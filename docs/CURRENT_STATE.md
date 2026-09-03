@@ -101,6 +101,12 @@
 - Yandex OAuth использует PKCE и публичный Client ID; secret browser-контракту
   не нужен, Supabase-сессия при пилотном входе не создаётся.
 - `main` содержит 14-дневную read-write Yandex ID-сессию: stage валидирует/отзывает opaque token, frontend восстанавливает профиль и блокирует истёкшую/неразрешённую сессию.
+- Текущая ветка расширяет единый Yandex API-контракт на read-write app-session:
+  клиенты, связи, замеры/цели, тренировки, feedback и push state принимают
+  `x-fit-session`; одновременная отправка read-only и read-write credentials
+  закрывается с `401`. После безопасной привязки сервер сразу возвращает
+  app-session только профилю с действующим `yandex`/`read_write` assignment;
+  сама привязка сохраняется и для профиля, ещё не включённого в rollout.
 - `main` содержит независимый default-off sticky route основного Trainer
   Assistant для одного перенесённого профиля. История, turns/actions,
   упражнения, parser и training summaries используют одну `x-fit-session` и
@@ -110,7 +116,9 @@
   CORS и история не меняются, прочие ветки исключены из Git deployments.
 - Pilot UI read-only; Client/custom-exercise и Planned/Live writes идут через
   stage API без изменения production routing.
-- Реальный invite → join → leave/remove smoke — внешняя проверка; полный cutover не выполнен.
+- Реальный invite → join → leave/remove smoke — внешняя проверка; полный cutover
+  основного интерфейса ещё не выполнен: следующий шаг — frontend repository
+  adapter и единый default-off tenant route без per-request fallback.
 ## Проверки активной ветки
 - #775 слит: возвраты в тренировках и календарь истории тренера проверены CI; ограничения ручной QA и production ведутся в ФИТ 7 (`docs/design/FIT7_TRAINER_DISCONNECT.md`).
 - Push bootstrap: два runtime SA созданы run `33761562506`; платные ресурсы не

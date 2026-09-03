@@ -1,4 +1,3 @@
-import { hashPilotSessionToken } from './auth/pilot-session-token.js'
 import {
   createClientCard,
   createCustomExercise,
@@ -15,48 +14,48 @@ import type {
   CreateClientCardDraft,
   CustomExerciseDraft,
 } from './domain-request.js'
-import {
-  PilotSessionInvalidError,
-  withYandexPilotSessionTransaction,
-} from './db/yandex-pilot-transaction.js'
 import type { DatabasePool } from './db/types.js'
+import {
+  withYandexActorSession,
+  type YandexActorSessionInput,
+} from './yandex-actor-session.js'
 
 export interface PilotDomainWriter {
   createClient(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     draft: CreateClientCardDraft,
   ): Promise<CreatedPilotClient>
   updateClient(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     clientId: string,
     draft: ClientCardDraft,
     expectedVersion: number,
   ): Promise<number>
   setClientArchived(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     clientId: string,
     archived: boolean,
     expectedVersion: number,
   ): Promise<number>
   updateClientPreferences(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     clientId: string,
     alias: string | null,
     note: string | null,
     expectedVersion: number,
   ): Promise<number>
   createCustomExercise(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     draft: CustomExerciseDraft,
   ): Promise<PilotCustomExerciseMutation>
   updateCustomExercise(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     exerciseId: string,
     draft: CustomExerciseDraft,
     expectedVersion: number,
   ): Promise<PilotCustomExerciseMutation>
   setCustomExerciseArchived(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     exerciseId: string,
     archived: boolean,
     expectedVersion: number,
@@ -67,71 +66,69 @@ export class DatabasePilotDomainWriter implements PilotDomainWriter {
   constructor(private readonly pool: DatabasePool) {}
 
   private withSession<Result>(
-    sessionToken: string,
-    work: Parameters<typeof withYandexPilotSessionTransaction<Result>>[2],
+    session: YandexActorSessionInput,
+    work: Parameters<typeof withYandexActorSession<Result>>[2],
   ): Promise<Result> {
-    const tokenHash = hashPilotSessionToken(sessionToken)
-    if (tokenHash === undefined) throw new PilotSessionInvalidError()
-    return withYandexPilotSessionTransaction(this.pool, tokenHash, work)
+    return withYandexActorSession(this.pool, session, work)
   }
 
-  createClient(sessionToken: string, draft: CreateClientCardDraft) {
-    return this.withSession(sessionToken, (client) => createClientCard(client, draft))
+  createClient(session: YandexActorSessionInput, draft: CreateClientCardDraft) {
+    return this.withSession(session, (client) => createClientCard(client, draft))
   }
 
   updateClient(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     clientId: string,
     draft: ClientCardDraft,
     expectedVersion: number,
   ) {
-    return this.withSession(sessionToken, (client) =>
+    return this.withSession(session, (client) =>
       updateClientCard(client, clientId, draft, expectedVersion))
   }
 
   setClientArchived(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     clientId: string,
     archived: boolean,
     expectedVersion: number,
   ) {
-    return this.withSession(sessionToken, (client) =>
+    return this.withSession(session, (client) =>
       setClientArchived(client, clientId, archived, expectedVersion))
   }
 
   updateClientPreferences(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     clientId: string,
     alias: string | null,
     note: string | null,
     expectedVersion: number,
   ) {
-    return this.withSession(sessionToken, (client) =>
+    return this.withSession(session, (client) =>
       updateClientPreferences(client, clientId, alias, note, expectedVersion))
   }
 
-  createCustomExercise(sessionToken: string, draft: CustomExerciseDraft) {
-    return this.withSession(sessionToken, (client) =>
+  createCustomExercise(session: YandexActorSessionInput, draft: CustomExerciseDraft) {
+    return this.withSession(session, (client) =>
       createCustomExercise(client, draft))
   }
 
   updateCustomExercise(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     exerciseId: string,
     draft: CustomExerciseDraft,
     expectedVersion: number,
   ) {
-    return this.withSession(sessionToken, (client) =>
+    return this.withSession(session, (client) =>
       updateCustomExercise(client, exerciseId, draft, expectedVersion))
   }
 
   setCustomExerciseArchived(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     exerciseId: string,
     archived: boolean,
     expectedVersion: number,
   ) {
-    return this.withSession(sessionToken, (client) =>
+    return this.withSession(session, (client) =>
       setCustomExerciseArchived(client, exerciseId, archived, expectedVersion))
   }
 }

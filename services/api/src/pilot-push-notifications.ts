@@ -1,9 +1,8 @@
-import { hashPilotSessionToken } from './auth/pilot-session-token.js'
 import type { DatabaseClient, DatabasePool } from './db/types.js'
 import {
-  PilotSessionInvalidError,
-  withYandexPilotSessionTransaction,
-} from './db/yandex-pilot-transaction.js'
+  withYandexActorSession,
+  type YandexActorSessionInput,
+} from './yandex-actor-session.js'
 import {
   deletePushSubscription,
   readPushNotificationStatus,
@@ -17,14 +16,14 @@ import type {
 } from './push-notifications-request.js'
 
 export interface PilotPushNotifications {
-  readStatus(sessionToken: string): Promise<PushNotificationStatus>
+  readStatus(session: YandexActorSessionInput): Promise<PushNotificationStatus>
   upsertSubscription(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     draft: PushSubscriptionDraft,
   ): Promise<void>
-  deleteSubscription(sessionToken: string): Promise<void>
+  deleteSubscription(session: YandexActorSessionInput): Promise<void>
   setPreference(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     kind: PushNotificationKind,
     enabled: boolean,
   ): Promise<void>
@@ -34,36 +33,34 @@ export class DatabasePilotPushNotifications implements PilotPushNotifications {
   constructor(private readonly pool: DatabasePool) {}
 
   private withSession<Result>(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     work: (client: DatabaseClient) => Promise<Result>,
   ): Promise<Result> {
-    const tokenHash = hashPilotSessionToken(sessionToken)
-    if (tokenHash === undefined) throw new PilotSessionInvalidError()
-    return withYandexPilotSessionTransaction(this.pool, tokenHash, work)
+    return withYandexActorSession(this.pool, session, work)
   }
 
-  readStatus(sessionToken: string): Promise<PushNotificationStatus> {
-    return this.withSession(sessionToken, readPushNotificationStatus)
+  readStatus(session: YandexActorSessionInput): Promise<PushNotificationStatus> {
+    return this.withSession(session, readPushNotificationStatus)
   }
 
   upsertSubscription(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     draft: PushSubscriptionDraft,
   ): Promise<void> {
-    return this.withSession(sessionToken, (client) =>
+    return this.withSession(session, (client) =>
       upsertPushSubscription(client, draft))
   }
 
-  deleteSubscription(sessionToken: string): Promise<void> {
-    return this.withSession(sessionToken, deletePushSubscription)
+  deleteSubscription(session: YandexActorSessionInput): Promise<void> {
+    return this.withSession(session, deletePushSubscription)
   }
 
   setPreference(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     kind: PushNotificationKind,
     enabled: boolean,
   ): Promise<void> {
-    return this.withSession(sessionToken, (client) =>
+    return this.withSession(session, (client) =>
       setNotificationPreference(client, kind, enabled))
   }
 }

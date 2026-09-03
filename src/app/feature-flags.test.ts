@@ -266,6 +266,19 @@ describe('Yandex session linking pilot flag', () => {
       clientId: 'public-client-id',
     })
   })
+
+  it('does not depend on the legacy read-only Yandex ID pilot switch', () => {
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS', 'trainer-1')
+    vi.stubEnv('VITE_YANDEX_ID_PILOT_ENABLED', '')
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
+
+    expect(getYandexSessionLinkingConfig('trainer-1')).toEqual({
+      apiBaseUrl: 'https://stage.example.test',
+      clientId: 'public-client-id',
+    })
+  })
 })
 
 describe('Yandex app session pilot flag', () => {

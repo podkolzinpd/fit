@@ -1,4 +1,3 @@
-import { hashPilotSessionToken } from './auth/pilot-session-token.js'
 import {
   claimClientInvitation,
   createClientInvitation,
@@ -7,73 +6,71 @@ import {
   revokeClientInvitation,
   type CreatedPilotInvitation,
 } from './connection-commands.js'
-import {
-  PilotSessionInvalidError,
-  withYandexPilotSessionTransaction,
-} from './db/yandex-pilot-transaction.js'
 import type { DatabasePool } from './db/types.js'
+import {
+  withYandexActorSession,
+  type YandexActorSessionInput,
+} from './yandex-actor-session.js'
 
 export interface PilotConnectionsWriter {
-  claimInvitation(sessionToken: string, code: string): Promise<string>
+  claimInvitation(session: YandexActorSessionInput, code: string): Promise<string>
   createInvitation(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     clientId: string,
     targetRole: 'client' | 'trainer',
   ): Promise<CreatedPilotInvitation>
-  leaveClient(sessionToken: string, clientId: string): Promise<void>
+  leaveClient(session: YandexActorSessionInput, clientId: string): Promise<void>
   removeTrainer(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     clientId: string,
     trainerId: string,
   ): Promise<void>
-  revokeInvitation(sessionToken: string, invitationId: string): Promise<void>
+  revokeInvitation(session: YandexActorSessionInput, invitationId: string): Promise<void>
 }
 
 export class DatabasePilotConnectionsWriter implements PilotConnectionsWriter {
   constructor(private readonly pool: DatabasePool) {}
 
   private withSession<Result>(
-    sessionToken: string,
-    work: Parameters<typeof withYandexPilotSessionTransaction<Result>>[2],
+    session: YandexActorSessionInput,
+    work: Parameters<typeof withYandexActorSession<Result>>[2],
   ): Promise<Result> {
-    const tokenHash = hashPilotSessionToken(sessionToken)
-    if (tokenHash === undefined) throw new PilotSessionInvalidError()
-    return withYandexPilotSessionTransaction(this.pool, tokenHash, work)
+    return withYandexActorSession(this.pool, session, work)
   }
 
-  claimInvitation(sessionToken: string, code: string): Promise<string> {
-    return this.withSession(sessionToken, (client) =>
+  claimInvitation(session: YandexActorSessionInput, code: string): Promise<string> {
+    return this.withSession(session, (client) =>
       claimClientInvitation(client, code))
   }
 
   createInvitation(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     clientId: string,
     targetRole: 'client' | 'trainer',
   ): Promise<CreatedPilotInvitation> {
-    return this.withSession(sessionToken, (client) =>
+    return this.withSession(session, (client) =>
       createClientInvitation(client, clientId, targetRole))
   }
 
-  leaveClient(sessionToken: string, clientId: string): Promise<void> {
-    return this.withSession(sessionToken, (client) =>
+  leaveClient(session: YandexActorSessionInput, clientId: string): Promise<void> {
+    return this.withSession(session, (client) =>
       leaveClientSpace(client, clientId))
   }
 
   removeTrainer(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     clientId: string,
     trainerId: string,
   ): Promise<void> {
-    return this.withSession(sessionToken, (client) =>
+    return this.withSession(session, (client) =>
       removeClientTrainer(client, clientId, trainerId))
   }
 
   revokeInvitation(
-    sessionToken: string,
+    session: YandexActorSessionInput,
     invitationId: string,
   ): Promise<void> {
-    return this.withSession(sessionToken, (client) =>
+    return this.withSession(session, (client) =>
       revokeClientInvitation(client, invitationId))
   }
 }
