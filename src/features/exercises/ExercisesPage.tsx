@@ -8,6 +8,9 @@ import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ExerciseImage } from './ExerciseImage'
 import { matchesExerciseSearch, rankExerciseSearch } from './exercise-search'
+import { exerciseCatalogSection, groupCatalogResults, isCatalogRoot, type CatalogSection } from '../../shared/exercise-catalog-curation'
+import { selectableExercises } from './selectable-exercises'
+import { CatalogSectionField, CatalogVariantField } from './CatalogControls'
 
 const INPUT_KIND_LABELS: Record<InputKind, string> = {
   strength: 'Вес + повторы',
@@ -54,16 +57,19 @@ function useCustomExercises() {
 }
 
 export function ExercisesPage() {
+  const { actor } = useAuth()
   const { archive, editing, query, save, setEditing, submit } = useCustomExercises()
   const [search, setSearch] = useState('')
+  const [section, setSection] = useState<CatalogSection>('core')
   const [selected, setSelected] = useState<ExerciseSnapshot | null>(null)
   const [visibleCount, setVisibleCount] = useState(48)
   const systemMatches = useMemo(() => {
-    if (!search.trim()) return [...exercisesRepository.system].sort((left, right) => left.name.localeCompare(right.name, 'ru'))
-    return rankExerciseSearch(exercisesRepository.system, search)
+    const selectable = selectableExercises(exercisesRepository.system)
+    if (!search.trim()) return selectable.filter((exercise) => isCatalogRoot(exercise) && exerciseCatalogSection(exercise) === section).sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+    return groupCatalogResults(rankExerciseSearch(selectable, search)
       .filter(({ exercise }) => matchesExerciseSearch(exercise, search))
-      .map(({ exercise }) => exercise)
-  }, [search])
+      .map(({ exercise }) => exercise))
+  }, [search, section])
   const visibleExercises = systemMatches.slice(0, visibleCount)
   const activeCustomCount = query.data?.filter((exercise) => !exercise.archivedAt).length ?? 0
   function updateSearch(value: string) {
@@ -78,7 +84,7 @@ export function ExercisesPage() {
     <section className="catalog-library" aria-labelledby="catalog-library-title">
       <div className="catalog-library-head">
         <div><p className="eyebrow">БИБЛИОТЕКА</p><h2 id="catalog-library-title">Системные упражнения</h2></div>
-        <span>{exercisesRepository.system.length}</span>
+        <span>{systemMatches.length}</span>
       </div>
       <label className="catalog-search">
         <span className="sr-only">Поиск упражнения</span>
@@ -86,8 +92,9 @@ export function ExercisesPage() {
         <input type="search" value={search} placeholder="Название, мышца или оборудование" onChange={(event) => updateSearch(event.target.value)} />
         {search && <button type="button" aria-label="Очистить поиск" onClick={() => updateSearch('')}><CloseIcon /></button>}
       </label>
+      {!search.trim() && <CatalogSectionField value={section} onChange={(value) => { setSection(value); setVisibleCount(48) }} userId={actor?.userId} />}
       <div className="catalog-results-meta" aria-live="polite">
-        <span>{search.trim() ? `Найдено: ${systemMatches.length}` : 'Все упражнения'}</span>
+        <span>{search.trim() ? `Найдено: ${systemMatches.length} · Во всех разделах` : 'Выбранный раздел'}</span>
         <span>Нажмите, чтобы открыть технику</span>
       </div>
       {systemMatches.length > 0 ? <>
@@ -122,6 +129,7 @@ export function ExercisesPage() {
       <section className="catalog-detail" role="dialog" aria-modal="true" aria-labelledby="catalog-detail-title" onClick={stopPropagation}>
         <header><div><p className="eyebrow">ТЕХНИКА</p><h2 id="catalog-detail-title">{selected.name}</h2></div><button type="button" className="catalog-detail-close" aria-label="Закрыть" onClick={() => setSelected(null)}><CloseIcon /></button></header>
         <ExerciseImage src={selected.imageUrl} motionSrc={selected.motionImageUrl} videoSrc={selected.techniqueVideoUrl} alt={selected.name} variant="technique" />
+        <CatalogVariantField exercise={selected} catalog={exercisesRepository.system} onChange={setSelected} />
         <div className="catalog-detail-facts"><span><small>Группа</small><strong>{MUSCLE_GROUP_LABELS[selected.muscleGroup]}</strong></span><span><small>Оборудование</small><strong>{selected.equipment ?? 'Без оборудования'}</strong></span><span><small>Тип ввода</small><strong>{INPUT_KIND_LABELS[selected.inputKind]}</strong></span><span><small>Уровень</small><strong>{selected.level ? LEVEL_LABELS[selected.level.toLocaleLowerCase()] ?? selected.level : 'Не указан'}</strong></span></div>
         {selected.instructions?.length ? <div className="catalog-detail-instructions"><h3>Как выполнять</h3><ol>{selected.instructions.map((instruction, index) => <li key={`${selected.ref}-${index}`}>{instruction}</li>)}</ol></div> : <p className="catalog-detail-note">Для этого упражнения пока нет пошагового описания.</p>}
         <button type="button" className="secondary" onClick={() => setSelected(null)}>Закрыть</button>

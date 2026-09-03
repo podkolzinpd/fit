@@ -357,7 +357,7 @@ describe('parseQuickWorkoutEntry', () => {
     const result = parseQuickWorkoutEntry('Тяга гантели одной рукой три по десять двадцать килограмм', SYSTEM_EXERCISE_CATALOG)
 
     expect(result.unparsed).toEqual([])
-    expect(result.parsed[0]?.exercise.ref).toBe('fedb-one-arm-dumbbell-row')
+    expect(result.parsed[0]?.exercise.ref).toBe('dumbbell-row')
     expect(result.parsed[0]?.sets).toEqual(Array.from({ length: 3 }, (_, position) => ({ position, weightKg: 20, reps: 10 })))
   })
 

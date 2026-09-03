@@ -1,6 +1,7 @@
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { exercisesRepository, type WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { matchesExplicitWorkoutEquipment, parseQuickWorkoutEntry, splitWorkoutText, workoutCandidates, type ParsedWorkoutExercise } from './quick-workout-entry'
+import { selectableExercises } from '../exercises/selectable-exercises'
 
 /**
  * Ниже этого порога выбор модели нужно подтвердить. Локальный строгий матчинг
@@ -26,7 +27,7 @@ export async function parseWorkoutWithLlm(text: string, catalog: readonly Exerci
   try {
     const remote = await (options.remoteParser ?? exercisesRepository.parseWorkout)(
       preparedText,
-      catalog.filter((exercise) => exercise.source === 'system'),
+      selectableExercises(catalog).filter((exercise) => exercise.source === 'system'),
     )
     return requireExerciseConfirmation(mergeWorkoutParse(remote, local, catalog), catalog, options)
   } catch (error) {

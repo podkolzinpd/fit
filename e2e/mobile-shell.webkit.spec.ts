@@ -131,7 +131,9 @@ async function expectMobileShellFillsViewport(page: Page) {
 }
 
 async function recoverMobileShellFromStaleKeyboard(page: Page, input: Locator) {
+  await expect(input).toBeVisible()
   await input.focus()
+  await expect(input).toBeFocused()
   await page.evaluate(() => {
     document.documentElement.style.setProperty('--app-viewport-height', '508px')
     document.documentElement.style.setProperty('--app-visible-height', '508px')
@@ -231,10 +233,10 @@ test('iPhone: поля бега не перекрываются в быстро�
   await page.getByText('Добавить значения', { exact: true }).click()
 
   const row = page.locator('.today-set-editor').first()
-  const durationLabel = row.locator('label').filter({ hasText: 'Бег (Кардио): время, подход 1' })
-  const duration = page.getByLabel('Бег (Кардио): время, подход 1')
-  const distance = page.getByLabel('Бег (Кардио): расстояние, подход 1')
-  const unit = page.getByLabel('Бег (Кардио): единица расстояния, подход 1')
+  const durationLabel = row.locator('label').filter({ hasText: 'Бег: время, подход 1' })
+  const duration = page.getByLabel('Бег: время, подход 1')
+  const distance = page.getByLabel('Бег: расстояние, подход 1')
+  const unit = page.getByLabel('Бег: единица расстояния, подход 1')
   await expect(durationLabel).toHaveCSS('position', 'absolute')
   await expect(duration).toHaveAttribute('placeholder', 'мм:сс')
   await expect(distance).toHaveAttribute('placeholder', '0')
@@ -263,8 +265,8 @@ test('iPhone: поля бега не перекрываются в быстро�
   await expect(unit.locator('option:checked')).toHaveText('км')
   await expectNoHorizontalOverflow(page)
   await page.getByRole('button', { name: 'Изменить порядок' }).click()
-  await page.getByRole('button', { name: /Переместить блок «Жим лёжа.*вверх/ }).click()
-  await expect(page.locator('.today-exercise-title strong').first()).toContainText('Жим лёжа')
+  await page.getByRole('button', { name: /Переместить блок «Жим штанги лёжа.*вверх/ }).click()
+  await expect(page.locator('.today-exercise-title strong').first()).toContainText('Жим штанги лёжа')
   await expect(page.getByRole('button', { name: 'Далее' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Готово' }).click()
   await expect(page.getByRole('button', { name: 'Далее' })).toBeVisible()
@@ -828,6 +830,8 @@ async function createIsolatedClient(page: Page, testInfo: import('@playwright/te
   await page.getByLabel('Возраст').fill('30')
   await page.getByLabel('Рост, см').fill('170')
   await page.getByLabel('Начальный вес, кг').fill('65')
+  const introduction = page.getByRole('button', { name: 'Понятно', exact: true })
+  if (await introduction.isVisible()) await introduction.click()
   await Promise.all([
     page.waitForURL(/\/clients\/[0-9a-f-]+$/),
     page.getByRole('button', { name: 'Сохранить' }).click(),
@@ -906,10 +910,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
     await page.setViewportSize(viewport)
     await login(page, 'client@fit.local')
     await openReviewWithFixture(page, '/me')
+    await page.getByText('Править подходы', { exact: true }).click()
 
     const frame = page.locator('.phone-frame')
     const content = page.locator('.content')
-    const firstWeight = page.getByLabel('Жим лёжа (Штанга): вес, подход 1')
+    const firstWeight = page.getByLabel('Жим штанги лёжа: вес, подход 1')
     await recoverMobileShellFromStaleKeyboard(page, firstWeight)
 
     const frameBox = await frame.boundingBox()
@@ -1370,7 +1375,7 @@ test('iPhone: копия тренировки открывается компа�
   await page.getByLabel('Вес, подход 2').fill('60')
   await page.getByLabel('Повторы, подход 2').fill('10')
   await addExercise(page, 'Жим лёжа')
-  const benchEditor = page.locator('.planned-exercise').filter({ hasText: 'Жим лёжа' })
+  const benchEditor = page.locator('.planned-exercise').filter({ hasText: 'Жим штанги лёжа' })
   await expect(benchEditor).toHaveCount(1)
   await benchEditor.getByLabel('Вес, подход 1').fill('40')
   await benchEditor.getByLabel('Повторы, подход 1').fill('10')
@@ -1553,7 +1558,7 @@ test('iPhone: отдых начинается после последнего п
 
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByText(/Отдых 1:(2[7-9]|30)/)).toBeVisible()
-  await expect(page.locator('.live-exercise-upcoming')).toContainText('Жим лёжа')
+  await expect(page.locator('.live-exercise-upcoming')).toContainText('Жим штанги лёжа')
   await expectNoHorizontalOverflow(page)
 })
 

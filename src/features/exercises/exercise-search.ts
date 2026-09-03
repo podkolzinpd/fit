@@ -1,9 +1,10 @@
 import type { ExerciseSnapshot } from '../../shared/domain'
-import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
+import { MUSCLE_GROUP_LABELS, SYSTEM_EXERCISE_LEGACY_CATALOG } from '../../shared/system-exercises'
+import { COMPATIBLE_EXERCISE_REPLACEMENTS } from '../../shared/exercise-catalog-curation'
 
 // Разговорные варианты, которыми тренеры обычно называют базовые упражнения.
 // Каталожное название не меняем: эти слова участвуют только в поиске.
-export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
+export const ORIGINAL_SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'barbell-squat': ['классический присед', 'приседания', 'присед штанга', 'скват'],
   'front-squat': ['фронтальный', 'фронт скват'],
   'leg-press': ['платформа', 'жим платформы', 'жим платформы ногами'],
@@ -121,6 +122,25 @@ export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = {
   'fedb-snatch': ['рывок', 'рывок штанги'],
 }
 
+// Preserve the complete hand-reviewed dictionary and old visible names. Only
+// compatible duplicates inherit exact phrases; variants keep their own match
+// and recording units. Nothing here upgrades generated hints to exact aliases.
+export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = (() => {
+  const aliases = new Map<string, Set<string>>(Object.entries(ORIGINAL_SEARCH_ALIASES).map(([ref, phrases]) => [ref, new Set(phrases)]))
+  for (const exercise of SYSTEM_EXERCISE_LEGACY_CATALOG) {
+    const phrases = aliases.get(exercise.ref) ?? new Set<string>()
+    phrases.add(exercise.name)
+    phrases.add(exercise.name.replace(/\s*\([^)]*\)\s*$/, '').trim())
+    aliases.set(exercise.ref, phrases)
+  }
+  for (const [ref, target] of Object.entries(COMPATIBLE_EXERCISE_REPLACEMENTS)) {
+    const targetPhrases = aliases.get(target) ?? new Set<string>()
+    for (const phrase of aliases.get(ref) ?? []) targetPhrases.add(phrase)
+    aliases.set(target, targetPhrases)
+  }
+  return Object.fromEntries([...aliases].map(([ref, phrases]) => [ref, [...phrases]]))
+})()
+
 // Латиница и сокращения приходят как из заметок тренера, так и из голосового
 // ввода. Приводим их к одному языку до поиска, не меняя названия в каталоге.
 const SEARCH_PHRASE_REPLACEMENTS: ReadonlyArray<readonly [RegExp, string]> = [
@@ -186,10 +206,29 @@ const GENERATED_SEARCH_VARIANT_RULES: ReadonlyArray<readonly [RegExp, string]> =
  * Полный набор фраз для поиска одного упражнения. Ручные варианты отвечают за
  * точный сленг, сгенерированные — за формы слов и оборудование во всём каталоге.
  */
+function nameWithoutEquipmentLabel(exercise: ExerciseSnapshot): string {
+  const suffix = exercise.name.match(/\s*\(([^)]*)\)\s*$/u)
+  // Parentheses can describe a real variant (e.g. powerlifting), not equipment.
+  // Stripping those would make the variant an exact alias of the base movement.
+  return suffix && (normalizeExerciseSearch(suffix[1]!) === normalizeExerciseSearch(exercise.equipment ?? '')
+    || /^(?:своё тело|свое тело|без оборудования)$/iu.test(suffix[1]!))
+    ? exercise.name.slice(0, suffix.index).trim() : exercise.name.trim()
+}
+
 export function exerciseSearchAliases(exercise: ExerciseSnapshot): readonly string[] {
-  const nameWithoutLabel = exercise.name.replace(/\s*\([^)]*\)\s*$/, '').trim()
+  const nameWithoutLabel = nameWithoutEquipmentLabel(exercise)
   const normalizedName = normalizeExerciseSearch(nameWithoutLabel)
-  const aliases = new Set<string>(SEARCH_ALIASES[exercise.ref] ?? [])
+  const aliases = new Set<string>(exercise.source === 'system' ? SEARCH_ALIASES[exercise.ref] ?? [] : [])
+  // Old generated English names/forms remain search hints, never exact matches.
+  if (exercise.source === 'system') {
+    for (const [ref, target] of Object.entries(COMPATIBLE_EXERCISE_REPLACEMENTS)) {
+      if (target !== exercise.ref) continue
+      const original = SYSTEM_EXERCISE_LEGACY_CATALOG.find((item) => item.ref === ref)
+      if (original) for (const phrase of legacySearchHints(original)) aliases.add(phrase)
+    }
+    const original = SYSTEM_EXERCISE_LEGACY_CATALOG.find((item) => item.ref === exercise.ref)
+    if (original) for (const phrase of legacySearchHints(original)) aliases.add(phrase)
+  }
   const muscleGroup = MUSCLE_GROUP_LABELS[exercise.muscleGroup]
   if (normalizedName) aliases.add(`${normalizedName} ${normalizeExerciseSearch(muscleGroup)}`)
   if (exercise.equipment) aliases.add(`${normalizedName} ${normalizeExerciseSearch(exercise.equipment)}`)
@@ -208,6 +247,17 @@ export function exerciseSearchAliases(exercise: ExerciseSnapshot): readonly stri
   aliases.delete(normalizedName)
   aliases.delete('')
   return [...aliases]
+}
+
+function legacySearchHints(exercise: ExerciseSnapshot): string[] {
+  const name = normalizeExerciseSearch(nameWithoutEquipmentLabel(exercise))
+  const hints = [exercise.ref.replace(/^(?:fedb|vital)-/u, '').replaceAll('-', ' '), `${name} ${normalizeExerciseSearch(MUSCLE_GROUP_LABELS[exercise.muscleGroup])}`]
+  if (exercise.equipment) hints.push(`${name} ${normalizeExerciseSearch(exercise.equipment)}`)
+  for (const [pattern, replacement] of GENERATED_SEARCH_VARIANT_RULES) {
+    pattern.lastIndex = 0
+    if (pattern.test(name)) { pattern.lastIndex = 0; hints.push(name.replace(pattern, replacement)) }
+  }
+  return hints
 }
 
 function editDistanceAtMostOne(left: string, right: string): boolean {
@@ -321,8 +371,8 @@ const exerciseSearchIndexCache = new WeakMap<ExerciseSnapshot, ExerciseSearchInd
 function getExerciseSearchIndex(exercise: ExerciseSnapshot): ExerciseSearchIndex {
   const cached = exerciseSearchIndexCache.get(exercise)
   if (cached) return cached
-  const name = normalizeExerciseSearch(exercise.name.replace(/\s*\([^)]*\)\s*$/, ''))
-  const exactAliases = (SEARCH_ALIASES[exercise.ref] ?? []).map(normalizeExerciseSearch)
+  const name = normalizeExerciseSearch(nameWithoutEquipmentLabel(exercise))
+  const exactAliases = (exercise.source === 'system' ? SEARCH_ALIASES[exercise.ref] ?? [] : []).map(normalizeExerciseSearch)
   const aliases = exerciseSearchAliases(exercise).map(normalizeExerciseSearch)
   const searchableTokens = normalizeExerciseSearch([
     name,

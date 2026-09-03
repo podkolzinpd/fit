@@ -3,8 +3,9 @@ import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
 import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
 import { VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
+import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 8
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 9
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {
@@ -190,7 +191,7 @@ const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
 // Составные протоколы и СБУ переиспользуют обложки базовых упражнений. Для
 // карточки техники им нужен тот же второй кадр, но дублировать его URL в каждом
 // литерале нет смысла.
-export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_CATALOG_SOURCE.map((exercise) => {
+export const SYSTEM_EXERCISE_LEGACY_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_CATALOG_SOURCE.map((exercise) => {
   const vitalMedia = VITAL_FREE_PACK_MEDIA_BY_REF[exercise.ref]
   const correctedName = exercise.ref === 'fedb-snatch-deadlift'
     ? 'Рывковая становая тяга (Штанга)'
@@ -205,3 +206,10 @@ export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERC
     techniqueVideoUrl: vitalMedia?.techniqueVideoUrl,
   }
 })
+
+// Rename display metadata only; persisted snapshots, units and historical refs
+// remain untouched. New additions absent from the approved list remain available.
+export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_LEGACY_CATALOG.map((exercise) => ({
+  ...exercise,
+  name: EXERCISE_CATALOG_DECISIONS[exercise.ref]?.name ?? exercise.name,
+}))
