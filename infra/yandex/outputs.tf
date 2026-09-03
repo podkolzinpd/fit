@@ -23,6 +23,11 @@ output "push_dispatcher_container_url" {
   value       = yandex_serverless_container.push_dispatcher.url
 }
 
+output "push_dispatcher_container_id" {
+  description = "Exact private dispatcher receiving scheduler and deployer invocation bindings."
+  value       = yandex_serverless_container.push_dispatcher.id
+}
+
 output "push_dispatcher_service_account_id" {
   description = "Least-privilege runtime identity attached to the private push dispatcher."
   value       = yandex_iam_service_account.push_dispatcher.id

@@ -132,6 +132,13 @@ const hasBoundedApiExecutionTimeout = (resource) => {
 const isServiceAccountMember = (value) =>
   /^serviceAccount:[a-z0-9]+$/u.test(value ?? '')
 
+const isKnownOrComputedServiceAccountMember = (resource) =>
+  isServiceAccountMember(resource.change.after?.member)
+  || (
+    resource.change.after?.member == null
+    && resource.change.after_unknown?.member === true
+  )
+
 const isReviewedPushPipelineBootstrap = (resource) => {
   if (!allowPushPipelineBootstrap || !pushPipelineBootstrapAddresses.has(resource.address)) {
     return false
@@ -171,7 +178,7 @@ const isReviewedPushPipelineBootstrap = (resource) => {
   }
   if (resource.address.includes('lockbox_secret_iam_member')) {
     return after.role === 'lockbox.payloadViewer'
-      && isServiceAccountMember(after.member)
+      && isKnownOrComputedServiceAccountMember(resource)
   }
   if (resource.address.includes('iam_service_account_iam_member')) {
     return after.role === 'iam.serviceAccounts.user'

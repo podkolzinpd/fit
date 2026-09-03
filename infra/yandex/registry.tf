@@ -11,11 +11,15 @@ resource "yandex_container_repository" "api" {
 resource "yandex_container_registry_iam_binding" "api_image_puller" {
   registry_id = yandex_container_registry.fit.id
   role        = "container-registry.images.puller"
-  members = [
-    "serviceAccount:${yandex_iam_service_account.api.id}",
-    "serviceAccount:${yandex_iam_service_account.migration.id}",
-    "serviceAccount:${yandex_iam_service_account.push_dispatcher.id}",
-  ]
+  members = concat(
+    [
+      "serviceAccount:${yandex_iam_service_account.api.id}",
+      "serviceAccount:${yandex_iam_service_account.migration.id}",
+    ],
+    var.push_dispatcher_registry_service_account_id == null ? [] : [
+      "serviceAccount:${var.push_dispatcher_registry_service_account_id}",
+    ],
+  )
 }
 
 resource "yandex_container_repository_lifecycle_policy" "api" {
