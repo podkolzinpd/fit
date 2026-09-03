@@ -596,7 +596,7 @@ test('iPhone: в live клиент видит те же действия с тр
 
   // Второй план не должен молча заменить первую незавершённую тренировку.
   // Пользователь остаётся на выбранном плане, пока явно не согласится открыть
-  // уже идущую запись; после «Назад» возвращается в её собственную карточку.
+  // уже идущую запись; после «Назад» возвращается в исходный выбранный план.
   const activeWorkoutPath = new URL(page.url()).pathname.replace(/\/live$/, '')
   await page.getByRole('button', { name: 'Назад' }).click()
   expect(new URL(page.url()).pathname).toBe(activeWorkoutPath)
@@ -623,7 +623,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await recovery.getByRole('button', { name: 'Открыть незавершённую' }).click()
   await expect(page).toHaveURL(new RegExp(`${activeWorkoutPath}/live$`))
   await page.getByRole('button', { name: 'Назад' }).click()
-  expect(new URL(page.url()).pathname).toBe(activeWorkoutPath)
+  await expect(page).toHaveURL(new RegExp(`${selectedPlanPath}$`))
   await expectNoHorizontalOverflow(page)
 })
 
