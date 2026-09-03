@@ -66,6 +66,11 @@ export interface PilotTrainingSummaryPublisher {
     clientSummary: Record<string, unknown>,
     expectedVersion: number,
   ): Promise<void>
+  unpublish?(
+    session: YandexActorSession,
+    summaryId: string,
+    expectedVersion: number,
+  ): Promise<void>
 }
 
 export interface PilotTrainingSummaries
@@ -189,6 +194,31 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
           select * from public.publish_training_summary($1, $2::jsonb, $3)
         `, [summaryId, JSON.stringify(clientSummary), expectedVersion])
         if (rows.length === 0) {
+          throw new PilotTrainingSummaryError(409, 'training_summary_conflict')
+        }
+      })
+    } catch (error) {
+      if (error instanceof PilotTrainingSummaryError) throw error
+      const code = typeof error === 'object' && error !== null && 'code' in error
+        ? String(error.code)
+        : ''
+      if (code === 'PT404') throw new PilotTrainingSummaryError(404, 'training_summary_not_found')
+      if (code === 'PT409') throw new PilotTrainingSummaryError(409, 'training_summary_conflict')
+      throw error
+    }
+  }
+
+  async unpublish(
+    session: YandexActorSession,
+    summaryId: string,
+    expectedVersion: number,
+  ): Promise<void> {
+    try {
+      await withYandexActorSession(this.pool, session, async (client) => {
+        const rows = await client.query<{ version: string }>(`
+          select public.unpublish_training_summary($1, $2) version
+        `, [summaryId, expectedVersion])
+        if (Number(rows[0]?.version) !== expectedVersion + 1) {
           throw new PilotTrainingSummaryError(409, 'training_summary_conflict')
         }
       })

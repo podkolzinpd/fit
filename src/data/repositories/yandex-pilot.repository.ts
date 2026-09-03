@@ -8,6 +8,11 @@ const profilePayloadSchema = z.object({
   lastName: z.string().nullable(),
   timezone: z.string().min(1),
   accountRole: z.enum(['trainer', 'client']),
+  client: z.object({
+    id: z.uuid(),
+    trainerId: z.uuid(),
+    fullName: z.string().min(1),
+  }).nullable().optional(),
 })
 
 const profileSchema = z.object({
@@ -33,7 +38,10 @@ const appSessionSchema = z.object({
 
 const appSessionProfileSchema = appSessionSchema.omit({ session: true })
 
-const linkedYandexIdentitySchema = z.object({ profileId: z.uuid() })
+const linkedYandexIdentitySchema = z.object({
+  profileId: z.uuid(),
+  appSession: appSessionSchema.optional(),
+})
 
 const clientSchema = z.object({
   id: z.uuid(),
@@ -152,6 +160,9 @@ const workoutSchema = z.object({
   clientQuestionResolvedAt: z.iso.datetime().nullable(),
   startedAt: z.iso.datetime().nullable(),
   completedAt: z.iso.datetime().nullable(),
+  stageId: z.uuid().nullable().optional(),
+  stageTitle: z.string().nullable().optional(),
+  hasPr: z.boolean().optional(),
   version: z.number().int().positive(),
   exercises: z.array(workoutExerciseSchema),
 })
@@ -162,6 +173,7 @@ const customExerciseSchema = z.object({
   inputKind: workoutExerciseSchema.shape.inputKind,
   archivedAt: z.iso.datetime().nullable(),
   version: z.number().int().positive(),
+  createdBy: z.uuid().optional(),
 })
 const trainingDataSchema = z.object({
   accessMode: z.literal('read_only'),
@@ -184,6 +196,7 @@ const trainingDataSchema = z.object({
     snoozedUntil: z.iso.datetime().nullable(),
   })),
   hasMoreWorkouts: z.boolean(),
+  totalWorkouts: z.number().int().nonnegative().optional(),
 })
 
 const createdInvitationSchema = z.object({
@@ -431,6 +444,20 @@ export const yandexPilotRepository = {
     }
     if (!response.ok) throw appSessionRestoreError(response.status)
   },
+  async updateProfile(
+    apiBaseUrl: string,
+    sessionToken: string,
+    input: { firstName: string | null; lastName: string | null; timezone: string },
+  ): Promise<void> {
+    const response = await commandResponse(() => yandexPilotQueries.updateProfile(
+      apiBaseUrl,
+      sessionToken,
+      input,
+    ))
+    if (response.status !== 204) {
+      throw new Error('Stage не подтвердил изменение профиля.')
+    }
+  },
   async linkYandexAccount(
     apiBaseUrl: string,
     supabaseAccessToken: string,
@@ -484,10 +511,16 @@ export const yandexPilotRepository = {
     apiBaseUrl: string,
     sessionToken: string,
     accessMode: YandexApiAccessMode = 'read_only',
+    page?: { limit: number; offset: number },
   ): Promise<YandexPilotTrainingData> {
     let response: Response
     try {
-      response = await yandexPilotQueries.listTrainingData(apiBaseUrl, sessionToken, accessMode)
+      response = await yandexPilotQueries.listTrainingData(
+        apiBaseUrl,
+        sessionToken,
+        accessMode,
+        page,
+      )
     } catch {
       throw new Error('Не удалось подключиться к Yandex Cloud stage.')
     }
@@ -500,6 +533,9 @@ export const yandexPilotRepository = {
       attention: result.data.attention,
       attentionPreferences: result.data.attentionPreferences,
       hasMoreWorkouts: result.data.hasMoreWorkouts,
+      ...(result.data.totalWorkouts === undefined
+        ? {}
+        : { totalWorkouts: result.data.totalWorkouts }),
     }
   },
   async parseWorkout(

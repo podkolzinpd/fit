@@ -3,10 +3,7 @@ import { useId, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
-import { clientsRepository } from '../../data/repositories/clients.repository'
-import { exercisesRepository } from '../../data/repositories/exercises.repository'
-import { goalsRepository } from '../../data/repositories/goals.repository'
-import { progressRepository } from '../../data/repositories/progress.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import type { Client, ClientGoal, CustomMetric, ExerciseSnapshot, GoalCriterionMetric, GoalCriterionOperation, GoalStage, SaveGoalCriterionInput } from '../../shared/domain'
 import { GOAL_CRITERION_METRICS, GOAL_CRITERION_OPERATIONS, goalCriterionTargetLabel, validateGoalCriterionInput } from '../../shared/goal-criterion-rules'
 import { orderedStages, stageStatus } from '../../shared/goal-rules'
@@ -26,6 +23,7 @@ function confirmedCriteriaLabel(count: number): string {
 }
 
 export function GoalPage() {
+  const { clients: clientsRepository } = useDataBackend()
   const { clientId = '' } = useParams()
   const client = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
   return <GoalWorkspace client={client.data} loading={client.isLoading} error={client.error}
@@ -33,6 +31,7 @@ export function GoalPage() {
 }
 
 export function MyGoalPage() {
+  const { clients: clientsRepository } = useDataBackend()
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   return <GoalWorkspace client={mine.data} loading={mine.isLoading} error={mine.error}
     onRetry={() => void mine.refetch()} back="/me/progress" self />
@@ -46,6 +45,7 @@ function GoalWorkspace({ client, loading, error, onRetry, back, self = false }: 
   back: string
   self?: boolean
 }) {
+  const { goals: goalsRepository } = useDataBackend()
   const { actor } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -134,6 +134,11 @@ function GoalForm({ clientId, goal, initialTitle, onSaved, onCancel }: {
   onSaved: () => Promise<void>
   onCancel?: () => void
 }) {
+  const {
+    exercises: exercisesRepository,
+    goals: goalsRepository,
+    progress: progressRepository,
+  } = useDataBackend()
   const titleCounterId = useId()
   const catalog = useExerciseCatalog()
   const queryClient = useQueryClient()
@@ -234,6 +239,7 @@ function GoalCreate({ clientId, initialTitle, onCreated }: {
 function GoalDetail({ goal, today, onChanged, onArchived }: {
   goal: ClientGoal; today: string; onChanged: () => Promise<void>; onArchived: () => Promise<void>
 }) {
+  const { goals: goalsRepository } = useDataBackend()
   const [editingGoal, setEditingGoal] = useState(false)
   const [addingStage, setAddingStage] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
@@ -281,6 +287,7 @@ function GoalDetail({ goal, today, onChanged, onArchived }: {
 }
 
 function StageRow({ stage, today, targetDate, onChanged }: { stage: GoalStage; today: string; targetDate: string | null; onChanged: () => Promise<void> }) {
+  const { goals: goalsRepository } = useDataBackend()
   const [editing, setEditing] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
   const remove = useMutation({ mutationFn: () => goalsRepository.deleteStage(stage.id), onSuccess: () => void onChanged() })
@@ -306,6 +313,7 @@ function StageForm({ goalId, stage, position, defaultStart, targetDate, onSaved,
   goalId: string; stage?: GoalStage; position: number; defaultStart: string; targetDate: string | null
   onSaved: () => Promise<void>; onCancel: () => void
 }) {
+  const { goals: goalsRepository } = useDataBackend()
   const titleCounterId = useId()
   const form = useForm<{ title: string; startsOn: string; endsOn: string }>({
     defaultValues: {

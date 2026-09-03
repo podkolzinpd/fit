@@ -123,6 +123,24 @@ export function isYandexAssistantRoutingPilotEnabled(userId: string): boolean {
   return pilotUserIds.length === 1 && pilotUserIds[0] === userId
 }
 
+// Основной интерфейс выбирает один источник данных на всю Yandex ID сессию.
+// Rollout независим от входа и ассистента и намеренно допускает только один
+// tenant/profile UUID в первой итерации. Ошибка Yandex API не переключает
+// отдельный запрос обратно на Supabase.
+export function isYandexMainRoutingPilotEnabled(userId: string): boolean {
+  if (import.meta.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true') return false
+  const pilotUserIds = String(import.meta.env.VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  return pilotUserIds.length === 1 && pilotUserIds[0] === userId
+}
+
+export function getYandexMainRoutingConfig(): YandexIdPilotConfig | null {
+  if (import.meta.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true') return null
+  return getYandexPublicConfig()
+}
+
 // Привязка существующего FIT-профиля к Yandex ID — отдельный default-off
 // rollout. Он намеренно не переиспользует read-only pilot и Apple Health
 // allowlist: UUID видны во frontend bundle и служат только для показа UI.

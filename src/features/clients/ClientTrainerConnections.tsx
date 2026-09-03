@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { invitationsRepository } from '../../data/repositories/invitations.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import type { TrainerMembership } from '../../shared/domain'
 import { useConfirm } from '../../shared/ui'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 
 export function ClientTrainerConnections({ clientId }: { clientId: string }) {
+  const { invitations: invitationsRepository } = useDataBackend()
   const queryClient = useQueryClient()
   const trainers = useQuery({ queryKey: ['client-trainers', clientId], queryFn: () => invitationsRepository.listTrainers(clientId) })
   const invitations = useQuery({ queryKey: ['client-invitations', clientId], queryFn: () => invitationsRepository.list(clientId) })

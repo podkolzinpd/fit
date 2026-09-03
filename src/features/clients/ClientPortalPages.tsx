@@ -3,10 +3,8 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useClientRealtime } from '../../app/use-client-realtime'
-import { clientsRepository } from '../../data/repositories/clients.repository'
-import { invitationsRepository } from '../../data/repositories/invitations.repository'
-import { progressRepository } from '../../data/repositories/progress.repository'
-import { splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { useDataBackend } from '../../app/data-backend-context'
+import { splitClientWorkouts } from '../../data/repositories/workouts.repository'
 import type { CustomMetric, ProgressEntry } from '../../shared/domain'
 import { ScheduleIcon } from '../../shared/icons'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
@@ -20,12 +18,14 @@ import { ClientWorkoutHistoryCalendar } from './ClientWorkoutHistoryCalendar'
 import { useWorkoutHistoryCalendar } from './use-workout-history-calendar'
 
 function useMine() {
+  const { clients: clientsRepository } = useDataBackend()
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   useClientRealtime(query.data?.id)
   return query
 }
 
 export function MyWorkoutsPage() {
+  const { invitations: invitationsRepository, workouts: workoutsRepository } = useDataBackend()
   const { actor } = useAuth()
   const mine = useMine()
   const today = todayInTimeZone(actor?.timezone)
@@ -88,6 +88,7 @@ export function MyWorkoutsPage() {
 }
 
 export function MyProgressPage() {
+  const { progress: progressRepository } = useDataBackend()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
   const mine = useMine()

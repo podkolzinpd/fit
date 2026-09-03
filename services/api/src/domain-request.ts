@@ -24,6 +24,8 @@ export interface ClientCardDraft {
 
 export interface CreateClientCardDraft extends ClientCardDraft {
   note: string | null
+  initialWeightKg?: number | null
+  initialWeightRecordedOn?: string | null
 }
 
 export interface VersionedClientCardRequest {
@@ -51,6 +53,12 @@ export interface CustomExerciseDraft {
 export interface VersionedCustomExerciseRequest {
   draft: CustomExerciseDraft
   expectedVersion: number
+}
+
+export interface ProfileDraft {
+  firstName: string | null
+  lastName: string | null
+  timezone: string
 }
 
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -147,9 +155,13 @@ export function readCreateClientCardDraft(
   const input = record(body)
   const draft = readClientFields(body)
   const note = nullableText(input?.note, 5_000)
-  return draft === undefined || note === undefined
+  const initialWeightKg = nullableMetric(input?.initialWeightKg, 0.01, 999.99)
+  const initialWeightRecordedOn = nullableDate(input?.initialWeightRecordedOn)
+  return draft === undefined || note === undefined || initialWeightKg === undefined
+    || initialWeightRecordedOn === undefined
+    || ((initialWeightKg === null) !== (initialWeightRecordedOn === null))
     ? undefined
-    : { ...draft, note }
+    : { ...draft, note, initialWeightKg, initialWeightRecordedOn }
 }
 
 export function readVersionedClientCardRequest(
@@ -213,4 +225,21 @@ export function readVersionedCustomExerciseRequest(
   return draft === undefined || version === undefined
     ? undefined
     : { draft, expectedVersion: version }
+}
+
+export function readProfileDraft(body: unknown): ProfileDraft | undefined {
+  const input = record(body)
+  if (input === undefined) return undefined
+  const firstName = nullableText(input.firstName, 120)
+  const lastName = nullableText(input.lastName, 120)
+  const timezone = requiredText(input.timezone, 1, 100)
+  if (firstName === undefined || lastName === undefined || timezone === undefined) {
+    return undefined
+  }
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format()
+  } catch {
+    return undefined
+  }
+  return { firstName, lastName, timezone }
 }

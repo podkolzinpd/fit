@@ -245,6 +245,24 @@ describe('native Yandex function contracts', () => {
     })
   })
 
+  it('uses the Yandex actor session for goal criteria suggestions', async () => {
+    const suggest = vi.fn().mockResolvedValue({ criteria: [], needsInput: [] })
+    const app = buildApp({ pilotWorkoutParser: { parse: vi.fn(), suggest }, logger: false })
+    apps.push(app)
+    const payload = { kind: 'goal_criteria', text: 'Бегать быстрее', systemCatalog: [], customMetrics: [] }
+
+    const response = await app.inject({
+      method: 'POST', url: '/v1/assistant/yandex/suggest-goal-criteria',
+      headers: { 'x-fit-session': 'a'.repeat(43) }, payload,
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ criteria: [], needsInput: [] })
+    expect(suggest).toHaveBeenCalledWith({
+      accessMode: 'read_write', token: 'a'.repeat(43),
+    }, payload)
+  })
+
   it('generates and lists a goal-aware summary through the pilot session', async () => {
     const generate = vi.fn().mockResolvedValue({
       data: { id: 'summary-id', generated_at: '2026-08-26T12:00:00.000Z' },
@@ -436,6 +454,49 @@ describe('native Yandex function contracts', () => {
       PROFILE_ID,
       payload.clientSummary,
       2,
+    )
+  })
+
+  it('unpublishes a training summary only through a read-write app session', async () => {
+    const unpublish = vi.fn().mockResolvedValue(undefined)
+    const app = buildApp({
+      pilotTrainingSummaryPublisher: { publish: vi.fn(), unpublish },
+      logger: false,
+    })
+    apps.push(app)
+
+    const readOnly = await app.inject({
+      method: 'POST', url: `/v1/training-summaries/${PROFILE_ID}/unpublish`,
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+      payload: { expectedVersion: 2 },
+    })
+    const readWrite = await app.inject({
+      method: 'POST', url: `/v1/training-summaries/${PROFILE_ID}/unpublish`,
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { expectedVersion: 2 },
+    })
+
+    expect(readOnly.statusCode).toBe(403)
+    expect(readWrite.statusCode).toBe(204)
+    expect(unpublish).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: 'a'.repeat(43) }, PROFILE_ID, 2,
+    )
+  })
+
+  it('updates the current profile only through a read-write app session', async () => {
+    const domain = buildDomainWriter()
+    const app = buildApp({ pilotDomainWriter: domain.pilotDomainWriter, logger: false })
+    apps.push(app)
+    const payload = { firstName: 'Ирина', lastName: 'Соколова', timezone: 'Europe/Moscow' }
+
+    const response = await app.inject({
+      method: 'PUT', url: '/v1/profile',
+      headers: { 'x-fit-session': 'a'.repeat(43) }, payload,
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(domain.updateProfile).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: 'a'.repeat(43) }, payload,
     )
   })
 
@@ -1088,6 +1149,7 @@ function buildConnectionsWriter(error?: Error): {
 
 function buildDomainWriter(error?: Error): {
   pilotDomainWriter: PilotDomainWriter
+  updateProfile: ReturnType<typeof vi.fn>
   createClient: ReturnType<typeof vi.fn>
   createCustomExercise: ReturnType<typeof vi.fn>
   setClientArchived: ReturnType<typeof vi.fn>
@@ -1113,6 +1175,7 @@ function buildDomainWriter(error?: Error): {
     membershipVersion: 1,
   }))
   const updateClient = vi.fn(() => result(2))
+  const updateProfile = vi.fn(() => result(undefined))
   const setClientArchived = vi.fn(() => result(3))
   const updateClientPreferences = vi.fn(() => result(2))
   const createCustomExercise = vi.fn(() => result(customExercise))
@@ -1124,6 +1187,7 @@ function buildDomainWriter(error?: Error): {
   }))
   return {
     pilotDomainWriter: {
+      updateProfile,
       createClient,
       createCustomExercise,
       setClientArchived,
@@ -1132,6 +1196,7 @@ function buildDomainWriter(error?: Error): {
       updateClientPreferences,
       updateCustomExercise,
     },
+    updateProfile,
     createClient,
     createCustomExercise,
     setClientArchived,
@@ -1946,7 +2011,7 @@ describe('read-only pilot training data endpoint', () => {
     expect(response.headers['cache-control']).toBe('no-store')
     expect(trainingData.readTrainingData).toHaveBeenCalledWith({
       accessMode: 'read_only', token: 's'.repeat(43),
-    })
+    }, { limit: 100, offset: 0 })
   })
 
   it('rejects a missing or expired pilot session', async () => {
@@ -2466,7 +2531,11 @@ describe('pilot client and custom exercise domain commands', () => {
       archived.statusCode, restored.statusCode,
     ]).toEqual([201, 200, 200, 200, 200])
     expect(created.headers['cache-control']).toBe('no-store')
-    expect(writer.createClient).toHaveBeenCalledWith(sessionToken, clientDraft)
+    expect(writer.createClient).toHaveBeenCalledWith(sessionToken, {
+      ...clientDraft,
+      initialWeightKg: null,
+      initialWeightRecordedOn: null,
+    })
     expect(writer.updateClient).toHaveBeenCalledWith(
       sessionToken, clientId, clientCardDraft, 1,
     )
@@ -2608,13 +2677,13 @@ describe('pilot planned workout commands', () => {
     expect(writer.savePlanned).toHaveBeenNthCalledWith(
       1,
       sessionToken,
-      { ...draft, id: null } satisfies PlannedWorkoutDraft,
+      { ...draft, id: null, stageId: null } satisfies PlannedWorkoutDraft,
       null,
     )
     expect(writer.savePlanned).toHaveBeenNthCalledWith(
       2,
       sessionToken,
-      { ...draft, id: WORKOUT_ID, notes: 'Обновлённый план' } satisfies PlannedWorkoutDraft,
+      { ...draft, id: WORKOUT_ID, stageId: null, notes: 'Обновлённый план' } satisfies PlannedWorkoutDraft,
       1,
     )
     expect(writer.deleteWorkout).toHaveBeenCalledWith(
@@ -2741,18 +2810,18 @@ describe('pilot completed workout lifecycle commands', () => {
     expect(writer.saveCompleted).toHaveBeenNthCalledWith(
       1,
       sessionToken,
-      { ...draft, id: null } satisfies PlannedWorkoutDraft,
+      { ...draft, id: null, stageId: null } satisfies PlannedWorkoutDraft,
       null,
     )
     expect(writer.saveCompleted).toHaveBeenNthCalledWith(
       2,
       sessionToken,
-      { ...draft, id: WORKOUT_ID } satisfies PlannedWorkoutDraft,
+      { ...draft, id: WORKOUT_ID, stageId: null } satisfies PlannedWorkoutDraft,
       2,
     )
     expect(writer.recordPlannedResult).toHaveBeenCalledWith(
       sessionToken,
-      { ...draft, id: WORKOUT_ID } satisfies PlannedWorkoutDraft,
+      { ...draft, id: WORKOUT_ID, stageId: null } satisfies PlannedWorkoutDraft,
       1,
     )
   })

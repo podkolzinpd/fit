@@ -1,10 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { clientsRepository } from '../../data/repositories/clients.repository'
-import { goalsRepository } from '../../data/repositories/goals.repository'
-import { progressRepository } from '../../data/repositories/progress.repository'
-import { createRunningFormatDrafts, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { createRunningFormatDrafts, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
 import { formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-date'
 import { isValidRpe } from '../../shared/rpe'
@@ -14,6 +11,7 @@ import { OverflowMenu, Page } from '../../shared/ui'
 import { ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { ClientPicker, type ClientPickerSelection } from '../clients'
 import { useAuth } from '../../app/auth-context'
+import { useDataBackend } from '../../app/data-backend-context'
 import { useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { useRpeDisplay } from '../../app/rpe-display'
 import { workoutTrainerComment, type ParsedWorkoutExercise } from './quick-workout-entry'
@@ -131,6 +129,7 @@ function runningFormatItems(exercise: ExerciseSnapshot, format: RunningFormat): 
 }
 
 export function TodayPage({ clientMode = false }: TodayPageProps) {
+  const { clients: clientsRepository, exercises: exercisesRepository, goals: goalsRepository, progress: progressRepository, workouts: workoutsRepository } = useDataBackend()
   const navigate = useNavigate()
   const location = useLocation()
   const queryClient = useQueryClient()
@@ -359,7 +358,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setParseError(null)
     setParsing(true)
     try {
-      const llm = await parseWorkoutWithLlm(text, catalog.exercises)
+      const llm = await parseWorkoutWithLlm(text, catalog.exercises, {
+        remoteParser: (sourceText, systemCatalog) => exercisesRepository.parseWorkout(sourceText, systemCatalog),
+      })
       if (request !== reviewRequest.current) return
       const parsedItems = parsedLlmItems(llm, catalog.exercises)
       const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: item.suggestedExerciseRefs.flatMap((ref) => catalog.exercises.find((exercise) => exercise.ref === ref) ?? []) }))
@@ -391,7 +392,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setVoiceRefinement({ state: 'loading', message: 'Разбираю диктовку по упражнениям…' })
     trackGoal('voice_workout_parse_started')
     try {
-      const llm = await parseWorkoutWithLlm(transcript, catalog.exercises)
+      const llm = await parseWorkoutWithLlm(transcript, catalog.exercises, {
+        remoteParser: (sourceText, systemCatalog) => exercisesRepository.parseWorkout(sourceText, systemCatalog),
+      })
       if (version !== voiceParseVersion.current) return
       const parsedItems = parsedLlmItems(llm, catalog.exercises)
       const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: item.suggestedExerciseRefs.flatMap((ref) => catalog.exercises.find((exercise) => exercise.ref === ref) ?? []) }))

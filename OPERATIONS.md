@@ -252,6 +252,36 @@ pilot UUID) и выполнить новый deployment; данные между
 не синхронизируются, поэтому переключение допускается только после проверки
 export/import и отсутствия незавершённых mutations.
 
+Sticky routing всего основного интерфейса имеет собственный независимый
+default-off rollout:
+
+```text
+VITE_YANDEX_MAIN_ROUTING_ENABLED=true
+VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS=<one-auth-user-uuid>
+```
+
+Флаг работает только при точном `true` и ровно одном непустом UUID в allowlist.
+Тот же UUID должен быть включён в `VITE_YANDEX_APP_SESSION_PILOT_USER_IDS`,
+иметь серверное назначение `provider=yandex`, `access_mode=read_write` и уже
+перенесённые данные. Также обязательны публичные
+`VITE_YANDEX_OAUTH_CLIENT_ID` и `VITE_YANDEX_API_BASE_URL`.
+
+После входа выбранный профиль использует Yandex API во всех основных вкладках:
+профиль, клиенты, цели, прогресс, упражнения, расписание, полный workout
+lifecycle, связи/приглашения, Assistant, сводки, feedback и push state. Выбор
+делается один раз на уровне app-session; ошибка отдельного Yandex-запроса не
+включает Supabase fallback. Старая browser Supabase-сессия завершается после
+успешного выбора Yandex backend, чтобы истечение Yandex token не переключило
+источник данных скрыто. Интерфейс и маршруты приложения остаются прежними.
+
+Пустой список, несколько UUID или выключенный флаг сохраняют Supabase для всех
+пользователей. UUID виден в публичном frontend bundle и не является границей
+авторизации: каждое чтение и изменение повторно защищается opaque session,
+actor/tenant ownership и правами БД. Изменение флага или списка требует нового
+Vercel deployment. До завершения export/import и rehearsal включать этот флаг
+нельзя. Rollback после начала mutations требует согласованного окна и проверки
+расхождений данных, а не только выключения frontend-флага.
+
 Светлая и тёмная палитры Foundation UI Identity v1 доступны всем пользователям
 и выбираются обычной настройкой темы в профиле. Отдельных Figma/dark pilot
 переменных и allowlist нет. Обновлённый поиск клиентов также является штатным

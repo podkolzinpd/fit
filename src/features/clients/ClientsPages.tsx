@@ -3,10 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { clientsRepository } from '../../data/repositories/clients.repository'
-import { goalsRepository } from '../../data/repositories/goals.repository'
-import { invitationsRepository } from '../../data/repositories/invitations.repository'
-import { bmiLabel, computeClientStats, splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { bmiLabel, computeClientStats, splitClientWorkouts } from '../../data/repositories/workouts.repository'
 import { ClientFirstRunIntro, TodayPage, WorkoutExercisesSummary, storeFirstWorkoutIntent, workoutCountLabel } from '../workouts'
 import type { Client, Gender } from '../../shared/domain'
 import { currentStage, daysToTarget, stageProgress } from '../../shared/goal-rules'
@@ -17,10 +14,12 @@ import { VoiceInputButton, VoiceNoteField, type VoiceInputPhase } from '../voice
 import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
+import { useDataBackend } from '../../app/data-backend-context'
 import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, ScheduleIcon } from '../../shared/icons'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 
 export function MyClientPage() {
+  const { clients: clientsRepository } = useDataBackend()
   const { actor, refresh } = useAuth()
   const queryClient = useQueryClient()
   const [voicePhase, setVoicePhase] = useState<VoiceInputPhase>('idle')
@@ -58,6 +57,7 @@ const clientProfileSchema = clientSchema.extend({
 })
 
 export function ClientFormPage() {
+  const { clients: clientsRepository } = useDataBackend()
   const { clientId } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
   useClientRealtime(clientId)
   const existing = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId ?? ''), enabled: Boolean(clientId) })
@@ -71,6 +71,7 @@ export function ClientFormPage() {
 }
 
 export function MyClientEditPage() {
+  const { clients: clientsRepository } = useDataBackend()
   const navigate = useNavigate(); const queryClient = useQueryClient()
   const { actor, refresh } = useAuth()
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
@@ -100,6 +101,7 @@ function ClientForm({
   onSaved: (id: string) => Promise<void>
   onCancel?: () => void
 }) {
+  const { clients: clientsRepository } = useDataBackend()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
   const form = useForm<ClientProfileValues>({ resolver: zodResolver(clientProfileSchema), defaultValues: existing ? {
@@ -167,6 +169,7 @@ function ClientForm({
 // Поэтому обе формы (цель / заметка) сохраняют через один хелпер и всегда
 // передают текущее значение соседнего поля — чтобы правка одного не затирала другое.
 function useSaveClient(client: Client, onDone: () => void) {
+  const { clients: clientsRepository } = useDataBackend()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (patch: { goal?: string; note?: string }) => {
@@ -194,6 +197,7 @@ function targetHint(days: number): string {
 }
 
 function ClientGoalBlock({ client }: { client: Client }) {
+  const { goals: goalsRepository } = useDataBackend()
   const { actor } = useAuth()
   const goalQuery = useQuery({ queryKey: ['client-goal', client.id], queryFn: () => goalsRepository.get(client.id) })
   const [editingText, setEditingText] = useState(false)
@@ -258,6 +262,11 @@ function ClientNoteBlock({ client }: { client: Client }) {
 }
 
 export function ClientDetailPage() {
+  const {
+    clients: clientsRepository,
+    invitations: invitationsRepository,
+    workouts: workoutsRepository,
+  } = useDataBackend()
   const { clientId = '' } = useParams(); const queryClient = useQueryClient()
   const { actor } = useAuth(); const navigate = useNavigate()
   const today = todayInTimeZone(actor?.timezone)

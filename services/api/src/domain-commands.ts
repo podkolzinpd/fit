@@ -7,6 +7,7 @@ import type {
   CustomExerciseDraft,
   InputKind,
   MuscleGroup,
+  ProfileDraft,
 } from './domain-request.js'
 
 interface ClientCreatedRow extends QueryResultRow {
@@ -104,6 +105,22 @@ export function createClientCard(
     )
     const created = rows[0]
     if (created === undefined) throw new Error('Client command returned no result')
+    if (draft.initialWeightKg != null && draft.initialWeightRecordedOn != null) {
+      await client.query(
+        'select * from public.save_client_progress($1::jsonb, null)',
+        [JSON.stringify({
+          id: null,
+          clientId: created.client_id,
+          recordedOn: draft.initialWeightRecordedOn,
+          weightKg: draft.initialWeightKg,
+          chestCm: null,
+          waistCm: null,
+          hipCm: null,
+          notes: null,
+          customMetrics: [],
+        })],
+      )
+    }
     return {
       id: created.client_id,
       version: safeVersion(created.version),
@@ -223,4 +240,17 @@ export function setCustomExerciseArchived(
      from public.set_custom_exercise_archived($1, $2, $3)`,
     [exerciseId, archived, expectedVersion],
   )
+}
+
+export async function updateOwnProfile(
+  client: DatabaseClient,
+  draft: ProfileDraft,
+): Promise<void> {
+  const rows = await runCommand(() => client.query<VersionRow>(`
+    update public.profiles
+    set first_name = $1, last_name = $2, timezone = $3
+    where id = auth.uid()
+    returning 1::bigint version
+  `, [draft.firstName, draft.lastName, draft.timezone]))
+  if (rows[0] === undefined) throw new PilotDomainCommandError('not_found')
 }

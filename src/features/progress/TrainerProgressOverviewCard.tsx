@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../app/auth-context'
-import { progressRepository } from '../../data/repositories/progress.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import type { WorkoutRegularity } from '../../shared/domain'
 import { AsyncView, Coachmark } from '../../shared/ui'
 
@@ -44,6 +44,7 @@ export function TrainerProgressOverviewContent({ week }: { week?: WorkoutRegular
 }
 
 export function TrainerProgressOverviewCard({ clientId }: { clientId: string }) {
+  const { progress: progressRepository } = useDataBackend()
   const { actor } = useAuth()
   const regularity = useQuery({
     queryKey: ['workout-regularity', clientId],

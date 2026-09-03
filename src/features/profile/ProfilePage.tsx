@@ -2,10 +2,10 @@ import { useMutation } from '@tanstack/react-query'
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
+import { useOptionalYandexAppSession } from '../../app/yandex-app-session-context'
 import { setExercisePlanRestDisplay, useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { setRpeDisplay, useRpeDisplay } from '../../app/rpe-display'
 import { setAppTheme, useAppTheme } from '../../app/theme'
-import { authRepository } from '../../data/repositories/auth.repository'
 import { Field, Page, SaveStatus, Switch } from '../../shared/ui'
 import { YandexAccountLinkingCard } from '../auth'
 import { AppFeedbackForm } from './AppFeedbackForm'
@@ -13,7 +13,8 @@ import { AppInstallPanel } from '../install'
 import { BodyMapAppearanceSetting } from '../progress/BodyMapAppearanceSetting'
 
 export function ProfilePage() {
-  const { actor, refresh } = useAuth(); const navigate = useNavigate(); const [saved, setSaved] = useState(false)
+  const { actor, refresh, signOut, updateProfile } = useAuth(); const navigate = useNavigate(); const [saved, setSaved] = useState(false)
+  const yandexSession = useOptionalYandexAppSession()?.session ?? null
   const theme = useAppTheme()
   const showRpe = useRpeDisplay(actor?.userId)
   const showExerciseRest = useExercisePlanRestDisplay(actor?.userId)
@@ -24,9 +25,9 @@ export function ProfilePage() {
   const update = useMutation({ mutationFn: async (form: HTMLFormElement) => {
     if (!actor || actor.kind !== 'trainer') throw new Error('Профиль тренера недоступен')
     const data = new FormData(form)
-    await authRepository.updateProfile({ ...actor, firstName: String(data.get('firstName') || '') || null, lastName: String(data.get('lastName') || '') || null, timezone: String(data.get('timezone')) })
+    await updateProfile({ firstName: String(data.get('firstName') || '') || null, lastName: String(data.get('lastName') || '') || null, timezone: String(data.get('timezone')) })
   }, onSuccess: async () => { setSaved(true); await refresh() } })
-  async function logout() { await authRepository.signOut(); navigate('/auth') }
+  async function logout() { await signOut(); navigate('/auth') }
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setSaved(false); update.mutate(event.currentTarget) }
   // Отмена сбрасывает несохранённые правки к текущим значениям профиля.
   function cancel() { formRef.current?.reset(); setSaved(false) }
@@ -57,7 +58,7 @@ export function ProfilePage() {
         <Switch label="Показывать архив клиентов" checked={showArchived} onChange={toggleShowArchived} />
       </>}
     </section>
-    {actor && <YandexAccountLinkingCard actor={actor} />}
+    {actor && yandexSession === null && <YandexAccountLinkingCard actor={actor} />}
     {actor?.role === 'trainer' && <BodyMapAppearanceSetting viewerUserId={actor.userId} role={actor.role} gender={null} />}
     <div className="menu"><Link to="/join">Ввести код приглашения</Link>{actor?.role === 'trainer' && <Link to="/exercises">Управление упражнениями</Link>}<button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button></div>
     {installOpen && <AppInstallPanel onClose={() => setInstallOpen(false)} />}

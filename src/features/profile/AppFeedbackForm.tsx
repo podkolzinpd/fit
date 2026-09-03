@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { appFeedbackRepository, type AppFeedbackKind } from '../../data/repositories/app-feedback.repository'
+import type { AppFeedbackKind } from '../../data/repositories/app-feedback.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { SaveStatus } from '../../shared/ui'
 
 export function AppFeedbackForm({ onClose }: { onClose: () => void }) {
+  const { appFeedback: appFeedbackRepository } = useDataBackend()
   const [kind, setKind] = useState<AppFeedbackKind>('suggestion')
   const [message, setMessage] = useState('')
   const [validationError, setValidationError] = useState<string | null>(null)

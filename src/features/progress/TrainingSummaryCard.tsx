@@ -2,17 +2,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
-import { goalsRepository } from '../../data/repositories/goals.repository'
-import { progressRepository } from '../../data/repositories/progress.repository'
-import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
-import { workoutsRepository } from '../../data/repositories/workouts.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import type {
   ClientGoal,
   ClientTrainingSummary,
   CustomMetric,
   Gender,
+  ProgressEntry,
   PublishedTrainingSummary,
   TrainingSummary,
+  Workout,
 } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
 import { addDays, daysBetween, todayInTimeZone, type LocalDate } from '../../shared/local-date'
@@ -73,6 +72,7 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
   gender?: Gender | null
 }) {
   const { actor } = useAuth()
+  const { goals: goalsRepository, progress: progressRepository, trainingSummaries: trainingSummariesRepository, workouts: workoutsRepository } = useDataBackend()
   const today = todayInTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState<SummaryPeriod>('1m')
@@ -218,10 +218,10 @@ function TrainerSummaryContent({ summary, clientId, gender, today, goal, profile
   goalLoading: boolean
   goalError: Error | null
   onGoalRetry: () => void
-  currentWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  previousWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  upcomingWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  measurements: Awaited<ReturnType<typeof progressRepository.list>>
+  currentWorkouts?: Workout[]
+  previousWorkouts?: Workout[]
+  upcomingWorkouts?: Workout[]
+  measurements: ProgressEntry[]
   customMetrics: CustomMetric[]
   measurementsLoading: boolean
   measurementsError: Error | null
@@ -325,10 +325,10 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
   goalLoading: boolean
   goalError: Error | null
   onGoalRetry: () => void
-  currentWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  previousWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  upcomingWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  measurements: Awaited<ReturnType<typeof progressRepository.list>>
+  currentWorkouts?: Workout[]
+  previousWorkouts?: Workout[]
+  upcomingWorkouts?: Workout[]
+  measurements: ProgressEntry[]
   customMetrics: CustomMetric[]
   measurementsLoading: boolean
   measurementsError: Error | null
@@ -338,6 +338,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
   workoutsError: Error | null
   onWorkoutsRetry: () => void
 }) {
+  const { workouts: workoutsRepository } = useDataBackend()
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [goalCriteriaOpen, setGoalCriteriaOpen] = useState(false)
   const personalRecordWorkout = [...(currentWorkouts ?? [])]
@@ -609,6 +610,7 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
   clientId: string
   onChanged: () => Promise<unknown>
 }) {
+  const { trainingSummaries: trainingSummariesRepository } = useDataBackend()
   const [saved, setSaved] = useState(false)
   const publish = useMutation({
     mutationFn: (copy: ClientTrainingSummary) =>
@@ -671,6 +673,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   measurementManagement?: ReactNode
 }) {
   const { actor } = useAuth()
+  const { goals: goalsRepository, progress: progressRepository, trainingSummaries: trainingSummariesRepository, workouts: workoutsRepository } = useDataBackend()
   const today = todayInTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState<SummaryPeriod>('1m')
@@ -817,10 +820,10 @@ function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalL
   goalLoading: boolean
   goalError: Error | null
   onGoalRetry: () => void
-  currentWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  previousWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  upcomingWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  measurements: Awaited<ReturnType<typeof progressRepository.list>>
+  currentWorkouts?: Workout[]
+  previousWorkouts?: Workout[]
+  upcomingWorkouts?: Workout[]
+  measurements: ProgressEntry[]
   customMetrics: CustomMetric[]
   measurementsLoading: boolean
   measurementsError: Error | null

@@ -37,6 +37,19 @@ export const yandexPilotQueries = {
       cache: 'no-store',
       headers: { 'x-fit-session': sessionToken },
     }),
+  updateProfile: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    input: { firstName: string | null; lastName: string | null; timezone: string },
+  ) => fetch(`${apiBaseUrl}/v1/profile`, {
+    method: 'PUT',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'x-fit-session': sessionToken,
+    },
+    body: JSON.stringify(input),
+  }),
   linkYandexAccount: (
     apiBaseUrl: string,
     supabaseAccessToken: string,
@@ -63,7 +76,10 @@ export const yandexPilotQueries = {
     apiBaseUrl: string,
     sessionToken: string,
     accessMode: YandexApiAccessMode = 'read_only',
-  ) => fetch(`${apiBaseUrl}/v1/training-data`, {
+    page?: { limit: number; offset: number },
+  ) => fetch(`${apiBaseUrl}/v1/training-data${page === undefined
+    ? ''
+    : `?limit=${page.limit}&offset=${page.offset}`}`, {
     cache: 'no-store',
     headers: sessionHeaders(sessionToken, accessMode),
   }),
