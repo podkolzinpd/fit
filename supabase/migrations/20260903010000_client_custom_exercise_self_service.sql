@@ -24,42 +24,12 @@ alter table public.custom_exercises
   add constraint custom_exercises_partition_owner_fk
     foreign key (trainer_id) references public.profiles(id) on delete restrict;
 
-create or replace function private.set_custom_exercise_author()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  new.created_by := coalesce(new.created_by, auth.uid(), new.trainer_id);
-  return new;
-end;
-$$;
-
-create trigger custom_exercises_set_author
-before insert on public.custom_exercises
-for each row execute function private.set_custom_exercise_author();
-
-create or replace function private.keep_custom_exercise_ownership()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  if new.trainer_id is distinct from old.trainer_id
-    or new.created_by is distinct from old.created_by then
-    raise exception using
-      errcode = '42501',
-      message = 'custom_exercise_ownership_immutable';
-  end if;
-  return new;
-end;
-$$;
-
-create trigger custom_exercises_keep_ownership
-before update on public.custom_exercises
-for each row execute function private.keep_custom_exercise_ownership();
+-- Автор назначается default auth.uid(), а RLS проверяет его при INSERT.
+-- После создания клиентский Data API меняет только содержимое, но не автора,
+-- раздел или ID. Привилегии колонок обеспечивают это без auth/business trigger.
+revoke update on public.custom_exercises from authenticated;
+grant update (name, muscle_group, input_kind, archived_at, version)
+  on public.custom_exercises to authenticated;
 
 drop index custom_exercises_active_name_uidx;
 create unique index custom_exercises_active_author_name_uidx

@@ -107,14 +107,14 @@ select throws_ok(
   $$update public.custom_exercises
     set trainer_id = 'a5000000-0000-4000-8000-000000000005'
     where id = 'a2300000-0000-4000-8000-000000000023'$$,
-  '42501', 'custom_exercise_ownership_immutable',
+  '42501', null,
   'client cannot move an existing exercise to another partition'
 );
 select throws_ok(
   $$update public.custom_exercises
     set created_by = 'a3000000-0000-4000-8000-000000000003'
     where id = 'a2300000-0000-4000-8000-000000000023'$$,
-  '42501', 'custom_exercise_ownership_immutable',
+  '42501', null,
   'client cannot transfer authorship of an existing exercise'
 );
 reset role;
