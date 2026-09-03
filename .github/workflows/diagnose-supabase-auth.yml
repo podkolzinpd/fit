@@ -5,11 +5,15 @@ on:
     inputs:
       start_utc:
         description: Start of the diagnostic window in ISO-8601 UTC
-        required: true
+        required: false
         type: string
       end_utc:
         description: End of the diagnostic window in ISO-8601 UTC, at most 60 minutes later
-        required: true
+        required: false
+        type: string
+      client_email_sha256:
+        description: Optional SHA-256 of normalized client email; inspect trainer links instead of auth logs (read-only)
+        required: false
         type: string
 
 permissions:
@@ -21,9 +25,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Query sanitized auth aggregates
+        if: ${{ inputs.client_email_sha256 == '' }}
         run: node scripts/query-supabase-auth-logs.mjs "$START_UTC" "$END_UTC"
         env:
           START_UTC: ${{ inputs.start_utc }}
           END_UTC: ${{ inputs.end_utc }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      - name: Inspect client trainer connections (read-only)
+        if: ${{ inputs.client_email_sha256 != '' }}
+        run: node scripts/query-supabase-client-trainers.mjs "$CLIENT_EMAIL_SHA256"
+        env:
+          CLIENT_EMAIL_SHA256: ${{ inputs.client_email_sha256 }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
