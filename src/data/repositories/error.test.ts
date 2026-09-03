@@ -60,8 +60,11 @@ describe('repositoryError', () => {
     expect(error.message).toBe('Сначала отключите текущего тренера в профиле. Ваши тренировки и результаты сохранятся.')
   })
 
-  it('explains a legacy client migration conflict without exposing internals', () => {
-    const error = repositoryError({ code: 'PT409', message: 'client_requires_safe_migration' })
+  it.each([
+    { code: 'PT409', message: 'client_requires_safe_migration' },
+    { code: 'PT422', message: 'root_trainer_cannot_be_removed' },
+  ])('explains a legacy client migration conflict without exposing internals ($message)', (input) => {
+    const error = repositoryError(input)
 
     expect(error.code).toBe('client_requires_safe_migration')
     expect(error.message).toBe('Сейчас отключить тренера безопасно не получилось. Ваши данные не изменены. Попробуйте позже или напишите в поддержку.')
