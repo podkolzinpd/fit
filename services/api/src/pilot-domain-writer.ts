@@ -6,6 +6,7 @@ import {
   updateClientCard,
   updateClientPreferences,
   updateCustomExercise,
+  updateOwnProfile,
   type CreatedPilotClient,
   type PilotCustomExerciseMutation,
 } from './domain-commands.js'
@@ -13,6 +14,7 @@ import type {
   ClientCardDraft,
   CreateClientCardDraft,
   CustomExerciseDraft,
+  ProfileDraft,
 } from './domain-request.js'
 import type { DatabasePool } from './db/types.js'
 import {
@@ -21,6 +23,10 @@ import {
 } from './yandex-actor-session.js'
 
 export interface PilotDomainWriter {
+  updateProfile(
+    session: YandexActorSessionInput,
+    draft: ProfileDraft,
+  ): Promise<void>
   createClient(
     session: YandexActorSessionInput,
     draft: CreateClientCardDraft,
@@ -70,6 +76,10 @@ export class DatabasePilotDomainWriter implements PilotDomainWriter {
     work: Parameters<typeof withYandexActorSession<Result>>[2],
   ): Promise<Result> {
     return withYandexActorSession(this.pool, session, work)
+  }
+
+  updateProfile(session: YandexActorSessionInput, draft: ProfileDraft) {
+    return this.withSession(session, (client) => updateOwnProfile(client, draft))
   }
 
   createClient(session: YandexActorSessionInput, draft: CreateClientCardDraft) {

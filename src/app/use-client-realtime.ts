@@ -1,10 +1,10 @@
 import { type QueryClient, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import {
-  realtimeRepository,
   type ClientRealtimeChange,
   type ClientRealtimeTable,
 } from '../data/repositories/realtime.repository'
+import { useDataBackend } from './data-backend-context'
 
 const REALTIME_DEBOUNCE_MS = 120
 
@@ -127,6 +127,7 @@ export async function refetchClientSpace(queryClient: QueryClient, clientId: str
 }
 
 export function useClientRealtime(clientId: string | undefined) {
+  const { realtime: realtimeRepository } = useDataBackend()
   const queryClient = useQueryClient()
   useEffect(() => {
     if (!clientId) return

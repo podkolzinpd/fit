@@ -43,6 +43,12 @@ vi.mock('../../data/repositories/auth.repository', () => ({ authRepository }))
 const yandexPilotRepository = vi.hoisted(() => ({ linkYandexAccount: vi.fn() }))
 vi.mock('../../data/repositories/yandex-pilot.repository', () => ({ yandexPilotRepository }))
 
+const establishYandexSession = vi.hoisted(() => vi.fn())
+vi.mock('../../app/yandex-app-session-context', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../app/yandex-app-session-context')>(),
+  useYandexAppSession: () => ({ establish: establishYandexSession }),
+}))
+
 async function linkingCallbackSearch(): Promise<string> {
   const authorizationUrl = new URL(await createYandexAuthorizationUrl(
     'public-client-id',
@@ -58,6 +64,7 @@ describe('Yandex account linking callback', () => {
     useAuth.mockReset()
     authRepository.getSession.mockReset()
     yandexPilotRepository.linkYandexAccount.mockReset()
+    establishYandexSession.mockReset()
     useAuth.mockReturnValue({ actor, loading: false, error: null, refresh: vi.fn() })
     authRepository.getSession.mockResolvedValue({
       data: { session: { access_token: 'supabase-access-token' } },
@@ -100,6 +107,30 @@ describe('Yandex account linking callback', () => {
       expect.stringMatching(/^[A-Za-z0-9_-]{43,128}$/),
     ))
     expect(yandexPilotRepository.linkYandexAccount).toHaveBeenCalledTimes(1)
+    expect(establishYandexSession).not.toHaveBeenCalled()
+  })
+
+  it('starts the issued Yandex app session immediately after a safe link', async () => {
+    const linkedSession = {
+      accessMode: 'read_write' as const,
+      profile: {
+        id: actor.userId, firstName: 'Ирина', lastName: null,
+        timezone: 'Europe/Moscow', accountRole: 'trainer' as const,
+      },
+      session: { token: 'a'.repeat(43), expiresAt: '2099-01-01T00:00:00.000Z' },
+    }
+    yandexPilotRepository.linkYandexAccount.mockResolvedValue({
+      profileId: linkedSession.profile.id,
+      appSession: linkedSession,
+    })
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', linkedSession.profile.id)
+    window.history.replaceState(null, '', `/auth/yandex/callback${await linkingCallbackSearch()}`)
+
+    render(<MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>)
+
+    expect(await screen.findByRole('heading', { name: 'Yandex ID привязан' })).toBeVisible()
+    expect(establishYandexSession).toHaveBeenCalledWith(linkedSession)
   })
 
   it('does not link when the current user is outside the rollout allowlist', async () => {

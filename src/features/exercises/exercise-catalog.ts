@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../app/auth-context'
-import { exercisesRepository } from '../../data/repositories/exercises.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import type { ExerciseSnapshot, InputKind, MuscleGroup, SessionActor } from '../../shared/domain'
 
 export interface ExerciseCatalogState {
@@ -18,6 +18,7 @@ export function customExercisePartitionOwner(actor: SessionActor): string {
 }
 
 export function useExerciseCatalog(): ExerciseCatalogState {
+  const { exercises: exercisesRepository } = useDataBackend()
   const { actor } = useAuth()
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['exercises'], queryFn: () => exercisesRepository.list() })

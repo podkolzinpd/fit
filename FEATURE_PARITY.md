@@ -4,7 +4,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 
 | Область | Обязательный результат V2 | Статус |
 |---|---|---|
-| Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset; постоянные роли trainer/client | Implemented; role-aware registration/session routing ready, production Google smoke passed, reset SMTP pending |
+| Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset; постоянные роли trainer/client | Implemented; role-aware registration/session routing ready, production Google smoke passed, reset SMTP pending. Default-off Yandex app-session and safe linking can select one rehearsed tenant without hidden Supabase fallback; production rollout remains disabled |
 | Client account | Клиент входит в тот же frontend, создаёт собственную карточку или видит ранее связанную; тренеры подключаются одноразовым кодом; несколько тренеров получают membership-доступ | Implemented auth, standalone card onboarding, invitations and author-scoped data: client sees all assignments and creates own workouts; each trainer sees only own workouts; progress is shared read-only across trainers with owner/author mutation rights |
 | Profile | Просмотр и изменение имени, корректный Cancel, выбор темы | Implemented: edit/logout ready; Cancel всегда возвращает клиента в профиль без сохранения черновика, covered iPhone WebKit 390 px; переключатель «Тёмная тема» отдаёт allowlisted-аккаунтам пилотную палитру из Figma, остальным — прежнюю тёмную |
 | Clients | List/empty/error/retry, create, detail, edit, archive/restore | Implemented; aggregate list uses one tenant-scoped RPC; core E2E + RLS ready; allowlisted-аккаунтам поиск отдаётся полем Fit с иконкой и сбросом и показывается от шести клиентов, остальным — прежним полем, covered component test |
@@ -19,7 +19,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Trainer response | После завершения клиент видит реакцию 👍 / 🔥 / 💪 и короткий ответ ответственного тренера | Implemented: trainer-author для назначения, root trainer для client-authored workout, автор/время, idempotent versioned RPC, realtime/refetch и RLS matrix |
 | Trainer attention | Клиент явно задаёт вопрос по завершённой тренировке, а основной тренер видит одну приоритетную задачу на клиента | Implemented: question → discomfort → planning priority, reply/explicit resolution, two-week planning snooze, realtime, RLS/SQL and mobile WebKit acceptance |
 | Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; Trainer first shows current week and the shared AI card, with running and measurements on explicit subroutes; Client starts with an interactive front/back body map of confirmed progress and performed-set load; duplicate-date create opens the existing entry without a failing DB request; visual regression covers Client 390/430 and Trainer 390/430/1440 px |
-| Assistant | Trainer-only history, idempotent turns, proposed actions and explicit confirmation | Implemented in production Supabase; default-off sticky routing can pin one migrated trainer to Yandex API for the same main UI, including conversations/messages/actions, custom exercises, workout parsing and training summaries. Every dependency uses one read-write app session; errors do not fall back per request. Production enablement and tenant data rehearsal remain pending |
+| Assistant | Trainer-only history, idempotent turns, proposed actions and explicit confirmation | Implemented in production Supabase; default-off sticky routing can pin one migrated trainer to Yandex API for the unchanged main UI. The same app-session now selects Yandex for all main feature repositories, including Assistant dependencies; errors do not fall back per request. Production enablement and tenant data rehearsal remain pending |
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |
 
@@ -76,8 +76,10 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
   state в `000026` поддерживает native turn endpoint через opaque Yandex session:
   capabilities, idempotent replay, conflict при повторе turnId с другим текстом
   и proposed workout draft с persistent action id. Отдельный default-off sticky
-  route может подключить основной Assistant одного перенесённого trainer-а ко
-  всем необходимым Yandex API без смешивания backend внутри сценария. Пока
+  route может подключить весь основной интерфейс одного перенесённого trainer-а
+  к Yandex API без смешивания backend внутри сессии: клиенты, профиль, цели и
+  прогресс, упражнения, полный workout lifecycle, связи/приглашения, Assistant,
+  сводки, feedback и push state используют одну app-session. Пока
   rollout-переменные не включены, production продолжает использовать Supabase.
 - Client overview в stage возвращает последний вес, количество завершённых
   тренировок, процент выполнения, дату последней тренировки, дни в работе

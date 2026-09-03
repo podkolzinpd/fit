@@ -1195,6 +1195,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         attention: [],
         attentionPreferences: [],
         hasMoreWorkouts: false,
+        totalWorkouts: 0,
       })
     })
 
@@ -1500,6 +1501,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             inputKind: 'strength',
             archivedAt: null,
             version: 1,
+            createdBy: STAGE_SMOKE_PROFILE_ID,
           },
         ],
         workouts: [
@@ -1529,6 +1531,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             startedAt: '2026-08-22T07:00:00.000Z',
             completedAt: '2026-08-22T08:00:00.000Z',
             version: 1,
+            stageId: null,
+            stageTitle: null,
+            hasPr: true,
             exercises: [
               {
                 id: smokeIds.strengthExerciseId,
@@ -1623,6 +1628,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           snoozedUntil: null,
         }],
         hasMoreWorkouts: false,
+        totalWorkouts: 1,
       })
 
       const clientSmokeData = await reader.readTrainingData(

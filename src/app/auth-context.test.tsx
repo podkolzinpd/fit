@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider, useAuth } from './auth-context'
 
 interface TestUser {
@@ -18,6 +18,30 @@ const auth = vi.hoisted(() => ({
     data: { subscription: { unsubscribe: () => void } }
   }>(),
   unsubscribe: vi.fn(),
+  signOut: vi.fn(),
+  updateProfile: vi.fn(),
+}))
+
+const yandex = vi.hoisted(() => ({ state: null as null | {
+  session: {
+    profile: {
+      id: string
+      firstName: string | null
+      lastName: string | null
+      timezone: string
+      accountRole: 'trainer'
+    }
+    session: { token: string; expiresAt: string }
+    accessMode: 'read_write'
+  }
+  loading: boolean
+  error: string | null
+  retry: ReturnType<typeof vi.fn>
+  signOut: ReturnType<typeof vi.fn>
+} }))
+
+vi.mock('./yandex-app-session-context', () => ({
+  useOptionalYandexAppSession: () => yandex.state,
 }))
 
 vi.mock('../data/repositories/auth.repository', () => ({
@@ -25,6 +49,8 @@ vi.mock('../data/repositories/auth.repository', () => ({
     getSession: auth.getSession,
     initialize: auth.initialize,
     onAuthStateChange: auth.onAuthStateChange,
+    signOut: auth.signOut,
+    updateProfile: auth.updateProfile,
   },
 }))
 
@@ -43,6 +69,11 @@ function RefreshProbe() {
   return <><p>{state.actor?.firstName ?? 'anonymous'}</p><button onClick={() => void state.refresh()}>Обновить</button></>
 }
 
+function YandexProbe() {
+  const state = useAuth()
+  return <><p>{state.loading ? 'loading' : state.actor?.userId ?? state.error ?? 'anonymous'}</p><button onClick={() => void state.refresh()}>Обновить</button><button onClick={() => void state.signOut()}>Выйти</button></>
+}
+
 function authCallback(): TestAuthCallback {
   const callback = auth.onAuthStateChange.mock.calls[0]?.[0]
   if (!callback) throw new Error('Auth callback was not registered')
@@ -59,11 +90,16 @@ function renderAuth(children: React.ReactNode) {
 
 describe('AuthProvider', () => {
   beforeEach(() => {
+    yandex.state = null
     auth.getSession.mockReset()
     auth.initialize.mockReset().mockResolvedValue(actor)
     auth.unsubscribe.mockReset()
+    auth.signOut.mockReset().mockResolvedValue(undefined)
+    auth.updateProfile.mockReset().mockResolvedValue(undefined)
     auth.onAuthStateChange.mockReset().mockReturnValue({ data: { subscription: { unsubscribe: auth.unsubscribe } } })
   })
+
+  afterEach(() => vi.unstubAllEnvs())
 
   it('initializes directly from the auth event without requesting the session again', async () => {
     renderAuth(<AuthProbe />)
@@ -75,6 +111,33 @@ describe('AuthProvider', () => {
     expect(auth.getSession).not.toHaveBeenCalled()
     expect(auth.initialize).toHaveBeenCalledOnce()
     expect(auth.initialize).toHaveBeenCalledWith(user)
+  })
+
+  it('uses one allowlisted Yandex session for the app actor and its session actions', async () => {
+    const retry = vi.fn().mockResolvedValue(undefined)
+    const signOut = vi.fn().mockResolvedValue(undefined)
+    yandex.state = {
+      session: {
+        accessMode: 'read_write',
+        profile: { id: 'trainer-1', firstName: 'Яна', lastName: null, timezone: 'Europe/Moscow', accountRole: 'trainer' },
+        session: { token: 'a'.repeat(43), expiresAt: '2099-01-01T00:00:00.000Z' },
+      },
+      loading: false,
+      error: null,
+      retry,
+      signOut,
+    } as typeof yandex.state
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', 'trainer-1')
+
+    renderAuth(<YandexProbe />)
+
+    expect(await screen.findByText('trainer-1')).toBeVisible()
+    screen.getByRole('button', { name: 'Обновить' }).click()
+    await waitFor(() => expect(retry).toHaveBeenCalledOnce())
+    screen.getByRole('button', { name: 'Выйти' }).click()
+    await waitFor(() => expect(signOut).toHaveBeenCalledOnce())
+    expect(auth.signOut).toHaveBeenCalled()
   })
 
   it('reuses the initialized actor for repeated events from the same session', async () => {

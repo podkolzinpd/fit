@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, type FormEvent, type MouseEvent } from 'react'
-import { exercisesRepository, type CustomExercise } from '../../data/repositories/exercises.repository'
+import type { CustomExercise } from '../../data/repositories/exercises.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import { useAuth } from '../../app/auth-context'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
 import { ChevronRightIcon, CloseIcon, PlayIcon, SearchIcon } from '../../shared/icons'
@@ -26,6 +27,7 @@ const LEVEL_LABELS: Record<string, string> = {
 }
 
 function useCustomExercises() {
+  const { exercises: exercisesRepository } = useDataBackend()
   const { actor } = useAuth()
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<CustomExercise | null>(null)
@@ -57,6 +59,7 @@ function useCustomExercises() {
 }
 
 export function ExercisesPage() {
+  const { exercises: exercisesRepository } = useDataBackend()
   const { actor } = useAuth()
   const { archive, editing, query, save, setEditing, submit } = useCustomExercises()
   const [search, setSearch] = useState('')
