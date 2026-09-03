@@ -32,6 +32,13 @@ describe('repositoryError', () => {
     expect(error.message).toBe('Показатель с таким названием уже существует.')
   })
 
+  it('explains a duplicate custom exercise without exposing database details', () => {
+    const error = repositoryError({ code: '23505', message: 'duplicate key value violates unique constraint "custom_exercises_active_author_name_uidx"' })
+
+    expect(error.code).toBe('custom_exercise_exists')
+    expect(error.message).toBe('Упражнение с таким названием уже существует.')
+  })
+
   it('explains an invalid invitation without exposing database details', () => {
     const error = repositoryError({ code: 'PT404', message: 'invitation_invalid' })
 

@@ -6,12 +6,12 @@ import { validateGoalCriteriaSuggestion, type GoalCriteriaSuggestionResult } fro
 
 export type { WorkoutParseResponse } from '../queries/exercises.queries'
 
-export interface CustomExercise extends ExerciseSnapshot { id: string; archivedAt: string | null; version: number }
+export interface CustomExercise extends ExerciseSnapshot { id: string; createdBy: string; archivedAt: string | null; version: number }
 
-function map(row: { id: string; name: string; muscle_group: string; input_kind: string; archived_at: string | null; version: number }): CustomExercise {
+function map(row: { id: string; name: string; muscle_group: string; input_kind: string; created_by: string; archived_at: string | null; version: number }): CustomExercise {
   return { id: row.id, source: 'custom', ref: row.id, customExerciseId: row.id, name: row.name,
     muscleGroup: row.muscle_group as MuscleGroup, inputKind: row.input_kind as InputKind,
-    archivedAt: row.archived_at, version: row.version }
+    createdBy: row.created_by, archivedAt: row.archived_at, version: row.version }
 }
 
 export const exercisesRepository = {
@@ -31,8 +31,8 @@ export const exercisesRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data.map(map)
   },
-  async create(trainerId: string, value: { name: string; muscleGroup: MuscleGroup; inputKind: InputKind }) {
-    const result = await exerciseQueries.create(trainerId, { name: value.name, muscle_group: value.muscleGroup, input_kind: value.inputKind })
+  async create(partitionOwnerId: string, value: { name: string; muscleGroup: MuscleGroup; inputKind: InputKind }) {
+    const result = await exerciseQueries.create(partitionOwnerId, { name: value.name, muscle_group: value.muscleGroup, input_kind: value.inputKind })
     if (result.error) throw repositoryError(result.error)
     return map(result.data)
   },
