@@ -8,6 +8,8 @@ import type { ExerciseCatalogState } from './exercise-catalog'
 import { matchesExerciseSearch, rankExerciseSearch, type ExerciseSearchOptions } from './exercise-search'
 import { readRecentKeys, recordRecent, resolveRecent } from './recent-exercises'
 import { selectableExercises } from './selectable-exercises'
+import { exerciseCatalogRoot, exerciseCatalogSection, groupCatalogResults, isCatalogRoot, type CatalogSection } from '../../shared/exercise-catalog-curation'
+import { CatalogSectionField, CatalogVariantField } from './CatalogControls'
 
 export function filterExercises(
   exercises: readonly ExerciseSnapshot[],
@@ -131,6 +133,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const [muscle, setMuscle] = useState<string | null>(null)
   const [equipment, setEquipment] = useState<string | null>(null)
   const [search, setSearch] = useState(initialSearch)
+  const [section, setSection] = useState<CatalogSection>('core')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -151,10 +154,11 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     [clientRecent],
   )
   const filtered = useMemo(
-    () => filterExercises(selectableCatalog, category, search, muscle, equipment, { preferredExerciseRefs: preferredSearchRefs, customFirst: true })
+    () => groupCatalogResults(filterExercises(selectableCatalog, category, search, muscle, equipment, { preferredExerciseRefs: preferredSearchRefs, customFirst: true })
       .filter((exercise) => matchesPickerMode(exercise, activeMode))
-      .filter((exercise) => !customOnly || exercise.source === 'custom'),
-    [activeMode, selectableCatalog, category, search, muscle, equipment, customOnly, preferredSearchRefs],
+      .filter((exercise) => !customOnly || exercise.source === 'custom')
+      .filter((exercise) => search.trim() || (isCatalogRoot(exercise) && (customOnly || exerciseCatalogSection(exercise) === section)))),
+    [activeMode, selectableCatalog, category, search, muscle, equipment, customOnly, preferredSearchRefs, section],
   )
   // Детальные мышцы выбранной группы (2-й уровень). Показываем, если их >1.
   const muscles = useMemo(
@@ -174,21 +178,23 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   )
   const showRunningFormats = activeMode === 'running' && !search.trim() && !hasFilters
   const promotedClient = useMemo(
-    () => (!hasFilters && !search.trim() ? selectableExercises(clientRecent).filter((exercise) => matchesPickerMode(exercise, activeMode)) : []),
-    [activeMode, clientRecent, hasFilters, search],
+    () => (!hasFilters && !search.trim() ? groupCatalogResults(selectableExercises(clientRecent)
+      .map((exercise) => selectableCatalog.find((current) => exerciseKey(current) === exerciseKey(exercise)) ?? exercise)
+      .filter((exercise) => matchesPickerMode(exercise, activeMode) && exerciseCatalogSection(exercise) === section)) : []),
+    [activeMode, clientRecent, hasFilters, search, selectableCatalog, section],
   )
   const recent = useMemo(() => {
     if (hasFilters || search.trim()) return []
-    const clientKeys = new Set(promotedClient.map(exerciseKey))
-    return resolveRecent(readRecentKeys(), selectableCatalog)
-      .filter((exercise) => matchesPickerMode(exercise, activeMode))
-      .filter((exercise) => !clientKeys.has(exerciseKey(exercise)))
-  }, [activeMode, hasFilters, promotedClient, search, selectableCatalog])
+    const clientKeys = new Set(promotedClient.map((exercise) => `${exercise.source}:${exerciseCatalogRoot(exercise)}`))
+    return groupCatalogResults(resolveRecent(readRecentKeys(), selectableCatalog)
+      .filter((exercise) => matchesPickerMode(exercise, activeMode) && exerciseCatalogSection(exercise) === section)
+      .filter((exercise) => !clientKeys.has(`${exercise.source}:${exerciseCatalogRoot(exercise)}`)))
+  }, [activeMode, hasFilters, promotedClient, search, selectableCatalog, section])
   const listExercises = useMemo(
     () => {
       if (hasFilters || search.trim()) return filtered
-      const promotedKeys = new Set([...promotedClient, ...recent].map(exerciseKey))
-      return filtered.filter((exercise) => !promotedKeys.has(exerciseKey(exercise)))
+      const promotedKeys = new Set([...promotedClient, ...recent].map((exercise) => `${exercise.source}:${exerciseCatalogRoot(exercise)}`))
+      return filtered.filter((exercise) => !promotedKeys.has(`${exercise.source}:${exerciseCatalogRoot(exercise)}`))
     },
     [filtered, hasFilters, promotedClient, recent, search],
   )
@@ -197,7 +203,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
 
   useEffect(() => {
     setVisibleCount(PICKER_BATCH_SIZE)
-  }, [activeMode, category, customOnly, equipment, muscle, search])
+  }, [activeMode, category, customOnly, equipment, muscle, search, section])
 
   function openCreate() {
     setName(search.trim())
@@ -314,6 +320,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         <div className="picker-technique-scroll">
           <ExerciseImage src={previewExercise.imageUrl} motionSrc={previewExercise.motionImageUrl} videoSrc={previewExercise.techniqueVideoUrl} alt={previewExercise.name} variant="technique" />
           <div className="picker-technique-title"><h2>{previewExercise.name}</h2><p>{[previewExercise.equipment ?? 'Без оборудования', MUSCLE_GROUP_LABELS[previewExercise.muscleGroup]].join(' · ')}</p></div>
+          <CatalogVariantField exercise={previewExercise} catalog={catalog.exercises} onChange={setPreviewExercise} />
           <div className="picker-technique-facts"><span><small>Формат</small><strong>{INPUT_KIND_LABELS[previewExercise.inputKind]}</strong></span>{previewExercise.primaryMuscleDetail && <span><small>Основная мышца</small><strong>{previewExercise.primaryMuscleDetail}</strong></span>}</div>
           {previewExercise.instructions?.length
             ? <div className="picker-technique-instructions"><h3>Как выполнять</h3><ol>{previewExercise.instructions.map((instruction, index) => <li key={`${previewExercise.ref}-${index}`}>{instruction}</li>)}</ol></div>
@@ -348,6 +355,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         </div>
           <button type="button" className="picker-filter-reset" onClick={resetFilters}>Сбросить</button>
         </div>}
+        {!showRunningFormats && !search.trim() && <CatalogSectionField value={section} onChange={setSection} userId={catalog.userId} />}
         {showRunningFormats ? <div className="running-format-picker">
           {catalog.loading && <p className="state">Загрузка…</p>}
           {catalog.error && <div className="state"><p className="error">{catalog.error.message}</p><button type="button" className="secondary" onClick={catalog.retry}>Повторить</button></div>}
@@ -377,7 +385,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
             {visibleCount < listExercises.length && <button type="button" className="picker-load-more" onClick={() => setVisibleCount((count) => count + PICKER_BATCH_SIZE)}>Показать ещё</button>}
           </div>}
           {!catalog.loading && !catalog.error && !hasVisibleExercises && <div className="picker-empty-state" role="status">
-            <p>{hasFilters || search.trim() ? 'Ничего не найдено' : 'В каталоге пока нет упражнений'}</p>
+            <p>{hasFilters || search.trim() ? 'Ничего не найдено' : 'В этом разделе пока нет упражнений'}</p>
             <div>{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить фильтры</button>}<button type="button" className="link" onClick={openCreate}>{search.trim() ? `Создать «${search.trim()}»` : 'Создать упражнение'}</button></div>
           </div>}
           {multiple && selected.size > 0 && <div className="picker-selection-bar"><span>Выбрано: {selected.size}</span><button type="button" className="primary" onClick={addSelected}>Добавить {selected.size}</button></div>}

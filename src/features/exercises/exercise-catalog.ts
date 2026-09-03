@@ -4,6 +4,7 @@ import { exercisesRepository } from '../../data/repositories/exercises.repositor
 import type { ExerciseSnapshot, InputKind, MuscleGroup, SessionActor } from '../../shared/domain'
 
 export interface ExerciseCatalogState {
+  userId?: string
   exercises: readonly ExerciseSnapshot[]
   loading: boolean
   error: Error | null
@@ -26,6 +27,7 @@ export function useExerciseCatalog(): ExerciseCatalogState {
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['exercises'] }),
   })
   return {
+    userId: actor?.userId,
     exercises: [...exercisesRepository.system, ...(query.data?.filter((item) => !item.archivedAt) ?? [])],
     loading: query.isLoading,
     error: query.error ?? create.error,

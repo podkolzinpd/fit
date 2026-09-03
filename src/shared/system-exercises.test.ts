@@ -16,7 +16,7 @@ const EXERCISE_VIDEO_PATHS = new Set(
 
 describe('system exercise catalog', () => {
   it('matches the current catalog contract', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(8)
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(9)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
@@ -201,12 +201,12 @@ describe('system exercise catalog', () => {
       ref: 'seated-dumbbell-press',
     })
     expect(seatedDumbbellPress).toMatchObject({
-      name: 'Жим гантелей сидя (Гантели)',
+      name: 'Жим гантелей сидя',
       equipment: 'Гантели',
       techniqueVideoUrl: '/exercises/vital/machine-shoulder-press.mp4',
     })
     expect(machineShoulderPress).toMatchObject({
-      name: 'Армейский жим в тренажёре (Тренажёр)',
+      name: 'Армейский жим в тренажёре',
       equipment: 'Тренажёр',
     })
     expect(machineShoulderPress?.techniqueVideoUrl).toBeUndefined()

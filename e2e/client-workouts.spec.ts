@@ -19,7 +19,7 @@ async function createCompletedWorkout(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
+  await page.locator('[data-exercise-ref="bench-press"]').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')

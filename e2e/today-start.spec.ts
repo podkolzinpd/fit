@@ -105,8 +105,8 @@ test('today: живая диктовка с паузами и числами с�
 
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible({ timeout: 10_000 })
   await expect(page.getByText('Распознано: 2', { exact: true })).toBeVisible()
-  await expect(page.getByText('Гоблет-присед (Гиря)', { exact: true })).toBeVisible()
-  await expect(page.getByText('Планка (Своё тело)', { exact: true })).toBeVisible()
+  await expect(page.getByText('Гоблет-присед', { exact: true })).toBeVisible()
+  await expect(page.getByText('Планка', { exact: true })).toBeVisible()
   await expect(page.locator('.today-exercise')).toHaveCount(2)
 })
 

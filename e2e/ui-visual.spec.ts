@@ -435,7 +435,7 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -614,7 +614,7 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -668,9 +668,13 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
 })
 
 test('exercise catalog and technique detail keep their visual baselines in both themes', async ({ page }) => {
+  // Keep the catalog snapshot independent from custom exercises created by
+  // behavior tests and from unrelated first-visit navigation coachmarks.
+  await page.route('**/rest/v1/custom_exercises?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await gotoStable(page, '/exercises')
   await expect(page.locator('.phone-frame')).toHaveClass(/exercise-catalog-identity/)
+  await page.keyboard.press('Escape')
   const search = page.getByLabel('Поиск упражнения')
   await search.fill('face pull')
   const result = page.locator('.catalog-media-card').first()
@@ -1087,7 +1091,7 @@ async function addCompletedBenchPress(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('60')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -1186,7 +1190,7 @@ async function openWorkoutForDetailReview(page: import('@playwright/test').Page,
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -1465,6 +1469,9 @@ test('trainer Clients list keeps its mobile visual baselines', async ({ page }, 
 })
 
 test('exercise picker keeps search, filters and technique readable', async ({ page }, testInfo) => {
+  // The baseline represents a new plan without a goal. Isolate it from goal
+  // records written by other scenarios sharing the local demo client.
+  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
   await signIn(page, 'trainer@fit.local', /\/today$/)
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : testInfo.project.name.replace('visual-client-', 'mobile-')
   await gotoStable(page, `/workouts/new?client=${demoClientId}`)
@@ -1477,7 +1484,7 @@ test('exercise picker keeps search, filters and technique readable', async ({ pa
   await expect(page.getByText(/Найдено: \d+/)).toBeVisible()
   await expectVisualBaseline(page, `exercise-picker-search-${profile}-${process.platform}.png`, [page.locator('.picker-item-media')])
 
-  await page.getByRole('button', { name: /Посмотреть технику: Болгарский присед \(Штанга\)/ }).click()
+  await page.getByRole('button', { name: 'Посмотреть технику: Болгарский сплит-присед со штангой', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Техника' })).toBeVisible()
   await expect(page.getByText('Как выполнять')).toBeVisible()
   await expectVisualBaseline(page, `exercise-picker-technique-${profile}-${process.platform}.png`, [page.locator('.picker-technique-view .exercise-image-technique')])
@@ -1631,7 +1638,7 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
     await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
     await page.getByRole('button', { name: /^Силовая/ }).click()
     await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-    await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
+    await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
     await page.getByRole('button', { name: 'Сохранить' }).click()
     await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+$/)

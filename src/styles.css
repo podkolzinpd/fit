@@ -2250,6 +2250,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .metric { display: flex; justify-content: space-between; padding: 10px 2px; border-bottom: 1px solid var(--border) }
 .sheet-overlay { position: fixed; z-index: 30; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-top: max(12px, env(safe-area-inset-top)); background: var(--overlay); backdrop-filter:none}
 .sheet-overlay.keyboard-open { padding-top: max(8px, env(safe-area-inset-top)) }
+.exercise-picker > .catalog-section-control { flex-shrink: 0 }
+.field .catalog-select { height: var(--control-height-standard); min-height: var(--control-height-standard) }
 .exercise-picker { width: min(100%, 440px); max-height: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 12px; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); border: 1px solid var(--border); border-bottom: 0; border-radius: 28px 28px 0 0; background: var(--surface-elevated); box-shadow:none}
 .keyboard-open .exercise-picker { height: 100%; border-radius: 24px 24px 0 0; padding-top: 14px; padding-bottom: 10px }
 .client-picker-control { display:grid; gap:6px; }.client-picker-label { color:var(--muted); font-size:13px; font-weight:700; }.client-picker-trigger { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; padding:12px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); text-align:left; box-shadow:none; }.client-picker-trigger > span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.client-picker-trigger > svg { width:18px; height:18px; flex:0 0 auto; color:var(--muted) }
