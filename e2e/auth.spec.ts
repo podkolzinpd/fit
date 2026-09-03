@@ -689,6 +689,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+$/)
   const leaveButton = page.getByRole('button', { name: 'Покинуть пространство клиента' })
   await expect(leaveButton).toBeVisible()
+  await page.keyboard.press('Escape')
   await leaveButton.click()
   // In-app confirm (useConfirm) вместо нативного window.confirm — подтверждаем
   // кнопкой в диалоге.
