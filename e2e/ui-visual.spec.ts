@@ -1465,6 +1465,9 @@ test('trainer Clients list keeps its mobile visual baselines', async ({ page }, 
 })
 
 test('exercise picker keeps search, filters and technique readable', async ({ page }, testInfo) => {
+  // The baseline represents a new plan without a goal. Isolate it from goal
+  // records written by other scenarios sharing the local demo client.
+  await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
   await signIn(page, 'trainer@fit.local', /\/today$/)
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : testInfo.project.name.replace('visual-client-', 'mobile-')
   await gotoStable(page, `/workouts/new?client=${demoClientId}`)

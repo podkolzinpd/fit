@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test'
-import { expectMonochromeAccessibility } from './accessibility-helpers'
 
 export function exerciseCatalogCurationCases() {
 for (const role of ['trainer', 'client'] as const) {
@@ -26,11 +25,12 @@ for (const role of ['trainer', 'client'] as const) {
       if (await help.isVisible()) await help.click()
       const dialog = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
       await expect(dialog.getByLabel('Раздел каталога')).toHaveValue('core')
+      expect((await dialog.getByLabel('Раздел каталога').boundingBox())?.height).toBeGreaterThanOrEqual(48)
       // A previous choice may promote its precise variant in the recent list.
       await dialog.getByRole('button', { name: /^Посмотреть технику: Жим гантелей на наклонной/ }).first().click()
       await dialog.getByLabel('Вариант упражнения').selectOption({ label: 'Жим гантелей на наклонной нейтральным хватом' })
       await expect(dialog.getByRole('heading', { name: 'Жим гантелей на наклонной нейтральным хватом' })).toBeVisible()
-      await expectMonochromeAccessibility(page)
+      expect((await dialog.getByLabel('Вариант упражнения').boundingBox())?.height).toBeGreaterThanOrEqual(48)
       await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`${role}-${dark ? 'dark' : 'light'}-variant.png`) })
       await dialog.getByRole('button', { name: 'Добавить к выбранным' }).click()

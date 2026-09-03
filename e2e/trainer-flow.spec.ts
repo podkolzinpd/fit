@@ -165,6 +165,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Рост, см').fill('170')
   await page.getByLabel('Начальный вес, кг').fill('61.5')
   await page.getByLabel('Цель').fill('Стать сильнее')
+  const introduction = page.getByRole('button', { name: 'Понятно', exact: true })
+  if (await introduction.isVisible()) await introduction.click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Анна Тестова' })).toBeVisible()
   const clientUrl = page.url()
