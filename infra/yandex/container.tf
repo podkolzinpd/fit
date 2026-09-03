@@ -245,5 +245,6 @@ resource "yandex_serverless_container" "push_dispatcher" {
     yandex_container_registry_iam_binding.api_image_puller,
     yandex_iam_service_account_iam_member.push_dispatcher_deployer,
     yandex_lockbox_secret_iam_member.push_dispatcher_connection_secret_reader,
+    yandex_lockbox_secret_iam_member.push_dispatcher_transport_secret_reader,
   ]
 }

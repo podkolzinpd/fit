@@ -51,6 +51,7 @@ env:
   YC_PUSH_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
   YC_PUSH_FUNCTION_NAME: fit-send-push-notifications
   YC_PUSH_LOCKBOX_NAME: fit-send-push-notifications-secrets
+  YC_STAGE_PUSH_LOCKBOX_NAME: fit-stage-push-transport
   YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
   PUSH_PIPELINE_PLAN_REVIEWED: ${{ (inputs.plan_only == true || inputs.approve_push_pipeline == true) && 'true' || 'false' }}
 
@@ -127,13 +128,32 @@ jobs:
             --name "$YC_PUSH_LOCKBOX_NAME" \
             --folder-id "$YC_PUSH_FOLDER_ID" \
             --format json)
+          source_secret_id=$(jq -er '.id' <<<"$secret")
+          source_secret_version_id=$(jq -er '.current_version.id' <<<"$secret")
           echo "TF_VAR_push_function_id=$function_id" >> "$GITHUB_ENV"
-          echo "TF_VAR_push_transport_secret_id=$(jq -er '.id' <<<"$secret")" >> "$GITHUB_ENV"
-          echo "TF_VAR_push_transport_secret_version_id=$(jq -er '.current_version.id' <<<"$secret")" >> "$GITHUB_ENV"
+          # The source IDs keep the first read-only plan mutation-free. Once the
+          # stage mirror exists, the next step replaces them with its local IDs.
+          echo "TF_VAR_push_transport_secret_id=$source_secret_id" >> "$GITHUB_ENV"
+          echo "TF_VAR_push_transport_secret_version_id=$source_secret_version_id" >> "$GITHUB_ENV"
       - name: Exchange OIDC token for the stage deployment identity
         env:
           YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
         run: scripts/yandex-github-oidc.sh
+      - name: Prefer the existing stage-local push transport mirror
+        run: |
+          set -euo pipefail
+          error_file=$(mktemp)
+          trap 'rm -f "$error_file"' EXIT
+          if stage_secret=$(yc lockbox secret get \
+              --name "$YC_STAGE_PUSH_LOCKBOX_NAME" \
+              --folder-id "$TF_VAR_folder_id" \
+              --format json 2>"$error_file"); then
+            echo "TF_VAR_push_transport_secret_id=$(jq -er '.id' <<<"$stage_secret")" >> "$GITHUB_ENV"
+            echo "TF_VAR_push_transport_secret_version_id=$(jq -er '.current_version.id' <<<"$stage_secret")" >> "$GITHUB_ENV"
+          elif ! grep -qiE 'NOT_FOUND|not found' "$error_file"; then
+            cat "$error_file" >&2
+            exit 1
+          fi
       - name: Initialize Terraform remote state
         working-directory: infra/yandex
         run: >-
@@ -208,6 +228,7 @@ jobs:
         run: scripts/yandex-github-oidc.sh
       - name: Resolve immutable push transport metadata
         run: |
+          set -euo pipefail
           function_id=$(yc serverless function get \
             --name "$YC_PUSH_FUNCTION_NAME" \
             --folder-id "$YC_PUSH_FOLDER_ID" \
@@ -216,13 +237,31 @@ jobs:
             --name "$YC_PUSH_LOCKBOX_NAME" \
             --folder-id "$YC_PUSH_FOLDER_ID" \
             --format json)
+          source_secret_id=$(jq -er '.id' <<<"$secret")
+          source_secret_version_id=$(jq -er '.current_version.id' <<<"$secret")
+          payload_file="$RUNNER_TEMP/push-dispatch-secret"
+          yc lockbox payload get \
+            --id "$source_secret_id" \
+            --version-id "$source_secret_version_id" \
+            --key PUSH_DISPATCH_SECRET > "$payload_file"
+          chmod 600 "$payload_file"
+          dispatch_secret=$(<"$payload_file")
+          echo "::add-mask::$dispatch_secret"
+          test "${#dispatch_secret}" -ge 32
           echo "TF_VAR_push_function_id=$function_id" >> "$GITHUB_ENV"
-          echo "TF_VAR_push_transport_secret_id=$(jq -er '.id' <<<"$secret")" >> "$GITHUB_ENV"
-          echo "TF_VAR_push_transport_secret_version_id=$(jq -er '.current_version.id' <<<"$secret")" >> "$GITHUB_ENV"
+          echo "PUSH_SOURCE_SECRET_VERSION_ID=$source_secret_version_id" >> "$GITHUB_ENV"
+          echo "PUSH_DISPATCH_SECRET_FILE=$payload_file" >> "$GITHUB_ENV"
       - name: Exchange OIDC token for the stage deployment identity
         env:
           YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
         run: scripts/yandex-github-oidc.sh
+      - name: Mirror the push transport payload into stage Lockbox
+        run: >-
+          node scripts/mirror-yandex-push-transport.mjs
+          --folder-id "$TF_VAR_folder_id"
+          --secret-name "$YC_STAGE_PUSH_LOCKBOX_NAME"
+          --source-version-id "$PUSH_SOURCE_SECRET_VERSION_ID"
+          --secret-file "$PUSH_DISPATCH_SECRET_FILE"
       - name: Initialize Terraform remote state
         working-directory: infra/yandex
         run: >-
@@ -244,21 +283,7 @@ jobs:
           -target=yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader
           -target=yandex_lockbox_secret_iam_member.migration_connection_secret_reader
           -target=yandex_lockbox_secret_iam_member.push_dispatcher_connection_secret_reader
-      - name: Exchange OIDC token for the push transport access grant
-        env:
-          YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
-        run: scripts/yandex-github-oidc.sh
-      - name: Grant the dispatcher access only to the shared transport payload
-        working-directory: infra/yandex
-        run: |
-          yc lockbox secret add-access-binding \
-            --id "$TF_VAR_push_transport_secret_id" \
-            --role lockbox.payloadViewer \
-            --service-account-id "$(terraform output -raw push_dispatcher_service_account_id)"
-      - name: Restore the stage deployment identity
-        env:
-          YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
-        run: scripts/yandex-github-oidc.sh
+          -target=yandex_lockbox_secret_iam_member.push_dispatcher_transport_secret_reader
       - name: Pin new push runtime identities for subsequent Terraform plans
         working-directory: infra/yandex
         run: |

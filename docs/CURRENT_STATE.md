@@ -1,6 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-03. База задачи: `main` `4c0b28c` (#777, каталог). Активная задача: актуальные названия только в новой копии тренировки; см. `docs/design/WORKOUT_COPY_CATALOG_NAMES.md`.
+Обновлено: 2026-09-03. База задачи: `main` `083e45ae` (#778). Активная
+задача: завершить one-time stage push bootstrap через stage-local Lockbox mirror.
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом; Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум один вторичный акцент. Live разделяет нейтральный таймер и активный отдых.
 - Создание, Live и завершение прошлого плана сохраняют прежнюю логику без
@@ -112,7 +113,10 @@
 - Реальный invite → join → leave/remove smoke — внешняя проверка; полный cutover не выполнен.
 ## Проверки активной ветки
 - #775 слит: возвраты в тренировках и календарь истории тренера проверены CI; ограничения ручной QA и production ведутся в ФИТ 7 (`docs/design/FIT7_TRAINER_DISCONNECT.md`).
-- Push plan: IAM-списки остаются известными в read-only plan; после identity phase workflow берёт новые SA ID из state для финальных binding. Run 33737999925 ничего не применил; policy и Terraform validate зелёные.
+- Push bootstrap: два runtime SA созданы run `33761562506`; платные ресурсы не
+  созданы. Прямой cross-scope grant на Functions Lockbox получил повторяемый
+  `FailedPrecondition`; текущая ветка заменяет его stage-local masked mirror без
+  попадания payload в GitHub env/logs или Terraform state.
 ## Ближайший порядок
 1. После review применить one-time stage push bootstrap; затем две rehearsal на non-production tenant.
 2. Оценить production infrastructure и согласовать rollout/rollback.

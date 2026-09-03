@@ -71,11 +71,15 @@ trainer-связей и pending push, freeze writes, target, backup и rollback 
 private Serverless Container `fit-stage-push-dispatcher`, вызываемый timer
 trigger раз в минуту. У контейнера нет `allUsers`, постоянно прогретых
 экземпляров и собственного секрета в Terraform state: пароль БД и
-`PUSH_DISPATCH_SECRET` монтируются из Lockbox. Function и transport Lockbox
-живут в отдельном каталоге `YC_SUMMARY_FOLDER_ID`: workflow получает их
-несекретные ID через существующую OIDC-учётку функций, выдаёт новому dispatcher
-только `lockbox.payloadViewer` на конкретный секрет и возвращается к stage OIDC.
-Payload не читается и не копируется в GitHub или Terraform state.
+`PUSH_DISPATCH_SECRET` монтируются из Lockbox. Function и исходный transport
+Lockbox живут в отдельном каталоге `YC_SUMMARY_FOLDER_ID`. Прямые IAM-привязки
+между его security scope и stage недоступны, поэтому workflow читает только
+`PUSH_DISPATCH_SECRET` во временный masked-файл runner-а, переключается на stage
+OIDC и идемпотентно синхронизирует deletion-protected секрет
+`fit-stage-push-transport`. Временный файл удаляется после синхронизации (а при
+более раннем сбое — вместе с одноразовым runner-ом); payload не попадает в
+GitHub outputs/env, логи или Terraform state. Dispatcher получает
+`lockbox.payloadViewer` только на stage-копию.
 
 После merge первый автоматический `Deploy Yandex stage` ожидаемо остановится на
 проверке Terraform plan. Запустите workflow вручную с `plan_only=true` и

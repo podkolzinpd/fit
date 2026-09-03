@@ -159,3 +159,9 @@ resource "yandex_lockbox_secret_iam_member" "push_dispatcher_connection_secret_r
   role      = "lockbox.payloadViewer"
   member    = "serviceAccount:${yandex_iam_service_account.push_dispatcher.id}"
 }
+
+resource "yandex_lockbox_secret_iam_member" "push_dispatcher_transport_secret_reader" {
+  secret_id = var.push_transport_secret_id
+  role      = "lockbox.payloadViewer"
+  member    = "serviceAccount:${yandex_iam_service_account.push_dispatcher.id}"
+}
