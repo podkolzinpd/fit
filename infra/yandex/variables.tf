@@ -266,3 +266,33 @@ variable "push_transport_secret_version_id" {
     error_message = "push_transport_secret_version_id must not be empty."
   }
 }
+
+variable "push_dispatcher_registry_service_account_id" {
+  description = "Existing dispatcher service-account ID pinned from Terraform state after the bootstrap identity phase. Null during the first read-only plan."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = var.push_dispatcher_registry_service_account_id == null || can(regex(
+      "^[a-z0-9]+$",
+      var.push_dispatcher_registry_service_account_id,
+    ))
+    error_message = "push_dispatcher_registry_service_account_id must be a service-account ID or null."
+  }
+}
+
+variable "push_scheduler_invoker_service_account_id" {
+  description = "Existing scheduler service-account ID pinned from Terraform state after the bootstrap identity phase. Null during the first read-only plan."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = var.push_scheduler_invoker_service_account_id == null || can(regex(
+      "^[a-z0-9]+$",
+      var.push_scheduler_invoker_service_account_id,
+    ))
+    error_message = "push_scheduler_invoker_service_account_id must be a service-account ID or null."
+  }
+}

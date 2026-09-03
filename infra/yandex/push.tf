@@ -2,8 +2,10 @@ resource "yandex_serverless_container_iam_binding" "push_dispatcher_invocation" 
   container_id = yandex_serverless_container.push_dispatcher.id
   role         = "serverless.containers.invoker"
   members = compact([
-    "serviceAccount:${yandex_iam_service_account.push_scheduler.id}",
     var.deployer_member,
+    var.push_scheduler_invoker_service_account_id == null
+    ? null
+    : "serviceAccount:${var.push_scheduler_invoker_service_account_id}",
   ])
 }
 
