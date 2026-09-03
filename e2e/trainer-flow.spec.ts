@@ -335,12 +335,13 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
   await expect(page.locator('.completed-set-summary').filter({ hasText: /45 кг × 9/ }).first()).toBeVisible()
 
-  // «Назад» с завершённой тренировки ведёт в расписание (все запланированные).
+  // Тренировка создана из карточки клиента: после Live и правки результата
+  // «Назад» возвращает к этому клиенту, не в расписание и не в редактор.
   await page.locator('.page-back').click()
-  await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
+  await expect(page).toHaveURL(clientUrl)
+  await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
 
   // После завершения тренировки статистика клиента обновлена.
-  await page.goto(clientUrl)
   await expect(page.locator('.client-detail-activity')).toContainText('1 тренировка')
   await expect(page.locator('.client-detail-activity')).toContainText('100%')
   await expect(page.locator('.client-detail-vitals')).toContainText('ИМТ')

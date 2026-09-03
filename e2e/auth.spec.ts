@@ -454,7 +454,13 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     page.waitForURL(preAttachWorkoutUrl),
     page.getByRole('button', { name: 'Завершить тренировку' }).click(),
   ])
-  await expect(page.getByText(/3 км × 20:00 · темп 6:40\/км/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Тренировка завершена' })).toBeVisible()
+  // После завершения сначала видна компактная сводка. Подробный темп
+  // проверяем после явного раскрытия результата, как его открывает клиент.
+  const completedRun = page.locator('.completed-exercise-details').first()
+  await expect(completedRun.locator('summary')).toContainText('3 км')
+  await completedRun.locator('summary').click()
+  await expect(completedRun.getByText(/3 км × 20:00 · темп 6:40\/км/)).toBeVisible()
 
   await page.goto('/join')
   await page.getByLabel('Код приглашения').fill(code!)
