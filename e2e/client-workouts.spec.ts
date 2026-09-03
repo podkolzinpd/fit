@@ -70,3 +70,29 @@ test('client switches workout history to a month calendar and returns to the sel
   await expect(page).toHaveURL(/\/me\/workouts\?view=calendar&month=\d{4}-\d{2}&date=\d{4}-\d{2}-\d{2}$/)
   await expect(page.locator('.client-history-calendar-day.selected')).toBeVisible()
 })
+
+test('client creates a custom exercise and saves it in a completed workout', async ({ page }, testInfo) => {
+  const exerciseName = `Моя румынская тяга ${testInfo.workerIndex}-${Date.now()}`
+  await createClientAccount(page, `custom-exercise-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+
+  await page.goto('/workouts/new')
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await page.getByRole('button', { name: 'Создать упражнение' }).click()
+  await page.getByLabel('Название').fill(exerciseName)
+  await page.getByRole('button', { name: 'Ноги', exact: true }).click()
+  await page.getByRole('button', { name: 'Сохранить упражнение' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Выберите упражнения' })).toBeVisible()
+  await expect(page.getByText('Выбрано: 1')).toBeVisible()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await expect(page.getByText(exerciseName, { exact: true })).toBeVisible()
+  await page.getByLabel('Вес, подход 1').fill('24')
+  await page.getByLabel('Повторы, подход 1').fill('12')
+  await page.getByRole('button', { name: 'Завершённая' }).click()
+  await page.getByRole('button', { name: 'Записать тренировку' }).click()
+
+  await expect(page).toHaveURL(/\/workouts\/[^/?]+$/)
+  await expect(page.getByRole('heading', { name: 'Ваша тренировка' })).toBeVisible()
+  await expect(page.getByText(exerciseName, { exact: true })).toBeVisible()
+})

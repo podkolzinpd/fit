@@ -20,8 +20,8 @@ insert into public.clients (id, trainer_id, auth_user_id, full_name) values
 insert into public.client_trainers (client_id, trainer_id, alias, note)
 values ('63000000-0000-4000-8000-000000000011', '63000000-0000-4000-8000-000000000001', 'Athlete alias', 'Private trainer note');
 
-insert into public.custom_exercises (id, trainer_id, name, muscle_group, input_kind)
-values ('63000000-0000-4000-8000-000000000020', '63000000-0000-4000-8000-000000000001', 'Custom press', 'chest', 'strength');
+insert into public.custom_exercises (id, trainer_id, created_by, name, muscle_group, input_kind)
+values ('63000000-0000-4000-8000-000000000020', '63000000-0000-4000-8000-000000000001', '63000000-0000-4000-8000-000000000001', 'Custom press', 'chest', 'strength');
 insert into public.workouts (
   id, trainer_id, client_id, created_by, updated_by, workout_date,
   status, started_at, completed_at

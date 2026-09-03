@@ -53,7 +53,7 @@ export const suggestGoalCriteria = (text: string, catalog: readonly ExerciseSnap
   })
 }
 
-const columns = 'id,name,muscle_group,input_kind,archived_at,version'
+const columns = 'id,name,muscle_group,input_kind,created_by,archived_at,version'
 
 export const exerciseQueries = {
   parseWorkout,
