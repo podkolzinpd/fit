@@ -1,9 +1,19 @@
 import { expect, test } from '@playwright/test'
 
+async function logoutFromProfile(page: import('@playwright/test').Page) {
+  const logout = page.getByRole('button', { name: 'Выйти' })
+  await logout.scrollIntoViewIfNeeded()
+  // First-visit tips must not intercept account-switching scenarios.
+  await page.keyboard.press('Escape')
+  await logout.click()
+}
+
 async function fillClientProfileDetails(page: import('@playwright/test').Page) {
   await page.getByLabel('Пол').selectOption('female')
   await page.getByLabel('Возраст').fill('30')
   await page.getByLabel('Рост, см').fill('170')
+  const introduction = page.getByRole('button', { name: 'Понятно', exact: true })
+  if (await introduction.isVisible()) await introduction.click()
 }
 
 test('auth shell matches mobile baseline', async ({ page }) => {
@@ -35,10 +45,12 @@ test('trainer registers without surname or email confirmation', async ({ page },
   await expect(page.getByLabel('Имя')).toHaveValue('Тест')
   await page.getByLabel('Имя').fill('Тест Обновлённый')
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('status')).toContainText('Сохранено')
+  await expect(page.getByRole('status').filter({ hasText: 'Сохранено' })).toBeVisible()
   await page.reload()
   await expect(page.getByLabel('Имя')).toHaveValue('Тест Обновлённый')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  const introduction = page.getByRole('button', { name: 'Понятно', exact: true })
+  if (await introduction.isVisible()) await introduction.click()
+  await logoutFromProfile(page)
   await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Имя').fill('Тест')
@@ -70,7 +82,7 @@ test('trainer adds the first client, plans a workout and gets an invitation code
   await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByText('Добавить значения', { exact: true }).click()
   await page.getByLabel(/вес, подход 1/i).fill('40')
@@ -139,7 +151,7 @@ test('client registers, starts without a profile questionnaire and creates an ow
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -209,7 +221,7 @@ test('invitation links reject the wrong role and revoked code without consuming 
   // Тренер не может использовать код клиента; код остаётся действующим для
   // правильного аккаунта и следующий переход по ссылке обрабатывается сам.
   await page.goto('/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Имя').fill('Неверная роль')
   await page.getByLabel('Email').fill(wrongRoleEmail)
@@ -222,7 +234,7 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await expect(page.getByRole('alert')).toHaveText('Этот код приглашения предназначен для другого типа аккаунта.')
 
   await page.goto('/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.goto(`/join?code=${clientCode}`)
   await expect(page).toHaveURL(/\/auth$/)
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -251,7 +263,7 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await expect(page.getByRole('heading', { name: 'Активные приглашения' })).toHaveCount(0)
 
   await page.goto('/me/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
   await page.getByLabel('Email').fill(wrongRoleEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -295,7 +307,7 @@ test('client safely switches trainers after an explicit disconnect', async ({ pa
 
   async function logoutTrainer() {
     await page.goto('/profile')
-    await page.getByRole('button', { name: 'Выйти' }).click()
+    await logoutFromProfile(page)
     await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
   }
 
@@ -407,7 +419,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   expect(code).toBeTruthy()
 
   await page.goto('/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('client')
   await page.getByLabel('Имя').fill('Клиент')
@@ -552,7 +564,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // Завершённая тренировка, которую клиент записал сам, входит в общую
   // историю тренера, но остаётся недоступной для редактирования и запуска.
   await page.goto('/me/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.getByLabel('Email').fill(trainerEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
@@ -580,7 +592,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // В этой тренировке два упражнения «Бег»: исходное и добавленное клиентом.
   // Копия должна сохранить оба, а не полагаться на неоднозначный текстовый
   // селектор.
-  await expect(page.getByText('Бег (Кардио)', { exact: true })).toHaveCount(2)
+  await expect(page.getByText('Бег', { exact: true })).toHaveCount(2)
   // Клиент поменял упражнения местами: факт остаётся у того же упражнения,
   // поэтому заполненный «Бег» теперь второй, а не теряется или не переносится.
   await expect(page.getByLabel('Время, подход 1').last()).toHaveValue('29:40')
@@ -594,7 +606,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   expect(sentPlanUrl).not.toBe(ownWorkoutUrl)
 
   await page.goto('/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.getByLabel('Email').fill(clientEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
@@ -660,7 +672,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByRole('heading', { name: 'Активные приглашения' })).toBeVisible()
 
   await page.goto('/me/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Имя').fill('Второй тренер')
   await page.getByLabel('Email').fill(`member-trainer-${suffix}@fit.local`)
@@ -687,7 +699,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // сначала проверяем понятное подтверждение, затем на 430 px в тёмной теме —
   // сам результат. Самостоятельная история остаётся доступна.
   await page.goto('/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.getByLabel('Email').fill(clientEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()

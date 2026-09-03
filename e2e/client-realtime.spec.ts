@@ -125,7 +125,7 @@ test('client and trainer receive progress and workout changes without reload', a
     ])
     const workoutUrl = trainer.url()
 
-    const assignedWorkout = client.getByRole('link', { name: /Бег \(Кардио\).*План/ })
+    const assignedWorkout = client.getByRole('link', { name: /Бег.*План/ })
     await expect(assignedWorkout).toBeVisible({ timeout: 10_000 })
     await assignedWorkout.click()
     await client.getByRole('button', { name: 'Начать тренировку' }).click()
