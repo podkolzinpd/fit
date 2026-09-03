@@ -59,7 +59,8 @@ test('invited trainer stays disconnected after profile reload and client card di
   await page.getByLabel('Email').fill(clientEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/me$/)
+  // The auth guard may restore the profile route after signing out there.
+  await expect(page).toHaveURL(/\/me(?:\/profile)?$/)
   await page.goto('/me/profile')
   await expect(page.getByText('Сейчас вы занимаетесь самостоятельно.')).toBeVisible()
   await page.getByRole('button', { name: 'Выйти' }).click()
