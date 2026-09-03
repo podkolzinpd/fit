@@ -2,6 +2,8 @@
 
 Запрос пользователя, 2026-09-03. Реализация от `main` f5bdd44.
 Тикет: https://github.com/podkolzinpd/fit/issues/774
+PR: https://github.com/podkolzinpd/fit/pull/775. Перед выкаткой синхронизирован
+с `main` 2b8cf62 (#773); конфликт snapshot разрешён с сохранением обеих задач.
 
 ## Acceptance-чеклист
 
