@@ -1,6 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-03. Базовый `main`: `2b8cf62` (#773 слит). Активный PR #775 / задача #774 — возвраты в тренировках и календарь истории у тренера.
+Обновлено: 2026-09-03. Проверенный базовый `main`: `7f046422` (#775); активная задача — восстановить read-only Terraform plan push bootstrap.
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом; Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум один вторичный акцент. Live разделяет нейтральный таймер и активный отдых.
 - Создание, Live и завершение прошлого плана сохраняют прежнюю логику без
@@ -111,8 +111,8 @@
   stage API без изменения production routing.
 - Реальный invite → join → leave/remove smoke — внешняя проверка; полный cutover не выполнен.
 ## Проверки активной ветки
-- #772 выкачен, ID/история тренеров сохранены. #773 слит: check, 1104 frontend / 306 API / 911 SQL/RLS, reset/types зелёные; ограничения ручной QA и production ведутся в ФИТ 7 (`docs/design/FIT7_TRAINER_DISCONNECT.md`).
-- #774: app check зелёный (1125 frontend, 306 API, 79 infra tests); 12 WebKit/Chromium E2E зелёные, light/dark 390/430/1440 просмотрены. Production — после CI/merge, авторизованный QA требует сессию тренера.
+- #775 слит: возвраты в тренировках и календарь истории тренера проверены CI; ограничения ручной QA и production ведутся в ФИТ 7 (`docs/design/FIT7_TRAINER_DISCONNECT.md`).
+- Push plan: IAM-списки остаются известными в read-only plan; после identity phase workflow берёт новые SA ID из state для финальных binding. Run 33737999925 ничего не применил; policy и Terraform validate зелёные.
 ## Ближайший порядок
 1. После review применить one-time stage push bootstrap; затем две rehearsal на non-production tenant.
 2. Оценить production infrastructure и согласовать rollout/rollback.

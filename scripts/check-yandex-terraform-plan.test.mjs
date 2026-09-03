@@ -124,6 +124,41 @@ describe('Yandex Terraform plan policy', () => {
             },
           },
         },
+        {
+          address: 'yandex_lockbox_secret_iam_member.push_dispatcher_connection_secret_reader',
+          change: {
+            actions: ['create'],
+            after: {
+              member: null,
+              role: 'lockbox.payloadViewer',
+            },
+            after_unknown: { member: true },
+          },
+        },
+        {
+          address: 'yandex_container_registry_iam_binding.api_image_puller',
+          change: {
+            actions: ['update'],
+            after: {
+              members: [
+                'serviceAccount:api',
+                'serviceAccount:migration',
+                'serviceAccount:pushdispatcher',
+              ],
+              role: 'container-registry.images.puller',
+            },
+          },
+        },
+        {
+          address: 'yandex_serverless_container_iam_binding.push_dispatcher_invocation',
+          change: {
+            actions: ['create'],
+            after: {
+              members: ['serviceAccount:deployer'],
+              role: 'serverless.containers.invoker',
+            },
+          },
+        },
       ],
       {
         automaticStageUpdate: true,
@@ -135,6 +170,28 @@ describe('Yandex Terraform plan policy', () => {
     assert.match(result.stdout, /Push pipeline bootstrap cost estimate/)
     assert.match(result.stdout, /about 0–389 RUB\/month/)
     assert.match(result.stdout, /approve_push_pipeline=true/)
+  })
+
+  test('rejects a broader computed push dispatcher Lockbox role', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_lockbox_secret_iam_member.push_dispatcher_connection_secret_reader',
+        change: {
+          actions: ['create'],
+          after: {
+            member: null,
+            role: 'lockbox.editor',
+          },
+          after_unknown: { member: true },
+        },
+      }],
+      {
+        automaticStageUpdate: true,
+        allowPushPipelineBootstrap: true,
+      },
+    )
+
+    assert.notEqual(result.status, 0)
   })
 
   test('rejects an oversized push dispatcher even with bootstrap approval', () => {
