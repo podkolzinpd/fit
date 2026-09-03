@@ -240,6 +240,7 @@ export function Coachmark({ id, userId, title, description, children }: PropsWit
 }>) {
   const [dismissed, setDismissed] = useState(false)
   const [position, setPosition] = useState<CSSProperties | null>(null)
+  const [portalHost, setPortalHost] = useState<Element | null>(null)
   const anchorRef = useRef<HTMLDivElement>(null)
   const bubbleRef = useRef<HTMLDivElement>(null)
   const visible = !dismissed && !isCoachmarkSeen(userId, id)
@@ -270,6 +271,7 @@ export function Coachmark({ id, userId, title, description, children }: PropsWit
 
   useLayoutEffect(() => {
     if (!visible) { setPosition(null); return }
+    setPortalHost(anchorRef.current?.closest('[role="dialog"]') ?? null)
     updatePosition()
     window.addEventListener('resize', updatePosition)
     window.addEventListener('scroll', updatePosition, true)
@@ -291,7 +293,7 @@ export function Coachmark({ id, userId, title, description, children }: PropsWit
     return () => document.removeEventListener('keydown', onKey)
   }, [visible, dismiss])
 
-  const host = document.querySelector('.phone-frame') ?? document.body
+  const host = portalHost ?? document.querySelector('.phone-frame') ?? document.body
   return <div className="coachmark-anchor" ref={anchorRef}>
     {children}
     {visible && createPortal(

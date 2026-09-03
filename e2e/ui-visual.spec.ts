@@ -1477,7 +1477,7 @@ test('exercise picker keeps search, filters and technique readable', async ({ pa
   await expect(page.getByText(/Найдено: \d+/)).toBeVisible()
   await expectVisualBaseline(page, `exercise-picker-search-${profile}-${process.platform}.png`, [page.locator('.picker-item-media')])
 
-  await page.getByRole('button', { name: /Посмотреть технику: Болгарский присед \(Штанга\)/ }).click()
+  await page.getByRole('button', { name: 'Посмотреть технику: Болгарский сплит-присед со штангой', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Техника' })).toBeVisible()
   await expect(page.getByText('Как выполнять')).toBeVisible()
   await expectVisualBaseline(page, `exercise-picker-technique-${profile}-${process.platform}.png`, [page.locator('.picker-technique-view .exercise-image-technique')])

@@ -1,4 +1,5 @@
 import type { ExerciseSnapshot } from '../../shared/domain'
+import { COMPATIBLE_EXERCISE_REPLACEMENTS } from '../../shared/exercise-catalog-curation'
 
 /**
  * Пары, где две системные карточки описывают одно и то же движение.
@@ -6,12 +7,7 @@ import type { ExerciseSnapshot } from '../../shared/domain'
  * прогрессу и старым ссылкам. В новом выборе показываем только каноническую
  * карточку. Пользовательские упражнения этот список никогда не затрагивает.
  */
-export const SYSTEM_EXERCISE_PICKER_REPLACEMENTS: Readonly<Record<string, string>> = {
-  'fedb-bent-over-barbell-row': 'barbell-row',
-  'fedb-standing-dumbbell-press': 'vital-standing-dumbbell-press',
-  'fedb-front-plate-raise': 'vital-plate-front-raise',
-  'fedb-smith-machine-stiff-legged-deadlift': 'vital-smith-stiff-leg-deadlift',
-}
+export const SYSTEM_EXERCISE_PICKER_REPLACEMENTS = COMPATIBLE_EXERCISE_REPLACEMENTS
 
 export function selectableExercises(exercises: readonly ExerciseSnapshot[]): readonly ExerciseSnapshot[] {
   return exercises.filter((exercise) => exercise.source === 'custom'

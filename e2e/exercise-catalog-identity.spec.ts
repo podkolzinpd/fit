@@ -65,9 +65,9 @@ test('exercise catalog preview keeps search, media and detail transitions usable
   await expect(detail).toHaveCount(0)
 
   await search.fill('лежачий велотренажер')
-  await expect(page.getByText('Найдено: 1')).toBeVisible()
+  await expect(page.getByText(/^Найдено: 1 ·/)).toBeVisible()
   const photoResult = page.locator('.catalog-media-card').first()
-  await expect(photoResult.getByText('Горизонтальный велотренажёр (Тренажёр)')).toBeVisible()
+  await expect(photoResult.getByText('Горизонтальный велотренажёр')).toBeVisible()
   await expect(photoResult.locator('video')).toHaveCount(0)
   await expect(photoResult.locator('.exercise-image-frame-start')).toBeVisible()
   await photoResult.click()

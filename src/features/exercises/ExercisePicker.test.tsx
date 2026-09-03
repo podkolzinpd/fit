@@ -40,6 +40,43 @@ function catalog(overrides: Partial<ExerciseCatalogState> = {}): ExerciseCatalog
 }
 
 describe('ExercisePicker', () => {
+  it('starts with core, keeps rare exercises searchable and groups duplicate names', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
+    expect(screen.getByLabelText('Раздел каталога')).toHaveValue('core')
+    expect(screen.getByText('80 упражнений')).toBeInTheDocument()
+    expect(document.querySelector('[data-exercise-ref="fedb-incline-dumbbell-press"]')).toBeInTheDocument()
+    expect(document.querySelector('[data-exercise-ref="fedb-incline-dumbbell-press-palms-in"]')).not.toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('Раздел каталога'), 'rare')
+    expect(screen.getByText('215 упражнений')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Поиск упражнения'), 'тяга гантели одной рукой')
+    expect(document.querySelector('[data-exercise-ref="dumbbell-row"]')).toBeInTheDocument()
+    expect(document.querySelector('[data-exercise-ref="fedb-one-arm-dumbbell-row"]')).not.toBeInTheDocument()
+  })
+
+  it('lets a trainer select the precise variant from one movement card', async () => {
+    const user = userEvent.setup()
+    const onPick = vi.fn()
+    const target = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-incline-dumbbell-press')!
+    const variant = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.name.includes('на наклонной нейтральным хватом'))!
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={onPick} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: `Посмотреть технику: ${target.name}` }))
+    await user.selectOptions(screen.getByLabelText('Вариант упражнения'), variant.ref)
+    expect(screen.getByRole('heading', { name: variant.name })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Добавить упражнение' }))
+    expect(onPick).toHaveBeenCalledWith(variant)
+  })
+
+  it('does not lose recording fields when two dip cards have different input kinds', async () => {
+    const user = userEvent.setup()
+    const onPick = vi.fn()
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialSearch="брусья" onPick={onPick} onClose={vi.fn()} />)
+    await user.click(screen.getAllByRole('button', { name: /Посмотреть технику:/ })[0]!)
+    await user.selectOptions(screen.getByLabelText('Вариант упражнения'), 'fedb-parallel-bar-dip')
+    await user.click(screen.getByRole('button', { name: 'Добавить упражнение' }))
+    expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ ref: 'fedb-parallel-bar-dip', inputKind: 'strength' }))
+  })
+
   beforeEach(() => {
     Object.defineProperty(window, 'localStorage', { configurable: true, value: browserStorage })
     browserStorage.clear()
@@ -73,6 +110,7 @@ describe('ExercisePicker', () => {
   it('показывает клиента, недавние и остальные без дублей', () => {
     window.localStorage.setItem('fit.recent-exercises', JSON.stringify(['b', 'd']))
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} clientRecent={[ENRICHED[3]!]} onPick={vi.fn()} onClose={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText("Раздел каталога"), { target: { value: "uncommon" } })
     expect(screen.getAllByText(/Последние у клиента|Недавние|Все упражнения/).map((node) => node.textContent))
       .toEqual(['Последние у клиента', 'Недавние', 'Все упражнения'])
     expect(screen.getAllByRole('button', { name: /Посмотреть технику: Жим лёжа/ })).toHaveLength(1)
@@ -119,6 +157,7 @@ describe('ExercisePicker', () => {
 
   it('оставляет статичный запасной кадр в списке, если основной кадр не загрузился', () => {
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText("Раздел каталога"), { target: { value: "uncommon" } })
     const squat = document.querySelector<HTMLElement>('[data-exercise-ref="a"]')!.closest('.picker-item')!
     fireEvent.error(squat.querySelector('img')!)
     expect(squat.querySelector('img')).toHaveAttribute('src', '/squat-end.jpg')
@@ -175,6 +214,7 @@ describe('ExercisePicker', () => {
   it('filters from one compact panel: group → muscle → equipment', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText("Раздел каталога"), { target: { value: "uncommon" } })
     expect(screen.queryByLabelText('Группа мышц')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Фильтры' }))
     await user.selectOptions(screen.getByLabelText('Группа мышц'), 'legs')
@@ -193,6 +233,7 @@ describe('ExercisePicker', () => {
   it('hides filters on search focus and keeps the selected values', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText("Раздел каталога"), { target: { value: "uncommon" } })
     await user.click(screen.getByRole('button', { name: 'Фильтры' }))
     await user.selectOptions(screen.getByLabelText('Группа мышц'), 'legs')
     const searchInput = screen.getByLabelText('Поиск упражнения')
@@ -207,6 +248,7 @@ describe('ExercisePicker', () => {
   it('blurs search before opening filters so the keyboard does not cover the panel', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText("Раздел каталога"), { target: { value: "uncommon" } })
     const searchInput = screen.getByLabelText('Поиск упражнения')
     await user.click(searchInput)
     expect(searchInput).toHaveFocus()
@@ -286,6 +328,7 @@ describe('ExercisePicker', () => {
   it('offers one clear recovery action when search has no results', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText("Раздел каталога"), { target: { value: "uncommon" } })
 
     await user.type(screen.getByLabelText('Поиск упражнения'), 'Новое движение')
 
@@ -297,6 +340,7 @@ describe('ExercisePicker', () => {
   it('очищает поиск крестиком и Escape, не сбрасывая фокус', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText("Раздел каталога"), { target: { value: "uncommon" } })
     const searchInput = screen.getByLabelText('Поиск упражнения')
 
     await user.type(searchInput, 'Присед')
@@ -313,6 +357,7 @@ describe('ExercisePicker', () => {
   it('показывает активные фильтры чипами и снимает их по одному', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText("Раздел каталога"), { target: { value: "uncommon" } })
     await user.click(screen.getByRole('button', { name: 'Фильтры' }))
     await user.selectOptions(screen.getByLabelText('Группа мышц'), 'legs')
     await user.selectOptions(screen.getByLabelText('Мышца'), 'Квадрицепс')
@@ -331,6 +376,7 @@ describe('ExercisePicker', () => {
     const user = userEvent.setup()
     const onPick = vi.fn()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={onPick} onPickMany={vi.fn()} multiple onClose={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText("Раздел каталога"), { target: { value: "uncommon" } })
     const searchInput = screen.getByLabelText('Поиск упражнения')
     await user.type(searchInput, 'Присед')
     const list = document.querySelector<HTMLElement>('.picker-list')!
@@ -352,6 +398,7 @@ describe('ExercisePicker', () => {
   it('добавляет упражнение из техники явным действием', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onPickMany={vi.fn()} multiple onClose={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText("Раздел каталога"), { target: { value: "uncommon" } })
     await user.click(screen.getByRole('button', { name: 'Посмотреть технику: Присед (Штанга)' }))
     await user.click(screen.getByRole('button', { name: 'Добавить к выбранным' }))
     expect(screen.getByText('Выбрано: 1')).toBeInTheDocument()
@@ -364,6 +411,7 @@ describe('ExercisePicker', () => {
       { ...ENRICHED[1]!, imageUrl: '/b.jpg', motionImageUrl: '/b-end.jpg' },
     ]
     render(<ExercisePicker catalog={catalog({ exercises })} onPick={vi.fn()} onClose={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText('Раздел каталога'), { target: { value: 'uncommon' } })
     expect(document.querySelectorAll('.picker-list video')).toHaveLength(0)
     expect(document.querySelectorAll('.picker-item-play')).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Посмотреть технику: Присед (Штанга)' }).querySelector('.picker-item-play')).toBeInTheDocument()
@@ -426,6 +474,7 @@ describe('ExercisePicker', () => {
     const user = userEvent.setup()
     const onPickMany = vi.fn()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onPickMany={onPickMany} multiple onClose={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText("Раздел каталога"), { target: { value: "uncommon" } })
     await user.click(screen.getByRole('button', { name: /Выбрать: Присед/ }))
     await user.click(screen.getByRole('button', { name: /Выбрать: Жим лёжа/ }))
     expect(screen.getByText('Выбрано: 2')).toBeInTheDocument()

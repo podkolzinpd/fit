@@ -73,7 +73,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
-  await page.getByRole('button', { name: 'Выбрать: Планка (Своё тело)', exact: true }).click()
+  await page.getByRole('button', { name: 'Выбрать: Планка', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
@@ -158,7 +158,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await expect(clientChronicleCard).toContainText('🔥')
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
   await page.goto(workoutUrl)
-  await page.getByRole('link', { name: 'История упражнения «Планка (Своё тело)»' }).click()
+  await page.getByRole('link', { name: 'История упражнения «Планка»' }).click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   const progressProof = page.getByLabel('Доказательство прогресса')
   await expect(progressProof).toBeVisible()
@@ -173,7 +173,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
-  await page.getByRole('button', { name: 'Выбрать: Планка (Своё тело)', exact: true }).click()
+  await page.getByRole('button', { name: 'Выбрать: Планка', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),

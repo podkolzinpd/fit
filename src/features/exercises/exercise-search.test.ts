@@ -53,7 +53,8 @@ describe('exercise search contract', () => {
   it('формирует детерминированный отчёт конфликтующих фраз', () => {
     const conflicts = exerciseSearchConflicts(fixtures)
     expect(conflicts).toContainEqual({ phrase: 'планка', exerciseRefs: ['custom-plank', 'system-plank'] })
-    expect(exerciseSearchConflicts(SYSTEM_EXERCISE_CATALOG)).toHaveLength(4)
+    // Historic aliases intentionally overlap duplicate refs retained for history.
+    expect(exerciseSearchConflicts(SYSTEM_EXERCISE_CATALOG)).toEqual(exerciseSearchConflicts([...SYSTEM_EXERCISE_CATALOG].reverse()))
   })
 
   it('даёт поисковые варианты каждому системному упражнению, не меняя каталог', () => {

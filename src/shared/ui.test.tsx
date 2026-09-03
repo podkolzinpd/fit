@@ -89,6 +89,14 @@ describe('system actions', () => {
 })
 
 describe('Coachmark', () => {
+  it('keeps a sheet coachmark inside its dialog stacking context', () => {
+    render(<div className="phone-frame"><section role="dialog" aria-label="Каталог"><Coachmark id="catalog-dialog" userId="catalog-user" title="Разделы" description="Поиск во всех разделах"><button>Каталог</button></Coachmark></section></div>)
+    expect(screen.getByRole('dialog', { name: 'Каталог' })).toContainElement(screen.getByRole('status'))
+    fireEvent.click(screen.getByRole('button', { name: 'Понятно' }))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
   beforeEach(() => {
     const values = new Map<string, string>()
     vi.stubGlobal('localStorage', {

@@ -14,6 +14,7 @@ import { GOAL_STAGE_TITLE_MAX_LENGTH, GOAL_TITLE_MAX_LENGTH, titleLengthValidati
 import { formatLocalDateShort, localDate, todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Field, Page, Switch, useConfirm } from '../../shared/ui'
 import { useExerciseCatalog } from '../exercises'
+import { selectableExercises } from '../exercises/selectable-exercises'
 import { MetricsManager } from '../progress/MetricsManager'
 
 const STATUS_LABEL: Record<string, string> = { done: 'завершён', current: 'идёт', upcoming: 'впереди' }
@@ -99,8 +100,13 @@ function CriterionEditor({ value, exercises, metrics, onChange, onRemove, onMana
       confirmationStatus: 'confirmed', position: value.position, regularityPeriod: metric === 'workout_regularity' ? 'week' : null,
       regularityMode: metric === 'workout_regularity' ? 'average' : null })
   }
+  const choices = selectableExercises(exercises)
+  // A saved goal may still reference a merged card: keep that exact option,
+  // never silently switch its historical metric to a different exercise.
+  const selected = exercises.find((exercise) => exercise.ref === value.exerciseRef && exercise.source === value.exerciseSource)
+  const withSelected = selected && !choices.includes(selected) ? [selected, ...choices] : choices
   const availableExercises = definition.family === 'cardio'
-    ? exercises.filter((exercise) => exercise.inputKind === 'distance' || exercise.inputKind === 'duration') : exercises
+    ? withSelected.filter((exercise) => exercise.inputKind === 'distance' || exercise.inputKind === 'duration') : withSelected
   return <section className="goal-criterion-item">
     <div className="goal-head"><strong>Критерий {(value.position ?? 0) + 1}</strong><button type="button" className="link danger" onClick={onRemove}>Удалить</button></div>
     <Field label="Показатель"><select value={value.metric} onChange={(event) => changeMetric(event.target.value as GoalCriterionMetric)}>{Object.entries(GOAL_CRITERION_METRICS).map(([metric, item]) => <option value={metric} key={metric}>{item.label}</option>)}</select></Field>
