@@ -3,6 +3,7 @@ import type { ExerciseSnapshot } from '../../shared/domain'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 import {
   exerciseSearchConflicts,
+  exerciseSearchAliases,
   normalizeExerciseSearch,
   rankExerciseSearch,
   resolveExerciseSearch,
@@ -52,7 +53,21 @@ describe('exercise search contract', () => {
   it('формирует детерминированный отчёт конфликтующих фраз', () => {
     const conflicts = exerciseSearchConflicts(fixtures)
     expect(conflicts).toContainEqual({ phrase: 'планка', exerciseRefs: ['custom-plank', 'system-plank'] })
-    expect(exerciseSearchConflicts(SYSTEM_EXERCISE_CATALOG)).toHaveLength(10)
+    expect(exerciseSearchConflicts(SYSTEM_EXERCISE_CATALOG)).toHaveLength(4)
+  })
+
+  it('даёт поисковые варианты каждому системному упражнению, не меняя каталог', () => {
+    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(663)
+    expect(SYSTEM_EXERCISE_CATALOG.every((exercise) => exerciseSearchAliases(exercise).length > 0)).toBe(true)
+    expect(exerciseSearchAliases(SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-face-pull')!)).toContain('face pull')
+  })
+
+  it('не превращает автоматически сгенерированный вариант в точное совпадение', () => {
+    const bridge = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-butt-lift-bridge')!
+    const result = resolveExerciseSearch([bridge], 'butt lift bridge')
+
+    expect(result.level).toBe('search')
+    expect(result.matches[0]?.exercise.ref).toBe('fedb-butt-lift-bridge')
   })
 
   it('укладывает полный каталог в интерактивный бюджет поиска', () => {

@@ -9,6 +9,8 @@ import type { ExerciseSnapshot } from '../../shared/domain'
 export const SYSTEM_EXERCISE_PICKER_REPLACEMENTS: Readonly<Record<string, string>> = {
   'fedb-bent-over-barbell-row': 'barbell-row',
   'fedb-standing-dumbbell-press': 'vital-standing-dumbbell-press',
+  'fedb-front-plate-raise': 'vital-plate-front-raise',
+  'fedb-smith-machine-stiff-legged-deadlift': 'vital-smith-stiff-leg-deadlift',
 }
 
 export function selectableExercises(exercises: readonly ExerciseSnapshot[]): readonly ExerciseSnapshot[] {
