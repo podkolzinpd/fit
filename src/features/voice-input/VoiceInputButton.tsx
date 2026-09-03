@@ -286,11 +286,14 @@ export function VoiceInputButton({
     >
       <StopIcon />
       <span className="voice-action-ring" aria-hidden="true" />
-    </button> : <span className="voice-action-button voice-action-button-visual" aria-hidden="true">
-      <MicIcon />
-      <span className="voice-action-ring" />
-    </span>}
-    {recording ? <div className="voice-action-recording-controls"><button type="button" className="primary wide" onClick={finishCurrentRecording}>Готово</button><button type="button" className="link" onClick={cancelRecording}>Отменить</button></div> : <div className="voice-action-label">{!busy && <strong>{idleLabel}</strong>}{busy && <span>Это займёт несколько секунд</span>}{!busy && secondaryAction}</div>}
+    </button> : <div className="voice-action-buttons">
+      <span className="voice-action-button voice-action-button-visual" aria-hidden="true">
+        <MicIcon />
+        <span className="voice-action-ring" />
+      </span>
+      {!busy && secondaryAction}
+    </div>}
+    {recording ? <div className="voice-action-recording-controls"><button type="button" className="primary wide" onClick={finishCurrentRecording}>Готово</button><button type="button" className="link" onClick={cancelRecording}>Отменить</button></div> : <div className="voice-action-label">{!busy && <strong>{idleLabel}</strong>}{busy && <span>Это займёт несколько секунд</span>}</div>}
     {message && !message.startsWith('Сейчас распознаю:') && <div className="voice-action-error" role="alert"><strong>{message}</strong></div>}
   </section>
 
