@@ -1,8 +1,7 @@
-import { hashPilotSessionToken } from './auth/pilot-session-token.js'
 import {
-  PilotSessionInvalidError,
-  withYandexPilotSessionTransaction,
-} from './db/yandex-pilot-transaction.js'
+  withYandexActorSession,
+  type YandexActorSessionInput,
+} from './yandex-actor-session.js'
 import type { DatabasePool } from './db/types.js'
 import type {
   LiveExerciseSnapshot,
@@ -44,89 +43,89 @@ import type {
 } from './post-workout-request.js'
 
 export interface PilotWorkoutsWriter {
-  submitFeedback(sessionToken: string, workoutId: string, feedback: WorkoutFeedbackRequest): Promise<number>
-  setReview(sessionToken: string, workoutId: string, response: WorkoutTrainerResponseRequest): Promise<number>
-  askQuestion(sessionToken: string, workoutId: string, question: string, expectedVersion: number): Promise<number>
-  answerQuestion(sessionToken: string, workoutId: string, response: WorkoutTrainerResponseRequest): Promise<number>
-  resolveQuestion(sessionToken: string, workoutId: string, expectedVersion: number): Promise<number>
-  snoozeAttention(sessionToken: string, clientId: string): Promise<string>
+  submitFeedback(sessionToken: YandexActorSessionInput, workoutId: string, feedback: WorkoutFeedbackRequest): Promise<number>
+  setReview(sessionToken: YandexActorSessionInput, workoutId: string, response: WorkoutTrainerResponseRequest): Promise<number>
+  askQuestion(sessionToken: YandexActorSessionInput, workoutId: string, question: string, expectedVersion: number): Promise<number>
+  answerQuestion(sessionToken: YandexActorSessionInput, workoutId: string, response: WorkoutTrainerResponseRequest): Promise<number>
+  resolveQuestion(sessionToken: YandexActorSessionInput, workoutId: string, expectedVersion: number): Promise<number>
+  snoozeAttention(sessionToken: YandexActorSessionInput, clientId: string): Promise<string>
   appendLiveExercise(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     exercise: LiveExerciseSnapshot,
     expectedVersion: number,
     operationId: string,
   ): Promise<PilotLiveStructureResult>
   appendLiveSet(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     exerciseId: string,
     expectedVersion: number,
     operationId: string,
   ): Promise<PilotLiveStructureResult>
   cancelPlanned(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     expectedVersion: number,
   ): Promise<number>
   confirmLiveSet(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     setId: string,
     expectedVersion: number,
     operationId: string,
   ): Promise<PilotLiveCommandResult>
   deletePlanned(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     expectedVersion: number,
   ): Promise<number>
   deleteWorkout(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     expectedVersion: number,
   ): Promise<number>
   recordPlannedResult(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     draft: PlannedWorkoutDraft,
     expectedVersion: number,
   ): Promise<SavedPilotWorkout>
   reschedule(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     workoutDate: string,
     startTime: string | null,
     expectedVersion: number,
   ): Promise<number>
   saveCompleted(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     draft: PlannedWorkoutDraft,
     expectedVersion: number | null,
   ): Promise<SavedPilotWorkout>
   savePlanned(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     draft: PlannedWorkoutDraft,
     expectedVersion: number | null,
   ): Promise<SavedPilotWorkout>
   saveLiveSet(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     setId: string,
     draft: LiveSetDraft,
     expectedVersion: number,
     operationId: string,
   ): Promise<PilotLiveCommandResult>
   finishLive(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     expectedVersion: number,
     operationId: string,
   ): Promise<PilotLiveCommandResult>
   removeLiveSet(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     setId: string,
     expectedVersion: number,
     operationId: string,
   ): Promise<PilotLiveStructureResult>
   reorderLiveBlock(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     blockId: string,
     direction: -1 | 1,
@@ -134,7 +133,7 @@ export interface PilotWorkoutsWriter {
     operationId: string,
   ): Promise<PilotLiveStructureResult>
   replaceLiveExercise(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     exerciseId: string,
     exercise: LiveExerciseSnapshot,
@@ -142,20 +141,20 @@ export interface PilotWorkoutsWriter {
     operationId: string,
   ): Promise<PilotLiveStructureResult>
   startLive(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     expectedVersion: number,
     operationId: string,
   ): Promise<PilotLiveCommandResult>
   setLiveExerciseComment(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     exerciseId: string,
     comment: string,
     expectedVersion: number,
     operationId: string,
   ): Promise<PilotLiveStructureResult>
   setClientComment(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     comment: string,
     expectedVersion: number,
@@ -166,46 +165,44 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   constructor(private readonly pool: DatabasePool) {}
 
   private withSession<Result>(
-    sessionToken: string,
-    work: Parameters<typeof withYandexPilotSessionTransaction<Result>>[2],
+    sessionToken: YandexActorSessionInput,
+    work: Parameters<typeof withYandexActorSession<Result>>[2],
   ): Promise<Result> {
-    const tokenHash = hashPilotSessionToken(sessionToken)
-    if (tokenHash === undefined) throw new PilotSessionInvalidError()
-    return withYandexPilotSessionTransaction(this.pool, tokenHash, work)
+    return withYandexActorSession(this.pool, sessionToken, work)
   }
 
-  submitFeedback(sessionToken: string, workoutId: string, feedback: WorkoutFeedbackRequest) {
+  submitFeedback(sessionToken: YandexActorSessionInput, workoutId: string, feedback: WorkoutFeedbackRequest) {
     return this.withSession(sessionToken, (client) =>
       submitWorkoutFeedback(client, workoutId, feedback))
   }
 
-  setReview(sessionToken: string, workoutId: string, response: WorkoutTrainerResponseRequest) {
+  setReview(sessionToken: YandexActorSessionInput, workoutId: string, response: WorkoutTrainerResponseRequest) {
     return this.withSession(sessionToken, (client) =>
       setWorkoutReview(client, workoutId, response))
   }
 
-  askQuestion(sessionToken: string, workoutId: string, question: string, expectedVersion: number) {
+  askQuestion(sessionToken: YandexActorSessionInput, workoutId: string, question: string, expectedVersion: number) {
     return this.withSession(sessionToken, (client) =>
       askWorkoutQuestion(client, workoutId, question, expectedVersion))
   }
 
-  answerQuestion(sessionToken: string, workoutId: string, response: WorkoutTrainerResponseRequest) {
+  answerQuestion(sessionToken: YandexActorSessionInput, workoutId: string, response: WorkoutTrainerResponseRequest) {
     return this.withSession(sessionToken, (client) =>
       answerWorkoutQuestion(client, workoutId, response))
   }
 
-  resolveQuestion(sessionToken: string, workoutId: string, expectedVersion: number) {
+  resolveQuestion(sessionToken: YandexActorSessionInput, workoutId: string, expectedVersion: number) {
     return this.withSession(sessionToken, (client) =>
       resolveWorkoutQuestion(client, workoutId, expectedVersion))
   }
 
-  snoozeAttention(sessionToken: string, clientId: string) {
+  snoozeAttention(sessionToken: YandexActorSessionInput, clientId: string) {
     return this.withSession(sessionToken, (client) =>
       snoozeClientAttention(client, clientId))
   }
 
   appendLiveExercise(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     exercise: LiveExerciseSnapshot,
     expectedVersion: number,
@@ -221,7 +218,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   appendLiveSet(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     exerciseId: string,
     expectedVersion: number,
     operationId: string,
@@ -235,7 +232,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   cancelPlanned(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     expectedVersion: number,
   ): Promise<number> {
@@ -244,7 +241,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   deletePlanned(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     expectedVersion: number,
   ): Promise<number> {
@@ -253,7 +250,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   deleteWorkout(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     expectedVersion: number,
   ): Promise<number> {
@@ -262,7 +259,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   confirmLiveSet(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     setId: string,
     expectedVersion: number,
     operationId: string,
@@ -272,7 +269,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   savePlanned(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     draft: PlannedWorkoutDraft,
     expectedVersion: number | null,
   ): Promise<SavedPilotWorkout> {
@@ -281,7 +278,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   saveCompleted(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     draft: PlannedWorkoutDraft,
     expectedVersion: number | null,
   ): Promise<SavedPilotWorkout> {
@@ -290,7 +287,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   saveLiveSet(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     setId: string,
     draft: LiveSetDraft,
     expectedVersion: number,
@@ -307,7 +304,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   finishLive(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     expectedVersion: number,
     operationId: string,
@@ -317,7 +314,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   recordPlannedResult(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     draft: PlannedWorkoutDraft,
     expectedVersion: number,
   ): Promise<SavedPilotWorkout> {
@@ -326,7 +323,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   removeLiveSet(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     setId: string,
     expectedVersion: number,
     operationId: string,
@@ -340,7 +337,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   reorderLiveBlock(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     blockId: string,
     direction: -1 | 1,
@@ -358,7 +355,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   reschedule(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     workoutDate: string,
     startTime: string | null,
@@ -374,7 +371,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   replaceLiveExercise(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     exerciseId: string,
     exercise: LiveExerciseSnapshot,
@@ -392,7 +389,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   startLive(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     expectedVersion: number,
     operationId: string,
@@ -402,7 +399,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   setLiveExerciseComment(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     exerciseId: string,
     comment: string,
     expectedVersion: number,
@@ -418,7 +415,7 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
   }
 
   setClientComment(
-    sessionToken: string,
+    sessionToken: YandexActorSessionInput,
     workoutId: string,
     comment: string,
     expectedVersion: number,

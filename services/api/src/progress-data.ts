@@ -1,12 +1,11 @@
 import type { QueryResultRow } from 'pg'
 
-import { hashPilotSessionToken } from './auth/pilot-session-token.js'
 import { PilotDomainCommandError } from './domain-commands.js'
 import type { DatabaseClient, DatabasePool } from './db/types.js'
 import {
-  PilotSessionInvalidError,
-  withYandexPilotSessionTransaction,
-} from './db/yandex-pilot-transaction.js'
+  withYandexActorSession,
+  type YandexActorSessionInput,
+} from './yandex-actor-session.js'
 import type {
   GoalDraft,
   GoalStageDraft,
@@ -56,63 +55,61 @@ async function readJson(client: DatabaseClient, sql: string, values: readonly un
 }
 
 export interface PilotProgressData {
-  readBundle(sessionToken: string, clientId: string): Promise<unknown>
-  readRegularity(sessionToken: string, clientId: string): Promise<unknown>
-  readRunning(sessionToken: string, clientId: string, from: string, to: string): Promise<unknown>
-  readExercise(sessionToken: string, clientId: string, exerciseRef: string,
+  readBundle(session: YandexActorSessionInput, clientId: string): Promise<unknown>
+  readRegularity(session: YandexActorSessionInput, clientId: string): Promise<unknown>
+  readRunning(session: YandexActorSessionInput, clientId: string, from: string, to: string): Promise<unknown>
+  readExercise(session: YandexActorSessionInput, clientId: string, exerciseRef: string,
     limit: number, cursor: ProgressCursor): Promise<unknown>
-  readChronicle(sessionToken: string, clientId: string, limit: number,
+  readChronicle(session: YandexActorSessionInput, clientId: string, limit: number,
     cursor: ProgressCursor): Promise<unknown>
-  saveProgress(sessionToken: string, draft: ProgressDraft,
+  saveProgress(session: YandexActorSessionInput, draft: ProgressDraft,
     expectedVersion: number | null): Promise<{ id: string; version: number }>
-  deleteProgress(sessionToken: string, id: string, expectedVersion: number): Promise<number>
-  saveMetric(sessionToken: string, draft: MetricDraft,
+  deleteProgress(session: YandexActorSessionInput, id: string, expectedVersion: number): Promise<number>
+  saveMetric(session: YandexActorSessionInput, draft: MetricDraft,
     expectedVersion: number | null): Promise<{ id: string; archivedAt: string | null; version: number }>
-  setMetricArchived(sessionToken: string, id: string, archived: boolean,
+  setMetricArchived(session: YandexActorSessionInput, id: string, archived: boolean,
     expectedVersion: number): Promise<{ id: string; archivedAt: string | null; version: number }>
-  saveGoal(sessionToken: string, draft: GoalDraft,
+  saveGoal(session: YandexActorSessionInput, draft: GoalDraft,
     expectedVersion: number | null): Promise<{ id: string; version: number }>
-  archiveGoal(sessionToken: string, id: string, expectedVersion: number): Promise<number>
-  saveStage(sessionToken: string, draft: GoalStageDraft,
+  archiveGoal(session: YandexActorSessionInput, id: string, expectedVersion: number): Promise<number>
+  saveStage(session: YandexActorSessionInput, draft: GoalStageDraft,
     expectedVersion: number | null): Promise<{ id: string; version: number }>
-  deleteStage(sessionToken: string, id: string, expectedVersion: number): Promise<void>
+  deleteStage(session: YandexActorSessionInput, id: string, expectedVersion: number): Promise<void>
 }
 
 export class DatabasePilotProgressData implements PilotProgressData {
   constructor(private readonly pool: DatabasePool) {}
 
-  private withSession<Result>(sessionToken: string, work: (client: DatabaseClient) => Promise<Result>) {
-    const tokenHash = hashPilotSessionToken(sessionToken)
-    if (tokenHash === undefined) throw new PilotSessionInvalidError()
-    return withYandexPilotSessionTransaction(this.pool, tokenHash, work)
+  private withSession<Result>(session: YandexActorSessionInput, work: (client: DatabaseClient) => Promise<Result>) {
+    return withYandexActorSession(this.pool, session, work)
   }
 
-  readBundle(token: string, clientId: string) {
-    return this.withSession(token, (client) =>
+  readBundle(session: YandexActorSessionInput, clientId: string) {
+    return this.withSession(session, (client) =>
       readJson(client, 'select public.get_client_progress_bundle($1) result', [clientId]))
   }
-  readRegularity(token: string, clientId: string) {
-    return this.withSession(token, (client) =>
+  readRegularity(session: YandexActorSessionInput, clientId: string) {
+    return this.withSession(session, (client) =>
       readJson(client, 'select public.get_workout_regularity($1) result', [clientId]))
   }
-  readRunning(token: string, clientId: string, from: string, to: string) {
-    return this.withSession(token, (client) =>
+  readRunning(session: YandexActorSessionInput, clientId: string, from: string, to: string) {
+    return this.withSession(session, (client) =>
       readJson(client, 'select public.list_running_progress($1, $2, $3) result', [clientId, from, to]))
   }
-  readExercise(token: string, clientId: string, exerciseRef: string,
+  readExercise(session: YandexActorSessionInput, clientId: string, exerciseRef: string,
     limit: number, cursor: ProgressCursor) {
-    return this.withSession(token, (client) => readJson(client,
+    return this.withSession(session, (client) => readJson(client,
       'select public.list_exercise_progress($1, $2, $3, $4, $5) result',
       [clientId, exerciseRef, limit, cursor.completedAt, cursor.workoutId]))
   }
-  readChronicle(token: string, clientId: string, limit: number, cursor: ProgressCursor) {
-    return this.withSession(token, (client) => readJson(client,
+  readChronicle(session: YandexActorSessionInput, clientId: string, limit: number, cursor: ProgressCursor) {
+    return this.withSession(session, (client) => readJson(client,
       'select public.list_workout_chronicle($1, $2, $3, $4) result',
       [clientId, limit, cursor.completedAt, cursor.workoutId]))
   }
 
-  saveProgress(token: string, draft: ProgressDraft, expectedVersion: number | null) {
-    return this.withSession(token, (client) => command(async () => {
+  saveProgress(session: YandexActorSessionInput, draft: ProgressDraft, expectedVersion: number | null) {
+    return this.withSession(session, (client) => command(async () => {
       const rows = await client.query<MutationRow>(
         'select progress_id resource_id, version from public.save_client_progress($1::jsonb, $2)',
         [JSON.stringify(draft), expectedVersion])
@@ -121,25 +118,25 @@ export class DatabasePilotProgressData implements PilotProgressData {
       return { id: row.resource_id, version: safeVersion(row.version) }
     }))
   }
-  deleteProgress(token: string, id: string, expectedVersion: number) {
-    return this.withSession(token, (client) => command(async () => {
+  deleteProgress(session: YandexActorSessionInput, id: string, expectedVersion: number) {
+    return this.withSession(session, (client) => command(async () => {
       const rows = await client.query<MutationRow>(
         'select $1::uuid resource_id, public.delete_client_progress($1, $2) version', [id, expectedVersion])
       return safeVersion(rows[0]?.version ?? '')
     }))
   }
-  saveMetric(token: string, draft: MetricDraft, expectedVersion: number | null) {
-    return this.metricCommand(token,
+  saveMetric(session: YandexActorSessionInput, draft: MetricDraft, expectedVersion: number | null) {
+    return this.metricCommand(session,
       'select metric_id resource_id, archived_at, version from public.save_client_metric($1::jsonb, $2)',
       [JSON.stringify(draft), expectedVersion])
   }
-  setMetricArchived(token: string, id: string, archived: boolean, expectedVersion: number) {
-    return this.metricCommand(token,
+  setMetricArchived(session: YandexActorSessionInput, id: string, archived: boolean, expectedVersion: number) {
+    return this.metricCommand(session,
       'select metric_id resource_id, archived_at, version from public.set_client_metric_archived($1, $2, $3)',
       [id, archived, expectedVersion])
   }
-  private metricCommand(token: string, sql: string, values: readonly unknown[]) {
-    return this.withSession(token, (client) => command(async () => {
+  private metricCommand(session: YandexActorSessionInput, sql: string, values: readonly unknown[]) {
+    return this.withSession(session, (client) => command(async () => {
       const rows = await client.query<MutationRow>(sql, values)
       const row = rows[0]
       if (row === undefined) throw new Error('Metric command returned no result')
@@ -147,30 +144,30 @@ export class DatabasePilotProgressData implements PilotProgressData {
         version: safeVersion(row.version) }
     }))
   }
-  saveGoal(token: string, draft: GoalDraft, expectedVersion: number | null) {
-    return this.versionedResourceCommand(token,
+  saveGoal(session: YandexActorSessionInput, draft: GoalDraft, expectedVersion: number | null) {
+    return this.versionedResourceCommand(session,
       'select goal_id resource_id, version from public.save_client_goal($1::jsonb, $2)',
       [JSON.stringify(draft), expectedVersion])
   }
-  archiveGoal(token: string, id: string, expectedVersion: number) {
-    return this.withSession(token, (client) => command(async () => {
+  archiveGoal(session: YandexActorSessionInput, id: string, expectedVersion: number) {
+    return this.withSession(session, (client) => command(async () => {
       const rows = await client.query<MutationRow>(
         'select $1::uuid resource_id, public.archive_client_goal($1, $2) version', [id, expectedVersion])
       return safeVersion(rows[0]?.version ?? '')
     }))
   }
-  saveStage(token: string, draft: GoalStageDraft, expectedVersion: number | null) {
-    return this.versionedResourceCommand(token,
+  saveStage(session: YandexActorSessionInput, draft: GoalStageDraft, expectedVersion: number | null) {
+    return this.versionedResourceCommand(session,
       'select stage_id resource_id, version from public.save_goal_stage($1::jsonb, $2)',
       [JSON.stringify(draft), expectedVersion])
   }
-  deleteStage(token: string, id: string, expectedVersion: number) {
-    return this.withSession(token, (client) => command(async () => {
+  deleteStage(session: YandexActorSessionInput, id: string, expectedVersion: number) {
+    return this.withSession(session, (client) => command(async () => {
       await client.query('select public.delete_goal_stage($1, $2)', [id, expectedVersion])
     }))
   }
-  private versionedResourceCommand(token: string, sql: string, values: readonly unknown[]) {
-    return this.withSession(token, (client) => command(async () => {
+  private versionedResourceCommand(session: YandexActorSessionInput, sql: string, values: readonly unknown[]) {
+    return this.withSession(session, (client) => command(async () => {
       const rows = await client.query<MutationRow>(sql, values)
       const row = rows[0]
       if (row === undefined) throw new Error('Progress resource command returned no result')

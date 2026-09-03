@@ -331,6 +331,74 @@ describe('native Yandex function contracts', () => {
     }, PROFILE_ID)
   })
 
+  it('uses one read-write app session across the main domain contract', async () => {
+    const clients = buildClientsReader()
+    const connections = buildConnectionsReader()
+    const connectionCommands = buildConnectionsWriter()
+    const progress = buildProgressData()
+    const domain = buildDomainWriter()
+    const workouts = buildWorkoutsWriter()
+    const feedback = buildAppFeedbackWriter()
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotClientsReader: clients.pilotClientsReader,
+      pilotConnectionsReader: connections.pilotConnectionsReader,
+      pilotConnectionsWriter: connectionCommands.pilotConnectionsWriter,
+      pilotProgressData: progress.pilotProgressData,
+      pilotDomainWriter: domain.pilotDomainWriter,
+      pilotWorkoutsWriter: workouts.pilotWorkoutsWriter,
+      pilotAppFeedbackWriter: feedback.pilotAppFeedbackWriter,
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+    const token = 'a'.repeat(43)
+    const session = { accessMode: 'read_write' as const, token }
+    const headers = { 'x-fit-session': token }
+    const clientId = CLIENTS_RESPONSE.clients[0]!.id
+    const invitationId = CONNECTIONS_RESPONSE.invitations[0]!.id
+
+    const responses = await Promise.all([
+      app.inject({ method: 'GET', url: '/v1/clients', headers }),
+      app.inject({ method: 'GET', url: '/v1/connections', headers }),
+      app.inject({ method: 'GET', url: `/v1/clients/${clientId}/progress`, headers }),
+      app.inject({
+        method: 'PUT', url: `/v1/clients/${clientId}/archive`, headers,
+        payload: { archived: true, expectedVersion: 1 },
+      }),
+      app.inject({
+        method: 'POST', url: `/v1/clients/${clientId}/attention/snooze`, headers,
+      }),
+      app.inject({
+        method: 'POST', url: '/v1/app-feedback', headers,
+        payload: {
+          kind: 'suggestion', message: 'Добавьте календарь', screenPath: '/',
+          appVersion: '1', displayMode: 'browser', userAgent: 'test',
+        },
+      }),
+      app.inject({ method: 'GET', url: '/v1/push-notifications/status', headers }),
+      app.inject({ method: 'DELETE', url: `/v1/invitations/${invitationId}`, headers }),
+    ])
+    const ambiguous = await app.inject({
+      method: 'GET',
+      url: '/v1/clients',
+      headers: { ...headers, 'x-fit-pilot-session': 's'.repeat(43) },
+    })
+
+    expect(responses.map((response) => response.statusCode)).toEqual([
+      200, 200, 200, 200, 200, 201, 200, 204,
+    ])
+    expect(ambiguous.statusCode).toBe(401)
+    expect(clients.readClients).toHaveBeenCalledWith(session, false)
+    expect(connections.readConnections).toHaveBeenCalledWith(session)
+    expect(progress.readBundle).toHaveBeenCalledWith(session, clientId)
+    expect(domain.setClientArchived).toHaveBeenCalledWith(session, clientId, true, 1)
+    expect(workouts.snoozeAttention).toHaveBeenCalledWith(session, clientId)
+    expect(feedback.submit).toHaveBeenCalledWith(session, expect.any(Object))
+    expect(push.readStatus).toHaveBeenCalledWith(session)
+    expect(connectionCommands.revokeInvitation).toHaveBeenCalledWith(session, invitationId)
+  })
+
   it('publishes a training summary only through a read-write app session', async () => {
     const publish = vi.fn().mockResolvedValue(undefined)
     const app = buildApp({
@@ -1530,11 +1598,47 @@ describe('Yandex ID app session and account linking endpoints', () => {
     const identity = buildIdentityProvider()
     const actor = buildExistingActorProvider()
     const linker = buildYandexAccountLinker()
+    const appSession = buildYandexAppSessionIssuer()
     const app = buildApp({
       oauthCodeProvider: oauth.oauthCodeProvider,
       identityProvider: identity.identityProvider,
       existingActorProvider: actor.existingActorProvider,
       yandexAccountLinker: linker.yandexAccountLinker,
+      yandexAppSessionIssuer: appSession.yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      headers: { authorization: 'Bearer supabase-session-token' },
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      profileId: PROFILE_ID,
+      appSession: APP_SESSION_RESPONSE,
+    })
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.body).not.toContain('temporary-yandex-token')
+    expect(response.body).not.toContain('supabase-session-token')
+    expect(actor.resolveActor).toHaveBeenCalledWith('supabase-session-token')
+    expect(oauth.exchangeCode).toHaveBeenCalledWith('one-time-code', 'v'.repeat(43))
+    expect(identity.verifyAccessToken).toHaveBeenCalledWith('temporary-yandex-token')
+    expect(linker.linkActor).toHaveBeenCalledWith(PROFILE_ID, SUBJECT_HASH)
+    expect(appSession.issue).toHaveBeenCalledWith(SUBJECT_HASH)
+  })
+
+  it('keeps a successful link when the profile is not in read-write rollout', async () => {
+    const appSession = buildYandexAppSessionIssuer(new YandexAppSessionDeniedError())
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      existingActorProvider: buildExistingActorProvider().existingActorProvider,
+      yandexAccountLinker: buildYandexAccountLinker().yandexAccountLinker,
+      yandexAppSessionIssuer: appSession.yandexAppSessionIssuer,
       logger: false,
     })
     apps.push(app)
@@ -1548,13 +1652,6 @@ describe('Yandex ID app session and account linking endpoints', () => {
 
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual({ profileId: PROFILE_ID })
-    expect(response.headers['cache-control']).toBe('no-store')
-    expect(response.body).not.toContain('temporary-yandex-token')
-    expect(response.body).not.toContain('supabase-session-token')
-    expect(actor.resolveActor).toHaveBeenCalledWith('supabase-session-token')
-    expect(oauth.exchangeCode).toHaveBeenCalledWith('one-time-code', 'v'.repeat(43))
-    expect(identity.verifyAccessToken).toHaveBeenCalledWith('temporary-yandex-token')
-    expect(linker.linkActor).toHaveBeenCalledWith(PROFILE_ID, SUBJECT_HASH)
   })
 
   it('does not contact Yandex OAuth when the existing FIT session is missing or invalid', async () => {
