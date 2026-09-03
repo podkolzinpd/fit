@@ -4,7 +4,7 @@ import { BASE_EXERCISES } from './system-exercises.base.generated'
 import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
 import { VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 7
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 8
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {
@@ -141,6 +141,31 @@ const WARMUP_AND_MOBILITY = [
   { source: 'system', ref: 'cat-cow', name: 'Кошка-корова', muscleGroup: 'core', inputKind: 'duration', imageUrl: '/exercises/base-walking.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Пресс', instructions: ['На четвереньках плавно чередуйте округление и прогиб спины. Укажите время работы.'] },
 ] as const satisfies readonly ExerciseSnapshot[]
 
+// Точечные дополнения из реальной практики тренеров. Они получают новые ref и
+// не заменяют существующие движения, поэтому старые планы и пользовательские
+// упражнения продолжают ссылаться на прежние записи без миграции.
+const CURATED_CATALOG_ADDITIONS = [
+  {
+    source: 'system',
+    ref: 'smith-single-leg-romanian-deadlift',
+    name: 'Румынская тяга на одной ноге в Смите (Тренажёр)',
+    muscleGroup: 'glutes',
+    inputKind: 'strength',
+    equipment: 'Тренажёр Смита',
+    equipmentRef: 'machine',
+    primaryMuscleDetail: 'Ягодицы',
+    secondaryMuscles: ['Задняя поверхность бедра', 'Поясница'],
+    level: 'intermediate',
+    imageUrl: '/exercises/fedb-smith-machine-stiff-legged-deadlift.jpg',
+    motionImageUrl: '/exercises/fedb-smith-machine-stiff-legged-deadlift-end.jpg',
+    instructions: [
+      'Встаньте боком или лицом к грифу Смита, перенесите вес на опорную ногу.',
+      'Отводите таз назад, сохраняя спину нейтральной, а свободную ногу вытянутой назад.',
+      'Вернитесь вверх усилием ягодицы опорной ноги и повторите на другую сторону.',
+    ],
+  },
+] as const satisfies readonly ExerciseSnapshot[]
+
 // Полный системный каталог: рукописные базовые + импортированные из открытой
 // базы. Импортированные добавляются в конец, дубли по ref отсекаются.
 const SEEN_REFS = new Set<string>(SYSTEM_EXERCISES.map((exercise) => exercise.ref))
@@ -157,6 +182,7 @@ const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
   ...FUNCTIONAL_PROTOCOLS,
   ...RUNNING_DRILLS,
   ...WARMUP_AND_MOBILITY,
+  ...CURATED_CATALOG_ADDITIONS,
   ...VITAL_FREE_PACK_EXERCISES,
   ...CATALOG_EXPANSION,
 ]
@@ -166,8 +192,14 @@ const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
 // литерале нет смысла.
 export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_CATALOG_SOURCE.map((exercise) => {
   const vitalMedia = VITAL_FREE_PACK_MEDIA_BY_REF[exercise.ref]
+  const correctedName = exercise.ref === 'fedb-snatch-deadlift'
+    ? 'Рывковая становая тяга (Штанга)'
+    : exercise.ref === 'fedb-car-deadlift'
+      ? 'Становая тяга в тренажёре «Автомобиль» (Тренажёр)'
+      : exercise.name
   return {
     ...exercise,
+    name: correctedName,
     imageUrl: vitalMedia?.imageUrl ?? exercise.imageUrl,
     motionImageUrl: vitalMedia?.motionImageUrl ?? exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
     techniqueVideoUrl: vitalMedia?.techniqueVideoUrl,

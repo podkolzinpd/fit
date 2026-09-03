@@ -16,7 +16,7 @@ import { ClientPicker, type ClientPickerSelection } from '../clients'
 import { useAuth } from '../../app/auth-context'
 import { useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { useRpeDisplay } from '../../app/rpe-display'
-import type { ParsedWorkoutExercise } from './quick-workout-entry'
+import { workoutTrainerComment, type ParsedWorkoutExercise } from './quick-workout-entry'
 import { formatLlmWorkoutText, parseWorkoutWithLlm } from './llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
@@ -87,7 +87,7 @@ function parsedLlmItems(response: WorkoutParseResponse, catalog: readonly Exerci
       ...(typeof set.durationMin === 'number' && set.durationMin > 0 ? { durationSec: Math.round(set.durationMin * 60) } : {}),
       ...(typeof set.distanceKm === 'number' && set.distanceKm > 0 ? { distanceKm: set.distanceKm } : {}),
     })) : [{ position: 0 }]
-    return [{ line: item.sourceText, exercise, sets, hasValues: sets.some((set) => Object.keys(set).some((key) => key !== 'position' && set[key as keyof typeof set] !== undefined)) }]
+    return [{ line: item.sourceText, exercise, sets, hasValues: sets.some((set) => Object.keys(set).some((key) => key !== 'position' && set[key as keyof typeof set] !== undefined)), trainerComment: workoutTrainerComment(item.sourceText) }]
   })
 }
 
@@ -102,6 +102,7 @@ function draftExercise(item: ParsedWorkoutExercise, position: number): WorkoutDr
     restBetweenExercisesSec: item.structure?.restBetweenExercisesSec,
     restBetweenRoundsSec: item.structure?.restBetweenRoundsSec,
     restBetweenSetsSec: item.structure?.restBetweenSetsSec,
+    trainerComment: item.trainerComment,
     // Черновик мог быть создан до появления строгого ограничения RPE в БД.
     // Не даём старому значению сорвать сохранение всей тренировки.
     sets: (item.sets.length ? item.sets : [{ position: 0 }]).map((set) => ({

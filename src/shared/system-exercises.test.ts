@@ -15,8 +15,8 @@ const EXERCISE_VIDEO_PATHS = new Set(
 )
 
 describe('system exercise catalog', () => {
-  it('matches the V1 baseline catalog', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(7)
+  it('matches the current catalog contract', () => {
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(8)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
@@ -64,11 +64,11 @@ describe('system exercise catalog', () => {
   })
 
   it('добавляет импортированный каталог поверх базового без дублей', () => {
-    // Полный каталог = 49 базовых + импортированные, ref уникальны.
-    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(662)
+    // Полный каталог = 49 базовых + импортированные + точечные дополнения, ref уникальны.
+    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(663)
     expect(IMPORTED_EXERCISES).toHaveLength(451)
     expect(CATALOG_EXPANSION).toHaveLength(120)
-    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length + CATALOG_EXPANSION.length + 42)
+    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length + CATALOG_EXPANSION.length + 43)
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
   })
 
@@ -223,8 +223,19 @@ describe('system exercise catalog', () => {
   })
 
   it('каталог = обогащённые базовые + импортированные без дублей', () => {
-    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(BASE_EXERCISES.length + IMPORTED_EXERCISES.length + CATALOG_EXPANSION.length + 42)
+    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(BASE_EXERCISES.length + IMPORTED_EXERCISES.length + CATALOG_EXPANSION.length + 43)
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
+  })
+
+  it('добавляет журавлик в Смите отдельным движением, не заменяя старые ref', () => {
+    expect(SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'smith-single-leg-romanian-deadlift')).toMatchObject({
+      name: 'Румынская тяга на одной ноге в Смите (Тренажёр)',
+      source: 'system',
+      inputKind: 'strength',
+      equipmentRef: 'machine',
+    })
+    expect(SYSTEM_EXERCISE_CATALOG.some((exercise) => exercise.ref === 'fedb-smith-machine-stiff-legged-deadlift')).toBe(true)
+    expect(SYSTEM_EXERCISE_CATALOG.some((exercise) => exercise.ref === 'vital-smith-stiff-leg-deadlift')).toBe(true)
   })
 
   it('весь каталог имеет русские инструкции (0 англ., 0 пустых)', () => {

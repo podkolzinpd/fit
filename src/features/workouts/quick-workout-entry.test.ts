@@ -72,6 +72,82 @@ describe('parseQuickWorkoutEntry', () => {
     }
   })
 
+  it('разбирает контрольную программу тренера и сохраняет уточнения техники', () => {
+    const cases = [
+      ['Отведения сидя в тренажере 4х15', 'fedb-thigh-abductor'],
+      ['Ягодичный мост 4х15', 'fedb-butt-lift-bridge'],
+      ['Выпад в Смита на каждую ногу (на прямую) 4х15', 'fedb-smith-single-leg-split-squat', 'На каждую ногу · На прямую ногу'],
+      ['Румынская тяга 4х15', 'romanian-deadlift'],
+      ['Журавлик в Смита 4х15', 'smith-single-leg-romanian-deadlift'],
+      ['Вертикальная тяга 4х15', 'lat-pulldown'],
+      ['Горизонтальная тяга 4х15', 'seated-cable-row'],
+      ['Вертикальная тяга узкая 4х15, негативная фаза 2 секунды', 'fedb-close-grip-front-lat-pulldown', 'Негативная фаза — 2 сек.'],
+      ['Тяга штанги в наклоне 4х15', 'barbell-row'],
+      ['Тяга рейдера (хват узко) W-образная рукоять 4х15', 'fedb-straight-arm-pulldown', 'Узкий хват · W-образная рукоять'],
+      ['Отведения в пек-деке 4х15', 'vital-reverse-pec-deck'],
+      ['Тяга назад с косичкой 4х15', 'fedb-cable-rope-rear-delt-rows'],
+      ['Жим на плечи в Смит 4х15', 'fedb-smith-machine-overhead-shoulder-press'],
+      ['Протяжка с нижнего блока (широким хватом) 4х15', 'fedb-upright-cable-row', 'Широкий хват'],
+      ['Отведения на среднюю дельту с гантелями 4х15', 'lateral-raise'],
+      ['Подъем гантелей перед собой поочередно, кисти смотрят в пол 4х30', 'fedb-alternating-deltoid-raise', 'Поочерёдно · Кисти направлены в пол'],
+      ['Махи назад в кроссовере 4х15', 'fedb-one-legged-cable-kickback'],
+      ['Болгарские выпады 4х15', 'bulgarian-split-squat'],
+      ['Жим платформы 4х15', 'leg-press'],
+      ['Разгибания ног сидя 5х15', 'leg-extension'],
+    ] as const
+
+    for (const [text, ref, trainerComment] of cases) {
+      const result = parseQuickWorkoutEntry(text, SYSTEM_EXERCISE_CATALOG)
+      expect(result.unparsed, text).toEqual([])
+      expect(result.parsed[0]?.exercise.ref, text).toBe(ref)
+      expect(result.parsed[0]?.trainerComment, text).toBe(trainerComment)
+    }
+  })
+
+  it('принимает контрольную программу целиком с разделами, нумерацией и повтором упражнения', () => {
+    const text = `Ягодицы:
+1.Отведения сидя в тренажере 4х15
+2.Ягодичный мост 4х15
+3.Выпад в Смита на каждую ногу (на прямую) 4х15
+4.Румынская тяга 4х15
+5.Журавлик в Смита 4х15
+
+Спина:
+1. Вертикальная тяга 4х15
+2. Горизонтальная тяга 4х15
+3. Вертикальная тяга узкая 4х15, негативная фаза 2 секунды
+4.Тяга штанги в наклоне 4х15
+5.Тяга рейдера (хват узко) W-образная рукоять 4х15
+
+Плечи:
+1.Отведения в пек-деке 4х15
+2.Тяга назад с косичкой 4х15
+3.Жим на плечи в Смит 4х15
+4.Протяжка с нижнего блока (широким хватом) 4х15
+5.Отведения на среднюю дельту с гантелями 4х15
+6.Подъем гантелей перед собой поочередно, кисти смотрят в пол 4х30
+
+Ягодицы/ноги:
+1.Ягодичный мост 4х15
+2.Махи назад в кроссовере 4х15
+3.Болгарские выпады 4х15
+4.Жим платформы 4х15
+5.Разгибания ног сидя 5х15`
+    const result = parseQuickWorkoutEntry(text, SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed.map((item) => item.exercise.ref)).toEqual([
+      'fedb-thigh-abductor', 'fedb-butt-lift-bridge', 'fedb-smith-single-leg-split-squat',
+      'romanian-deadlift', 'smith-single-leg-romanian-deadlift', 'lat-pulldown',
+      'seated-cable-row', 'fedb-close-grip-front-lat-pulldown', 'barbell-row',
+      'fedb-straight-arm-pulldown', 'vital-reverse-pec-deck', 'fedb-cable-rope-rear-delt-rows',
+      'fedb-smith-machine-overhead-shoulder-press', 'fedb-upright-cable-row', 'lateral-raise',
+      'fedb-alternating-deltoid-raise', 'fedb-butt-lift-bridge', 'fedb-one-legged-cable-kickback',
+      'bulgarian-split-squat', 'leg-press', 'leg-extension',
+    ])
+    expect(result.parsed).toHaveLength(21)
+  })
+
   it('понимает транслит, английские термины и сокращения тренера', () => {
     const cases = [
       ['smith squat 3×8 80 kg', 'fedb-smith-machine-squat'],
