@@ -1,8 +1,25 @@
 import type { ExerciseSnapshot } from './domain'
 import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
-import { SYSTEM_EXERCISE_CATALOG } from './system-exercises'
+import { SYSTEM_EXERCISES, SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISE_LEGACY_CATALOG } from './system-exercises'
 
 const byRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
+
+const normalizedName = (name: string) => name.trim().toLocaleLowerCase('ru-RU').replaceAll('ё', 'е').replace(/\s+/gu, ' ')
+const priorNamesByRef = new Map<string, Set<string>>()
+for (const exercise of [...SYSTEM_EXERCISES, ...SYSTEM_EXERCISE_LEGACY_CATALOG]) {
+  const names = priorNamesByRef.get(exercise.ref) ?? new Set<string>()
+  names.add(normalizedName(exercise.name))
+  priorNamesByRef.set(exercise.ref, names)
+}
+
+/** Only a new copy may refresh a known catalog label; never infer identity from text. */
+export function copiedExerciseName(exercise: ExerciseSnapshot): string {
+  if (exercise.source !== 'system' || exercise.customExerciseId) return exercise.name
+  const current = byRef.get(exercise.ref)
+  if (!current || current.inputKind !== exercise.inputKind) return exercise.name
+  // Preserve running formats and any trainer-authored or otherwise unknown label.
+  return priorNamesByRef.get(exercise.ref)?.has(normalizedName(exercise.name)) ? current.name : exercise.name
+}
 
 // Same movement is not enough: converting reps/time to weight+reps would lose
 // data. Such aliases become explicit variants instead of silent replacements.

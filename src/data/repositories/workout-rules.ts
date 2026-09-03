@@ -3,6 +3,7 @@ import type { LocalDate } from '../../shared/local-date'
 import type { RunningFormat } from '../../shared/running-formats'
 import { runningFormatExerciseName } from '../../shared/running-formats'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
+import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
 import { isRowingExerciseRef, rowingPaceLabel, runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
 
 export interface ExerciseBlock {
@@ -845,7 +846,7 @@ export function exerciseChartPoints(workouts: Workout[], exerciseRef: string): E
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
 }
 
-export function copyWorkout(source: Workout, workoutDate = source.workoutDate): WorkoutDraft {
+export function copyWorkout(source: Workout, workoutDate = source.workoutDate, options: { refreshCatalogNames?: boolean } = {}): WorkoutDraft {
   // Копия сохраняет структуру блоков (тип), но получает свежие block_id,
   // чтобы не конфликтовать с исходной тренировкой.
   const blockIdMap = new Map<string, string>()
@@ -861,7 +862,7 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate): 
     endTime: source.endTime ?? undefined, notes: source.notes ?? undefined,
     exercises: source.exercises.map((exercise) => ({
       source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId,
-      name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind,
+      name: options.refreshCatalogNames ? copiedExerciseName(exercise) : exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind,
       position: exercise.position,
       blockId: nextBlockId(exercise.blockId), blockType: exercise.blockType, blockPreset: exercise.blockPreset, blockRounds: exercise.blockRounds,
       restBetweenExercisesSec: exercise.restBetweenExercisesSec, restBetweenRoundsSec: exercise.restBetweenRoundsSec, restBetweenSetsSec: exercise.restBetweenSetsSec,

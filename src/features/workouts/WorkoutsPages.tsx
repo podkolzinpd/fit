@@ -7,6 +7,7 @@ import { goalsRepository } from '../../data/repositories/goals.repository'
 import { invitationsRepository } from '../../data/repositories/invitations.repository'
 import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
+import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
 import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
@@ -379,7 +380,7 @@ export function WorkoutFormPage() {
   const [pickerSearch, setPickerSearch] = useState('')
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
-  const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today)) : undefined
+  const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today, { refreshCatalogNames: true })) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
   const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`)
   // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
@@ -401,7 +402,8 @@ export function WorkoutFormPage() {
   const completedMode = recordCompleted || recordPlannedResult || Boolean(workoutId && source.data?.status === 'done')
   useEffect(() => {
     if (!actor || source.isLoading || (clientMode && mine.isLoading) || formDraftReady) return
-    const saved = readWorkoutFormDraft(draftKey)
+    // Only creation persists drafts. An unfinished copy must never populate an edit.
+    const saved = workoutId ? null : readWorkoutFormDraft(draftKey)
     if (saved) {
       setSelectedClientId(routeClientId || saved.clientId)
       setEntryDate(saved.workoutDate)
@@ -411,7 +413,9 @@ export function WorkoutFormPage() {
       setNotes(saved.notes)
       setStageId(saved.stageId)
       setRecordCompleted(saved.recordCompleted)
-      setDraftExercises(saved.exercises)
+      setDraftExercises(copiedWorkout
+        ? saved.exercises.map((exercise) => ({ ...exercise, name: copiedExerciseName(exercise) }))
+        : saved.exercises)
     } else if (initial) {
       setEntryDate(initial.workoutDate)
       // PostgreSQL возвращает time как HH:MM:SS, а нативный input[type=time]
