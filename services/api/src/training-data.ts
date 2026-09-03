@@ -2,7 +2,7 @@ import type { QueryResultRow } from 'pg'
 
 import type { DatabaseClient } from './db/types.js'
 
-const WORKOUT_PAGE_SIZE = 100
+const DEFAULT_WORKOUT_PAGE_SIZE = 100
 
 type MuscleGroup =
   | 'legs'
@@ -29,6 +29,7 @@ interface CustomExerciseRow extends QueryResultRow {
   input_kind: InputKind
   archived_at: Date | null
   version: string
+  trainer_id: string
 }
 
 interface WorkoutRow extends QueryResultRow {
@@ -57,6 +58,10 @@ interface WorkoutRow extends QueryResultRow {
   started_at: Date | null
   completed_at: Date | null
   version: string
+  stage_id: string | null
+  stage_title: string | null
+  has_pr: boolean
+  total_count: string
 }
 
 interface AttentionRow extends QueryResultRow {
@@ -124,6 +129,7 @@ export interface PilotCustomExercise {
   inputKind: InputKind
   archivedAt: string | null
   version: number
+  createdBy?: string
 }
 
 export interface PilotWorkoutSet {
@@ -195,6 +201,9 @@ export interface PilotWorkout {
   startedAt: string | null
   completedAt: string | null
   version: number
+  stageId?: string | null
+  stageTitle?: string | null
+  hasPr?: boolean
   exercises: PilotWorkoutExercise[]
 }
 
@@ -223,6 +232,12 @@ export interface PilotTrainingDataResponse {
   attention: PilotTrainerAttentionWorkout[]
   attentionPreferences: PilotAttentionPreference[]
   hasMoreWorkouts: boolean
+  totalWorkouts?: number
+}
+
+export interface TrainingDataPage {
+  limit: number
+  offset: number
 }
 
 function safeInteger(value: string, field: string): number {
@@ -237,10 +252,11 @@ function optionalNumber(value: string | null): number | null {
 
 export async function readAccessibleTrainingData(
   client: DatabaseClient,
+  page: TrainingDataPage = { limit: DEFAULT_WORKOUT_PAGE_SIZE, offset: 0 },
 ): Promise<PilotTrainingDataResponse> {
   const [customExerciseRows, workoutLookahead, attentionRows, preferenceRows] = await Promise.all([
     client.query<CustomExerciseRow>(`
-      select id, name, muscle_group, input_kind, archived_at, version
+      select id, name, muscle_group, input_kind, archived_at, version, trainer_id
       from public.custom_exercises
       order by archived_at nulls first, lower(name), id
     `),
@@ -270,14 +286,19 @@ export async function readAccessibleTrainingData(
         workout.client_question_resolved_at,
         workout.started_at,
         workout.completed_at,
-        workout.version
+        workout.version,
+        workout.stage_id,
+        stage.title stage_title,
+        public.read_workout_has_personal_record(workout.id) has_pr,
+        count(*) over() total_count
       from public.workouts workout
       join public.clients client on client.id = workout.client_id
+      left join public.goal_stages stage on stage.id = workout.stage_id
       where workout.deleted_at is null
       order by workout.workout_date desc, workout.start_time desc nulls last,
         workout.created_at desc, workout.id
-      limit $1
-    `, [WORKOUT_PAGE_SIZE + 1]),
+      limit $1 offset $2
+    `, [page.limit + 1, page.offset]),
     client.query<AttentionRow>(`
       select workout_id, client_id, client_name, workout_date::text,
         client_question, client_question_asked_at, discomfort,
@@ -291,7 +312,10 @@ export async function readAccessibleTrainingData(
       order by client_id
     `),
   ])
-  const workoutRows = workoutLookahead.slice(0, WORKOUT_PAGE_SIZE)
+  const workoutRows = workoutLookahead.slice(0, page.limit)
+  const totalWorkouts = workoutRows[0] === undefined
+    ? 0
+    : safeInteger(workoutRows[0].total_count, 'total workouts')
   const workoutIds = workoutRows.map((row) => row.id)
   const exerciseRows = workoutIds.length === 0
     ? []
@@ -383,6 +407,7 @@ export async function readAccessibleTrainingData(
       inputKind: row.input_kind,
       archivedAt: row.archived_at?.toISOString() ?? null,
       version: safeInteger(row.version, 'custom exercise version'),
+      createdBy: row.trainer_id,
     })),
     workouts: workoutRows.map((row) => ({
       id: row.id,
@@ -410,6 +435,9 @@ export async function readAccessibleTrainingData(
       startedAt: row.started_at?.toISOString() ?? null,
       completedAt: row.completed_at?.toISOString() ?? null,
       version: safeInteger(row.version, 'workout version'),
+      stageId: row.stage_id,
+      stageTitle: row.stage_title,
+      hasPr: row.has_pr,
       exercises: exercisesByWorkout.get(row.id) ?? [],
     })),
     attention: attentionRows.map((row) => ({
@@ -428,6 +456,7 @@ export async function readAccessibleTrainingData(
       clientId: row.client_id,
       snoozedUntil: row.attention_snoozed_until?.toISOString() ?? null,
     })),
-    hasMoreWorkouts: workoutLookahead.length > WORKOUT_PAGE_SIZE,
+    hasMoreWorkouts: page.offset + workoutRows.length < totalWorkouts,
+    totalWorkouts,
   }
 }

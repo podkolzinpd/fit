@@ -9,6 +9,7 @@ import {
   isWearablesPilotEnabled,
   isYandexAssistantRoutingPilotEnabled,
   isYandexAppSessionPilotEnabled,
+  isYandexMainRoutingPilotEnabled,
   isYandexSessionLinkingPilotEnabled,
   trainerHomePath,
 } from './feature-flags'
@@ -363,5 +364,41 @@ describe('Yandex Assistant sticky routing flag', () => {
 
     expect(isYandexAssistantRoutingPilotEnabled('trainer-1')).toBe(true)
     expect(isAssistantNavPilotEnabled('trainer-1')).toBe(false)
+  })
+})
+
+describe('Yandex main sticky routing flag', () => {
+  it('is default-off and requires the exact enabled value', () => {
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', 'trainer-1')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', '')
+    expect(isYandexMainRoutingPilotEnabled('trainer-1')).toBe(false)
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'TRUE')
+    expect(isYandexMainRoutingPilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('routes exactly one trimmed pilot profile', () => {
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', ' , trainer-1, ')
+    expect(isYandexMainRoutingPilotEnabled('trainer-1')).toBe(true)
+    expect(isYandexMainRoutingPilotEnabled('trainer-2')).toBe(false)
+    expect(isYandexMainRoutingPilotEnabled('')).toBe(false)
+  })
+
+  it('fails closed for an empty or multi-profile rollout', () => {
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', '')
+    expect(isYandexMainRoutingPilotEnabled('trainer-1')).toBe(false)
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', 'trainer-1,trainer-2')
+    expect(isYandexMainRoutingPilotEnabled('trainer-1')).toBe(false)
+    expect(isYandexMainRoutingPilotEnabled('trainer-2')).toBe(false)
+  })
+
+  it('does not reuse another feature allowlist', () => {
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', 'trainer-1')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', 'trainer-2')
+    expect(isYandexMainRoutingPilotEnabled('trainer-1')).toBe(true)
+    expect(isYandexMainRoutingPilotEnabled('trainer-2')).toBe(false)
   })
 })

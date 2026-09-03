@@ -41,6 +41,7 @@ import {
   readCreateClientCardDraft,
   readClientPreferencesRequest,
   readCustomExerciseDraft,
+  readProfileDraft,
   readVersionedClientCardRequest,
   readVersionedCustomExerciseRequest,
 } from './domain-request.js'
@@ -285,6 +286,29 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   })
 
+  app.post('/v1/assistant/yandex/suggest-goal-criteria', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (options.pilotWorkoutParser?.suggest === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    try {
+      return reply.header('cache-control', 'no-store')
+        .send(await options.pilotWorkoutParser.suggest(session, request.body))
+    } catch (error) {
+      if (error instanceof PilotSessionInvalidError
+        || error instanceof YandexAppSessionInvalidError) {
+        return reply.code(401).send({ error: 'unauthorized' })
+      }
+      if (error instanceof WorkoutParseError) {
+        return reply.code(error.status).send({ error: error.code })
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
   app.get('/v1/clients/:clientId/training-summaries', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     const { clientId } = request.params as { clientId?: unknown }
@@ -361,6 +385,42 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.header('cache-control', 'no-store').code(204).send()
     } catch (error) {
       return sendPilotSummaryError(error, reply)
+    }
+  })
+
+  app.post('/v1/training-summaries/:summaryId/unpublish', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { summaryId } = request.params as { summaryId?: unknown }
+    const expectedVersion = readExpectedVersion(request.body)
+    if (session === undefined) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (session.accessMode !== 'read_write') {
+      return reply.code(403).send({ error: 'read_write_session_required' })
+    }
+    if (typeof summaryId !== 'string' || !uuidPattern.test(summaryId)
+      || expectedVersion === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const publisher = options.pilotTrainingSummaryPublisher
+    if (publisher?.unpublish === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    try {
+      await publisher.unpublish(session, summaryId, expectedVersion)
+      return reply.header('cache-control', 'no-store').code(204).send()
+    } catch (error) {
+      if (error instanceof PilotSessionInvalidError
+        || error instanceof YandexAppSessionInvalidError) {
+        return reply.code(401).send({ error: 'unauthorized' })
+      }
+      if (error instanceof YandexAppSessionDeniedError) {
+        return reply.code(403).send({ error: 'action_not_allowed' })
+      }
+      if (error instanceof PilotTrainingSummaryError) {
+        return reply.code(error.status).send({ error: error.code })
+      }
+      return sendSafeDatabaseFailure(reply, error, 'Training summary unpublish failed')
     }
   })
 
@@ -792,17 +852,24 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.get('/v1/training-data', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
+    const query = request.query as { limit?: unknown; offset?: unknown }
+    const limit = query.limit === undefined ? 100 : Number(query.limit)
+    const offset = query.offset === undefined ? 0 : Number(query.offset)
     if (session === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     if (options.pilotTrainingDataReader === undefined) {
       return reply.code(503).send({ error: 'service_unavailable' })
     }
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100
+      || !Number.isSafeInteger(offset) || offset < 0) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
 
     try {
       return reply
         .header('cache-control', 'no-store')
-        .send(await options.pilotTrainingDataReader.readTrainingData(session))
+        .send(await options.pilotTrainingDataReader.readTrainingData(session, { limit, offset }))
     } catch (error) {
       if (error instanceof PilotSessionInvalidError
         || error instanceof YandexAppSessionInvalidError) {
@@ -1290,6 +1357,25 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return sendPilotCommand(
       reply,
       () => pushNotifications.setPreference(sessionToken, kind, preference.enabled),
+      () => reply.header('cache-control', 'no-store').code(204).send(),
+    )
+  })
+
+  app.put('/v1/profile', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const draft = readProfileDraft(request.body)
+    if (session === undefined) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (session.accessMode !== 'read_write') {
+      return reply.code(403).send({ error: 'read_write_session_required' })
+    }
+    if (draft === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    const writer = options.pilotDomainWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.updateProfile(session, draft),
       () => reply.header('cache-control', 'no-store').code(204).send(),
     )
   })

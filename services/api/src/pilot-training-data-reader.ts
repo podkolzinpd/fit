@@ -2,6 +2,7 @@ import type { DatabasePool } from './db/types.js'
 import {
   readAccessibleTrainingData,
   type PilotTrainingDataResponse,
+  type TrainingDataPage,
 } from './training-data.js'
 import {
   withYandexActorSession,
@@ -9,17 +10,23 @@ import {
 } from './yandex-actor-session.js'
 
 export interface PilotTrainingDataReader {
-  readTrainingData(session: YandexActorSessionInput): Promise<PilotTrainingDataResponse>
+  readTrainingData(
+    session: YandexActorSessionInput,
+    page?: TrainingDataPage,
+  ): Promise<PilotTrainingDataResponse>
 }
 
 export class DatabasePilotTrainingDataReader implements PilotTrainingDataReader {
   constructor(private readonly pool: DatabasePool) {}
 
-  readTrainingData(session: YandexActorSessionInput): Promise<PilotTrainingDataResponse> {
+  readTrainingData(
+    session: YandexActorSessionInput,
+    page?: TrainingDataPage,
+  ): Promise<PilotTrainingDataResponse> {
     return withYandexActorSession(
       this.pool,
       session,
-      readAccessibleTrainingData,
+      (client) => readAccessibleTrainingData(client, page),
     )
   }
 }

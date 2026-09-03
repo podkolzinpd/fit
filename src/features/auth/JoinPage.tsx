@@ -2,11 +2,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
-import { invitationsRepository } from '../../data/repositories/invitations.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import { RepositoryError } from '../../data/repositories/error'
 import { Field, Page } from '../../shared/ui'
 
 export function JoinPage() {
+  const { invitations: invitationsRepository } = useDataBackend()
   const { actor } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()

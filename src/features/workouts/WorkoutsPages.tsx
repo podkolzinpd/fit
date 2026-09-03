@@ -2,15 +2,11 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { clientsRepository } from '../../data/repositories/clients.repository'
-import { goalsRepository } from '../../data/repositories/goals.repository'
-import { invitationsRepository } from '../../data/repositories/invitations.repository'
 import { currentStage, orderedStages } from '../../shared/goal-rules'
-import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -35,6 +31,7 @@ import { setLiveScreenAwake } from './live-keep-awake'
 import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
 import { useAuth } from '../../app/auth-context'
+import { useDataBackend } from '../../app/data-backend-context'
 import { useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { useRpeDisplay } from '../../app/rpe-display'
 import { useClientRealtime } from '../../app/use-client-realtime'
@@ -69,6 +66,7 @@ function eventTime(workout: Workout): string {
 }
 
 export function SchedulePage() {
+  const { workouts: workoutsRepository } = useDataBackend()
   const [params, setParams] = useSearchParams()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
@@ -288,6 +286,7 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo }: { work
 }
 
 export function ClientWorkoutsPage() {
+  const { workouts: workoutsRepository } = useDataBackend()
   const { clientId = '' } = useParams()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
@@ -342,6 +341,7 @@ export function ClientWorkoutsPage() {
 }
 
 export function WorkoutFormPage() {
+  const { clients: clientsRepository, goals: goalsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId } = useParams()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
@@ -626,6 +626,7 @@ export function WorkoutFormPage() {
 }
 
 export function WorkoutDetailPage() {
+  const { goals: goalsRepository, invitations: invitationsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams(); const navigate = useNavigate(); const location = useLocation(); const queryClient = useQueryClient()
   const navigationState = location.state as WorkoutNavigationState | null
   const { actor } = useAuth()
@@ -1352,6 +1353,7 @@ function WorkoutTimer({ startedAt, resting = false }: { startedAt: string | null
 }
 
 export function LiveWorkoutPage() {
+  const { workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
   const showRpeByDefault = useRpeDisplay(actor?.userId)
@@ -1929,6 +1931,7 @@ function numberValue(value: FormDataEntryValue | null) { return value ? Number(v
 type ExerciseCardTab = 'stats' | 'history' | 'how'
 
 export function ExerciseHistoryPage() {
+  const { exercises: exercisesRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '', exerciseRef = '' } = useParams()
   const goBack = useWorkoutBack(`/workouts/${workoutId}`)
   const { actor } = useAuth()

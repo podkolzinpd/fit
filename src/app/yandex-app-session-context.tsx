@@ -198,3 +198,7 @@ export function useYandexAppSession(): YandexAppSessionState {
   }
   return context
 }
+
+export function useOptionalYandexAppSession(): YandexAppSessionState | null {
+  return use(YandexAppSessionContext)
+}

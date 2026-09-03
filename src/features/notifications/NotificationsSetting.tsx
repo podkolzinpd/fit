@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { pushNotificationsRepository } from '../../data/repositories/push-notifications.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import { Switch } from '../../shared/ui'
 import { isPushSupported } from './push-subscription'
 
 export function NotificationsSetting({ userId }: { userId: string }) {
+  const { pushNotifications: pushNotificationsRepository } = useDataBackend()
   const queryClient = useQueryClient()
   const statusKey = ['push-notifications-status', userId]
   const status = useQuery({

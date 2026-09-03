@@ -162,7 +162,7 @@ export function trainingSummaryFromRow(
   return fromInternal(row, published ? new Set([row.id]) : new Set())
 }
 
-function fromPublished(row: PublishedRows[number]): PublishedTrainingSummary {
+export function publishedTrainingSummaryFromRow(row: PublishedRows[number]): PublishedTrainingSummary {
   return {
     id: row.id,
     sourceSummaryId: row.source_summary_id,
@@ -195,7 +195,7 @@ export const trainingSummariesRepository = {
   async listForClient(clientId: string): Promise<PublishedTrainingSummary[]> {
     const result = await trainingSummaryQueries.listPublished(clientId)
     if (result.error) throw repositoryError(result.error)
-    return result.data.map(fromPublished)
+    return result.data.map(publishedTrainingSummaryFromRow)
   },
   async generate(
     clientId: string,

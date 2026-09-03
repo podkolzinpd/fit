@@ -473,6 +473,7 @@ function YandexReadOnlyPilotCallbackPage() {
 
 function YandexAccountLinkingCallbackPage() {
   const { actor, loading } = useAuth()
+  const { establish } = useYandexAppSession()
   const config = actor === null ? null : getYandexSessionLinkingConfig(actor.userId)
   const apiBaseUrl = config?.apiBaseUrl ?? null
   const clientId = config?.clientId ?? null
@@ -523,12 +524,18 @@ function YandexAccountLinkingCallbackPage() {
           if (!supabaseAccessToken) {
             throw new Error('Войдите в FIT заново и повторите привязку Yandex ID.')
           }
-          await yandexPilotRepository.linkYandexAccount(
+          const result = await yandexPilotRepository.linkYandexAccount(
             apiBaseUrl,
             supabaseAccessToken,
             authorization.code,
             authorization.codeVerifier,
           )
+          if (result.appSession !== undefined
+            && result.profileId === actor.userId
+            && result.appSession.profile.id === actor.userId
+            && isYandexAppSessionPilotEnabled(result.profileId)) {
+            establish(result.appSession)
+          }
         })
         await linkRequest.current
         if (!cancelled) setLinked(true)
@@ -539,7 +546,7 @@ function YandexAccountLinkingCallbackPage() {
 
     void linkAccount()
     return () => { cancelled = true }
-  }, [actor, apiBaseUrl, loading])
+  }, [actor, apiBaseUrl, establish, loading])
 
   return <AuthIdentityScreen className="auth-yandex-link-flow">
     <header className="auth-entry-head">
