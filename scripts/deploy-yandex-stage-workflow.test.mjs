@@ -44,6 +44,14 @@ const databaseTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'database.tf'),
   'utf8',
 )
+const registryTerraform = readFileSync(
+  join(import.meta.dirname, '..', 'infra', 'yandex', 'registry.tf'),
+  'utf8',
+)
+const pushTerraform = readFileSync(
+  join(import.meta.dirname, '..', 'infra', 'yandex', 'push.tf'),
+  'utf8',
+)
 
 test('publishes the final yandex-stage result without restoring an approval gate', () => {
   assert.match(workflow, /^  publish_deployment:$/m)
@@ -112,7 +120,25 @@ test('bootstraps the private push timer only after explicit cost approval and he
   )
   assert.match(
     workflow,
+    /Pin existing push runtime identities from Terraform state[\s\S]*?TF_VAR_push_dispatcher_registry_service_account_id/,
+  )
+  assert.match(
+    workflow,
+    /Pin new push runtime identities for subsequent Terraform plans[\s\S]*?TF_VAR_push_scheduler_invoker_service_account_id/,
+  )
+  assert.match(
+    workflow,
     /-target=yandex_serverless_container_iam_binding\.push_dispatcher_invocation/,
+  )
+  assert.match(registryTerraform, /var\.push_dispatcher_registry_service_account_id/)
+  assert.doesNotMatch(
+    registryTerraform,
+    /serviceAccount:\$\{yandex_iam_service_account\.push_dispatcher\.id\}/,
+  )
+  assert.match(pushTerraform, /var\.push_scheduler_invoker_service_account_id/)
+  assert.doesNotMatch(
+    pushTerraform,
+    /serviceAccount:\$\{yandex_iam_service_account\.push_scheduler\.id\}/,
   )
   assert.match(workflow, /push-dispatcher-health\.json/)
   assert.match(workflow, /\.releaseId == \$release_id/)

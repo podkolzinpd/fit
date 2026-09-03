@@ -30,6 +30,11 @@ only their non-secret IDs with the existing Functions OIDC identity, grants the
 dispatcher `lockbox.payloadViewer` on that exact secret, and then restores the
 stage OIDC identity. Terraform receives IDs and the immutable version only; the
 payload is mounted directly into the runtime and never enters CI or state.
+The provider cannot plan IAM binding lists containing service-account IDs that
+are still unknown on the first run. The read-only plan therefore omits only
+those free IAM members. After the bootstrap identity phase, the workflow pins
+their IDs from Terraform state and the final reviewed plan manages the exact
+registry and dispatcher bindings without folder-wide roles or configuration drift.
 
 ## Safe workflow
 
