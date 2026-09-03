@@ -2,6 +2,21 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { buildLogsUrl, parseLogRange, queryLogs } from './query-supabase-auth-logs.mjs'
 import { CLIENT_TRAINERS_QUERY, queryClientTrainers } from './query-supabase-client-trainers.mjs'
+import { buildStaleTrainerRepair, repairStaleTrainer } from './repair-stale-client-trainer.mjs'
+
+test('repair refuses SQL fragments and missing lookup parameters', () => {
+  for (const value of ['', "' OR true --", 'A'.repeat(64)]) {
+    assert.throws(() => buildStaleTrainerRepair({ emailHash: value, trainerNameHash: 'b'.repeat(64) }), /SHA-256/)
+    assert.throws(() => buildStaleTrainerRepair({ emailHash: 'b'.repeat(64), trainerNameHash: value }), /SHA-256/)
+  }
+})
+
+test('repair does not report success or expose private response details on failure', async () => {
+  await assert.rejects(repairStaleTrainer({
+    accessToken: 'secret-token', projectId: 'a'.repeat(20), emailHash: 'b'.repeat(64), trainerNameHash: 'c'.repeat(64),
+    fetchImplementation: async () => new Response('private account details', { status: 400 }),
+  }), { message: 'Stale trainer repair failed with HTTP 400' })
+})
 
 const clientDiagnosticOptions = {
   accessToken: 'secret-token',

@@ -1,4 +1,5 @@
 import { pathToFileURL } from 'node:url'
+import { repairStaleTrainer } from './repair-stale-client-trainer.mjs'
 
 // Parameters arrive only through an encrypted, masked GitHub secret. Public
 // diagnostic logs contain a fixed set of booleans: no identifiers or contents.
@@ -53,13 +54,25 @@ export async function queryClientTrainers({ accessToken, projectId, emailHash, t
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const lookup = JSON.parse(process.env.FIT_CLIENT_TRAINER_DIAGNOSTIC ?? '{}')
-    const result = await queryClientTrainers({
+    const options = {
       accessToken: process.env.SUPABASE_ACCESS_TOKEN,
       projectId: process.env.SUPABASE_PROJECT_ID,
       emailHash: lookup.emailHash,
       trainerNameHash: lookup.trainerNameHash,
-    })
+    }
+    const result = await queryClientTrainers(options)
     console.log(JSON.stringify(result, null, 2))
+    if (process.env.FIT_REPAIR_STALE_TRAINER === 'true') {
+      if (!result.account_unique || !result.client_unique || !result.self_owned || !result.target_unique
+        || !result.target_membership_present || result.target_relationship_active
+        || result.target_relationship_disconnected || !result.other_trainers_present) {
+        throw new Error('Repair preconditions failed')
+      }
+      console.log(JSON.stringify(await repairStaleTrainer(options), null, 2))
+      const after = await queryClientTrainers(options)
+      console.log(JSON.stringify(after, null, 2))
+      if (after.target_membership_present || !after.other_trainers_present) throw new Error('Repair verification failed')
+    }
   } catch {
     console.error('Client trainer diagnostic failed; sensitive response details suppressed')
     process.exitCode = 1

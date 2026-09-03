@@ -12,13 +12,22 @@ on:
         required: false
         type: string
       client_trainers:
-        description: Inspect anonymous trainer-link flags using the encrypted diagnostic lookup secret (read-only)
+        description: Inspect anonymous trainer-link flags using the encrypted diagnostic lookup secret
+        required: false
+        default: false
+        type: boolean
+      disconnect_stale_trainer:
+        description: Execute explicitly client-authorized stale membership removal after diagnosis; all other data must stay unchanged
         required: false
         default: false
         type: boolean
 
 permissions:
   contents: read
+
+concurrency:
+  group: supabase-client-trainer-maintenance
+  cancel-in-progress: false
 
 jobs:
   auth-logs:
@@ -33,10 +42,11 @@ jobs:
           END_UTC: ${{ inputs.end_utc }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-      - name: Inspect client trainer connections (read-only)
+      - name: Inspect or repair an explicitly client-authorized stale connection
         if: ${{ inputs.client_trainers == true }}
         run: node scripts/query-supabase-client-trainers.mjs
         env:
           FIT_CLIENT_TRAINER_DIAGNOSTIC: ${{ secrets.FIT_CLIENT_TRAINER_DIAGNOSTIC }}
+          FIT_REPAIR_STALE_TRAINER: ${{ inputs.disconnect_stale_trainer }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
