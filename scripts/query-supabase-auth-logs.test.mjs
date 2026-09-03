@@ -7,7 +7,10 @@ const clientDiagnosticOptions = {
   accessToken: 'secret-token',
   projectId: 'a'.repeat(20),
   emailHash: 'b'.repeat(64),
+  trainerNameHash: 'c'.repeat(64),
 }
+
+const safeFlags = { account_unique: true, client_unique: true, self_owned: true, target_unique: true, target_membership_present: true, target_relationship_active: false, target_relationship_disconnected: false, other_trainers_present: true }
 
 test('client trainer diagnostic is read-only, parameterized and strips unrelated fields', async () => {
   let requests = 0
@@ -17,14 +20,14 @@ test('client trainer diagnostic is read-only, parameterized and strips unrelated
       requests += 1
       assert.equal(url, `https://api.supabase.com/v1/projects/${'a'.repeat(20)}/database/query`)
       assert.deepEqual(JSON.parse(options.body), {
-        query: CLIENT_TRAINERS_QUERY, parameters: ['b'.repeat(64)], read_only: true,
+        query: CLIENT_TRAINERS_QUERY, parameters: ['b'.repeat(64), 'c'.repeat(64)], read_only: true,
       })
-      assert.match(CLIENT_TRAINERS_QUERY, /account\.email[\s\S]*= \$1/)
-      return new Response(JSON.stringify([{ client_id: 'client-1', workout_count: 3, memberships: [], email: 'private' }]))
+      assert.match(CLIENT_TRAINERS_QUERY, /btrim\(email\)[\s\S]*= \$1/)
+      return new Response(JSON.stringify([{ ...safeFlags, email: 'private', client_id: 'private' }]))
     },
   })
   assert.equal(requests, 1)
-  assert.deepEqual(rows, [{ client_id: 'client-1', workout_count: 3, memberships: [] }])
+  assert.deepEqual(rows, safeFlags)
 })
 
 test('client trainer diagnostic rejects broad or injectable identifiers before network access', async () => {
