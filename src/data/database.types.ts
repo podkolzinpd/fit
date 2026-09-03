@@ -1,4 +1,4 @@
-// schema-sha256: 731721f52aac6c2f273f04e03fa2e780cdce0e4feb40430c65df2156d19f458a
+// schema-sha256: 185ba130a9888e95e56b5d0a47f5ffba276cfed5c1645dbd066bc27df76d3d37
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -980,6 +980,7 @@ export type Database = {
         Row: {
           archived_at: string | null
           created_at: string
+          created_by: string
           id: string
           input_kind: string
           muscle_group: string
@@ -991,6 +992,7 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           created_at?: string
+          created_by?: string
           id?: string
           input_kind: string
           muscle_group: string
@@ -1002,6 +1004,7 @@ export type Database = {
         Update: {
           archived_at?: string | null
           created_at?: string
+          created_by?: string
           id?: string
           input_kind?: string
           muscle_group?: string
@@ -1012,11 +1015,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "custom_exercises_trainer_id_fkey"
+            foreignKeyName: "custom_exercises_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_exercises_partition_owner_fk"
             columns: ["trainer_id"]
             isOneToOne: false
-            referencedRelation: "trainers"
-            referencedColumns: ["profile_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }

@@ -98,6 +98,9 @@ export function repositoryError(error: unknown): RepositoryError {
     return new RepositoryError(code, 'Операцию нельзя выполнить с текущими данными.')
   }
   if (code === '23505') {
+    if (normalizedMessage.includes('custom_exercises_active_author_name_uidx')) {
+      return new RepositoryError('custom_exercise_exists', 'Упражнение с таким названием уже существует.')
+    }
     return new RepositoryError(code, 'Такая запись уже существует. Проверьте введённые данные.')
   }
   if (code === '23503') {
