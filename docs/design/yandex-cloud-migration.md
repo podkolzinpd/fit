@@ -107,6 +107,13 @@ revision activation applies to all requests, while API Gateway percentage
 canaries are random request routing; neither is the source of truth for a
 specific-user pilot.
 
+The read-write application session is also the only credential for the migrated
+main UI. All actor-scoped domain endpoints accept `x-fit-session`; the legacy
+read-only pilot credential remains supported during the transition. Sending
+both credentials is invalid and must fail closed. A successful account-linking
+request may return an application session only when the server-side assignment
+already authorizes the exact linked profile for `yandex`/`read_write`.
+
 The safe migration unit is a tenant cohort, not always one account. A trainer,
 linked client profiles and their shared memberships/workouts must not be split
 between writable backends. An individual account can be moved alone only when

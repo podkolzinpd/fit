@@ -133,5 +133,5 @@ export function isYandexSessionLinkingPilotEnabled(userId: string): boolean {
 
 export function getYandexSessionLinkingConfig(userId: string): YandexIdPilotConfig | null {
   if (!isYandexSessionLinkingPilotEnabled(userId)) return null
-  return getYandexIdPilotConfig()
+  return getYandexPublicConfig()
 }
