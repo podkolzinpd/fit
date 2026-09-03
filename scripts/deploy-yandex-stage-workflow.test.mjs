@@ -83,27 +83,28 @@ test('bootstraps the private push timer only after explicit cost approval and he
   )
   assert.match(workflow, /policy_args\+=\(--allow-push-pipeline-bootstrap\)/)
   assert.match(workflow, /YC_PUSH_FOLDER_ID: \$\{\{ vars\.YC_SUMMARY_FOLDER_ID \}\}/)
+  assert.match(workflow, /^  YC_STAGE_PUSH_LOCKBOX_NAME: fit-stage-push-transport$/m)
   assert.match(workflow, /TF_VAR_push_function_id=\$function_id/)
   assert.match(workflow, /TF_VAR_push_transport_secret_version_id=/)
   assert.match(
     workflow,
-    /yc lockbox secret add-access-binding[\s\S]*?--role lockbox\.payloadViewer[\s\S]*?push_dispatcher_service_account_id/,
+    /lockbox payload get[\s\S]*?--key PUSH_DISPATCH_SECRET[\s\S]*?echo "::add-mask::\$dispatch_secret"/,
   )
-  const grantTokenIndex = workflow.indexOf(
-    '- name: Exchange OIDC token for the push transport access grant',
-  )
-  const grantIndex = workflow.indexOf(
-    '- name: Grant the dispatcher access only to the shared transport payload',
-  )
-  const restoreStageTokenIndex = workflow.indexOf(
-    '- name: Restore the stage deployment identity',
-  )
-  assert.ok(grantTokenIndex >= 0)
-  assert.ok(grantIndex > grantTokenIndex)
-  assert.ok(restoreStageTokenIndex > grantIndex)
   assert.match(
-    workflow.slice(grantTokenIndex, grantIndex),
-    /YC_DEPLOY_SA_ID: \$\{\{ vars\.YC_SUMMARY_DEPLOY_SA_ID \}\}[\s\S]*?scripts\/yandex-github-oidc\.sh/,
+    workflow,
+    /Mirror the push transport payload into stage Lockbox[\s\S]*?mirror-yandex-push-transport\.mjs[\s\S]*?--source-version-id "\$PUSH_SOURCE_SECRET_VERSION_ID"/,
+  )
+  assert.match(
+    readFileSync(join(import.meta.dirname, 'mirror-yandex-push-transport.mjs'), 'utf8'),
+    /--deletion-protection[\s\S]*?--version-description[\s\S]*?--payload', '-'/,
+  )
+  assert.doesNotMatch(
+    workflow,
+    /PUSH_DISPATCH_SECRET=.*>> "\$GITHUB_ENV"/,
+  )
+  assert.match(
+    workflow,
+    /-target=yandex_lockbox_secret_iam_member\.push_dispatcher_transport_secret_reader/,
   )
 
   const deployIndex = workflow.indexOf(
