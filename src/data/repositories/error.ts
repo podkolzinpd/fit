@@ -64,7 +64,8 @@ export function repositoryError(error: unknown): RepositoryError {
       'Сначала отключите текущего тренера в профиле. Ваши тренировки и результаты сохранятся.',
     )
   }
-  if (normalizedMessage.includes('client_requires_safe_migration')) {
+  if (normalizedMessage.includes('client_requires_safe_migration')
+    || normalizedMessage.includes('root_trainer_cannot_be_removed')) {
     return new RepositoryError(
       'client_requires_safe_migration',
       'Сейчас отключить тренера безопасно не получилось. Ваши данные не изменены. Попробуйте позже или напишите в поддержку.',
