@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
-import { COMPATIBLE_EXERCISE_REPLACEMENTS, exerciseCatalogRoot, exerciseCatalogSection, exerciseCatalogVariants, groupCatalogResults, isCatalogRoot } from './exercise-catalog-curation'
+import { COMPATIBLE_EXERCISE_REPLACEMENTS, copiedExerciseName, exerciseCatalogRoot, exerciseCatalogSection, exerciseCatalogVariants, groupCatalogResults, isCatalogRoot } from './exercise-catalog-curation'
 import { SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISE_LEGACY_CATALOG } from './system-exercises'
 import { ORIGINAL_SEARCH_ALIASES, SEARCH_ALIASES, matchesExerciseSearch, normalizeExerciseSearch, resolveExerciseSearch } from '../features/exercises/exercise-search'
 import { selectableExercises } from '../features/exercises/selectable-exercises'
@@ -9,6 +9,37 @@ const byRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, e
 const selectable = selectableExercises(SYSTEM_EXERCISE_CATALOG)
 
 describe('approved catalog curation', () => {
+  it('refreshes known labels for every historical ref without changing the snapshot', () => {
+    for (const exercise of SYSTEM_EXERCISE_LEGACY_CATALOG) {
+      const original = structuredClone(exercise)
+      expect(copiedExerciseName(exercise), exercise.ref).toBe(byRef.get(exercise.ref)!.name)
+      expect(exercise).toEqual(original)
+    }
+  })
+
+  it('recognizes the early bare catalog label but not arbitrary trainer text', () => {
+    const bench = byRef.get('bench-press')!
+    expect(copiedExerciseName({ ...bench, name: 'Жим лёжа' })).toBe('Жим штанги лёжа')
+    expect(copiedExerciseName({ ...bench, name: '  ЖИМ   ЛЕЖА (Штанга)  ' })).toBe('Жим штанги лёжа')
+    for (const name of ['Жим лёжа с паузой по команде тренера', 'Жим узким хватом', 'Жим']) {
+      expect(copiedExerciseName({ ...bench, name })).toBe(name)
+    }
+    for (const name of ['Бег — быстрый отрезок', 'Бег — восстановление', 'Бег — интервалы']) {
+      expect(copiedExerciseName({ ...byRef.get('running')!, name })).toBe(name)
+    }
+  })
+
+  it('preserves custom exercises, unknown refs and incompatible fields even when labels match', () => {
+    const bench = { ...byRef.get('bench-press')!, name: 'Жим лёжа (Штанга)' }
+    for (const exercise of [
+      { ...bench, source: 'custom' as const },
+      { ...bench, customExerciseId: 'own-exercise' },
+      { ...bench, ref: 'unknown-old-ref' },
+      { ...bench, inputKind: 'reps' as const },
+    ]) expect(copiedExerciseName(exercise)).toBe(exercise.name)
+    expect(copiedExerciseName(byRef.get('bench-press')!)).toBe('Жим штанги лёжа')
+  })
+
   it('accounts for all approved rows, and preserves the later Smith addition', () => {
     expect(Object.keys(EXERCISE_CATALOG_DECISIONS)).toHaveLength(662)
     expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(663)
