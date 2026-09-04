@@ -1,7 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-04. База задачи: `main` `7c1a2fbd` (#782). Активная
-задача: воспроизводимая репетиция переноса tenant в Yandex PostgreSQL.
+Обновлено: 2026-09-04. База задачи: `main` `3da66200` (#783). Активная
+задача: private remote audit/dry-run выбранного tenant на Yandex stage.
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом; Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум один вторичный акцент. Live разделяет нейтральный таймер и активный отдых.
 - Создание, Live и завершение прошлого плана сохраняют прежнюю логику без
@@ -105,12 +105,16 @@
   строк, все 28 manifest-таблиц; временные БД и artifacts удалены.
 - `npm run local:verify`: 947 Supabase SQL/RLS проверок и 30 PostgreSQL actor/RLS
   integration-тестов прошли; generated types и migration safety актуальны.
+- Ветка добавляет ручной source-audit и private stage dry-run/apply: envelope
+  живёт в памяти, apply требует подтверждение и повтор с `inserted=0`; production не меняется.
 - Push bootstrap: два runtime SA созданы run `33761562506`; платные ресурсы не
   созданы. Прямой cross-scope grant на Functions Lockbox заменён в `main`
   stage-local masked mirror без payload в GitHub env/logs или Terraform state.
 ## Ближайший порядок
-1. После review согласовать exact remote cohort/source/target, credentials,
-   freeze и rollback-окно; локальная команда не обращается к облаку.
-2. Оценить production infrastructure и только затем включить один tenant.
+1. После merge сохранить выбранный tenant как masked repository secret, выполнить
+   remote audit, затем transactional dry-run и сверить aggregate-отчёт.
+2. Только после успешного dry-run применить копию на stage, связать Yandex ID и
+   проверить основной UI; production routing остаётся выключенным.
+3. Оценить production infrastructure и только затем включить один tenant.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.

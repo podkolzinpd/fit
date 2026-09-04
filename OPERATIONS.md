@@ -80,6 +80,33 @@ trainer-связей и pending push, freeze writes, target, backup и rollback 
 Точные границы manifest и ограничения описаны в
 `docs/design/YANDEX_TENANT_MIGRATION_TOOLING.md`.
 
+### Удалённая репетиция на Yandex stage
+
+Workflow `Rehearse Yandex tenant migration` запускается только вручную из
+`main` и использует выбранный profile UUID из masked repository secret
+`FIT_TENANT_TRAINER_ID`. UUID не является workflow input и не выводится в
+команды или отчёт. Существующие `SUPABASE_PROJECT_ID` и
+`SUPABASE_DB_PASSWORD` дают source-доступ через связанный session pooler;
+target вызывается только через private `fit-stage-migration` с короткоживущим
+GitHub OIDC → Yandex IAM token.
+
+Режимы выполняются последовательно:
+
+- `audit` — одна `REPEATABLE READ READ ONLY` транзакция в Supabase; показывает
+  только fingerprint, таблицы, количества строк и размер encrypted envelope;
+- `dry-run` — повторяет audit, передаёт envelope только в памяти private runner
+  и откатывает полную target-транзакцию после constraints/checksum validation;
+- `apply` — сначала выполняет dry-run, затем commit и обязательный повторный
+  apply, который должен вставить ноль строк. Требует точное отдельное значение
+  `APPLY_TENANT_TO_YANDEX_STAGE`.
+
+Artifact не записывается в GitHub Artifacts, workspace или Object Storage.
+Размер запроса ограничен 3 МиБ; превышение останавливает workflow после
+read-only audit. Workflow не меняет sticky routing, Yandex ID assignment,
+production frontend или Supabase. Перенос на stage оплачивает только фактические
+холодные вызовы уже существующего Serverless Container; новый постоянно
+работающий или provisioned ресурс не создаётся.
+
 ## Первый запуск Yandex push pipeline
 
 Миграция `000030` сама не отправляет уведомления. Доставку включает только

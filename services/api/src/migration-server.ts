@@ -14,6 +14,7 @@ import { DatabasePilotClientsReader } from './pilot-clients-reader.js'
 import { DatabasePilotConnectionsReader } from './pilot-connections-reader.js'
 import { DatabasePilotTrainingDataReader } from './pilot-training-data-reader.js'
 import { DatabasePilotProgressData } from './progress-data.js'
+import { DatabaseStageTenantMigrationRunner } from './tenant-migration/stage-runner.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -57,9 +58,15 @@ const stageRuntimeDatabasePreflightEnabled =
 if (stageRuntimeDatabasePreflightEnabled && process.env.APP_ENV !== 'stage') {
   throw new Error('Runtime database preflight can be enabled only in stage')
 }
+const stageTenantMigrationEnabled =
+  process.env.STAGE_TENANT_MIGRATION_ENABLED === 'true'
+if (stageTenantMigrationEnabled && process.env.APP_ENV !== 'stage') {
+  throw new Error('Tenant migration can be enabled only in stage')
+}
 const privateFeaturePool = pilotEnrollmentEnabled
   || stageWorkoutFixtureEnabled
   || stageDatabaseAccessEnabled
+  || stageTenantMigrationEnabled
   ? new PgDatabasePool(databaseConfig)
   : undefined
 const runtimeDatabaseConfig = stageRuntimeDatabasePreflightEnabled
@@ -89,6 +96,12 @@ if (pilotEnrollmentEnabled && yandexClientId === undefined) {
 }
 
 const app = buildMigrationApp({
+  ...(privateFeaturePool === undefined || !stageTenantMigrationEnabled
+    ? {}
+    : {
+        stageTenantMigration:
+          new DatabaseStageTenantMigrationRunner(privateFeaturePool),
+      }),
   ...(privateFeaturePool === undefined || !stageDatabaseAccessEnabled
     ? {}
     : {

@@ -97,6 +97,14 @@ CI job; CI keeps the response file private and verifies the nested aggregate
 through the public runtime API and its `fit_api` RLS role before accepting the
 new revision.
 
+The same private runner exposes encrypted tenant `dry-run` and `apply` routes
+only when `APP_ENV=stage` and `STAGE_TENANT_MIGRATION_ENABLED=true`. The body is
+an AES-256-GCM envelope capped at 3 MiB; its random passphrase is supplied for
+one request and is never stored. Dry-run executes the complete serializable
+import and rolls it back. Apply requires an independent exact confirmation and
+the calling workflow immediately repeats it to prove `inserted=0`. These routes
+do not create rollout assignments or change frontend routing.
+
 ## Roles
 
 - `fit_owner` owns the `fit` database and runs migrations only;

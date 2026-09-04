@@ -1,0 +1,130 @@
+name: Rehearse Yandex tenant migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Read-only source audit, target rollback dry-run, or idempotent stage apply'
+        required: true
+        type: choice
+        default: audit
+        options:
+          - audit
+          - dry-run
+          - apply
+      apply_confirmation:
+        description: 'For apply only: APPLY_TENANT_TO_YANDEX_STAGE'
+        required: false
+        type: string
+
+concurrency:
+  group: yandex-tenant-migration
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Audit source tenant
+    if: inputs.mode == 'audit'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.0
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+      - run: npm ci --prefix services/api
+      - name: Resolve the reviewed Supabase session pooler
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: >-
+          supabase link
+          --project-ref "$SUPABASE_PROJECT_ID"
+          --password "$SUPABASE_DB_PASSWORD"
+      - name: Audit the selected tenant without writing either database
+        env:
+          FIT_TENANT_REHEARSAL_MODE: audit
+          FIT_TENANT_SOURCE_SSL_ROOT_CERT: /etc/ssl/certs/ca-certificates.crt
+          FIT_TENANT_TRAINER_ID: ${{ secrets.FIT_TENANT_TRAINER_ID }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -s supabase/.temp/pooler-url
+          export FIT_TENANT_SOURCE_POOLER_URL="$(<supabase/.temp/pooler-url)"
+          npm --prefix services/api run tenant:rehearse:remote
+
+  stage:
+    name: Rehearse target transaction
+    if: inputs.mode != 'audit'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+      YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+      YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.0
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+      - run: npm ci --prefix services/api
+      - name: Reject an unconfirmed apply before remote access
+        if: inputs.mode == 'apply'
+        env:
+          APPLY_CONFIRMATION: ${{ inputs.apply_confirmation }}
+        run: test "$APPLY_CONFIRMATION" = APPLY_TENANT_TO_YANDEX_STAGE
+      - name: Resolve the reviewed Supabase session pooler
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: >-
+          supabase link
+          --project-ref "$SUPABASE_PROJECT_ID"
+          --password "$SUPABASE_DB_PASSWORD"
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh \
+            --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - name: Exchange GitHub OIDC for the bounded deploy identity
+        run: scripts/yandex-github-oidc.sh
+      - name: Resolve the private migration runner URL
+        run: |
+          migration_url=$(yc serverless container get \
+            --name fit-stage-migration \
+            --folder-id "$YC_FOLDER_ID" \
+            --format json | jq -er '.url')
+          echo "FIT_TENANT_STAGE_CONTAINER_URL=$migration_url" >> "$GITHUB_ENV"
+      - name: Export, encrypt and rehearse the selected tenant
+        env:
+          FIT_TENANT_REHEARSAL_MODE: ${{ inputs.mode }}
+          FIT_TENANT_REMOTE_APPLY_CONFIRMATION: ${{ inputs.apply_confirmation }}
+          FIT_TENANT_SOURCE_SSL_ROOT_CERT: /etc/ssl/certs/ca-certificates.crt
+          FIT_TENANT_TRAINER_ID: ${{ secrets.FIT_TENANT_TRAINER_ID }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -s supabase/.temp/pooler-url
+          export FIT_TENANT_SOURCE_POOLER_URL="$(<supabase/.temp/pooler-url)"
+          npm --prefix services/api run tenant:rehearse:remote
