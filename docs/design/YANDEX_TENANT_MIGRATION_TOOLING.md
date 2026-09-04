@@ -53,6 +53,10 @@ Yandex migration `000029_tenant_migration_parity.sql` preserves the V1
 `workouts.stage_id` goal-stage binding and `client_progress.updated_by` audit
 field. The exporter derives Yandex-required creator/fingerprint fields only
 where the V1 schema did not persist them directly.
+Migration `000035_client_custom_exercise_self_service.sql` additionally
+preserves `custom_exercises.created_by`: client-authored exercises keep their
+author and root data partition instead of being silently converted into
+trainer-owned rows.
 
 ## Acceptance checklist
 
@@ -64,8 +68,16 @@ where the V1 schema did not persist them directly.
 - [x] A changed target row is detected by validation.
 - [x] Source and target remain local Podman PostgreSQL instances during the
   implementation check.
-- [ ] Run two complete rehearsals with production-like, non-production data.
+- [x] Run two complete local rehearsals with production-like, non-production
+  synthetic data (`npm run tenant:rehearse:local`, 2026-09-04): each clean
+  target imported and validated 35 rows across all 28 manifest tables, the
+  dry-run left the target empty and the repeated apply inserted zero rows.
 - [ ] Review a production export window, remote credentials and the exact
   target before the first remote command.
 - [ ] Freeze writes, validate the selected real cohort and change its sticky
   routing only in the separately approved cutover step.
+
+The local rehearsals exercise a clean PostgreSQL 17 migration chain and the
+complete data contract. They deliberately do not prove VPC/IAM connectivity,
+remote TLS credentials, production volume or cutover timing; those remain part
+of the separately reviewed remote gate.
