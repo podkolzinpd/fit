@@ -517,12 +517,13 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await ownerPool.query(
         `
           insert into public.custom_exercises (
-            id, trainer_id, name, muscle_group, input_kind
+            id, trainer_id, created_by, name, muscle_group, input_kind
           ) values
-            ($1, $3, 'Тяга саней', 'legs', 'strength'),
-            ($2, $4, 'Темповый бег', 'cardio', 'duration')
+            ($1, $3, $3, 'Тяга саней', 'legs', 'strength'),
+            ($2, $4, $4, 'Темповый бег', 'cardio', 'duration')
           on conflict (id) do update set
             trainer_id = excluded.trainer_id,
+            created_by = excluded.created_by,
             name = excluded.name,
             muscle_group = excluded.muscle_group,
             input_kind = excluded.input_kind,
@@ -1177,7 +1178,13 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         OTHER_ACTOR_ID,
         readAccessibleTrainingData,
       )
-      expect(clientData.customExercises).toEqual([])
+      expect(clientData.customExercises).toMatchObject([
+        {
+          id: ROOT_CUSTOM_EXERCISE_ID,
+          name: 'Тяга саней',
+          createdBy: ACTOR_ID,
+        },
+      ])
       expect(clientData.workouts.map((workout) => workout.id)).toEqual([
         MEMBER_WORKOUT_ID,
         ROOT_WORKOUT_ID,
@@ -1198,6 +1205,88 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         hasMoreWorkouts: false,
         totalWorkouts: 0,
       })
+    })
+
+    it('preserves client ownership for custom exercises in a shared partition', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      const draft = {
+        name: 'Клиентская тяга блока',
+        muscleGroup: 'back' as const,
+        inputKind: 'strength' as const,
+      }
+      const exercise = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => createCustomExercise(client, draft),
+      )
+      try {
+        const stored = await ownerPool.query<{
+          created_by: string
+          trainer_id: string
+        } & QueryResultRow>(
+          'select created_by, trainer_id from public.custom_exercises where id = $1',
+          [exercise.id],
+        )
+        expect(stored.rows).toEqual([{
+          created_by: OTHER_ACTOR_ID,
+          trainer_id: ACTOR_ID,
+        }])
+
+        const updated = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => updateCustomExercise(
+            client,
+            exercise.id,
+            { ...draft, name: 'Клиентская тяга блока с паузой' },
+            1,
+          ),
+        )
+        expect(updated).toMatchObject({
+          name: 'Клиентская тяга блока с паузой',
+          version: 2,
+        })
+
+        for (const actorId of [ACTOR_ID, MEMBER_TRAINER_ID, OTHER_ACTOR_ID]) {
+          const data = await withActorTransaction(
+            runtimePool,
+            actorId,
+            readAccessibleTrainingData,
+          )
+          expect(data.customExercises).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+              id: exercise.id,
+              createdBy: OTHER_ACTOR_ID,
+            }),
+          ]))
+        }
+        const outside = await withActorTransaction(
+          runtimePool,
+          OUTSIDE_TRAINER_ID,
+          readAccessibleTrainingData,
+        )
+        expect(outside.customExercises.some((item) => item.id === exercise.id)).toBe(false)
+        await expect(withActorTransaction(
+          runtimePool,
+          OUTSIDE_TRAINER_ID,
+          (client) => updateCustomExercise(client, exercise.id, draft, 2),
+        )).rejects.toMatchObject({ failure: 'forbidden' })
+
+        const archived = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => setCustomExerciseArchived(client, exercise.id, true, 2),
+        )
+        expect(archived).toMatchObject({ version: 3 })
+        expect(archived.archivedAt).not.toBeNull()
+      } finally {
+        await ownerPool.query(
+          'delete from public.custom_exercises where id = $1',
+          [exercise.id],
+        )
+      }
     })
 
     it('shows memberships to the client cohort and active invitations only to their creator', async () => {
@@ -3894,6 +3983,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         [DOMAIN_CLIENT_ACTOR_ID],
       )
       let clientId: string | undefined
+      let exerciseId: string | undefined
       try {
         const draft = {
           fullName: 'Самостоятельный клиент',
@@ -3955,7 +4045,35 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           created_by: DOMAIN_CLIENT_ACTOR_ID,
           trainer_id: DOMAIN_CLIENT_ACTOR_ID,
         })
+
+        const exercise = await withActorTransaction(
+          runtimePool,
+          DOMAIN_CLIENT_ACTOR_ID,
+          (client) => createCustomExercise(client, {
+            name: 'Самостоятельная планка',
+            muscleGroup: 'core',
+            inputKind: 'duration',
+          }),
+        )
+        exerciseId = exercise.id
+        const storedExercise = await ownerPool.query<{
+          created_by: string
+          trainer_id: string
+        } & QueryResultRow>(
+          'select created_by, trainer_id from public.custom_exercises where id = $1',
+          [exercise.id],
+        )
+        expect(storedExercise.rows).toEqual([{
+          created_by: DOMAIN_CLIENT_ACTOR_ID,
+          trainer_id: DOMAIN_CLIENT_ACTOR_ID,
+        }])
       } finally {
+        if (exerciseId !== undefined) {
+          await ownerPool.query(
+            'delete from public.custom_exercises where id = $1',
+            [exerciseId],
+          )
+        }
         if (clientId !== undefined) {
           await ownerPool.query('delete from public.clients where id = $1', [clientId])
         }

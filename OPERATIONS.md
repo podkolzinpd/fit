@@ -34,6 +34,21 @@ npm run tenant:migrate -- import --in <artifact.fit> --apply
 npm run tenant:migrate -- validate --in <artifact.fit>
 ```
 
+Для повторяемой проверки всего цикла одной командой используйте:
+
+```text
+npm run tenant:rehearse:local
+```
+
+Команда работает только с loopback-портами локального Podman, дополняет
+исключительно синтетический demo cohort production-like данными, дважды создаёт
+чистую временную PostgreSQL 17 базу и для каждой выполняет export, dry-run,
+проверку rollback, apply, повторный apply с `inserted=0` и validate всех 28
+таблиц. Зашифрованные artifacts и обе временные базы удаляются после прогона.
+Подключить этой командой stage или production нельзя. Она проверяет данные,
+чистую цепочку миграций и идемпотентность, но не заменяет отдельную проверку
+сетевого доступа, IAM, remote credentials и согласованного окна переноса.
+
 Первый `import` — обязательный dry-run: он открывает транзакцию, проверяет все
 FK/unique/check constraints и checksums, затем делает rollback. `--apply`
 фиксирует данные только после полной проверки. Повторный apply безопасен и
