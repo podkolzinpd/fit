@@ -32,6 +32,28 @@ write to a remote database by default.
 10. This tooling does not implement dual-write, reverse migration, routing or
     production cutover. Those remain separate reviewed gates.
 
+## Remote stage orchestration
+
+The manually dispatched `Rehearse Yandex tenant migration` workflow removes
+the need to copy credentials or run migration commands on an operator laptop.
+The selected trainer UUID is a masked repository secret rather
+than a visible workflow input. The source step resolves the reviewed Supabase
+session pooler and performs the same read-only export. No Yandex identity or
+target credential is needed in `audit` mode.
+
+For `dry-run` and `apply`, GitHub OIDC obtains the existing bounded deploy
+identity and invokes the private `fit-stage-migration` container. The encrypted
+envelope and a random one-run passphrase exist only in memory; the workflow
+does not upload an artifact. The runner accepts at most 3 MiB, exposes neither
+row contents nor identifiers, and is registered only when
+`APP_ENV=stage`. Dry-run rolls back after full import validation. Apply requires
+the independent `APPLY_TENANT_TO_YANDEX_STAGE` confirmation and immediately
+repeats the import, requiring zero inserted rows.
+
+This stage workflow still does not change routing or provision a rollout
+assignment. It adds no always-on resource: only the invoked execution time of
+the existing cold migration container is billable.
+
 ## Manifest v1
 
 The manifest covers profiles/trainers/clients and memberships, invitations and
@@ -74,6 +96,8 @@ trainer-owned rows.
   dry-run left the target empty and the repeated apply inserted zero rows.
 - [ ] Review a production export window, remote credentials and the exact
   target before the first remote command.
+- [ ] Run the selected cohort through remote `audit` and target `dry-run` using
+  the private stage workflow; keep `apply` blocked until both reports match.
 - [ ] Freeze writes, validate the selected real cohort and change its sticky
   routing only in the separately approved cutover step.
 

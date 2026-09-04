@@ -13,6 +13,7 @@
     "db:migrate": "node-pg-migrate up --migrations-dir db/migrations --migrations-table fit_migrations --migrations-schema app_private --create-migrations-schema --verbose=false",
     "db:migrate:dry-run": "node-pg-migrate up --migrations-dir db/migrations --migrations-table fit_migrations --migrations-schema app_private --create-migrations-schema --verbose=false --dry-run",
     "tenant:migrate": "npm run build && node dist/tenant-migration/cli.js",
+    "tenant:rehearse:remote": "npm run build && node dist/tenant-migration/remote-rehearsal-cli.js",
     "start": "node dist/server.js"
   },
   "dependencies": {
