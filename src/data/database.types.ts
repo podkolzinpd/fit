@@ -1,4 +1,4 @@
-// schema-sha256: 5fb8e9f8a03d02a7515701491f9df3cd8a8cfc27cfa485abb67446137605837a
+// schema-sha256: cf7bd4b6a26b1aba1f6cf8efee5a3c578982ca99421c8bf30c1c1cd26b4defd4
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -2013,6 +2013,14 @@ export type Database = {
       remove_client_trainer: {
         Args: { p_client_id: string; p_trainer_id: string }
         Returns: undefined
+      }
+      remove_live_exercise: {
+        Args: {
+          p_exercise_id: string
+          p_expected_version: number
+          p_workout_id: string
+        }
+        Returns: number
       }
       remove_live_set: {
         Args: { p_expected_version: number; p_set_id: string }

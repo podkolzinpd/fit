@@ -61,6 +61,7 @@ import {
   finishLiveWorkout,
   recordPlannedWorkoutResult,
   removeLiveSet,
+  removeLiveExercise,
   reorderLiveBlock,
   rescheduleWorkout,
   replaceLiveExercise,
@@ -3082,6 +3083,26 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           count: 6,
           resource_ids_present: true,
         }])
+        const deleteOperation = 'd6740000-0000-4000-8000-000000000001'
+        const removalId = appendedExerciseId
+        if (removalId === undefined) throw new Error('Live exercise fixture is missing')
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID,
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 8, deleteOperation),
+        )).rejects.toMatchObject({ failure: 'forbidden' })
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 7, deleteOperation),
+        )).rejects.toMatchObject({ failure: 'conflict' })
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 8, deleteOperation),
+        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 9, replayed: false })
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 8, deleteOperation),
+        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 9, replayed: true })
+        const remaining = await ownerPool.query<{ id: string }>(
+          'select id from public.workout_exercises where workout_id=$1', [ROOT_WORKOUT_ID],
+        )
+        expect(remaining.rows).toEqual([{ id: ROOT_WORKOUT_EXERCISE_ID }])
+        await ownerPool.query('delete from app_private.live_workout_operations where operation_id=$1', [deleteOperation])
       } finally {
         await ownerPool.query(
           `
