@@ -143,6 +143,57 @@ async function dismissCalendarHint(page: Page) {
 }
 
 for (const role of ['trainer', 'client'] as const) {
+  test(`${role}: Live exercise removal confirms, recovers and persists on reload`, async ({ page }, testInfo) => {
+    const state = await mockNavigationWorkouts(page)
+    state.status = 'in_progress'
+    let deleted = false
+    let fail = true
+    let calls = 0
+    await page.route('**/rest/v1/workout_exercises?*', (route) => route.fulfill({
+      contentType: 'application/json', body: JSON.stringify(deleted ? [] : [fixtureExercise]),
+    }))
+    await page.route('**/rest/v1/rpc/remove_live_exercise', async (route) => {
+      calls += 1
+      expect(route.request().postDataJSON()).toEqual({
+        p_workout_id: historyRow.id, p_exercise_id: fixtureExercise.id, p_expected_version: state.version,
+      })
+      if (fail) {
+        fail = false
+        await route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ code: 'PT409', message: 'workout_conflict' }) })
+      } else {
+        deleted = true; state.version += 1
+        await route.fulfill({ contentType: 'application/json', body: JSON.stringify(state.version) })
+      }
+    })
+    await loginForHistory(page, role)
+    await page.goto(`${detailPath}/live`)
+    await page.locator('.live-exercise-collapsed').click()
+    await page.locator('.live-exercise').getByRole('button', { name: 'Ещё действия', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Удалить упражнение', exact: true }).click()
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog).toContainText('включая выполненные')
+    for (const width of [390, 430, ...(role === 'trainer' ? [1440] : [])]) {
+      await page.setViewportSize({ width, height: 932 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`${role}-delete-${width}.png`) })
+    }
+    await dialog.getByRole('button', { name: 'Отмена', exact: true }).click()
+    expect(calls).toBe(0)
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await page.locator('.live-exercise').getByRole('button', { name: 'Ещё действия', exact: true }).click()
+      await page.getByRole('menuitem', { name: 'Удалить упражнение', exact: true }).click()
+      await dialog.getByRole('button', { name: 'Удалить', exact: true }).click()
+      if (attempt === 0) await expect(page.getByText(/Тренировка изменилась в другом окне/)).toBeVisible()
+    }
+    await expect(page.locator('.live-exercise')).toHaveCount(0)
+    expect(calls).toBe(2)
+    await page.reload()
+    await expect(page.getByRole('button', { name: '＋ Ещё упражнение', exact: true })).toBeVisible()
+    await expect(page.locator('.live-exercise, .live-exercise-collapsed')).toHaveCount(0)
+  })
+}
+
+for (const role of ['trainer', 'client'] as const) {
   test(`${role}: calendar and list Back preserve the source without duplicate screens`, async ({ page }, testInfo) => {
     await mockNavigationWorkouts(page)
     await loginForHistory(page, role)

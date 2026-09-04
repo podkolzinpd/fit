@@ -234,6 +234,7 @@ describe('Yandex main repository', () => {
     await repository.workouts.appendLiveExercise(item, exerciseSnapshot())
     await repository.workouts.appendLiveSet(item, exerciseId)
     await repository.workouts.removeLiveSet(item, setId)
+    await repository.workouts.removeLiveExercise(item, exerciseId)
     await repository.workouts.reorderLiveBlock(item, blockId, -1)
     await repository.workouts.setExerciseComment(item, exerciseId, 'Комментарий')
     await repository.workouts.setWorkoutReview(item, { reaction: 'fire', review: 'Отлично' })

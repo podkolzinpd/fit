@@ -544,7 +544,7 @@ export function createYandexMainRepository(
     invalidate()
     return payload.workout.version
   }
-  const liveCommand = async (path: string, method: 'POST' | 'PUT', expectedVersion: number, body: object = {}) => {
+  const liveCommand = async (path: string, method: 'POST' | 'PUT' | 'DELETE', expectedVersion: number, body: object = {}) => {
     const payload = await writeJson(queries, path, method, {
       ...body, expectedVersion, operationId: crypto.randomUUID(),
     }, z.union([
@@ -842,6 +842,7 @@ export function createYandexMainRepository(
         const payload = await writeJson(queries, `/v1/workout-sets/${setId}`, 'DELETE', { expectedVersion: item.version, operationId: crypto.randomUUID() }, z.object({ set: z.object({ version: z.number().int().positive() }) }))
         invalidate(); return payload.set.version
       },
+      async removeLiveExercise(item, exerciseId) { return liveCommand(`/v1/workouts/${item.id}/exercises/${exerciseId}`, 'DELETE', item.version) },
       async reorderLiveBlock(item, blockId, direction) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/reorder`, 'POST', item.version, { direction }) },
       async setExerciseComment(item, exerciseId, comment) { return liveCommand(`/v1/workout-exercises/${exerciseId}/comment`, 'PUT', item.version, { comment }) },
       async setWorkoutReview(item, value) { return commandVersion(`/v1/workouts/${item.id}/review`, 'PUT', { reaction: value.reaction, review: value.review, expectedVersion: item.version }) },

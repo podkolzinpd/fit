@@ -70,6 +70,24 @@ describe('catalog names in new copies only', () => {
       .toEqual(source.exercises.map(({ ref, inputKind }) => ({ ref, inputKind })))
     expect(copy.exercises.map((exercise) => exercise.name)).toEqual(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.name))
   })
+
+  it('does not resurrect removed exercises or sets when a completed result is edited again', () => {
+    const source = sourceWorkout()
+    const exercise = source.exercises[0]!
+    source.exercises = [
+      { ...exercise, id: 'omitted-exercise', sets: [{ ...exercise.sets[0]!, id: 'omitted', confirmedAt: null, fact: {} }] },
+      { ...exercise, position: 1, sets: [
+        { ...exercise.sets[0]!, id: 'omitted-set', confirmedAt: null, fact: {} },
+        { ...exercise.sets[0]!, position: 1 },
+      ] },
+    ]
+    const draft = completedWorkoutDraft(source)
+    expect(draft.exercises).toHaveLength(1)
+    expect(draft.exercises[0]).toMatchObject({ position: 0, sourceExerciseId: 'original-exercise' })
+    expect(draft.exercises[0]?.sets).toEqual([expect.objectContaining({ position: 0, sourceSetId: 'original-set', weightKg: 55 })])
+    expect(source.exercises).toHaveLength(2)
+    expect(completedWorkoutDraft({ ...source, status: 'planned' }).exercises).toHaveLength(2)
+  })
 })
 
 describe('workouts repository rules', () => {

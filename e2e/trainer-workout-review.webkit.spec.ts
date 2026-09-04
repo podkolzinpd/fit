@@ -12,6 +12,68 @@ async function login(page: Page, email: string) {
   ])
 }
 
+for (const role of ['trainer', 'client'] as const) {
+  test(`${role}: completed exercise deletion saves to the database and stays deleted on the next edit`, async ({ page }, testInfo) => {
+    const requestPromise = page.waitForRequest((request) => request.url().includes('/rest/v1/rpc/list_workouts'))
+    await login(page, `${role}@fit.local`)
+    const readRequest = await requestPromise
+    const headers = {
+      apikey: (await readRequest.headerValue('apikey'))!,
+      authorization: (await readRequest.headerValue('authorization'))!,
+    }
+    // Only synthetic local fixtures. The actual edit/save is through the UI
+    // and the real RPC, with no mutation response interception.
+    const api = new URL('/rest/v1/', readRequest.url()).href
+    const response = await page.request.post(`${api}rpc/save_completed_workout`, {
+      headers,
+      data: { p_workout: {
+        clientId: demoClientId, workoutDate: '2026-09-04',
+        notes: `Exercise removal QA ${role}`,
+        exercises: [0, 1, 2].map((position) => ({
+          source: 'system', ref: 'squat', name: `Проверка удаления ${position + 1}`,
+          muscleGroup: 'legs', inputKind: 'strength', position,
+          sets: [{ position: 0, weightKg: 10, reps: 10 }, { position: 1, weightKg: 20, reps: 15 }],
+        })),
+      } },
+    })
+    expect(response.ok()).toBe(true)
+    const workoutId: unknown = await response.json()
+    if (typeof workoutId !== 'string') throw new Error('Fixture workout was not created')
+    await page.goto(`/workouts/${workoutId}/edit`)
+    for (let removed = 0; removed < 2; removed += 1) {
+      const exercise = page.getByRole('article').filter({ hasText: 'Проверка удаления' }).first()
+      await exercise.getByRole('button', { name: 'Ещё действия', exact: true }).click()
+      await page.getByRole('menuitem', { name: 'Удалить', exact: true }).click()
+    }
+    await expect(page.getByRole('article').filter({ hasText: 'Проверка удаления' })).toHaveCount(1)
+    const surviving = page.getByRole('article').filter({ hasText: 'Проверка удаления' })
+    await expect(surviving).toContainText('Проверка удаления 3')
+    const expand = surviving.locator('.compact-editor-exercise-toggle')
+    if (await expand.getAttribute('aria-expanded') === 'false') await expand.click()
+    await surviving.getByRole('button', { name: 'Удалить подход 1', exact: true }).click()
+    await expect(surviving.getByLabel('Фактический вес, подход 1', { exact: true })).toHaveValue('20')
+    await surviving.getByLabel('Фактический вес, подход 1', { exact: true }).fill('25')
+    await page.getByRole('button', { name: 'Сохранить изменения', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+    await page.goto(`/workouts/${workoutId}/edit`)
+    await expect(page.getByRole('article').filter({ hasText: 'Проверка удаления' })).toHaveCount(1)
+    await expect(page.getByRole('article').filter({ hasText: 'Проверка удаления' })).toContainText('Проверка удаления 3')
+    for (const theme of ['light', 'dark']) {
+      await page.locator('html').evaluate((element, value) => element.classList.toggle('theme-light', value === 'light'), theme)
+      await page.locator('.phone-frame').evaluate((element, value) => element.classList.toggle('theme-light', value === 'light'), theme)
+      for (const width of [390, 430, ...(role === 'trainer' ? [1440] : [])]) {
+        await page.setViewportSize({ width, height: 932 })
+        await page.getByLabel('Фактический вес, подход 1', { exact: true }).scrollIntoViewIfNeeded()
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+        await page.screenshot({ path: testInfo.outputPath(`${role}-saved-removal-${theme}-${width}.png`), fullPage: true })
+      }
+    }
+    const roots = await page.request.get(`${api}workouts?id=eq.${workoutId}&select=version,status`, { headers })
+    const records: unknown = await roots.json()
+    expect(records).toEqual([expect.objectContaining({ status: 'done' })])
+  })
+}
+
 async function setRpe(page: Page, value: number) {
   const scale = page.getByRole('slider', { name: 'Общая тяжесть по шкале RPE' })
   await scale.focus()

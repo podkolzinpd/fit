@@ -1234,6 +1234,7 @@ function buildWorkoutsWriter(error?: Error): {
   deleteWorkout: ReturnType<typeof vi.fn>
   finishLive: ReturnType<typeof vi.fn>
   removeLiveSet: ReturnType<typeof vi.fn>
+  removeLiveExercise: ReturnType<typeof vi.fn>
   reorderLiveBlock: ReturnType<typeof vi.fn>
   replaceLiveExercise: ReturnType<typeof vi.fn>
   recordPlannedResult: ReturnType<typeof vi.fn>
@@ -1287,6 +1288,7 @@ function buildWorkoutsWriter(error?: Error): {
     version: 5,
     replayed: false,
   }))
+  const removeLiveExercise = vi.fn(() => result({ resourceId: WORKOUT_EXERCISE_ID, version: 2, replayed: false }))
   const reorderLiveBlock = vi.fn(() => result({
     resourceId: WORKOUT_BLOCK_ID,
     version: 6,
@@ -1318,6 +1320,7 @@ function buildWorkoutsWriter(error?: Error): {
       deleteWorkout,
       finishLive,
       removeLiveSet,
+      removeLiveExercise,
       reorderLiveBlock,
       replaceLiveExercise,
       recordPlannedResult,
@@ -1337,6 +1340,7 @@ function buildWorkoutsWriter(error?: Error): {
     deleteWorkout,
     finishLive,
     removeLiveSet,
+    removeLiveExercise,
     reorderLiveBlock,
     replaceLiveExercise,
     recordPlannedResult,
@@ -3247,6 +3251,24 @@ describe('pilot live workout structural commands', () => {
       },
     })
     expect(commented.headers['cache-control']).toBe('no-store')
+    const removedExercise = await app.inject({
+      method: 'DELETE',
+      url: `/v1/workouts/${WORKOUT_ID}/exercises/${WORKOUT_EXERCISE_ID}`,
+      headers: { 'x-fit-session': sessionToken },
+      payload: { expectedVersion: 8, operationId: OPERATION_IDS.removeSet },
+    })
+    expect(removedExercise.statusCode).toBe(200)
+    expect(removedExercise.json()).toEqual({ exercise: {
+      id: WORKOUT_EXERCISE_ID, version: 2, replayed: false,
+    } })
+    expect(writer.removeLiveExercise).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: sessionToken }, WORKOUT_ID, WORKOUT_EXERCISE_ID, 8, OPERATION_IDS.removeSet,
+    )
+    const unauthorizedDelete = await app.inject({
+      method: 'DELETE', url: `/v1/workouts/${WORKOUT_ID}/exercises/${WORKOUT_EXERCISE_ID}`,
+      payload: { expectedVersion: 8, operationId: OPERATION_IDS.removeSet },
+    })
+    expect(unauthorizedDelete.statusCode).toBe(401)
     expect(writer.appendLiveExercise).toHaveBeenCalledWith(
       sessionToken,
       WORKOUT_ID,

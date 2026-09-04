@@ -1627,6 +1627,21 @@ export function LiveWorkoutPage() {
   }
   const appendSet = useMutation({ mutationFn: (exerciseId: string) => runLiveWorkoutMutation(`append-set:${exerciseId}`, (workout) => workoutsRepository.appendLiveSet(workout, exerciseId)), onSuccess: async () => { await query.refetch() } })
   const removeSet = useMutation({ mutationFn: (setId: string) => runLiveWorkoutMutation(`remove-set:${setId}`, (workout) => workoutsRepository.removeLiveSet(workout, setId)), onSuccess: async () => { await query.refetch() } })
+  const removeExercise = useMutation({
+    mutationFn: async (exercise: WorkoutExerciseModel) => {
+      // Let blur saves finish before deleting their parent, including on iOS.
+      await liveSets.waitForIdle()
+      return runLiveWorkoutMutation(`remove-exercise:${exercise.id}`, (workout) => workoutsRepository.removeLiveExercise(workout, exercise.id))
+    },
+    onSuccess: async (_version, exercise) => {
+      for (const set of exercise.sets) acknowledgeLiveDraft(set.id)
+      setExpandedSetId(null)
+      stopRest()
+      await query.refetch()
+      void queryClient.invalidateQueries({ queryKey: ['workouts'] })
+      void queryClient.invalidateQueries({ queryKey: ['clients'] })
+    },
+  })
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => runLiveWorkoutMutation(`append-exercise:${exercise.ref}`, (workout) => workoutsRepository.appendLiveExercise(workout, exercise)), onSuccess: async () => { await query.refetch() } })
   const reorderBlock = useMutation({ mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => runLiveWorkoutMutation(`reorder:${blockId}:${direction}`, (workout) => workoutsRepository.reorderLiveBlock(workout, blockId, direction)), onSuccess: async () => { await query.refetch() } })
   const replaceLive = useMutation({ mutationFn: ({ exerciseId, exercise }: { exerciseId: string; exercise: ExerciseSnapshot }) => runLiveWorkoutMutation(`replace:${exerciseId}`, (workout) => workoutsRepository.replaceLiveExercise(workout, exerciseId, exercise)), onSuccess: async () => { await query.refetch() } })
@@ -1656,7 +1671,7 @@ export function LiveWorkoutPage() {
     ])
     showCompletedWorkout(true)
   } })
-  const rootMutationPending = appendSet.isPending || removeSet.isPending || appendExercise.isPending
+  const rootMutationPending = appendSet.isPending || removeSet.isPending || removeExercise.isPending || appendExercise.isPending
     || reorderBlock.isPending || replaceLive.isPending || commentLive.isPending || finish.isPending
   function draftFrom(form: HTMLFormElement): LiveSetDraft {
     const values = new FormData(form)
@@ -1702,7 +1717,7 @@ export function LiveWorkoutPage() {
       window.removeEventListener('pageshow', onWake)
     }
   }, [restActive])
-  const error = save.error ?? confirm.error ?? appendSet.error ?? removeSet.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
+  const error = save.error ?? confirm.error ?? appendSet.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExerciseModel) {
     if (clientMode) return null
@@ -1724,6 +1739,9 @@ export function LiveWorkoutPage() {
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
       ...(canReplace ? [{ label: 'Заменить', disabled: rootMutationPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } }] : []),
       ...(removableSet ? [{ label: 'Удалить подход', danger: true, disabled: rootMutationPending, onClick: async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(removableSet.id) } }] : []),
+      { label: 'Удалить упражнение', danger: true, disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: async () => {
+        if (await askConfirm({ message: `Удалить «${exercise.name}» из этой тренировки? Все его подходы, включая выполненные, будут удалены.`, confirmLabel: 'Удалить', danger: true })) removeExercise.mutate(exercise)
+      } },
     ]} />
   }
   // Стрелки ↑/↓ видны только во временном режиме перестановки.
