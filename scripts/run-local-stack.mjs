@@ -8,12 +8,23 @@ const POSTGRES_DATABASE = 'fit_actor_test'
 const POSTGRES_PORT = '55432'
 const OWNER_DATABASE_URL = `postgresql://postgres:postgres@127.0.0.1:${POSTGRES_PORT}/${POSTGRES_DATABASE}`
 const RUNTIME_DATABASE_URL = `postgresql://fit_api:fit-api-test-only@127.0.0.1:${POSTGRES_PORT}/${POSTGRES_DATABASE}`
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+const isWin32 = process.platform === 'win32'
+const npmCommand = isWin32 ? 'npm.cmd' : 'npm'
+const npxCommand = isWin32 ? 'npx.cmd' : 'npx'
+
+// Node >=18.20.2/20.12.2/21.7.3 (CVE-2024-27980) отказывает EINVAL при спавне
+// .bat/.cmd на Windows без shell:true — затрагивает только npm/npx-обёртки,
+// не трогаем podman/node: их аргументы (например, многословный SQL) не
+// экранируются автоматически при shell:true и могут разъехаться.
+function needsShell(command) {
+  return isWin32 && (command === npmCommand || command === npxCommand)
+}
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     encoding: 'utf8',
     stdio: options.capture ? 'pipe' : 'inherit',
+    shell: needsShell(command),
     ...options,
   })
 
@@ -47,7 +58,7 @@ function startSupabase() {
   console.log('[local] Supabase готов.')
 
   console.log('[local] Применяю только ещё не применённые Supabase-миграции…')
-  run('npx', ['--no-install', 'supabase', 'migration', 'up', '--local'])
+  run(npxCommand, ['--no-install', 'supabase', 'migration', 'up', '--local'])
 }
 
 function ensureApiDependencies() {
@@ -198,7 +209,7 @@ async function waitForApi(child) {
 }
 
 function spawnInherited(command, args, env = process.env) {
-  return spawn(command, args, { env, stdio: 'inherit' })
+  return spawn(command, args, { env, stdio: 'inherit', shell: needsShell(command) })
 }
 
 async function runDevelopmentServers() {
