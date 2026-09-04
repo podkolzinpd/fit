@@ -53,7 +53,7 @@ Yandex migration `000029_tenant_migration_parity.sql` preserves the V1
 `workouts.stage_id` goal-stage binding and `client_progress.updated_by` audit
 field. The exporter derives Yandex-required creator/fingerprint fields only
 where the V1 schema did not persist them directly.
-Migration `000034_client_custom_exercise_self_service.sql` additionally
+Migration `000035_client_custom_exercise_self_service.sql` additionally
 preserves `custom_exercises.created_by`: client-authored exercises keep their
 author and root data partition instead of being silently converted into
 trainer-owned rows.

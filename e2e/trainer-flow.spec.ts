@@ -328,10 +328,11 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.workout-fact-summary')).toContainText('383 кг')
 
   // Завершённую тренировку можно исправить без возврата в live: редактор
-  // открывает сохранённый факт; сохранение дополняет все подходы и статус
-  // возвращается к полностью завершённой тренировке.
+  // открывает только сохранённый факт, не подтверждая оставшийся план.
   await page.getByRole('link', { name: 'Изменить результат' }).click()
   await expect(page.getByLabel('Фактический вес, подход 1')).toHaveValue('42.5')
+  await expect(page.locator('.planned-exercise')).toHaveCount(1)
+  await expect(page.getByLabel(/Фактический вес, подход/)).toHaveCount(1)
   await page.getByLabel('Фактический вес, подход 1').fill('45')
   await page.getByRole('button', { name: 'Сохранить изменения' }).click()
   await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
@@ -381,7 +382,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(personalRecordCard).toHaveClass(/has-pr/)
   await expect(personalRecordCard.locator('.workout-pr-badge')).toHaveText('Личный рекорд')
   await expect(personalRecordCard.locator('[data-icon="record"]')).toBeVisible()
-  await expect(page.locator('.card-meta').first()).toContainText('1.2 т')
+  // Только исправленный подтверждённый подход: 45 × 9 = 405 кг.
+  await expect(page.locator('.card-meta').first()).toContainText('405 кг')
   await page.locator('.card').first().click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   // Заходим в аналитику упражнения и возвращаемся: «назад» с упражнения ведёт

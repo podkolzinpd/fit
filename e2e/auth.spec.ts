@@ -537,20 +537,32 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Фактическое время').fill('29:40')
   await page.getByLabel('Фактическая дистанция').fill('5.2')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
-  // В тренировке остались добавленные подход и упражнение, поэтому завершение
-  // подтверждаем как частичное. Это сохраняет проверку структурных мутаций.
+  // Для последующей перестановки результата нужны два реально выполненных
+  // упражнения. Невыполненный план редактор больше не превращает в факт.
+  await expect(page.locator('.live-set-compact.confirmed')).toBeVisible()
+  await page.getByRole('button', { name: 'Вверх' }).last().click()
+  // Дождаться серверной перестановки: у нового текущего упражнения один
+  // подход; до refetch здесь ещё видны два подхода предыдущего упражнения.
+  await expect(page.locator('.live-exercise .live-set-number')).toHaveCount(1)
+  await expect(page.getByLabel('Фактическое время')).toHaveValue('')
+  await page.getByLabel('Фактическое время').fill('10:00')
+  await page.getByLabel('Фактическая дистанция').fill('1.2')
+  await page.getByRole('button', { name: 'Готово, отдых' }).click()
+  await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
+  // В первом упражнении остался неподтверждённый добавленный подход.
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await Promise.all([
     page.waitForURL(ownWorkoutUrl),
     page.getByRole('button', { name: 'Завершить', exact: true }).click(),
   ])
-  const ownCompletedRun = page.locator('.completed-exercise-details').first()
+  const ownCompletedRun = page.locator('.completed-exercise-details').filter({ hasText: '5,2 км' })
   await expect(ownCompletedRun.locator('summary')).toContainText('5,2 км')
   await ownCompletedRun.locator('summary').click()
   await expect(ownCompletedRun.getByText(/5,2 км × 29:40 · темп 5:42\/км/)).toBeVisible()
   // Собственную завершённую тренировку клиент может исправить: перестановка
   // не должна сталкиваться с промежуточным дубликатом позиции в БД.
   await page.getByRole('link', { name: 'Изменить результат' }).click()
+  await expect(page.locator('.planned-exercise')).toHaveCount(2)
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
   await page.getByRole('menuitem', { name: 'Изменить порядок' }).click()
   await expect(page.getByRole('button', { name: 'Вверх' }).last()).toBeEnabled()
@@ -593,10 +605,12 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // Копия должна сохранить оба, а не полагаться на неоднозначный текстовый
   // селектор.
   await expect(page.getByText('Бег', { exact: true })).toHaveCount(2)
-  // Клиент поменял упражнения местами: факт остаётся у того же упражнения,
-  // поэтому заполненный «Бег» теперь второй, а не теряется или не переносится.
-  await expect(page.getByLabel('Время, подход 1').last()).toHaveValue('29:40')
-  await expect(page.getByLabel('Расстояние, подход 1').last()).toHaveValue('5.2')
+  // После перестановки в Live и обратной перестановки результата оба факта
+  // остаются у своих упражнений, а не переносятся между одинаковыми ref.
+  await expect(page.getByLabel('Время, подход 1').first()).toHaveValue('29:40')
+  await expect(page.getByLabel('Расстояние, подход 1').first()).toHaveValue('5.2')
+  await expect(page.getByLabel('Время, подход 1').last()).toHaveValue('10:00')
+  await expect(page.getByLabel('Расстояние, подход 1').last()).toHaveValue('1.2')
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
     page.getByRole('button', { name: 'Сохранить' }).click(),
