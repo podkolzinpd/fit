@@ -54,8 +54,8 @@ select lives_ok(
 );
 select throws_ok(
   $$insert into public.client_goals (client_id, trainer_id, created_by, title)
-    values ('c1100000-0000-4000-8000-000000000011',
-      'c1000000-0000-4000-8000-000000000001',
+    values ('c2200000-0000-4000-8000-000000000022',
+      'c3000000-0000-4000-8000-000000000003',
       'c1000000-0000-4000-8000-000000000001', 'Обход RPC')$$,
   '42501', null, 'RLS and grants still prevent direct client writes'
 );
