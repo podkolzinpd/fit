@@ -1,7 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-03. База задачи: `main` `3d2f47b8` (#780). Активная
-задача: полноценная Yandex ID session и default-off sticky routing основного UI.
+Обновлено: 2026-09-04. База задачи: `main` `ce504cfe` (#781). Активная
+задача: воспроизводимая репетиция переноса tenant в Yandex PostgreSQL.
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом; Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум один вторичный акцент. Live разделяет нейтральный таймер и активный отдых.
 - Создание, Live и завершение прошлого плана сохраняют прежнюю логику без
@@ -78,29 +78,37 @@
   упражнения, parser и training summaries используют одну `x-fit-session` и
   Yandex API; mismatch или ошибка не переключают отдельный запрос на Supabase.
   Остальные пользователи и вкладки сохраняют текущий Supabase backend.
-- Текущая ветка добавляет отдельный default-off sticky route всего основного
+- `main` содержит отдельный default-off sticky route всего основного
   интерфейса для ровно одного перенесённого profile UUID. Профиль, клиенты,
   упражнения, цели/прогресс, тренировки/Live/post-workout, приглашения,
   Assistant, сводки, feedback и push используют один `x-fit-session`; ошибки
   не переключают отдельные запросы на Supabase. После выбора Yandex backend
   старая browser Supabase-сессия завершается. Вне allowlist production не
   меняется; UI и маршруты остаются прежними.
+- Yandex migration `000034` сохраняет author-scoped пользовательские
+  упражнения: клиент с тренером или без него создаёт и изменяет свою запись,
+  корневой и подключённый тренеры видят доступные им клиентские упражнения,
+  посторонний tenant не получает доступ. `created_by` переносится без потери.
 - Стабильный Vercel Preview синхронизируется с каждым verified `main`; callback,
   CORS и история не меняются, прочие ветки исключены из Git deployments.
 - Read-only callback остаётся диагностическим экраном; полноценная app-session
   использует тот же основной UI и read-write stage API без изменения rollout
   для пользователей вне allowlist.
 - Реальный invite → join → leave/remove smoke — внешняя проверка. До первого
-  tenant rollout остаются export/import validation, две rehearsal и явное
-  решение по rollback-окну.
+  tenant rollout остаются проверка точных remote source/target/credentials,
+  freeze/rollback-окно и явное включение одного tenant.
 ## Проверки активной ветки
-- #775 слит: возвраты в тренировках и календарь истории тренера проверены CI; ограничения ручной QA и production ведутся в ФИТ 7 (`docs/design/FIT7_TRAINER_DISCONNECT.md`).
+- Две чистые локальные репетиции прошли через export → dry-run/rollback → apply
+  → повторный apply (`inserted=0`) → validate: 35 synthetic production-like
+  строк, все 28 manifest-таблиц; временные БД и artifacts удалены.
+- `npm run local:verify`: 930 Supabase SQL/RLS проверок и 30 PostgreSQL actor/RLS
+  integration-тестов прошли; generated types и migration safety актуальны.
 - Push bootstrap: два runtime SA созданы run `33761562506`; платные ресурсы не
-  созданы. Прямой cross-scope grant на Functions Lockbox получил повторяемый
-  `FailedPrecondition`; текущая ветка заменяет его stage-local masked mirror без
-  попадания payload в GitHub env/logs или Terraform state.
+  созданы. Прямой cross-scope grant на Functions Lockbox заменён в `main`
+  stage-local masked mirror без payload в GitHub env/logs или Terraform state.
 ## Ближайший порядок
-1. После review выполнить export/import validation и две rehearsal на non-production tenant.
-2. Оценить production infrastructure, согласовать rollback и только затем включить один tenant.
+1. После review согласовать exact remote cohort/source/target, credentials,
+   freeze и rollback-окно; локальная команда не обращается к облаку.
+2. Оценить production infrastructure и только затем включить один tenant.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.

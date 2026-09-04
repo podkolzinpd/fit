@@ -24,6 +24,7 @@ type TrainerReaction = 'thumbs_up' | 'fire' | 'strong'
 
 interface CustomExerciseRow extends QueryResultRow {
   id: string
+  created_by: string
   name: string
   muscle_group: MuscleGroup
   input_kind: InputKind
@@ -256,7 +257,7 @@ export async function readAccessibleTrainingData(
 ): Promise<PilotTrainingDataResponse> {
   const [customExerciseRows, workoutLookahead, attentionRows, preferenceRows] = await Promise.all([
     client.query<CustomExerciseRow>(`
-      select id, name, muscle_group, input_kind, archived_at, version, trainer_id
+      select id, created_by, name, muscle_group, input_kind, archived_at, version
       from public.custom_exercises
       order by archived_at nulls first, lower(name), id
     `),
@@ -407,7 +408,7 @@ export async function readAccessibleTrainingData(
       inputKind: row.input_kind,
       archivedAt: row.archived_at?.toISOString() ?? null,
       version: safeInteger(row.version, 'custom exercise version'),
-      createdBy: row.trainer_id,
+      createdBy: row.created_by,
     })),
     workouts: workoutRows.map((row) => ({
       id: row.id,
