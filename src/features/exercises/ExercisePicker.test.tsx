@@ -40,6 +40,19 @@ function catalog(overrides: Partial<ExerciseCatalogState> = {}): ExerciseCatalog
 }
 
 describe('ExercisePicker', () => {
+  it('excludes retired entries from recent and search but keeps used exercises selectable', async () => {
+    const user = userEvent.setup()
+    const retired = SYSTEM_EXERCISE_CATALOG.find((item) => item.ref === 'fedb-atlas-stones')!
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} clientRecent={[retired]} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.selectOptions(screen.getByLabelText('Раздел каталога'), 'rare')
+    expect(document.querySelector('[data-exercise-ref="fedb-atlas-stones"]')).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText('Поиск упражнения'), retired.name)
+    expect(document.querySelector('[data-exercise-ref="fedb-atlas-stones"]')).not.toBeInTheDocument()
+    await user.clear(screen.getByLabelText('Поиск упражнения'))
+    await user.type(screen.getByLabelText('Поиск упражнения'), 'Жим Брэдфорда стоя')
+    expect(document.querySelector('[data-exercise-ref="fedb-standing-bradford-press"]')).toBeInTheDocument()
+  })
+
   it('starts with core, keeps rare exercises searchable and groups duplicate names', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
@@ -48,7 +61,7 @@ describe('ExercisePicker', () => {
     expect(document.querySelector('[data-exercise-ref="fedb-incline-dumbbell-press"]')).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="fedb-incline-dumbbell-press-palms-in"]')).not.toBeInTheDocument()
     await user.selectOptions(screen.getByLabelText('Раздел каталога'), 'rare')
-    expect(screen.getByText('215 упражнений')).toBeInTheDocument()
+    expect(screen.getByText('137 упражнений')).toBeInTheDocument()
     await user.type(screen.getByLabelText('Поиск упражнения'), 'тяга гантели одной рукой')
     expect(document.querySelector('[data-exercise-ref="dumbbell-row"]')).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="fedb-one-arm-dumbbell-row"]')).not.toBeInTheDocument()

@@ -1,7 +1,8 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-04. База задачи: `main` `3da66200` (#783). Активная
-задача: private remote audit/dry-run выбранного tenant на Yandex stage.
+Обновлено: 2026-09-04. База задачи: `main` `26f1e394`. Активная задача: private
+remote audit/dry-run tenant на Yandex stage. В `main` завершена YAFIT-467: 83
+упражнения исключены из новых выборов; история и 4 использовавшихся сохранены.
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом; Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум один вторичный акцент. Live разделяет нейтральный таймер и активный отдых.
 - Создание, Live и завершение прошлого плана сохраняют прежнюю логику без
@@ -27,7 +28,8 @@
 - PWA, беговой MVP и локальный каталог работают; Yandex Web Push producer,
   lease/retry/timer готовы локально, но stage bootstrap ещё не применён; гребля использует темп `/500 м`.
 - Email-вход ограничивает зависший запрос, повторяет временный сбой и возвращает активную форму с ошибкой.
-- Каталог содержит 663 сохранённых ref и 50 локальных роликов; варианты,
+- Каталог содержит 663 сохранённых ref и 50 локальных роликов; активный выбор —
+  491 движение и 7 форматов; 83 согласованных ref исключены. Варианты,
   синонимы, старые названия и custom-карточки не теряются. Поиск различает точное
   совпадение, уточнение и выдачу; picker раздельно открывает технику и добавляет
   упражнение, сохраняет поиск/фильтры/scroll и рендерит каталог порциями.
@@ -105,11 +107,9 @@
   строк, все 28 manifest-таблиц; временные БД и artifacts удалены.
 - `npm run local:verify`: 947 Supabase SQL/RLS проверок и 30 PostgreSQL actor/RLS
   integration-тестов прошли; generated types и migration safety актуальны.
-- Ветка добавляет ручной source-audit и private stage dry-run/apply: envelope
-  живёт в памяти, apply требует подтверждение и повтор с `inserted=0`; production не меняется.
-- Push bootstrap: два runtime SA созданы run `33761562506`; платные ресурсы не
-  созданы. Прямой cross-scope grant на Functions Lockbox заменён в `main`
-  stage-local masked mirror без payload в GitHub env/logs или Terraform state.
+- Ветка: remote audit/dry-run/apply без artifacts; apply подтверждается и повторяется с `inserted=0`; production не меняется.
+- Push bootstrap: два runtime SA созданы run `33761562506`; платные ресурсы не созданы.
+  Functions Lockbox использует stage-local masked mirror без payload в state/logs.
 ## Ближайший порядок
 1. После merge сохранить выбранный tenant как masked repository secret, выполнить
    remote audit, затем transactional dry-run и сверить aggregate-отчёт.

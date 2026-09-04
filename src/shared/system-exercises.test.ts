@@ -16,7 +16,7 @@ const EXERCISE_VIDEO_PATHS = new Set(
 
 describe('system exercise catalog', () => {
   it('matches the current catalog contract', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(9)
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(10)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
