@@ -51,6 +51,13 @@ describe('workoutQueries lists', () => {
     })
   })
 
+  it('deletes only the selected Live occurrence with the root version', () => {
+    workoutQueries.removeLiveExercise('workout-id', 'exercise-id', 8)
+    expect(rpc).toHaveBeenCalledWith('remove_live_exercise', {
+      p_workout_id: 'workout-id', p_exercise_id: 'exercise-id', p_expected_version: 8,
+    })
+  })
+
   it('loads summaries without the nested workout aggregate', () => {
     workoutQueries.listSummaries('client-id')
 
