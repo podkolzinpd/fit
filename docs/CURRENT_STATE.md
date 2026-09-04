@@ -1,7 +1,8 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-04. База задачи: `main` `3da6620`. Активная задача:
-YAFIT-467 — исключение 83 согласованных упражнений из новых выборов; история и 4 использовавшихся упражнения сохранены.
+Обновлено: 2026-09-04. База задачи: `main` `26f1e394`. Активная задача: private
+remote audit/dry-run tenant на Yandex stage. В `main` завершена YAFIT-467: 83
+упражнения исключены из новых выборов; история и 4 использовавшихся сохранены.
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом; Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум один вторичный акцент. Live разделяет нейтральный таймер и активный отдых.
 - Создание, Live и завершение прошлого плана сохраняют прежнюю логику без
@@ -106,12 +107,14 @@ YAFIT-467 — исключение 83 согласованных упражне�
   строк, все 28 manifest-таблиц; временные БД и artifacts удалены.
 - `npm run local:verify`: 947 Supabase SQL/RLS проверок и 30 PostgreSQL actor/RLS
   integration-тестов прошли; generated types и migration safety актуальны.
-- Push bootstrap: два runtime SA созданы run `33761562506`; платные ресурсы не
-  созданы. Прямой cross-scope grant на Functions Lockbox заменён в `main`
-  stage-local masked mirror без payload в GitHub env/logs или Terraform state.
+- Ветка: remote audit/dry-run/apply без artifacts; apply подтверждается и повторяется с `inserted=0`; production не меняется.
+- Push bootstrap: два runtime SA созданы run `33761562506`; платные ресурсы не созданы.
+  Functions Lockbox использует stage-local masked mirror без payload в state/logs.
 ## Ближайший порядок
-1. После review согласовать exact remote cohort/source/target, credentials,
-   freeze и rollback-окно; локальная команда не обращается к облаку.
-2. Оценить production infrastructure и только затем включить один tenant.
+1. После merge сохранить выбранный tenant как masked repository secret, выполнить
+   remote audit, затем transactional dry-run и сверить aggregate-отчёт.
+2. Только после успешного dry-run применить копию на stage, связать Yandex ID и
+   проверить основной UI; production routing остаётся выключенным.
+3. Оценить production infrastructure и только затем включить один tenant.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.

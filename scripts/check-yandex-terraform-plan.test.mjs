@@ -72,6 +72,38 @@ describe('Yandex Terraform plan policy', () => {
     assert.equal(result.status, 0)
   })
 
+  test('accepts enabling a stage-only route on the existing migration runner', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_serverless_container.migration[0]',
+          change: {
+            actions: ['update'],
+            before: {
+              memory: 512,
+              cores: 1,
+              image: [{ environment: { APP_ENV: 'stage' }, url: 'old' }],
+            },
+            after: {
+              memory: 512,
+              cores: 1,
+              image: [{
+                environment: {
+                  APP_ENV: 'stage',
+                  STAGE_TENANT_MIGRATION_ENABLED: 'true',
+                },
+                url: 'new',
+              }],
+            },
+          },
+        },
+      ],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(result.status, 0)
+  })
+
   test('blocks an automatic paid resource creation', () => {
     const result = runPolicy(
       [

@@ -14,6 +14,8 @@ import {
   type StageDatabaseReaderAccessManager,
 } from './db/stage-database-reader-access.js'
 import { buildMigrationApp } from './migration-app.js'
+import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
+import { TenantMigrationError } from './tenant-migration/engine.js'
 
 const apps: ReturnType<typeof buildMigrationApp>[] = []
 const STAGE_CLIENT_ID = '10000000-0000-4000-8000-000000000001'
@@ -327,6 +329,154 @@ describe('stage workout fixture', () => {
     expect(response.statusCode).toBe(500)
     expect(response.json()).toEqual({ status: 'fixture_failed' })
     expect(response.body).not.toContain('secret')
+  })
+})
+
+describe('stage tenant migration', () => {
+  const envelope = {
+    format: 'fit-tenant-envelope-v1',
+    ciphertext: 'encrypted-payload',
+  }
+  const report = {
+    mode: 'dry-run' as const,
+    tenantFingerprint: 'a'.repeat(16),
+    tables: [{ name: 'public.profiles', rows: 2, inserted: 2 }],
+  }
+
+  function buildTenantMigration(
+    run = vi.fn().mockResolvedValue(report),
+  ) {
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      stageTenantMigration: { run },
+    })
+    apps.push(app)
+    return { app, run }
+  }
+
+  it('does not expose tenant migration routes unless explicitly enabled', async () => {
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/tenant-migration/dry-run',
+      headers: { 'x-fit-tenant-migration-passphrase': 'p'.repeat(32) },
+      payload: envelope,
+    })
+
+    expect(response.statusCode).toBe(404)
+  })
+
+  it('runs an encrypted dry-run and returns only aggregate diagnostics', async () => {
+    const { app, run } = buildTenantMigration()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/tenant-migration/dry-run',
+      headers: { 'x-fit-tenant-migration-passphrase': 'p'.repeat(32) },
+      payload: envelope,
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      status: 'tenant_migration_dry_run',
+      tenantFingerprint: 'a'.repeat(16),
+      tables: report.tables,
+    })
+    expect(run).toHaveBeenCalledWith(envelope, 'p'.repeat(32), false)
+    expect(response.body).not.toContain('encrypted-payload')
+    expect(response.body).not.toContain('p'.repeat(32))
+  })
+
+  it('requires an independent exact confirmation before apply', async () => {
+    const { app, run } = buildTenantMigration()
+
+    const rejected = await app.inject({
+      method: 'POST',
+      url: '/stage/tenant-migration/apply',
+      headers: { 'x-fit-tenant-migration-passphrase': 'p'.repeat(32) },
+      payload: envelope,
+    })
+    expect(rejected.statusCode).toBe(403)
+    expect(rejected.json()).toEqual({ status: 'apply_not_confirmed' })
+    expect(run).not.toHaveBeenCalled()
+
+    const accepted = await app.inject({
+      method: 'POST',
+      url: '/stage/tenant-migration/apply',
+      headers: {
+        'x-fit-tenant-migration-passphrase': 'p'.repeat(32),
+        'x-fit-tenant-migration-confirmation': 'APPLY_TENANT_TO_YANDEX_STAGE',
+      },
+      payload: envelope,
+    })
+    expect(accepted.statusCode).toBe(200)
+    expect(accepted.json()).toEqual({
+      status: 'tenant_migration_applied',
+      tenantFingerprint: 'a'.repeat(16),
+      tables: report.tables,
+    })
+    expect(run).toHaveBeenCalledWith(envelope, 'p'.repeat(32), true)
+  })
+
+  it('rejects missing passphrases and oversized artifacts before import', async () => {
+    const { app, run } = buildTenantMigration()
+
+    const missingPassphrase = await app.inject({
+      method: 'POST',
+      url: '/stage/tenant-migration/dry-run',
+      payload: envelope,
+    })
+    expect(missingPassphrase.statusCode).toBe(400)
+
+    const oversized = await app.inject({
+      method: 'POST',
+      url: '/stage/tenant-migration/dry-run',
+      headers: { 'x-fit-tenant-migration-passphrase': 'p'.repeat(32) },
+      payload: { ciphertext: 'x'.repeat(3 * 1024 * 1024) },
+    })
+    expect(oversized.statusCode).toBe(413)
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('keeps artifact, validation and connection failures safe', async () => {
+    for (const [error, expectedStatus, expectedBody] of [
+      [
+        new TenantMigrationArtifactError('artifact_decryption_failed'),
+        400,
+        { status: 'tenant_migration_artifact_rejected' },
+      ],
+      [
+        new TenantMigrationError('target_validation_failed:public.profiles'),
+        409,
+        {
+          status: 'tenant_migration_rejected',
+          code: 'target_validation_failed:public.profiles',
+        },
+      ],
+      [
+        new Error('postgresql://owner:secret@private-host'),
+        500,
+        { status: 'tenant_migration_failed' },
+      ],
+    ] as const) {
+      const { app } = buildTenantMigration(vi.fn().mockRejectedValue(error))
+      const response = await app.inject({
+        method: 'POST',
+        url: '/stage/tenant-migration/dry-run',
+        headers: { 'x-fit-tenant-migration-passphrase': 'p'.repeat(32) },
+        payload: envelope,
+      })
+      expect(response.statusCode).toBe(expectedStatus)
+      expect(response.json()).toEqual(expectedBody)
+      expect(response.body).not.toContain('secret')
+      expect(response.body).not.toContain('private-host')
+    }
   })
 })
 
