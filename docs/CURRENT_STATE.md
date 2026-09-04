@@ -1,7 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-04. База задачи: `main` `26f1e394`. Активная задача: private
-remote audit/dry-run tenant на Yandex stage. В `main` завершена YAFIT-467: 83
+Обновлено: 2026-09-04. База: `main` `f3975e9b`. Активно: перенос DataLens и `app_feedback` в Telegram/Tracker на Yandex stage. В `main` завершена YAFIT-467: 83
 упражнения исключены из новых выборов; история и 4 использовавшихся сохранены.
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом; Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум один вторичный акцент. Live разделяет нейтральный таймер и активный отдых.
@@ -17,8 +16,8 @@ remote audit/dry-run tenant на Yandex stage. В `main` завершена YAFI
   бег и связки; неоднозначность открывает проверку. Сохранённые тренировки —
   компактная хроника с копированием и удалением в меню.
 - ИИ-сводка и production-разбор — через Yandex Cloud Functions, локальный разбор
-  — в Supabase. Tracker sync `app_feedback` остановлен; команда читает через
-  `analytics.app_feedback` и Telegram (`notify-app-feedback-telegram`).
+  — в Supabase. Legacy `app_feedback` остаётся в Supabase DataLens/Telegram;
+  активная ветка переносит DataLens, Telegram и Tracker для Yandex tenants.
 - Assistant открыт всем тренерским аккаунтам и защищён `TrainerOnly`; `VITE_ASSISTANT_NAV_ENABLED=false` остаётся общим kill switch. Durable turns/actions и narrow
   RPC сохраняют owner/RLS. Новые turn'ы создают workout draft, прежние карточки
   остаются читаемыми; исходная диктовка сохраняется при уточнении клиента.
@@ -26,7 +25,7 @@ remote audit/dry-run tenant на Yandex stage. В `main` завершена YAFI
   многострочный composer держит микрофон и отправку на одной нижней линии, а
   неизвестное имя открывает полный выбор прямых и подключённых клиентов.
 - PWA, беговой MVP и локальный каталог работают; Yandex Web Push producer,
-  lease/retry/timer готовы локально, но stage bootstrap ещё не применён; гребля использует темп `/500 м`.
+  lease/retry и минутный private timer работают на stage; гребля использует темп `/500 м`.
 - Email-вход ограничивает зависший запрос, повторяет временный сбой и возвращает активную форму с ошибкой.
 - Каталог содержит 663 сохранённых ref и 50 локальных роликов; активный выбор —
   491 движение и 7 форматов; 83 согласованных ref исключены. Варианты,
@@ -93,6 +92,8 @@ remote audit/dry-run tenant на Yandex stage. В `main` завершена YAFI
   упражнения: клиент с тренером или без него создаёт и изменяет свою запись,
   корневой и подключённый тренеры видят доступные им клиентские упражнения,
   посторонний tenant не получает доступ. `created_by` переносится без потери.
+- Активная ветка добавляет `000036`: receipts/retry Telegram/Tracker, четыре
+  live DataLens views и read-only `fit_datalens`; новый timer/container не нужен.
 - Стабильный Vercel Preview синхронизируется с каждым verified `main`; callback,
   CORS и история не меняются, прочие ветки исключены из Git deployments.
 - Read-only callback остаётся диагностическим экраном; полноценная app-session
@@ -111,10 +112,9 @@ remote audit/dry-run tenant на Yandex stage. В `main` завершена YAFI
 - Push bootstrap: два runtime SA созданы run `33761562506`; платные ресурсы не созданы.
   Functions Lockbox использует stage-local masked mirror без payload в state/logs.
 ## Ближайший порядок
-1. После merge сохранить выбранный tenant как masked repository secret, выполнить
-   remote audit, затем transactional dry-run и сверить aggregate-отчёт.
-2. Только после успешного dry-run применить копию на stage, связать Yandex ID и
-   проверить основной UI; production routing остаётся выключенным.
-3. Оценить production infrastructure и только затем включить один tenant.
+1. После merge создать stage Lockbox Telegram/Tracker и проверить синтетический feedback.
+2. Подключить DataLens к `fit_datalens`, выполнить tenant apply на stage, связать Yandex ID и проверить UI.
+3. После одного успешного tenant перевести оставшихся пользователей партиями;
+   Supabase держать только на rollback-окно.
 ## Отложено
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.

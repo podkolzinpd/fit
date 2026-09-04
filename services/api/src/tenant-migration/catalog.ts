@@ -292,20 +292,18 @@ where conversation.owner_id in (select id from scope_users)`,
     name: 'public.app_feedback',
     sourceSql: `${scopeCte}
 select to_jsonb(feedback)
-  - 'tracker_issue_key'
   - 'tracker_request_id'
-  - 'tracker_sync_attempts'
-  - 'tracker_last_error'
   - 'telegram_request_id'
-  - 'telegram_notified_at'
-  - 'telegram_sync_attempts'
-  - 'telegram_last_error' as row
+  - 'operations_dispatch_token'
+  - 'operations_dispatch_started_at' as row
 from public.app_feedback feedback
 where feedback.user_id in (select id from scope_users)`,
-    targetSql: publicRows(
-      'app_feedback',
-      'row.user_id in (select id from scope_users)',
-    ),
+    targetSql: `${scopeCte}
+select to_jsonb(feedback)
+  - 'operations_dispatch_token'
+  - 'operations_dispatch_started_at' as row
+from public.app_feedback feedback
+where feedback.user_id in (select id from scope_users)`,
     targetRecord: 'public.app_feedback',
   },
   {

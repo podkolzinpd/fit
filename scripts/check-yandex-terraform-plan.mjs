@@ -43,6 +43,8 @@ const automaticLockboxAddresses = new Set([
 ])
 const runtimePreflightSecretAccessAddress =
   'yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader[0]'
+const appFeedbackSecretAccessAddress =
+  'yandex_lockbox_secret_iam_member.push_dispatcher_app_feedback_integrations_reader[0]'
 const pushPipelineBootstrapAddresses = new Set([
   'yandex_iam_service_account.push_dispatcher',
   'yandex_iam_service_account.push_scheduler',
@@ -130,6 +132,50 @@ const hasBoundedApiExecutionTimeout = (resource) => {
     && Number(after[1]) <= 120
 }
 
+const withoutDataLensAccess = (value) => {
+  if (Array.isArray(value)) return value.map(withoutDataLensAccess)
+  if (value === null || typeof value !== 'object') return value
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => key !== 'data_lens')
+      .map(([key, nested]) => [key, withoutDataLensAccess(nested)]),
+  )
+}
+
+const readDataLensAccess = (value) => {
+  const config = Array.isArray(value?.config) ? value.config[0] : value?.config
+  const access = Array.isArray(config?.access) ? config.access[0] : config?.access
+  return access?.data_lens
+}
+
+const isExactDataLensAccessUpdate = (resource) =>
+  resource.address === 'yandex_mdb_postgresql_cluster_v2.fit'
+  && resource.change.actions.join(',') === 'update'
+  && readDataLensAccess(resource.change.before) === false
+  && readDataLensAccess(resource.change.after) === true
+  && isDeepStrictEqual(
+    withoutDataLensAccess(resource.change.before),
+    withoutDataLensAccess(resource.change.after),
+  )
+
+const isExactDataLensUser = (resource) => {
+  if (
+    resource.address !== 'yandex_mdb_postgresql_user.datalens'
+    || resource.change.actions.join(',') !== 'create'
+  ) return false
+  const after = resource.change.after ?? {}
+  const permissions = after.permission
+  const settings = after.settings ?? {}
+  return after.name === 'fit_datalens'
+    && after.login === true
+    && after.generate_password === true
+    && Number(after.conn_limit) === 5
+    && Array.isArray(permissions)
+    && permissions.length === 1
+    && permissions[0]?.database_name === 'fit'
+    && String(settings.default_transaction_read_only) === 'true'
+}
+
 const isServiceAccountMember = (value) =>
   /^serviceAccount:[a-z0-9]+$/u.test(value ?? '')
 
@@ -206,16 +252,25 @@ const isAutomaticStageChange = (resource) => {
   if (isReviewedPushPipelineBootstrap(resource)) return true
   if (actions === 'create') {
     return isExactPublicApiBinding(resource)
+      || isExactDataLensUser(resource)
       || (
         resource.address === runtimePreflightSecretAccessAddress
         && resource.change.after?.role === 'lockbox.payloadViewer'
         && /^serviceAccount:[a-z0-9]+$/u.test(resource.change.after?.member ?? '')
+      )
+      || (
+        resource.address === appFeedbackSecretAccessAddress
+        && resource.change.after?.role === 'lockbox.payloadViewer'
+        && isKnownOrComputedServiceAccountMember(resource)
       )
   }
   if (actions !== 'update') {
     return false
   }
   if (isExactPublicApiBinding(resource)) {
+    return true
+  }
+  if (isExactDataLensAccessUpdate(resource)) {
     return true
   }
   if (automaticContainerAddresses.has(resource.address)) {

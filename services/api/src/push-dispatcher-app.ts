@@ -1,9 +1,10 @@
 import Fastify, { type FastifyInstance } from 'fastify'
 
+import type { BackgroundDispatchSummary } from './background-dispatcher.js'
 import type { PushDispatchSummary } from './push-dispatcher.js'
 
 interface PushDispatchRunner {
-  run(): Promise<PushDispatchSummary>
+  run(): Promise<PushDispatchSummary | BackgroundDispatchSummary>
 }
 
 interface BuildPushDispatcherAppOptions {
@@ -49,7 +50,7 @@ export function buildPushDispatcherApp(
     } catch (error) {
       request.log.error(
         { errorType: error instanceof Error ? error.name : 'unknown' },
-        'Push dispatch failed',
+        'Background dispatch failed',
       )
       return reply.code(500).send({ status: 'dispatch_failed' })
     }
