@@ -8,6 +8,15 @@ const catalog: ExerciseSnapshot[] = [
 ]
 
 describe('formatLlmWorkoutText', () => {
+  it('does not send retired refs to the model or accept them back as new exercises', async () => {
+    const retired: ExerciseSnapshot = { source: 'system', ref: 'fedb-atlas-stones', name: 'Подъём камней Атласа', muscleGroup: 'other', inputKind: 'strength' }
+    const remoteParser = vi.fn().mockResolvedValue({ items: [{ sourceText: retired.name, exerciseRef: retired.ref, confidence: 1, sets: [{ reps: 10 }] }], unmatched: [] })
+    const result = await parseWorkoutWithLlm(retired.name, [...catalog, retired], { remoteParser })
+    expect(remoteParser.mock.calls[0]?.[1]).toEqual(catalog)
+    expect(result.items.some((item) => item.exerciseRef === retired.ref)).toBe(false)
+    expect(result.unmatched.some((item) => item.sourceText === retired.name)).toBe(true)
+  })
+
   afterEach(() => vi.restoreAllMocks())
 
   it('оставляет каждый результат отдельной строкой и не теряет неизвестный фрагмент', () => {

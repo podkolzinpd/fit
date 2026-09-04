@@ -23,6 +23,7 @@ import type {
 import { localDate } from '../../shared/local-date'
 import { validateGoalCriteriaSuggestion } from '../../shared/goal-criteria-suggestions'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
+import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retirement'
 import { subscribeToPush, unsubscribeFromPush } from '../../features/notifications/push-subscription'
 import { createYandexMainQueries, type YandexMainQueries } from '../queries/yandex-main.queries'
 import { toJson } from '../queries/json'
@@ -642,7 +643,7 @@ export function createYandexMainRepository(
       async suggestGoalCriteria(text, catalog, metrics) {
         const result = await response(() => queries.write('/v1/assistant/yandex/suggest-goal-criteria', 'POST', {
           kind: 'goal_criteria', text,
-          systemCatalog: catalog.filter((item) => item.source === 'system'),
+          systemCatalog: catalog.filter((item) => item.source === 'system' && isActiveCatalogExercise(item)),
           customMetrics: metrics,
         }))
         return validateGoalCriteriaSuggestion(await result.json(), catalog, metrics)

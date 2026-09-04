@@ -1,5 +1,6 @@
 import type { CustomMetric, ExerciseSnapshot, SaveGoalCriterionInput } from './domain'
 import { GOAL_CRITERION_METRICS, validateGoalCriterionInput } from './goal-criterion-rules'
+import { isActiveCatalogExercise } from './exercise-catalog-retirement'
 
 export interface GoalCriteriaSuggestionResult {
   criteria: SaveGoalCriterionInput[]
@@ -23,7 +24,7 @@ export function validateGoalCriteriaSuggestion(
   const root = record(value)
   if (!root || !Array.isArray(root.criteria) || !Array.isArray(root.needsInput)
     || !(root.unsupportedReason === null || typeof root.unsupportedReason === 'string')) throw new Error('invalid_goal_suggestion')
-  const exerciseByRef = new Map(exercises.map((exercise) => [exercise.ref, exercise]))
+  const exerciseByRef = new Map(exercises.filter(isActiveCatalogExercise).map((exercise) => [exercise.ref, exercise]))
   const metricById = new Map(customMetrics.filter((metric) => !metric.archivedAt).map((metric) => [metric.id, metric]))
   const criteria = root.criteria.map((raw, position) => {
     const item = record(raw)
