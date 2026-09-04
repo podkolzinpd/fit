@@ -1,6 +1,7 @@
 import { supabase } from './client'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import type { CustomMetric } from '../../shared/domain'
+import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retirement'
 
 export type WorkoutParseResponse = {
   items: Array<{ sourceText: string; exerciseRef: string; confidence: number; sets: Array<{ weightKg?: number; reps?: number; durationMin?: number; distanceKm?: number }> }>
@@ -38,7 +39,7 @@ export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnaps
 }
 
 export const suggestGoalCriteria = (text: string, catalog: readonly ExerciseSnapshot[], metrics: readonly CustomMetric[]) => {
-  const body = { kind: 'goal_criteria', text, systemCatalog: catalog.filter((item) => item.source === 'system'), customMetrics: metrics }
+  const body = { kind: 'goal_criteria', text, systemCatalog: catalog.filter((item) => item.source === 'system' && isActiveCatalogExercise(item)), customMetrics: metrics }
   if (isLocalSupabase) return supabase.functions.invoke<GoalCriteriaSuggestionResponse>('parse-workout', { body })
   return supabase.auth.getSession().then(async ({ data: { session } }) => {
     if (!session?.access_token) return { data: null, error: new Error('authentication_required') }

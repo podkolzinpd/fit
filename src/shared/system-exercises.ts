@@ -5,7 +5,7 @@ import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
 import { VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
 import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 9
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 10
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {
