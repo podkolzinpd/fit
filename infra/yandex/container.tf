@@ -143,7 +143,7 @@ resource "yandex_serverless_container" "migration" {
         STAGE_WORKOUT_FIXTURES_ENABLED           = var.environment == "stage" ? "true" : "false"
         STAGE_DATABASE_ACCESS_ENABLED            = var.environment == "stage" ? "true" : "false"
         STAGE_RUNTIME_DATABASE_PREFLIGHT_ENABLED = var.environment == "stage" ? "true" : "false"
-        STAGE_TENANT_MIGRATION_ENABLED            = var.environment == "stage" ? "true" : "false"
+        STAGE_TENANT_MIGRATION_ENABLED           = var.environment == "stage" ? "true" : "false"
       },
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id
