@@ -3202,6 +3202,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         const deleteOperation = 'd6740000-0000-4000-8000-000000000001'
         const removalId = appendedExerciseId
         if (removalId === undefined) throw new Error('Live exercise fixture is missing')
+        await ownerPool.query(
+          `update public.workouts set status='done',completed_at=now() where id=$1`,
+          [ROOT_WORKOUT_ID],
+        )
         await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID,
           (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 8, deleteOperation),
         )).rejects.toMatchObject({ failure: 'forbidden' })

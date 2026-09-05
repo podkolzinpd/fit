@@ -711,6 +711,19 @@ export function WorkoutDetailPage() {
     onSuccess: async () => { setDecisionSheet(null); await invalidateWorkoutSurfaces() },
   })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workouts'] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); goBack() } })
+  const removeCompletedExercise = useMutation({
+    mutationFn: ({ exerciseId, workout }: { exerciseId: string; exerciseName: string; workout: Workout }) => workoutsRepository.removeLiveExercise(workout, exerciseId),
+    onSuccess: async () => {
+      await Promise.all([
+        invalidateWorkoutSurfaces(),
+        queryClient.invalidateQueries({ queryKey: ['workout-personal-records', workoutId] }),
+        queryClient.invalidateQueries({ queryKey: ['exercise-history', query.data!.clientId] }),
+        queryClient.invalidateQueries({ queryKey: ['client-stats', query.data!.clientId] }),
+        queryClient.invalidateQueries({ queryKey: ['client-progress-story-workouts', query.data!.clientId] }),
+        queryClient.invalidateQueries({ queryKey: ['trainer-progress-story-workouts', query.data!.clientId] }),
+      ])
+    },
+  })
   const review = useMutation({ mutationFn: (value: WorkoutTrainerResponseDraft) => workoutsRepository.setWorkoutReview(query.data!, value), onSuccess: async () => {
     await invalidateWorkoutSurfaces()
   } })
@@ -737,6 +750,7 @@ export function WorkoutDetailPage() {
   const clientOwned = clientMode && workout?.createdBy === actor.userId
   const trainerOwned = !clientMode && Boolean(workout && (!workout.createdBy || workout.createdBy === actor?.userId))
   const canManage = clientMode ? clientOwned : trainerOwned
+  const canRemoveCompletedExercise = Boolean(done && workout && (clientMode || trainerOwned))
   const canExecute = clientMode || trainerOwned
   const clientAuthoredReadOnly = !clientMode && Boolean(workout && !trainerOwned)
   const canReview = !clientMode && Boolean(done && workout && (
@@ -757,6 +771,13 @@ export function WorkoutDetailPage() {
   const plannedActions = workout?.status === 'planned' ? plannedWorkoutActionLabels(workout.workoutDate, today) : null
   const requestWorkoutRemoval = async () => {
     if (await confirm({ message: 'Удалить тренировку?', confirmLabel: 'Удалить', danger: true })) remove.mutate()
+  }
+  const requestCompletedExerciseRemoval = async (exercise: WorkoutExerciseModel) => {
+    if (await confirm({
+      message: `Удалить «${exercise.name}» из результата тренировки вместе со всеми подходами?`,
+      confirmLabel: 'Удалить',
+      danger: true,
+    })) removeCompletedExercise.mutate({ exerciseId: exercise.id, exerciseName: exercise.name, workout: query.data! })
   }
   const requestCancelPlanned = async () => {
     setDecisionSheet(null)
@@ -826,7 +847,13 @@ export function WorkoutDetailPage() {
                 {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} exerciseRef={exercise.ref} />)}
               </WorkoutSetTable>
             </details>
-            <Link className="exercise-history-link" aria-label={`История упражнения «${exercise.name}»`} to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><HistoryIcon /><span className="sr-only">История</span></Link>
+            <div className="workout-detail-exercise-actions">
+              <Link className="exercise-history-link" aria-label={`История упражнения «${exercise.name}»`} to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><HistoryIcon /><span className="sr-only">История</span></Link>
+              {canRemoveCompletedExercise && <OverflowMenu label={`Действия с упражнением «${exercise.name}»`} items={[{
+                label: 'Удалить упражнение', danger: true, disabled: removeCompletedExercise.isPending,
+                onClick: () => { void requestCompletedExerciseRemoval(exercise) },
+              }]} />}
+            </div>
           </div>
           {exercise.trainerComment && <p className="exercise-comment-note">{exercise.trainerComment}</p>}
         </WorkoutExercise>
@@ -834,6 +861,11 @@ export function WorkoutDetailPage() {
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
         return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>
+      {removeCompletedExercise.error && <p className="error workout-exercise-removal-error" role="alert">Не удалось удалить упражнение. <button type="button" className="link" disabled={removeCompletedExercise.isPending} onClick={async () => {
+        if (!removeCompletedExercise.variables) return
+        const refreshed = await query.refetch()
+        if (refreshed.data) removeCompletedExercise.mutate({ ...removeCompletedExercise.variables, workout: refreshed.data })
+      }}>Повторить</button></p>}
       {workout.notes && <section className="workout-review workout-review-readonly"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
       {canManage && <div className="actions workout-detail-actions">
         {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
