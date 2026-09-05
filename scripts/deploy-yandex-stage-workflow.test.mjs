@@ -184,6 +184,14 @@ test('reuses the private dispatcher for optional Telegram and Tracker delivery',
     variablesTerraform,
     /variable "app_feedback_integrations_secret_version_id"[\s\S]*?== null \? true : \([\s\S]*?trimspace\(var\.app_feedback_integrations_secret_version_id\)/,
   )
+  assert.match(
+    variablesTerraform,
+    /var\.app_feedback_integrations_secret_id == null \? true : \([\s\S]*?trimspace\(var\.app_feedback_integrations_secret_id\)/,
+  )
+  assert.match(
+    variablesTerraform,
+    /var\.app_feedback_integrations_secret_version_id == null \? true : \([\s\S]*?trimspace\(var\.app_feedback_integrations_secret_version_id\)/,
+  )
 })
 
 test('allows the API gateway and database readiness to settle before rollback', () => {

@@ -9,14 +9,50 @@ import {
   subscribeInstallState,
 } from './app-install'
 
-function InstallInstructions({ platform }: { platform: ReturnType<typeof detectInstallPlatform> }) {
+type InstallPlatform = ReturnType<typeof detectInstallPlatform>
+
+type InstallContent = {
+  eyebrow: string
+  title: string
+  copy: string
+  instructionsButton: string
+  installButton: string
+}
+
+function getInstallContent(platform: InstallPlatform): InstallContent {
+  if (platform === 'ios') return {
+    eyebrow: 'ДЛЯ IPHONE',
+    title: 'Установите Fit на iPhone',
+    copy: 'Открывайте тренировки с экрана «Домой», как обычное приложение.',
+    instructionsButton: 'Как установить на iPhone',
+    installButton: 'Установить на iPhone',
+  }
+  if (platform === 'android') return {
+    eyebrow: 'ДЛЯ ANDROID',
+    title: 'Установите Fit на Android',
+    copy: 'Запускайте тренировки с главного экрана без поиска ссылки в браузере.',
+    instructionsButton: 'Как установить на Android',
+    installButton: 'Установить на Android',
+  }
+  return {
+    eyebrow: 'ПРИЛОЖЕНИЕ',
+    title: 'Установите Fit',
+    copy: 'Открывайте Fit с главного экрана, как обычное приложение.',
+    instructionsButton: 'Как установить',
+    installButton: 'Установить Fit',
+  }
+}
+
+function InstallInstructions({ platform }: { platform: InstallPlatform }) {
   if (platform === 'ios') return <ol className="app-install-steps">
-    <li>Нажмите «Поделиться» внизу Safari.</li>
+    <li>Откройте эту страницу в Safari.</li>
+    <li>Нажмите «Поделиться» внизу экрана.</li>
     <li>Выберите «На экран „Домой“», затем «Добавить».</li>
   </ol>
   if (platform === 'android') return <ol className="app-install-steps">
-    <li>Откройте меню браузера ⋮.</li>
-    <li>Выберите «Установить приложение» или «Добавить на главный экран».</li>
+    <li>Откройте эту страницу в Chrome.</li>
+    <li>Нажмите меню ⋮ в правом верхнем углу.</li>
+    <li>Выберите «Установить приложение» или «Добавить на главный экран» и подтвердите.</li>
   </ol>
   return <ol className="app-install-steps">
     <li>Откройте меню браузера.</li>
@@ -34,6 +70,8 @@ export function AppInstallPrompt({ userId }: { userId: string }) {
   const { installed, promptAvailable } = useInstallState()
   const [dismissed, setDismissed] = useState(() => installPromptDismissed(userId))
   const [instructionsOpen, setInstructionsOpen] = useState(false)
+  const platform = detectInstallPlatform()
+  const content = getInstallContent(platform)
   if (installed || dismissed) return null
 
   async function install() {
@@ -53,10 +91,10 @@ export function AppInstallPrompt({ userId }: { userId: string }) {
   }
 
   return <section className="app-install-card compact" aria-labelledby="app-install-prompt-title">
-    <div><p className="eyebrow">FIT ПОД РУКОЙ</p><h2 id="app-install-prompt-title">Добавьте Fit на экран «Домой»</h2><p>Открывайте тренировки как обычное приложение.</p></div>
-    {instructionsOpen && <InstallInstructions platform={detectInstallPlatform()} />}
+    <div><p className="eyebrow">{content.eyebrow}</p><h2 id="app-install-prompt-title">{content.title}</h2><p>{content.copy}</p></div>
+    {instructionsOpen && <InstallInstructions platform={platform} />}
     <div className="app-install-actions">
-      <button type="button" className="secondary" onClick={() => instructionsOpen ? dismiss() : void install()}>{instructionsOpen ? 'Понятно' : promptAvailable ? 'Установить' : 'Как добавить'}</button>
+      <button type="button" className="secondary" onClick={() => instructionsOpen ? dismiss() : void install()}>{instructionsOpen ? 'Понятно' : promptAvailable ? content.installButton : content.instructionsButton}</button>
       {!instructionsOpen && <button type="button" className="link muted" onClick={dismiss}>Не сейчас</button>}
     </div>
   </section>
@@ -65,6 +103,8 @@ export function AppInstallPrompt({ userId }: { userId: string }) {
 export function AppInstallPanel({ onClose }: { onClose: () => void }) {
   const { installed, promptAvailable } = useInstallState()
   const [instructionsOpen, setInstructionsOpen] = useState(!promptAvailable)
+  const platform = detectInstallPlatform()
+  const content = getInstallContent(platform)
 
   async function install() {
     if (!promptAvailable) {
@@ -77,11 +117,11 @@ export function AppInstallPanel({ onClose }: { onClose: () => void }) {
   }
 
   return <section className="app-install-card" aria-labelledby="app-install-panel-title">
-    <div className="app-install-head"><div><p className="eyebrow">ПРИЛОЖЕНИЕ</p><h2 id="app-install-panel-title">Fit на экране «Домой»</h2></div><button type="button" className="link" onClick={onClose}>Закрыть</button></div>
+    <div className="app-install-head"><div><p className="eyebrow">{content.eyebrow}</p><h2 id="app-install-panel-title">{content.title}</h2></div><button type="button" className="link" onClick={onClose}>Закрыть</button></div>
     {installed ? <p className="app-install-success" role="status">Fit уже открывается как приложение.</p> : <>
-      <p className="app-install-copy">Быстрый доступ без поиска ссылки в браузере.</p>
-      {instructionsOpen && <InstallInstructions platform={detectInstallPlatform()} />}
-      {promptAvailable && <button type="button" className="secondary wide" onClick={() => void install()}>Установить Fit</button>}
+      <p className="app-install-copy">{content.copy}</p>
+      {instructionsOpen && <InstallInstructions platform={platform} />}
+      {promptAvailable && <button type="button" className="secondary wide" onClick={() => void install()}>{content.installButton}</button>}
     </>}
   </section>
 }

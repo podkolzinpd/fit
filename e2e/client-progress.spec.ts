@@ -171,7 +171,9 @@ test('linked client sees only the published client progress view', async ({ page
 })
 
 test('client sees deterministic standard-measurement goal facts', async ({ page }) => {
-  const fiveDaysAgo = addDays(todayInTimeZone('Europe/Moscow'), -5)
+  const today = todayInTimeZone('Europe/Moscow')
+  const fiveDaysAgo = addDays(today, -5)
+  const twentyDaysAgo = addDays(today, -20)
   await page.goto('/auth')
   await page.getByLabel('Email').fill('client@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -195,7 +197,7 @@ test('client sees deterministic standard-measurement goal facts', async ({ page 
     contentType: 'application/json',
     body: JSON.stringify([
       { id: 'a4000000-0000-4000-8000-000000000004', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: fiveDaysAgo, weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
-      { id: 'a3000000-0000-4000-8000-000000000003', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: '2026-08-05', weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+      { id: 'a3000000-0000-4000-8000-000000000003', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: twentyDaysAgo, weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
     ]),
   }))
   await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({
