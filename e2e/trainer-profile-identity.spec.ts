@@ -57,7 +57,8 @@ test('trainer profile preview keeps settings, panels and form actions usable', a
   await expect(name).toHaveValue(savedName)
 
   await page.getByRole('button', { name: 'Fit на экране «Домой»' }).click()
-  await expect(page.getByRole('heading', { name: 'Fit на экране «Домой»' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Установите Fit на Android' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Установить на Android' }).or(page.getByText('Откройте эту страницу в Chrome.'))).toBeVisible()
   await page.getByRole('button', { name: 'Закрыть' }).click()
 
   await page.getByRole('button', { name: 'Предложение или проблема' }).click()
