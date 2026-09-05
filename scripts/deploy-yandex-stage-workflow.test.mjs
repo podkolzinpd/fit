@@ -150,6 +150,38 @@ test('bootstraps the private push timer only after explicit cost approval and he
   )
 })
 
+test('reuses the private dispatcher for optional Telegram and Tracker delivery', () => {
+  assert.match(
+    workflow,
+    /^  YC_APP_FEEDBACK_LOCKBOX_NAME: fit-stage-app-feedback-integrations$/m,
+  )
+  assert.match(
+    workflow,
+    /Resolve the optional app feedback integrations Lockbox version[\s\S]*?TF_VAR_app_feedback_integrations_secret_id=[\s\S]*?\.current_version\.id/,
+  )
+  assert.match(
+    workflow,
+    /-target=yandex_lockbox_secret_iam_member\.push_dispatcher_app_feedback_integrations_reader/,
+  )
+  assert.match(workflow, /-target=yandex_mdb_postgresql_user\.datalens/)
+  assert.match(
+    containerTerraform,
+    /dynamic "secrets"[\s\S]*?APP_FEEDBACK_TELEGRAM_BOT_TOKEN[\s\S]*?APP_FEEDBACK_TRACKER_TOKEN/,
+  )
+  assert.match(
+    databaseTerraform,
+    /data_lens\s+= true[\s\S]*?resource "yandex_mdb_postgresql_user" "datalens"/,
+  )
+  assert.match(
+    databaseTerraform,
+    /default_transaction_read_only\s+= true/,
+  )
+  assert.match(
+    variablesTerraform,
+    /variable "app_feedback_integrations_secret_version_id"/,
+  )
+})
+
 test('allows the API gateway and database readiness to settle before rollback', () => {
   assert.match(
     workflow,

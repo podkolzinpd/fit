@@ -8,6 +8,8 @@ const workflow = readFileSync(
   'utf8',
 )
 
+const supportedSupabaseCliVersion = '2.116.0'
+
 test('runs isolated WebKit shards in two parallel lanes and retries only a failed shard', () => {
   assert.match(workflow, /e2e-webkit:/)
   assert.match(workflow, /max-parallel: 2/)
@@ -55,4 +57,15 @@ test('waits for local auth readiness before auth-dependent E2E jobs', () => {
 test('cancels a superseded CI run for the same pull request', () => {
   assert.match(workflow, /concurrency:\n  group: ci-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}/)
   assert.match(workflow, /cancel-in-progress: true/)
+})
+
+test('uses a Supabase CLI version that reloads Kong after db reset', () => {
+  const configuredVersions = [...workflow.matchAll(/uses: supabase\/setup-cli@v1\n\s+with:[\s\S]*?\n\s+version: ([^\s]+)/g)]
+    .map((match) => match[1])
+
+  assert.ok(configuredVersions.length > 0)
+  assert.deepEqual(
+    [...new Set(configuredVersions)],
+    [supportedSupabaseCliVersion],
+  )
 })

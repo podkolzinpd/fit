@@ -50,7 +50,7 @@ jobs:
         with:
           # Pin to the version used by package-lock.json. Resolving `latest`
           # hits GitHub's unauthenticated release API and can be rate-limited.
-          version: 2.109.1
+          version: 2.116.0
       # Database tests do not exercise the local mail inbox. Skipping Mailpit
       # avoids its fixed 54324 port colliding with a hosted runner process.
       - run: supabase start --exclude mailpit
@@ -125,7 +125,7 @@ jobs:
       - run: npm ci
       - uses: supabase/setup-cli@v1
         with:
-          version: 2.109.1
+          version: 2.116.0
       # E2E authenticates through the local API; it does not inspect emails.
       # Keep the CI container set minimal and avoid Mailpit's fixed port.
       - run: supabase start --exclude mailpit
@@ -196,7 +196,7 @@ jobs:
       - run: npm ci
       - uses: supabase/setup-cli@v1
         with:
-          version: 2.109.1
+          version: 2.116.0
       - run: supabase start --exclude mailpit
       - run: supabase db reset --local
       - run: node scripts/wait-for-local-auth.mjs

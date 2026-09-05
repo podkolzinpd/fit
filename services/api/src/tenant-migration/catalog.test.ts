@@ -31,7 +31,11 @@ describe('tenant migration catalog', () => {
     expect(byName.get('public.client_published_training_summaries')?.sourceSql)
       .toContain("'input_fingerprint'")
     expect(byName.get('public.app_feedback')?.sourceSql)
-      .toContain("'tracker_issue_key'")
+      .toContain("'tracker_request_id'")
+    expect(byName.get('public.app_feedback')?.sourceSql)
+      .not.toContain("- 'tracker_issue_key'")
+    expect(byName.get('public.app_feedback')?.sourceSql)
+      .not.toContain("- 'telegram_notified_at'")
     expect(byName.get('app_private.workout_create_requests')?.sourceSql)
       .toContain("'actor_id'")
 
