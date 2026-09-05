@@ -245,9 +245,9 @@ resource "yandex_serverless_container" "push_dispatcher" {
   dynamic "secrets" {
     for_each = var.app_feedback_integrations_secret_id == null ? {} : {
       APP_FEEDBACK_TELEGRAM_BOT_TOKEN = "APP_FEEDBACK_TELEGRAM_BOT_TOKEN"
-      APP_FEEDBACK_TELEGRAM_CHAT_ID    = "APP_FEEDBACK_TELEGRAM_CHAT_ID"
-      APP_FEEDBACK_TRACKER_TOKEN       = "APP_FEEDBACK_TRACKER_TOKEN"
-      APP_FEEDBACK_TRACKER_ORG_ID      = "APP_FEEDBACK_TRACKER_ORG_ID"
+      APP_FEEDBACK_TELEGRAM_CHAT_ID   = "APP_FEEDBACK_TELEGRAM_CHAT_ID"
+      APP_FEEDBACK_TRACKER_TOKEN      = "APP_FEEDBACK_TRACKER_TOKEN"
+      APP_FEEDBACK_TRACKER_ORG_ID     = "APP_FEEDBACK_TRACKER_ORG_ID"
     }
 
     content {
