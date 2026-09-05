@@ -5,6 +5,14 @@ const DEFAULT_TIMEOUT_MS = 120_000
 const DEFAULT_POLL_INTERVAL_MS = 5_000
 const ATTACH_RUNTIME_ROLE = 'iam.serviceAccounts.user'
 
+class YandexIamRequestError extends Error {
+  constructor(message, { retryable }) {
+    super(message)
+    this.name = 'YandexIamRequestError'
+    this.retryable = retryable
+  }
+}
+
 function requiredString(value, field) {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new Error(`${field} must be a non-empty string`)
@@ -34,9 +42,17 @@ function parseArgs(argv) {
 }
 
 async function requestJson(url, token, fetchImpl) {
-  const response = await fetchImpl(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  let response
+  try {
+    response = await fetchImpl(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  } catch (error) {
+    throw new YandexIamRequestError(
+      `Yandex IAM request failed before receiving a response: ${error.message}`,
+      { retryable: true },
+    )
+  }
   const text = await response.text()
   let body
   try {
@@ -45,8 +61,9 @@ async function requestJson(url, token, fetchImpl) {
     body = { message: text.slice(0, 500) }
   }
   if (!response.ok) {
-    throw new Error(
+    throw new YandexIamRequestError(
       `Yandex IAM returned HTTP ${response.status}: ${body.message ?? 'unknown error'}`,
+      { retryable: response.status === 429 || response.status >= 500 },
     )
   }
   return body
@@ -129,15 +146,27 @@ export async function waitForRuntimeBindings({
   const interval = positiveInteger(pollIntervalMs, 'poll interval')
   let missing = []
   do {
-    missing = await findMissingRuntimeBindings({
-      deployerServiceAccountId,
-      apiRuntimeServiceAccountId,
-      migrationRuntimeServiceAccountId,
-      pushDispatcherServiceAccountId,
-      pushSchedulerServiceAccountId,
-      token,
-      fetchImpl,
-    })
+    try {
+      missing = await findMissingRuntimeBindings({
+        deployerServiceAccountId,
+        apiRuntimeServiceAccountId,
+        migrationRuntimeServiceAccountId,
+        pushDispatcherServiceAccountId,
+        pushSchedulerServiceAccountId,
+        token,
+        fetchImpl,
+      })
+    } catch (error) {
+      if (!(error instanceof YandexIamRequestError) || !error.retryable) throw error
+      if (Date.now() >= deadline) {
+        throw new Error(
+          `Yandex IAM access verification did not recover before timeout: ${error.message}`,
+        )
+      }
+      process.stdout.write('Waiting for Yandex IAM API availability.\n')
+      await sleep(Math.min(interval, Math.max(1, deadline - Date.now())))
+      continue
+    }
     if (missing.length === 0) return
     if (Date.now() >= deadline) break
     process.stdout.write(`Waiting for IAM propagation: ${missing.join(', ')}\n`)
