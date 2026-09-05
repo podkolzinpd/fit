@@ -24,8 +24,9 @@ for (const role of ['trainer', 'client'] as const) {
       const help = page.getByRole('button', { name: 'Понятно', exact: true })
       if (await help.isVisible()) await help.click()
       const dialog = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
-      await expect(dialog.getByLabel('Раздел каталога')).toHaveValue('core')
-      expect((await dialog.getByLabel('Раздел каталога').boundingBox())?.height).toBeGreaterThanOrEqual(48)
+      await expect(dialog.getByLabel('Раздел каталога')).toHaveCount(0)
+      const initialListHeight = (await dialog.locator('.picker-list').boundingBox())?.height ?? 0
+      expect(initialListHeight).toBeGreaterThan(280)
       // A previous choice may promote its precise variant in the recent list.
       await dialog.getByRole('button', { name: /^Посмотреть технику: Жим гантелей на наклонной/ }).first().click()
       await dialog.getByLabel('Вариант упражнения').selectOption({ label: 'Жим гантелей на наклонной нейтральным хватом' })
@@ -54,12 +55,15 @@ for (const role of ['trainer', 'client'] as const) {
       await dialog.getByLabel('Поиск упражнения').fill('Жим Брэдфорда стоя')
       await expect(dialog.locator('[data-exercise-ref="fedb-standing-bradford-press"]')).toBeVisible()
       await dialog.getByRole('button', { name: 'Очистить поиск' }).click()
-      await dialog.getByLabel('Раздел каталога').selectOption('formats')
-      await expect(dialog.getByRole('button', { name: /Посмотреть технику: Табата/ })).toBeVisible()
-      await dialog.getByLabel('Раздел каталога').selectOption('rare')
+      await dialog.getByRole('button', { name: 'Фильтры' }).click()
+      await dialog.getByLabel('Группа мышц').selectOption('legs')
+      expect((await dialog.locator('.picker-list').boundingBox())?.height ?? 0).toBeGreaterThan(280)
+      await page.screenshot({ path: testInfo.outputPath(`${role}-${dark ? 'dark' : 'light'}-filter-panel.png`) })
+      await dialog.getByRole('button', { name: /^Показать \d+ упражн/ }).click()
+      await expect(dialog.getByLabel('Выбранные фильтры')).toContainText('Ноги')
       await expect(dialog.locator('.picker-list')).toBeVisible()
       await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
-      await page.screenshot({ path: testInfo.outputPath(`${role}-${dark ? 'dark' : 'light'}-rare.png`) })
+      await page.screenshot({ path: testInfo.outputPath(`${role}-${dark ? 'dark' : 'light'}-filters.png`) })
     }
   })
 }
