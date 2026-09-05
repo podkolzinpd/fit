@@ -194,6 +194,53 @@ for (const role of ['trainer', 'client'] as const) {
 }
 
 for (const role of ['trainer', 'client'] as const) {
+  test(`${role}: completed exercise removal confirms, retries and persists on reload`, async ({ page }, testInfo) => {
+    const state = await mockNavigationWorkouts(page)
+    let deleted = false
+    let fail = true
+    let calls = 0
+    await page.route('**/rest/v1/workout_exercises?*', (route) => route.fulfill({
+      contentType: 'application/json', body: JSON.stringify(deleted ? [] : [fixtureExercise]),
+    }))
+    await page.route('**/rest/v1/rpc/remove_live_exercise', async (route) => {
+      calls += 1
+      expect(route.request().postDataJSON()).toEqual({
+        p_workout_id: historyRow.id, p_exercise_id: fixtureExercise.id, p_expected_version: state.version,
+      })
+      if (fail) {
+        fail = false
+        await route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ code: 'PT409', message: 'workout_conflict' }) })
+      } else {
+        deleted = true
+        state.version += 1
+        await route.fulfill({ contentType: 'application/json', body: JSON.stringify(state.version) })
+      }
+    })
+    await loginForHistory(page, role)
+    await page.goto(detailPath)
+    const actions = page.getByRole('button', { name: `Действия с упражнением «${fixtureExercise.exercise_name}»` })
+    await expect(actions).toBeVisible()
+    await actions.click()
+    await page.getByRole('menuitem', { name: 'Удалить упражнение', exact: true }).click()
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog).toContainText('вместе со всеми подходами')
+    await dialog.getByRole('button', { name: 'Удалить', exact: true }).click()
+    const error = page.getByRole('alert').filter({ hasText: 'Не удалось удалить упражнение.' })
+    await expect(error).toBeVisible()
+    await error.getByRole('button', { name: 'Повторить', exact: true }).click()
+    await expect(page.locator('.completed-exercise')).toHaveCount(0)
+    expect(calls).toBe(2)
+    for (const width of [390, 430, ...(role === 'trainer' ? [1440] : [])]) {
+      await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`${role}-completed-delete-${width}.png`), fullPage: true })
+    }
+    await page.reload()
+    await expect(page.locator('.completed-exercise')).toHaveCount(0)
+  })
+}
+
+for (const role of ['trainer', 'client'] as const) {
   test(`${role}: calendar and list Back preserve the source without duplicate screens`, async ({ page }, testInfo) => {
     await mockNavigationWorkouts(page)
     await loginForHistory(page, role)

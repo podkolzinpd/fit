@@ -35,7 +35,22 @@ select is((select sum(plan_weight_kg) from public.workout_sets s join original_e
 select lives_ok($$select public.save_completed_workout(payload,(select version from public.workouts where id=fixture.id)) from fixture$$,'repeated save does not reintroduce position collisions');
 select throws_ok($$select public.save_completed_workout(payload,0) from fixture$$,'PT409','workout_conflict','stale completed write rolls back parking');
 select is((select position from public.workout_exercises where id=(select id from original_exercises where position=2)),0::smallint,'failed save leaves position unchanged');
+-- Explicit removal from the completed detail deletes the occurrence rather
+-- than merely excluding its fact. Both the authoring trainer and the owning
+-- client can use it; an unrelated trainer cannot.
+select set_config('request.jwt.claim.sub','50000000-0000-4000-8000-000000000076',true);
+select throws_ok($$select public.remove_live_exercise((select id from fixture),(select id from original_exercises where position=0),(select version from public.workouts where id=(select id from fixture)))$$,'PT403',null,'unrelated trainer cannot delete completed exercise');
+select set_config('request.jwt.claim.sub','50000000-0000-4000-8000-000000000074',true);
+select lives_ok($$select public.remove_live_exercise((select id from fixture),(select id from original_exercises where position=0),(select version from public.workouts where id=(select id from fixture)))$$,'trainer deletes unperformed exercise from completed workout');
+select is((select count(*) from public.workout_exercises where id=(select id from original_exercises where position=0)),0::bigint,'completed occurrence is deleted');
+select is((select count(*) from public.workout_sets where workout_exercise_id=(select id from original_exercises where position=0)),0::bigint,'completed occurrence sets are deleted');
+select set_config('request.jwt.claim.sub','50000000-0000-4000-8000-000000000075',true);
+select throws_ok($$select public.remove_live_exercise((select id from fixture),(select id from original_exercises where position=2),0)$$,'PT409','workout_conflict','stale completed delete is rejected');
+select lives_ok($$select public.remove_live_exercise((select id from fixture),(select id from original_exercises where position=2),(select version from public.workouts where id=(select id from fixture)))$$,'owning client deletes performed exercise from completed trainer workout');
+select is((select count(*) from public.workout_sets where workout_exercise_id=(select id from original_exercises where position=2)),0::bigint,'performed facts are removed with completed occurrence');
+select is((select count(*) from public.workout_exercises where workout_id=(select id from fixture)),1::bigint,'other completed exercise remains');
 -- Live structure is shared between trainer and owning client.
+select set_config('request.jwt.claim.sub','50000000-0000-4000-8000-000000000074',true);
 update fixture set id=public.save_workout((payload - 'id') || jsonb_build_object('exercises',jsonb_build_array(
  jsonb_build_object('source','system','ref','squat','name','First','muscleGroup','legs','inputKind','strength','position',0,'sets',jsonb_build_array(jsonb_build_object('position',0,'weightKg',10,'reps',10))),
  jsonb_build_object('source','system','ref','plank','name','Second','muscleGroup','core','inputKind','duration','position',1,'sets',jsonb_build_array(jsonb_build_object('position',0,'durationSec',30)))
