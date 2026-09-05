@@ -1496,9 +1496,12 @@ test('exercise picker keeps search, filters and technique readable', async ({ pa
   await page.getByRole('button', { name: 'Фильтры' }).click()
   await page.getByLabel('Группа мышц').selectOption('legs')
   await page.getByLabel('Мышца').selectOption('Передняя поверхность бедра')
+  await expect(page.getByLabel('Настройки фильтров')).toBeVisible()
+  await expectVisualBaseline(page, `exercise-picker-filters-${profile}-${process.platform}.png`, [page.locator('.picker-item-media')])
+  await page.getByRole('button', { name: /^Показать \d+ упражн/ }).click()
   await expect(page.getByLabel('Выбранные фильтры')).toContainText('Ноги')
   await expect(page.getByLabel('Выбранные фильтры')).toContainText('Передняя поверхность бедра')
-  await expectVisualBaseline(page, `exercise-picker-filters-${profile}-${process.platform}.png`, [page.locator('.picker-item-media')])
+  expect((await page.locator('.picker-list').boundingBox())?.height ?? 0).toBeGreaterThan(280)
 })
 
 test('trainer Client Detail keeps its visual baselines', async ({ page }, testInfo) => {

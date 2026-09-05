@@ -2253,9 +2253,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .metric { display: flex; justify-content: space-between; padding: 10px 2px; border-bottom: 1px solid var(--border) }
 .sheet-overlay { position: fixed; z-index: 30; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-top: max(12px, env(safe-area-inset-top)); background: var(--overlay); backdrop-filter:none}
 .sheet-overlay.keyboard-open { padding-top: max(8px, env(safe-area-inset-top)) }
-.exercise-picker > .catalog-section-control { flex-shrink: 0 }
 .field .catalog-select { height: var(--control-height-standard); min-height: var(--control-height-standard) }
-.exercise-picker { width: min(100%, 440px); max-height: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 12px; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); border: 1px solid var(--border); border-bottom: 0; border-radius: 28px 28px 0 0; background: var(--surface-elevated); box-shadow:none}
+.exercise-picker { position:relative; width: min(100%, 440px); max-height: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 12px; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); border: 1px solid var(--border); border-bottom: 0; border-radius: 28px 28px 0 0; background: var(--surface-elevated); box-shadow:none}
 .keyboard-open .exercise-picker { height: 100%; border-radius: 24px 24px 0 0; padding-top: 14px; padding-bottom: 10px }
 .client-picker-control { display:grid; gap:6px; }.client-picker-label { color:var(--muted); font-size:13px; font-weight:700; }.client-picker-trigger { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; padding:12px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); text-align:left; box-shadow:none; }.client-picker-trigger > span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.client-picker-trigger > svg { width:18px; height:18px; flex:0 0 auto; color:var(--muted) }
 .client-picker { width:min(100%, 440px); max-height:100%; overflow:hidden; display:flex; flex-direction:column; gap:12px; padding:20px 20px calc(20px + env(safe-area-inset-bottom)); border:1px solid var(--border); border-bottom:0; border-radius:28px 28px 0 0; background:var(--surface-elevated); box-shadow:none; }.keyboard-open .client-picker { height:100%; border-radius:24px 24px 0 0; padding-top:14px; padding-bottom:10px; }
@@ -2310,15 +2309,24 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .picker-search-clear svg { width:18px; height:18px }
 .picker-search-row { flex: 0 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px }
 .picker-filter-toggle { padding: 0 13px; border: 1px solid var(--border); background: var(--surface-sunken); color: var(--muted); box-shadow:none}.picker-filter-toggle.active { border-color: var(--accent-surface-border); color: var(--accent-strong); background: var(--accent-surface) }
-.picker-filter-panel { flex: 0 0 auto; display: grid; grid-template-columns: 1fr; gap: 6px; padding: 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-sunken) }
+.picker-filter-layer { position:absolute; z-index:5; inset:0; display:flex; align-items:flex-end }
+.picker-filter-scrim { position:absolute; inset:0; width:100%; height:100%; padding:0; border:0; border-radius:inherit; background:color-mix(in srgb, var(--overlay) 58%, transparent); box-shadow:none }
+.picker-filter-panel { position:relative; z-index:1; width:100%; max-height:min(72%, 480px); overflow-y:auto; display:grid; grid-template-columns:1fr; gap:12px; padding:16px 20px calc(18px + env(safe-area-inset-bottom)); border:1px solid var(--border); border-bottom:0; border-radius:22px 22px 0 0; background:var(--surface-elevated); box-shadow:none }
+.picker-filter-panel > header { display:flex; align-items:center; justify-content:space-between; gap:12px }
+.picker-filter-panel > header h2 { margin:0; font-size:20px }
+.picker-filter-close { width:44px; height:44px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:var(--surface-sunken); color:var(--muted); box-shadow:none }
+.picker-filter-close svg { width:19px; height:19px }
+.picker-filter-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px }
 .picker-filter-panel label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: var(--text-xs); font-weight: var(--weight-medium) }
 .picker-filter-panel select { min-width:0; height:44px; min-height:44px; padding:7px 9px; font-size:14px }
 .picker-filter-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:40px }
-.picker-filter-panel .picker-custom-filter { flex-direction: row; align-items: center; gap: 8px; min-height: 36px; color: var(--fg) }
+.picker-filter-panel .picker-custom-filter { flex-direction: row; align-items: center; gap: 8px; min-height: 44px; color: var(--fg) }
 .picker-filter-panel .picker-custom-filter input { width: 20px; height: 20px; margin: 0 }
 .picker-filter-actions .link { flex:0 0 auto; min-height:40px; padding:6px 2px }
+.picker-filter-actions .primary { min-height:44px; padding:10px 16px }
 .picker-filter-chips { flex:0 0 auto; min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:6px }
-.picker-filter-chips > div { min-width:0; display:flex; flex-wrap:wrap; gap:6px; padding-bottom:2px }
+.picker-filter-chips > div { min-width:0; display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none }
+.picker-filter-chips > div::-webkit-scrollbar { display:none }
 .picker-filter-chips button { flex:0 0 auto; min-height:32px; display:inline-flex; align-items:center; gap:5px; padding:5px 9px; border:1px solid var(--border); border-radius:99px; background:var(--surface-sunken); color:var(--fg); font-size:12px; font-weight:600; box-shadow:none }
 .picker-filter-chips button svg { width:13px; height:13px; color:var(--muted) }
 .picker-filter-chips .picker-filter-reset { border-color:transparent; background:transparent; color:var(--muted) }
