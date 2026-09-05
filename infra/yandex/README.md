@@ -8,8 +8,7 @@ database password, OAuth secret or Terraform state.
 
 - one VPC and private subnet in `ru-central1-d`;
 - one private Managed PostgreSQL 17 host with no public IP;
-- separate `fit_owner` migration, non-owner `fit_api` runtime and read-only
-  `fit_datalens` analytics users;
+- separate `fit_owner` migration and non-owner `fit_api` runtime users;
 - one `fit` database owned only by the migration user;
 - one Serverless Container with 1 GB RAM and no provisioned instances;
 - one private 512 MB background dispatcher with no provisioned instances, plus
@@ -44,8 +43,10 @@ registry and dispatcher bindings without folder-wide roles or configuration drif
 The same dispatcher optionally mounts the immutable stage-local
 `fit-stage-app-feedback-integrations` Lockbox version. When the secret is
 absent, Telegram/Tracker delivery is disabled without preventing ordinary API
-or migration delivery. DataLens uses the managed `fit_datalens` Connection
-Manager identity and only the `analytics` schema; PostgreSQL remains private.
+or migration delivery. Migration `000036` prepares narrow `analytics` views,
+but the existing DataLens lives in another cloud. Internal DataLens access and
+a dedicated database user therefore remain disabled until a separate
+connection decision is reviewed; PostgreSQL remains private.
 
 ## Safe workflow
 
@@ -160,9 +161,10 @@ Do not place backend credentials, OAuth secrets, database passwords or URLs,
 Pull-request CI never applies Terraform. A merge to `main` creates a plan and
 automatically deploys only when policy confirms an existing API/migration image
 update with no new paid resource, resize, identity change, delete or replacement.
-The only additional automatic bootstrap allowed is the exact read-only
-`fit_datalens` user, internal DataLens access flag and narrow Lockbox payload
-viewer grant for the existing dispatcher; these do not add compute resources.
+The only additional automatic bootstrap allowed here is the narrow Lockbox
+payload viewer grant for the existing dispatcher; it does not add compute
+resources. DataLens access and database-user creation are not part of the
+automatic stage plan.
 Every other infrastructure plan stops before image push, migration or apply.
 Feature branches initialize Terraform without the remote backend and validate
 the configuration without Yandex OIDC or state credentials; remote plan and

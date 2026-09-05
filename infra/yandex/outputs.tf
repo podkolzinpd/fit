@@ -58,21 +58,6 @@ output "database_runtime_user" {
   value       = yandex_mdb_postgresql_user.api.name
 }
 
-output "database_datalens_user" {
-  description = "Dedicated read-only PostgreSQL user for DataLens."
-  value       = yandex_mdb_postgresql_user.datalens.name
-}
-
-output "datalens_connection_id" {
-  description = "Connection Manager connection for the dedicated DataLens user."
-  value       = yandex_mdb_postgresql_user.datalens.user_connection_manager[0].connection_id
-}
-
-output "datalens_connection_secret_id" {
-  description = "Lockbox secret containing the generated DataLens database password."
-  value       = data.yandex_connectionmanager_connection.datalens.lockbox_secret.id
-}
-
 output "database_host_fqdn" {
   description = "Private PostgreSQL host FQDN for the later database baseline step."
   value       = yandex_mdb_postgresql_cluster_v2.fit.hosts["primary"].fqdn
