@@ -761,6 +761,11 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
 test('iPhone: standard goal facts stay readable without horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page, 'client@fit.local')
+  const measurementDate = (daysAgo: number) => {
+    const date = new Date()
+    date.setUTCDate(date.getUTCDate() - daysAgo)
+    return date.toISOString().slice(0, 10)
+  }
   await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
     id: 'b1000000-0000-4000-8000-000000000001', clientId: '11111111-1111-4111-8111-111111111111',
     title: 'Держать вес 59 кг', targetDate: null, status: 'active', version: 1, stages: [], criteria: [{
@@ -771,8 +776,8 @@ test('iPhone: standard goal facts stay readable without horizontal overflow', as
     }],
   }) }))
   await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
-    { id: 'b4000000-0000-4000-8000-000000000004', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: '2026-08-25', weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
-    { id: 'b3000000-0000-4000-8000-000000000003', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: '2026-08-05', weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+    { id: 'b4000000-0000-4000-8000-000000000004', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: measurementDate(5), weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+    { id: 'b3000000-0000-4000-8000-000000000003', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: measurementDate(20), weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
   ]) }))
   await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
   await page.route('**/rest/v1/client_custom_metrics?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
