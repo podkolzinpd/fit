@@ -106,6 +106,7 @@ async function mockTrainerProgressVisual(page: VisualPage) {
 }
 
 async function mockMeasurementProgress(page: VisualPage) {
+  await mockProgressPeriodSummary(page)
   await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
     id: '86000000-0000-4000-8000-000000000001', clientId: demoClientId,
     title: 'Увеличить рабочий вес и сохранить талию', targetDate: null, status: 'active', version: 1, stages: [],
