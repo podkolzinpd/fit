@@ -9,9 +9,9 @@ import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ExerciseImage } from './ExerciseImage'
 import { matchesExerciseSearch, rankExerciseSearch } from './exercise-search'
-import { exerciseCatalogSection, groupCatalogResults, isCatalogRoot, type CatalogSection } from '../../shared/exercise-catalog-curation'
+import { compareCatalogBrowseOrder, groupCatalogResults, isCatalogRoot } from '../../shared/exercise-catalog-curation'
 import { selectableExercises } from './selectable-exercises'
-import { CatalogSectionField, CatalogVariantField } from './CatalogControls'
+import { CatalogVariantField } from './CatalogControls'
 
 const INPUT_KIND_LABELS: Record<InputKind, string> = {
   strength: 'Вес + повторы',
@@ -60,19 +60,17 @@ function useCustomExercises() {
 
 export function ExercisesPage() {
   const { exercises: exercisesRepository } = useDataBackend()
-  const { actor } = useAuth()
   const { archive, editing, query, save, setEditing, submit } = useCustomExercises()
   const [search, setSearch] = useState('')
-  const [section, setSection] = useState<CatalogSection>('core')
   const [selected, setSelected] = useState<ExerciseSnapshot | null>(null)
   const [visibleCount, setVisibleCount] = useState(48)
   const systemMatches = useMemo(() => {
     const selectable = selectableExercises(exercisesRepository.system)
-    if (!search.trim()) return selectable.filter((exercise) => isCatalogRoot(exercise) && exerciseCatalogSection(exercise) === section).sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+    if (!search.trim()) return selectable.filter(isCatalogRoot).sort(compareCatalogBrowseOrder)
     return groupCatalogResults(rankExerciseSearch(selectable, search)
       .filter(({ exercise }) => matchesExerciseSearch(exercise, search))
       .map(({ exercise }) => exercise))
-  }, [search, section])
+  }, [search])
   const visibleExercises = systemMatches.slice(0, visibleCount)
   const activeCustomCount = query.data?.filter((exercise) => !exercise.archivedAt).length ?? 0
   function updateSearch(value: string) {
@@ -95,9 +93,8 @@ export function ExercisesPage() {
         <input type="search" value={search} placeholder="Название, мышца или оборудование" onChange={(event) => updateSearch(event.target.value)} />
         {search && <button type="button" aria-label="Очистить поиск" onClick={() => updateSearch('')}><CloseIcon /></button>}
       </label>
-      {!search.trim() && <CatalogSectionField value={section} onChange={(value) => { setSection(value); setVisibleCount(48) }} userId={actor?.userId} />}
       <div className="catalog-results-meta" aria-live="polite">
-        <span>{search.trim() ? `Найдено: ${systemMatches.length} · Во всех разделах` : 'Выбранный раздел'}</span>
+        <span>{search.trim() ? `Найдено: ${systemMatches.length}` : `${systemMatches.length} упражнений`}</span>
         <span>Нажмите, чтобы открыть технику</span>
       </div>
       {systemMatches.length > 0 ? <>
