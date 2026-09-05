@@ -45,6 +45,9 @@ const runtimePreflightSecretAccessAddress =
   'yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader[0]'
 const appFeedbackSecretAccessAddress =
   'yandex_lockbox_secret_iam_member.push_dispatcher_app_feedback_integrations_reader[0]'
+const pushDispatcherAddress = 'yandex_serverless_container.push_dispatcher'
+const pushDispatcherTriggerAddress = 'yandex_function_trigger.push_dispatcher_timer'
+const apiImagePullerAddress = 'yandex_container_registry_iam_binding.api_image_puller'
 const pushPipelineBootstrapAddresses = new Set([
   'yandex_iam_service_account.push_dispatcher',
   'yandex_iam_service_account.push_scheduler',
@@ -131,6 +134,47 @@ const hasBoundedApiExecutionTimeout = (resource) => {
     && Number(after[1]) >= Number(before[1])
     && Number(after[1]) <= 120
 }
+
+const pushDispatcherServiceAccountId = changes.find(
+  (resource) => resource.address === pushDispatcherAddress,
+)?.change.after?.service_account_id
+
+const isExactPushDispatcherImagePullerUpdate = (resource) => {
+  if (
+    resource.address !== apiImagePullerAddress
+    || resource.change.actions.join(',') !== 'update'
+    || !isServiceAccountMember(`serviceAccount:${pushDispatcherServiceAccountId ?? ''}`)
+  ) return false
+
+  const before = resource.change.before ?? {}
+  const after = resource.change.after ?? {}
+  const beforeMembers = before.members
+  const afterMembers = after.members
+  if (
+    before.role !== 'container-registry.images.puller'
+    || after.role !== before.role
+    || !Array.isArray(beforeMembers)
+    || !Array.isArray(afterMembers)
+    || afterMembers.length !== beforeMembers.length + 1
+    || !beforeMembers.every(isServiceAccountMember)
+    || !afterMembers.every(isServiceAccountMember)
+    || !beforeMembers.every((member) => afterMembers.includes(member))
+  ) return false
+
+  const addedMembers = afterMembers.filter((member) => !beforeMembers.includes(member))
+  return addedMembers.length === 1
+    && addedMembers[0] === `serviceAccount:${pushDispatcherServiceAccountId}`
+    && hasOnlyTopLevelChanges(resource, new Set(['id', 'members']))
+}
+
+const isExactPushDispatcherTriggerDescriptionUpdate = (resource) =>
+  resource.address === pushDispatcherTriggerAddress
+  && resource.change.actions.join(',') === 'update'
+  && resource.change.before?.description
+    === 'Run the private Fit push producer and dispatcher every minute'
+  && resource.change.after?.description
+    === 'Run private Fit push and app-feedback delivery every minute'
+  && hasOnlyTopLevelChanges(resource, new Set(['description']))
 
 const isServiceAccountMember = (value) =>
   /^serviceAccount:[a-z0-9]+$/u.test(value ?? '')
@@ -223,6 +267,12 @@ const isAutomaticStageChange = (resource) => {
     return false
   }
   if (isExactPublicApiBinding(resource)) {
+    return true
+  }
+  if (
+    isExactPushDispatcherImagePullerUpdate(resource)
+    || isExactPushDispatcherTriggerDescriptionUpdate(resource)
+  ) {
     return true
   }
   if (automaticContainerAddresses.has(resource.address)) {
