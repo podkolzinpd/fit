@@ -18,7 +18,7 @@ resource "yandex_mdb_postgresql_cluster_v2" "fit" {
     }
 
     access = {
-      data_lens     = true
+      data_lens     = false
       data_transfer = false
       serverless    = true
       web_sql       = true
@@ -88,36 +88,12 @@ resource "yandex_mdb_postgresql_user" "api" {
   }
 }
 
-resource "yandex_mdb_postgresql_user" "datalens" {
-  cluster_id        = yandex_mdb_postgresql_cluster_v2.fit.id
-  name              = "fit_datalens"
-  generate_password = true
-  login             = true
-  conn_limit        = 5
-
-  permission {
-    database_name = yandex_mdb_postgresql_database.fit.name
-  }
-
-  settings = {
-    pool_mode                           = "session"
-    default_transaction_isolation       = "read committed"
-    idle_in_transaction_session_timeout = 15000
-    statement_timeout                   = 30000
-    default_transaction_read_only       = true
-  }
-}
-
 data "yandex_connectionmanager_connection" "owner" {
   connection_id = yandex_mdb_postgresql_user.owner.user_connection_manager[0].connection_id
 }
 
 data "yandex_connectionmanager_connection" "api" {
   connection_id = yandex_mdb_postgresql_user.api.user_connection_manager[0].connection_id
-}
-
-data "yandex_connectionmanager_connection" "datalens" {
-  connection_id = yandex_mdb_postgresql_user.datalens.user_connection_manager[0].connection_id
 }
 
 resource "yandex_lockbox_secret" "database_url" {
