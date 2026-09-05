@@ -267,6 +267,61 @@ variable "push_transport_secret_version_id" {
   }
 }
 
+variable "app_feedback_integrations_secret_id" {
+  description = "Optional existing Lockbox secret containing Telegram and Tracker credentials. Secret payload never enters Terraform state."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.app_feedback_integrations_secret_id == null
+      || length(trimspace(var.app_feedback_integrations_secret_id)) > 0
+    )
+    error_message = "app_feedback_integrations_secret_id must be non-empty or null."
+  }
+}
+
+variable "app_feedback_integrations_secret_version_id" {
+  description = "Immutable version of app_feedback_integrations_secret_id, resolved immediately before planning."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.app_feedback_integrations_secret_version_id == null
+      || length(trimspace(var.app_feedback_integrations_secret_version_id)) > 0
+    )
+    error_message = "app_feedback_integrations_secret_version_id must be non-empty or null."
+  }
+}
+
+variable "app_feedback_tracker_org_header" {
+  description = "Tracker organization header selected by the organization type."
+  type        = string
+  default     = "X-Org-ID"
+
+  validation {
+    condition = contains(
+      ["X-Org-ID", "X-Cloud-Org-ID"],
+      var.app_feedback_tracker_org_header,
+    )
+    error_message = "app_feedback_tracker_org_header must be X-Org-ID or X-Cloud-Org-ID."
+  }
+}
+
+variable "app_feedback_tracker_queue" {
+  description = "Tracker queue receiving application feedback."
+  type        = string
+  default     = "YAFIT"
+
+  validation {
+    condition     = can(regex("^[A-Z][A-Z0-9_]{1,19}$", var.app_feedback_tracker_queue))
+    error_message = "app_feedback_tracker_queue must be a valid Tracker queue key."
+  }
+}
+
 variable "push_dispatcher_registry_service_account_id" {
   description = "Existing dispatcher service-account ID pinned from Terraform state after the bootstrap identity phase. Null during the first read-only plan."
   type        = string

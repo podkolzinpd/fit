@@ -7,6 +7,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
 import { submitAppFeedback } from '../app-feedback-command.js'
 import {
+  claimAppFeedbackDeliveries,
+  finalizeAppFeedbackDeliveries,
+} from '../app-feedback-dispatcher-command.js'
+import {
   applyAssistantAction,
   appendAssistantUserMessage,
   createAssistantConversation,
@@ -172,6 +176,8 @@ const OTHER_LINK_SUBJECT_HASH = '7'.repeat(64)
 const RUNTIME_PASSWORD = 'fit-api-test-only'
 const READER_ROLE = 'fit_ops_reader_test'
 const READER_PASSWORD = 'fit-ops-reader-test-only'
+const DATALENS_ROLE = 'fit_datalens'
+const DATALENS_PASSWORD = 'fit-datalens-test-only'
 const migrationsDirectory = fileURLToPath(
   new URL('../../db/migrations', import.meta.url),
 )
@@ -324,6 +330,18 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         end
         $$;
       `)
+      await ownerPool.query(`
+        do $$
+        begin
+          if not exists (select 1 from pg_roles where rolname = '${DATALENS_ROLE}') then
+            create role ${DATALENS_ROLE} login password '${DATALENS_PASSWORD}';
+          else
+            alter role ${DATALENS_ROLE} login password '${DATALENS_PASSWORD}';
+          end if;
+        end
+        $$;
+        alter role ${DATALENS_ROLE} set default_transaction_read_only = on;
+      `)
 
       await runner({
         databaseUrl: ownerUrl,
@@ -334,6 +352,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         createMigrationsSchema: true,
         verbose: false,
       })
+
+      // The local PostgreSQL volume survives repeated verification runs. A
+      // developer may therefore create fit_datalens after migration 000036 was
+      // already recorded; restore the same narrow grants that a clean CI/stage
+      // run receives from that migration.
+      await ownerPool.query(`
+        grant usage on schema analytics to ${DATALENS_ROLE};
+        grant select on all tables in schema analytics to ${DATALENS_ROLE};
+      `)
 
       // The local PostgreSQL container is persistent. Remove only rows carrying
       // the explicit synthetic marker so earlier assertions stay isolated
@@ -3352,6 +3379,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       const createdIds: string[] = []
 
       try {
+        await ownerPool.query(
+          'delete from public.app_feedback where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
         const actorFeedbackId = await withActorTransaction(
           runtimePool,
           ACTOR_ID,
@@ -3413,6 +3444,107 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           { id: actorFeedbackId, user_id: ACTOR_ID },
           { id: otherFeedbackId, user_id: OTHER_ACTOR_ID },
         ]))
+
+        const dispatchTime = new Date('2026-09-04T12:01:00.000Z')
+        const batch = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => claimAppFeedbackDeliveries(client, dispatchTime),
+        )
+        if (batch === null) throw new Error('App feedback batch was not claimed')
+        expect(batch.deliveries).toHaveLength(2)
+        expect(batch.deliveries.every(
+          (delivery) => delivery.sendTracker && delivery.sendTelegram,
+        )).toBe(true)
+
+        const results = batch.deliveries.map((delivery, index) => ({
+          id: delivery.id,
+          tracker: index === 0
+            ? { ok: true as const, issueKey: 'YAFIT-42' }
+            : { ok: false as const, error: 'tracker_http_503' },
+          telegram: { ok: true as const },
+        }))
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => finalizeAppFeedbackDeliveries(
+            client,
+            batch.dispatchToken,
+            results.slice(0, 1),
+            dispatchTime,
+          ),
+        )).rejects.toMatchObject({ code: 'PT422' })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => finalizeAppFeedbackDeliveries(
+            client,
+            batch.dispatchToken,
+            results,
+            dispatchTime,
+          ),
+        )).resolves.toEqual({
+          trackerSucceeded: 1,
+          trackerFailed: 1,
+          trackerDiscarded: 0,
+          telegramSucceeded: 2,
+          telegramFailed: 0,
+          telegramDiscarded: 0,
+        })
+
+        const retryBatch = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => claimAppFeedbackDeliveries(
+            client,
+            new Date('2026-09-04T12:02:00.000Z'),
+          ),
+        )
+        if (retryBatch === null) throw new Error('Tracker retry was not claimed')
+        expect(retryBatch.deliveries).toEqual([expect.objectContaining({
+          id: otherFeedbackId,
+          sendTracker: true,
+          sendTelegram: false,
+        })])
+        await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => finalizeAppFeedbackDeliveries(
+            client,
+            retryBatch.dispatchToken,
+            [{
+              id: otherFeedbackId,
+              tracker: { ok: true, issueKey: 'YAFIT-43' },
+            }],
+            new Date('2026-09-04T12:02:00.000Z'),
+          ),
+        )
+
+        const dataLensUrl = new URL(requireLocalTestDatabaseUrl())
+        dataLensUrl.username = DATALENS_ROLE
+        dataLensUrl.password = DATALENS_PASSWORD
+        const dataLensPool = new Pool({
+          connectionString: dataLensUrl.toString(),
+          max: 1,
+        })
+        try {
+          await expect(dataLensPool.query(
+            'select tracker_issue_key from analytics.app_feedback where id = $1',
+            [actorFeedbackId],
+          )).resolves.toMatchObject({
+            rows: [{ tracker_issue_key: 'YAFIT-42' }],
+          })
+          await expect(dataLensPool.query('show transaction_read_only'))
+            .resolves.toMatchObject({ rows: [{ transaction_read_only: 'on' }] })
+          await expect(dataLensPool.query('select id from public.app_feedback'))
+            .rejects.toMatchObject({ code: '42501' })
+          await expect(dataLensPool.query(
+            "update analytics.app_feedback set kind = 'suggestion' where id = $1",
+            [actorFeedbackId],
+          )).rejects.toMatchObject({ code: '55000' })
+        } finally {
+          await dataLensPool.end()
+        }
       } finally {
         await ownerPool.query(
           'delete from public.app_feedback where id = any($1::uuid[])',

@@ -52,6 +52,7 @@ env:
   YC_PUSH_FUNCTION_NAME: fit-send-push-notifications
   YC_PUSH_LOCKBOX_NAME: fit-send-push-notifications-secrets
   YC_STAGE_PUSH_LOCKBOX_NAME: fit-stage-push-transport
+  YC_APP_FEEDBACK_LOCKBOX_NAME: fit-stage-app-feedback-integrations
   YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
   PUSH_PIPELINE_PLAN_REVIEWED: ${{ (inputs.plan_only == true || inputs.approve_push_pipeline == true) && 'true' || 'false' }}
 
@@ -150,6 +151,21 @@ jobs:
               --format json 2>"$error_file"); then
             echo "TF_VAR_push_transport_secret_id=$(jq -er '.id' <<<"$stage_secret")" >> "$GITHUB_ENV"
             echo "TF_VAR_push_transport_secret_version_id=$(jq -er '.current_version.id' <<<"$stage_secret")" >> "$GITHUB_ENV"
+          elif ! grep -qiE 'NOT_FOUND|not found' "$error_file"; then
+            cat "$error_file" >&2
+            exit 1
+          fi
+      - name: Resolve the optional app feedback integrations Lockbox version
+        run: |
+          set -euo pipefail
+          error_file=$(mktemp)
+          trap 'rm -f "$error_file"' EXIT
+          if secret=$(yc lockbox secret get \
+              --name "$YC_APP_FEEDBACK_LOCKBOX_NAME" \
+              --folder-id "$TF_VAR_folder_id" \
+              --format json 2>"$error_file"); then
+            echo "TF_VAR_app_feedback_integrations_secret_id=$(jq -er '.id' <<<"$secret")" >> "$GITHUB_ENV"
+            echo "TF_VAR_app_feedback_integrations_secret_version_id=$(jq -er '.current_version.id' <<<"$secret")" >> "$GITHUB_ENV"
           elif ! grep -qiE 'NOT_FOUND|not found' "$error_file"; then
             cat "$error_file" >&2
             exit 1
@@ -262,6 +278,21 @@ jobs:
           --secret-name "$YC_STAGE_PUSH_LOCKBOX_NAME"
           --source-version-id "$PUSH_SOURCE_SECRET_VERSION_ID"
           --secret-file "$PUSH_DISPATCH_SECRET_FILE"
+      - name: Resolve the optional app feedback integrations Lockbox version
+        run: |
+          set -euo pipefail
+          error_file=$(mktemp)
+          trap 'rm -f "$error_file"' EXIT
+          if secret=$(yc lockbox secret get \
+              --name "$YC_APP_FEEDBACK_LOCKBOX_NAME" \
+              --folder-id "$TF_VAR_folder_id" \
+              --format json 2>"$error_file"); then
+            echo "TF_VAR_app_feedback_integrations_secret_id=$(jq -er '.id' <<<"$secret")" >> "$GITHUB_ENV"
+            echo "TF_VAR_app_feedback_integrations_secret_version_id=$(jq -er '.current_version.id' <<<"$secret")" >> "$GITHUB_ENV"
+          elif ! grep -qiE 'NOT_FOUND|not found' "$error_file"; then
+            cat "$error_file" >&2
+            exit 1
+          fi
       - name: Initialize Terraform remote state
         working-directory: infra/yandex
         run: >-
@@ -283,7 +314,9 @@ jobs:
           -target=yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader
           -target=yandex_lockbox_secret_iam_member.migration_connection_secret_reader
           -target=yandex_lockbox_secret_iam_member.push_dispatcher_connection_secret_reader
+          -target=yandex_lockbox_secret_iam_member.push_dispatcher_app_feedback_integrations_reader
           -target=yandex_lockbox_secret_iam_member.push_dispatcher_transport_secret_reader
+          -target=yandex_mdb_postgresql_user.datalens
       - name: Pin new push runtime identities for subsequent Terraform plans
         working-directory: infra/yandex
         run: |

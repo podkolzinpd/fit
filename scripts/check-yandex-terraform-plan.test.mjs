@@ -290,6 +290,79 @@ describe('Yandex Terraform plan policy', () => {
     )
   })
 
+  test('allows only the exact read-only DataLens bootstrap automatically', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_mdb_postgresql_cluster_v2.fit',
+          change: {
+            actions: ['update'],
+            before: {
+              config: [{
+                access: [{ data_lens: false, serverless: true }],
+                resources: [{ disk_size: 10 }],
+              }],
+            },
+            after: {
+              config: [{
+                access: [{ data_lens: true, serverless: true }],
+                resources: [{ disk_size: 10 }],
+              }],
+            },
+          },
+        },
+        {
+          address: 'yandex_mdb_postgresql_user.datalens',
+          change: {
+            actions: ['create'],
+            after: {
+              name: 'fit_datalens',
+              login: true,
+              generate_password: true,
+              conn_limit: 5,
+              permission: [{ database_name: 'fit' }],
+              settings: { default_transaction_read_only: 'true' },
+            },
+          },
+        },
+        {
+          address:
+            'yandex_lockbox_secret_iam_member.push_dispatcher_app_feedback_integrations_reader[0]',
+          change: {
+            actions: ['create'],
+            after: { member: null, role: 'lockbox.payloadViewer' },
+            after_unknown: { member: true },
+          },
+        },
+      ],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(result.status, 0)
+  })
+
+  test('blocks a writable or oversized DataLens database user', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_mdb_postgresql_user.datalens',
+        change: {
+          actions: ['create'],
+          after: {
+            name: 'fit_datalens',
+            login: true,
+            generate_password: true,
+            conn_limit: 50,
+            permission: [{ database_name: 'fit' }],
+            settings: { default_transaction_read_only: 'false' },
+          },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.notEqual(result.status, 0)
+  })
+
   test('blocks an automatic Serverless Container resize', () => {
     const result = runPolicy(
       [

@@ -134,6 +134,48 @@ GitHub outputs/env, логи или Terraform state. Dispatcher получает
 после health-check точной ревизии, а последующие image-only обновления снова
 выкатываются автоматически. Ручной SQL и копирование Lockbox payload не нужны.
 
+## DataLens, Telegram и Tracker в Yandex stage
+
+Миграция `000036` добавляет live views `analytics.trainers_metrics`,
+`analytics.trainer_overview`, `analytics.client_overview` и
+`analytics.app_feedback`. Для текущего небольшого объёма данных это обычные
+PostgreSQL views: отдельный refresh и `pg_cron` не нужны, поэтому включение
+аналитики не перезапускает кластер. Terraform включает internal DataLens access
+и создаёт отдельного пользователя `fit_datalens` с
+`default_transaction_read_only=true`; ему выдаётся только `USAGE` на
+`analytics` и `SELECT` на эти views. Пароль генерирует Connection Manager, он
+не входит в Terraform state и репозиторий.
+
+Telegram и Tracker не создают новый container или timer. Уже существующий
+private `fit-stage-push-dispatcher` раз в минуту забирает ограниченную lease-
+пачку `app_feedback`, отправляет её в оба сервиса и независимо фиксирует два
+результата. Подтверждённый канал повторно не отправляется, неуспешный имеет не
+более 10 попыток. Tracker получает `unique=<feedback UUID>`, поэтому повторный
+запрос не создаёт вторую задачу. Telegram Bot API не поддерживает idempotency
+key: после подтверждённого ответа повтора не будет, но авария контейнера между
+приёмом сообщения Telegram и записью receipt теоретически может дать дубль;
+`Код сообщения` позволяет его однозначно распознать.
+
+Создайте в каталоге stage один Lockbox secret с именем
+`fit-stage-app-feedback-integrations` и одной версией, содержащей ровно:
+
+- `APP_FEEDBACK_TELEGRAM_BOT_TOKEN`;
+- `APP_FEEDBACK_TELEGRAM_CHAT_ID`;
+- `APP_FEEDBACK_TRACKER_TOKEN`;
+- `APP_FEEDBACK_TRACKER_ORG_ID`.
+
+Workflow сам находит текущую immutable-версию по имени и монтирует значения
+только в private dispatcher. При отсутствующем секрете deployment остаётся
+рабочим, feedback сохраняется и виден в DataLens, но внешняя доставка не
+запускается. Queue по умолчанию — `YAFIT`; заголовок организации — `X-Org-ID`.
+Для Identity Hub задайте Terraform input
+`app_feedback_tracker_org_header="X-Cloud-Org-ID"`. Секреты нельзя добавлять в
+GitHub/Vercel variables, `.env`, команды или логи.
+
+После deployment подключите DataLens через Connection Manager output
+`datalens_connection_id` либо выберите кластер `fit-stage-postgres`, базу `fit`
+и пользователя `fit_datalens`. Включать public IP у PostgreSQL не требуется.
+
 ## GitHub Secrets
 
 В repository secrets должны быть настроены:
