@@ -5,6 +5,8 @@ const CONTAINERS_API = 'https://serverless-containers.api.cloud.yandex.net'
 const OPERATIONS_API = 'https://operation.api.cloud.yandex.net'
 const DEFAULT_TIMEOUT_MS = 180_000
 const POLL_INTERVAL_MS = 2_000
+const DEFAULT_REQUEST_ATTEMPTS = 3
+const DEFAULT_RETRY_DELAY_MS = 500
 const NANOSECONDS_PER_SECOND = 1_000_000_000n
 const DURATION_UNIT_NANOSECONDS = {
   h: 3_600_000_000_000n,
@@ -190,16 +192,33 @@ export function formatYandexCloudApiError({ operation, status, body, headers }) 
     + permissionHint
 }
 
-async function requestJson(url, token, options = {}, operation = 'API request') {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...options.headers,
-    },
-  })
-  const text = await response.text()
+class YandexCloudRequestError extends Error {
+  constructor(message, { retryable }) {
+    super(message)
+    this.name = 'YandexCloudRequestError'
+    this.retryable = retryable
+  }
+}
+
+async function requestJsonOnce(url, token, options, operation, fetchImpl) {
+  let response
+  let text
+  try {
+    response = await fetchImpl(url, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...options.headers,
+      },
+    })
+    text = await response.text()
+  } catch (error) {
+    throw new YandexCloudRequestError(
+      `Yandex Cloud ${operation} failed before receiving a response: ${error.message}`,
+      { retryable: true },
+    )
+  }
   let body
   try {
     body = text === '' ? {} : JSON.parse(text)
@@ -207,14 +226,55 @@ async function requestJson(url, token, options = {}, operation = 'API request') 
     body = { message: text.slice(0, 500) }
   }
   if (!response.ok) {
-    throw new Error(formatYandexCloudApiError({
-      operation,
-      status: response.status,
-      body,
-      headers: response.headers,
-    }))
+    throw new YandexCloudRequestError(
+      formatYandexCloudApiError({
+        operation,
+        status: response.status,
+        body,
+        headers: response.headers,
+      }),
+      { retryable: response.status === 429 || response.status >= 500 },
+    )
   }
   return body
+}
+
+export async function requestJson(
+  url,
+  token,
+  options = {},
+  operation = 'API request',
+  {
+    fetchImpl = fetch,
+    sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay)),
+    maxAttempts = DEFAULT_REQUEST_ATTEMPTS,
+    retryDelayMs = DEFAULT_RETRY_DELAY_MS,
+  } = {},
+) {
+  const attempts = requiredInteger(maxAttempts, 'request attempts')
+  if (attempts === 0) throw new Error('request attempts must be positive')
+  const delay = requiredInteger(retryDelayMs, 'retry delay')
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await requestJsonOnce(url, token, options, operation, fetchImpl)
+    } catch (error) {
+      if (
+        !(error instanceof YandexCloudRequestError)
+        || !error.retryable
+        || attempt === attempts
+      ) {
+        throw error
+      }
+      process.stdout.write(
+        `Retrying Yandex Cloud ${operation} after a transient failure `
+          + `(attempt ${attempt + 1}/${attempts}).\n`,
+      )
+      await sleep(delay * (2 ** (attempt - 1)))
+    }
+  }
+
+  throw new Error(`Yandex Cloud ${operation} exhausted all request attempts`)
 }
 
 async function waitForOperation(operationId, token, timeoutMs = DEFAULT_TIMEOUT_MS) {
