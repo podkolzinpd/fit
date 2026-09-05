@@ -7,6 +7,7 @@ import {
   formatYandexCloudApiError,
   hasPlannedChange,
   normalizeExecutionTimeout,
+  requestJson,
 } from './deploy-yandex-serverless-revision.mjs'
 
 const values = {
@@ -158,4 +159,101 @@ test('reports the failed API operation and safe request identifier', () => {
       + 'account has an explicit iam.serviceAccounts.user role on the stage '
       + 'folder; if it does, contact Yandex Cloud support with the request ID.',
   )
+})
+
+test('retries transient transport failures with bounded backoff', async () => {
+  let calls = 0
+  const delays = []
+  const result = await requestJson(
+    'https://example.test/deploy',
+    'secret-token',
+    { method: 'POST', body: '{}' },
+    'DeployRevision request',
+    {
+      fetchImpl: async () => {
+        calls += 1
+        if (calls < 3) throw new TypeError('fetch failed')
+        return new Response(JSON.stringify({ id: 'operation-id' }))
+      },
+      sleep: async (delay) => { delays.push(delay) },
+    },
+  )
+
+  assert.deepEqual(result, { id: 'operation-id' })
+  assert.equal(calls, 3)
+  assert.deepEqual(delays, [500, 1_000])
+})
+
+test('retries rate limits and server errors', async () => {
+  let calls = 0
+  const result = await requestJson(
+    'https://example.test/operation',
+    'token',
+    {},
+    'operation poll',
+    {
+      fetchImpl: async () => {
+        calls += 1
+        if (calls === 1) {
+          return new Response(JSON.stringify({ message: 'Unavailable' }), { status: 503 })
+        }
+        return new Response(JSON.stringify({ done: true }))
+      },
+      sleep: async () => {},
+    },
+  )
+
+  assert.deepEqual(result, { done: true })
+  assert.equal(calls, 2)
+})
+
+test('does not retry authorization or invalid request failures', async () => {
+  let calls = 0
+  await assert.rejects(
+    requestJson(
+      'https://example.test/deploy',
+      'secret-token',
+      {},
+      'DeployRevision request',
+      {
+        fetchImpl: async () => {
+          calls += 1
+          return new Response(
+            JSON.stringify({ message: 'Permission denied' }),
+            { status: 403 },
+          )
+        },
+        sleep: async () => {},
+      },
+    ),
+    /returned HTTP 403: Permission denied/u,
+  )
+  assert.equal(calls, 1)
+})
+
+test('stops after the configured number of transient failures without exposing token', async () => {
+  let calls = 0
+  let caught
+  try {
+    await requestJson(
+      'https://example.test/deploy',
+      'very-secret-token',
+      {},
+      'DeployRevision request',
+      {
+        fetchImpl: async () => {
+          calls += 1
+          throw new TypeError('fetch failed')
+        },
+        sleep: async () => {},
+        maxAttempts: 2,
+      },
+    )
+  } catch (error) {
+    caught = error
+  }
+
+  assert.equal(calls, 2)
+  assert.match(caught?.message ?? '', /failed before receiving a response: fetch failed/u)
+  assert.doesNotMatch(caught?.message ?? '', /very-secret-token/u)
 })
