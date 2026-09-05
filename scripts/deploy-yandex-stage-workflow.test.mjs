@@ -182,11 +182,11 @@ test('reuses the private dispatcher for optional Telegram and Tracker delivery',
   )
   assert.match(
     variablesTerraform,
-    /trimspace\(coalesce\(var\.app_feedback_integrations_secret_id, ""\)\)/,
+    /var\.app_feedback_integrations_secret_id == null \? true : \([\s\S]*?trimspace\(var\.app_feedback_integrations_secret_id\)/,
   )
   assert.match(
     variablesTerraform,
-    /trimspace\(coalesce\(var\.app_feedback_integrations_secret_version_id, ""\)\)/,
+    /var\.app_feedback_integrations_secret_version_id == null \? true : \([\s\S]*?trimspace\(var\.app_feedback_integrations_secret_version_id\)/,
   )
 })
 
