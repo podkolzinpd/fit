@@ -18,6 +18,11 @@ const plan = JSON.parse(readFileSync(planPath, 'utf8'))
 const changes = (plan.resource_changes ?? []).filter(
   (resource) => resource.change.actions.join(',') !== 'no-op',
 )
+const collectPlannedResources = (module) => [
+  ...(module?.resources ?? []),
+  ...(module?.child_modules ?? []).flatMap(collectPlannedResources),
+]
+const plannedResources = collectPlannedResources(plan.planned_values?.root_module)
 const destructive = changes.filter((resource) =>
   resource.change.actions.includes('delete'),
 )
@@ -138,6 +143,9 @@ const hasBoundedApiExecutionTimeout = (resource) => {
 const pushDispatcherServiceAccountId = changes.find(
   (resource) => resource.address === pushDispatcherAddress,
 )?.change.after?.service_account_id
+  ?? plannedResources.find(
+    (resource) => resource.address === pushDispatcherAddress,
+  )?.values?.service_account_id
 
 const isExactPushDispatcherImagePullerUpdate = (resource) => {
   if (
