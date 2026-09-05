@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 
@@ -5,6 +6,9 @@ const CONTAINERS_API = 'https://serverless-containers.api.cloud.yandex.net'
 const OPERATIONS_API = 'https://operation.api.cloud.yandex.net'
 const DEFAULT_TIMEOUT_MS = 180_000
 const POLL_INTERVAL_MS = 2_000
+const DEFAULT_REQUEST_ATTEMPTS = 4
+const DEFAULT_RETRY_DELAY_MS = 1_000
+const MAX_RETRY_DELAY_MS = 10_000
 const NANOSECONDS_PER_SECOND = 1_000_000_000n
 const DURATION_UNIT_NANOSECONDS = {
   h: 3_600_000_000_000n,
@@ -190,31 +194,101 @@ export function formatYandexCloudApiError({ operation, status, body, headers }) 
     + permissionHint
 }
 
-async function requestJson(url, token, options = {}, operation = 'API request') {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...options.headers,
-    },
-  })
-  const text = await response.text()
-  let body
-  try {
-    body = text === '' ? {} : JSON.parse(text)
-  } catch {
-    body = { message: text.slice(0, 500) }
+function defaultSleep(delayMs) {
+  return new Promise((resolve) => setTimeout(resolve, delayMs))
+}
+
+function retryDelay(delayMs, attempt) {
+  return Math.min(delayMs * (2 ** (attempt - 1)), MAX_RETRY_DELAY_MS)
+}
+
+function isRetryableStatus(status) {
+  return status === 429 || status >= 500
+}
+
+export async function requestJson(
+  url,
+  token,
+  options = {},
+  operation = 'API request',
+  dependencies = {},
+) {
+  const fetch_ = dependencies.fetch ?? globalThis.fetch
+  const sleep = dependencies.sleep ?? defaultSleep
+  const attempts = dependencies.attempts ?? DEFAULT_REQUEST_ATTEMPTS
+  const retryDelayMs = dependencies.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS
+  const idempotencyKeyFactory = dependencies.randomUUID ?? randomUUID
+  if (typeof fetch_ !== 'function') throw new Error('fetch is unavailable')
+  if (!Number.isInteger(attempts) || attempts < 1) {
+    throw new Error('request attempts must be a positive integer')
   }
-  if (!response.ok) {
-    throw new Error(formatYandexCloudApiError({
+  if (!Number.isInteger(retryDelayMs) || retryDelayMs < 0) {
+    throw new Error('retry delay must be a non-negative integer')
+  }
+
+  const method = (options.method ?? 'GET').toUpperCase()
+  const headers = new Headers(options.headers)
+  headers.set('Authorization', `Bearer ${token}`)
+  if (options.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+  if (method !== 'GET' && method !== 'HEAD') {
+    // Generate this once per logical write so a retried request cannot create
+    // a second revision after the first response was lost in transit.
+    headers.set('Idempotency-Key', idempotencyKeyFactory())
+  }
+  const requestOptions = {
+    ...options,
+    method,
+    headers,
+  }
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    let response
+    let text
+    try {
+      response = await fetch_(url, requestOptions)
+      text = await response.text()
+    } catch {
+      if (attempt === attempts) {
+        throw new Error(
+          `Yandex Cloud ${operation} failed after ${attempts} attempts: `
+            + 'the API connection was interrupted',
+        )
+      }
+      process.stdout.write(
+        `Retrying Yandex Cloud ${operation} after a transient network failure `
+          + `(${attempt}/${attempts}).\n`,
+      )
+      await sleep(retryDelay(retryDelayMs, attempt))
+      continue
+    }
+
+    let body
+    try {
+      body = text === '' ? {} : JSON.parse(text)
+    } catch {
+      body = { message: text.slice(0, 500) }
+    }
+    if (response.ok) return body
+
+    const formattedError = formatYandexCloudApiError({
       operation,
       status: response.status,
       body,
       headers: response.headers,
-    }))
+    })
+    if (!isRetryableStatus(response.status) || attempt === attempts) {
+      throw new Error(formattedError)
+    }
+    process.stdout.write(
+      `Retrying Yandex Cloud ${operation} after HTTP ${response.status} `
+        + `(${attempt}/${attempts}).\n`,
+    )
+    await sleep(retryDelay(retryDelayMs, attempt))
   }
-  return body
+
+  throw new Error(`Yandex Cloud ${operation} failed unexpectedly`)
 }
 
 async function waitForOperation(operationId, token, timeoutMs = DEFAULT_TIMEOUT_MS) {

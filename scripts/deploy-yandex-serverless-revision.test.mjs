@@ -7,6 +7,7 @@ import {
   formatYandexCloudApiError,
   hasPlannedChange,
   normalizeExecutionTimeout,
+  requestJson,
 } from './deploy-yandex-serverless-revision.mjs'
 
 const values = {
@@ -158,4 +159,115 @@ test('reports the failed API operation and safe request identifier', () => {
       + 'account has an explicit iam.serviceAccounts.user role on the stage '
       + 'folder; if it does, contact Yandex Cloud support with the request ID.',
   )
+})
+
+test('retries a transient deploy failure with one stable idempotency key', async () => {
+  const requests = []
+  const delays = []
+  const result = await requestJson(
+    'https://serverless-containers.api.cloud.yandex.net/containers/v1/revisions:deploy',
+    'token',
+    { method: 'POST', body: '{"containerId":"container-id"}' },
+    'DeployRevision request',
+    {
+      attempts: 3,
+      retryDelayMs: 10,
+      randomUUID: () => '11111111-1111-4111-8111-111111111111',
+      sleep: async (delay) => { delays.push(delay) },
+      fetch: async (_url, options) => {
+        requests.push(options)
+        if (requests.length === 1) throw new TypeError('fetch failed')
+        return new Response(JSON.stringify({ id: 'operation-id' }), { status: 200 })
+      },
+    },
+  )
+
+  assert.deepEqual(result, { id: 'operation-id' })
+  assert.deepEqual(delays, [10])
+  assert.equal(requests.length, 2)
+  assert.equal(
+    requests[0].headers.get('Idempotency-Key'),
+    '11111111-1111-4111-8111-111111111111',
+  )
+  assert.equal(
+    requests[1].headers.get('Idempotency-Key'),
+    requests[0].headers.get('Idempotency-Key'),
+  )
+})
+
+test('retries HTTP 429 and 5xx responses with bounded backoff', async () => {
+  const statuses = [429, 503, 200]
+  const delays = []
+  const result = await requestJson(
+    'https://operation.api.cloud.yandex.net/operations/operation-id',
+    'token',
+    {},
+    'operation poll',
+    {
+      attempts: 3,
+      retryDelayMs: 10,
+      sleep: async (delay) => { delays.push(delay) },
+      fetch: async (_url, options) => {
+        assert.equal(options.headers.has('Idempotency-Key'), false)
+        const status = statuses.shift()
+        return new Response(
+          JSON.stringify(status === 200 ? { done: true } : { message: 'retry' }),
+          { status },
+        )
+      },
+    },
+  )
+
+  assert.deepEqual(result, { done: true })
+  assert.deepEqual(delays, [10, 20])
+})
+
+test('does not retry a non-transient API rejection', async () => {
+  let calls = 0
+  await assert.rejects(
+    requestJson(
+      'https://serverless-containers.api.cloud.yandex.net/containers/v1/revisions:deploy',
+      'token',
+      { method: 'POST', body: '{}' },
+      'DeployRevision request',
+      {
+        attempts: 4,
+        retryDelayMs: 0,
+        randomUUID: () => '11111111-1111-4111-8111-111111111111',
+        sleep: async () => {},
+        fetch: async () => {
+          calls += 1
+          return new Response(
+            JSON.stringify({ message: 'Permission denied' }),
+            { status: 403 },
+          )
+        },
+      },
+    ),
+    /returned HTTP 403: Permission denied/u,
+  )
+  assert.equal(calls, 1)
+})
+
+test('stops after the configured number of network attempts', async () => {
+  let calls = 0
+  await assert.rejects(
+    requestJson(
+      'https://operation.api.cloud.yandex.net/operations/operation-id',
+      'token',
+      {},
+      'operation poll',
+      {
+        attempts: 3,
+        retryDelayMs: 0,
+        sleep: async () => {},
+        fetch: async () => {
+          calls += 1
+          throw new TypeError('fetch failed')
+        },
+      },
+    ),
+    /failed after 3 attempts: the API connection was interrupted/u,
+  )
+  assert.equal(calls, 3)
 })
