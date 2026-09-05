@@ -274,9 +274,8 @@ variable "app_feedback_integrations_secret_id" {
   nullable    = true
 
   validation {
-    condition = (
-      var.app_feedback_integrations_secret_id == null
-      || length(trimspace(coalesce(var.app_feedback_integrations_secret_id, ""))) > 0
+    condition = var.app_feedback_integrations_secret_id == null ? true : (
+      length(trimspace(var.app_feedback_integrations_secret_id)) > 0
     )
     error_message = "app_feedback_integrations_secret_id must be non-empty or null."
   }
@@ -289,9 +288,8 @@ variable "app_feedback_integrations_secret_version_id" {
   nullable    = true
 
   validation {
-    condition = (
-      var.app_feedback_integrations_secret_version_id == null
-      || length(trimspace(coalesce(var.app_feedback_integrations_secret_version_id, ""))) > 0
+    condition = var.app_feedback_integrations_secret_version_id == null ? true : (
+      length(trimspace(var.app_feedback_integrations_secret_version_id)) > 0
     )
     error_message = "app_feedback_integrations_secret_version_id must be non-empty or null."
   }
