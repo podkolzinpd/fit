@@ -1,7 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-05. База: `main` `1c3e8bea`. Активно: перенос DataLens и `app_feedback` в Telegram/Tracker на Yandex stage. В `main` завершена YAFIT-467: 83
-упражнения исключены из новых выборов; история и 4 использовавшихся сохранены.
+Обновлено: 2026-09-05. База: `main` `f364e89`. Активно: восстановление stage deployment перед удалённой репетицией переноса tenant. В `main` завершена YAFIT-467: 83 упражнения исключены из новых выборов; история и 4 использовавшихся сохранены.
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом; Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум один вторичный акцент. Live разделяет нейтральный таймер и активный отдых.
 - Создание, Live и завершение прошлого плана сохраняют прежнюю логику без
@@ -16,8 +15,8 @@
   бег и связки; неоднозначность открывает проверку. Сохранённые тренировки —
   компактная хроника с копированием и удалением в меню.
 - ИИ-сводка и production-разбор — через Yandex Cloud Functions, локальный разбор
-  — в Supabase. Legacy `app_feedback` остаётся в Supabase DataLens/Telegram;
-  активная ветка переносит DataLens, Telegram и Tracker для Yandex tenants.
+  — в Supabase. `main` содержит Yandex PostgreSQL operations для `app_feedback`;
+  legacy DataLens/Telegram и новые внешние DataLens/Telegram/Tracker подключения отложены.
 - Assistant открыт всем тренерским аккаунтам и защищён `TrainerOnly`; `VITE_ASSISTANT_NAV_ENABLED=false` остаётся общим kill switch. Durable turns/actions и narrow
   RPC сохраняют owner/RLS. Новые turn'ы создают workout draft, прежние карточки
   остаются читаемыми; исходная диктовка сохраняется при уточнении клиента.
@@ -93,8 +92,8 @@
   упражнения: клиент с тренером или без него создаёт и изменяет свою запись,
   корневой и подключённый тренеры видят доступные им клиентские упражнения,
   посторонний tenant не получает доступ. `created_by` переносится без потери.
-- Активная ветка добавляет `000036`: receipts/retry Telegram/Tracker, четыре
-  live DataLens views и read-only `fit_datalens`; новый timer/container не нужен.
+- `main` содержит `000036`: receipts/retry Telegram/Tracker и четыре analytics
+  views; DataLens stage access и отдельный пользователь отложены.
 - Стабильный Vercel Preview синхронизируется с каждым verified `main`; callback,
   CORS и история не меняются, прочие ветки исключены из Git deployments.
 - Read-only callback остаётся диагностическим экраном; полноценная app-session
@@ -113,9 +112,10 @@
 - Push bootstrap: два runtime SA созданы run `33761562506`; платные ресурсы не созданы.
   Functions Lockbox использует stage-local masked mirror без payload в state/logs.
 ## Ближайший порядок
-1. После merge создать stage Lockbox Telegram/Tracker и проверить синтетический feedback.
-2. Подключить DataLens к `fit_datalens`, выполнить tenant apply на stage, связать Yandex ID и проверить UI.
+1. Восстановить stage deployment и применить актуальные миграции/API.
+2. Выполнить remote audit/dry-run/apply, связать Yandex ID и проверить основной UI.
 3. После одного успешного tenant перевести оставшихся пользователей партиями;
    Supabase держать только на rollback-окно.
 ## Отложено
+- DataLens и доставка `app_feedback` в Telegram/Tracker отложены до отдельного решения.
 - `YAFIT-333/334` отложены; `YAFIT-335/337` завершены. `YAFIT-245` не начинать без решения; `YAFIT-234` отложен; `YAFIT-235` — Webvisor. Новые виды спорта, питание, social/wearables и ИИ-блоки — после P0/P1 и пилота.

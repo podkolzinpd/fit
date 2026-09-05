@@ -316,7 +316,6 @@ jobs:
           -target=yandex_lockbox_secret_iam_member.push_dispatcher_connection_secret_reader
           -target=yandex_lockbox_secret_iam_member.push_dispatcher_app_feedback_integrations_reader
           -target=yandex_lockbox_secret_iam_member.push_dispatcher_transport_secret_reader
-          -target=yandex_mdb_postgresql_user.datalens
       - name: Pin new push runtime identities for subsequent Terraform plans
         working-directory: infra/yandex
         run: |
