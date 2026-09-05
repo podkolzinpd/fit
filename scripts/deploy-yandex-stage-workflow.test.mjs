@@ -163,18 +163,18 @@ test('reuses the private dispatcher for optional Telegram and Tracker delivery',
     workflow,
     /-target=yandex_lockbox_secret_iam_member\.push_dispatcher_app_feedback_integrations_reader/,
   )
-  assert.match(workflow, /-target=yandex_mdb_postgresql_user\.datalens/)
+  assert.doesNotMatch(workflow, /-target=yandex_mdb_postgresql_user\.datalens/)
   assert.match(
     containerTerraform,
     /dynamic "secrets"[\s\S]*?APP_FEEDBACK_TELEGRAM_BOT_TOKEN[\s\S]*?APP_FEEDBACK_TRACKER_TOKEN/,
   )
   assert.match(
     databaseTerraform,
-    /data_lens\s+= true[\s\S]*?resource "yandex_mdb_postgresql_user" "datalens"/,
+    /data_lens\s+= false/,
   )
-  assert.match(
+  assert.doesNotMatch(
     databaseTerraform,
-    /default_transaction_read_only\s+= true/,
+    /resource "yandex_mdb_postgresql_user" "datalens"/,
   )
   assert.match(
     variablesTerraform,
