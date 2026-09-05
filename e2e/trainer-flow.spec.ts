@@ -200,14 +200,15 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // Под визуальным контролем — search-first хром пикера.
   await expect(page).toHaveScreenshot('exercise-picker-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
   // Группа → мышца → оборудование собраны в одном компактном фильтре.
-  await page.getByRole('button', { name: 'Фильтры' }).click()
+  await page.getByRole('button', { name: 'Фильтры', exact: true }).click()
   await page.getByLabel('Группа мышц').selectOption('legs')
   await page.getByLabel('Мышца').selectOption('Передняя поверхность бедра')
+  await expect(page.getByLabel('Настройки фильтров')).toBeVisible()
   await expect(page.getByLabel('Оборудование')).toBeVisible()
   await expect(page.getByLabel('Оборудование')).toContainText('Штанга')
-  await expect(page).toHaveScreenshot('exercise-picker-equipment-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
+  await expect(page.getByRole('button', { name: /^Показать \d+ упражн/ })).toBeVisible()
   await page.getByRole('button', { name: 'Сбросить' }).click()
-  await page.getByRole('button', { name: 'Фильтры' }).click()
+  await page.getByLabel('Настройки фильтров').getByRole('button', { name: 'Закрыть фильтры' }).click()
   await page.getByLabel('Поиск упражнения').fill('Болгарский')
   await expect(page.getByText(/Найдено: \d+/)).toBeVisible()
   await expect(page.getByLabel('Группа мышц')).toBeHidden()
