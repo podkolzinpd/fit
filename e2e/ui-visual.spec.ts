@@ -106,6 +106,7 @@ async function mockTrainerProgressVisual(page: VisualPage) {
 }
 
 async function mockMeasurementProgress(page: VisualPage) {
+  await mockProgressPeriodSummary(page)
   await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
     id: '86000000-0000-4000-8000-000000000001', clientId: demoClientId,
     title: 'Увеличить рабочий вес и сохранить талию', targetDate: null, status: 'active', version: 1, stages: [],
@@ -336,8 +337,8 @@ async function mockClientWorkoutHistory(page: import('@playwright/test').Page) {
 }
 
 async function openClientProgress(page: import('@playwright/test').Page, options: { scheme?: boolean, dark?: boolean } = {}) {
-  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await signIn(page, 'client@fit.local', /\/me$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   if (options.scheme || options.dark) {
     await gotoStable(page, '/me/profile')
     if (options.scheme) {
@@ -831,8 +832,8 @@ test('measurement trends stay readable for client and trainer in both themes', a
   const initialViewport = page.viewportSize()
   await mockMeasurementProgress(page)
   if (trainer) {
-    await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
     await signIn(page, 'trainer@fit.local', /\/today$/)
+    await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
     await gotoStable(page, `/progress/${demoClientId}`)
   } else {
     await openClientProgress(page, { scheme: true })
