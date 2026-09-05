@@ -1234,7 +1234,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .planned-round-exercise { margin-bottom: 6px }
 .planned-round-exercise:last-child { margin-bottom: 0 }
 .planned-round-exercise-name { display: block; font-size: 13px; font-weight: 600; margin-bottom: 3px }
-.workout-detail-exercise-row { display:grid; grid-template-columns:minmax(0,1fr) 44px; align-items:start; gap:var(--space-2); min-width:0 }
+.workout-detail-exercise-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:var(--space-2); min-width:0 }
+.workout-detail-exercise-actions { display:flex; align-items:flex-start; flex:0 0 auto }
+.workout-detail-exercise-actions .overflow-trigger { min-width:44px; min-height:44px }
+.completed-exercise .exercise-comment-note { margin-right:88px }
 .exercise-history-link { width:44px; min-height:44px; display:grid; place-items:center; align-self:start; margin:0; padding:0; border:0; border-radius:var(--radius-sm); color:var(--secondary-label-fg); background:transparent; line-height:1; text-decoration:none }
 .exercise-history-link svg { width:20px; height:20px }
 .exercise-history-link:hover { color:var(--accent-strong) }
