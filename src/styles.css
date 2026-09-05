@@ -2314,7 +2314,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .picker-filter-panel { position:relative; z-index:1; width:100%; max-height:min(72%, 480px); overflow-y:auto; display:grid; grid-template-columns:1fr; gap:12px; padding:16px 20px calc(18px + env(safe-area-inset-bottom)); border:1px solid var(--border); border-bottom:0; border-radius:22px 22px 0 0; background:var(--surface-elevated); box-shadow:none }
 .picker-filter-panel > header { display:flex; align-items:center; justify-content:space-between; gap:12px }
 .picker-filter-panel > header h2 { margin:0; font-size:20px }
-.picker-filter-close { width:40px; height:40px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:var(--surface-sunken); color:var(--muted); box-shadow:none }
+.picker-filter-close { width:44px; height:44px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:var(--surface-sunken); color:var(--muted); box-shadow:none }
 .picker-filter-close svg { width:19px; height:19px }
 .picker-filter-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px }
 .picker-filter-panel label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: var(--text-xs); font-weight: var(--weight-medium) }
