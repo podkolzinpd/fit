@@ -307,6 +307,122 @@ describe('Yandex Terraform plan policy', () => {
     assert.equal(result.status, 0)
   })
 
+  test('allows only the existing push dispatcher pull grant and trigger description automatically', () => {
+    const dispatcherMember = 'serviceAccount:dispatcher123'
+    const timer = [{ cron_expression: '* * * * ? *', payload: 'sync-push-notifications' }]
+    const container = [{
+      path: '/internal/push/dispatch',
+      retry_attempts: 1,
+      retry_interval: '10s',
+    }]
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_serverless_container.push_dispatcher',
+          change: {
+            actions: ['update'],
+            before: { service_account_id: 'dispatcher123', image: [{ url: 'old' }] },
+            after: { service_account_id: 'dispatcher123', image: [{ url: 'new' }] },
+          },
+        },
+        {
+          address: 'yandex_container_registry_iam_binding.api_image_puller',
+          change: {
+            actions: ['update'],
+            before: {
+              id: 'registry/container-registry.images.puller',
+              role: 'container-registry.images.puller',
+              members: ['serviceAccount:api123', 'serviceAccount:migration123'],
+            },
+            after: {
+              id: null,
+              role: 'container-registry.images.puller',
+              members: ['serviceAccount:api123', 'serviceAccount:migration123', dispatcherMember],
+            },
+            after_unknown: { id: true },
+          },
+        },
+        {
+          address: 'yandex_function_trigger.push_dispatcher_timer',
+          change: {
+            actions: ['update'],
+            before: {
+              description: 'Run the private Fit push producer and dispatcher every minute',
+              timer,
+              container,
+            },
+            after: {
+              description: 'Run private Fit push and app-feedback delivery every minute',
+              timer,
+              container,
+            },
+          },
+        },
+      ],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(result.status, 0)
+  })
+
+  test('blocks a registry grant for any service account other than the dispatcher', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_serverless_container.push_dispatcher',
+          change: {
+            actions: ['update'],
+            before: { service_account_id: 'dispatcher123' },
+            after: { service_account_id: 'dispatcher123' },
+          },
+        },
+        {
+          address: 'yandex_container_registry_iam_binding.api_image_puller',
+          change: {
+            actions: ['update'],
+            before: {
+              role: 'container-registry.images.puller',
+              members: ['serviceAccount:api123', 'serviceAccount:migration123'],
+            },
+            after: {
+              role: 'container-registry.images.puller',
+              members: [
+                'serviceAccount:api123',
+                'serviceAccount:migration123',
+                'serviceAccount:unexpected123',
+              ],
+            },
+          },
+        },
+      ],
+      { automaticStageUpdate: true },
+    )
+
+    assert.notEqual(result.status, 0)
+  })
+
+  test('blocks functional changes hidden behind a trigger description update', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_function_trigger.push_dispatcher_timer',
+        change: {
+          actions: ['update'],
+          before: {
+            description: 'Run the private Fit push producer and dispatcher every minute',
+            timer: [{ cron_expression: '* * * * ? *' }],
+          },
+          after: {
+            description: 'Run private Fit push and app-feedback delivery every minute',
+            timer: [{ cron_expression: '*/10 * * * ? *' }],
+          },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.notEqual(result.status, 0)
+  })
+
   test('blocks a deferred DataLens bootstrap automatically', () => {
     const result = runPolicy(
       [
