@@ -1436,6 +1436,146 @@ h3 {
   line-height: 1.32;
 }
 
+/* Competitor deep dives: paired evidence, not feature catalogues. */
+.competitor-detail-slide h2 {
+  max-width: 1416px;
+  margin-top: 18px;
+  font-size: 46px;
+  line-height: 1.02;
+}
+.competitor-pair {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 214px;
+  height: 508px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 34px;
+  border-top: 2px solid var(--ink);
+}
+.competitor-profile {
+  min-width: 0;
+  padding-top: 18px;
+}
+.competitor-profile + .competitor-profile {
+  padding-left: 34px;
+  border-left: 1px solid var(--line);
+}
+.competitor-profile header {
+  min-height: 58px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+.competitor-profile header span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .09em;
+}
+.competitor-profile h3 {
+  font-size: 31px;
+  line-height: 1;
+}
+.competitor-profile header em {
+  max-width: 210px;
+  padding-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+  font-style: normal;
+  text-align: right;
+}
+.competitor-kpis {
+  height: 96px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.competitor-kpis > div {
+  min-width: 0;
+  padding: 16px 16px 12px 0;
+}
+.competitor-kpis > div + div {
+  padding-left: 16px;
+  border-left: 1px solid var(--line);
+}
+.competitor-kpis strong {
+  display: block;
+  white-space: nowrap;
+  font-size: 25px;
+  line-height: 1;
+  letter-spacing: -.035em;
+}
+.competitor-kpis span {
+  display: block;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+}
+.competitor-fact {
+  min-height: 95px;
+  display: grid;
+  grid-template-columns: 126px 1fr;
+  gap: 18px;
+  align-items: start;
+  padding: 14px 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+.competitor-fact > span {
+  padding-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .085em;
+}
+.competitor-fact strong {
+  display: block;
+  font-size: 17px;
+  line-height: 1.2;
+}
+.competitor-fact p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.competitor-profile--closest .competitor-kpis {
+  background: var(--paper-2);
+}
+.competitor-takeaway {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  bottom: 69px;
+  min-height: 80px;
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: 26px;
+  align-items: start;
+  padding-top: 16px;
+  border-top: 2px solid var(--ink);
+}
+.competitor-takeaway span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .09em;
+}
+.competitor-takeaway strong {
+  max-width: 1170px;
+  font-size: 20px;
+  line-height: 1.28;
+}
+
 .audience-slide h2 { max-width: 1320px; }
 .audience-metrics {
   position: absolute;
@@ -2478,6 +2618,203 @@ FITMOST: https://www.fitmost.ru/kzn/
 Сравнение основано на публично описанных продуктовых поверхностях. Тезис относится к совокупности контура, а не к отсутствию каждой отдельной функции у конкурентов.</aside>
     </section>
 
+    <section class="slide competitor-detail-slide" data-section="Конкуренты">
+      <div class="eyebrow">08A · БЛИЖАЙШИЕ АНАЛОГИ</div>
+      <h2>Hevy доказал глобальный спрос, Fitness Online — локальный</h2>
+      <div class="competitor-pair">
+        <article class="competitor-profile competitor-profile--closest">
+          <header><div><span>ГЛОБАЛЬНЫЙ ПРОДУКТ</span><h3>Hevy</h3></div><em>B2C + SaaS для тренеров</em></header>
+          <div class="competitor-kpis">
+            <div><strong>16+ млн</strong><span>спортсменов</span></div>
+            <div><strong>112 млн</strong><span>тренировок · 2025</span></div>
+            <div><strong>4,9</strong><span>590 тыс. оценок</span></div>
+          </div>
+          <div class="competitor-fact"><span>ДЕНЬГИ</span><div><strong>≈ $1,92 млн годового темпа</strong><p>Внешняя оценка 2024 года; компания выручку не раскрывает</p></div></div>
+          <div class="competitor-fact"><span>ЗА ЧТО ПЛАТЯТ</span><div><strong>Pro-подписка и Hevy Coach</strong><p>Дневник, программы, расширенная аналитика; отдельный тариф для работы с клиентами</p></div></div>
+          <div class="competitor-fact"><span>ЧТО УДЕРЖИВАЕТ</span><div><strong>Быстрый факт, прогресс и социальная лента</strong><p>История упражнения снижает трение следующей тренировки</p></div></div>
+        </article>
+        <article class="competitor-profile">
+          <header><div><span>РОССИЙСКИЙ ПРОДУКТ</span><h3>Fitness Online</h3></div><em>B2C + услуги тренеров</em></header>
+          <div class="competitor-kpis">
+            <div><strong>5 млн+</strong><span>установок Android</span></div>
+            <div><strong>82,2 тыс.</strong><span>отзывов Google Play</span></div>
+            <div><strong>4,6</strong><span>рейтинг</span></div>
+          </div>
+          <div class="competitor-fact"><span>ДЕНЬГИ</span><div><strong>≈ $0,67 млн выручки</strong><p>62,25 млн ₽ российского юрлица за 2024 год; пересчёт по среднему курсу ЦБ</p></div></div>
+          <div class="competitor-fact"><span>ЗА ЧТО ПЛАТЯТ</span><div><strong>Подписка и сопровождение тренера</strong><p>Разовые и ежемесячные услуги, онлайн-оплата тренеру</p></div></div>
+          <div class="competitor-fact"><span>ЧТО УДЕРЖИВАЕТ</span><div><strong>Планы, дневник, питание, чат и лента</strong><p>850+ упражнений, 5 000 продуктов и ИИ-сборка программы</p></div></div>
+        </article>
+      </div>
+      <div class="competitor-takeaway"><span>ВЫВОД ДЛЯ FIT</span><strong>Продуктовый спрос уже существует и в мире, и в России. Риск Fit не в отсутствии потребности, а в способности превратить регулярное использование в более широкую экономику.</strong></div>
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Показать два наиболее близких пользовательских аналога и отделить доказанный спрос от доказанной экономики.
+
+ЧТО ГОВОРИМ
+Hevy максимально близок к ядру Fit: программа, фиксация силовой тренировки, история, прогресс и социальная мотивация. Масштаб в 16 миллионов пользователей и 112 миллионов тренировок за год доказывает, что дневник с хорошей петлёй возврата способен стать массовым продуктом. Публичная цифра дохода Hevy является внешней оценкой, поэтому мы не выдаём её за отчётность.
+
+Fitness Online — важный локальный аналог. Это не абстрактный зарубежный кейс: приложение набрало более 5 миллионов установок в Google Play, сочетает тренировки, питание, социальную ленту, выбор тренера и оплату его услуг. С августа 2026 года в описании продукта также заявлен ИИ-ассистент, способный собирать полную программу. Выручка российского юрлица в 2024 году составила 62,25 миллиона рублей, или около 0,67 миллиона долларов по среднему курсу 92,44 рубля за доллар.
+
+УПРАВЛЕНЧЕСКИЙ ВЫВОД
+Оба продукта подтверждают потребность. Одновременно Fitness Online показывает, что миллионы накопленных установок не гарантируют крупной экономики. Поэтому Fit не должен ограничиваться подпиской на тренировочный контент: тренерский контур, транзакции и сервисы вокруг спорта являются частью бизнес-модели, а не поздним дополнением.
+
+[Sources]
+Hevy, Partners — 16+ млн пользователей, 112 млн тренировок в 2025 году, рейтинг 4,9 по 590 тыс. оценок: https://www.hevyapp.com/partners/
+Hevy, Starter Story — внешняя оценка $160 тыс. MRR в 2024 году: https://www.starterstory.com/hevy-breakdown
+Fitness Online, Google Play — 5 млн+ установок, рейтинг и функции продукта: https://play.google.com/store/apps/details?hl=ru&id=fitness.online.app
+Fitness Online, официальный сайт — продукт, тренеры, питание и способы оплаты: https://fitnessonline.app/ru/
+ООО «Фитнес Онлайн», ИНН 1655370251 — выручка 62,246 млн ₽ за 2024 год: https://www.egrul-base.ru/company/1161690142481/
+Банк России, Annual Report 2024 — средний курс с начала года к декабрю 92,44 RUB/USD: https://cbr.ru/collection/collection/file/55580/ar_2024_e.pdf
+Расчёт: 62,246 млн ₽ / 92,44 = около $0,67 млн. Показатель российского юрлица может не включать доходы других юридических структур.</aside>
+    </section>
+
+    <section class="slide competitor-detail-slide" data-section="Конкуренты">
+      <div class="eyebrow">08B · МАССОВАЯ ЭКОНОМИКА</div>
+      <h2>Масштаб создаёт привычка, крупную выручку — несколько потоков</h2>
+      <div class="competitor-pair">
+        <article class="competitor-profile">
+          <header><div><span>СОЦИАЛЬНЫЙ ГРАФ СПОРТСМЕНОВ</span><h3>Strava</h3></div><em>B2C-подписка</em></header>
+          <div class="competitor-kpis">
+            <div><strong>150+ млн</strong><span>спортсменов · 2025</span></div>
+            <div><strong>≈ $500 млн</strong><span>ARR · 2025</span></div>
+            <div><strong>&gt;50%</strong><span>рост новых · 2024</span></div>
+          </div>
+          <div class="competitor-fact"><span>МОНЕТИЗАЦИЯ</span><div><strong>$79,99 в год в США</strong><p>Индивидуальная и семейная подписка, пакет Strava + Runna</p></div></div>
+          <div class="competitor-fact"><span>МЕХАНИКА</span><div><strong>Факт становится социальным событием</strong><p>Лента, клубы, челленджи, сегменты и интеграции с устройствами</p></div></div>
+          <div class="competitor-fact"><span>РОСТ</span><div><strong>Открытая спортивная платформа</strong><p>Более 100 приложений подключены к API; приобретены Runna и The Breakaway</p></div></div>
+        </article>
+        <article class="competitor-profile competitor-profile--closest">
+          <header><div><span>ФИТНЕС-ЭКОСИСТЕМА</span><h3>Keep</h3></div><em>Подписка + товары + реклама</em></header>
+          <div class="competitor-kpis">
+            <div><strong>21,8 млн</strong><span>средний MAU · 2025</span></div>
+            <div><strong>2,74 млн</strong><span>подписчиков</span></div>
+            <div><strong>12,6%</strong><span>penetration</span></div>
+          </div>
+          <div class="competitor-fact"><span>ДЕНЬГИ</span><div><strong>≈ $228 млн выручки · 2025</strong><p>Первый год с положительной скорректированной прибылью: около $3,5 млн</p></div></div>
+          <div class="competitor-fact"><span>СТРУКТУРА</span><div><strong>47,5% товары · 41,5% контент</strong><p>Оставшиеся 11% дают реклама и другие направления</p></div></div>
+          <div class="competitor-fact"><span>МЕХАНИКА</span><div><strong>Контент связывает тренировку и покупку</strong><p>Персональные планы, ИИ, устройства и собственные спортивные товары</p></div></div>
+        </article>
+      </div>
+      <div class="competitor-takeaway"><span>ВЫВОД ДЛЯ FIT</span><strong>Strava доказывает ценность прогресса и сообщества. Keep показывает более широкую цель: спортивный контекст способен продавать не только подписку, но и товары вокруг регулярной активности.</strong></div>
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Показать две разные модели массовой экономики цифрового спорта.
+
+ЧТО ГОВОРИМ
+Strava превратила каждую активность в социальный объект: результат видят друзья, клуб и сообщество. В 2025 году компания сообщала о более чем 150 миллионах спортсменов, росте новых пользователей более чем на 50 процентов за предыдущий год и приближении к 500 миллионам долларов ARR. Основная прямая модель — подписка.
+
+Keep соединяет контент, подписку, устройства и спортивные товары. В 2025 году компания получила около 228 миллионов долларов выручки. Почти половину дали собственные товары, ещё 41,5 процента — членство и платный контент. Это прямое подтверждение нашей исходной логики: знание тренировочного контекста создаёт право рекомендовать и продавать то, что нужно человеку вокруг спорта.
+
+УПРАВЛЕНЧЕСКИЙ ВЫВОД
+Для Fit социальный прогресс и повторяющийся план являются механизмом удержания. Но стратегическая экономика не должна заканчиваться на подписке. В долгосрочной модели важно связать спортивное намерение с Маркетом, Едой, платежами и логистикой Яндекса.
+
+[Sources]
+Strava, пресс-релиз 19.08.2025 — 150+ млн спортсменов, ≈$500 млн ARR и >50% роста новых пользователей: https://press.strava.com/nl/articles/strava-finalizes-leadership-team-for-next-stage-of-growth
+Strava, приобретение Runna — 100+ приложений подключены к API: https://press.strava.com/en-gb/articles/strava-to-acquire-runna-a-leading-running-training-app
+Strava, Pricing — $79,99 в год в США: https://www.strava.com/pricing
+Keep Inc., Annual Report 2025 — 21,772 млн MAU, 2,742 млн подписчиков, выручка RMB1,637 млрд, adjusted profit RMB25,2 млн: https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0423/2026042300920.pdf
+Federal Reserve G.5A — средний курс 2025 года 7,1875 CNY/USD: https://www.federalreserve.gov/releases/g5a/current/
+Расчёты: RMB1,637 млрд / 7,1875 ≈ $228 млн; RMB25,2 млн / 7,1875 ≈ $3,5 млн. Доли рассчитаны по раскрытым сегментам: RMB778,1 млн товары, RMB679,7 млн членство и контент, RMB179,5 млн реклама и прочее.</aside>
+    </section>
+
+    <section class="slide competitor-detail-slide" data-section="Конкуренты">
+      <div class="eyebrow">08C · ТРЕНЕРСКИЙ КОНТУР</div>
+      <h2>Тренер может быть одновременно каналом, пользователем и продавцом</h2>
+      <div class="competitor-pair">
+        <article class="competitor-profile competitor-profile--closest">
+          <header><div><span>ЗРЕЛАЯ ПЛАТФОРМА</span><h3>ABC Trainerize</h3></div><em>SaaS + платежи</em></header>
+          <div class="competitor-kpis">
+            <div><strong>400 тыс.</strong><span>тренеров</span></div>
+            <div><strong>1,6 млн</strong><span>клиентов</span></div>
+            <div><strong>68 млн</strong><span>тренировок · 2024</span></div>
+          </div>
+          <div class="competitor-fact"><span>ДЕНЬГИ</span><div><strong>$20 млн ARR · 2022</strong><p>$186 млн продаж тренеров прошло через Payments в 2024 году; это GMV, не выручка платформы</p></div></div>
+          <div class="competitor-fact"><span>ЗА ЧТО ПЛАТЯТ</span><div><strong>SaaS, дополнения и транзакции</strong><p>Программы, питание, привычки, брендированное приложение, бронирование и платежи</p></div></div>
+          <div class="competitor-fact"><span>ПЕТЛЯ РОСТА</span><div><strong>Тренер приводит клиента</strong><p>Клиент получает программу, тренер — автоматизацию и новый цифровой доход</p></div></div>
+        </article>
+        <article class="competitor-profile">
+          <header><div><span>БЫСТРОРАСТУЩИЙ ИГРОК</span><h3>Everfit</h3></div><em>SaaS + marketplace</em></header>
+          <div class="competitor-kpis">
+            <div><strong>300 тыс.+</strong><span>тренеров</span></div>
+            <div><strong>миллионы</strong><span>клиентов</span></div>
+            <div><strong>190+</strong><span>стран</span></div>
+          </div>
+          <div class="competitor-fact"><span>ДЕНЬГИ</span><div><strong>≈ $21,3 млн · внешняя оценка</strong><p>Компания выручку не раскрывает; основатели сообщают о прибыльности в 2025 году</p></div></div>
+          <div class="competitor-fact"><span>ЗА ЧТО ПЛАТЯТ</span><div><strong>От $19 до $290 в месяц</strong><p>Цена растёт от 5 до 300 клиентов; marketplace берёт 15% первые три месяца</p></div></div>
+          <div class="competitor-fact"><span>МЕХАНИКА</span><div><strong>Автоматизация тренерской рутины</strong><p>Программы, питание, задачи, напоминания, аналитика и ИИ-помощник</p></div></div>
+        </article>
+      </div>
+      <div class="competitor-takeaway"><span>ВЫВОД ДЛЯ FIT</span><strong>Тренерский продукт нельзя делать второстепенным. Он снижает стоимость привлечения, создаёт первый полезный сценарий клиенту и открывает SaaS- и транзакционную монетизацию.</strong></div>
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Показать, что связка тренер-клиент является отдельной доказанной бизнес-моделью и может стать каналом дистрибуции Fit.
+
+ЧТО ГОВОРИМ
+ABC Trainerize строит продукт вокруг операционной системы тренера. Платформа соединяет 400 тысяч тренеров и 1,6 миллиона клиентов. В 2022 году компания сообщала о 20 миллионах долларов ARR. В 2024 году через платежный контур тренеров прошло 186 миллионов долларов продаж. Это не выручка Trainerize, но доказательство крупного транзакционного потока вокруг программ и сопровождения.
+
+Everfit повторяет модель с сильным акцентом на автоматизацию и ИИ. Компания заявляет более 300 тысяч тренеров и миллионы клиентов. Официальной финансовой отчётности нет; оценка 21,3 миллиона долларов является моделью Growjo и должна восприниматься как ориентир. Зато публичная тарифная сетка показывает механику выручки: плата растёт вместе с клиентской базой тренера, а marketplace добавляет комиссию за привлечённого клиента.
+
+УПРАВЛЕНЧЕСКИЙ ВЫВОД
+Для Fit тренер — не только пользователь функций. Он может приводить клиента сразу в готовую программу, помогать удержанию и продавать сопровождение. В пилоте мотивацию тренера правильно привязывать не к установке, а к активному клиенту W4.
+
+[Sources]
+ABC Trainerize, About — 400 тыс. тренеров, 1,6 млн клиентов, 5 млн тренировок и 23 млн приёмов пищи в месяц: https://www.trainerize.com/about/
+ABC Trainerize, 24.05.2022 — достижение $20 млн ARR: https://www.trainerize.com/blog/vancouver-startup-trainerize-levels-up-its-leadership-sets-its-sights-on-50m-arr-usd/
+ABC Trainerize, 2024 Year in Review — 68 млн тренировок, 168 млн приёмов пищи, 1,4 млн продуктов и $186 млн продаж через Payments: https://www.trainerize.com/blog/abc-trainerize-wrapped-2024/
+Everfit, Jobs — 300 тыс.+ тренеров и миллионы клиентов: https://jobs.everfit.io/jobs
+Everfit, Pricing — тарифы от $19 за 5 клиентов до $290 за 300 клиентов: https://everfit.io/pricing/
+Everfit Marketplace — комиссия 15% первые три месяца: https://help-marketplace.everfit.io/en/articles/10800902-intro-fees-for-coaches
+Growjo — внешняя модель выручки Everfit $21,3 млн: https://growjo.com/company/Everfit.io
+Публичное сообщение сооснователя о прибыльности в 2025 году: https://www.linkedin.com/posts/longdnguyen_were-closing-out-everfit-2025-with-strong-activity-7412113456843268096-XnX4</aside>
+    </section>
+
+    <section class="slide competitor-detail-slide" data-section="Конкуренты">
+      <div class="eyebrow">08D · ЭКСПЕРТНЫЙ КОНТЕНТ</div>
+      <h2>Экспертные программы масштабируются двумя разными путями</h2>
+      <div class="competitor-pair">
+        <article class="competitor-profile">
+          <header><div><span>ПОТРЕБИТЕЛЬСКАЯ МЕДИАМОДЕЛЬ</span><h3>Ladder</h3></div><em>Подписка на команды</em></header>
+          <div class="competitor-kpis">
+            <div><strong>150 тыс.+</strong><span>план на конец 2024</span></div>
+            <div><strong>$29,99</strong><span>в месяц</span></div>
+            <div><strong>$105 млн</strong><span>финансирование · 2024</span></div>
+          </div>
+          <div class="competitor-fact"><span>ДЕНЬГИ</span><div><strong>Выручка не раскрыта</strong><p>$15 млн equity и $90 млн финансирования роста; цель — вывести модель на положительный cash flow</p></div></div>
+          <div class="competitor-fact"><span>МЕХАНИКА</span><div><strong>Один тренер работает как медиа-команда</strong><p>Еженедельная программа, голосовое сопровождение, чат команды и музыка</p></div></div>
+          <div class="competitor-fact"><span>РОСТ</span><div><strong>Новый спрос, а не только миграция</strong><p>80% пользователей ранее не пользовались фитнес-приложением; 50% не пробовали ни одного</p></div></div>
+        </article>
+        <article class="competitor-profile competitor-profile--closest">
+          <header><div><span>ПРОФЕССИОНАЛЬНАЯ ЭКОСИСТЕМА</span><h3>TrainingPeaks</h3></div><em>B2C + SaaS + планы</em></header>
+          <div class="competitor-kpis">
+            <div><strong>миллионы</strong><span>спортсменов за 25 лет</span></div>
+            <div><strong>миллиарды</strong><span>тренировок</span></div>
+            <div><strong>Garmin</strong><span>приобрёл · 2026</span></div>
+          </div>
+          <div class="competitor-fact"><span>ДЕНЬГИ</span><div><strong>$134,99 в год спортсмену</strong><p>Тренеру — $21,99–54,99 в месяц плюс Premium-аккаунты; общая выручка и цена сделки не раскрыты</p></div></div>
+          <div class="competitor-fact"><span>МЕХАНИКА</span><div><strong>План, данные и человеческий тренер</strong><p>Календарь, аналитика нагрузки, интеграции с устройствами, Coach Match и магазин планов</p></div></div>
+          <div class="competitor-fact"><span>СТРАТЕГИЯ</span><div><strong>Данные усиливают экосистему устройств</strong><p>Garmin покупает не отдельный трекер, а связь спортсмена с программой и тренером</p></div></div>
+        </article>
+      </div>
+      <div class="competitor-takeaway"><span>ВЫВОД ДЛЯ FIT</span><strong>Ladder показывает стоимость масштабирования чистого B2C. TrainingPeaks — стратегическую ценность контура «данные, план, тренер» внутри большой экосистемы.</strong></div>
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Показать две модели масштабирования экспертного контента и их ограничения.
+
+ЧТО ГОВОРИМ
+Ladder превращает тренера в лидера цифровой команды. Пользователь получает не библиотеку роликов, а новый план каждую неделю, голосовое сопровождение и группу с общей идентичностью. Компания привлекла 105 миллионов долларов финансирования, из которых 90 миллионов были связаны с масштабированием привлечения клиентов. Это сильный продуктовый сигнал, но также предупреждение: чистый B2C может требовать дорогого маркетинга.
+
+TrainingPeaks вырос вокруг профессионального спортивного контекста: план, календарь, нагрузка, устройства и человеческий тренер. За 25 лет платформа обслужила миллионы спортсменов и миллиарды тренировок. В июле 2026 года Garmin приобрёл TrainingPeaks и TrainHeroic, прямо объяснив сделку усилением собственной фитнес-экосистемы и персонализированного коучинга. Финансовые условия не раскрыты.
+
+УПРАВЛЕНЧЕСКИЙ ВЫВОД
+Fit не должен копировать медиаэкономику Ladder один к одному. Преимущество Яндекса — снизить стоимость роста собственной дистрибуцией и одновременно построить экосистемный контур, который Garmin пришлось покупать извне.
+
+[Sources]
+Axios, 20.11.2024 — $105 млн финансирования Ladder, план 150 тыс.+ платящих пользователей к концу 2024 года, цена $29,99 в месяц и назначение $90 млн на customer acquisition: https://www.axios.com/pro/health-tech-deals/2024/11/20/virtual-training-startup-ladder-gets-105m
+Fortune, 10.12.2024 — 80% аудитории Ladder ранее не пользовались фитнес-приложением, 50% не пробовали ни одного: https://fortune.com/2024/12/10/strength-training-ladder-app-users-growth/
+Ladder, App Store — актуальная подписка $29,99 в месяц и $179,99 в год: https://apps.apple.com/us/app/ladder-strength-training-plans/id1502936453
+Ladder, официальный сайт — еженедельные программы, команды, тренеры и интеграция музыки: https://www.joinladder.com/
+TrainingPeaks, Legacy in Motion — миллионы спортсменов и миллиарды тренировок за 25 лет: https://www.trainingpeaks.com/legacyinmotion/
+TrainingPeaks, Pricing for Athletes — $19,95 в месяц или $134,99 в год: https://www.trainingpeaks.com/pricing/for-athletes/
+TrainingPeaks, Pricing for Coaches — $21,99–54,99 в месяц и доплата за Premium-спортсменов: https://www.trainingpeaks.com/pricing/for-coaches/
+Garmin, 22.07.2026 — приобретение TrainingPeaks и TrainHeroic; финансовые условия не раскрыты: https://investors.garmin.com/news-and-events/news/news-details/2026/Garmin-acquires-TrainingPeaks-and-TrainHeroic-leading-endurance-and-strength-training-platforms-for-athletes-and-coaches/default.aspx</aside>
+    </section>
+
     <section class="slide audience-slide" data-section="Аудитория">
       <div class="eyebrow">09 · МАСШТАБ АУДИТОРИИ</div>
       <h2>Около 22 млн россиян 18–55 лет регулярно занимаются спортом</h2>
@@ -2819,7 +3156,7 @@ Fit создаёт для Яндекса три уровня ценности, �
 
   <button class="nav nav-prev" id="prev" aria-label="Предыдущий слайд">←</button>
   <button class="nav nav-next" id="next" aria-label="Следующий слайд">→</button>
-  <div class="slide-meta"><span id="sectionName">Решение</span><span id="counter">01 / 26</span></div>
+  <div class="slide-meta"><span id="sectionName">Решение</span><span id="counter">01 / 30</span></div>
   <div class="notes-panel" id="notesPanel" aria-hidden="true"><button id="closeNotes" aria-label="Закрыть заметки">×</button><div id="notesContent"></div></div>
   <script>
 const slides = [...document.querySelectorAll('.slide')]
