@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useOptionalYandexAppSession } from '../../app/yandex-app-session-context'
 import { setAppTheme, useAppTheme } from '../../app/theme'
 import { AsyncView, Page, Switch } from '../../shared/ui'
-import { YandexAccountLinkingCard } from '../auth'
+import { LogoutButton, YandexAccountLinkingCard } from '../auth'
 import { ClientTrainerConnections } from './ClientTrainerConnections'
 import { AppFeedbackForm } from '../profile/AppFeedbackForm'
 import { useState } from 'react'
@@ -14,10 +14,9 @@ import { NotificationsSetting } from '../notifications'
 import { BodyMapAppearanceSetting } from '../progress/BodyMapAppearanceSetting'
 
 export function ClientProfilePage() {
-  const { actor, signOut } = useAuth()
+  const { actor } = useAuth()
   const { clients: clientsRepository } = useDataBackend()
   const yandexSession = useOptionalYandexAppSession()?.session ?? null
-  const navigate = useNavigate()
   const theme = useAppTheme()
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [installOpen, setInstallOpen] = useState(false)
@@ -27,11 +26,6 @@ export function ClientProfilePage() {
     enabled: actor?.role === 'client',
   })
   if (!actor || actor.role !== 'client') return null
-
-  async function logout() {
-    await signOut()
-    navigate('/auth')
-  }
 
   return <Page title="Профиль" className="client-profile-page">
     <AsyncView loading={client.isLoading} error={client.error} empty={!client.data} onRetry={() => void client.refetch()}>
@@ -62,6 +56,6 @@ export function ClientProfilePage() {
     <div className="menu"><Link to="/join">Ввести код приглашения</Link><button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button></div>
     {installOpen && <AppInstallPanel onClose={() => setInstallOpen(false)} />}
     {feedbackOpen && <AppFeedbackForm onClose={() => setFeedbackOpen(false)} />}
-    <button className="danger secondary wide" onClick={() => void logout()}>Выйти</button>
+    <LogoutButton />
   </Page>
 }
