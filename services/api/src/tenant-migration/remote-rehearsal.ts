@@ -4,7 +4,10 @@ import { randomBytes } from 'node:crypto'
 import type { PoolConfig } from 'pg'
 
 import { PgDatabasePool } from '../db/pg-pool.js'
-import { encryptMigrationBundle } from './bundle.js'
+import {
+  encryptMigrationBundle,
+  TenantMigrationArtifactError,
+} from './bundle.js'
 import { exportTenant, TenantMigrationError } from './engine.js'
 import type {
   TenantMigrationBundle,
@@ -328,25 +331,46 @@ export async function runRemoteTenantRehearsal(
 ): Promise<void> {
   const sourcePool = new PgDatabasePool(settings.sourceConfig)
   let sourceConnection: Awaited<ReturnType<PgDatabasePool['connect']>> | undefined
-  let bundle: TenantMigrationBundle
+  let bundle: TenantMigrationBundle | undefined
+  let sourceFailure: unknown
+  let sourceCleanupFailure: unknown
   try {
     sourceConnection = await sourcePool.connect()
     bundle = await exportTenant(sourceConnection, settings.trainerId)
   } catch (error) {
-    if (
-      error instanceof RemoteTenantRehearsalError
-      || error instanceof TenantMigrationError
-    ) throw error
-    throw new RemoteTenantRehearsalError(
-      readSourceDatabaseFailureCode(error),
-    )
+    sourceFailure = error
   } finally {
-    sourceConnection?.release()
-    await sourcePool.end()
+    try {
+      sourceConnection?.release()
+      await sourcePool.end()
+    } catch (error) {
+      sourceCleanupFailure = error
+    }
+  }
+  if (sourceFailure !== undefined) {
+    if (
+      sourceFailure instanceof RemoteTenantRehearsalError
+      || sourceFailure instanceof TenantMigrationError
+    ) throw sourceFailure
+    throw new RemoteTenantRehearsalError(
+      readSourceDatabaseFailureCode(sourceFailure),
+    )
+  }
+  if (sourceCleanupFailure !== undefined) {
+    throw new RemoteTenantRehearsalError('source_database_cleanup_failed')
+  }
+  if (bundle === undefined) {
+    throw new RemoteTenantRehearsalError('source_database_failed')
   }
 
   const passphrase = randomBytes(48).toString('base64url')
-  const envelope = await encryptMigrationBundle(bundle, passphrase)
+  let envelope: TenantMigrationEnvelope
+  try {
+    envelope = await encryptMigrationBundle(bundle, passphrase)
+  } catch (error) {
+    if (error instanceof TenantMigrationArtifactError) throw error
+    throw new RemoteTenantRehearsalError('bundle_encryption_failed')
+  }
   const encryptedBytes = Buffer.byteLength(JSON.stringify(envelope))
   printBundleSummary(bundle, encryptedBytes)
   if (settings.mode === 'audit') return
