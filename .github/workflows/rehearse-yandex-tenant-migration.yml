@@ -52,7 +52,7 @@ jobs:
       - name: Audit the selected tenant without writing either database
         env:
           FIT_TENANT_REHEARSAL_MODE: audit
-          FIT_TENANT_SOURCE_SSL_ROOT_CERT: /etc/ssl/certs/ca-certificates.crt
+          FIT_TENANT_SOURCE_SSL_ROOT_CERT: certs/supabase-prod-ca-2021.crt
           FIT_TENANT_TRAINER_ID: ${{ secrets.FIT_TENANT_TRAINER_ID }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
@@ -119,7 +119,7 @@ jobs:
         env:
           FIT_TENANT_REHEARSAL_MODE: ${{ inputs.mode }}
           FIT_TENANT_REMOTE_APPLY_CONFIRMATION: ${{ inputs.apply_confirmation }}
-          FIT_TENANT_SOURCE_SSL_ROOT_CERT: /etc/ssl/certs/ca-certificates.crt
+          FIT_TENANT_SOURCE_SSL_ROOT_CERT: certs/supabase-prod-ca-2021.crt
           FIT_TENANT_TRAINER_ID: ${{ secrets.FIT_TENANT_TRAINER_ID }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildSupabaseSourceConfig,
+  readSourceDatabaseFailureCode,
   readRemoteTenantRehearsalSettings,
   readStageTenantMigrationResponse,
   RemoteTenantRehearsalError,
@@ -59,6 +60,15 @@ describe('remote tenant rehearsal configuration', () => {
     )).toThrowError(RemoteTenantRehearsalError)
   })
 
+  it('reports an unreadable source certificate without leaking its path', () => {
+    expect(() => buildSupabaseSourceConfig(
+      SOURCE_ENVIRONMENT,
+      () => { throw new Error('/private/certificate/path') },
+    )).toThrowError(
+      new RemoteTenantRehearsalError('source_certificate_unreadable'),
+    )
+  })
+
   it('keeps audit source-only and validates stage settings for dry-run', () => {
     const audit = readRemoteTenantRehearsalSettings(
       SOURCE_ENVIRONMENT,
@@ -94,6 +104,31 @@ describe('remote tenant rehearsal configuration', () => {
       () => 'trusted-ca',
     )).toThrowError(new RemoteTenantRehearsalError('apply_not_confirmed'))
   })
+})
+
+describe('source database failure reporting', () => {
+  it('reports a PostgreSQL SQLSTATE without exposing the error message', () => {
+    expect(readSourceDatabaseFailureCode({
+      code: '42P01',
+      message: 'relation secret_table does not exist',
+    })).toBe('source_database_failed:sqlstate_42P01')
+  })
+
+  it('reports only explicitly allowed transport error codes', () => {
+    expect(readSourceDatabaseFailureCode({ code: 'ETIMEDOUT' }))
+      .toBe('source_database_failed:transport_ETIMEDOUT')
+  })
+
+  it('keeps unknown errors generic', () => {
+    const code = readSourceDatabaseFailureCode({
+      code: 'PRIVATE_DATABASE_HOST',
+      message: 'password=do-not-print',
+    })
+
+    expect(code).toBe('source_database_failed')
+    expect(code).not.toContain('do-not-print')
+  })
+
 })
 
 describe('stage tenant migration response', () => {

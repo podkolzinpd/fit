@@ -38,8 +38,11 @@ The manually dispatched `Rehearse Yandex tenant migration` workflow removes
 the need to copy credentials or run migration commands on an operator laptop.
 The selected trainer UUID is a masked repository secret rather
 than a visible workflow input. The source step resolves the reviewed Supabase
-session pooler and performs the same read-only export. No Yandex identity or
-target credential is needed in `audit` mode.
+session pooler and performs the same read-only export. TLS hostname and chain
+verification use the reviewed public Supabase Root 2021 CA committed at
+`services/api/certs/supabase-prod-ca-2021.crt`; certificate verification is
+never disabled. No Yandex identity or target credential is needed in `audit`
+mode.
 
 For `dry-run` and `apply`, GitHub OIDC obtains the existing bounded deploy
 identity and invokes the private `fit-stage-migration` container. The encrypted
