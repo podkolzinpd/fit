@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(28);
 
 select ok(
   exists(select 1 from pg_matviews where schemaname = 'analytics' and matviewname = 'client_overview'),
@@ -74,6 +74,17 @@ insert into public.workouts (id, trainer_id, client_id, created_by, updated_by, 
   ('72000000-0000-4000-8000-000000000005', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '2026-08-10', 'in_progress', '2026-08-10 09:00:00+00', null, '2026-08-10 09:00:00+00'),
   ('72000000-0000-4000-8000-000000000006', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '2026-08-11', 'done', '2026-08-11 08:00:00+00', '2026-08-11 09:00:00+00', '2026-08-11 09:00:00+00'),
   ('72000000-0000-4000-8000-000000000007', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '2026-08-12', 'cancelled', null, null, '2026-08-12 09:00:00+00');
+
+-- Клиент F: self-registered, с СОБСТВЕННОЙ активностью 2 дня назад (relative
+-- to now(), а не фиксированная дата) — чтобы client_status = 'active' не
+-- зависел от того, в какой день реально прогоняются тесты.
+insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
+  ('70000000-0000-4000-8000-000000000006', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'overview-active-client-f@example.test', '');
+insert into public.profiles (id) values ('70000000-0000-4000-8000-000000000006');
+insert into public.clients (id, trainer_id, auth_user_id, full_name, created_at) values
+  ('71000000-0000-4000-8000-000000000006', '70000000-0000-4000-8000-000000000006', '70000000-0000-4000-8000-000000000006', 'Overview Client F', '2026-08-06');
+insert into public.workouts (id, trainer_id, client_id, created_by, updated_by, workout_date, status, updated_at) values
+  ('72000000-0000-4000-8000-000000000008', '70000000-0000-4000-8000-000000000006', '71000000-0000-4000-8000-000000000006', '70000000-0000-4000-8000-000000000006', '70000000-0000-4000-8000-000000000006', (now() - interval '2 days')::date, 'planned', now() - interval '2 days');
 
 refresh materialized view analytics.client_overview;
 
@@ -163,6 +174,42 @@ select is(
 select is(
   (select workouts_done from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000004'),
   0::bigint, 'client with zero workouts gets workouts_done = 0, not null'
+);
+
+select is(
+  (select days_since_last_activity from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
+  (select floor(extract(epoch from (now() - '2026-08-09 09:00:00+00'::timestamptz)) / 86400)::bigint),
+  'days_since_last_activity is the whole-day difference between refreshed_at and last_client_activity_at'
+);
+select is(
+  (select client_status from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
+  'not_active', 'client with last activity from 2026-08-09 is not_active (well over 7 days ago)'
+);
+
+select ok(
+  (select last_client_activity_at is null and days_since_last_activity is null
+   from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000004'),
+  'client with no self-authored activity gets null last_client_activity_at/days_since_last_activity, not a fabricated zero'
+);
+select is(
+  (select client_status from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000004'),
+  'new', 'client with no activity ever gets client_status = new, not not_active'
+);
+
+select is(
+  (select client_status from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000006'),
+  'active', 'client with self-authored activity 2 days ago is active (within the 7-day threshold)'
+);
+
+select ok(
+  (select refreshed_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000001')
+    between now() - interval '1 minute' and now() + interval '1 minute',
+  'refreshed_at is set to the moment of the last REFRESH MATERIALIZED VIEW'
+);
+select is(
+  (select count(distinct refreshed_at) from analytics.client_overview),
+  1::bigint,
+  'refreshed_at is the same snapshot moment across every row'
 );
 
 select * from finish();
