@@ -2831,6 +2831,167 @@ h3 {
 .channel-community { border-top: 2px solid var(--ink) !important; }
 .retention-role li { min-height: 48px; padding: 8px 0; }
 
+/* One evidence slide: market scale, independent research and the repeat-use loop. */
+.legacy-behavior-slide { display: none !important; }
+.combined-demand-slide h2 {
+  max-width: 1430px;
+  font-size: 44px;
+  line-height: 1.04;
+}
+.demand-product-grid {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 218px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.demand-product {
+  min-height: 155px;
+  padding: 17px 20px 15px 0;
+  border-right: 1px solid var(--line);
+}
+.demand-product + .demand-product { padding-left: 20px; }
+.demand-product:last-child { border-right: 0; }
+.demand-product span {
+  display: block;
+  min-height: 28px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .075em;
+}
+.demand-product strong {
+  display: block;
+  margin-top: 12px;
+  font-size: 33px;
+  line-height: 1;
+  letter-spacing: -.035em;
+}
+.demand-product b {
+  display: block;
+  margin-top: 7px;
+  font-size: 14px;
+  line-height: 1.15;
+}
+.demand-product small {
+  display: block;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.25;
+}
+.demand-product--closest {
+  padding-left: 20px;
+  background: var(--paper-2);
+  box-shadow: inset 5px 0 0 var(--ink);
+}
+.demand-product--closest span { color: var(--ink); }
+.demand-research-band {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 410px;
+  display: grid;
+  grid-template-columns: 315px 1fr;
+  gap: 38px;
+}
+.demand-research-summary {
+  min-height: 250px;
+  padding: 21px 25px 20px 0;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.demand-research-summary > span,
+.demand-mechanics > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .075em;
+}
+.demand-research-summary strong {
+  display: block;
+  margin-top: 31px;
+  font-size: 29px;
+  letter-spacing: -.025em;
+}
+.demand-research-summary b {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.demand-research-summary p {
+  margin-top: 30px;
+  font-size: 15px;
+  line-height: 1.25;
+}
+.demand-research-summary em {
+  display: block;
+  font-size: 35px;
+  font-style: normal;
+  font-weight: 760;
+  letter-spacing: -.035em;
+}
+.demand-mechanics {
+  padding-top: 21px;
+  border-top: 2px solid var(--ink);
+}
+.demand-mechanics-flow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  margin-top: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.demand-mechanics-flow > div {
+  min-height: 195px;
+  padding: 18px 17px 16px 0;
+  border-right: 1px solid var(--line);
+}
+.demand-mechanics-flow > div + div { padding-left: 17px; }
+.demand-mechanics-flow > div:last-child { border-right: 0; }
+.demand-mechanics-flow b {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .08em;
+}
+.demand-mechanics-flow strong {
+  display: block;
+  margin-top: 31px;
+  font-size: 18px;
+  line-height: 1.12;
+}
+.demand-mechanics-flow small {
+  display: block;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.demand-mechanics-flow .demand-mechanics-next {
+  padding-left: 17px;
+  color: var(--white);
+  background: var(--ink);
+}
+.demand-mechanics-next b,
+.demand-mechanics-next small { color: var(--dark-muted); }
+.demand-combined-conclusion {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  bottom: 70px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  padding-top: 18px;
+  border-top: 2px solid var(--ink);
+  font-size: 17px;
+  line-height: 1.3;
+}
+.demand-combined-conclusion span { color: var(--muted); }
+
 @media print {
   @page { size: 16in 9in; margin: 0; }
   html, body { overflow: visible; background: #fff; }
@@ -3073,58 +3234,69 @@ Fit остаётся отдельным приложением, потому ч�
 Глубина поддержки видов спорта и механика персональных рекомендаций вынесены в материалы.</aside>
     </section>
 
-    <section class="slide demand-proof-slide" data-section="Доказанный спрос">
+    <section class="slide demand-proof-slide combined-demand-slide" data-section="Доказанный спрос">
       <div class="eyebrow">06 · ДОКАЗАННЫЙ СПРОС</div>
-      <h2>Массовый спрос на цифровое сопровождение спорта уже доказан</h2>
-      <div class="benchmark-ledger">
-        <div class="benchmark-row">
-          <strong class="benchmark-brand">Strava</strong>
-          <div class="benchmark-scale"><b>195+ млн</b><span>спортсменов</span></div>
-          <p><b>&gt;50%</b> роста новых пользователей за 2024 год</p>
+      <h2>Спрос доказан мировыми продуктами, а эффект цифрового сопровождения — исследованиями</h2>
+      <div class="demand-product-grid">
+        <div class="demand-product">
+          <span>STRAVA</span><strong>195+ млн</strong><b>спортсменов</b><small>социальный трекинг</small>
         </div>
-        <div class="benchmark-row">
-          <strong class="benchmark-brand">Keep</strong>
-          <div class="benchmark-scale"><b>21,8 млн</b><span>средний MAU · 2025</span></div>
-          <p><b>2,7 млн</b> подписчиков · <b>12,6%</b> проникновения подписки</p>
+        <div class="demand-product">
+          <span>KEEP</span><strong>21,8 млн</strong><b>средний MAU · 2025</b><small>спорт и товары</small>
         </div>
-        <div class="benchmark-row benchmark-row--closest">
-          <strong class="benchmark-brand benchmark-brand--closest">Hevy<small>БЛИЖАЙШИЙ АНАЛОГ FIT</small></strong>
-          <div class="benchmark-scale"><b>16+ млн</b><span>пользователей</span></div>
-          <p><b>112 млн</b> тренировок за 2025 год · <b>4,9</b> по 590 тыс. оценок</p>
+        <div class="demand-product demand-product--closest">
+          <span>HEVY · БЛИЖАЙШИЙ АНАЛОГ</span><strong>16+ млн</strong><b>пользователей</b><small>112 млн тренировок · 2025</small>
         </div>
-        <div class="benchmark-row">
-          <strong class="benchmark-brand">Trainerize</strong>
-          <div class="benchmark-scale"><b>1,6+ млн</b><span>клиентов</span></div>
-          <p><b>5 млн</b> тренировок и <b>23 млн</b> приёмов пищи в месяц</p>
+        <div class="demand-product">
+          <span>FITNESS ONLINE</span><strong>5 млн+</strong><b>установок Android</b><small>российский рынок</small>
+        </div>
+        <div class="demand-product">
+          <span>TRAINERIZE</span><strong>1,6 млн</strong><b>клиентов</b><small>связка тренер — клиент</small>
         </div>
       </div>
-      <div class="benchmark-conclusion">
-        <span>ОБЩАЯ ПОТРЕБНОСТЬ</span>
-        <div>
-          <strong>Понимать, что делать сегодня, видеть результат и не оставаться без поддержки.</strong>
-          <small>Метрики показывают масштаб разных моделей категории и не сравниваются напрямую.</small>
+      <div class="demand-research-band">
+        <div class="demand-research-summary">
+          <span>НЕЗАВИСИМОЕ ПОДТВЕРЖДЕНИЕ</span>
+          <strong>47 метаанализов</strong>
+          <b>507 RCT · 206 873 участника</b>
+          <p><em>+1 329</em> шагов в день благодаря цифровому сопровождению</p>
+        </div>
+        <div class="demand-mechanics">
+          <span>МЕХАНИКА ПОВТОРНОЙ ПОЛЬЗЫ</span>
+          <div class="demand-mechanics-flow">
+            <div><b>01</b><strong>План</strong><small>что делать сегодня</small></div>
+            <div><b>02</b><strong>Простой факт</strong><small>голос, текст или трекер</small></div>
+            <div><b>03</b><strong>Прогресс</strong><small>результат и обратная связь</small></div>
+            <div><b>04</b><strong>Поддержка</strong><small>ИИ, тренер, друзья, напоминания</small></div>
+            <div class="demand-mechanics-next"><b>05</b><strong>Следующий план</strong><small>факт меняет рекомендацию</small></div>
+          </div>
         </div>
       </div>
+      <div class="demand-combined-conclusion"><strong>Исследования подтверждают общий эффект цифрового сопровождения.</strong><span>Fit собирает его механики в одном постоянном цикле.</span></div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Доказать не будущий масштаб Fit, а существование массовой категории и повторяющейся пользовательской потребности.
+Одновременно доказать существование массовой категории и показать, за счёт какой повторяющейся пользы цифровое сопровождение влияет на поведение.
 
 ЧТО ГОВОРИМ
-Мы не просим поверить, что люди внезапно захотят пользоваться цифровым спортивным помощником. Они уже это делают. Strava доказала массовый спрос на фиксацию прогресса и социальную мотивацию. Keep — на сочетание тренировочного контента, данных, подписки и спортивных товаров. Hevy — ближайший продуктовый аналог Fit: дневник силовых тренировок, аналитика прогресса и социальный контур уже выросли до 16 миллионов пользователей и 112 миллионов зафиксированных тренировок за один год. Trainerize доказал спрос на постоянную цифровую связку тренера и клиента.
+Мы не просим поверить, что люди внезапно захотят пользоваться цифровым спортивным помощником. Они уже это делают. Strava доказала массовый спрос на фиксацию прогресса и социальную мотивацию. Keep — на сочетание тренировочного контента, данных и товаров. Hevy — ближайший продуктовый аналог Fit: дневник силовых тренировок, аналитика прогресса и социальный контур уже выросли до 16 миллионов пользователей и 112 миллионов зафиксированных тренировок за один год. Fitness Online подтверждает локальный спрос: карточка приложения в Google Play показывает более 5 миллионов установок на Android. Trainerize доказал спрос на постоянную цифровую связку тренера и клиента.
 
-Эти показатели нельзя складывать или напрямую сравнивать: здесь одновременно показаны спортсмены, пользователи, MAU и клиенты. Их задача — подтвердить масштаб разных моделей внутри одной категории, а не спрогнозировать аудиторию Fit.
+Крупный обзор 47 метаанализов, включивший 507 рандомизированных исследований и более 206 тысяч участников, показал измеримое увеличение физической активности от eHealth- и mHealth-интервенций. В среднем это плюс 1 329 шагов в день, 44,8 минуты общей активности и 55,1 минуты активности средней и высокой интенсивности в неделю.
+
+Fit опирается на понятную механику повторной пользы: дать план, максимально просто принять факт, показать прогресс, поддержать и превратить результат в следующий план. Исследование подтверждает совокупный эффект цифрового сопровождения, а не причинный вклад каждого отдельного элемента петли.
 
 ОБЯЗАТЕЛЬНАЯ ОГОВОРКА
-Масштаб аналогов не гарантирует успех Fit. Он снимает другой риск: потребность не нужно создавать с нуля. Пилот должен проверить, способен ли Яндекс собрать доказанные механики в более цельный локальный продукт и получить удержание W4.
+Показатели нельзя складывать или напрямую сравнивать: здесь показаны спортсмены, пользователи, MAU, установки и клиенты. Масштаб аналогов и результаты исследований не гарантируют успех Fit. Они снимают риск отсутствия потребности; пилот проверяет, способен ли Яндекс собрать доказанные механики в цельный локальный продукт и получить удержание W4.
 
 ПЕРЕХОД
-Масштаб подтверждает спрос на категорию. Следующий вопрос — какие продуктовые механики действительно помогают людям возвращаться к тренировкам.
+Потребность и эффект цифрового сопровождения подтверждены. Но сегодня весь спортивный путь распределён между разными сервисами — здесь появляется возможность Яндекса.
 
 [Sources]
 Strava, About — более 195 млн спортсменов: https://press.strava.com/about
-Strava, пресс-релиз 19.08.2025 — рост новых пользователей более чем на 50% за предыдущий год: https://press.strava.com/en-gb/articles/strava-finalizes-leadership-team-for-next-stage-of-growth
 Keep Inc., Annual Report 2025 — средний MAU 21,8 млн, 2,7 млн подписчиков и penetration 12,6%: https://manager.wisdomir.com/files/676/2026/0423/20260423171501_44046414_en.pdf
 Hevy, Partners — 16+ млн пользователей, 112+ млн тренировок в 2025 году, рейтинг 4,9 по 590+ тыс. оценок: https://www.hevyapp.com/partners/
-ABC Trainerize, About — 400 тыс. тренеров, 1,6 млн клиентов, 5 млн тренировок и 23 млн приёмов пищи в месяц: https://www.trainerize.com/about/</aside>
+Fitness Online, Google Play — 5 млн+ установок Android: https://play.google.com/store/apps/details?hl=ru&amp;id=fitness.online.app
+ABC Trainerize, About — 400 тыс. тренеров, 1,6 млн клиентов, 5 млн тренировок и 23 млн приёмов пищи в месяц: https://www.trainerize.com/about/
+Singh et al., 2024, systematic umbrella review and meta-meta-analysis — 47 метаанализов, 507 RCT, 206 873 участника; +1 329 шагов/день, +44,8 минуты общей активности и +55,1 минуты MVPA в неделю: https://pmc.ncbi.nlm.nih.gov/articles/PMC11226451/
+Laranjo et al., 2021, British Journal of Sports Medicine — приложения и трекеры увеличивали активность в среднем на 1 850 шагов/день; персонализация и текстовые сообщения ассоциировались с более выраженным эффектом: https://bjsm.bmj.com/content/55/8/422</aside>
     </section>
 
     <section class="slide monetization-proof-slide" data-section="Доказанная монетизация">
@@ -3189,7 +3361,7 @@ ABC Trainerize, 24.05.2022 — достижение $20 млн ARR: https://www.
 ABC Trainerize, итоги 2024 — $186 млн продаж через Payments: https://www.trainerize.com/blog/abc-trainerize-wrapped-2024/</aside>
     </section>
 
-    <section class="slide behavior-proof-slide" data-section="Доказанный спрос">
+    <section class="slide behavior-proof-slide legacy-behavior-slide" data-section="Доказанный спрос">
       <div class="eyebrow">07 · ПОЧЕМУ ВОЗВРАЩАЮТСЯ</div>
       <h2>Люди возвращаются, когда приложение превращает данные в следующий полезный шаг</h2>
       <div class="research-proof">
@@ -4223,7 +4395,7 @@ const valueSlide = document.querySelector('.value-slide')
 if (monetizationSlide && valueSlide) valueSlide.after(monetizationSlide)
 document.querySelectorAll('.competitor-material-slide').forEach(slide => deck.appendChild(slide))
 document.querySelectorAll('.late-material-slide').forEach(slide => deck.appendChild(slide))
-const slides = [...document.querySelectorAll('.slide:not(.legacy-competitor-slide)')]
+const slides = [...document.querySelectorAll('.slide:not(.legacy-competitor-slide):not(.legacy-behavior-slide)')]
 const counter = document.getElementById('counter')
 const sectionName = document.getElementById('sectionName')
 const progressFill = document.getElementById('progressFill')
