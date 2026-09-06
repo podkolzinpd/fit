@@ -53,6 +53,13 @@ const SOURCE_TRANSPORT_ERROR_CODES = new Set([
   'SELF_SIGNED_CERT_IN_CHAIN',
   'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
 ])
+const REHEARSAL_ERROR_CODE_PATTERN =
+  /^[a-z][a-z0-9_]*(?::[A-Za-z0-9_.-]+)?$/
+const SAFE_UNEXPECTED_ERROR_NAMES = new Set([
+  'Error',
+  'RangeError',
+  'TypeError',
+])
 
 export class RemoteTenantRehearsalError extends Error {
   constructor(readonly code: string) {
@@ -76,6 +83,33 @@ export function readSourceDatabaseFailureCode(error: unknown): string {
     return `source_database_failed:transport_${error.code}`
   }
   return 'source_database_failed'
+}
+
+export function readRemoteTenantRehearsalFailureCode(error: unknown): string {
+  if (
+    error instanceof RemoteTenantRehearsalError
+    || error instanceof TenantMigrationArtifactError
+    || error instanceof TenantMigrationError
+  ) return error.code
+  if (
+    isRecord(error)
+    && typeof error.name === 'string'
+    && (
+      error.name === 'RemoteTenantRehearsalError'
+      || error.name === 'TenantMigrationArtifactError'
+      || error.name === 'TenantMigrationError'
+    )
+    && typeof error.code === 'string'
+    && REHEARSAL_ERROR_CODE_PATTERN.test(error.code)
+  ) return error.code
+
+  const sourceCode = readSourceDatabaseFailureCode(error)
+  if (sourceCode !== 'source_database_failed') return sourceCode
+  if (
+    error instanceof Error
+    && SAFE_UNEXPECTED_ERROR_NAMES.has(error.name)
+  ) return `unexpected_failure:${error.name}`
+  return 'unexpected_failure'
 }
 
 function requireEnvironment(
