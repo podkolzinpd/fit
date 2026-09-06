@@ -171,10 +171,16 @@ export function buildSupabaseSourceConfig(
   ) throw new RemoteTenantRehearsalError('source_url_invalid')
 
   poolerUrl.password = password
+  let ca: string
+  try {
+    ca = readCertificate(certificatePath)
+  } catch {
+    throw new RemoteTenantRehearsalError('source_certificate_unreadable')
+  }
   return {
     connectionString: poolerUrl.href,
     ssl: {
-      ca: readCertificate(certificatePath),
+      ca,
       rejectUnauthorized: true,
     },
   }

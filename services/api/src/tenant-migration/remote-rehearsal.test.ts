@@ -61,6 +61,15 @@ describe('remote tenant rehearsal configuration', () => {
     )).toThrowError(RemoteTenantRehearsalError)
   })
 
+  it('reports an unreadable source certificate without leaking its path', () => {
+    expect(() => buildSupabaseSourceConfig(
+      SOURCE_ENVIRONMENT,
+      () => { throw new Error('/private/certificate/path') },
+    )).toThrowError(
+      new RemoteTenantRehearsalError('source_certificate_unreadable'),
+    )
+  })
+
   it('keeps audit source-only and validates stage settings for dry-run', () => {
     const audit = readRemoteTenantRehearsalSettings(
       SOURCE_ENVIRONMENT,
