@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(21);
 
 select ok(
   exists(select 1 from pg_matviews where schemaname = 'analytics' and matviewname = 'client_overview'),
@@ -65,6 +65,16 @@ insert into public.workouts (id, trainer_id, client_id, created_by, updated_by, 
 insert into public.client_progress (id, trainer_id, client_id, created_by, updated_by, recorded_on, updated_at) values
   ('73000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000003', '71000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', '2026-08-09', '2026-08-09 09:00:00+00');
 
+-- Счётчики тренировок клиента (workouts_total/planned/in_progress/done):
+-- клиент A получает по одной тренировке каждого статуса плюс 'cancelled',
+-- чтобы отдельно проверить, что workouts_total считает ВСЕ статусы, а не
+-- только сумму трёх явных колонок. Клиент D остаётся без единой
+-- тренировки — проверяет coalesce(..., 0) вместо null.
+insert into public.workouts (id, trainer_id, client_id, created_by, updated_by, workout_date, status, started_at, completed_at, updated_at) values
+  ('72000000-0000-4000-8000-000000000005', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '2026-08-10', 'in_progress', '2026-08-10 09:00:00+00', null, '2026-08-10 09:00:00+00'),
+  ('72000000-0000-4000-8000-000000000006', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '2026-08-11', 'done', '2026-08-11 08:00:00+00', '2026-08-11 09:00:00+00', '2026-08-11 09:00:00+00'),
+  ('72000000-0000-4000-8000-000000000007', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '2026-08-12', 'cancelled', null, null, '2026-08-12 09:00:00+00');
+
 refresh materialized view analytics.client_overview;
 
 select is(
@@ -118,6 +128,41 @@ select is(
   (select last_client_activity_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
   '2026-08-09 09:00:00+00'::timestamptz,
   'last_client_activity_at is greatest() of self-edited workout and progress entry'
+);
+
+select is(
+  (select workouts_total from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000001'),
+  4::bigint,
+  'workouts_total counts all non-deleted workouts of any status (planned + in_progress + done + cancelled)'
+);
+select is(
+  (select workouts_planned from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000001'),
+  1::bigint, 'workouts_planned counts only status = planned'
+);
+select is(
+  (select workouts_in_progress from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000001'),
+  1::bigint, 'workouts_in_progress counts only status = in_progress'
+);
+select is(
+  (select workouts_done from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000001'),
+  1::bigint, 'workouts_done counts only status = done'
+);
+
+select is(
+  (select workouts_total from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000004'),
+  0::bigint, 'client with zero workouts gets workouts_total = 0, not null'
+);
+select is(
+  (select workouts_planned from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000004'),
+  0::bigint, 'client with zero workouts gets workouts_planned = 0, not null'
+);
+select is(
+  (select workouts_in_progress from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000004'),
+  0::bigint, 'client with zero workouts gets workouts_in_progress = 0, not null'
+);
+select is(
+  (select workouts_done from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000004'),
+  0::bigint, 'client with zero workouts gets workouts_done = 0, not null'
 );
 
 select * from finish();
