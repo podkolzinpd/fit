@@ -2680,6 +2680,147 @@ h3 {
 .social-phases p { margin-top: 22px; color: var(--ink); font-size: 20px; line-height: 1.38; }
 .social-phases small { display: block; margin-top: 26px; color: var(--muted); font-size: 15px; line-height: 1.35; }
 
+/* Two workstreams start together: product with AI and audience with community. */
+.load-context-slide h2 { max-width: 1320px; }
+.roadmap-intro {
+  position: absolute;
+  left: 92px;
+  top: 188px;
+  max-width: 1180px;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1.35;
+}
+.parallel-roadmap {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 245px;
+}
+.roadmap-lane {
+  min-height: 190px;
+  display: grid;
+  grid-template-columns: 260px repeat(3, 1fr);
+  border-top: 2px solid var(--ink);
+}
+.roadmap-lane:last-child { border-bottom: 1px solid var(--line); }
+.roadmap-lane-title,
+.roadmap-step { padding: 23px 25px 18px 0; }
+.roadmap-step {
+  padding-left: 25px;
+  border-left: 1px solid var(--line);
+}
+.roadmap-lane-title span,
+.roadmap-step b,
+.monetization-gate span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .08em;
+}
+.roadmap-lane-title strong {
+  display: block;
+  margin-top: 34px;
+  max-width: 210px;
+  font-size: 22px;
+  line-height: 1.25;
+}
+.roadmap-step strong {
+  display: block;
+  margin-top: 23px;
+  font-size: 21px;
+  line-height: 1.25;
+}
+.roadmap-step p {
+  margin-top: 11px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.35;
+}
+.roadmap-step-primary { background: var(--paper-2); }
+.monetization-gate {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  bottom: 70px;
+  min-height: 118px;
+  display: grid;
+  grid-template-columns: 270px 1fr;
+  gap: 30px;
+  align-items: center;
+  padding: 22px 28px;
+  border-radius: 14px;
+  color: var(--white);
+  background: var(--ink);
+}
+.monetization-gate span { color: var(--dark-muted); }
+.monetization-gate strong { font-size: 19px; line-height: 1.35; }
+
+/* Competitive summary: status of Fit versus established products. */
+.market-comparison-slide h2 { max-width: 1390px; font-size: 46px; }
+.comparison-legend {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 205px;
+  min-height: 40px;
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.comparison-legend span { color: var(--ink); font-weight: 750; letter-spacing: .08em; }
+.comparison-legend strong { padding-left: 18px; border-left: 1px solid var(--line); color: var(--ink); }
+.comparison-legend em { margin-left: auto; font-style: normal; }
+.market-compare-table {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 250px;
+  border-top: 2px solid var(--ink);
+}
+.market-compare-table > div {
+  min-height: 47px;
+  display: grid;
+  grid-template-columns: 270px 140px repeat(5, 1fr);
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+}
+.market-compare-table span,
+.market-compare-table strong,
+.market-compare-table b,
+.market-compare-table em {
+  display: flex;
+  align-items: center;
+  padding: 7px 13px;
+  border-left: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.2;
+  font-style: normal;
+}
+.market-compare-table span { padding-left: 0; border-left: 0; font-weight: 650; }
+.market-compare-table strong {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .06em;
+}
+.market-compare-table em { color: var(--muted); }
+.market-compare-table b { font-size: 12px; }
+.market-compare-head { min-height: 52px !important; }
+.market-compare-head span { color: var(--muted); font-size: 11px; letter-spacing: .07em; }
+.market-compare-head strong:nth-child(2) { color: var(--white); background: var(--ink); }
+.fit-now { color: var(--white); background: var(--ink); }
+.fit-pilot { background: var(--paper-2); }
+.fit-next { color: var(--muted); }
+.fit-scale { color: var(--muted); font-size: 11px !important; }
+
+/* Social mechanics now start in the pilot, not after it. */
+.acquisition-slide .channel-row { min-height: 57px; }
+.acquisition-slide .channel-stack { top: 229px; }
+.channel-community { border-top: 2px solid var(--ink) !important; }
+.retention-role li { min-height: 48px; padding: 8px 0; }
+
 @media print {
   @page { size: 16in 9in; margin: 0; }
   html, body { overflow: visible; background: #fff; }
@@ -2891,48 +3032,35 @@ Fit остаётся отдельным приложением, потому ч�
     </section>
 
     <section class="slide load-context-slide" data-section="Продукт">
-      <div class="eyebrow">04A · ПЕРСОНАЛЬНЫЕ РЕКОМЕНДАЦИИ</div>
-      <h2>Fit учитывает всю нагрузку и предлагает следующий шаг</h2>
-      <div class="sport-depth">
-        <div>
-          <span>ДЕТАЛЬНО В ПЕРВОЙ ОЧЕРЕДИ</span>
-          <strong>Силовые и фитнес<br>Бег<br>Велосипед<br>Плавание</strong>
-          <p>Структура тренировки, объём, интенсивность, прогресс и следующий план.</p>
+      <div class="eyebrow">04A · ПЛАН РАЗВИТИЯ</div>
+      <h2>ИИ и рост аудитории запускаются параллельно</h2>
+      <p class="roadmap-intro">Базовая петля уже работает. К пилоту одновременно усиливаем продукт и создаём социальное ядро.</p>
+      <div class="parallel-roadmap">
+        <div class="roadmap-lane roadmap-product">
+          <div class="roadmap-lane-title"><span>ПРОДУКТ</span><strong>Полезность каждой тренировки</strong></div>
+          <div class="roadmap-step"><b>СЕЙЧАС</b><strong>Отдельное приложение</strong><p>План, факт, прогресс и разбор тренировки из голоса или текста.</p></div>
+          <div class="roadmap-step roadmap-step-primary"><b>К ПИЛОТУ</b><strong>ИИ-конструктор</strong><p>Готовая тренировка, недельный план и адаптация следующего шага.</p></div>
+          <div class="roadmap-step"><b>СЛЕДОМ</b><strong>Тренер и онлайн-занятия</strong><p>Подбор, контекстный чат, программы, индивидуальные и групповые онлайн-тренировки.</p></div>
         </div>
-        <div>
-          <span>ПО ОБЩЕЙ МОДЕЛИ НАГРУЗКИ</span>
-          <strong>Функциональные тренировки и HIIT<br>Ходьба и походы<br>Йога, мобильность и растяжка</strong>
-          <p>Длительность, интенсивность, восстановление и место активности в общем плане.</p>
-        </div>
-        <div>
-          <span>БЫСТРАЯ ФИКСАЦИЯ</span>
-          <strong>Футбол, падел, теннис<br>Бокс и единоборства<br>Лыжи, баскетбол и другие виды</strong>
-          <p>Активность попадает в профиль и влияет на рекомендации без отдельного глубокого модуля.</p>
+        <div class="roadmap-lane roadmap-growth">
+          <div class="roadmap-lane-title"><span>АУДИТОРИЯ И СООБЩЕСТВО</span><strong>Рост с первого дня</strong></div>
+          <div class="roadmap-step roadmap-step-primary"><b>К ПИЛОТУ</b><strong>Социальное ядро</strong><p>Спортивный профиль, лента результатов, друзья, группы тренера и челленджи.</p></div>
+          <div class="roadmap-step"><b>ПАРАЛЛЕЛЬНО</b><strong>Дистрибуция Яндекса</strong><p>Поиск, Карты, Музыка, Алиса, Плюс, тренеры и приглашения друзей.</p></div>
+          <div class="roadmap-step"><b>ПОСЛЕ ПЛОТНОСТИ</b><strong>Открытые сообщества</strong><p>Авторы, события и продвижение тренеров, программ и спортивного контента.</p></div>
         </div>
       </div>
-      <div class="recommendation-context">
-        <span>КОНТЕКСТ РЕКОМЕНДАЦИИ</span>
-        <strong>Сон и восстановление</strong><strong>Пульс и нагрузка</strong><strong>Питание</strong><strong>Цель, история и самочувствие</strong>
-      </div>
-      <div class="recommendation-example">
-        <span>ПРИМЕР</span>
-        <strong>Вчера была интенсивная игра в футбол, нагрузка на ноги выше обычного, а сон короче вашей нормы. Сегодня Fit предлагает верх тела или восстановительное занятие.</strong>
-      </div>
+      <div class="monetization-gate"><span>КОММЕРЦИЯ ПОСЛЕ УДЕРЖАНИЯ</span><strong>Онлайн-программы и тренировки, продвижение тренеров и авторов, товары, услуги и реклама подключаются после подтверждения W4 и активности сообщества.</strong></div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Показать конечную продуктовую ценность: Fit собирает разрозненные данные о нагрузке и превращает их в понятное следующее действие.
+Показать порядок развития без ложного выбора между продуктом и ростом аудитории.
 
 ЧТО ГОВОРИМ
-Мы не строим одинаково глубокий модуль для каждого вида спорта. В первой очереди подробно поддерживаем силовые тренировки и фитнес, бег, велосипед и плавание. Для функциональных занятий, ходьбы, походов, йоги и растяжки используем общую модель нагрузки. Остальные активности можно быстро добавить или импортировать, чтобы они влияли на общий спортивный контекст.
+Базовая клиентская петля уже работает в отдельном приложении. К пилоту продуктовая команда сразу делает ИИ-конструктор, который создаёт готовую тренировку и недельный план. Параллельно growth-команда набирает аудиторию через сервисы Яндекса, тренеров и приглашения друзей, а продукт создаёт социальное ядро из профилей, ленты результатов, групп и челленджей.
 
-Рекомендация учитывает не только тренировочный факт. При наличии разрешения пользователя Fit использует сон, пульс, восстановление, питание, цель, историю и самочувствие. Пользователь получает объяснимый следующий шаг, а не ещё один экран с данными.
+Следующим расширением становятся подбор тренера, контекстный мессенджер и онлайн-тренировки. Эта работа может пересекаться по времени с пилотом, но не должна задерживать запуск базовой клиентской петли и ИИ.
 
-ГРАНИЦЫ
-Fit не ставит медицинские диагнозы. Коммерческое предложение не маскируется под рекомендацию ИИ. Глубина поддержки нового вида спорта увеличивается только после подтверждения спроса и удержания.
+Монетизацию не ставим первой целью запуска. Сначала доказываем W4 и активность сообщества. После этого подключаем платные программы и онлайн-тренировки, продвижение тренеров и авторов, товары, услуги и рекламные форматы.
 
-[Sources]
-Apple HealthKit, типы данных тренировок, сна и питания: https://developer.apple.com/documentation/healthkit
-Apple Watch, Training Load: https://support.apple.com/en-ie/guide/watch/apde4c07a6cf/watchos
-Strava, поддерживаемые виды спорта: https://support.strava.com/en-us/articles/15402005-supported-sport-types-on-strava</aside>
+Глубина поддержки видов спорта и механика персональных рекомендаций вынесены в материалы.</aside>
     </section>
 
     <section class="slide demand-proof-slide" data-section="Доказанный спрос">
@@ -3020,8 +3148,8 @@ ABC Trainerize, About — 400 тыс. тренеров, 1,6 млн клиент�
         </div>
       </div>
       <div class="revenue-conclusion">
-        <span>ВЫВОД</span>
-        <div><strong>Пользовательская потребность монетизируется разными способами. Fit может соединить их в одной модели.</strong><small>Все суммы в USD. Модельные показатели отмечены отдельно; Keep пересчитан по среднему курсу ФРС за 2025 год.</small></div>
+        <span>ПОРЯДОК FIT</span>
+        <div><strong>Рынок доказал модели заработка. Fit подключает их после подтверждения удержания и активности сообщества.</strong><small>Все суммы в USD. Модельные показатели отмечены отдельно; Keep пересчитан по среднему курсу ФРС за 2025 год.</small></div>
       </div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
 Показать, что рынок доказал не только пользовательский спрос, но и способность зарабатывать на цифровом сопровождении спорта.
@@ -3033,6 +3161,9 @@ ABC Trainerize, About — 400 тыс. тренеров, 1,6 млн клиент�
 
 ОБЯЗАТЕЛЬНАЯ ОГОВОРКА
 Эти показатели не переносятся напрямую в модель Fit. Они доказывают, что ценность уже оплачивается рынком. Конкретный revenue mix Fit и доход на активного пользователя должны проверяться пилотом.
+
+ПОРЯДОК ДЛЯ FIT
+Монетизация не является первой задачей запуска. Продукт и growth параллельно строят ИИ, удержание и активное сообщество. Коммерческие механики включаем после подтверждения W4 и достаточной плотности взаимодействий.
 
 ПЕРЕХОД
 Категория доказала спрос и деньги. Независимые исследования объясняют, почему цифровое сопровождение помогает людям больше двигаться и возвращаться к тренировкам.
@@ -3314,6 +3445,41 @@ ABC Trainerize About: https://www.trainerize.com/about/
 ABC Trainerize ARR: https://www.trainerize.com/blog/vancouver-startup-trainerize-levels-up-its-leadership-sets-its-sights-on-50m-arr-usd/
 ABC Trainerize 2024: https://www.trainerize.com/blog/abc-trainerize-wrapped-2024/
 App Store и экраны: https://apps.apple.com/us/app/fitness-app-abc-trainerize/id516851502</aside>
+    </section>
+
+    <section class="slide market-comparison-slide" data-section="Конкуренты">
+      <div class="eyebrow">08F · СРАВНЕНИЕ ПРОДУКТОВ</div>
+      <h2>Базовая петля Fit готова. Остальные контуры входят в пилот и развитие</h2>
+      <div class="comparison-legend"><span>FIT</span><strong>Сейчас</strong><strong>К пилоту</strong><strong>Следом</strong><strong>После аудитории</strong><em>Конкуренты: есть, частично или нет</em></div>
+      <div class="market-compare-table">
+        <div class="market-compare-head"><span>ВОЗМОЖНОСТЬ</span><strong>FIT</strong><strong>HEVY</strong><strong>FITNESS ONLINE</strong><strong>STRAVA</strong><strong>KEEP</strong><strong>TRAINERIZE</strong></div>
+        <div><span>План, факт и прогресс</span><b class="fit-now">Сейчас</b><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em></div>
+        <div><span>ИИ-конструктор тренировок</span><b class="fit-pilot">К пилоту</b><em>Частично</em><em>Нет</em><em>Частично</em><em>Частично</em><em>Есть</em></div>
+        <div><span>Единый профиль разных видов спорта</span><b class="fit-next">Следом</b><em>Частично</em><em>Частично</em><em>Есть</em><em>Частично</em><em>Частично</em></div>
+        <div><span>Лента и спортивные сообщества</span><b class="fit-pilot">К пилоту</b><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em></div>
+        <div><span>Рабочее место тренера</span><b class="fit-next">Следом</b><em>Есть</em><em>Частично</em><em>Нет</em><em>Частично</em><em>Есть</em></div>
+        <div><span>Подбор тренера</span><b class="fit-next">Следом</b><em>Частично</em><em>Частично</em><em>Нет</em><em>Нет</em><em>Частично</em></div>
+        <div><span>Чат, связанный с планом</span><b class="fit-next">Следом</b><em>Есть</em><em>Есть</em><em>Нет</em><em>Частично</em><em>Есть</em></div>
+        <div><span>Онлайн-тренировки 1:1 и в группах</span><b class="fit-next">Следом</b><em>Нет</em><em>Частично</em><em>Нет</em><em>Есть</em><em>Есть</em></div>
+        <div><span>Питание и восстановление</span><b class="fit-next">Следом</b><em>Нет</em><em>Есть</em><em>Частично</em><em>Есть</em><em>Есть</em></div>
+        <div><span>Продвижение тренеров и авторов</span><b class="fit-scale">После аудитории</b><em>Частично</em><em>Частично</em><em>Нет</em><em>Частично</em><em>Есть</em></div>
+        <div><span>Товары и спортивные услуги</span><b class="fit-scale">После аудитории</b><em>Нет</em><em>Частично</em><em>Нет</em><em>Есть</em><em>Частично</em></div>
+      </div>
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Честно показать, что уже сделано в Fit, что должно войти в пилот и какие контуры развиваются после него. Сравнение не доказывает уникальность каждой отдельной функции: преимущество должно возникнуть из их связи с дистрибуцией и коммерческими сервисами Яндекса.
+
+КАК ЧИТАТЬ
+В колонке Fit показан статус разработки: «Сейчас», «К пилоту», «Следом» или «После аудитории». Для конкурентов «Частично» означает ограниченный сценарий, отдельный продукт, дополнение или отсутствие единого контура.
+
+КЛЮЧЕВОЙ ВЫВОД
+Fit уже закрывает клиентскую петлю плана, факта и прогресса. Самый крупный разрыв до целевого продукта находится в социальной плотности, ИИ-конструкторе, тренерском контуре и онлайн-занятиях. Коммерческие поверхности не должны опережать удержание.
+
+[Sources]
+Hevy product and coach platform: https://www.hevyapp.com/product/ and https://www.hevyapp.com/features/trainer-platform/
+Fitness Online product and community: https://www.fitnessonline.app/en/
+Strava supported sports and subscription features: https://support.strava.com/en-us/articles/15402005-supported-sport-types-on-strava and https://support.strava.com/en-us/articles/15402044-strava-subscription-features
+Keep product: https://www.gotokeep.com/
+ABC Trainerize features, AI builder, messaging and video coaching: https://www.trainerize.com/features/</aside>
     </section>
 
     <section class="slide competitor-single-slide competitor-material-slide" data-section="Материалы">
@@ -3670,8 +3836,9 @@ Garmin, 22.07.2026 — приобретение TrainingPeaks и TrainHeroic; ф
         <div class="channel-row channel-pilot"><b>01</b><strong>Тренеры и подбор</strong><span>тренер приводит клиента или Fit подбирает специалиста по цели; бонус начисляется за активного W4</span><em>ПИЛОТ</em></div>
         <div class="channel-row channel-pilot"><b>02</b><strong>Поиск · Директ · Карты</strong><span>ловят запрос или географический момент и ведут в программу Fit</span><em>ПИЛОТ</em></div>
         <div class="channel-row channel-pilot"><b>03</b><strong>Музыка · Алиса</strong><span>предлагают начать или записать тренировку в момент занятия</span><em>ПИЛОТ</em></div>
-        <div class="channel-row channel-retain"><b>04</b><strong>Плюс · пуши · персональные напоминания</strong><span>возвращают к следующей тренировке через план, факт и прогресс</span><em>УДЕРЖАНИЕ</em></div>
-        <div class="channel-row channel-scale"><b>05</b><strong>Рефералы · сообщества · UrbanAds · Go</strong><span>друзья, челленджи, локальные события и контент масштабируют сценарии после подтверждения удержания</span><em>МАСШТАБ</em></div>
+        <div class="channel-row channel-community"><b>04</b><strong>Лента · друзья · сообщества</strong><span>результаты, приглашения, группы тренеров и челленджи создают органический рост с запуска</span><em>ПИЛОТ</em></div>
+        <div class="channel-row channel-retain"><b>05</b><strong>Плюс · пуши · напоминания</strong><span>возвращают к следующей тренировке через план, факт и прогресс</span><em>УДЕРЖАНИЕ</em></div>
+        <div class="channel-row channel-scale"><b>06</b><strong>UrbanAds · Go · авторы</strong><span>масштабируют подтверждённые сценарии через события и спортивный контент</span><em>МАСШТАБ</em></div>
       </div>
       <div class="distribution-footer">
         <div><span>ЕДИНАЯ МЕТРИКА КАНАЛА</span><strong>Стоимость дополнительного активного пользователя W4 с учётом полной стоимости контакта</strong></div>
@@ -3689,7 +3856,9 @@ Garmin, 22.07.2026 — приобретение TrainingPeaks и TrainHeroic; ф
 
 Третий — момент занятия. Музыка и Алиса могут предложить начать, открыть план или записать тренировку без разрыва контекста.
 
-После первого действия Плюс, пуши и персональные напоминания возвращают человека к следующей тренировке. Рефералы, друзья, сообщества, челленджи, локальные события, UrbanAds, Go и контент подключаем только после подтверждения удержания и экономики.
+Социальное ядро создаём с запуска, а не после набора аудитории. Пользователь делится результатом, приглашает друзей, вступает в группу тренера и участвует в челлендже. Так продукт получает органическое распространение параллельно с дистрибуцией Яндекса.
+
+После первого действия Плюс, пуши и персональные напоминания возвращают человека к следующей тренировке. UrbanAds, Go, крупные события и продвижение авторов масштабируют только те сценарии, где уже подтверждены удержание и экономика.
 
 Мы не сравниваем каналы по кликам и установкам. Единая метрика — полная стоимость дополнительного активного пользователя W4 относительно контрольной группы.
 
@@ -3713,7 +3882,8 @@ UrbanAds: https://yandex.ru/support/urbanads/ru/</aside>
             <li>Календарь и шаблоны программ</li>
             <li>Факт, отчёты и обратная связь</li>
             <li>ИИ для рутины и аналитики</li>
-            <li>Контекстный чат и поиск учеников</li>
+            <li>Контекстный чат и онлайн-занятия</li>
+            <li>Профиль, поиск учеников и продажа программ</li>
           </ul>
         </article>
         <article class="retention-role client-role">
@@ -3724,6 +3894,7 @@ UrbanAds: https://yandex.ru/support/urbanads/ru/</aside>
             <li>Календарь и план тренировок</li>
             <li>Питание, нагрузка и восстановление</li>
             <li>Подбор тренера и чат внутри плана</li>
+            <li>Индивидуальные и групповые онлайн-тренировки</li>
           </ul>
         </article>
       </div>
@@ -3735,7 +3906,7 @@ UrbanAds: https://yandex.ru/support/urbanads/ru/</aside>
 ЧТО ГОВОРИМ
 У клиента и тренера разные причины возвращаться, но они работают на один цикл. Клиент хранит здесь спортивный профиль: планы, факты, прогресс и следующий шаг. Чем больше подтверждённых тренировок, тем точнее аналитика и рекомендации. Самостоятельный клиент получает ценность от ИИ, календаря и прогресса; клиент с тренером — ещё и от персональной обратной связи.
 
-Для тренера Fit становится рабочим местом: единая карточка спортсмена, календарь и шаблоны программ, сбор отчётов, обратная связь, контекстный мессенджер и ИИ для рутины. Сообщение связано с тренировкой, упражнением, фактом выполнения или изменением плана, поэтому общение не отрывается от спортивного контекста.
+Для тренера Fit становится рабочим местом: единая карточка спортсмена, календарь и шаблоны программ, сбор отчётов, обратная связь, контекстный мессенджер и ИИ для рутины. Сообщение связано с тренировкой, упражнением, фактом выполнения или изменением плана, поэтому общение не отрывается от спортивного контекста. В этом же контуре тренер проводит индивидуальные и групповые онлайн-занятия, размещает программы и развивает профессиональный профиль.
 
 Платформа подбора работает в обе стороны. Тренер приглашает существующих клиентов, а пользователь может найти нового специалиста по цели, уровню, месту, расписанию и бюджету. В пилоте начинаем с 30–50 отобранных тренеров, проверенных анкет, чата и пробной тренировки. Открытые отклики, отзывы и полноценный платёжный маркетплейс развиваем после проверки плотности спроса и качества подбора.
 
@@ -3747,14 +3918,18 @@ UrbanAds: https://yandex.ru/support/urbanads/ru/</aside>
 Если эта петля удержания работает, Fit создаёт для Яндекса ценность сразу на трёх уровнях.
 
 НЕ ОБЕЩАЕМ
-Не называем это доказанным сетевым эффектом. Коммуникация, поиск учеников, расширенная геймификация и социальная лента — направления развития после проверки базового W4.</aside>
+Не называем это доказанным сетевым эффектом. Социальное ядро входит в пилот, но открытое продвижение авторов, коммерческие витрины и масштабные события подключаются после проверки базового W4 и плотности аудитории.
+
+[Sources]
+ABC Trainerize, встроенные сообщения, AI Workout Builder, индивидуальные и групповые видеозвонки: https://www.trainerize.com/features/
+Fitness Online, лента, сообщения, планы и обратная связь от тренеров: https://www.fitnessonline.app/en/</aside>
     </section>
 
     <section class="slide value-slide" data-section="Ценность Яндексу">
       <div class="eyebrow">12 · ЦЕННОСТЬ ДЛЯ ЯНДЕКСА</div>
       <h2>Fit создаёт три уровня ценности для Яндекса</h2>
       <div class="value-planes">
-        <div class="value-plane direct"><span>01</span><h3>Прямая выручка Fit</h3><p>Комиссии с услуг и программ, реклама, B2B и профессиональные функции.</p></div>
+        <div class="value-plane direct"><span>01</span><h3>Прямая выручка Fit</h3><p>Онлайн-тренировки, программы, продвижение тренеров и авторов, реклама и B2B.</p></div>
         <div class="value-plane incremental"><span>02</span><h3>Инкрементальная маржа сервисов</h3><p>Новые заказы Маркета, Еды, бронирований и других направлений.</p></div>
         <div class="value-plane strategic"><span>03</span><h3>Экосистемный эффект</h3><p>Удержание Плюса, частота использования и новый рекламный контекст.</p></div>
       </div>
@@ -3766,7 +3941,7 @@ UrbanAds: https://yandex.ru/support/urbanads/ru/</aside>
 ЧТО ГОВОРИМ
 Fit создаёт для Яндекса три уровня ценности, и их важно не смешивать.
 
-Первый — собственная выручка Fit: комиссии с релевантных транзакций, рекламные форматы, B2B и профессиональные функции.
+Первый — собственная выручка Fit после формирования активной аудитории: комиссии с онлайн-тренировок и программ, продвижение тренеров и авторов, рекламные форматы, B2B и профессиональные функции.
 
 Второй — дополнительная маржа других сервисов. Спортивный контекст создаёт новые заказы Маркета, Еды, бронирований и других направлений. Здесь считаем только действительно дополнительные транзакции, а не весь оборот пользователя.
 
@@ -4017,14 +4192,14 @@ ABC Trainerize, сообщения, голосовые сообщения, гр�
 
     <section class="slide appendix social-roadmap late-material-slide" data-section="Материалы">
       <div class="eyebrow">A12 · СОЦИАЛЬНЫЙ СЛОЙ</div>
-      <h2>Социальные механики развиваются после личной пользы</h2>
+      <h2>Социальное ядро развивается параллельно с продуктом</h2>
       <div class="social-phases">
-        <div><span>ЭТАП 1 · ПИЛОТ</span><strong>Близкий круг</strong><p>Тренер, партнёр, друзья, закрытая группа и совместная цель.</p><small>Проверяем влияние на W4 и возврат после пропуска.</small></div>
-        <div><span>ЭТАП 2</span><strong>Сообщества</strong><p>Челленджи, тематические группы, серии и достижения.</p><small>Запускаем после доказательства индивидуального удержания.</small></div>
-        <div><span>ЭТАП 3</span><strong>Открытая сеть</strong><p>Локальные события, публичная лента и авторы спортивного контента.</p><small>Масштабируем при достаточной плотности аудитории и модерации.</small></div>
+        <div><span>С ЗАПУСКА</span><strong>Социальное ядро</strong><p>Спортивный профиль, лента результатов, друзья, группа тренера и совместная цель.</p><small>Проверяем вклад в приглашения, W4 и возврат после пропуска.</small></div>
+        <div><span>ПО МЕРЕ РОСТА</span><strong>Сообщества и авторы</strong><p>Челленджи, тематические группы, онлайн-занятия и продвижение экспертов.</p><small>Развиваем при достаточной активности внутри отдельных сценариев.</small></div>
+        <div><span>ПОСЛЕ ПЛОТНОСТИ</span><strong>Открытая сеть и коммерция</strong><p>События, публичная лента, витрины программ, товаров и спортивных услуг.</p><small>Монетизируем после подтверждения удержания и правил модерации.</small></div>
       </div>
-      <p class="closing-line">Социальный слой усиливает полезный продукт, но не заменяет персональный план, прогресс и поддержку тренера.</p>
-      <aside class="speaker-notes">Публичную социальную сеть не включаем в обязательный объём пилота. Начинаем с доверенных связей, где польза и риски модерации понятнее.</aside>
+      <p class="closing-line">Социальное ядро входит в пилот вместе с ИИ. Открытые витрины и коммерция появляются после достаточной активности сообщества.</p>
+      <aside class="speaker-notes">Аудитория и ИИ развиваются параллельно. На старте создаём минимальное социальное ядро, которое помогает делиться результатами и приглашать близкий круг. Открытая площадка для продвижения себя, программ и товаров требует достаточной плотности аудитории, доверия и модерации.</aside>
     </section>
   </main>
 
