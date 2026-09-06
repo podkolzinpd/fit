@@ -93,3 +93,27 @@ test('Yandex ID app session restores and logs out in mobile WebKit', async ({ pa
   await expect.poll(() => revokeCount).toBe(1)
   await expect(page.evaluate(() => window.localStorage.getItem('fit.yandexAppSession.v1'))).resolves.toBeNull()
 })
+
+for (const account of [
+  { role: 'тренера', email: 'trainer@fit.local', home: /\/today$/, profile: '/profile' },
+  { role: 'клиента', email: 'client@fit.local', home: /\/me$/, profile: '/me/profile' },
+]) {
+  test(`выход ${account.role} не падает при обрыве серверного revoke`, async ({ page }) => {
+    await page.goto('/auth')
+    await page.getByLabel('Email').fill(account.email)
+    await page.getByLabel('Пароль').fill('FitLocal123!')
+    await page.getByRole('button', { name: 'Войти', exact: true }).click()
+    await expect(page).toHaveURL(account.home)
+    await page.route('**/auth/v1/logout*', (route) => route.abort('failed'))
+
+    await page.goto(account.profile)
+    await expect(page.getByRole('button', { name: 'Выйти', exact: true })).toBeVisible()
+    const pageErrors: string[] = []
+    page.on('pageerror', (error) => pageErrors.push(error.message))
+    await page.getByRole('button', { name: 'Выйти', exact: true }).click()
+
+    await expect(page).toHaveURL(/\/auth$/)
+    await page.waitForTimeout(250)
+    expect(pageErrors.filter((message) => /RepositoryError|Не удалось выйти/i.test(message))).toEqual([])
+  })
+}
