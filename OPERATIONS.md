@@ -87,6 +87,11 @@ Workflow `Rehearse Yandex tenant migration` запускается только 
 `FIT_TENANT_TRAINER_ID`. UUID не является workflow input и не выводится в
 команды или отчёт. Существующие `SUPABASE_PROJECT_ID` и
 `SUPABASE_DB_PASSWORD` дают source-доступ через связанный session pooler;
+TLS проверяется с `verify-full`-эквивалентной настройкой и публичным корневым
+сертификатом `services/api/certs/supabase-prod-ca-2021.crt`, опубликованным
+Supabase для hosted PostgreSQL. Системного CA bundle для Supavisor недостаточно;
+проверку сертификата отключать запрещено. Сертификат не является секретом, но
+при его ротации новый файл и fingerprint должны попасть в обычный review;
 target вызывается только через private `fit-stage-migration` с короткоживущим
 GitHub OIDC → Yandex IAM token.
 

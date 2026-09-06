@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { X509Certificate } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -16,6 +17,16 @@ const workflow = readFileSync(
 const container = readFileSync(
   join(repositoryRoot, 'infra', 'yandex', 'container.tf'),
   'utf8',
+)
+const sourceCertificatePath = join(
+  repositoryRoot,
+  'services',
+  'api',
+  'certs',
+  'supabase-prod-ca-2021.crt',
+)
+const sourceCertificate = new X509Certificate(
+  readFileSync(sourceCertificatePath),
 )
 
 test('keeps tenant rehearsal manual and single-flight', () => {
@@ -49,6 +60,18 @@ test('uses source-only permissions for audit and OIDC only for target access', (
   assert.match(workflow, /supabase link[\s\S]*SUPABASE_DB_PASSWORD/)
   assert.match(workflow, /scripts\/yandex-github-oidc\.sh/)
   assert.match(workflow, /--name fit-stage-migration/)
+})
+
+test('pins the reviewed Supabase root CA without disabling verification', () => {
+  assert.equal(
+    sourceCertificate.fingerprint256,
+    '80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA',
+  )
+  assert.equal(
+    workflow.match(/services\/api\/certs\/supabase-prod-ca-2021\.crt/g)?.length,
+    2,
+  )
+  assert.doesNotMatch(workflow, /rejectUnauthorized:\s*false|sslmode=no-verify/)
 })
 
 test('requires independent apply confirmation and a private stage route', () => {
