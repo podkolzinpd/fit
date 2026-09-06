@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(10);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('62000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'push-scheduled-trainer@example.test', ''),
@@ -57,6 +57,13 @@ select ok(
     where kind = 'workout_scheduled' and user_id = '62000000-0000-4000-8000-000000000002')
     like 'Тренер Анна Тренер запланировал вам тренировку на 01.09.2026 в 18:30%',
   'the notification body names the trainer and the scheduled date/time'
+);
+select is(
+  (select data ->> 'url' from private.push_notifications_outbox
+    where kind = 'workout_scheduled' and user_id = '62000000-0000-4000-8000-000000000002'),
+  '/workouts/' || (select data ->> 'workout_id' from private.push_notifications_outbox
+    where kind = 'workout_scheduled' and user_id = '62000000-0000-4000-8000-000000000002'),
+  'the notification carries a generic deep-link url for the service worker'
 );
 
 -- Тренер создаёт тренировку клиенту без push-подписки — outbox не пополняется.

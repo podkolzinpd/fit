@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(23);
 
 -- Трейнер + клиент со связанным auth-аккаунтом (иначе клиент не пользуется
 -- приложением и push ему не нужен), таймзона фиксирована для предсказуемости.
@@ -186,6 +186,11 @@ select is(
   (select (data ->> 'workout_id')::uuid from private.push_notifications_outbox where user_id = '61000000-0000-4000-8000-000000000003'),
   '61000000-0000-4000-8000-000000000021'::uuid,
   'the enqueued reminder references the correct workout'
+);
+select is(
+  (select data ->> 'url' from private.push_notifications_outbox where user_id = '61000000-0000-4000-8000-000000000003'),
+  '/workouts/61000000-0000-4000-8000-000000000021',
+  'the enqueued reminder carries a generic deep-link url for the service worker'
 );
 
 -- producer: повторный вызов не создаёт дубль (та же тренировка).
