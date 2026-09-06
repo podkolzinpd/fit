@@ -1,6 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-05. База: `main` `f364e89`. Активно: восстановление stage deployment перед удалённой репетицией переноса tenant. В `main` завершена YAFIT-467: 83 упражнения исключены из новых выборов; история и 4 использовавшихся сохранены.
+Обновлено: 2026-09-06. База: `main` `d2af8d8c`. Активно: stage migrations актуальны; устраняется transient-сбой DeployRevision перед удалённой репетицией переноса tenant.
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом; Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум один вторичный акцент. Live разделяет нейтральный таймер и активный отдых.
 - Создание, Live и завершение прошлого плана сохраняют прежнюю логику без
@@ -106,13 +106,12 @@
 - Две чистые локальные репетиции прошли через export → dry-run/rollback → apply
   → повторный apply (`inserted=0`) → validate: 35 synthetic production-like
   строк, все 28 manifest-таблиц; временные БД и artifacts удалены.
-- `npm run local:verify`: 947 Supabase SQL/RLS проверок и 30 PostgreSQL actor/RLS
-  integration-тестов прошли; generated types и migration safety актуальны.
-- Ветка: remote audit/dry-run/apply без artifacts; apply подтверждается и повторяется с `inserted=0`; production не меняется.
-- Push bootstrap: два runtime SA созданы run `33761562506`; платные ресурсы не созданы.
-  Functions Lockbox использует stage-local masked mirror без payload в state/logs.
+- `npm run local:verify`: 947 Supabase SQL/RLS и 30 PostgreSQL actor/RLS integration-тестов прошли; generated types и migration safety актуальны.
+- Активная ветка повторяет Yandex management API при network/429/5xx с одним
+  idempotency key на запись; 4xx не повторяются. Полный `npm run check` зелёный.
+- Push bootstrap: два runtime SA созданы run `33761562506`; платные ресурсы не созданы; Functions Lockbox использует stage-local masked mirror без payload в state/logs.
 ## Ближайший порядок
-1. Восстановить stage deployment и применить актуальные миграции/API.
+1. После merge повторить stage deployment и проверить API revision/smoke.
 2. Выполнить remote audit/dry-run/apply, связать Yandex ID и проверить основной UI.
 3. После одного успешного tenant перевести оставшихся пользователей партиями;
    Supabase держать только на rollback-окно.

@@ -161,69 +161,87 @@ test('reports the failed API operation and safe request identifier', () => {
   )
 })
 
-test('retries transient transport failures with bounded backoff', async () => {
-  let calls = 0
+test('retries a transient deploy failure with one stable idempotency key', async () => {
+  const requests = []
   const delays = []
   const result = await requestJson(
-    'https://example.test/deploy',
-    'secret-token',
-    { method: 'POST', body: '{}' },
+    'https://serverless-containers.api.cloud.yandex.net/containers/v1/revisions:deploy',
+    'token',
+    { method: 'POST', body: '{"containerId":"container-id"}' },
     'DeployRevision request',
     {
-      fetchImpl: async () => {
-        calls += 1
-        if (calls < 3) throw new TypeError('fetch failed')
-        return new Response(JSON.stringify({ id: 'operation-id' }))
-      },
+      attempts: 3,
+      retryDelayMs: 10,
+      randomUUID: () => '11111111-1111-4111-8111-111111111111',
       sleep: async (delay) => { delays.push(delay) },
+      fetch: async (_url, options) => {
+        requests.push(options)
+        if (requests.length === 1) throw new TypeError('fetch failed')
+        return new Response(JSON.stringify({ id: 'operation-id' }), { status: 200 })
+      },
     },
   )
 
   assert.deepEqual(result, { id: 'operation-id' })
-  assert.equal(calls, 3)
-  assert.deepEqual(delays, [500, 1_000])
+  assert.deepEqual(delays, [10])
+  assert.equal(requests.length, 2)
+  assert.equal(
+    requests[0].headers.get('Idempotency-Key'),
+    '11111111-1111-4111-8111-111111111111',
+  )
+  assert.equal(
+    requests[1].headers.get('Idempotency-Key'),
+    requests[0].headers.get('Idempotency-Key'),
+  )
 })
 
-test('retries rate limits and server errors', async () => {
-  let calls = 0
+test('retries HTTP 429 and 5xx responses with bounded backoff', async () => {
+  const statuses = [429, 503, 200]
+  const delays = []
   const result = await requestJson(
-    'https://example.test/operation',
+    'https://operation.api.cloud.yandex.net/operations/operation-id',
     'token',
     {},
     'operation poll',
     {
-      fetchImpl: async () => {
-        calls += 1
-        if (calls === 1) {
-          return new Response(JSON.stringify({ message: 'Unavailable' }), { status: 503 })
-        }
-        return new Response(JSON.stringify({ done: true }))
+      attempts: 3,
+      retryDelayMs: 10,
+      sleep: async (delay) => { delays.push(delay) },
+      fetch: async (_url, options) => {
+        assert.equal(options.headers.has('Idempotency-Key'), false)
+        const status = statuses.shift()
+        return new Response(
+          JSON.stringify(status === 200 ? { done: true } : { message: 'retry' }),
+          { status },
+        )
       },
-      sleep: async () => {},
     },
   )
 
   assert.deepEqual(result, { done: true })
-  assert.equal(calls, 2)
+  assert.deepEqual(delays, [10, 20])
 })
 
-test('does not retry authorization or invalid request failures', async () => {
+test('does not retry a non-transient API rejection', async () => {
   let calls = 0
   await assert.rejects(
     requestJson(
-      'https://example.test/deploy',
-      'secret-token',
-      {},
+      'https://serverless-containers.api.cloud.yandex.net/containers/v1/revisions:deploy',
+      'token',
+      { method: 'POST', body: '{}' },
       'DeployRevision request',
       {
-        fetchImpl: async () => {
+        attempts: 4,
+        retryDelayMs: 0,
+        randomUUID: () => '11111111-1111-4111-8111-111111111111',
+        sleep: async () => {},
+        fetch: async () => {
           calls += 1
           return new Response(
             JSON.stringify({ message: 'Permission denied' }),
             { status: 403 },
           )
         },
-        sleep: async () => {},
       },
     ),
     /returned HTTP 403: Permission denied/u,
@@ -231,29 +249,33 @@ test('does not retry authorization or invalid request failures', async () => {
   assert.equal(calls, 1)
 })
 
-test('stops after the configured number of transient failures without exposing token', async () => {
+test('stops after the configured number of network attempts without exposing token', async () => {
   let calls = 0
   let caught
   try {
     await requestJson(
-      'https://example.test/deploy',
+      'https://operation.api.cloud.yandex.net/operations/operation-id',
       'very-secret-token',
       {},
-      'DeployRevision request',
+      'operation poll',
       {
-        fetchImpl: async () => {
+        attempts: 3,
+        retryDelayMs: 0,
+        sleep: async () => {},
+        fetch: async () => {
           calls += 1
           throw new TypeError('fetch failed')
         },
-        sleep: async () => {},
-        maxAttempts: 2,
       },
     )
   } catch (error) {
     caught = error
   }
 
-  assert.equal(calls, 2)
-  assert.match(caught?.message ?? '', /failed before receiving a response: fetch failed/u)
+  assert.equal(calls, 3)
+  assert.match(
+    caught?.message ?? '',
+    /failed after 3 attempts: the API connection was interrupted/u,
+  )
   assert.doesNotMatch(caught?.message ?? '', /very-secret-token/u)
 })
