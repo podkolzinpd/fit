@@ -4,10 +4,7 @@ import { randomBytes } from 'node:crypto'
 import type { PoolConfig } from 'pg'
 
 import { PgDatabasePool } from '../db/pg-pool.js'
-import {
-  encryptMigrationBundle,
-  TenantMigrationArtifactError,
-} from './bundle.js'
+import { encryptMigrationBundle } from './bundle.js'
 import { exportTenant, TenantMigrationError } from './engine.js'
 import type {
   TenantMigrationBundle,
@@ -53,13 +50,6 @@ const SOURCE_TRANSPORT_ERROR_CODES = new Set([
   'SELF_SIGNED_CERT_IN_CHAIN',
   'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
 ])
-const REHEARSAL_ERROR_CODE_PATTERN =
-  /^[a-z][a-z0-9_]*(?::[A-Za-z0-9_.-]+)?$/
-const SAFE_UNEXPECTED_ERROR_NAMES = new Set([
-  'Error',
-  'RangeError',
-  'TypeError',
-])
 
 export class RemoteTenantRehearsalError extends Error {
   constructor(readonly code: string) {
@@ -83,33 +73,6 @@ export function readSourceDatabaseFailureCode(error: unknown): string {
     return `source_database_failed:transport_${error.code}`
   }
   return 'source_database_failed'
-}
-
-export function readRemoteTenantRehearsalFailureCode(error: unknown): string {
-  if (
-    error instanceof RemoteTenantRehearsalError
-    || error instanceof TenantMigrationArtifactError
-    || error instanceof TenantMigrationError
-  ) return error.code
-  if (
-    isRecord(error)
-    && typeof error.name === 'string'
-    && (
-      error.name === 'RemoteTenantRehearsalError'
-      || error.name === 'TenantMigrationArtifactError'
-      || error.name === 'TenantMigrationError'
-    )
-    && typeof error.code === 'string'
-    && REHEARSAL_ERROR_CODE_PATTERN.test(error.code)
-  ) return error.code
-
-  const sourceCode = readSourceDatabaseFailureCode(error)
-  if (sourceCode !== 'source_database_failed') return sourceCode
-  if (
-    error instanceof Error
-    && SAFE_UNEXPECTED_ERROR_NAMES.has(error.name)
-  ) return `unexpected_failure:${error.name}`
-  return 'unexpected_failure'
 }
 
 function requireEnvironment(
@@ -369,69 +332,29 @@ function printStageSummary(response: StageTenantMigrationResponse): void {
 export async function runRemoteTenantRehearsal(
   settings: RemoteTenantRehearsalSettings,
 ): Promise<void> {
-  let sourcePool: PgDatabasePool
-  try {
-    sourcePool = new PgDatabasePool(settings.sourceConfig)
-  } catch {
-    throw new RemoteTenantRehearsalError('source_pool_initialization_failed')
-  }
+  const sourcePool = new PgDatabasePool(settings.sourceConfig)
   let sourceConnection: Awaited<ReturnType<PgDatabasePool['connect']>> | undefined
-  let bundle: TenantMigrationBundle | undefined
-  let sourceFailure: unknown
-  let sourceCleanupFailure: unknown
+  let bundle: TenantMigrationBundle
   try {
     sourceConnection = await sourcePool.connect()
     bundle = await exportTenant(sourceConnection, settings.trainerId)
   } catch (error) {
-    sourceFailure = error
-  } finally {
-    try {
-      sourceConnection?.release()
-      await sourcePool.end()
-    } catch (error) {
-      sourceCleanupFailure = error
-    }
-  }
-  if (sourceFailure !== undefined) {
     if (
-      sourceFailure instanceof RemoteTenantRehearsalError
-      || sourceFailure instanceof TenantMigrationError
-    ) throw sourceFailure
+      error instanceof RemoteTenantRehearsalError
+      || error instanceof TenantMigrationError
+    ) throw error
     throw new RemoteTenantRehearsalError(
-      readSourceDatabaseFailureCode(sourceFailure),
+      readSourceDatabaseFailureCode(error),
     )
-  }
-  if (sourceCleanupFailure !== undefined) {
-    throw new RemoteTenantRehearsalError('source_database_cleanup_failed')
-  }
-  if (bundle === undefined) {
-    throw new RemoteTenantRehearsalError('source_database_failed')
+  } finally {
+    sourceConnection?.release()
+    await sourcePool.end()
   }
 
-  let passphrase: string
-  try {
-    passphrase = randomBytes(48).toString('base64url')
-  } catch {
-    throw new RemoteTenantRehearsalError('bundle_key_generation_failed')
-  }
-  let envelope: TenantMigrationEnvelope
-  try {
-    envelope = await encryptMigrationBundle(bundle, passphrase)
-  } catch (error) {
-    if (error instanceof TenantMigrationArtifactError) throw error
-    throw new RemoteTenantRehearsalError('bundle_encryption_failed')
-  }
-  let encryptedBytes: number
-  try {
-    encryptedBytes = Buffer.byteLength(JSON.stringify(envelope))
-  } catch {
-    throw new RemoteTenantRehearsalError('bundle_size_failed')
-  }
-  try {
-    printBundleSummary(bundle, encryptedBytes)
-  } catch {
-    throw new RemoteTenantRehearsalError('audit_summary_failed')
-  }
+  const passphrase = randomBytes(48).toString('base64url')
+  const envelope = await encryptMigrationBundle(bundle, passphrase)
+  const encryptedBytes = Buffer.byteLength(JSON.stringify(envelope))
+  printBundleSummary(bundle, encryptedBytes)
   if (settings.mode === 'audit') return
   if (encryptedBytes > STAGE_ARTIFACT_LIMIT_BYTES) {
     throw new RemoteTenantRehearsalError('artifact_too_large_for_stage')

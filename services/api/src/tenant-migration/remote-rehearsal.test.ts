@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildSupabaseSourceConfig,
-  readRemoteTenantRehearsalFailureCode,
   readSourceDatabaseFailureCode,
   readRemoteTenantRehearsalSettings,
   readStageTenantMigrationResponse,
@@ -130,18 +129,6 @@ describe('source database failure reporting', () => {
     expect(code).not.toContain('do-not-print')
   })
 
-  it('reads reviewed failure classes structurally without leaking unknowns', () => {
-    expect(readRemoteTenantRehearsalFailureCode({
-      code: 'source_read_failed:public.workouts',
-      name: 'TenantMigrationError',
-    })).toBe('source_read_failed:public.workouts')
-    expect(readRemoteTenantRehearsalFailureCode(new TypeError('private value')))
-      .toBe('unexpected_failure:TypeError')
-    expect(readRemoteTenantRehearsalFailureCode({
-      code: 'private value',
-      name: 'UnknownError',
-    })).toBe('unexpected_failure')
-  })
 })
 
 describe('stage tenant migration response', () => {
