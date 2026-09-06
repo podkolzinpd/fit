@@ -3,6 +3,8 @@ import { authRepository } from './auth.repository'
 
 const queries = vi.hoisted(() => ({
   clearLocalSession: vi.fn(),
+  getSession: vi.fn(),
+  signOut: vi.fn(),
   signIn: vi.fn(),
   getLinkedClient: vi.fn(),
   getTrainer: vi.fn(),
@@ -14,6 +16,8 @@ const queries = vi.hoisted(() => ({
 vi.mock('../queries/auth.queries', () => ({
   authQueries: {
     clearLocalSession: queries.clearLocalSession,
+    getSession: queries.getSession,
+    signOut: queries.signOut,
     signIn: queries.signIn,
     getLinkedClient: queries.getLinkedClient,
     getTrainer: queries.getTrainer,
@@ -26,6 +30,8 @@ vi.mock('../queries/auth.queries', () => ({
 describe('authRepository.initialize', () => {
   beforeEach(() => {
     queries.clearLocalSession.mockReset().mockResolvedValue({ error: null })
+    queries.getSession.mockReset().mockResolvedValue({ data: { session: null }, error: null })
+    queries.signOut.mockReset().mockResolvedValue({ error: null })
     queries.signIn.mockReset()
     queries.getLinkedClient.mockReset()
     queries.getTrainer.mockReset()
@@ -97,6 +103,31 @@ describe('authRepository.initialize', () => {
     await vi.runAllTimersAsync()
     await result
     expect(queries.signIn).toHaveBeenCalledTimes(2)
+  })
+
+  it('завершает выход без дополнительной проверки при успешном revoke', async () => {
+    await expect(authRepository.signOut()).resolves.toBeUndefined()
+
+    expect(queries.signOut).toHaveBeenCalledOnce()
+    expect(queries.getSession).not.toHaveBeenCalled()
+  })
+
+  it('считает выход успешным, если revoke оборвался, но локальная сессия уже удалена', async () => {
+    queries.signOut.mockResolvedValue({ error: new TypeError('Failed to fetch') })
+
+    await expect(authRepository.signOut()).resolves.toBeUndefined()
+
+    expect(queries.getSession).toHaveBeenCalledOnce()
+  })
+
+  it('показывает ошибку, если после сбоя выхода локальная сессия осталась', async () => {
+    queries.signOut.mockResolvedValue({ error: new TypeError('Failed to fetch') })
+    queries.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-1' } } },
+      error: null,
+    })
+
+    await expect(authRepository.signOut()).rejects.toThrow()
   })
 
   it('resolves a linked client without creating a trainer profile', async () => {

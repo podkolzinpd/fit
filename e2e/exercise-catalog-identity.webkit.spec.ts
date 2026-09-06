@@ -35,7 +35,7 @@ test('exercise catalog search and technique detail work in the iOS shell', async
   await page.getByRole('dialog').locator('button.secondary').click()
 
   await page.getByLabel('Поиск упражнения').fill('трэп гриф')
-  await expect(page.getByText(/^Найдено: 1 ·/)).toBeVisible()
+  await expect(page.getByText('Найдено: 1', { exact: true })).toBeVisible()
   const photoResult = page.locator('.catalog-media-card').first()
   await expect(photoResult.getByText('Становая тяга с трэп-грифом')).toBeVisible()
   await photoResult.click()

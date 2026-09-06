@@ -249,12 +249,13 @@ test('does not retry a non-transient API rejection', async () => {
   assert.equal(calls, 1)
 })
 
-test('stops after the configured number of network attempts', async () => {
+test('stops after the configured number of network attempts without exposing token', async () => {
   let calls = 0
-  await assert.rejects(
-    requestJson(
+  let caught
+  try {
+    await requestJson(
       'https://operation.api.cloud.yandex.net/operations/operation-id',
-      'token',
+      'very-secret-token',
       {},
       'operation poll',
       {
@@ -266,8 +267,15 @@ test('stops after the configured number of network attempts', async () => {
           throw new TypeError('fetch failed')
         },
       },
-    ),
+    )
+  } catch (error) {
+    caught = error
+  }
+
+  assert.equal(calls, 3)
+  assert.match(
+    caught?.message ?? '',
     /failed after 3 attempts: the API connection was interrupted/u,
   )
-  assert.equal(calls, 3)
+  assert.doesNotMatch(caught?.message ?? '', /very-secret-token/u)
 })

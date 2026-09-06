@@ -1,19 +1,19 @@
 import { useMutation } from '@tanstack/react-query'
 import { useRef, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useOptionalYandexAppSession } from '../../app/yandex-app-session-context'
 import { setExercisePlanRestDisplay, useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { setRpeDisplay, useRpeDisplay } from '../../app/rpe-display'
 import { setAppTheme, useAppTheme } from '../../app/theme'
 import { Field, Page, SaveStatus, Switch } from '../../shared/ui'
-import { YandexAccountLinkingCard } from '../auth'
+import { LogoutButton, YandexAccountLinkingCard } from '../auth'
 import { AppFeedbackForm } from './AppFeedbackForm'
 import { AppInstallPanel } from '../install'
 import { BodyMapAppearanceSetting } from '../progress/BodyMapAppearanceSetting'
 
 export function ProfilePage() {
-  const { actor, refresh, signOut, updateProfile } = useAuth(); const navigate = useNavigate(); const [saved, setSaved] = useState(false)
+  const { actor, refresh, updateProfile } = useAuth(); const [saved, setSaved] = useState(false)
   const yandexSession = useOptionalYandexAppSession()?.session ?? null
   const theme = useAppTheme()
   const showRpe = useRpeDisplay(actor?.userId)
@@ -27,7 +27,6 @@ export function ProfilePage() {
     const data = new FormData(form)
     await updateProfile({ firstName: String(data.get('firstName') || '') || null, lastName: String(data.get('lastName') || '') || null, timezone: String(data.get('timezone')) })
   }, onSuccess: async () => { setSaved(true); await refresh() } })
-  async function logout() { await signOut(); navigate('/auth') }
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setSaved(false); update.mutate(event.currentTarget) }
   // Отмена сбрасывает несохранённые правки к текущим значениям профиля.
   function cancel() { formRef.current?.reset(); setSaved(false) }
@@ -63,6 +62,6 @@ export function ProfilePage() {
     <div className="menu"><Link to="/join">Ввести код приглашения</Link>{actor?.role === 'trainer' && <Link to="/exercises">Управление упражнениями</Link>}<button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button></div>
     {installOpen && <AppInstallPanel onClose={() => setInstallOpen(false)} />}
     {feedbackOpen && <AppFeedbackForm onClose={() => setFeedbackOpen(false)} />}
-    <button className="danger secondary wide" onClick={() => void logout()}>Выйти</button>
+    <LogoutButton />
   </Page>
 }
