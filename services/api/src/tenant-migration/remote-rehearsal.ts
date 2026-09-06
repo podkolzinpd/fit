@@ -363,7 +363,12 @@ function printStageSummary(response: StageTenantMigrationResponse): void {
 export async function runRemoteTenantRehearsal(
   settings: RemoteTenantRehearsalSettings,
 ): Promise<void> {
-  const sourcePool = new PgDatabasePool(settings.sourceConfig)
+  let sourcePool: PgDatabasePool
+  try {
+    sourcePool = new PgDatabasePool(settings.sourceConfig)
+  } catch {
+    throw new RemoteTenantRehearsalError('source_pool_initialization_failed')
+  }
   let sourceConnection: Awaited<ReturnType<PgDatabasePool['connect']>> | undefined
   let bundle: TenantMigrationBundle | undefined
   let sourceFailure: unknown
@@ -397,7 +402,12 @@ export async function runRemoteTenantRehearsal(
     throw new RemoteTenantRehearsalError('source_database_failed')
   }
 
-  const passphrase = randomBytes(48).toString('base64url')
+  let passphrase: string
+  try {
+    passphrase = randomBytes(48).toString('base64url')
+  } catch {
+    throw new RemoteTenantRehearsalError('bundle_key_generation_failed')
+  }
   let envelope: TenantMigrationEnvelope
   try {
     envelope = await encryptMigrationBundle(bundle, passphrase)
@@ -405,8 +415,17 @@ export async function runRemoteTenantRehearsal(
     if (error instanceof TenantMigrationArtifactError) throw error
     throw new RemoteTenantRehearsalError('bundle_encryption_failed')
   }
-  const encryptedBytes = Buffer.byteLength(JSON.stringify(envelope))
-  printBundleSummary(bundle, encryptedBytes)
+  let encryptedBytes: number
+  try {
+    encryptedBytes = Buffer.byteLength(JSON.stringify(envelope))
+  } catch {
+    throw new RemoteTenantRehearsalError('bundle_size_failed')
+  }
+  try {
+    printBundleSummary(bundle, encryptedBytes)
+  } catch {
+    throw new RemoteTenantRehearsalError('audit_summary_failed')
+  }
   if (settings.mode === 'audit') return
   if (encryptedBytes > STAGE_ARTIFACT_LIMIT_BYTES) {
     throw new RemoteTenantRehearsalError('artifact_too_large_for_stage')
