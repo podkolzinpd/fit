@@ -2756,13 +2756,22 @@ h3 {
 .monetization-gate span { color: var(--dark-muted); }
 .monetization-gate strong { font-size: 19px; line-height: 1.35; }
 
-/* Competitive summary: status of Fit versus established products. */
-.market-comparison-slide h2 { max-width: 1390px; font-size: 46px; }
+/* Competitive summary: lead with the product blocks that already work. */
+.market-comparison-slide h2 { max-width: 1390px; font-size: 48px; }
+.comparison-subhead {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 178px;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.35;
+}
 .comparison-legend {
   position: absolute;
   left: 92px;
   right: 92px;
-  top: 205px;
+  top: 218px;
   min-height: 40px;
   display: flex;
   gap: 22px;
@@ -2777,11 +2786,11 @@ h3 {
   position: absolute;
   left: 92px;
   right: 92px;
-  top: 250px;
+  top: 262px;
   border-top: 2px solid var(--ink);
 }
 .market-compare-table > div {
-  min-height: 47px;
+  min-height: 67px;
   display: grid;
   grid-template-columns: 270px 140px repeat(5, 1fr);
   align-items: stretch;
@@ -2807,13 +2816,14 @@ h3 {
 }
 .market-compare-table em { color: var(--muted); }
 .market-compare-table b { font-size: 12px; }
-.market-compare-head { min-height: 52px !important; }
+.market-compare-head { min-height: 48px !important; }
 .market-compare-head span { color: var(--muted); font-size: 11px; letter-spacing: .07em; }
 .market-compare-head strong:nth-child(2) { color: var(--white); background: var(--ink); }
 .fit-now { color: var(--white); background: var(--ink); }
 .fit-pilot { background: var(--paper-2); }
 .fit-next { color: var(--muted); }
 .fit-scale { color: var(--muted); font-size: 11px !important; }
+.compare-current-row > span { font-weight: 750; }
 
 /* Social mechanics now start in the pilot, not after it. */
 .acquisition-slide .channel-row { min-height: 57px; }
@@ -3449,30 +3459,29 @@ App Store и экраны: https://apps.apple.com/us/app/fitness-app-abc-trainer
 
     <section class="slide market-comparison-slide" data-section="Конкуренты">
       <div class="eyebrow">08F · СРАВНЕНИЕ ПРОДУКТОВ</div>
-      <h2>Базовая петля Fit готова. Остальные контуры входят в пилот и развитие</h2>
-      <div class="comparison-legend"><span>FIT</span><strong>Сейчас</strong><strong>К пилоту</strong><strong>Следом</strong><strong>После аудитории</strong><em>Конкуренты: есть, частично или нет</em></div>
+      <h2>У Fit уже работают три ключевых блока продукта</h2>
+      <p class="comparison-subhead">К пилоту достраиваем ИИ-конструктор и социальное ядро. Остальные расширения не задерживают запуск.</p>
+      <div class="comparison-legend"><span>FIT</span><strong>Уже работает</strong><strong>Дорабатываем к пилоту</strong><strong>Следующий этап</strong><em>Конкуренты: есть, частично или нет</em></div>
       <div class="market-compare-table">
         <div class="market-compare-head"><span>ВОЗМОЖНОСТЬ</span><strong>FIT</strong><strong>HEVY</strong><strong>FITNESS ONLINE</strong><strong>STRAVA</strong><strong>KEEP</strong><strong>TRAINERIZE</strong></div>
-        <div><span>План, факт и прогресс</span><b class="fit-now">Сейчас</b><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em></div>
-        <div><span>ИИ-конструктор тренировок</span><b class="fit-pilot">К пилоту</b><em>Частично</em><em>Нет</em><em>Частично</em><em>Частично</em><em>Есть</em></div>
+        <div class="compare-current-row"><span>План, факт и прогресс клиента</span><b class="fit-now">Работает</b><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em></div>
+        <div class="compare-current-row"><span>Голос и текст в структуру тренировки</span><b class="fit-now">Работает</b><em>Частично</em><em>Частично</em><em>Частично</em><em>Частично</em><em>Частично</em></div>
+        <div class="compare-current-row"><span>Кабинет тренера и работа с клиентами</span><b class="fit-now">Работает</b><em>Есть</em><em>Есть</em><em>Нет</em><em>Частично</em><em>Есть</em></div>
+        <div><span>ИИ создаёт тренировку и недельный план</span><b class="fit-pilot">К пилоту</b><em>Частично</em><em>Есть</em><em>Нет</em><em>Частично</em><em>Есть</em></div>
+        <div><span>Лента, друзья и спортивные сообщества</span><b class="fit-pilot">К пилоту</b><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em></div>
         <div><span>Единый профиль разных видов спорта</span><b class="fit-next">Следом</b><em>Частично</em><em>Частично</em><em>Есть</em><em>Частично</em><em>Частично</em></div>
-        <div><span>Лента и спортивные сообщества</span><b class="fit-pilot">К пилоту</b><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em></div>
-        <div><span>Рабочее место тренера</span><b class="fit-next">Следом</b><em>Есть</em><em>Частично</em><em>Нет</em><em>Частично</em><em>Есть</em></div>
-        <div><span>Подбор тренера</span><b class="fit-next">Следом</b><em>Частично</em><em>Частично</em><em>Нет</em><em>Нет</em><em>Частично</em></div>
-        <div><span>Чат, связанный с планом</span><b class="fit-next">Следом</b><em>Есть</em><em>Есть</em><em>Нет</em><em>Частично</em><em>Есть</em></div>
-        <div><span>Онлайн-тренировки 1:1 и в группах</span><b class="fit-next">Следом</b><em>Нет</em><em>Частично</em><em>Нет</em><em>Есть</em><em>Есть</em></div>
-        <div><span>Питание и восстановление</span><b class="fit-next">Следом</b><em>Нет</em><em>Есть</em><em>Частично</em><em>Есть</em><em>Есть</em></div>
-        <div><span>Продвижение тренеров и авторов</span><b class="fit-scale">После аудитории</b><em>Частично</em><em>Частично</em><em>Нет</em><em>Частично</em><em>Есть</em></div>
-        <div><span>Товары и спортивные услуги</span><b class="fit-scale">После аудитории</b><em>Нет</em><em>Частично</em><em>Нет</em><em>Есть</em><em>Частично</em></div>
+        <div><span>Поиск тренера, чат и онлайн-занятия</span><b class="fit-next">Следом</b><em>Частично</em><em>Есть</em><em>Нет</em><em>Частично</em><em>Есть</em></div>
       </div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Честно показать, что уже сделано в Fit, что должно войти в пилот и какие контуры развиваются после него. Сравнение не доказывает уникальность каждой отдельной функции: преимущество должно возникнуть из их связи с дистрибуцией и коммерческими сервисами Яндекса.
+Показать, что Fit выходит на пилот не с пустой концепцией, а с уже работающей продуктовой основой. Сравнение не доказывает уникальность каждой отдельной функции: преимущество должно возникнуть из их связи с дистрибуцией и коммерческими сервисами Яндекса.
 
 КАК ЧИТАТЬ
-В колонке Fit показан статус разработки: «Сейчас», «К пилоту», «Следом» или «После аудитории». Для конкурентов «Частично» означает ограниченный сценарий, отдельный продукт, дополнение или отсутствие единого контура.
+Первые три строки — блоки, которые уже работают: клиент ведёт план и факт, видит прогресс; голос или свободный текст превращаются в структуру тренировки; у тренера есть кабинет и базовая работа с клиентами. К пилоту достраиваем две функции, которые усиливают масштаб и удержание: готовый план от ИИ и социальное ядро. Мультиспорт, подбор, контекстный чат и онлайн-занятия развиваем следующим этапом.
+
+Для конкурентов «Частично» означает ограниченный сценарий, отдельный продукт, дополнение или отсутствие единого контура.
 
 КЛЮЧЕВОЙ ВЫВОД
-Fit уже закрывает клиентскую петлю плана, факта и прогресса. Самый крупный разрыв до целевого продукта находится в социальной плотности, ИИ-конструкторе, тренерском контуре и онлайн-занятиях. Коммерческие поверхности не должны опережать удержание.
+Fit уже закрывает основу продукта по обе стороны тренировки. До пилота нужно не создавать приложение заново, а достроить ИИ-конструктор и социальные механики вокруг работающего ядра.
 
 [Sources]
 Hevy product and coach platform: https://www.hevyapp.com/product/ and https://www.hevyapp.com/features/trainer-platform/
