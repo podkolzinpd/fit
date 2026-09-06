@@ -157,13 +157,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [refreshSupabase, yandexRoutingEnabled, yandexSession])
 
   const signOut = useCallback(async () => {
-    queryClient.clear()
     if (yandexRoutingEnabled && yandexSession !== null) {
       await yandexSession.signOut()
       await authRepository.signOut()
-      return
+    } else {
+      await authRepository.signOut()
     }
-    await authRepository.signOut()
+    // Если локальная сессия действительно осталась активной, repository
+    // пробросит ошибку и данные текущего пользователя не исчезнут из UI.
+    queryClient.clear()
   }, [queryClient, yandexRoutingEnabled, yandexSession])
 
   const updateProfile = useCallback(async (input: { firstName: string | null; lastName: string | null; timezone: string }) => {

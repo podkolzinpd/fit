@@ -100,7 +100,19 @@ export const authRepository = {
   },
   async signOut() {
     const { error } = await authQueries.signOut()
-    if (error) throw repositoryError(error)
+    if (!error) return
+
+    const normalized = repositoryError(error)
+    try {
+      const local = await authQueries.getSession()
+      // Supabase удаляет локальную сессию даже когда серверный revoke оборвался.
+      // Проверяем фактическое состояние storage: завершённый локальный выход не
+      // должен превращаться в необработанную ошибку интерфейса.
+      if (!local.error && local.data.session === null) return
+    } catch {
+      // Сохраняем исходную понятную ошибку logout, если storage нельзя проверить.
+    }
+    throw normalized
   },
   async initialize(user: { id: string; email?: string; user_metadata: Record<string, unknown> }): Promise<SessionActor> {
     const [linkedClient, existing] = await Promise.all([
