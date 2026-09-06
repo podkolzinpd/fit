@@ -39,6 +39,17 @@ const STAGE_CONTAINER_HOST_PATTERN =
 const STAGE_APPLY_CONFIRMATION = 'APPLY_TENANT_TO_YANDEX_STAGE'
 const STAGE_ARTIFACT_LIMIT_BYTES = 3 * 1024 * 1024
 const RESPONSE_LIMIT_BYTES = 1024 * 1024
+const POSTGRES_SQLSTATE_PATTERN = /^[0-9A-Z]{5}$/
+const SOURCE_TRANSPORT_ERROR_CODES = new Set([
+  'CERT_HAS_EXPIRED',
+  'EAI_AGAIN',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ENOTFOUND',
+  'ETIMEDOUT',
+  'SELF_SIGNED_CERT_IN_CHAIN',
+  'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+])
 
 export class RemoteTenantRehearsalError extends Error {
   constructor(readonly code: string) {
@@ -49,6 +60,19 @@ export class RemoteTenantRehearsalError extends Error {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+export function readSourceDatabaseFailureCode(error: unknown): string {
+  if (!isRecord(error) || typeof error.code !== 'string') {
+    return 'source_database_failed'
+  }
+  if (POSTGRES_SQLSTATE_PATTERN.test(error.code)) {
+    return `source_database_failed:sqlstate_${error.code}`
+  }
+  if (SOURCE_TRANSPORT_ERROR_CODES.has(error.code)) {
+    return `source_database_failed:transport_${error.code}`
+  }
+  return 'source_database_failed'
 }
 
 function requireEnvironment(
@@ -313,7 +337,9 @@ export async function runRemoteTenantRehearsal(
       error instanceof RemoteTenantRehearsalError
       || error instanceof TenantMigrationError
     ) throw error
-    throw new RemoteTenantRehearsalError('source_database_failed')
+    throw new RemoteTenantRehearsalError(
+      readSourceDatabaseFailureCode(error),
+    )
   } finally {
     sourceConnection?.release()
     await sourcePool.end()
