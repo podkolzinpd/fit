@@ -25,7 +25,7 @@ test('exercise catalog search and technique detail work in the iOS shell', async
     controls: element.controls,
     loop: element.loop,
     muted: element.muted,
-  }))).resolves.toEqual({ autoplay: true, controls: true, loop: true, muted: true })
+  }))).resolves.toEqual({ autoplay: true, controls: false, loop: true, muted: true })
   await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(false)
 
   await page.emulateMedia({ reducedMotion: 'reduce' })

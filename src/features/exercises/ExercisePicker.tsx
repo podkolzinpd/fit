@@ -11,6 +11,7 @@ import { selectableExercises } from './selectable-exercises'
 import { compareCatalogBrowseOrder, exerciseCatalogRoot, groupCatalogResults, isCatalogRoot } from '../../shared/exercise-catalog-curation'
 import { VITAL_GYM_PRO_MAIN_REF_CANDIDATES } from '../../shared/vital-gym-pro.generated'
 import { CatalogVariantField } from './CatalogControls'
+import { ExerciseTechniqueContent } from './ExerciseTechnique'
 
 export function filterExercises(
   exercises: readonly ExerciseSnapshot[],
@@ -98,13 +99,6 @@ function exerciseCountLabel(count: number) {
 }
 
 const PICKER_BATCH_SIZE = 48
-
-const INPUT_KIND_LABELS: Record<InputKind, string> = {
-  strength: 'Вес и повторы',
-  reps: 'Повторы',
-  duration: 'Время',
-  distance: 'Расстояние и время',
-}
 
 function useVisualViewportStyle() {
   const [style, setStyle] = useState<CSSProperties>()
@@ -341,15 +335,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         <button type="button" className="picker-close" aria-label="Закрыть" onClick={creating ? () => setCreating(false) : onClose}><CloseIcon /></button>
       </header>
       {previewExercise ? <div className="picker-technique-view">
-        <div className="picker-technique-scroll">
-          <ExerciseImage src={previewExercise.imageUrl} fallbackSrc={previewExercise.fallbackImageUrl} motionSrc={previewExercise.motionImageUrl} videoSrc={previewExercise.techniqueVideoUrl} alt={previewExercise.name} variant="technique" />
-          <div className="picker-technique-title"><h2>{previewExercise.name}</h2><p>{[previewExercise.equipment ?? 'Без оборудования', MUSCLE_GROUP_LABELS[previewExercise.muscleGroup]].join(' · ')}</p></div>
-          <CatalogVariantField exercise={previewExercise} catalog={catalog.exercises} onChange={setPreviewExercise} />
-          <div className="picker-technique-facts"><span><small>Формат</small><strong>{INPUT_KIND_LABELS[previewExercise.inputKind]}</strong></span>{previewExercise.primaryMuscleDetail && <span><small>Основная мышца</small><strong>{previewExercise.primaryMuscleDetail}</strong></span>}</div>
-          {previewExercise.instructions?.length
-            ? <div className="picker-technique-instructions"><h3>Как выполнять</h3><ol>{previewExercise.instructions.map((instruction, index) => <li key={`${previewExercise.ref}-${index}`}>{instruction}</li>)}</ol></div>
-            : <p className="picker-technique-note">{previewExercise.imageUrl || previewExercise.motionImageUrl || previewExercise.techniqueVideoUrl ? 'Пошагового описания пока нет — ориентируйтесь на движение в превью.' : 'Для этого упражнения пока нет изображения и пошагового описания.'}</p>}
-        </div>
+        <ExerciseTechniqueContent exercise={previewExercise} beforeFacts={<CatalogVariantField exercise={previewExercise} catalog={catalog.exercises} onChange={setPreviewExercise} />} />
         <button type="button" className="primary picker-technique-action" onClick={() => techniqueAction(previewExercise)}>{multiple && selected.has(exerciseKey(previewExercise)) ? 'Убрать из выбранных' : multiple ? 'Добавить к выбранным' : techniqueActionLabel}</button>
       </div> : mode === 'choose' && !creating ? <div className="workout-kind-entry">
         <p>Выберите направление — его можно сменить позже.</p>
