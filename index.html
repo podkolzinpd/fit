@@ -3797,6 +3797,195 @@ h3 {
   border-top: 1px solid var(--line);
 }
 
+/* Review cycle · 2.2 · Problem as one shared broken route. */
+.review-problem-v2 {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.review-problem-v2 .eyebrow { color: var(--ink); }
+
+.review-problem-v2 .review-fit-label {
+  position: absolute;
+  top: 70px;
+  right: 92px;
+  color: #a4a3a0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.review-problem-v2 h2 {
+  top: 126px;
+  left: 92px;
+  width: 1240px;
+  font-size: 70px;
+  line-height: .98;
+}
+
+.review-problem-v2 .subhead {
+  position: absolute;
+  top: 276px;
+  left: 96px;
+  width: 940px;
+  color: var(--muted);
+  font-size: 25px;
+  line-height: 1.34;
+}
+
+.review-problem-v2 .review-problem-system {
+  position: absolute;
+  top: 366px;
+  left: 92px;
+  width: 1416px;
+  height: 342px;
+}
+
+.review-problem-v2 .review-actor {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+}
+
+.review-problem-v2 .review-actor span,
+.review-problem-v2 .review-problem-conclusion span {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.review-problem-v2 .review-actor strong {
+  font-size: 27px;
+  line-height: 1.12;
+}
+
+.review-problem-v2 .review-route {
+  position: absolute;
+  top: 65px;
+  left: 0;
+  width: 100%;
+  height: 160px;
+}
+
+.review-problem-v2 .review-route-line {
+  position: absolute;
+  top: 38px;
+  height: 2px;
+  background: var(--ink);
+}
+
+.review-problem-v2 .review-route-line-before {
+  left: 0;
+  width: 1024px;
+}
+
+.review-problem-v2 .review-route-line-after {
+  left: 1195px;
+  right: 0;
+}
+
+.review-problem-v2 .review-route-node {
+  position: absolute;
+  top: 29px;
+  width: 205px;
+}
+
+.review-problem-v2 .review-route-node i {
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin-bottom: 20px;
+  border: 5px solid var(--paper);
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.review-problem-v2 .review-route-node span {
+  display: block;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.review-problem-v2 .review-route-node strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.review-problem-v2 .node-goal { left: 0; }
+.review-problem-v2 .node-plan { left: 270px; }
+.review-problem-v2 .node-workout { left: 540px; }
+.review-problem-v2 .node-fact { left: 810px; }
+.review-problem-v2 .node-next { left: 1195px; width: 221px; }
+
+.review-problem-v2 .review-route-break {
+  position: absolute;
+  top: 0;
+  left: 1037px;
+  width: 145px;
+  text-align: center;
+}
+
+.review-problem-v2 .review-route-break b {
+  display: block;
+  height: 65px;
+  color: var(--ink);
+  font-size: 52px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.review-problem-v2 .review-route-break span {
+  display: block;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.22;
+}
+
+.review-problem-v2 .review-trainer {
+  position: absolute;
+  top: 257px;
+  left: 270px;
+}
+
+.review-problem-v2 .review-trainer::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -22px;
+  width: 754px;
+  height: 1px;
+  background: var(--line);
+}
+
+.review-problem-v2 .review-trainer strong {
+  max-width: 830px;
+}
+
+.review-problem-v2 .review-problem-conclusion {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  bottom: 72px;
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 24px;
+  align-items: baseline;
+  padding-top: 22px;
+  border-top: 1px solid var(--ink);
+}
+
+.review-problem-v2 .review-problem-conclusion strong {
+  font-size: 28px;
+  line-height: 1.15;
+}
+
 .rd-problem .pilot-trainer-track .pilot-track-title { position: static; }
 
 .rd-problem .pilot-trainer-context {
@@ -5714,7 +5903,7 @@ Fit остаётся отдельным приложением, потому ч�
 Логотип: вариант 1, предоставленный пользователем.</aside>
     </section>
 
-    <section class="slide slide-dark pilot-problem redesign-v2 rd-problem" data-section="Проблема" data-slide-type="problem" data-golden="linear/03-linear-product-flow.png">
+    <section class="slide slide-dark pilot-problem redesign-v2 rd-problem" data-section="Проблема" data-slide-family="2" data-version="2.1" data-slide-type="problem" data-golden="linear/03-linear-product-flow.png">
       <div class="eyebrow">01 · ПРОБЛЕМА</div>
       <h2>Начать трудно. Удержаться ещё труднее</h2>
       <p class="subhead">Клиенту нужен понятный следующий шаг. Тренеру — единый контекст, чтобы этот шаг вовремя дать.</p>
@@ -5743,6 +5932,67 @@ Fit остаётся отдельным приложением, потому ч�
 
 ЧТО ГОВОРИМ
 Путь человека в спорт состоит из повторяющихся вопросов. Где начать? Кому довериться? Что делать сегодня? Что получилось? Что менять дальше? Сейчас ответы разбросаны между поиском, заметками, мессенджером, часами, отдельными приложениями и памятью самого человека.
+
+Из-за этого клиент теряет следующий понятный шаг и постепенно выпадает из режима. Если есть тренер, он тоже работает вслепую: собирает цель, программу, факт выполнения и обратную связь вручную. В результате время тренера уходит на администрирование, а не на качество сопровождения.
+
+Клиент — массовая и основная аудитория Fit. Тренер — меньшая по масштабу сторона, но сильный усилитель результата, удержания и дистрибуции. Без тренера Fit работает через ИИ и аналитику. С тренером продукт соединяет обе стороны в одном цикле.
+
+      ПЕРЕХОД
+Значит, продукт должен не просто записывать тренировки, а удерживать весь спортивный маршрут и всегда давать следующий шаг.</aside>
+    </section>
+
+    <section class="slide redesign-v2 review-problem-v2" data-section="Проблема" data-slide-family="2" data-version="2.2" data-slide-type="problem" data-golden="linear/03-linear-product-flow.png">
+      <div class="eyebrow">01 · ПРОБЛЕМА</div>
+      <div class="review-fit-label">Fit</div>
+      <h2>Начать трудно. Удержаться ещё труднее</h2>
+      <p class="subhead">Клиент и тренер участвуют в одном процессе, но сегодня у них нет общего контекста.</p>
+
+      <div class="review-problem-system" aria-label="Разорванный спортивный цикл клиента и тренера">
+        <div class="review-actor review-client">
+          <span>КЛИЕНТ</span>
+          <strong>не понимает, что делать дальше</strong>
+        </div>
+
+        <div class="review-route">
+          <div class="review-route-line review-route-line-before"></div>
+          <div class="review-route-line review-route-line-after"></div>
+
+          <div class="review-route-node node-goal">
+            <i></i><span>Цель</span><strong>Где начать?</strong>
+          </div>
+          <div class="review-route-node node-plan">
+            <i></i><span>План</span><strong>Что делать?</strong>
+          </div>
+          <div class="review-route-node node-workout">
+            <i></i><span>Тренировка</span><strong>Что выполнить?</strong>
+          </div>
+          <div class="review-route-node node-fact">
+            <i></i><span>Факт</span><strong>Что получилось?</strong>
+          </div>
+          <div class="review-route-break">
+            <b>×</b><span>теряется общий<br>контекст</span>
+          </div>
+          <div class="review-route-node node-next">
+            <i></i><span>Следующий шаг</span><strong>Что дальше?</strong>
+          </div>
+        </div>
+
+        <div class="review-actor review-trainer">
+          <span>ТРЕНЕР</span>
+          <strong>собирает цель, программу, факт и обратную связь вручную</strong>
+        </div>
+      </div>
+
+      <div class="review-problem-conclusion">
+        <span>РОЛЬ FIT</span>
+        <strong>Соединить клиента и тренера общим контекстом</strong>
+      </div>
+
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Показать не абстрактную проблему «людям не хватает мотивации», а разрыв в следующем действии.
+
+ЧТО ГОВОРИМ
+Путь человека в спорт состоит из повторяющихся вопросов. Где начать? Что делать сегодня? Что получилось? Что менять дальше? Сейчас ответы разбросаны между поиском, заметками, мессенджером, часами, отдельными приложениями и памятью самого человека.
 
 Из-за этого клиент теряет следующий понятный шаг и постепенно выпадает из режима. Если есть тренер, он тоже работает вслепую: собирает цель, программу, факт выполнения и обратную связь вручную. В результате время тренера уходит на администрирование, а не на качество сопровождения.
 
