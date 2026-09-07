@@ -1,0 +1,4761 @@
+{
+  "version": 1,
+  "exerciseCount": 317,
+  "files": [
+    {
+      "path": "vital-captain-s-chair-leg-raise-ex003.jpg",
+      "bytes": 13574,
+      "sha256": "199917531810af587e0c9554054230195db6378ce21d7cf2698783017f36099b"
+    },
+    {
+      "path": "vital-captain-s-chair-leg-raise-ex003-end.jpg",
+      "bytes": 13818,
+      "sha256": "1bf589a07e2e3185537239d2a1595884ab04d74143fef88bedab37414abf52d8"
+    },
+    {
+      "path": "vital-captain-s-chair-leg-raise-ex003.mp4",
+      "bytes": 66999,
+      "sha256": "6b422de687a808f5535dbd72da3021dd37bb50682a38d8ca50b69bb625e50cc6"
+    },
+    {
+      "path": "vital-hanging-leg-raise-ex004.jpg",
+      "bytes": 19289,
+      "sha256": "345d08ac79e823146689181a0a4cf9679469cb724c54b8f9e7a4c11f20cecde3"
+    },
+    {
+      "path": "vital-hanging-leg-raise-ex004-end.jpg",
+      "bytes": 19397,
+      "sha256": "d087c651e6b1dc4c46561ac81e4a459c2c2b5ca91b051802c2906c471aa023b5"
+    },
+    {
+      "path": "vital-hanging-leg-raise-ex004.mp4",
+      "bytes": 138822,
+      "sha256": "54e47b656865144e78e4b493d0866568026eab3e6e42c3fdbd2e0505eaabc0b3"
+    },
+    {
+      "path": "vital-band-pushup-ex008.jpg",
+      "bytes": 12558,
+      "sha256": "a90669533e93cdeffcfa1d7677b84d44f8e17240ea6a0457a2bad4a52a6572c1"
+    },
+    {
+      "path": "vital-band-pushup-ex008-end.jpg",
+      "bytes": 12605,
+      "sha256": "137e568e210a6e558db1baebb5a4230ce994a997d33bdfbb2aedc2e4d3b207c5"
+    },
+    {
+      "path": "vital-band-pushup-ex008.mp4",
+      "bytes": 93956,
+      "sha256": "04cd4923ee796fa6056665e2b4101aa9313d42472e2e80468903f9939c7d8d99"
+    },
+    {
+      "path": "vital-barbell-curl-standard-ex009.jpg",
+      "bytes": 13875,
+      "sha256": "736a6ab56db403f6033e78567aaad613e8ced7209db01a41ac91808e834d8458"
+    },
+    {
+      "path": "vital-barbell-curl-standard-ex009-end.jpg",
+      "bytes": 14026,
+      "sha256": "b34298d4df1dffdb211722bfd0e5d2729e89f40653814002a526afae5cab9521"
+    },
+    {
+      "path": "vital-barbell-curl-standard-ex009.mp4",
+      "bytes": 119937,
+      "sha256": "49c2fc0e992d61f70698a52ad3963f9238334e7cf5e2c4a801d2ad0caa3c9d31"
+    },
+    {
+      "path": "vital-barbell-hold-ex010.jpg",
+      "bytes": 13317,
+      "sha256": "8d204384cbf00190e88c207ac6e69a4499f49b5e6d053c4a5b69a5206b420d98"
+    },
+    {
+      "path": "vital-barbell-hold-ex010-end.jpg",
+      "bytes": 13066,
+      "sha256": "a182d9a12969b219008d344347a490c207061b9d4b0d5655e5dacca3144e041e"
+    },
+    {
+      "path": "vital-barbell-hold-ex010.mp4",
+      "bytes": 36304,
+      "sha256": "2601d22a46e196cb05400e149432116b03e70b6f4f8ee58d1d6d3db723d8f522"
+    },
+    {
+      "path": "vital-cable-curl-straight-bar-ex011.jpg",
+      "bytes": 22094,
+      "sha256": "4d34e22b452a0343f2ead4d1b0ff7f223ee1b5141bd1b1aaf2f9aed9f49dec87"
+    },
+    {
+      "path": "vital-cable-curl-straight-bar-ex011-end.jpg",
+      "bytes": 22677,
+      "sha256": "47b01d21fe054a6482a46a86199f8a8d36da88c7af3429d1fdd7c1e09ce6b4bd"
+    },
+    {
+      "path": "vital-cable-curl-straight-bar-ex011.mp4",
+      "bytes": 125403,
+      "sha256": "931636e916601c15f555b310a4e0809dc5e3169e0471b764962065418d71f34a"
+    },
+    {
+      "path": "vital-cable-wood-chop-ex012.jpg",
+      "bytes": 17082,
+      "sha256": "a591a79e983dced7b60788e4bd3ced7b9e6dabbad7d88653ee97669531a7c640"
+    },
+    {
+      "path": "vital-cable-wood-chop-ex012-end.jpg",
+      "bytes": 17069,
+      "sha256": "d98170739cbfd2e4c8c42e4c5ee7ab6fe80e24ec2feadc53584e4fa76baedc69"
+    },
+    {
+      "path": "vital-cable-wood-chop-ex012.mp4",
+      "bytes": 122422,
+      "sha256": "14319c353a4b1e01da139b2e4a5ff530cc8d35b5b8ef28ce70de814933e04ff2"
+    },
+    {
+      "path": "vital-concentration-curl-seated-dumbbell-ex014.jpg",
+      "bytes": 13913,
+      "sha256": "dac345cda4fdaaa90f5fde28fee505663d52c0c5283c0e0f93973911bb44a347"
+    },
+    {
+      "path": "vital-concentration-curl-seated-dumbbell-ex014-end.jpg",
+      "bytes": 14057,
+      "sha256": "fb8c2c8c2ed3d6eb48cf684369c4e8e0804fa5dd5a80c2c423fa9ed49cdf0a71"
+    },
+    {
+      "path": "vital-concentration-curl-seated-dumbbell-ex014.mp4",
+      "bytes": 76634,
+      "sha256": "c83bfc96d9441031dc0d82fd741e44ea0f403f4ff78449dec84fd1edb2e3ae4d"
+    },
+    {
+      "path": "vital-hammer-dumbbell-biceps-curl-ex016.jpg",
+      "bytes": 8531,
+      "sha256": "77f81e7d8c7cb65065fbe52eae952d9728eade0541bfdb69ece9a61471c11eee"
+    },
+    {
+      "path": "vital-hammer-dumbbell-biceps-curl-ex016-end.jpg",
+      "bytes": 8743,
+      "sha256": "b2a8f53897df0fefcec6b03241aaa42dc4123c6c1e005068f8005a9bd3724926"
+    },
+    {
+      "path": "vital-hammer-dumbbell-biceps-curl-ex016.mp4",
+      "bytes": 82720,
+      "sha256": "9755c4836be65f1850717668723ee31ad63022ab6c36acae41e88640ee7ad26b"
+    },
+    {
+      "path": "vital-dumbbell-spider-curl-ex018.jpg",
+      "bytes": 14978,
+      "sha256": "576ed336dd890788557e9f541405f142ea481a0dce6f97e5fc9c63a857ac977e"
+    },
+    {
+      "path": "vital-dumbbell-spider-curl-ex018-end.jpg",
+      "bytes": 15093,
+      "sha256": "5c1a61444c2cde555b4a256a9086b8f7c8b5f7b2d156fea16feea192e18fcc4d"
+    },
+    {
+      "path": "vital-dumbbell-spider-curl-ex018.mp4",
+      "bytes": 87096,
+      "sha256": "a6c03b92a8f503ba1d9095e6801595236977824668da46808f4deb5212e17315"
+    },
+    {
+      "path": "vital-incline-dumbbell-curl-ex019.jpg",
+      "bytes": 16718,
+      "sha256": "999760c83c9f20ac42b7522452fc1e722fb858a1e933d753ff4bee51b2f6706e"
+    },
+    {
+      "path": "vital-incline-dumbbell-curl-ex019-end.jpg",
+      "bytes": 16957,
+      "sha256": "38a6ddb66387d5bbaa3059435bb3715d670d0c9a62e618f4018eb69fc840f8f3"
+    },
+    {
+      "path": "vital-incline-dumbbell-curl-ex019.mp4",
+      "bytes": 108141,
+      "sha256": "2d339aa228107d9ce83f4b9ded3010fb53b1689b0a07d2f29ca28a17147adab2"
+    },
+    {
+      "path": "vital-landmine-press-single-arm-ex020.jpg",
+      "bytes": 16104,
+      "sha256": "20793588d12defdee04c018332e2a92b348715cba8914297de0200ad623cb3be"
+    },
+    {
+      "path": "vital-landmine-press-single-arm-ex020-end.jpg",
+      "bytes": 16262,
+      "sha256": "b4d83447f242302274f5ca209e8b2c61310cfbac8b1615ab5d91c517095bad03"
+    },
+    {
+      "path": "vital-landmine-press-single-arm-ex020.mp4",
+      "bytes": 83773,
+      "sha256": "0021c6728b1a8ba05d13d2aef15de60809ddd26a16db23ca0a24eba421f05582"
+    },
+    {
+      "path": "vital-overhead-triceps-extension-dumbbell-ex021.jpg",
+      "bytes": 9584,
+      "sha256": "d03057bbd47d619019b9a05961949f499eebca2e8366028128030be5ba6064f3"
+    },
+    {
+      "path": "vital-overhead-triceps-extension-dumbbell-ex021-end.jpg",
+      "bytes": 9564,
+      "sha256": "027cde2fdba4b7b1fae25fbb0d989de96f985da134eec07d0f6fe1538d5a14ea"
+    },
+    {
+      "path": "vital-overhead-triceps-extension-dumbbell-ex021.mp4",
+      "bytes": 74376,
+      "sha256": "37a2b29726f2d871bb4f958e99e43c3d0d309890446cda49b042988429f43c58"
+    },
+    {
+      "path": "vital-preacher-curl-ez-bar-ex022.jpg",
+      "bytes": 14185,
+      "sha256": "46ad284f9cfcc93b6109a46492ffca3d07353220d7fdccd7c6df93856adb879b"
+    },
+    {
+      "path": "vital-preacher-curl-ez-bar-ex022-end.jpg",
+      "bytes": 14587,
+      "sha256": "3bf3ae161ed9c5883076bc995cf6bb262e3c1e6f62728d1e4b5902b5136bcb02"
+    },
+    {
+      "path": "vital-preacher-curl-ez-bar-ex022.mp4",
+      "bytes": 137648,
+      "sha256": "2ce84004e9c168bf8e4e58a1cd131f3a4db4297de8056bf2b12c88e3ee95a35a"
+    },
+    {
+      "path": "vital-skull-crushers-ez-bar-ex024.jpg",
+      "bytes": 16350,
+      "sha256": "1488f776010cd42039d4d255cc7bddfde7f048b8a8c001ebb9a9e6562425398d"
+    },
+    {
+      "path": "vital-skull-crushers-ez-bar-ex024-end.jpg",
+      "bytes": 16260,
+      "sha256": "bc88b6b207d81d33f30ddb4ad61208803d9826c66886a45ea359f593ceceabd9"
+    },
+    {
+      "path": "vital-skull-crushers-ez-bar-ex024.mp4",
+      "bytes": 84065,
+      "sha256": "2396f75917869fd7511d5a70a98d321cfa0220e3ca6afe3309207fb572eb7b33"
+    },
+    {
+      "path": "vital-weighted-pushup-ex026.jpg",
+      "bytes": 11621,
+      "sha256": "28c0a3cd0a4e300ab7d2ea886c99b42047bec9d99a5bac6b51601bed06a73231"
+    },
+    {
+      "path": "vital-weighted-pushup-ex026-end.jpg",
+      "bytes": 11869,
+      "sha256": "7a275a52e4a7abbef15b179b68111b6597e44cbd31a6c5041ffa0931f915e015"
+    },
+    {
+      "path": "vital-weighted-pushup-ex026.mp4",
+      "bytes": 103838,
+      "sha256": "7d635a72fbfaed21be9c5e6af4eae8b02f91d6b6a9d7b56807bcfd9d2af477c0"
+    },
+    {
+      "path": "vital-barbell-shrug-ex029.jpg",
+      "bytes": 13023,
+      "sha256": "917dc4f057b483a6ea9784f0bc468851f8313b16e767612295eeb1a8e1f24545"
+    },
+    {
+      "path": "vital-barbell-shrug-ex029-end.jpg",
+      "bytes": 13139,
+      "sha256": "6b3ef9f9ef322ad7653d08f4bc6b53620f23f704d4bbd94ee188cdbe965d4307"
+    },
+    {
+      "path": "vital-barbell-shrug-ex029.mp4",
+      "bytes": 60968,
+      "sha256": "21ffd4fa0d8d26b33a82535e3728069718e246cb6263373669a7a300ab7e6553"
+    },
+    {
+      "path": "vital-cable-face-pull-ex030.jpg",
+      "bytes": 23288,
+      "sha256": "d88ffa3b7ed4f98a547c66ed2e1a0699570cfea799df61e5b6cb0295c881ce11"
+    },
+    {
+      "path": "vital-cable-face-pull-ex030-end.jpg",
+      "bytes": 23546,
+      "sha256": "70e9a0ac06e53d7a31db38ddf0a9e6c3a89cc063925fc883c6e7cd5244668b4d"
+    },
+    {
+      "path": "vital-cable-face-pull-ex030.mp4",
+      "bytes": 101289,
+      "sha256": "808d9043cac57f1e89cf80d6ad846d1de3c1bacf7b1f7d9ae2899c8f72cb64be"
+    },
+    {
+      "path": "vital-chin-up-leg-folded-ex031.jpg",
+      "bytes": 15925,
+      "sha256": "274ee2724762e5083e47c2110cef9ef6df229bb273ee4c24be51daea60945dc2"
+    },
+    {
+      "path": "vital-chin-up-leg-folded-ex031-end.jpg",
+      "bytes": 15885,
+      "sha256": "bde07706b5a394d95e069cfc4f236a14ca5f2f42fa27dbf6024f2e567501900a"
+    },
+    {
+      "path": "vital-chin-up-leg-folded-ex031.mp4",
+      "bytes": 79656,
+      "sha256": "90b2aedb2689273a9fcf04c03e00684345e51896b45c5adc71b4fe49810ceaf3"
+    },
+    {
+      "path": "vital-barbell-deadlift-ex032.jpg",
+      "bytes": 13421,
+      "sha256": "ec74c38719cd047d97e467cc60efbb5e56a4445737dbe6206a73f32b825157db"
+    },
+    {
+      "path": "vital-barbell-deadlift-ex032-end.jpg",
+      "bytes": 12587,
+      "sha256": "430628a2f51e05dd1057393551701af4b2d38d700366294fc6d0075e58158b03"
+    },
+    {
+      "path": "vital-barbell-deadlift-ex032.mp4",
+      "bytes": 120961,
+      "sha256": "8bc8b530c721c9a3783a13259548d14a6182726b9953babefda371e5036feda2"
+    },
+    {
+      "path": "vital-deadlift-sumo-barbell-ex033.jpg",
+      "bytes": 13283,
+      "sha256": "53e1cf5a95d53e1864197140665bcbaf00c36d6b15d9a95744ddfa4c6ec89e34"
+    },
+    {
+      "path": "vital-deadlift-sumo-barbell-ex033-end.jpg",
+      "bytes": 13479,
+      "sha256": "f11f984163da6263f77c25667eefebe85291f3d664e57b60ac00cc39a803083d"
+    },
+    {
+      "path": "vital-deadlift-sumo-barbell-ex033.mp4",
+      "bytes": 187459,
+      "sha256": "e292a952f6b8e1721856176ca03a2a814556862536da1e9a9f2609954b875bd9"
+    },
+    {
+      "path": "vital-dumbbell-shrug-ex034.jpg",
+      "bytes": 10701,
+      "sha256": "f22092199b65ebb867583b89bcf07a26e7cc3320b563e8ff287c2118addf2e54"
+    },
+    {
+      "path": "vital-dumbbell-shrug-ex034-end.jpg",
+      "bytes": 11211,
+      "sha256": "ea4bf3f819cfeff9c067b36c799b8d38862b9b456a7bae4d39603935ced04a68"
+    },
+    {
+      "path": "vital-dumbbell-shrug-ex034.mp4",
+      "bytes": 50004,
+      "sha256": "c5b0b7f6fb52c76ca6407df2f8eda9e7ea520c8372dc974319741f0835f64db3"
+    },
+    {
+      "path": "vital-good-morning-barbell-ex035.jpg",
+      "bytes": 12170,
+      "sha256": "36ac768e702ff9c237b96dd6fe0f1a4c6cbb0a54a8352c415a8fedfa145c8d95"
+    },
+    {
+      "path": "vital-good-morning-barbell-ex035-end.jpg",
+      "bytes": 12142,
+      "sha256": "247bef037def318f738cf2e93aca856896bcb6a3b39efc078d91b2126c97e52b"
+    },
+    {
+      "path": "vital-good-morning-barbell-ex035.mp4",
+      "bytes": 103989,
+      "sha256": "831a476442aa695f83f505e5e7e6b7a8708da973f50f4628c37fbb3647cbec4c"
+    },
+    {
+      "path": "vital-hyperextensions-back-extension-ex036.jpg",
+      "bytes": 14532,
+      "sha256": "a579648e1e5614913703af7d8b7dd64c0f71ca2115d01d08eca0cd77f188893d"
+    },
+    {
+      "path": "vital-hyperextensions-back-extension-ex036-end.jpg",
+      "bytes": 14480,
+      "sha256": "c2722044f9acede0cc8168b62dea8227f902c098279c4c03f54745b82e52207d"
+    },
+    {
+      "path": "vital-hyperextensions-back-extension-ex036.mp4",
+      "bytes": 87411,
+      "sha256": "094ae3b970f0f2d93d5e2530faefb2f1b50c86eac96f52d0950762fa595bf476"
+    },
+    {
+      "path": "vital-pullup-ex038.jpg",
+      "bytes": 19174,
+      "sha256": "6b4d4acdde787eecefd6598ed7e10f88438e077d8d7789e266846e6b5cb63b2a"
+    },
+    {
+      "path": "vital-pullup-ex038-end.jpg",
+      "bytes": 19285,
+      "sha256": "c1bf067acc9130d354b3837911813f25b75dae6dd948326290e92a12b79e3ef2"
+    },
+    {
+      "path": "vital-pullup-ex038.mp4",
+      "bytes": 79678,
+      "sha256": "23f1b17b9df29bb72b8f5cf738aa63565c12e67960dd13393c3f6dda726f9792"
+    },
+    {
+      "path": "vital-dumbbell-rear-delt-fly-ex039.jpg",
+      "bytes": 10530,
+      "sha256": "603dcf92e2f5eb974a949906c14e8a3aafb77bd4da6f0a9ffcea52ec8d5daf6e"
+    },
+    {
+      "path": "vital-dumbbell-rear-delt-fly-ex039-end.jpg",
+      "bytes": 10810,
+      "sha256": "3c255caa907e390e3b8574d796ea3396a9ffaab518ddabcec9ab7e6acdf8f316"
+    },
+    {
+      "path": "vital-dumbbell-rear-delt-fly-ex039.mp4",
+      "bytes": 79168,
+      "sha256": "2783e884e35f31199218a59ef8b206eb1341d115d4e09f9693e48c7229d4162e"
+    },
+    {
+      "path": "vital-seated-chest-supported-machine-t-bar-row-ex040.jpg",
+      "bytes": 15710,
+      "sha256": "4c3ad3194bbc96161fc4578f74b81926c31a6278c3634f9b1e85d29cbd3406f4"
+    },
+    {
+      "path": "vital-seated-chest-supported-machine-t-bar-row-ex040-end.jpg",
+      "bytes": 15791,
+      "sha256": "2beb5aeea71cff1c0442087ebf00e9b09c9d2e8721fc956c20d3ea15050cb6bb"
+    },
+    {
+      "path": "vital-seated-chest-supported-machine-t-bar-row-ex040.mp4",
+      "bytes": 71264,
+      "sha256": "ff240dd723fd0b32978d7e61c568abf8faf1e05e59468a3ca9a9f5a6ad93bdae"
+    },
+    {
+      "path": "vital-barbell-bench-press-flat-ex041.jpg",
+      "bytes": 16925,
+      "sha256": "89f39ec466ee17a4dabb03f22ed8aa5fae43c63d3bf8d2b1a8a2f73786a72e78"
+    },
+    {
+      "path": "vital-barbell-bench-press-flat-ex041-end.jpg",
+      "bytes": 17187,
+      "sha256": "5ab7fc3c7b94536c878a98453660f384992ff60975c5872b43e882dda16ac890"
+    },
+    {
+      "path": "vital-barbell-bench-press-flat-ex041.mp4",
+      "bytes": 84578,
+      "sha256": "3a54963326b150d166b981567df5baa022c88066113162a67a29b67b54fa24e9"
+    },
+    {
+      "path": "vital-incline-barbell-bench-press-ex042.jpg",
+      "bytes": 15942,
+      "sha256": "c09f6dd1f392e726fd817dfc882c4e196ac9d7b91038e3dc22ee4e2679e025ce"
+    },
+    {
+      "path": "vital-incline-barbell-bench-press-ex042-end.jpg",
+      "bytes": 16096,
+      "sha256": "af6722471a807e0dc77b9654ca0ed8a5809530ce7980c5610dfbee83bb59996a"
+    },
+    {
+      "path": "vital-incline-barbell-bench-press-ex042.mp4",
+      "bytes": 89750,
+      "sha256": "a4d4c55701f8b5f51e835f95ce5ba85c8c5d7676375a63cd987d8f945732b565"
+    },
+    {
+      "path": "vital-dips-chest-focus-leaning-forward-ex044.jpg",
+      "bytes": 15553,
+      "sha256": "1bfd0fa77d155ffdb006a71b30734ec36c9a1a8ca1ff45562e5109905fac0a96"
+    },
+    {
+      "path": "vital-dips-chest-focus-leaning-forward-ex044-end.jpg",
+      "bytes": 16182,
+      "sha256": "5032fa3d375b2f72daac9537830ffab71c5f38014cab265fc69503a97041ebcb"
+    },
+    {
+      "path": "vital-dips-chest-focus-leaning-forward-ex044.mp4",
+      "bytes": 79020,
+      "sha256": "a259bb0ad68e0d7355ce7a44be0b9ba05b6f4f7763e5fe087c8c47175442a4e2"
+    },
+    {
+      "path": "vital-dumbbell-bench-press-decline-ex046.jpg",
+      "bytes": 15870,
+      "sha256": "4c30217f6b7564d790affb3c06a3f3a63a7db4396b9d874c7aa7124046a434d4"
+    },
+    {
+      "path": "vital-dumbbell-bench-press-decline-ex046-end.jpg",
+      "bytes": 16269,
+      "sha256": "b9370ed8778f06f97e70025a049ce0cd2914c4b96b0546a3e12d3c324a8684f8"
+    },
+    {
+      "path": "vital-dumbbell-bench-press-decline-ex046.mp4",
+      "bytes": 106227,
+      "sha256": "f14ab6bb253442e1051c7d0f9455b56773a1c8b70cdb7e565b8ba35c4deb20ee"
+    },
+    {
+      "path": "vital-dumbbell-flys-flat-ex048.jpg",
+      "bytes": 17406,
+      "sha256": "8d7aa880b67fe3a45b9295073bedd30230514e7295b7cae7885591a63ddfbb51"
+    },
+    {
+      "path": "vital-dumbbell-flys-flat-ex048-end.jpg",
+      "bytes": 17533,
+      "sha256": "4e0bf72c3734d3b185ac130ec2e3c2ffd7875835a0567174486ff1fc09855693"
+    },
+    {
+      "path": "vital-dumbbell-flys-flat-ex048.mp4",
+      "bytes": 115787,
+      "sha256": "e6b86617c19b5ed36ab840b96f9f32efb8f1532b9bee71bf314402b514dcf8d5"
+    },
+    {
+      "path": "vital-dumbbell-flys-incline-ex049.jpg",
+      "bytes": 16458,
+      "sha256": "6a8a37fcc47a31f9546667abd48be45abf90ba1edb259f009fed47e02cad8ddb"
+    },
+    {
+      "path": "vital-dumbbell-flys-incline-ex049-end.jpg",
+      "bytes": 16683,
+      "sha256": "67cd6c72ea076984c66b7419d67933e73b5861712d6ebec466da03bec08297c6"
+    },
+    {
+      "path": "vital-dumbbell-flys-incline-ex049.mp4",
+      "bytes": 90252,
+      "sha256": "92bf959a1051fcc70d0d7e66018d8dac41587204662d41f57a37ed1cdd572275"
+    },
+    {
+      "path": "vital-pec-deck-machine-fly-ex050.jpg",
+      "bytes": 26959,
+      "sha256": "07572ebc14acb2380156f4e142752582f6e9d3cb825a26a2c237ee512ee51119"
+    },
+    {
+      "path": "vital-pec-deck-machine-fly-ex050-end.jpg",
+      "bytes": 27147,
+      "sha256": "0ab42b3575182e07b3e9dcb296c0c02f360766515bbe05d9efdc0045dca67e0d"
+    },
+    {
+      "path": "vital-pec-deck-machine-fly-ex050.mp4",
+      "bytes": 144944,
+      "sha256": "ebb33f76e5527584121eb6feec3cddc64d4e7fe7037033ab165be9b8464d573a"
+    },
+    {
+      "path": "vital-svend-press-chest-ex051.jpg",
+      "bytes": 9134,
+      "sha256": "45ae6c563881dd2252d783eba8564512fe566480d7e7c7bb07ac0d8a4afc279c"
+    },
+    {
+      "path": "vital-svend-press-chest-ex051-end.jpg",
+      "bytes": 9247,
+      "sha256": "012fd31ff6eb3e3aa78b08bb374088a4296556b664a70c1f0900d93eccd97f2f"
+    },
+    {
+      "path": "vital-svend-press-chest-ex051.mp4",
+      "bytes": 45654,
+      "sha256": "b889a04d2d14b0c0b256c48d5e8e26d8f1fdae19bb78625b9f1e166bd3bd1010"
+    },
+    {
+      "path": "vital-air-bike-sprint-ex052.jpg",
+      "bytes": 20171,
+      "sha256": "b05f56062a548f713d50c4e75a07f5f17f679fc8e4288246a0f91cede26ea69f"
+    },
+    {
+      "path": "vital-air-bike-sprint-ex052-end.jpg",
+      "bytes": 20471,
+      "sha256": "f90b01d327307ed3465801dbb8426cf513c12dc51870721beb59d4a42c85f2e4"
+    },
+    {
+      "path": "vital-air-bike-sprint-ex052.mp4",
+      "bytes": 75069,
+      "sha256": "c3c2c88f0f129ed23c3e70068d309fea3d19ff007b9f235af023230499fbdbdd"
+    },
+    {
+      "path": "vital-barbell-bodyweight-squat-ex053.jpg",
+      "bytes": 12825,
+      "sha256": "acbdc4cb7d2d772b889720c86a089140577e13e8d20ebdfe1b5ebe4c1c88b1f6"
+    },
+    {
+      "path": "vital-barbell-bodyweight-squat-ex053-end.jpg",
+      "bytes": 13241,
+      "sha256": "f4da1979b6d28356132bba26cedeb8b1391ed868980ffe2d3b97c9bb899289cf"
+    },
+    {
+      "path": "vital-barbell-bodyweight-squat-ex053.mp4",
+      "bytes": 128085,
+      "sha256": "853444bbecdf32c81f4b3b731790f68b0c90ea870bb02b7b362b15dab705ce69"
+    },
+    {
+      "path": "vital-barbell-bulgarian-split-squat-ex054.jpg",
+      "bytes": 15220,
+      "sha256": "c2af427450b39d474288a66756ce9e66c83c8e78280d88f97402898cbe5eed46"
+    },
+    {
+      "path": "vital-barbell-bulgarian-split-squat-ex054-end.jpg",
+      "bytes": 15589,
+      "sha256": "8ad80f236d9cdd169542418f3779161c80d43337f94775f14789db3f8bd4d4f8"
+    },
+    {
+      "path": "vital-barbell-bulgarian-split-squat-ex054.mp4",
+      "bytes": 114626,
+      "sha256": "50d9f1ebd4f96c4f16390aa34a251d24f28c6b9791c2ab3cfcec256d8b106cdd"
+    },
+    {
+      "path": "vital-barbell-front-squat-ex055.jpg",
+      "bytes": 12579,
+      "sha256": "514b87a6e37bbf4908f6f4545c9a14c7d5f5cf9d84bc54fdc717e7de80b01b6a"
+    },
+    {
+      "path": "vital-barbell-front-squat-ex055-end.jpg",
+      "bytes": 12866,
+      "sha256": "f59bce9387dab17e97ff1f8f0f7459c38156b75c8fae4c45e927e8e9e624f6fd"
+    },
+    {
+      "path": "vital-barbell-front-squat-ex055.mp4",
+      "bytes": 136091,
+      "sha256": "6919ea0dd3d87465c7263eb745197d5a4e24a8794f07756bea928438613b656e"
+    },
+    {
+      "path": "vital-barbell-hip-thrust-ex056.jpg",
+      "bytes": 13731,
+      "sha256": "4b4bf913d940a6a228a1daf2f1fcd5aecebd4e3fdb0806abc99981c5894cacc3"
+    },
+    {
+      "path": "vital-barbell-hip-thrust-ex056-end.jpg",
+      "bytes": 13923,
+      "sha256": "ca6aec14a24e27da8ec8645be33ad73087b84167ba0be50e7a13b0fea8fa7b87"
+    },
+    {
+      "path": "vital-barbell-hip-thrust-ex056.mp4",
+      "bytes": 64116,
+      "sha256": "3ff010f71710c7968fc66d1790ccfce804487b1e501f0d2ae32e42733aab55a3"
+    },
+    {
+      "path": "vital-barbell-reverse-lunge-ex058.jpg",
+      "bytes": 13637,
+      "sha256": "9244d9b6dcb15dc590ecc73a2099235f207cd66b730f2373b85d4e10bf632e36"
+    },
+    {
+      "path": "vital-barbell-reverse-lunge-ex058-end.jpg",
+      "bytes": 13706,
+      "sha256": "c3e736d4c6e5baa380e358655a2021680617a016527ab1cfa0bb4215be4c2ebc"
+    },
+    {
+      "path": "vital-barbell-reverse-lunge-ex058.mp4",
+      "bytes": 136507,
+      "sha256": "e6f868959c21751eb1e9b0c6fc5b5d9a03acec1a6bfc95f7e17ebf017d727984"
+    },
+    {
+      "path": "vital-barbell-rdl-ex059.jpg",
+      "bytes": 8892,
+      "sha256": "df882bb1c6b09535262d150330754c04d06dc889aec7348fa1f3bf84d13ab25b"
+    },
+    {
+      "path": "vital-barbell-rdl-ex059-end.jpg",
+      "bytes": 9325,
+      "sha256": "0d1bca46a3e20b5e6ff60f9252eef5ac60125b37ab024f7f991ad07bb618a88c"
+    },
+    {
+      "path": "vital-barbell-rdl-ex059.mp4",
+      "bytes": 163994,
+      "sha256": "dbe3965022b207cea8cd5e44a01b570223375fa2d1fc8bc1f0056e3cb0088145"
+    },
+    {
+      "path": "vital-cable-leg-kickback-ex060.jpg",
+      "bytes": 17843,
+      "sha256": "9039ad5c7ec7e922685ad6e07c8ecd47aafae3aa23738a8e8f0c92e3bcd7686d"
+    },
+    {
+      "path": "vital-cable-leg-kickback-ex060-end.jpg",
+      "bytes": 17909,
+      "sha256": "feac70e0f5c363788ba87282151b87a772cddea235f565ac783d38983df83936"
+    },
+    {
+      "path": "vital-cable-leg-kickback-ex060.mp4",
+      "bytes": 102362,
+      "sha256": "ab3e26b59019583125740d725f8750acb12681e3e5db7e1b7383e9c62132ce24"
+    },
+    {
+      "path": "vital-cycling-ex061.jpg",
+      "bytes": 16438,
+      "sha256": "da102b5437ae7bae034a056707786b18d18f4f1773ac33a32a88105527dde2e0"
+    },
+    {
+      "path": "vital-cycling-ex061-end.jpg",
+      "bytes": 16515,
+      "sha256": "08a83b1c0b1faf6d7fbdaf5e3fda7fd0cf821bf9af5e153f717039a563eb705e"
+    },
+    {
+      "path": "vital-cycling-ex061.mp4",
+      "bytes": 241101,
+      "sha256": "d912684c8fc2fbeeaba270220df21cd1dcd0939e3bae3f64dc2f1a15d5afdf1c"
+    },
+    {
+      "path": "vital-dumbbell-bulgarian-split-squat-ex062.jpg",
+      "bytes": 14674,
+      "sha256": "4d2aa9f40c3094d403522295f156883f73c1728c68adfd214ed627694d44555b"
+    },
+    {
+      "path": "vital-dumbbell-bulgarian-split-squat-ex062-end.jpg",
+      "bytes": 14983,
+      "sha256": "ea81206ecd5ec4cbc11c5b905d8dcd6ba88ba645e58f61521015ec49aa2ae0cd"
+    },
+    {
+      "path": "vital-dumbbell-bulgarian-split-squat-ex062.mp4",
+      "bytes": 153736,
+      "sha256": "ae4cbbae2d153ba723791603155d7dd5b783d7c5ed9025ab01dd3821a7f3b429"
+    },
+    {
+      "path": "vital-dumbbell-goblet-squat-ex063.jpg",
+      "bytes": 10601,
+      "sha256": "f098e7163a4d91f8218ce39926265f5859ff2ca472342014e96a57cf93c7290f"
+    },
+    {
+      "path": "vital-dumbbell-goblet-squat-ex063-end.jpg",
+      "bytes": 10616,
+      "sha256": "7125f9e1c949504e697c5caa140e239ba0d40eab557f50b359e033c8be2a73dc"
+    },
+    {
+      "path": "vital-dumbbell-goblet-squat-ex063.mp4",
+      "bytes": 96713,
+      "sha256": "2142b207edc370b68c541e7851b07a04ce3319063375500b3131be6d0f2d629e"
+    },
+    {
+      "path": "vital-dumbbell-hip-hinge-ex064.jpg",
+      "bytes": 10827,
+      "sha256": "80fa863c7f3cfd36616e1683831000fa7f37625b05995aa8ac2a4363f18186d1"
+    },
+    {
+      "path": "vital-dumbbell-hip-hinge-ex064-end.jpg",
+      "bytes": 10942,
+      "sha256": "84af6864068a94daac18e5b85447b4cb027c7fe2d07fdc0e0adb3c70c0b6fb28"
+    },
+    {
+      "path": "vital-dumbbell-hip-hinge-ex064.mp4",
+      "bytes": 108134,
+      "sha256": "356398bc35ea89a57bdc1013856743e52f72d84eb307796b6be62e5ff9618a9d"
+    },
+    {
+      "path": "vital-dumbbell-jump-squat-ex065.jpg",
+      "bytes": 11058,
+      "sha256": "8a201ca656e55650e961b82604fac8652935b5b40775d120b9877d27e4af03eb"
+    },
+    {
+      "path": "vital-dumbbell-jump-squat-ex065-end.jpg",
+      "bytes": 11352,
+      "sha256": "4c5ca05c231e5cef0c7d63d38a0d102b6a281ce7beed272d2a034163f7277ba1"
+    },
+    {
+      "path": "vital-dumbbell-jump-squat-ex065.mp4",
+      "bytes": 87092,
+      "sha256": "a0714566b6dadf8e890949b82453563be046b59007a6c7330ddd6833a958998c"
+    },
+    {
+      "path": "vital-elliptical-hiit-machine-ex066.jpg",
+      "bytes": 15326,
+      "sha256": "e3caa1261b14fd5993a23e595b83fe89b1da6dcf9a0fafd8615809e8cbe83286"
+    },
+    {
+      "path": "vital-elliptical-hiit-machine-ex066-end.jpg",
+      "bytes": 15849,
+      "sha256": "4c89a477c90a7d99d41d18b639b7b84ab7040bfea3f47d52d41c090c54d3f15b"
+    },
+    {
+      "path": "vital-elliptical-hiit-machine-ex066.mp4",
+      "bytes": 108541,
+      "sha256": "0853e746a7d4d789197dbc472e5dd6a1fbe2d7d29f464b3d435cee09ce0af29d"
+    },
+    {
+      "path": "vital-hack-squat-machine-ex067.jpg",
+      "bytes": 26124,
+      "sha256": "6debae0231d2c57965055f2abe834624cb96c4240142292c6ffb6420de658d6f"
+    },
+    {
+      "path": "vital-hack-squat-machine-ex067-end.jpg",
+      "bytes": 25925,
+      "sha256": "5f24a19ddf7997a98257cc6f2a95b1d6018e4853a874a207522e8d7734d0186a"
+    },
+    {
+      "path": "vital-hack-squat-machine-ex067.mp4",
+      "bytes": 180708,
+      "sha256": "d72fecfe97be10e1ae5d9fa51c7011ef23774130dece32eed45095fb6deefc8e"
+    },
+    {
+      "path": "vital-hip-abduction-machine-ex068.jpg",
+      "bytes": 13281,
+      "sha256": "70b96fa40a9f5fb09b5e8faf86c251bea5ec188a53f673727651a9ec43096c2c"
+    },
+    {
+      "path": "vital-hip-abduction-machine-ex068-end.jpg",
+      "bytes": 13424,
+      "sha256": "b451a49596e4f04b0268ad0e1815500f83bf4395636d53de692272967c6be573"
+    },
+    {
+      "path": "vital-hip-abduction-machine-ex068.mp4",
+      "bytes": 69875,
+      "sha256": "e511c4461b62990a65cede5b905b03658ad96d2fe8d0215761e59f2050504ccb"
+    },
+    {
+      "path": "vital-kettlebell-hold-march-ex069.jpg",
+      "bytes": 9499,
+      "sha256": "0754e4457f42757076bc2d0cefc0eccd329c03f937a22b67b2679c32c532633e"
+    },
+    {
+      "path": "vital-kettlebell-hold-march-ex069-end.jpg",
+      "bytes": 9614,
+      "sha256": "7cdb7028864b08fb712ad0e3495001fc7ef563560098eb8805320d9632218a17"
+    },
+    {
+      "path": "vital-kettlebell-hold-march-ex069.mp4",
+      "bytes": 77592,
+      "sha256": "5fd94336163918c3dc16a2d84641f41fedf72190b4e11c7b8e06c86f25688d9e"
+    },
+    {
+      "path": "vital-kettlebell-swing-ex071.jpg",
+      "bytes": 8752,
+      "sha256": "12f89b1fff15eb632459bcf34233c9737cc6273fb9222235931c8137f53a66fc"
+    },
+    {
+      "path": "vital-kettlebell-swing-ex071-end.jpg",
+      "bytes": 8608,
+      "sha256": "597d897e367164e82474572a368bf1e4e7aa991800dc50425334b7ab9edd640d"
+    },
+    {
+      "path": "vital-kettlebell-swing-ex071.mp4",
+      "bytes": 85182,
+      "sha256": "3895e697d72c68c0f4e3829052e97486a7f5b86f21f9a6f913ab658ef62b1960"
+    },
+    {
+      "path": "vital-leg-extension-machine-ex072.jpg",
+      "bytes": 21724,
+      "sha256": "2e9563a35d5ddda06414c319812c43fa599f962651dd17f513abf1bf925c8e37"
+    },
+    {
+      "path": "vital-leg-extension-machine-ex072-end.jpg",
+      "bytes": 22008,
+      "sha256": "fa073686e278744776d86b821333c5c49ddd76abf0aedef6d4ed095c517d08ac"
+    },
+    {
+      "path": "vital-leg-extension-machine-ex072.mp4",
+      "bytes": 126269,
+      "sha256": "9782716c20006fc46ff24bb686e9e2e42200e879321b1830f82d82c6d95a2761"
+    },
+    {
+      "path": "vital-leg-press-machine-ex073.jpg",
+      "bytes": 20518,
+      "sha256": "4aedb1238bd12316522fd44c612376bdf2d2581adc9df9774d08058d84401740"
+    },
+    {
+      "path": "vital-leg-press-machine-ex073-end.jpg",
+      "bytes": 20779,
+      "sha256": "583fe447a53eb64de09eb734af98cd80bd42c23b295a7d4ab5efa136713cd4f3"
+    },
+    {
+      "path": "vital-leg-press-machine-ex073.mp4",
+      "bytes": 85149,
+      "sha256": "cee2d44e1d96be1c78654f977c484fae75c1a82a501a92483b64b0c15d0c226e"
+    },
+    {
+      "path": "vital-lying-leg-curl-machine-ex074.jpg",
+      "bytes": 11888,
+      "sha256": "93fd0b95dac80319e6f98c628abe96a7b681cc6a3ac736aa779d7b7e38ee74ae"
+    },
+    {
+      "path": "vital-lying-leg-curl-machine-ex074-end.jpg",
+      "bytes": 12098,
+      "sha256": "fc3db7e9fe6e3cdd970e9a4a93bfe5822cfb6bdc51524008c5487fcc453160fc"
+    },
+    {
+      "path": "vital-lying-leg-curl-machine-ex074.mp4",
+      "bytes": 53034,
+      "sha256": "2c2df2c1e2e3de0218bdf48f8a17b5e98ae9bf75637e3f9d16e99d270c196702"
+    },
+    {
+      "path": "vital-rope-wave-ex075.jpg",
+      "bytes": 13863,
+      "sha256": "6f126589064a264596a82a246f20e9f4ccfab34513eca23135e8a52b504bca72"
+    },
+    {
+      "path": "vital-rope-wave-ex075-end.jpg",
+      "bytes": 14156,
+      "sha256": "229e37e6715da824dc640c3b802ebb4e264d33018209fad7e7720bb4151d8d62"
+    },
+    {
+      "path": "vital-rope-wave-ex075.mp4",
+      "bytes": 102791,
+      "sha256": "ed52bb44df3754b963d38fd521b8d45df29060292d2722721b10ccc40a6273c0"
+    },
+    {
+      "path": "vital-rowing-machine-ex076.jpg",
+      "bytes": 19162,
+      "sha256": "1efc20403fcc549370cfd39d8569bcd49eb66f446d53ed7feb8246854b4c4022"
+    },
+    {
+      "path": "vital-rowing-machine-ex076-end.jpg",
+      "bytes": 19086,
+      "sha256": "d393e8084348a004c3c0ebbd7ece573ba8a2d0910c2f06116a44892e8a652bf2"
+    },
+    {
+      "path": "vital-rowing-machine-ex076.mp4",
+      "bytes": 100329,
+      "sha256": "66fbdcf616d4cb406d96bdc404f2d2b6f96bee5c765e22c2bb015e9dd02a8c7e"
+    },
+    {
+      "path": "vital-treadmill-running-ex077.jpg",
+      "bytes": 15687,
+      "sha256": "ef1bb86e7343d908e6f21b71903c2e77eee6e5958ca276812288463773e3128f"
+    },
+    {
+      "path": "vital-treadmill-running-ex077-end.jpg",
+      "bytes": 16748,
+      "sha256": "f833d8f41185cbff139755b8ae51e8a9ee718c61b6819de937dea4c6b44cff93"
+    },
+    {
+      "path": "vital-treadmill-running-ex077.mp4",
+      "bytes": 311278,
+      "sha256": "afb37f067f2d290925b78ebacca6c6588fe158385eb649e5b5eb325493d13c52"
+    },
+    {
+      "path": "vital-seated-leg-curl-machine-ex078.jpg",
+      "bytes": 19467,
+      "sha256": "363d2d4b2af6d7146c30f1876d7b4c24275c94d7267bdf51a519bd5a49a23437"
+    },
+    {
+      "path": "vital-seated-leg-curl-machine-ex078-end.jpg",
+      "bytes": 20056,
+      "sha256": "0be53b95c89c7b659f0a41965eb95b9fceba11efb3a0404c42bb166acf3f5f3c"
+    },
+    {
+      "path": "vital-seated-leg-curl-machine-ex078.mp4",
+      "bytes": 120453,
+      "sha256": "abd5d7c28403311ad85fe53fe61b98d0a8596705b472d17abe5c946eefbd3102"
+    },
+    {
+      "path": "vital-seated-overhead-press-ex079.jpg",
+      "bytes": 14207,
+      "sha256": "e6afe30b4e634f25e42fd7149e5f53d3b82fada910187b5a005a3ff12f62845e"
+    },
+    {
+      "path": "vital-seated-overhead-press-ex079-end.jpg",
+      "bytes": 14207,
+      "sha256": "c5000f6445fa17b21c4b8716fb5f4a9bb7247fdac32d6059e1607c1ccb73af11"
+    },
+    {
+      "path": "vital-seated-overhead-press-ex079.mp4",
+      "bytes": 46758,
+      "sha256": "faf8637fea261725811a82e55cd3c29f945592904b844c6e1eae1e4255ce15ad"
+    },
+    {
+      "path": "vital-stepup-weighted-ex080.jpg",
+      "bytes": 14546,
+      "sha256": "6bbcfee8f5fc6e57dbf626a156565ef53217a17d541b7bd3c364aaaf5a33ece7"
+    },
+    {
+      "path": "vital-stepup-weighted-ex080-end.jpg",
+      "bytes": 14649,
+      "sha256": "d6658b4abdc9e5194f761a28f22cdb05fe201791933e119d4b9afe5111364b9f"
+    },
+    {
+      "path": "vital-stepup-weighted-ex080.mp4",
+      "bytes": 129057,
+      "sha256": "75f188e9293dd8f00cec270f4d658612ada05b2ce304930fdc0860950419079c"
+    },
+    {
+      "path": "vital-stepmill-machine-ex081.jpg",
+      "bytes": 15314,
+      "sha256": "44a69284e2374683ec432c160dc13deb2414904a0c60ef655ef1f5a6d11b5259"
+    },
+    {
+      "path": "vital-stepmill-machine-ex081-end.jpg",
+      "bytes": 15624,
+      "sha256": "41ccb8fe7da1fbbffef1476e94530211c301493b142c8396bc21b0143fc09238"
+    },
+    {
+      "path": "vital-stepmill-machine-ex081.mp4",
+      "bytes": 49825,
+      "sha256": "a7d9ece7c466f34d7e192f8d5f8255abc6284b5a314cabdf126949d000161f33"
+    },
+    {
+      "path": "vital-stiff-leg-deadlift-machine-ex082.jpg",
+      "bytes": 24348,
+      "sha256": "b87c78239859639aad1519fdc1a6c52ab26fc490ec1853f277db275a11383584"
+    },
+    {
+      "path": "vital-stiff-leg-deadlift-machine-ex082-end.jpg",
+      "bytes": 24382,
+      "sha256": "55bf108ad509e704e410a821f24677c5c646a223c8ae9e38a5c2f3588c19d5c8"
+    },
+    {
+      "path": "vital-stiff-leg-deadlift-machine-ex082.mp4",
+      "bytes": 133603,
+      "sha256": "f5168ff37d963000c8d3134d8e1f42f4cd012a8a6256de746fcd0752c3c05fc7"
+    },
+    {
+      "path": "vital-triceps-pushdown-cable-rope-ex083.jpg",
+      "bytes": 16001,
+      "sha256": "529f070bc0763b54b67cacc33ab25c8e77991469e9848e185a58755b567b5f5c"
+    },
+    {
+      "path": "vital-triceps-pushdown-cable-rope-ex083-end.jpg",
+      "bytes": 16114,
+      "sha256": "63caf637903f66bc796da8972dfc5b18d008241396d14ec2f598e1507d68a973"
+    },
+    {
+      "path": "vital-triceps-pushdown-cable-rope-ex083.mp4",
+      "bytes": 60670,
+      "sha256": "9df16e61abb790360dd453576ea5c3054ffa10feaeacb61e5591cec22e429d23"
+    },
+    {
+      "path": "vital-treadmill-walking-ex084.jpg",
+      "bytes": 16602,
+      "sha256": "14782929b20746b977f7f6c8d5fc6e335c6c32da1ab898ad9216c3c6913a2361"
+    },
+    {
+      "path": "vital-treadmill-walking-ex084-end.jpg",
+      "bytes": 16400,
+      "sha256": "346344227fc5e3bb6c8f53d608a134ba6593828ebf72f854a80e19757bbddee0"
+    },
+    {
+      "path": "vital-treadmill-walking-ex084.mp4",
+      "bytes": 105142,
+      "sha256": "0af07f44a26d3610de797f55cded1f584157f56efa223d479f1c6d1304f191dc"
+    },
+    {
+      "path": "vital-arnold-press-dumbbell-ex085.jpg",
+      "bytes": 12502,
+      "sha256": "76614d2796f241eadb64bd3f4b46333e05fbb8e48f98bfa71c07b3cb50c69272"
+    },
+    {
+      "path": "vital-arnold-press-dumbbell-ex085-end.jpg",
+      "bytes": 14202,
+      "sha256": "5c92431abc494b3b1697f42e1f68bfa65e055936a2ff4871defcaebedbdc8b6f"
+    },
+    {
+      "path": "vital-arnold-press-dumbbell-ex085.mp4",
+      "bytes": 70253,
+      "sha256": "c92e7028d9a74c15c8a6333ed29adc800e2951b783cc9587c67c6c3a7d18ce0f"
+    },
+    {
+      "path": "vital-barbell-overhead-press-standing-ex086.jpg",
+      "bytes": 12560,
+      "sha256": "621af127056fa678662070298975258e64c52c6c33979a4cdce647230697aed4"
+    },
+    {
+      "path": "vital-barbell-overhead-press-standing-ex086-end.jpg",
+      "bytes": 12533,
+      "sha256": "b37557ca8af642de89f928e9645e0d59b2e9949844403570496e58fc60a877ee"
+    },
+    {
+      "path": "vital-barbell-overhead-press-standing-ex086.mp4",
+      "bytes": 82992,
+      "sha256": "d8ff92bb43cec0aefac3548cebb07c0b8f3546f25ac0ce09962f103be0f7f281"
+    },
+    {
+      "path": "vital-barbell-upright-row-ex087.jpg",
+      "bytes": 13325,
+      "sha256": "59921fd5ce6c41d6d87db3e978f9141ec1adef9cd1e4cdc6f86fd1fac5988162"
+    },
+    {
+      "path": "vital-barbell-upright-row-ex087-end.jpg",
+      "bytes": 13406,
+      "sha256": "4a6de3f6304cb92059d6cc331f81a3d2542fa9cbdbd1a25deb38bab51af5307b"
+    },
+    {
+      "path": "vital-barbell-upright-row-ex087.mp4",
+      "bytes": 133520,
+      "sha256": "e1554d6926a0b65bba65cc5ebbc48d7778f813529ccee39eb1a5ac38ba8f3ca9"
+    },
+    {
+      "path": "vital-dumbbell-overhead-standard-ex088.jpg",
+      "bytes": 12049,
+      "sha256": "7fd28cc8d709cffbadcb872e293848569ffa720b71b5ed72f86a389ffc7874fc"
+    },
+    {
+      "path": "vital-dumbbell-overhead-standard-ex088-end.jpg",
+      "bytes": 12366,
+      "sha256": "d537dd417c9c5b219596c1083ba3d9df05ba7233d91f9f94fd11f7ae2f4f5123"
+    },
+    {
+      "path": "vital-dumbbell-overhead-standard-ex088.mp4",
+      "bytes": 57568,
+      "sha256": "92b8f09504216b1603038f599a2c6f49b6b0572f09f22fc82ed850df09d04160"
+    },
+    {
+      "path": "vital-dumbbell-upright-row-ex089.jpg",
+      "bytes": 11459,
+      "sha256": "cb1f5a876f0ac35b176f2f303b62797651f34072564dc35fe042985138e8c44d"
+    },
+    {
+      "path": "vital-dumbbell-upright-row-ex089-end.jpg",
+      "bytes": 11527,
+      "sha256": "008ce433e18c4eac26140a0fafb61955157d788db0fcd95a64c002749105ad7a"
+    },
+    {
+      "path": "vital-dumbbell-upright-row-ex089.mp4",
+      "bytes": 95507,
+      "sha256": "4e01f4332f47ae5e339d3d971d1dac7c9458bc836300bdd411d8b96249ea12f1"
+    },
+    {
+      "path": "vital-front-raise-dumbbell-ex090.jpg",
+      "bytes": 11457,
+      "sha256": "a1f43cf8a75626c5217972ad4d3c8ccaecb236ea08042c2b0b8345fb66feb3b8"
+    },
+    {
+      "path": "vital-front-raise-dumbbell-ex090-end.jpg",
+      "bytes": 11646,
+      "sha256": "02fbb23899d0d2e44e79328ead4468c367f0f5b4cf5c62fb99bc8d8d74dc308b"
+    },
+    {
+      "path": "vital-front-raise-dumbbell-ex090.mp4",
+      "bytes": 97063,
+      "sha256": "ec4260e3c046e2f6042ed9ad3a3f24c1a9c45020180977884c88732452388f04"
+    },
+    {
+      "path": "vital-front-raise-weighted-plate-ex091.jpg",
+      "bytes": 9847,
+      "sha256": "3c0a5ce2f4129eba3637b543c0feb52908d517df290d9dd1aeb7f3b9996b43b7"
+    },
+    {
+      "path": "vital-front-raise-weighted-plate-ex091-end.jpg",
+      "bytes": 9993,
+      "sha256": "5f3f8f3399641025f37de4e5c545916bfe111d380ee1128150bde9bb9566cbbc"
+    },
+    {
+      "path": "vital-front-raise-weighted-plate-ex091.mp4",
+      "bytes": 105530,
+      "sha256": "273510a8000c4f4469477dcefc385bc85be1c9b23cecf3cf2ee52f5a08bf5355"
+    },
+    {
+      "path": "vital-kettlebell-overhead-press-ex092.jpg",
+      "bytes": 9775,
+      "sha256": "f686966c25d3092c7b31aff1ee45e363efb9ac192f0e2f506188720d5d25bbef"
+    },
+    {
+      "path": "vital-kettlebell-overhead-press-ex092-end.jpg",
+      "bytes": 9648,
+      "sha256": "e724dab3fecf3460941cf25f7eb29eed076b569886e15381f2f701f79d3a6a76"
+    },
+    {
+      "path": "vital-kettlebell-overhead-press-ex092.mp4",
+      "bytes": 48878,
+      "sha256": "4a044793b990c6ce752834b54231e683ea5171aa9667bd7ae1d879a1c300db2a"
+    },
+    {
+      "path": "vital-lateral-raise-dumbbell-ex094.jpg",
+      "bytes": 11559,
+      "sha256": "27e2609b0bfce17a5f04f4e765281441f2d077cf0f2b3d50799f8a40ba17e1d8"
+    },
+    {
+      "path": "vital-lateral-raise-dumbbell-ex094-end.jpg",
+      "bytes": 11506,
+      "sha256": "aa278a79766dd7990576ea4709b26a28acd95c04fe49d9fe5413fc5595585a60"
+    },
+    {
+      "path": "vital-lateral-raise-dumbbell-ex094.mp4",
+      "bytes": 85748,
+      "sha256": "3ddf0fcfe6de901cdbe4a0c989f7ccb00392603b34f1cb2cb56218ae6b5d5131"
+    },
+    {
+      "path": "vital-lateral-raise-machine-ex095.jpg",
+      "bytes": 20199,
+      "sha256": "73ee3b4b5d3acf4481cacef54cb25470ee4fbc9082cff8c052f14b26ab111087"
+    },
+    {
+      "path": "vital-lateral-raise-machine-ex095-end.jpg",
+      "bytes": 20264,
+      "sha256": "5497c268b36ed3e83910fb17c96619a254deaa7b26d8d12bac688cd12ab3bc36"
+    },
+    {
+      "path": "vital-lateral-raise-machine-ex095.mp4",
+      "bytes": 158328,
+      "sha256": "a55500c50166e209cbd51730b255a0cb82e9fae51c5d91dfb127414136794f18"
+    },
+    {
+      "path": "vital-military-press-seated-smith-machine-ex096.jpg",
+      "bytes": 27063,
+      "sha256": "36fbf8f4b0b62eefc053d5fe6ca7be2e70994c1e20ba76479dc2a62e64c3175a"
+    },
+    {
+      "path": "vital-military-press-seated-smith-machine-ex096-end.jpg",
+      "bytes": 27132,
+      "sha256": "0e12b4b9cd24bc9bf366dae764df0a51adb052a80767109120771dc53eaa98c6"
+    },
+    {
+      "path": "vital-military-press-seated-smith-machine-ex096.mp4",
+      "bytes": 107045,
+      "sha256": "1cf43194c9e387522d113883efee4d528434dbb5064a29b51b097c02f5c36bbb"
+    },
+    {
+      "path": "vital-rear-delt-fly-reverse-pec-deck-ex097.jpg",
+      "bytes": 18680,
+      "sha256": "b5d65b4583b430b4c54de07b062f8084f58a16d8adb7adbe2690a1f63ab72e51"
+    },
+    {
+      "path": "vital-rear-delt-fly-reverse-pec-deck-ex097-end.jpg",
+      "bytes": 18342,
+      "sha256": "9012a46e56f8fd491506f8ab400afcedcef766f150bc99cba804da9d4f91258c"
+    },
+    {
+      "path": "vital-rear-delt-fly-reverse-pec-deck-ex097.mp4",
+      "bytes": 111122,
+      "sha256": "10e7034ee8657cac885b563196c35731f5130be160da328e85fc41d0fe4d62b9"
+    },
+    {
+      "path": "vital-assisted-pullup-ex100.jpg",
+      "bytes": 17786,
+      "sha256": "ffb2c9d7722bc9cda56e8958c3b72d74232c091aa98c4ecec2ab91c72e472ec6"
+    },
+    {
+      "path": "vital-assisted-pullup-ex100-end.jpg",
+      "bytes": 18654,
+      "sha256": "26ebf5f259c75199d1067c8de617b440652f8b2fde59a6238499f3a528f3ca9c"
+    },
+    {
+      "path": "vital-assisted-pullup-ex100.mp4",
+      "bytes": 226714,
+      "sha256": "9abb848b9f0d5f6024a776176d13c15fa97e7d472069ace9866bde755f30982a"
+    },
+    {
+      "path": "vital-cable-crunch-ex101.jpg",
+      "bytes": 9901,
+      "sha256": "8c683509418a17d756b2235e61e1d2cf19b7b2ada4d7e922373fc3c30105da2a"
+    },
+    {
+      "path": "vital-cable-crunch-ex101-end.jpg",
+      "bytes": 9892,
+      "sha256": "602d6aea1f1b9c3aef8bb5e62dcd4a1d7c519f57b1122ff93929ea7c906dc494"
+    },
+    {
+      "path": "vital-cable-crunch-ex101.mp4",
+      "bytes": 35605,
+      "sha256": "09c2af455c02a7a604abca3c3f5ac4cec72315099560fdbe5139e3e5785a131c"
+    },
+    {
+      "path": "vital-cross-body-mountain-climbers-ex102.jpg",
+      "bytes": 7532,
+      "sha256": "160f86ee3d8fc4b2ac36b113a3c8f7dc1f1ce8b2240137ae4a7430c7523e9e13"
+    },
+    {
+      "path": "vital-cross-body-mountain-climbers-ex102-end.jpg",
+      "bytes": 7479,
+      "sha256": "4aa68c516d6d1f11657f80a186a67cb1f7118876e8b11f016e78d78a6da81f38"
+    },
+    {
+      "path": "vital-cross-body-mountain-climbers-ex102.mp4",
+      "bytes": 33579,
+      "sha256": "3e9f48bee8c4a560bd2bef8992de016797fcae77e945e3fb444c30232d9219f2"
+    },
+    {
+      "path": "vital-dead-bug-ex103.jpg",
+      "bytes": 6893,
+      "sha256": "c57cf69c141b14e076d57ce02e573657a2d68ffa34b608dbb6f706b9de493370"
+    },
+    {
+      "path": "vital-dead-bug-ex103-end.jpg",
+      "bytes": 7381,
+      "sha256": "df5fa312724d824f302798688650a177847f09c85a2ac59f6c1a6dd2dbaec020"
+    },
+    {
+      "path": "vital-dead-bug-ex103.mp4",
+      "bytes": 100340,
+      "sha256": "0853f61cb2d7a66da0c9036c4582c8daacc3b4e676b7d3f88e0efce74226415a"
+    },
+    {
+      "path": "vital-decline-bench-crunch-ex104.jpg",
+      "bytes": 11583,
+      "sha256": "f47bbbe4a2377325e45c2133697fcfd3ecb576f039712ad9cff656d3109d37c4"
+    },
+    {
+      "path": "vital-decline-bench-crunch-ex104-end.jpg",
+      "bytes": 10456,
+      "sha256": "0ab27aee57f09adedf1e3831c70f1326e9e7647cc55b4557919051e2143a0260"
+    },
+    {
+      "path": "vital-decline-bench-crunch-ex104.mp4",
+      "bytes": 37336,
+      "sha256": "41cceaee000ac50ae481e4312b5d4d5631a1abc426447e6d1fedded10f61e5d8"
+    },
+    {
+      "path": "vital-decline-elbow-plank-ex105.jpg",
+      "bytes": 8120,
+      "sha256": "71a6ed5dced8578467beb5fe75aa8a67d35c6d1df66db73e40a959c01847cd35"
+    },
+    {
+      "path": "vital-decline-elbow-plank-ex105-end.jpg",
+      "bytes": 8426,
+      "sha256": "3287296f3a5476a1f3761b643006cf854c2c2e82b19dce4beb3c3d75b6d2091f"
+    },
+    {
+      "path": "vital-decline-elbow-plank-ex105.mp4",
+      "bytes": 42259,
+      "sha256": "cd54ca012df21508f73b4a8b67ffde21c23a414dbaa6ed1a4557b04db4335984"
+    },
+    {
+      "path": "vital-dumbbell-chopper-ex106.jpg",
+      "bytes": 8669,
+      "sha256": "f8ba6d49488c52422b57fece62c826132e258596becbfce4fad1ae19846c7e41"
+    },
+    {
+      "path": "vital-dumbbell-chopper-ex106-end.jpg",
+      "bytes": 8918,
+      "sha256": "023adb1521bc43717ab88b876782a62a5da7ef9d4739300e56fbc3b049c9644a"
+    },
+    {
+      "path": "vital-dumbbell-chopper-ex106.mp4",
+      "bytes": 96578,
+      "sha256": "cf22766025e2d5f83fb8ace949fda4717cc186bb212a2902906ce704a1382007"
+    },
+    {
+      "path": "vital-dumbbell-drag-ex107.jpg",
+      "bytes": 6918,
+      "sha256": "d1a38e0b4088fa9a888343d90c43949cdc7ebc6cf09139a5fc376ae5d82e88e4"
+    },
+    {
+      "path": "vital-dumbbell-drag-ex107-end.jpg",
+      "bytes": 7174,
+      "sha256": "f04037f8ddd0fed4e7780693b3e8564123889094047b940792c460b93e6a08f5"
+    },
+    {
+      "path": "vital-dumbbell-drag-ex107.mp4",
+      "bytes": 115849,
+      "sha256": "a0720b39c5c533cb2255d802d11dbbcc030e2e117aede15193fbbc8709a6e63a"
+    },
+    {
+      "path": "vital-flutter-kick-ex108.jpg",
+      "bytes": 6726,
+      "sha256": "a07ac7eeb0f8ac37453d1e8ab7960236d39335c3c7a6427340126e3453cdd844"
+    },
+    {
+      "path": "vital-flutter-kick-ex108-end.jpg",
+      "bytes": 6858,
+      "sha256": "5e891f2b37d61738c70a59d68c1f3accdc964a5064184c6e2bfb1b6e89d7a102"
+    },
+    {
+      "path": "vital-flutter-kick-ex108.mp4",
+      "bytes": 20469,
+      "sha256": "75237dbe790c053077ac42ddc37b90879dbda555211d7f32e1281cf764fd1dee"
+    },
+    {
+      "path": "vital-glute-bridge-ex109.jpg",
+      "bytes": 7814,
+      "sha256": "dab5b8aa599497cc66a80b04a84badae7659d64b561425a2297b41857ec4dd88"
+    },
+    {
+      "path": "vital-glute-bridge-ex109-end.jpg",
+      "bytes": 7880,
+      "sha256": "1786344377c24f23a0ef313dd539703e2e0ec6a04610a791a256117b06354c90"
+    },
+    {
+      "path": "vital-glute-bridge-ex109.mp4",
+      "bytes": 36500,
+      "sha256": "745609d961c9e744e16f01950e6b09b2b47e6a6ece07cbaa17e27cb8a930eec5"
+    },
+    {
+      "path": "vital-hanging-knee-raise-captain-s-chair-ex112.jpg",
+      "bytes": 13039,
+      "sha256": "8a94302c1aac9a82b41f410c793507e6d0e3ed53aa4a2a5a39f09f35310c3d89"
+    },
+    {
+      "path": "vital-hanging-knee-raise-captain-s-chair-ex112-end.jpg",
+      "bytes": 13758,
+      "sha256": "99425029483cb8b9c3eab2210e7201034158e922f6e8edc3395202222f3f8c0d"
+    },
+    {
+      "path": "vital-hanging-knee-raise-captain-s-chair-ex112.mp4",
+      "bytes": 70654,
+      "sha256": "150a68eb26d3d7dee2e00a1643e77aaeab0b7fb6d20fe629bd0f4cbb5cab9dce"
+    },
+    {
+      "path": "vital-jumping-jack-ex115.jpg",
+      "bytes": 8187,
+      "sha256": "973d4176e12f69f218ec8f1274c8b800714fe160b4dc3b402da0f9250e1d1711"
+    },
+    {
+      "path": "vital-jumping-jack-ex115-end.jpg",
+      "bytes": 8220,
+      "sha256": "435155326689c8fb2da74daafbd577f213250f9917dad2cd618de0327ce26042"
+    },
+    {
+      "path": "vital-jumping-jack-ex115.mp4",
+      "bytes": 57859,
+      "sha256": "11b8c4467a26ccdb5306b27910a06366a33f112842f99271dc39d87786886a7f"
+    },
+    {
+      "path": "vital-mountain-climber-ex117.jpg",
+      "bytes": 8735,
+      "sha256": "ef0b3ca0028d08f414c5ba8f309d695053b6e68b71dced104a1e5a156ce8660e"
+    },
+    {
+      "path": "vital-mountain-climber-ex117-end.jpg",
+      "bytes": 8629,
+      "sha256": "d87965f812b221390ed581fc1b9a679a701721f7012997014eb49ce4be6eb690"
+    },
+    {
+      "path": "vital-mountain-climber-ex117.mp4",
+      "bytes": 33313,
+      "sha256": "06b18e1d385f75627ddcc5bdc27069a82ad3a059943612e3ab9184d2ffa728ad"
+    },
+    {
+      "path": "vital-plank-hip-dip-ex118.jpg",
+      "bytes": 7577,
+      "sha256": "de3ef70fc3b9f65986f7444eab7021a4da4064f512c25c9e7906f7550d433260"
+    },
+    {
+      "path": "vital-plank-hip-dip-ex118-end.jpg",
+      "bytes": 7789,
+      "sha256": "e8a67e6bf1d445e3c652a3f1bf269ec872acd99fa27156f6fef89464aaf2e4f5"
+    },
+    {
+      "path": "vital-plank-hip-dip-ex118.mp4",
+      "bytes": 42163,
+      "sha256": "9a41ac770c6eef4f8a54b48ce6dfd8b7d3f7d7876c8bbfc150b0c4a0a4ccc2c5"
+    },
+    {
+      "path": "vital-russian-twist-ex120.jpg",
+      "bytes": 7357,
+      "sha256": "4b0832615a0686d6435f826c149e4e6ff52ea72c44f21b2c0c25bfe5544199fb"
+    },
+    {
+      "path": "vital-russian-twist-ex120-end.jpg",
+      "bytes": 7535,
+      "sha256": "98e990b2622de7025b2eb9615203aae46a62df375e68e6cb004945726f1d1a91"
+    },
+    {
+      "path": "vital-russian-twist-ex120.mp4",
+      "bytes": 61278,
+      "sha256": "9d35da255b119ad70be5ff7c88ea74caf5d4593f6f7c0ef757b2869fc097e356"
+    },
+    {
+      "path": "vital-scissor-kick-ex121.jpg",
+      "bytes": 7757,
+      "sha256": "e1418e28e68182947a6ca2ec6f87127e8c15191ee094e616cbc4f9f40b778656"
+    },
+    {
+      "path": "vital-scissor-kick-ex121-end.jpg",
+      "bytes": 7921,
+      "sha256": "4492ebf92cee4031c567cddec1d56a488a1f737e6d4b9d0a5624276183afaa4f"
+    },
+    {
+      "path": "vital-scissor-kick-ex121.mp4",
+      "bytes": 22917,
+      "sha256": "91981dea7c7fb1f93803908a8e458a6a3b9dd1043ce0cbdbf74eb4381f351853"
+    },
+    {
+      "path": "vital-single-leg-glute-bridge-ex122.jpg",
+      "bytes": 7509,
+      "sha256": "3fcd12cc3913a5c364cc3e10481348c9a6bfbd0f06e250ae3f14026ee8a4ffc8"
+    },
+    {
+      "path": "vital-single-leg-glute-bridge-ex122-end.jpg",
+      "bytes": 7769,
+      "sha256": "013273125432fda5cf593f93026617345a1980d003bba0a7232484731d529ba6"
+    },
+    {
+      "path": "vital-single-leg-glute-bridge-ex122.mp4",
+      "bytes": 63790,
+      "sha256": "90d6bb524c46cf6b738e71ad9ef1c29186cb9fa1f8540e8ce30f961924b2240e"
+    },
+    {
+      "path": "vital-standard-crunch-ex123.jpg",
+      "bytes": 6888,
+      "sha256": "05ee63823790b2c2d6db4d7283c547fa0a56f633333999f52dbd367935c36e55"
+    },
+    {
+      "path": "vital-standard-crunch-ex123-end.jpg",
+      "bytes": 7205,
+      "sha256": "24bfd274f836caff9ae6e83a02a847e39e383ed22bd302cd47a769f55a81b726"
+    },
+    {
+      "path": "vital-standard-crunch-ex123.mp4",
+      "bytes": 40280,
+      "sha256": "cf9f88f252321dce4f90567a3c900a5cb0aa274b65448cb6d5dcfcc739788247"
+    },
+    {
+      "path": "vital-toe-touch-crunch-ex125.jpg",
+      "bytes": 8789,
+      "sha256": "d89712bdaf33535d029be28ce80590f16e0a920cde6dfc14b73603b06a057457"
+    },
+    {
+      "path": "vital-toe-touch-crunch-ex125-end.jpg",
+      "bytes": 8665,
+      "sha256": "c28f7a804deadf7dd417c0ad0f5fdd536b22f013a78b5e8454f7bd9a8e950fec"
+    },
+    {
+      "path": "vital-toe-touch-crunch-ex125.mp4",
+      "bytes": 76299,
+      "sha256": "7f63b0cb219ae3e83adea55d0aa41a4875d315748b96f494be1ac5a4969fa03c"
+    },
+    {
+      "path": "vital-v-up-jackknife-ex126.jpg",
+      "bytes": 5654,
+      "sha256": "e4993364a2951380b3f604d5504e19c324f1412dcef16db8b91ec83284c6d50b"
+    },
+    {
+      "path": "vital-v-up-jackknife-ex126-end.jpg",
+      "bytes": 5944,
+      "sha256": "a0211d727b6bcbb9dec8d967c591f4443cb37a5711233a76746b5404b698d172"
+    },
+    {
+      "path": "vital-v-up-jackknife-ex126.mp4",
+      "bytes": 87586,
+      "sha256": "a8c92c8fd1e6e6e6f40cdb2136ca17fa34c68b033fe6e3b0d5bfb931c1f3f1b5"
+    },
+    {
+      "path": "vital-alternating-dumbbell-curl-ex127.jpg",
+      "bytes": 9301,
+      "sha256": "d58b8c29cb7f9d7d14f8f2921714e4d58d40f6fdc04e1a7a1c2775e5414dd687"
+    },
+    {
+      "path": "vital-alternating-dumbbell-curl-ex127-end.jpg",
+      "bytes": 9460,
+      "sha256": "1e60e203e830af8f2138f3962da74e74ae897c5b78fdc68bd7734a4046a7973c"
+    },
+    {
+      "path": "vital-alternating-dumbbell-curl-ex127.mp4",
+      "bytes": 138855,
+      "sha256": "d881895e2a1ff36e5053f8fac0a41c0ba9434123a8e4bb102af0b3bb1ec8b53d"
+    },
+    {
+      "path": "vital-archer-pushup-ex128.jpg",
+      "bytes": 7185,
+      "sha256": "bd0ea6091bd140c69f5645a7ce27556900919af2f21437d30402afe0d78de9d8"
+    },
+    {
+      "path": "vital-archer-pushup-ex128-end.jpg",
+      "bytes": 7298,
+      "sha256": "68703f5a365564f60f0d86f9252a6b5f1003a52c11204bc798864caea28afd94"
+    },
+    {
+      "path": "vital-archer-pushup-ex128.mp4",
+      "bytes": 106231,
+      "sha256": "bff10796f403a0d51e99822bc78b9f848fb26f27191cce2366d77d76922499ba"
+    },
+    {
+      "path": "vital-biceps-curl-ex131.jpg",
+      "bytes": 10218,
+      "sha256": "02cb001206e1dc4f336d74b6367a43929ec10c9492daa51a0ebc787442d4b711"
+    },
+    {
+      "path": "vital-biceps-curl-ex131-end.jpg",
+      "bytes": 10410,
+      "sha256": "9d91ef7fd10d3d894b19be32678f827a77163714cf074147874651b610e42b7e"
+    },
+    {
+      "path": "vital-biceps-curl-ex131.mp4",
+      "bytes": 107485,
+      "sha256": "d9ba3df1bd1f27cfa588ef0e0c72642ec92717a511a8433216d5bc96e42d30b2"
+    },
+    {
+      "path": "vital-bicycle-crunch-ex132.jpg",
+      "bytes": 6825,
+      "sha256": "47c8e4e58f279588fada19da75e17c092c274a9b7ba812883021fb6142536311"
+    },
+    {
+      "path": "vital-bicycle-crunch-ex132-end.jpg",
+      "bytes": 7046,
+      "sha256": "8fcf737644d2359fea9c3632add6b20108b71f2736bc1b86fb496031c4d17449"
+    },
+    {
+      "path": "vital-bicycle-crunch-ex132.mp4",
+      "bytes": 49647,
+      "sha256": "7a38eb98e46e6d746117d3675f89a5de88f9be25cff4b65068b0263c377f9e87"
+    },
+    {
+      "path": "vital-cable-lateral-raise-ex134.jpg",
+      "bytes": 10086,
+      "sha256": "03bced6878a9a74714e639890b224cff9b9ea4707bb1c628239552de13d2454d"
+    },
+    {
+      "path": "vital-cable-lateral-raise-ex134-end.jpg",
+      "bytes": 9976,
+      "sha256": "545b7d15ed260bd0347aa746622cbdf1d81cbf199a5d33dea2f7bccd6dbf4fdf"
+    },
+    {
+      "path": "vital-cable-lateral-raise-ex134.mp4",
+      "bytes": 59705,
+      "sha256": "15e21b03ce275e29635b4053cca3fc7de27d8b3428453a2631056e2890dfec9d"
+    },
+    {
+      "path": "vital-cable-overhead-triceps-extension-ex137.jpg",
+      "bytes": 15738,
+      "sha256": "d59aafa71975861ab78361686a539c9cddb7fdd4d2b384b6cc4a774f5336237b"
+    },
+    {
+      "path": "vital-cable-overhead-triceps-extension-ex137-end.jpg",
+      "bytes": 15686,
+      "sha256": "32de72b21a6a8cf5445829f46cd494fccb872c2bbcae42d38bf443ce6d11c64c"
+    },
+    {
+      "path": "vital-cable-overhead-triceps-extension-ex137.mp4",
+      "bytes": 30482,
+      "sha256": "9305da3927d563435963c4e01816ed7bcf879c6ddaef67c6adda788e5dcaa29b"
+    },
+    {
+      "path": "vital-concentration-curl-ex139.jpg",
+      "bytes": 10610,
+      "sha256": "4d626175291f3b56ee9cc5d5e5a005956000b3bb431bb2cb04574a41a932f49e"
+    },
+    {
+      "path": "vital-concentration-curl-ex139-end.jpg",
+      "bytes": 10653,
+      "sha256": "8ac663c6ebb2c641d8209442322fd72e84ce7af4fac77271fe55df285b8d38ba"
+    },
+    {
+      "path": "vital-concentration-curl-ex139.mp4",
+      "bytes": 40980,
+      "sha256": "2cd6de874b8d00c924efc7af8b93de4403303d36e0fb2673936717ec1fad6851"
+    },
+    {
+      "path": "vital-cross-body-hammer-curl-ex140.jpg",
+      "bytes": 11062,
+      "sha256": "ecc3b45a4bd530931b8e373d7b1c3c03ed4af7ba5f60c68c9f3f2741e27c2ef7"
+    },
+    {
+      "path": "vital-cross-body-hammer-curl-ex140-end.jpg",
+      "bytes": 11398,
+      "sha256": "bb806d54b91a7095b2125b03cca33e451ed2a30c69fb02c9d76d1f24f4ecfc79"
+    },
+    {
+      "path": "vital-cross-body-hammer-curl-ex140.mp4",
+      "bytes": 114211,
+      "sha256": "2848dc30dca989cf988fd52caa7396f259ef90b8f8b7cba2f2f1f3cb3eeff023"
+    },
+    {
+      "path": "vital-diamond-pushup-ex141.jpg",
+      "bytes": 7079,
+      "sha256": "526778f4053d042f67fb56e2b29e1d6f8eebddcc344d8ae8c51177d3d5174118"
+    },
+    {
+      "path": "vital-diamond-pushup-ex141-end.jpg",
+      "bytes": 7276,
+      "sha256": "07afc2b7fe09e2847527105f6352869360ccad0c36e126a35be65fd0d69b43b1"
+    },
+    {
+      "path": "vital-diamond-pushup-ex141.mp4",
+      "bytes": 43792,
+      "sha256": "246e05daa0c67ed325fa5e708d4c3deb35f9bd532b9e54e87e9fbb62a7394544"
+    },
+    {
+      "path": "vital-dips-ex142.jpg",
+      "bytes": 10030,
+      "sha256": "d73c1cc7e6c98e0eada0b81cd9eccbc591384a545141dadfaa548ba28fdd6fe6"
+    },
+    {
+      "path": "vital-dips-ex142-end.jpg",
+      "bytes": 10293,
+      "sha256": "ee089dbd25ce3e8caf9fe8f55eb6790f4fa228c076845eca0d0b4415f1a72dbe"
+    },
+    {
+      "path": "vital-dips-ex142.mp4",
+      "bytes": 44604,
+      "sha256": "296847f1fafb82408cd02e79b01d5be430743bbe2dd1500fe36d68608bc4789f"
+    },
+    {
+      "path": "vital-dumbbell-triceps-kickback-ex143.jpg",
+      "bytes": 8578,
+      "sha256": "337bf1a423b69368a5b8ffa8af5e00029e0651a02ded2a3972d97cb5b470dc6d"
+    },
+    {
+      "path": "vital-dumbbell-triceps-kickback-ex143-end.jpg",
+      "bytes": 8686,
+      "sha256": "0732b89cfb3235190ba4c3c25c3b633a67329ebbb7e88eb96b8c9a7d43764084"
+    },
+    {
+      "path": "vital-dumbbell-triceps-kickback-ex143.mp4",
+      "bytes": 67366,
+      "sha256": "9888249ddc0ee6ae4368b5e351b96c008b23478a0410e43d53f4d38cbb54b148"
+    },
+    {
+      "path": "vital-dumbbell-forearms-curl-ex145.jpg",
+      "bytes": 10955,
+      "sha256": "8559e2e018a0a45b13de16b10067cf2f301ea67948028638f853f9a6320cd8e3"
+    },
+    {
+      "path": "vital-dumbbell-forearms-curl-ex145-end.jpg",
+      "bytes": 11179,
+      "sha256": "bd2985006fc168a5c0487aced7761d977bb9389167bb01f94e1ee51632811c8b"
+    },
+    {
+      "path": "vital-dumbbell-forearms-curl-ex145.mp4",
+      "bytes": 42184,
+      "sha256": "deb4f2b56026d609ed10cfad9ba4aff757dd62d4443ee257280537527b849db6"
+    },
+    {
+      "path": "vital-dumbbell-skull-crusher-ex147.jpg",
+      "bytes": 7973,
+      "sha256": "237b64c5f19f90902e1e775c34cb9267a862a0c3732592ea49cd028891978b24"
+    },
+    {
+      "path": "vital-dumbbell-skull-crusher-ex147-end.jpg",
+      "bytes": 8276,
+      "sha256": "dd334b85c29eac9f57cc0bb9682f03c2d155b87117036ed8a2f298f149709faf"
+    },
+    {
+      "path": "vital-dumbbell-skull-crusher-ex147.mp4",
+      "bytes": 56744,
+      "sha256": "f69858bb99a7264a6f310cd7e19a8957b0ea8bc2a42c65ac73af7b4985b3775f"
+    },
+    {
+      "path": "vital-ez-bar-curl-ex152.jpg",
+      "bytes": 9624,
+      "sha256": "6cc5a2b1c4ec86e1d2184fb23152b95ed0134cdca9f3a96b249dc097391413dc"
+    },
+    {
+      "path": "vital-ez-bar-curl-ex152-end.jpg",
+      "bytes": 9961,
+      "sha256": "607ec20f75c218e289512c517bf44d26c048c89c085dbca6943c375611c52dd3"
+    },
+    {
+      "path": "vital-ez-bar-curl-ex152.mp4",
+      "bytes": 65408,
+      "sha256": "9f1283ab9fea93d1b8d6f3cf22dfdbbf8f51cbd53991c2c267c69dec1642b089"
+    },
+    {
+      "path": "vital-high-plank-ex153.jpg",
+      "bytes": 7361,
+      "sha256": "f44073538dd41a3c10c09d0e16fe5c40efc2e263d1860d28bdef3d49c114a5b9"
+    },
+    {
+      "path": "vital-high-plank-ex153-end.jpg",
+      "bytes": 7293,
+      "sha256": "d493f6f3ef40ff027d9b361237e941ad695e3b442356d999ae070a8489159dcc"
+    },
+    {
+      "path": "vital-high-plank-ex153.mp4",
+      "bytes": 25374,
+      "sha256": "8dc194530d68436cb28ea746c9729a84f0df07f08efdac13f9cb370002e12aac"
+    },
+    {
+      "path": "vital-meadows-row-ex155.jpg",
+      "bytes": 11271,
+      "sha256": "1d75ade2d3ac03ebed0570153750ec02a2da0166252bc0b30ddd98d0dc69ea8b"
+    },
+    {
+      "path": "vital-meadows-row-ex155-end.jpg",
+      "bytes": 11371,
+      "sha256": "b54ed56897218b5856d15bb4a043d546356e0c86a1fe6fb7561bc92638ad9453"
+    },
+    {
+      "path": "vital-meadows-row-ex155.mp4",
+      "bytes": 119800,
+      "sha256": "aad4cbfb4d5e1f4336f212f683cddfa896395a09b955be5d417008893e092fc6"
+    },
+    {
+      "path": "vital-preacher-curl-machine-ex156.jpg",
+      "bytes": 19275,
+      "sha256": "8c3d5e9c8b99bf745e97b13143bc15a796de5deac056d4d81b107ce8d4cb6df7"
+    },
+    {
+      "path": "vital-preacher-curl-machine-ex156-end.jpg",
+      "bytes": 19399,
+      "sha256": "7849f4114bd011a44d3f7670f981a3f1c02b355d977d12bafc2b6d78d85a6aa7"
+    },
+    {
+      "path": "vital-preacher-curl-machine-ex156.mp4",
+      "bytes": 105610,
+      "sha256": "3ff28c36e39a87c7919fc9da985e8f578f82f7f523c55f753fa5926a4518b625"
+    },
+    {
+      "path": "vital-pushup-arm-lift-ex157.jpg",
+      "bytes": 7775,
+      "sha256": "54e10ab53459848b36adf153bd408c33c35b8036c5c52c0128ca23514bae3a51"
+    },
+    {
+      "path": "vital-pushup-arm-lift-ex157-end.jpg",
+      "bytes": 7780,
+      "sha256": "1710f636904b50fee0c2dbe6ba988b5ad9ba4cf03b3c7901db8d44dcbe9c58ca"
+    },
+    {
+      "path": "vital-pushup-arm-lift-ex157.mp4",
+      "bytes": 142125,
+      "sha256": "c1aae3a351f1ad72b86f7c05809259ca9a3a6638543faf7d20f2dd0916970c6f"
+    },
+    {
+      "path": "vital-resistance-band-biceps-curl-ex158.jpg",
+      "bytes": 10235,
+      "sha256": "c1e6f055f23a24da12675175dcafc29a15b7e4606dda296ae6e504cba270c2e2"
+    },
+    {
+      "path": "vital-resistance-band-biceps-curl-ex158-end.jpg",
+      "bytes": 10584,
+      "sha256": "2688fafd612a2dfc1302869dbec2d0501920645f2b635a96d0f90f8cfa1a15c0"
+    },
+    {
+      "path": "vital-resistance-band-biceps-curl-ex158.mp4",
+      "bytes": 69781,
+      "sha256": "216dbb2294bf7f116bac38819543cf28ab3be80873375079bf7c434994f3a8ea"
+    },
+    {
+      "path": "vital-resistance-band-overhead-triceps-extension-ex159.jpg",
+      "bytes": 9339,
+      "sha256": "bf69e77f937f4acf44a5a4f33760aa072e1ff2308a34827817d4a9bf349bf29c"
+    },
+    {
+      "path": "vital-resistance-band-overhead-triceps-extension-ex159-end.jpg",
+      "bytes": 9497,
+      "sha256": "dbed11c56737980c2d909b5840f53f3b3d7b3795e122d844593f8ffcef89b6b1"
+    },
+    {
+      "path": "vital-resistance-band-overhead-triceps-extension-ex159.mp4",
+      "bytes": 79688,
+      "sha256": "1fd349ccd75a76fc94180d06b745c57d4a7049ac739c791850580c7ad4e5d942"
+    },
+    {
+      "path": "vital-seated-cable-row-ex160.jpg",
+      "bytes": 14458,
+      "sha256": "01bd6a46812f732de3eba5bce937a4dd7be3df9dbcc0c607ede005cb84def621"
+    },
+    {
+      "path": "vital-seated-cable-row-ex160-end.jpg",
+      "bytes": 14585,
+      "sha256": "7f50508fc6694210e0366f314405414a9de2c2012a0ccefaade81ddac931cbaf"
+    },
+    {
+      "path": "vital-seated-cable-row-ex160.mp4",
+      "bytes": 56542,
+      "sha256": "f455f8663541f3bd790832062f585ba4c7370b15ba0e49daf8ed8a518ae1aaf2"
+    },
+    {
+      "path": "vital-seated-lateral-raise-ex161.jpg",
+      "bytes": 10570,
+      "sha256": "257d17a11b84cc0cfbf6c36ad3f3b3b3aad9bc6b72f7721d4371a9166337e890"
+    },
+    {
+      "path": "vital-seated-lateral-raise-ex161-end.jpg",
+      "bytes": 10776,
+      "sha256": "d6ef16fad8b007540365a77514d83095e7e335eb95b444b99945710d45306bb1"
+    },
+    {
+      "path": "vital-seated-lateral-raise-ex161.mp4",
+      "bytes": 69549,
+      "sha256": "9a9266544049be19a296d7805911f7b0b0accc0be6e5007affc7aabba01c1514"
+    },
+    {
+      "path": "vital-seated-overhead-dumbbell-extension-ex162.jpg",
+      "bytes": 9558,
+      "sha256": "98ee9c666802c60b0b8a4045b96d16a93fc4e1cc96ad8a7216476eb745399a8d"
+    },
+    {
+      "path": "vital-seated-overhead-dumbbell-extension-ex162-end.jpg",
+      "bytes": 9695,
+      "sha256": "c98166657f19ee78128db2abe6f134072192db1d0e62e4b583d6918a150732c3"
+    },
+    {
+      "path": "vital-seated-overhead-dumbbell-extension-ex162.mp4",
+      "bytes": 42732,
+      "sha256": "c9854ae4f4dbee7fe9d43be87fcbd05fdeeffdf7eb86391e839da3d89c99d084"
+    },
+    {
+      "path": "vital-seated-shoulder-press-machine-ex163.jpg",
+      "bytes": 19005,
+      "sha256": "6f22c3522b56b6cac47c03826fa7be7700d7b777e9574f22739b837bf0dadc2d"
+    },
+    {
+      "path": "vital-seated-shoulder-press-machine-ex163-end.jpg",
+      "bytes": 19239,
+      "sha256": "f9f4d815a9670d9c4c852f4b8c81e245630d9dcf7acce8a2a9d1826edbbd115b"
+    },
+    {
+      "path": "vital-seated-shoulder-press-machine-ex163.mp4",
+      "bytes": 60780,
+      "sha256": "6d4195b43a1b7e5fa8f8fcc731634de36eb731d443e55ef20ab149421fc785c6"
+    },
+    {
+      "path": "vital-seated-triceps-dip-machine-ex164.jpg",
+      "bytes": 14657,
+      "sha256": "1bbae871bf829bf1e6dd02280ce65bf8b22acfa0c3843ae182076f215a9a7e67"
+    },
+    {
+      "path": "vital-seated-triceps-dip-machine-ex164-end.jpg",
+      "bytes": 14945,
+      "sha256": "f12103f173874a668d1791bf1142591a8420ad3f7db0553420f4665cc27ac320"
+    },
+    {
+      "path": "vital-seated-triceps-dip-machine-ex164.mp4",
+      "bytes": 46772,
+      "sha256": "87fc8c03dd9e09621b7a45d9a16f8d35a86f6b17bf1a41db4bb36be9e2885210"
+    },
+    {
+      "path": "vital-single-arm-high-cable-curl-ex166.jpg",
+      "bytes": 10546,
+      "sha256": "a600756534856c35d1be178dd3eada5881ff28532596c47f1bc356ad549079c8"
+    },
+    {
+      "path": "vital-single-arm-high-cable-curl-ex166-end.jpg",
+      "bytes": 10531,
+      "sha256": "3e2934287d516373d048921dcfcb6cc7d5c95514aaad13ade66ed082998616db"
+    },
+    {
+      "path": "vital-single-arm-high-cable-curl-ex166.mp4",
+      "bytes": 44302,
+      "sha256": "fe3fa039b76b57fa52deb10e9175b8289656055dea9781d970e6a14bff49887d"
+    },
+    {
+      "path": "vital-standing-barbell-extension-ex167.jpg",
+      "bytes": 7866,
+      "sha256": "83bdafcd88d62ea49bebc8fa339e826348dd30cb2ff8f866b87afb5b572da022"
+    },
+    {
+      "path": "vital-standing-barbell-extension-ex167-end.jpg",
+      "bytes": 8348,
+      "sha256": "b9d89e94a71000d3d2706645f2c26fe2e493175c65575ca8dd1d19a995871448"
+    },
+    {
+      "path": "vital-standing-barbell-extension-ex167.mp4",
+      "bytes": 68624,
+      "sha256": "395f028074f814e86cbaaf33a49e7af8546eb1bed4641af438dd79fb1a1d5a7d"
+    },
+    {
+      "path": "vital-standing-cable-concentration-curl-ex169.jpg",
+      "bytes": 10831,
+      "sha256": "234193107d8b54a375ea9a25dd70ec26ec4073fb71ebff2944c3cd6a9f127045"
+    },
+    {
+      "path": "vital-standing-cable-concentration-curl-ex169-end.jpg",
+      "bytes": 10797,
+      "sha256": "ef09a7bb0faf6c1ab73d821b1588f556f4c04eb0cad15f9786273e3305cb3b07"
+    },
+    {
+      "path": "vital-standing-cable-concentration-curl-ex169.mp4",
+      "bytes": 37548,
+      "sha256": "9bd4a005b4eaf09e16c6cae5654ba6c80b12bb3c89aef7f77069e64a49fb7d6c"
+    },
+    {
+      "path": "vital-standing-single-arm-overhead-extension-ex170.jpg",
+      "bytes": 8729,
+      "sha256": "9cc0e3c1b5fccf1b9f3720760c2082ef80cc73d208c584116d3a9f9e9b43f69c"
+    },
+    {
+      "path": "vital-standing-single-arm-overhead-extension-ex170-end.jpg",
+      "bytes": 8636,
+      "sha256": "86af98f763c60b73809e9a0a6a7b4df059890a1e03aa1ead2a30bf332ac8ae98"
+    },
+    {
+      "path": "vital-standing-single-arm-overhead-extension-ex170.mp4",
+      "bytes": 44877,
+      "sha256": "9a263cce065fc4202f325f1c3a12993bc384c51bf77b85ec840e8798fc92b1be"
+    },
+    {
+      "path": "vital-tate-press-ex173.jpg",
+      "bytes": 11922,
+      "sha256": "71405dbf033c99bebaaaf4f061319e246eb16b66497a1c8611db4b399c7cc04b"
+    },
+    {
+      "path": "vital-tate-press-ex173-end.jpg",
+      "bytes": 12177,
+      "sha256": "ea5f5d2f8881f722c9089c9b9b03c7360b244f518fc3d855e1921781cf2e30f2"
+    },
+    {
+      "path": "vital-tate-press-ex173.mp4",
+      "bytes": 54069,
+      "sha256": "af5be29ebd0b4b40b7400dc62f7bd013a31148a64f05a8261444d799e7be7c1c"
+    },
+    {
+      "path": "vital-triceps-bench-dip-ex176.jpg",
+      "bytes": 11608,
+      "sha256": "4c65f8626aa9e6edb8dae2a38045f01dd1e31ffe1720411c9441276deb7beb50"
+    },
+    {
+      "path": "vital-triceps-bench-dip-ex176-end.jpg",
+      "bytes": 11745,
+      "sha256": "1f7ef34be24de4e4be4a18371f2848f2b2c28ff608c425da4ff1e143e3f7f336"
+    },
+    {
+      "path": "vital-triceps-bench-dip-ex176.mp4",
+      "bytes": 58157,
+      "sha256": "8bbb15dcc4ec8499703961a67c90d0884ef82e9042492dbff7c1e6a5f23a2450"
+    },
+    {
+      "path": "vital-zottman-curl-ex180.jpg",
+      "bytes": 9596,
+      "sha256": "4423c7e1c0edc1fe46a7e62f28a714b87fa021ead1168a56f033c59a7b677146"
+    },
+    {
+      "path": "vital-zottman-curl-ex180-end.jpg",
+      "bytes": 9969,
+      "sha256": "0989e5a973b285b7e37530cc3b582663fc370d4a45c80672391e09229c57f03a"
+    },
+    {
+      "path": "vital-zottman-curl-ex180.mp4",
+      "bytes": 133063,
+      "sha256": "fa59cf7a5e872b49f0f116e829af4647eaa4943599ed4bf2b6aed6a8ee8eb774"
+    },
+    {
+      "path": "vital-45-degree-hyperextension-machine-ex181.jpg",
+      "bytes": 10318,
+      "sha256": "f085e8f3f52d250a84e62860e075fdafc17154c3a06db1a4d507f150a8898e6c"
+    },
+    {
+      "path": "vital-45-degree-hyperextension-machine-ex181-end.jpg",
+      "bytes": 10660,
+      "sha256": "a3d6271d5cbc194edb6681f340e66faed35e2428408cb3f5647d5f9007a243c6"
+    },
+    {
+      "path": "vital-45-degree-hyperextension-machine-ex181.mp4",
+      "bytes": 95483,
+      "sha256": "7c0ff72681691e4aff1cbd55a312b8a696ba61898ef5269d585d1c7403001d66"
+    },
+    {
+      "path": "vital-banded-overhead-press-ex182.jpg",
+      "bytes": 9959,
+      "sha256": "1b6064c847c60f5a277853ab66e12d2fc4213d25ab19dbb59394209c4c70b2e3"
+    },
+    {
+      "path": "vital-banded-overhead-press-ex182-end.jpg",
+      "bytes": 10139,
+      "sha256": "ce7dcf23acc1798296c31554c8395d2fae38024bdccb6a6cddd897682498aca5"
+    },
+    {
+      "path": "vital-banded-overhead-press-ex182.mp4",
+      "bytes": 77806,
+      "sha256": "732588d448917ad0d1b70622b1cdb93fbfe336cade53e99ae9ffba82d6f75ac4"
+    },
+    {
+      "path": "vital-banded-pull-apart-ex183.jpg",
+      "bytes": 8372,
+      "sha256": "edeba38a388c98c75ad2a38101811e3ea79b49f143ab303f780f7fe611654ba6"
+    },
+    {
+      "path": "vital-banded-pull-apart-ex183-end.jpg",
+      "bytes": 8561,
+      "sha256": "f63a791b4cfe6913a5a3a246f007ecc71a874906e80357315141c9aeacd6d46d"
+    },
+    {
+      "path": "vital-banded-pull-apart-ex183.mp4",
+      "bytes": 42523,
+      "sha256": "6be51a8e8f3a4536cb7ad98e9ac431fda27896a2c72d0b0bbd513a5efc9a8a6f"
+    },
+    {
+      "path": "vital-banded-seated-row-ex184.jpg",
+      "bytes": 11276,
+      "sha256": "f03fa37520430fdcfb9d052bafc1ea28a463de5fe575fc639fec5df4997bc442"
+    },
+    {
+      "path": "vital-banded-seated-row-ex184-end.jpg",
+      "bytes": 11391,
+      "sha256": "e311be3eb4ed52f14b0dba098172f40332c1e250ce79203482e6a58a97dbc0d9"
+    },
+    {
+      "path": "vital-banded-seated-row-ex184.mp4",
+      "bytes": 79127,
+      "sha256": "e1f39d110343f0bf1da06cc2bc5e36eb1d4b6e5d2aa6da26044ae29beeff8ee6"
+    },
+    {
+      "path": "vital-bent-over-dumbbell-row-ex186.jpg",
+      "bytes": 9240,
+      "sha256": "e4d6a18480a67aa66680d38fc6ffdc2690e2517e9168179e72d22dce661ae646"
+    },
+    {
+      "path": "vital-bent-over-dumbbell-row-ex186-end.jpg",
+      "bytes": 9531,
+      "sha256": "6ad0dce16160746c896e7ae9f395644c9d3ed680d41f79be0664c082f60accfb"
+    },
+    {
+      "path": "vital-bent-over-dumbbell-row-ex186.mp4",
+      "bytes": 55991,
+      "sha256": "2aacf763b0fdbafb308b42ec464eb60d50e4e1fe24863ed3acb2a5063570bcd6"
+    },
+    {
+      "path": "vital-cat-cow-back-stretch-ex187.jpg",
+      "bytes": 8487,
+      "sha256": "998abe7bac3e7b6d65dd0feb420f165f9157c39fa60abde128ebee0385f91927"
+    },
+    {
+      "path": "vital-cat-cow-back-stretch-ex187-end.jpg",
+      "bytes": 8567,
+      "sha256": "ae4f9d4a7ce5c8c34d1df26d6c1288db0c1ba5dbe662da90c40d573dec4247a7"
+    },
+    {
+      "path": "vital-cat-cow-back-stretch-ex187.mp4",
+      "bytes": 58935,
+      "sha256": "ae8b96bd0f93ca1bd5e2c1ed52a0fc30306fa078c520ab3621b0fcb0118057b2"
+    },
+    {
+      "path": "vital-gorilla-row-ex190.jpg",
+      "bytes": 9158,
+      "sha256": "f60cb797e3818571a7aba00b2a368609af75ad4918a9474db417fdf98796096b"
+    },
+    {
+      "path": "vital-gorilla-row-ex190-end.jpg",
+      "bytes": 9260,
+      "sha256": "107f3485ea95c0c66becd05c9ee4204e69513c479e09fab0c6f8df14d939f1df"
+    },
+    {
+      "path": "vital-gorilla-row-ex190.mp4",
+      "bytes": 97599,
+      "sha256": "20de553f4391ac22ae0e3ca19928bcaf42d7714e396f2b0bf41d3c66b766b3c6"
+    },
+    {
+      "path": "vital-inverted-row-ex191.jpg",
+      "bytes": 8266,
+      "sha256": "d184d4cb2bb9f9b13f2088a1e7d2891197a2547681a231efc763adb7a5176ef2"
+    },
+    {
+      "path": "vital-inverted-row-ex191-end.jpg",
+      "bytes": 8516,
+      "sha256": "3294f880343935bc6f4cef77bec4eb0756ab0543ff240d25a2df39615726777f"
+    },
+    {
+      "path": "vital-inverted-row-ex191.mp4",
+      "bytes": 44125,
+      "sha256": "5c0a0fb395253c2aa572cea79417064e1ddae5541352d108864924aeeeaf6308"
+    },
+    {
+      "path": "vital-penddlay-row-ex192.jpg",
+      "bytes": 10524,
+      "sha256": "cb813886300835cecddc81c6414dc998b93c90a473f0b20ac02fb95becd8a3a3"
+    },
+    {
+      "path": "vital-penddlay-row-ex192-end.jpg",
+      "bytes": 10496,
+      "sha256": "0949542f6bce3e1d93d987e11ac4c0fa23d15084df94bb35d104aac404227ddc"
+    },
+    {
+      "path": "vital-penddlay-row-ex192.mp4",
+      "bytes": 88003,
+      "sha256": "29f736bacd769d7afc90b44e8bd25b67271f2a559c27f6fe4951171649819c4a"
+    },
+    {
+      "path": "vital-plank-to-downward-dog-ex193.jpg",
+      "bytes": 8191,
+      "sha256": "53b5a4213bbbbe61c4d8f3639f186c15907b46b94e8afb832e41a39eafd442ca"
+    },
+    {
+      "path": "vital-plank-to-downward-dog-ex193-end.jpg",
+      "bytes": 8879,
+      "sha256": "7f6c1d5b291f86edd4373981e37b1cbbfd18d4cd96937f2fa17e84c4f830c6b6"
+    },
+    {
+      "path": "vital-plank-to-downward-dog-ex193.mp4",
+      "bytes": 168510,
+      "sha256": "e0ccd8d7220fd0b36937ec57b4ffdc0b9999b2b9831bdab57528bb0c59912961"
+    },
+    {
+      "path": "vital-prone-back-extension-ex194.jpg",
+      "bytes": 6672,
+      "sha256": "a20371eec3a0b43007167acb4897e4b663ad52344d0159c736d5084c2b12b7bc"
+    },
+    {
+      "path": "vital-prone-back-extension-ex194-end.jpg",
+      "bytes": 7285,
+      "sha256": "0053166b786bf58939810c72f60cb95c74a172863e8ad64aa9b29e8e7e4e28b9"
+    },
+    {
+      "path": "vital-prone-back-extension-ex194.mp4",
+      "bytes": 49120,
+      "sha256": "83f7c7533085ca23318f6d1770524ec6bd6bac95b2274ef4230608c6ad1aa1cc"
+    },
+    {
+      "path": "vital-renegade-row-ex196.jpg",
+      "bytes": 8460,
+      "sha256": "e20fbdde9fb40c19fea9a0eabc3538173f57b624217b9e4a562718eb7c683094"
+    },
+    {
+      "path": "vital-renegade-row-ex196-end.jpg",
+      "bytes": 8668,
+      "sha256": "0a7802363d6e4788901ee1aa707aba8b58039dcc6f8ffaac0b57b9d8007ca5e0"
+    },
+    {
+      "path": "vital-renegade-row-ex196.mp4",
+      "bytes": 57705,
+      "sha256": "cee906b787e9bd5b1da31bf7de7c1220dc72fe7979e000716e45dd712b6bf94e"
+    },
+    {
+      "path": "vital-resistance-band-deadlift-ex197.jpg",
+      "bytes": 10386,
+      "sha256": "466460f9aced91b1f93c47664799c14cd0ec8e7c5e14dce9868c56b451630f98"
+    },
+    {
+      "path": "vital-resistance-band-deadlift-ex197-end.jpg",
+      "bytes": 10715,
+      "sha256": "64104e39194553ca64ae13802ec8b9bf130df5bfebc72e8fd087e3ae8f0f3d91"
+    },
+    {
+      "path": "vital-resistance-band-deadlift-ex197.mp4",
+      "bytes": 98486,
+      "sha256": "40671e44a452a36747859eb40e2600af57b6ffcf7f5c6e6cd33ee5b7267cd1ac"
+    },
+    {
+      "path": "vital-resistance-band-lat-pulldown-ex198.jpg",
+      "bytes": 10016,
+      "sha256": "aa278b90fb246e100312905a86046e0be822b48a5b36f7045d7d5fd963eee86d"
+    },
+    {
+      "path": "vital-resistance-band-lat-pulldown-ex198-end.jpg",
+      "bytes": 9922,
+      "sha256": "22b52df444e0de621ac5f56df7f39be775ed9888b7a395475cf5e5bd22ac20e4"
+    },
+    {
+      "path": "vital-resistance-band-lat-pulldown-ex198.mp4",
+      "bytes": 50851,
+      "sha256": "516c9d8902c0b512e439e5f8972c629c5ada92db843fafebcc3ba2f7e56e0660"
+    },
+    {
+      "path": "vital-resistance-band-w-raise-ex199.jpg",
+      "bytes": 9463,
+      "sha256": "c5adff23df450ab5fce4f23751b7b833e153776e7423300452e6d6ecba2520d3"
+    },
+    {
+      "path": "vital-resistance-band-w-raise-ex199-end.jpg",
+      "bytes": 9431,
+      "sha256": "fbb4d8879de1c437b736c28cd9934522eab0fc53cc538ab9b5ec7706dc1d257e"
+    },
+    {
+      "path": "vital-resistance-band-w-raise-ex199.mp4",
+      "bytes": 33182,
+      "sha256": "4c4585be8916d3f852abc7f482f449be4b038890e6ff1780a85bb1f441971071"
+    },
+    {
+      "path": "vital-single-arm-dumbbell-row-ex200.jpg",
+      "bytes": 10173,
+      "sha256": "603d27869d54a0d055b94f1e8bafd82c0194ebad5d93de57eeec9879fd553f4c"
+    },
+    {
+      "path": "vital-single-arm-dumbbell-row-ex200-end.jpg",
+      "bytes": 10413,
+      "sha256": "528eaba67130e0670fcdbc8a3b43f45b0f7232bf17a515c57578adccb41c4735"
+    },
+    {
+      "path": "vital-single-arm-dumbbell-row-ex200.mp4",
+      "bytes": 42889,
+      "sha256": "1b3c6c1ce73980d3e58674e5ef2468d15b28de7a2ebf198a9718737190d506ad"
+    },
+    {
+      "path": "vital-single-leg-deadlift-ex201.jpg",
+      "bytes": 8872,
+      "sha256": "6e8caec277abf43b58c526f5caac948b50934b387855f88db9827f5f58304a22"
+    },
+    {
+      "path": "vital-single-leg-deadlift-ex201-end.jpg",
+      "bytes": 9001,
+      "sha256": "a80f7ce09404a43203b2f7f2c272e6a2b1a655c4d8ea38373c9a7e4523b9ef1b"
+    },
+    {
+      "path": "vital-single-leg-deadlift-ex201.mp4",
+      "bytes": 129806,
+      "sha256": "84c811cb2642515b8d10d1b1e179e043f2a5d53729c80f81a6816b330e1d5ccd"
+    },
+    {
+      "path": "vital-superman-hold-ex202.jpg",
+      "bytes": 6403,
+      "sha256": "aab613d6444652464835a517ec29a2a14d8f2bf91cd201f19c14f507b5da12e0"
+    },
+    {
+      "path": "vital-superman-hold-ex202-end.jpg",
+      "bytes": 6580,
+      "sha256": "56b832f2d8859ed1b5d844b0df4d1eeb3269fd255dd8bddb3e5940bd83b58f68"
+    },
+    {
+      "path": "vital-superman-hold-ex202.mp4",
+      "bytes": 87940,
+      "sha256": "64abcb7c7e17e150d0776694b0e92f3b33fdbf866c2d7d601ecee4d546645ad9"
+    },
+    {
+      "path": "vital-t-bar-row-landmine-ex203.jpg",
+      "bytes": 15560,
+      "sha256": "a1ce0f4db2478d718bbc5a954812413e15e229577d28897b9c989bf7530719d5"
+    },
+    {
+      "path": "vital-t-bar-row-landmine-ex203-end.jpg",
+      "bytes": 15901,
+      "sha256": "8b7b64e16cd4a23073977380527e1f748f2cb7d9061b10917afeaa172fa47437"
+    },
+    {
+      "path": "vital-t-bar-row-landmine-ex203.mp4",
+      "bytes": 111936,
+      "sha256": "eb5bbb56059ba3f147cc36c5f82905dbe16efc14d002beef529cdcb25d6c3d6e"
+    },
+    {
+      "path": "vital-bear-crawl-ex206.jpg",
+      "bytes": 7917,
+      "sha256": "ca536b763e9a81684b1544d4111229115c868c6e85279c07a8f883b187378cbb"
+    },
+    {
+      "path": "vital-bear-crawl-ex206-end.jpg",
+      "bytes": 7811,
+      "sha256": "a21ceb0d51e9dbb096988fbdbc08362326a61653046ae1cd3de11436ba0f9ecd"
+    },
+    {
+      "path": "vital-bear-crawl-ex206.mp4",
+      "bytes": 44353,
+      "sha256": "d790435b1d98a682dfa135d43849bf83ef1d6f178d19f12499d816b690772cf7"
+    },
+    {
+      "path": "vital-box-jump-ex207.jpg",
+      "bytes": 10456,
+      "sha256": "93aaee180acdca53919ddca85bdeb9568a8080a4ca663032474b471f91e5c705"
+    },
+    {
+      "path": "vital-box-jump-ex207-end.jpg",
+      "bytes": 10844,
+      "sha256": "86ccdb80ddae4b0c2ef70d63c7d04032fa442836cbacaadf5e5aa390ac10bf4f"
+    },
+    {
+      "path": "vital-box-jump-ex207.mp4",
+      "bytes": 189161,
+      "sha256": "5ee0f200ee1e1118cef810035fa23f91a3c5f940fd07053e4282160e288a03d8"
+    },
+    {
+      "path": "vital-high-knee-cardio-ex210.jpg",
+      "bytes": 10271,
+      "sha256": "30a8bc3d8cfdbae5bb2a1f9ddefd06f75e6f9d77ff30263251bbdc9b7a63aac9"
+    },
+    {
+      "path": "vital-high-knee-cardio-ex210-end.jpg",
+      "bytes": 9257,
+      "sha256": "c67a79e6596530f68455567770f7bcb215dffa4eead617f030033247ff72ec2a"
+    },
+    {
+      "path": "vital-high-knee-cardio-ex210.mp4",
+      "bytes": 62965,
+      "sha256": "aef5a5116e0af9cb83eaf53712207cc6ba0ce943a746211b45dcf3933a5fbd15"
+    },
+    {
+      "path": "vital-jump-rope-ex211.jpg",
+      "bytes": 9391,
+      "sha256": "e08dda76716c20e6b983812f9045fdd787477cd1cb279108fcdeae5383dbdf73"
+    },
+    {
+      "path": "vital-jump-rope-ex211-end.jpg",
+      "bytes": 9770,
+      "sha256": "e8392e503bb0ae4b6f1c809f3f892d5663d2231a50ec5e56563eb89e89b4162e"
+    },
+    {
+      "path": "vital-jump-rope-ex211.mp4",
+      "bytes": 60533,
+      "sha256": "74ccc0ecaae062f95837333345b671ca4bd9c1402efe108f7ab671c41163a0a2"
+    },
+    {
+      "path": "vital-medicine-ball-slam-ex214.jpg",
+      "bytes": 8180,
+      "sha256": "dfc104782437e9231cfde7fcc015798d069e49017210ab28532364293a296c10"
+    },
+    {
+      "path": "vital-medicine-ball-slam-ex214-end.jpg",
+      "bytes": 8189,
+      "sha256": "16b392f37abae58c76e7feee78a13592644b464dcac71e019e77ad830930088e"
+    },
+    {
+      "path": "vital-medicine-ball-slam-ex214.mp4",
+      "bytes": 72477,
+      "sha256": "4ff57048e8591da91f3b3a510d347970d084128a2b2c6a2b9b463fb993d3a082"
+    },
+    {
+      "path": "vital-place-jog-cardio-ex215.jpg",
+      "bytes": 10484,
+      "sha256": "7dc71aa198eafa3ad4e5d6ca85eef87babcebd817f918e2d9311b769ac6b4ee0"
+    },
+    {
+      "path": "vital-place-jog-cardio-ex215-end.jpg",
+      "bytes": 10510,
+      "sha256": "10c2c70e364eaac9dd150750ba1530848f3d6bcdf6fee17edd9dc174c60b037b"
+    },
+    {
+      "path": "vital-place-jog-cardio-ex215.mp4",
+      "bytes": 109868,
+      "sha256": "ff02ae57aebad2df5cec02a5bd9724e3bd8f87a934915ba614c6353603ba4e44"
+    },
+    {
+      "path": "vital-run-ex217.jpg",
+      "bytes": 9131,
+      "sha256": "073bf1f8790e688d4960c5206b633ef5d8870bd30ecb6b4afe566b45991b56fd"
+    },
+    {
+      "path": "vital-run-ex217-end.jpg",
+      "bytes": 9169,
+      "sha256": "3d29b836f3f8cd352e7e8cf5a0edfa440a413ca54ff2668333589c5d30f56411"
+    },
+    {
+      "path": "vital-run-ex217.mp4",
+      "bytes": 52094,
+      "sha256": "a641f83c98ccc27c6c91578f64a72c5545d488aadc7658b0318cf0554d5e5d58"
+    },
+    {
+      "path": "vital-tuck-jump-ex218.jpg",
+      "bytes": 7717,
+      "sha256": "0adceb1bfd7328c47ed26155e3aa977c8c5b78c7c6bd95caea8dc5f80a5352ea"
+    },
+    {
+      "path": "vital-tuck-jump-ex218-end.jpg",
+      "bytes": 7632,
+      "sha256": "6e54655cdf41559ed11b0bce96ff59f0d827ebc3c8e9bd094576a1146702849e"
+    },
+    {
+      "path": "vital-tuck-jump-ex218.mp4",
+      "bytes": 34748,
+      "sha256": "b175ed6ca6becb7573be7005876c4075c54f8134103c47d561458ef11baf10fb"
+    },
+    {
+      "path": "vital-clap-pushup-ex219.jpg",
+      "bytes": 10490,
+      "sha256": "5818c18fae4d17712a90c3d3dc400c53e939e2c28623193638555a50f41c84f9"
+    },
+    {
+      "path": "vital-clap-pushup-ex219-end.jpg",
+      "bytes": 11029,
+      "sha256": "1091019d63c9a6659081be96ab6661bb3ff624d4e53e400b0c5536768f902ba9"
+    },
+    {
+      "path": "vital-clap-pushup-ex219.mp4",
+      "bytes": 115303,
+      "sha256": "062d912b6797ca17f2ef952d142f0c091cfca34930a0157980c98a384293c63e"
+    },
+    {
+      "path": "vital-decline-pushup-ex221.jpg",
+      "bytes": 8953,
+      "sha256": "784c70d96805bad951d07c8d556671369af607d57ccafc323b1fd0d2b57edbdb"
+    },
+    {
+      "path": "vital-decline-pushup-ex221-end.jpg",
+      "bytes": 9297,
+      "sha256": "aa8003fca95e27ffb1e92351ce36c95cba9905323328fa0cb05b5c6a23756af4"
+    },
+    {
+      "path": "vital-decline-pushup-ex221.mp4",
+      "bytes": 47409,
+      "sha256": "e9a6c3cf092b10f1bec36f84afecb0630eafa2a0c7fc4449029f5cec5e131481"
+    },
+    {
+      "path": "vital-handstand-pushup-ex225.jpg",
+      "bytes": 8081,
+      "sha256": "2bf553edefae29cff59cee56ec54681f7a1367b0a72e9df3cb14206b91115b21"
+    },
+    {
+      "path": "vital-handstand-pushup-ex225-end.jpg",
+      "bytes": 8007,
+      "sha256": "339bd43214cebf40adb5299478096d5b5bb48e91de2f76f0b463eabeaf495ba6"
+    },
+    {
+      "path": "vital-handstand-pushup-ex225.mp4",
+      "bytes": 45827,
+      "sha256": "71895aa486a48a04d1d725cac96fc63423084abc185b5d8933c94eb22ada5a05"
+    },
+    {
+      "path": "vital-incline-dumbbell-bench-press-ex227.jpg",
+      "bytes": 9735,
+      "sha256": "3352f5cc5168719a9a83a7497e6bf255a306c0b76d4bcb6469f3e06da8e1fe4d"
+    },
+    {
+      "path": "vital-incline-dumbbell-bench-press-ex227-end.jpg",
+      "bytes": 9717,
+      "sha256": "d40e5d994c431269fff8da1058effdc87008360be742fac315f058f3656366ed"
+    },
+    {
+      "path": "vital-incline-dumbbell-bench-press-ex227.mp4",
+      "bytes": 38629,
+      "sha256": "d16bb2249eb84a912510d3372f0ca6c0ee4d74daff21185d384c4c6a137c77db"
+    },
+    {
+      "path": "vital-incline-pushup-ex228.jpg",
+      "bytes": 10277,
+      "sha256": "1c2cf929c854e5b7212661a83340ab1e6ffdee18c2b16ec38213ff4905af8620"
+    },
+    {
+      "path": "vital-incline-pushup-ex228-end.jpg",
+      "bytes": 10414,
+      "sha256": "f2cfc090082f353746b598bf77e150756a10044bdf3428217869f7b57fa4c9a2"
+    },
+    {
+      "path": "vital-incline-pushup-ex228.mp4",
+      "bytes": 43629,
+      "sha256": "2d726259a4043db96713a6e816420a669b6ae80f2f0db54201f9645f62465c7f"
+    },
+    {
+      "path": "vital-one-hand-pushup-ex230.jpg",
+      "bytes": 8684,
+      "sha256": "b9a84953a04673090a00b0e1ee8afb699ff76f145bedbf2b28ec6bcfdf407755"
+    },
+    {
+      "path": "vital-one-hand-pushup-ex230-end.jpg",
+      "bytes": 8802,
+      "sha256": "f53116b81486478c3b0f2c78fa3a6a517793bc86518b732f30697f53df5bec22"
+    },
+    {
+      "path": "vital-one-hand-pushup-ex230.mp4",
+      "bytes": 65014,
+      "sha256": "71c361257060eedc5177b530d8df2dcbc97f4ef60eee5c53628809d0367a55c1"
+    },
+    {
+      "path": "vital-resistance-band-chest-press-ex232.jpg",
+      "bytes": 9231,
+      "sha256": "0429a8bb7c01c8a279552c47112eba4c64f5ccbe656cb75c0d70aa6ca1c5f8c3"
+    },
+    {
+      "path": "vital-resistance-band-chest-press-ex232-end.jpg",
+      "bytes": 9421,
+      "sha256": "e2c492f113dd3874d826fdbbcb143bf7c32ffc3d048cddb6021bc99214cee1f5"
+    },
+    {
+      "path": "vital-resistance-band-chest-press-ex232.mp4",
+      "bytes": 55046,
+      "sha256": "6f4381a2bb0da0f7e62f2d5c0e7bcaa2896821407093f27ef8af6ae2e8349ff0"
+    },
+    {
+      "path": "vital-seated-machine-chest-press-ex234.jpg",
+      "bytes": 16466,
+      "sha256": "7b370ea24528edb43be09394b516761683e8518fd8a2bec45262ffee58a7b2ad"
+    },
+    {
+      "path": "vital-seated-machine-chest-press-ex234-end.jpg",
+      "bytes": 16733,
+      "sha256": "4a61c61ce771f35fcb7550ad9001cb168baa384728eedb4a911c6e5872a61608"
+    },
+    {
+      "path": "vital-seated-machine-chest-press-ex234.mp4",
+      "bytes": 74240,
+      "sha256": "0bea63491784ec7ea59618d9826328eab5f5d998fb54735816f0817ef4458c77"
+    },
+    {
+      "path": "vital-standard-pushup-ex235.jpg",
+      "bytes": 10813,
+      "sha256": "b7b57ff6dbd63403d87546c2783857ac3b9befb9f1421a688b66919988e3c810"
+    },
+    {
+      "path": "vital-standard-pushup-ex235-end.jpg",
+      "bytes": 11132,
+      "sha256": "b3db4708500e40a260f9580be01058c52fd43b60481e532ade354d463ab9ba31"
+    },
+    {
+      "path": "vital-standard-pushup-ex235.mp4",
+      "bytes": 78420,
+      "sha256": "b7f866b9ba41203a9c2402e4ae454e6eb0fd3ce8c7ed2e01d188290d82840939"
+    },
+    {
+      "path": "vital-banded-seated-abduction-ex239.jpg",
+      "bytes": 12768,
+      "sha256": "8f9d935440a82dfc7d1d42b5be42df092c29f4092eed018b748ceeb790390d05"
+    },
+    {
+      "path": "vital-banded-seated-abduction-ex239-end.jpg",
+      "bytes": 13110,
+      "sha256": "b6bb695e04e2060aa59cfbc0bb9b3e30f234a40d6ca6b019c8cf41ebcf50a245"
+    },
+    {
+      "path": "vital-banded-seated-abduction-ex239.mp4",
+      "bytes": 57742,
+      "sha256": "f8d6dfabc49f49e324b50f142198899e2216225ac544b2321457d15c932b5f64"
+    },
+    {
+      "path": "vital-barbell-standing-calf-raise-ex240.jpg",
+      "bytes": 17429,
+      "sha256": "20ff826cda05b8ad66937ed85b18be59177b08d761334c82417678e26ad21411"
+    },
+    {
+      "path": "vital-barbell-standing-calf-raise-ex240-end.jpg",
+      "bytes": 17409,
+      "sha256": "8e1e2cf8dc4eb7e2d7592828ba112d6b0a95a12e22bca84a33d4739bd3eef8ee"
+    },
+    {
+      "path": "vital-barbell-standing-calf-raise-ex240.mp4",
+      "bytes": 52991,
+      "sha256": "2ef0997299ed520b94dd49223a705bde509347b9fbc9831e3f09db1ba9290e43"
+    },
+    {
+      "path": "vital-bulgarian-split-squat-ex242.jpg",
+      "bytes": 10631,
+      "sha256": "4d0a00fe468937cbc0bef7a213f8bc6641fc26b4b3673a9c8b6db838ca136840"
+    },
+    {
+      "path": "vital-bulgarian-split-squat-ex242-end.jpg",
+      "bytes": 10925,
+      "sha256": "4ae455a615a4d246def4ef0fa18fb345c1afcf51c84cec8f99d18fdcbbe30a4b"
+    },
+    {
+      "path": "vital-bulgarian-split-squat-ex242.mp4",
+      "bytes": 79925,
+      "sha256": "0862fc0236919ffe4bf3395a5b9028b291edb109c1cd7073d6a4fc5aef744fa5"
+    },
+    {
+      "path": "vital-cable-hip-abduction-ex243.jpg",
+      "bytes": 12827,
+      "sha256": "127b3b7406ec606a07e28d3222d12d02f58c7d1188d39b3805dd249f280fe936"
+    },
+    {
+      "path": "vital-cable-hip-abduction-ex243-end.jpg",
+      "bytes": 12747,
+      "sha256": "3f5ccc8c4ff6f22c9888f2c5ca6937a2790baa37dd212db34a708484c8760627"
+    },
+    {
+      "path": "vital-cable-hip-abduction-ex243.mp4",
+      "bytes": 85160,
+      "sha256": "68a20cfa0addece3ae4c211f7e921a0f15c718438c456ed66876c9b6a5b12d72"
+    },
+    {
+      "path": "vital-curtsy-lunge-ex244.jpg",
+      "bytes": 8567,
+      "sha256": "06e85a392e00901548eb1fe9fbb7e5b934c259f9d257aa47d875feb74d2f2d79"
+    },
+    {
+      "path": "vital-curtsy-lunge-ex244-end.jpg",
+      "bytes": 8829,
+      "sha256": "bc3d5b5ac1c8563b7f48fe3f7a4f5e12ee663eaf6d000b74a2c0a3c244baf024"
+    },
+    {
+      "path": "vital-curtsy-lunge-ex244.mp4",
+      "bytes": 64726,
+      "sha256": "6bb2232345816292647a5b14dddd6be6bb675c327b2a9223fa97a6e091d398dd"
+    },
+    {
+      "path": "vital-dumbbell-calf-raise-ex246.jpg",
+      "bytes": 7753,
+      "sha256": "976c51c4fc1897480ef997b388ee7f78626a103bfdd5cbf6e6f36077e2cae68f"
+    },
+    {
+      "path": "vital-dumbbell-calf-raise-ex246-end.jpg",
+      "bytes": 7868,
+      "sha256": "2b31358602378269e73ad74a25763616d819c0f9fe4b9a8a936f78c1899f413c"
+    },
+    {
+      "path": "vital-dumbbell-calf-raise-ex246.mp4",
+      "bytes": 42774,
+      "sha256": "1f48977a8f3e3a7994656c0b8fa3e920df8311ba1c69e3cd6af8c2cc498f70b3"
+    },
+    {
+      "path": "vital-dumbbell-rdl-ex248.jpg",
+      "bytes": 8259,
+      "sha256": "1d6c8d3af46622caae80a7aa506b6c8eb35ec4db2f2034722b658f9fccb943e2"
+    },
+    {
+      "path": "vital-dumbbell-rdl-ex248-end.jpg",
+      "bytes": 8343,
+      "sha256": "5b92ddf4f3ec0df9d4d85443c55e348638b971b4cb55d1819ab4d6207d8db786"
+    },
+    {
+      "path": "vital-dumbbell-rdl-ex248.mp4",
+      "bytes": 94554,
+      "sha256": "16b70235a98b6fd59f65faf935ff7eddcfa5cec9d3c9dbcf9b8cbe229abb4688"
+    },
+    {
+      "path": "vital-dumbbell-sumo-deadlift-ex250.jpg",
+      "bytes": 9276,
+      "sha256": "1cfdc9ae9a2111d2d98aac01eb2ee320d537dfa916662c3243938b3724e73ea5"
+    },
+    {
+      "path": "vital-dumbbell-sumo-deadlift-ex250-end.jpg",
+      "bytes": 9414,
+      "sha256": "2808cb1863bddce06f1309e9b7406bf8567130df5e4d7a72a3ab3d7d829f013e"
+    },
+    {
+      "path": "vital-dumbbell-sumo-deadlift-ex250.mp4",
+      "bytes": 104350,
+      "sha256": "277a40dc072f19b494baa942a1d45cf5d4cc878b3a1465302bb62ee46b3afff8"
+    },
+    {
+      "path": "vital-dumbbell-thruster-ex251.jpg",
+      "bytes": 10049,
+      "sha256": "e2c68e46d297156b1cfae19004ac3015854394917497905f835b65153d84fc66"
+    },
+    {
+      "path": "vital-dumbbell-thruster-ex251-end.jpg",
+      "bytes": 10149,
+      "sha256": "e52e8393c94e36a15b1e863aa4f2d1efab3c0125a72bf33ffa25f7e6f3c2a81f"
+    },
+    {
+      "path": "vital-dumbbell-thruster-ex251.mp4",
+      "bytes": 85694,
+      "sha256": "f07521617ab21a76cb39b443e797c32f20d96ed678ed267c314eb6e250511a25"
+    },
+    {
+      "path": "vital-fire-hydrant-ex252.jpg",
+      "bytes": 8064,
+      "sha256": "a42f593e86c7ecc10a41c36d5eafbe54b3df7ed686aa8a8ee8a43fb5792020c6"
+    },
+    {
+      "path": "vital-fire-hydrant-ex252-end.jpg",
+      "bytes": 8213,
+      "sha256": "e144d08215fbb4d48e6b168509ece505a1059ae980480679785541101ac2b318"
+    },
+    {
+      "path": "vital-fire-hydrant-ex252.mp4",
+      "bytes": 88101,
+      "sha256": "9831bd9576e7a848c171e312f8e6965ba472631be96f871ce9261f36ceeb2696"
+    },
+    {
+      "path": "vital-hamstring-stretch-ex254.jpg",
+      "bytes": 8894,
+      "sha256": "0d63eb6e228bad17288eeac5c5c0cafaa05cf82324636cce6efde8201708021c"
+    },
+    {
+      "path": "vital-hamstring-stretch-ex254-end.jpg",
+      "bytes": 9461,
+      "sha256": "d52fb23b26b1ec4bd52178a65baa3ef45d483df6def9dcf69a788cf0dd800051"
+    },
+    {
+      "path": "vital-hamstring-stretch-ex254.mp4",
+      "bytes": 108189,
+      "sha256": "8a29e51891ecdb87ddb592226c5e4f99324f2098cd748ff90d418d1f7bc26838"
+    },
+    {
+      "path": "vital-jefferson-squat-ex255.jpg",
+      "bytes": 10354,
+      "sha256": "187d7cdd5d02b2e810db3f54d9891985d9a331b27390d4bea4a2f41245108fe4"
+    },
+    {
+      "path": "vital-jefferson-squat-ex255-end.jpg",
+      "bytes": 10505,
+      "sha256": "2a63bdc42cd8b098e2bc157580593d783ebb2b34c890c3ee962974601960b6a1"
+    },
+    {
+      "path": "vital-jefferson-squat-ex255.mp4",
+      "bytes": 96228,
+      "sha256": "f70294546dc0424ab82d87884545b95d022cf6735ea165ba984a7d0abee46d6c"
+    },
+    {
+      "path": "vital-jump-squat-ex256.jpg",
+      "bytes": 8179,
+      "sha256": "d703fb4228c5ff036b94eb15b7ecfc1ad37a24193213bebbb2cec8cafd44b09e"
+    },
+    {
+      "path": "vital-jump-squat-ex256-end.jpg",
+      "bytes": 8246,
+      "sha256": "d75ea68042711449904c838936953d44e4a27b02bc6425e1487ee955c5cd193f"
+    },
+    {
+      "path": "vital-jump-squat-ex256.mp4",
+      "bytes": 65960,
+      "sha256": "27676b5f2c275072bd8db15f0588cfb1e7aefdbb13a09f791a8f6ef03973aeea"
+    },
+    {
+      "path": "vital-lying-leg-raise-ex260.jpg",
+      "bytes": 5711,
+      "sha256": "412376b821ff6af2cd8be3078458b6efda9cd387127cc58f56875811e4fc487b"
+    },
+    {
+      "path": "vital-lying-leg-raise-ex260-end.jpg",
+      "bytes": 6095,
+      "sha256": "42b2f5eceac88cae1d293de94bc1715651b6ff9f56f2969117afac7e24fe0f2e"
+    },
+    {
+      "path": "vital-lying-leg-raise-ex260.mp4",
+      "bytes": 62116,
+      "sha256": "3c9c977130879bb60d8b2fdd7d0acbe4aac29efbda2b2c56607d39cbfa84616a"
+    },
+    {
+      "path": "vital-resistance-band-good-morning-ex261.jpg",
+      "bytes": 10776,
+      "sha256": "f38fe5660aa9151f6e576c0f48409a43afa49b5448e0616c00b0e5c24f54e120"
+    },
+    {
+      "path": "vital-resistance-band-good-morning-ex261-end.jpg",
+      "bytes": 10965,
+      "sha256": "8d1ba330bf090b6b9296f60d31076234863d61324fbc9e6078ca60c7aed56efd"
+    },
+    {
+      "path": "vital-resistance-band-good-morning-ex261.mp4",
+      "bytes": 89752,
+      "sha256": "45e7bffa5f571edc294423b67a766377f3dcbbf26c629db83a5e46d07a107298"
+    },
+    {
+      "path": "vital-resistance-band-monster-walk-ex262.jpg",
+      "bytes": 8174,
+      "sha256": "c07bcd629b041cad78048dfe1509796376178ccf0f951dbd5acd37d339f60ba2"
+    },
+    {
+      "path": "vital-resistance-band-monster-walk-ex262-end.jpg",
+      "bytes": 8270,
+      "sha256": "4245b56ff9a8a59eb3247dad2f1b6aa8fc3c2a4ed6f3901c997b1ff25fec1790"
+    },
+    {
+      "path": "vital-resistance-band-monster-walk-ex262.mp4",
+      "bytes": 155628,
+      "sha256": "4af1a3adfe121a4fdfc3cc5d43742cd37a69c7f73608d5899d0b7e47231bebbc"
+    },
+    {
+      "path": "vital-resistance-band-squat-ex264.jpg",
+      "bytes": 10185,
+      "sha256": "97a3f65eda87b4c4c70e5dc6d74f93b297f96aa3fbfb23026bb8bd3e9f93cf21"
+    },
+    {
+      "path": "vital-resistance-band-squat-ex264-end.jpg",
+      "bytes": 10707,
+      "sha256": "f73de8db25b4ffd62e2dd2db9fa58a11ba18612515b0df8a82f283f4b8cede05"
+    },
+    {
+      "path": "vital-resistance-band-squat-ex264.mp4",
+      "bytes": 78394,
+      "sha256": "d6649a9258481b1f7b6505a66bf6350a1e90f62b99a7c9f6127d40dfc126b91a"
+    },
+    {
+      "path": "vital-skater-hops-ex265.jpg",
+      "bytes": 8394,
+      "sha256": "f004860fc7a91b78f768bae569d5204b5081cf4f76b9172f8dcaaaa7dc49ab90"
+    },
+    {
+      "path": "vital-skater-hops-ex265-end.jpg",
+      "bytes": 8325,
+      "sha256": "6a4a3067516b85877490227f4dd58d28904b2019aff2eaf9ae3e0a60a89ec10e"
+    },
+    {
+      "path": "vital-skater-hops-ex265.mp4",
+      "bytes": 98766,
+      "sha256": "b58a69fa05d3769a16aa5dededb9a7ae45ad307dbd9fc4c4832527299e561d5b"
+    },
+    {
+      "path": "vital-smith-machine-squat-ex266.jpg",
+      "bytes": 18020,
+      "sha256": "d1c5cf65e1baf2cdaba1c58f08006514a5d27d46e613bcb938f53d93ece646ae"
+    },
+    {
+      "path": "vital-smith-machine-squat-ex266-end.jpg",
+      "bytes": 18081,
+      "sha256": "03a1173bb3d10856a67e97ae2537ded2d50bb4292f9c82fbdf82fb4729e162cc"
+    },
+    {
+      "path": "vital-smith-machine-squat-ex266.mp4",
+      "bytes": 71773,
+      "sha256": "954fb877e76febf0bb7a67803584d0397422cd43b039dc4a1b7bea704effd751"
+    },
+    {
+      "path": "vital-squat-machine-ex267.jpg",
+      "bytes": 14484,
+      "sha256": "a3d6bd662d62970626253d71b3c7381756635dda7117e667bc0a9b58524fa783"
+    },
+    {
+      "path": "vital-squat-machine-ex267-end.jpg",
+      "bytes": 14589,
+      "sha256": "04d8691e494adf05a2ff32dd263ad6190b8f73b83b2c6b9e71977da47bdc43d4"
+    },
+    {
+      "path": "vital-squat-machine-ex267.mp4",
+      "bytes": 74682,
+      "sha256": "ba0a544e4157bc8b8d1d60d9889501560272e3f490c3b41e2bcfac3af6110f27"
+    },
+    {
+      "path": "vital-standing-calf-raise-ex268.jpg",
+      "bytes": 7543,
+      "sha256": "8024031bf227d61f32e471acb225b5fa0b01e47c39f53dce3a3c06a5b027e754"
+    },
+    {
+      "path": "vital-standing-calf-raise-ex268-end.jpg",
+      "bytes": 7499,
+      "sha256": "9339c84d8e19caa8c431ad7e101d2de5eb1716c852f000500e9b50cba80f0cd2"
+    },
+    {
+      "path": "vital-standing-calf-raise-ex268.mp4",
+      "bytes": 31711,
+      "sha256": "337f8a6d64e5a00efd38e0c5bd38e237be4191da65ddd8700de02b5838580253"
+    },
+    {
+      "path": "vital-sumo-squat-ex269.jpg",
+      "bytes": 8699,
+      "sha256": "3fecbb3690d264d5da8adaf5d267e7d7221b81cf88b28a9f450cd2cc01a2834b"
+    },
+    {
+      "path": "vital-sumo-squat-ex269-end.jpg",
+      "bytes": 8884,
+      "sha256": "6abb68d9a476c5b57a6d356adffd5c7c155e3cd4450a5f2a1b0c48d587fc653a"
+    },
+    {
+      "path": "vital-sumo-squat-ex269.mp4",
+      "bytes": 101082,
+      "sha256": "5a81707640449ad5819cd31b8ac23f65b2d152b096b50572543a88bd12c32dab"
+    },
+    {
+      "path": "vital-walking-lunge-ex270.jpg",
+      "bytes": 8324,
+      "sha256": "d1ded87e07703bc7b9809a5ee51caa38996e5d3d8f35c03291cad220c0967094"
+    },
+    {
+      "path": "vital-walking-lunge-ex270-end.jpg",
+      "bytes": 8627,
+      "sha256": "339c40f48876d4adc1df98edc4fa1af5bd567f36fafe09d50726a03bcbd0f225"
+    },
+    {
+      "path": "vital-walking-lunge-ex270.mp4",
+      "bytes": 57370,
+      "sha256": "5eace99bc5837a61badde3a811e249525f6b602118df365feb59924f03e66ed5"
+    },
+    {
+      "path": "vital-banded-lateral-raise-ex272.jpg",
+      "bytes": 8874,
+      "sha256": "d1bf42bd5e9dd532644b7ce275774cdb24fc4131403967b76bfb4a53677dea20"
+    },
+    {
+      "path": "vital-banded-lateral-raise-ex272-end.jpg",
+      "bytes": 8987,
+      "sha256": "ac09b8ad1a5058416da6164987978d393eddeff4d62fcb03148199c6c6b4b3a9"
+    },
+    {
+      "path": "vital-banded-lateral-raise-ex272.mp4",
+      "bytes": 50341,
+      "sha256": "5f9803c8b76a35882c938dab87f66924fc3fc06950826c3d1152b41feadfa26c"
+    },
+    {
+      "path": "vital-cable-upright-row-ex274.jpg",
+      "bytes": 12050,
+      "sha256": "f7dbb2678d9e64a49e05ef43381cec7b062680d38f8f78cda499beb510b0403d"
+    },
+    {
+      "path": "vital-cable-upright-row-ex274-end.jpg",
+      "bytes": 12128,
+      "sha256": "8f6392a9774db3666484b901ca048f82bf70bb9364f8abc2b10b72ce17fa4a09"
+    },
+    {
+      "path": "vital-cable-upright-row-ex274.mp4",
+      "bytes": 88997,
+      "sha256": "352cf73452d68000bf931b86faab768990ee31bd3645d2215bd2fa56c8640c82"
+    },
+    {
+      "path": "vital-dumbbell-y-raise-ex276.jpg",
+      "bytes": 11404,
+      "sha256": "9ad2b56c5cc3fa9455fda874c99cb961acead3c6cd025cc2cd73e4a71a1cb189"
+    },
+    {
+      "path": "vital-dumbbell-y-raise-ex276-end.jpg",
+      "bytes": 11811,
+      "sha256": "d9e9e31d112e1c6e4a36604a47e710b3bc6ae6359357d2863f96e491d1d12567"
+    },
+    {
+      "path": "vital-dumbbell-y-raise-ex276.mp4",
+      "bytes": 141589,
+      "sha256": "3be3cb84a765563b6ab00ac0ed5d63535ded93cdd0884cfb17229153715dea0c"
+    },
+    {
+      "path": "vital-incline-bench-rear-delt-fly-ex278.jpg",
+      "bytes": 10923,
+      "sha256": "448e0416e9a0e20c03d4b90ab98782c47ebaa5d94393cb0228667da69c810068"
+    },
+    {
+      "path": "vital-incline-bench-rear-delt-fly-ex278-end.jpg",
+      "bytes": 10921,
+      "sha256": "506c9263829d39ab6c9ec30097b2ac26b3f846c0bade0f4cc6b1d12f2ab065b4"
+    },
+    {
+      "path": "vital-incline-bench-rear-delt-fly-ex278.mp4",
+      "bytes": 56593,
+      "sha256": "7aa99e20cca62cb54d11a98a953868d2bfede105d65ff05b220712ca2b61ccbd"
+    },
+    {
+      "path": "vital-resistance-band-high-side-pull-ex279.jpg",
+      "bytes": 9310,
+      "sha256": "a91fb1ae6c6de7b076f7ede575f1723bc280bec82eba58adb138536ec6143962"
+    },
+    {
+      "path": "vital-resistance-band-high-side-pull-ex279-end.jpg",
+      "bytes": 9217,
+      "sha256": "3735cd8f4b2cebc93c63080f20ee1dfc1a5b0e0ef0fa5336f233aed529d99096"
+    },
+    {
+      "path": "vital-resistance-band-high-side-pull-ex279.mp4",
+      "bytes": 90958,
+      "sha256": "df57114bd2e98d9f7d436ba6689296fe478b648996b64cecf22c35cef1d0eff3"
+    },
+    {
+      "path": "vital-resistance-band-shoulder-roll-ex280.jpg",
+      "bytes": 9163,
+      "sha256": "c35d20a55921ab679667b0d0bd7d1f9c77427dd7620baa6a3f77da12a5a1f636"
+    },
+    {
+      "path": "vital-resistance-band-shoulder-roll-ex280-end.jpg",
+      "bytes": 8993,
+      "sha256": "7b73b0f8f15dc7f008122d25ddf642c29cc8e4d48000044c3c3c584b7d23c282"
+    },
+    {
+      "path": "vital-resistance-band-shoulder-roll-ex280.mp4",
+      "bytes": 77284,
+      "sha256": "4d1250e935c1d525a361d013939167dae9ce600f4e4287f4fb725cef5f4c9455"
+    },
+    {
+      "path": "vital-shoulder-landmine-press-ex283.jpg",
+      "bytes": 7486,
+      "sha256": "e4d9a1e877070c507f945924eb949babee5f6ffc2f361f09356a2992e3db55d9"
+    },
+    {
+      "path": "vital-shoulder-landmine-press-ex283-end.jpg",
+      "bytes": 7479,
+      "sha256": "6239431f479121a5f318dcdc3f58e3265396e27a5b72ac5fa1cc0f1aad7f3203"
+    },
+    {
+      "path": "vital-shoulder-landmine-press-ex283.mp4",
+      "bytes": 32282,
+      "sha256": "128433e525eb75fca76f9b6207c9406791ffe23ed53f9ca77eacc59e12f77aab"
+    },
+    {
+      "path": "vital-ab-wheel-rollout-ex286.jpg",
+      "bytes": 11830,
+      "sha256": "907e3aa697f887df22b2a52fc7003d7235548c8cf25266bc7a4f986f44ea49a6"
+    },
+    {
+      "path": "vital-ab-wheel-rollout-ex286-end.jpg",
+      "bytes": 11440,
+      "sha256": "6ba36d523d689d4eb6e415cc4990f2cf023d96945be27c8eba86b8b1ae80c46a"
+    },
+    {
+      "path": "vital-ab-wheel-rollout-ex286.mp4",
+      "bytes": 120950,
+      "sha256": "03fa3593e1a903f8d4300d41f22cfdd8e8304f81d430f56bbf7af7a3759a2011"
+    },
+    {
+      "path": "vital-bodyweight-squat-ex290.jpg",
+      "bytes": 9044,
+      "sha256": "72f8248db6941d03ee8c0b9abbd9ba3d844b2adcf743296c76cf4fe753dd0bc8"
+    },
+    {
+      "path": "vital-bodyweight-squat-ex290-end.jpg",
+      "bytes": 9088,
+      "sha256": "c7eee64ec602badeb3ac46bfa5562b8bfbceccd34b1dfc051773b7749ee78eb4"
+    },
+    {
+      "path": "vital-bodyweight-squat-ex290.mp4",
+      "bytes": 84230,
+      "sha256": "5ecb5db8b9735f88e8fe864ebc4139709bf53551e60f75aee814335e9029f310"
+    },
+    {
+      "path": "vital-burpees-ex292.jpg",
+      "bytes": 6285,
+      "sha256": "f64f699254d51a3ee9cf53f9dc62e5e652d2b6f4d579cf781747863453831481"
+    },
+    {
+      "path": "vital-burpees-ex292-end.jpg",
+      "bytes": 6398,
+      "sha256": "2043db61b1c9d8f6942875e929078a3133069014db60b477f24e485d79aeab35"
+    },
+    {
+      "path": "vital-burpees-ex292.mp4",
+      "bytes": 94669,
+      "sha256": "189bf1e46d814c4ee918ec9608b11e686a3a0483fbd0b7ddc4715de7bbeed0ce"
+    },
+    {
+      "path": "vital-cross-body-crunch-ex298.jpg",
+      "bytes": 9424,
+      "sha256": "4f7a06683a8e5a19b9e1e891393ef65500868eb6a16415a7022de0160d2d24b9"
+    },
+    {
+      "path": "vital-cross-body-crunch-ex298-end.jpg",
+      "bytes": 9841,
+      "sha256": "5ae924db4faefe7d15caa7940d6459261d709b0975a3eb65f5b2302bc23cd90c"
+    },
+    {
+      "path": "vital-cross-body-crunch-ex298.mp4",
+      "bytes": 133093,
+      "sha256": "e1e1cc8dd4882921785b22eb0d18f41f05f4dd67acc5faeacdc70da10b1a0799"
+    },
+    {
+      "path": "vital-donkey-kicks-ex301.jpg",
+      "bytes": 6945,
+      "sha256": "42ad115e9ed8e412d0956b2853950c1d4e1ee86d4e52da037237c13944ceba5c"
+    },
+    {
+      "path": "vital-donkey-kicks-ex301-end.jpg",
+      "bytes": 7084,
+      "sha256": "ee47f7c2c0f01b613b769e76547b2534c802c68a46dbd5b82a605fa752f096c1"
+    },
+    {
+      "path": "vital-donkey-kicks-ex301.mp4",
+      "bytes": 45480,
+      "sha256": "6f5c2a44418d2181861af3914882180d36f76c6e122f518e6d9a7efb86366944"
+    },
+    {
+      "path": "vital-hip-circle-ex308.jpg",
+      "bytes": 9147,
+      "sha256": "7e75d80065de596dad0388af9da24a971df43f969cf71dda41d0106db342b8c2"
+    },
+    {
+      "path": "vital-hip-circle-ex308-end.jpg",
+      "bytes": 9970,
+      "sha256": "6f713c23b1415c1b1c3b3018da4dc7714d52070e421300b11f697f922b967052"
+    },
+    {
+      "path": "vital-hip-circle-ex308.mp4",
+      "bytes": 189482,
+      "sha256": "8604c1e980699ccb3edd568b5102d5abe73f7bfd6caf7cc038ed49aed8da8f90"
+    },
+    {
+      "path": "vital-inch-worm-ex309.jpg",
+      "bytes": 6672,
+      "sha256": "9a7fd006327046aca9d4ccefeb76516dfd8eb1148d573594acc6a09f170b06f6"
+    },
+    {
+      "path": "vital-inch-worm-ex309-end.jpg",
+      "bytes": 6763,
+      "sha256": "e0d9dfa41487bad79ad8e351b7c044e0304ffe5476299e91d1c7690c71c46cab"
+    },
+    {
+      "path": "vital-inch-worm-ex309.mp4",
+      "bytes": 223076,
+      "sha256": "0985e898e6f4a9fdbf4a4de0c8c83da7c561863fa6a104ef51c5e4205a58646a"
+    },
+    {
+      "path": "vital-jumping-lunge-ex311.jpg",
+      "bytes": 9188,
+      "sha256": "e8c14ff580fc65de68b7fd13f7fc8f6519e5bba983e03e843dbd143f48257ddd"
+    },
+    {
+      "path": "vital-jumping-lunge-ex311-end.jpg",
+      "bytes": 9303,
+      "sha256": "cfd065f17760ad8e49e3091c79bb6e46753941327ce8f022a0f9d6b5961ae45d"
+    },
+    {
+      "path": "vital-jumping-lunge-ex311.mp4",
+      "bytes": 102949,
+      "sha256": "f72465552d7dd1cb09b1995b84969d1808cb446e728ba7b282857a5f08dbf86e"
+    },
+    {
+      "path": "vital-knee-pushup-ex312.jpg",
+      "bytes": 9454,
+      "sha256": "769df75d392dec298a5feeb57b22dcd5a9bc01ce4686bec2258beab64ff30ec3"
+    },
+    {
+      "path": "vital-knee-pushup-ex312-end.jpg",
+      "bytes": 9498,
+      "sha256": "68b307456d31868a703b4f57e30cb3a2f266102179dcf9d631af906dffa1e3d4"
+    },
+    {
+      "path": "vital-knee-pushup-ex312.mp4",
+      "bytes": 82429,
+      "sha256": "63c8a6598499f94b1058694f2b23738306324066adac57a308bda87dea838887"
+    },
+    {
+      "path": "vital-lunge-forward-ex314.jpg",
+      "bytes": 9324,
+      "sha256": "453eac36e9af87b7c5283eaeb0c22cc5826d9e32ce350be0dba4a5001ed421d0"
+    },
+    {
+      "path": "vital-lunge-forward-ex314-end.jpg",
+      "bytes": 9448,
+      "sha256": "48a942d5461c7b5c2a41ae95f3e8096af1b94a2d6add19941724bdce623a6da5"
+    },
+    {
+      "path": "vital-lunge-forward-ex314.mp4",
+      "bytes": 59601,
+      "sha256": "1b09a82807dd2d06713217ceb56c41a01bc8606fcfff65b513fda742fae90e01"
+    },
+    {
+      "path": "vital-pike-pushup-ex317.jpg",
+      "bytes": 11895,
+      "sha256": "aa3048d2c8631627e6840f397a9c31aa15e7090aa86f297f731c208c2e8710fd"
+    },
+    {
+      "path": "vital-pike-pushup-ex317-end.jpg",
+      "bytes": 11970,
+      "sha256": "f94bef9833386497b74a99a5773392351484f83eb451070fcd4260bbc9f4e8e9"
+    },
+    {
+      "path": "vital-pike-pushup-ex317.mp4",
+      "bytes": 74765,
+      "sha256": "3a0eeeed06b537bcac9a14fcee9a5a50e22dab726e09732771d2dac96395c924"
+    },
+    {
+      "path": "vital-quad-stretch-ex320.jpg",
+      "bytes": 10306,
+      "sha256": "494bfc056144fb743f0266f7fc5dd0b5bc7d0b2722bb5cc83dc0b4fe2a4fd1f5"
+    },
+    {
+      "path": "vital-quad-stretch-ex320-end.jpg",
+      "bytes": 10304,
+      "sha256": "ceecdbb12aa1d6b5566704e6c2700ce85db6e8b07e543c544272fc0845b6704d"
+    },
+    {
+      "path": "vital-quad-stretch-ex320.mp4",
+      "bytes": 51153,
+      "sha256": "e01ed2267e8e6e64cfee1b816424ad851cc6ceec50bb7cc4d32ec6745e701ac7"
+    },
+    {
+      "path": "vital-reverse-crunch-ex321.jpg",
+      "bytes": 6866,
+      "sha256": "b854b422b3c3ca35971107c54e341879ec60f42c951cc36b512b56fcc401c1a3"
+    },
+    {
+      "path": "vital-reverse-crunch-ex321-end.jpg",
+      "bytes": 7317,
+      "sha256": "11ae97418af70329ede5fc61db68360a9414d71a5199a6d848f99be81965b2af"
+    },
+    {
+      "path": "vital-reverse-crunch-ex321.mp4",
+      "bytes": 68826,
+      "sha256": "f4af027de3b4487805ac129563843f7798d627e430595d30c2084c457cfdba36"
+    },
+    {
+      "path": "vital-reverse-lunge-ex322.jpg",
+      "bytes": 7214,
+      "sha256": "26206e2c57d3d2d3ea058b5f03e9cc93d9ec52392a31f7500c392756ab6dc2e9"
+    },
+    {
+      "path": "vital-reverse-lunge-ex322-end.jpg",
+      "bytes": 7309,
+      "sha256": "ab59f6bed84a90cec2cc10a6914aaaa08b33528de60bbf18f66026f31a3eb1b1"
+    },
+    {
+      "path": "vital-reverse-lunge-ex322.mp4",
+      "bytes": 109422,
+      "sha256": "47f14a82b9c9f8155ea91fa52a752a160dc1086abf78bad393d37776772824e3"
+    },
+    {
+      "path": "vital-seated-forward-bend-ex323.jpg",
+      "bytes": 10408,
+      "sha256": "fc9bc13c92bd90cbe2b8001079a3fc2d7ee0fc6be2d66e19f9c27a4668519881"
+    },
+    {
+      "path": "vital-seated-forward-bend-ex323-end.jpg",
+      "bytes": 11083,
+      "sha256": "a0275ea04c33c4ab20216e12944c6619d4a01524e928effc5697caab6a2c9e4b"
+    },
+    {
+      "path": "vital-seated-forward-bend-ex323.mp4",
+      "bytes": 85888,
+      "sha256": "fdf235c43283d9dc33b04971f2ef20dc6bb0296b9308732d414aceeb69e712b7"
+    },
+    {
+      "path": "vital-shoulder-stretch-ex324.jpg",
+      "bytes": 11436,
+      "sha256": "ddc6f37da48f5fa04077d40a6663d582bdefe4fa108c284497a74320b02f5527"
+    },
+    {
+      "path": "vital-shoulder-stretch-ex324-end.jpg",
+      "bytes": 11066,
+      "sha256": "d342d43d1a831ff53b63151f0a7c250f53b3871a9e1cbdc1c93a19b9c4c8fb0e"
+    },
+    {
+      "path": "vital-shoulder-stretch-ex324.mp4",
+      "bytes": 79810,
+      "sha256": "1e214b49f14e48329f57173fcb28390ad4a406ef2df71d47d909a6d13f134fe6"
+    },
+    {
+      "path": "vital-side-lunge-ex325.jpg",
+      "bytes": 8733,
+      "sha256": "de7f9842465e56db4a86a092f611db9e221c78ca1e46655a888a475d68bcb9c7"
+    },
+    {
+      "path": "vital-side-lunge-ex325-end.jpg",
+      "bytes": 8830,
+      "sha256": "f251b7a14c41e9fd8ce625bae7577642fa02e7876f224fa20d8903d3ebb09892"
+    },
+    {
+      "path": "vital-side-lunge-ex325.mp4",
+      "bytes": 82549,
+      "sha256": "adb4bd4241b7646b6f4f95c11b3a208b782044d1f63d1df828948781f5a9b47a"
+    },
+    {
+      "path": "vital-side-plank-ex326.jpg",
+      "bytes": 10802,
+      "sha256": "816cc7bb489119396703306f723d200d63c7d73bcb42b789a069d91e8248a15b"
+    },
+    {
+      "path": "vital-side-plank-ex326-end.jpg",
+      "bytes": 10681,
+      "sha256": "580632e7fc268144500961e976279c6f437e1aef4f93d48f3201e1c1e616e6d2"
+    },
+    {
+      "path": "vital-side-plank-ex326.mp4",
+      "bytes": 37110,
+      "sha256": "2ac7883a3b0ac3cb230d929e9be86477cfa1bceaa75fd3767c328578310dd4fd"
+    },
+    {
+      "path": "vital-situp-ex328.jpg",
+      "bytes": 10297,
+      "sha256": "58dbcaf06679966c0b0ebd486a60913377f80f309ebff6f908edd394b4e7cfcd"
+    },
+    {
+      "path": "vital-situp-ex328-end.jpg",
+      "bytes": 10878,
+      "sha256": "5d5cb7bba06e066ce177214b2242bab2228ae16cd60702f32856cb108decbc2a"
+    },
+    {
+      "path": "vital-situp-ex328.mp4",
+      "bytes": 84858,
+      "sha256": "e4e5c150b9ed54f9d67b5b80ca605b7d49ab423c94b9eff3fffe11a02a6a6da3"
+    },
+    {
+      "path": "vital-stepup-ex332.jpg",
+      "bytes": 7250,
+      "sha256": "2b064a844e1579f864fa510e4687f48bfde58436553e277102056af4c16d4061"
+    },
+    {
+      "path": "vital-stepup-ex332-end.jpg",
+      "bytes": 7457,
+      "sha256": "a1ec0ad407fa292e3ab66da998ba8e00dc3507b6d64b569d6c8316ae23242611"
+    },
+    {
+      "path": "vital-stepup-ex332.mp4",
+      "bytes": 182052,
+      "sha256": "fe94a9af777183388c0d10077d5c84ccfeb475742b33a155f0cee4cc74af4a6e"
+    },
+    {
+      "path": "vital-wall-sit-ex336.jpg",
+      "bytes": 11541,
+      "sha256": "a07c8386e7cccd36fb6b629a9802a61411fd81557ae316e8859d9deff3acf4e6"
+    },
+    {
+      "path": "vital-wall-sit-ex336-end.jpg",
+      "bytes": 11708,
+      "sha256": "8731908336b0aa511d7173076baddfe6ab8b2fb1f7e0e2ed7a3b84881c9b384a"
+    },
+    {
+      "path": "vital-wall-sit-ex336.mp4",
+      "bytes": 49625,
+      "sha256": "01782e2db2e280f932b05cb0e3584a1cd7fac4781e23674a42366f4e28ce88da"
+    },
+    {
+      "path": "vital-bird-dog-ex343.jpg",
+      "bytes": 7079,
+      "sha256": "ec942e908cfcb705b4f0aad323760f63dea01c9ba166de92d222e785e5cf8273"
+    },
+    {
+      "path": "vital-bird-dog-ex343-end.jpg",
+      "bytes": 7373,
+      "sha256": "a6a5e090551c210fa7153fd3e1e52567d87339f0ba97d4f83223c2d77af150bf"
+    },
+    {
+      "path": "vital-bird-dog-ex343.mp4",
+      "bytes": 159442,
+      "sha256": "6416c6c166d3f43c9de3803277bf2c224885358215dc35ac63b5d945445f58bf"
+    },
+    {
+      "path": "vital-butt-kick-ex347.jpg",
+      "bytes": 7898,
+      "sha256": "a9aad8c2c212b683019e8be61157d76df0886babfaeba1c9138009c6d7d0c87a"
+    },
+    {
+      "path": "vital-butt-kick-ex347-end.jpg",
+      "bytes": 8665,
+      "sha256": "92220154d8e89a5874dfd81dbedc3f46e1909e4340f9255cba2bd192963074ed"
+    },
+    {
+      "path": "vital-butt-kick-ex347.mp4",
+      "bytes": 112716,
+      "sha256": "c667b24946a7aa4a2c4b99935799bf056d06652bfa5913aa58db7aa733a201f3"
+    },
+    {
+      "path": "vital-child-pose-ex350.jpg",
+      "bytes": 10427,
+      "sha256": "ed8105e71ba1366861c028f60c4ce353e3b5b17f168f9ff4ec00497a624a435b"
+    },
+    {
+      "path": "vital-child-pose-ex350-end.jpg",
+      "bytes": 10429,
+      "sha256": "e69bbbafa2369e15527ff5b468ac1880c8480fe893817a2885586651691d0b55"
+    },
+    {
+      "path": "vital-child-pose-ex350.mp4",
+      "bytes": 18503,
+      "sha256": "4b257064ddd8df30aa8a3b544444f264f5b96da89c99629c3a6f450eb6b2fdcf"
+    },
+    {
+      "path": "vital-depth-jump-ex359.jpg",
+      "bytes": 8720,
+      "sha256": "f8138cb3f16b96f2e379f503a9e663ac749782d0728fe28f01753eddad68db6a"
+    },
+    {
+      "path": "vital-depth-jump-ex359-end.jpg",
+      "bytes": 8830,
+      "sha256": "cb97f55a0e68488a1e6cf5db54ef76717a4b7882b19c0d5f5d601caab5a39e41"
+    },
+    {
+      "path": "vital-depth-jump-ex359.mp4",
+      "bytes": 188983,
+      "sha256": "e08cafd56e745433816eeef6d8539ea0db2c74fe9542e0399196b6ed5f78da87"
+    },
+    {
+      "path": "vital-downward-dog-hold-ex362.jpg",
+      "bytes": 13312,
+      "sha256": "a337ac5c4393e6f820ac7e4402383737bae467f4d8f6f109eb540f58c8a96f12"
+    },
+    {
+      "path": "vital-downward-dog-hold-ex362-end.jpg",
+      "bytes": 13384,
+      "sha256": "d6e7c8de3ff4cb19a62999838d392b190c409cab1be326ea7dff7f24eccee629"
+    },
+    {
+      "path": "vital-downward-dog-hold-ex362.mp4",
+      "bytes": 65182,
+      "sha256": "aebf72ed9c4c58d4ca7f46e23c7ef82b4978a09538e0f0b1400dbe69a60afedf"
+    },
+    {
+      "path": "vital-dragon-flags-core-mastery-ex363.jpg",
+      "bytes": 10585,
+      "sha256": "03142fa15d4b1bf9da90d516203ad2d85771f395d7d0e53b3ac6d6e28b08d10d"
+    },
+    {
+      "path": "vital-dragon-flags-core-mastery-ex363-end.jpg",
+      "bytes": 11153,
+      "sha256": "2ec570cb1c123e0549e3baa9509e8923f9c28ced80e0a0f6bd2ef900b4758d54"
+    },
+    {
+      "path": "vital-dragon-flags-core-mastery-ex363.mp4",
+      "bytes": 86435,
+      "sha256": "384519c1b2a5259cfb80191ab1534a03871dedfcb88ed519dbf4b382e587127c"
+    },
+    {
+      "path": "vital-hip-flexor-stretch-kneeling-ex376.jpg",
+      "bytes": 11372,
+      "sha256": "5db7e9839a51762f6a6007c2dcfde9b701d4b36eef0f12c2a02a4bd6139498aa"
+    },
+    {
+      "path": "vital-hip-flexor-stretch-kneeling-ex376-end.jpg",
+      "bytes": 11440,
+      "sha256": "48fdf99899c6f8e849957b54662586d1e390bb1a7cfdb354a214a3a9b429dbfe"
+    },
+    {
+      "path": "vital-hip-flexor-stretch-kneeling-ex376.mp4",
+      "bytes": 44133,
+      "sha256": "9fac7fbf3a4d51e93bcedf2a799a7702639239a54795092fa153421af3b04af6"
+    },
+    {
+      "path": "vital-hollow-body-hold-ex378.jpg",
+      "bytes": 8458,
+      "sha256": "bad93523c3fe70c02ecffd9210e1d0d07f9a6d53a0f400cd42cd3b64d8e2b0ac"
+    },
+    {
+      "path": "vital-hollow-body-hold-ex378-end.jpg",
+      "bytes": 8556,
+      "sha256": "cb7955e796320fd1195488655aefbb8f305d6283d7aca86fdd2fa65b0a9b4f5b"
+    },
+    {
+      "path": "vital-hollow-body-hold-ex378.mp4",
+      "bytes": 32139,
+      "sha256": "fb471c08ef22e0730c334de582766df54ceb982efc4eefea05c42f03b793e8e1"
+    },
+    {
+      "path": "vital-l-sit-hold-ex385.jpg",
+      "bytes": 13656,
+      "sha256": "f5e75f5060b89ffbe10401e05c948d7336b72d6becae793e3b8bbb3646efb2ee"
+    },
+    {
+      "path": "vital-l-sit-hold-ex385-end.jpg",
+      "bytes": 13544,
+      "sha256": "8ba8523bd18ad13bebed1fc7551c27dbc6aa38d8e8bfacd000042c8b81354f5b"
+    },
+    {
+      "path": "vital-l-sit-hold-ex385.mp4",
+      "bytes": 70869,
+      "sha256": "bea2182a85ad663f2207ddffa5fde3bb82208fc87d474acf282a40a6cb52682e"
+    },
+    {
+      "path": "vital-leg-swing-front-to-back-ex388.jpg",
+      "bytes": 11448,
+      "sha256": "8b9075b29b0a1afd3ec00c4c0ff3162a00428d0b7a0d10219e132a88d37b9f1f"
+    },
+    {
+      "path": "vital-leg-swing-front-to-back-ex388-end.jpg",
+      "bytes": 11335,
+      "sha256": "cebd2d704c43ef8d0e14aad9c13630a636660f287855b4ea027353d71ece6610"
+    },
+    {
+      "path": "vital-leg-swing-front-to-back-ex388.mp4",
+      "bytes": 73233,
+      "sha256": "a434a8d92b6a0c5b7ad1809f2e2ef85afc3227f6277ffdd05852d2d70e850e62"
+    },
+    {
+      "path": "vital-leg-swing-side-to-side-ex390.jpg",
+      "bytes": 10772,
+      "sha256": "c4017d640dd8979adffef6615bf9c31a945816dd5c6340df8fab78d56fee2a0d"
+    },
+    {
+      "path": "vital-leg-swing-side-to-side-ex390-end.jpg",
+      "bytes": 10771,
+      "sha256": "c58771f53ceb9bb0046c80ed97ea6e385eee2fa355f836c4db5e6fc9ca48647b"
+    },
+    {
+      "path": "vital-leg-swing-side-to-side-ex390.mp4",
+      "bytes": 86957,
+      "sha256": "4a772d7ab61a6fd430ad4ce44d88fb269e02c44b61c935df0acec1d97b704650"
+    },
+    {
+      "path": "vital-negative-pullup-ex391.jpg",
+      "bytes": 12345,
+      "sha256": "d204520ee1ffd27203b25fa3ff4f750c1d460afe52b66001314762ee48be3569"
+    },
+    {
+      "path": "vital-negative-pullup-ex391-end.jpg",
+      "bytes": 12253,
+      "sha256": "8ebd237f3444df1ecf3e82d30c136976adccf045e286644725c5a7314dfce2aa"
+    },
+    {
+      "path": "vital-negative-pullup-ex391.mp4",
+      "bytes": 88002,
+      "sha256": "7ff03025696de7abc3bb7c92720538e9a17c4fd926331e492969216adc737e6a"
+    },
+    {
+      "path": "vital-pistol-squat-ex393.jpg",
+      "bytes": 8451,
+      "sha256": "974c88b237677c2fa101e96ccbff5b263cfce367df1778ce1cfd6f8ef004a6d5"
+    },
+    {
+      "path": "vital-pistol-squat-ex393-end.jpg",
+      "bytes": 8614,
+      "sha256": "ddcdbe6c3c8e1d9ebed049b91e062ca039847caa1c43ad01b7e2692ec5653afd"
+    },
+    {
+      "path": "vital-pistol-squat-ex393.mp4",
+      "bytes": 158298,
+      "sha256": "e7b6c1e181a1370367ea683b72bf23d5410984e1ccd66c4ac95537a4e6565c7b"
+    },
+    {
+      "path": "vital-plank-jack-advanced-ex395.jpg",
+      "bytes": 12114,
+      "sha256": "7af4706a0466ee181d64d41ec1b6197c58ca8883bca89625490812943bd05a63"
+    },
+    {
+      "path": "vital-plank-jack-advanced-ex395-end.jpg",
+      "bytes": 12483,
+      "sha256": "4041f667f8905a2edcdb632a196c03041420658258901b763c03993b1ecb4ef7"
+    },
+    {
+      "path": "vital-plank-jack-advanced-ex395.mp4",
+      "bytes": 58937,
+      "sha256": "75ad14368fda6600438c095fc212f68ad618c12a49c1d9a482864063f0fa3fe2"
+    },
+    {
+      "path": "vital-barbell-bench-wide-grip-press-ex405.jpg",
+      "bytes": 9865,
+      "sha256": "51d815f78f25d069617559dae9f7b619ef8315ed2ac5cd9ee12042efe2c2cadc"
+    },
+    {
+      "path": "vital-barbell-bench-wide-grip-press-ex405-end.jpg",
+      "bytes": 10077,
+      "sha256": "93def6cfe6f85b33e671d1752bdadcd5df9a43434776f692116785bc88050f31"
+    },
+    {
+      "path": "vital-barbell-bench-wide-grip-press-ex405.mp4",
+      "bytes": 52111,
+      "sha256": "cda7433d5c5cc0610482370db3e643a04319bc5016a6000ad9b09731abc244cd"
+    },
+    {
+      "path": "vital-dumbbell-windmill-ex443.jpg",
+      "bytes": 5447,
+      "sha256": "d46d0eaff1cba376e07b521f3cbc4a493faed2077504ded38ecf21d578b9dcbc"
+    },
+    {
+      "path": "vital-dumbbell-windmill-ex443-end.jpg",
+      "bytes": 5450,
+      "sha256": "16e4b43b11d64550fea3e2afd8299687d37939e07d83063a759d314b1b19e609"
+    },
+    {
+      "path": "vital-dumbbell-windmill-ex443.mp4",
+      "bytes": 132881,
+      "sha256": "8bb8d91743dcacef00cd9aa5c6bb8b222e04e3877908ad1f0a1ccfd3b5dd6bbb"
+    },
+    {
+      "path": "vital-kneeling-landmine-oblique-twist-ex470.jpg",
+      "bytes": 9002,
+      "sha256": "7ac0f99b59a9ee6493b6d3b0ab0d192f6c20fc688f635dc0671de0f624e73dc6"
+    },
+    {
+      "path": "vital-kneeling-landmine-oblique-twist-ex470-end.jpg",
+      "bytes": 8982,
+      "sha256": "7eed85d278c21afb814576c76de09ceebbea2b76bf87dfdf357c54727fa9143b"
+    },
+    {
+      "path": "vital-kneeling-landmine-oblique-twist-ex470.mp4",
+      "bytes": 98258,
+      "sha256": "aead8b80bdec4555651f6383deccf4414bf22d5dfa89f772a91ce95937f88c20"
+    },
+    {
+      "path": "vital-kneeling-quad-extension-ex471.jpg",
+      "bytes": 5418,
+      "sha256": "d6dcf01d6516a596233abf2a7fefcd8bafff01c195f1ac7c3c3e3b4d401ccdba"
+    },
+    {
+      "path": "vital-kneeling-quad-extension-ex471-end.jpg",
+      "bytes": 5507,
+      "sha256": "891f43f140ac0de0c4f3a6436bcff4de37ecc996aba49945c55f29ea9bf226e8"
+    },
+    {
+      "path": "vital-kneeling-quad-extension-ex471.mp4",
+      "bytes": 67577,
+      "sha256": "7523ae013566f7371fc7ff1a352586b41edb3d2cf9cc123706ee2e64cd23361d"
+    },
+    {
+      "path": "vital-plank-t-twist-ex493.jpg",
+      "bytes": 6701,
+      "sha256": "b901dd5c5b383cf2bb1de70be69ad5cfe32a321bbc0294335ee21a939e4a3d03"
+    },
+    {
+      "path": "vital-plank-t-twist-ex493-end.jpg",
+      "bytes": 6744,
+      "sha256": "0bea74c7144e292b71252a838e6dfbed1da10d946a160e1e6947cd204b7d9737"
+    },
+    {
+      "path": "vital-plank-t-twist-ex493.mp4",
+      "bytes": 186094,
+      "sha256": "b8c0442f3ae69000d1dfb78d4dbf784f8e65d50c88fd48f96a46272bd031556a"
+    },
+    {
+      "path": "vital-plyometric-pushup-ex495.jpg",
+      "bytes": 6221,
+      "sha256": "05df63f64d22bc4535d5c190c9512774a246e2cce07dba528059aabc43ae9e25"
+    },
+    {
+      "path": "vital-plyometric-pushup-ex495-end.jpg",
+      "bytes": 6177,
+      "sha256": "6293f174d93239110b357bb38557e2196529415aeac73bad390e84fa909cd9b8"
+    },
+    {
+      "path": "vital-plyometric-pushup-ex495.mp4",
+      "bytes": 64622,
+      "sha256": "82f82c95cb8ccfe5380fd2ebed3c8ed13b26ee1e3cf8d6fb47d27cab6052989a"
+    },
+    {
+      "path": "vital-resistance-band-kneeling-crunch-ex498.jpg",
+      "bytes": 8700,
+      "sha256": "a82e5b8c92aac5e5936e4816f88d528541ffe971014321d592a038e8fb52a7cc"
+    },
+    {
+      "path": "vital-resistance-band-kneeling-crunch-ex498-end.jpg",
+      "bytes": 8907,
+      "sha256": "8eded3ac887c7902edf3c71e1dd8402ee319da6278a89ef86fc789d0b17bfe92"
+    },
+    {
+      "path": "vital-resistance-band-kneeling-crunch-ex498.mp4",
+      "bytes": 89721,
+      "sha256": "dbd2d6ec87e0a57c272ebfe6f45831f4275a16088ce3c1300f5f6167c16d27e2"
+    },
+    {
+      "path": "vital-single-leg-box-jump-ex506.jpg",
+      "bytes": 5042,
+      "sha256": "413b1e238faf38dff0bdfd48f6a8c755fc3d6d709d9a27c1a066078ffde14e0a"
+    },
+    {
+      "path": "vital-single-leg-box-jump-ex506-end.jpg",
+      "bytes": 5098,
+      "sha256": "dc532c88f7cc96d90e04613c56ae1a15da5bc3fdf5845daba9949e46144f9d01"
+    },
+    {
+      "path": "vital-single-leg-box-jump-ex506.mp4",
+      "bytes": 63024,
+      "sha256": "8b0e60074a32ec350835d204609fd76ef9e6ff8eaa14b6b965be4ff704c8b0f1"
+    },
+    {
+      "path": "vital-sled-drag-ex513.jpg",
+      "bytes": 7679,
+      "sha256": "1e986d0b595c0fe8ccfe4e8831fdeda41f7a6859a56bfc3fdeeacb2f3622f404"
+    },
+    {
+      "path": "vital-sled-drag-ex513-end.jpg",
+      "bytes": 7881,
+      "sha256": "57463de8f6ba8d08a23706a27d4698df5b8cf55873e1a7ef4d0085095cfa86da"
+    },
+    {
+      "path": "vital-sled-drag-ex513.mp4",
+      "bytes": 97346,
+      "sha256": "a629a38e107a30601cab5d5fc11eb14cfb818338d4b58214050ab229f0b3d3ad"
+    },
+    {
+      "path": "vital-stability-ball-deadbug-ex517.jpg",
+      "bytes": 6526,
+      "sha256": "74526a6b1e023418ac537e7f7e87b41ee2242b569cce58c0c64544a5456dd4dc"
+    },
+    {
+      "path": "vital-stability-ball-deadbug-ex517-end.jpg",
+      "bytes": 6573,
+      "sha256": "ea9e752a45446149cfb5fd33e20626044915eb19f5db2b626484abcf8a0db3e0"
+    },
+    {
+      "path": "vital-stability-ball-deadbug-ex517.mp4",
+      "bytes": 109572,
+      "sha256": "00e10502a147f9676d29f18f86860e232e8354b6f02a5526f4e8ead1dd80f1dc"
+    },
+    {
+      "path": "vital-lat-pulldown-ex531.jpg",
+      "bytes": 17648,
+      "sha256": "d03a48ffadd7291d0a301d07cb80544ab9a1a902061d36645ae29a7e7d8de819"
+    },
+    {
+      "path": "vital-lat-pulldown-ex531-end.jpg",
+      "bytes": 17847,
+      "sha256": "32c4d75f8cb4f22c2ff7ae9e86d3fa2dc9900788577096c7903b94080f160358"
+    },
+    {
+      "path": "vital-lat-pulldown-ex531.mp4",
+      "bytes": 68774,
+      "sha256": "3622874ec49d32cafca6f887827441e663e737f01099c937158ce4ebc38ddef3"
+    },
+    {
+      "path": "vital-seated-machine-row-ex532.jpg",
+      "bytes": 13907,
+      "sha256": "da8f76cb92c14c0cf47212eb499d4e9ad4fd2c5acec1ef8ab70d9d062a687bcd"
+    },
+    {
+      "path": "vital-seated-machine-row-ex532-end.jpg",
+      "bytes": 14125,
+      "sha256": "c058a9b183ff0c0a230bee23ac4877e2d460f3a6bd2c34fb0ced3086c7b3890f"
+    },
+    {
+      "path": "vital-seated-machine-row-ex532.mp4",
+      "bytes": 81846,
+      "sha256": "1b6208a76842c1c21c6a3c03b0a4ac319d4cca4f70b8a6ebb7cd424dd6073f4b"
+    },
+    {
+      "path": "vital-barbell-glute-bridge-ex533.jpg",
+      "bytes": 12018,
+      "sha256": "4e61f3569ddd3f5f7516605a34c34325a636dbe31852d407a3940872eb5c0f75"
+    },
+    {
+      "path": "vital-barbell-glute-bridge-ex533-end.jpg",
+      "bytes": 12423,
+      "sha256": "a283b29902cf54ee62e229f552c9c3f64677e69c591d96b2003a3a72cc5c43c5"
+    },
+    {
+      "path": "vital-barbell-glute-bridge-ex533.mp4",
+      "bytes": 156930,
+      "sha256": "d3aadfd26b49d4f418e65074bc84c30622c32f39b956496127dbeb4399cfff2b"
+    },
+    {
+      "path": "vital-glute-bridge-march-ex534.jpg",
+      "bytes": 8578,
+      "sha256": "3a5e8e383ced75ab6d41bbbe984f671dc88e8f136e61d695800a9177108e2fc9"
+    },
+    {
+      "path": "vital-glute-bridge-march-ex534-end.jpg",
+      "bytes": 8526,
+      "sha256": "f27450275f303924e6291b49e5b79ba7897d21f38bc3dfdf017e6d8d72da56fc"
+    },
+    {
+      "path": "vital-glute-bridge-march-ex534.mp4",
+      "bytes": 114434,
+      "sha256": "83c7f75c1f4bea006ff131598d249a14196c5276c03713ff3bd60cd566f059ed"
+    },
+    {
+      "path": "vital-med-ball-situp-ex539.jpg",
+      "bytes": 11134,
+      "sha256": "121ea155a225dd22a9dc6aee320690a63c34d9389f1c150bfffc2415fb8b7643"
+    },
+    {
+      "path": "vital-med-ball-situp-ex539-end.jpg",
+      "bytes": 11366,
+      "sha256": "3af14e67a1375d2efeadf063d6e8840fd82cbff41650c7d0da35793f86ec233e"
+    },
+    {
+      "path": "vital-med-ball-situp-ex539.mp4",
+      "bytes": 101283,
+      "sha256": "3dc6127557fb7c1fa07ad6b66345808ebc58e2c50071a48fcbaf298aa40dc7b5"
+    },
+    {
+      "path": "vital-toe-tap-ex540.jpg",
+      "bytes": 8824,
+      "sha256": "60a1e8768a5e97437d4a98a5110a756a10c6fb825e1304a388cf37c9d71acd5b"
+    },
+    {
+      "path": "vital-toe-tap-ex540-end.jpg",
+      "bytes": 9132,
+      "sha256": "fbe1332785ddcd6f8415d36122221746844c8a8af57c6426be82d11ae04fdc58"
+    },
+    {
+      "path": "vital-toe-tap-ex540.mp4",
+      "bytes": 109643,
+      "sha256": "35002197d91b714c08fd641e2335d4ac8b768076e6b3fe3fce1be651ece3702c"
+    },
+    {
+      "path": "vital-incline-treadmill-walking-ex544.jpg",
+      "bytes": 12139,
+      "sha256": "9bc14a1881d506db441b73f23301e24cd6196f84c979ef9feb0efcf2bc5996a9"
+    },
+    {
+      "path": "vital-incline-treadmill-walking-ex544-end.jpg",
+      "bytes": 13136,
+      "sha256": "7e15c5e26bdffe42e5e42397990ad4f84339dda8c6ee3b8f13335dd60d1d7411"
+    },
+    {
+      "path": "vital-incline-treadmill-walking-ex544.mp4",
+      "bytes": 82551,
+      "sha256": "e7669add5fc754002d0ecfee1dbccd28a1dc9013bf3afcb6c243339bf5c7422d"
+    },
+    {
+      "path": "vital-nordic-curl-ex549.jpg",
+      "bytes": 7558,
+      "sha256": "2118eafd2c0f701108f41a50914019edd4880b2036b44ff2845f415b9bff25c9"
+    },
+    {
+      "path": "vital-nordic-curl-ex549-end.jpg",
+      "bytes": 7837,
+      "sha256": "54fba4ee509e85ed20739f7543b46cce66d73675c5baf202d1822ad86d34a80b"
+    },
+    {
+      "path": "vital-nordic-curl-ex549.mp4",
+      "bytes": 108795,
+      "sha256": "22a36a1bee3e04eac72752de12c827ed5bb6db7206f9097c851a9805e89757db"
+    },
+    {
+      "path": "vital-single-leg-leg-press-ex551.jpg",
+      "bytes": 20218,
+      "sha256": "66d791601da4f48969346dc042448a5a7e3aec88e54eb0aa5e9bb9398cd0ec75"
+    },
+    {
+      "path": "vital-single-leg-leg-press-ex551-end.jpg",
+      "bytes": 20397,
+      "sha256": "33b0490107d3cd5136d4139c999588f2f2073c4898fa0bda2cace0de9bdf1eaa"
+    },
+    {
+      "path": "vital-single-leg-leg-press-ex551.mp4",
+      "bytes": 100084,
+      "sha256": "52e9e6eaecebbcefdf79230442bf829ae9f8142b282bca7eeca72df72b866ea9"
+    },
+    {
+      "path": "vital-single-arm-lat-pulldown-ex556.jpg",
+      "bytes": 18301,
+      "sha256": "3512ad3b297fa999af73fab20a601c9e7fd2548e516b19053f36c021ef166993"
+    },
+    {
+      "path": "vital-single-arm-lat-pulldown-ex556-end.jpg",
+      "bytes": 18720,
+      "sha256": "c70c8f6849ad9bd348855e93fdf23637ece3bb13441cec3ecc9ea73eea295ad7"
+    },
+    {
+      "path": "vital-single-arm-lat-pulldown-ex556.mp4",
+      "bytes": 70930,
+      "sha256": "68fec8522f43ca57998df80ea97d0a0fe52fb0673950851762f5cbc9cd14298e"
+    },
+    {
+      "path": "vital-band-lunge-ex562.jpg",
+      "bytes": 10458,
+      "sha256": "6aa82f59b5fea7be79b6d5f43491563718d22b85b9d6cf6f5f28aa4a6eea95c9"
+    },
+    {
+      "path": "vital-band-lunge-ex562-end.jpg",
+      "bytes": 10605,
+      "sha256": "4d1fe98634f5385edd2f2313a738252faa62a3feb8954b2ebc0abab47f61d3fb"
+    },
+    {
+      "path": "vital-band-lunge-ex562.mp4",
+      "bytes": 64155,
+      "sha256": "7d4e9bbf84b78721117801caa118c83188de26ae1779c4da71cf9950764bd4b5"
+    },
+    {
+      "path": "vital-banded-front-squat-ex567.jpg",
+      "bytes": 8431,
+      "sha256": "466d1d5a10d55c02121a445daa4f8fb6d52bfed39ddffa25528338deb81ecfda"
+    },
+    {
+      "path": "vital-banded-front-squat-ex567-end.jpg",
+      "bytes": 8728,
+      "sha256": "ad9c01497c6b20191eb74ede44f0adebe4223f32b4f6f44546626917f514c9e9"
+    },
+    {
+      "path": "vital-banded-front-squat-ex567.mp4",
+      "bytes": 69738,
+      "sha256": "e25ff15f499eaafed3292c39e099af9bbd18c6b69f3ba71b8c6c04893b71a356"
+    },
+    {
+      "path": "vital-banded-glute-kick-ex568.jpg",
+      "bytes": 10089,
+      "sha256": "7cfcac9cb54c0d6f6dba1dacbda8f50c67011d0b6c4e370f30f73f775309494d"
+    },
+    {
+      "path": "vital-banded-glute-kick-ex568-end.jpg",
+      "bytes": 10200,
+      "sha256": "0474433d6dbcb73b58a61cd85429569c9b27e2858cec746f0a80d854cebc2581"
+    },
+    {
+      "path": "vital-banded-glute-kick-ex568.mp4",
+      "bytes": 74848,
+      "sha256": "348908c566bc0e64a2179bf9f7a01081a2d9642724fdb5ba569c8ff8765d29de"
+    },
+    {
+      "path": "vital-banded-one-arm-row-ex571.jpg",
+      "bytes": 10239,
+      "sha256": "0c077a99ca2dcc2d66572496adb7cac3f94f1edfebb9955eb6249b11cc714043"
+    },
+    {
+      "path": "vital-banded-one-arm-row-ex571-end.jpg",
+      "bytes": 10343,
+      "sha256": "8eea112ebd81bcfec7b12dda3d573e94557626b82c0b2d904b98e66225968196"
+    },
+    {
+      "path": "vital-banded-one-arm-row-ex571.mp4",
+      "bytes": 55857,
+      "sha256": "161b8cebc1d970b10c4b14162581a1a95320cc89cd926dc9c1b4d4c154c524a4"
+    },
+    {
+      "path": "vital-barbell-lunge-ex577.jpg",
+      "bytes": 11276,
+      "sha256": "6a04eeca2b7e55e66a1f3c1cf07c314b98ce017243a18c2158e3c88c5505a742"
+    },
+    {
+      "path": "vital-barbell-lunge-ex577-end.jpg",
+      "bytes": 11299,
+      "sha256": "b71855bb49a3b3841de4252b52259add579158f5361d1e2d9ab1672ad3cbcf2c"
+    },
+    {
+      "path": "vital-barbell-lunge-ex577.mp4",
+      "bytes": 89207,
+      "sha256": "38064a47f592d8634ccf978beaa88d0b990eb37cdc6bb10af14b88eff427480f"
+    },
+    {
+      "path": "vital-barbell-static-lunge-ex578.jpg",
+      "bytes": 9262,
+      "sha256": "5b65249f064c2cd2d3f325f498b3f02a01e2077dae05c53b109b0ada6f016d96"
+    },
+    {
+      "path": "vital-barbell-static-lunge-ex578-end.jpg",
+      "bytes": 9690,
+      "sha256": "1ee43a3097cdae765c4f1521263625f98a347a8af44de89f4ddefd84d1f441cb"
+    },
+    {
+      "path": "vital-barbell-static-lunge-ex578.mp4",
+      "bytes": 70656,
+      "sha256": "3fb1babb9c9b88c4cc52a43f878e3ca28af8f23f43f13ec5f6e702963b0990cd"
+    },
+    {
+      "path": "vital-barbell-stiff-deadlift-ex579.jpg",
+      "bytes": 9487,
+      "sha256": "d28e5a6c342963cb82e170f47ce65e2902a0c3e0fab89d1b10d3b278a672ccd1"
+    },
+    {
+      "path": "vital-barbell-stiff-deadlift-ex579-end.jpg",
+      "bytes": 9630,
+      "sha256": "afe2436fd719764c196559ad0569836b8734acc5dda5f5865a9f7ebc5d67ba5c"
+    },
+    {
+      "path": "vital-barbell-stiff-deadlift-ex579.mp4",
+      "bytes": 106054,
+      "sha256": "587ab66967f5c251dc728aa1f69574d25cb1b0cdc0d191ad206711d4d1f71bd5"
+    },
+    {
+      "path": "vital-bench-abs-crunch-ex580.jpg",
+      "bytes": 10487,
+      "sha256": "35a7b061d8e20864d7df982f01795102404eae00a16873886a1813942760d3e3"
+    },
+    {
+      "path": "vital-bench-abs-crunch-ex580-end.jpg",
+      "bytes": 10591,
+      "sha256": "d7e0bce09c36e794ef2b03b69b3988563dcac813f0423d573055f04eb8a2460d"
+    },
+    {
+      "path": "vital-bench-abs-crunch-ex580.mp4",
+      "bytes": 62016,
+      "sha256": "769ddb2487cccb6b3f0b7b03e047e8b2a70fe4c312303366ad541373574a0f9a"
+    },
+    {
+      "path": "vital-calf-raise-leg-press-ex587.jpg",
+      "bytes": 20460,
+      "sha256": "8094f718d4482e47ee5ab6483d9ffff38a1928ca5491fc134b695defc846a40d"
+    },
+    {
+      "path": "vital-calf-raise-leg-press-ex587-end.jpg",
+      "bytes": 20651,
+      "sha256": "0f64fbf69c9be147f98052363dd68429108e3a67d870ba4dc14033c5da34c451"
+    },
+    {
+      "path": "vital-calf-raise-leg-press-ex587.mp4",
+      "bytes": 73389,
+      "sha256": "17b1d6cdaa22e1bd0f81743cb4f6dbeed72b578de705e33ae0f7863a517adeb5"
+    },
+    {
+      "path": "vital-chest-press-in-smith-ex588.jpg",
+      "bytes": 23877,
+      "sha256": "e80ceb222a2c12a2c03af178103a636348e3597f361d94b951ceff6d98d30a2e"
+    },
+    {
+      "path": "vital-chest-press-in-smith-ex588-end.jpg",
+      "bytes": 23934,
+      "sha256": "06f1610a920ed06cfae8b4b6670423e9b1b0cc453599aa3749b00d74d552dc38"
+    },
+    {
+      "path": "vital-chest-press-in-smith-ex588.mp4",
+      "bytes": 77327,
+      "sha256": "5f5a51c82460ae1c3b28da13b4e3cdc8845e0ef8898727b6e02167bb82c423a1"
+    },
+    {
+      "path": "vital-dumbbell-cursty-lunge-ex593.jpg",
+      "bytes": 6669,
+      "sha256": "f79ce5195ca77ae071393b4b443aa78485dc873878a06fa715f41ea807d14c07"
+    },
+    {
+      "path": "vital-dumbbell-cursty-lunge-ex593-end.jpg",
+      "bytes": 6775,
+      "sha256": "37f37a615d4ef49676dffbbb92f50e86182b8a3dd8eb234371f86bd7b073dc8d"
+    },
+    {
+      "path": "vital-dumbbell-cursty-lunge-ex593.mp4",
+      "bytes": 159086,
+      "sha256": "b6e164ad039bf45aa0714833864852acf8352ca72bab0cee0cf89bff9a3be1ca"
+    },
+    {
+      "path": "vital-dumbbell-leg-curl-ex596.jpg",
+      "bytes": 11078,
+      "sha256": "a971ba89d67c0b15d83d3d79c7ef439e503b4894c9a548062e8690e8c50fb51f"
+    },
+    {
+      "path": "vital-dumbbell-leg-curl-ex596-end.jpg",
+      "bytes": 11206,
+      "sha256": "99b606f44b2789a070dfd6fc1ae426d7f59aef0609bfcacf1ee59fcbdaea83f4"
+    },
+    {
+      "path": "vital-dumbbell-leg-curl-ex596.mp4",
+      "bytes": 73189,
+      "sha256": "3d71cc2b3bd7a1c12446e5a703b71cd98e6b887ba0be0b8c8990946a8e2231de"
+    },
+    {
+      "path": "vital-elevated-plank-ex598.jpg",
+      "bytes": 10266,
+      "sha256": "ecef58db0170d53b1bdff042d62d5b0e0e628095d1dbbc7a51b688f0d40c52e9"
+    },
+    {
+      "path": "vital-elevated-plank-ex598-end.jpg",
+      "bytes": 10187,
+      "sha256": "0ea1cda9b1f7d4a4483068f5609b2b2469d9c3200e414858c0555f1beaab17e0"
+    },
+    {
+      "path": "vital-elevated-plank-ex598.mp4",
+      "bytes": 69601,
+      "sha256": "c4cfb84250269ac6929514e5f1a68fa89d8bd42fbaca38325301ed52255b0758"
+    },
+    {
+      "path": "vital-hip-abduction-ex603.jpg",
+      "bytes": 18844,
+      "sha256": "0dfc89d9042e792ef3b0605e3b0dacb3702736d48d30a074d27038cdcc0cafe2"
+    },
+    {
+      "path": "vital-hip-abduction-ex603-end.jpg",
+      "bytes": 18714,
+      "sha256": "1217bfb03a9ead9c2bfd78fd6e28aa0a45719ff2003553c332a64ec8e50b94f6"
+    },
+    {
+      "path": "vital-hip-abduction-ex603.mp4",
+      "bytes": 111257,
+      "sha256": "56fe6791d559f8084c66f113da251e77c10a59e3764ebfeac3dc25143fe93692"
+    },
+    {
+      "path": "vital-hip-adduction-ex604.jpg",
+      "bytes": 21685,
+      "sha256": "7f820f60d6d2d56a603f5568d8489ef298266cb66514a3504b9b69ea3de65134"
+    },
+    {
+      "path": "vital-hip-adduction-ex604-end.jpg",
+      "bytes": 22015,
+      "sha256": "78ee2532c8865b0c3cf9cb07e799cb6f4eabc7b3c839ea114b8254ebd3d0de35"
+    },
+    {
+      "path": "vital-hip-adduction-ex604.mp4",
+      "bytes": 126956,
+      "sha256": "e5d524776423bf5a822e731162270676a6b09e80dfc571ae5bcdddc1a9286bea"
+    },
+    {
+      "path": "vital-knee-lift-crunch-ex606.jpg",
+      "bytes": 7452,
+      "sha256": "fa704f70da2c727ca3f6f9868e2f92eacce44c7707cba00154bcaae8c4874376"
+    },
+    {
+      "path": "vital-knee-lift-crunch-ex606-end.jpg",
+      "bytes": 7349,
+      "sha256": "9d5d19ccd64426e44036b4e94c66a643f149058fcc5f4ec0ed59cc4097c82d24"
+    },
+    {
+      "path": "vital-knee-lift-crunch-ex606.mp4",
+      "bytes": 72110,
+      "sha256": "d157c39e1461a62bb9f936902ac9c29455605f9af76e9988d90df448e60c4678"
+    },
+    {
+      "path": "vital-landmine-barbell-deadlift-ex608.jpg",
+      "bytes": 15969,
+      "sha256": "e2ff840ca6fd58ace2cfae0234f2de4fe4ec7670e746df820095b67df9775ca9"
+    },
+    {
+      "path": "vital-landmine-barbell-deadlift-ex608-end.jpg",
+      "bytes": 16199,
+      "sha256": "804610d45084027ab89a52904258a8cfa8857f58f8945773f0eed52809cb4b98"
+    },
+    {
+      "path": "vital-landmine-barbell-deadlift-ex608.mp4",
+      "bytes": 107749,
+      "sha256": "987eadc76ac3f5f05c91948e666c8fb096ba5c1277b77fe61ee9fff85758623c"
+    },
+    {
+      "path": "vital-medicine-ball-abs-crunch-ex614.jpg",
+      "bytes": 8608,
+      "sha256": "f9b39da64ffa9cbea959bb848eb56011b02ccd1be46fc9b068bd64363c435578"
+    },
+    {
+      "path": "vital-medicine-ball-abs-crunch-ex614-end.jpg",
+      "bytes": 8905,
+      "sha256": "322bcc891bead67b5b222f2e89586397684f85a5aff9fde053979d4f24b58c27"
+    },
+    {
+      "path": "vital-medicine-ball-abs-crunch-ex614.mp4",
+      "bytes": 66632,
+      "sha256": "fd014890c8dd4961d8554e5ffddd459a05a2126f8207584acd36f11083a79250"
+    },
+    {
+      "path": "vital-side-to-side-crunch-ex630.jpg",
+      "bytes": 7128,
+      "sha256": "7b989d1adc4ce5f2014109924f08f7f1dacbd5c333a795ce00ff8259c7c0df57"
+    },
+    {
+      "path": "vital-side-to-side-crunch-ex630-end.jpg",
+      "bytes": 7438,
+      "sha256": "a76247aa6fed0f9105043b725345513890d4a36cdeba69ae063af15fc993c20e"
+    },
+    {
+      "path": "vital-side-to-side-crunch-ex630.mp4",
+      "bytes": 117004,
+      "sha256": "34a5ca979486639a368566355891f97e7b9786fd4e5ae0b32255ca4c40bcc13d"
+    },
+    {
+      "path": "vital-standing-cable-row-ex633.jpg",
+      "bytes": 19169,
+      "sha256": "9b7f4b8797b0881ec0147ab77306ed60581952934a5cd1446e158d62029405c5"
+    },
+    {
+      "path": "vital-standing-cable-row-ex633-end.jpg",
+      "bytes": 19360,
+      "sha256": "1ebe4867904bce1eca9e5238ae54b183c5b1b4bf0b7243f9dbc28fee681d126f"
+    },
+    {
+      "path": "vital-standing-cable-row-ex633.mp4",
+      "bytes": 65770,
+      "sha256": "140c0f7d6d2f88e02fd23f21e420b530022b444e2738c22f7826e386ca38bb07"
+    },
+    {
+      "path": "vital-90-90-rotation-ex639.jpg",
+      "bytes": 6283,
+      "sha256": "36ec4ebecae96067ccec80c530082fdaeb01ddc0ace395b7354ad14b30f1f8c5"
+    },
+    {
+      "path": "vital-90-90-rotation-ex639-end.jpg",
+      "bytes": 6361,
+      "sha256": "a09e0ea434fd9f82067087695fb71140be5dcf5f658966693bdc3de6155df462"
+    },
+    {
+      "path": "vital-90-90-rotation-ex639.mp4",
+      "bytes": 117168,
+      "sha256": "9ecf8195a9f5c7efdb2b3f84b76f8752fbef51061b5c73c17dff78bf75959ed6"
+    },
+    {
+      "path": "vital-barbell-row-ex644.jpg",
+      "bytes": 9402,
+      "sha256": "20e4364909f178b4e39281795be61673ce86eeb511f45ceea5f0360df32a174f"
+    },
+    {
+      "path": "vital-barbell-row-ex644-end.jpg",
+      "bytes": 9558,
+      "sha256": "b2d1e8c6090c9102a6d1810b1d42cf8928cdea822c4ceeb3a2b259312dc98b21"
+    },
+    {
+      "path": "vital-barbell-row-ex644.mp4",
+      "bytes": 68455,
+      "sha256": "94024dba0edbc74c473329b1532006445830f298726b95d3b03cad11ee1448b4"
+    },
+    {
+      "path": "vital-bear-hold-ex646.jpg",
+      "bytes": 9092,
+      "sha256": "81bfe4428df39e1dcf5a402608c58e294fe4940a185cb964c9b8d2478087ef62"
+    },
+    {
+      "path": "vital-bear-hold-ex646-end.jpg",
+      "bytes": 9330,
+      "sha256": "2ea19edeff2f8d6d1dd20e6106bec691123e11d2c97a462816f54f768aa96807"
+    },
+    {
+      "path": "vital-bear-hold-ex646.mp4",
+      "bytes": 131767,
+      "sha256": "0a86b3a13955609382481895a69e6255af03a662d96df6027e812547a62669c7"
+    },
+    {
+      "path": "vital-cable-crossover-ex650.jpg",
+      "bytes": 28644,
+      "sha256": "8abc1606e381fc4589e3a029e0e66165c753f2d4f9539527a7f46093f870733d"
+    },
+    {
+      "path": "vital-cable-crossover-ex650-end.jpg",
+      "bytes": 28731,
+      "sha256": "e435dd4475b85428cc5c34f8eafe35a922ab812f634d354d25bac852f9ebda09"
+    },
+    {
+      "path": "vital-cable-crossover-ex650.mp4",
+      "bytes": 79128,
+      "sha256": "f34d9081996c31eeaf106bf85d709244f211d4aa90497875549150aafce8e0fd"
+    },
+    {
+      "path": "vital-elbow-wall-plank-ex658.jpg",
+      "bytes": 8128,
+      "sha256": "a7bf46adeac969f9ad5fcefeab8feffa83853614cf8dd8f13df2fc69387a6bef"
+    },
+    {
+      "path": "vital-elbow-wall-plank-ex658-end.jpg",
+      "bytes": 8418,
+      "sha256": "f9c7ecd69167a7b18ecb468a0cb08e1a05075f9d44dba6e25c713f18eb5996c9"
+    },
+    {
+      "path": "vital-elbow-wall-plank-ex658.mp4",
+      "bytes": 31505,
+      "sha256": "17ee2c9ac1d78c62b776b0ed969cb32a2504db1a525b44915881e1c33cde5f4d"
+    },
+    {
+      "path": "vital-frog-pumps-ex661.jpg",
+      "bytes": 7932,
+      "sha256": "ccada1bdfd79cbcfb07b0c088b4b29111bc3644db7f1b84ee151c56dbe504790"
+    },
+    {
+      "path": "vital-frog-pumps-ex661-end.jpg",
+      "bytes": 8323,
+      "sha256": "a0b04574909361341d687b6a9386a5a340c5be4edc019f7fe9d8be4d7d2b9136"
+    },
+    {
+      "path": "vital-frog-pumps-ex661.mp4",
+      "bytes": 48920,
+      "sha256": "20b683f1d36922bbf1231aea60fe6d8e24091418915ff87d372520e3e83533f2"
+    },
+    {
+      "path": "vital-glute-drive-machine-ex663.jpg",
+      "bytes": 20806,
+      "sha256": "26fddfcb258badd0f360d8a8b1cb8fbe2c118f0d2f8a31ce87a570bf0cbb7061"
+    },
+    {
+      "path": "vital-glute-drive-machine-ex663-end.jpg",
+      "bytes": 21114,
+      "sha256": "5827833e4bb2b973d3c028fa1cbf23b0271129cea5a4c90267292ab8bcf0d817"
+    },
+    {
+      "path": "vital-glute-drive-machine-ex663.mp4",
+      "bytes": 71856,
+      "sha256": "b34f6e6848748b76f14a69e9d9e826824a88060e2916851d1355d3dbcea7f56b"
+    },
+    {
+      "path": "vital-heel-slides-ex667.jpg",
+      "bytes": 8086,
+      "sha256": "8f5421f532d5ec1f4e161f8e2722c152e889d5890d1f9b6490ba421aad9089ba"
+    },
+    {
+      "path": "vital-heel-slides-ex667-end.jpg",
+      "bytes": 8131,
+      "sha256": "fd8e1467bcc5dcb76ba93df1b1c74aa35149053b8a1a12a72648a27581b0a453"
+    },
+    {
+      "path": "vital-heel-slides-ex667.mp4",
+      "bytes": 98412,
+      "sha256": "ef3963249a94b5988d3f0a2a31554daaf3c5c04e5741fe39a43c3613002cbc18"
+    },
+    {
+      "path": "vital-heel-tap-ex668.jpg",
+      "bytes": 8400,
+      "sha256": "e6112d51eb363e60ffd9d626358021f0357d904cd4f2080ad49440f79ccb8e3c"
+    },
+    {
+      "path": "vital-heel-tap-ex668-end.jpg",
+      "bytes": 8534,
+      "sha256": "56ecc1631081d86633c8a561dc675789e1c1c6d7782d80845a6cad423f2da646"
+    },
+    {
+      "path": "vital-heel-tap-ex668.mp4",
+      "bytes": 104098,
+      "sha256": "7bb7af6f6b80f704ebdc80b37f26c4caf1deb03a246df8be01d1bac4970492ea"
+    },
+    {
+      "path": "vital-hip-adduction-machine-ex670.jpg",
+      "bytes": 16395,
+      "sha256": "09131726e1f487be689d5ca149a3468eb89436585d6e42aef65b888978651b32"
+    },
+    {
+      "path": "vital-hip-adduction-machine-ex670-end.jpg",
+      "bytes": 16564,
+      "sha256": "5fb6e1abb6e6db17f1af0427549fc6e3deab226163e61ba66369d85f1fb0ba3c"
+    },
+    {
+      "path": "vital-hip-adduction-machine-ex670.mp4",
+      "bytes": 68873,
+      "sha256": "2c76a71c3ec7e8e660bb6de2de4cd3c88e6f2b9ef0719edd8bbcf872be8f1ab3"
+    },
+    {
+      "path": "vital-pelvic-tilt-ex679.jpg",
+      "bytes": 7438,
+      "sha256": "7c4c86598c5ddd5884de216e1647b85c749daf98952d3679c25f852ac6d74fa4"
+    },
+    {
+      "path": "vital-pelvic-tilt-ex679-end.jpg",
+      "bytes": 7859,
+      "sha256": "18a1a73302692b860bf3457af9e3bcdc4625839629575eca6a3ac11c060d0d2f"
+    },
+    {
+      "path": "vital-pelvic-tilt-ex679.mp4",
+      "bytes": 48301,
+      "sha256": "350eae843bf87305aa88b4002b0202141ba688610734c64fc481405a9e36f7fe"
+    },
+    {
+      "path": "vital-pendulum-squat-ex680.jpg",
+      "bytes": 21607,
+      "sha256": "d9309d970019e50aa15b60c338c719b4ff20429f188373aef372eaff0649a7ea"
+    },
+    {
+      "path": "vital-pendulum-squat-ex680-end.jpg",
+      "bytes": 21658,
+      "sha256": "b50caa3b687baae6e99b94b8e1302f17e38b3d53f0816c22600c96588864b4ed"
+    },
+    {
+      "path": "vital-pendulum-squat-ex680.mp4",
+      "bytes": 99146,
+      "sha256": "53a3cd411b59f801007ca6a1e0ee30994e8c876eda63aef48e2951282867117b"
+    },
+    {
+      "path": "vital-plank-ex681.jpg",
+      "bytes": 8437,
+      "sha256": "ec3eca2b4a7564e6c56bff08e13bb429305599d52e9eb9a62e9c606082e8a627"
+    },
+    {
+      "path": "vital-plank-ex681-end.jpg",
+      "bytes": 8636,
+      "sha256": "0d8c2da68fb20b41d385ac82c4a7db737cef1567f4b58e9465b9f0dd76382da1"
+    },
+    {
+      "path": "vital-plank-ex681.mp4",
+      "bytes": 48071,
+      "sha256": "1025c322a3c408867a79c6fcd0df65bfc2cf4a3c3c227cc1790519f01053c23e"
+    },
+    {
+      "path": "vital-reverse-hack-squat-ex685.jpg",
+      "bytes": 21328,
+      "sha256": "8b6b6e4df17f40545875957132b7c930301a38a106032b2e9f6ae3bd53081838"
+    },
+    {
+      "path": "vital-reverse-hack-squat-ex685-end.jpg",
+      "bytes": 21675,
+      "sha256": "05e9c218d19b151b95ac24b62ad9d85aee9b08ec90767891a4c3b8e475122f41"
+    },
+    {
+      "path": "vital-reverse-hack-squat-ex685.mp4",
+      "bytes": 93682,
+      "sha256": "ae6a96182894bcbc07cf974e77d2a8f71ab94cf5ba504bc840b1a9539327b4ab"
+    },
+    {
+      "path": "vital-seated-calf-raise-ex689.jpg",
+      "bytes": 15787,
+      "sha256": "f510656355c8c829829896ae7457e97b1ba580d38116bd484c4505219ae6b1e0"
+    },
+    {
+      "path": "vital-seated-calf-raise-ex689-end.jpg",
+      "bytes": 15559,
+      "sha256": "a78c238afb92021817a4b56bf46b48a89b0a8e6329d640e92b87c0e5d549de65"
+    },
+    {
+      "path": "vital-seated-calf-raise-ex689.mp4",
+      "bytes": 58579,
+      "sha256": "c93cb79ce40b0ce0435a7022b688510e566aa252c2682c0f754c0d86980002fe"
+    },
+    {
+      "path": "vital-single-leg-hip-thrust-ex693.jpg",
+      "bytes": 10591,
+      "sha256": "bfcd385263f8845dffc89ca75d475982cbabc422b5dde43b3ecfab95266ce81e"
+    },
+    {
+      "path": "vital-single-leg-hip-thrust-ex693-end.jpg",
+      "bytes": 10751,
+      "sha256": "45b66792f3080a0e5c065b8c2b4bf310cd322dc81d4669984d759c15fed71ca8"
+    },
+    {
+      "path": "vital-single-leg-hip-thrust-ex693.mp4",
+      "bytes": 57116,
+      "sha256": "9df881211c52eb99340d0fff74c5ce7b50637281a5cd6627a30dd94efedb3184"
+    },
+    {
+      "path": "vital-standing-pallof-press-ex697.jpg",
+      "bytes": 20264,
+      "sha256": "d01eb7b95ef88e252e44e85000fa296155dd23fa2655a3731409d8271757a80b"
+    },
+    {
+      "path": "vital-standing-pallof-press-ex697-end.jpg",
+      "bytes": 20274,
+      "sha256": "df26426677bf14beb626902e643bd74c5677898694f4b06a747ee57f89d7b0f9"
+    },
+    {
+      "path": "vital-standing-pallof-press-ex697.mp4",
+      "bytes": 38023,
+      "sha256": "61b737e917c0e330d8a9409dd4f14cf38422f55b6c15e0a46fa666e5fc521d96"
+    },
+    {
+      "path": "vital-suitcase-carry-ex699.jpg",
+      "bytes": 8674,
+      "sha256": "e3335efef434a5121c860cdf60fc6810b06c60034b63cdfc87d6efc678863254"
+    },
+    {
+      "path": "vital-suitcase-carry-ex699-end.jpg",
+      "bytes": 8962,
+      "sha256": "a2ee7069029bb49d6485eb7c1a605016335945edf45d9119384ee0aa2c350702"
+    },
+    {
+      "path": "vital-suitcase-carry-ex699.mp4",
+      "bytes": 49908,
+      "sha256": "50a0564f13e603b869399a56560074f13ce257b01325d179ba60f6891445a00d"
+    },
+    {
+      "path": "vital-t-spine-rotation-ex702.jpg",
+      "bytes": 7864,
+      "sha256": "068d4a14f8dbaa447604b7730937accdb4dfffdaf9685ab414d2dcb318392bba"
+    },
+    {
+      "path": "vital-t-spine-rotation-ex702-end.jpg",
+      "bytes": 7880,
+      "sha256": "4ca2ef68788fb348e3a580a3db62258ded064e8417a5c3f3548406155157710d"
+    },
+    {
+      "path": "vital-t-spine-rotation-ex702.mp4",
+      "bytes": 441574,
+      "sha256": "526f8b2946495c27b91ebfe92b9cc02fa46531d4e8d9fd52a1b75f3d6fc71116"
+    },
+    {
+      "path": "vital-crossbody-arm-swing-ex713.jpg",
+      "bytes": 10800,
+      "sha256": "9325903ffc989357bb081e5ed524b9cefcb93bb604a1a14d33e5bbcc54ef7f90"
+    },
+    {
+      "path": "vital-crossbody-arm-swing-ex713-end.jpg",
+      "bytes": 10788,
+      "sha256": "d6960acb4e2e466d093f880d5fbb34dfe20dbf6fa81dc13ff8f97d013f47e088"
+    },
+    {
+      "path": "vital-crossbody-arm-swing-ex713.mp4",
+      "bytes": 57213,
+      "sha256": "9bd96866d59c9d1ab28caf28b2a174cb9d9d6be80ce928b83da7d16ec852f3de"
+    },
+    {
+      "path": "vital-chest-supported-dumbbell-row-ex715.jpg",
+      "bytes": 14412,
+      "sha256": "a7ca22f66e0f9e75c96588e45fe6b3e7063c97a52140bd09088bbcdf29999b57"
+    },
+    {
+      "path": "vital-chest-supported-dumbbell-row-ex715-end.jpg",
+      "bytes": 14953,
+      "sha256": "8fec4e0df97c5f3d766eec30f2c66a3f46aa3ec3d81bee5da3db7a6267404ab0"
+    },
+    {
+      "path": "vital-chest-supported-dumbbell-row-ex715.mp4",
+      "bytes": 72828,
+      "sha256": "ec5ae3c989683f6b646e46ae606f0df09256e7c763978ecf7dad819b486f48b4"
+    },
+    {
+      "path": "vital-dumbbell-bench-press-ex717.jpg",
+      "bytes": 10238,
+      "sha256": "d91627c42b755db5461def7fa88555102b6de731d80c8e7100c5a91290434f9d"
+    },
+    {
+      "path": "vital-dumbbell-bench-press-ex717-end.jpg",
+      "bytes": 10361,
+      "sha256": "ace775530533869d21ea442bd6f3903392f724e196b6f246758fc504032a88d4"
+    },
+    {
+      "path": "vital-dumbbell-bench-press-ex717.mp4",
+      "bytes": 52235,
+      "sha256": "fbd4bb468cfffd4af98ef0b1936d6d4424da3dac2e34cf262b1933583fb00e50"
+    },
+    {
+      "path": "vital-dumbbell-farmer-carry-ex721.jpg",
+      "bytes": 8318,
+      "sha256": "6f89a7939869657ddb7af18f0fd89b03c289d32f86a14b25a6170544e87c2f33"
+    },
+    {
+      "path": "vital-dumbbell-farmer-carry-ex721-end.jpg",
+      "bytes": 8415,
+      "sha256": "015552f045c9d219290bb28fb92bce7d788399ea8a81661ab8f348dd22ddadee"
+    },
+    {
+      "path": "vital-dumbbell-farmer-carry-ex721.mp4",
+      "bytes": 53637,
+      "sha256": "581a9a3461114815066d533127e557735b08c1d6526d7cbbf030c351f1babf1d"
+    },
+    {
+      "path": "vital-dumbbell-walking-lunge-ex727.jpg",
+      "bytes": 8501,
+      "sha256": "ecb6746b9bc1e9527c571efdd749aa5823b224ed98eed3f720779c241e969b22"
+    },
+    {
+      "path": "vital-dumbbell-walking-lunge-ex727-end.jpg",
+      "bytes": 8966,
+      "sha256": "d8697fbbe25827694944f49f75f07970beb8b318583a78a90fac26c80f7b88a6"
+    },
+    {
+      "path": "vital-dumbbell-walking-lunge-ex727.mp4",
+      "bytes": 161487,
+      "sha256": "dc9086c2edaa3463d3127ec8736fc3c60a62d3df6a951158a9ef4b439f33535d"
+    },
+    {
+      "path": "vital-assisted-pistol-squat-ex729.jpg",
+      "bytes": 10106,
+      "sha256": "0c653cd9ad1c3212b87cd49277a245bf2d45cb1a2d5bb1d271409896ee0434eb"
+    },
+    {
+      "path": "vital-assisted-pistol-squat-ex729-end.jpg",
+      "bytes": 10178,
+      "sha256": "eec0e1800adaaaff0afff5284e8d650b1cf723392a4e28cc7985d07cf5d1592f"
+    },
+    {
+      "path": "vital-assisted-pistol-squat-ex729.mp4",
+      "bytes": 129743,
+      "sha256": "515674021408a06642b69e21284523cc14156043cfca3ce3ea0707132d07d753"
+    },
+    {
+      "path": "vital-plank-with-reach-ex730.jpg",
+      "bytes": 8608,
+      "sha256": "6bca401a4d2f625a7a385fe973c542c167c86b8739d7a429c90c9abd547d346c"
+    },
+    {
+      "path": "vital-plank-with-reach-ex730-end.jpg",
+      "bytes": 8712,
+      "sha256": "6f9b9c1c3dd538031610ab4239e72231a374c043fb43e779db7ecb80afe75a23"
+    },
+    {
+      "path": "vital-plank-with-reach-ex730.mp4",
+      "bytes": 74093,
+      "sha256": "cfced26d49e343f92793b28da393f309253f86b7151cda0b96234d3672ba6e40"
+    },
+    {
+      "path": "vital-cable-tricep-kickback-ex733.jpg",
+      "bytes": 20207,
+      "sha256": "97f34df19afc66add08dd5bb9042d3e7e4e4b94c1a4776b13ff1aac029232879"
+    },
+    {
+      "path": "vital-cable-tricep-kickback-ex733-end.jpg",
+      "bytes": 20318,
+      "sha256": "cfdac3f9d635aa42c6648762c7c8bb327e5a04f82cdeab8cd03434efef0175a8"
+    },
+    {
+      "path": "vital-cable-tricep-kickback-ex733.mp4",
+      "bytes": 38277,
+      "sha256": "e139d6f505c275f1a0b3cffc8bf468cee7e3542d7fc0225ac6b55c0742323a9f"
+    },
+    {
+      "path": "vital-cable-standing-chest-press-ex734.jpg",
+      "bytes": 20449,
+      "sha256": "33c57ee652e04e952b2f68a24224a2b86a018191e18a7d03e643c84cf235ac53"
+    },
+    {
+      "path": "vital-cable-standing-chest-press-ex734-end.jpg",
+      "bytes": 20531,
+      "sha256": "ea5d14183452552e19f8b73550b2f5052f2d309a5efff3c711d028e565c72370"
+    },
+    {
+      "path": "vital-cable-standing-chest-press-ex734.mp4",
+      "bytes": 80375,
+      "sha256": "d252af1b89ee3bbb506e074c0d3cd00a255ae84c96b7ed79a08eda5b14e3ace7"
+    },
+    {
+      "path": "vital-trap-bar-deadlift-ex744.jpg",
+      "bytes": 11421,
+      "sha256": "7f6e35eefb5b339e181dea177ccfe9074212c64bfcf33fa6aec9ae17196e4361"
+    },
+    {
+      "path": "vital-trap-bar-deadlift-ex744-end.jpg",
+      "bytes": 11810,
+      "sha256": "a2459f9b19f1ed9d5ed3e71f0e9b82bfbb718761c2bbd84f808302ad11794991"
+    },
+    {
+      "path": "vital-trap-bar-deadlift-ex744.mp4",
+      "bytes": 82814,
+      "sha256": "d82a0ba94c656f91b499ad68b6c63207fdd0503b8683a151f04259e041eabdf7"
+    },
+    {
+      "path": "vital-barbell-skull-crusher-ex746.jpg",
+      "bytes": 12755,
+      "sha256": "65ee2006c51315394f3f689d053b1a8a6f0e2d79deeaaf697f47298ef3a6d54c"
+    },
+    {
+      "path": "vital-barbell-skull-crusher-ex746-end.jpg",
+      "bytes": 12850,
+      "sha256": "401a4a4cfd52545151779d518c87b1df882485d93333fe805b4aef2480336a15"
+    },
+    {
+      "path": "vital-barbell-skull-crusher-ex746.mp4",
+      "bytes": 82414,
+      "sha256": "8e2d37d3ecc7672c5b0237e86f378d5513aba0c2ba59dcb8e4a83d67788de50f"
+    },
+    {
+      "path": "vital-seated-knee-tucks-ex750.jpg",
+      "bytes": 8602,
+      "sha256": "7450b3e4ebfd03d3fac0bf261a357b99cf5ab9da839822c192a25cb845088ea5"
+    },
+    {
+      "path": "vital-seated-knee-tucks-ex750-end.jpg",
+      "bytes": 8759,
+      "sha256": "fc5d0b9ed423d19e8fb7dbfe598d9708dc1b7acf7d62a0b0a5aec51f43c0a2bf"
+    },
+    {
+      "path": "vital-seated-knee-tucks-ex750.mp4",
+      "bytes": 47174,
+      "sha256": "dc32f4ceffbf7d9ba9140ae81e87c65ed9b7d78433aa8106dc434887012f54f6"
+    },
+    {
+      "path": "vital-cable-straight-arm-pulldown-ex751.jpg",
+      "bytes": 14059,
+      "sha256": "0020e0d5e13d635b6946c8bf6d0dc7fe94abd497964099417d4a82918d3f699a"
+    },
+    {
+      "path": "vital-cable-straight-arm-pulldown-ex751-end.jpg",
+      "bytes": 14152,
+      "sha256": "ccec97938d1d4fa6f873eb40c35f403f5b896b2ccf39a903899bbda06898d761"
+    },
+    {
+      "path": "vital-cable-straight-arm-pulldown-ex751.mp4",
+      "bytes": 53584,
+      "sha256": "8eb656be8ab3fb083d9115c61259bf1b109048a3cf397a0c78f61f508abaa842"
+    },
+    {
+      "path": "vital-hanging-windshield-wipers-ex752.jpg",
+      "bytes": 15080,
+      "sha256": "fb70ef3d418ad8081b5b3c8e894d42f7df053a4fe5388c2f7460442e865ebe17"
+    },
+    {
+      "path": "vital-hanging-windshield-wipers-ex752-end.jpg",
+      "bytes": 15124,
+      "sha256": "79e5058c5e71b1a751b9f3afff3e0313d67e9bc6dd898a91cadae8e2b35f464d"
+    },
+    {
+      "path": "vital-hanging-windshield-wipers-ex752.mp4",
+      "bytes": 66387,
+      "sha256": "0bf88b6ad65f65aa921005cbe4021d14b5dfd63f84f05cdf0211cadf88c7e60d"
+    },
+    {
+      "path": "vital-cossack-squat-ex757.jpg",
+      "bytes": 9294,
+      "sha256": "fdaac6d54e3dfa21a3727c0ecc45ac8f23f90f2b9e7d76276227db6e7b697658"
+    },
+    {
+      "path": "vital-cossack-squat-ex757-end.jpg",
+      "bytes": 9580,
+      "sha256": "245005921716848977c1fbef7a6acd57e44c3c92059577e59b8a93ec6325fe6f"
+    },
+    {
+      "path": "vital-cossack-squat-ex757.mp4",
+      "bytes": 159741,
+      "sha256": "435e40357646367cd251548ede4410719cde88ea7de1159d487e25731f3810b0"
+    },
+    {
+      "path": "vital-dumbbell-single-leg-stepup-ex759.jpg",
+      "bytes": 10983,
+      "sha256": "ecb57fe932980e2a0016a0b929b6870046846f44069d684f8648e787fd294d75"
+    },
+    {
+      "path": "vital-dumbbell-single-leg-stepup-ex759-end.jpg",
+      "bytes": 10746,
+      "sha256": "61729174723e6a99808f8df4e1d593f9d9927575e9da75f00f596efe241875f9"
+    },
+    {
+      "path": "vital-dumbbell-single-leg-stepup-ex759.mp4",
+      "bytes": 124116,
+      "sha256": "96330cb22e0c5274ff4488843b1e1ca6b0282d033406ac881db1d8b1a637f0c3"
+    },
+    {
+      "path": "vital-assisted-pullup-ex763.jpg",
+      "bytes": 16804,
+      "sha256": "cc503efc56d916c0110f201e9e51191df34359fbf04686d36f315ec4a4123400"
+    },
+    {
+      "path": "vital-assisted-pullup-ex763-end.jpg",
+      "bytes": 17102,
+      "sha256": "fcb1561162d069368f193956c2a0cd951042dd9eebf37ce7a432de4b3b83ab2b"
+    },
+    {
+      "path": "vital-assisted-pullup-ex763.mp4",
+      "bytes": 106596,
+      "sha256": "905288b5545e6c1819565be3b1209f587a8204a7afad16e388642978fc7cc6af"
+    },
+    {
+      "path": "vital-cable-low-to-high-ex770.jpg",
+      "bytes": 22429,
+      "sha256": "cf8a019b21240d0491b78dd09f335bd08def5560a40b5013d5aac9010419b665"
+    },
+    {
+      "path": "vital-cable-low-to-high-ex770-end.jpg",
+      "bytes": 22736,
+      "sha256": "9ca9289730aa312c508af35cfaa9c5d9a2d0f78f54b0177f711dc4ec06331f9c"
+    },
+    {
+      "path": "vital-cable-low-to-high-ex770.mp4",
+      "bytes": 89697,
+      "sha256": "68260a7f2f768c0c6c7a1420a7ea857ba9c76bee136e047c38d60ad8443a6830"
+    },
+    {
+      "path": "vital-cable-rear-delt-fly-ex771.jpg",
+      "bytes": 18192,
+      "sha256": "77547a38b6d6533653e2956ba75726f0aa14bf23476768c71270e5c2e9ae90d0"
+    },
+    {
+      "path": "vital-cable-rear-delt-fly-ex771-end.jpg",
+      "bytes": 18324,
+      "sha256": "eb007aa7a63f0c8c08ae1293b5af037885adab86820eb3cbfc386612037ab682"
+    },
+    {
+      "path": "vital-cable-rear-delt-fly-ex771.mp4",
+      "bytes": 50625,
+      "sha256": "2682eaa3baa66aa6fbcab45a94cd5d6ec09b7d7aa6a86457c4feb4560243a193"
+    },
+    {
+      "path": "vital-crab-walk-ex773.jpg",
+      "bytes": 9152,
+      "sha256": "5203a7926456bce2c1bb7a0fb262c36955b37b943cdd28c40b74448a544f11fc"
+    },
+    {
+      "path": "vital-crab-walk-ex773-end.jpg",
+      "bytes": 9469,
+      "sha256": "18c1c51c5ca4a4fd0d20d96db7f8b76a2a2792dfe2ea6882751412d9e4c9565c"
+    },
+    {
+      "path": "vital-crab-walk-ex773.mp4",
+      "bytes": 195217,
+      "sha256": "7dd5bb201cfb821f44df37da3c4a1348341dff6cb3f1a94a9faa7d17d6b3dc0d"
+    },
+    {
+      "path": "vital-dumbbell-pullover-ex780.jpg",
+      "bytes": 15085,
+      "sha256": "29d77d409518ebfbedcccfe65cd4be3720841a08d7a0be2ca59a9996f93ac291"
+    },
+    {
+      "path": "vital-dumbbell-pullover-ex780-end.jpg",
+      "bytes": 15354,
+      "sha256": "dc3919dbc53d9cb194bff8f3191c0af3e0c084a3b1aa4ef03f66db5406f319ce"
+    },
+    {
+      "path": "vital-dumbbell-pullover-ex780.mp4",
+      "bytes": 105400,
+      "sha256": "e5194c1b8cb9a33fee5b9b87e03b8bb8beb937d2e044d2540aed3adbe55b3ebc"
+    },
+    {
+      "path": "vital-kettlebell-deep-squat-ex783.jpg",
+      "bytes": 8821,
+      "sha256": "81d83f4f311d77d23b8cb8e517d0ad38e488f12fe3789852bbca4856e1971ec3"
+    },
+    {
+      "path": "vital-kettlebell-deep-squat-ex783-end.jpg",
+      "bytes": 8955,
+      "sha256": "0bfe598e4efffabea0f575f774e21598f6f6c72677ae1aa8f4f2b5b29833c42c"
+    },
+    {
+      "path": "vital-kettlebell-deep-squat-ex783.mp4",
+      "bytes": 90892,
+      "sha256": "0e46145162d4493e0d68695aae1d8b6748eeaea1e4a39376a2006c23ff744a00"
+    },
+    {
+      "path": "vital-kettlebell-reverse-lunge-ex784.jpg",
+      "bytes": 8846,
+      "sha256": "bd04ddb6f26f6c74505e91edaed93bd3c72fd0b98f4596a82c9bc7700178701d"
+    },
+    {
+      "path": "vital-kettlebell-reverse-lunge-ex784-end.jpg",
+      "bytes": 9019,
+      "sha256": "b79550ec79ed9bb936ad13797a6d2b258be240a63b48f5eb63b1767ae230b33c"
+    },
+    {
+      "path": "vital-kettlebell-reverse-lunge-ex784.mp4",
+      "bytes": 101999,
+      "sha256": "2478f987b9fd9e697211921a1c1d32d1a9e696dd29cc5b8cc16f156e437b397c"
+    },
+    {
+      "path": "vital-smith-machine-reverse-lunge-ex795.jpg",
+      "bytes": 19745,
+      "sha256": "eb606621096393e86f91742035bfa53f2b8454bb8f6887548454426a5b69dd93"
+    },
+    {
+      "path": "vital-smith-machine-reverse-lunge-ex795-end.jpg",
+      "bytes": 20079,
+      "sha256": "99f6882a7465678df7bd8cf0da7e19eb5b241a887fd14abc923aaf92ef706b69"
+    },
+    {
+      "path": "vital-smith-machine-reverse-lunge-ex795.mp4",
+      "bytes": 105579,
+      "sha256": "a8bc8b59070fa25aabd398dd04b43e46f88240b020f9a82d838116c024626829"
+    },
+    {
+      "path": "vital-smith-machine-split-squat-ex796.jpg",
+      "bytes": 20142,
+      "sha256": "88eb18b7d70032646bfa570f9edb35212eb5cd4e65c9d91de2da1c9c4b8e1a91"
+    },
+    {
+      "path": "vital-smith-machine-split-squat-ex796-end.jpg",
+      "bytes": 20599,
+      "sha256": "2e1e6880eacaa4d6cda61886af03a95a0bd106856bd89850074b8ecc13255a81"
+    },
+    {
+      "path": "vital-smith-machine-split-squat-ex796.mp4",
+      "bytes": 77807,
+      "sha256": "501badabb0e0c17a3bc9993eba3633d80df126421f1f2dbf2560ee92abb12c58"
+    },
+    {
+      "path": "vital-wall-ball-squat-ex799.jpg",
+      "bytes": 10659,
+      "sha256": "aa04a2a520679f94f074c4e979147a4c09b12d3e557498a06cff8199b9574c97"
+    },
+    {
+      "path": "vital-wall-ball-squat-ex799-end.jpg",
+      "bytes": 11041,
+      "sha256": "e57b33049284d8b6fe8dc1a301418da62a011694fb83310cafb4842cc66a033c"
+    },
+    {
+      "path": "vital-wall-ball-squat-ex799.mp4",
+      "bytes": 115035,
+      "sha256": "217001ee11d8fc35fb970a91064d4ca9a9af8ef17b25584c11fcd594d14ed75a"
+    },
+    {
+      "path": "vital-zercher-squat-ex801.jpg",
+      "bytes": 13143,
+      "sha256": "78106904fa2617ac4195ada0dfa870299ae4d57c2e245aa13a4740ca53fc1905"
+    },
+    {
+      "path": "vital-zercher-squat-ex801-end.jpg",
+      "bytes": 13675,
+      "sha256": "c71469f314aa955f11db4a6b2c6517e417362f1265c4fbd1bad20f77c86f3bc8"
+    },
+    {
+      "path": "vital-zercher-squat-ex801.mp4",
+      "bytes": 149614,
+      "sha256": "51642057ff6b3e472e37ac5fc6aeee7c34d1ec7a667e8060bf7de00753d9c41b"
+    }
+  ]
+}

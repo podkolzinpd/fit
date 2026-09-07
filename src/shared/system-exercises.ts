@@ -3,9 +3,10 @@ import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
 import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
 import { VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
+import { VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF, VITAL_GYM_PRO_NEW_EXERCISES } from './vital-gym-pro.generated'
 import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 10
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 11
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {
@@ -186,13 +187,17 @@ const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
   ...CURATED_CATALOG_ADDITIONS,
   ...VITAL_FREE_PACK_EXERCISES,
   ...CATALOG_EXPANSION,
+  ...VITAL_GYM_PRO_NEW_EXERCISES,
 ]
 
 // Составные протоколы и СБУ переиспользуют обложки базовых упражнений. Для
 // карточки техники им нужен тот же второй кадр, но дублировать его URL в каждом
 // литерале нет смысла.
 export const SYSTEM_EXERCISE_LEGACY_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_CATALOG_SOURCE.map((exercise) => {
-  const vitalMedia = VITAL_FREE_PACK_MEDIA_BY_REF[exercise.ref]
+  const freePackMedia = VITAL_FREE_PACK_MEDIA_BY_REF[exercise.ref]
+  const gymProMedia = VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF[exercise.ref]
+  const vitalMedia = freePackMedia ?? gymProMedia
+  const usesGymProMedia = !freePackMedia && Boolean(gymProMedia)
   const correctedName = exercise.ref === 'fedb-snatch-deadlift'
     ? 'Рывковая становая тяга (Штанга)'
     : exercise.ref === 'fedb-car-deadlift'
@@ -202,7 +207,16 @@ export const SYSTEM_EXERCISE_LEGACY_CATALOG: readonly ExerciseSnapshot[] = SYSTE
     ...exercise,
     name: correctedName,
     imageUrl: vitalMedia?.imageUrl ?? exercise.imageUrl,
-    motionImageUrl: vitalMedia?.motionImageUrl ?? exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
+    fallbackImageUrl: usesGymProMedia && exercise.imageUrl !== gymProMedia?.imageUrl
+      ? exercise.imageUrl
+      : undefined,
+    // Gym Pro media is intentionally absent from the public checkout. Keep the
+    // existing catalog image as a resilient fallback if a licensed file cannot
+    // be prepared or fetched. The encrypted production build still uses the
+    // Gym Pro poster and video as the primary media.
+    motionImageUrl: usesGymProMedia
+      ? exercise.motionImageUrl ?? exercise.imageUrl ?? gymProMedia?.motionImageUrl
+      : freePackMedia?.motionImageUrl ?? exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
     techniqueVideoUrl: vitalMedia?.techniqueVideoUrl,
   }
 })

@@ -63,12 +63,30 @@ describe('ExerciseImage', () => {
     expect(screen.getByRole('img', { name: 'Присед' })).toHaveAttribute('src', '/exercises/start.jpg')
   })
 
+  it('plays video in a picker card only when that card is explicitly active', () => {
+    const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="picker" />)
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    rerender(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="picker" playVideo />)
+    expect(screen.getByLabelText('Техника: Присед')).toHaveAttribute('autoplay')
+    expect(screen.getByLabelText('Техника: Присед')).not.toHaveAttribute('controls')
+    expect(container.querySelectorAll('video')).toHaveLength(1)
+  })
+
   it('uses the still end frame when a compact card start frame fails', () => {
     const { container } = render(<ExerciseImage src="/exercises/broken.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Жим лёжа" variant="picker" />)
     fireEvent.error(screen.getByRole('img', { name: 'Жим лёжа' }))
     expect(screen.getByRole('img', { name: 'Жим лёжа' })).toHaveAttribute('src', '/exercises/end.jpg')
     expect(container.querySelector('video')).not.toBeInTheDocument()
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+  })
+
+  it('uses the explicit public poster before falling back to the end frame', () => {
+    const { container } = render(<ExerciseImage src="/licensed/start.jpg" fallbackSrc="/public/start.jpg" motionSrc="/public/end.jpg" alt="Тяга" variant="technique" />)
+    fireEvent.error(screen.getByRole('img', { name: 'Тяга' }))
+    expect(screen.getByRole('img', { name: 'Тяга' })).toHaveAttribute('src', '/public/start.jpg')
+    expect(container.firstElementChild).toHaveClass('exercise-image-motion')
+    fireEvent.error(screen.getByRole('img', { name: 'Тяга' }))
+    expect(screen.getByRole('img', { name: 'Тяга' })).toHaveAttribute('src', '/public/end.jpg')
   })
 
   it('keeps manual video controls but disables autoplay when reduced motion is enabled', () => {

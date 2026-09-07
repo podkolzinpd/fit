@@ -58,7 +58,7 @@ describe('exercise search contract', () => {
   })
 
   it('даёт поисковые варианты каждому системному упражнению, не меняя каталог', () => {
-    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(663)
+    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(814)
     expect(SYSTEM_EXERCISE_CATALOG.every((exercise) => exerciseSearchAliases(exercise).length > 0)).toBe(true)
     expect(exerciseSearchAliases(SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-face-pull')!)).toContain('face pull')
   })

@@ -43,9 +43,9 @@ describe('approved catalog curation', () => {
 
   it('accounts for all approved rows, and preserves the later Smith addition', () => {
     expect(Object.keys(EXERCISE_CATALOG_DECISIONS)).toHaveLength(662)
-    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(663)
+    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(814)
     const roots = SYSTEM_EXERCISE_CATALOG.filter(isCatalogRoot)
-    expect(['core', 'uncommon', 'rare', 'formats'].map((section) => roots.filter((exercise) => exerciseCatalogSection(exercise) === section).length)).toEqual([80, 279, 215, 7])
+    expect(['core', 'uncommon', 'rare', 'formats'].map((section) => roots.filter((exercise) => exerciseCatalogSection(exercise) === section).length)).toEqual([80, 430, 215, 7])
     expect(roots.find((exercise) => exercise.ref === 'smith-single-leg-romanian-deadlift')).toBeDefined()
     for (const [ref, decision] of Object.entries(EXERCISE_CATALOG_DECISIONS)) {
       expect(byRef.has(ref), ref).toBe(true)

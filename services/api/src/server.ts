@@ -32,6 +32,7 @@ import {
 } from './yandex-app-session.js'
 import { summarizeClientTraining } from './legacy-summary/index.js'
 import { buildYandexAiAuthorization } from './yandex-ai-authorization.js'
+import { SupabaseVitalMediaSigner } from './vital-media.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -163,6 +164,9 @@ const pilotTrainingSummaryGenerator =
     ? undefined
     : pilotTrainingSummaryReader
 const supabaseBridgeConfig = readSupabaseBridgeConfig()
+const vitalMediaSigner = supabaseBridgeConfig === undefined
+  ? undefined
+  : new SupabaseVitalMediaSigner(supabaseBridgeConfig)
 const existingActorProvider =
   supabaseBridgeConfig === undefined
     ? undefined
@@ -206,6 +210,7 @@ const app = buildApp(
     ...(yandexAppSessionIssuer === undefined ? {} : { yandexAppSessionIssuer }),
     ...(yandexAppSessionReader === undefined ? {} : { yandexAppSessionReader }),
     ...(yandexAppSessionRevoker === undefined ? {} : { yandexAppSessionRevoker }),
+    ...(vitalMediaSigner === undefined ? {} : { vitalMediaSigner }),
     ...(yandexAccountLinker === undefined ? {} : { yandexAccountLinker }),
     ...(existingActorProvider === undefined ? {} : { existingActorProvider }),
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),

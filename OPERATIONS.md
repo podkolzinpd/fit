@@ -219,6 +219,13 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key>
 
 `SUPABASE_DB_PASSWORD`, `SUPABASE_ACCESS_TOKEN`, service-role key и OAuth Client Secret в Vercel не добавляются. После первого production deploy его канонический URL фиксируется в Supabase Auth URL Configuration:
 
+Лицензированные Vital Gym Pro media также не требуют закрытых переменных в
+Vercel. Зашифрованный bundle публикуется только workflow `Deploy Vital exercise
+media`, использующим GitHub secrets `VITAL_MEDIA_KEY`, `SUPABASE_ACCESS_TOKEN`
+и `SUPABASE_PROJECT_ID`. Файлы находятся в private bucket
+`fit-exercise-media`; policy разрешает чтение только роли `authenticated`, а
+frontend создаёт короткоживущие signed URL.
+
 Закрытый пилот Apple Health управляется build-time переменными Vercel:
 
 ```text
