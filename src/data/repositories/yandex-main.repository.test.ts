@@ -384,7 +384,7 @@ describe('Yandex main repository', () => {
 
     expect(await repository.appFeedback.submit('problem', '  Сообщение  ')).toBe(progressId)
     vi.stubGlobal('Notification', { permission: 'granted' })
-    expect(await repository.pushNotifications.status(actor.userId)).toEqual({ state: 'working', workoutReminderEnabled: true })
+    expect(await repository.pushNotifications.status(actor.userId)).toEqual({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: false })
     await repository.pushNotifications.enable(actor.userId)
     await repository.pushNotifications.disable(actor.userId)
 
