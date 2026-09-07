@@ -944,7 +944,11 @@ export function createYandexMainRepository(
             await writeEmpty(queries, '/v1/push-notifications/subscription', 'PUT', subscription)
           },
         })
-        return { state, workoutReminderEnabled: payload.status.preferences.workout_reminder }
+        return {
+          state,
+          workoutReminderEnabled: payload.status.preferences.workout_reminder,
+          workoutScheduledEnabled: payload.status.preferences.workout_scheduled,
+        }
       },
       async enable() {
         const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
@@ -958,8 +962,8 @@ export function createYandexMainRepository(
         await unsubscribeFromPush()
         await writeEmpty(queries, '/v1/push-notifications/subscription', 'DELETE')
       },
-      async enableCategory(_userId, kind) {
-        await writeEmpty(queries, `/v1/push-notifications/preferences/${kind}`, 'PUT', { enabled: true })
+      async setCategoryEnabled(_userId, kind, enabled) {
+        await writeEmpty(queries, `/v1/push-notifications/preferences/${kind}`, 'PUT', { enabled })
       },
       sendTestPush() {
         // Yandex-пилот не разворачивал отдельный тестовый эндпоинт (см.

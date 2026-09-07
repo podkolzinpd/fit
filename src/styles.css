@@ -1013,6 +1013,16 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .switch-input:checked + .switch-control::after { transform: translateX(20px); background: var(--on-accent) }
 .switch-input:focus-visible + .switch-control { outline: 3px solid var(--accent-ring); outline-offset: 2px }
 .switch-row:active .switch-control::after { width: 22px }
+.push-status-row { display: grid; gap: 8px; padding: 13px 14px; border-top: 1px solid var(--border) }
+.push-status-row + .switch-row { border-top: 1px solid var(--border) }
+.push-status-text { margin: 0; font-size: var(--text-ui); font-weight: var(--weight-medium); color: var(--fg) }
+.push-status-text.working { color: var(--success-fg) }
+.push-status-text.warning { color: var(--warning-fg) }
+.push-status-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
+.push-status-actions .secondary, .push-status-actions .link { min-height: var(--control-height-standard) }
+.push-test-result { color: var(--muted) }
+.push-test-result.success { color: var(--success-fg) }
+.push-test-result.error { color: var(--danger) }
  .content:has(.schedule-page) { overflow: hidden; padding-bottom: 0 }
 .schedule-page { height: 100%; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0 }
 .schedule-page > .page-header { flex: 0 0 auto }

@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const repository = vi.hoisted(() => ({
   status: vi.fn(),
   enable: vi.fn(),
-  enableCategory: vi.fn(),
+  setCategoryEnabled: vi.fn(),
   sendTestPush: vi.fn(),
 }))
 vi.mock('../../data/repositories/push-notifications.repository', () => ({
@@ -66,7 +66,7 @@ describe('NotificationOnboarding', () => {
   beforeEach(() => {
     repository.status.mockReset()
     repository.enable.mockReset()
-    repository.enableCategory.mockReset()
+    repository.setCategoryEnabled.mockReset()
     repository.sendTestPush.mockReset()
     isPushSupported.mockReset()
     getCurrentPushSubscription.mockReset()
@@ -120,7 +120,7 @@ describe('NotificationOnboarding', () => {
     primeHappyPathDefaults()
     const user = userEvent.setup()
     repository.enable.mockResolvedValue(undefined)
-    repository.enableCategory.mockResolvedValue(undefined)
+    repository.setCategoryEnabled.mockResolvedValue(undefined)
     getCurrentPushSubscription.mockResolvedValue(LOCAL_SUBSCRIPTION)
     repository.sendTestPush.mockImplementation(() => {
       window.dispatchEvent(new MessageEvent('message', { data: { type: 'fit-test-push-received' } }))
@@ -137,7 +137,7 @@ describe('NotificationOnboarding', () => {
 
     expect(await screen.findByText('Уведомления работают.')).toBeVisible()
     expect(repository.enable).toHaveBeenCalledWith(USER_ID)
-    expect(repository.enableCategory).toHaveBeenCalledWith(USER_ID, 'workout_scheduled')
+    expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'workout_scheduled', true)
     expect(repository.sendTestPush).toHaveBeenCalledWith(LOCAL_SUBSCRIPTION.endpoint)
     expect(markPushOnboardingSeen).toHaveBeenCalledWith(USER_ID)
 
