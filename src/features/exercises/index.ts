@@ -1,6 +1,7 @@
 export { ExercisesPage } from './ExercisesPage'
 export { ExercisePicker, filterExercises } from './ExercisePicker'
 export { ExerciseImage } from './ExerciseImage'
+export { ExerciseTechniqueSheet, hasExerciseTechnique } from './ExerciseTechnique'
 export { recentExercisesForClient } from './client-recent-exercises'
 export { useExerciseCatalog } from './exercise-catalog'
 export type { ExerciseCatalogState } from './exercise-catalog'

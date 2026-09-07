@@ -398,7 +398,7 @@ describe('ExercisePicker', () => {
     expect(screen.getByRole('heading', { name: 'Присед (Штанга)' })).toBeInTheDocument()
     expect(screen.getByText('Как выполнять')).toBeInTheDocument()
     expect(document.querySelector('.picker-technique-view video')).toHaveAttribute('src', '/squat.mp4')
-    expect(document.querySelector('.picker-technique-view video')).toHaveAttribute('controls')
+    expect(document.querySelector('.picker-technique-view video')).not.toHaveAttribute('controls')
 
     await user.click(screen.getByRole('button', { name: 'Назад к выбору' }))
     expect(screen.getByLabelText('Поиск упражнения')).toHaveValue('Присед')

@@ -14,7 +14,7 @@ import {
   type LocalDate,
 } from '../../shared/local-date'
 import { AsyncView, Coachmark, EmptyState, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
-import { ExerciseImage, ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
+import { ExerciseImage, ExercisePicker, ExerciseTechniqueSheet, hasExerciseTechnique, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { clientWorkoutAuthorLabel, ClientPicker, ClientWorkoutHistoryCalendar, useWorkoutHistoryCalendar, type ClientPickerSelection } from '../clients'
 import { hasWorkoutBackEntry, safeWorkoutReturnTo, useWorkoutBack, workoutListFallback, type WorkoutNavigationState } from './workout-navigation'
 import { VoiceNoteField } from '../voice-input'
@@ -53,6 +53,11 @@ import { InvitationCodeCard } from '../../shared/invitation-code-card'
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
 export const WORKOUT_HISTORY_PAGE_SIZE = 20
+
+function catalogExerciseFor(exercises: readonly ExerciseSnapshot[], exercise: { ref: string; source?: 'system' | 'custom' }) {
+  return exercises.find((candidate) => candidate.ref === exercise.ref && (!exercise.source || candidate.source === exercise.source))
+    ?? exercises.find((candidate) => candidate.ref === exercise.ref)
+}
 
 function minutesOf(time: string): number {
   const [h, m] = time.split(':').map(Number)
@@ -377,6 +382,7 @@ export function WorkoutFormPage() {
   const [formDraftReady, setFormDraftReady] = useState(false)
   const [prefillError, setPrefillError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [techniqueExercise, setTechniqueExercise] = useState<ExerciseSnapshot | null>(null)
   const [pickerSearch, setPickerSearch] = useState('')
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
@@ -614,13 +620,17 @@ export function WorkoutFormPage() {
         <div className="workout-form-section-head workout-form-exercise-heading"><h2>{completedMode ? 'Что выполнено' : 'Упражнения'}</h2></div>
         <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} />
         {exercises.length === 0 && <p className="workout-empty-hint" role="status">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
-        <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout} initialExercisesReady={formDraftReady} />
+        <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }}
+          canOpenTechnique={(exercise) => hasExerciseTechnique(catalogExerciseFor(catalog.exercises, exercise))}
+          onOpenTechnique={(exercise) => { const meta = catalogExerciseFor(catalog.exercises, exercise); if (hasExerciseTechnique(meta)) setTechniqueExercise(meta) }}
+          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout} initialExercisesReady={formDraftReady} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>
     </form>}</AsyncView>
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
+    {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmLeaveDialog}
   </Page>
 }
@@ -1433,6 +1443,7 @@ export function LiveWorkoutPage() {
   const completedLocally = useRef(false)
   const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [techniqueExercise, setTechniqueExercise] = useState<ExerciseSnapshot | null>(null)
   // В обычной тренировке перестановка не нужна постоянно: включается из меню
   // и только тогда показывает стрелки у блоков.
   const [reordering, setReordering] = useState(false)
@@ -1452,6 +1463,10 @@ export function LiveWorkoutPage() {
   const [savingSetId, setSavingSetId] = useState<string | null>(null)
   const [savedSetId, setSavedSetId] = useState<string | null>(null)
   const [saveErrorSetId, setSaveErrorSetId] = useState<string | null>(null)
+  function techniqueActionFor(exercise: WorkoutExerciseModel) {
+    const meta = catalogExerciseFor(catalog.exercises, exercise)
+    return hasExerciseTechnique(meta) ? () => setTechniqueExercise(meta) : undefined
+  }
   useEffect(() => {
     if (!actor?.userId || !query.data) return
     const serverSets = new Map(query.data.exercises.flatMap((exercise) => exercise.sets).map((set) => [set.id, set]))
@@ -1913,12 +1928,12 @@ export function LiveWorkoutPage() {
               const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set, exercise.ref)).find(Boolean)
               const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
               return <WorkoutExercise key={exercise.id} state="upcoming" className="live-exercise-upcoming">
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
                 <p className="live-upcoming-summary"><span>{exercise.sets.length} {countLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>
               </WorkoutExercise>
             }
             return <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
-              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
@@ -1945,7 +1960,7 @@ export function LiveWorkoutPage() {
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
             <div className="circuit-round-label">Круг {round.round}</div>
             {round.items.map(({ exercise, set }) => <section key={set.id}>
-              <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={exercise.name} actions={roundIndex === 0 ? exerciseMenu(exercise) : undefined} />
+              <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={roundIndex === 0 ? exerciseMenu(exercise) : undefined} />
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
               {roundIndex === 0 && liveCommentField(exercise)}
             </section>)}
@@ -1972,6 +1987,7 @@ export function LiveWorkoutPage() {
       </div>
     </>}</AsyncView>
     {canManageLiveStructure && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onClose={closePicker} />}
+    {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmDialog}
   </Page>
 }

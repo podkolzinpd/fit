@@ -31,13 +31,14 @@ describe('ExerciseImage', () => {
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
   })
 
-  it('uses an accessible controlled video only in the explicit technique view', () => {
+  it('uses an accessible inline video without native controls in the explicit technique view', () => {
     const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="technique" />)
     const video = screen.getByLabelText('Техника: Присед')
     expect(video).toHaveAttribute('src', '/exercises/technique.mp4')
     expect(video).toHaveAttribute('autoplay')
     expect(video).toHaveAttribute('loop')
-    expect(video).toHaveAttribute('controls')
+    expect(video).not.toHaveAttribute('controls')
+    expect(video).toHaveAttribute('preload', 'auto')
     expect(video).toHaveProperty('muted', true)
     expect(video).toHaveAttribute('playsinline')
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
@@ -89,7 +90,7 @@ describe('ExerciseImage', () => {
     expect(screen.getByRole('img', { name: 'Тяга' })).toHaveAttribute('src', '/public/end.jpg')
   })
 
-  it('keeps manual video controls but disables autoplay when reduced motion is enabled', () => {
+  it('uses a custom play action and disables autoplay when reduced motion is enabled', () => {
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
       matches: true,
       media: '(prefers-reduced-motion: reduce)',
@@ -97,8 +98,9 @@ describe('ExerciseImage', () => {
       removeEventListener: vi.fn(),
     }))
     const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="technique" />)
-    expect(container.querySelector('video')).toHaveAttribute('controls')
+    expect(container.querySelector('video')).not.toHaveAttribute('controls')
     expect(container.querySelector('video')).not.toHaveAttribute('autoplay')
+    expect(screen.getByRole('button', { name: 'Запустить анимацию: Присед' })).toBeInTheDocument()
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
     rerender(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="preview" />)
     expect(container.querySelector('video')).not.toBeInTheDocument()

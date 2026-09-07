@@ -104,6 +104,16 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByRole('menuitem', { name: 'Сбросить значения' })).toBeInTheDocument()
   })
 
+  it('opens technique separately from editing planned sets', async () => {
+    const user = userEvent.setup()
+    const onOpenTechnique = vi.fn()
+    render(<WorkoutExerciseEditor exercises={exercises} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} onOpenTechnique={onOpenTechnique} canOpenTechnique={() => true} />)
+
+    await user.click(screen.getByRole('button', { name: 'Посмотреть технику: Присед' }))
+    expect(onOpenTechnique).toHaveBeenCalledWith(exercises[0])
+    expect(screen.getByLabelText('Вес, подход 1')).toHaveValue(52.5)
+  })
+
   it('accepts copied factual seconds that are not multiples of 15', () => {
     const copied: WorkoutExerciseDraft[] = [{
       source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance', position: 0,
