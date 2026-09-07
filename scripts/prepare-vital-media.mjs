@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createDecipheriv, createHash } from 'node:crypto'
-import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -36,6 +36,24 @@ async function validateMedia(manifest) {
   return true
 }
 
+async function materializeReviewedMedia(manifest, unpackedDir) {
+  await rm(outputDir, { recursive: true, force: true })
+  await mkdir(outputDir, { recursive: true })
+  for (const file of manifest.files) {
+    if (file.path.includes('/') || file.path.includes('\\') || file.path === '.' || file.path === '..') {
+      throw new Error(`Unsafe Gym Pro media path in manifest: ${file.path}`)
+    }
+    const sourcePath = join(unpackedDir, file.path)
+    const sourceStat = await lstat(sourcePath).catch(() => null)
+    if (!sourceStat?.isFile() || sourceStat.size !== file.bytes) {
+      throw new Error(`Missing or invalid Gym Pro media file: ${file.path}`)
+    }
+    const digest = createHash('sha256').update(await readFile(sourcePath)).digest('hex')
+    if (digest !== file.sha256) throw new Error(`Gym Pro media checksum mismatch: ${file.path}`)
+    await copyFile(sourcePath, join(outputDir, file.path))
+  }
+}
+
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
 if (manifest.version !== 1 || manifest.exerciseCount !== 317 || manifest.files.length !== 951) {
   throw new Error('Unexpected Gym Pro media manifest')
@@ -66,11 +84,12 @@ const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()])
 
 const temporaryDir = await mkdtemp(join(tmpdir(), 'fit-vital-build-'))
 const tarPath = join(temporaryDir, 'media.tar')
+const unpackedDir = join(temporaryDir, 'unpacked')
 try {
   await writeFile(tarPath, plaintext)
-  await rm(outputDir, { recursive: true, force: true })
-  await mkdir(outputDir, { recursive: true })
-  await run('tar', ['-xf', tarPath, '-C', outputDir])
+  await mkdir(unpackedDir)
+  await run('tar', ['-xf', tarPath, '-C', unpackedDir])
+  await materializeReviewedMedia(manifest, unpackedDir)
   if (!(await validateMedia(manifest))) throw new Error('Decrypted Gym Pro media does not match the reviewed manifest')
   console.log('Prepared and verified 317 Gym Pro videos for this build.')
 } finally {
