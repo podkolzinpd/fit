@@ -14,8 +14,8 @@ describe('selectable exercise catalog', () => {
   it('retires exactly 83 roots without losing any historical ref or the four used exercises', () => {
     const selectable = selectableExercises(SYSTEM_EXERCISE_CATALOG)
     expect(RETIRED_SYSTEM_EXERCISE_REFS.size).toBe(83)
-    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(663)
-    expect(selectable).toHaveLength(663 - 16 - 83)
+    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(814)
+    expect(selectable).toHaveLength(814 - 16 - 83)
     for (const ref of RETIRED_SYSTEM_EXERCISE_REFS) {
       const historic = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === ref)!
       expect(historic, ref).toBeDefined()
@@ -28,7 +28,7 @@ describe('selectable exercise catalog', () => {
     }
     for (const ref of retained) expect(selectable.some((exercise) => exercise.ref === ref), ref).toBe(true)
     const roots = selectable.filter(isCatalogRoot)
-    expect(['core', 'uncommon', 'rare', 'formats'].map((section) => roots.filter((exercise) => exerciseCatalogSection(exercise) === section).length)).toEqual([80, 274, 137, 7])
+    expect(['core', 'uncommon', 'rare', 'formats'].map((section) => roots.filter((exercise) => exerciseCatalogSection(exercise) === section).length)).toEqual([80, 425, 137, 7])
   })
 
   it('does not recreate retired refs through typed workouts or an explicit AI program ref', () => {

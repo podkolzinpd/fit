@@ -8,6 +8,7 @@
     "local:prepare": "node scripts/run-local-stack.mjs",
     "local:verify": "node scripts/run-local-stack.mjs --verify",
     "dev:frontend": "vite --port 5173",
+    "prebuild": "node scripts/prepare-vital-media.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc -b --pretty false",

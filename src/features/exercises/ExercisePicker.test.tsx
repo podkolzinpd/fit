@@ -56,7 +56,7 @@ describe('ExercisePicker', () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
     expect(screen.queryByLabelText('Раздел каталога')).not.toBeInTheDocument()
-    expect(screen.getByText('498 упражнений')).toBeInTheDocument()
+    expect(screen.getByText('312 упражнений')).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="fedb-incline-dumbbell-press"]')).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="fedb-incline-dumbbell-press-palms-in"]')).not.toBeInTheDocument()
     await user.type(screen.getByLabelText('Поиск упражнения'), 'тяга гантели одной рукой')
@@ -69,8 +69,11 @@ describe('ExercisePicker', () => {
     const onPick = vi.fn()
     const target = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-incline-dumbbell-press')!
     const variant = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.name.includes('на наклонной нейтральным хватом'))!
-    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={onPick} onClose={vi.fn()} />)
-    await user.click(screen.getByRole('button', { name: `Посмотреть технику: ${target.name}` }))
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialSearch={target.name} onPick={onPick} onClose={vi.fn()} />)
+    const targetArticle = document.querySelector(`[data-exercise-ref="${target.ref}"]`)?.closest('.picker-item')
+    await user.click(targetArticle!.querySelector<HTMLButtonElement>('.picker-item-technique')!)
+    const openPlaying = screen.queryByRole('button', { name: `Открыть технику: ${target.name}` })
+    if (openPlaying) await user.click(openPlaying)
     await user.selectOptions(screen.getByLabelText('Вариант упражнения'), variant.ref)
     expect(screen.getByRole('heading', { name: variant.name })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Добавить упражнение' }))
@@ -81,7 +84,9 @@ describe('ExercisePicker', () => {
     const user = userEvent.setup()
     const onPick = vi.fn()
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialSearch="брусья" onPick={onPick} onClose={vi.fn()} />)
-    await user.click(screen.getAllByRole('button', { name: /Посмотреть технику:/ })[0]!)
+    await user.click(screen.getAllByRole('button', { name: /(?:Посмотреть|Проиграть) технику:/ })[0]!)
+    const openPlaying = screen.queryByRole('button', { name: /Открыть технику:/ })
+    if (openPlaying) await user.click(openPlaying)
     await user.selectOptions(screen.getByLabelText('Вариант упражнения'), 'fedb-parallel-bar-dip')
     await user.click(screen.getByRole('button', { name: 'Добавить упражнение' }))
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ ref: 'fedb-parallel-bar-dip', inputKind: 'strength' }))
@@ -122,9 +127,9 @@ describe('ExercisePicker', () => {
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} clientRecent={[ENRICHED[3]!]} onPick={vi.fn()} onClose={vi.fn()} />)
     expect(screen.getAllByText(/Последние у клиента|Недавние|Все упражнения/).map((node) => node.textContent))
       .toEqual(['Последние у клиента', 'Недавние', 'Все упражнения'])
-    expect(screen.getAllByRole('button', { name: /Посмотреть технику: Жим лёжа/ })).toHaveLength(1)
-    expect(screen.getAllByRole('button', { name: /Посмотреть технику: Разгибание ног/ })).toHaveLength(1)
-    expect(screen.getAllByRole('button', { name: /Посмотреть технику: Присед/ })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: /технику: Жим лёжа/ })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: /технику: Разгибание ног/ })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: /технику: Присед/ })).toHaveLength(1)
   })
 
   it('при поиске поднимает недавнее и пользовательское упражнение, не скрывая остальные', async () => {
@@ -227,7 +232,7 @@ describe('ExercisePicker', () => {
     await user.selectOptions(screen.getByLabelText('Группа мышц'), 'legs')
     await user.selectOptions(screen.getByLabelText('Мышца'), 'Квадрицепс')
     await user.selectOptions(screen.getByLabelText('Оборудование'), 'Штанга')
-    expect(screen.getByRole('button', { name: /Посмотреть технику: Присед/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /технику: Присед/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Посмотреть технику: Разгибание ног/ })).not.toBeInTheDocument()
     await user.selectOptions(screen.getByLabelText('Мышца'), 'Бицепс бедра')
     expect(screen.getByRole('button', { name: /Посмотреть технику: Сгибание ног/ })).toBeInTheDocument()
@@ -290,8 +295,8 @@ describe('ExercisePicker', () => {
     expect(screen.getByRole('button', { name: /Темповый бег/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Восстановительный бег/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Интервалы/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Посмотреть технику: Бег с высоким подниманием бедра/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Посмотреть технику: Семенящий бег/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /технику: Бег с высоким подниманием бедра/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /технику: Семенящий бег/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Посмотреть технику: Жим лёжа/ })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Темповый бег/ }))
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ ref: 'running' }), 'tempo')
@@ -386,7 +391,8 @@ describe('ExercisePicker', () => {
     const list = document.querySelector<HTMLElement>('.picker-list')!
     list.scrollTop = 120
 
-    await user.click(screen.getByRole('button', { name: 'Посмотреть технику: Присед (Штанга)' }))
+    await user.click(screen.getByRole('button', { name: 'Проиграть технику: Присед (Штанга)' }))
+    await user.click(screen.getByRole('button', { name: 'Открыть технику: Присед (Штанга)' }))
     expect(onPick).not.toHaveBeenCalled()
     expect(screen.getByRole('heading', { name: 'Техника' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Присед (Штанга)' })).toBeInTheDocument()
@@ -402,22 +408,27 @@ describe('ExercisePicker', () => {
   it('добавляет упражнение из техники явным действием', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onPickMany={vi.fn()} multiple onClose={vi.fn()} />)
-    await user.click(screen.getByRole('button', { name: 'Посмотреть технику: Присед (Штанга)' }))
+    await user.click(screen.getByRole('button', { name: 'Проиграть технику: Присед (Штанга)' }))
+    await user.click(screen.getByRole('button', { name: 'Открыть технику: Присед (Штанга)' }))
     await user.click(screen.getByRole('button', { name: 'Добавить к выбранным' }))
     expect(screen.getByText('Выбрано: 1')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Убрать: Присед (Штанга)' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('не запускает видео в списке и отмечает значком только настоящее видео', () => {
+  it('проигрывает только последнее явно нажатое упражнение в списке', async () => {
+    const user = userEvent.setup()
     const exercises = [
       ENRICHED[0]!,
-      { ...ENRICHED[1]!, imageUrl: '/b.jpg', motionImageUrl: '/b-end.jpg' },
+      { ...ENRICHED[1]!, imageUrl: '/b.jpg', motionImageUrl: '/b-end.jpg', techniqueVideoUrl: '/b.mp4' },
     ]
     render(<ExercisePicker catalog={catalog({ exercises })} onPick={vi.fn()} onClose={vi.fn()} />)
     expect(document.querySelectorAll('.picker-list video')).toHaveLength(0)
-    expect(document.querySelectorAll('.picker-item-play')).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'Посмотреть технику: Присед (Штанга)' }).querySelector('.picker-item-play')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Посмотреть технику: Разгибание ног (Тренажёр)' }).querySelector('.picker-item-play')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Проиграть технику: Присед (Штанга)' }))
+    expect(document.querySelectorAll('.picker-list video')).toHaveLength(1)
+    expect(document.querySelector('.picker-list video')).toHaveAttribute('src', '/squat.mp4')
+    await user.click(screen.getByRole('button', { name: 'Проиграть технику: Разгибание ног (Тренажёр)' }))
+    expect(document.querySelectorAll('.picker-list video')).toHaveLength(1)
+    expect(document.querySelector('.picker-list video')).toHaveAttribute('src', '/b.mp4')
   })
 
   it('closes from the overlay and close button', async () => {

@@ -4,19 +4,29 @@ import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
 import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
 import { VITAL_FREE_PACK_ASSETS, VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
+import { VITAL_GYM_PRO_ASSETS, VITAL_GYM_PRO_MAIN_REFS, VITAL_GYM_PRO_NEW_EXERCISES } from './vital-gym-pro.generated'
+import vitalGymProMediaManifest from '../../scripts/data/vital-gym-pro-media-manifest.json'
+
+const PACKAGED_GYM_PRO_MEDIA_PATHS = vitalGymProMediaManifest.files.map(({ path }) => `/exercises/vital-pro/${path}`)
 
 const EXERCISE_MEDIA_PATHS = new Set(
-  Object.keys(import.meta.glob('../../public/exercises/**/*.jpg', { query: '?url', import: 'default' }))
-    .map((path) => path.replace('../../public', '')),
+  [
+    ...Object.keys(import.meta.glob('../../public/exercises/**/*.jpg', { query: '?url', import: 'default' }))
+      .map((path) => path.replace('../../public', '')),
+    ...PACKAGED_GYM_PRO_MEDIA_PATHS.filter((path) => path.endsWith('.jpg')),
+  ],
 )
 const EXERCISE_VIDEO_PATHS = new Set(
-  Object.keys(import.meta.glob('../../public/exercises/vital/*.mp4', { query: '?url', import: 'default' }))
-    .map((path) => path.replace('../../public', '')),
+  [
+    ...Object.keys(import.meta.glob('../../public/exercises/**/*.mp4', { query: '?url', import: 'default' }))
+      .map((path) => path.replace('../../public', '')),
+    ...PACKAGED_GYM_PRO_MEDIA_PATHS.filter((path) => path.endsWith('.mp4')),
+  ],
 )
 
 describe('system exercise catalog', () => {
   it('matches the current catalog contract', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(10)
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(11)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
@@ -65,10 +75,10 @@ describe('system exercise catalog', () => {
 
   it('добавляет импортированный каталог поверх базового без дублей', () => {
     // Полный каталог = 49 базовых + импортированные + точечные дополнения, ref уникальны.
-    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(663)
+    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(814)
     expect(IMPORTED_EXERCISES).toHaveLength(451)
     expect(CATALOG_EXPANSION).toHaveLength(120)
-    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length + CATALOG_EXPANSION.length + 43)
+    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length + CATALOG_EXPANSION.length + VITAL_GYM_PRO_NEW_EXERCISES.length + 43)
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
   })
 
@@ -183,11 +193,26 @@ describe('system exercise catalog', () => {
     expect(new Set(VITAL_FREE_PACK_ASSETS.map((asset) => asset.id))).toEqual(new Set(Array.from({ length: 50 }, (_, index) => String(index + 51).padStart(4, '0'))))
     expect(new Set(VITAL_FREE_PACK_ASSETS.map((asset) => asset.ref)).size).toBe(50)
     expect(new Set(VITAL_FREE_PACK_ASSETS.map((asset) => asset.file)).size).toBe(50)
-    const withVideo = SYSTEM_EXERCISE_CATALOG.filter((exercise) => exercise.techniqueVideoUrl)
-    expect(withVideo).toHaveLength(expected.size)
-    for (const exercise of withVideo) {
+    const freePackVideos = SYSTEM_EXERCISE_CATALOG.filter((exercise) => exercise.techniqueVideoUrl?.startsWith('/exercises/vital/'))
+    expect(freePackVideos).toHaveLength(expected.size)
+    for (const exercise of freePackVideos) {
       expect(exercise).toMatchObject(VITAL_FREE_PACK_MEDIA_BY_REF[exercise.ref]!)
       expect(exercise.techniqueVideoUrl).toBe(expected.get(exercise.ref))
+      expect(EXERCISE_VIDEO_PATHS.has(exercise.techniqueVideoUrl!)).toBe(true)
+    }
+  })
+
+  it('подключает 317 проверенных видео Gym Pro без подмены отсутствующих движений', () => {
+    expect(vitalGymProMediaManifest).toMatchObject({ version: 1, exerciseCount: 317 })
+    expect(vitalGymProMediaManifest.files).toHaveLength(951)
+    expect(new Set(vitalGymProMediaManifest.files.map(({ path }) => path)).size).toBe(951)
+    expect(vitalGymProMediaManifest.files.every(({ bytes, sha256 }) => bytes > 0 && /^[a-f0-9]{64}$/.test(sha256))).toBe(true)
+    expect(VITAL_GYM_PRO_MAIN_REFS).toHaveLength(317)
+    expect(VITAL_GYM_PRO_NEW_EXERCISES).toHaveLength(151)
+    expect(Object.keys(VITAL_GYM_PRO_ASSETS)).toHaveLength(317)
+    expect(new Set(VITAL_GYM_PRO_MAIN_REFS).size).toBe(317)
+    for (const exercise of VITAL_GYM_PRO_NEW_EXERCISES) {
+      expect(exercise.techniqueVideoUrl).toMatch(/^\/exercises\/vital-pro\/.+\.mp4$/)
       expect(EXERCISE_VIDEO_PATHS.has(exercise.techniqueVideoUrl!)).toBe(true)
     }
   })
@@ -208,8 +233,8 @@ describe('system exercise catalog', () => {
     expect(machineShoulderPress).toMatchObject({
       name: 'Армейский жим в тренажёре',
       equipment: 'Тренажёр',
+      techniqueVideoUrl: '/exercises/vital-pro/vital-seated-shoulder-press-machine-ex163.mp4',
     })
-    expect(machineShoulderPress?.techniqueVideoUrl).toBeUndefined()
   })
 
   it('добавляет отдельные карточки только для отсутствующих движений Free50', () => {
@@ -223,7 +248,7 @@ describe('system exercise catalog', () => {
   })
 
   it('каталог = обогащённые базовые + импортированные без дублей', () => {
-    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(BASE_EXERCISES.length + IMPORTED_EXERCISES.length + CATALOG_EXPANSION.length + 43)
+    expect(SYSTEM_EXERCISE_CATALOG.length).toBe(BASE_EXERCISES.length + IMPORTED_EXERCISES.length + CATALOG_EXPANSION.length + VITAL_GYM_PRO_NEW_EXERCISES.length + 43)
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
   })
 
