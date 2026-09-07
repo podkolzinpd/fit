@@ -1017,7 +1017,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .push-status-row + .switch-row { border-top: 1px solid var(--border) }
 .push-status-text { margin: 0; font-size: var(--text-ui); font-weight: var(--weight-medium); color: var(--fg) }
 .push-status-text.working { color: var(--success-fg) }
-.push-status-text.attention { color: var(--warning-fg) }
+.push-status-text.warning { color: var(--warning-fg) }
 .push-status-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
 .push-status-actions .secondary, .push-status-actions .link { min-height: var(--control-height-standard) }
 .push-test-result { color: var(--muted) }

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useDataBackend } from '../../app/data-backend-context'
-import { Coachmark, Switch } from '../../shared/ui'
+import { Switch } from '../../shared/ui'
 import { WORKOUT_REMINDER_KIND, WORKOUT_SCHEDULED_KIND } from '../../data/repositories/push-notifications.repository'
 import { detectInstallPlatform, isAppInstalled } from '../install'
 import { getCurrentPushSubscription, isPushSupported } from './push-subscription'
@@ -71,14 +71,9 @@ export function NotificationsSetting({ userId }: { userId: string }) {
     }
   }
 
-  return <Coachmark
-    id="push-settings-2026-09"
-    userId={userId}
-    title="Уведомления стали подробнее"
-    description="Вместо одного тумблера — статус, проверка и отдельные переключатели по видам уведомлений."
-  >
+  return <>
     <div className="push-status-row">
-      <p className={working ? 'push-status-text working' : 'push-status-text attention'} role="status">{STATUS_COPY[state]}</p>
+      <p className={working ? 'push-status-text working' : 'push-status-text warning'} role="status">{STATUS_COPY[state]}</p>
       {state === 'needs-permission' && <div className="push-status-actions">
         <button type="button" className="secondary" disabled={enableMutation.isPending} aria-busy={enableMutation.isPending} onClick={() => enableMutation.mutate()}>
           {enableMutation.isPending ? 'Включаем…' : 'Включить уведомления'}
@@ -108,5 +103,5 @@ export function NotificationsSetting({ userId }: { userId: string }) {
       onChange={(next) => categoryMutation.mutate({ kind: WORKOUT_SCHEDULED_KIND, enabled: next })}
     />
     {categoryMutation.error && <small className="error">{categoryMutation.error instanceof Error ? categoryMutation.error.message : 'Не удалось изменить настройку.'}</small>}
-  </Coachmark>
+  </>
 }
