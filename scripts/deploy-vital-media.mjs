@@ -22,6 +22,40 @@ const supabase = createClient(`https://${projectRef}.supabase.co`, deploymentKey
   auth: { persistSession: false, autoRefreshToken: false },
 })
 const bucket = supabase.storage.from('fit-exercise-media')
+const transferConcurrency = 4
+const maxTransferAttempts = 5
+
+function sleep(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds))
+}
+
+function isTransientStorageError(error) {
+  const status = Number(error?.statusCode ?? error?.status ?? 0)
+  if ([408, 425, 429, 500, 502, 503, 504].includes(status)) return true
+
+  const message = error instanceof Error ? error.message : String(error?.message ?? error ?? '')
+  return /gateway timeout|too many connections|timed? ?out|timeout|temporar|rate.?limit|fetch failed|connection (?:reset|closed)|econnreset|socket hang up|service unavailable/i.test(message)
+}
+
+async function withStorageRetry(operation, label) {
+  let lastResult
+  for (let attempt = 1; attempt <= maxTransferAttempts; attempt += 1) {
+    try {
+      lastResult = await operation()
+      if (!lastResult?.error || !isTransientStorageError(lastResult.error)) return lastResult
+    } catch (error) {
+      if (!isTransientStorageError(error) || attempt === maxTransferAttempts) throw error
+      lastResult = { data: null, error }
+    }
+
+    if (attempt === maxTransferAttempts) return lastResult
+    const delay = 750 * (2 ** (attempt - 1))
+    console.warn(`${label}: transient storage error, retrying (${attempt}/${maxTransferAttempts})`)
+    await sleep(delay)
+  }
+  return lastResult
+}
+
 const { data: buckets, error: listError } = await supabase.storage.listBuckets()
 if (listError) throw new Error(`Could not inspect the media bucket: ${listError.message}`)
 if (!buckets.some(({ id }) => id === 'fit-exercise-media')) {
@@ -51,16 +85,19 @@ async function uploadNext() {
     const file = manifest.files[cursor++]
     const body = await readFile(join(mediaDir, file.path))
     const contentType = file.path.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg'
-    const { error } = await bucket.upload(`vital-pro/${file.path}`, body, {
-      cacheControl: '31536000',
-      contentType,
-      upsert: true,
-    })
+    const { error } = await withStorageRetry(
+      () => bucket.upload(`vital-pro/${file.path}`, body, {
+        cacheControl: '31536000',
+        contentType,
+        upsert: true,
+      }),
+      `Upload ${file.path}`,
+    )
     if (error) uploadFailures.push(`${file.path}: ${error.message}`)
   }
 }
 
-await Promise.all(Array.from({ length: 12 }, uploadNext))
+await Promise.all(Array.from({ length: transferConcurrency }, uploadNext))
 if (uploadFailures.length > 0) {
   throw new Error(`Upload failed for ${uploadFailures.length} files:\n${uploadFailures.slice(0, 20).join('\n')}`)
 }
@@ -70,7 +107,10 @@ const verifyFailures = []
 async function verifyNext() {
   while (cursor < manifest.files.length) {
     const file = manifest.files[cursor++]
-    const { data, error } = await bucket.download(`vital-pro/${file.path}`)
+    const { data, error } = await withStorageRetry(
+      () => bucket.download(`vital-pro/${file.path}`),
+      `Verify ${file.path}`,
+    )
     if (error || !data) {
       verifyFailures.push(`${file.path}: ${error?.message ?? 'empty response'}`)
       continue
@@ -83,7 +123,7 @@ async function verifyNext() {
   }
 }
 
-await Promise.all(Array.from({ length: 12 }, verifyNext))
+await Promise.all(Array.from({ length: transferConcurrency }, verifyNext))
 if (verifyFailures.length > 0) {
   throw new Error(`Verification failed for ${verifyFailures.length} files:\n${verifyFailures.slice(0, 20).join('\n')}`)
 }
