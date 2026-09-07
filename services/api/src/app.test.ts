@@ -65,6 +65,7 @@ import type { LegacyWorkoutParser } from './legacy-workout-parser.js'
 import type { PilotProgressData } from './progress-data.js'
 import type { PilotWorkoutParser } from './pilot-workout-parser.js'
 import type { PilotTrainingSummaries } from './training-summary.js'
+import type { VitalMediaSigner } from './vital-media.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -95,6 +96,57 @@ describe('health endpoint', () => {
       releaseId: 'api-tree-hash',
     })
     expect(response.headers['x-fit-release-id']).toBe('api-tree-hash')
+  })
+})
+
+describe('Vital exercise media', () => {
+  it('signs only reviewed paths for a valid read-write session', async () => {
+    const read = vi.fn().mockResolvedValue({})
+    const sign = vi.fn().mockResolvedValue('https://signed.example/vital')
+    const vitalMediaSigner: VitalMediaSigner = { sign }
+    const app = buildApp({
+      yandexAppSessionReader: { read },
+      vitalMediaSigner,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/exercise-media/sign',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { path: 'vital-pro/vital-barbell-squat-ex001.mp4' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ signedUrl: 'https://signed.example/vital' })
+    expect(read).toHaveBeenCalledWith('a'.repeat(43))
+    expect(sign).toHaveBeenCalledWith('vital-pro/vital-barbell-squat-ex001.mp4')
+  })
+
+  it('rejects invalid paths and read-only pilot sessions', async () => {
+    const app = buildApp({
+      yandexAppSessionReader: { read: vi.fn() },
+      vitalMediaSigner: { sign: vi.fn() },
+      logger: false,
+    })
+    apps.push(app)
+
+    const invalid = await app.inject({
+      method: 'POST',
+      url: '/v1/exercise-media/sign',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { path: 'vital-pro/../private.txt' },
+    })
+    const readOnly = await app.inject({
+      method: 'POST',
+      url: '/v1/exercise-media/sign',
+      headers: { 'x-fit-pilot-session': 'a'.repeat(43) },
+      payload: { path: 'vital-pro/vital-barbell-squat-ex001.mp4' },
+    })
+
+    expect(invalid.statusCode).toBe(400)
+    expect(readOnly.statusCode).toBe(403)
   })
 })
 

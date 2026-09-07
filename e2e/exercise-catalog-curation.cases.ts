@@ -28,7 +28,8 @@ for (const role of ['trainer', 'client'] as const) {
       const initialListHeight = (await dialog.locator('.picker-list').boundingBox())?.height ?? 0
       expect(initialListHeight).toBeGreaterThan(280)
       // A previous choice may promote its precise variant in the recent list.
-      await dialog.getByRole('button', { name: /^Посмотреть технику: Жим гантелей на наклонной/ }).first().click()
+      await dialog.getByRole('button', { name: /^Проиграть технику: Жим гантелей на наклонной/ }).first().click()
+      await dialog.getByRole('button', { name: /^Открыть технику: Жим гантелей на наклонной/ }).first().click()
       await dialog.getByLabel('Вариант упражнения').selectOption({ label: 'Жим гантелей на наклонной нейтральным хватом' })
       await expect(dialog.getByRole('heading', { name: 'Жим гантелей на наклонной нейтральным хватом' })).toBeVisible()
       expect((await dialog.getByLabel('Вариант упражнения').boundingBox())?.height).toBeGreaterThanOrEqual(48)

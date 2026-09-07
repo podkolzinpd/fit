@@ -65,7 +65,7 @@ describe('catalog names in new copies only', () => {
       ...source.exercises[0]!, ...exercise, position, id: String(position),
     }))
     const copy = copyWorkout(source, TODAY, { refreshCatalogNames: true })
-    expect(copy.exercises).toHaveLength(663)
+    expect(copy.exercises).toHaveLength(814)
     expect(copy.exercises.map(({ ref, inputKind }) => ({ ref, inputKind })))
       .toEqual(source.exercises.map(({ ref, inputKind }) => ({ ref, inputKind })))
     expect(copy.exercises.map((exercise) => exercise.name)).toEqual(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.name))
