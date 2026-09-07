@@ -5661,7 +5661,21 @@ h3 {
   <div class="progress" aria-hidden="true"><span id="progressFill"></span></div>
 
   <main class="deck" id="deck" aria-live="polite">
-    <section class="slide slide-cover active pilot-cover redesign-v2 rd-hero" data-section="Решение" data-slide-type="hero" data-golden="apple/05-apple-keynote-hero.png">
+    <section class="slide slide-cover active" data-section="Решение" data-slide-family="1" data-version="1.1">
+      <div class="eyebrow">ЯНДЕКС FIT · ПРЕДЛОЖЕНИЕ ПО ЗАПУСКУ</div>
+      <div class="cover-copy">
+        <h1>Спортивный слой<br>экосистемы Яндекса</h1>
+        <p class="lead">От намерения начать тренировку — до устойчивой привычки и повторных транзакций вокруг спорта.</p>
+      </div>
+      <div class="cover-decision">
+        <span>Решение</span>
+        <strong>Запустить отдельное приложение и проверить модель на 24-недельном пилоте</strong>
+      </div>
+      <div class="fit-mark">Fit<span>↗</span></div>
+      <aside class="speaker-notes">Главный запрос к встрече: утвердить пилот, а не полномасштабный запуск. Fit остаётся отдельным приложением, но работает как слой между сервисами.</aside>
+    </section>
+
+    <section class="slide slide-cover pilot-cover redesign-v2 rd-hero" data-section="Решение" data-slide-family="1" data-version="1.2" data-slide-type="hero" data-golden="apple/05-apple-keynote-hero.png">
       <div class="eyebrow">ЯНДЕКС FIT · ПРЕДЛОЖЕНИЕ ПО ЗАПУСКУ</div>
       <div class="pilot-cover-copy">
         <h1>Яндекс упрощает<br>путь в спорт</h1>
@@ -7081,6 +7095,17 @@ if (monetizationSlide && valueSlide) valueSlide.after(monetizationSlide)
 document.querySelectorAll('.competitor-material-slide').forEach(slide => deck.appendChild(slide))
 document.querySelectorAll('.late-material-slide').forEach(slide => deck.appendChild(slide))
 const slides = [...document.querySelectorAll('.slide:not(.legacy-competitor-slide):not(.legacy-behavior-slide)')]
+let logicalSlide = 0
+slides.forEach(slide => {
+  const explicitFamily = Number(slide.dataset.slideFamily)
+  if (Number.isFinite(explicitFamily) && explicitFamily > 0) {
+    logicalSlide = Math.max(logicalSlide, explicitFamily)
+  } else {
+    logicalSlide += 1
+    slide.dataset.slideFamily = String(logicalSlide)
+    slide.dataset.version = `${logicalSlide}.1`
+  }
+})
 const counter = document.getElementById('counter')
 const sectionName = document.getElementById('sectionName')
 const progressFill = document.getElementById('progressFill')
@@ -7099,7 +7124,8 @@ function show(index, updateHash = true) {
     slide.classList.toggle('active', i === current)
     slide.setAttribute('aria-hidden', i === current ? 'false' : 'true')
   })
-  counter.textContent = `${String(current + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`
+  const version = slides[current].dataset.version || `${current + 1}.1`
+  counter.textContent = `${version} · ${String(current + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`
   sectionName.textContent = slides[current].dataset.section || ''
   progressFill.style.width = `${((current + 1) / slides.length) * 100}%`
   if (updateHash) history.replaceState(null, '', `#${current + 1}`)
