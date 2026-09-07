@@ -6,31 +6,9 @@ import { detectInstallPlatform, installPromptDismissed, isAppInstalled } from '.
 import { trackGoal } from '../../shared/yandex-metrika'
 import { markPushOnboardingSeen, pushOnboardingSeen } from './notification-onboarding-storage'
 import { getCurrentPushSubscription, isPushSupported } from './push-subscription'
+import { waitForTestPushConfirmation } from './wait-for-test-push-confirmation'
 
 const TEST_PUSH_TIMEOUT_MS = 12_000
-
-// Ждём postMessage от sw.js ПАРАЛЛЕЛЬНО с самой отправкой (слушатель вешается
-// до вызова sendTestPush, не после) — иначе пуш, пришедший быстрее сетевого
-// round-trip до вызывающего кода, будет пропущен.
-function waitForTestPushConfirmation(timeoutMs: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (typeof navigator === 'undefined' || !navigator.serviceWorker) {
-      resolve(false)
-      return
-    }
-    const timer = window.setTimeout(() => {
-      navigator.serviceWorker.removeEventListener('message', onMessage)
-      resolve(false)
-    }, timeoutMs)
-    function onMessage(event: MessageEvent) {
-      if ((event.data as { type?: string } | undefined)?.type !== 'fit-test-push-received') return
-      window.clearTimeout(timer)
-      navigator.serviceWorker.removeEventListener('message', onMessage)
-      resolve(true)
-    }
-    navigator.serviceWorker.addEventListener('message', onMessage)
-  })
-}
 
 export function NotificationOnboarding({ userId }: { userId: string }) {
   const { pushNotifications: pushNotificationsRepository, source } = useDataBackend()
@@ -71,7 +49,7 @@ export function NotificationOnboarding({ userId }: { userId: string }) {
     setMessage(null)
     try {
       await pushNotificationsRepository.enable(userId)
-      await pushNotificationsRepository.enableCategory(userId, WORKOUT_SCHEDULED_KIND)
+      await pushNotificationsRepository.setCategoryEnabled(userId, WORKOUT_SCHEDULED_KIND, true)
 
       if (source === 'supabase') {
         const local = await getCurrentPushSubscription()
