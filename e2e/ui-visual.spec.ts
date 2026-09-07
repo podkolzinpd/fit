@@ -1224,12 +1224,36 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   const partialFinish = page.getByRole('button', { name: 'Завершить', exact: true })
   if (await partialFinish.isVisible()) await partialFinish.click()
-  await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: trainer ? 'Тренировка завершена' : 'Тренировка сохранена частично' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
-  await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
+  if (trainer) {
+    await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
+  } else {
+    await expect(page.getByRole('progressbar', { name: 'Выполнение плана' })).toHaveAttribute('aria-valuenow', '33')
+    await expect(page.getByText('Осталось выполнить')).toBeVisible()
+    await expect(page.locator('.workout-completion-recorded')).not.toHaveAttribute('open')
+    await expect(page.getByRole('link', { name: 'Готово' })).toHaveAttribute('href', '/me')
+    await expect(page.getByRole('link', { name: 'Посмотреть прогресс' })).toHaveAttribute('href', '/me/progress')
+  }
   const detailPath = new URL(page.url()).pathname
   await expectVisualBaseline(page, `workout-detail-completion-${process.platform}.png`)
+  if (!trainer) {
+    await page.locator('.content').evaluate((element) => { element.scrollTop = element.scrollHeight })
+    await expectVisualBaseline(page, `workout-completion-report-actions-${process.platform}.png`)
+    await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
+    await page.evaluate(() => {
+      localStorage.setItem('fit.appTheme', 'dark')
+      window.dispatchEvent(new Event('fit-theme-change'))
+    })
+    await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+    await expectVisualBaseline(page, `workout-completion-report-dark-${process.platform}.png`, [], false, '#1d1e21')
+    await page.evaluate(() => {
+      localStorage.setItem('fit.appTheme', 'light')
+      window.dispatchEvent(new Event('fit-theme-change'))
+    })
+  }
 
+  if (!trainer) await page.locator('.workout-completion-recorded > summary').click()
   await page.locator('.exercise-history-link').first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
@@ -1243,6 +1267,7 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, detailPath)
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
+  if (!trainer) await expect(page.locator('.workout-completion-report')).toHaveCount(0)
   await expectVisualBaseline(page, `workout-detail-dark-${process.platform}.png`, [], false, '#1d1e21')
   await gotoStable(page, historyPath)
   await expectVisualBaseline(page, `workout-exercise-history-dark-${process.platform}.png`, [], false, '#1d1e21')

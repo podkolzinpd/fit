@@ -469,6 +469,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByRole('region', { name: 'Тренировка завершена' })).toBeVisible()
   // После завершения сначала видна компактная сводка. Подробный темп
   // проверяем после явного раскрытия результата, как его открывает клиент.
+  await page.locator('.workout-completion-recorded > summary').click()
   const completedRun = page.locator('.completed-exercise-details').first()
   await expect(completedRun.locator('summary')).toContainText('3 км')
   await completedRun.locator('summary').click()
@@ -555,13 +556,14 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     page.waitForURL(ownWorkoutUrl),
     page.getByRole('button', { name: 'Завершить', exact: true }).click(),
   ])
+  await page.locator('.workout-completion-recorded > summary').click()
   const ownCompletedRun = page.locator('.completed-exercise-details').filter({ hasText: '5,2 км' })
   await expect(ownCompletedRun.locator('summary')).toContainText('5,2 км')
   await ownCompletedRun.locator('summary').click()
   await expect(ownCompletedRun.getByText(/5,2 км × 29:40 · темп 5:42\/км/)).toBeVisible()
   // Собственную завершённую тренировку клиент может исправить: перестановка
   // не должна сталкиваться с промежуточным дубликатом позиции в БД.
-  await page.getByRole('link', { name: 'Изменить результат' }).click()
+  await page.getByRole('link', { name: 'Исправить результат' }).click()
   await expect(page.locator('.planned-exercise')).toHaveCount(2)
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
   await page.getByRole('menuitem', { name: 'Изменить порядок' }).click()

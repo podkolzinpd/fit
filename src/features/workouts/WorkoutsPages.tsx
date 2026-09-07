@@ -43,6 +43,7 @@ import { isRowingExerciseRef, parseRunDurationInput, rowingPaceLabel, runDistanc
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 import { WorkoutCompletionCard } from './WorkoutCompletionCard'
+import { WorkoutCompletionReport } from './WorkoutCompletionReport'
 import { ArrowDownIcon, ArrowUpIcon, BackIcon, ChevronRightIcon, CloseIcon, HistoryIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
@@ -767,6 +768,12 @@ export function WorkoutDetailPage() {
     trainerOwned || (clientAuthoredReadOnly && workout.trainerId === actor?.userId)
   ))
   const trainers = useQuery({ queryKey: ['client-trainers', workout?.clientId], queryFn: () => invitationsRepository.listTrainers(workout!.clientId), enabled: clientMode && Boolean(workout?.clientId) })
+  const clientCompletionReport = Boolean(justCompleted && clientMode)
+  const completedExercises = workout?.exercises.filter((exercise) => exercise.sets.length > 0 && exercise.sets.every((set) => Boolean(set.confirmedAt))).length ?? 0
+  const incompleteExercises = workout?.exercises.flatMap((exercise) => {
+    const missingSets = exercise.sets.filter((set) => !set.confirmedAt).length
+    return missingSets > 0 ? [`${exercise.name} — ${missingSets} ${setCountLabel(missingSets)}`] : []
+  }) ?? []
   const authorLabel = workout ? clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data) : null
   const responseAuthor = trainers.data?.find((trainer) => trainer.trainerId === workout?.trainerReviewAuthorId)
   const responseAuthorName = responseAuthor ? [responseAuthor.firstName, responseAuthor.lastName].filter(Boolean).join(' ') : null
@@ -806,7 +813,35 @@ export function WorkoutDetailPage() {
     { label: 'Копировать тренировку', onClick: () => navigate(`/workouts/new?copy=${workoutId}`, { state: childNavigationState }) },
     { label: 'Удалить тренировку', danger: true, disabled: remove.isPending, onClick: () => { void requestWorkoutRemoval() } },
   ]
-  return <Page title="Тренировка" hideTitle className="workout-detail-page" back={backTo} onBack={goBack}>
+  const exerciseCards = <div className={`cards ${done ? 'completed-exercise-list' : 'planned-exercise-list'}`}>{groupIntoBlocks(workout?.exercises ?? []).map((block) => {
+    const articles = block.exercises.map((exercise) => {
+      const detailSummary = compactExerciseDetailSummary(exercise.inputKind, exercise.sets, done ? 'completed' : 'planned', showRpe, exercise.ref)
+      return <WorkoutExercise state={done ? 'history' : 'planned'} className={`exercise ${done ? 'completed-exercise' : 'planned-detail-exercise'}`} key={exercise.id}>
+        <div className="workout-detail-exercise-row">
+          <details className={done ? 'completed-exercise-details' : 'planned-exercise-details'}>
+            <summary className={done ? 'completed-set-summary' : 'planned-set-summary'}>
+              <span className="workout-detail-exercise-heading"><strong>{exercise.name}</strong><span className="exercise-details-chevron" aria-hidden="true" /></span>
+              <span className="workout-detail-exercise-result">{detailSummary}</span>
+            </summary>
+            <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={[done ? 'Результат' : 'План']} className="workout-history-sets">
+              {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} exerciseRef={exercise.ref} />)}
+            </WorkoutSetTable>
+          </details>
+          <div className="workout-detail-exercise-actions">
+            <Link className="exercise-history-link" aria-label={`История упражнения «${exercise.name}»`} to={`/workouts/${workout?.id}/history/${encodeURIComponent(exercise.ref)}`}><HistoryIcon /><span className="sr-only">История</span></Link>
+            {canRemoveCompletedExercise && <OverflowMenu label={`Действия с упражнением «${exercise.name}»`} items={[{
+              label: 'Удалить упражнение', danger: true, disabled: removeCompletedExercise.isPending,
+              onClick: () => { void requestCompletedExerciseRemoval(exercise) },
+            }]} />}
+          </div>
+        </div>
+        {exercise.trainerComment && <p className="exercise-comment-note">{exercise.trainerComment}</p>}
+      </WorkoutExercise>
+    })
+    if (block.blockType === 'single' || block.exercises.length === 1) return articles
+    return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
+  })}</div>
+  return <Page title="Тренировка" hideTitle className={`workout-detail-page${clientCompletionReport ? ' workout-completion-page' : ''}`} back={backTo} onBack={goBack}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {!clientMode && navigationState?.firstPlanClient && <section className="first-plan-success" aria-labelledby="first-plan-success-title">
         <div><p className="eyebrow">ГОТОВО</p><h2 id="first-plan-success-title">Тренировка запланирована</h2><p>Первый план для {navigationState.firstPlanClient.fullName} готов.</p></div>
@@ -814,12 +849,25 @@ export function WorkoutDetailPage() {
         {firstPlanInvite.error && <p className="error" role="alert">{firstPlanInvite.error.message}</p>}
         <Link className="button secondary wide" to="/today">Перейти на главную</Link>
       </section>}
-      {justCompleted && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={clientMode} clientId={workout.clientId} />}
-      <WorkoutHeader eyebrow={clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? 'Ваша тренировка' : workout.clientName} state={detailState}
+      {clientCompletionReport && <WorkoutCompletionReport
+        completedSets={completedSets}
+        totalSets={sets.length}
+        completedExercises={completedExercises}
+        totalExercises={workout.exercises.length}
+        incompleteExercises={incompleteExercises}
+        duration={duration && duration !== '0 мин' ? duration : null}
+        tonnage={tonnage > 0 ? tonnageLabel(tonnage) : null}
+        muscleGroups={groups}
+        record={completionRecords.data?.[0]}
+        recordLoading={completionRecords.isLoading}
+        hasTrainer={Boolean(trainers.data?.length)}
+      />}
+      {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
+      {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? 'Ваша тренировка' : workout.clientName} state={detailState}
         statusLabel={statusPresentation?.label}
         showStatus={detailState !== 'completed'}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
-        meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>{clientMode && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · только просмотр</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />
+        meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>{clientMode && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · только просмотр</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
       {plannedActions && canExecute && <div className="workout-detail-primary-actions">
         {workout.workoutDate < today ? <Coachmark id="missed-workout-actions-2026-08" userId={actor?.userId} title="План можно закрыть спокойно" description="Запишите результат, перенесите тренировку или сохраните, что она не состоялась.">
           <WorkoutCta className="wide" pending={start.isPending || cancelPlanned.isPending || reschedule.isPending} pendingLabel="Сохраняем…" onClick={() => setDecisionSheet('actions')}>{plannedActions.primary}</WorkoutCta>
@@ -832,52 +880,33 @@ export function WorkoutDetailPage() {
         event.preventDefault()
         openLive(workoutId)
       }}>Продолжить тренировку</Link>}
-      {done && <section className="workout-fact-summary" aria-label="Сводка тренировки">
+      {done && !clientCompletionReport && <section className="workout-fact-summary" aria-label="Сводка тренировки">
         {duration && <p><span>Время</span><strong>{duration}</strong></p>}
         {tonnage > 0 && <p><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></p>}
         {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
       </section>}
       {done && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
-      {done && clientMode && <WorkoutClientQuestion workout={workout} saving={question.isPending} error={question.error} onSave={(value) => question.mutateAsync(value)} />}
+      {done && clientMode && !clientCompletionReport && <WorkoutClientQuestion workout={workout} saving={question.isPending} error={question.error} onSave={(value) => question.mutateAsync(value)} />}
       {done && !clientMode && workout.clientQuestion && <WorkoutTrainerQuestion workout={workout} canReply={canReview} startEditing={new URLSearchParams(location.search).get('reply') === '1'} authorName={responseAuthorName} saving={questionAnswer.isPending} error={questionAnswer.error} onSave={(value) => questionAnswer.mutateAsync(value)} />}
       {done && (clientMode || !workout.clientQuestion) && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {!clientMode && workout.clientComment && workout.sessionRpe === undefined && <WorkoutClientComment workout={workout} />}
       {!done && <div className="workout-detail-exercise-overview"><p>ПЛАН ТРЕНИРОВКИ</p><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)} · {sets.length} {setCountLabel(sets.length)}</span></div>}
-      <div className={`cards ${done ? 'completed-exercise-list' : 'planned-exercise-list'}`}>{groupIntoBlocks(workout.exercises).map((block) => {
-        const articles = block.exercises.map((exercise) => {
-          const detailSummary = compactExerciseDetailSummary(exercise.inputKind, exercise.sets, done ? 'completed' : 'planned', showRpe, exercise.ref)
-          return <WorkoutExercise state={done ? 'history' : 'planned'} className={`exercise ${done ? 'completed-exercise' : 'planned-detail-exercise'}`} key={exercise.id}>
-          <div className="workout-detail-exercise-row">
-            <details className={done ? 'completed-exercise-details' : 'planned-exercise-details'}>
-              <summary className={done ? 'completed-set-summary' : 'planned-set-summary'}>
-                <span className="workout-detail-exercise-heading"><strong>{exercise.name}</strong><span className="exercise-details-chevron" aria-hidden="true" /></span>
-                <span className="workout-detail-exercise-result">{detailSummary}</span>
-              </summary>
-              <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={[done ? 'Результат' : 'План']} className="workout-history-sets">
-                {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} exerciseRef={exercise.ref} />)}
-              </WorkoutSetTable>
-            </details>
-            <div className="workout-detail-exercise-actions">
-              <Link className="exercise-history-link" aria-label={`История упражнения «${exercise.name}»`} to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><HistoryIcon /><span className="sr-only">История</span></Link>
-              {canRemoveCompletedExercise && <OverflowMenu label={`Действия с упражнением «${exercise.name}»`} items={[{
-                label: 'Удалить упражнение', danger: true, disabled: removeCompletedExercise.isPending,
-                onClick: () => { void requestCompletedExerciseRemoval(exercise) },
-              }]} />}
-            </div>
-          </div>
-          {exercise.trainerComment && <p className="exercise-comment-note">{exercise.trainerComment}</p>}
-        </WorkoutExercise>
-        })
-        if (block.blockType === 'single' || block.exercises.length === 1) return articles
-        return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
-      })}</div>
+      {clientCompletionReport ? <details className="workout-completion-recorded">
+        <summary><span><span className="eyebrow">РЕЗУЛЬТАТ</span><strong>Что записано</strong></span><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)}</span></summary>
+        {exerciseCards}
+        {canManage && <Link className="button secondary wide workout-completion-edit" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>Исправить результат</Link>}
+      </details> : exerciseCards}
       {removeCompletedExercise.error && <p className="error workout-exercise-removal-error" role="alert">Не удалось удалить упражнение. <button type="button" className="link" disabled={removeCompletedExercise.isPending} onClick={async () => {
         if (!removeCompletedExercise.variables) return
         const refreshed = await query.refetch()
         if (refreshed.data) removeCompletedExercise.mutate({ ...removeCompletedExercise.variables, workout: refreshed.data })
       }}>Повторить</button></p>}
-      {workout.notes && <section className="workout-review workout-review-readonly"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
-      {canManage && <div className="actions workout-detail-actions">
+      {workout.notes && !clientCompletionReport && <section className="workout-review workout-review-readonly"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
+      {clientCompletionReport && <div className="workout-completion-actions">
+        <Link className="button primary wide" to="/me" replace>Готово</Link>
+        <Link className="button secondary wide" to="/me/progress">Посмотреть прогресс</Link>
+      </div>}
+      {canManage && !clientCompletionReport && <div className="actions workout-detail-actions">
         {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
         {!manageMenuInHeader && <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} />}
       </div>}
