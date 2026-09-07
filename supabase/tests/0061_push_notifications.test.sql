@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(23);
+select plan(26);
 
 -- Трейнер + клиент со связанным auth-аккаунтом (иначе клиент не пользуется
 -- приложением и push ему не нужен), таймзона фиксирована для предсказуемости.
@@ -31,11 +31,13 @@ select is(
   'dispatcher runs every minute'
 );
 
--- RLS: клиент управляет только своей подпиской и настройками.
+-- RLS: клиент управляет только своей подпиской и настройками. Явный id у
+-- подписки (вместо auto-generated) — ниже он нужен, чтобы адресовать outbox
+-- на конкретное устройство и проверить точечное 404/410-удаление.
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '61000000-0000-4000-8000-000000000002', true);
-insert into public.push_subscriptions (user_id, endpoint, p256dh, auth_key)
-values ('61000000-0000-4000-8000-000000000002', 'https://push.example/ep1', 'p256dh-key', 'auth-key');
+insert into public.push_subscriptions (id, user_id, endpoint, p256dh, auth_key)
+values ('61000000-0000-4000-8000-000000000040', '61000000-0000-4000-8000-000000000002', 'https://push.example/ep1', 'p256dh-key', 'auth-key');
 select throws_ok(
   $$insert into public.push_subscriptions (user_id, endpoint, p256dh, auth_key) values ('61000000-0000-4000-8000-000000000001', 'https://push.example/ep2', 'k', 'k')$$,
   '42501', null, 'cannot create a push subscription for another user'
@@ -51,13 +53,14 @@ insert into public.workouts (id, trainer_id, client_id, workout_date, start_time
 values ('61000000-0000-4000-8000-000000000020', '61000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000010', current_date, '09:00', 'planned');
 
 -- Форсируем окно 9:00 руками — вставляем строку outbox напрямую с тем же
--- ключом дедупликации, которым воспользовался бы producer, и проверяем, что
--- повторный insert с тем же (kind, user_id, data) не создаёт дубль.
-insert into private.push_notifications_outbox (kind, user_id, title, body, data)
-values ('workout_reminder', '61000000-0000-4000-8000-000000000002', 'Тренировка сегодня', 'Запланирована на 09:00', jsonb_build_object('workout_id', '61000000-0000-4000-8000-000000000020'));
-insert into private.push_notifications_outbox (kind, user_id, title, body, data)
-values ('workout_reminder', '61000000-0000-4000-8000-000000000002', 'Тренировка сегодня', 'Запланирована на 09:00', jsonb_build_object('workout_id', '61000000-0000-4000-8000-000000000020'))
-on conflict (kind, user_id, data) do nothing;
+-- ключом дедупликации, которым воспользовался бы producer (теперь включает
+-- subscription_id — адресует конкретное устройство), и проверяем, что
+-- повторный insert с тем же ключом не создаёт дубль.
+insert into private.push_notifications_outbox (kind, user_id, title, body, data, subscription_id)
+values ('workout_reminder', '61000000-0000-4000-8000-000000000002', 'Тренировка сегодня', 'Запланирована на 09:00', jsonb_build_object('workout_id', '61000000-0000-4000-8000-000000000020'), '61000000-0000-4000-8000-000000000040');
+insert into private.push_notifications_outbox (kind, user_id, title, body, data, subscription_id)
+values ('workout_reminder', '61000000-0000-4000-8000-000000000002', 'Тренировка сегодня', 'Запланирована на 09:00', jsonb_build_object('workout_id', '61000000-0000-4000-8000-000000000020'), '61000000-0000-4000-8000-000000000040')
+on conflict (kind, user_id, data, subscription_id) do nothing;
 select is(
   (select count(*)::int from private.push_notifications_outbox where user_id = '61000000-0000-4000-8000-000000000002'),
   1,
@@ -111,9 +114,13 @@ select is(
 );
 
 -- finalize: неуспешный ответ с истёкшей подпиской (410 Gone) — попытка
--- засчитана, причина сохранена, мёртвая подписка удалена.
-insert into private.push_notifications_outbox (id, kind, user_id, title, body, data, dispatch_request_id)
-values ('61000000-0000-4000-8000-000000000030', 'workout_reminder', '61000000-0000-4000-8000-000000000002', 'Тест', 'Тест', jsonb_build_object('workout_id', 'other'), 999202);
+-- засчитана, причина сохранена, мёртвая подписка удалена. Регрессионный тест
+-- на мульти-device: у пользователя есть ВТОРОЕ устройство (другой endpoint,
+-- другая подписка) — 410 по первому устройству не должен погасить второе.
+insert into public.push_subscriptions (id, user_id, endpoint, p256dh, auth_key)
+values ('61000000-0000-4000-8000-000000000041', '61000000-0000-4000-8000-000000000002', 'https://push.example/ep1b', 'p256dh-key-1b', 'auth-key-1b');
+insert into private.push_notifications_outbox (id, kind, user_id, title, body, data, dispatch_request_id, subscription_id)
+values ('61000000-0000-4000-8000-000000000030', 'workout_reminder', '61000000-0000-4000-8000-000000000002', 'Тест', 'Тест', jsonb_build_object('workout_id', 'other'), 999202, '61000000-0000-4000-8000-000000000040');
 insert into net._http_response (id, status_code, content)
 values (999202, 200, jsonb_build_object(
   'results', jsonb_build_array(jsonb_build_object(
@@ -131,9 +138,14 @@ select ok(
   'finalize stores the failure reason for later triage'
 );
 select is(
-  (select count(*)::int from public.push_subscriptions where user_id = '61000000-0000-4000-8000-000000000002'),
+  (select count(*)::int from public.push_subscriptions where id = '61000000-0000-4000-8000-000000000040'),
   0,
-  'finalize removes the subscription on 410 Gone so future dispatch does not retry a dead endpoint'
+  'finalize removes exactly the subscription referenced by the failed outbox row (device A)'
+);
+select is(
+  (select count(*)::int from public.push_subscriptions where id = '61000000-0000-4000-8000-000000000041'),
+  1,
+  'finalize does not touch the user''s other active subscription (device B) on the same 410 response'
 );
 
 -- producer: клиент без пуш-подписки не получает напоминание, даже если
@@ -174,8 +186,8 @@ select is(
 );
 
 -- producer: с подпиской и в пределах окна 9:00 клиент получает напоминание.
-insert into public.push_subscriptions (user_id, endpoint, p256dh, auth_key)
-values ('61000000-0000-4000-8000-000000000003', 'https://push.example/ep3', 'p256dh-key-3', 'auth-key-3');
+insert into public.push_subscriptions (id, user_id, endpoint, p256dh, auth_key)
+values ('61000000-0000-4000-8000-000000000042', '61000000-0000-4000-8000-000000000003', 'https://push.example/ep3', 'p256dh-key-3', 'auth-key-3');
 select private.enqueue_workout_reminders();
 select is(
   (select count(*)::int from private.push_notifications_outbox where user_id = '61000000-0000-4000-8000-000000000003' and kind = 'workout_reminder'),
@@ -199,6 +211,27 @@ select is(
   (select count(*)::int from private.push_notifications_outbox where user_id = '61000000-0000-4000-8000-000000000003'),
   1,
   'producer is idempotent across repeated runs for the same workout'
+);
+
+-- producer: мульти-device fan-out — у клиента появляется второе устройство,
+-- следующий вызов enqueue должен добавить ровно одну новую строку outbox
+-- под новую подписку (по одной строке на подписку), не трогая уже
+-- поставленную под первое устройство.
+insert into public.push_subscriptions (id, user_id, endpoint, p256dh, auth_key)
+values ('61000000-0000-4000-8000-000000000043', '61000000-0000-4000-8000-000000000003', 'https://push.example/ep3b', 'p256dh-key-3b', 'auth-key-3b');
+select private.enqueue_workout_reminders();
+select results_eq(
+  $$select subscription_id from private.push_notifications_outbox
+      where user_id = '61000000-0000-4000-8000-000000000003' and kind = 'workout_reminder'
+      order by subscription_id$$,
+  $$values ('61000000-0000-4000-8000-000000000042'::uuid), ('61000000-0000-4000-8000-000000000043'::uuid)$$,
+  'fan-out enqueues exactly one row per active subscription of the client'
+);
+select private.enqueue_workout_reminders();
+select is(
+  (select count(*)::int from private.push_notifications_outbox where user_id = '61000000-0000-4000-8000-000000000003' and kind = 'workout_reminder'),
+  2,
+  'fan-out stays idempotent per device across repeated runs'
 );
 
 -- producer: клиент, явно выключивший этот вид уведомлений, не получает push.

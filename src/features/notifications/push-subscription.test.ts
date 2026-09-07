@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { isPushSupported, subscribeToPush, unsubscribeFromPush } from './push-subscription'
+import { getCurrentPushSubscription, isPushSupported, subscribeToPush, unsubscribeFromPush } from './push-subscription'
 
 const VAPID_PUBLIC_KEY = 'BMjedldt2YoR1q15MG53VqwpPgYbdFd163qczlmo4aaor7lLON0t_5LPoVh-KMJ1EP_mLxZnyizrp0nzvDaX3WA'
 
@@ -107,25 +107,63 @@ describe('subscribeToPush', () => {
 })
 
 describe('unsubscribeFromPush', () => {
-  it('does nothing when the browser lacks push support', async () => {
-    await expect(unsubscribeFromPush()).resolves.toBeUndefined()
+  it('returns null when the browser lacks push support', async () => {
+    await expect(unsubscribeFromPush()).resolves.toBeNull()
   })
 
-  it('unsubscribes the existing browser subscription', async () => {
+  it('unsubscribes the existing browser subscription and returns its endpoint', async () => {
     Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
     const unsubscribe = vi.fn().mockResolvedValue(true)
-    const registration = { pushManager: { getSubscription: vi.fn().mockResolvedValue({ unsubscribe }) } }
+    const existingSubscription = { endpoint: 'https://push.example/existing', unsubscribe }
+    const registration = { pushManager: { getSubscription: vi.fn().mockResolvedValue(existingSubscription) } }
     stubServiceWorker({ getRegistration: vi.fn().mockResolvedValue(registration) })
 
-    await unsubscribeFromPush()
+    const result = await unsubscribeFromPush()
 
     expect(unsubscribe).toHaveBeenCalled()
+    expect(result).toEqual({ endpoint: 'https://push.example/existing' })
   })
 
-  it('does nothing when there is no registration to unsubscribe', async () => {
+  it('returns null when there is no registration to unsubscribe', async () => {
     Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
     stubServiceWorker({ getRegistration: vi.fn().mockResolvedValue(undefined) })
 
-    await expect(unsubscribeFromPush()).resolves.toBeUndefined()
+    await expect(unsubscribeFromPush()).resolves.toBeNull()
+  })
+
+  it('returns null when a registration exists but has no active subscription', async () => {
+    Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
+    const registration = { pushManager: { getSubscription: vi.fn().mockResolvedValue(null) } }
+    stubServiceWorker({ getRegistration: vi.fn().mockResolvedValue(registration) })
+
+    await expect(unsubscribeFromPush()).resolves.toBeNull()
+  })
+})
+
+describe('getCurrentPushSubscription', () => {
+  it('returns null when the browser lacks push support', async () => {
+    await expect(getCurrentPushSubscription()).resolves.toBeNull()
+  })
+
+  it('returns null when there is no active subscription', async () => {
+    Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
+    const registration = { pushManager: { getSubscription: vi.fn().mockResolvedValue(null) } }
+    stubServiceWorker({ getRegistration: vi.fn().mockResolvedValue(registration) })
+
+    await expect(getCurrentPushSubscription()).resolves.toBeNull()
+  })
+
+  it('returns the current browser subscription without unsubscribing it', async () => {
+    Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
+    const existingSubscription = {
+      endpoint: 'https://push.example/existing',
+      toJSON: () => ({ keys: { p256dh: 'existing-p256dh', auth: 'existing-auth' } }),
+    }
+    const registration = { pushManager: { getSubscription: vi.fn().mockResolvedValue(existingSubscription) } }
+    stubServiceWorker({ getRegistration: vi.fn().mockResolvedValue(registration) })
+
+    const result = await getCurrentPushSubscription()
+
+    expect(result).toEqual({ endpoint: 'https://push.example/existing', p256dh: 'existing-p256dh', authKey: 'existing-auth' })
   })
 })

@@ -1,4 +1,4 @@
-// schema-sha256: 25315ba03deff3eec40f6d53197422128ca181f66ef5232cda7825545832ebf3
+// schema-sha256: 306c7c6ec954c6cea0630d505b5a6e79bfa749a2d05b949b243f58f2786d533c
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1278,6 +1278,7 @@ export type Database = {
           auth_key: string
           created_at: string
           endpoint: string
+          id: string
           p256dh: string
           user_id: string
         }
@@ -1285,6 +1286,7 @@ export type Database = {
           auth_key: string
           created_at?: string
           endpoint: string
+          id?: string
           p256dh: string
           user_id: string
         }
@@ -1292,6 +1294,7 @@ export type Database = {
           auth_key?: string
           created_at?: string
           endpoint?: string
+          id?: string
           p256dh?: string
           user_id?: string
         }
@@ -1299,7 +1302,7 @@ export type Database = {
           {
             foreignKeyName: "push_subscriptions_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
