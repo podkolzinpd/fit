@@ -1,9 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { ExerciseImage } from './ExerciseImage'
 
 describe('ExerciseImage', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
 
   it('renders a lazily decoded image inside the requested frame', () => {
     const { container } = render(<ExerciseImage src="/exercises/test.jpg" alt="Жим лёжа" variant="detail" />)
@@ -56,6 +61,73 @@ describe('ExerciseImage', () => {
     expect(container.querySelector('video')).not.toBeInTheDocument()
     expect(container.firstElementChild).toHaveClass('exercise-image-motion')
     expect(container.querySelectorAll('img')).toHaveLength(2)
+  })
+
+  it('shows no legacy frame while private Gym Pro media is resolving', async () => {
+    vi.stubEnv('MODE', 'production')
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    const createVitalMediaUrl = vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockReturnValue(new Promise(() => {}))
+
+    const { container } = render(<ExerciseImage
+      src="/exercises/vital-pro/dumbbell-lunge-pending.jpg"
+      fallbackSrc="/exercises/fedb-dumbbell-lunge.jpg"
+      motionSrc="/exercises/fedb-dumbbell-lunge-end.jpg"
+      videoSrc="/exercises/vital-pro/dumbbell-lunge-pending.mp4"
+      alt="Выпады с гантелями"
+      variant="picker"
+      playVideo
+    />)
+
+    expect(container.firstElementChild).toHaveClass('exercise-image-empty', 'exercise-image-loading')
+    expect(container.querySelector('img')).not.toBeInTheDocument()
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+    expect(container.innerHTML).not.toContain('fedb-dumbbell-lunge')
+    await waitFor(() => expect(createVitalMediaUrl).toHaveBeenCalledTimes(2))
+    expect(createVitalMediaUrl).not.toHaveBeenCalledWith('vital-pro/fedb-dumbbell-lunge-end.jpg', expect.anything())
+  })
+
+  it('keeps the matching Gym Pro poster visible until its video is ready', async () => {
+    vi.stubEnv('MODE', 'production')
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockImplementation((path) => (
+      path.endsWith('.jpg')
+        ? Promise.resolve('https://signed.example/dumbbell-lunge.jpg')
+        : new Promise(() => {})
+    ))
+
+    const { container } = render(<ExerciseImage
+      src="/exercises/vital-pro/dumbbell-lunge-poster.jpg"
+      fallbackSrc="/exercises/fedb-dumbbell-lunge.jpg"
+      motionSrc="/exercises/fedb-dumbbell-lunge-end.jpg"
+      videoSrc="/exercises/vital-pro/dumbbell-lunge-poster.mp4"
+      alt="Выпады с гантелями"
+      variant="technique"
+    />)
+
+    await waitFor(() => expect(screen.getByRole('img', { name: 'Выпады с гантелями' })).toHaveAttribute('src', 'https://signed.example/dumbbell-lunge.jpg'))
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+    expect(container.innerHTML).not.toContain('fedb-dumbbell-lunge')
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+  })
+
+  it('uses a neutral placeholder when private Gym Pro media cannot be signed', async () => {
+    vi.stubEnv('MODE', 'production')
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    const createVitalMediaUrl = vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockRejectedValue(new Error('denied'))
+
+    const { container } = render(<ExerciseImage
+      src="/exercises/vital-pro/dumbbell-lunge-failed.jpg"
+      fallbackSrc="/exercises/fedb-dumbbell-lunge.jpg"
+      motionSrc="/exercises/fedb-dumbbell-lunge-end.jpg"
+      videoSrc="/exercises/vital-pro/dumbbell-lunge-failed.mp4"
+      alt="Выпады с гантелями"
+      variant="technique"
+    />)
+
+    await waitFor(() => expect(createVitalMediaUrl).toHaveBeenCalledTimes(2))
+    expect(container.firstElementChild).toHaveClass('exercise-image-empty', 'exercise-image-loading')
+    expect(container.querySelector('img, video')).not.toBeInTheDocument()
+    expect(container.innerHTML).not.toContain('fedb-dumbbell-lunge')
   })
 
   it('keeps compact catalog cards static even when video is available', () => {

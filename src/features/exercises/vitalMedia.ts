@@ -8,7 +8,8 @@ const CACHE_TTL_MS = 50 * 60 * 1_000
 
 const signedUrlCache = new Map<string, { expiresAt: number; promise: Promise<string> }>()
 
-function shouldUsePrivateStorage(source: string) {
+export function shouldUsePrivateVitalStorage(source: string | undefined) {
+  if (!source) return false
   if (!source.startsWith(LOCAL_PREFIX) || import.meta.env.MODE === 'test') return false
   const configuredUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
   if (!configuredUrl) return false
@@ -22,7 +23,7 @@ async function createVitalSignedUrl(source: string, signer: (path: string, expir
 }
 
 function resolveVitalMedia(source: string, signer: (path: string, expiresIn: number) => Promise<string>) {
-  if (!shouldUsePrivateStorage(source)) return Promise.resolve(source)
+  if (!shouldUsePrivateVitalStorage(source)) return Promise.resolve(source)
   const cached = signedUrlCache.get(source)
   if (cached && cached.expiresAt > Date.now()) return cached.promise
 
@@ -36,7 +37,7 @@ function resolveVitalMedia(source: string, signer: (path: string, expiresIn: num
 
 export function useVitalMediaUrl(source: string | undefined, enabled = true) {
   const { exercises } = useDataBackend()
-  const [resolved, setResolved] = useState(() => source && !shouldUsePrivateStorage(source) ? source : undefined)
+  const [resolved, setResolved] = useState(() => source && !shouldUsePrivateVitalStorage(source) ? source : undefined)
 
   useEffect(() => {
     let active = true
@@ -44,7 +45,7 @@ export function useVitalMediaUrl(source: string | undefined, enabled = true) {
       setResolved(undefined)
       return () => { active = false }
     }
-    if (!shouldUsePrivateStorage(source)) {
+    if (!shouldUsePrivateVitalStorage(source)) {
       setResolved(source)
       return () => { active = false }
     }
