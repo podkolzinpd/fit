@@ -111,8 +111,7 @@ test('гребной тренажёр использует темп на 500 м 
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Гребной тренажёр')
-  await page.getByRole('button', { name: /Гребной тренажёр/ }).first().click()
-  await page.getByRole('button', { name: 'Добавить к выбранным' }).click()
+  await page.getByRole('button', { name: 'Выбрать: Гребной тренажёр', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
 
   await page.getByLabel('Время, подход 1').fill('5:08')
