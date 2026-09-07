@@ -225,6 +225,8 @@ export interface ExerciseSnapshot {
   secondaryMuscles?: string[]
   level?: string | null
   imageUrl?: string
+  /** Existing public poster used if optional licensed media is unavailable. */
+  fallbackImageUrl?: string
   /** Второй локальный кадр техники: конечное положение упражнения. */
   motionImageUrl?: string
   /** Короткая локальная петля техники; изображения остаются обязательным fallback. */

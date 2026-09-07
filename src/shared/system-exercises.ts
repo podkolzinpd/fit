@@ -207,12 +207,15 @@ export const SYSTEM_EXERCISE_LEGACY_CATALOG: readonly ExerciseSnapshot[] = SYSTE
     ...exercise,
     name: correctedName,
     imageUrl: vitalMedia?.imageUrl ?? exercise.imageUrl,
+    fallbackImageUrl: usesGymProMedia && exercise.imageUrl !== gymProMedia?.imageUrl
+      ? exercise.imageUrl
+      : undefined,
     // Gym Pro media is intentionally absent from the public checkout. Keep the
     // existing catalog image as a resilient fallback if a licensed file cannot
     // be prepared or fetched. The encrypted production build still uses the
     // Gym Pro poster and video as the primary media.
     motionImageUrl: usesGymProMedia
-      ? exercise.imageUrl ?? exercise.motionImageUrl ?? gymProMedia?.motionImageUrl
+      ? exercise.motionImageUrl ?? exercise.imageUrl ?? gymProMedia?.motionImageUrl
       : freePackMedia?.motionImageUrl ?? exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
     techniqueVideoUrl: vitalMedia?.techniqueVideoUrl,
   }

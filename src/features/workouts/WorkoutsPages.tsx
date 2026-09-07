@@ -2012,7 +2012,7 @@ export function ExerciseHistoryPage() {
   return <Page title="Упражнение" back={`/workouts/${workoutId}`} onBack={goBack}>
     <AsyncView loading={current.isLoading || history.isLoading} error={current.error ?? history.error} onRetry={() => { void current.refetch(); void history.refetch() }}>
       <section className="exercise-card-head card">
-        <ExerciseImage src={meta?.imageUrl} alt={name} variant="detail" />
+        <ExerciseImage src={meta?.imageUrl} fallbackSrc={meta?.fallbackImageUrl} alt={name} variant="detail" />
         <div className="exercise-card-meta">
           <h2>{name}</h2>
           {meta?.equipment && <p><span className="muted">Оборудование:</span> {meta.equipment}</p>}
@@ -2056,7 +2056,7 @@ export function ExerciseHistoryPage() {
       {tab === 'history' && <ExerciseProgressHistory items={items} showRpe={showRpe} exerciseRef={exerciseRef} />}
 
       {tab === 'how' && <section className="exercise-technique">
-        <ExerciseImage src={meta?.imageUrl} motionSrc={meta?.motionImageUrl} videoSrc={meta?.techniqueVideoUrl} alt={`Техника: ${name}`} variant="technique" />
+        <ExerciseImage src={meta?.imageUrl} fallbackSrc={meta?.fallbackImageUrl} motionSrc={meta?.motionImageUrl} videoSrc={meta?.techniqueVideoUrl} alt={`Техника: ${name}`} variant="technique" />
         {instructions.length
           ? <ol className="how-steps">{instructions.map((step, index) => <li key={index}>{step}</li>)}</ol>
           : <p className="muted empty-hint">Описание техники пока не добавлено.</p>}

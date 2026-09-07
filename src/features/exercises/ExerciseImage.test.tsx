@@ -80,6 +80,15 @@ describe('ExerciseImage', () => {
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
   })
 
+  it('uses the explicit public poster before falling back to the end frame', () => {
+    const { container } = render(<ExerciseImage src="/licensed/start.jpg" fallbackSrc="/public/start.jpg" motionSrc="/public/end.jpg" alt="Тяга" variant="technique" />)
+    fireEvent.error(screen.getByRole('img', { name: 'Тяга' }))
+    expect(screen.getByRole('img', { name: 'Тяга' })).toHaveAttribute('src', '/public/start.jpg')
+    expect(container.firstElementChild).toHaveClass('exercise-image-motion')
+    fireEvent.error(screen.getByRole('img', { name: 'Тяга' }))
+    expect(screen.getByRole('img', { name: 'Тяга' })).toHaveAttribute('src', '/public/end.jpg')
+  })
+
   it('keeps manual video controls but disables autoplay when reduced motion is enabled', () => {
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
       matches: true,
