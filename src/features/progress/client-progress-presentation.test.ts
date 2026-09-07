@@ -223,6 +223,7 @@ describe('clientProgressPresentation', () => {
     })
 
     expect(result.nextWorkout).toEqual({
+      id: 'next',
       date: '28 августа 2026 г. · 18:30', title: 'Ближайшая тренировка',
       exercises: [{ name: 'Жим гантелей лёжа', plan: '3 × 20 кг × 10 повт.' }],
     })
@@ -235,7 +236,7 @@ describe('clientProgressPresentation', () => {
       comparable: true,
       facts: [],
       conclusions: [],
-      emptyMessage: 'Текущий период сохранён как отправная точка. Сравнение появится, когда накопится следующий сопоставимый период.',
+      emptyMessage: 'Сравнение появится, когда будут данные за два периода.',
     })
     expect(result.goal).toBeUndefined()
     expect(result.nextWorkout).toBeUndefined()

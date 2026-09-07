@@ -6,10 +6,11 @@ const planPath = process.argv[2]
 const allowDestroy = process.argv.includes('--allow-destroy')
 const allowPublicApi = process.argv.includes('--allow-public-api')
 const automaticStageUpdate = process.argv.includes('--automatic-stage-update')
+const allowPushPipelineBootstrap = process.argv.includes('--allow-push-pipeline-bootstrap')
 
 if (planPath === undefined) {
   throw new Error(
-    'Usage: check-yandex-terraform-plan.mjs <plan.json> [--allow-destroy] [--allow-public-api] [--automatic-stage-update]',
+    'Usage: check-yandex-terraform-plan.mjs <plan.json> [--allow-destroy] [--allow-public-api] [--automatic-stage-update] [--allow-push-pipeline-bootstrap]',
   )
 }
 
@@ -17,6 +18,11 @@ const plan = JSON.parse(readFileSync(planPath, 'utf8'))
 const changes = (plan.resource_changes ?? []).filter(
   (resource) => resource.change.actions.join(',') !== 'no-op',
 )
+const collectPlannedResources = (module) => [
+  ...(module?.resources ?? []),
+  ...(module?.child_modules ?? []).flatMap(collectPlannedResources),
+]
+const plannedResources = collectPlannedResources(plan.planned_values?.root_module)
 const destructive = changes.filter((resource) =>
   resource.change.actions.includes('delete'),
 )
@@ -34,6 +40,7 @@ const allowedPublicApiAddress =
 const automaticContainerAddresses = new Set([
   'yandex_serverless_container.api',
   'yandex_serverless_container.migration[0]',
+  'yandex_serverless_container.push_dispatcher',
 ])
 const automaticLockboxAddresses = new Set([
   'yandex_lockbox_secret.database_owner_url',
@@ -41,13 +48,30 @@ const automaticLockboxAddresses = new Set([
 ])
 const runtimePreflightSecretAccessAddress =
   'yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader[0]'
+const appFeedbackSecretAccessAddress =
+  'yandex_lockbox_secret_iam_member.push_dispatcher_app_feedback_integrations_reader[0]'
+const pushDispatcherAddress = 'yandex_serverless_container.push_dispatcher'
+const pushDispatcherTriggerAddress = 'yandex_function_trigger.push_dispatcher_timer'
+const apiImagePullerAddress = 'yandex_container_registry_iam_binding.api_image_puller'
+const pushPipelineBootstrapAddresses = new Set([
+  'yandex_iam_service_account.push_dispatcher',
+  'yandex_iam_service_account.push_scheduler',
+  'yandex_iam_service_account_iam_member.push_dispatcher_deployer[0]',
+  'yandex_iam_service_account_iam_member.push_scheduler_deployer[0]',
+  'yandex_lockbox_secret_iam_member.push_dispatcher_connection_secret_reader',
+  'yandex_lockbox_secret_iam_member.push_dispatcher_transport_secret_reader',
+  'yandex_container_registry_iam_binding.api_image_puller',
+  'yandex_serverless_container.push_dispatcher',
+  'yandex_serverless_container_iam_binding.push_dispatcher_invocation',
+  'yandex_function_trigger.push_dispatcher_timer',
+])
 const costSensitiveContainerFields = [
   'memory',
   'cores',
   'core_fraction',
   'concurrency',
   'execution_timeout',
-  'provisioned_instances_count',
+  'provision_policy',
   'service_account_id',
   'connectivity',
   'log_options',
@@ -116,6 +140,112 @@ const hasBoundedApiExecutionTimeout = (resource) => {
     && Number(after[1]) <= 120
 }
 
+const pushDispatcherServiceAccountId = changes.find(
+  (resource) => resource.address === pushDispatcherAddress,
+)?.change.after?.service_account_id
+  ?? plannedResources.find(
+    (resource) => resource.address === pushDispatcherAddress,
+  )?.values?.service_account_id
+
+const isExactPushDispatcherImagePullerUpdate = (resource) => {
+  if (
+    resource.address !== apiImagePullerAddress
+    || resource.change.actions.join(',') !== 'update'
+    || !isServiceAccountMember(`serviceAccount:${pushDispatcherServiceAccountId ?? ''}`)
+  ) return false
+
+  const before = resource.change.before ?? {}
+  const after = resource.change.after ?? {}
+  const beforeMembers = before.members
+  const afterMembers = after.members
+  if (
+    before.role !== 'container-registry.images.puller'
+    || after.role !== before.role
+    || !Array.isArray(beforeMembers)
+    || !Array.isArray(afterMembers)
+    || afterMembers.length !== beforeMembers.length + 1
+    || !beforeMembers.every(isServiceAccountMember)
+    || !afterMembers.every(isServiceAccountMember)
+    || !beforeMembers.every((member) => afterMembers.includes(member))
+  ) return false
+
+  const addedMembers = afterMembers.filter((member) => !beforeMembers.includes(member))
+  return addedMembers.length === 1
+    && addedMembers[0] === `serviceAccount:${pushDispatcherServiceAccountId}`
+    && hasOnlyTopLevelChanges(resource, new Set(['id', 'members']))
+}
+
+const isExactPushDispatcherTriggerDescriptionUpdate = (resource) =>
+  resource.address === pushDispatcherTriggerAddress
+  && resource.change.actions.join(',') === 'update'
+  && resource.change.before?.description
+    === 'Run the private Fit push producer and dispatcher every minute'
+  && resource.change.after?.description
+    === 'Run private Fit push and app-feedback delivery every minute'
+  && hasOnlyTopLevelChanges(resource, new Set(['description']))
+
+const isServiceAccountMember = (value) =>
+  /^serviceAccount:[a-z0-9]+$/u.test(value ?? '')
+
+const isKnownOrComputedServiceAccountMember = (resource) =>
+  isServiceAccountMember(resource.change.after?.member)
+  || (
+    resource.change.after?.member == null
+    && resource.change.after_unknown?.member === true
+  )
+
+const isReviewedPushPipelineBootstrap = (resource) => {
+  if (!allowPushPipelineBootstrap || !pushPipelineBootstrapAddresses.has(resource.address)) {
+    return false
+  }
+  const actions = resource.change.actions.join(',')
+  if (actions !== 'create' && actions !== 'update') return false
+  const after = resource.change.after ?? {}
+
+  if (resource.address === 'yandex_serverless_container.push_dispatcher') {
+    return Number(after.memory) === 512
+      && Number(after.cores) === 1
+      && Number(after.core_fraction) === 100
+      && Number(after.concurrency) === 1
+      && after.execution_timeout === '60s'
+      && (!Array.isArray(after.provision_policy) || after.provision_policy.length === 0)
+  }
+  if (resource.address === 'yandex_function_trigger.push_dispatcher_timer') {
+    const retryInterval = after.container?.[0]?.retry_interval
+    return after.timer?.[0]?.cron_expression === '* * * * ? *'
+      && after.timer?.[0]?.payload === 'sync-push-notifications'
+      && after.container?.[0]?.path === '/internal/push/dispatch'
+      && Number(after.container?.[0]?.retry_attempts) === 1
+      && (Number(retryInterval) === 10 || retryInterval === '10s')
+  }
+  if (resource.address === 'yandex_container_registry_iam_binding.api_image_puller') {
+    return after.role === 'container-registry.images.puller'
+      && Array.isArray(after.members)
+      && after.members.length === 3
+      && after.members.every(isServiceAccountMember)
+  }
+  if (resource.address === 'yandex_serverless_container_iam_binding.push_dispatcher_invocation') {
+    return after.role === 'serverless.containers.invoker'
+      && Array.isArray(after.members)
+      && after.members.length >= 1
+      && after.members.length <= 2
+      && after.members.every(isServiceAccountMember)
+  }
+  if (resource.address.includes('lockbox_secret_iam_member')) {
+    return after.role === 'lockbox.payloadViewer'
+      && isKnownOrComputedServiceAccountMember(resource)
+  }
+  if (resource.address.includes('iam_service_account_iam_member')) {
+    return after.role === 'iam.serviceAccounts.user'
+      && isServiceAccountMember(after.member)
+  }
+  if (resource.address.startsWith('yandex_iam_service_account.')) {
+    return typeof after.name === 'string'
+      && /^fit-(stage|prod)-push-(dispatcher|scheduler)$/u.test(after.name)
+  }
+  return false
+}
+
 const changesContainerCostOrIdentity = (resource) =>
   costSensitiveContainerFields.some(
     (field) =>
@@ -127,6 +257,7 @@ const changesContainerCostOrIdentity = (resource) =>
 
 const isAutomaticStageChange = (resource) => {
   const actions = resource.change.actions.join(',')
+  if (isReviewedPushPipelineBootstrap(resource)) return true
   if (actions === 'create') {
     return isExactPublicApiBinding(resource)
       || (
@@ -134,11 +265,22 @@ const isAutomaticStageChange = (resource) => {
         && resource.change.after?.role === 'lockbox.payloadViewer'
         && /^serviceAccount:[a-z0-9]+$/u.test(resource.change.after?.member ?? '')
       )
+      || (
+        resource.address === appFeedbackSecretAccessAddress
+        && resource.change.after?.role === 'lockbox.payloadViewer'
+        && isKnownOrComputedServiceAccountMember(resource)
+      )
   }
   if (actions !== 'update') {
     return false
   }
   if (isExactPublicApiBinding(resource)) {
+    return true
+  }
+  if (
+    isExactPushDispatcherImagePullerUpdate(resource)
+    || isExactPushDispatcherTriggerDescriptionUpdate(resource)
+  ) {
     return true
   }
   if (automaticContainerAddresses.has(resource.address)) {
@@ -155,6 +297,22 @@ const isAutomaticStageChange = (resource) => {
 const unexpectedAutomaticChanges = automaticStageUpdate
   ? changes.filter((resource) => !isAutomaticStageChange(resource))
   : []
+const includesPushPipelineBootstrap = changes.some(
+  (resource) => pushPipelineBootstrapAddresses.has(resource.address)
+    && resource.change.actions.includes('create'),
+)
+const pushPipelineCostSummary = includesPushPipelineBootstrap
+  ? [
+      '### Push pipeline bootstrap cost estimate',
+      '',
+      '- Schedule: 43,200 private dispatcher calls per 30-day month.',
+      '- Configuration: 0.5 GB RAM, 1 vCPU, zero provisioned instances.',
+      '- Estimated dispatcher cost: about 0–389 RUB/month when an average call takes 0.1–5 seconds.',
+      '- Existing shared free tier, sender-function calls and internet egress can change the invoice.',
+      '- Apply remains blocked until `approve_push_pipeline=true` is supplied manually.',
+      '',
+    ]
+  : []
 
 const summary = [
   '## Yandex stage Terraform plan',
@@ -169,6 +327,7 @@ const summary = [
     (resource) => `| \`${resource.address}\` | ${resource.change.actions.join(', ')} |`,
   ),
   '',
+  ...pushPipelineCostSummary,
 ].join('\n')
 
 process.stdout.write(`${summary}\n`)

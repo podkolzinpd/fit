@@ -50,4 +50,29 @@ describe('RunMetricsFields', () => {
     await user.tab()
     expect(onCommit).toHaveBeenLastCalledWith({ durationSec: 1815, durationMin: undefined })
   })
+
+  it('shows rowing pace and commits stroke rate', async () => {
+    const user = userEvent.setup()
+    const onCommit = vi.fn()
+    render(<RunMetricsFields
+      idPrefix="rowing"
+      rowing
+      durationSec={308}
+      distanceKm={0.5}
+      strokeRate={30}
+      inputClassName="test-input"
+      durationLabel="Время"
+      distanceLabel="Дистанция"
+      distanceUnitLabel="Единица дистанции"
+      onCommit={onCommit}
+    />)
+    expect(screen.getByText('Темп 5:08/500 м')).toBeInTheDocument()
+    expect(screen.getByLabelText('Единица дистанции')).toHaveValue('m')
+    const strokeRate = screen.getByLabelText('Гребков в минуту')
+    expect(strokeRate).toHaveValue(30)
+    await user.clear(strokeRate)
+    await user.type(strokeRate, '32')
+    await user.tab()
+    expect(onCommit).toHaveBeenLastCalledWith({ reps: 32 })
+  })
 })

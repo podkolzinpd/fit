@@ -26,8 +26,8 @@ export type VapidConfig = {
 /**
  * web-push does the ECDH/AEAD payload encryption and VAPID JWT signing per
  * subscription — this cannot be done in plain SQL, which is why the outbox
- * dispatcher (private.dispatch_push_notifications) posts here instead of
- * calling the push service directly like the Tracker/Telegram sync do.
+ * dispatcher posts here instead of calling the push service directly from
+ * PostgreSQL.
  */
 export async function sendPushNotification(
   input: PushNotificationInput,
@@ -50,8 +50,15 @@ export async function sendPushNotification(
     const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error
       ? Number(error.statusCode)
       : 0
-    const message = error instanceof Error ? error.message : String(error)
-    return { id: input.id, ok: false, status: Number.isFinite(statusCode) ? statusCode : 0, error: message.slice(0, 500) }
+    const status = Number.isFinite(statusCode) ? statusCode : 0
+    return {
+      id: input.id,
+      ok: false,
+      status,
+      // Provider errors may contain a subscription endpoint. Return only a
+      // stable code so neither the function response nor the outbox stores it.
+      error: status === 0 ? 'web_push_failed' : `web_push_${status}`,
+    }
   }
 }
 

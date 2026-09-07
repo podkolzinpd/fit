@@ -8,6 +8,17 @@ test('skips the browser runtime only for explicit documentation and deployment i
     'docs/CURRENT_STATE.md',
     'infra/yandex/stage/main.tf',
     '.github/workflows/deploy-yandex-stage.yml',
+    'OPERATIONS.md',
+    'scripts/check-yandex-terraform-plan.mjs',
+    'scripts/check-yandex-terraform-plan.test.mjs',
+    'scripts/deploy-yandex-serverless-revision.mjs',
+    'scripts/deploy-yandex-serverless-revision.test.mjs',
+    'scripts/deploy-yandex-stage-workflow.mjs',
+    'scripts/deploy-yandex-stage-workflow.test.mjs',
+    'scripts/e2e-scope.mjs',
+    'scripts/e2e-scope.test.mjs',
+    'scripts/verify-yandex-stage-access.mjs',
+    'scripts/verify-yandex-stage-access.test.mjs',
     'vercel.json',
   ]), false)
 })

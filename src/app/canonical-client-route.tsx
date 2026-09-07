@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Navigate, Outlet, useLocation, useParams, useSearchParams } from 'react-router-dom'
-import { clientsRepository } from '../data/repositories/clients.repository'
+import { useDataBackend } from './data-backend-context'
 
 function RouteState({ error, retry }: { error?: Error | null; retry?: () => void }) {
   if (error) return <main className="state error"><p>{error.message}</p><button type="button" className="secondary" onClick={retry}>Повторить</button></main>
@@ -8,6 +8,7 @@ function RouteState({ error, retry }: { error?: Error | null; retry?: () => void
 }
 
 export function CanonicalClientParamRoute() {
+  const { clients: clientsRepository } = useDataBackend()
   const { clientId = '' } = useParams()
   const location = useLocation()
   const query = useQuery({
@@ -25,6 +26,7 @@ export function CanonicalClientParamRoute() {
 }
 
 export function CanonicalWorkoutClientRoute() {
+  const { clients: clientsRepository } = useDataBackend()
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const clientId = searchParams.get('client') ?? ''

@@ -127,6 +127,28 @@ describe('VoiceInputButton', () => {
     expect(onTranscript).not.toHaveBeenCalled()
   })
 
+  it('uses the entire hero surface as the idle microphone action', async () => {
+    const user = userEvent.setup()
+    const start = vi.fn().mockResolvedValue(undefined)
+    render(<VoiceInputButton
+      variant="hero"
+      idleLabel="Надиктовать тренировку"
+      onTranscript={vi.fn()}
+      source="today"
+      streamingFactory={() => ({ start, stop: vi.fn().mockResolvedValue(undefined), rotate: vi.fn() })}
+    />)
+
+    const surface = screen.getByRole('button', { name: 'Надиктовать тренировку' })
+    expect(surface).toHaveClass('voice-action-hitarea')
+    expect(surface).toBeEnabled()
+    expect(surface.parentElement).toHaveClass('voice-action')
+    expect(surface.parentElement?.querySelector('.voice-action-button-visual')).not.toBeInstanceOf(HTMLButtonElement)
+    await user.click(surface)
+
+    expect(start).toHaveBeenCalledOnce()
+    expect(await screen.findByRole('button', { name: /Завершить запись/ })).toBeVisible()
+  })
+
   it('renders a compact icon control for chat composers', async () => {
     const user = userEvent.setup()
     const onTranscript = vi.fn()

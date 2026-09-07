@@ -7,8 +7,8 @@ import type { Client } from '../../shared/domain'
 import { ClientsPage } from './ClientsListPage'
 
 const repository = vi.hoisted(() => ({ list: vi.fn() }))
-vi.mock('../../data/repositories/clients.repository', () => ({
-  clientsRepository: { list: repository.list },
+vi.mock('../../app/data-backend-context', () => ({
+  useDataBackend: () => ({ clients: { list: repository.list } }),
 }))
 
 // Из workouts.repository экрану нужен только формат ИМТ, а тест проверяет

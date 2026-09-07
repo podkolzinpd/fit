@@ -1,9 +1,19 @@
 import { expect, test } from '@playwright/test'
 
+async function logoutFromProfile(page: import('@playwright/test').Page) {
+  const logout = page.getByRole('button', { name: 'Выйти' })
+  await logout.scrollIntoViewIfNeeded()
+  // First-visit tips must not intercept account-switching scenarios.
+  await page.keyboard.press('Escape')
+  await logout.click()
+}
+
 async function fillClientProfileDetails(page: import('@playwright/test').Page) {
   await page.getByLabel('Пол').selectOption('female')
   await page.getByLabel('Возраст').fill('30')
   await page.getByLabel('Рост, см').fill('170')
+  const introduction = page.getByRole('button', { name: 'Понятно', exact: true })
+  if (await introduction.isVisible()) await introduction.click()
 }
 
 test('auth shell matches mobile baseline', async ({ page }) => {
@@ -35,10 +45,12 @@ test('trainer registers without surname or email confirmation', async ({ page },
   await expect(page.getByLabel('Имя')).toHaveValue('Тест')
   await page.getByLabel('Имя').fill('Тест Обновлённый')
   await page.getByRole('button', { name: 'Сохранить' }).click()
-  await expect(page.getByRole('status')).toContainText('Сохранено')
+  await expect(page.getByRole('status').filter({ hasText: 'Сохранено' })).toBeVisible()
   await page.reload()
   await expect(page.getByLabel('Имя')).toHaveValue('Тест Обновлённый')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  const introduction = page.getByRole('button', { name: 'Понятно', exact: true })
+  if (await introduction.isVisible()) await introduction.click()
+  await logoutFromProfile(page)
   await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Имя').fill('Тест')
@@ -70,7 +82,7 @@ test('trainer adds the first client, plans a workout and gets an invitation code
   await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByText('Добавить значения', { exact: true }).click()
   await page.getByLabel(/вес, подход 1/i).fill('40')
@@ -81,7 +93,12 @@ test('trainer adds the first client, plans a workout and gets an invitation code
   await expect(page.getByRole('heading', { name: 'Тренировка запланирована' })).toBeVisible()
   await page.getByRole('button', { name: 'Пригласить спортсмена' }).click()
   await expect(page.getByText(/Код приглашения/)).toBeVisible()
-  await expect(page.locator('.first-plan-invite-code strong')).toHaveText(/[A-F0-9]{12}/)
+  const invitationCode = (await page.locator('.invitation-code-card strong').textContent())?.match(/[A-F0-9]{12}/)?.[0]
+  expect(invitationCode).toBeTruthy()
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.getByRole('button', { name: 'Скопировать код приглашения' }).click()
+  await expect(page.getByRole('button', { name: 'Код приглашения скопирован' })).toBeVisible()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(invitationCode)
 })
 
 test('client registers, starts without a profile questionnaire and creates an own workout', async ({ page }, testInfo) => {
@@ -98,11 +115,17 @@ test('client registers, starts without a profile questionnaire and creates an ow
   await expect(page.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await page.goto('/me/workouts')
-  await expect(page.getByRole('heading', { name: 'Сначала создайте личную карточку' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Создать карточку' })).toHaveAttribute('href', '/me')
+  await expect(page.getByRole('heading', { name: 'Заполните профиль спортсмена' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Заполнить профиль' })).toHaveAttribute('href', '/me/edit')
   await page.goto('/me/progress')
-  await expect(page.getByRole('heading', { name: 'Сначала создайте личную карточку' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Создать карточку' })).toHaveAttribute('href', '/me')
+  await expect(page.getByRole('heading', { name: 'Заполните профиль спортсмена' })).toBeVisible()
+  await page.getByRole('link', { name: 'Заполнить профиль' }).click()
+  await expect(page).toHaveURL(/\/me\/edit$/)
+  await expect(page.getByRole('heading', { name: 'Профиль спортсмена' })).toBeVisible()
+  await expect(page.getByLabel('Имя')).toHaveValue('Клиент')
+  await fillClientProfileDetails(page)
+  await page.getByRole('button', { name: 'Сохранить профиль' }).click()
+  await expect(page).toHaveURL(/\/me$/)
   await page.goto('/me')
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
 
@@ -128,7 +151,7 @@ test('client registers, starts without a profile questionnaire and creates an ow
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
+  await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -190,11 +213,15 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await page.getByRole('button', { name: 'Пригласить клиента' }).click()
   const clientCode = (await page.getByText(/Код клиента:/).textContent())?.match(/[A-F0-9]{12}/)?.[0]
   expect(clientCode).toBeTruthy()
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.getByRole('button', { name: 'Скопировать код клиента' }).click()
+  await expect(page.getByRole('button', { name: 'Код клиента скопирован' })).toBeVisible()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(clientCode)
 
   // Тренер не может использовать код клиента; код остаётся действующим для
   // правильного аккаунта и следующий переход по ссылке обрабатывается сам.
   await page.goto('/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Имя').fill('Неверная роль')
   await page.getByLabel('Email').fill(wrongRoleEmail)
@@ -207,7 +234,7 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await expect(page.getByRole('alert')).toHaveText('Этот код приглашения предназначен для другого типа аккаунта.')
 
   await page.goto('/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.goto(`/join?code=${clientCode}`)
   await expect(page).toHaveURL(/\/auth$/)
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -228,12 +255,15 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await page.getByRole('button', { name: 'Пригласить тренера' }).click()
   const trainerCode = (await page.getByText(/Код для тренера:/).textContent())?.match(/[A-F0-9]{12}/)?.[0]
   expect(trainerCode).toBeTruthy()
+  await page.getByRole('button', { name: 'Скопировать код для тренера' }).click()
+  await expect(page.getByRole('button', { name: 'Код для тренера скопирован' })).toBeVisible()
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(trainerCode)
   await page.getByRole('button', { name: 'Отозвать' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отозвать' }).click()
   await expect(page.getByRole('heading', { name: 'Активные приглашения' })).toHaveCount(0)
 
   await page.goto('/me/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
   await page.getByLabel('Email').fill(wrongRoleEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -277,7 +307,7 @@ test('client safely switches trainers after an explicit disconnect', async ({ pa
 
   async function logoutTrainer() {
     await page.goto('/profile')
-    await page.getByRole('button', { name: 'Выйти' }).click()
+    await logoutFromProfile(page)
     await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
   }
 
@@ -389,7 +419,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   expect(code).toBeTruthy()
 
   await page.goto('/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Тип аккаунта').selectOption('client')
   await page.getByLabel('Имя').fill('Клиент')
@@ -428,12 +458,21 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Фактическое время').fill('20:00')
   await page.getByLabel('Фактическая дистанция').fill('3')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
-  await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+  // Дожидаемся подтверждения единственного подхода. Иначе завершение может
+  // прочитать старый query state и открыть partial-confirm, а после быстрого
+  // refetch — сразу закончить тренировку, делая следующий селектор гонкой.
+  await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
   await Promise.all([
     page.waitForURL(preAttachWorkoutUrl),
-    page.getByRole('button', { name: 'Завершить', exact: true }).click(),
+    page.getByRole('button', { name: 'Завершить тренировку' }).click(),
   ])
-  await expect(page.getByText(/3 км × 20:00 · темп 6:40\/км/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Тренировка завершена' })).toBeVisible()
+  // После завершения сначала видна компактная сводка. Подробный темп
+  // проверяем после явного раскрытия результата, как его открывает клиент.
+  const completedRun = page.locator('.completed-exercise-details').first()
+  await expect(completedRun.locator('summary')).toContainText('3 км')
+  await completedRun.locator('summary').click()
+  await expect(completedRun.getByText(/3 км × 20:00 · темп 6:40\/км/)).toBeVisible()
 
   await page.goto('/join')
   await page.getByLabel('Код приглашения').fill(code!)
@@ -478,7 +517,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
   await page.getByRole('menuitem', { name: 'Заменить' }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
-  await page.getByRole('button', { name: /^Планка/ }).first().click()
+  await page.getByRole('button', { name: /^Добавить: Планка/ }).first().click()
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Планка')
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
   await page.getByRole('menuitem', { name: 'Заменить' }).click()
@@ -498,17 +537,32 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Фактическое время').fill('29:40')
   await page.getByLabel('Фактическая дистанция').fill('5.2')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
-  // В тренировке остались добавленные подход и упражнение, поэтому завершение
-  // подтверждаем как частичное. Это сохраняет проверку структурных мутаций.
+  // Для последующей перестановки результата нужны два реально выполненных
+  // упражнения. Невыполненный план редактор больше не превращает в факт.
+  await expect(page.locator('.live-set-compact.confirmed')).toBeVisible()
+  await page.getByRole('button', { name: 'Вверх' }).last().click()
+  // Дождаться серверной перестановки: у нового текущего упражнения один
+  // подход; до refetch здесь ещё видны два подхода предыдущего упражнения.
+  await expect(page.locator('.live-exercise .live-set-number')).toHaveCount(1)
+  await expect(page.getByLabel('Фактическое время')).toHaveValue('')
+  await page.getByLabel('Фактическое время').fill('10:00')
+  await page.getByLabel('Фактическая дистанция').fill('1.2')
+  await page.getByRole('button', { name: 'Готово, отдых' }).click()
+  await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
+  // В первом упражнении остался неподтверждённый добавленный подход.
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await Promise.all([
     page.waitForURL(ownWorkoutUrl),
     page.getByRole('button', { name: 'Завершить', exact: true }).click(),
   ])
-  await expect(page.getByText(/5,2 км × 29:40 · темп 5:42\/км/)).toBeVisible()
+  const ownCompletedRun = page.locator('.completed-exercise-details').filter({ hasText: '5,2 км' })
+  await expect(ownCompletedRun.locator('summary')).toContainText('5,2 км')
+  await ownCompletedRun.locator('summary').click()
+  await expect(ownCompletedRun.getByText(/5,2 км × 29:40 · темп 5:42\/км/)).toBeVisible()
   // Собственную завершённую тренировку клиент может исправить: перестановка
   // не должна сталкиваться с промежуточным дубликатом позиции в БД.
   await page.getByRole('link', { name: 'Изменить результат' }).click()
+  await expect(page.locator('.planned-exercise')).toHaveCount(2)
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
   await page.getByRole('menuitem', { name: 'Изменить порядок' }).click()
   await expect(page.getByRole('button', { name: 'Вверх' }).last()).toBeEnabled()
@@ -522,7 +576,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // Завершённая тренировка, которую клиент записал сам, входит в общую
   // историю тренера, но остаётся недоступной для редактирования и запуска.
   await page.goto('/me/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.getByLabel('Email').fill(trainerEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
@@ -535,6 +589,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.goto(`${canonicalClientHref}/workouts`)
   const clientAuthoredCard = page.locator(`a[href="${ownWorkoutPath}"]`)
   await expect(clientAuthoredCard).toContainText('Создано клиентом')
+  await page.getByRole('status').filter({ hasText: 'История по датам' }).getByRole('button', { name: 'Понятно' }).click()
   await clientAuthoredCard.click()
   await expect(page.getByText('Создано клиентом · только просмотр')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Изменить результат' })).toHaveCount(0)
@@ -549,11 +604,13 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // В этой тренировке два упражнения «Бег»: исходное и добавленное клиентом.
   // Копия должна сохранить оба, а не полагаться на неоднозначный текстовый
   // селектор.
-  await expect(page.getByText('Бег (Кардио)', { exact: true })).toHaveCount(2)
-  // Клиент поменял упражнения местами: факт остаётся у того же упражнения,
-  // поэтому заполненный «Бег» теперь второй, а не теряется или не переносится.
-  await expect(page.getByLabel('Время, подход 1').last()).toHaveValue('29:40')
-  await expect(page.getByLabel('Расстояние, подход 1').last()).toHaveValue('5.2')
+  await expect(page.getByText('Бег', { exact: true })).toHaveCount(2)
+  // После перестановки в Live и обратной перестановки результата оба факта
+  // остаются у своих упражнений, а не переносятся между одинаковыми ref.
+  await expect(page.getByLabel('Время, подход 1').first()).toHaveValue('29:40')
+  await expect(page.getByLabel('Расстояние, подход 1').first()).toHaveValue('5.2')
+  await expect(page.getByLabel('Время, подход 1').last()).toHaveValue('10:00')
+  await expect(page.getByLabel('Расстояние, подход 1').last()).toHaveValue('1.2')
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
     page.getByRole('button', { name: 'Сохранить' }).click(),
@@ -563,7 +620,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   expect(sentPlanUrl).not.toBe(ownWorkoutUrl)
 
   await page.goto('/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.getByLabel('Email').fill(clientEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
@@ -629,7 +686,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByRole('heading', { name: 'Активные приглашения' })).toBeVisible()
 
   await page.goto('/me/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Имя').fill('Второй тренер')
   await page.getByLabel('Email').fill(`member-trainer-${suffix}@fit.local`)
@@ -646,6 +703,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+$/)
   const leaveButton = page.getByRole('button', { name: 'Покинуть пространство клиента' })
   await expect(leaveButton).toBeVisible()
+  await page.keyboard.press('Escape')
   await leaveButton.click()
   // In-app confirm (useConfirm) вместо нативного window.confirm — подтверждаем
   // кнопкой в диалоге.
@@ -656,7 +714,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // сначала проверяем понятное подтверждение, затем на 430 px в тёмной теме —
   // сам результат. Самостоятельная история остаётся доступна.
   await page.goto('/profile')
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutFromProfile(page)
   await page.getByLabel('Email').fill(clientEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()

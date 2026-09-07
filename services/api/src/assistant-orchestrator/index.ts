@@ -1,5 +1,10 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
+import {
+  readAssistantTurnRequest,
+  type AssistantTurnRequest,
+} from '../assistant-state-request.js'
+
 const completionUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion'
 const releaseSha = process.env.RELEASE_SHA?.trim() || 'unknown'
 const assistantSystemPrompt = 'Ты безопасный ассистент фитнес-приложения. Не ставь диагнозов и не давай опасных рекомендаций. Любое write-действие только как предложенная карточка с подтверждением; никогда не утверждай, что данные уже сохранены.'
@@ -12,7 +17,6 @@ const tools = ['record_workout', 'create_client_draft', 'create_program_draft', 
 const enabledTools = ['record_workout'] as const
 type Tool = typeof tools[number]
 
-export type AssistantTurnRequest = { conversationId: string; message: string; turnId?: string }
 export type AssistantAction = { id?: string; tool: Tool; status: 'needs_input' | 'proposed'; title: string; description: string; payload: Record<string, unknown> }
 export type AssistantTurnResponse = { reply: string; action: AssistantAction | null }
 
@@ -77,6 +81,12 @@ type ClientContextRow = {
   ageYears: number | null
   heightCm: number | string | null
   gender: string | null
+}
+
+export async function loadAssistantClientContext(actorClient: SupabaseClient): Promise<ClientContextRow[]> {
+  const result: unknown = await actorClient.rpc('list_clients', { p_include_archived: false })
+  if (!record(result) || result.error) throw new HttpError(503, 'context_unavailable')
+  return clientContextRows(result.data)
 }
 
 function clientContextRows(value: unknown): ClientContextRow[] {
@@ -215,14 +225,7 @@ export function summaryTurn(
   })
 }
 
-export function readAssistantTurnRequest(value: unknown): AssistantTurnRequest | undefined {
-  if (!record(value) || typeof value.conversation_id !== 'string' || typeof value.message !== 'string') return undefined
-  const message = value.message.trim()
-  if (!UUID.test(value.conversation_id) || message.length === 0 || message.length > 4_000) return undefined
-  const turnId = value.turn_id === undefined ? undefined : typeof value.turn_id === 'string' && UUID.test(value.turn_id) ? value.turn_id : undefined
-  if (value.turn_id !== undefined && turnId === undefined) return undefined
-  return { conversationId: value.conversation_id, ...(turnId === undefined ? {} : { turnId }), message }
-}
+export { readAssistantTurnRequest }
 
 export function isTurnIdReuse(existingContent: unknown, requestedContent: string): boolean {
   return typeof existingContent === 'string' && existingContent !== requestedContent
@@ -544,6 +547,13 @@ export function recordWorkoutTurn(
       ...(workoutTextProvided(pendingTranscript) ? { transcript: pendingTranscript } : {}),
     })
   }
+  const unmatchedClientHint = previousStep === 'client' || /(?:^|\s)для\s+[\p{L}-]{3,}/iu.test(message)
+  if (!selectedClient && clients.length > 0 && unmatchedClientHint) {
+    return workoutAction('Выберите клиента', 'Не нашла точного совпадения. Выберите клиента из списка.', 'needs_input', {
+      step: 'client', candidates: clients.map(({ id, fullName }) => ({ id, fullName })),
+      ...(workoutTextProvided(pendingTranscript) ? { transcript: pendingTranscript } : {}),
+    })
+  }
   if (!selectedClient) {
     return workoutAction('Уточните клиента', 'Для кого записать тренировку? Напишите имя или фамилию клиента.', 'needs_input', {
       step: 'client',
@@ -754,10 +764,10 @@ export async function runAssistantTurn(authorization: string, command: Assistant
     return persistAssistantResponse(service, command.conversationId, turnId, result)
   }
 
-  const { data: clients, error: clientsError } = await service.from('clients')
-    .select('id,full_name,goal,age_years,height_cm,gender').eq('trainer_id', user.id).is('archived_at', null).order('full_name').limit(50)
-  if (clientsError) throw new HttpError(503, 'context_unavailable')
-  const clientRows = clientContextRows(clients)
+  // Use the same actor-scoped source as the Clients screen. A direct
+  // clients.trainer_id filter misses clients connected through
+  // client_trainers and also loses the trainer-specific alias.
+  const clientRows = await loadAssistantClientContext(actorClient)
   const { data: rows, error: historyError } = await service.from('assistant_messages')
     .select('author,content,action').eq('conversation_id', command.conversationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20)
   if (historyError) throw new HttpError(503, 'history_unavailable')

@@ -17,6 +17,7 @@ function runPolicy(resourceChanges, options = {}) {
       complete: true,
       errored: false,
       resource_changes: resourceChanges,
+      planned_values: options.plannedValues,
     }),
   )
 
@@ -29,6 +30,9 @@ function runPolicy(resourceChanges, options = {}) {
       ...(options.allowPublicApi === true ? ['--allow-public-api'] : []),
       ...(options.automaticStageUpdate === true
         ? ['--automatic-stage-update']
+        : []),
+      ...(options.allowPushPipelineBootstrap === true
+        ? ['--allow-push-pipeline-bootstrap']
         : []),
     ],
     { encoding: 'utf8' },
@@ -69,6 +73,38 @@ describe('Yandex Terraform plan policy', () => {
     assert.equal(result.status, 0)
   })
 
+  test('accepts enabling a stage-only route on the existing migration runner', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_serverless_container.migration[0]',
+          change: {
+            actions: ['update'],
+            before: {
+              memory: 512,
+              cores: 1,
+              image: [{ environment: { APP_ENV: 'stage' }, url: 'old' }],
+            },
+            after: {
+              memory: 512,
+              cores: 1,
+              image: [{
+                environment: {
+                  APP_ENV: 'stage',
+                  STAGE_TENANT_MIGRATION_ENABLED: 'true',
+                },
+                url: 'new',
+              }],
+            },
+          },
+        },
+      ],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(result.status, 0)
+  })
+
   test('blocks an automatic paid resource creation', () => {
     const result = runPolicy(
       [
@@ -85,6 +121,146 @@ describe('Yandex Terraform plan policy', () => {
       result.stderr,
       /Automatic stage deploy contains new or cost-sensitive infrastructure changes/,
     )
+  })
+
+  test('accepts only the explicitly approved bounded push pipeline bootstrap', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_serverless_container.push_dispatcher',
+          change: {
+            actions: ['create'],
+            after: {
+              memory: 512,
+              cores: 1,
+              core_fraction: 100,
+              concurrency: 1,
+              execution_timeout: '60s',
+              provision_policy: [],
+            },
+          },
+        },
+        {
+          address: 'yandex_function_trigger.push_dispatcher_timer',
+          change: {
+            actions: ['create'],
+            after: {
+              timer: [{
+                cron_expression: '* * * * ? *',
+                payload: 'sync-push-notifications',
+              }],
+              container: [{
+                path: '/internal/push/dispatch',
+                retry_attempts: '1',
+                retry_interval: '10',
+              }],
+            },
+          },
+        },
+        {
+          address: 'yandex_lockbox_secret_iam_member.push_dispatcher_connection_secret_reader',
+          change: {
+            actions: ['create'],
+            after: {
+              member: null,
+              role: 'lockbox.payloadViewer',
+            },
+            after_unknown: { member: true },
+          },
+        },
+        {
+          address: 'yandex_lockbox_secret_iam_member.push_dispatcher_transport_secret_reader',
+          change: {
+            actions: ['create'],
+            after: {
+              member: null,
+              role: 'lockbox.payloadViewer',
+            },
+            after_unknown: { member: true },
+          },
+        },
+        {
+          address: 'yandex_container_registry_iam_binding.api_image_puller',
+          change: {
+            actions: ['update'],
+            after: {
+              members: [
+                'serviceAccount:api',
+                'serviceAccount:migration',
+                'serviceAccount:pushdispatcher',
+              ],
+              role: 'container-registry.images.puller',
+            },
+          },
+        },
+        {
+          address: 'yandex_serverless_container_iam_binding.push_dispatcher_invocation',
+          change: {
+            actions: ['create'],
+            after: {
+              members: ['serviceAccount:deployer'],
+              role: 'serverless.containers.invoker',
+            },
+          },
+        },
+      ],
+      {
+        automaticStageUpdate: true,
+        allowPushPipelineBootstrap: true,
+      },
+    )
+
+    assert.equal(result.status, 0)
+    assert.match(result.stdout, /Push pipeline bootstrap cost estimate/)
+    assert.match(result.stdout, /about 0–389 RUB\/month/)
+    assert.match(result.stdout, /approve_push_pipeline=true/)
+  })
+
+  test('rejects a broader computed push dispatcher Lockbox role', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_lockbox_secret_iam_member.push_dispatcher_connection_secret_reader',
+        change: {
+          actions: ['create'],
+          after: {
+            member: null,
+            role: 'lockbox.editor',
+          },
+          after_unknown: { member: true },
+        },
+      }],
+      {
+        automaticStageUpdate: true,
+        allowPushPipelineBootstrap: true,
+      },
+    )
+
+    assert.notEqual(result.status, 0)
+  })
+
+  test('rejects an oversized push dispatcher even with bootstrap approval', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_serverless_container.push_dispatcher',
+        change: {
+          actions: ['create'],
+          after: {
+            memory: 2048,
+            cores: 1,
+            core_fraction: 100,
+            concurrency: 1,
+            execution_timeout: '60s',
+            provision_policy: [],
+          },
+        },
+      }],
+      {
+        automaticStageUpdate: true,
+        allowPushPipelineBootstrap: true,
+      },
+    )
+
+    assert.notEqual(result.status, 0)
   })
 
   test('blocks an automatic database resize', () => {
@@ -113,6 +289,231 @@ describe('Yandex Terraform plan policy', () => {
       result.stderr,
       /yandex_mdb_postgresql_cluster_v2\.fit \[config, description\]/,
     )
+  })
+
+  test('allows the optional app-feedback Lockbox grant automatically', () => {
+    const result = runPolicy(
+      [{
+        address:
+          'yandex_lockbox_secret_iam_member.push_dispatcher_app_feedback_integrations_reader[0]',
+        change: {
+          actions: ['create'],
+          after: { member: null, role: 'lockbox.payloadViewer' },
+          after_unknown: { member: true },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(result.status, 0)
+  })
+
+  test('allows only the existing push dispatcher pull grant and trigger description automatically', () => {
+    const dispatcherMember = 'serviceAccount:dispatcher123'
+    const timer = [{ cron_expression: '* * * * ? *', payload: 'sync-push-notifications' }]
+    const container = [{
+      path: '/internal/push/dispatch',
+      retry_attempts: 1,
+      retry_interval: '10s',
+    }]
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_serverless_container.push_dispatcher',
+          change: {
+            actions: ['update'],
+            before: { service_account_id: 'dispatcher123', image: [{ url: 'old' }] },
+            after: { service_account_id: 'dispatcher123', image: [{ url: 'new' }] },
+          },
+        },
+        {
+          address: 'yandex_container_registry_iam_binding.api_image_puller',
+          change: {
+            actions: ['update'],
+            before: {
+              id: 'registry/container-registry.images.puller',
+              role: 'container-registry.images.puller',
+              members: ['serviceAccount:api123', 'serviceAccount:migration123'],
+            },
+            after: {
+              id: null,
+              role: 'container-registry.images.puller',
+              members: ['serviceAccount:api123', 'serviceAccount:migration123', dispatcherMember],
+            },
+            after_unknown: { id: true },
+          },
+        },
+        {
+          address: 'yandex_function_trigger.push_dispatcher_timer',
+          change: {
+            actions: ['update'],
+            before: {
+              description: 'Run the private Fit push producer and dispatcher every minute',
+              timer,
+              container,
+            },
+            after: {
+              description: 'Run private Fit push and app-feedback delivery every minute',
+              timer,
+              container,
+            },
+          },
+        },
+      ],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(result.status, 0)
+  })
+
+  test('allows delayed dispatcher pull grant propagation when the container is unchanged', () => {
+    const dispatcherMember = 'serviceAccount:dispatcher123'
+    const registryChange = {
+      address: 'yandex_container_registry_iam_binding.api_image_puller',
+      change: {
+        actions: ['update'],
+        before: {
+          id: 'registry/container-registry.images.puller',
+          role: 'container-registry.images.puller',
+          members: ['serviceAccount:api123', 'serviceAccount:migration123'],
+        },
+        after: {
+          id: null,
+          role: 'container-registry.images.puller',
+          members: ['serviceAccount:api123', 'serviceAccount:migration123', dispatcherMember],
+        },
+        after_unknown: { id: true },
+      },
+    }
+    const result = runPolicy(
+      [registryChange],
+      {
+        automaticStageUpdate: true,
+        plannedValues: {
+          root_module: {
+            resources: [{
+              address: 'yandex_serverless_container.push_dispatcher',
+              values: { service_account_id: 'dispatcher123' },
+            }],
+          },
+        },
+      },
+    )
+
+    assert.equal(result.status, 0)
+
+    const unexpectedResult = runPolicy(
+      [{
+        ...registryChange,
+        change: {
+          ...registryChange.change,
+          after: {
+            ...registryChange.change.after,
+            members: [
+              'serviceAccount:api123',
+              'serviceAccount:migration123',
+              'serviceAccount:unexpected123',
+            ],
+          },
+        },
+      }],
+      {
+        automaticStageUpdate: true,
+        plannedValues: {
+          root_module: {
+            resources: [{
+              address: 'yandex_serverless_container.push_dispatcher',
+              values: { service_account_id: 'dispatcher123' },
+            }],
+          },
+        },
+      },
+    )
+
+    assert.notEqual(unexpectedResult.status, 0)
+  })
+
+  test('blocks a registry grant for any service account other than the dispatcher', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_serverless_container.push_dispatcher',
+          change: {
+            actions: ['update'],
+            before: { service_account_id: 'dispatcher123' },
+            after: { service_account_id: 'dispatcher123' },
+          },
+        },
+        {
+          address: 'yandex_container_registry_iam_binding.api_image_puller',
+          change: {
+            actions: ['update'],
+            before: {
+              role: 'container-registry.images.puller',
+              members: ['serviceAccount:api123', 'serviceAccount:migration123'],
+            },
+            after: {
+              role: 'container-registry.images.puller',
+              members: [
+                'serviceAccount:api123',
+                'serviceAccount:migration123',
+                'serviceAccount:unexpected123',
+              ],
+            },
+          },
+        },
+      ],
+      { automaticStageUpdate: true },
+    )
+
+    assert.notEqual(result.status, 0)
+  })
+
+  test('blocks functional changes hidden behind a trigger description update', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_function_trigger.push_dispatcher_timer',
+        change: {
+          actions: ['update'],
+          before: {
+            description: 'Run the private Fit push producer and dispatcher every minute',
+            timer: [{ cron_expression: '* * * * ? *' }],
+          },
+          after: {
+            description: 'Run private Fit push and app-feedback delivery every minute',
+            timer: [{ cron_expression: '*/10 * * * ? *' }],
+          },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.notEqual(result.status, 0)
+  })
+
+  test('blocks a deferred DataLens bootstrap automatically', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_mdb_postgresql_cluster_v2.fit',
+          change: {
+            actions: ['update'],
+            before: { config: [{ access: [{ data_lens: false }] }] },
+            after: { config: [{ access: [{ data_lens: true }] }] },
+          },
+        },
+        {
+          address: 'yandex_mdb_postgresql_user.datalens',
+          change: {
+            actions: ['create'],
+            after: { name: 'fit_datalens' },
+          },
+        },
+      ],
+      { automaticStageUpdate: true },
+    )
+
+    assert.notEqual(result.status, 0)
   })
 
   test('blocks an automatic Serverless Container resize', () => {

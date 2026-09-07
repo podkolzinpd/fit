@@ -98,6 +98,37 @@ test('форма: короткая беговая фраза создаёт ре
   await expect(page.getByLabel('Отдых между подходами, с')).toHaveValue('90')
 })
 
+test('гребной тренажёр использует темп на 500 м и частоту гребков', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+
+  await page.goto('/workouts/new')
+  await selectClient(page, 'Анна Смирнова')
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await page.getByLabel('Поиск упражнения').fill('Гребной тренажёр')
+  await page.getByRole('button', { name: 'Выбрать: Гребной тренажёр', exact: true }).click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+
+  await page.getByLabel('Время, подход 1').fill('5:08')
+  await expect(page.getByLabel('Единица расстояния, подход 1')).toHaveValue('m')
+  await page.getByLabel('Расстояние, подход 1').fill('500')
+  await page.getByLabel('Гребков в минуту').fill('30')
+  await page.getByLabel('Гребков в минуту').press('Tab')
+
+  await expect(page.getByLabel('Время, подход 1')).toHaveValue('5:08')
+  await expect(page.getByLabel('Расстояние, подход 1')).toHaveValue('500')
+  await expect(page.getByText('Темп 5:08/500 м')).toBeVisible()
+  await expect(page.getByLabel('Гребков в минуту')).toHaveValue('30')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.setViewportSize({ width: 430, height: 932 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})
+
 test('стартовый экран показывает точный результат автоматического распознавания до сохранения', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
@@ -133,6 +164,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByLabel('Рост, см').fill('170')
   await page.getByLabel('Начальный вес, кг').fill('61.5')
   await page.getByLabel('Цель').fill('Стать сильнее')
+  const introduction = page.getByRole('button', { name: 'Понятно', exact: true })
+  if (await introduction.isVisible()) await introduction.click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Анна Тестова' })).toBeVisible()
   const clientUrl = page.url()
@@ -155,10 +188,10 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await expect(page.getByRole('heading', { name: 'Тип тренировки' })).toBeVisible()
   await page.getByRole('button', { name: /^Силовая/ }).click()
-  await expect(page.getByRole('button', { name: /Присед со штангой/ }).first()).toBeVisible()
+  await expect(page.locator('.picker-item-technique').first()).toBeVisible()
   const firstExerciseImage = page.locator('.picker-list .exercise-image').first()
   await expect(firstExerciseImage).toBeVisible()
-  await expect(firstExerciseImage.locator('img')).toHaveCSS('object-fit', 'contain')
+  await expect(firstExerciseImage.locator('img').first()).toHaveCSS('object-fit', 'contain')
   const firstExerciseImageBox = await firstExerciseImage.boundingBox()
   expect(firstExerciseImageBox?.width).toBe(firstExerciseImageBox?.height)
   expect(firstExerciseImageBox?.width).toBeGreaterThanOrEqual(48)
@@ -166,21 +199,36 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // Под визуальным контролем — search-first хром пикера.
   await expect(page).toHaveScreenshot('exercise-picker-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
   // Группа → мышца → оборудование собраны в одном компактном фильтре.
-  await page.getByRole('button', { name: 'Фильтры' }).click()
+  await page.getByRole('button', { name: 'Фильтры', exact: true }).click()
   await page.getByLabel('Группа мышц').selectOption('legs')
   await page.getByLabel('Мышца').selectOption('Передняя поверхность бедра')
+  await expect(page.getByLabel('Настройки фильтров')).toBeVisible()
   await expect(page.getByLabel('Оборудование')).toBeVisible()
   await expect(page.getByLabel('Оборудование')).toContainText('Штанга')
-  await expect(page).toHaveScreenshot('exercise-picker-equipment-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
+  await expect(page.getByRole('button', { name: /^Показать \d+ упражн/ })).toBeVisible()
   await page.getByRole('button', { name: 'Сбросить' }).click()
-  await page.getByRole('button', { name: 'Фильтры' }).click()
+  await page.getByLabel('Настройки фильтров').getByRole('button', { name: 'Закрыть фильтры' }).click()
   await page.getByLabel('Поиск упражнения').fill('Болгарский')
-  await expect(page.getByText(/\d+ упражнени(?:е|я|й)/)).toBeVisible()
+  await expect(page.getByText(/Найдено: \d+/)).toBeVisible()
   await expect(page.getByLabel('Группа мышц')).toBeHidden()
-  await expect(page).toHaveScreenshot('exercise-picker-search-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.05, mask: [page.locator('.picker-list')] })
-  await page.getByRole('button', { name: /Болгарский присед/ }).click()
+  // Количество найденных карточек меняется вместе с каталогом и сдвигает
+  // bottom sheet по высоте. Визуальные baseline списка живут в ui-visual;
+  // здесь проверяем поведение и отсутствие горизонтального переполнения.
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
+  await expect(page.getByRole('button', { name: 'Очистить поиск' })).toBeVisible()
+  await page.getByRole('button', { name: 'Проиграть технику: Болгарский сплит-присед со штангой', exact: true }).click()
+  await expect(page.locator('.picker-item.playing video')).toBeVisible()
+  await page.getByRole('button', { name: 'Открыть технику: Болгарский сплит-присед со штангой', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Техника' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Болгарский сплит-присед со штангой' })).toBeVisible()
+  await expect(page.locator('.picker-technique-view .exercise-image-technique')).toBeVisible()
+  await expect(page.getByText('Как выполнять')).toBeVisible()
+  await expect(page).toHaveScreenshot('exercise-picker-technique-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.05, mask: [page.locator('.picker-technique-view .exercise-image-technique')] })
+  await page.getByRole('button', { name: 'Назад к выбору' }).click()
+  await expect(page.getByLabel('Поиск упражнения')).toHaveValue('Болгарский')
+  await page.getByRole('button', { name: 'Выбрать: Болгарский сплит-присед со штангой', exact: true }).click()
   await expect(page.getByText('Выбрано: 1')).toBeVisible()
-  await expect(page).toHaveScreenshot('exercise-picker-selected-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.05, mask: [page.locator('.picker-list')] })
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await expect(page.getByRole('button', { name: '＋ Упражнение' })).toBeVisible()
   await page.getByLabel('Вес, подход 1').fill('40')
@@ -209,16 +257,20 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.live-set-table')).toHaveCount(1)
   await expect(page.locator('.live-set-table > .live-set')).toHaveCount(1)
   await expect(page.locator('.live-set-table > .live-set-compact')).toHaveCount(1)
-  const compactInputAction = page.getByRole('button', { name: 'Ввести подход 2' })
+  const compactInputAction = page.getByRole('button', { name: 'Заполнить подход 2' })
   await expect(compactInputAction).toBeVisible()
+  await expect(compactInputAction).toContainText('План 35 кг × 12 повт.')
+  await expect(compactInputAction).toContainText('Заполнить')
   const compactActionStyle = await compactInputAction.evaluate((element) => {
     const style = getComputedStyle(element)
-    return { backgroundColor: style.backgroundColor, color: style.color, height: element.getBoundingClientRect().height }
+    const box = element.getBoundingClientRect()
+    return { backgroundColor: style.backgroundColor, color: style.color, height: box.height, width: box.width }
   })
-  expect(compactActionStyle.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+  expect(compactActionStyle.backgroundColor).toBe('rgba(0, 0, 0, 0)')
   const liveForeground = await page.locator('.phone-frame').evaluate((element) => getComputedStyle(element).color)
   expect(compactActionStyle.color).toBe(liveForeground)
   expect(compactActionStyle.height).toBeGreaterThanOrEqual(44)
+  expect(compactActionStyle.width).toBeGreaterThan(200)
   const addSetBackground = await page.getByRole('button', { name: '＋ Подход' }).evaluate((element) => getComputedStyle(element).backgroundColor)
   expect(addSetBackground).toBe('rgba(0, 0, 0, 0)')
   // Факт сразу начинается с плановых значений; тренер правит число напрямую.
@@ -253,11 +305,11 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // строка сворачивается, но показывает только что сохранённые числа.
   await page.getByLabel('Фактический вес').first().fill('37.5')
   await page.getByLabel('Фактические повторы').first().fill('11')
-  await page.getByRole('button', { name: 'Ввести подход 3' }).click()
+  await page.getByRole('button', { name: 'Заполнить подход 3' }).click()
   await expect(page.locator('.live-set-compact.upcoming')).toContainText('Введено 37.5 кг × 11 повт.')
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Берпи')
-  await page.getByRole('button', { name: /^Берпи/ }).click()
+  await page.getByRole('button', { name: /^Добавить: Берпи/ }).click()
   await expect(page.getByRole('heading', { name: 'Берпи' })).toBeVisible()
   // Есть незавершённые подходы → inline-подтверждение частичного завершения.
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
@@ -281,21 +333,23 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.workout-fact-summary')).toContainText('383 кг')
 
   // Завершённую тренировку можно исправить без возврата в live: редактор
-  // открывает сохранённый факт; сохранение дополняет все подходы и статус
-  // возвращается к полностью завершённой тренировке.
+  // открывает только сохранённый факт, не подтверждая оставшийся план.
   await page.getByRole('link', { name: 'Изменить результат' }).click()
   await expect(page.getByLabel('Фактический вес, подход 1')).toHaveValue('42.5')
+  await expect(page.locator('.planned-exercise')).toHaveCount(1)
+  await expect(page.getByLabel(/Фактический вес, подход/)).toHaveCount(1)
   await page.getByLabel('Фактический вес, подход 1').fill('45')
   await page.getByRole('button', { name: 'Сохранить изменения' }).click()
-  await expect(page.locator('.workout-detail-page .badge.done')).toHaveText('Готово')
+  await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
   await expect(page.locator('.completed-set-summary').filter({ hasText: /45 кг × 9/ }).first()).toBeVisible()
 
-  // «Назад» с завершённой тренировки ведёт в расписание (все запланированные).
+  // Тренировка создана из карточки клиента: после Live и правки результата
+  // «Назад» возвращает к этому клиенту, не в расписание и не в редактор.
   await page.locator('.page-back').click()
-  await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
+  await expect(page).toHaveURL(clientUrl)
+  await expect(page.getByRole('heading', { name: trainerAlias })).toBeVisible()
 
   // После завершения тренировки статистика клиента обновлена.
-  await page.goto(clientUrl)
   await expect(page.locator('.client-detail-activity')).toContainText('1 тренировка')
   await expect(page.locator('.client-detail-activity')).toContainText('100%')
   await expect(page.locator('.client-detail-vitals')).toContainText('ИМТ')
@@ -308,9 +362,9 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await expect(page.getByText('Последние у клиента')).toBeVisible()
   await expect(page.getByText('Разминка и мобилити')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /Болгарский присед/ })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Проиграть технику: Болгарский сплит-присед со штангой', exact: true })).toHaveCount(1)
   await page.getByLabel('Поиск упражнения').fill('Болгарский')
-  await page.getByRole('button', { name: /Болгарский присед/ }).click()
+  await page.getByRole('button', { name: 'Выбрать: Болгарский сплит-присед со штангой', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await expect(page.getByLabel('Вес, подход 1')).toHaveValue('45')
   await expect(page.getByLabel('Повторы, подход 1')).toHaveValue('9')
@@ -322,19 +376,22 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // переход туда-обратно не должен ронять приложение (регресс e.filter).
   await page.getByRole('link', { name: 'История тренировок', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Тренировки клиента' })).toBeVisible()
+  const workoutHistoryUrl = page.url()
+  await page.getByRole('status').filter({ hasText: 'История по датам' }).getByRole('button', { name: 'Понятно' }).click()
   await expect(page.locator('.card').first()).toBeVisible()
   // На карточке истории — список упражнений (а не группы мышц) и тоннаж.
-  await expect(page.locator('.cards .card').first()).toContainText('Болгарский присед')
+  await expect(page.locator('.cards .card').first()).toContainText('Болгарский сплит-присед')
   await expect(page.locator('.cards .card').first()).toContainText('45 кг × 9 повт.')
   const personalRecordCard = page.locator('.cards .card').first()
   await expect(personalRecordCard).toHaveClass(/has-pr/)
   await expect(personalRecordCard.locator('.workout-pr-badge')).toHaveText('Личный рекорд')
   await expect(personalRecordCard.locator('[data-icon="record"]')).toBeVisible()
-  await expect(page.locator('.card-meta').first()).toContainText('1.2 т')
+  // Только исправленный подтверждённый подход: 45 × 9 = 405 кг.
+  await expect(page.locator('.card-meta').first()).toContainText('405 кг')
   await page.locator('.card').first().click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   // Заходим в аналитику упражнения и возвращаемся: «назад» с упражнения ведёт
-  // на тренировку, «назад» с тренировки — в расписание (без петли).
+  // на тренировку, «назад» с тренировки — в исходную историю (без петли).
   await page.locator('.exercise-history-link').first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   // После одной проведённой тренировки статистика показывает текущий результат.
@@ -345,7 +402,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.locator('.page-back').click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.locator('.page-back').click()
-  await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
+  await expect(page).toHaveURL(workoutHistoryUrl)
+  await expect(page.getByRole('heading', { name: 'Тренировки клиента' })).toBeVisible()
 
   // Прогресс открывается из карточки клиента, без отдельного списка-посредника.
   await page.goto(clientUrl)
@@ -387,7 +445,7 @@ test('live: планка вводится в секундах, таймер за
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
-  await page.getByRole('button', { name: /^Планка/ }).click()
+  await page.getByRole('button', { name: 'Выбрать: Планка', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   // Планка — точное время в секундах, а не вес или минуты.
   await expect(page.getByLabel('Время, сек, подход 1')).toBeVisible()
@@ -437,7 +495,7 @@ test('план: порядок упражнений меняется в отде
     await page.getByRole('button', { name: index === 0 ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
     if (index === 0) await page.getByRole('button', { name: /^Силовая/ }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
-    await page.getByRole('button', { name: new RegExp(q) }).first().click()
+    await page.locator('.picker-select-mark').first().click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
   // В обычном режиме стрелок нет: порядок включается из меню упражнения.
@@ -453,7 +511,7 @@ test('план: порядок упражнений меняется в отде
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   // В просмотре первым идёт «Жим лёжа».
-  await expect(page.locator('.cards .exercise strong').first()).toContainText('Жим лёжа')
+  await expect(page.locator('.cards .exercise strong').first()).toContainText('Жим штанги лёжа')
 })
 
 test('live: порядок упражнений меняется в отдельном режиме', async ({ page }) => {
@@ -479,7 +537,7 @@ test('live: порядок упражнений меняется в отдель
     await page.getByRole('button', { name: index === 0 ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
     if (index === 0) await page.getByRole('button', { name: /^Силовая/ }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
-    await page.getByRole('button', { name: new RegExp(q) }).first().click()
+    await page.locator('.picker-select-mark').first().click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
     await page.getByLabel('Вес, подход 1').nth(index).fill(index === 0 ? '70' : '50')
     await page.getByLabel('Повторы, подход 1').nth(index).fill(index === 0 ? '8' : '10')
@@ -494,7 +552,7 @@ test('live: порядок упражнений меняется в отдель
   // без таблицы подходов и RPE.
   const upcomingExercise = page.locator('.live-exercise-upcoming')
   await expect(upcomingExercise).toHaveCount(1)
-  await expect(upcomingExercise).toContainText('Жим лёжа')
+  await expect(upcomingExercise).toContainText('Жим штанги лёжа')
   await expect(upcomingExercise).toContainText('1 подход')
   await expect(upcomingExercise).toContainText('План: 50 кг × 10 повт.')
   await expect(upcomingExercise.locator('.workout-set-table')).toHaveCount(0)
@@ -514,7 +572,7 @@ test('live: порядок упражнений меняется в отдель
   await expect(page.locator('.live-exercise-collapsed')).toHaveCount(1)
   await expect(page.locator('.live-exercise.current .workout-set-table')).toHaveCount(1)
   await page.locator('.live-exercise.current').getByRole('button', { name: 'Вверх' }).click()
-  await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим лёжа')
+  await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим штанги лёжа')
 })
 
 test('замена упражнения: в форме плана и в live', async ({ page }) => {
@@ -540,7 +598,7 @@ test('замена упражнения: в форме плана и в live', a
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Присед со штангой')
-  await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
+  await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('50')
   await page.getByLabel('Повторы, подход 1').fill('10')
@@ -550,8 +608,8 @@ test('замена упражнения: в форме плана и в live', a
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
   await page.getByRole('menuitem', { name: 'Заменить' }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
-  await page.getByRole('button', { name: /Жим лёжа/ }).first().click()
-  await expect(page.locator('.exercise header strong').first()).toContainText('Жим лёжа')
+  await page.locator('[data-exercise-ref="bench-press"]').click()
+  await expect(page.locator('.exercise header strong').first()).toContainText('Жим штанги лёжа')
   await expect(page.getByLabel('Вес, подход 1')).toHaveValue('50')
 
   await page.getByRole('button', { name: 'Сохранить' }).click()
@@ -560,11 +618,11 @@ test('замена упражнения: в форме плана и в live', a
   // Live: заменяем нетронутое упражнение на «Тяга верхнего блока».
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
-  await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим лёжа')
+  await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим штанги лёжа')
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
   await page.getByRole('menuitem', { name: 'Заменить' }).click()
   await page.getByLabel('Поиск упражнения').fill('Тяга верхнего блока')
-  await page.getByRole('button', { name: /Тяга верхнего блока/ }).first().click()
+  await page.getByRole('button', { name: /Добавить: Тяга верхнего блока/ }).first().click()
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Тяга верхнего блока')
   // После подтверждения меню остаётся для редких действий, но «Заменить»
   // пропадает: начатое упражнение нельзя подменить другим.
@@ -599,7 +657,7 @@ test('карточка упражнения: шапка с оборудован�
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('тяга штанги в наклоне (штанга)')
-  await page.getByRole('button', { name: /Тяга штанги в наклоне \(Штанга\)/ }).first().click()
+  await page.locator('.picker-item').filter({ hasText: 'Тяга штанги в наклоне' }).first().locator('.picker-select-mark').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
@@ -626,6 +684,8 @@ test('карточка упражнения: шапка с оборудован�
   // демонстрации техники.
   const techniqueImage = page.locator('.exercise-image-technique')
   await expect(techniqueImage.locator('img')).toHaveCount(2)
+  await expect(techniqueImage.locator('img').first()).toHaveCSS('position', 'absolute')
+  await expect(techniqueImage.locator('img').first()).toHaveCSS('object-fit', 'contain')
   await expect(techniqueImage).toHaveClass(/exercise-image-motion/)
   await expect(techniqueImage.locator('.exercise-image-frame-end')).not.toHaveCSS('animation-name', 'none')
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -668,7 +728,7 @@ test('план: два упражнения объединяются в супе
     await page.getByRole('button', { name: index === 0 ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
     if (index === 0) await page.getByRole('button', { name: /^Силовая/ }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
-    await page.getByRole('button', { name: new RegExp(q) }).first().click()
+    await page.locator('.picker-select-mark').first().click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
   // Объединяем первое упражнение со следующим в блок → появляется селектор типа.
@@ -825,7 +885,7 @@ test('расписание: тренировка без времени оста�
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
-  await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
+  await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
@@ -878,7 +938,7 @@ test('расписание: создание тренировки из расп�
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
-  await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
+  await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
@@ -930,7 +990,7 @@ test('расписание: карточка события — время, им
     await page.getByRole('button', { name: index === 0 ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
     if (index === 0) await page.getByRole('button', { name: /^Силовая/ }).click()
     await page.getByLabel('Поиск упражнения').fill(q)
-    await page.locator('.picker-item').first().click()
+    await page.locator('.picker-select-mark').first().click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
   await page.getByRole('button', { name: 'Сохранить' }).click()
@@ -979,7 +1039,7 @@ test('комментарий тренера к упражнению: план �
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
-  await page.getByRole('button', { name: /Присед со штангой/ }).first().click()
+  await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('90')
   await page.getByLabel('Повторы, подход 1').fill('8')
@@ -1053,7 +1113,7 @@ test('live: удаление подхода и наследование факт
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
-  await page.locator('.picker-item').first().click()
+  await page.locator('.picker-select-mark').first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('90')
   await page.getByLabel('Повторы, подход 1').fill('8')
@@ -1141,7 +1201,7 @@ test('live: «Готово» без ввода факта — подход сч�
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
-  await page.locator('.picker-item').first().click()
+  await page.locator('.picker-select-mark').first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('100')
   await page.getByLabel('Повторы, подход 1').fill('5')

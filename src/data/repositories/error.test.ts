@@ -32,6 +32,13 @@ describe('repositoryError', () => {
     expect(error.message).toBe('Показатель с таким названием уже существует.')
   })
 
+  it('explains a duplicate custom exercise without exposing database details', () => {
+    const error = repositoryError({ code: '23505', message: 'duplicate key value violates unique constraint "custom_exercises_active_author_name_uidx"' })
+
+    expect(error.code).toBe('custom_exercise_exists')
+    expect(error.message).toBe('Упражнение с таким названием уже существует.')
+  })
+
   it('explains an invalid invitation without exposing database details', () => {
     const error = repositoryError({ code: 'PT404', message: 'invitation_invalid' })
 
@@ -53,8 +60,11 @@ describe('repositoryError', () => {
     expect(error.message).toBe('Сначала отключите текущего тренера в профиле. Ваши тренировки и результаты сохранятся.')
   })
 
-  it('explains a legacy client migration conflict without exposing internals', () => {
-    const error = repositoryError({ code: 'PT409', message: 'client_requires_safe_migration' })
+  it.each([
+    { code: 'PT409', message: 'client_requires_safe_migration' },
+    { code: 'PT422', message: 'root_trainer_cannot_be_removed' },
+  ])('explains a legacy client migration conflict without exposing internals ($message)', (input) => {
+    const error = repositoryError(input)
 
     expect(error.code).toBe('client_requires_safe_migration')
     expect(error.message).toBe('Сейчас отключить тренера безопасно не получилось. Ваши данные не изменены. Попробуйте позже или напишите в поддержку.')
@@ -80,6 +90,23 @@ describe('repositoryError', () => {
 
     expect(error.code).toBe('23514')
     expect(error.message).toBe('В одном из подходов указано некорректное RPE. Выберите значение от 6 до 10 с шагом 0,5.')
+  })
+
+  it.each([
+    ['invalid_stage', 'invalid_stage', 'Проверьте этап: название — не более 120 символов, дата окончания — не раньше начала и не позже даты цели.'],
+    ['invalid_goal', 'invalid_goal', 'Проверьте цель: название должно содержать не более 200 символов.'],
+  ])('explains %s without exposing database details', (sourceMessage, code, message) => {
+    const error = repositoryError({ code: 'PT422', message: sourceMessage })
+
+    expect(error.code).toBe(code)
+    expect(error.message).toBe(message)
+  })
+
+  it('does not confuse an invalid goal criterion with an invalid goal title', () => {
+    const error = repositoryError({ code: 'PT422', message: 'invalid_goal_criterion' })
+
+    expect(error.code).toBe('PT422')
+    expect(error.message).toBe('Операцию нельзя выполнить с текущими данными.')
   })
 
   it('never exposes an unknown database message', () => {

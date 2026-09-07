@@ -1,0 +1,29 @@
+name: Diagnose Supabase auth
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_utc:
+        description: Start of the diagnostic window in ISO-8601 UTC
+        required: true
+        type: string
+      end_utc:
+        description: End of the diagnostic window in ISO-8601 UTC, at most 60 minutes later
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  auth-logs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Query sanitized auth aggregates
+        run: node scripts/query-supabase-auth-logs.mjs "$START_UTC" "$END_UTC"
+        env:
+          START_UTC: ${{ inputs.start_utc }}
+          END_UTC: ${{ inputs.end_utc }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}

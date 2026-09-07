@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from 'fastify'
+import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify'
 
 import {
   YandexIdentityRejectedError,
@@ -17,6 +17,9 @@ import {
   type StageDatabaseReaderAccessAction,
   type StageDatabaseReaderAccessManager,
 } from './db/stage-database-reader-access.js'
+import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
+import { TenantMigrationError } from './tenant-migration/engine.js'
+import type { StageTenantMigrationRunner } from './tenant-migration/stage-runner.js'
 
 interface PilotEnrollmentOptions {
   enroller: PilotEnroller
@@ -32,12 +35,42 @@ interface BuildMigrationAppOptions {
     sessionToken: string,
     clientId: string,
   ) => Promise<RuntimeDomainReadinessResult>
+  stageTenantMigration?: StageTenantMigrationRunner
   stageWorkoutFixture?: StageWorkoutFixtureLoader
 }
 
 const DATABASE_USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._@-]{0,62}$/
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const STAGE_TENANT_APPLY_CONFIRMATION = 'APPLY_TENANT_TO_YANDEX_STAGE'
+const STAGE_TENANT_ARTIFACT_LIMIT_BYTES = 3 * 1024 * 1024
+const SAFE_TENANT_MIGRATION_ERROR_PATTERN = /^[a-z0-9_.:-]{1,96}$/
+
+function readTenantMigrationPassphrase(
+  header: string | string[] | undefined,
+): string | undefined {
+  if (
+    typeof header !== 'string'
+    || header.length < 20
+    || header.length > 256
+  ) return undefined
+  return header
+}
+
+function tenantMigrationFailure(reply: FastifyReply, error: unknown) {
+  if (error instanceof TenantMigrationArtifactError) {
+    return reply.code(400).send({ status: 'tenant_migration_artifact_rejected' })
+  }
+  if (error instanceof TenantMigrationError) {
+    return reply.code(409).send({
+      status: 'tenant_migration_rejected',
+      code: SAFE_TENANT_MIGRATION_ERROR_PATTERN.test(error.code)
+        ? error.code
+        : 'unknown',
+    })
+  }
+  return reply.code(500).send({ status: 'tenant_migration_failed' })
+}
 
 function readDatabaseReaderAccessRequest(body: unknown): {
   action: StageDatabaseReaderAccessAction
@@ -143,6 +176,54 @@ export function buildMigrationApp(
         return reply.code(500).send({ status: 'database_access_failed' })
       }
     })
+  }
+
+  if (options.stageTenantMigration !== undefined) {
+    const tenantMigration = options.stageTenantMigration
+    const registerTenantMigrationRoute = (
+      path: '/stage/tenant-migration/dry-run' | '/stage/tenant-migration/apply',
+      apply: boolean,
+    ) => {
+      app.post(
+        path,
+        { bodyLimit: STAGE_TENANT_ARTIFACT_LIMIT_BYTES },
+        async (request, reply) => {
+          const passphrase = readTenantMigrationPassphrase(
+            request.headers['x-fit-tenant-migration-passphrase'],
+          )
+          if (passphrase === undefined) {
+            return reply.code(400).send({ status: 'invalid_request' })
+          }
+          if (
+            apply
+            && request.headers['x-fit-tenant-migration-confirmation']
+              !== STAGE_TENANT_APPLY_CONFIRMATION
+          ) {
+            return reply.code(403).send({ status: 'apply_not_confirmed' })
+          }
+
+          try {
+            const report = await tenantMigration.run(
+              request.body,
+              passphrase,
+              apply,
+            )
+            return {
+              status: apply
+                ? 'tenant_migration_applied'
+                : 'tenant_migration_dry_run',
+              tenantFingerprint: report.tenantFingerprint,
+              tables: report.tables,
+            }
+          } catch (error) {
+            return tenantMigrationFailure(reply, error)
+          }
+        },
+      )
+    }
+
+    registerTenantMigrationRoute('/stage/tenant-migration/dry-run', false)
+    registerTenantMigrationRoute('/stage/tenant-migration/apply', true)
   }
 
   if (options.pilotEnrollment !== undefined) {

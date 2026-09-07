@@ -1,18 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
-import { clientsRepository } from '../../data/repositories/clients.repository'
-import { exercisesRepository } from '../../data/repositories/exercises.repository'
-import { goalsRepository } from '../../data/repositories/goals.repository'
-import { progressRepository } from '../../data/repositories/progress.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import type { Client, ClientGoal, CustomMetric, ExerciseSnapshot, GoalCriterionMetric, GoalCriterionOperation, GoalStage, SaveGoalCriterionInput } from '../../shared/domain'
 import { GOAL_CRITERION_METRICS, GOAL_CRITERION_OPERATIONS, goalCriterionTargetLabel, validateGoalCriterionInput } from '../../shared/goal-criterion-rules'
 import { orderedStages, stageStatus } from '../../shared/goal-rules'
+import { GOAL_STAGE_TITLE_MAX_LENGTH, GOAL_TITLE_MAX_LENGTH, titleLengthValidation } from '../../shared/goal-title-limits'
 import { formatLocalDateShort, localDate, todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Field, Page, Switch, useConfirm } from '../../shared/ui'
 import { useExerciseCatalog } from '../exercises'
+import { selectableExercises } from '../exercises/selectable-exercises'
 import { MetricsManager } from '../progress/MetricsManager'
 
 const STATUS_LABEL: Record<string, string> = { done: 'завершён', current: 'идёт', upcoming: 'впереди' }
@@ -24,6 +23,7 @@ function confirmedCriteriaLabel(count: number): string {
 }
 
 export function GoalPage() {
+  const { clients: clientsRepository } = useDataBackend()
   const { clientId = '' } = useParams()
   const client = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
   return <GoalWorkspace client={client.data} loading={client.isLoading} error={client.error}
@@ -31,6 +31,7 @@ export function GoalPage() {
 }
 
 export function MyGoalPage() {
+  const { clients: clientsRepository } = useDataBackend()
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   return <GoalWorkspace client={mine.data} loading={mine.isLoading} error={mine.error}
     onRetry={() => void mine.refetch()} back="/me/progress" self />
@@ -44,6 +45,7 @@ function GoalWorkspace({ client, loading, error, onRetry, back, self = false }: 
   back: string
   self?: boolean
 }) {
+  const { goals: goalsRepository } = useDataBackend()
   const { actor } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -98,8 +100,13 @@ function CriterionEditor({ value, exercises, metrics, onChange, onRemove, onMana
       confirmationStatus: 'confirmed', position: value.position, regularityPeriod: metric === 'workout_regularity' ? 'week' : null,
       regularityMode: metric === 'workout_regularity' ? 'average' : null })
   }
+  const choices = selectableExercises(exercises)
+  // A saved goal may still reference a merged card: keep that exact option,
+  // never silently switch its historical metric to a different exercise.
+  const selected = exercises.find((exercise) => exercise.ref === value.exerciseRef && exercise.source === value.exerciseSource)
+  const withSelected = selected && !choices.includes(selected) ? [selected, ...choices] : choices
   const availableExercises = definition.family === 'cardio'
-    ? exercises.filter((exercise) => exercise.inputKind === 'distance' || exercise.inputKind === 'duration') : exercises
+    ? withSelected.filter((exercise) => exercise.inputKind === 'distance' || exercise.inputKind === 'duration') : withSelected
   return <section className="goal-criterion-item">
     <div className="goal-head"><strong>Критерий {(value.position ?? 0) + 1}</strong><button type="button" className="link danger" onClick={onRemove}>Удалить</button></div>
     <Field label="Показатель"><select value={value.metric} onChange={(event) => changeMetric(event.target.value as GoalCriterionMetric)}>{Object.entries(GOAL_CRITERION_METRICS).map(([metric, item]) => <option value={metric} key={metric}>{item.label}</option>)}</select></Field>
@@ -127,6 +134,12 @@ function GoalForm({ clientId, goal, initialTitle, onSaved, onCancel }: {
   onSaved: () => Promise<void>
   onCancel?: () => void
 }) {
+  const {
+    exercises: exercisesRepository,
+    goals: goalsRepository,
+    progress: progressRepository,
+  } = useDataBackend()
+  const titleCounterId = useId()
   const catalog = useExerciseCatalog()
   const queryClient = useQueryClient()
   const metrics = useQuery({ queryKey: ['progress-metrics', clientId], queryFn: () => progressRepository.listMetrics(clientId) })
@@ -150,7 +163,8 @@ function GoalForm({ clientId, goal, initialTitle, onSaved, onCancel }: {
     targetDate: goal?.targetDate ?? '',
   }
   const form = useForm<GoalFormValues>({ defaultValues: defaults })
-  const title = useWatch({ control: form.control, name: 'title' }).trim()
+  const titleValue = useWatch({ control: form.control, name: 'title' })
+  const title = titleValue.trim()
   const criterionNeedsReview = Boolean(existingCriteria.some((criterion) => criterion.confirmationStatus !== 'confirmed') || (existingCriteria.length && title !== goal?.title))
   const suggestion = useMutation({
     mutationFn: async () => {
@@ -183,7 +197,12 @@ function GoalForm({ clientId, goal, initialTitle, onSaved, onCancel }: {
     {!goal && <p className="muted">Оформите цель с датой и при желании настройте измеримый критерий.</p>}
     <Field label="Цель" error={form.formState.errors.title?.message}>
       <textarea rows={2} placeholder="Например: держать вес 59 кг"
-        {...form.register('title', { required: 'Введите цель' })} />
+        maxLength={GOAL_TITLE_MAX_LENGTH} aria-label="Цель" aria-describedby={titleCounterId}
+        {...form.register('title', {
+          required: 'Введите цель',
+          validate: (value) => titleLengthValidation(value, 'Цель', GOAL_TITLE_MAX_LENGTH),
+        })} />
+      <small id={titleCounterId} className="goal-title-counter">{titleValue.length}/{GOAL_TITLE_MAX_LENGTH}</small>
     </Field>
     <Field label="Дата достижения"><input type="date" {...form.register('targetDate')} /></Field>
     <section className="goal-criterion-form">
@@ -220,6 +239,7 @@ function GoalCreate({ clientId, initialTitle, onCreated }: {
 function GoalDetail({ goal, today, onChanged, onArchived }: {
   goal: ClientGoal; today: string; onChanged: () => Promise<void>; onArchived: () => Promise<void>
 }) {
+  const { goals: goalsRepository } = useDataBackend()
   const [editingGoal, setEditingGoal] = useState(false)
   const [addingStage, setAddingStage] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
@@ -267,6 +287,7 @@ function GoalDetail({ goal, today, onChanged, onArchived }: {
 }
 
 function StageRow({ stage, today, targetDate, onChanged }: { stage: GoalStage; today: string; targetDate: string | null; onChanged: () => Promise<void> }) {
+  const { goals: goalsRepository } = useDataBackend()
   const [editing, setEditing] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
   const remove = useMutation({ mutationFn: () => goalsRepository.deleteStage(stage.id), onSuccess: () => void onChanged() })
@@ -292,6 +313,8 @@ function StageForm({ goalId, stage, position, defaultStart, targetDate, onSaved,
   goalId: string; stage?: GoalStage; position: number; defaultStart: string; targetDate: string | null
   onSaved: () => Promise<void>; onCancel: () => void
 }) {
+  const { goals: goalsRepository } = useDataBackend()
+  const titleCounterId = useId()
   const form = useForm<{ title: string; startsOn: string; endsOn: string }>({
     defaultValues: {
       title: stage?.title ?? '', startsOn: stage?.startsOn ?? defaultStart, endsOn: stage?.endsOn ?? '',
@@ -304,9 +327,15 @@ function StageForm({ goalId, stage, position, defaultStart, targetDate, onSaved,
     }),
     onSuccess: () => void onSaved(),
   })
+  const titleValue = useWatch({ control: form.control, name: 'title' })
   return <form className="stack stage-form" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
     <Field label="Название этапа" error={form.formState.errors.title?.message}>
-      <input placeholder="Например: Сушка" {...form.register('title', { required: 'Введите название' })} />
+      <input placeholder="Например: Сушка" maxLength={GOAL_STAGE_TITLE_MAX_LENGTH} aria-label="Название этапа" aria-describedby={titleCounterId}
+        {...form.register('title', {
+          required: 'Введите название',
+          validate: (value) => titleLengthValidation(value, 'Название этапа', GOAL_STAGE_TITLE_MAX_LENGTH),
+        })} />
+      <small id={titleCounterId} className="goal-title-counter">{titleValue.length}/{GOAL_STAGE_TITLE_MAX_LENGTH}</small>
     </Field>
     <div className="split">
       <Field label="Начало" error={form.formState.errors.startsOn?.message}><input type="date" {...form.register('startsOn', { required: 'Дата' })} /></Field>

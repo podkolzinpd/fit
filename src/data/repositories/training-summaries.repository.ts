@@ -134,7 +134,9 @@ function metrics(value: Json): TrainingSummaryMetrics {
 }
 
 function fromInternal(
-  row: InternalRows[number],
+  row: Pick<InternalRows[number],
+    'id' | 'client_id' | 'period_start' | 'period_end' | 'trainer_summary'
+    | 'client_summary' | 'display_metrics' | 'generated_at' | 'version'>,
   publishedSourceIds: ReadonlySet<string>,
 ): TrainingSummary {
   return {
@@ -151,7 +153,16 @@ function fromInternal(
   }
 }
 
-function fromPublished(row: PublishedRows[number]): PublishedTrainingSummary {
+export function trainingSummaryFromRow(
+  row: Pick<InternalRows[number],
+    'id' | 'client_id' | 'period_start' | 'period_end' | 'trainer_summary'
+    | 'client_summary' | 'display_metrics' | 'generated_at' | 'version'>,
+  published: boolean,
+): TrainingSummary {
+  return fromInternal(row, published ? new Set([row.id]) : new Set())
+}
+
+export function publishedTrainingSummaryFromRow(row: PublishedRows[number]): PublishedTrainingSummary {
   return {
     id: row.id,
     sourceSummaryId: row.source_summary_id,
@@ -184,7 +195,7 @@ export const trainingSummariesRepository = {
   async listForClient(clientId: string): Promise<PublishedTrainingSummary[]> {
     const result = await trainingSummaryQueries.listPublished(clientId)
     if (result.error) throw repositoryError(result.error)
-    return result.data.map(fromPublished)
+    return result.data.map(publishedTrainingSummaryFromRow)
   },
   async generate(
     clientId: string,

@@ -3,6 +3,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { DatabaseConnection, DatabasePool } from './db/types.js'
 import type { PilotConnectionsResponse } from './connections.js'
 import { buildApp } from './app.js'
+import { AppFeedbackCommandError } from './app-feedback-command.js'
+import type { AppFeedbackDraft } from './app-feedback-request.js'
+import { AssistantStateError } from './assistant-state.js'
+import { PushNotificationCommandError } from './push-notifications-command.js'
+import type { PilotPushNotifications } from './pilot-push-notifications.js'
 import {
   YandexIdentityRejectedError,
   type YandexIdentityProvider,
@@ -11,13 +16,21 @@ import {
 import {
   YandexOAuthCodeRejectedError,
   type YandexOAuthCodeProvider,
+  YandexOAuthCodeUnavailableError,
 } from './auth/yandex-oauth-code.js'
 import {
   PilotAccessDeniedError,
   PilotSessionInvalidError,
 } from './db/yandex-pilot-transaction.js'
+import {
+  YandexAppSessionDeniedError,
+  YandexAppSessionInvalidError,
+} from './db/yandex-app-transaction.js'
 import type { PilotClientsResponse } from './clients.js'
 import type { PilotClientsReader } from './pilot-clients-reader.js'
+import type { PilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
+import type { PilotAssistantState } from './pilot-assistant-state.js'
+import type { PilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import { PilotConnectionCommandError } from './connection-commands.js'
@@ -30,6 +43,18 @@ import type {
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer, PilotSessionResponse } from './pilot-session.js'
+import type {
+  YandexAppSessionIssuer,
+  YandexAppSessionReader,
+  YandexAppSessionResponse,
+  YandexAppSessionRevoker,
+} from './yandex-app-session.js'
+import {
+  ExistingActorUnavailableError,
+  YandexAccountLinkError,
+  type ExistingActorProvider,
+  type YandexAccountLinker,
+} from './yandex-account-linking.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
 import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
 import type { PlannedWorkoutDraft } from './planned-workout-request.js'
@@ -40,6 +65,7 @@ import type { LegacyWorkoutParser } from './legacy-workout-parser.js'
 import type { PilotProgressData } from './progress-data.js'
 import type { PilotWorkoutParser } from './pilot-workout-parser.js'
 import type { PilotTrainingSummaries } from './training-summary.js'
+import type { VitalMediaSigner } from './vital-media.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -70,6 +96,57 @@ describe('health endpoint', () => {
       releaseId: 'api-tree-hash',
     })
     expect(response.headers['x-fit-release-id']).toBe('api-tree-hash')
+  })
+})
+
+describe('Vital exercise media', () => {
+  it('signs only reviewed paths for a valid read-write session', async () => {
+    const read = vi.fn().mockResolvedValue({})
+    const sign = vi.fn().mockResolvedValue('https://signed.example/vital')
+    const vitalMediaSigner: VitalMediaSigner = { sign }
+    const app = buildApp({
+      yandexAppSessionReader: { read },
+      vitalMediaSigner,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/exercise-media/sign',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { path: 'vital-pro/vital-barbell-squat-ex001.mp4' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ signedUrl: 'https://signed.example/vital' })
+    expect(read).toHaveBeenCalledWith('a'.repeat(43))
+    expect(sign).toHaveBeenCalledWith('vital-pro/vital-barbell-squat-ex001.mp4')
+  })
+
+  it('rejects invalid paths and read-only pilot sessions', async () => {
+    const app = buildApp({
+      yandexAppSessionReader: { read: vi.fn() },
+      vitalMediaSigner: { sign: vi.fn() },
+      logger: false,
+    })
+    apps.push(app)
+
+    const invalid = await app.inject({
+      method: 'POST',
+      url: '/v1/exercise-media/sign',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { path: 'vital-pro/../private.txt' },
+    })
+    const readOnly = await app.inject({
+      method: 'POST',
+      url: '/v1/exercise-media/sign',
+      headers: { 'x-fit-pilot-session': 'a'.repeat(43) },
+      payload: { path: 'vital-pro/vital-barbell-squat-ex001.mp4' },
+    })
+
+    expect(invalid.statusCode).toBe(400)
+    expect(readOnly.statusCode).toBe(403)
   })
 })
 
@@ -213,9 +290,29 @@ describe('native Yandex function contracts', () => {
 
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual({ items: [], unmatched: [] })
-    expect(parse).toHaveBeenCalledWith('s'.repeat(43), {
+    expect(parse).toHaveBeenCalledWith({
+      accessMode: 'read_only', token: 's'.repeat(43),
+    }, {
       text: 'присед', systemCatalog: [],
     })
+  })
+
+  it('uses the Yandex actor session for goal criteria suggestions', async () => {
+    const suggest = vi.fn().mockResolvedValue({ criteria: [], needsInput: [] })
+    const app = buildApp({ pilotWorkoutParser: { parse: vi.fn(), suggest }, logger: false })
+    apps.push(app)
+    const payload = { kind: 'goal_criteria', text: 'Бегать быстрее', systemCatalog: [], customMetrics: [] }
+
+    const response = await app.inject({
+      method: 'POST', url: '/v1/assistant/yandex/suggest-goal-criteria',
+      headers: { 'x-fit-session': 'a'.repeat(43) }, payload,
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ criteria: [], needsInput: [] })
+    expect(suggest).toHaveBeenCalledWith({
+      accessMode: 'read_write', token: 'a'.repeat(43),
+    }, payload)
   })
 
   it('generates and lists a goal-aware summary through the pilot session', async () => {
@@ -253,7 +350,9 @@ describe('native Yandex function contracts', () => {
       data: { id: 'summary-id', generated_at: '2026-08-26T12:00:00.000Z' },
       cached: false,
     })
-    expect(generate).toHaveBeenCalledWith('s'.repeat(43), {
+    expect(generate).toHaveBeenCalledWith({
+      accessMode: 'read_only', token: 's'.repeat(43),
+    }, {
       clientId: PROFILE_ID,
       periodStart: '2026-08-01',
       periodEnd: '2026-08-26',
@@ -261,6 +360,196 @@ describe('native Yandex function contracts', () => {
     })
     expect(listed.statusCode).toBe(200)
     expect(listed.json()).toEqual({ summaries: [{ id: 'summary-id' }] })
+  })
+
+  it('uses the read-write app session for Assistant dependencies without accepting both credentials', async () => {
+    const parse = vi.fn().mockResolvedValue({ items: [], unmatched: [] })
+    const list = vi.fn().mockResolvedValue([])
+    const app = buildApp({
+      pilotWorkoutParser: { parse },
+      pilotTrainingSummaryReader: { list },
+      logger: false,
+    })
+    apps.push(app)
+
+    const parsed = await app.inject({
+      method: 'POST',
+      url: '/v1/assistant/yandex/parse-workout',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { text: 'присед', systemCatalog: [] },
+    })
+    const listed = await app.inject({
+      method: 'GET',
+      url: `/v1/clients/${PROFILE_ID}/training-summaries`,
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+    })
+    const ambiguous = await app.inject({
+      method: 'GET',
+      url: `/v1/clients/${PROFILE_ID}/training-summaries`,
+      headers: {
+        'x-fit-session': 'a'.repeat(43),
+        'x-fit-pilot-session': 's'.repeat(43),
+      },
+    })
+
+    expect([parsed.statusCode, listed.statusCode, ambiguous.statusCode]).toEqual([200, 200, 401])
+    expect(parse).toHaveBeenCalledWith({
+      accessMode: 'read_write', token: 'a'.repeat(43),
+    }, { text: 'присед', systemCatalog: [] })
+    expect(list).toHaveBeenCalledWith({
+      accessMode: 'read_write', token: 'a'.repeat(43),
+    }, PROFILE_ID)
+  })
+
+  it('uses one read-write app session across the main domain contract', async () => {
+    const clients = buildClientsReader()
+    const connections = buildConnectionsReader()
+    const connectionCommands = buildConnectionsWriter()
+    const progress = buildProgressData()
+    const domain = buildDomainWriter()
+    const workouts = buildWorkoutsWriter()
+    const feedback = buildAppFeedbackWriter()
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotClientsReader: clients.pilotClientsReader,
+      pilotConnectionsReader: connections.pilotConnectionsReader,
+      pilotConnectionsWriter: connectionCommands.pilotConnectionsWriter,
+      pilotProgressData: progress.pilotProgressData,
+      pilotDomainWriter: domain.pilotDomainWriter,
+      pilotWorkoutsWriter: workouts.pilotWorkoutsWriter,
+      pilotAppFeedbackWriter: feedback.pilotAppFeedbackWriter,
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+    const token = 'a'.repeat(43)
+    const session = { accessMode: 'read_write' as const, token }
+    const headers = { 'x-fit-session': token }
+    const clientId = CLIENTS_RESPONSE.clients[0]!.id
+    const invitationId = CONNECTIONS_RESPONSE.invitations[0]!.id
+
+    const responses = await Promise.all([
+      app.inject({ method: 'GET', url: '/v1/clients', headers }),
+      app.inject({ method: 'GET', url: '/v1/connections', headers }),
+      app.inject({ method: 'GET', url: `/v1/clients/${clientId}/progress`, headers }),
+      app.inject({
+        method: 'PUT', url: `/v1/clients/${clientId}/archive`, headers,
+        payload: { archived: true, expectedVersion: 1 },
+      }),
+      app.inject({
+        method: 'POST', url: `/v1/clients/${clientId}/attention/snooze`, headers,
+      }),
+      app.inject({
+        method: 'POST', url: '/v1/app-feedback', headers,
+        payload: {
+          kind: 'suggestion', message: 'Добавьте календарь', screenPath: '/',
+          appVersion: '1', displayMode: 'browser', userAgent: 'test',
+        },
+      }),
+      app.inject({ method: 'GET', url: '/v1/push-notifications/status', headers }),
+      app.inject({ method: 'DELETE', url: `/v1/invitations/${invitationId}`, headers }),
+    ])
+    const ambiguous = await app.inject({
+      method: 'GET',
+      url: '/v1/clients',
+      headers: { ...headers, 'x-fit-pilot-session': 's'.repeat(43) },
+    })
+
+    expect(responses.map((response) => response.statusCode)).toEqual([
+      200, 200, 200, 200, 200, 201, 200, 204,
+    ])
+    expect(ambiguous.statusCode).toBe(401)
+    expect(clients.readClients).toHaveBeenCalledWith(session, false)
+    expect(connections.readConnections).toHaveBeenCalledWith(session)
+    expect(progress.readBundle).toHaveBeenCalledWith(session, clientId)
+    expect(domain.setClientArchived).toHaveBeenCalledWith(session, clientId, true, 1)
+    expect(workouts.snoozeAttention).toHaveBeenCalledWith(session, clientId)
+    expect(feedback.submit).toHaveBeenCalledWith(session, expect.any(Object))
+    expect(push.readStatus).toHaveBeenCalledWith(session)
+    expect(connectionCommands.revokeInvitation).toHaveBeenCalledWith(session, invitationId)
+  })
+
+  it('publishes a training summary only through a read-write app session', async () => {
+    const publish = vi.fn().mockResolvedValue(undefined)
+    const app = buildApp({
+      pilotTrainingSummaryPublisher: { publish },
+      logger: false,
+    })
+    apps.push(app)
+    const payload = {
+      clientSummary: {
+        headline: 'Стабильный прогресс',
+        achievements: [],
+        consistency: 'Регулярно',
+        encouragement: 'Продолжайте',
+      },
+      expectedVersion: 2,
+    }
+
+    const readOnly = await app.inject({
+      method: 'POST',
+      url: `/v1/training-summaries/${PROFILE_ID}/publish`,
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+      payload,
+    })
+    const readWrite = await app.inject({
+      method: 'POST',
+      url: `/v1/training-summaries/${PROFILE_ID}/publish`,
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload,
+    })
+
+    expect(readOnly.statusCode).toBe(403)
+    expect(readWrite.statusCode).toBe(204)
+    expect(publish).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: 'a'.repeat(43) },
+      PROFILE_ID,
+      payload.clientSummary,
+      2,
+    )
+  })
+
+  it('unpublishes a training summary only through a read-write app session', async () => {
+    const unpublish = vi.fn().mockResolvedValue(undefined)
+    const app = buildApp({
+      pilotTrainingSummaryPublisher: { publish: vi.fn(), unpublish },
+      logger: false,
+    })
+    apps.push(app)
+
+    const readOnly = await app.inject({
+      method: 'POST', url: `/v1/training-summaries/${PROFILE_ID}/unpublish`,
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+      payload: { expectedVersion: 2 },
+    })
+    const readWrite = await app.inject({
+      method: 'POST', url: `/v1/training-summaries/${PROFILE_ID}/unpublish`,
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { expectedVersion: 2 },
+    })
+
+    expect(readOnly.statusCode).toBe(403)
+    expect(readWrite.statusCode).toBe(204)
+    expect(unpublish).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: 'a'.repeat(43) }, PROFILE_ID, 2,
+    )
+  })
+
+  it('updates the current profile only through a read-write app session', async () => {
+    const domain = buildDomainWriter()
+    const app = buildApp({ pilotDomainWriter: domain.pilotDomainWriter, logger: false })
+    apps.push(app)
+    const payload = { firstName: 'Ирина', lastName: 'Соколова', timezone: 'Europe/Moscow' }
+
+    const response = await app.inject({
+      method: 'PUT', url: '/v1/profile',
+      headers: { 'x-fit-session': 'a'.repeat(43) }, payload,
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(domain.updateProfile).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: 'a'.repeat(43) }, payload,
+    )
   })
 
   it('does not expose either native contract without a pilot session', async () => {
@@ -325,6 +614,7 @@ describe('browser pilot CORS', () => {
     expect(preflight.headers['access-control-allow-methods']).toContain('PUT')
     expect(preflight.headers['access-control-allow-headers']).toContain('authorization')
     expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-pilot-session')
+    expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-session')
     expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-release-id')
     expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-error-code')
 
@@ -454,7 +744,9 @@ function buildIdentityProvider(
   return { identityProvider: { verifyAccessToken }, verifyAccessToken }
 }
 
-function buildOAuthCodeProvider(error?: YandexOAuthCodeRejectedError): {
+function buildOAuthCodeProvider(
+  error?: YandexOAuthCodeRejectedError | YandexOAuthCodeUnavailableError,
+): {
   oauthCodeProvider: YandexOAuthCodeProvider
   exchangeCode: ReturnType<typeof vi.fn>
 } {
@@ -480,6 +772,15 @@ const SESSION_RESPONSE: PilotSessionResponse = {
   session: {
     token: 's'.repeat(43),
     expiresAt: '2026-08-20T13:15:00.000Z',
+  },
+}
+
+const APP_SESSION_RESPONSE: YandexAppSessionResponse = {
+  ...PROFILE_RESPONSE,
+  accessMode: 'read_write',
+  session: {
+    token: 'a'.repeat(43),
+    expiresAt: '2026-08-31T13:15:00.000Z',
   },
 }
 
@@ -636,6 +937,68 @@ function buildSessionIssuer(
   return { pilotSessionIssuer: { issue }, issue }
 }
 
+function buildYandexAppSessionIssuer(
+  result: YandexAppSessionResponse | undefined | Error = APP_SESSION_RESPONSE,
+): {
+  yandexAppSessionIssuer: YandexAppSessionIssuer
+  issue: ReturnType<typeof vi.fn>
+} {
+  const issue = vi.fn(() =>
+    result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
+  )
+  return { yandexAppSessionIssuer: { issue }, issue }
+}
+
+function buildYandexAppSessionReader(
+  result: ProfileResponse | Error = { ...PROFILE_RESPONSE, accessMode: 'read_write' },
+): {
+  yandexAppSessionReader: YandexAppSessionReader
+  read: ReturnType<typeof vi.fn>
+} {
+  const read = vi.fn(() =>
+    result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
+  )
+  return { yandexAppSessionReader: { read }, read }
+}
+
+function buildYandexAppSessionRevoker(
+  result: boolean | Error = true,
+): {
+  yandexAppSessionRevoker: YandexAppSessionRevoker
+  revoke: ReturnType<typeof vi.fn>
+} {
+  const revoke = vi.fn(() =>
+    result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
+  )
+  return { yandexAppSessionRevoker: { revoke }, revoke }
+}
+
+function buildExistingActorProvider(
+  result: string | null | Error = PROFILE_ID,
+): {
+  existingActorProvider: ExistingActorProvider
+  resolveActor: ReturnType<typeof vi.fn>
+} {
+  const resolveActor = vi.fn(() =>
+    result instanceof Error
+      ? Promise.reject(result)
+      : Promise.resolve(result ?? undefined),
+  )
+  return { existingActorProvider: { resolveActor }, resolveActor }
+}
+
+function buildYandexAccountLinker(
+  result: { profileId: string } | Error = { profileId: PROFILE_ID },
+): {
+  yandexAccountLinker: YandexAccountLinker
+  linkActor: ReturnType<typeof vi.fn>
+} {
+  const linkActor = vi.fn(() =>
+    result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
+  )
+  return { yandexAccountLinker: { linkActor }, linkActor }
+}
+
 function buildClientsReader(
   result: PilotClientsResponse | Error = CLIENTS_RESPONSE,
 ): {
@@ -658,6 +1021,108 @@ function buildConnectionsReader(
     result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
   )
   return { pilotConnectionsReader: { readConnections }, readConnections }
+}
+
+function buildAppFeedbackWriter(error?: Error): {
+  pilotAppFeedbackWriter: PilotAppFeedbackWriter
+  submit: ReturnType<typeof vi.fn>
+} {
+  const submit = vi.fn(() => error === undefined
+    ? Promise.resolve(PROFILE_ID)
+    : Promise.reject(error))
+  return { pilotAppFeedbackWriter: { submit }, submit }
+}
+
+function buildAssistantState(error?: Error): {
+  pilotAssistantState: PilotAssistantState
+  listConversations: ReturnType<typeof vi.fn>
+  createConversation: ReturnType<typeof vi.fn>
+  listMessages: ReturnType<typeof vi.fn>
+  listActions: ReturnType<typeof vi.fn>
+  applyAction: ReturnType<typeof vi.fn>
+  completeSummary: ReturnType<typeof vi.fn>
+  cancelAction: ReturnType<typeof vi.fn>
+} {
+  const result = <Value>(value: Value) => error === undefined
+    ? Promise.resolve(value)
+    : Promise.reject(error)
+  const conversation = {
+    id: PROFILE_ID,
+    title: 'Новый диалог',
+    createdAt: '2026-08-31T10:00:00.000Z',
+  }
+  const listConversations = vi.fn(() => result([conversation]))
+  const createConversation = vi.fn(() => result(conversation))
+  const listMessages = vi.fn(() => result([]))
+  const listActions = vi.fn(() => result([]))
+  const applyAction = vi.fn(() => result({ status: 'applied', version: 2 }))
+  const completeSummary = vi.fn(() => result({ status: 'applied', version: 2 }))
+  const cancelAction = vi.fn(() => result({ status: 'cancelled', version: 2 }))
+  return {
+    pilotAssistantState: {
+      listConversations,
+      createConversation,
+      listMessages,
+      listActions,
+      applyAction,
+      completeSummary,
+      cancelAction,
+    },
+    listConversations,
+    createConversation,
+    listMessages,
+    listActions,
+    applyAction,
+    completeSummary,
+    cancelAction,
+  }
+}
+
+function buildAssistantTurnRunner(error?: Error): {
+  pilotAssistantTurnRunner: PilotAssistantTurnRunner
+  runTurn: ReturnType<typeof vi.fn>
+} {
+  const runTurn = vi.fn(() => error === undefined
+    ? Promise.resolve({
+        reply: 'Могу коротко пообщаться и записать тренировку.',
+        action: null,
+      })
+    : Promise.reject(error))
+  return { pilotAssistantTurnRunner: { runTurn }, runTurn }
+}
+
+function buildPushNotifications(error?: Error): {
+  pilotPushNotifications: PilotPushNotifications
+  readStatus: ReturnType<typeof vi.fn>
+  upsertSubscription: ReturnType<typeof vi.fn>
+  deleteSubscription: ReturnType<typeof vi.fn>
+  setPreference: ReturnType<typeof vi.fn>
+} {
+  const result = <Value>(value: Value) => error === undefined
+    ? Promise.resolve(value)
+    : Promise.reject(error)
+  const readStatus = vi.fn(() => result({
+    subscribed: true,
+    preferences: {
+      workout_reminder: false,
+      workout_scheduled: true,
+    },
+  }))
+  const upsertSubscription = vi.fn(() => result(undefined))
+  const deleteSubscription = vi.fn(() => result(undefined))
+  const setPreference = vi.fn(() => result(undefined))
+  return {
+    pilotPushNotifications: {
+      readStatus,
+      upsertSubscription,
+      deleteSubscription,
+      setPreference,
+    },
+    readStatus,
+    upsertSubscription,
+    deleteSubscription,
+    setPreference,
+  }
 }
 
 function buildTrainingDataReader(
@@ -736,6 +1201,7 @@ function buildConnectionsWriter(error?: Error): {
 
 function buildDomainWriter(error?: Error): {
   pilotDomainWriter: PilotDomainWriter
+  updateProfile: ReturnType<typeof vi.fn>
   createClient: ReturnType<typeof vi.fn>
   createCustomExercise: ReturnType<typeof vi.fn>
   setClientArchived: ReturnType<typeof vi.fn>
@@ -761,6 +1227,7 @@ function buildDomainWriter(error?: Error): {
     membershipVersion: 1,
   }))
   const updateClient = vi.fn(() => result(2))
+  const updateProfile = vi.fn(() => result(undefined))
   const setClientArchived = vi.fn(() => result(3))
   const updateClientPreferences = vi.fn(() => result(2))
   const createCustomExercise = vi.fn(() => result(customExercise))
@@ -772,6 +1239,7 @@ function buildDomainWriter(error?: Error): {
   }))
   return {
     pilotDomainWriter: {
+      updateProfile,
       createClient,
       createCustomExercise,
       setClientArchived,
@@ -780,6 +1248,7 @@ function buildDomainWriter(error?: Error): {
       updateClientPreferences,
       updateCustomExercise,
     },
+    updateProfile,
     createClient,
     createCustomExercise,
     setClientArchived,
@@ -817,6 +1286,7 @@ function buildWorkoutsWriter(error?: Error): {
   deleteWorkout: ReturnType<typeof vi.fn>
   finishLive: ReturnType<typeof vi.fn>
   removeLiveSet: ReturnType<typeof vi.fn>
+  removeLiveExercise: ReturnType<typeof vi.fn>
   reorderLiveBlock: ReturnType<typeof vi.fn>
   replaceLiveExercise: ReturnType<typeof vi.fn>
   recordPlannedResult: ReturnType<typeof vi.fn>
@@ -870,6 +1340,7 @@ function buildWorkoutsWriter(error?: Error): {
     version: 5,
     replayed: false,
   }))
+  const removeLiveExercise = vi.fn(() => result({ resourceId: WORKOUT_EXERCISE_ID, version: 2, replayed: false }))
   const reorderLiveBlock = vi.fn(() => result({
     resourceId: WORKOUT_BLOCK_ID,
     version: 6,
@@ -901,6 +1372,7 @@ function buildWorkoutsWriter(error?: Error): {
       deleteWorkout,
       finishLive,
       removeLiveSet,
+      removeLiveExercise,
       reorderLiveBlock,
       replaceLiveExercise,
       recordPlannedResult,
@@ -920,6 +1392,7 @@ function buildWorkoutsWriter(error?: Error): {
     deleteWorkout,
     finishLive,
     removeLiveSet,
+    removeLiveExercise,
     reorderLiveBlock,
     replaceLiveExercise,
     recordPlannedResult,
@@ -1101,6 +1574,279 @@ describe('Yandex PKCE pilot callback', () => {
     expect(response.statusCode).toBe(401)
     expect(response.json()).toEqual({ error: 'unauthorized' })
     expect(response.body).not.toContain('rejected-code')
+  })
+})
+
+describe('Yandex ID app session and account linking endpoints', () => {
+  it('exchanges a Yandex code for a read-write app session without exposing provider tokens', async () => {
+    const oauth = buildOAuthCodeProvider()
+    const identity = buildIdentityProvider()
+    const appSession = buildYandexAppSessionIssuer()
+    const app = buildApp({
+      oauthCodeProvider: oauth.oauthCodeProvider,
+      identityProvider: identity.identityProvider,
+      yandexAppSessionIssuer: appSession.yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(APP_SESSION_RESPONSE)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.body).not.toContain('temporary-yandex-token')
+    expect(oauth.exchangeCode).toHaveBeenCalledWith('one-time-code', 'v'.repeat(43))
+    expect(identity.verifyAccessToken).toHaveBeenCalledWith('temporary-yandex-token')
+    expect(appSession.issue).toHaveBeenCalledWith(SUBJECT_HASH)
+  })
+
+  it('keeps linked but disabled users outside the read-write Yandex rollout', async () => {
+    const appSession = buildYandexAppSessionIssuer(
+      new YandexAppSessionDeniedError(),
+    )
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      yandexAppSessionIssuer: appSession.yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(403)
+    expect(response.json()).toEqual({ error: 'yandex_session_denied' })
+  })
+
+  it('restores and revokes an opaque read-write app session', async () => {
+    const reader = buildYandexAppSessionReader()
+    const revoker = buildYandexAppSessionRevoker()
+    const app = buildApp({
+      yandexAppSessionReader: reader.yandexAppSessionReader,
+      yandexAppSessionRevoker: revoker.yandexAppSessionRevoker,
+      logger: false,
+    })
+    apps.push(app)
+
+    const restored = await app.inject({
+      method: 'GET',
+      url: '/v1/auth/yandex/session',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+    })
+    const revoked = await app.inject({
+      method: 'DELETE',
+      url: '/v1/auth/yandex/session',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+    })
+
+    expect(restored.statusCode).toBe(200)
+    expect(restored.headers['cache-control']).toBe('no-store')
+    expect(restored.json()).toEqual({ ...PROFILE_RESPONSE, accessMode: 'read_write' })
+    expect(restored.body).not.toContain('a'.repeat(43))
+    expect(revoked.statusCode).toBe(204)
+    expect(revoked.body).toBe('')
+    expect(reader.read).toHaveBeenCalledWith('a'.repeat(43))
+    expect(revoker.revoke).toHaveBeenCalledWith('a'.repeat(43))
+  })
+
+  it('rejects a missing or invalid app session without exposing its token', async () => {
+    const reader = buildYandexAppSessionReader(new YandexAppSessionInvalidError())
+    const revoker = buildYandexAppSessionRevoker(new YandexAppSessionInvalidError())
+    const app = buildApp({
+      yandexAppSessionReader: reader.yandexAppSessionReader,
+      yandexAppSessionRevoker: revoker.yandexAppSessionRevoker,
+      logger: false,
+    })
+    apps.push(app)
+
+    const missing = await app.inject({
+      method: 'GET',
+      url: '/v1/auth/yandex/session',
+    })
+    const invalid = await app.inject({
+      method: 'GET',
+      url: '/v1/auth/yandex/session',
+      headers: { 'x-fit-session': 'x'.repeat(43) },
+    })
+    const invalidRevoke = await app.inject({
+      method: 'DELETE',
+      url: '/v1/auth/yandex/session',
+      headers: { 'x-fit-session': 'x'.repeat(43) },
+    })
+
+    expect(missing.statusCode).toBe(401)
+    expect(invalid.statusCode).toBe(401)
+    expect(invalidRevoke.statusCode).toBe(401)
+    expect(missing.json()).toEqual({ error: 'unauthorized' })
+    expect(invalid.body).not.toContain('x'.repeat(43))
+    expect(invalidRevoke.body).not.toContain('x'.repeat(43))
+    expect(reader.read).toHaveBeenCalledOnce()
+    expect(revoker.revoke).toHaveBeenCalledOnce()
+  })
+
+  it('rejects malformed app-session input before contacting Yandex OAuth', async () => {
+    const oauth = buildOAuthCodeProvider()
+    const app = buildApp({
+      oauthCodeProvider: oauth.oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      yandexAppSessionIssuer: buildYandexAppSessionIssuer().yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'too-short' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(oauth.exchangeCode).not.toHaveBeenCalled()
+  })
+
+  it('links Yandex ID only after proving ownership of the current FIT account', async () => {
+    const oauth = buildOAuthCodeProvider()
+    const identity = buildIdentityProvider()
+    const actor = buildExistingActorProvider()
+    const linker = buildYandexAccountLinker()
+    const appSession = buildYandexAppSessionIssuer()
+    const app = buildApp({
+      oauthCodeProvider: oauth.oauthCodeProvider,
+      identityProvider: identity.identityProvider,
+      existingActorProvider: actor.existingActorProvider,
+      yandexAccountLinker: linker.yandexAccountLinker,
+      yandexAppSessionIssuer: appSession.yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      headers: { authorization: 'Bearer supabase-session-token' },
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      profileId: PROFILE_ID,
+      appSession: APP_SESSION_RESPONSE,
+    })
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.body).not.toContain('temporary-yandex-token')
+    expect(response.body).not.toContain('supabase-session-token')
+    expect(actor.resolveActor).toHaveBeenCalledWith('supabase-session-token')
+    expect(oauth.exchangeCode).toHaveBeenCalledWith('one-time-code', 'v'.repeat(43))
+    expect(identity.verifyAccessToken).toHaveBeenCalledWith('temporary-yandex-token')
+    expect(linker.linkActor).toHaveBeenCalledWith(PROFILE_ID, SUBJECT_HASH)
+    expect(appSession.issue).toHaveBeenCalledWith(SUBJECT_HASH)
+  })
+
+  it('keeps a successful link when the profile is not in read-write rollout', async () => {
+    const appSession = buildYandexAppSessionIssuer(new YandexAppSessionDeniedError())
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      existingActorProvider: buildExistingActorProvider().existingActorProvider,
+      yandexAccountLinker: buildYandexAccountLinker().yandexAccountLinker,
+      yandexAppSessionIssuer: appSession.yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      headers: { authorization: 'Bearer supabase-session-token' },
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ profileId: PROFILE_ID })
+  })
+
+  it('does not contact Yandex OAuth when the existing FIT session is missing or invalid', async () => {
+    const oauth = buildOAuthCodeProvider()
+    const actor = buildExistingActorProvider(null)
+    const linker = buildYandexAccountLinker()
+    const app = buildApp({
+      oauthCodeProvider: oauth.oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      existingActorProvider: actor.existingActorProvider,
+      yandexAccountLinker: linker.yandexAccountLinker,
+      logger: false,
+    })
+    apps.push(app)
+
+    const missingAuth = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+    const invalidAuth = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      headers: { authorization: 'Bearer invalid-supabase-session' },
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(missingAuth.statusCode).toBe(401)
+    expect(invalidAuth.statusCode).toBe(401)
+    expect(actor.resolveActor).toHaveBeenCalledOnce()
+    expect(oauth.exchangeCode).not.toHaveBeenCalled()
+    expect(linker.linkActor).not.toHaveBeenCalled()
+  })
+
+  it('maps existing-auth outages and account conflicts without leaking identifiers', async () => {
+    const unavailableActor = buildExistingActorProvider(
+      new ExistingActorUnavailableError(),
+    )
+    const unavailableApp = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      existingActorProvider: unavailableActor.existingActorProvider,
+      yandexAccountLinker: buildYandexAccountLinker().yandexAccountLinker,
+      logger: false,
+    })
+    apps.push(unavailableApp)
+    const unavailable = await unavailableApp.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      headers: { authorization: 'Bearer supabase-session-token' },
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+    expect(unavailable.statusCode).toBe(503)
+    expect(unavailable.body).not.toContain('supabase-session-token')
+
+    const conflictLinker = buildYandexAccountLinker(
+      new YandexAccountLinkError('conflict'),
+    )
+    const conflictApp = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      existingActorProvider: buildExistingActorProvider().existingActorProvider,
+      yandexAccountLinker: conflictLinker.yandexAccountLinker,
+      logger: false,
+    })
+    apps.push(conflictApp)
+    const conflict = await conflictApp.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      headers: { authorization: 'Bearer supabase-session-token' },
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+    expect(conflict.statusCode).toBe(409)
+    expect(conflict.json()).toEqual({ error: 'yandex_identity_conflict' })
   })
 })
 
@@ -1319,7 +2065,9 @@ describe('read-only pilot training data endpoint', () => {
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual(TRAINING_DATA_RESPONSE)
     expect(response.headers['cache-control']).toBe('no-store')
-    expect(trainingData.readTrainingData).toHaveBeenCalledWith('s'.repeat(43))
+    expect(trainingData.readTrainingData).toHaveBeenCalledWith({
+      accessMode: 'read_only', token: 's'.repeat(43),
+    }, { limit: 100, offset: 0 })
   })
 
   it('rejects a missing or expired pilot session', async () => {
@@ -1483,6 +2231,305 @@ describe('pilot progress and goals endpoints', () => {
   })
 })
 
+describe('pilot app feedback command', () => {
+  const sessionToken = 's'.repeat(43)
+
+  it('normalizes the current feedback contract without accepting an author from the body', async () => {
+    const writer = buildAppFeedbackWriter()
+    const app = buildApp({
+      pilotAppFeedbackWriter: writer.pilotAppFeedbackWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/app-feedback',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        kind: ' Problem ',
+        message: ' Не открывается тренировка ',
+        screenPath: ' ',
+        appVersion: ' ',
+        displayMode: ' Standalone ',
+        userAgent: ' Safari ',
+        userId: '974f21af-f304-421f-81bd-050dbfabdd46',
+      },
+    })
+
+    const expectedDraft: AppFeedbackDraft = {
+      kind: 'problem',
+      message: 'Не открывается тренировка',
+      screenPath: '/',
+      appVersion: 'unknown',
+      displayMode: 'standalone',
+      userAgent: 'Safari',
+    }
+    expect(response.statusCode).toBe(201)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toEqual({ feedback: { id: PROFILE_ID } })
+    expect(writer.submit).toHaveBeenCalledWith(sessionToken, expectedDraft)
+  })
+
+  it.each([
+    [{ kind: 'other', message: 'Текст', screenPath: '/', appVersion: '1', displayMode: 'browser', userAgent: 'test' }],
+    [{ kind: 'problem', message: '  ', screenPath: '/', appVersion: '1', displayMode: 'browser', userAgent: 'test' }],
+    [{ kind: 'problem', message: 'Текст', screenPath: '/', appVersion: '1', displayMode: 'desktop', userAgent: 'test' }],
+    [{ kind: 'problem', message: 'Текст', screenPath: 10, appVersion: '1', displayMode: 'browser', userAgent: 'test' }],
+  ])('rejects malformed feedback before invoking the writer', async (payload) => {
+    const writer = buildAppFeedbackWriter()
+    const app = buildApp({
+      pilotAppFeedbackWriter: writer.pilotAppFeedbackWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/app-feedback',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload,
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(writer.submit).not.toHaveBeenCalled()
+  })
+
+  it('requires a pilot session before invoking the writer', async () => {
+    const writer = buildAppFeedbackWriter()
+    const app = buildApp({
+      pilotAppFeedbackWriter: writer.pilotAppFeedbackWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/app-feedback',
+      payload: {
+        kind: 'suggestion',
+        message: 'Добавьте календарь',
+        screenPath: '/',
+        appVersion: '1',
+        displayMode: 'browser',
+        userAgent: 'test',
+      },
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual({ error: 'unauthorized' })
+    expect(writer.submit).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['forbidden', 403, 'action_not_allowed'],
+    ['invalid', 422, 'invalid_feedback'],
+  ] as const)('maps %s database failures without exposing details', async (
+    failure, status, responseError,
+  ) => {
+    const writer = buildAppFeedbackWriter(new AppFeedbackCommandError(failure))
+    const app = buildApp({
+      pilotAppFeedbackWriter: writer.pilotAppFeedbackWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/app-feedback',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        kind: 'suggestion',
+        message: 'Добавьте календарь',
+        screenPath: '/',
+        appVersion: '1',
+        displayMode: 'browser',
+        userAgent: 'test',
+      },
+    })
+
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual({ error: responseError })
+    expect(response.body).not.toContain('App feedback command failed')
+  })
+})
+
+describe('pilot push notification state', () => {
+  const sessionToken = 's'.repeat(43)
+
+  it('returns actor-scoped status without exposing subscription secrets', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/push-notifications/status',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toEqual({
+      status: {
+        subscribed: true,
+        preferences: {
+          workout_reminder: false,
+          workout_scheduled: true,
+        },
+      },
+    })
+    expect(response.body).not.toContain('endpoint')
+    expect(response.body).not.toContain('authKey')
+    expect(push.readStatus).toHaveBeenCalledWith(sessionToken)
+  })
+
+  it('stores only a validated browser subscription for the pilot session actor', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/v1/push-notifications/subscription',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        endpoint: ' https://push.example/subscription ',
+        p256dh: ' public-key ',
+        authKey: ' auth-secret ',
+        userId: '974f21af-f304-421f-81bd-050dbfabdd46',
+      },
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(push.upsertSubscription).toHaveBeenCalledWith(sessionToken, {
+      endpoint: 'https://push.example/subscription',
+      p256dh: 'public-key',
+      authKey: 'auth-secret',
+    })
+  })
+
+  it('rejects malformed subscriptions before invoking the database command', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/v1/push-notifications/subscription',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { endpoint: 'http://push.example', p256dh: '', authKey: 'secret' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(push.upsertSubscription).not.toHaveBeenCalled()
+  })
+
+  it('deletes the current actor subscription idempotently', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/v1/push-notifications/subscription',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(push.deleteSubscription).toHaveBeenCalledWith(sessionToken)
+  })
+
+  it('sets only a supported explicit preference', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/v1/push-notifications/preferences/workout_reminder',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { enabled: false },
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(push.setPreference).toHaveBeenCalledWith(
+      sessionToken,
+      'workout_reminder',
+      false,
+    )
+
+    const invalid = await app.inject({
+      method: 'PUT',
+      url: '/v1/push-notifications/preferences/marketing',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { enabled: true },
+    })
+    expect(invalid.statusCode).toBe(400)
+    expect(push.setPreference).toHaveBeenCalledOnce()
+  })
+
+  it('requires a pilot session for every push-state route', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/push-notifications/status',
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual({ error: 'unauthorized' })
+    expect(push.readStatus).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['forbidden', 403, 'action_not_allowed'],
+    ['invalid', 422, 'invalid_push_notifications'],
+  ] as const)('maps %s database failures without exposing details', async (
+    failure, status, responseError,
+  ) => {
+    const push = buildPushNotifications(new PushNotificationCommandError(failure))
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/v1/push-notifications/preferences/workout_scheduled',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { enabled: false },
+    })
+
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual({ error: responseError })
+    expect(response.body).not.toContain('Push notification command failed')
+  })
+})
+
 describe('pilot client and custom exercise domain commands', () => {
   const sessionToken = 's'.repeat(43)
   const clientId = CLIENTS_RESPONSE.clients[0]!.id
@@ -1540,7 +2587,11 @@ describe('pilot client and custom exercise domain commands', () => {
       archived.statusCode, restored.statusCode,
     ]).toEqual([201, 200, 200, 200, 200])
     expect(created.headers['cache-control']).toBe('no-store')
-    expect(writer.createClient).toHaveBeenCalledWith(sessionToken, clientDraft)
+    expect(writer.createClient).toHaveBeenCalledWith(sessionToken, {
+      ...clientDraft,
+      initialWeightKg: null,
+      initialWeightRecordedOn: null,
+    })
     expect(writer.updateClient).toHaveBeenCalledWith(
       sessionToken, clientId, clientCardDraft, 1,
     )
@@ -1682,13 +2733,13 @@ describe('pilot planned workout commands', () => {
     expect(writer.savePlanned).toHaveBeenNthCalledWith(
       1,
       sessionToken,
-      { ...draft, id: null } satisfies PlannedWorkoutDraft,
+      { ...draft, id: null, stageId: null } satisfies PlannedWorkoutDraft,
       null,
     )
     expect(writer.savePlanned).toHaveBeenNthCalledWith(
       2,
       sessionToken,
-      { ...draft, id: WORKOUT_ID, notes: 'Обновлённый план' } satisfies PlannedWorkoutDraft,
+      { ...draft, id: WORKOUT_ID, stageId: null, notes: 'Обновлённый план' } satisfies PlannedWorkoutDraft,
       1,
     )
     expect(writer.deleteWorkout).toHaveBeenCalledWith(
@@ -1815,18 +2866,18 @@ describe('pilot completed workout lifecycle commands', () => {
     expect(writer.saveCompleted).toHaveBeenNthCalledWith(
       1,
       sessionToken,
-      { ...draft, id: null } satisfies PlannedWorkoutDraft,
+      { ...draft, id: null, stageId: null } satisfies PlannedWorkoutDraft,
       null,
     )
     expect(writer.saveCompleted).toHaveBeenNthCalledWith(
       2,
       sessionToken,
-      { ...draft, id: WORKOUT_ID } satisfies PlannedWorkoutDraft,
+      { ...draft, id: WORKOUT_ID, stageId: null } satisfies PlannedWorkoutDraft,
       2,
     )
     expect(writer.recordPlannedResult).toHaveBeenCalledWith(
       sessionToken,
-      { ...draft, id: WORKOUT_ID } satisfies PlannedWorkoutDraft,
+      { ...draft, id: WORKOUT_ID, stageId: null } satisfies PlannedWorkoutDraft,
       1,
     )
   })
@@ -2252,6 +3303,24 @@ describe('pilot live workout structural commands', () => {
       },
     })
     expect(commented.headers['cache-control']).toBe('no-store')
+    const removedExercise = await app.inject({
+      method: 'DELETE',
+      url: `/v1/workouts/${WORKOUT_ID}/exercises/${WORKOUT_EXERCISE_ID}`,
+      headers: { 'x-fit-session': sessionToken },
+      payload: { expectedVersion: 8, operationId: OPERATION_IDS.removeSet },
+    })
+    expect(removedExercise.statusCode).toBe(200)
+    expect(removedExercise.json()).toEqual({ exercise: {
+      id: WORKOUT_EXERCISE_ID, version: 2, replayed: false,
+    } })
+    expect(writer.removeLiveExercise).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: sessionToken }, WORKOUT_ID, WORKOUT_EXERCISE_ID, 8, OPERATION_IDS.removeSet,
+    )
+    const unauthorizedDelete = await app.inject({
+      method: 'DELETE', url: `/v1/workouts/${WORKOUT_ID}/exercises/${WORKOUT_EXERCISE_ID}`,
+      payload: { expectedVersion: 8, operationId: OPERATION_IDS.removeSet },
+    })
+    expect(unauthorizedDelete.statusCode).toBe(401)
     expect(writer.appendLiveExercise).toHaveBeenCalledWith(
       sessionToken,
       WORKOUT_ID,
@@ -2482,5 +3551,217 @@ describe('pilot invitation and membership commands', () => {
 
     expect(response.statusCode).toBe(401)
     expect(writer.revokeInvitation).not.toHaveBeenCalled()
+  })
+})
+
+describe('pilot assistant state', () => {
+  const sessionToken = 's'.repeat(43)
+
+  it('lists and creates actor-owned conversations without cache', async () => {
+    const state = buildAssistantState()
+    const app = buildApp({
+      pilotAssistantState: state.pilotAssistantState,
+      logger: false,
+    })
+    apps.push(app)
+
+    const listed = await app.inject({
+      method: 'GET',
+      url: '/v1/assistant/conversations',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+    const created = await app.inject({
+      method: 'POST',
+      url: '/v1/assistant/conversations',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { title: '  Новый диалог  ' },
+    })
+
+    expect(listed.statusCode).toBe(200)
+    expect(listed.headers['cache-control']).toBe('no-store')
+    expect(listed.json()).toMatchObject({
+      conversations: [{ id: PROFILE_ID, title: 'Новый диалог' }],
+    })
+    expect(created.statusCode).toBe(201)
+    const session = { accessMode: 'read_only', token: sessionToken }
+    expect(state.listConversations).toHaveBeenCalledWith(session)
+    expect(state.createConversation).toHaveBeenCalledWith(
+      session,
+      'Новый диалог',
+    )
+  })
+
+  it('reads history and dispatches versioned action commands', async () => {
+    const state = buildAssistantState()
+    const app = buildApp({
+      pilotAssistantState: state.pilotAssistantState,
+      logger: false,
+    })
+    apps.push(app)
+
+    const messages = await app.inject({
+      method: 'GET',
+      url: `/v1/assistant/conversations/${PROFILE_ID}/messages`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+    const actions = await app.inject({
+      method: 'GET',
+      url: `/v1/assistant/actions?conversationId=${PROFILE_ID}`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+    const applied = await app.inject({
+      method: 'POST',
+      url: `/v1/assistant/actions/${PROFILE_ID}/apply`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1, input: { workout: {} } },
+    })
+    const completed = await app.inject({
+      method: 'POST',
+      url: `/v1/assistant/actions/${PROFILE_ID}/complete-summary`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1 },
+    })
+    const cancelled = await app.inject({
+      method: 'POST',
+      url: `/v1/assistant/actions/${PROFILE_ID}/cancel`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1 },
+    })
+
+    expect([
+      messages.statusCode,
+      actions.statusCode,
+      applied.statusCode,
+      completed.statusCode,
+      cancelled.statusCode,
+    ]).toEqual([200, 200, 200, 200, 200])
+    const session = { accessMode: 'read_only', token: sessionToken }
+    expect(state.listMessages).toHaveBeenCalledWith(session, PROFILE_ID)
+    expect(state.listActions).toHaveBeenCalledWith(session, PROFILE_ID)
+    expect(state.applyAction).toHaveBeenCalledWith(
+      session,
+      PROFILE_ID,
+      { workout: {} },
+      1,
+    )
+    expect(state.completeSummary).toHaveBeenCalledWith(session, PROFILE_ID, 1)
+    expect(state.cancelAction).toHaveBeenCalledWith(session, PROFILE_ID, 1)
+  })
+
+  it('dispatches native turns through the opaque Yandex pilot session', async () => {
+    const turnRunner = buildAssistantTurnRunner()
+    const app = buildApp({
+      pilotAssistantTurnRunner: turnRunner.pilotAssistantTurnRunner,
+      logger: false,
+    })
+    apps.push(app)
+    const turnId = '6e577cc7-3b56-4a86-bc85-1ce2426ce249'
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/assistant/turn',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        conversation_id: PROFILE_ID,
+        turn_id: turnId,
+        message: '  что ты умеешь?  ',
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toEqual({
+      reply: 'Могу коротко пообщаться и записать тренировку.',
+      action: null,
+    })
+    expect(turnRunner.runTurn).toHaveBeenCalledWith({
+      accessMode: 'read_only', token: sessionToken,
+    }, {
+      conversationId: PROFILE_ID,
+      turnId,
+      message: 'что ты умеешь?',
+    })
+  })
+
+  it('validates input and maps state failures without database details', async () => {
+    const invalidState = buildAssistantState()
+    const invalidApp = buildApp({
+      pilotAssistantState: invalidState.pilotAssistantState,
+      logger: false,
+    })
+    apps.push(invalidApp)
+    const invalid = await invalidApp.inject({
+      method: 'POST',
+      url: `/v1/assistant/actions/${PROFILE_ID}/cancel`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 0 },
+    })
+    expect(invalid.statusCode).toBe(400)
+    expect(invalidState.cancelAction).not.toHaveBeenCalled()
+
+    const conflictState = buildAssistantState(new AssistantStateError('conflict'))
+    const conflictApp = buildApp({
+      pilotAssistantState: conflictState.pilotAssistantState,
+      logger: false,
+    })
+    apps.push(conflictApp)
+    const conflict = await conflictApp.inject({
+      method: 'POST',
+      url: `/v1/assistant/actions/${PROFILE_ID}/cancel`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1 },
+    })
+    expect(conflict.statusCode).toBe(409)
+    expect(conflict.json()).toEqual({ error: 'version_conflict' })
+    expect(conflict.body).not.toContain('Assistant state operation failed')
+
+    const turnState = buildAssistantTurnRunner(new AssistantStateError('conflict'))
+    const turnApp = buildApp({
+      pilotAssistantTurnRunner: turnState.pilotAssistantTurnRunner,
+      logger: false,
+    })
+    apps.push(turnApp)
+    const turnConflict = await turnApp.inject({
+      method: 'POST',
+      url: '/v1/assistant/turn',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: {
+        conversation_id: PROFILE_ID,
+        turn_id: PROFILE_ID,
+        message: 'Привет',
+      },
+    })
+    expect(turnConflict.statusCode).toBe(409)
+    expect(turnConflict.json()).toEqual({ error: 'version_conflict' })
+  })
+
+  it('requires an opaque pilot session before reading state', async () => {
+    const state = buildAssistantState()
+    const turnRunner = buildAssistantTurnRunner()
+    const app = buildApp({
+      pilotAssistantState: state.pilotAssistantState,
+      pilotAssistantTurnRunner: turnRunner.pilotAssistantTurnRunner,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/assistant/conversations',
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(state.listConversations).not.toHaveBeenCalled()
+
+    const turnResponse = await app.inject({
+      method: 'POST',
+      url: '/v1/assistant/turn',
+      payload: {
+        conversation_id: PROFILE_ID,
+        message: 'Привет',
+      },
+    })
+    expect(turnResponse.statusCode).toBe(401)
+    expect(turnRunner.runTurn).not.toHaveBeenCalled()
   })
 })

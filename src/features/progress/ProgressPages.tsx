@@ -3,9 +3,8 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useClientRealtime } from '../../app/use-client-realtime'
-import { clientsRepository } from '../../data/repositories/clients.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import { findProgressDateConflict } from '../../data/repositories/progress-rules'
-import { progressRepository } from '../../data/repositories/progress.repository'
 import type { CustomMetric, ProgressEntry } from '../../shared/domain'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { ChevronRightIcon, CloseIcon } from '../../shared/icons'
@@ -31,6 +30,7 @@ function metricField(metric: CustomMetric, entry: ProgressEntry | null, placehol
 }
 
 export function ProgressPage() {
+  const { clients: clientsRepository, progress: progressRepository } = useDataBackend()
   const { clientId = '' } = useParams(); const queryClient = useQueryClient(); const { actor } = useAuth(); const [editing, setEditing] = useState<ProgressEntry | null>(null)
   const [searchParams] = useSearchParams()
   const view = searchParams.get('view')

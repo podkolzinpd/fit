@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../database.types'
+import { createAuthFetch } from './auth-fetch'
 import { assertSafeSupabaseUrl } from './supabase-environment'
 
 const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? (import.meta.env.MODE === 'test' ? 'http://127.0.0.1:54321' : undefined)
@@ -13,4 +14,5 @@ assertSafeSupabaseUrl(url, import.meta.env.DEV)
 
 export const supabase = createClient<Database>(url, publishableKey, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  global: { fetch: createAuthFetch() },
 })

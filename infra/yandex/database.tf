@@ -153,3 +153,23 @@ resource "yandex_lockbox_secret_iam_member" "migration_connection_secret_reader"
   role      = "lockbox.payloadViewer"
   member    = "serviceAccount:${yandex_iam_service_account.migration.id}"
 }
+
+resource "yandex_lockbox_secret_iam_member" "push_dispatcher_connection_secret_reader" {
+  secret_id = data.yandex_connectionmanager_connection.api.lockbox_secret.id
+  role      = "lockbox.payloadViewer"
+  member    = "serviceAccount:${yandex_iam_service_account.push_dispatcher.id}"
+}
+
+resource "yandex_lockbox_secret_iam_member" "push_dispatcher_transport_secret_reader" {
+  secret_id = var.push_transport_secret_id
+  role      = "lockbox.payloadViewer"
+  member    = "serviceAccount:${yandex_iam_service_account.push_dispatcher.id}"
+}
+
+resource "yandex_lockbox_secret_iam_member" "push_dispatcher_app_feedback_integrations_reader" {
+  count = var.app_feedback_integrations_secret_id == null ? 0 : 1
+
+  secret_id = var.app_feedback_integrations_secret_id
+  role      = "lockbox.payloadViewer"
+  member    = "serviceAccount:${yandex_iam_service_account.push_dispatcher.id}"
+}

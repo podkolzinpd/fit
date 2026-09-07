@@ -23,10 +23,16 @@ describe('today draft', () => {
     expect(readTodayDraft(key)).toBeNull()
   })
 
-  it('восстанавливает черновик с финального шага сохранения', () => {
+  it('возвращает пустой финальный шаг к проверке', () => {
     const key = todayDraftKey('trainer-a')
     writeTodayDraft(key, { screen: 'save', text: 'Планка 3 по 45 сек', choices: {}, items: [], clientId: 'client-a', recordMode: 'planned', workoutDate: '2026-08-05' })
-    expect(readTodayDraft(key)?.screen).toBe('save')
+    expect(readTodayDraft(key)?.screen).toBe('review')
+  })
+
+  it('возвращает пустой финальный шаг без текста к началу', () => {
+    const key = todayDraftKey('trainer-a')
+    writeTodayDraft(key, { screen: 'save', text: '', choices: {}, items: [], clientId: 'client-a', recordMode: 'completed', workoutDate: '2026-08-05' })
+    expect(readTodayDraft(key)?.screen).toBe('compose')
   })
 
   it('сохраняет снимок текста после LLM-разбора', () => {

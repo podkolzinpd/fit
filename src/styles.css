@@ -467,6 +467,8 @@ p { margin: 6px 0 }
 .trainer-tab-bar { grid-template-columns: repeat(3, 1fr) }
 .trainer-tab-bar:has(a[href="/assistant"]) { grid-template-columns: repeat(4, 1fr) }
 .trainer-tab-bar:has(a[href="/assistant"]):has(a[href="/profile"]) { grid-template-columns: repeat(5, 1fr) }
+.trainer-tab-bar > .coachmark-anchor { min-width:0 }
+.trainer-tab-bar > .coachmark-anchor > a { height:100% }
 .client-tab-bar:has(a[href="/assistant"]) { grid-template-columns: repeat(5, 1fr) }
 /* Локальный первый срез ассистента. Он использует только component state: здесь
    намеренно нет queries, repository или сетевых вызовов. Карточки повторяют
@@ -683,6 +685,7 @@ p { margin: 6px 0 }
 .assistant-workout-saved small { color:var(--muted); }
 .assistant-icon-button { display:grid; place-items:center; width:48px; min-height:48px; padding:0; border-radius:50%; }
 .assistant-icon-button svg { width:22px; height:22px; }
+.assistant-composer > .voice-input-icon { align-self:end; }
 .assistant-reset { grid-column:1 / -1; justify-self:center; min-height:auto; padding:4px 8px; border:0; background:transparent; color:var(--muted); box-shadow:none; font-size:var(--type-caption-size); }
 .assistant-reset:hover { color:var(--fg); }
 @media (max-width: 480px) {
@@ -825,6 +828,16 @@ p { margin: 6px 0 }
 .client-home-section-head .secondary { min-height: 38px; padding: 8px 11px }
 .client-home-connections > .card, .client-home-invitations { box-shadow:none}
 .client-home-connections > .card, .client-home-invitations .card { border-radius: 14px; background: var(--surface-sunken) }
+.invitation-code-card { display:grid; align-items:stretch; gap:10px }
+.invitation-code-row { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:12px }
+.invitation-code-content { min-width:0 }
+.invitation-code-content > strong { overflow-wrap:anywhere; line-height:1.35 }
+.invitation-code-value { font-variant-numeric:tabular-nums; letter-spacing:.04em; -webkit-user-select:all; user-select:all }
+.invitation-code-copy { flex:0 0 auto; min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:0 12px; border-radius:14px; font-size:12px; font-weight:500; white-space:nowrap }
+.invitation-code-copy svg { width:18px; height:18px }
+.invitation-code-copy[data-state='copied'] { color:var(--success-fg) }
+.invitation-code-card > p { margin:0 }
+.invitation-code-card .invitation-code-error { color:var(--danger) }
 .client-trainer-disconnect-success { margin: 0; color: var(--success-text); font-weight: 700; }
 .client-home-invitations { display: grid; gap: 8px }
 .client-home-invitations h3 { margin: 5px 0 0; font-size: 14px; color: var(--muted) }
@@ -924,6 +937,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .menu { display: flex; flex-direction: column; margin: 22px 0; border-block: 1px solid var(--border) }
 .menu a, .menu > button { min-height: 52px; display: flex; align-items: center; justify-content: flex-start; padding: 15px 4px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; color: var(--fg); font: inherit; text-align: left; text-decoration: none; box-shadow:none}.menu > :last-child { border-bottom: 0 }
 .profile-settings { margin: 20px 0 22px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow:none}
+.profile-settings-group-head { display:grid; gap:4px; padding:16px 14px 10px; border-top:1px solid var(--border); color:var(--fg) }
+.profile-settings-group-head strong { font-size:var(--type-body-size); font-weight:var(--weight-semibold); line-height:var(--leading-snug) }
+.profile-settings-group-head span { color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.profile-settings-group-head + .switch-row { border-top:0 }
+.yandex-account-linking-card { display:grid; gap:var(--space-3); margin:20px 0 22px; padding:var(--space-3); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:none}
+.yandex-account-linking-card .eyebrow { margin:0 0 var(--space-1) }
+.yandex-account-linking-card h2 { margin:0; font-size:var(--type-section-size); line-height:var(--leading-snug) }
+.yandex-account-linking-card p { margin:0; color:var(--muted); font-size:var(--type-body-size); line-height:var(--leading-body) }
+.yandex-account-linking-card .secondary { min-height:var(--control-height-primary); border-radius:var(--radius-lg); box-shadow:none}
+.yandex-account-linking-card .secondary:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--muted) }
+.yandex-account-linking-card .error { color:var(--danger); font-size:var(--text-xs); font-weight:var(--weight-semibold) }
+.yandex-account-linking-card .yandex-account-linking-note { font-size:var(--text-xs) }
 .body-map-appearance-setting { display:grid; gap:var(--space-3); margin:20px 0 22px; padding:var(--space-3); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:none}
 .body-map-appearance-setting > div:first-child { display:grid; gap:3px }
 .body-map-appearance-setting > div:first-child strong { font-size:var(--type-body-size); line-height:var(--leading-tight) }
@@ -988,6 +1013,16 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .switch-input:checked + .switch-control::after { transform: translateX(20px); background: var(--on-accent) }
 .switch-input:focus-visible + .switch-control { outline: 3px solid var(--accent-ring); outline-offset: 2px }
 .switch-row:active .switch-control::after { width: 22px }
+.push-status-row { display: grid; gap: 8px; padding: 13px 14px; border-top: 1px solid var(--border) }
+.push-status-row + .switch-row { border-top: 1px solid var(--border) }
+.push-status-text { margin: 0; font-size: var(--text-ui); font-weight: var(--weight-medium); color: var(--fg) }
+.push-status-text.working { color: var(--success-fg) }
+.push-status-text.warning { color: var(--warning-fg) }
+.push-status-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
+.push-status-actions .secondary, .push-status-actions .link { min-height: var(--control-height-standard) }
+.push-test-result { color: var(--muted) }
+.push-test-result.success { color: var(--success-fg) }
+.push-test-result.error { color: var(--danger) }
  .content:has(.schedule-page) { overflow: hidden; padding-bottom: 0 }
 .schedule-page { height: 100%; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0 }
 .schedule-page > .page-header { flex: 0 0 auto }
@@ -1097,6 +1132,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-block-head select { min-height: 34px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700 }
 /* Стрелки перемещения блока/упражнения вверх-вниз. */
 .exercise-head-actions { display: inline-flex; align-items: center; gap: 8px }
+.planned-technique-button { width:44px; height:44px; display:grid; place-items:center; padding:0; border:1px solid var(--border); border-radius:50%; background:var(--surface-sunken); color:var(--fg); box-shadow:none }
+.planned-technique-button svg { width:16px; height:16px }
 .block-reorder { display: inline-flex; gap: 4px }
 .reorder-btn { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-raised); color: var(--fg); font-size: 15px; line-height: 1; cursor: pointer }
 .reorder-btn svg { width:18px; height:18px }
@@ -1125,6 +1162,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .theme-light .coachmark-bubble { background: var(--surface-elevated) }
 .live-exercise-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
 .live-exercise-head h2, .live-exercise-head h3 { margin: 0; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere }
+.exercise-technique-trigger { min-width:0; flex:1 1 auto; display:grid; justify-items:start; gap:3px; padding:4px 0; border:0; border-radius:var(--radius-sm); background:transparent; color:var(--fg); text-align:left; box-shadow:none }
+.exercise-technique-trigger:hover { background:transparent }
+.exercise-technique-trigger:focus-visible { outline:3px solid var(--accent-ring); outline-offset:2px }
+.exercise-technique-trigger > h2, .exercise-technique-trigger > h3, .exercise-technique-trigger > strong { width:100% }
+.exercise-technique-trigger > span { color:var(--muted); font-size:var(--text-xs); font-weight:var(--weight-semibold); line-height:1.2 }
 .live-previous-result { margin:2px 0 0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .live-exercise-head .exercise-head-actions { flex: 0 0 auto }
 .block-badge { align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: var(--surface-raised); border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 700 }
@@ -1151,6 +1193,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .block-rest { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 0 }
 .block-rest-field { display: inline-flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 600 }
 .block-rest-field input { width: 72px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700; text-align: center }
+.exercise-plan-rest-field { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:6px 0 12px; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken); color:var(--muted); font-size:var(--type-caption-size); font-weight:var(--weight-medium); line-height:var(--leading-snug) }
+.exercise-plan-rest-field input { width:78px; min-height:44px; flex:0 0 auto; padding:8px 10px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-raised); color:var(--fg); font:inherit; font-size:var(--type-body-size); font-weight:var(--weight-semibold); text-align:center }
 .exercise-options { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px }
 .exercise-options summary { width: fit-content; min-height:var(--control-height-standard); display:flex; align-items:center; color: var(--accent-weak); cursor: pointer; font-size: 13px; font-weight: 700; list-style-position: inside }
 .exercise-options-hint { margin-left: 5px; color: var(--muted); font-weight: 600 }
@@ -1207,7 +1251,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .planned-round-exercise { margin-bottom: 6px }
 .planned-round-exercise:last-child { margin-bottom: 0 }
 .planned-round-exercise-name { display: block; font-size: 13px; font-weight: 600; margin-bottom: 3px }
-.workout-detail-exercise-row { display:grid; grid-template-columns:minmax(0,1fr) 44px; align-items:start; gap:var(--space-2); min-width:0 }
+.workout-detail-exercise-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:var(--space-2); min-width:0 }
+.workout-detail-exercise-actions { display:flex; align-items:flex-start; flex:0 0 auto }
+.workout-detail-exercise-actions .overflow-trigger { min-width:44px; min-height:44px }
+.completed-exercise .exercise-comment-note { margin-right:88px }
 .exercise-history-link { width:44px; min-height:44px; display:grid; place-items:center; align-self:start; margin:0; padding:0; border:0; border-radius:var(--radius-sm); color:var(--secondary-label-fg); background:transparent; line-height:1; text-decoration:none }
 .exercise-history-link svg { width:20px; height:20px }
 .exercise-history-link:hover { color:var(--accent-strong) }
@@ -1467,7 +1514,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
    hero-вариант меняет только представление первого экрана. */
 .today-voice-home { min-height:calc(100dvh - 190px); align-content:start; gap:12px; }
 .today-greeting { margin:2px 0 0; color:var(--text); font-size:15px; line-height:1.35; }
-.voice-action { display:grid; justify-items:center; gap:14px; padding:2px 0 0; text-align:center; }
+.voice-action { position:relative; display:grid; justify-items:center; gap:14px; padding:2px 0 0; text-align:center; }
+.voice-action-hitarea { position:absolute; inset:0; z-index:2; width:100%; min-height:0; padding:0; border:0; border-radius:inherit; background:transparent; box-shadow:none; cursor:pointer; }
+.voice-action-hitarea:hover { background:transparent; }
+.voice-action-hitarea:focus-visible { outline:3px solid var(--accent-ring); outline-offset:3px; }
+.voice-action-hitarea:disabled { background:transparent; cursor:wait; }
 .voice-action-copy { min-height:34px; display:grid; align-content:center; gap:8px; }
 .voice-action-copy h2 { margin:0; color:var(--voice-title); font-size:21px; letter-spacing:-.02em; }
 .voice-action-guidance { max-width:310px; margin:0; color:var(--voice-copy); font-size:14px; line-height:1.4; }
@@ -1476,6 +1527,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .voice-action-button:active { transform:scale(.965); box-shadow:none; }
 .voice-action-button:focus-visible { outline:3px solid var(--accent-ring); outline-offset:9px; }
 .voice-action-button:disabled { opacity:1; cursor:wait; }
+.voice-action-button-visual { pointer-events:none; }
 .voice-action-button svg { position:relative; z-index:1; width:47px; height:47px; }
 .voice-action-ring { position:absolute; inset:-7px; border-radius:50%; pointer-events:none; }
 .voice-action-recording .voice-action-button::before { animation:voice-breathe 1.9s ease-in-out infinite; }
@@ -1585,9 +1637,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .first-plan-success .eyebrow, .first-plan-success h2, .first-plan-success p { margin:0; }
 .first-plan-success h2 { color:var(--fg); font-size:24px; line-height:1.12; }
 .first-plan-success > div:first-child > p:last-child { color:var(--muted); font-size:14px; }
-.first-plan-invite-code { display:grid; gap:3px; padding:12px 14px; border:1px solid var(--success-border); border-radius:14px; background:var(--surface-raised); }
-.first-plan-invite-code span, .first-plan-invite-code small { color:var(--muted); font-size:12px; }
-.first-plan-invite-code strong { color:var(--fg); font-size:22px; letter-spacing:.08em; }
 .join-invitation { margin-top:14px; }
 .client-home-next, .client-home-past-plan, .client-home-week, .client-home-highlight, .client-home-self-training.compact, .client-home-error { padding:16px; border:1px solid var(--voice-context-border); border-radius:20px; background:var(--voice-surface); box-shadow:none; }
 .client-home-next, .client-home-week, .client-home-highlight, .client-home-self-training { min-width:0; }
@@ -1735,6 +1784,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-set-compact-values { min-width:0; display:flex; flex-direction:column; gap:1px; overflow:hidden }
 .live-set-compact-values strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--fg); font-size:var(--type-body-size) }
 .live-set-compact-values small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:var(--type-caption-size) }
+.live-set-fill-action { grid-column:2 / -1; width:100%; min-height:44px; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px; padding:0 2px 0 0; border:0; border-radius:var(--radius-sm); background:transparent; color:var(--fg); text-align:left }
+.live-set-fill-action:hover { background:var(--surface-sunken) }
+.live-set-fill-action:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
+.live-set-fill-label { display:inline-flex; align-items:center; gap:2px; min-height:44px; padding-left:8px; font-size:var(--type-body-size); font-weight:var(--weight-medium); white-space:nowrap }
+.live-set-fill-label svg { width:16px; height:16px }
 .live-set-compact-action { min-height:44px; padding:6px 8px; border-radius:var(--radius-sm); background:var(--accent); color:var(--on-accent); font-size:var(--type-caption-size); font-weight:var(--weight-bold); text-align:center }
 .live-set-compact.confirmed .live-set-compact-action { min-height:44px; padding:4px 2px; background:transparent; color:var(--success-fg); font-size:18px }
 .live-set-grid { position:relative; display:grid; grid-template-columns:28px minmax(0, 1fr) minmax(0, 1fr) 44px; gap:6px; min-height:50px; padding:5px 0; border-top:0 }
@@ -1907,7 +1961,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-periods button { min-height: var(--control-height-compact); padding: 7px var(--space-1); border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--muted); box-shadow:none; font-size: var(--type-caption-size) }
 .ai-progress-periods button.active { border-color: color-mix(in srgb, var(--accent) 28%, var(--ai-divider)); background: var(--surface-raised); color: var(--accent-strong); box-shadow:none}
 .ai-progress-hero { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--card-padding); border-block: 1px solid var(--ai-divider); background: var(--ai-subtle-surface) }
-.ai-progress-hero span, .ai-progress-regularity span { color: var(--accent-weak); font-size: var(--type-caption-size); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase }
+.ai-progress-hero span { color: var(--accent-weak); font-size: var(--type-caption-size); font-weight: var(--weight-bold); letter-spacing: var(--tracking-label); text-transform: uppercase }
 .ai-progress-hero strong { min-width: 0; overflow-wrap: anywhere; font-size: var(--type-body-size); line-height: var(--leading-body) }
 .ai-progress-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; border-bottom: 1px solid var(--ai-divider); background: var(--ai-divider) }
 .ai-progress-stats div { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 12px 3px; background: var(--ai-stat-surface); text-align: center }
@@ -1917,15 +1971,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 @media (max-width: 400px) {
   .ai-progress-stats span { text-overflow: clip; white-space: normal }
 }
-.ai-progress-facts { display: grid; gap: var(--space-2) }
-.ai-progress-fact { display: grid; gap: 2px; padding-bottom: var(--space-2); border-bottom: 1px solid var(--ai-divider) }
-.ai-progress-fact:last-child { padding-bottom: 0; border-bottom: 0 }
-.ai-progress-fact strong { min-width: 0; overflow-wrap: anywhere; font-size: var(--type-caption-size); line-height: var(--leading-snug) }
-.ai-progress-fact span { min-width: 0; overflow-wrap: anywhere; color: var(--ai-copy); font-size: var(--type-caption-size); font-variant-numeric: tabular-nums; line-height: var(--leading-body) }
-.ai-progress-regularity { display: block; margin: var(--space-3) var(--card-padding) 0; padding: var(--space-3) 0 0; border-top: 1px solid var(--ai-divider) }
-.ai-progress-regularity div { display: flex; align-items: center; justify-content: space-between; gap: 10px }
-.ai-progress-regularity strong { font-size: var(--type-body-size) }
-.ai-progress-regularity p { margin: 4px 0 0; color: var(--muted); font-size: var(--type-caption-size); line-height: var(--leading-snug) }
 .ai-progress-goal { display: grid; gap: 6px; margin: var(--space-3) var(--card-padding) 0; padding-top: var(--space-3); border-top: 1px solid var(--ai-divider) }
 .ai-progress-goal h3 { margin: 0 0 2px; font-size: var(--type-body-size) }
 .ai-progress-goal > strong { min-width: 0; overflow-wrap: anywhere; font-size: var(--type-caption-size); line-height: var(--leading-body) }
@@ -1935,11 +1980,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-goal-empty .button { width: fit-content; min-height: 36px; padding: 8px 12px; font-size: var(--type-caption-size) }
 .ai-progress-goal-error { display: flex; align-items: center; justify-content: space-between; gap: 10px }
 .ai-progress-goal-error .link { min-height: 32px; padding: 4px 0 }
-.ai-progress-next-steps { padding-top: 15px }
-.ai-progress-more { min-height: 32px; align-self: flex-start; padding: 4px 0; color: var(--accent-strong); font-size: var(--type-caption-size); font-weight: var(--weight-bold) }
-.ai-progress-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-3); padding: var(--space-3) var(--card-padding); border-top: 1px solid var(--ai-divider); background: var(--ai-subtle-surface) }
-.ai-progress-footer > span { flex: 1 1 auto; color: var(--muted); font-size: var(--type-caption-size); line-height: var(--leading-snug) }
-.ai-progress-footer button { flex: 0 0 auto; min-height: var(--control-height-compact); padding: 7px var(--space-3); border-radius: var(--radius-sm); font-size: var(--type-caption-size) }
 .ai-progress-empty { display: flex; min-height: 150px; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 24px 22px; border-block: 1px solid var(--ai-divider); color: var(--ai-empty-fg); text-align: center; background: var(--ai-subtle-surface) }
 .ai-progress-empty p { color: var(--muted); font-size: var(--type-caption-size) }
 .ai-progress-error { margin: 0; padding: 0 17px 14px; font-size: var(--type-caption-size) }
@@ -1957,7 +1997,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .ai-progress-sheet > header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3) }
 .ai-progress-sheet > header h2 { margin: 0; font-size: var(--type-title-size) }
 .ai-progress-sheet-content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; gap: var(--space-3) }
-.ai-progress-sheet-content > .ai-progress-facts { gap: var(--space-3) }
 .ai-progress-sheet-list { display: grid; gap: var(--space-3) }
 .ai-progress-sheet-list p { margin: 0; padding-bottom: var(--space-3); border-bottom: 1px solid var(--border); font-size: var(--type-body-size); line-height: var(--leading-body) }
 .ai-progress-sheet-list p:last-child { padding-bottom: 0; border-bottom: 0 }
@@ -1968,31 +2007,31 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-page .ai-progress-title h2 { font-size: var(--type-section-size) }
 .trainer-progress-page .ai-progress-title p { font-size: 13px }
 .trainer-progress-page .ai-progress-hero strong { font-size: var(--type-body-size); font-weight: var(--weight-semibold); line-height: var(--leading-body) }
-.trainer-progress-page .ai-progress-fact strong { font-size: 13px }
-.trainer-progress-page .ai-progress-fact span,
-.trainer-progress-page .ai-progress-regularity p { font-size: 13px }
-.trainer-progress-page .ai-progress-footer { margin-top: var(--space-2) }
 .client-progress-card { border-color: var(--client-ai-card-border); background: var(--client-ai-card-background) }
 .client-progress-card .ai-progress-mark { border-color: var(--client-ai-mark-border); background: var(--client-ai-mark-background); box-shadow:none}
 .client-progress-card .coachmark-anchor { width:100% }
 .client-progress-card .ai-progress-periods { width:min(320px, calc(100% - 2 * var(--card-padding))); margin-bottom:var(--space-2); padding:2px; border-color:color-mix(in srgb, var(--ai-divider) 72%, transparent); box-shadow:none}
 .client-progress-card .ai-progress-periods.period-count-1 { width:min(140px, calc(100% - 2 * var(--card-padding))) }
 .client-progress-card .ai-progress-periods button { min-height:34px; padding:5px var(--space-2) }
-.body-progress-map { display:grid; gap:var(--space-3); padding:var(--space-3) var(--card-padding) var(--space-4); border-block:1px solid var(--ai-divider); background:var(--surface-raised) }
-.body-progress-map > header { min-width:0; display:grid; gap:var(--space-3) }
+.body-progress-map { display:grid; gap:10px; overflow:hidden; padding:var(--space-3) var(--card-padding) var(--space-4); border:1px solid var(--ai-divider); border-radius:var(--radius-lg); background:var(--surface-raised) }
+.body-progress-map > header { min-width:0; display:grid; gap:8px }
 .body-progress-map > header > div:first-child { min-width:0 }
 .body-progress-map > header span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
 .body-progress-map > header h3 { margin:3px 0 0; font-size:var(--type-section-size); line-height:var(--leading-tight) }
 .body-progress-map > header p { margin:3px 0 0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
-.body-progress-modes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:3px; padding:3px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken) }
-.body-progress-modes button { min-height:36px; padding:6px var(--space-2); border:0; border-radius:calc(var(--radius-md) - 3px); background:transparent; color:var(--muted); box-shadow:none; font-size:var(--type-caption-size); font-weight:var(--weight-semibold) }
-.body-progress-modes button[aria-pressed="true"] { background:var(--surface-raised); color:var(--accent-strong); box-shadow:none}
-.body-progress-figure-shell { display:grid; justify-items:center; gap:var(--space-2); min-width:0 }
-.body-progress-sides { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:2px; width:min(100%,220px); padding:2px; border:1px solid color-mix(in srgb,var(--border) 72%,transparent); border-radius:999px; background:color-mix(in srgb,var(--surface-sunken) 78%,transparent) }
-.body-progress-sides button { min-height:32px; padding:4px var(--space-2); border:0; border-radius:999px; background:transparent; color:var(--muted); box-shadow:none; font-size:var(--text-xs); font-weight:var(--weight-semibold) }
-.body-progress-sides button[aria-pressed="true"] { background:var(--surface-raised); color:var(--fg-strong); box-shadow:none}
+.body-progress-modes { position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); justify-self:center; width:min(100%,164px); gap:0; padding:0; border:0; border-radius:9px; background:transparent }
+.body-progress-modes::before { content:""; position:absolute; z-index:0; inset:4px 0; border:1px solid var(--border); border-radius:9px; background:var(--surface-sunken); pointer-events:none }
+.body-progress-modes button { position:relative; z-index:1; isolation:isolate; min-height:44px; padding:4px 6px; border:0; border-radius:7px; background:transparent; color:var(--muted); box-shadow:none; font-size:11px; font-weight:var(--weight-semibold) }
+.body-progress-modes button[aria-pressed="true"] { color:var(--accent-strong); box-shadow:none}
+.body-progress-modes button[aria-pressed="true"]::before { content:""; position:absolute; z-index:-1; inset:5px 1px; border-radius:7px; background:var(--surface-raised); pointer-events:none }
+.body-progress-figure-shell { display:grid; justify-items:center; gap:8px; min-width:0 }
+.body-progress-sides { position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0; width:min(100%,120px); height:28px; padding:0; border:0; border-radius:var(--radius-pill); background:transparent }
+.body-progress-sides::before { content:""; position:absolute; z-index:0; inset:2px 0; border:1px solid color-mix(in srgb,var(--border) 72%,transparent); border-radius:var(--radius-pill); background:color-mix(in srgb,var(--surface-sunken) 78%,transparent); pointer-events:none }
+.body-progress-sides button { position:relative; z-index:1; isolation:isolate; min-height:44px; margin:-8px 0; padding:3px 4px; border:0; border-radius:var(--radius-pill); background:transparent; color:var(--muted); box-shadow:none; font-size:10px; font-weight:var(--weight-semibold) }
+.body-progress-sides button[aria-pressed="true"] { color:var(--fg-strong); box-shadow:none}
+.body-progress-sides button[aria-pressed="true"]::before { content:""; position:absolute; z-index:-1; inset:11px 1px; border-radius:var(--radius-pill); background:var(--surface-raised); pointer-events:none }
 .body-progress-sides button:disabled { opacity:.38 }
-.body-progress-visual { position:relative; width:min(100%,270px); aspect-ratio:476/1000; justify-self:center; overflow:hidden; touch-action:pan-y; border-radius:var(--radius-lg); background:transparent }
+.body-progress-visual { position:relative; width:min(100%,210px); aspect-ratio:476/1000; justify-self:center; overflow:hidden; touch-action:pan-y; border-radius:var(--radius-lg); background:transparent }
 .body-progress-overlay { position:absolute; inset:0; width:100%; height:100%; overflow:visible; filter:none; user-select:none }
 .body-progress-visual.figure-neutral .body-progress-figure-image-light { display:none }
 .body-progress-visual.figure-neutral .body-progress-figure-image-dark { display:block }
@@ -2011,12 +2050,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .body-progress-region:focus-visible .body-progress-region-hit { stroke:color-mix(in srgb,var(--success-fg) 48%,transparent); stroke-width:3px }
 .body-progress-visual.discovering.mode-progress .body-progress-region:not(.selected) .body-progress-region-fill { animation:body-zone-discovery .7s ease var(--body-zone-delay) both }
 @keyframes body-zone-discovery { 0%,100% { opacity:var(--body-zone-base-opacity) } 42%,68% { opacity:.18 } }
-.body-progress-detail { display:grid; gap:6px; padding:var(--space-3); border:1px solid color-mix(in srgb, var(--success-border) 70%, var(--border)); border-radius:var(--radius-md); background:color-mix(in srgb, var(--success-surface) 52%, var(--surface-raised)) }
+.body-progress-detail { display:grid; gap:4px; padding:12px; border:1px solid color-mix(in srgb, var(--success-border) 70%, var(--border)); border-radius:var(--radius-md); background:color-mix(in srgb, var(--success-surface) 52%, var(--surface-raised)) }
 .body-progress-detail-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:var(--space-2) }
-.body-progress-detail-heading > div { min-width:0; display:grid; gap:2px }
 .body-progress-detail-heading strong { overflow-wrap:anywhere; font-size:var(--type-body-size); line-height:var(--leading-tight) }
 .body-progress-detail-heading span { flex:0 0 auto; color:var(--success-fg); font-size:var(--type-section-size); font-variant-numeric:tabular-nums; font-weight:var(--weight-bold); letter-spacing:0; text-transform:none }
-.body-progress-detail-heading small { color:var(--muted); font-size:var(--text-xs); line-height:var(--leading-snug) }
 .body-progress-detail p { margin:0; overflow-wrap:anywhere; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .body-progress-detail .body-progress-primary-detail { color:var(--fg-strong); font-weight:var(--weight-semibold) }
 .body-progress-more { width:fit-content; min-height:44px; padding:6px 0; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold) }
@@ -2040,19 +2077,17 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-story-hero.empty { min-height:132px; align-content:center; text-align:center }
 .progress-story-hero.empty h3 { font-size:var(--type-body-size) }
 .client-progress-wins { display:grid; gap:10px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
-.client-progress-wins h3, .client-progress-insight h3, .client-progress-details-section h3 { margin:0; font-size:var(--type-body-size); line-height:var(--leading-tight) }
+.client-progress-wins h3 { margin:0; font-size:var(--type-body-size); line-height:var(--leading-tight) }
 .client-progress-wins > div { display:grid; gap:9px }
 .client-progress-wins article { min-width:0; display:grid; grid-template-columns:7px minmax(0,1fr); align-items:start; gap:9px }
 .client-progress-wins article > span { width:7px; height:7px; margin-top:5px; border-radius:50%; background:var(--success); box-shadow:none}
 .client-progress-wins article div { min-width:0 }
 .client-progress-wins article strong { display:block; overflow-wrap:anywhere; font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .client-progress-wins article p { margin:2px 0 0; overflow-wrap:anywhere; color:var(--muted); font-size:var(--type-caption-size); font-variant-numeric:tabular-nums; line-height:var(--leading-snug) }
-.client-progress-insight p, .client-progress-details-section p { margin:0; overflow-wrap:anywhere; font-size:var(--type-caption-size); line-height:var(--leading-body) }
-.client-progress-insight { display:grid; gap:4px; margin:var(--space-3) var(--card-padding) 0; padding-top:var(--space-3); border-top:1px solid var(--client-ai-note-border) }
-.client-progress-insight h3 { color:var(--client-ai-note-fg) }
-.client-progress-insight p { color:var(--muted) }
 .client-progress-main-now { display:grid; gap:7px }
-.client-progress-main-now > span { color:var(--secondary-label-fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.client-progress-main-now-head { display:flex; min-width:0; align-items:center; justify-content:space-between; gap:12px }
+.client-progress-main-now-head > span { color:var(--secondary-label-fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.client-progress-details-trigger { flex:0 0 auto; min-height:44px; padding:5px 0; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-semibold) }
 .client-progress-main-now h3 { margin:0; overflow-wrap:anywhere; font-size:var(--type-section-size); line-height:var(--leading-tight) }
 .client-progress-main-now p { margin:0; overflow-wrap:anywhere; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
 .client-progress-main-now > strong { display:block; padding-top:9px; border-top:1px solid var(--border); overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); font-variant-numeric:tabular-nums; line-height:var(--leading-snug) }
@@ -2067,12 +2102,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .period-comparison-facts dt span { display:block; margin-top:2px; color:var(--muted); font-size:var(--type-micro-size); font-variant-numeric:tabular-nums; font-weight:var(--weight-regular) }
 .period-comparison-facts dd { margin:0; color:var(--fg); font-size:var(--type-body-size); font-variant-numeric:tabular-nums; font-weight:var(--weight-semibold); white-space:nowrap }
 .period-comparison-facts > div.positive dd { color:var(--success-strong) }
-.period-comparison-toggle { width:fit-content; min-height:44px; padding:6px 0 }
-.period-comparison-conclusions { display:grid; gap:8px }
-.period-comparison-conclusions > div { display:grid; grid-template-columns:minmax(92px,.65fr) minmax(0,1.7fr); gap:10px; padding-top:10px; border-top:1px solid var(--border) }
-.period-comparison-conclusions span { color:var(--muted); font-size:var(--type-micro-size); line-height:var(--leading-snug) }
-.period-comparison-conclusions p,
+.period-comparison-limitation { padding-top:10px; border-top:1px solid var(--border); color:var(--muted) }
+.period-comparison-limitation,
 .period-comparison-empty { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.period-comparison-limitation { color:var(--muted) }
 .client-progress-measurements-story { display:grid; gap:12px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
 .client-progress-measurements-story > header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
 .client-progress-measurements-story > header > div { display:grid; gap:3px; min-width:0 }
@@ -2104,15 +2137,17 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .measurement-story-state { color:var(--muted) }
 .measurement-story-empty { display:grid; gap:7px; padding:14px 0; color:var(--muted) }
 .measurement-story-empty .link { width:fit-content; min-height:44px; padding:7px 0 }
-.client-progress-regularity-story { display:grid; gap:12px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
-.client-progress-regularity-story > header > div { display:grid; gap:3px }
-.client-progress-regularity-story > header span { color:var(--muted); font-size:var(--type-micro-size); font-weight:var(--weight-semibold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.measurement-story-management { min-width:0; padding-top:12px; border-top:1px solid var(--border) }
+.client-measurement-management { display:grid; gap:12px; min-width:0 }
+.measurement-story-management .measurement-actions { padding-top:0; border-top:0 }
+.measurement-story-management .client-progress-form,
+.measurement-story-management .client-progress-history,
+.measurement-story-management .metrics-manager { margin:0; padding:16px 0 0; border:0; border-top:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.client-progress-regularity-story { display:grid; gap:10px; margin:var(--space-3) var(--card-padding) 0; padding-bottom:var(--space-3); border-bottom:1px solid var(--ai-divider) }
+.client-progress-regularity-story > header { display:flex; align-items:baseline; justify-content:space-between; gap:12px }
 .client-progress-regularity-story > header h3 { margin:0; overflow-wrap:anywhere; font-size:var(--type-body-size); line-height:var(--leading-tight) }
-.regularity-story-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding:12px 0; border-block:1px solid var(--border) }
-.regularity-story-summary > div { display:grid; gap:3px; min-width:0 }
-.regularity-story-summary span { color:var(--muted); font-size:var(--type-micro-size); line-height:var(--leading-snug) }
-.regularity-story-summary strong { overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-numeric-size); font-variant-numeric:tabular-nums; line-height:var(--leading-tight) }
-.regularity-weekly-strip { display:grid; gap:9px; padding:12px; border-radius:var(--radius-md); background:var(--surface-sunken) }
+.client-progress-regularity-story > header strong { flex:0 0 auto; color:var(--fg); font-size:var(--type-body-size); font-variant-numeric:tabular-nums; line-height:var(--leading-tight) }
+.regularity-weekly-strip { display:grid; gap:8px; padding:10px; border-radius:var(--radius-md); background:var(--surface-sunken) }
 .regularity-weekly-strip-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px }
 .regularity-weekly-strip-head span { color:var(--fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold) }
 .regularity-weekly-strip-head small { color:var(--muted); font-size:var(--type-micro-size); font-variant-numeric:tabular-nums; text-align:right }
@@ -2123,18 +2158,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .regularity-weekly-strip ol.dense { gap:2px }
 .regularity-weekly-strip ol.dense li { min-height:26px; border-radius:3px }
 .regularity-weekly-strip ol.dense li > span { display:none }
-.regularity-weekly-legend { display:flex; flex-wrap:wrap; gap:6px 12px }
-.regularity-weekly-legend span { display:inline-flex; align-items:center; gap:5px; color:var(--muted); font-size:var(--type-micro-size) }
-.regularity-weekly-legend span::before { width:8px; height:8px; border:1px solid var(--border); border-radius:3px; background:var(--surface-raised); content:'' }
-.regularity-weekly-legend span.active::before { border-color:var(--mono-primary); background:var(--mono-primary) }
-.regularity-weekly-legend span.current::before { border-style:dashed; background:transparent }
-.regularity-story-facts { display:grid; gap:0; margin:0; border-top:1px solid var(--border) }
-.regularity-story-facts > div { display:grid; grid-template-columns:minmax(120px,.9fr) minmax(0,1.4fr); gap:10px; padding:9px 0; border-bottom:1px solid var(--border) }
+.regularity-story-facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; margin:0; border-block:1px solid var(--border) }
+.regularity-story-facts > div { display:grid; align-content:start; gap:3px; min-width:0; padding:8px 6px }
+.regularity-story-facts > div + div { border-left:1px solid var(--border) }
 .regularity-story-facts dt { color:var(--muted); font-size:var(--type-micro-size); line-height:var(--leading-snug) }
 .regularity-story-facts dd { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); font-variant-numeric:tabular-nums; font-weight:var(--weight-semibold); line-height:var(--leading-snug) }
-.regularity-story-explanation { display:grid; gap:4px; padding-top:10px; border-top:1px solid var(--border) }
-.regularity-story-explanation > span { color:var(--muted); font-size:var(--type-micro-size); font-weight:var(--weight-semibold); letter-spacing:var(--tracking-label); text-transform:uppercase }
-.regularity-story-explanation p, .regularity-story-state { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.regularity-story-state { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); line-height:var(--leading-body) }
 .regularity-story-state { color:var(--muted) }
 .client-progress-goal-story { display:grid; gap:8px; margin:var(--space-3) var(--card-padding) 0; padding:var(--space-3); border:1px solid var(--ai-divider); border-radius:var(--radius-md); background:var(--surface-muted) }
 .client-progress-goal-story > span, .client-progress-upcoming > span { color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold); letter-spacing:var(--tracking-label); text-transform:uppercase }
@@ -2165,17 +2194,59 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-upcoming article strong { min-width:0; overflow-wrap:anywhere; font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .client-progress-upcoming article span { flex:0 0 auto; color:var(--muted); font-size:var(--type-micro-size); font-variant-numeric:tabular-nums }
 .client-progress-upcoming > .link { width:fit-content; min-height:36px; margin-top:2px; padding:5px 0; font-size:var(--type-caption-size); font-weight:var(--weight-bold) }
-.progress-story-attention { display:flex; align-items:flex-start; gap:9px; margin:var(--space-3) var(--card-padding) 0; padding:10px 11px; border:1px solid var(--ai-attention-border); border-radius:var(--radius-md); background:var(--ai-attention-surface) }
-.progress-story-attention > span { width:20px; height:20px; display:grid; place-items:center; flex:0 0 auto; border-radius:50%; color:var(--mono-on-primary); background:var(--warning); font-size:12px; font-weight:900 }
-.progress-story-attention > div { min-width:0; display:grid; gap:4px }
-.progress-story-attention strong { color:var(--ai-attention-fg); font-size:var(--type-caption-size); letter-spacing:var(--tracking-label); text-transform:uppercase }
-.progress-story-attention p { margin:0; overflow-wrap:anywhere; color:var(--ai-attention-fg); font-size:var(--type-caption-size); line-height:var(--leading-body) }
-.client-progress-details-toggle { display:flex; justify-content:flex-start; margin:var(--space-2) var(--card-padding) 0 }
-.client-progress-details-toggle .link { min-height:var(--control-height-compact); padding:var(--space-1) 0; color:var(--accent-strong); font-size:var(--type-caption-size); font-weight:var(--weight-bold) }
-.client-progress-details-section { display:grid; gap:var(--space-2) }
-.client-progress-details-section + .client-progress-details-section { padding-top:var(--space-3); border-top:1px solid var(--border) }
-.client-progress-details-section ul { display:grid; gap:var(--space-2); margin:0; padding-left:18px }
-.client-progress-details-section li { color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.client-progress-next-step { gap:10px; border-color:var(--border); background:var(--surface-raised) }
+.progress-next-step-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
+.progress-next-step-head > span { color:var(--secondary-label-fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.progress-next-step-head > strong { flex:0 0 auto; max-width:48%; padding:4px 8px; border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:var(--type-micro-size); font-weight:var(--weight-semibold); line-height:1.25; text-align:right }
+.progress-next-step-evidence { display:block; padding-top:9px; border-top:1px solid var(--border); overflow-wrap:anywhere; color:var(--muted); font-size:var(--type-micro-size); font-variant-numeric:tabular-nums; line-height:var(--leading-body) }
+.client-progress-next-step > .progress-next-step-actions,
+.progress-next-step-decision > .progress-next-step-actions,
+.progress-next-step-editor > .progress-next-step-actions { display:flex; align-items:center; flex-wrap:wrap; gap:6px 14px; margin-top:0 }
+.progress-next-step-actions button,
+.progress-next-step-decision > .secondary { min-height:44px; font-size:var(--type-caption-size); font-weight:var(--weight-semibold) }
+.progress-next-step-actions .secondary,
+.progress-next-step-decision > .secondary { padding:8px 12px; border:1px solid var(--fg); border-radius:var(--radius-sm); background:var(--fg); color:var(--bg); text-decoration:none }
+.client-progress-next-step > .progress-next-step-actions .secondary,
+.progress-next-step-editor > .progress-next-step-actions .secondary,
+.progress-next-step-decision > .secondary { width:100%; min-height:48px }
+.progress-next-step-actions .link { padding:7px 0 }
+.progress-next-step-editor { display:grid; gap:10px; padding-top:10px; border-top:1px solid var(--border) }
+.progress-next-step-editor fieldset { display:grid; gap:7px; margin:0; padding:0; border:0 }
+.progress-next-step-editor legend { margin-bottom:8px; color:var(--muted); font-size:var(--type-micro-size); font-weight:var(--weight-semibold) }
+.progress-next-step-editor label { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:start; gap:9px; min-height:44px; padding:10px; border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--fg); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
+.progress-next-step-editor input { width:18px; height:18px; margin:0 }
+.progress-next-step-decision { display:grid; gap:9px; margin-top:0; padding-top:10px; border-top:1px solid var(--border) }
+.progress-next-step-decision > p { color:var(--secondary-label-fg) }
+.progress-next-step-decision > p strong { color:var(--fg); font-weight:var(--weight-semibold) }
+.progress-next-step-decision > .secondary { display:inline-flex; align-items:center; justify-content:center }
+.client-progress-next-step.state-rejected { border-style:dashed }
+.trainer-progress-signals { display:grid; gap:0; margin:var(--space-3) var(--card-padding) 0; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-raised) }
+.trainer-progress-signals > header { min-height:64px; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 13px }
+.trainer-progress-signals > header > div { min-width:0; display:grid; gap:3px }
+.trainer-progress-signals > header span { color:var(--secondary-label-fg); font-size:var(--type-micro-size); font-weight:var(--weight-semibold); letter-spacing:var(--tracking-label); text-transform:uppercase }
+.trainer-progress-signals > header h3 { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
+.trainer-progress-signals > header .link { min-height:44px; flex:0 0 auto; padding:7px 0; color:var(--fg); font-size:var(--type-caption-size) }
+.trainer-progress-signals-content { display:grid; gap:0; padding:0 13px 13px; border-top:1px solid var(--border) }
+.trainer-progress-signals-content > p { margin:12px 0 0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.trainer-progress-signals-content > p .link { min-height:44px; padding:6px 0 }
+.trainer-progress-signals-content ol { display:grid; margin:0; padding:0; list-style:none }
+.trainer-progress-signals-content li { display:grid; gap:7px; padding:13px 0 }
+.trainer-progress-signals-content li + li { border-top:1px solid var(--border) }
+.trainer-progress-signals-content li > strong { color:var(--fg); font-size:var(--type-caption-size) }
+.trainer-progress-signals-content li p { display:grid; grid-template-columns:52px minmax(0,1fr); gap:8px; margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.trainer-progress-signals-content li p span { color:var(--secondary-label-fg); font-size:var(--type-micro-size); font-weight:var(--weight-semibold); text-transform:uppercase }
+.ai-progress-auto-error { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0; padding:10px var(--card-padding); color:var(--danger); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.ai-progress-auto-error span { min-width:0; overflow-wrap:anywhere }
+.ai-progress-auto-error .link { flex:0 0 auto; min-height:44px; padding:5px 0; color:inherit; font-weight:var(--weight-semibold) }
+.progress-detailed-analysis { display:grid; gap:0 }
+.progress-detailed-analysis-lead { margin:0; padding:0 0 16px; color:var(--secondary-label-fg); font-size:14px; line-height:1.5 }
+.progress-detailed-analysis-section { display:grid; gap:9px; padding:16px 0; border-top:1px solid var(--border) }
+.progress-detailed-analysis-section:last-child { padding-bottom:0 }
+.progress-detailed-analysis-section h3 { margin:0; color:var(--fg); font-size:14px; font-weight:600; line-height:1.35 }
+.progress-detailed-analysis-section ul { display:grid; gap:10px; margin:0; padding:0; list-style:none }
+.progress-detailed-analysis-section li { position:relative; margin:0; padding-left:16px; overflow-wrap:anywhere; color:var(--fg); font-size:14px; line-height:1.5 }
+.progress-detailed-analysis-section li::before { content:""; position:absolute; top:.7em; left:1px; width:5px; height:5px; border-radius:50%; background:var(--accent-strong); transform:translateY(-50%) }
+.progress-detailed-analysis-empty { margin:0; overflow-wrap:anywhere; color:var(--secondary-label-fg); font-size:14px; line-height:1.5 }
 .client-progress-card .ai-progress-goal { margin-top:0; padding-top:var(--space-3) }
 @media (min-width:700px) {
   .trainer-progress-story-card .progress-story-hero { grid-template-columns:auto minmax(0,1fr); column-gap:var(--space-3); align-items:end }
@@ -2199,7 +2270,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .metric { display: flex; justify-content: space-between; padding: 10px 2px; border-bottom: 1px solid var(--border) }
 .sheet-overlay { position: fixed; z-index: 30; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-top: max(12px, env(safe-area-inset-top)); background: var(--overlay); backdrop-filter:none}
 .sheet-overlay.keyboard-open { padding-top: max(8px, env(safe-area-inset-top)) }
-.exercise-picker { width: min(100%, 440px); max-height: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 12px; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); border: 1px solid var(--border); border-bottom: 0; border-radius: 28px 28px 0 0; background: var(--surface-elevated); box-shadow:none}
+.field .catalog-select { height: var(--control-height-standard); min-height: var(--control-height-standard) }
+.exercise-picker { position:relative; width: min(100%, 440px); max-height: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 12px; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); border: 1px solid var(--border); border-bottom: 0; border-radius: 28px 28px 0 0; background: var(--surface-elevated); box-shadow:none}
 .keyboard-open .exercise-picker { height: 100%; border-radius: 24px 24px 0 0; padding-top: 14px; padding-bottom: 10px }
 .client-picker-control { display:grid; gap:6px; }.client-picker-label { color:var(--muted); font-size:13px; font-weight:700; }.client-picker-trigger { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; padding:12px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); text-align:left; box-shadow:none; }.client-picker-trigger > span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.client-picker-trigger > svg { width:18px; height:18px; flex:0 0 auto; color:var(--muted) }
 .client-picker { width:min(100%, 440px); max-height:100%; overflow:hidden; display:flex; flex-direction:column; gap:12px; padding:20px 20px calc(20px + env(safe-area-inset-bottom)); border:1px solid var(--border); border-bottom:0; border-radius:28px 28px 0 0; background:var(--surface-elevated); box-shadow:none; }.keyboard-open .client-picker { height:100%; border-radius:24px 24px 0 0; padding-top:14px; padding-bottom:10px; }
@@ -2248,20 +2320,38 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .running-progress-insight { display:grid; gap:var(--space-2); padding:var(--space-3); border-radius:var(--radius-md); background:var(--accent-surface); color:var(--fg-on-surface) }
 .running-progress-insight p { margin:0; font-size:14px; line-height:1.45 }
 .running-progress-insight span { color:var(--muted); font-size:12px }
-.picker-search { flex: 0 0 auto; width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 13px; color: var(--fg-on-surface); background: var(--input); font-size: 18px; outline: none }
+.picker-search-control { position:relative; min-width:0 }
+.picker-search { flex: 0 0 auto; width: 100%; padding: 14px 48px 14px 16px; border: 1px solid var(--border); border-radius: 13px; color: var(--fg-on-surface); background: var(--input); font-size: 18px; outline: none }
+.picker-search-clear { position:absolute; top:50%; right:2px; width:44px; height:44px; translate:0 -50%; display:grid; place-items:center; padding:0; border:0; border-radius:11px; background:transparent; color:var(--muted); box-shadow:none }
+.picker-search-clear svg { width:18px; height:18px }
 .picker-search-row { flex: 0 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px }
 .picker-filter-toggle { padding: 0 13px; border: 1px solid var(--border); background: var(--surface-sunken); color: var(--muted); box-shadow:none}.picker-filter-toggle.active { border-color: var(--accent-surface-border); color: var(--accent-strong); background: var(--accent-surface) }
-.picker-filter-panel { flex: 0 0 auto; display: grid; grid-template-columns: 1fr; gap: 6px; padding: 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-sunken) }
+.picker-filter-layer { position:absolute; z-index:5; inset:0; display:flex; align-items:flex-end }
+.picker-filter-scrim { position:absolute; inset:0; width:100%; height:100%; padding:0; border:0; border-radius:inherit; background:color-mix(in srgb, var(--overlay) 58%, transparent); box-shadow:none }
+.picker-filter-panel { position:relative; z-index:1; width:100%; max-height:min(72%, 480px); overflow-y:auto; display:grid; grid-template-columns:1fr; gap:12px; padding:16px 20px calc(18px + env(safe-area-inset-bottom)); border:1px solid var(--border); border-bottom:0; border-radius:22px 22px 0 0; background:var(--surface-elevated); box-shadow:none }
+.picker-filter-panel > header { display:flex; align-items:center; justify-content:space-between; gap:12px }
+.picker-filter-panel > header h2 { margin:0; font-size:20px }
+.picker-filter-close { width:44px; height:44px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:var(--surface-sunken); color:var(--muted); box-shadow:none }
+.picker-filter-close svg { width:19px; height:19px }
+.picker-filter-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px }
 .picker-filter-panel label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: var(--text-xs); font-weight: var(--weight-medium) }
-.picker-filter-panel select { min-width: 0; min-height: 40px; padding: 7px 9px; font-size: 14px }
+.picker-filter-panel select { min-width:0; height:44px; min-height:44px; padding:7px 9px; font-size:14px }
 .picker-filter-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:40px }
-.picker-filter-panel .picker-custom-filter { flex-direction: row; align-items: center; gap: 8px; min-height: 36px; color: var(--fg) }
+.picker-filter-panel .picker-custom-filter { flex-direction: row; align-items: center; gap: 8px; min-height: 44px; color: var(--fg) }
 .picker-filter-panel .picker-custom-filter input { width: 20px; height: 20px; margin: 0 }
 .picker-filter-actions .link { flex:0 0 auto; min-height:40px; padding:6px 2px }
+.picker-filter-actions .primary { min-height:44px; padding:10px 16px }
+.picker-filter-chips { flex:0 0 auto; min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:6px }
+.picker-filter-chips > div { min-width:0; display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none }
+.picker-filter-chips > div::-webkit-scrollbar { display:none }
+.picker-filter-chips button { flex:0 0 auto; min-height:32px; display:inline-flex; align-items:center; gap:5px; padding:5px 9px; border:1px solid var(--border); border-radius:99px; background:var(--surface-sunken); color:var(--fg); font-size:12px; font-weight:600; box-shadow:none }
+.picker-filter-chips button svg { width:13px; height:13px; color:var(--muted) }
+.picker-filter-chips .picker-filter-reset { border-color:transparent; background:transparent; color:var(--muted) }
 .picker-list-meta { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -2px 2px 0; color: var(--muted); font-size: var(--text-caption); font-weight: var(--weight-medium) }
 .picker-list-meta .link { font-size: var(--text-caption); white-space: nowrap }
 .picker-empty-state { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: var(--control-height-standard); margin: 0 2px; padding: var(--space-2) 0; color: var(--muted); }
 .picker-empty-state p { margin: 0; font-size: var(--type-body-size); }
+.picker-empty-state > div { display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap }
 .picker-empty-state .link { flex: 0 0 auto; min-height: var(--control-height-standard); white-space: nowrap; }
 .picker-categories { flex: 0 0 auto; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none }.picker-categories::-webkit-scrollbar { display: none }
 .picker-category { flex: 0 0 auto; padding: 9px 14px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface-sunken); color: var(--fg); font-weight: 500; box-shadow:none}.picker-category.active { border-color: var(--accent); background: var(--accent); color: var(--on-accent) }
@@ -2274,23 +2364,56 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .picker-create { flex: 0 0 auto; border: 1px dashed var(--border); background: var(--surface-sunken); color: var(--muted); box-shadow:none}
 .picker-list { flex: 1 1 auto; min-height: 76px; overflow-y: auto; overscroll-behavior: contain; scroll-padding-bottom: 76px; display: flex; flex-direction: column; gap: 6px; padding-bottom: 2px }
 .picker-section-label { margin: 4px 2px 0; color: var(--muted); font-size: var(--text-caption); font-weight: var(--weight-medium); text-transform: uppercase; letter-spacing: var(--tracking-label) }
-.picker-item { display: flex; align-items: center; gap: 10px; width: 100%; min-height:64px; padding: 7px 10px; border: 1px solid var(--border); border-radius:14px; background: var(--surface-raised); color: var(--fg-on-surface); text-align: left; font-weight: var(--weight-medium); line-height: var(--leading-snug); box-shadow:none}.picker-item small { color: var(--muted); font-weight: 400 }
+.picker-item { flex:0 0 auto; display:grid; grid-template-columns:minmax(0,1fr) 50px; align-items:stretch; width:100%; min-height:78px; overflow:hidden; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg-on-surface); font-weight:var(--weight-medium); line-height:var(--leading-snug) }.picker-item small { color: var(--muted); font-size:12px; font-weight:400; line-height:1.3 }
 .picker-item.selected { border-color: var(--accent-surface-border); background: var(--accent-surface) }
+.picker-item.playing { min-height:132px; border-color:var(--accent-surface-border); background:var(--accent-surface) }
+.picker-item-technique { min-width:0; display:flex; align-items:center; gap:10px; padding:7px 8px; border:0; background:transparent; color:inherit; text-align:left; box-shadow:none }
+.picker-item-media { position:relative; flex:0 0 auto }
+.picker-item-play { position:absolute; right:-3px; bottom:-3px; width:20px; height:20px; display:grid; place-items:center; border:2px solid var(--surface-raised); border-radius:50%; background:var(--fg); color:var(--bg) }
+.picker-item-play svg { width:11px; height:11px }
 .picker-item-copy { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px }
-.picker-item-name { min-width: 0; display:-webkit-box; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2 }
-.picker-select-mark { flex: 0 0 auto; width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: 18px }.picker-item.selected .picker-select-mark { border-color: var(--accent); color: var(--on-accent); background: var(--accent) }
+.picker-item-playing-note { color:var(--accent-label) !important; font-weight:600 !important }
+.picker-item-name { min-width:0; display:-webkit-box; overflow:hidden; overflow-wrap:anywhere; -webkit-box-orient:vertical; -webkit-line-clamp:2; font-size:14px; line-height:1.3 }
+.picker-select-mark { align-self:center; width:44px; height:44px; display:grid; place-items:center; padding:0; border:1px solid var(--border); border-radius:12px; background:var(--surface-sunken); color:var(--muted); font-size:18px; box-shadow:none }.picker-item.selected .picker-select-mark { border-color: var(--accent); color: var(--on-accent); background: var(--accent) }
 .picker-select-mark svg { width:17px; height:17px }
+.picker-load-more { flex:0 0 auto; min-height:44px; border:1px solid var(--border); border-radius:13px; background:var(--surface-sunken); color:var(--fg); font-size:14px; font-weight:650; box-shadow:none }
 .exercise-image { position:relative; box-sizing:border-box; flex:0 0 auto; display:grid; place-items:center; aspect-ratio:1; overflow:hidden; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken); color:var(--secondary-label-fg) }
-.exercise-image img { display:block; grid-area:1 / 1; width:100%; height:100%; box-sizing:border-box; padding:3px; object-fit:contain; object-position:center; background:var(--surface-raised) }
+.exercise-image img { position:absolute; inset:0; display:block; width:100%; min-width:0; height:100%; min-height:0; box-sizing:border-box; padding:3px; object-fit:contain; object-position:center; background:var(--surface-raised) }
+.exercise-image-video { position:absolute; z-index:1; inset:0; display:block; width:100%; height:100%; object-fit:contain; object-position:center; background:transparent; opacity:0; transition:opacity 160ms ease }
+.exercise-image-video.playing { opacity:1 }
+.exercise-video-play { position:absolute; z-index:2; left:50%; top:50%; width:52px; height:52px; translate:-50% -50%; display:grid; place-items:center; padding:0 0 0 3px; border:1px solid color-mix(in srgb, var(--fg) 20%, transparent); border-radius:50%; background:color-mix(in srgb, var(--fg) 88%, transparent); color:var(--bg); font-size:20px; box-shadow:none }
+.exercise-image img[src*="/vital-pro/"], .exercise-image-video[src*="/vital-pro/"] { filter:grayscale(1) }
 .exercise-image-frame-end { position:absolute; inset:0; opacity:0 }
 .exercise-image-motion .exercise-image-frame-end { animation:exercise-image-two-frame 3.2s steps(1, end) infinite }
 @keyframes exercise-image-two-frame { 0%, 46%, 100% { opacity:0 } 50%, 96% { opacity:1 } }
 @media (prefers-reduced-motion: reduce) { .exercise-image-motion .exercise-image-frame-end { animation:none; opacity:0 } }
 .exercise-image svg { width:45%; height:45% }
 .exercise-image-thumbnail { width:48px }
+.exercise-image-preview { width:48px }
+.exercise-image-picker { width:62px }
+.picker-item.playing .exercise-image-picker { width:116px }
 .exercise-image-detail { width:104px }
 .exercise-image-technique { width:100%; aspect-ratio:3 / 2; border-radius:var(--radius-lg) }
 .exercise-image-empty { background:var(--surface-sunken) }
+.picker-technique-header { display:grid; grid-template-columns:40px minmax(0,1fr) 40px; text-align:center }
+.picker-technique-header h1 { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.picker-technique-view { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:12px }
+.picker-technique-scroll { flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; display:grid; align-content:start; gap:14px; padding:1px 1px 4px }
+.picker-technique-title { display:grid; gap:4px }
+.picker-technique-title h2 { margin:0; overflow-wrap:anywhere; font-size:22px; line-height:1.2 }
+.picker-technique-title p { margin:0; color:var(--muted); font-size:13px; line-height:1.4 }
+.picker-technique-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); overflow:hidden; border:1px solid var(--border); border-radius:14px }
+.picker-technique-facts span { display:grid; gap:3px; min-width:0; padding:11px }
+.picker-technique-facts span + span { border-left:1px solid var(--border) }
+.picker-technique-facts small { color:var(--muted); font-size:11px }
+.picker-technique-facts strong { overflow-wrap:anywhere; font-size:13px; line-height:1.3 }
+.picker-technique-instructions { display:grid; gap:8px }
+.picker-technique-instructions h3 { margin:0; font-size:17px }
+.picker-technique-instructions ol { display:grid; gap:8px; margin:0; padding-left:22px; color:var(--fg); font-size:14px; line-height:1.45 }
+.picker-technique-note { margin:0; color:var(--muted); font-size:14px; line-height:1.45 }
+.picker-technique-action { flex:0 0 auto; width:100%; min-height:48px }
+.technique-sheet { min-height:min(720px, 88dvh) }
+.technique-sheet-header h1 { margin:0; font-size:var(--text-title) }
 .picker-selection-bar { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-size: var(--text-caption); font-weight: var(--weight-bold) }
 .picker-selection-bar button { min-height: 44px; padding: 10px 18px }
 /* Карточка упражнения: шапка (картинка + метаданные) + табы. */
@@ -2400,6 +2523,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .run-distance-unit { width:100%; min-width:0; min-height:var(--control-height-standard); padding:4px 25px 4px 9px; border:1px solid var(--border); border-radius:var(--radius-sm); appearance:none; -webkit-appearance:none; background:var(--surface-sunken); color:var(--fg); text-align:center; font-size:13px; font-weight:700; text-transform:lowercase }
 .run-distance-unit:focus { border-color:var(--accent-focus); box-shadow:none; outline:none }
 .run-distance-unit:disabled { border-color:transparent; background:transparent; color:var(--fg); opacity:1 }
+.rowing-stroke-rate-field { min-width:0; display:grid; gap:3px; margin-top:3px; color:var(--secondary-label-fg); font-size:12px; font-weight:700; line-height:1.25; text-align:center }
+.rowing-stroke-rate-field > span { min-width:0 }
+.rowing-stroke-rate-field > input { min-height:36px; padding-block:4px }
 .planned-set-rpe { width:100%; min-width:0; min-height:var(--control-height-standard); padding:5px 3px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-sunken); color:var(--fg); text-align:center; font-size:13px; font-weight:700 }
 .planned-set-table.rpe-visible .planned-set-table-head,
 .planned-set.rpe-visible { grid-template-columns:28px minmax(0, 1fr) minmax(0, 1fr) 48px 32px; gap:5px }
@@ -2497,7 +2623,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-progress-card .ai-progress-regularity { display: grid; gap: 5px; }
 .client-progress-card .ai-progress-regularity p { margin: 0; }
 .client-progress-card .ai-progress-empty { min-height: 116px; padding: 18px 16px; }
-.client-progress-card .ai-progress-footer button { min-height: var(--control-height-compact); padding: var(--space-2) var(--space-3); }
 
 /* Chips на защищённых рабочих экранах используют одну высоту и pill-форму.
    Главные страницы ролей намеренно не входят в этот scope. */
@@ -2584,6 +2709,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 }
 @media (max-width: 480px) { .measurement-actions { grid-template-columns:repeat(2,minmax(0,1fr)) }.measurement-actions .measurement-primary-action { grid-column:1 / -1 }.trainer-measurements-workspace { gap:var(--space-3) } }
 @media (max-width: 480px) { .client-progress-measurement .measurement-actions { grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr) }.client-progress-measurement .measurement-actions .measurement-primary-action { grid-column:auto } }
+@media (max-width: 480px) { .measurement-story-management .measurement-actions { grid-template-columns:minmax(0,1.35fr) minmax(0,.65fr) }.measurement-story-management .measurement-actions .measurement-primary-action { grid-column:auto }.measurement-story-management .measurement-actions > :last-child { grid-column:1 / -1 } }
 @media (max-width: 360px) { .measure-grid { grid-template-columns: 1fr }.inline-form { grid-template-columns: 1fr }.inline-form button { grid-column: 1 }.tab-bar a { font-size: 11px } }
 
 /* Единый component contract тренировки (YAFIT-315): создание, live и
@@ -2919,28 +3045,32 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 
 .client-home-identity .voice-action {
   grid-template-columns:minmax(0,1fr) 48px;
-  grid-template-areas:"copy button" "label button" "controls controls" "error error";
+  grid-template-areas:"copy button" "label button";
+  align-content:center;
   align-items:center;
   justify-items:stretch;
-  gap:4px 14px;
-  min-height:116px;
-  padding:18px;
+  gap:6px 16px;
+  min-height:112px;
+  padding:16px 18px;
   border:0;
   border-radius:18px;
   background:var(--mono-primary);
   color:var(--mono-on-primary);
   text-align:left;
+  transition:transform .14s ease;
 }
 .client-home-identity .voice-action-copy { grid-area:copy; min-height:0; justify-items:start; gap:5px }
 .client-home-identity .voice-action-copy h2 { color:var(--mono-on-primary); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
 .client-home-identity .voice-action-guidance, .client-home-identity .voice-action-transcript { max-width:none; color:var(--mono-on-primary); font-size:12px; font-weight:400; line-height:1.35; opacity:.76 }
-.client-home-identity .voice-action-button { grid-area:button; width:48px; height:48px; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none}
+.client-home-identity .voice-action-button { grid-area:button; align-self:center; justify-self:end; width:48px; height:48px; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none}
 .client-home-identity .voice-action-button::before { display:none }
 .client-home-identity .voice-action-button svg { width:23px; height:23px; stroke-width:1.8 }
 .client-home-identity .voice-action-button:focus-visible { outline:2px solid var(--mono-on-primary); outline-offset:3px }
 .client-home-identity .voice-action-label { grid-area:label; justify-items:start; gap:0 }
 .client-home-identity .voice-action-label strong, .client-home-identity .voice-action-label span { color:var(--mono-on-primary); font-size:14px; font-weight:500; line-height:1.3 }
 .client-home-identity .voice-action-ring { inset:0; border:0 }
+.client-home-identity .voice-action-hitarea:focus-visible { outline:2px solid var(--mono-on-primary); outline-offset:-3px }
+.client-home-identity .voice-action:has(.voice-action-hitarea:active) { transform:scale(.995) }
 .client-home-identity .voice-action-recording-controls { grid-area:controls; width:100%; grid-template-columns:minmax(0,1fr) auto; align-items:center; margin-top:10px }
 .client-home-identity .voice-action-recording-controls .wide { min-height:48px; border:1px solid var(--mono-on-primary); border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); font-size:14px; font-weight:500 }
 .client-home-identity .voice-action-recording-controls .link { min-height:44px; color:var(--mono-on-primary); font-size:14px; font-weight:500 }
@@ -3056,6 +3186,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-home-identity .first-run-copy h2 { font-size:18px }
   .client-home-identity .voice-action { min-height:108px; padding:16px }
 }
+@media (max-width:360px) {
+  .invitation-code-row { align-items:stretch; flex-direction:column }
+  .invitation-code-copy { width:100% }
+}
 
 /* ── Gate 4 / Live: один рабочий экран поверх принятой Identity v1.
    Product DOM, RPC и порядок действий остаются общими с текущим интерфейсом. */
@@ -3126,6 +3260,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-identity .live-set-compact { grid-template-columns:24px minmax(0,1fr) 52px; min-height:56px; border-color:var(--border) }
 .live-identity .live-set-compact-values strong { color:var(--fg); font-size:14px; font-weight:500 }
 .live-identity .live-set-compact-values small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.live-identity .live-set-fill-action { border-radius:10px; color:var(--fg) }
+.live-identity .live-set-fill-label { font-size:14px; font-weight:500 }
 .live-identity .live-set-compact-action { min-height:44px; border-radius:10px; background:var(--surface-sunken); color:var(--fg); font-size:12px; font-weight:500 }
 .live-identity .live-set-compact.confirmed .live-set-compact-action { color:var(--success-fg) }
 .live-identity .live-add-set { min-height:44px; color:var(--fg); font-size:14px; font-weight:500 }
@@ -3199,7 +3335,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   box-shadow:none;
 }
 .progress-identity .content { padding-bottom:calc(82px + env(safe-area-inset-bottom)); background:var(--bg) }
-.progress-identity .client-progress-page { max-width:560px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px 28px }
+.progress-identity .client-progress-page { max-width:560px; padding:max(12px, calc(24px - env(safe-area-inset-top))) 16px calc(28px + env(safe-area-inset-bottom)) }
 .progress-identity .client-progress-page > .page-header { min-height:44px; margin-bottom:16px }
 .progress-identity .client-progress-page > .page-header h1 { font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
 .progress-identity .client-progress-stack { gap:12px }
@@ -3211,15 +3347,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .progress-story-card { display:grid; gap:12px; overflow:visible; border:0; border-radius:0; background:transparent }
 .progress-identity .progress-story-period,
 .progress-identity .progress-story-summary { overflow:hidden; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.progress-identity .progress-story-period { display:flex; min-height:60px; align-items:center; gap:12px; padding:8px 14px 8px 18px }
 .progress-identity .progress-story-summary.main-fact-removed .ai-progress-stats div { min-height:64px }
-.progress-identity .ai-progress-header { padding:18px 18px 12px }
+.progress-identity .ai-progress-header { flex:0 0 auto; padding:0 }
 .progress-identity .ai-progress-title { gap:10px }
 .progress-identity .ai-progress-title h2 { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em; text-transform:uppercase }
-.progress-identity .ai-progress-title p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
-.progress-identity .ai-progress-periods { width:auto; margin:0 18px 12px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
-.progress-identity .client-progress-card .ai-progress-periods button { min-height:44px; padding:0 12px; border:0; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
-.progress-identity .client-progress-card .ai-progress-periods button.active { border:0; background:var(--surface-raised); color:var(--fg); box-shadow:none}
-.progress-identity .ai-progress-footer button { min-height:44px }
+.progress-identity .ai-progress-periods { width:auto; min-width:0; flex:0 1 auto; margin:0 0 0 auto; padding:0; border:0; border-radius:10px; background:transparent }
+.progress-identity .ai-progress-periods.period-count-1 { width:auto; min-width:96px }
+.progress-identity .client-progress-card .ai-progress-periods button { position:relative; min-height:44px; padding:0 12px; border:0; border-radius:10px; background:transparent; color:var(--muted); font-size:12px; font-weight:500 }
+.progress-identity .client-progress-card .ai-progress-periods button::before { position:absolute; inset:4px 0; z-index:0; border:1px solid var(--border); border-radius:10px; background:var(--surface-sunken); content:'' }
+.progress-identity .client-progress-card .ai-progress-periods button span { position:relative; z-index:1 }
+.progress-identity .client-progress-card .ai-progress-periods button.active { border:0; background:transparent; color:var(--fg); box-shadow:none}
+.progress-identity .client-progress-card .ai-progress-periods button.active::before { background:var(--surface-raised); border-color:var(--fg) }
 
 .progress-identity .progress-story-hero { gap:5px; padding:18px; border:0; border-bottom:1px solid var(--border); background:var(--surface-elevated) }
 .progress-identity .progress-story-hero > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
@@ -3232,30 +3371,30 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .ai-progress-stats strong { color:var(--fg); font-size:18px; font-weight:600 }
 .progress-identity .ai-progress-stats span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 
-.progress-identity .body-progress-map { gap:12px; padding:16px 18px 18px; border-color:var(--border); background:var(--surface-raised) }
-.progress-identity .body-progress-map > header { gap:12px }
+.progress-identity .body-progress-map { gap:10px; padding:14px 16px 16px; border-color:var(--border); background:var(--surface-raised) }
+.progress-identity .body-progress-map > header { gap:8px }
 .progress-identity .body-progress-map > header span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .progress-identity .body-progress-map > header h3 { font-size:16px; font-weight:600 }
 .progress-identity .body-progress-map > header p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
-.progress-identity .body-progress-modes { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
-.progress-identity .body-progress-modes button { min-height:44px; border-radius:10px; color:var(--muted); font-size:12px; font-weight:500 }
-.progress-identity .body-progress-modes button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none}
-.progress-identity .body-progress-sides { border-color:var(--border); border-radius:10px; background:var(--surface-sunken) }
-.progress-identity .body-progress-sides button { min-height:44px; border-radius:10px; font-size:12px; font-weight:500 }
-.progress-identity .body-progress-sides button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none}
-.progress-identity .body-progress-visual { border:1px solid var(--border); border-radius:18px; background:var(--surface-sunken) }
+.progress-identity .body-progress-modes { width:min(100%,164px); gap:0; padding:0; border:0; border-radius:9px; background:transparent }
+.progress-identity .body-progress-modes::before { border-color:var(--border); background:var(--surface-sunken) }
+.progress-identity .body-progress-modes button { min-height:44px; border-radius:7px; color:var(--muted); font-size:11px; font-weight:500 }
+.progress-identity .body-progress-modes button[aria-pressed='true'] { color:var(--fg); box-shadow:none}
+.progress-identity .body-progress-sides { width:min(100%,120px); border:0; border-radius:var(--radius-pill); background:transparent }
+.progress-identity .body-progress-sides::before { border-color:var(--border); background:var(--surface-sunken) }
+.progress-identity .body-progress-sides button { min-height:44px; border-radius:var(--radius-pill); font-size:10px; font-weight:500 }
+.progress-identity .body-progress-sides button[aria-pressed='true'] { color:var(--fg); box-shadow:none}
+.progress-identity .body-progress-visual { width:min(100%,210px); border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken) }
 .progress-identity .body-progress-overlay { filter:none }
 .progress-identity .body-progress-region-fill { transition:none }
 .progress-identity .body-progress-visual.discovering .body-progress-region-fill { animation:none }
-.progress-identity .body-progress-detail { border-color:var(--border); border-radius:14px; background:var(--surface-elevated) }
+.progress-identity .body-progress-detail { gap:4px; padding:12px; border-color:var(--border); border-radius:12px; background:var(--surface-elevated) }
 
 .progress-identity .client-progress-wins,
 .progress-identity .client-progress-comparison,
 .progress-identity .client-progress-measurements-story,
 .progress-identity .client-progress-regularity-story,
-.progress-identity .client-progress-goal-story,
 .progress-identity .client-progress-upcoming,
-.progress-identity .client-progress-main-now,
 .progress-identity .client-progress-insight { margin:0; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
 .progress-identity .client-progress-wins,
 .progress-identity .client-progress-comparison,
@@ -3278,18 +3417,19 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .client-progress-goal-story p,
 .progress-identity .client-progress-main-now p,
 .progress-identity .client-progress-insight p { font-size:12px }
-.progress-identity .client-progress-main-now { gap:8px; border-color:var(--mono-primary) }
-.progress-identity .client-progress-main-now > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.progress-identity .client-progress-overview { display:grid; overflow:hidden; border:1px solid var(--fg); border-radius:18px; background:var(--surface-raised) }
+.progress-identity .client-progress-main-now { gap:8px; margin:0; padding:18px; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent }
+.progress-identity .client-progress-main-now-head > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.progress-identity .client-progress-details-trigger { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.progress-identity .client-progress-main-now h3 { font-size:18px; line-height:1.2 }
 .progress-identity .client-progress-main-now > strong { padding-top:10px; border-color:var(--border); font-size:12px; font-weight:600 }
 .progress-identity .client-progress-main-now > .link { color:var(--fg); font-size:12px; font-weight:500 }
 .progress-identity .client-progress-comparison > header p,
-.progress-identity .period-comparison-facts dt span,
-.progress-identity .period-comparison-conclusions span { color:var(--secondary-label-fg); font-size:11px }
+.progress-identity .period-comparison-facts dt span { color:var(--secondary-label-fg); font-size:11px }
 .progress-identity .period-comparison-facts dt,
-.progress-identity .period-comparison-conclusions p { font-size:12px }
+.progress-identity .period-comparison-limitation { font-size:12px }
 .progress-identity .period-comparison-facts dd { font-size:16px; font-weight:600 }
 .progress-identity .period-comparison-facts > div.positive dd { color:var(--success-fg) }
-.progress-identity .period-comparison-toggle { color:var(--fg); font-size:12px; font-weight:500 }
 .progress-identity .client-progress-measurements-story > header span,
 .progress-identity .measurement-story-current span,
 .progress-identity .measurement-story-current small,
@@ -3298,28 +3438,26 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .measurement-story-facts dd,
 .progress-identity .measurement-story-explanation p,
 .progress-identity .measurement-story-after-period { font-size:12px }
-.progress-identity .client-progress-regularity-story > header span,
-.progress-identity .regularity-story-summary span,
-.progress-identity .regularity-story-facts dt,
-.progress-identity .regularity-story-explanation > span { color:var(--secondary-label-fg); font-size:11px }
-.progress-identity .regularity-story-facts dd,
-.progress-identity .regularity-story-explanation p { font-size:12px }
+.progress-identity .regularity-story-facts dt { color:var(--secondary-label-fg); font-size:11px }
+.progress-identity .regularity-story-facts dd { font-size:12px }
 .progress-identity .client-progress-goal-story > span,
 .progress-identity .client-progress-upcoming > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.progress-identity .client-progress-goal-story { margin:0; padding:18px; border:0; border-radius:0; background:transparent }
+.progress-identity .client-progress-goal-story h3 { font-size:16px; line-height:1.25 }
 .progress-identity .client-progress-goal-story.empty,
 .progress-identity .client-progress-upcoming { margin:0; padding:18px; border-color:var(--border); border-radius:18px; background:var(--surface-raised) }
+.progress-identity .client-progress-overview .client-progress-goal-story.empty { border:0; border-radius:0; background:transparent }
+.progress-identity .client-progress-overview .client-progress-story-state { margin:0; padding:18px; border:0; border-radius:0; border-top:1px solid var(--border); background:transparent }
 .progress-identity .client-progress-story-state { margin:0; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); color:var(--secondary-label-fg); font-size:14px }
-.progress-identity .client-progress-details-toggle { margin:0 }
-.progress-identity .client-progress-details-toggle .link { width:100%; min-height:48px; justify-content:flex-start; padding:0 18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg); font-size:14px; font-weight:500 }
-.progress-identity .ai-progress-footer { margin:0; padding:12px 18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
-.progress-identity .ai-progress-error { margin:0; padding:12px 18px; border:1px solid var(--danger-border); border-radius:18px; background:var(--surface-raised) }
+.progress-identity .ai-progress-auto-error { padding:6px 18px; border:1px solid var(--danger-border); border-radius:18px; background:var(--surface-raised) }
 
 .progress-identity .client-progress-goal-story-head { align-items:flex-start }
 .progress-identity .goal-story-actions { align-items:flex-start }
+.progress-identity .goal-story-actions > .link { min-height:44px }
 .progress-identity .goal-foundation-facts { grid-template-columns:1fr; gap:0; margin:8px 0 0; border-top:1px solid var(--border) }
 .progress-identity .goal-foundation-facts > div { grid-template-columns:minmax(86px,.7fr) minmax(0,1.5fr); gap:10px; padding:10px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent }
 .progress-identity .goal-criteria-progress-list { gap:0; margin-top:8px; border-top:1px solid var(--border) }
-.progress-identity .goal-criterion-progress-row { display:grid; gap:12px; padding:14px 0; border-bottom:1px solid var(--border) }
+.progress-identity .goal-criterion-progress-row { display:grid; gap:8px; padding:12px 0; border-bottom:1px solid var(--border) }
 .progress-identity .goal-criterion-progress-row header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
 .progress-identity .goal-criterion-progress-row header strong { font-size:14px; font-weight:600; line-height:1.35 }
 .progress-identity .goal-criterion-progress-row header span { max-width:46%; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35; text-align:right }
@@ -3355,6 +3493,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-identity .measurement-actions button { min-height:48px; border-radius:14px; font-size:12px; font-weight:500 }
 .progress-identity .measurement-actions .secondary { border-color:var(--border); background:var(--surface-elevated); color:var(--fg); box-shadow:none}
 .progress-identity .measurement-actions .link { color:var(--fg) }
+.progress-identity .measurement-story-management .client-progress-form,
+.progress-identity .measurement-story-management .client-progress-history,
+.progress-identity .measurement-story-management .metrics-manager { background:transparent }
 .progress-identity .client-progress-form,
 .progress-identity .client-progress-history { padding-top:16px; border-color:var(--border); background:transparent; box-shadow:none}
 .progress-identity .client-progress-form .field { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
@@ -3383,11 +3524,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 }
 @media (max-width:375px) {
   .progress-identity .client-progress-page { padding-inline:14px }
-  .progress-identity .ai-progress-header,
   .progress-identity .progress-story-hero,
   .progress-identity .body-progress-map,
   .progress-identity .running-progress-card,
   .progress-identity .client-progress-measurement { padding-inline:16px }
+  .progress-identity .progress-story-period .ai-progress-header { padding:0 }
   .progress-identity .progress-story-hero > strong { font-size:36px }
 }
 
@@ -3536,6 +3677,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-profile-shell-identity .client-home-connections,
 .client-profile-shell-identity .body-map-appearance-setting,
 .client-profile-shell-identity .profile-settings,
+.client-profile-shell-identity .yandex-account-linking-card,
 .client-profile-shell-identity .menu,
 .client-profile-shell-identity .app-install-card,
 .client-profile-shell-identity .app-feedback-card { margin:0; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none}
@@ -3590,18 +3732,25 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-profile-shell-identity .client-profile-page > .danger.secondary { min-height:48px; margin:0; border-color:var(--border); border-radius:14px; background:transparent; color:var(--danger); font-size:14px; font-weight:500; box-shadow:none}
 
 .client-profile-shell-identity .app-install-card,
+.client-profile-shell-identity .yandex-account-linking-card,
 .client-profile-shell-identity .app-feedback-card { gap:16px; padding:18px }
 .client-profile-shell-identity .app-install-card .eyebrow,
+.client-profile-shell-identity .yandex-account-linking-card .eyebrow,
 .client-profile-shell-identity .app-feedback-card .eyebrow { color:var(--muted); font-size:12px; font-weight:500; letter-spacing:.06em }
 .client-profile-shell-identity .app-install-card h2,
+.client-profile-shell-identity .yandex-account-linking-card h2,
 .client-profile-shell-identity .app-feedback-card h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
 .client-profile-shell-identity .app-install-head .link,
 .client-profile-shell-identity .app-feedback-head .link { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
 .client-profile-shell-identity .app-install-copy,
 .client-profile-shell-identity .app-install-steps,
+.client-profile-shell-identity .yandex-account-linking-card p,
 .client-profile-shell-identity .app-feedback-context { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .client-profile-shell-identity .app-install-card .secondary,
+.client-profile-shell-identity .yandex-account-linking-card .secondary,
 .client-profile-shell-identity .app-feedback-card button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.client-profile-shell-identity .yandex-account-linking-card .secondary:disabled { background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.client-profile-shell-identity .yandex-account-linking-card .error { color:var(--danger); font-size:12px; font-weight:500 }
 .client-profile-shell-identity .app-feedback-kinds { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
 .client-profile-shell-identity .app-feedback-kinds button { min-height:44px; border-radius:10px; background:transparent; color:var(--muted); font-size:12px; font-weight:500 }
 .client-profile-shell-identity .app-feedback-kinds button.active { background:var(--surface-elevated); color:var(--fg); box-shadow:none}
@@ -3886,6 +4035,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-history-identity .workout-cta[data-variant='primary'] { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none}
 .workout-detail-history-identity button.secondary,
 .workout-detail-history-identity .button.secondary { border-color:var(--border); background:var(--surface-elevated); color:var(--fg); box-shadow:none}
+.ui-identity .workout-feedback .workout-choice[data-control-state='selected'] { border-color:var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
+.ui-identity .workout-feedback .workout-choice[data-control-state='selected'][data-tone='destructive'] { border-color:var(--danger-border); background:var(--danger-surface); color:var(--danger) }
 .workout-detail-history-identity button:disabled,
 .workout-detail-history-identity .button[aria-disabled='true'] { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); box-shadow:none}
 
@@ -3939,6 +4090,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-history-identity .planned-set-summary span,
 .workout-detail-history-identity .completed-set-summary span,
 .workout-detail-history-identity .workout-history-set .plan-note { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .workout-history-set.confirmed { border-color:var(--border); background:transparent }
 .workout-detail-history-identity .exercise-history-link { width:44px; min-height:44px; border-radius:14px; color:var(--secondary-label-fg) }
 .workout-detail-history-identity .exercise-history-link:active { background:var(--surface-sunken); color:var(--fg) }
 .workout-detail-history-identity .workout-review,
@@ -4005,12 +4157,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-today-identity .today-voice-home { min-height:0; gap:12px }
 .trainer-today-identity .today-greeting { margin:0 0 2px; color:var(--secondary-label-fg); font-size:14px; font-weight:400; line-height:1.4 }
 
-.trainer-today-identity .voice-action { grid-template-columns:minmax(0,1fr) 48px; grid-template-areas:"copy button" "label button" "controls controls" "error error"; align-items:center; justify-items:stretch; gap:4px 14px; min-height:116px; padding:18px; border:0; border-radius:18px; background:var(--mono-primary); color:var(--mono-on-primary); text-align:left; box-shadow:none}
+.trainer-today-identity .voice-action { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"copy button" "label button"; align-content:center; align-items:center; justify-items:stretch; gap:6px 16px; min-height:112px; padding:16px 18px; border:0; border-radius:18px; background:var(--mono-primary); color:var(--mono-on-primary); text-align:left; box-shadow:none; transition:transform .14s ease}
 .trainer-today-identity .voice-action-copy { grid-area:copy; min-height:0; justify-items:start; gap:5px }
 .trainer-today-identity .voice-action-copy h2 { color:var(--mono-on-primary); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
 .trainer-today-identity .voice-action-guidance,
 .trainer-today-identity .voice-action-transcript { max-width:none; color:var(--mono-on-primary); font-size:12px; font-weight:400; line-height:1.35; opacity:.76 }
-.trainer-today-identity .voice-action-button { grid-area:button; width:48px; height:48px; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none}
+.trainer-today-identity .voice-action-buttons { grid-area:button; display:flex; align-items:center; gap:10px }
+.trainer-today-identity .voice-action-button { grid-area:button; align-self:center; justify-self:end; width:48px; height:48px; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none}
 .trainer-today-identity .voice-action-button::before { display:none }
 .trainer-today-identity .voice-action-button svg { width:23px; height:23px; stroke-width:1.8 }
 .trainer-today-identity .voice-action-button:focus-visible { outline:2px solid var(--mono-on-primary); outline-offset:3px }
@@ -4018,6 +4171,17 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-today-identity .voice-action-label strong,
 .trainer-today-identity .voice-action-label span { color:var(--mono-on-primary); font-size:14px; font-weight:500; line-height:1.3 }
 .trainer-today-identity .voice-action-ring { inset:0; border:0 }
+.trainer-today-identity .voice-action-hitarea:focus-visible { outline:2px solid var(--mono-on-primary); outline-offset:-3px }
+.trainer-today-identity .voice-action:has(.voice-action-hitarea:active) { transform:scale(.995) }
+/* Пилот приветствия в шапке (см. feature-flags.ts): убирает фиксированный
+   min-height карточки, чтобы верхний и нижний паддинг совпадали при коротком
+   тексте. Применяется только тому же allowlist, не всем пользователям. */
+.trainer-today-identity .today-voice-hero-compact .voice-action { min-height:0 }
+/* Пилот приветствия в шапке: аккуратная кнопка «Ввести текстом» внутри той
+   же чёрной карточки, рядом с идущим текстом. position+z-index обязательны,
+   иначе клик перехватывает voice-action-hitarea (z-index:2) над ней. */
+.trainer-today-identity .today-voice-text-inline { position:relative; z-index:3; width:48px; height:48px; display:grid; place-items:center; padding:0; border:0; border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); box-shadow:none }
+.trainer-today-identity .today-voice-text-inline svg { width:23px; height:23px; stroke-width:1.8 }
 .trainer-today-identity .voice-action-recording-controls { grid-area:controls; width:100%; grid-template-columns:minmax(0,1fr) auto; align-items:center; margin-top:10px }
 .trainer-today-identity .voice-action-recording-controls .wide { min-height:48px; border:1px solid var(--mono-on-primary); border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); font-size:14px; font-weight:500 }
 .trainer-today-identity .voice-action-recording-controls .link { min-height:44px; color:var(--mono-on-primary); font-size:14px; font-weight:500 }
@@ -4100,12 +4264,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-clients-identity .clients-page .page-header { min-height:44px; margin-bottom:16px }
 .trainer-clients-identity .clients-page .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
 .trainer-clients-identity .clients-page .page-header .button { display:inline-flex; align-items:center; justify-content:center; height:44px; min-height:44px; padding:0 14px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; line-height:1; white-space:nowrap; box-shadow:none}
-.trainer-clients-identity .clients-search,
-.trainer-clients-identity .clients-search input { min-height:48px; margin-bottom:12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); box-shadow:none}
-.trainer-clients-identity .clients-search { padding:0 8px 0 14px }
+.trainer-clients-identity .clients-search { min-height:48px; margin-bottom:12px; padding:0 8px 0 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); box-shadow:none}
 .trainer-clients-identity .clients-search:focus-within { border-color:var(--fg); box-shadow:none}
 .trainer-clients-identity .clients-search > svg { color:var(--secondary-label-fg) }
-.trainer-clients-identity .clients-search input { color:var(--fg); font-size:16px; font-weight:400 }
+.trainer-clients-identity .clients-search input { min-height:46px; margin:0; padding:0; border:0; border-radius:0; outline:0; background:transparent; color:var(--fg); font-size:16px; font-weight:400; box-shadow:none}
+.trainer-clients-identity .clients-search input:focus-visible { outline:0 }
 .trainer-clients-identity .clients-search input::placeholder { color:var(--secondary-label-fg) }
 .trainer-clients-identity .clients-search-clear { width:44px; height:44px; min-height:44px; color:var(--secondary-label-fg) }
 .trainer-clients-identity .clients-search-clear:focus-visible { outline:2px solid var(--fg); outline-offset:-2px }
@@ -4317,6 +4480,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-client-goal-identity select:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px }
 .trainer-client-goal-identity .stage-form input,
 .trainer-client-goal-identity .stage-form textarea { background:var(--surface-raised) }
+.trainer-client-goal-identity .goal-title-counter { align-self:flex-end; color:var(--secondary-label-fg); font-size:12px; font-weight:400; line-height:1.35; font-variant-numeric:tabular-nums }
 .trainer-client-goal-identity .stage-hint { margin:0; font-size:12px }
 .trainer-client-goal-identity .actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0 }
 .trainer-client-goal-identity .page > form.stack > .actions { grid-template-columns:1fr }
@@ -4474,16 +4638,20 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-identity .trainer-progress-week p { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
 
 .trainer-progress-identity .ai-progress-card { margin:0; overflow:hidden }
-.trainer-progress-identity .ai-progress-header { padding:18px 18px 12px }
+.trainer-progress-identity .progress-story-period { display:flex; min-height:60px; align-items:center; flex-wrap:wrap; gap:8px 12px; padding:8px 18px; border-bottom:1px solid var(--border) }
+.trainer-progress-identity .ai-progress-header { flex:0 0 auto; padding:0 }
 .trainer-progress-identity .ai-progress-title { gap:10px }
-.trainer-progress-identity .ai-progress-title h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.012em }
-.trainer-progress-identity .ai-progress-title p { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-progress-identity .ai-progress-title h2 { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em; text-transform:uppercase }
 .trainer-progress-identity .ai-progress-mark { width:36px; height:36px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--fg); box-shadow:none; font-size:14px }
 .trainer-progress-identity .ai-progress-demo,
 .trainer-progress-identity .ai-progress-demo.published { min-height:28px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
-.trainer-progress-identity .ai-progress-periods { width:auto; margin:0 18px 12px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
-.trainer-progress-identity .ai-progress-periods button { min-height:44px; padding:0 12px; border:0; border-radius:10px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; box-shadow:none}
-.trainer-progress-identity .ai-progress-periods button.active { border:0; background:var(--surface-raised); color:var(--fg); box-shadow:none}
+.trainer-progress-identity .ai-progress-periods { width:auto; min-width:0; flex:0 1 auto; margin:0 0 0 auto; padding:0; border:0; border-radius:10px; background:transparent }
+.trainer-progress-identity .ai-progress-periods.period-count-1 { width:auto; min-width:96px }
+.trainer-progress-identity .ai-progress-periods button { position:relative; min-height:44px; padding:0 12px; border:0; border-radius:10px; background:transparent; color:var(--secondary-label-fg); font-size:12px; font-weight:500; box-shadow:none}
+.trainer-progress-identity .ai-progress-periods button::before { position:absolute; inset:4px 0; z-index:0; border:1px solid var(--border); border-radius:10px; background:var(--surface-sunken); content:'' }
+.trainer-progress-identity .ai-progress-periods button span { position:relative; z-index:1 }
+.trainer-progress-identity .ai-progress-periods button.active { border:0; background:transparent; color:var(--fg); box-shadow:none}
+.trainer-progress-identity .ai-progress-periods button.active::before { border-color:var(--fg); background:var(--surface-raised) }
 .trainer-progress-identity .progress-story-hero { gap:5px; padding:18px; border-color:var(--border); background:var(--surface-elevated) }
 .trainer-progress-identity .progress-story-hero > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-progress-identity .progress-story-hero > strong { color:var(--success-fg); font-size:40px; font-weight:600; letter-spacing:-.035em }
@@ -4495,31 +4663,32 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-identity .ai-progress-stats strong { color:var(--fg); font-size:18px; font-weight:600 }
 .trainer-progress-identity .ai-progress-stats span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 
-.trainer-progress-identity .body-progress-map { gap:12px; padding:16px 18px 18px; border-color:var(--border); background:var(--surface-raised) }
-.trainer-progress-identity .body-progress-map > header { gap:12px }
+.trainer-progress-identity .body-progress-map { gap:10px; padding:14px 16px 16px; border-color:var(--border); background:var(--surface-raised) }
+.trainer-progress-identity .body-progress-map > header { gap:8px }
 .trainer-progress-identity .body-progress-map > header span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-progress-identity .body-progress-map > header h3 { color:var(--fg); font-size:16px; font-weight:600 }
 .trainer-progress-identity .body-progress-map > header p { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
-.trainer-progress-identity .body-progress-modes { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
-.trainer-progress-identity .body-progress-modes button { min-height:44px; border-radius:10px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
-.trainer-progress-identity .body-progress-modes button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none}
-.trainer-progress-identity .body-progress-sides { border-color:var(--border); border-radius:10px; background:var(--surface-sunken) }
-.trainer-progress-identity .body-progress-sides button { min-height:36px; border-radius:10px; font-size:12px; font-weight:500 }
-.trainer-progress-identity .body-progress-sides button[aria-pressed='true'] { background:var(--surface-raised); color:var(--fg); box-shadow:none}
+.trainer-progress-identity .body-progress-modes { width:min(100%,164px); gap:0; padding:0; border:0; border-radius:9px; background:transparent }
+.trainer-progress-identity .body-progress-modes::before { border-color:var(--border); background:var(--surface-sunken) }
+.trainer-progress-identity .body-progress-modes button { min-height:44px; border-radius:7px; color:var(--secondary-label-fg); font-size:11px; font-weight:500 }
+.trainer-progress-identity .body-progress-modes button[aria-pressed='true'] { color:var(--fg); box-shadow:none}
+.trainer-progress-identity .body-progress-sides { width:min(100%,120px); border:0; border-radius:var(--radius-pill); background:transparent }
+.trainer-progress-identity .body-progress-sides::before { border-color:var(--border); background:var(--surface-sunken) }
+.trainer-progress-identity .body-progress-sides button { min-height:44px; border-radius:var(--radius-pill); font-size:10px; font-weight:500 }
+.trainer-progress-identity .body-progress-sides button[aria-pressed='true'] { color:var(--fg); box-shadow:none}
 .trainer-progress-identity .body-progress-sides button:disabled { opacity:1; color:var(--secondary-label-fg) }
-.trainer-progress-identity .body-progress-visual { border:1px solid var(--border); border-radius:18px; background:var(--surface-sunken) }
+.trainer-progress-identity .body-progress-visual { width:min(100%,210px); border:1px solid var(--border); border-radius:16px; background:var(--surface-sunken) }
 .trainer-progress-identity .body-progress-overlay { filter:none }
 .trainer-progress-identity .body-progress-region-fill { transition:none }
 .trainer-progress-identity .body-progress-visual.discovering .body-progress-region-fill { animation:none }
-.trainer-progress-identity .body-progress-detail { border-color:var(--border); border-radius:14px; background:var(--surface-elevated) }
+.trainer-progress-identity .body-progress-detail { gap:4px; padding:12px; border-color:var(--border); border-radius:12px; background:var(--surface-elevated) }
 
 .trainer-progress-identity .client-progress-wins,
 .trainer-progress-identity .client-progress-comparison,
 .trainer-progress-identity .client-progress-measurements-story,
 .trainer-progress-identity .client-progress-regularity-story,
-.trainer-progress-identity .client-progress-goal-story,
-.trainer-progress-identity .client-progress-main-now,
 .trainer-progress-identity .client-progress-insight { margin-inline:18px; border-color:var(--border) }
+.trainer-progress-identity .client-progress-overview { display:grid; overflow:hidden; margin-inline:18px; border:1px solid var(--fg); border-radius:14px; background:var(--surface-elevated) }
 .trainer-progress-identity .client-progress-wins h3,
 .trainer-progress-identity .client-progress-comparison h3,
 .trainer-progress-identity .client-progress-measurements-story h3,
@@ -4535,15 +4704,19 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-identity .client-progress-goal-story p,
 .trainer-progress-identity .client-progress-main-now p,
 .trainer-progress-identity .client-progress-insight p { font-size:12px }
-.trainer-progress-identity .client-progress-main-now { padding:14px; border-radius:14px; background:var(--surface-elevated) }
+.trainer-progress-identity .client-progress-main-now { margin:0; padding:14px; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent }
+.trainer-progress-identity .client-progress-main-now h3 { font-size:18px; line-height:1.2 }
+.trainer-progress-identity .client-progress-overview .client-progress-goal-story,
+.trainer-progress-identity .client-progress-overview .client-progress-goal-story.empty { margin:0; padding:14px; border:0; border-radius:0; background:transparent }
+.trainer-progress-identity .client-progress-overview .client-progress-goal-story h3 { font-size:16px; line-height:1.25 }
+.trainer-progress-identity .client-progress-overview .client-progress-story-state { margin:0; padding:14px; border:0; border-top:1px solid var(--border); background:transparent }
+.trainer-progress-identity .goal-story-actions > .link { min-height:44px }
 .trainer-progress-identity .client-progress-comparison > header p,
-.trainer-progress-identity .period-comparison-facts dt span,
-.trainer-progress-identity .period-comparison-conclusions span { color:var(--secondary-label-fg); font-size:11px }
+.trainer-progress-identity .period-comparison-facts dt span { color:var(--secondary-label-fg); font-size:11px }
 .trainer-progress-identity .period-comparison-facts dt,
-.trainer-progress-identity .period-comparison-conclusions p { font-size:12px }
+.trainer-progress-identity .period-comparison-limitation { font-size:12px }
 .trainer-progress-identity .period-comparison-facts dd { font-size:16px; font-weight:600 }
 .trainer-progress-identity .period-comparison-facts > div.positive dd { color:var(--success-fg) }
-.trainer-progress-identity .period-comparison-toggle { color:var(--fg); font-size:12px; font-weight:500 }
 .trainer-progress-identity .client-progress-measurements-story { margin-inline:18px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-elevated) }
 .trainer-progress-identity .client-progress-measurements-story > header span,
 .trainer-progress-identity .measurement-story-current span,
@@ -4554,26 +4727,16 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-progress-identity .measurement-story-explanation p,
 .trainer-progress-identity .measurement-story-after-period { font-size:12px }
 .trainer-progress-identity .client-progress-regularity-story { margin-inline:18px; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-elevated) }
-.trainer-progress-identity .client-progress-regularity-story > header span,
-.trainer-progress-identity .regularity-story-summary span,
-.trainer-progress-identity .regularity-story-facts dt,
-.trainer-progress-identity .regularity-story-explanation > span { color:var(--secondary-label-fg); font-size:11px }
-.trainer-progress-identity .regularity-story-facts dd,
-.trainer-progress-identity .regularity-story-explanation p { font-size:12px }
+.trainer-progress-identity .regularity-story-facts dt { color:var(--secondary-label-fg); font-size:11px }
+.trainer-progress-identity .regularity-story-facts dd { font-size:12px }
 .trainer-progress-identity .client-progress-goal-story > span,
 .trainer-progress-identity .client-progress-upcoming > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-progress-identity .client-progress-goal-story.empty,
 .trainer-progress-identity .client-progress-upcoming { margin-inline:18px; padding:14px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated) }
-.trainer-progress-identity .progress-story-attention { border-color:var(--warning-border); border-radius:14px; background:var(--surface-elevated) }
-.trainer-progress-identity .progress-story-attention > span { color:var(--warning-fg); background:var(--surface-sunken); font-weight:600 }
-.trainer-progress-identity .client-progress-details-toggle,
+.trainer-progress-identity .trainer-progress-signals { margin-inline:18px; border-radius:14px; background:var(--surface-elevated) }
 .trainer-progress-identity .client-copy-toggle { margin-inline:18px; border-color:var(--border) }
-.trainer-progress-identity .client-progress-details-toggle .link,
 .trainer-progress-identity .client-copy-toggle .link { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
-.trainer-progress-identity .ai-progress-footer { margin-top:12px; padding:12px 18px; border-color:var(--border); background:var(--surface-elevated) }
-.trainer-progress-identity .ai-progress-footer > span { color:var(--secondary-label-fg); font-size:12px; font-weight:400 }
-.trainer-progress-identity .ai-progress-footer button { min-height:44px; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--fg); font-size:12px; font-weight:500; box-shadow:none}
-.trainer-progress-identity .ai-progress-footer button:disabled { opacity:1; background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.trainer-progress-identity .ai-progress-auto-error { margin-inline:18px; padding:6px 14px; border:1px solid var(--danger-border); border-radius:14px; background:var(--surface-elevated) }
 .trainer-progress-identity .ai-progress-empty { border-color:var(--border); background:var(--surface-elevated) }
 
 .trainer-progress-identity .trainer-progress-route-card { min-height:88px; padding:16px 18px; color:var(--fg) }
@@ -4710,7 +4873,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-catalog-identity .catalog-media-card:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
 .exercise-catalog-identity .catalog-media-card .exercise-image { width:56px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken) }
 .exercise-catalog-identity .catalog-media-card .exercise-image img { background:var(--surface-raised) }
-.exercise-catalog-identity .catalog-media-card > span { display:grid; gap:4px; min-width:0 }
+.exercise-catalog-identity .catalog-media-card-visual { position:relative; display:block; min-width:0 }
+.exercise-catalog-identity .catalog-media-card-play { position:absolute; right:-4px; bottom:-4px; width:20px; height:20px; display:grid; place-items:center; border:2px solid var(--surface-elevated); border-radius:50%; background:var(--fg); color:var(--bg) }
+.exercise-catalog-identity .catalog-media-card-play svg { width:11px; height:11px }
+.exercise-catalog-identity .catalog-media-card-copy { display:grid; gap:4px; min-width:0 }
 .exercise-catalog-identity .catalog-media-card strong { overflow:hidden; color:var(--fg); font-size:14px; font-weight:500; line-height:1.25; text-overflow:ellipsis }
 .exercise-catalog-identity .catalog-media-card small { overflow:hidden; color:var(--secondary-label-fg); font-size:12px; font-weight:400; line-height:1.25; text-overflow:ellipsis; white-space:nowrap }
 .exercise-catalog-identity .catalog-media-card > svg { width:18px; height:18px; color:var(--secondary-label-fg) }
@@ -4821,6 +4987,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 
 .trainer-profile-identity .profile-settings,
 .trainer-profile-identity .body-map-appearance-setting,
+.trainer-profile-identity .yandex-account-linking-card,
 .trainer-profile-identity .menu,
 .trainer-profile-identity .app-install-card,
 .trainer-profile-identity .app-feedback-card { margin:0; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none}
@@ -4852,20 +5019,28 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-profile-identity .menu > button:focus-visible { outline:2px solid var(--fg); outline-offset:-3px }
 
 .trainer-profile-identity .app-install-card,
+.trainer-profile-identity .yandex-account-linking-card,
 .trainer-profile-identity .app-feedback-card { gap:16px; padding:18px }
 .trainer-profile-identity .app-install-card .eyebrow,
+.trainer-profile-identity .yandex-account-linking-card .eyebrow,
 .trainer-profile-identity .app-feedback-card .eyebrow { margin:0 0 4px }
 .trainer-profile-identity .app-install-card h2,
+.trainer-profile-identity .yandex-account-linking-card h2,
 .trainer-profile-identity .app-feedback-card h2 { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
 .trainer-profile-identity .app-install-head .link,
 .trainer-profile-identity .app-feedback-head .link { min-height:44px; padding:0; color:var(--fg); font-size:12px; font-weight:500 }
 .trainer-profile-identity .app-install-copy,
 .trainer-profile-identity .app-install-steps,
+.trainer-profile-identity .yandex-account-linking-card p,
 .trainer-profile-identity .app-feedback-context { color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.45 }
 .trainer-profile-identity .app-install-card .secondary,
+.trainer-profile-identity .yandex-account-linking-card .secondary,
 .trainer-profile-identity .app-feedback-card button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500; box-shadow:none}
 .trainer-profile-identity .app-install-card .secondary,
+.trainer-profile-identity .yandex-account-linking-card .secondary,
 .trainer-profile-identity .app-feedback-card .secondary { border:1px solid var(--border); background:transparent; color:var(--fg) }
+.trainer-profile-identity .yandex-account-linking-card .secondary:disabled { background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.trainer-profile-identity .yandex-account-linking-card .error { color:var(--danger); font-size:12px; font-weight:500 }
 .trainer-profile-identity .app-feedback-card .primary { border:1px solid var(--mono-primary); background:var(--mono-primary); color:var(--mono-on-primary) }
 .trainer-profile-identity .app-install-success { border-color:var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--success-fg); font-size:14px; font-weight:500 }
 .trainer-profile-identity .app-feedback-kinds { gap:3px; padding:3px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken) }
@@ -5141,4 +5316,33 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
     transition-duration:.01ms !important;
     transition-delay:0ms !important;
   }
+}
+
+/* Голосовая hero-плашка — единая зона нажатия. Правило стоит после общих
+   button-состояний, чтобы прозрачный слой не перекрывал содержимое карточки. */
+.client-home-identity .voice-action > .voice-action-hitarea,
+.trainer-today-identity .voice-action > .voice-action-hitarea,
+.client-home-identity .voice-action > .voice-action-hitarea:hover,
+.trainer-today-identity .voice-action > .voice-action-hitarea:hover,
+.client-home-identity .voice-action > .voice-action-hitarea:disabled,
+.trainer-today-identity .voice-action > .voice-action-hitarea:disabled {
+  min-height:0;
+  border:0;
+  border-radius:inherit;
+  background:transparent;
+  color:transparent;
+  box-shadow:none;
+}
+.client-home-identity .voice-action > .voice-action-hitarea:focus-visible,
+.trainer-today-identity .voice-action > .voice-action-hitarea:focus-visible {
+  outline:2px solid var(--mono-on-primary);
+  outline-offset:-4px;
+}
+.client-home-identity .voice-action-recording,
+.trainer-today-identity .voice-action-recording {
+  grid-template-areas:"copy button" "controls controls" "error error";
+}
+.client-home-identity .voice-action:has(.voice-action-error):not(.voice-action-recording),
+.trainer-today-identity .voice-action:has(.voice-action-error):not(.voice-action-recording) {
+  grid-template-areas:"copy button" "label button" "error error";
 }

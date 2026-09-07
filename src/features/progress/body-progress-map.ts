@@ -37,7 +37,7 @@ export interface BodyMapRegion {
 export interface BodyMapData {
   mode: BodyMapMode
   title: string
-  description: string
+  description?: string
   regions: BodyMapRegion[]
   emptyMessage: string
 }
@@ -206,7 +206,7 @@ export function progressBodyMap(summary: BodyProgressSummary): BodyMapData {
         label: BODY_ZONE_LABELS[group],
         percent,
         valueLabel: `+${percent}%`,
-        metricLabel: 'Лучший результат зоны',
+        metricLabel: 'Результат зоны',
         primaryDetail: sorted[0]!.detail,
         details: sorted.slice(1).map((value) => value.detail),
         intensity: Math.min(1, Math.max(.28, percent / 50)),
@@ -217,7 +217,6 @@ export function progressBodyMap(summary: BodyProgressSummary): BodyMapData {
   return {
     mode: 'progress',
     title: 'Где выросли результаты',
-    description: 'Изменения по подтверждённым результатам упражнений',
     regions,
     emptyMessage: 'Сохрани ещё один результат — и здесь появятся первые зоны прогресса.',
   }

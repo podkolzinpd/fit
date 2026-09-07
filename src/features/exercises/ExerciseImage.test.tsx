@@ -1,8 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ExerciseImage } from './ExerciseImage'
 
 describe('ExerciseImage', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
   it('renders a lazily decoded image inside the requested frame', () => {
     const { container } = render(<ExerciseImage src="/exercises/test.jpg" alt="Жим лёжа" variant="detail" />)
     const image = screen.getByRole('img', { name: 'Жим лёжа' })
@@ -27,6 +29,82 @@ describe('ExerciseImage', () => {
     fireEvent.error(container.querySelector('.exercise-image-frame-end')!)
     expect(screen.getByRole('img', { name: 'Жим лёжа' })).toHaveAttribute('src', '/exercises/start.jpg')
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+  })
+
+  it('uses an accessible inline video without native controls in the explicit technique view', () => {
+    const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="technique" />)
+    const video = screen.getByLabelText('Техника: Присед')
+    expect(video).toHaveAttribute('src', '/exercises/technique.mp4')
+    expect(video).toHaveAttribute('autoplay')
+    expect(video).toHaveAttribute('loop')
+    expect(video).not.toHaveAttribute('controls')
+    expect(video).toHaveAttribute('preload', 'auto')
+    expect(video).toHaveProperty('muted', true)
+    expect(video).toHaveAttribute('playsinline')
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+
+    rerender(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" />)
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+
+    rerender(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="preview" />)
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+  })
+
+  it('falls back to the two technique frames when video loading fails', () => {
+    const { container } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/broken.mp4" alt="Присед" variant="technique" />)
+    fireEvent.error(container.querySelector('video')!)
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    expect(container.firstElementChild).toHaveClass('exercise-image-motion')
+    expect(container.querySelectorAll('img')).toHaveLength(2)
+  })
+
+  it('keeps compact catalog cards static even when video is available', () => {
+    const { container } = render(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="preview" />)
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Присед' })).toHaveAttribute('src', '/exercises/start.jpg')
+  })
+
+  it('plays video in a picker card only when that card is explicitly active', () => {
+    const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="picker" />)
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    rerender(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="picker" playVideo />)
+    expect(screen.getByLabelText('Техника: Присед')).toHaveAttribute('autoplay')
+    expect(screen.getByLabelText('Техника: Присед')).not.toHaveAttribute('controls')
+    expect(container.querySelectorAll('video')).toHaveLength(1)
+  })
+
+  it('uses the still end frame when a compact card start frame fails', () => {
+    const { container } = render(<ExerciseImage src="/exercises/broken.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Жим лёжа" variant="picker" />)
+    fireEvent.error(screen.getByRole('img', { name: 'Жим лёжа' }))
+    expect(screen.getByRole('img', { name: 'Жим лёжа' })).toHaveAttribute('src', '/exercises/end.jpg')
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+  })
+
+  it('uses the explicit public poster before falling back to the end frame', () => {
+    const { container } = render(<ExerciseImage src="/licensed/start.jpg" fallbackSrc="/public/start.jpg" motionSrc="/public/end.jpg" alt="Тяга" variant="technique" />)
+    fireEvent.error(screen.getByRole('img', { name: 'Тяга' }))
+    expect(screen.getByRole('img', { name: 'Тяга' })).toHaveAttribute('src', '/public/start.jpg')
+    expect(container.firstElementChild).toHaveClass('exercise-image-motion')
+    fireEvent.error(screen.getByRole('img', { name: 'Тяга' }))
+    expect(screen.getByRole('img', { name: 'Тяга' })).toHaveAttribute('src', '/public/end.jpg')
+  })
+
+  it('uses a custom play action and disables autoplay when reduced motion is enabled', () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
+      matches: true,
+      media: '(prefers-reduced-motion: reduce)',
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+    const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="technique" />)
+    expect(container.querySelector('video')).not.toHaveAttribute('controls')
+    expect(container.querySelector('video')).not.toHaveAttribute('autoplay')
+    expect(screen.getByRole('button', { name: 'Запустить анимацию: Присед' })).toBeInTheDocument()
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+    rerender(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="preview" />)
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Присед' })).toBeVisible()
   })
 
   it('shows the same neutral placeholder for missing and failed media', () => {

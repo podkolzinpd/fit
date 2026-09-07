@@ -1,16 +1,16 @@
 import type { QueryResultRow } from 'pg'
 
-import { hashPilotSessionToken } from './auth/pilot-session-token.js'
 import {
+  type GoalCriteriaSuggestionResponse,
   YandexWorkoutParser,
   type WorkoutParseResponse,
   type WorkoutParserExercise,
 } from './legacy-workout-parser.js'
 import type { DatabasePool } from './db/types.js'
 import {
-  PilotSessionInvalidError,
-  withYandexPilotSessionTransaction,
-} from './db/yandex-pilot-transaction.js'
+  withYandexActorSession,
+  type YandexActorSessionInput,
+} from './yandex-actor-session.js'
 
 interface ExerciseRow extends QueryResultRow {
   id: string
@@ -19,7 +19,11 @@ interface ExerciseRow extends QueryResultRow {
 }
 
 export interface PilotWorkoutParser {
-  parse(sessionToken: string, value: unknown): Promise<WorkoutParseResponse>
+  parse(session: YandexActorSessionInput, value: unknown): Promise<WorkoutParseResponse>
+  suggest?(
+    session: YandexActorSessionInput,
+    value: unknown,
+  ): Promise<GoalCriteriaSuggestionResponse>
 }
 
 export class DatabasePilotWorkoutParser implements PilotWorkoutParser {
@@ -28,12 +32,10 @@ export class DatabasePilotWorkoutParser implements PilotWorkoutParser {
     private readonly parser: YandexWorkoutParser,
   ) {}
 
-  async parse(sessionToken: string, value: unknown): Promise<WorkoutParseResponse> {
-    const tokenHash = hashPilotSessionToken(sessionToken)
-    if (tokenHash === undefined) throw new PilotSessionInvalidError()
-    const customCatalog = await withYandexPilotSessionTransaction(
+  async parse(session: YandexActorSessionInput, value: unknown): Promise<WorkoutParseResponse> {
+    const customCatalog = await withYandexActorSession(
       this.pool,
-      tokenHash,
+      session,
       async (client) => {
         const rows = await client.query<ExerciseRow>(`
           select exercise.id, exercise.name, exercise.input_kind
@@ -51,5 +53,36 @@ export class DatabasePilotWorkoutParser implements PilotWorkoutParser {
       },
     )
     return this.parser.parse(value, customCatalog)
+  }
+
+  async suggest(
+    session: YandexActorSessionInput,
+    value: unknown,
+  ): Promise<GoalCriteriaSuggestionResponse> {
+    return withYandexActorSession(this.pool, session, async (client) => {
+      const [exerciseRows, metricRows] = await Promise.all([
+        client.query<ExerciseRow>(`
+          select exercise.id, exercise.name, exercise.input_kind
+          from public.custom_exercises exercise
+          where exercise.archived_at is null
+          order by lower(exercise.name), exercise.id
+          limit 1000
+        `),
+        client.query<{ id: string; name: string; unit: string | null }>(`
+          select metric.id, metric.name, metric.unit
+          from public.client_custom_metrics metric
+          where metric.archived_at is null
+          order by lower(metric.name), metric.id
+          limit 1000
+        `),
+      ])
+      const customCatalog = exerciseRows.map((row): WorkoutParserExercise => ({
+        source: 'custom',
+        ref: row.id,
+        name: row.name,
+        inputKind: row.input_kind,
+      }))
+      return this.parser.suggest(value, customCatalog, [...metricRows])
+    })
   }
 }

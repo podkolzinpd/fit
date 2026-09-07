@@ -24,8 +24,67 @@ async function login(page: import('@playwright/test').Page, email: string) {
   await expect(page).toHaveURL(/\/me$/)
 }
 
+async function mockAutomaticSummaryGeneration(page: Page) {
+  const response = {
+    contentType: 'application/json',
+    body: JSON.stringify({ data: { generated_at: '2026-08-20T08:00:00Z' }, cached: true }),
+  }
+  await page.route('**/v1/legacy/summarize-client-training', (route) => route.fulfill(response))
+  await page.route('**/functions/v1/summarize-client-training', (route) => route.fulfill(response))
+}
+
 async function expectNoHorizontalOverflow(page: import('@playwright/test').Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+}
+
+async function expectCompactBodyMap(map: Locator) {
+  await expect(map).toBeVisible()
+  const geometry = await map.evaluate((element) => {
+    const mapStyle = getComputedStyle(element)
+    const rect = (selector: string) => {
+      const node = element.querySelector<HTMLElement>(selector)
+      if (!node) return null
+      const box = node.getBoundingClientRect()
+      return { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width, height: box.height, centerX: box.left + box.width / 2 }
+    }
+    const sidesElement = element.querySelector<HTMLElement>('.body-progress-sides')
+    const sidesTrack = sidesElement ? getComputedStyle(sidesElement, '::before') : null
+    return {
+      borderRadius: Number.parseFloat(mapStyle.borderTopLeftRadius),
+      borderWidth: Number.parseFloat(mapStyle.borderTopWidth),
+      modes: rect('.body-progress-modes'),
+      modeButtons: Array.from(element.querySelectorAll<HTMLElement>('.body-progress-modes button')).map((node) => node.getBoundingClientRect().height),
+      sides: rect('.body-progress-sides'),
+      sideTrackHeight: sidesElement && sidesTrack
+        ? sidesElement.getBoundingClientRect().height - Number.parseFloat(sidesTrack.top) - Number.parseFloat(sidesTrack.bottom)
+        : null,
+      sideButtons: Array.from(element.querySelectorAll<HTMLElement>('.body-progress-sides button')).map((node) => node.getBoundingClientRect().height),
+      visual: rect('.body-progress-visual'),
+      detail: rect('.body-progress-detail'),
+    }
+  })
+
+  expect(geometry.modes).not.toBeNull()
+  expect(geometry.borderRadius).toBeGreaterThanOrEqual(16)
+  expect(geometry.borderWidth).toBeGreaterThanOrEqual(1)
+  expect(geometry.modes!.width).toBeLessThanOrEqual(166)
+  expect(geometry.modes!.height).toBeLessThanOrEqual(44)
+  expect(geometry.modeButtons.every((height) => height >= 44)).toBe(true)
+  expect(geometry.visual).not.toBeNull()
+  expect(geometry.visual!.width).toBeLessThanOrEqual(212)
+  expect(geometry.visual!.height).toBeLessThanOrEqual(445)
+  expect(Math.abs(geometry.modes!.centerX - geometry.visual!.centerX)).toBeLessThanOrEqual(1)
+  if (geometry.sides) {
+    expect(geometry.sides.width).toBeLessThanOrEqual(146)
+    expect(geometry.sides.height).toBeLessThanOrEqual(28)
+    expect(geometry.sideTrackHeight).toBeLessThanOrEqual(24)
+    expect(geometry.sideButtons.every((height) => height >= 44)).toBe(true)
+    expect(Math.abs(geometry.modes!.centerX - geometry.sides.centerX)).toBeLessThanOrEqual(1)
+  }
+  if (geometry.detail) {
+    expect(geometry.detail.top).toBeGreaterThanOrEqual(geometry.visual!.bottom)
+    expect(geometry.detail.top - geometry.visual!.bottom).toBeLessThanOrEqual(12)
+  }
 }
 
 async function expectActionTextVerticallyCentered(action: Locator) {
@@ -72,7 +131,9 @@ async function expectMobileShellFillsViewport(page: Page) {
 }
 
 async function recoverMobileShellFromStaleKeyboard(page: Page, input: Locator) {
+  await expect(input).toBeVisible()
   await input.focus()
+  await expect(input).toBeFocused()
   await page.evaluate(() => {
     document.documentElement.style.setProperty('--app-viewport-height', '508px')
     document.documentElement.style.setProperty('--app-visible-height', '508px')
@@ -127,8 +188,16 @@ test('iPhone: поиск и фильтры каталога не перекры�
   await expect(page.getByLabel('Группа мышц')).toBeHidden()
   await expect(page.getByRole('button', { name: 'Фильтры 1' })).toBeVisible()
   await search.fill('присед')
-  await expect(page.locator('.picker-list-meta').getByText(/\d+ упражнени(?:е|я|й)/)).toBeVisible()
-  await expect(page.getByRole('button', { name: /Присед/ }).first()).toBeInViewport()
+  await expect(page.locator('.picker-list-meta').getByText(/Найдено: \d+/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Очистить поиск' })).toBeVisible()
+  const technique = page.getByRole('button', { name: /Проиграть технику: Присед/ }).first()
+  await expect(technique).toBeInViewport()
+  await technique.click()
+  await page.getByRole('button', { name: /Открыть технику: Присед/ }).first().click()
+  await expect(page.getByRole('heading', { name: 'Техника' })).toBeVisible()
+  await expect(page.locator('.picker-technique-view')).toBeInViewport()
+  await page.getByRole('button', { name: 'Назад к выбору' }).click()
+  await expect(search).toHaveValue('присед')
   await expectNoHorizontalOverflow(page)
 })
 
@@ -165,10 +234,10 @@ test('iPhone: поля бега не перекрываются в быстро�
   await page.getByText('Добавить значения', { exact: true }).click()
 
   const row = page.locator('.today-set-editor').first()
-  const durationLabel = row.locator('label').filter({ hasText: 'Бег (Кардио): время, подход 1' })
-  const duration = page.getByLabel('Бег (Кардио): время, подход 1')
-  const distance = page.getByLabel('Бег (Кардио): расстояние, подход 1')
-  const unit = page.getByLabel('Бег (Кардио): единица расстояния, подход 1')
+  const durationLabel = row.locator('label').filter({ hasText: 'Бег: время, подход 1' })
+  const duration = page.getByLabel('Бег: время, подход 1')
+  const distance = page.getByLabel('Бег: расстояние, подход 1')
+  const unit = page.getByLabel('Бег: единица расстояния, подход 1')
   await expect(durationLabel).toHaveCSS('position', 'absolute')
   await expect(duration).toHaveAttribute('placeholder', 'мм:сс')
   await expect(distance).toHaveAttribute('placeholder', '0')
@@ -197,8 +266,8 @@ test('iPhone: поля бега не перекрываются в быстро�
   await expect(unit.locator('option:checked')).toHaveText('км')
   await expectNoHorizontalOverflow(page)
   await page.getByRole('button', { name: 'Изменить порядок' }).click()
-  await page.getByRole('button', { name: /Переместить блок «Жим лёжа.*вверх/ }).click()
-  await expect(page.locator('.today-exercise-title strong').first()).toContainText('Жим лёжа')
+  await page.getByRole('button', { name: /Переместить блок «Жим штанги лёжа.*вверх/ }).click()
+  await expect(page.locator('.today-exercise-title strong').first()).toContainText('Жим штанги лёжа')
   await expect(page.getByRole('button', { name: 'Далее' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Готово' }).click()
   await expect(page.getByRole('button', { name: 'Далее' })).toBeVisible()
@@ -244,6 +313,8 @@ test('iPhone: тренер назначает интервалы, спортсм
     const codeText = await trainer.getByText(/Код клиента:/).textContent()
     const code = codeText?.match(/[A-F0-9]{12}/)?.[0]
     expect(code).toBeTruthy()
+    await trainer.getByRole('button', { name: 'Скопировать код клиента' }).click()
+    await expect(trainer.getByRole('button', { name: 'Код клиента скопирован' })).toBeVisible()
 
     await register(client, 'Интервальный спортсмен', `interval-client-${suffix}@fit.local`, 'client')
     await expect(client.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' })).toBeVisible()
@@ -271,7 +342,7 @@ test('iPhone: тренер назначает интервалы, спортсм
     await expect(trainer.getByRole('button', { name: /Темповый бег/ })).toBeVisible()
     await expect(trainer.getByRole('button', { name: /Восстановительный бег/ })).toBeVisible()
     await expect(trainer.getByRole('button', { name: /^Интервалы/ })).toBeVisible()
-    await expect(trainer.getByRole('button', { name: /Семенящий бег/ })).toBeVisible()
+    await expect(trainer.getByRole('button', { name: 'Посмотреть технику: Семенящий бег', exact: true })).toBeVisible()
     await expectNoHorizontalOverflow(trainer)
     await trainer.screenshot({ path: testInfo.outputPath('running-formats-390.png'), fullPage: true })
     await trainer.getByRole('button', { name: /^Интервалы/ }).click()
@@ -318,10 +389,12 @@ test('iPhone: тренер назначает интервалы, спортсм
     await expect(client.getByRole('button', { name: 'Готово', exact: true })).toHaveCount(0)
     await client.getByRole('button', { name: 'Завершить тренировку' }).click()
     await expect(client).toHaveURL(workoutUrl)
-    await expect(client.getByText('Готово', { exact: true }).first()).toBeVisible()
+    await expect(client.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
+    await expect(client.locator('.completed-exercise-list')).toBeVisible()
 
     await trainer.goto(workoutUrl)
-    await expect(trainer.getByText('Готово', { exact: true }).first()).toBeVisible()
+    await expect(trainer.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
+    await expect(trainer.locator('.completed-exercise-list')).toBeVisible()
     await expect(trainer.locator('.block-badge')).toContainText('Интервалы · 6 кр.')
   } finally {
     await trainerContext.close()
@@ -430,6 +503,10 @@ test('iPhone: client voice-first home сохраняет тренировку т
   await page.getByRole('button', { name: 'Далее' }).click()
   await expect(page.getByText('Тренировка будет сохранена в ваш кабинет')).toBeVisible()
   await expect(page.locator('.client-picker-trigger')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Запланировать тренировку' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Записать выполненную' }).click()
+  await expect(page.getByRole('button', { name: 'Записать тренировку' })).toBeEnabled()
+  await expect(page.getByText('Завершена', { exact: true })).toBeVisible()
   await page.goto('/me/profile')
   await expect(page).toHaveURL(/\/me\/profile$/)
   await page.getByRole('link', { name: 'Изменить данные' }).click()
@@ -454,6 +531,9 @@ test('iPhone: client voice-first home сохраняет тренировку т
   ])
   await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Пригласить тренера' })).toBeInViewport()
+  await page.getByRole('button', { name: 'Пригласить тренера' }).click()
+  await page.getByRole('button', { name: 'Скопировать код для тренера' }).click()
+  await expect(page.getByRole('button', { name: 'Код для тренера скопирован' })).toBeVisible()
   await page.reload()
   await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
   await expectNoHorizontalOverflow(page)
@@ -519,7 +599,7 @@ test('iPhone: в live клиент видит те же действия с тр
 
   // Второй план не должен молча заменить первую незавершённую тренировку.
   // Пользователь остаётся на выбранном плане, пока явно не согласится открыть
-  // уже идущую запись; после «Назад» возвращается в её собственную карточку.
+  // уже идущую запись; после «Назад» возвращается в исходный выбранный план.
   const activeWorkoutPath = new URL(page.url()).pathname.replace(/\/live$/, '')
   await page.getByRole('button', { name: 'Назад' }).click()
   expect(new URL(page.url()).pathname).toBe(activeWorkoutPath)
@@ -528,7 +608,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
-  await page.getByRole('button', { name: /^Планка/ }).first().click()
+  await page.getByRole('button', { name: /^Выбрать: Планка/ }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
@@ -546,7 +626,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await recovery.getByRole('button', { name: 'Открыть незавершённую' }).click()
   await expect(page).toHaveURL(new RegExp(`${activeWorkoutPath}/live$`))
   await page.getByRole('button', { name: 'Назад' }).click()
-  expect(new URL(page.url()).pathname).toBe(activeWorkoutPath)
+  await expect(page).toHaveURL(new RegExp(`${selectedPlanPath}$`))
   await expectNoHorizontalOverflow(page)
 })
 
@@ -639,14 +719,21 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
   const regularity = page.locator('.client-progress-regularity-story')
   await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
   await expect(regularity.getByRole('list', { name: 'Тренировки по неделям' })).toBeVisible()
-  await expect(regularity.getByText('Тренировались', { exact: true })).toBeVisible()
-  await expect(regularity.getByText('Без тренировок', { exact: true })).toBeVisible()
+  await expect(regularity.getByText('По неделям', { exact: true })).toBeVisible()
+  await expect(regularity.getByText(/Активные: \d+ из \d+/)).toBeVisible()
+  await expect(regularity.getByText('Серия', { exact: true })).toBeVisible()
+  await expect(regularity.getByText('Интервал', { exact: true })).toBeVisible()
+  await expect(regularity.getByText('Макс. перерыв', { exact: true })).toBeVisible()
+  await expect(regularity.getByText('Тренировались', { exact: true })).toHaveCount(0)
+  await expect(regularity.getByText('Без тренировок', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Прогресс', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Нагрузка', exact: true })).toBeVisible()
   await expect(page.getByText('Для твоей цели', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
   await expect(page.getByText('Прогресс уже заметен, ты на верном пути.')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Обновить' })).toBeVisible()
+  await expect(page.locator('.client-progress-next-step')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Обновить' })).toHaveCount(0)
+  await expect(page.locator('.ai-progress-footer')).toHaveCount(0)
   const runningProgress = page.getByLabel('Беговой прогресс')
   await expect(runningProgress).toContainText('2 пробежки')
   await expect(runningProgress).toContainText('10 км · 58 мин')
@@ -655,7 +742,17 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
   await expect(runningProgress).toContainText('быстрее на 8%')
   await expect(runningProgress).toContainText('Последняя нагрузка: RPE 7')
 
-  await page.getByText('УПРАВЛЕНИЕ', { exact: true }).scrollIntoViewIfNeeded()
+  const measurementActions = page.getByRole('navigation', { name: 'Действия с замерами' })
+  await measurementActions.scrollIntoViewIfNeeded()
+  const [actionsBox, navigationBox] = await Promise.all([
+    measurementActions.boundingBox(),
+    page.getByRole('navigation', { name: 'Основная навигация' }).boundingBox(),
+  ])
+  expect(actionsBox).not.toBeNull()
+  expect(navigationBox).not.toBeNull()
+  expect(actionsBox!.y + actionsBox!.height).toBeLessThanOrEqual(navigationBox!.y)
+
+  await page.locator('.measurement-story-management').scrollIntoViewIfNeeded()
   await page.getByRole('button', { name: 'Добавить замер' }).click()
   await expect(page.getByRole('heading', { name: 'Новый замер' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Сохранить замер' })).toBeVisible()
@@ -665,6 +762,11 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
 test('iPhone: standard goal facts stay readable without horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page, 'client@fit.local')
+  const measurementDate = (daysAgo: number) => {
+    const date = new Date()
+    date.setUTCDate(date.getUTCDate() - daysAgo)
+    return date.toISOString().slice(0, 10)
+  }
   await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
     id: 'b1000000-0000-4000-8000-000000000001', clientId: '11111111-1111-4111-8111-111111111111',
     title: 'Держать вес 59 кг', targetDate: null, status: 'active', version: 1, stages: [], criteria: [{
@@ -675,8 +777,8 @@ test('iPhone: standard goal facts stay readable without horizontal overflow', as
     }],
   }) }))
   await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
-    { id: 'b4000000-0000-4000-8000-000000000004', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: '2026-08-25', weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
-    { id: 'b3000000-0000-4000-8000-000000000003', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: '2026-08-05', weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+    { id: 'b4000000-0000-4000-8000-000000000004', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: measurementDate(5), weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+    { id: 'b3000000-0000-4000-8000-000000000003', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: measurementDate(20), weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
   ]) }))
   await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
   await page.route('**/rest/v1/client_custom_metrics?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
@@ -684,11 +786,14 @@ test('iPhone: standard goal facts stay readable without horizontal overflow', as
   await page.goto('/me/progress')
   const goal = page.locator('.client-progress-goal-story')
   await expect(goal.getByText('В диапазоне сейчас', { exact: true })).toBeVisible()
-  await expect(goal.getByRole('link', { name: 'Смотреть значения и график' })).toBeVisible()
+  await expect(goal.getByText('Сейчас', { exact: true })).toBeVisible()
+  await expect(goal.getByText('Ориентир', { exact: true })).toBeVisible()
+  await expect(goal.getByRole('link', { name: 'Смотреть значения и график' })).toHaveCount(0)
   const measurements = page.locator('.client-progress-measurements-story')
   await expect(measurements.getByRole('heading', { name: 'Тренд по значениям' })).toBeVisible()
   await expect(measurements.getByText('60 кг → 59 кг', { exact: true })).toBeVisible()
   await expect(measurements.getByLabel('График показателя «Вес»')).toBeVisible()
+  await expect(measurements.getByText('Цель · 58,5–59,5 кг').first()).toBeVisible()
   await expect(measurements.getByText(/2 точки · достаточно для динамики/)).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })
@@ -702,7 +807,8 @@ for (const width of [320, 375]) {
     const mainNow = page.locator('.client-progress-main-now')
     await expect(mainNow.getByText('Главное сейчас', { exact: true })).toBeVisible()
     await expect(mainNow.getByRole('heading')).toBeVisible()
-    await expect(mainNow.locator('> strong')).toBeVisible()
+    await expect(mainNow.locator('> p')).toBeVisible()
+    await expect(mainNow.locator('> strong')).toHaveCount(0)
     const action = mainNow.getByRole('link')
     if (await action.count()) expect(await action.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
     await expectNoHorizontalOverflow(page)
@@ -730,6 +836,8 @@ async function createIsolatedClient(page: Page, testInfo: import('@playwright/te
   await page.getByLabel('Возраст').fill('30')
   await page.getByLabel('Рост, см').fill('170')
   await page.getByLabel('Начальный вес, кг').fill('65')
+  const introduction = page.getByRole('button', { name: 'Понятно', exact: true })
+  if (await introduction.isVisible()) await introduction.click()
   await Promise.all([
     page.waitForURL(/\/clients\/[0-9a-f-]+$/),
     page.getByRole('button', { name: 'Сохранить' }).click(),
@@ -741,7 +849,7 @@ async function addExercise(page: Page, name: string, first = false) {
   await page.getByRole('button', { name: first ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
   if (first) await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill(name)
-  await page.getByRole('button', { name: new RegExp(name) }).first().click()
+  await page.locator('.picker-select-mark').first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
 }
 
@@ -808,10 +916,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
     await page.setViewportSize(viewport)
     await login(page, 'client@fit.local')
     await openReviewWithFixture(page, '/me')
+    await page.getByText('Править подходы', { exact: true }).click()
 
     const frame = page.locator('.phone-frame')
     const content = page.locator('.content')
-    const firstWeight = page.getByLabel('Жим лёжа (Штанга): вес, подход 1')
+    const firstWeight = page.getByLabel('Жим штанги лёжа: вес, подход 1')
     await recoverMobileShellFromStaleKeyboard(page, firstWeight)
 
     const frameBox = await frame.boundingBox()
@@ -944,14 +1053,36 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     await expect(analysis.getByRole('button', { name: 'Прогресс', exact: true })).toBeVisible()
     await expect(analysis.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
     await expect(analysis.getByRole('list', { name: 'Тренировки по неделям' })).toBeVisible()
+    const trainerSignals = analysis.locator('.trainer-progress-signals')
+    await expect(trainerSignals).toBeVisible()
+    await expect(trainerSignals.getByRole('button', { name: 'Показать' })).toHaveAttribute('aria-expanded', 'false')
+    if (viewport.width === 390) {
+      await trainerSignals.getByRole('button', { name: 'Показать' }).click()
+      await expect(trainerSignals.getByText('Факт', { exact: true }).first()).toBeVisible()
+      await expect(trainerSignals.getByText('Вопрос', { exact: true }).first()).toBeVisible()
+    }
+    await analysis.getByRole('button', { name: 'Прогресс', exact: true }).click()
+    await expect(analysis.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
+    await expectCompactBodyMap(analysis.locator('.body-progress-map'))
     await analysis.getByRole('button', { name: 'Нагрузка', exact: true }).click()
     await expect(analysis.getByRole('heading', { name: 'Куда пришлась нагрузка' })).toBeVisible()
+    await expectCompactBodyMap(analysis.locator('.body-progress-map'))
     await expect(page.locator('details')).toHaveCount(0)
     await expect(page.getByRole('link', { name: 'Открыть замеры и показатели' })).toBeVisible()
     const coachmark = page.getByRole('button', { name: 'Понятно' })
     if (await coachmark.isVisible()) await coachmark.evaluate((element) => {
       (element as HTMLButtonElement).click()
     })
+    await expectNoHorizontalOverflow(page)
+    await page.evaluate(() => {
+      window.localStorage.setItem('fit.appTheme', 'dark')
+      window.dispatchEvent(new Event('fit-theme-change'))
+    })
+    await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+    const darkAnalysis = page.getByLabel('ИИ-анализ тренировок')
+    await darkAnalysis.getByRole('button', { name: 'Прогресс', exact: true }).click()
+    await expect(darkAnalysis.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
+    await expectCompactBodyMap(darkAnalysis.locator('.body-progress-map'))
     await expectNoHorizontalOverflow(page)
   })
 }
@@ -961,6 +1092,7 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     await page.setViewportSize(viewport)
     await login(page, 'client@fit.local')
     await page.goto('/me/progress')
+    await expect(page.locator('.trainer-progress-signals')).toHaveCount(0)
 
     await expect(page.getByLabel('Регулярность тренировок')).toHaveCount(0)
     const summary = page.locator('.client-progress-card')
@@ -970,23 +1102,37 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     await expect(summary.getByRole('list', { name: 'Тренировки по неделям' })).toBeVisible()
     await summary.getByRole('button', { name: 'Прогресс', exact: true }).click()
     await expect(summary.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
+    await expectCompactBodyMap(summary.locator('.body-progress-map'))
     await summary.getByRole('button', { name: 'Нагрузка', exact: true }).click()
     await expect(summary.getByRole('heading', { name: 'Куда пришлась нагрузка' })).toBeVisible()
+    await expectCompactBodyMap(summary.locator('.body-progress-map'))
     await expect(summary.locator('.ai-progress-stats span').filter({ hasText: /недел/ })).toBeVisible()
     await expect(summary.getByText('Для твоей цели', { exact: true })).toBeVisible()
     await expect(summary.getByText('Подробный анализ', { exact: true })).toBeVisible()
+    await page.evaluate(() => {
+      window.localStorage.setItem('fit.appTheme', 'dark')
+      window.dispatchEvent(new Event('fit-theme-change'))
+    })
+    await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+    const darkSummary = page.locator('.client-progress-card')
+    await darkSummary.getByRole('button', { name: 'Прогресс', exact: true }).click()
+    await expect(darkSummary.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
+    await expectCompactBodyMap(darkSummary.locator('.body-progress-map'))
+    await expectNoHorizontalOverflow(page)
     await page.goto('/me/profile')
     await page.getByRole('radio', { name: 'Схема' }).click()
     await page.goto('/me/progress')
     const schemeSummary = page.locator('.client-progress-card')
     await expect(schemeSummary.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
+    await expectCompactBodyMap(schemeSummary.locator('.body-progress-map'))
     await expectNoHorizontalOverflow(page)
   })
 }
 
-for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
+for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
   test(`iPhone: короткая история и длинное упражнение не ломают Progress на ${viewport.width} px`, async ({ page }) => {
     await page.setViewportSize(viewport)
+    await mockAutomaticSummaryGeneration(page)
     await login(page, 'client@fit.local')
     await page.clock.install({ time: new Date('2026-08-20T18:00:00+03:00') })
     await page.route('**/rest/v1/workouts?*', async (route) => {
@@ -1044,25 +1190,61 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
     const summary = page.locator('.client-progress-card')
     await summary.getByRole('button', { name: 'Спереди' }).click()
     await expect(summary.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
-    await summary.getByLabel('Грудь. Лучший результат зоны: +20%').click()
-    await summary.getByRole('button', { name: 'Сзади' }).click()
+    await summary.getByLabel('Грудь. Результат зоны: +20%').click()
+    await summary.locator('.body-progress-visual').evaluate((element) => {
+      const swipe = (type: 'touchstart' | 'touchend', clientX: number) => {
+        const event = new Event(type, { bubbles: true })
+        Object.defineProperty(event, 'changedTouches', { value: [{ clientX }] })
+        element.dispatchEvent(event)
+      }
+      swipe('touchstart', 180)
+      swipe('touchend', 80)
+    })
     await expect(summary.getByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
-    await summary.getByLabel('Верх спины. Лучший результат зоны: +36%').press('Enter')
-    await expect(summary.locator('.body-progress-detail')).toContainText('В зоне «Верх спины» лучший подтверждённый результат изменился на +36%.')
+    await expectCompactBodyMap(summary.locator('.body-progress-map'))
+    await summary.getByLabel('Верх спины. Результат зоны: +36%').press('Enter')
+    await expect(summary.locator('.body-progress-detail')).toContainText('Результат вырос на 36%.')
     await expect(summary.locator('.body-progress-detail').getByText('Тяга верхнего блока обратным узким хватом в кроссовере с дополнительной рукоятью', { exact: false })).toHaveCount(0)
     await summary.getByRole('button', { name: 'Показать 1 упражнение' }).click()
     const bodyDetails = page.getByRole('dialog', { name: 'Верх спины' })
     await expect(bodyDetails.getByText('Тяга верхнего блока обратным узким хватом в кроссовере с дополнительной рукоятью', { exact: false })).toBeVisible()
     await bodyDetails.getByRole('button', { name: 'Закрыть' }).click()
     await summary.getByRole('button', { name: 'Подробный анализ' }).click()
-    await expect(page.getByRole('dialog', { name: 'Подробный анализ' }).getByText('Рабочий вес: 50 → 68 кг', { exact: false })).toBeVisible()
+    const detailedAnalysis = page.getByRole('dialog', { name: 'Подробный анализ' })
+    await expect(detailedAnalysis.getByRole('heading', { name: 'Результат периода' })).toBeVisible()
+    await expect(detailedAnalysis.getByRole('heading', { name: 'Связь с целью' })).toBeVisible()
+    await expect(detailedAnalysis.getByRole('heading', { name: 'На что обратить внимание' })).toBeVisible()
+    await expect(detailedAnalysis.getByText('Рабочий вес: 50 → 68 кг', { exact: false })).toHaveCount(0)
     await expect(summary.getByRole('button', { name: '1 месяц' })).toBeVisible()
     await expect(summary.getByRole('button', { name: '3 месяца' })).toHaveCount(0)
+    await page.evaluate(() => {
+      window.localStorage.setItem('fit.appTheme', 'dark')
+      window.dispatchEvent(new Event('fit-theme-change'))
+    })
+    await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+    await expectCompactBodyMap(summary.locator('.body-progress-map'))
     await expectNoHorizontalOverflow(page)
   })
 }
 
 test('iPhone: ручной выбор начинает с недавних, а не с разминки на 390 px', async ({ page }, testInfo) => {
+  async function expectPickerItemsToKeepTheirGeometry() {
+    const itemLayout = await page.locator('.picker-item').evaluateAll((items) => items.slice(0, 8).map((item, index, visibleItems) => {
+      const rect = item.getBoundingClientRect()
+      const image = item.querySelector('.exercise-image')?.getBoundingClientRect()
+      const copy = item.querySelector('.picker-item-copy')?.getBoundingClientRect()
+      const next = visibleItems[index + 1]?.getBoundingClientRect()
+      return {
+        height: rect.height,
+        imageContained: Boolean(image && image.top >= rect.top && image.bottom <= rect.bottom),
+        copyContained: Boolean(copy && copy.top >= rect.top && copy.bottom <= rect.bottom),
+        overlapsNext: Boolean(next && rect.bottom > next.top),
+      }
+    }))
+    expect(itemLayout.length).toBeGreaterThan(3)
+    expect(itemLayout.every((item) => item.height >= 64 && item.imageContained && item.copyContained && !item.overlapsNext)).toBe(true)
+  }
+
   await page.setViewportSize({ width: 390, height: 844 })
   await page.route('**/exercises/base-bench-press.jpg', (route) => route.abort())
   await loginAsTrainer(page)
@@ -1075,17 +1257,44 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await expect(page.getByText('Недавние')).toBeVisible()
   await expect(page.getByText('Все упражнения')).toBeVisible()
   await expect(page.getByText('Разминка и мобилити')).toHaveCount(0)
-  const recentExercise = page.locator('.picker-item[data-exercise-ref="bench-press"]')
+  const recentExercise = page.locator('.picker-item').filter({ has: page.locator('[data-exercise-ref="bench-press"]') })
   await expect(recentExercise).toHaveCount(1)
-  await expect(recentExercise.locator('.exercise-image-empty')).toBeVisible()
-  await expect(recentExercise.locator('img')).toHaveCount(0)
-  const catalogImage = page.locator('.picker-item[data-exercise-ref="barbell-squat"] .exercise-image')
-  await expect(catalogImage.locator('img')).toHaveCSS('object-fit', 'contain')
+  // Если основной кадр недоступен, превью техники остаётся рабочим на втором кадре.
+  await expect(recentExercise.locator('.exercise-image-empty')).toHaveCount(0)
+  await expect(recentExercise.locator('img')).toHaveCount(1)
+  const catalogImage = page.locator('.picker-item').nth(1).locator('.exercise-image')
+  await expect(catalogImage.locator('img').first()).toHaveCSS('object-fit', 'contain')
   const catalogImageBox = await catalogImage.boundingBox()
   expect(catalogImageBox?.width).toBe(catalogImageBox?.height)
   expect(catalogImageBox?.width).toBeGreaterThanOrEqual(48)
+  await expectPickerItemsToKeepTheirGeometry()
   await expectNoHorizontalOverflow(page)
   await page.screenshot({ path: testInfo.outputPath('exercise-images-picker.png'), fullPage: true })
+
+  await page.evaluate(() => window.localStorage.setItem('fit.appTheme', 'dark'))
+  await page.reload()
+  await selectClient(page)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+  await expectPickerItemsToKeepTheirGeometry()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('exercise-images-picker-dark.png'), fullPage: true })
+
+  await page.setViewportSize({ width: 430, height: 932 })
+  await expectPickerItemsToKeepTheirGeometry()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('exercise-images-picker-dark-430.png'), fullPage: true })
+
+  await page.evaluate(() => window.localStorage.setItem('fit.appTheme', 'light'))
+  await page.reload()
+  await selectClient(page)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await expect(page.locator('html')).toHaveClass(/theme-light/)
+  await expectPickerItemsToKeepTheirGeometry()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('exercise-images-picker-430.png'), fullPage: true })
 })
 
 test('iPhone: создание тренировки сфокусировано и меню не перекрывает действия на 390 px', async ({ page }) => {
@@ -1172,7 +1381,7 @@ test('iPhone: копия тренировки открывается компа�
   await page.getByLabel('Вес, подход 2').fill('60')
   await page.getByLabel('Повторы, подход 2').fill('10')
   await addExercise(page, 'Жим лёжа')
-  const benchEditor = page.locator('.planned-exercise').filter({ hasText: 'Жим лёжа' })
+  const benchEditor = page.locator('.planned-exercise').filter({ hasText: 'Жим штанги лёжа' })
   await expect(benchEditor).toHaveCount(1)
   await benchEditor.getByLabel('Вес, подход 1').fill('40')
   await benchEditor.getByLabel('Повторы, подход 1').fill('10')
@@ -1273,6 +1482,10 @@ test('iPhone: длинное название и 10 подходов не лом
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
   await expect(page.locator('.live-session-progress')).toContainText('подход 1 из 10')
   await expect(page.locator('.live-exercise.current')).toContainText(longName)
+  const fillNextSet = page.getByRole('button', { name: 'Заполнить подход 2' })
+  await expect(fillNextSet).toBeVisible()
+  await expect(fillNextSet).toContainText('Заполнить')
+  expect((await fillNextSet.boundingBox())!.height).toBeGreaterThanOrEqual(44)
   await expectNoHorizontalOverflow(page)
 })
 
@@ -1351,7 +1564,7 @@ test('iPhone: отдых начинается после последнего п
 
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByText(/Отдых 1:(2[7-9]|30)/)).toBeVisible()
-  await expect(page.locator('.live-exercise-upcoming')).toContainText('Жим лёжа')
+  await expect(page.locator('.live-exercise-upcoming')).toContainText('Жим штанги лёжа')
   await expectNoHorizontalOverflow(page)
 })
 
@@ -1410,6 +1623,7 @@ test('iPhone: частично завершённая тренировка по�
   await expect(completedDetails).not.toHaveAttribute('open')
   await completedDetails.locator('summary').click()
   await expect(completedDetails.locator('.workout-history-sets')).toBeVisible()
+  await expect(completedDetails.locator('.workout-history-set.confirmed').first()).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
   await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
   await expect(page.getByRole('menuitem', { name: 'Копировать тренировку' })).toBeVisible()
   const deleteWorkout = page.getByRole('menuitem', { name: 'Удалить тренировку' })
@@ -1498,7 +1712,7 @@ test('iPhone: результат прошлого плана записывае�
   await expect(page).toHaveURL(/\/workouts\/[0-9a-f-]+$/)
   await expect(page).not.toHaveURL(/\/live/)
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
-  await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveText('Готово')
+  await expect(page.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
   await expect(page.getByText('40 кг × 10', { exact: true }).first()).toBeVisible()
   await expectNoHorizontalOverflow(page)
   await page.screenshot({ path: testInfo.outputPath('record-past-plan-result-390.png'), fullPage: true })
@@ -1563,7 +1777,11 @@ test('iPhone: составная цель настраивается вручн�
   await login(page, 'client@fit.local')
   await page.goto('/me/goal')
   await expect(page.getByRole('heading', { name: 'Моя цель' })).toBeVisible()
-  await page.getByRole('switch', { name: 'Автоматическая оценка' }).check()
+  const configure = page.getByRole('button', { name: 'Настроить' })
+  const automaticEvaluation = page.getByRole('switch', { name: 'Автоматическая оценка' })
+  await expect(configure.or(automaticEvaluation)).toBeVisible()
+  if (await configure.isVisible()) await configure.click()
+  await automaticEvaluation.check()
   await page.getByRole('button', { name: '＋ Добавить критерий' }).click()
   const regularity = page.locator('.goal-criterion-item').nth(1)
   await regularity.getByLabel('Показатель').selectOption('workout_regularity')

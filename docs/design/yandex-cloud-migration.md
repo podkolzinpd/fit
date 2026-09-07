@@ -74,10 +74,19 @@ The following remain unchanged during the foundation phase:
    no production or Supabase data is read, and the token is not printed. The
    Feedback/reactions, questions, progress/chronicle, client overview and the
    goal-aware summary storage/API are now represented in the isolated Yandex
-   chain. Production routing and the tenant data copy remain pending.
-8. Rehearse full tenant migration at least twice. Cut over one isolated tenant
-   cohort only after all data it can mutate is migrated and writes are frozen
-   for the cutover window.
+   chain. Application feedback storage and its authenticated insert API are
+   represented by `000024`, with operator reads limited to `ops_readonly`.
+   Production routing, the Telegram delivery transport and the tenant data copy
+   remain pending.
+8. [Local tooling and two clean data rehearsals complete; remote gate pending]
+   Export/import/validation covers one isolated trainer cohort with an
+   encrypted manifest, mandatory dry-run, transactional idempotent apply and
+   per-table count/checksum validation. `npm run tenant:rehearse:local` passed
+   twice on clean PostgreSQL 17 targets with 35 production-like synthetic rows
+   across all 28 manifest tables. This does not validate VPC/IAM/TLS or real
+   production volume. Cut over one isolated tenant cohort only after reviewing
+   the exact remote source/target and credentials, migrating all mutable data
+   and freezing writes for the cutover window.
 9. Expand sticky tenant cohorts gradually after monitoring data integrity,
    authorization failures, latency and error rates.
 10. Remove Supabase only after all cohorts are migrated and the rollback window
@@ -99,6 +108,13 @@ The assignment is evaluated server-side and is sticky. Serverless Container
 revision activation applies to all requests, while API Gateway percentage
 canaries are random request routing; neither is the source of truth for a
 specific-user pilot.
+
+The read-write application session is also the only credential for the migrated
+main UI. All actor-scoped domain endpoints accept `x-fit-session`; the legacy
+read-only pilot credential remains supported during the transition. Sending
+both credentials is invalid and must fail closed. A successful account-linking
+request may return an application session only when the server-side assignment
+already authorizes the exact linked profile for `yandex`/`read_write`.
 
 The safe migration unit is a tenant cohort, not always one account. A trainer,
 linked client profiles and their shared memberships/workouts must not be split
@@ -193,7 +209,15 @@ Migration `000018_training_summaries` adds role-safe internal summaries and a
 physically separate client-safe projection. Native pilot routes authenticate
 summary generation and workout parsing with the hashed Fit session, read the
 facts and custom exercise catalog from Yandex PostgreSQL and do not require a
-Supabase JWT. Existing production routes remain intact.
+Supabase JWT. Migrations `000019`–`000023` add the relationship foundation,
+atomic client attachment and the current goal-criteria contract. Migration
+`000024_app_feedback` stores suggestion/problem submissions under the
+transaction actor, exposes only a validated insert command to `fit_api` and a
+curated operational view to stage readers. Existing production routes remain
+intact. Migration `000025_push_state` ports actor-scoped Web Push subscriptions,
+opt-out preferences and the private outbox. It intentionally has no producer,
+cron, dispatcher or sender: stage can validate storage parity without sending
+real notifications or exposing endpoint/key material.
 Product work merged after the foundation still expands the contract required
 before a production tenant can be switched.
 
@@ -220,7 +244,16 @@ Port the current `main` behavior in this order:
     (`000018` and the native pilot API are implemented; runtime AI authorization
     uses the API service account and short-lived metadata IAM tokens. A separate
     explicit paid synthetic generation/parse smoke is implemented and must pass
-    once after deployment; tenant migration rehearsals remain before cutover).
+    once after deployment; the reviewed remote migration gate remains before
+    cutover).
+11. application feedback storage and authenticated submission (`000024` and
+    `POST /v1/app-feedback` are implemented in the isolated API; production
+    still submits through Supabase, and Telegram delivery remains on the legacy
+    transport until a reviewed Yandex outbox/sender slice exists).
+12. assistant durable state, push subscription/outbox state and the remaining
+    Edge Function contracts required by a migrated tenant. Assistant state and
+    push storage/API are ported; producer/dispatcher/sender code is ready, while
+    the stage timer/bootstrap stays disabled until its separate cost approval.
 
 Each item is a separate vertical slice: PostgreSQL migration, grants/RLS and
 cross-tenant tests, API transaction/DTO, repository adapter and observable

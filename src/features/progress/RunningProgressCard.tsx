@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
-import { progressRepository } from '../../data/repositories/progress.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import { ChevronRightIcon } from '../../shared/icons'
 import { addDays, addMonths, todayInTimeZone } from '../../shared/local-date'
 import {
@@ -39,6 +39,7 @@ export function RunningProgressCard({ clientId, compact = false, detailsPath }: 
   compact?: boolean
   detailsPath?: string
 }) {
+  const { progress: progressRepository } = useDataBackend()
   const { actor } = useAuth()
   const [months, setMonths] = useState<1 | 3 | 6>(1)
   const today = todayInTimeZone(actor?.timezone)

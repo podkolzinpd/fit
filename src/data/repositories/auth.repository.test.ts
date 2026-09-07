@@ -1,7 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { authRepository } from './auth.repository'
 
 const queries = vi.hoisted(() => ({
+  clearLocalSession: vi.fn(),
+  getSession: vi.fn(),
+  signOut: vi.fn(),
   signIn: vi.fn(),
   getLinkedClient: vi.fn(),
   getTrainer: vi.fn(),
@@ -12,6 +15,9 @@ const queries = vi.hoisted(() => ({
 
 vi.mock('../queries/auth.queries', () => ({
   authQueries: {
+    clearLocalSession: queries.clearLocalSession,
+    getSession: queries.getSession,
+    signOut: queries.signOut,
     signIn: queries.signIn,
     getLinkedClient: queries.getLinkedClient,
     getTrainer: queries.getTrainer,
@@ -23,6 +29,9 @@ vi.mock('../queries/auth.queries', () => ({
 
 describe('authRepository.initialize', () => {
   beforeEach(() => {
+    queries.clearLocalSession.mockReset().mockResolvedValue({ error: null })
+    queries.getSession.mockReset().mockResolvedValue({ data: { session: null }, error: null })
+    queries.signOut.mockReset().mockResolvedValue({ error: null })
     queries.signIn.mockReset()
     queries.getLinkedClient.mockReset()
     queries.getTrainer.mockReset()
@@ -31,13 +40,38 @@ describe('authRepository.initialize', () => {
     queries.updateProfile.mockReset()
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('повторяет вход один раз после краткого сетевого обрыва', async () => {
     queries.signIn
       .mockResolvedValueOnce({ error: new TypeError('Failed to fetch') })
       .mockResolvedValueOnce({ error: null })
 
     await expect(authRepository.signIn('trainer@example.test', 'FitLocal123!')).resolves.toBeUndefined()
+    expect(queries.clearLocalSession).toHaveBeenCalledTimes(1)
+    expect(queries.clearLocalSession.mock.invocationCallOrder[0]!)
+      .toBeLessThan(queries.signIn.mock.invocationCallOrder[0]!)
     expect(queries.signIn).toHaveBeenCalledTimes(2)
+  })
+
+  it('продолжает вход после очистки отозванной локальной сессии', async () => {
+    queries.clearLocalSession.mockResolvedValue({
+      error: { code: 'refresh_token_not_found', message: 'Invalid Refresh Token: Refresh Token Not Found' },
+    })
+    queries.signIn.mockResolvedValue({ error: null })
+
+    await expect(authRepository.signIn('trainer@example.test', 'FitLocal123!')).resolves.toBeUndefined()
+    expect(queries.signIn).toHaveBeenCalledTimes(1)
+  })
+
+  it('не маскирует локальную ошибку сессии под отсутствие интернета и не повторяет пароль', async () => {
+    queries.signIn.mockRejectedValue(new TypeError('Storage quota exceeded'))
+
+    await expect(authRepository.signIn('trainer@example.test', 'FitLocal123!'))
+      .rejects.toThrow('Не удалось сохранить вход на этом устройстве. Обновите страницу и попробуйте ещё раз.')
+    expect(queries.signIn).toHaveBeenCalledTimes(1)
   })
 
   it('не повторяет вход при неверных учётных данных', async () => {
@@ -45,6 +79,55 @@ describe('authRepository.initialize', () => {
 
     await expect(authRepository.signIn('trainer@example.test', 'wrong-password')).rejects.toThrow('Неверный email или пароль')
     expect(queries.signIn).toHaveBeenCalledTimes(1)
+  })
+
+  it('завершает зависший вход, повторяет запрос и возвращает понятную ошибку', async () => {
+    vi.useFakeTimers()
+    queries.signIn.mockImplementation(() => new Promise(() => undefined))
+
+    const signIn = authRepository.signIn('trainer@example.test', 'FitLocal123!')
+    const result = expect(signIn).rejects.toThrow('Не удалось войти. Проверьте интернет и попробуйте ещё раз.')
+
+    await vi.runAllTimersAsync()
+    await result
+    expect(queries.signIn).toHaveBeenCalledTimes(2)
+  })
+
+  it('возвращает понятную ошибку после двух сетевых сбоев', async () => {
+    vi.useFakeTimers()
+    queries.signIn.mockResolvedValue({ error: new TypeError('Failed to fetch') })
+
+    const signIn = authRepository.signIn('trainer@example.test', 'FitLocal123!')
+    const result = expect(signIn).rejects.toThrow('Не удалось войти. Проверьте интернет и попробуйте ещё раз.')
+
+    await vi.runAllTimersAsync()
+    await result
+    expect(queries.signIn).toHaveBeenCalledTimes(2)
+  })
+
+  it('завершает выход без дополнительной проверки при успешном revoke', async () => {
+    await expect(authRepository.signOut()).resolves.toBeUndefined()
+
+    expect(queries.signOut).toHaveBeenCalledOnce()
+    expect(queries.getSession).not.toHaveBeenCalled()
+  })
+
+  it('считает выход успешным, если revoke оборвался, но локальная сессия уже удалена', async () => {
+    queries.signOut.mockResolvedValue({ error: new TypeError('Failed to fetch') })
+
+    await expect(authRepository.signOut()).resolves.toBeUndefined()
+
+    expect(queries.getSession).toHaveBeenCalledOnce()
+  })
+
+  it('показывает ошибку, если после сбоя выхода локальная сессия осталась', async () => {
+    queries.signOut.mockResolvedValue({ error: new TypeError('Failed to fetch') })
+    queries.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-1' } } },
+      error: null,
+    })
+
+    await expect(authRepository.signOut()).rejects.toThrow()
   })
 
   it('resolves a linked client without creating a trainer profile', async () => {

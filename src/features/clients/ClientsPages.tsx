@@ -3,10 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { clientsRepository } from '../../data/repositories/clients.repository'
-import { goalsRepository } from '../../data/repositories/goals.repository'
-import { invitationsRepository } from '../../data/repositories/invitations.repository'
-import { bmiLabel, computeClientStats, splitClientWorkouts, workoutsRepository } from '../../data/repositories/workouts.repository'
+import { bmiLabel, computeClientStats, splitClientWorkouts } from '../../data/repositories/workouts.repository'
 import { ClientFirstRunIntro, TodayPage, WorkoutExercisesSummary, storeFirstWorkoutIntent, workoutCountLabel } from '../workouts'
 import type { Client, Gender } from '../../shared/domain'
 import { currentStage, daysToTarget, stageProgress } from '../../shared/goal-rules'
@@ -17,9 +14,12 @@ import { VoiceInputButton, VoiceNoteField, type VoiceInputPhase } from '../voice
 import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
+import { useDataBackend } from '../../app/data-backend-context'
 import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, ScheduleIcon } from '../../shared/icons'
+import { InvitationCodeCard } from '../../shared/invitation-code-card'
 
 export function MyClientPage() {
+  const { clients: clientsRepository } = useDataBackend()
   const { actor, refresh } = useAuth()
   const queryClient = useQueryClient()
   const [voicePhase, setVoicePhase] = useState<VoiceInputPhase>('idle')
@@ -57,6 +57,7 @@ const clientProfileSchema = clientSchema.extend({
 })
 
 export function ClientFormPage() {
+  const { clients: clientsRepository } = useDataBackend()
   const { clientId } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
   useClientRealtime(clientId)
   const existing = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId ?? ''), enabled: Boolean(clientId) })
@@ -70,16 +71,18 @@ export function ClientFormPage() {
 }
 
 export function MyClientEditPage() {
+  const { clients: clientsRepository } = useDataBackend()
   const navigate = useNavigate(); const queryClient = useQueryClient()
-  const { refresh } = useAuth()
+  const { actor, refresh } = useAuth()
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   useClientRealtime(query.data?.id)
-  return <AsyncView loading={query.isLoading} error={query.error} empty={!query.data} onRetry={() => void query.refetch()}>
-    {query.data && <ClientForm existing={query.data} createMode="self" onSaved={async () => {
+  const initialFullName = [actor?.firstName, actor?.lastName].filter(Boolean).join(' ').trim()
+  return <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+    {!query.isLoading && <ClientForm existing={query.data ?? undefined} initialFullName={initialFullName} createMode="self" onSaved={async () => {
       await queryClient.invalidateQueries({ queryKey: ['my-client'] })
       await refresh()
       navigate('/me')
-    }} onCancel={() => navigate('/me/profile')} />}
+    }} onCancel={() => navigate(query.data ? '/me/profile' : '/me')} />}
   </AsyncView>
 }
 
@@ -98,6 +101,7 @@ function ClientForm({
   onSaved: (id: string) => Promise<void>
   onCancel?: () => void
 }) {
+  const { clients: clientsRepository } = useDataBackend()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
   const form = useForm<ClientProfileValues>({ resolver: zodResolver(clientProfileSchema), defaultValues: existing ? {
@@ -135,7 +139,7 @@ function ClientForm({
         <Field label="Имя" error={form.formState.errors.fullName?.message}><input {...form.register('fullName')} /></Field>
         <Field label="Пол"><select {...form.register('gender')}><option value="">Выберите</option><option value="female">Женский</option><option value="male">Мужской</option></select></Field>
         <div className="split"><Field label="Возраст"><input type="number" {...form.register('ageYears')} /></Field><Field label="Рост, см"><input type="number" step="0.1" {...form.register('heightCm')} /></Field></div>
-        {!existing && <Field label="Начальный вес, кг"><input type="number" step="0.1" {...form.register('initialWeightKg')} /></Field>}
+        {!existing && <Field label="Начальный вес, кг" error={form.formState.errors.initialWeightKg?.message}><input type="number" step="0.1" {...form.register('initialWeightKg', { setValueAs: (value: unknown) => value === '' ? undefined : Number(value) })} /></Field>}
         <Field label="Цель"><textarea {...form.register('goal')} /></Field>
         {createMode === 'trainer' && <Controller
           control={form.control}
@@ -153,15 +157,19 @@ function ClientForm({
         <Controller control={form.control} name="privateNote" render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Личная заметка" value={field.value ?? ''} onValueChange={field.onChange} />} />
       </section>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions">{onCancel && <button type="button" className="secondary" disabled={mutation.isPending} onClick={onCancel}>Отмена</button>}<button className="primary" disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : createMode === 'self' && !existing ? 'Создать карточку' : 'Сохранить'}</button></div>
+      <div className="actions">{onCancel && <button type="button" className="secondary" disabled={mutation.isPending} onClick={onCancel}>Отмена</button>}<button className="primary" disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : createMode === 'self' && !existing ? 'Сохранить профиль' : 'Сохранить'}</button></div>
     </form>
-  return embedded ? contents : <Page title={existing ? 'Редактировать клиента' : 'Новый клиент'} className={createMode === 'self' ? 'client-self-edit-page' : undefined}>{contents}</Page>
+  const title = createMode === 'self' && !existing
+    ? 'Профиль спортсмена'
+    : existing ? 'Редактировать клиента' : 'Новый клиент'
+  return embedded ? contents : <Page title={title} className={createMode === 'self' ? 'client-self-edit-page' : undefined}>{contents}</Page>
 }
 
 // update_client пишет goal и note одной транзакцией с optimistic-lock (version).
 // Поэтому обе формы (цель / заметка) сохраняют через один хелпер и всегда
 // передают текущее значение соседнего поля — чтобы правка одного не затирала другое.
 function useSaveClient(client: Client, onDone: () => void) {
+  const { clients: clientsRepository } = useDataBackend()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (patch: { goal?: string; note?: string }) => {
@@ -189,6 +197,7 @@ function targetHint(days: number): string {
 }
 
 function ClientGoalBlock({ client }: { client: Client }) {
+  const { goals: goalsRepository } = useDataBackend()
   const { actor } = useAuth()
   const goalQuery = useQuery({ queryKey: ['client-goal', client.id], queryFn: () => goalsRepository.get(client.id) })
   const [editingText, setEditingText] = useState(false)
@@ -253,6 +262,11 @@ function ClientNoteBlock({ client }: { client: Client }) {
 }
 
 export function ClientDetailPage() {
+  const {
+    clients: clientsRepository,
+    invitations: invitationsRepository,
+    workouts: workoutsRepository,
+  } = useDataBackend()
   const { clientId = '' } = useParams(); const queryClient = useQueryClient()
   const { actor } = useAuth(); const navigate = useNavigate()
   const today = todayInTimeZone(actor?.timezone)
@@ -307,7 +321,7 @@ export function ClientDetailPage() {
       <ClientNoteBlock client={query.data} />
       <div className="page-actions">
         {query.data.hasAccount === false && <button className="secondary wide" disabled={invite.isPending} aria-busy={invite.isPending} onClick={() => invite.mutate()}>{invite.isPending ? 'Создаём приглашение…' : 'Пригласить клиента'}</button>}
-        {invite.data && <div className="card"><strong>Код клиента: {invite.data}</strong><p>Передайте код клиенту. Он действует 7 дней и используется один раз.</p></div>}
+        {invite.data && <InvitationCodeCard code={invite.data} label="Код клиента" description="Передайте код клиенту. Он действует 7 дней и используется один раз." />}
         {invitations.data?.map((item) => <article className="card" key={item.id}><div><strong>Активное приглашение клиента</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU', { timeZone: normalizeTimeZone(actor?.timezone) })}</p></div><button className="link danger" disabled={revoke.isPending} aria-busy={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Код больше нельзя будет использовать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>{revoke.isPending ? 'Отзываем…' : 'Отозвать'}</button></article>)}
         {invite.error && <p className="error">{invite.error.message}</p>}
         {revoke.error && <p className="error">{revoke.error.message}</p>}

@@ -61,6 +61,7 @@ describe('buildPeriodComparison', () => {
     const result = completeComparison()
 
     expect(result.comparable).toBe(true)
+    expect(result.periodLabel).toBe('июль → август 2026')
     expect(new Set(result.facts.map((fact) => fact.kind))).toEqual(new Set([
       'goal', 'strength', 'measurement', 'regularity', 'load', 'cardio',
     ]))
@@ -72,7 +73,11 @@ describe('buildPeriodComparison', () => {
       expect.objectContaining({ subject: 'Выполненные подходы', previousLabel: '2 подх.', currentLabel: '6 подх.' }),
     ]))
     expect(result.conclusions).toHaveLength(2)
-    expect(result.conclusions[1]).toMatchObject({ kind: 'limitation', source: 'deterministic' })
+    expect(result.conclusions[1]).toMatchObject({
+      kind: 'limitation',
+      source: 'deterministic',
+      text: 'Мало данных: в одном из периодов только 1 завершённая тренировка.',
+    })
   })
 
   it('accepts only short LLM wording grounded in one calculated fact', () => {
@@ -116,7 +121,7 @@ describe('buildPeriodComparison', () => {
 
     expect(result.facts).toEqual([])
     expect(result.conclusions).toEqual([])
-    expect(result.emptyMessage).toContain('отправная точка')
+    expect(result.emptyMessage).toBe('Сравнение появится, когда будут данные за два периода.')
   })
 
   it('refuses to compare periods of different length', () => {
@@ -128,6 +133,7 @@ describe('buildPeriodComparison', () => {
     expect(result.comparable).toBe(false)
     expect(result.facts).toEqual([])
     expect(result.conclusions[0]).toMatchObject({ kind: 'limitation', factIds: [] })
+    expect(result.emptyMessage).toBe('Для сравнения нужны периоды одинаковой длины.')
   })
 
   it('can remove a fact already used as the main conclusion', () => {

@@ -36,6 +36,58 @@ visibility: a client reads its own workouts, connected trainers read their own
 assignments plus completed client-authored history, and unrelated actors read
 nothing. Runtime insert, update and delete grants remain closed.
 
+Migration `000024` adds application feedback as an isolated Yandex vertical
+slice. The pilot session supplies the author UUID and account role; request
+bodies cannot choose either value. `fit_api` can execute only the validated
+insert command and cannot read or write the table directly. Human stage readers
+see new messages through the curated `ops_readonly.app_feedback` view, without
+profile names or user-agent data. Production feedback continues to use the
+existing Supabase RPC until sticky tenant routing is implemented.
+
+Migration `000025` ports Web Push state without enabling delivery. It stores one
+browser subscription per actor, opt-out preferences for the two existing kinds
+and a provider-neutral private outbox. The public API returns only subscription
+presence and preference booleans; endpoint and Web Push keys are never returned
+or exposed through `ops_readonly`. `fit_api` executes narrow actor-derived
+functions and has no direct table access. The migration deliberately creates no
+producer, scheduler, dispatcher or sender, so applying it cannot send a push.
+Subscription enable/disable and the matching reminder preference update happen
+atomically inside the database command.
+
+Migration `000030` completes the Yandex delivery contract without `pg_net` or a
+business trigger. Creating a trainer-authored plan explicitly enqueues the
+`workout_scheduled` event in the same API transaction; a private timer runner
+enqueues timezone-aware 09:00 reminders, leases at most 20 rows with
+`SKIP LOCKED`, calls the existing Web Push sender and finalizes every result.
+Leases recover after ten minutes, retries stop after ten attempts, expired
+subscriptions are discarded and removed, and the outbox remains unavailable
+through both direct `fit_api` grants and `ops_readonly`.
+
+Migration `000026` ports durable Assistant conversations, messages and actions.
+Only trainer actors can create or read their own history; user turns and model
+responses are idempotent by `turn_id`, and action confirmation uses optimistic
+versions. Record-workout, client draft, program draft and progress-summary
+actions reuse the existing actor-scoped domain functions. The runtime exposes
+history and confirmation endpoints behind the opaque pilot session, while the
+production Assistant continues to use Supabase until sticky tenant routing is
+enabled. Assistant content is intentionally absent from `ops_readonly`.
+
+Migration `000027` adds the foundation for normal Yandex ID sessions without
+switching production auth. A user who is already signed in through the existing
+provider can link one app-scoped Yandex identity digest to their existing
+profile. Linking is idempotent for the same pair, rejects subject/profile
+collisions and does not create rollout access by itself. A separate opaque
+read-write app session can be issued only when the linked profile already has
+an enabled `yandex`/`read_write` rollout assignment. Provider OAuth tokens,
+raw Yandex identifiers and the app session token are never stored; only SHA-256
+digests are persisted.
+
+Delivery is enabled only by the separately reviewed private dispatcher and
+timer infrastructure. Applying the database migration alone cannot make an
+outbound request. The sender function keeps the existing shared-secret
+contract; provider errors are reduced to stable status codes so subscription
+endpoints never reach responses, logs or outbox error text.
+
 Stage delivery uses the private migration runner to load one deterministic,
 synthetic workout fixture for each enabled read-only trainer plus an isolated
 smoke actor. This route is disabled outside `APP_ENV=stage`, accepts no user
@@ -44,6 +96,14 @@ not duplicate domain rows. It returns one 15-minute session only to the current
 CI job; CI keeps the response file private and verifies the nested aggregate
 through the public runtime API and its `fit_api` RLS role before accepting the
 new revision.
+
+The same private runner exposes encrypted tenant `dry-run` and `apply` routes
+only when `APP_ENV=stage` and `STAGE_TENANT_MIGRATION_ENABLED=true`. The body is
+an AES-256-GCM envelope capped at 3 MiB; its random passphrase is supplied for
+one request and is never stored. Dry-run executes the complete serializable
+import and rolls it back. Apply requires an independent exact confirmation and
+the calling workflow immediately repeats it to prove `inserted=0`. These routes
+do not create rollout assignments or change frontend routing.
 
 ## Roles
 
@@ -58,8 +118,8 @@ Human stage readers never receive either role. Migration `000013` creates the
 `ops_readonly` schema with explicit security-definer views and a private,
 owner-only grant/revoke function. The views omit profile/client names, goals,
 membership notes, invitation hashes, workout notes and trainer comments. They
-never expose `app_private`. A direct `fit_api` grant would allow actor-context
-impersonation and is prohibited.
+never expose `app_private`, push endpoints or Web Push key material. A direct
+`fit_api` grant would allow actor-context impersonation and is prohibited.
 
 The private migration runner exposes the access function only in stage. The
 manual `Manage Yandex stage database access` GitHub workflow calls it with an

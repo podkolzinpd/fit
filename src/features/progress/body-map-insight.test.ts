@@ -7,7 +7,7 @@ const region: BodyMapRegion = {
   label: 'Верх спины',
   percent: 36,
   valueLabel: '+36%',
-  metricLabel: 'Лучший результат зоны',
+  metricLabel: 'Результат зоны',
   primaryDetail: 'Тяга верхнего блока · Рабочий вес: 50 → 68 кг',
   details: ['Тяга нижнего блока · Рабочий вес: 60 → 75 кг'],
   intensity: .72,
@@ -16,7 +16,6 @@ const region: BodyMapRegion = {
 const progress: BodyMapData = {
   mode: 'progress',
   title: 'Где выросли результаты',
-  description: 'Изменения по подтверждённым результатам упражнений',
   regions: [region],
   emptyMessage: 'Нет данных',
 }
@@ -24,7 +23,7 @@ const progress: BodyMapData = {
 describe('bodyMapInsight', () => {
   it('accepts a short LLM explanation only when it is grounded in the selected zone fact', () => {
     expect(bodyMapInsight(progress, region, [
-      'В тяге верхнего блока подтверждено изменение +36%; это главный результат выбранной зоны.',
+      'Результат тяги верхнего блока вырос на 36%.',
     ])).toEqual(expect.objectContaining({
       source: 'llm',
       factId: 'body-map:progress:upper_back:+36%',
@@ -37,7 +36,7 @@ describe('bodyMapInsight', () => {
 
     expect(invented.source).toBe('deterministic')
     expect(prescription.source).toBe('deterministic')
-    expect(prescription.text).toBe('В зоне «Верх спины» лучший подтверждённый результат изменился на +36%.')
+    expect(prescription.text).toBe('Результат вырос на 36%.')
   })
 
   it('explains load from the calculated share without asking the LLM to infer it', () => {

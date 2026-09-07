@@ -104,6 +104,16 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByRole('menuitem', { name: 'Сбросить значения' })).toBeInTheDocument()
   })
 
+  it('opens technique separately from editing planned sets', async () => {
+    const user = userEvent.setup()
+    const onOpenTechnique = vi.fn()
+    render(<WorkoutExerciseEditor exercises={exercises} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} onOpenTechnique={onOpenTechnique} canOpenTechnique={() => true} />)
+
+    await user.click(screen.getByRole('button', { name: 'Посмотреть технику: Присед' }))
+    expect(onOpenTechnique).toHaveBeenCalledWith(exercises[0])
+    expect(screen.getByLabelText('Вес, подход 1')).toHaveValue(52.5)
+  })
+
   it('accepts copied factual seconds that are not multiples of 15', () => {
     const copied: WorkoutExerciseDraft[] = [{
       source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance', position: 0,
@@ -206,6 +216,26 @@ describe('workout exercise editor rules', () => {
     await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
     await user.click(screen.getByRole('menuitem', { name: 'Скрыть RPE' }))
     expect(screen.queryByLabelText('Целевой RPE, подход 1')).not.toBeInTheDocument()
+  })
+
+  it('uses the trainer rest preference while keeping a per-exercise override', async () => {
+    const user = userEvent.setup()
+    render(<WorkoutExerciseEditor exercises={exercises} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} showRestByDefault />)
+
+    expect(screen.getByLabelText('Отдых между подходами, Присед')).toHaveValue(90)
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Скрыть отдых' }))
+    expect(screen.queryByLabelText('Отдых между подходами, Присед')).not.toBeInTheDocument()
+  })
+
+  it('can reveal rest from the exercise menu without changing the global preference', async () => {
+    const user = userEvent.setup()
+    render(<EditorHarness onOpenPicker={vi.fn()} />)
+
+    expect(screen.queryByLabelText('Отдых между подходами, Присед')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Показать отдых' }))
+    expect(screen.getByLabelText('Отдых между подходами, Присед')).toBeInTheDocument()
   })
 
   it('shows reorder arrows only in the explicit reorder mode', async () => {

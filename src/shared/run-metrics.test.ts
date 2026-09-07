@@ -7,6 +7,7 @@ import {
   runDistanceKmFromInput,
   runDistanceLabel,
   runPaceLabel,
+  rowingPaceLabel,
 } from './run-metrics'
 
 describe('run metrics', () => {
@@ -33,5 +34,11 @@ describe('run metrics', () => {
     expect(runPaceLabel(1780, 5.2)).toBe('5:42/км')
     expect(runPaceLabel(100, 0.4)).toBe('4:10/км')
     expect(runPaceLabel(undefined, 5)).toBeNull()
+  })
+
+  it('calculates rowing pace per 500 metres', () => {
+    expect(rowingPaceLabel(308, 0.5)).toBe('5:08/500 м')
+    expect(rowingPaceLabel(1800, 3)).toBe('5:00/500 м')
+    expect(rowingPaceLabel(undefined, 0.5)).toBeNull()
   })
 })

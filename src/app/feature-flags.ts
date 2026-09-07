@@ -9,22 +9,16 @@ export function trainerHomePath() {
   return isTodayStartRedesignEnabled() ? '/today' : '/clients'
 }
 
-// Верхняя навигация тренера «Ассистент» (возврат YAFIT-276 после отката
-// YAFIT-279) открывается только участникам пилота. В production безопасный
-// default — единственный тестовый e-mail; VITE_ASSISTANT_NAV_ENABLED=false
-// остаётся мгновенным kill switch. Allowlist не является границей авторизации:
-// данные защищаются существующими RLS/ownership-проверками.
-export function isProductionAssistantPilotEmail(email?: string | null) {
-  return email?.trim().toLowerCase() === 'test@test.com'
-}
-
+// Ассистент доступен всем тренерам в production; TrainerOnly и RLS/ownership
+// остаются границами роли и данных. VITE_ASSISTANT_NAV_ENABLED=false —
+// мгновенный production kill switch. В development allowlist сохраняет
+// изолированный локальный пилот.
 export function isAssistantNavPilotEnabled(userId: string, email?: string | null) {
   const enabledValue = String(import.meta.env.VITE_ASSISTANT_NAV_ENABLED ?? '').trim()
   const enabled = enabledValue === 'true' || (import.meta.env.PROD && enabledValue !== 'false')
   if (!enabled) return false
-  // Production must never inherit an old UUID allowlist from Vercel. The
-  // public pilot is deliberately one account wide until the next rollout.
-  if (import.meta.env.PROD) return isProductionAssistantPilotEmail(email)
+  // Production must never inherit an old UUID/e-mail allowlist from Vercel.
+  if (import.meta.env.PROD) return true
   const allowedUserIds = String(import.meta.env.VITE_ASSISTANT_NAV_PILOT_USER_IDS ?? '')
     .split(',')
     .map((value) => value.trim())
@@ -62,9 +56,24 @@ export function isTodayGreetingPilotEnabled(userId: string) {
   return allowedUserIds.includes(userId)
 }
 
+function isUserInPublicAllowlist(userId: string, value: unknown): boolean {
+  const allowedUserIds = String(value ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  return allowedUserIds.includes(userId)
+}
+
 export interface YandexIdPilotConfig {
   apiBaseUrl: string
   clientId: string
+}
+
+function getYandexPublicConfig(): YandexIdPilotConfig | null {
+  const clientId = String(import.meta.env.VITE_YANDEX_OAUTH_CLIENT_ID ?? '').trim()
+  const apiBaseUrl = String(import.meta.env.VITE_YANDEX_API_BASE_URL ?? '').trim().replace(/\/$/, '')
+  if (clientId.length === 0 || clientId.length > 200 || !isSafePilotApiUrl(apiBaseUrl)) return null
+  return { apiBaseUrl, clientId }
 }
 
 function isSafePilotApiUrl(value: string): boolean {
@@ -83,8 +92,64 @@ function isSafePilotApiUrl(value: string): boolean {
 // безопасного API URL. Client secret во frontend не используется.
 export function getYandexIdPilotConfig(): YandexIdPilotConfig | null {
   if (import.meta.env.VITE_YANDEX_ID_PILOT_ENABLED !== 'true') return null
-  const clientId = String(import.meta.env.VITE_YANDEX_OAUTH_CLIENT_ID ?? '').trim()
-  const apiBaseUrl = String(import.meta.env.VITE_YANDEX_API_BASE_URL ?? '').trim().replace(/\/$/, '')
-  if (clientId.length === 0 || clientId.length > 200 || !isSafePilotApiUrl(apiBaseUrl)) return null
-  return { apiBaseUrl, clientId }
+  return getYandexPublicConfig()
+}
+
+// Полноценная Yandex ID сессия — отдельный default-off rollout. До завершения
+// OAuth внутренний UUID профиля неизвестен, поэтому entry point защищён
+// глобальным kill switch и серверным rollout assignment. Публичный UUID
+// allowlist дополнительно проверяется сразу после обмена кода и при restore.
+export function getYandexAppSessionEntryConfig(): YandexIdPilotConfig | null {
+  if (import.meta.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true') return null
+  return getYandexPublicConfig()
+}
+
+export function isYandexAppSessionPilotEnabled(userId: string): boolean {
+  if (import.meta.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true') return false
+  return isUserInPublicAllowlist(userId, import.meta.env.VITE_YANDEX_APP_SESSION_PILOT_USER_IDS)
+}
+
+// Sticky routing основного Assistant — отдельный default-off rollout. Он не
+// переиспользует allowlist входа: после включения выбранный профиль работает
+// только с Yandex API и не откатывает отдельные запросы на Supabase.
+export function isYandexAssistantRoutingPilotEnabled(userId: string): boolean {
+  if (import.meta.env.VITE_YANDEX_ASSISTANT_ROUTING_ENABLED !== 'true') return false
+  const pilotUserIds = String(
+    import.meta.env.VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS ?? '',
+  )
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  return pilotUserIds.length === 1 && pilotUserIds[0] === userId
+}
+
+// Основной интерфейс выбирает один источник данных на всю Yandex ID сессию.
+// Rollout независим от входа и ассистента и намеренно допускает только один
+// tenant/profile UUID в первой итерации. Ошибка Yandex API не переключает
+// отдельный запрос обратно на Supabase.
+export function isYandexMainRoutingPilotEnabled(userId: string): boolean {
+  if (import.meta.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true') return false
+  const pilotUserIds = String(import.meta.env.VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  return pilotUserIds.length === 1 && pilotUserIds[0] === userId
+}
+
+export function getYandexMainRoutingConfig(): YandexIdPilotConfig | null {
+  if (import.meta.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true') return null
+  return getYandexPublicConfig()
+}
+
+// Привязка существующего FIT-профиля к Yandex ID — отдельный default-off
+// rollout. Он намеренно не переиспользует read-only pilot и Apple Health
+// allowlist: UUID видны во frontend bundle и служат только для показа UI.
+export function isYandexSessionLinkingPilotEnabled(userId: string): boolean {
+  if (import.meta.env.VITE_YANDEX_SESSION_LINKING_ENABLED !== 'true') return false
+  return isUserInPublicAllowlist(userId, import.meta.env.VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS)
+}
+
+export function getYandexSessionLinkingConfig(userId: string): YandexIdPilotConfig | null {
+  if (!isYandexSessionLinkingPilotEnabled(userId)) return null
+  return getYandexPublicConfig()
 }

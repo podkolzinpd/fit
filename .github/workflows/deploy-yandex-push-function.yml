@@ -167,7 +167,7 @@ jobs:
           set -euo pipefail
           if ! yc serverless function get --name "$PUSH_FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
             yc serverless function create "$PUSH_FUNCTION_NAME" \
-              --description 'Production Fit Web Push sender, called by pg_cron dispatch with a shared secret' \
+              --description 'Production Fit Web Push sender, called by authenticated dispatchers with a shared secret' \
               --folder-id "$YC_FOLDER_ID"
           fi
           previous_version_id=$(yc serverless function version get-by-tag \

@@ -2,30 +2,33 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
-import { goalsRepository } from '../../data/repositories/goals.repository'
-import { progressRepository } from '../../data/repositories/progress.repository'
-import { trainingSummariesRepository } from '../../data/repositories/training-summaries.repository'
-import { workoutsRepository } from '../../data/repositories/workouts.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import type {
   ClientGoal,
   ClientTrainingSummary,
   CustomMetric,
   Gender,
+  ProgressEntry,
   PublishedTrainingSummary,
   TrainingSummary,
-  TrainingProgressFact,
+  Workout,
 } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
-import { addDays, daysBetween, formatLocalDate, normalizeTimeZone, todayInTimeZone, type LocalDate } from '../../shared/local-date'
+import { addDays, daysBetween, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { TrainingBodyProgressMap } from './ClientBodyProgressMap'
 import { MeasurementProgressSection } from './MeasurementProgressSection'
+import { ProgressDetailedAnalysis } from './ProgressDetailedAnalysis'
+import { TrainerProgressSignalsSection } from './TrainerProgressSignalsSection'
 import { WorkoutRegularityProgressSection } from './WorkoutRegularityProgressSection'
 import { progressStoryPresentation } from './client-progress-presentation'
-import { progressFactChangeLabel } from './progress-facts'
-import { formatSummaryText, formatWorkoutsPerWeek, progressMetricNoun } from './summary-format'
+import { buildProgressNextStep } from './next-step-recommendation'
+import { buildProgressDetailedAnalysis } from './progress-detailed-analysis'
+import { formatSummaryText } from './summary-format'
 import { availableSummaryPeriods, SUMMARY_PERIODS, summaryPeriodMatch, summaryPeriodRange, type SummaryPeriod } from './summary-period'
+import { buildTrainerProgressSignals } from './trainer-progress-signals'
+import { buildWorkoutRegularityProgress } from './workout-regularity-progress'
 
 function PeriodTabs({ value, available, onChange }: {
   value: SummaryPeriod
@@ -39,32 +42,8 @@ function PeriodTabs({ value, available, onChange }: {
       key={period.key}
       className={period.key === value ? 'active' : ''}
       onClick={() => onChange(period.key)}
-    >{period.label}</button>)}
+    ><span>{period.label}</span></button>)}
   </div>
-}
-
-function ProgressFacts({ facts, fallback, limit, onShowAll }: {
-  facts: readonly TrainingProgressFact[]
-  fallback: readonly string[]
-  limit?: number
-  onShowAll?: () => void
-}) {
-  const visibleFacts = limit ? facts.slice(0, limit) : facts
-  const visibleFallback = limit ? fallback.slice(0, limit) : fallback
-  const hiddenCount = facts.length > 0
-    ? Math.max(0, facts.length - visibleFacts.length)
-    : Math.max(0, fallback.length - visibleFallback.length)
-  if (facts.length === 0) {
-    return <><ul>{visibleFallback.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
-      {hiddenCount > 0 && onShowAll && <button type="button" className="link ai-progress-more" onClick={onShowAll}>Ещё {hiddenCount}</button>}
-    </>
-  }
-  return <><div className="ai-progress-facts">
-    {visibleFacts.map((fact) => <div className="ai-progress-fact" key={fact.exerciseName}>
-      <strong>{fact.exerciseName}</strong>
-      {fact.changes.map((change) => <span key={change.metric}>{progressFactChangeLabel(change)}</span>)}
-    </div>)}
-  </div>{hiddenCount > 0 && onShowAll && <button type="button" className="link ai-progress-more" onClick={onShowAll}>Ещё {hiddenCount} {hiddenCount === 1 ? 'упражнение' : 'упражнения'}</button>}</>
 }
 
 function SummaryHeader({ published }: { published?: boolean }) {
@@ -72,7 +51,6 @@ function SummaryHeader({ published }: { published?: boolean }) {
     <div className="ai-progress-title">
       <div>
         <h2>Период</h2>
-        <p>По завершённым тренировкам</p>
       </div>
     </div>
     {published !== undefined && <span className={`ai-progress-demo${published ? ' published' : ''}`}>
@@ -81,17 +59,23 @@ function SummaryHeader({ published }: { published?: boolean }) {
   </header>
 }
 
+function AutomaticSummaryError({ error, onRetry }: { error: Error; onRetry: () => void }) {
+  return <p className="ai-progress-auto-error" role="alert">
+    <span>{error.message}</span>
+    <button type="button" className="link" onClick={onRetry}>Повторить</button>
+  </p>
+}
+
 export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = null }: {
   clientId: string
   profileGoal?: string | null
   gender?: Gender | null
 }) {
   const { actor } = useAuth()
+  const { goals: goalsRepository, progress: progressRepository, trainingSummaries: trainingSummariesRepository, workouts: workoutsRepository } = useDataBackend()
   const today = todayInTimeZone(actor?.timezone)
-  const timeZone = normalizeTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState<SummaryPeriod>('1m')
-  const [generationMessage, setGenerationMessage] = useState<string | null>(null)
   const firstWorkout = useQuery({
     queryKey: ['training-summary-first-workout', clientId],
     queryFn: () => trainingSummariesRepository.firstCompletedWorkoutDate(clientId),
@@ -140,26 +124,29 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
     queryKey: ['client-goal', clientId],
     queryFn: () => goalsRepository.get(clientId),
   })
-  const generate = useMutation({
-    mutationFn: async () => {
+  const automaticGeneration = useQuery({
+    queryKey: ['training-summary-generation', 'trainer', clientId, range.start, range.end],
+    queryFn: async () => {
       const generation = await trainingSummariesRepository.generate(
         clientId,
         range.start,
         range.end,
-        Boolean(summary),
+        false,
       )
       const summaries = await trainingSummariesRepository.listForTrainer(clientId)
       return { generation, summaries }
     },
-    onMutate: () => setGenerationMessage(null),
-    onSuccess: ({ generation, summaries }) => {
-      queryClient.setQueryData(['training-summaries', 'trainer', clientId], summaries)
-      setGenerationMessage(generation.cached ? 'Анализ уже актуален' : 'Анализ обновлён')
-    },
+    enabled: ready && firstWorkout.data !== null,
   })
+  useEffect(() => {
+    if (automaticGeneration.data) {
+      queryClient.setQueryData(
+        ['training-summaries', 'trainer', clientId],
+        automaticGeneration.data.summaries,
+      )
+    }
+  }, [automaticGeneration.data, clientId, queryClient])
   const changePeriod = (nextPeriod: SummaryPeriod) => {
-    generate.reset()
-    setGenerationMessage(null)
     setPeriod(nextPeriod)
   }
   const currentWorkouts = workouts.data?.filter((workout) =>
@@ -169,7 +156,7 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
   const upcomingWorkouts = workouts.data?.filter((workout) =>
     workout.workoutDate >= today && workout.workoutDate <= storyRange.end)
 
-  return <section className="ai-progress-card client-progress-card progress-story-card trainer-progress-story-card" aria-label="ИИ-анализ тренировок" aria-busy={loading}>
+  return <section className="ai-progress-card client-progress-card progress-story-card trainer-progress-story-card" aria-label="ИИ-анализ тренировок" aria-busy={loading || (!summary && automaticGeneration.isFetching)}>
     <section className="progress-story-period" aria-labelledby="trainer-progress-period-title">
       <SummaryHeader published={summary?.published} />
       <span className="sr-only" id="trainer-progress-period-title">Период анализа прогресса</span>
@@ -207,32 +194,17 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
               queryKey: ['training-summaries', 'trainer', clientId],
             })}
           />
-        : <div className="ai-progress-empty">
-            <strong>Анализ за этот период ещё не создан</strong>
-            <p>{formatLocalDate(range.start)} — {formatLocalDate(range.end)}</p>
-          </div>}
+        : automaticGeneration.isFetching
+          ? <div className="ai-progress-empty" role="status"><strong>Обновляем прогресс…</strong></div>
+          : !automaticGeneration.error && <div className="ai-progress-empty"><strong>Пока нет анализа за этот период</strong></div>}
     </AsyncView>
-    {ready && <footer className="ai-progress-footer">
-      <span role={generationMessage ? 'status' : undefined}>
-        {generate.isPending
-          ? 'Формируем новый анализ — это может занять до минуты'
-          : generationMessage ?? (summary
-            ? `Обновлено ${new Date(summary.generatedAt).toLocaleString('ru-RU', { timeZone })}`
-            : 'Данные клиента не отправляются без действия тренера')}
-      </span>
-      <button
-        type="button"
-        className="secondary"
-        disabled={generate.isPending}
-        onClick={() => {
-          trackGoal(summary ? 'refresh_training_summary_click' : 'create_training_summary_click')
-          generate.mutate()
-        }}
-      >
-        {generate.isPending ? 'Обновляем…' : summary ? 'Обновить' : 'Создать анализ'}
-      </button>
-    </footer>}
-    {generate.error && <p className="ai-progress-error error" role="alert">{generate.error.message}</p>}
+    {automaticGeneration.error && <AutomaticSummaryError
+      error={automaticGeneration.error}
+      onRetry={() => {
+        trackGoal(summary ? 'refresh_training_summary_retry' : 'create_training_summary_retry')
+        void automaticGeneration.refetch()
+      }}
+    />}
   </section>
 }
 
@@ -246,10 +218,10 @@ function TrainerSummaryContent({ summary, clientId, gender, today, goal, profile
   goalLoading: boolean
   goalError: Error | null
   onGoalRetry: () => void
-  currentWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  previousWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  upcomingWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  measurements: Awaited<ReturnType<typeof progressRepository.list>>
+  currentWorkouts?: Workout[]
+  previousWorkouts?: Workout[]
+  upcomingWorkouts?: Workout[]
+  measurements: ProgressEntry[]
   customMetrics: CustomMetric[]
   measurementsLoading: boolean
   measurementsError: Error | null
@@ -312,6 +284,10 @@ function summaryConsistency(summary: ProgressStorySummary): string {
   return 'summary' in summary ? summary.summary.consistency : summary.trainer.consistency
 }
 
+function summaryNextSteps(summary: ProgressStorySummary): readonly string[] {
+  return ('summary' in summary ? summary.summary.nextSteps : summary.client.nextSteps) ?? []
+}
+
 function measurementCopyCandidates(summary: ProgressStorySummary, role: 'client' | 'trainer'): string[] {
   if ('summary' in summary) {
     return [summary.summary.headline, ...summary.summary.achievements, summary.summary.goalAlignment ?? '']
@@ -321,7 +297,24 @@ function measurementCopyCandidates(summary: ProgressStorySummary, role: 'client'
     : [summary.client.headline, ...summary.client.achievements, summary.client.goalAlignment ?? '']
 }
 
-function ProgressStoryContent({ summary, clientId, role, gender, today, goal, profileGoal, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, customMetrics, measurementsLoading, measurementsError, onMeasurementsRetry, workoutsLoading, workoutsError, onWorkoutsRetry }: {
+function russianCount(value: number, one: string, few: string, many: string): string {
+  const mod100 = Math.abs(value) % 100
+  const mod10 = Math.abs(value) % 10
+  if (mod100 >= 11 && mod100 <= 14) return `${value} ${many}`
+  if (mod10 === 1) return `${value} ${one}`
+  if (mod10 >= 2 && mod10 <= 4) return `${value} ${few}`
+  return `${value} ${many}`
+}
+
+function goalAwareMainTitle(title: string, role: 'client' | 'trainer'): string {
+  if (title === 'Есть движение к ориентиру цели') {
+    return role === 'client' ? 'Ты приближаешься к цели' : 'Клиент приближается к цели'
+  }
+  if (title === 'Текущий результат соответствует ориентиру') return 'Ориентир цели достигнут'
+  return title
+}
+
+function ProgressStoryContent({ summary, clientId, role, gender, today, goal, profileGoal, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, customMetrics, measurementsLoading, measurementsError, onMeasurementsRetry, measurementManagement, workoutsLoading, workoutsError, onWorkoutsRetry }: {
   summary: ProgressStorySummary
   clientId: string
   role: 'client' | 'trainer'
@@ -332,21 +325,22 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
   goalLoading: boolean
   goalError: Error | null
   onGoalRetry: () => void
-  currentWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  previousWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  upcomingWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  measurements: Awaited<ReturnType<typeof progressRepository.list>>
+  currentWorkouts?: Workout[]
+  previousWorkouts?: Workout[]
+  upcomingWorkouts?: Workout[]
+  measurements: ProgressEntry[]
   customMetrics: CustomMetric[]
   measurementsLoading: boolean
   measurementsError: Error | null
   onMeasurementsRetry: () => void
+  measurementManagement?: ReactNode
   workoutsLoading: boolean
   workoutsError: Error | null
   onWorkoutsRetry: () => void
 }) {
+  const { workouts: workoutsRepository } = useDataBackend()
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [goalCriteriaOpen, setGoalCriteriaOpen] = useState(false)
-  const [comparisonOpen, setComparisonOpen] = useState(false)
   const personalRecordWorkout = [...(currentWorkouts ?? [])]
     .filter((workout) => workout.status === 'done' && workout.hasPr)
     .sort((left, right) => right.workoutDate.localeCompare(left.workoutDate))[0]
@@ -391,67 +385,137 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       : presentation.mainNow.action === 'workout'
         ? 'Запланировать тренировку'
         : null
-  const attention = role === 'trainer' && 'trainer' in summary ? summary.trainer.attention : []
   const goalCriteria = presentation.goal?.criteria ?? []
-  const visibleGoalCriteria = goalCriteriaOpen ? goalCriteria : goalCriteria.slice(0, 1)
-  const visibleComparisonFacts = comparisonOpen
-    ? presentation.comparison.facts
-    : presentation.comparison.facts.slice(0, 4)
+  const visibleGoalCriteria = goalCriteriaOpen ? goalCriteria : goalCriteria.slice(0, 2)
+  const hiddenGoalCriteria = Math.max(0, goalCriteria.length - visibleGoalCriteria.length)
+  const primaryGoalCriterion = goalCriteria[0]
+  const mainTitle = goalAwareMainTitle(presentation.mainNow.title, role)
+  const mainExplanation = presentation.mainNow.kind === 'goal' && primaryGoalCriterion
+    ? primaryGoalCriterion.dynamics.replace('ориентиру', 'цели')
+    : presentation.mainNow.explanation
+  const mainEvidence = presentation.mainNow.kind === 'goal'
+    ? null
+    : presentation.mainNow.evidence
+  const goalHandlesMainAction = presentation.mainNow.action === 'goal'
+    || (presentation.mainNow.action === 'measurement' && goalCriteria.some((criterion) => criterion.action === 'measurement'))
+  const visibleComparisonFacts = presentation.comparison.facts.slice(0, 3)
+  const comparisonLimitation = presentation.comparison.conclusions.find((conclusion) => conclusion.kind === 'limitation')
   const periodDays = daysBetween(summary.periodStart, summary.periodEnd) + 1
   const previousPeriodStart = addDays(summary.periodStart, -periodDays)
   const previousPeriodEnd = addDays(summary.periodStart, -1)
+  const regularity = buildWorkoutRegularityProgress({
+    currentWorkouts: currentWorkouts ?? [],
+    previousWorkouts,
+    periodStart: summary.periodStart,
+    periodEnd: summary.periodEnd,
+    previousPeriodStart,
+    previousPeriodEnd,
+    today,
+  })
+  const nextStep = buildProgressNextStep({
+    goal: presentation.goal,
+    nextWorkout: presentation.nextWorkout,
+    completedWorkouts: regularity.completedWorkouts,
+    activeWeeks: regularity.activeWeeks,
+    totalWeeks: Math.max(1, regularity.elapsedWeeks),
+    llmSuggestions: summaryNextSteps(summary),
+    role,
+  })
+  const trainerSignals = role === 'trainer' ? buildTrainerProgressSignals({
+    goal: presentation.goal,
+    regularity,
+    currentWorkouts,
+    summaryCompletedWorkouts: summary.metrics.completedWorkouts,
+    today,
+  }) : []
+  const detailedAnalysis = buildProgressDetailedAnalysis({
+    summary,
+    role,
+    goalTitle: presentation.goal?.title,
+    visibleTexts: [
+      presentation.mainNow.title,
+      presentation.mainNow.explanation,
+      presentation.mainNow.evidence,
+      ...(presentation.hero ? [presentation.hero.exerciseName, presentation.hero.detail] : []),
+      ...wins.flatMap((item) => [item.title, item.detail]),
+      ...visibleComparisonFacts.flatMap((fact) => [fact.subject, fact.previousLabel, fact.currentLabel, fact.value]),
+      ...presentation.comparison.conclusions.map((conclusion) => conclusion.text),
+      ...(presentation.goal ? [
+        presentation.goal.title,
+        presentation.goal.statusLabel,
+        presentation.goal.message ?? '',
+        ...(presentation.goal.criteria ?? []).flatMap((criterion) => [
+          criterion.label,
+          criterion.target,
+          criterion.current,
+          criterion.dynamics,
+          criterion.status,
+        ]),
+      ] : []),
+      summaryConsistency(summary),
+      nextStep.recommendation.title,
+      nextStep.recommendation.explanation,
+      nextStep.recommendation.evidence,
+    ],
+  })
   const goalStory = <>
     {goalLoading && <section className="client-progress-story-state" role="status">Проверяем данные цели…</section>}
     {goalError && <section className="client-progress-story-state" role="alert">Не удалось загрузить цель. <button type="button" className="link" onClick={onGoalRetry}>Повторить</button></section>}
-    {!goalLoading && !goalError && presentation.goal && <section className="client-progress-goal-story" aria-labelledby={`${role}-progress-goal-title`}>
+    {!goalLoading && !goalError && presentation.goal && <div className="client-progress-goal-story" aria-labelledby={`${role}-progress-goal-title`}>
       <div className="client-progress-goal-story-head"><span>{role === 'client' ? 'Для твоей цели' : 'Цель клиента'}</span>
-        <div className="goal-story-actions"><strong className={`goal-foundation-status ${presentation.goal.state}`}>{presentation.goal.statusLabel}</strong><Link className="link" to={goalLink}>Изменить цель</Link></div></div>
+        <div className="goal-story-actions"><strong className={`goal-foundation-status ${presentation.goal.state}`}>{goalCriteria.length > 1 ? russianCount(goalCriteria.length, 'показатель', 'показателя', 'показателей') : presentation.goal.statusLabel}</strong><Link className="link" to={goalLink}>Изменить цель</Link></div></div>
       <h3 id={`${role}-progress-goal-title`}>{presentation.goal.title}</h3>
       {goalCriteria.length > 0 ? <><div className="goal-criteria-progress-list">{visibleGoalCriteria.map((criterion) => <article key={criterion.id} className="goal-criterion-progress-row">
         <header><strong>{criterion.label}</strong>{(presentation.goal?.totalCriteria ?? 0) > 1 ? <span>{criterion.status}</span> : null}</header>
-        <dl><div><dt>Ориентир</dt><dd>{criterion.target}</dd></div>{criterion.dataOwner === 'workout' && <><div><dt>Сейчас</dt><dd>{criterion.current}</dd></div><div><dt>Динамика</dt><dd>{criterion.dynamics}</dd></div><div><dt>Данные</dt><dd>{criterion.lastDate ? `${criterion.lastDate} · ` : ''}{criterion.freshness} · {criterion.sufficiency}</dd></div></>}</dl>
-        {criterion.dataOwner === 'measurement' && criterion.action === null && <a className="link" href="#progress-measurements">Смотреть значения и график</a>}
+        <dl><div><dt>Сейчас</dt><dd>{criterion.current}</dd></div><div><dt>Ориентир</dt><dd>{criterion.target}</dd></div></dl>
         {criterion.action === 'measurement' && <Link className="link" to={measurementLink}>Добавить актуальный замер</Link>}
         {criterion.action === 'workout' && <Link className="link" to={workoutLink}>Записать тренировку</Link>}
-      </article>)}</div>{goalCriteria.length > 1 && <button
+      </article>)}</div>{goalCriteria.length > 2 && <button
         type="button"
         className="link goal-criteria-toggle"
         aria-expanded={goalCriteriaOpen}
         onClick={() => setGoalCriteriaOpen((open) => !open)}
-      >{goalCriteriaOpen ? 'Показать только основной критерий' : `Показать все критерии · ${goalCriteria.length}`}</button>}</> : presentation.goal.criterionLabel && <dl className="goal-foundation-facts">
+      >{goalCriteriaOpen ? 'Скрыть дополнительные критерии' : `Ещё ${russianCount(hiddenGoalCriteria, 'критерий', 'критерия', 'критериев')}`}</button>}</> : presentation.goal.criterionLabel && <dl className="goal-foundation-facts">
         <div><dt>Критерий</dt><dd>{presentation.goal.criterionLabel}</dd></div>
         <div><dt>Ориентир</dt><dd>{presentation.goal.targetLabel}</dd></div>
         {presentation.goal.currentLabel && <div><dt>Сейчас</dt><dd>{presentation.goal.currentLabel}</dd></div>}
         {presentation.goal.periodEndLabel && <div><dt>На конец периода</dt><dd>{presentation.goal.periodEndLabel}</dd></div>}
         {presentation.goal.baselineLabel && <div><dt>Отправная точка</dt><dd>{presentation.goal.baselineLabel}</dd></div>}
       </dl>}
-      {presentation.goal.state === 'unconfigured' && <><p>Цель сохранена как текст. Автоматическая оценка не настроена.</p><Link className="link" to={goalLink}>Настроить оценку</Link></>}
+      {presentation.goal.state === 'unconfigured' && <Link className="link" to={goalLink}>Настроить оценку</Link>}
       {presentation.goal.state === 'needs_review' && <><p>Формулировка цели изменилась. Проверь, подходит ли сохранённый критерий.</p><Link className="link" to={goalLink}>Проверить критерий</Link></>}
       {presentation.goal.state === 'needs_data' && <><p>Нет ни одного замера выбранного показателя.</p><Link className="link" to={measurementLink}>Добавить замер</Link></>}
-      {presentation.goal.state === 'configured' && <p>{presentation.goal.message}</p>}
-    </section>}
-    {!goalLoading && !goalError && !presentation.goal && <section className="client-progress-goal-story empty" aria-labelledby={`${role}-progress-goal-title`}>
+    </div>}
+    {!goalLoading && !goalError && !presentation.goal && <div className="client-progress-goal-story empty" aria-labelledby={`${role}-progress-goal-title`}>
       <span>{role === 'client' ? 'Для твоей цели' : 'Цель клиента'}</span>
       <h3 id={`${role}-progress-goal-title`}>Цель пока не указана</h3>
       <p>{role === 'client' ? 'Добавь ориентир — тогда результаты можно будет оценивать в его контексте.' : 'Добавьте ориентир, чтобы оценивать результаты в контексте задачи клиента.'}</p>
       <Link className="link" to={goalLink}>{role === 'client' ? 'Добавить цель' : 'Указать цель'}</Link>
-    </section>}
+    </div>}
   </>
 
   return <>
     <section
-      className="client-progress-main-now"
+      className="client-progress-overview"
       aria-labelledby={`${role}-progress-main-now-title`}
       data-fact-id={presentation.mainNow.factId}
       data-copy-source={presentation.mainNow.source}
     >
-      <span>Главное сейчас</span>
-      <h3 id={`${role}-progress-main-now-title`}>{presentation.mainNow.title}</h3>
-      <p>{presentation.mainNow.explanation}</p>
-      <strong>{presentation.mainNow.evidence}</strong>
-      {mainNowLink && mainNowActionLabel && <Link className="link" to={mainNowLink}>{mainNowActionLabel}</Link>}
+      <div className="client-progress-main-now">
+        <div className="client-progress-main-now-head">
+          <span>Главное сейчас</span>
+          <button type="button" className="link client-progress-details-trigger" onClick={() => setDetailsOpen(true)}>Подробный анализ</button>
+        </div>
+        <h3 id={`${role}-progress-main-now-title`}>{mainTitle}</h3>
+        <p>{mainExplanation}</p>
+        {mainEvidence && <strong>{mainEvidence}</strong>}
+        {!goalHandlesMainAction && mainNowLink && mainNowActionLabel && <Link className="link" to={mainNowLink}>{mainNowActionLabel}</Link>}
+      </div>
+      {goalStory}
     </section>
-    {goalStory}
+    {detailsOpen && <SummarySheet title="Подробный анализ" onClose={() => setDetailsOpen(false)}>
+      <ProgressDetailedAnalysis sections={detailedAnalysis} />
+    </SummarySheet>}
     <TrainingBodyProgressMap
       summary={summary}
       workouts={currentWorkouts ?? []}
@@ -466,31 +530,22 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       <header>
         <div>
           <h3 id={`${role}-progress-comparison-title`}>{presentation.comparison.title}</h3>
-          <p>{presentation.comparison.periodLabel}</p>
+          {visibleComparisonFacts.length > 0 && <p>{presentation.comparison.periodLabel}</p>}
         </div>
       </header>
       {workoutsLoading && currentWorkouts === undefined
-        ? <p className="period-comparison-empty" role="status">Собираем данные двух периодов…</p>
+        ? <p className="period-comparison-empty" role="status">Сравниваем периоды…</p>
         : visibleComparisonFacts.length > 0
         ? <>
           <dl className="period-comparison-facts">{visibleComparisonFacts.map((fact) => <div key={fact.factId} className={fact.tone} data-fact-id={fact.factId}>
             <dt>{fact.subject}<span>{fact.previousLabel} → {fact.currentLabel}</span></dt>
             <dd>{fact.value}</dd>
           </div>)}</dl>
-          {presentation.comparison.facts.length > 4 && <button
-            type="button"
-            className="link period-comparison-toggle"
-            aria-expanded={comparisonOpen}
-            onClick={() => setComparisonOpen((open) => !open)}
-          >{comparisonOpen ? 'Скрыть дополнительные изменения' : `Показать ещё · ${presentation.comparison.facts.length - 4}`}</button>}
-          {presentation.comparison.conclusions.length > 0 && <div className="period-comparison-conclusions">
-            {presentation.comparison.conclusions.map((conclusion) => <div
-              key={`${conclusion.kind}:${conclusion.factIds.join(':')}`}
-              className={conclusion.kind}
-              data-fact-ids={conclusion.factIds.join(',')}
-              data-copy-source={conclusion.source}
-            ><span>{conclusion.kind === 'change' ? 'Главное изменение' : 'Ограничение'}</span><p>{conclusion.text}</p></div>)}
-          </div>}
+          {comparisonLimitation && <p
+            className="period-comparison-limitation"
+            data-fact-ids={comparisonLimitation.factIds.join(',')}
+            data-copy-source={comparisonLimitation.source}
+          >{comparisonLimitation.text}</p>}
         </>
         : <p className="period-comparison-empty">{presentation.comparison.emptyMessage}</p>}
     </section>
@@ -507,6 +562,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       error={measurementsError}
       onRetry={onMeasurementsRetry}
       llmCandidates={measurementCopyCandidates(summary, role)}
+      management={measurementManagement}
     />
     <WorkoutRegularityProgressSection
       currentWorkouts={currentWorkouts}
@@ -536,45 +592,16 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       <h3 id={`${role}-progress-wins-title`}>{role === 'client' ? 'Твои достижения' : 'Ключевые изменения'}</h3>
       <div>{wins.map((item) => <article key={item.title}><span aria-hidden="true" /><div><strong>{item.title}</strong><p>{item.detail}</p></div></article>)}</div>
     </section>}
-    {presentation.mainNow.kind !== 'plan' && <section className="client-progress-upcoming" aria-labelledby={`${role}-progress-upcoming-title`}>
-      <span>Следующий шаг</span>
-      {presentation.nextWorkout
-        ? <><h3 id={`${role}-progress-upcoming-title`}>{presentation.nextWorkout.date}</h3>
-          {presentation.nextWorkout.title !== 'Ближайшая тренировка' && <p>{presentation.nextWorkout.title}</p>}
-          <div>{presentation.nextWorkout.exercises.map((exercise) => <article key={exercise.name}>
-            <strong>{exercise.name}</strong>{exercise.plan && <span>{exercise.plan}</span>}
-          </article>)}</div></>
-        : <><h3 id={`${role}-progress-upcoming-title`}>Ближайшая тренировка не запланирована</h3>
-          <Link className="link" to={workoutLink}>Запланировать тренировку</Link></>}
-    </section>}
-    {attention.length > 0 && <section className="progress-story-attention" aria-label="На что обратить внимание">
-      <span aria-hidden="true">!</span><div><strong>На что обратить внимание</strong><p>{formatSummaryText(attention[0]!)}</p></div>
-    </section>}
-    <div className="client-progress-details-toggle">
-      <button type="button" className="link" onClick={() => setDetailsOpen(true)}>Подробный анализ</button>
-    </div>
-    {detailsOpen && <SummarySheet title="Подробный анализ" onClose={() => setDetailsOpen(false)}>
-      <section className="client-progress-details-section">
-        <h3>Динамика упражнений</h3>
-        <ProgressFacts facts={summary.metrics.progressFacts} fallback={summaryFallbackProgress(summary)} />
-      </section>
-      <section className="client-progress-details-section">
-        <h3>Ритм тренировок</h3>
-        <p>{formatSummaryText(summaryConsistency(summary))}</p>
-        <p>
-          В среднем: {formatWorkoutsPerWeek(summary.metrics.workoutsPerWeek)} тренировки в неделю
-          {summary.metrics.longestGapDays !== null && <> · самая длинная пауза: {summary.metrics.longestGapDays} {progressMetricNoun(summary.metrics.longestGapDays, 'gapDay')}</>}
-        </p>
-      </section>
-      {presentation.orientations.length > 0 && <section className="client-progress-details-section">
-        <h3>Ориентиры</h3>
-        <ul>{presentation.orientations.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
-      </section>}
-      {attention.length > 0 && <section className="client-progress-details-section">
-        <h3>Сигналы тренеру</h3>
-        <ul>{attention.map((point) => <li key={point}>{formatSummaryText(point)}</li>)}</ul>
-      </section>}
-    </SummarySheet>}
+    {role === 'trainer' && <TrainerProgressSignalsSection
+      signals={trainerSignals}
+      loading={goalLoading || workoutsLoading || measurementsLoading}
+      error={goalError ?? workoutsError ?? measurementsError}
+      onRetry={() => {
+        onGoalRetry()
+        onWorkoutsRetry()
+        onMeasurementsRetry()
+      }}
+    />}
   </>
 }
 
@@ -583,6 +610,7 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
   clientId: string
   onChanged: () => Promise<unknown>
 }) {
+  const { trainingSummaries: trainingSummariesRepository } = useDataBackend()
   const [saved, setSaved] = useState(false)
   const publish = useMutation({
     mutationFn: (copy: ClientTrainingSummary) =>
@@ -638,17 +666,17 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
   </form>
 }
 
-export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null }: {
+export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null, measurementManagement }: {
   clientId: string
   profileGoal?: string | null
   gender?: Gender | null
+  measurementManagement?: ReactNode
 }) {
   const { actor } = useAuth()
+  const { goals: goalsRepository, progress: progressRepository, trainingSummaries: trainingSummariesRepository, workouts: workoutsRepository } = useDataBackend()
   const today = todayInTimeZone(actor?.timezone)
-  const timeZone = normalizeTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState<SummaryPeriod>('1m')
-  const [generationMessage, setGenerationMessage] = useState<string | null>(null)
   const firstWorkout = useQuery({
     queryKey: ['training-summary-first-workout', clientId],
     queryFn: () => trainingSummariesRepository.firstCompletedWorkoutDate(clientId),
@@ -665,9 +693,10 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
     if (!availablePeriods.includes(period)) setPeriod('1m')
   }, [availablePeriods, period])
   const summary = summaryPeriodMatch(query.data ?? [], period, today)
+  const range = summaryPeriodRange(period, today)
   const workoutRange = summary
     ? { start: summary.periodStart, end: summary.periodEnd }
-    : summaryPeriodRange(period, today)
+    : range
   const periodDays = summary ? daysBetween(summary.periodStart, summary.periodEnd) + 1 : 0
   const previousRange = summary ? {
     start: addDays(summary.periodStart, -periodDays),
@@ -685,33 +714,35 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   const measurements = useQuery({
     queryKey: ['client-progress-story-measurements', clientId],
     queryFn: () => progressRepository.list(clientId),
-    enabled: ready && Boolean(summary),
+    enabled: ready,
   })
   const customMetrics = useQuery({
     queryKey: ['progress-metrics', clientId],
     queryFn: () => progressRepository.listMetrics(clientId),
-    enabled: ready && Boolean(summary),
+    enabled: ready,
   })
   const goal = useQuery({
     queryKey: ['client-goal', clientId],
     queryFn: () => goalsRepository.get(clientId),
   })
-  const generate = useMutation({
-    mutationFn: async () => {
-      const range = summaryPeriodRange(period, today)
-      const generation = await trainingSummariesRepository.generate(clientId, range.start, range.end, true)
+  const automaticGeneration = useQuery({
+    queryKey: ['training-summary-generation', 'client', clientId, range.start, range.end],
+    queryFn: async () => {
+      const generation = await trainingSummariesRepository.generate(clientId, range.start, range.end, false)
       const summaries = await trainingSummariesRepository.listForClient(clientId)
       return { generation, summaries }
     },
-    onMutate: () => setGenerationMessage(null),
-    onSuccess: ({ generation, summaries }) => {
-      queryClient.setQueryData(['training-summaries', 'client', clientId], summaries)
-      setGenerationMessage(generation.cached ? 'Анализ уже актуален' : 'Анализ обновлён')
-    },
+    enabled: ready && firstWorkout.data !== null,
   })
+  useEffect(() => {
+    if (automaticGeneration.data) {
+      queryClient.setQueryData(
+        ['training-summaries', 'client', clientId],
+        automaticGeneration.data.summaries,
+      )
+    }
+  }, [automaticGeneration.data, clientId, queryClient])
   const changePeriod = (nextPeriod: SummaryPeriod) => {
-    generate.reset()
-    setGenerationMessage(null)
     setPeriod(nextPeriod)
   }
   const currentWorkouts = workouts.data?.filter((workout) =>
@@ -721,7 +752,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   const upcomingWorkouts = workouts.data?.filter((workout) =>
     workout.workoutDate >= today && workout.workoutDate <= storyRange.end)
 
-  return <section className="ai-progress-card client-progress-card progress-story-card" aria-label="Прогресс тренировок" aria-busy={loading}>
+  return <section className="ai-progress-card client-progress-card progress-story-card" aria-label="Прогресс тренировок" aria-busy={loading || (!summary && automaticGeneration.isFetching)}>
     <section className="progress-story-period" aria-labelledby="client-progress-period-title">
       <SummaryHeader />
       <span className="sr-only" id="client-progress-period-title">Период прогресса</span>
@@ -749,36 +780,38 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
           measurementsLoading={measurements.isLoading || customMetrics.isLoading}
           measurementsError={measurements.error ?? customMetrics.error}
           onMeasurementsRetry={() => void Promise.all([measurements.refetch(), customMetrics.refetch()])}
+          measurementManagement={measurementManagement}
           workoutsLoading={workouts.isLoading}
           workoutsError={workouts.error}
           onWorkoutsRetry={() => void workouts.refetch()}
-        /> : <div className="ai-progress-empty">
-        <strong>Анализ за этот период ещё не создан</strong>
-        <p>Создай его по завершённым тренировкам.</p>
-      </div>}
+        /> : <>
+          {automaticGeneration.isFetching
+            ? <div className="ai-progress-empty" role="status"><strong>Обновляем прогресс…</strong></div>
+            : !automaticGeneration.error && <div className="ai-progress-empty"><strong>Пока нет анализа за этот период</strong></div>}
+          {measurementManagement && <MeasurementProgressSection
+            clientId={clientId}
+            entries={measurements.data ?? []}
+            customMetrics={customMetrics.data ?? []}
+            goal={goal.data}
+            periodStart={workoutRange.start}
+            periodEnd={workoutRange.end}
+            today={today}
+            role="client"
+            loading={measurements.isLoading || customMetrics.isLoading}
+            error={measurements.error ?? customMetrics.error}
+            onRetry={() => void Promise.all([measurements.refetch(), customMetrics.refetch()])}
+            management={measurementManagement}
+          />}
+        </>}
     </AsyncView>
-    {ready && <footer className="ai-progress-footer">
-      <span role={generationMessage ? 'status' : undefined}>
-        {generate.isPending
-          ? 'Формируем новый анализ — это может занять до минуты'
-          : generationMessage ?? (summary
-            ? `Сводка сформирована ${new Date(summary.publishedAt).toLocaleDateString('ru-RU', { timeZone })}`
-            : 'Можно запросить первый анализ')}
-      </span>
-      <button
-        type="button"
-        className="secondary"
-        disabled={generate.isPending}
-        onClick={() => generate.mutate()}
-      >
-        {generate.isPending ? 'Обновляем…' : summary ? 'Обновить' : 'Создать анализ'}
-      </button>
-    </footer>}
-    {generate.error && <p className="ai-progress-error error" role="alert">{generate.error.message}</p>}
+    {automaticGeneration.error && <AutomaticSummaryError
+      error={automaticGeneration.error}
+      onRetry={() => void automaticGeneration.refetch()}
+    />}
   </section>
 }
 
-function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, customMetrics, measurementsLoading, measurementsError, onMeasurementsRetry, workoutsLoading, workoutsError, onWorkoutsRetry }: {
+function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, customMetrics, measurementsLoading, measurementsError, onMeasurementsRetry, measurementManagement, workoutsLoading, workoutsError, onWorkoutsRetry }: {
   summary: PublishedTrainingSummary
   goal: ClientGoal | null | undefined
   profileGoal?: string | null
@@ -787,14 +820,15 @@ function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalL
   goalLoading: boolean
   goalError: Error | null
   onGoalRetry: () => void
-  currentWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  previousWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  upcomingWorkouts?: Awaited<ReturnType<typeof workoutsRepository.list>>
-  measurements: Awaited<ReturnType<typeof progressRepository.list>>
+  currentWorkouts?: Workout[]
+  previousWorkouts?: Workout[]
+  upcomingWorkouts?: Workout[]
+  measurements: ProgressEntry[]
   customMetrics: CustomMetric[]
   measurementsLoading: boolean
   measurementsError: Error | null
   onMeasurementsRetry: () => void
+  measurementManagement?: ReactNode
   workoutsLoading: boolean
   workoutsError: Error | null
   onWorkoutsRetry: () => void
@@ -818,6 +852,7 @@ function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalL
       measurementsLoading={measurementsLoading}
       measurementsError={measurementsError}
       onMeasurementsRetry={onMeasurementsRetry}
+      measurementManagement={measurementManagement}
       workoutsLoading={workoutsLoading}
       workoutsError={workoutsError}
       onWorkoutsRetry={onWorkoutsRetry}

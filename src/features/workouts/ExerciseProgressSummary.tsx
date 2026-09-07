@@ -1,6 +1,7 @@
 import type { ExerciseProgressResult, ExerciseProgressSet, InputKind } from '../../shared/domain'
 import { RecordIcon } from '../../shared/icons'
 import { formatLocalDate } from '../../shared/local-date'
+import { isRowingExerciseRef, rowingPaceLabel, runDistanceLabel } from '../../shared/run-metrics'
 
 function compactNumber(value: number): string {
   return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(value)
@@ -51,14 +52,16 @@ function milestoneInfo(totalCount: number): { count: string; note: string } {
   return { count: executionCountLabel(totalCount), note: 'Отметка 1000 достигнута' }
 }
 
-export function exerciseProgressSetLabel(set: ExerciseProgressSet, inputKind: InputKind, showRpe: boolean): string {
+export function exerciseProgressSetLabel(set: ExerciseProgressSet, inputKind: InputKind, showRpe: boolean, exerciseRef?: string): string {
+  const rowing = inputKind === 'distance' && isRowingExerciseRef(exerciseRef)
+  const rowingPace = rowing ? rowingPaceLabel(set.durationSec, set.distanceKm) : null
   const values = inputKind === 'strength'
     ? [set.weightKg === undefined ? null : `${compactNumber(set.weightKg)} кг`, set.reps === undefined ? null : `${compactNumber(set.reps)} повт.`]
     : inputKind === 'reps'
       ? [set.reps === undefined ? null : `${compactNumber(set.reps)} повт.`]
       : inputKind === 'duration'
         ? [set.durationSec === undefined ? null : durationValue(set.durationSec)]
-        : [set.distanceKm === undefined ? null : `${compactNumber(set.distanceKm)} км`, set.durationSec === undefined ? null : durationValue(set.durationSec)]
+        : [set.distanceKm === undefined ? null : runDistanceLabel(set.distanceKm), set.durationSec === undefined ? null : durationValue(set.durationSec), rowingPace, rowing && set.reps !== undefined ? `${compactNumber(set.reps)} гребков/мин` : null]
   return [
     ...values,
     showRpe && set.rpe !== undefined ? `RPE ${compactNumber(set.rpe)}` : null,
@@ -108,9 +111,11 @@ export function ExerciseProgressSummary({
 export function ExerciseProgressHistory({
   items,
   showRpe,
+  exerciseRef,
 }: {
   items: ExerciseProgressResult[]
   showRpe: boolean
+  exerciseRef?: string
 }) {
   if (!items.length) return <p className="muted empty-hint">Ещё нет выполненных подходов по этому упражнению.</p>
   return <div className="timeline exercise-progress-timeline">{items.map((item) => {
@@ -121,7 +126,7 @@ export function ExerciseProgressHistory({
     return <article key={item.workoutId} className="card">
       <div className="exercise-progress-row-head"><strong>{formatLocalDate(item.workoutDate)}</strong><span>{item.confirmedSetCount} подх.</span></div>
       {visibleBadges.length > 0 && <div className="exercise-progress-badges">{visibleBadges.map((badge) => <span key={badge}>{badge}</span>)}</div>}
-      <p>{item.sets.map((set) => exerciseProgressSetLabel(set, item.inputKind, showRpe)).join(' · ')}</p>
+      <p>{item.sets.map((set) => exerciseProgressSetLabel(set, item.inputKind, showRpe, exerciseRef)).join(' · ')}</p>
       {item.trainerComment && <p className="exercise-comment-note">💬 {item.trainerComment}</p>}
     </article>
   })}</div>

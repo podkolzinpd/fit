@@ -236,3 +236,116 @@ variable "migration_invoker_member" {
     error_message = "migration_invoker_member must be a supported scoped IAM member or null."
   }
 }
+
+variable "push_function_id" {
+  description = "Existing Yandex Cloud Function ID used for Web Push transport. Resolve it through the function-folder OIDC identity; this is not a secret."
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.push_function_id)) > 0
+    error_message = "push_function_id must not be empty."
+  }
+}
+
+variable "push_transport_secret_id" {
+  description = "Existing Lockbox secret ID containing PUSH_DISPATCH_SECRET. The payload never enters Terraform."
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.push_transport_secret_id)) > 0
+    error_message = "push_transport_secret_id must not be empty."
+  }
+}
+
+variable "push_transport_secret_version_id" {
+  description = "Current immutable version of push_transport_secret_id, resolved immediately before planning."
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.push_transport_secret_version_id)) > 0
+    error_message = "push_transport_secret_version_id must not be empty."
+  }
+}
+
+variable "app_feedback_integrations_secret_id" {
+  description = "Optional existing Lockbox secret containing Telegram and Tracker credentials. Secret payload never enters Terraform state."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = var.app_feedback_integrations_secret_id == null ? true : (
+      length(trimspace(var.app_feedback_integrations_secret_id)) > 0
+    )
+    error_message = "app_feedback_integrations_secret_id must be non-empty or null."
+  }
+}
+
+variable "app_feedback_integrations_secret_version_id" {
+  description = "Immutable version of app_feedback_integrations_secret_id, resolved immediately before planning."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = var.app_feedback_integrations_secret_version_id == null ? true : (
+      length(trimspace(var.app_feedback_integrations_secret_version_id)) > 0
+    )
+    error_message = "app_feedback_integrations_secret_version_id must be non-empty or null."
+  }
+}
+
+variable "app_feedback_tracker_org_header" {
+  description = "Tracker organization header selected by the organization type."
+  type        = string
+  default     = "X-Org-ID"
+
+  validation {
+    condition = contains(
+      ["X-Org-ID", "X-Cloud-Org-ID"],
+      var.app_feedback_tracker_org_header,
+    )
+    error_message = "app_feedback_tracker_org_header must be X-Org-ID or X-Cloud-Org-ID."
+  }
+}
+
+variable "app_feedback_tracker_queue" {
+  description = "Tracker queue receiving application feedback."
+  type        = string
+  default     = "YAFIT"
+
+  validation {
+    condition     = can(regex("^[A-Z][A-Z0-9_]{1,19}$", var.app_feedback_tracker_queue))
+    error_message = "app_feedback_tracker_queue must be a valid Tracker queue key."
+  }
+}
+
+variable "push_dispatcher_registry_service_account_id" {
+  description = "Existing dispatcher service-account ID pinned from Terraform state after the bootstrap identity phase. Null during the first read-only plan."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = var.push_dispatcher_registry_service_account_id == null || can(regex(
+      "^[a-z0-9]+$",
+      var.push_dispatcher_registry_service_account_id,
+    ))
+    error_message = "push_dispatcher_registry_service_account_id must be a service-account ID or null."
+  }
+}
+
+variable "push_scheduler_invoker_service_account_id" {
+  description = "Existing scheduler service-account ID pinned from Terraform state after the bootstrap identity phase. Null during the first read-only plan."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = var.push_scheduler_invoker_service_account_id == null || can(regex(
+      "^[a-z0-9]+$",
+      var.push_scheduler_invoker_service_account_id,
+    ))
+    error_message = "push_scheduler_invoker_service_account_id must be a service-account ID or null."
+  }
+}

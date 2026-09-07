@@ -5,6 +5,31 @@ import { Pool, type QueryResultRow } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
+import { submitAppFeedback } from '../app-feedback-command.js'
+import {
+  claimAppFeedbackDeliveries,
+  finalizeAppFeedbackDeliveries,
+} from '../app-feedback-dispatcher-command.js'
+import {
+  applyAssistantAction,
+  appendAssistantUserMessage,
+  createAssistantConversation,
+  listAssistantActions,
+  listAssistantConversations,
+  listAssistantMessages,
+  persistAssistantResponse,
+} from '../assistant-state.js'
+import {
+  deletePushSubscription,
+  readPushNotificationStatus,
+  setNotificationPreference,
+  upsertPushSubscription,
+} from '../push-notifications-command.js'
+import {
+  claimPushNotifications,
+  enqueueWorkoutReminders,
+  finalizePushNotifications,
+} from '../push-dispatcher-command.js'
 import { readAccessibleClients } from '../clients.js'
 import { readAccessibleConnections } from '../connections.js'
 import {
@@ -40,6 +65,7 @@ import {
   finishLiveWorkout,
   recordPlannedWorkoutResult,
   removeLiveSet,
+  removeLiveExercise,
   reorderLiveBlock,
   rescheduleWorkout,
   replaceLiveExercise,
@@ -73,6 +99,19 @@ import {
   PilotEnrollmentConflictError,
 } from './yandex-pilot-enrollment.js'
 import {
+  DatabaseYandexAccountLinker,
+  YandexAccountLinkError,
+} from '../yandex-account-linking.js'
+import {
+  DatabaseYandexAppSessionIssuer,
+  DatabaseYandexAppSessionRevoker,
+} from '../yandex-app-session.js'
+import {
+  YandexAppSessionDeniedError,
+  YandexAppSessionInvalidError,
+  withYandexAppSessionTransaction,
+} from './yandex-app-transaction.js'
+import {
   PilotAccessDeniedError,
   PilotSessionInvalidError,
   withYandexPilotActorTransaction,
@@ -97,6 +136,8 @@ const ROOT_WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
 const MEMBER_WORKOUT_ID = 'd3cff30a-7aa2-4407-b62d-0683167cf4c8'
 const CLIENT_WORKOUT_ID = '6e2d8d63-7c3a-4301-b9ba-76d875210f1f'
 const POST_WORKOUT_ID = 'cd691fd5-86ee-4740-838c-b37166df7e71'
+const ASSISTANT_TURN_ID = 'a16c6f9e-86ee-4740-838c-b37166df7e71'
+const ASSISTANT_ACTION_ID = 'ea691fd5-86ee-4740-838c-b37166df7e71'
 const PROGRESS_WORKOUT_EXERCISE_ID = '736e9f0c-634a-42e0-a13b-2c5b070fe5ef'
 const PROGRESS_WORKOUT_SET_ID = '9a15f723-44cb-4cf1-9bcf-4659c43cc764'
 const ROOT_WORKOUT_EXERCISE_ID = 'd40b742b-5d5b-41ab-91df-ed464414d034'
@@ -127,9 +168,16 @@ const LIVE_STRUCTURE_OPERATION_IDS = {
 const PILOT_SUBJECT_HASH = 'b'.repeat(64)
 const OUTSIDE_SUBJECT_HASH = 'c'.repeat(64)
 const ENROLLMENT_SUBJECT_HASH = 'e'.repeat(64)
+const APP_ACTOR_ID = '53ec8d8f-8d29-4a1d-9f40-1e00ba797da0'
+const APP_SUBJECT_HASH = 'f'.repeat(64)
+const LINK_ACTOR_ID = 'a6145f94-3889-47b3-8e63-b0f72df8f2ee'
+const LINK_SUBJECT_HASH = '6'.repeat(64)
+const OTHER_LINK_SUBJECT_HASH = '7'.repeat(64)
 const RUNTIME_PASSWORD = 'fit-api-test-only'
 const READER_ROLE = 'fit_ops_reader_test'
 const READER_PASSWORD = 'fit-ops-reader-test-only'
+const DATALENS_ROLE = 'fit_datalens'
+const DATALENS_PASSWORD = 'fit-datalens-test-only'
 const migrationsDirectory = fileURLToPath(
   new URL('../../db/migrations', import.meta.url),
 )
@@ -161,6 +209,24 @@ interface InvitationSecretRow extends QueryResultRow {
 
 interface CountRow extends QueryResultRow {
   count: number
+}
+
+interface AppFeedbackAuditRow extends QueryResultRow {
+  account_role: string
+  app_version: string
+  display_mode: string
+  kind: string
+  message: string
+  screen_path: string
+  user_agent: string
+  user_id: string
+}
+
+interface PushSubscriptionAuditRow extends QueryResultRow {
+  auth_key: string
+  endpoint: string
+  p256dh: string
+  user_id: string
 }
 
 interface JsonResultRow extends QueryResultRow {
@@ -264,6 +330,18 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         end
         $$;
       `)
+      await ownerPool.query(`
+        do $$
+        begin
+          if not exists (select 1 from pg_roles where rolname = '${DATALENS_ROLE}') then
+            create role ${DATALENS_ROLE} login password '${DATALENS_PASSWORD}';
+          else
+            alter role ${DATALENS_ROLE} login password '${DATALENS_PASSWORD}';
+          end if;
+        end
+        $$;
+        alter role ${DATALENS_ROLE} set default_transaction_read_only = on;
+      `)
 
       await runner({
         databaseUrl: ownerUrl,
@@ -274,6 +352,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         createMigrationsSchema: true,
         verbose: false,
       })
+
+      // The local PostgreSQL volume survives repeated verification runs. A
+      // developer may therefore create fit_datalens after migration 000036 was
+      // already recorded; restore the same narrow grants that a clean CI/stage
+      // run receives from that migration.
+      await ownerPool.query(`
+        grant usage on schema analytics to ${DATALENS_ROLE};
+        grant select on all tables in schema analytics to ${DATALENS_ROLE};
+      `)
 
       // The local PostgreSQL container is persistent. Remove only rows carrying
       // the explicit synthetic marker so earlier assertions stay isolated
@@ -321,6 +408,11 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
          where full_name = 'Тестовый клиент Yandex stage'`,
       )
       await ownerPool.query(
+        `delete from public.clients
+         where trainer_id = $1 and full_name = 'Клиент из Assistant'`,
+        [ACTOR_ID],
+      )
+      await ownerPool.query(
         'delete from public.profiles where id = $1',
         [stageWorkoutFixtureIds(STAGE_SMOKE_PROFILE_ID).clientActorId],
       )
@@ -351,6 +443,32 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         'delete from public.profiles where id = $1',
         [LIFECYCLE_CLIENT_ACTOR_ID],
       )
+      await ownerPool.query(
+        'delete from app_private.yandex_app_sessions where profile_id = any($1::uuid[])',
+        [[APP_ACTOR_ID, LINK_ACTOR_ID]],
+      )
+      await ownerPool.query(
+        `
+          delete from app_private.auth_identities
+          where provider = 'yandex'
+            and (
+              provider_subject_sha256 = any($1::text[])
+              or profile_id = any($2::uuid[])
+            )
+        `,
+        [
+          [APP_SUBJECT_HASH, LINK_SUBJECT_HASH, OTHER_LINK_SUBJECT_HASH],
+          [APP_ACTOR_ID, LINK_ACTOR_ID],
+        ],
+      )
+      await ownerPool.query(
+        'delete from app_private.profile_rollout_assignments where profile_id = any($1::uuid[])',
+        [[APP_ACTOR_ID, LINK_ACTOR_ID]],
+      )
+      await ownerPool.query(
+        'delete from public.profiles where id = any($1::uuid[])',
+        [[APP_ACTOR_ID, LINK_ACTOR_ID]],
+      )
 
       await ownerPool.query(
         `
@@ -361,6 +479,18 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             account_role = excluded.account_role
         `,
         [ACTOR_ID, OTHER_ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.profiles (id, first_name, account_role)
+          values
+            ($1, 'App actor', 'trainer'),
+            ($2, 'Link actor', 'client')
+          on conflict (id) do update set
+            first_name = excluded.first_name,
+            account_role = excluded.account_role
+        `,
+        [APP_ACTOR_ID, LINK_ACTOR_ID],
       )
       await ownerPool.query(
         `
@@ -414,12 +544,13 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await ownerPool.query(
         `
           insert into public.custom_exercises (
-            id, trainer_id, name, muscle_group, input_kind
+            id, trainer_id, created_by, name, muscle_group, input_kind
           ) values
-            ($1, $3, 'Тяга саней', 'legs', 'strength'),
-            ($2, $4, 'Темповый бег', 'cardio', 'duration')
+            ($1, $3, $3, 'Тяга саней', 'legs', 'strength'),
+            ($2, $4, $4, 'Темповый бег', 'cardio', 'duration')
           on conflict (id) do update set
             trainer_id = excluded.trainer_id,
+            created_by = excluded.created_by,
             name = excluded.name,
             muscle_group = excluded.muscle_group,
             input_kind = excluded.input_kind,
@@ -531,6 +662,28 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         `,
         [ACTOR_ID],
       )
+      await ownerPool.query(
+        `
+          insert into app_private.auth_identities (
+            provider, provider_subject_sha256, profile_id
+          ) values ('yandex', $1, $2)
+          on conflict (provider, provider_subject_sha256) do update set
+            profile_id = excluded.profile_id
+        `,
+        [APP_SUBJECT_HASH, APP_ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into app_private.profile_rollout_assignments (
+            profile_id, target_backend, access_mode, enabled
+          ) values ($1, 'yandex', 'read_write', true)
+          on conflict (profile_id) do update set
+            target_backend = excluded.target_backend,
+            access_mode = excluded.access_mode,
+            enabled = excluded.enabled
+        `,
+        [APP_ACTOR_ID],
+      )
 
       const runtimeUrl = new URL(ownerUrl)
       runtimeUrl.username = 'fit_api'
@@ -580,6 +733,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           [ACTOR_ID],
         )
         expect(visibleProfiles.rows).toEqual([{ id: ACTOR_ID }])
+        await expect(readerPool.query(
+          'select id from ops_readonly.app_feedback limit 0',
+        )).resolves.toMatchObject({ rows: [] })
 
         const clientColumns = await readerPool.query<{ column_name: string }>(
           `
@@ -747,6 +903,119 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await expect(
         clientsReader.readClients(expiredToken),
       ).rejects.toBeInstanceOf(PilotSessionInvalidError)
+      expect(await readActor(runtimePool)).toBeNull()
+    })
+
+    it('issues and revokes a read-write Yandex app session only for enabled rollout', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const issuer = new DatabaseYandexAppSessionIssuer(
+        runtimePool,
+        () => new Date('2026-08-31T10:00:00.000Z'),
+      )
+      const revoker = new DatabaseYandexAppSessionRevoker(runtimePool)
+      const session = await issuer.issue(APP_SUBJECT_HASH)
+
+      expect(session?.accessMode).toBe('read_write')
+      expect(session?.profile.id).toBe(APP_ACTOR_ID)
+      expect(session?.session.token).toMatch(/^[A-Za-z0-9_-]{43}$/)
+      const sessionDigest = session === undefined
+        ? undefined
+        : hashPilotSessionToken(session.session.token)
+      const storedSessions = await ownerPool.query<SessionDigestRow>(
+        `
+          select token_sha256
+          from app_private.yandex_app_sessions
+          where profile_id = $1 and expires_at > now()
+          order by created_at desc
+          limit 1
+        `,
+        [APP_ACTOR_ID],
+      )
+      expect(storedSessions.rows).toEqual([{ token_sha256: sessionDigest }])
+      expect(storedSessions.rows[0]?.token_sha256).not.toBe(session?.session.token)
+
+      const resolvedActor = await withYandexAppSessionTransaction(
+        runtimePool,
+        sessionDigest ?? '',
+        async (client) => {
+          const rows = await client.query<ActorRow>(
+            'select auth.uid() as actor_id',
+          )
+          return rows[0]?.actor_id ?? null
+        },
+      )
+      expect(resolvedActor).toBe(APP_ACTOR_ID)
+      expect(await revoker.revoke(session?.session.token ?? '')).toBe(true)
+      await expect(
+        withYandexAppSessionTransaction(
+          runtimePool,
+          sessionDigest ?? '',
+          () => Promise.resolve(undefined),
+        ),
+      ).rejects.toBeInstanceOf(YandexAppSessionInvalidError)
+
+      await ownerPool.query(
+        'update app_private.profile_rollout_assignments set enabled = false where profile_id = $1',
+        [APP_ACTOR_ID],
+      )
+      await expect(
+        issuer.issue(APP_SUBJECT_HASH),
+      ).rejects.toBeInstanceOf(YandexAppSessionDeniedError)
+      await ownerPool.query(
+        'update app_private.profile_rollout_assignments set enabled = true where profile_id = $1',
+        [APP_ACTOR_ID],
+      )
+
+      await expect(
+        issuer.issue(PILOT_SUBJECT_HASH),
+      ).rejects.toBeInstanceOf(YandexAppSessionDeniedError)
+      expect(await readActor(runtimePool)).toBeNull()
+    })
+
+    it('links Yandex ID to the current FIT actor without granting rollout access', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const linker = new DatabaseYandexAccountLinker(runtimePool)
+
+      await expect(
+        linker.linkActor(LINK_ACTOR_ID, LINK_SUBJECT_HASH),
+      ).resolves.toEqual({ profileId: LINK_ACTOR_ID })
+      await expect(
+        linker.linkActor(LINK_ACTOR_ID, LINK_SUBJECT_HASH),
+      ).resolves.toEqual({ profileId: LINK_ACTOR_ID })
+
+      const linkedIdentities = await ownerPool.query<CountRow>(
+        `
+          select count(*)::int as count
+          from app_private.auth_identities
+          where provider = 'yandex'
+            and provider_subject_sha256 = $1
+            and profile_id = $2
+        `,
+        [LINK_SUBJECT_HASH, LINK_ACTOR_ID],
+      )
+      expect(linkedIdentities.rows).toEqual([{ count: 1 }])
+      const rolloutRows = await ownerPool.query<CountRow>(
+        `
+          select count(*)::int as count
+          from app_private.profile_rollout_assignments
+          where profile_id = $1
+        `,
+        [LINK_ACTOR_ID],
+      )
+      expect(rolloutRows.rows).toEqual([{ count: 0 }])
+
+      await expect(
+        linker.linkActor(OTHER_ACTOR_ID, LINK_SUBJECT_HASH),
+      ).rejects.toBeInstanceOf(YandexAccountLinkError)
+      await expect(
+        linker.linkActor(LINK_ACTOR_ID, OTHER_LINK_SUBJECT_HASH),
+      ).rejects.toBeInstanceOf(YandexAccountLinkError)
       expect(await readActor(runtimePool)).toBeNull()
     })
 
@@ -936,7 +1205,13 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         OTHER_ACTOR_ID,
         readAccessibleTrainingData,
       )
-      expect(clientData.customExercises).toEqual([])
+      expect(clientData.customExercises).toMatchObject([
+        {
+          id: ROOT_CUSTOM_EXERCISE_ID,
+          name: 'Тяга саней',
+          createdBy: ACTOR_ID,
+        },
+      ])
       expect(clientData.workouts.map((workout) => workout.id)).toEqual([
         MEMBER_WORKOUT_ID,
         ROOT_WORKOUT_ID,
@@ -955,7 +1230,90 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         attention: [],
         attentionPreferences: [],
         hasMoreWorkouts: false,
+        totalWorkouts: 0,
       })
+    })
+
+    it('preserves client ownership for custom exercises in a shared partition', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      const draft = {
+        name: 'Клиентская тяга блока',
+        muscleGroup: 'back' as const,
+        inputKind: 'strength' as const,
+      }
+      const exercise = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => createCustomExercise(client, draft),
+      )
+      try {
+        const stored = await ownerPool.query<{
+          created_by: string
+          trainer_id: string
+        } & QueryResultRow>(
+          'select created_by, trainer_id from public.custom_exercises where id = $1',
+          [exercise.id],
+        )
+        expect(stored.rows).toEqual([{
+          created_by: OTHER_ACTOR_ID,
+          trainer_id: ACTOR_ID,
+        }])
+
+        const updated = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => updateCustomExercise(
+            client,
+            exercise.id,
+            { ...draft, name: 'Клиентская тяга блока с паузой' },
+            1,
+          ),
+        )
+        expect(updated).toMatchObject({
+          name: 'Клиентская тяга блока с паузой',
+          version: 2,
+        })
+
+        for (const actorId of [ACTOR_ID, MEMBER_TRAINER_ID, OTHER_ACTOR_ID]) {
+          const data = await withActorTransaction(
+            runtimePool,
+            actorId,
+            readAccessibleTrainingData,
+          )
+          expect(data.customExercises).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+              id: exercise.id,
+              createdBy: OTHER_ACTOR_ID,
+            }),
+          ]))
+        }
+        const outside = await withActorTransaction(
+          runtimePool,
+          OUTSIDE_TRAINER_ID,
+          readAccessibleTrainingData,
+        )
+        expect(outside.customExercises.some((item) => item.id === exercise.id)).toBe(false)
+        await expect(withActorTransaction(
+          runtimePool,
+          OUTSIDE_TRAINER_ID,
+          (client) => updateCustomExercise(client, exercise.id, draft, 2),
+        )).rejects.toMatchObject({ failure: 'forbidden' })
+
+        const archived = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => setCustomExerciseArchived(client, exercise.id, true, 2),
+        )
+        expect(archived).toMatchObject({ version: 3 })
+        expect(archived.archivedAt).not.toBeNull()
+      } finally {
+        await ownerPool.query(
+          'delete from public.custom_exercises where id = $1',
+          [exercise.id],
+        )
+      }
     })
 
     it('shows memberships to the client cohort and active invitations only to their creator', async () => {
@@ -1260,6 +1618,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             inputKind: 'strength',
             archivedAt: null,
             version: 1,
+            createdBy: STAGE_SMOKE_PROFILE_ID,
           },
         ],
         workouts: [
@@ -1289,6 +1648,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             startedAt: '2026-08-22T07:00:00.000Z',
             completedAt: '2026-08-22T08:00:00.000Z',
             version: 1,
+            stageId: null,
+            stageTitle: null,
+            hasPr: true,
             exercises: [
               {
                 id: smokeIds.strengthExerciseId,
@@ -1383,6 +1745,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           snoozedUntil: null,
         }],
         hasMoreWorkouts: false,
+        totalWorkouts: 1,
       })
 
       const clientSmokeData = await reader.readTrainingData(
@@ -2836,6 +3199,30 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           count: 6,
           resource_ids_present: true,
         }])
+        const deleteOperation = 'd6740000-0000-4000-8000-000000000001'
+        const removalId = appendedExerciseId
+        if (removalId === undefined) throw new Error('Live exercise fixture is missing')
+        await ownerPool.query(
+          `update public.workouts set status='done',completed_at=now() where id=$1`,
+          [ROOT_WORKOUT_ID],
+        )
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID,
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 8, deleteOperation),
+        )).rejects.toMatchObject({ failure: 'forbidden' })
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 7, deleteOperation),
+        )).rejects.toMatchObject({ failure: 'conflict' })
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 8, deleteOperation),
+        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 9, replayed: false })
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 8, deleteOperation),
+        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 9, replayed: true })
+        const remaining = await ownerPool.query<{ id: string }>(
+          'select id from public.workout_exercises where workout_id=$1', [ROOT_WORKOUT_ID],
+        )
+        expect(remaining.rows).toEqual([{ id: ROOT_WORKOUT_EXERCISE_ID }])
+        await ownerPool.query('delete from app_private.live_workout_operations where operation_id=$1', [deleteOperation])
       } finally {
         await ownerPool.query(
           `
@@ -2978,6 +3365,584 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       )
       expect(comments.rows).toEqual([{ trainer_comment: null }])
       await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+    })
+
+    it('stores app feedback under the transaction actor and keeps runtime reads closed', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const draft = {
+        kind: 'problem' as const,
+        message: 'Не открывается завершённая тренировка',
+        screenPath: '/workouts/test',
+        appVersion: '0.1.0',
+        displayMode: 'browser' as const,
+        userAgent: 'Fit integration test',
+      }
+      const createdIds: string[] = []
+
+      try {
+        await ownerPool.query(
+          'delete from public.app_feedback where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
+        const actorFeedbackId = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => submitAppFeedback(client, draft),
+        )
+        createdIds.push(actorFeedbackId)
+        const otherFeedbackId = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => submitAppFeedback(client, {
+            ...draft,
+            kind: 'suggestion',
+            message: 'Добавьте быстрый повтор тренировки',
+          }),
+        )
+        createdIds.push(otherFeedbackId)
+
+        const stored = await ownerPool.query<AppFeedbackAuditRow>(
+          `select user_id, account_role, kind, message, screen_path,
+                  app_version, display_mode, user_agent
+           from public.app_feedback
+           where id = $1`,
+          [actorFeedbackId],
+        )
+        expect(stored.rows).toEqual([{
+          user_id: ACTOR_ID,
+          account_role: 'trainer',
+          kind: 'problem',
+          message: draft.message,
+          screen_path: draft.screenPath,
+          app_version: draft.appVersion,
+          display_mode: draft.displayMode,
+          user_agent: draft.userAgent,
+        }])
+
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => client.query(
+            'select id from public.app_feedback where id = $1',
+            [actorFeedbackId],
+          ),
+        )).rejects.toMatchObject({ code: '42501' })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => client.query(
+            `select public.submit_app_feedback(
+              'other', 'Некорректный тип', '/', '0.1.0', 'browser', 'test'
+            )`,
+          ),
+        )).rejects.toMatchObject({ message: 'app_feedback_invalid', code: 'PT422' })
+
+        const authors = await ownerPool.query<{ id: string; user_id: string } & QueryResultRow>(
+          'select id, user_id from public.app_feedback where id = any($1::uuid[])',
+          [createdIds],
+        )
+        expect(authors.rows).toEqual(expect.arrayContaining([
+          { id: actorFeedbackId, user_id: ACTOR_ID },
+          { id: otherFeedbackId, user_id: OTHER_ACTOR_ID },
+        ]))
+
+        const dispatchTime = new Date('2026-09-04T12:01:00.000Z')
+        const batch = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => claimAppFeedbackDeliveries(client, dispatchTime),
+        )
+        if (batch === null) throw new Error('App feedback batch was not claimed')
+        expect(batch.deliveries).toHaveLength(2)
+        expect(batch.deliveries.every(
+          (delivery) => delivery.sendTracker && delivery.sendTelegram,
+        )).toBe(true)
+
+        const results = batch.deliveries.map((delivery, index) => ({
+          id: delivery.id,
+          tracker: index === 0
+            ? { ok: true as const, issueKey: 'YAFIT-42' }
+            : { ok: false as const, error: 'tracker_http_503' },
+          telegram: { ok: true as const },
+        }))
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => finalizeAppFeedbackDeliveries(
+            client,
+            batch.dispatchToken,
+            results.slice(0, 1),
+            dispatchTime,
+          ),
+        )).rejects.toMatchObject({ code: 'PT422' })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => finalizeAppFeedbackDeliveries(
+            client,
+            batch.dispatchToken,
+            results,
+            dispatchTime,
+          ),
+        )).resolves.toEqual({
+          trackerSucceeded: 1,
+          trackerFailed: 1,
+          trackerDiscarded: 0,
+          telegramSucceeded: 2,
+          telegramFailed: 0,
+          telegramDiscarded: 0,
+        })
+
+        const retryBatch = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => claimAppFeedbackDeliveries(
+            client,
+            new Date('2026-09-04T12:02:00.000Z'),
+          ),
+        )
+        if (retryBatch === null) throw new Error('Tracker retry was not claimed')
+        expect(retryBatch.deliveries).toEqual([expect.objectContaining({
+          id: otherFeedbackId,
+          sendTracker: true,
+          sendTelegram: false,
+        })])
+        await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => finalizeAppFeedbackDeliveries(
+            client,
+            retryBatch.dispatchToken,
+            [{
+              id: otherFeedbackId,
+              tracker: { ok: true, issueKey: 'YAFIT-43' },
+            }],
+            new Date('2026-09-04T12:02:00.000Z'),
+          ),
+        )
+
+        const dataLensUrl = new URL(requireLocalTestDatabaseUrl())
+        dataLensUrl.username = DATALENS_ROLE
+        dataLensUrl.password = DATALENS_PASSWORD
+        const dataLensPool = new Pool({
+          connectionString: dataLensUrl.toString(),
+          max: 1,
+        })
+        try {
+          await expect(dataLensPool.query(
+            'select tracker_issue_key from analytics.app_feedback where id = $1',
+            [actorFeedbackId],
+          )).resolves.toMatchObject({
+            rows: [{ tracker_issue_key: 'YAFIT-42' }],
+          })
+          await expect(dataLensPool.query('show transaction_read_only'))
+            .resolves.toMatchObject({ rows: [{ transaction_read_only: 'on' }] })
+          await expect(dataLensPool.query('select id from public.app_feedback'))
+            .rejects.toMatchObject({ code: '42501' })
+          await expect(dataLensPool.query(
+            "update analytics.app_feedback set kind = 'suggestion' where id = $1",
+            [actorFeedbackId],
+          )).rejects.toMatchObject({ code: '55000' })
+        } finally {
+          await dataLensPool.end()
+        }
+      } finally {
+        await ownerPool.query(
+          'delete from public.app_feedback where id = any($1::uuid[])',
+          [createdIds],
+        )
+      }
+    })
+
+    it('stores actor-scoped push state while keeping secrets and the outbox private', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      try {
+        await ownerPool.query(
+          'delete from public.notification_preferences where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
+        await ownerPool.query(
+          'delete from public.push_subscriptions where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
+
+        const initial = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          readPushNotificationStatus,
+        )
+        expect(initial).toEqual({
+          subscribed: false,
+          preferences: {
+            workout_reminder: true,
+            workout_scheduled: true,
+          },
+        })
+
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          upsertPushSubscription(client, {
+            endpoint: 'https://push.example/actor',
+            p256dh: 'actor-public-key',
+            authKey: 'actor-auth-secret',
+          }))
+        expect((await ownerPool.query(
+          `select enabled from public.notification_preferences
+           where user_id = $1 and kind = 'workout_reminder'`,
+          [ACTOR_ID],
+        )).rows).toEqual([{ enabled: true }])
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          setNotificationPreference(client, 'workout_reminder', false))
+
+        const actorStatus = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          readPushNotificationStatus,
+        )
+        expect(actorStatus).toEqual({
+          subscribed: true,
+          preferences: {
+            workout_reminder: false,
+            workout_scheduled: true,
+          },
+        })
+        const otherStatus = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          readPushNotificationStatus,
+        )
+        expect(otherStatus).toEqual({
+          subscribed: false,
+          preferences: {
+            workout_reminder: true,
+            workout_scheduled: true,
+          },
+        })
+
+        const stored = await ownerPool.query<PushSubscriptionAuditRow>(
+          'select user_id, endpoint, p256dh, auth_key from public.push_subscriptions',
+        )
+        expect(stored.rows).toEqual([{
+          user_id: ACTOR_ID,
+          endpoint: 'https://push.example/actor',
+          p256dh: 'actor-public-key',
+          auth_key: 'actor-auth-secret',
+        }])
+
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => client.query('select endpoint from public.push_subscriptions'),
+        )).rejects.toMatchObject({ code: '42501' })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => client.query('select id from app_private.push_notifications_outbox'),
+        )).rejects.toMatchObject({ code: '42501' })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => client.query(
+            "select public.upsert_push_subscription('http://invalid', 'key', 'secret')",
+          ),
+        )).rejects.toMatchObject({
+          message: 'push_notifications_invalid',
+          code: 'PT422',
+        })
+
+        expect((await ownerPool.query(
+          `select id from app_private.push_notifications_outbox
+           where user_id = any($1::uuid[])`,
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )).rows).toEqual([])
+
+        await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          deletePushSubscription,
+        )
+        await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          deletePushSubscription,
+        )
+        expect((await ownerPool.query(
+          'select user_id from public.push_subscriptions where user_id = $1',
+          [ACTOR_ID],
+        )).rows).toEqual([])
+        expect((await ownerPool.query(
+          `select enabled from public.notification_preferences
+           where user_id = $1 and kind = 'workout_reminder'`,
+          [ACTOR_ID],
+        )).rows).toEqual([{ enabled: false }])
+      } finally {
+        await ownerPool.query(
+          'delete from public.notification_preferences where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
+        await ownerPool.query(
+          'delete from public.push_subscriptions where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
+      }
+    })
+
+    it('produces, leases and finalizes Yandex push notifications without direct table grants', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const workoutIds: string[] = []
+      const timezoneRows = await ownerPool.query<{ timezone: string } & QueryResultRow>(
+        'select timezone from public.profiles where id = $1',
+        [OTHER_ACTOR_ID],
+      )
+      const originalTimezone = timezoneRows.rows[0]?.timezone
+      if (originalTimezone === undefined) throw new Error('Client timezone is missing')
+      const actorRows = await ownerPool.query<{ full_name: string } & QueryResultRow>(
+        `select btrim(coalesce(first_name, '') || ' ' || coalesce(last_name, ''))
+           as full_name
+         from public.profiles
+         where id = $1`,
+        [ACTOR_ID],
+      )
+      const actorName = actorRows.rows[0]?.full_name
+      if (actorName === undefined || actorName === '') {
+        throw new Error('Trainer name is missing')
+      }
+
+      try {
+        await ownerPool.query(
+          'delete from app_private.push_notifications_outbox where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )
+        await ownerPool.query(
+          'delete from public.notification_preferences where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )
+        await ownerPool.query(
+          'delete from public.push_subscriptions where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )
+        await ownerPool.query(
+          "update public.profiles set timezone = 'UTC' where id = $1",
+          [OTHER_ACTOR_ID],
+        )
+
+        await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+          upsertPushSubscription(client, {
+            endpoint: 'https://push.example/yandex-pipeline',
+            p256dh: 'pipeline-public-key',
+            authKey: 'pipeline-auth-key',
+          }))
+
+        const trainerWorkout = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => savePlannedWorkout(client, {
+            id: null,
+            clientId: CLIENT_ID,
+            workoutDate: '2099-01-01',
+            startTime: '18:30',
+            endTime: null,
+            notes: 'Yandex push pipeline trainer plan',
+            exercises: [],
+          }, null),
+        )
+        workoutIds.push(trainerWorkout.id)
+
+        await ownerPool.query(
+          `delete from app_private.push_notifications_outbox
+           where kind = 'workout_scheduled'
+             and data = jsonb_build_object('workout_id', $1::uuid)`,
+          [trainerWorkout.id],
+        )
+        const outsideEnqueued = await withActorTransaction(
+          runtimePool,
+          OUTSIDE_TRAINER_ID,
+          async (client) => {
+            const rows = await client.query<{ enqueued: boolean } & QueryResultRow>(
+              `select app_private.enqueue_workout_scheduled_notification($1)
+                 as enqueued`,
+              [trainerWorkout.id],
+            )
+            return rows[0]?.enqueued
+          },
+        )
+        expect(outsideEnqueued).toBe(false)
+        const ownerEnqueued = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          async (client) => {
+            const rows = await client.query<{ enqueued: boolean } & QueryResultRow>(
+              `select app_private.enqueue_workout_scheduled_notification($1)
+                 as enqueued`,
+              [trainerWorkout.id],
+            )
+            return rows[0]?.enqueued
+          },
+        )
+        expect(ownerEnqueued).toBe(true)
+
+        const clientWorkout = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => savePlannedWorkout(client, {
+            id: null,
+            clientId: CLIENT_ID,
+            workoutDate: '2099-01-02',
+            startTime: null,
+            endTime: null,
+            notes: 'Yandex push pipeline self plan',
+            exercises: [],
+          }, null),
+        )
+        workoutIds.push(clientWorkout.id)
+
+        const scheduled = await ownerPool.query<{
+          body: string
+          kind: string
+          title: string
+        } & QueryResultRow>(
+          `select kind, title, body
+           from app_private.push_notifications_outbox
+           where user_id = $1`,
+          [OTHER_ACTOR_ID],
+        )
+        expect(scheduled.rows).toHaveLength(1)
+        expect(scheduled.rows[0]).toMatchObject({
+          kind: 'workout_scheduled',
+          title: 'Новая тренировка',
+        })
+        expect(scheduled.rows[0]?.body).toContain(actorName)
+
+        await ownerPool.query(
+          `insert into app_private.push_notifications_outbox (
+             kind, user_id, title, body, data, attempts
+           ) values (
+             'retry_limit_test', $1, 'Retry limit', 'Retry limit', $2::jsonb, 9
+           )`,
+          [OTHER_ACTOR_ID, JSON.stringify({ test: 'retry-limit' })],
+        )
+
+        const dispatchTime = new Date('2099-01-01T09:02:00.000Z')
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => enqueueWorkoutReminders(client, dispatchTime),
+        )).resolves.toBe(1)
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => enqueueWorkoutReminders(client, dispatchTime),
+        )).resolves.toBe(0)
+
+        const batch = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => claimPushNotifications(client, dispatchTime),
+        )
+        expect(batch?.notifications).toHaveLength(3)
+        if (batch === null) throw new Error('Push batch was not claimed')
+        const results = batch.notifications.map((notification) =>
+          notification.title === 'Новая тренировка'
+            ? { id: notification.id, ok: true as const }
+            : notification.title === 'Retry limit'
+              ? {
+                  id: notification.id,
+                  ok: false as const,
+                  status: 503,
+                  error: 'web_push_503',
+                }
+            : {
+                id: notification.id,
+                ok: false as const,
+                status: 410,
+                error: 'web_push_410',
+              })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => finalizePushNotifications(
+            client,
+            batch.dispatchToken,
+            results.slice(0, 1),
+            dispatchTime,
+          ),
+        )).rejects.toMatchObject({ code: 'PT422' })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => finalizePushNotifications(
+            client,
+            batch.dispatchToken,
+            results,
+            dispatchTime,
+          ),
+        )).resolves.toEqual({ succeeded: 1, failed: 2, discarded: 2 })
+
+        const finalized = await ownerPool.query<{
+          attempts: number
+          discarded: boolean
+          kind: string
+          sent: boolean
+        } & QueryResultRow>(
+          `select
+             kind,
+             sent_at is not null as sent,
+             discarded_at is not null as discarded,
+             attempts
+           from app_private.push_notifications_outbox
+           where user_id = $1
+           order by kind`,
+          [OTHER_ACTOR_ID],
+        )
+        expect(finalized.rows).toEqual([
+          { kind: 'retry_limit_test', sent: false, discarded: true, attempts: 10 },
+          { kind: 'workout_reminder', sent: false, discarded: true, attempts: 1 },
+          { kind: 'workout_scheduled', sent: true, discarded: false, attempts: 0 },
+        ])
+        expect((await ownerPool.query(
+          'select user_id from public.push_subscriptions where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )).rows).toEqual([])
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => claimPushNotifications(
+            client,
+            new Date('2099-01-01T09:03:00.000Z'),
+          ),
+        )).resolves.toBeNull()
+      } finally {
+        await ownerPool.query(
+          'delete from app_private.push_notifications_outbox where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )
+        await ownerPool.query(
+          'delete from public.notification_preferences where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )
+        await ownerPool.query(
+          'delete from public.push_subscriptions where user_id = $1',
+          [OTHER_ACTOR_ID],
+        )
+        if (workoutIds.length > 0) {
+          await ownerPool.query(
+            'delete from public.workouts where id = any($1::uuid[])',
+            [workoutIds],
+          )
+        }
+        await ownerPool.query(
+          'update public.profiles set timezone = $2 where id = $1',
+          [OTHER_ACTOR_ID, originalTimezone],
+        )
+      }
     })
 
     it('enforces the client card, private preferences and custom exercise mutation contract', async () => {
@@ -3154,6 +4119,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         [DOMAIN_CLIENT_ACTOR_ID],
       )
       let clientId: string | undefined
+      let exerciseId: string | undefined
       try {
         const draft = {
           fullName: 'Самостоятельный клиент',
@@ -3215,7 +4181,35 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           created_by: DOMAIN_CLIENT_ACTOR_ID,
           trainer_id: DOMAIN_CLIENT_ACTOR_ID,
         })
+
+        const exercise = await withActorTransaction(
+          runtimePool,
+          DOMAIN_CLIENT_ACTOR_ID,
+          (client) => createCustomExercise(client, {
+            name: 'Самостоятельная планка',
+            muscleGroup: 'core',
+            inputKind: 'duration',
+          }),
+        )
+        exerciseId = exercise.id
+        const storedExercise = await ownerPool.query<{
+          created_by: string
+          trainer_id: string
+        } & QueryResultRow>(
+          'select created_by, trainer_id from public.custom_exercises where id = $1',
+          [exercise.id],
+        )
+        expect(storedExercise.rows).toEqual([{
+          created_by: DOMAIN_CLIENT_ACTOR_ID,
+          trainer_id: DOMAIN_CLIENT_ACTOR_ID,
+        }])
       } finally {
+        if (exerciseId !== undefined) {
+          await ownerPool.query(
+            'delete from public.custom_exercises where id = $1',
+            [exerciseId],
+          )
+        }
         if (clientId !== undefined) {
           await ownerPool.query('delete from public.clients where id = $1', [clientId])
         }
@@ -3344,7 +4338,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           doneCount: 1,
           completionPercent: 50,
           lastWorkoutDate: '2026-08-19',
-          needsAttention: false,
+          // На 14-й день без тренировки сигнал уже должен быть активен.
+          needsAttention: true,
         },
       })
 
@@ -3436,6 +4431,56 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(memberInternal).toHaveLength(1)
       expect(memberInternal[0]?.trainer_summary).toEqual(trainerSummary)
 
+      const sourceSummary = await ownerPool.query<QueryResultRow & {
+        id: string
+        version: number
+      }>(
+        `select id, version
+         from public.client_training_summaries
+         where trainer_id = $1 and client_id = $2
+           and period_start = date '2026-08-01'
+           and period_end = date '2026-08-26'`,
+        [ACTOR_ID, CLIENT_ID],
+      )
+      const source = sourceSummary.rows[0]
+      if (source === undefined) throw new Error('Training summary fixture is missing')
+      const publishedClientSummary = {
+        ...clientSummary,
+        encouragement: 'Опубликовано через read-write Assistant contract.',
+      }
+      const publication = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => client.query<QueryResultRow & {
+          published_id: string
+          next_version: number
+        }>(
+          'select * from public.publish_training_summary($1, $2::jsonb, $3)',
+          [source.id, JSON.stringify(publishedClientSummary), source.version],
+        ),
+      )
+      expect(publication).toHaveLength(1)
+      expect(publication[0]?.published_id).toMatch(/^[0-9a-f-]{36}$/)
+      expect(Number(publication[0]?.next_version)).toBe(Number(source.version) + 1)
+      await expect(withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => client.query(
+          'select * from public.publish_training_summary($1, $2::jsonb, $3)',
+          [source.id, JSON.stringify(clientSummary), source.version],
+        ),
+      )).rejects.toMatchObject({ code: 'PT409' })
+
+      const publishedThroughAssistant = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => client.query<QueryResultRow & { summary: unknown }>(
+          'select summary from public.client_published_training_summaries where client_id = $1',
+          [CLIENT_ID],
+        ),
+      )
+      expect(publishedThroughAssistant[0]?.summary).toEqual(publishedClientSummary)
+
       const clientInternal = await withActorTransaction(
         runtimePool,
         OTHER_ACTOR_ID,
@@ -3477,6 +4522,144 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         ) values ($1, $2, current_date, current_date, 'x', '{}'::jsonb, '{}'::jsonb,
           'model', 'prompt', 'fingerprint')`, [ACTOR_ID, CLIENT_ID])))
         .rejects.toMatchObject({ code: '42501' })
+    })
+
+    it('keeps Assistant history and actions durable, idempotent and actor-scoped', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      await ownerPool.query(
+        'delete from public.assistant_conversations where owner_id = any($1::uuid[])',
+        [[ACTOR_ID, MEMBER_TRAINER_ID]],
+      )
+      await ownerPool.query(
+        `delete from public.clients where trainer_id = $1
+          and full_name = 'Клиент из Assistant'`,
+        [ACTOR_ID],
+      )
+
+      const conversation = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => createAssistantConversation(client, 'Проверка Assistant'),
+      )
+      await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        appendAssistantUserMessage(
+          client,
+          conversation.id,
+          ASSISTANT_TURN_ID,
+          'Добавь клиента',
+        ))
+      await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        appendAssistantUserMessage(
+          client,
+          conversation.id,
+          ASSISTANT_TURN_ID,
+          'Добавь клиента',
+        ))
+      await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        appendAssistantUserMessage(
+          client,
+          conversation.id,
+          ASSISTANT_TURN_ID,
+          'Другой текст',
+        ))).rejects.toMatchObject({ failure: 'conflict' })
+
+      const responseAction = {
+        id: ASSISTANT_ACTION_ID,
+        tool: 'create_client_draft',
+        status: 'proposed',
+        title: 'Новый клиент',
+        description: 'Проверьте имя',
+        payload: { step: 'confirm' },
+      }
+      const persisted = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        persistAssistantResponse(
+          client,
+          conversation.id,
+          ASSISTANT_TURN_ID,
+          'Готов черновик клиента',
+          responseAction,
+        ))
+      const repeated = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        persistAssistantResponse(
+          client,
+          conversation.id,
+          ASSISTANT_TURN_ID,
+          'Этот текст не заменит сохранённый',
+          responseAction,
+        ))
+      expect(persisted.deduplicated).toBe(false)
+      expect(repeated).toMatchObject({
+        deduplicated: true,
+        content: 'Готов черновик клиента',
+      })
+
+      const applied = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        applyAssistantAction(
+          client,
+          ASSISTANT_ACTION_ID,
+          { fullName: 'Клиент из Assistant' },
+          1,
+        ))
+      const appliedAgain = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => applyAssistantAction(client, ASSISTANT_ACTION_ID, {}, 2),
+      )
+      expect(applied).toMatchObject({ status: 'applied', version: 2 })
+      expect(appliedAgain).toMatchObject({ status: 'applied', version: 2 })
+      const createdCount = await ownerPool.query<CountRow>(
+        `select count(*)::integer count from public.clients
+          where trainer_id = $1 and full_name = 'Клиент из Assistant'`,
+        [ACTOR_ID],
+      )
+      expect(createdCount.rows[0]?.count).toBe(1)
+
+      const ownState = await withActorTransaction(runtimePool, ACTOR_ID, async (client) => ({
+        conversations: await listAssistantConversations(client),
+        messages: await listAssistantMessages(client, conversation.id),
+        actions: await listAssistantActions(client, conversation.id),
+      }))
+      expect(ownState.conversations).toHaveLength(1)
+      expect(ownState.messages).toHaveLength(2)
+      expect(ownState.actions).toMatchObject([{
+        id: ASSISTANT_ACTION_ID,
+        status: 'applied',
+        version: 2,
+      }])
+
+      const foreignState = await withActorTransaction(
+        runtimePool,
+        MEMBER_TRAINER_ID,
+        async (client) => ({
+          conversations: await listAssistantConversations(client),
+          messages: await listAssistantMessages(client, conversation.id),
+          actions: await listAssistantActions(client, conversation.id),
+        }),
+      )
+      expect(foreignState).toEqual({
+        conversations: [],
+        messages: [],
+        actions: [],
+      })
+      await expect(withActorTransaction(runtimePool, MEMBER_TRAINER_ID, (client) =>
+        persistAssistantResponse(
+          client,
+          conversation.id,
+          ASSISTANT_TURN_ID,
+          'Чужой ответ',
+          null,
+        ))).rejects.toMatchObject({ failure: 'not_found' })
+      await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+        createAssistantConversation(client, null)))
+        .rejects.toMatchObject({ failure: 'forbidden' })
+      await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+        client.query(
+          `insert into public.assistant_conversations (owner_id)
+            values ($1)`,
+          [ACTOR_ID],
+        ))).rejects.toMatchObject({ code: '42501' })
     })
   },
 )

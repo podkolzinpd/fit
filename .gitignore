@@ -160,6 +160,7 @@ test-results/
 
 # Local generated artifacts
 src/data/database.types.generated.ts
+public/exercises/vital-pro/
 
 # Terraform local state and provider cache
 **/.terraform/

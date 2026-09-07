@@ -58,7 +58,7 @@ export async function requestAppInstall(): Promise<'accepted' | 'dismissed' | 'u
 }
 
 export function installPromptStorageKey(userId: string) {
-  return `fit.installPromptDismissed:v1:${userId}`
+  return `fit.installPromptDismissed:v2:${userId}`
 }
 
 export function installPromptDismissed(userId: string): boolean {

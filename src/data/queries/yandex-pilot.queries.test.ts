@@ -7,6 +7,68 @@ afterEach(() => {
 })
 
 describe('yandexPilotQueries', () => {
+  it('exchanges Yandex OAuth codes for app sessions and links accounts explicitly', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValue(new Response('{}', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const baseUrl = 'https://stage.example.test'
+    const code = 'oauth-code'
+    const codeVerifier = 'v'.repeat(43)
+
+    await yandexPilotQueries.exchangeCodeForAppSession(baseUrl, code, codeVerifier)
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/auth/yandex/session`,
+      {
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code, codeVerifier }),
+      },
+    )
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
+      .not.toHaveProperty('authorization')
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
+      .not.toHaveProperty('x-fit-pilot-session')
+
+    await yandexPilotQueries.getAppSession(baseUrl, 'a'.repeat(43))
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/auth/yandex/session`,
+      {
+        cache: 'no-store',
+        headers: { 'x-fit-session': 'a'.repeat(43) },
+      },
+    )
+
+    await yandexPilotQueries.revokeAppSession(baseUrl, 'a'.repeat(43))
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/auth/yandex/session`,
+      {
+        method: 'DELETE',
+        cache: 'no-store',
+        headers: { 'x-fit-session': 'a'.repeat(43) },
+      },
+    )
+
+    await yandexPilotQueries.linkYandexAccount(
+      baseUrl,
+      'supabase-session',
+      code,
+      codeVerifier,
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/auth/yandex/link`,
+      {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          authorization: 'Bearer supabase-session',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ code, codeVerifier }),
+      },
+    )
+  })
+
   it('sends the Fit pilot session outside the Yandex IAM Authorization header', async () => {
     const fetchMock = vi.fn<typeof fetch>()
       .mockResolvedValue(new Response('{}', { status: 200 }))
@@ -103,6 +165,182 @@ describe('yandexPilotQueries', () => {
     expect(fetchMock).toHaveBeenLastCalledWith(
       `https://stage.example.test/v1/invitations/${invitationId}`,
       expect.objectContaining({ method: 'DELETE' }),
+    )
+  })
+
+  it('keeps Web Push secrets in actor-authenticated request bodies only', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValue(new Response(null, { status: 204 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const token = 's'.repeat(43)
+
+    await yandexPilotQueries.getPushNotificationStatus(
+      'https://stage.example.test',
+      token,
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/push-notifications/status',
+      {
+        cache: 'no-store',
+        headers: { 'x-fit-pilot-session': token },
+      },
+    )
+
+    await yandexPilotQueries.upsertPushSubscription(
+      'https://stage.example.test',
+      token,
+      {
+        endpoint: 'https://push.example/subscription',
+        p256dh: 'public-key',
+        authKey: 'auth-secret',
+      },
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/push-notifications/subscription',
+      {
+        method: 'PUT',
+        cache: 'no-store',
+        headers: {
+          'content-type': 'application/json',
+          'x-fit-pilot-session': token,
+        },
+        body: JSON.stringify({
+          endpoint: 'https://push.example/subscription',
+          p256dh: 'public-key',
+          authKey: 'auth-secret',
+        }),
+      },
+    )
+    expect(fetchMock.mock.calls.at(-1)?.[0]).not.toContain('auth-secret')
+
+    await yandexPilotQueries.setPushNotificationPreference(
+      'https://stage.example.test',
+      token,
+      'workout_reminder',
+      false,
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/push-notifications/preferences/workout_reminder',
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ enabled: false }) }),
+    )
+
+    await yandexPilotQueries.deletePushSubscription(
+      'https://stage.example.test',
+      token,
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/push-notifications/subscription',
+      expect.objectContaining({ method: 'DELETE' }),
+    )
+  })
+
+  it('uses the opaque session for Assistant history and versioned actions', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValue(new Response('{}', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const baseUrl = 'https://stage.example.test'
+    const token = 's'.repeat(43)
+    const id = '6e577cc7-3b56-4a86-bc85-1ce2426ce249'
+
+    await yandexPilotQueries.createAssistantConversation(baseUrl, token, 'План')
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/assistant/conversations`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ title: 'План' }),
+      }),
+    )
+
+    await yandexPilotQueries.listAssistantMessages(baseUrl, token, id)
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/assistant/conversations/${id}/messages`,
+      {
+        cache: 'no-store',
+        headers: { 'x-fit-pilot-session': token },
+      },
+    )
+
+    await yandexPilotQueries.sendAssistantTurn(
+      baseUrl,
+      token,
+      id,
+      'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+      'что ты умеешь?',
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/assistant/turn`,
+      {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          'content-type': 'application/json',
+          'x-fit-pilot-session': token,
+        },
+        body: JSON.stringify({
+          conversation_id: id,
+          turn_id: 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+          message: 'что ты умеешь?',
+        }),
+      },
+    )
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
+      .not.toHaveProperty('authorization')
+
+    await yandexPilotQueries.applyAssistantAction(
+      baseUrl,
+      token,
+      id,
+      { workout: { id } },
+      3,
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/assistant/actions/${id}/apply`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ input: { workout: { id } }, expectedVersion: 3 }),
+      }),
+    )
+    const request = fetchMock.mock.calls.at(-1)?.[1]
+    expect(request?.headers).toEqual({
+      'content-type': 'application/json',
+      'x-fit-pilot-session': token,
+    })
+    expect(request?.headers).not.toHaveProperty('authorization')
+  })
+
+  it('uses only the read-write app session for sticky Assistant requests', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValue(new Response('{}', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const baseUrl = 'https://stage.example.test'
+    const token = 'a'.repeat(43)
+    const id = '6e577cc7-3b56-4a86-bc85-1ce2426ce249'
+
+    await yandexPilotQueries.listTrainingData(baseUrl, token, 'read_write')
+    await yandexPilotQueries.listAssistantConversations(baseUrl, token, 'read_write')
+    await yandexPilotQueries.publishTrainingSummary(
+      baseUrl,
+      token,
+      id,
+      { headline: 'Стабильный прогресс' },
+      2,
+    )
+
+    for (const call of fetchMock.mock.calls) {
+      const headers = call[1]?.headers as Record<string, string>
+      expect(headers['x-fit-session']).toBe(token)
+      expect(headers).not.toHaveProperty('x-fit-pilot-session')
+      expect(headers).not.toHaveProperty('authorization')
+    }
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/training-summaries/${id}/publish`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          clientSummary: { headline: 'Стабильный прогресс' },
+          expectedVersion: 2,
+        }),
+      }),
     )
   })
 })

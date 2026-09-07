@@ -1,15 +1,23 @@
 import { z } from 'zod'
 import { yandexPilotQueries } from '../queries/yandex-pilot.queries'
+import type { YandexApiAccessMode } from '../queries/yandex-pilot.queries'
+
+const profilePayloadSchema = z.object({
+  id: z.uuid(),
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  timezone: z.string().min(1),
+  accountRole: z.enum(['trainer', 'client']),
+  client: z.object({
+    id: z.uuid(),
+    trainerId: z.uuid(),
+    fullName: z.string().min(1),
+  }).nullable().optional(),
+})
 
 const profileSchema = z.object({
   accessMode: z.literal('read_only'),
-  profile: z.object({
-    id: z.uuid(),
-    firstName: z.string().nullable(),
-    lastName: z.string().nullable(),
-    timezone: z.string().min(1),
-    accountRole: z.enum(['trainer', 'client']),
-  }),
+  profile: profilePayloadSchema,
 })
 
 const sessionSchema = profileSchema.extend({
@@ -17,6 +25,22 @@ const sessionSchema = profileSchema.extend({
     token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
     expiresAt: z.iso.datetime(),
   }),
+})
+
+const appSessionSchema = z.object({
+  accessMode: z.literal('read_write'),
+  profile: profilePayloadSchema,
+  session: z.object({
+    token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+    expiresAt: z.iso.datetime(),
+  }),
+})
+
+const appSessionProfileSchema = appSessionSchema.omit({ session: true })
+
+const linkedYandexIdentitySchema = z.object({
+  profileId: z.uuid(),
+  appSession: appSessionSchema.optional(),
 })
 
 const clientSchema = z.object({
@@ -136,6 +160,9 @@ const workoutSchema = z.object({
   clientQuestionResolvedAt: z.iso.datetime().nullable(),
   startedAt: z.iso.datetime().nullable(),
   completedAt: z.iso.datetime().nullable(),
+  stageId: z.uuid().nullable().optional(),
+  stageTitle: z.string().nullable().optional(),
+  hasPr: z.boolean().optional(),
   version: z.number().int().positive(),
   exercises: z.array(workoutExerciseSchema),
 })
@@ -146,6 +173,7 @@ const customExerciseSchema = z.object({
   inputKind: workoutExerciseSchema.shape.inputKind,
   archivedAt: z.iso.datetime().nullable(),
   version: z.number().int().positive(),
+  createdBy: z.uuid().optional(),
 })
 const trainingDataSchema = z.object({
   accessMode: z.literal('read_only'),
@@ -168,6 +196,7 @@ const trainingDataSchema = z.object({
     snoozedUntil: z.iso.datetime().nullable(),
   })),
   hasMoreWorkouts: z.boolean(),
+  totalWorkouts: z.number().int().nonnegative().optional(),
 })
 
 const createdInvitationSchema = z.object({
@@ -195,6 +224,32 @@ const parsedWorkoutSchema = z.object({
     suggestedExerciseRefs: z.array(z.string()),
   })),
 })
+const assistantTurnActionSchema = z.object({
+  id: z.uuid().optional(),
+  tool: z.enum([
+    'record_workout',
+    'create_client_draft',
+    'create_program_draft',
+    'schedule_program',
+    'summarize_progress',
+  ]),
+  status: z.enum(['needs_input', 'proposed']),
+  title: z.string().min(1).max(200),
+  description: z.string().min(1).max(1_000),
+  payload: z.record(z.string(), z.unknown()),
+  lifecycleStatus: z.enum([
+    'proposed',
+    'applying',
+    'applied',
+    'failed',
+    'cancelled',
+  ]).optional(),
+  result: z.record(z.string(), z.unknown()).nullable().optional(),
+})
+const assistantTurnSchema = z.object({
+  reply: z.string().min(1).max(4_000),
+  action: assistantTurnActionSchema.nullable(),
+})
 const storedSummarySchema = z.object({
   id: z.uuid(),
   client_id: z.uuid(),
@@ -210,6 +265,9 @@ const generatedSummarySchema = z.object({
 })
 
 export type YandexPilotSession = z.infer<typeof sessionSchema>
+export type YandexAppSession = z.infer<typeof appSessionSchema>
+export type YandexAppSessionProfile = z.infer<typeof appSessionProfileSchema>
+export type YandexLinkedIdentity = z.infer<typeof linkedYandexIdentitySchema>
 export type YandexPilotClient = z.infer<typeof clientSchema>
 export type YandexPilotMembership = z.infer<typeof membershipSchema>
 export type YandexPilotInvitation = z.infer<typeof invitationSchema>
@@ -217,6 +275,7 @@ export type YandexPilotConnections = Omit<z.infer<typeof connectionsSchema>, 'ac
 export type YandexPilotCreatedInvitation = z.infer<typeof createdInvitationSchema>['invitation']
 export type YandexPilotTrainingData = Omit<z.infer<typeof trainingDataSchema>, 'accessMode'>
 export type YandexPilotParsedWorkout = z.infer<typeof parsedWorkoutSchema>
+export type YandexPilotAssistantTurn = z.infer<typeof assistantTurnSchema>
 export type YandexPilotStoredSummary = z.infer<typeof storedSummarySchema>
 
 function responseError(status: number): Error {
@@ -225,6 +284,41 @@ function responseError(status: number): Error {
   if (status === 404) return new Error('Профиль для пилота не найден.')
   if (status === 503) return new Error('Пилот временно недоступен. Попробуйте позднее.')
   return new Error('Не удалось проверить доступ к пилоту.')
+}
+
+function appSessionResponseError(status: number): Error {
+  if (status === 401) return new YandexAppSessionExpiredError()
+  if (status === 403) {
+    return new Error('Yandex ID связан, но профиль ещё не включён в основной Yandex Cloud rollout.')
+  }
+  if (status === 503) return new Error('Yandex Cloud вход временно недоступен. Попробуйте позднее.')
+  return new Error('Не удалось открыть сессию через Yandex ID.')
+}
+
+export class YandexAppSessionExpiredError extends Error {
+  constructor() {
+    super('Сессия Yandex ID истекла. Войдите заново.')
+    this.name = 'YandexAppSessionExpiredError'
+  }
+}
+
+function appSessionRestoreError(status: number): Error {
+  if (status === 401) return new YandexAppSessionExpiredError()
+  if (status === 503) return new Error('Yandex Cloud вход временно недоступен. Попробуйте позднее.')
+  return new Error('Не удалось восстановить сессию Yandex ID.')
+}
+
+function linkResponseError(status: number): Error {
+  if (status === 401) {
+    return new Error('Не удалось подтвердить текущий FIT-аккаунт или Yandex ID. Войдите заново.')
+  }
+  if (status === 403) return new Error('Недостаточно прав для связывания Yandex ID.')
+  if (status === 404) return new Error('Профиль текущего FIT-аккаунта не найден.')
+  if (status === 409) {
+    return new Error('Этот Yandex ID уже связан с другим профилем или профиль уже связан с другим Yandex ID.')
+  }
+  if (status === 503) return new Error('Связывание Yandex ID временно недоступно. Попробуйте позднее.')
+  return new Error('Не удалось связать Yandex ID с FIT-профилем.')
 }
 
 function clientsResponseError(status: number): Error {
@@ -241,6 +335,16 @@ function commandResponseError(status: number): Error {
   if (status === 422) return new Error('Основного тренера нельзя отключить или вывести из пространства.')
   if (status === 503) return new Error('Пилот временно недоступен. Попробуйте позднее.')
   return new Error('Не удалось изменить связи в stage.')
+}
+
+function assistantTurnResponseError(status: number): Error {
+  if (status === 401) return new Error('Сессия пилота истекла. Начните вход через Yandex ID заново.')
+  if (status === 403) return new Error('Недостаточно прав для ассистента.')
+  if (status === 404) return new Error('Диалог ассистента уже недоступен. Обновите страницу.')
+  if (status === 409) return new Error('Этот запрос ассистента уже был использован с другим текстом.')
+  if (status === 400) return new Error('Запрос ассистента имеет некорректный формат.')
+  if (status === 503) return new Error('Ассистент stage временно недоступен. Попробуйте позднее.')
+  return new Error('Не удалось выполнить запрос ассистента.')
 }
 
 async function commandResponse(request: () => Promise<Response>): Promise<Response> {
@@ -276,6 +380,17 @@ async function aiResponse(request: () => Promise<Response>): Promise<Response> {
   throw new Error('Не удалось выполнить запрос ИИ.')
 }
 
+async function assistantTurnResponse(request: () => Promise<Response>): Promise<Response> {
+  let response: Response
+  try {
+    response = await request()
+  } catch {
+    throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+  }
+  if (!response.ok) throw assistantTurnResponseError(response.status)
+  return response
+}
+
 export const yandexPilotRepository = {
   async exchangeCodeForSession(apiBaseUrl: string, code: string, codeVerifier: string): Promise<YandexPilotSession> {
     let response: Response
@@ -287,6 +402,82 @@ export const yandexPilotRepository = {
     if (!response.ok) throw responseError(response.status)
     const result = sessionSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат сессии.')
+    return result.data
+  },
+  async exchangeCodeForAppSession(
+    apiBaseUrl: string,
+    code: string,
+    codeVerifier: string,
+  ): Promise<YandexAppSession> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.exchangeCodeForAppSession(apiBaseUrl, code, codeVerifier)
+    } catch {
+      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    }
+    if (!response.ok) throw appSessionResponseError(response.status)
+    const result = appSessionSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат Yandex ID сессии.')
+    return result.data
+  },
+  async getAppSession(
+    apiBaseUrl: string,
+    sessionToken: string,
+  ): Promise<YandexAppSessionProfile> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.getAppSession(apiBaseUrl, sessionToken)
+    } catch {
+      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    }
+    if (!response.ok) throw appSessionRestoreError(response.status)
+    const result = appSessionProfileSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат Yandex ID сессии.')
+    return result.data
+  },
+  async revokeAppSession(apiBaseUrl: string, sessionToken: string): Promise<void> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.revokeAppSession(apiBaseUrl, sessionToken)
+    } catch {
+      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    }
+    if (!response.ok) throw appSessionRestoreError(response.status)
+  },
+  async updateProfile(
+    apiBaseUrl: string,
+    sessionToken: string,
+    input: { firstName: string | null; lastName: string | null; timezone: string },
+  ): Promise<void> {
+    const response = await commandResponse(() => yandexPilotQueries.updateProfile(
+      apiBaseUrl,
+      sessionToken,
+      input,
+    ))
+    if (response.status !== 204) {
+      throw new Error('Stage не подтвердил изменение профиля.')
+    }
+  },
+  async linkYandexAccount(
+    apiBaseUrl: string,
+    supabaseAccessToken: string,
+    code: string,
+    codeVerifier: string,
+  ): Promise<YandexLinkedIdentity> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.linkYandexAccount(
+        apiBaseUrl,
+        supabaseAccessToken,
+        code,
+        codeVerifier,
+      )
+    } catch {
+      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    }
+    if (!response.ok) throw linkResponseError(response.status)
+    const result = linkedYandexIdentitySchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый результат связывания.')
     return result.data
   },
   async listClients(apiBaseUrl: string, sessionToken: string): Promise<YandexPilotClient[]> {
@@ -316,10 +507,20 @@ export const yandexPilotRepository = {
       invitations: result.data.invitations,
     }
   },
-  async listTrainingData(apiBaseUrl: string, sessionToken: string): Promise<YandexPilotTrainingData> {
+  async listTrainingData(
+    apiBaseUrl: string,
+    sessionToken: string,
+    accessMode: YandexApiAccessMode = 'read_only',
+    page?: { limit: number; offset: number },
+  ): Promise<YandexPilotTrainingData> {
     let response: Response
     try {
-      response = await yandexPilotQueries.listTrainingData(apiBaseUrl, sessionToken)
+      response = await yandexPilotQueries.listTrainingData(
+        apiBaseUrl,
+        sessionToken,
+        accessMode,
+        page,
+      )
     } catch {
       throw new Error('Не удалось подключиться к Yandex Cloud stage.')
     }
@@ -332,6 +533,9 @@ export const yandexPilotRepository = {
       attention: result.data.attention,
       attentionPreferences: result.data.attentionPreferences,
       hasMoreWorkouts: result.data.hasMoreWorkouts,
+      ...(result.data.totalWorkouts === undefined
+        ? {}
+        : { totalWorkouts: result.data.totalWorkouts }),
     }
   },
   async parseWorkout(
@@ -339,21 +543,37 @@ export const yandexPilotRepository = {
     sessionToken: string,
     text: string,
     systemCatalog: readonly unknown[],
+    accessMode: YandexApiAccessMode = 'read_only',
   ): Promise<YandexPilotParsedWorkout> {
     const response = await aiResponse(() => yandexPilotQueries.parseWorkout(
-      apiBaseUrl, sessionToken, text, systemCatalog,
+      apiBaseUrl, sessionToken, text, systemCatalog, accessMode,
     ))
     const result = parsedWorkoutSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат разбора тренировки.')
+    return result.data
+  },
+  async sendAssistantTurn(
+    apiBaseUrl: string,
+    sessionToken: string,
+    conversationId: string,
+    turnId: string,
+    message: string,
+  ): Promise<YandexPilotAssistantTurn> {
+    const response = await assistantTurnResponse(() => yandexPilotQueries.sendAssistantTurn(
+      apiBaseUrl, sessionToken, conversationId, turnId, message,
+    ))
+    const result = assistantTurnSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый формат ответа ассистента.')
     return result.data
   },
   async listTrainingSummaries(
     apiBaseUrl: string,
     sessionToken: string,
     clientId: string,
+    accessMode: YandexApiAccessMode = 'read_only',
   ): Promise<YandexPilotStoredSummary[]> {
     const response = await aiResponse(() => yandexPilotQueries.listTrainingSummaries(
-      apiBaseUrl, sessionToken, clientId,
+      apiBaseUrl, sessionToken, clientId, accessMode,
     ))
     const result = summaryListSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат ИИ-анализа.')
@@ -366,13 +586,30 @@ export const yandexPilotRepository = {
     periodStart: string,
     periodEnd: string,
     force = false,
+    accessMode: YandexApiAccessMode = 'read_only',
   ): Promise<{ data: YandexPilotStoredSummary; cached: boolean }> {
     const response = await aiResponse(() => yandexPilotQueries.generateTrainingSummary(
-      apiBaseUrl, sessionToken, clientId, periodStart, periodEnd, force,
+      apiBaseUrl, sessionToken, clientId, periodStart, periodEnd, force, accessMode,
     ))
     const result = generatedSummarySchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый результат ИИ-анализа.')
     return result.data
+  },
+  async publishTrainingSummary(
+    apiBaseUrl: string,
+    sessionToken: string,
+    summaryId: string,
+    clientSummary: Record<string, unknown>,
+    expectedVersion: number,
+  ): Promise<void> {
+    const response = await commandResponse(() => yandexPilotQueries.publishTrainingSummary(
+      apiBaseUrl,
+      sessionToken,
+      summaryId,
+      clientSummary,
+      expectedVersion,
+    ))
+    if (response.status !== 204) throw new Error('Stage не подтвердил публикацию ИИ-анализа.')
   },
   async createInvitation(
     apiBaseUrl: string,

@@ -143,4 +143,20 @@ describe('ProgressChart', () => {
     expect(screen.queryByRole('button', { name: 'Показать последние 28 дней' })).toBeNull()
     expect(screen.getByLabelText('График показателя «Вес»')).toHaveClass('compact')
   })
+
+  it('shows a confirmed goal guide and includes it in the chart domain', () => {
+    render(<ProgressChart
+      entries={[entry('2026-08-01', 80), entry('2026-08-15', 81)]}
+      metric="weightKg"
+      label="Вес"
+      unit="кг"
+      windowEnd={null}
+      onWindowChange={vi.fn()}
+      rangeStart={localDate('2026-08-01')}
+      rangeEnd={localDate('2026-08-31')}
+      compact
+      goalGuide={{ min: 83, max: 83, label: 'Цель · 83 кг' }}
+    />)
+    expect(screen.getAllByText('Цель · 83 кг').length).toBeGreaterThan(0)
+  })
 })

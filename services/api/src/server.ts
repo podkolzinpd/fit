@@ -4,6 +4,10 @@ import { YandexOAuthCodeClient } from './auth/yandex-oauth-code.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import { DatabasePilotClientsReader } from './pilot-clients-reader.js'
+import { DatabasePilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
+import { DatabasePilotAssistantState } from './pilot-assistant-state.js'
+import { DatabasePilotAssistantTurnRunner } from './pilot-assistant-turn.js'
+import { DatabasePilotPushNotifications } from './pilot-push-notifications.js'
 import { DatabasePilotConnectionsReader } from './pilot-connections-reader.js'
 import { DatabasePilotConnectionsWriter } from './pilot-connections-writer.js'
 import { DatabasePilotDomainWriter } from './pilot-domain-writer.js'
@@ -17,8 +21,18 @@ import { DatabasePilotTrainingSummaries } from './training-summary.js'
 import { SupabaseWorkoutParser } from './legacy-workout-parser.js'
 import { YandexWorkoutParser } from './legacy-workout-parser.js'
 import { readSupabaseBridgeConfig, SupabaseBridge } from './supabase-bridge.js'
+import {
+  DatabaseYandexAccountLinker,
+  SupabaseExistingActorProvider,
+} from './yandex-account-linking.js'
+import {
+  DatabaseYandexAppSessionIssuer,
+  DatabaseYandexAppSessionReader,
+  DatabaseYandexAppSessionRevoker,
+} from './yandex-app-session.js'
 import { summarizeClientTraining } from './legacy-summary/index.js'
 import { buildYandexAiAuthorization } from './yandex-ai-authorization.js'
+import { SupabaseVitalMediaSigner } from './vital-media.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -65,10 +79,42 @@ const pilotSessionIssuer =
   databasePool === undefined
     ? undefined
     : new DatabasePilotSessionIssuer(databasePool)
+const yandexAppSessionIssuer =
+  databasePool === undefined
+    ? undefined
+    : new DatabaseYandexAppSessionIssuer(databasePool)
+const yandexAppSessionReader =
+  databasePool === undefined
+    ? undefined
+    : new DatabaseYandexAppSessionReader(databasePool)
+const yandexAppSessionRevoker =
+  databasePool === undefined
+    ? undefined
+    : new DatabaseYandexAppSessionRevoker(databasePool)
+const yandexAccountLinker =
+  databasePool === undefined
+    ? undefined
+    : new DatabaseYandexAccountLinker(databasePool)
 const pilotClientsReader =
   databasePool === undefined
     ? undefined
     : new DatabasePilotClientsReader(databasePool)
+const pilotAppFeedbackWriter =
+  databasePool === undefined
+    ? undefined
+    : new DatabasePilotAppFeedbackWriter(databasePool)
+const pilotAssistantState =
+  databasePool === undefined
+    ? undefined
+    : new DatabasePilotAssistantState(databasePool)
+const pilotAssistantTurnRunner =
+  databasePool === undefined
+    ? undefined
+    : new DatabasePilotAssistantTurnRunner(databasePool)
+const pilotPushNotifications =
+  databasePool === undefined
+    ? undefined
+    : new DatabasePilotPushNotifications(databasePool)
 const pilotConnectionsReader =
   databasePool === undefined
     ? undefined
@@ -118,6 +164,13 @@ const pilotTrainingSummaryGenerator =
     ? undefined
     : pilotTrainingSummaryReader
 const supabaseBridgeConfig = readSupabaseBridgeConfig()
+const vitalMediaSigner = supabaseBridgeConfig === undefined
+  ? undefined
+  : new SupabaseVitalMediaSigner(supabaseBridgeConfig)
+const existingActorProvider =
+  supabaseBridgeConfig === undefined
+    ? undefined
+    : new SupabaseExistingActorProvider(new SupabaseBridge(supabaseBridgeConfig))
 const legacyWorkoutParser =
   supabaseBridgeConfig === undefined
     || process.env.YANDEX_CLOUD_API_KEY === undefined
@@ -144,12 +197,22 @@ const app = buildApp(
     ...(databasePool === undefined ? {} : { databasePool }),
     ...(identityProvider === undefined ? {} : { identityProvider }),
     ...(oauthCodeProvider === undefined ? {} : { oauthCodeProvider }),
+    ...(pilotAppFeedbackWriter === undefined ? {} : { pilotAppFeedbackWriter }),
+    ...(pilotAssistantState === undefined ? {} : { pilotAssistantState }),
+    ...(pilotAssistantTurnRunner === undefined ? {} : { pilotAssistantTurnRunner }),
+    ...(pilotPushNotifications === undefined ? {} : { pilotPushNotifications }),
     ...(pilotClientsReader === undefined ? {} : { pilotClientsReader }),
     ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),
     ...(pilotConnectionsWriter === undefined ? {} : { pilotConnectionsWriter }),
     ...(pilotDomainWriter === undefined ? {} : { pilotDomainWriter }),
     ...(pilotProfileReader === undefined ? {} : { pilotProfileReader }),
     ...(pilotSessionIssuer === undefined ? {} : { pilotSessionIssuer }),
+    ...(yandexAppSessionIssuer === undefined ? {} : { yandexAppSessionIssuer }),
+    ...(yandexAppSessionReader === undefined ? {} : { yandexAppSessionReader }),
+    ...(yandexAppSessionRevoker === undefined ? {} : { yandexAppSessionRevoker }),
+    ...(vitalMediaSigner === undefined ? {} : { vitalMediaSigner }),
+    ...(yandexAccountLinker === undefined ? {} : { yandexAccountLinker }),
+    ...(existingActorProvider === undefined ? {} : { existingActorProvider }),
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
     ...(pilotProgressData === undefined ? {} : { pilotProgressData }),
@@ -158,6 +221,9 @@ const app = buildApp(
       ? {}
       : { pilotTrainingSummaryGenerator }),
     ...(pilotTrainingSummaryReader === undefined ? {} : { pilotTrainingSummaryReader }),
+    ...(pilotTrainingSummaryReader === undefined
+      ? {}
+      : { pilotTrainingSummaryPublisher: pilotTrainingSummaryReader }),
     ...(legacyWorkoutParser === undefined ? {} : { legacyWorkoutParser }),
     ...(legacySummaryHandler === undefined ? {} : { legacySummaryHandler }),
   },

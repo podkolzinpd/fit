@@ -17,9 +17,9 @@ insert into public.clients (id, trainer_id, auth_user_id, full_name, gender, age
   ('50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000002', 'Resolution client', 'female', 30, 170);
 
 insert into public.workouts (id, trainer_id, client_id, created_by, workout_date, start_time, status, version) values
-  ('50000000-0000-4000-8000-000000000010', '50000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000001', current_date - 2, '10:00', 'planned', 1),
-  ('50000000-0000-4000-8000-000000000011', '50000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000001', current_date - 3, null, 'planned', 1),
-  ('50000000-0000-4000-8000-000000000012', '50000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000001', current_date - 4, null, 'planned', 1),
+  ('50000000-0000-4000-8000-000000000010', '50000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000001', date_trunc('month', current_date)::date - 1, '10:00', 'planned', 1),
+  ('50000000-0000-4000-8000-000000000011', '50000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000001', date_trunc('month', current_date)::date - 2, null, 'planned', 1),
+  ('50000000-0000-4000-8000-000000000012', '50000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000001', date_trunc('month', current_date)::date - 3, null, 'planned', 1),
   ('50000000-0000-4000-8000-000000000013', '50000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000001', current_date + 2, null, 'planned', 1);
 insert into public.workout_exercises (
   id, workout_id, trainer_id, client_id, position, exercise_source,
@@ -80,7 +80,10 @@ select is(
   'client can resolve an assigned past plan'
 );
 select is(
-  (select skipped_count from public.get_workout_regularity('50000000-0000-4000-8000-000000000004', now()) where period = 'month'),
+  (select skipped_count from public.get_workout_regularity(
+    '50000000-0000-4000-8000-000000000004',
+    (date_trunc('month', current_date)::date - 1)::timestamptz + interval '12 hours'
+  ) where period = 'month'),
   2::integer,
   'cancelled and unresolved trainer plans stay outside completed attendance'
 );

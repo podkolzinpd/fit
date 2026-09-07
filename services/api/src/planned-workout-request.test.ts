@@ -54,6 +54,7 @@ describe('planned workout request', () => {
       draft: {
         ...validRequest(),
         id: null,
+        stageId: null,
         notes: 'План на вторник',
       },
       expectedVersion: null,

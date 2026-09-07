@@ -1,36 +1,80 @@
 import type { AccountRole, SessionActor, TrainerActor } from '../../shared/domain'
 import { isValidTimeZone, normalizeTimeZone, systemTimeZone } from '../../shared/local-date'
 import { authQueries } from '../queries/auth.queries'
-import { repositoryError } from './error'
+import { RepositoryError, repositoryError } from './error'
 
 const signupFailedMessage = 'Не удалось создать аккаунт. Попробуйте войти или используйте другой email.'
-const NETWORK_ERROR = /failed to fetch|fetch failed|networkerror|network request failed|load failed/i
+const signInUnavailableMessage = 'Не удалось войти. Проверьте интернет и попробуйте ещё раз.'
+const signInSessionMessage = 'Не удалось сохранить вход на этом устройстве. Обновите страницу и попробуйте ещё раз.'
+const NETWORK_ERROR = /failed to fetch|fetch failed|networkerror|network request failed|load failed|timed out|timeout|aborted|aborterror/i
+const SIGN_IN_ATTEMPT_DEADLINE_MS = 9_000
 
-function isTransientNetworkError(error: unknown): boolean {
-  return error instanceof TypeError
-    || (error instanceof Error && NETWORK_ERROR.test(error.message))
-    || (typeof error === 'object' && error !== null && 'message' in error
-      && typeof error.message === 'string' && NETWORK_ERROR.test(error.message))
+class SignInTimeoutError extends TypeError {
+  constructor() {
+    super('Auth sign-in request timed out')
+    this.name = 'SignInTimeoutError'
+  }
 }
 
-async function retrySignInAfterNetworkBlip(email: string, password: string) {
-  let result = await authQueries.signIn(email, password)
-  // В WKWebView короткий переход между Wi-Fi/сотовой сетью или включение VPN
-  // иногда обрывает первый HTTPS-запрос. Повторяем ровно один раз и только
-  // сетевую ошибку: неверный пароль и любые ответы Auth не маскируются.
-  if (result.error && isTransientNetworkError(result.error)) {
-    await new Promise<void>((resolve) => window.setTimeout(resolve, 500))
-    result = await authQueries.signIn(email, password)
+function isTransientNetworkError(error: unknown): boolean {
+  return (error instanceof Error && NETWORK_ERROR.test(error.message))
+    || (typeof error === 'object' && error !== null && 'message' in error
+      && typeof error.message === 'string' && NETWORK_ERROR.test(error.message))
+    || (typeof error === 'object' && error !== null && 'status' in error
+      && typeof error.status === 'number' && [502, 503, 504].includes(error.status))
+}
+
+async function signInAttempt(email: string, password: string) {
+  let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined
+  try {
+    return await Promise.race([
+      authQueries.signIn(email, password),
+      new Promise<never>((_, reject) => {
+        timeoutId = globalThis.setTimeout(() => reject(new SignInTimeoutError()), SIGN_IN_ATTEMPT_DEADLINE_MS)
+      }),
+    ])
+  } finally {
+    if (timeoutId !== undefined) globalThis.clearTimeout(timeoutId)
   }
-  return result
+}
+
+async function signInWithNetworkRetry(email: string, password: string): Promise<void> {
+  let lastNetworkError: unknown
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const { error } = await signInAttempt(email, password)
+      if (!error) return
+      if (!isTransientNetworkError(error)) throw repositoryError(error)
+      lastNetworkError = error
+    } catch (error) {
+      if (!isTransientNetworkError(error)) {
+        if (error instanceof TypeError) {
+          throw new RepositoryError('session_unavailable', signInSessionMessage, { cause: error })
+        }
+        throw error
+      }
+      lastNetworkError = error
+    }
+
+    // На мобильном короткий переход между Wi-Fi и сотовой сетью может оборвать
+    // первый HTTPS-запрос. Повторяем ровно один раз и только сетевой сбой.
+    if (attempt === 0) await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 500))
+  }
+
+  throw new RepositoryError('network_unavailable', signInUnavailableMessage, { cause: lastNetworkError })
 }
 
 export const authRepository = {
   getSession: authQueries.getSession,
   onAuthStateChange: authQueries.onAuthStateChange,
   async signIn(email: string, password: string) {
-    const { error } = await retrySignInAfterNetworkBlip(email, password)
-    if (error) throw repositoryError(error)
+    // Мобильный браузер может восстановить старую вкладку с уже отозванным
+    // refresh token одновременно с новым входом. Дожидаемся восстановления
+    // SDK и очищаем только локальную сессию, не затрагивая другие устройства.
+    // Ошибка серверного sign-out здесь не блокирует вход: SDK всё равно
+    // удаляет локальную сессию для scope=local.
+    await authQueries.clearLocalSession().catch(() => undefined)
+    await signInWithNetworkRetry(email, password)
   },
   async signUp(email: string, password: string, firstName: string, role: AccountRole) {
     const { data, error } = await authQueries.signUp(email, password, firstName, role)
@@ -56,7 +100,19 @@ export const authRepository = {
   },
   async signOut() {
     const { error } = await authQueries.signOut()
-    if (error) throw repositoryError(error)
+    if (!error) return
+
+    const normalized = repositoryError(error)
+    try {
+      const local = await authQueries.getSession()
+      // Supabase удаляет локальную сессию даже когда серверный revoke оборвался.
+      // Проверяем фактическое состояние storage: завершённый локальный выход не
+      // должен превращаться в необработанную ошибку интерфейса.
+      if (!local.error && local.data.session === null) return
+    } catch {
+      // Сохраняем исходную понятную ошибку logout, если storage нельзя проверить.
+    }
+    throw normalized
   },
   async initialize(user: { id: string; email?: string; user_metadata: Record<string, unknown> }): Promise<SessionActor> {
     const [linkedClient, existing] = await Promise.all([

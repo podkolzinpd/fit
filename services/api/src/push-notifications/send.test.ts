@@ -29,13 +29,13 @@ describe('sendPushNotification', () => {
   it('reports the push service status code on a gone subscription', async () => {
     sendNotification.mockRejectedValueOnce(Object.assign(new Error('subscription expired'), { statusCode: 410 }))
     const result = await sendPushNotification(input, vapid)
-    expect(result).toEqual({ id: 'notif-1', ok: false, status: 410, error: 'subscription expired' })
+    expect(result).toEqual({ id: 'notif-1', ok: false, status: 410, error: 'web_push_410' })
   })
 
   it('falls back to status 0 for a non-HTTP failure', async () => {
     sendNotification.mockRejectedValueOnce(new Error('network unreachable'))
     const result = await sendPushNotification(input, vapid)
-    expect(result).toEqual({ id: 'notif-1', ok: false, status: 0, error: 'network unreachable' })
+    expect(result).toEqual({ id: 'notif-1', ok: false, status: 0, error: 'web_push_failed' })
   })
 })
 
@@ -49,7 +49,7 @@ describe('sendPushNotifications', () => {
     )
     expect(results).toEqual([
       { id: 'notif-1', ok: true },
-      { id: 'notif-2', ok: false, status: 404, error: 'gone' },
+      { id: 'notif-2', ok: false, status: 404, error: 'web_push_404' },
     ])
   })
 })

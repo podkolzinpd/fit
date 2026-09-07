@@ -1,28 +1,24 @@
-import { hashPilotSessionToken } from './auth/pilot-session-token.js'
 import {
   readAccessibleConnections,
   type PilotConnectionsResponse,
 } from './connections.js'
 import {
-  PilotSessionInvalidError,
-  withYandexPilotSessionTransaction,
-} from './db/yandex-pilot-transaction.js'
+  withYandexActorSession,
+  type YandexActorSessionInput,
+} from './yandex-actor-session.js'
 import type { DatabasePool } from './db/types.js'
 
 export interface PilotConnectionsReader {
-  readConnections(sessionToken: string): Promise<PilotConnectionsResponse>
+  readConnections(session: YandexActorSessionInput): Promise<PilotConnectionsResponse>
 }
 
 export class DatabasePilotConnectionsReader implements PilotConnectionsReader {
   constructor(private readonly pool: DatabasePool) {}
 
-  readConnections(sessionToken: string): Promise<PilotConnectionsResponse> {
-    const tokenHash = hashPilotSessionToken(sessionToken)
-    if (tokenHash === undefined) throw new PilotSessionInvalidError()
-
-    return withYandexPilotSessionTransaction(
+  readConnections(session: YandexActorSessionInput): Promise<PilotConnectionsResponse> {
+    return withYandexActorSession(
       this.pool,
-      tokenHash,
+      session,
       readAccessibleConnections,
     )
   }

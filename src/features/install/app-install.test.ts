@@ -16,6 +16,6 @@ describe('app install helpers', () => {
   })
 
   it('scopes dismissal to the signed-in user', () => {
-    expect(installPromptStorageKey('user-1')).toBe('fit.installPromptDismissed:v1:user-1')
+    expect(installPromptStorageKey('user-1')).toBe('fit.installPromptDismissed:v2:user-1')
   })
 })

@@ -190,32 +190,47 @@
 `workout_reminder`): **producer → dispatcher → sender**. Producer — SQL-функция
 per сценарий в `private`, кладёт строки в `private.push_notifications_outbox`.
 Dispatcher (`private.dispatch_push_notifications`/`finalize_push_notifications`,
-общие, не трогать под новый сценарий) шлёт пачку в Cloud Function
+общие, не трогать под новый сценарий — но см. ниже, мульти-device их уже
+переписал под текущую схему подписок) шлёт пачку в Cloud Function
 `fit-send-push-notifications` (`services/api/src/push-notifications/`,
 деплой — `.github/workflows/deploy-yandex-push-function.yml`). Sender шифрует
 и реально отправляет через Web Push API (`web-push`) — это единственное
 место, куда идёт настоящий сетевой вызов; шифрование ECDH/VAPID не делается
 в SQL.
 
+Мульти-device (с `20260907090000_push_subscriptions_multi_device.sql`):
+`public.push_subscriptions.id` — PK, `user_id` — обычная FK-колонка,
+`unique (user_id, endpoint)` — идентичность устройства. У пользователя может
+быть сколько угодно активных подписок одновременно; вход с нового телефона
+добавляет строку, а не замещает старую. `private.push_notifications_outbox`
+несёт `subscription_id`, который producer проставляет сразу при постановке в
+очередь (не dispatcher при отправке) — каждая строка outbox адресована ровно
+одной подписке, dedupe-ключ расширен до `(kind, user_id, data, subscription_id)`.
+Отключение уведомлений или протухший endpoint (404/410) на одном устройстве
+удаляют только его строку `push_subscriptions`, остальные устройства
+пользователя не затрагиваются.
+
 Новый сценарий уведомления — это:
 1. Одна SQL-функция-producer в новой миграции (`private.enqueue_<scenario>()`),
-   которая инсертит в `private.push_notifications_outbox` с уникальным `kind`
-   и dedupe-ключом `(kind, user_id, data)`. Обязательно фильтровать по
-   `exists (select 1 from public.push_subscriptions ...)` и по
-   `notification_preferences` (opt-out модель — отсутствие строки = включено).
+   которая фан-аутит на все активные подписки получателя — `join
+   public.push_subscriptions s on s.user_id = <получатель>` (для множества
+   получателей разом) или цикл `for subscription in select id from
+   public.push_subscriptions where user_id = ...` (для одного получателя за
+   вызов) — и инсертит в `private.push_notifications_outbox` с уникальным
+   `kind`, `subscription_id = s.id`/`subscription.id` на каждой строке и
+   dedupe-ключом `(kind, user_id, data, subscription_id)`. Отсутствие
+   подписок само по себе ничего не вставляет — отдельная `exists`-проверка не
+   нужна. Обязательно фильтровать по `notification_preferences` (opt-out
+   модель — отсутствие строки = включено).
 2. `select cron.schedule(...)` под нужную частоту опроса — не переиспользовать
    расписание другого сценария, если триггер другой природы.
 3. Ничего не менять в dispatcher/finalize/Cloud Function — они уже общие для
-   всех `kind`.
+   всех `kind` и уже адресуются по `subscription_id`.
 4. Если сценарий — новый текст пуша, добавить его прямо в producer (`title`/`body`);
    отдельного реестра шаблонов нет, простая конкатенация в SQL.
-5. Тесты — pgTAP на producer (idempotency, opt-out, отсутствие подписки) по
-   образцу `0061_push_notifications.test.sql`.
-
-MVP-ограничение: одна активная push-подписка на пользователя
-(`push_subscriptions.user_id` — primary key, не отдельная таблица per-device).
-Мульти-device — сознательно не в первой итерации, не расширять без отдельного
-решения.
+5. Тесты — pgTAP на producer (idempotency, opt-out, отсутствие подписки,
+   фан-аут на несколько подписок одного получателя) по образцу
+   `0061_push_notifications.test.sql`.
 
 ## Качество и безопасность
 

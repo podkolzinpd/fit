@@ -52,6 +52,7 @@ test('client and trainer receive progress and workout changes without reload', a
     await trainer.getByLabel('Имя').fill('Realtime клиент')
     await fillClientProfileDetails(trainer)
     await trainer.getByLabel('Начальный вес, кг').fill('60')
+    await trainer.keyboard.press('Escape')
     await Promise.all([
       trainer.waitForURL(/\/clients\/[0-9a-f-]+$/),
       trainer.getByRole('button', { name: 'Сохранить' }).click(),
@@ -125,7 +126,7 @@ test('client and trainer receive progress and workout changes without reload', a
     ])
     const workoutUrl = trainer.url()
 
-    const assignedWorkout = client.getByRole('link', { name: /Бег \(Кардио\).*План/ })
+    const assignedWorkout = client.getByRole('link', { name: /Бег.*План/ })
     await expect(assignedWorkout).toBeVisible({ timeout: 10_000 })
     await assignedWorkout.click()
     await client.getByRole('button', { name: 'Начать тренировку' }).click()
@@ -145,7 +146,8 @@ test('client and trainer receive progress and workout changes without reload', a
 
     // Завершение уже видно тренеру до необязательного feedback: его ошибка или
     // пропуск не может откатить сохранённый факт тренировки.
-    await expect(trainer.getByText('Готово', { exact: true })).toBeVisible()
+    await expect(trainer.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
+    await expect(trainer.locator('.completed-exercise-list')).toBeVisible()
     const clientComment = `Realtime комментарий ${suffix}`
     const feedbackCard = client.locator('.workout-feedback')
     await setRpe(client, 7)

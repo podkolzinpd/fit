@@ -37,7 +37,11 @@ export function readTodayDraft(key: string): TodayDraft | null {
   try {
     const raw = localStorage.getItem(key)
     const parsed: unknown = raw ? JSON.parse(raw) : null
-    return isDraft(parsed) ? parsed : null
+    if (!isDraft(parsed)) return null
+    if (parsed.screen === 'save' && parsed.items.length === 0) {
+      return { ...parsed, screen: parsed.text.trim() ? 'review' : 'compose' }
+    }
+    return parsed
   } catch {
     return null
   }

@@ -36,6 +36,7 @@ describe('measurement progress', () => {
       freshness: 'fresh', ageDays: 2, sufficiency: 'enough_for_dynamics', hasNewerValueAfterPeriod: true,
       latest: { value: 82, date: '2026-08-28' }, periodStart: { value: 80.5 }, periodEnd: { value: 81 },
       min: { value: 80.5 }, max: { value: 81.5 }, targetLabel: 'увеличить до 85 кг',
+      goalGuide: { min: 85, max: 85, label: 'Цель · 85 кг' },
     })
     expect(result.explanation?.text).toContain('80,5–81,5 кг')
   })
@@ -48,6 +49,36 @@ describe('measurement progress', () => {
     expect(result.primary?.label).toBe('Плечи')
     expect(result.primary?.selector).toEqual({ customMetricId: 'shoulders' })
     expect(result.primary?.targetLabel).toBe('увеличить до 118 см')
+  })
+
+  it('builds an honest chart range for a maintain goal', () => {
+    const rangeGoal = goal('weight')
+    rangeGoal.criteria[0] = {
+      ...rangeGoal.criteria[0]!, operation: 'maintain_range', targetValue: null, rangeMin: 79.5, rangeMax: 80.5,
+    }
+    const result = buildMeasurementProgress({
+      entries, customMetrics: metrics, goal: rangeGoal,
+      periodStart: localDate('2026-08-01'), periodEnd: localDate('2026-08-20'), today: localDate('2026-08-30'),
+    })
+    expect(result.primary?.goalGuide).toEqual({ min: 79.5, max: 80.5, label: 'Цель · 79,5–80,5 кг' })
+  })
+
+  it('derives an absolute chart target for change-by only from a confirmed baseline', () => {
+    const changeGoal = goal('weight')
+    changeGoal.criteria[0] = {
+      ...changeGoal.criteria[0]!, operation: 'change_by', targetValue: -3, baselineValue: 82,
+    }
+    const result = buildMeasurementProgress({
+      entries, customMetrics: metrics, goal: changeGoal,
+      periodStart: localDate('2026-08-01'), periodEnd: localDate('2026-08-20'), today: localDate('2026-08-30'),
+    })
+    expect(result.primary?.goalGuide).toEqual({ min: 79, max: 79, label: 'Цель · 79 кг' })
+
+    changeGoal.criteria[0] = { ...changeGoal.criteria[0]!, baselineValue: null }
+    expect(buildMeasurementProgress({
+      entries, customMetrics: metrics, goal: changeGoal,
+      periodStart: localDate('2026-08-01'), periodEnd: localDate('2026-08-20'), today: localDate('2026-08-30'),
+    }).primary?.goalGuide).toBeNull()
   })
 
   it('marks one point as insufficient and stale using the named policy', () => {

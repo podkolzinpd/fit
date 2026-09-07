@@ -143,6 +143,7 @@ resource "yandex_serverless_container" "migration" {
         STAGE_WORKOUT_FIXTURES_ENABLED           = var.environment == "stage" ? "true" : "false"
         STAGE_DATABASE_ACCESS_ENABLED            = var.environment == "stage" ? "true" : "false"
         STAGE_RUNTIME_DATABASE_PREFLIGHT_ENABLED = var.environment == "stage" ? "true" : "false"
+        STAGE_TENANT_MIGRATION_ENABLED           = var.environment == "stage" ? "true" : "false"
       },
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id
@@ -184,4 +185,96 @@ resource "yandex_serverless_container_iam_binding" "migration_invocation" {
   container_id = yandex_serverless_container.migration[0].id
   role         = "serverless.containers.invoker"
   members      = [var.migration_invoker_member]
+}
+
+resource "yandex_serverless_container" "push_dispatcher" {
+  folder_id          = var.folder_id
+  name               = "${local.name_prefix}-push-dispatcher"
+  description        = "Private timer-driven Fit push and app-feedback dispatcher"
+  memory             = 512
+  cores              = 1
+  core_fraction      = 100
+  concurrency        = 1
+  execution_timeout  = "60s"
+  service_account_id = yandex_iam_service_account.push_dispatcher.id
+  labels             = local.labels
+
+  lifecycle {
+    precondition {
+      condition = (
+        (var.app_feedback_integrations_secret_id == null && var.app_feedback_integrations_secret_version_id == null)
+        || (var.app_feedback_integrations_secret_id != null && var.app_feedback_integrations_secret_version_id != null)
+      )
+      error_message = "App feedback integrations Lockbox ID and version must be provided together."
+    }
+  }
+
+  runtime {
+    type = "http"
+  }
+
+  connectivity {
+    network_id = yandex_vpc_network.fit.id
+  }
+
+  image {
+    url     = "cr.yandex/${yandex_container_repository.api.name}:${var.api_image_tag}"
+    command = ["node", "dist/push-dispatcher-server.js"]
+    environment = {
+      APP_ENV                         = var.environment
+      FIT_RELEASE_ID                  = var.api_image_tag
+      LOG_LEVEL                       = "info"
+      DATABASE_HOST                   = yandex_mdb_postgresql_cluster_v2.fit.hosts["primary"].fqdn
+      DATABASE_PORT                   = "6432"
+      DATABASE_NAME                   = yandex_mdb_postgresql_database.fit.name
+      DATABASE_USER                   = yandex_mdb_postgresql_user.api.name
+      DATABASE_SSL_ROOT_CERT          = "/app/certs/yandex-cloud-ca.pem"
+      PUSH_FUNCTION_URL               = "https://functions.yandexcloud.net/${var.push_function_id}"
+      APP_FEEDBACK_TRACKER_ORG_HEADER = var.app_feedback_tracker_org_header
+      APP_FEEDBACK_TRACKER_QUEUE      = var.app_feedback_tracker_queue
+    }
+  }
+
+  secrets {
+    id                   = data.yandex_connectionmanager_connection.api.lockbox_secret.id
+    version_id           = data.yandex_connectionmanager_connection.api.lockbox_secret.version
+    key                  = data.yandex_connectionmanager_connection.api.params.postgresql.auth.user_password.password.lockbox_secret_key
+    environment_variable = "DATABASE_PASSWORD"
+  }
+
+  dynamic "secrets" {
+    for_each = var.app_feedback_integrations_secret_id == null ? {} : {
+      APP_FEEDBACK_TELEGRAM_BOT_TOKEN = "APP_FEEDBACK_TELEGRAM_BOT_TOKEN"
+      APP_FEEDBACK_TELEGRAM_CHAT_ID   = "APP_FEEDBACK_TELEGRAM_CHAT_ID"
+      APP_FEEDBACK_TRACKER_TOKEN      = "APP_FEEDBACK_TRACKER_TOKEN"
+      APP_FEEDBACK_TRACKER_ORG_ID     = "APP_FEEDBACK_TRACKER_ORG_ID"
+    }
+
+    content {
+      id                   = var.app_feedback_integrations_secret_id
+      version_id           = var.app_feedback_integrations_secret_version_id
+      key                  = secrets.value
+      environment_variable = secrets.key
+    }
+  }
+
+  secrets {
+    id                   = var.push_transport_secret_id
+    version_id           = var.push_transport_secret_version_id
+    key                  = "PUSH_DISPATCH_SECRET"
+    environment_variable = "PUSH_DISPATCH_SECRET"
+  }
+
+  log_options {
+    folder_id = var.folder_id
+    min_level = "INFO"
+  }
+
+  depends_on = [
+    yandex_container_registry_iam_binding.api_image_puller,
+    yandex_iam_service_account_iam_member.push_dispatcher_deployer,
+    yandex_lockbox_secret_iam_member.push_dispatcher_connection_secret_reader,
+    yandex_lockbox_secret_iam_member.push_dispatcher_app_feedback_integrations_reader,
+    yandex_lockbox_secret_iam_member.push_dispatcher_transport_secret_reader,
+  ]
 }

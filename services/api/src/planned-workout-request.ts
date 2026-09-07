@@ -57,6 +57,7 @@ export interface PlannedWorkoutDraft {
   startTime: string | null
   endTime: string | null
   notes: string | null
+  stageId?: string | null
   exercises: PlannedWorkoutExerciseDraft[]
 }
 
@@ -277,6 +278,9 @@ export function readSavePlannedWorkoutRequest(
   const startTime = nullableTime(input.startTime)
   const endTime = nullableTime(input.endTime)
   const notes = text(input.notes, { nullable: true, max: 5_000 })
+  const stageId = input.stageId === null || input.stageId === undefined || input.stageId === ''
+    ? null
+    : uuid(input.stageId)
   const exercises = input.exercises.map(readExercise)
   const expectedVersion = workoutId === null
     ? null
@@ -288,6 +292,7 @@ export function readSavePlannedWorkoutRequest(
     || startTime === undefined
     || endTime === undefined
     || notes === undefined
+    || stageId === undefined
     || exercises.some((exercise) => exercise === undefined)
     || new Set(exercises.map((exercise) => exercise?.position)).size
       !== exercises.length
@@ -307,6 +312,7 @@ export function readSavePlannedWorkoutRequest(
       startTime,
       endTime,
       notes,
+      stageId,
       exercises: exercises as PlannedWorkoutExerciseDraft[],
     },
     expectedVersion: expectedVersion ?? null,

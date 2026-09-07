@@ -1,20 +1,33 @@
-import { useEffect, useRef, useState, type FormEvent, type PropsWithChildren } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type PropsWithChildren } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { authRepository } from '../../data/repositories/auth.repository'
 import {
   yandexPilotRepository,
   type YandexPilotClient,
   type YandexPilotConnections as YandexPilotConnectionsData,
+  type YandexAppSession,
   type YandexPilotSession,
   type YandexPilotTrainingData as YandexPilotTrainingDataState,
 } from '../../data/repositories/yandex-pilot.repository'
 import { useAuth } from '../../app/auth-context'
-import { getYandexIdPilotConfig, trainerHomePath } from '../../app/feature-flags'
+import {
+  getYandexAppSessionEntryConfig,
+  getYandexIdPilotConfig,
+  getYandexSessionLinkingConfig,
+  isYandexAppSessionPilotEnabled,
+  trainerHomePath,
+} from '../../app/feature-flags'
+import { useYandexAppSession } from '../../app/yandex-app-session-context'
 import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from '../../app/theme'
 import { ProfileIcon } from '../../shared/icons'
-import { AsyncView, Field } from '../../shared/ui'
+import { AsyncView, Field, StatePanel } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
-import { consumeYandexAuthorizationCallback, createYandexAuthorizationUrl } from './yandex-pilot-oauth'
+import {
+  clearPendingYandexAuthorization,
+  consumeYandexAuthorizationCallback,
+  createYandexAuthorizationUrl,
+  peekPendingYandexAuthorizationIntent,
+} from './yandex-pilot-oauth'
 import { YandexPilotConnections } from './YandexPilotConnections'
 import { YandexPilotTrainingData } from './YandexPilotTrainingData'
 import { useYandexPilotPolling } from './use-yandex-pilot-polling'
@@ -54,8 +67,14 @@ export function AuthPage() {
   const [error, setError] = useState<string | null>(null)
   const [role, setRole] = useState<AccountRole>(returnTo?.startsWith('/join') ? 'client' : 'trainer')
   const { actor } = useAuth()
+  const yandexAppSession = useYandexAppSession()
+  const yandexAppSessionConfig = getYandexAppSessionEntryConfig()
   const yandexPilotConfig = getYandexIdPilotConfig()
   if (actor) return <Navigate to={returnTo ?? (actor.role === 'client' ? '/me' : trainerHomePath())} replace />
+  if (yandexAppSession.loading) return <AuthIdentityScreen>
+    <StatePanel tone="info" title="Восстанавливаем сессию" description="Проверяем действующую сессию Yandex ID…" />
+  </AuthIdentityScreen>
+  if (yandexAppSession.session) return <Navigate to="/auth/yandex/session" replace />
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(null)
@@ -86,21 +105,178 @@ export function AuthPage() {
       <Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>
       <Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required /></Field>
       {error && <p className="error" role="alert">{error}</p>}
-      <button className="primary" disabled={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
+      <button className="primary" disabled={busy} aria-busy={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
     </form>
     <button className="secondary auth-google" onClick={() => void authRepository.signInWithGoogle(mode === 'register' ? role : 'trainer')}>Продолжить с Google</button>
-    {yandexPilotConfig && <button className="secondary auth-yandex" disabled={yandexBusy} onClick={() => {
+    {(yandexAppSessionConfig ?? yandexPilotConfig) && <button className="secondary auth-yandex" disabled={yandexBusy} onClick={() => {
       setError(null); setYandexBusy(true)
       const redirectUri = `${window.location.origin}/auth/yandex/callback`
-      void createYandexAuthorizationUrl(yandexPilotConfig.clientId, redirectUri)
+      const config = yandexAppSessionConfig ?? yandexPilotConfig
+      if (config === null) return
+      void createYandexAuthorizationUrl(
+        config.clientId,
+        redirectUri,
+        sessionStorage,
+        yandexAppSessionConfig === null ? 'pilot' : 'app',
+      )
         .then((url) => window.location.assign(url))
         .catch(() => { setError('Не удалось начать вход через Yandex ID.'); setYandexBusy(false) })
-    }}>{yandexBusy ? 'Переходим в Yandex ID…' : 'Проверить Yandex ID'}</button>}
+    }}>{yandexBusy
+        ? 'Переходим в Yandex ID…'
+        : yandexAppSessionConfig === null ? 'Проверить Yandex ID' : 'Войти через Yandex ID'}</button>}
+    {yandexAppSession.error && <div className="stack" role="alert">
+      <p className="error">{yandexAppSession.error}</p>
+      <button className="secondary" type="button" onClick={() => void yandexAppSession.retry()}>Повторить проверку</button>
+    </div>}
     <div className="auth-links"><button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Создать аккаунт' : 'У меня есть аккаунт'}</button>{mode === 'login' && <Link to="/auth/forgot">Забыли пароль?</Link>}</div>
   </AuthIdentityScreen>
 }
 
 export function YandexPilotCallbackPage() {
+  const [intent] = useState(() => peekPendingYandexAuthorizationIntent())
+  return intent === 'link'
+    ? <YandexAccountLinkingCallbackPage />
+    : intent === 'app' ? <YandexAppSessionCallbackPage /> : <YandexReadOnlyPilotCallbackPage />
+}
+
+function YandexAppSessionCallbackPage() {
+  const navigate = useNavigate()
+  const { actor, loading: authLoading } = useAuth()
+  const { establish } = useYandexAppSession()
+  const config = useMemo(() => getYandexAppSessionEntryConfig(), [])
+  const [error, setError] = useState<string | null>(null)
+  const sessionRequest = useRef<Promise<YandexAppSession> | null>(null)
+
+  useEffect(() => {
+    if (authLoading || config === null) return
+    const apiBaseUrl = config.apiBaseUrl
+    const search = window.location.search
+    window.history.replaceState(null, '', window.location.pathname)
+    let cancelled = false
+
+    async function openSession(): Promise<void> {
+      try {
+        sessionRequest.current ??= Promise.resolve().then(() => {
+          const authorization = consumeYandexAuthorizationCallback(search)
+          if (authorization.intent !== 'app') throw new Error('Начните вход через Yandex ID заново.')
+          return yandexPilotRepository.exchangeCodeForAppSession(
+            apiBaseUrl,
+            authorization.code,
+            authorization.codeVerifier,
+          )
+        })
+        const result = await sessionRequest.current
+        if (!isYandexAppSessionPilotEnabled(result.profile.id)) {
+          try {
+            await yandexPilotRepository.revokeAppSession(apiBaseUrl, result.session.token)
+          } catch {
+            // Токен не сохраняется и не показывается пользователю. Серверный
+            // rollout assignment остаётся настоящей границей доступа.
+          }
+          throw new Error('Этот профиль не добавлен в пилот входа через Yandex ID.')
+        }
+        if (actor !== null && result.profile.id !== actor.userId) {
+          try {
+            await yandexPilotRepository.revokeAppSession(apiBaseUrl, result.session.token)
+          } catch {
+            // Несовпавшая сессия никогда не сохраняется в browser storage.
+          }
+          throw new Error('Yandex ID связан с другим FIT-профилем. Войдите в соответствующий аккаунт или используйте другой Yandex ID.')
+        }
+        if (cancelled) return
+        establish(result)
+        navigate(actor === null ? '/auth/yandex/session' : '/assistant', { replace: true })
+      } catch (caught) {
+        if (!cancelled) {
+          setError(caught instanceof Error ? caught.message : 'Не удалось открыть сессию Yandex ID.')
+        }
+      }
+    }
+
+    void openSession()
+    return () => { cancelled = true }
+  }, [actor, authLoading, config, establish, navigate])
+
+  if (config === null) return <Navigate to="/auth" replace />
+  return <AuthIdentityScreen>
+    <header className="auth-entry-head">
+      <div className="brand" aria-hidden="true">FIT</div>
+      <p className="eyebrow">YANDEX ID</p>
+      <h1>{error ? 'Не удалось войти' : 'Проверяем вход'}</h1>
+      <p className="muted">{error ?? 'Подтверждаем профиль и создаём защищённую сессию FIT…'}</p>
+    </header>
+    {error && <StatePanel
+      tone="error"
+      title="Сессия не создана"
+      description={error}
+      action={<Link to="/auth">Вернуться ко входу</Link>}
+    />}
+  </AuthIdentityScreen>
+}
+
+export function YandexAppSessionPage() {
+  const navigate = useNavigate()
+  const { actor, loading: authLoading } = useAuth()
+  const { session, loading, error, retry, signOut } = useYandexAppSession()
+  const [signingOut, setSigningOut] = useState(false)
+  const config = getYandexAppSessionEntryConfig()
+
+  if (config === null) return <Navigate to="/auth" replace />
+  if (authLoading || loading) return <AuthIdentityScreen>
+    <StatePanel tone="info" title="Восстанавливаем сессию" description="Проверяем действующую сессию Yandex ID…" />
+  </AuthIdentityScreen>
+  if (actor !== null) {
+    return <Navigate to={actor.role === 'client' ? '/me' : trainerHomePath()} replace />
+  }
+  if (error && session === null) return <AuthIdentityScreen>
+    <StatePanel
+      tone="error"
+      title="Не удалось восстановить сессию"
+      description={error}
+      action={<div className="stack">
+        <button type="button" onClick={() => void retry()}>Повторить</button>
+        <Link to="/auth">Вернуться ко входу</Link>
+      </div>}
+    />
+  </AuthIdentityScreen>
+  if (session === null) return <Navigate to="/auth" replace />
+
+  const fullName = [session.profile.firstName, session.profile.lastName]
+    .filter(Boolean).join(' ') || 'Пользователь FIT'
+  const expiresAt = new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(session.session.expiresAt))
+
+  return <AuthIdentityScreen>
+    <header className="auth-entry-head">
+      <div className="brand" aria-hidden="true">FIT</div>
+      <p className="eyebrow">YANDEX ID · ПИЛОТ</p>
+      <h1>Сессия работает</h1>
+      <p className="muted">Вход восстановится после перезагрузки страницы и завершится автоматически в указанный срок.</p>
+    </header>
+    <section className="compact stack yandex-pilot-profile" aria-label="Профиль Yandex ID">
+      <div><span>Профиль</span><strong>{fullName}</strong></div>
+      <div><span>Роль</span><strong>{session.profile.accountRole === 'trainer' ? 'Тренер' : 'Клиент'}</strong></div>
+      <div><span>Сессия до</span><strong>{expiresAt}</strong></div>
+    </section>
+    <StatePanel
+      tone="info"
+      compact
+      title="Основной интерфейс пока не переключён"
+      description="Эта проверка подтверждает полноценную Yandex ID-сессию. Подключение вкладок к Yandex API будет отдельным безопасным этапом."
+    />
+    <button className="primary" type="button" disabled={signingOut} onClick={() => {
+      setSigningOut(true)
+      void signOut().finally(() => navigate('/auth', { replace: true }))
+    }}>{signingOut ? 'Завершаем сессию…' : 'Выйти из Yandex ID'}</button>
+  </AuthIdentityScreen>
+}
+
+function YandexReadOnlyPilotCallbackPage() {
   const config = getYandexIdPilotConfig()
   const apiBaseUrl = config?.apiBaseUrl ?? null
   const [session, setSession] = useState<YandexPilotSession | null>(null)
@@ -292,6 +468,111 @@ export function YandexPilotCallbackPage() {
       session={session}
     />}
     <Link className="auth-back-link" to="/auth">Вернуться ко входу</Link>
+  </AuthIdentityScreen>
+}
+
+function YandexAccountLinkingCallbackPage() {
+  const { actor, loading } = useAuth()
+  const { establish } = useYandexAppSession()
+  const config = actor === null ? null : getYandexSessionLinkingConfig(actor.userId)
+  const apiBaseUrl = config?.apiBaseUrl ?? null
+  const clientId = config?.clientId ?? null
+  const [linked, setLinked] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [restartBusy, setRestartBusy] = useState(false)
+  const linkRequest = useRef<Promise<void> | null>(null)
+  const profilePath = actor?.role === 'client' ? '/me/profile' : '/profile'
+
+  async function restartLinking(): Promise<void> {
+    if (clientId === null) return
+    setRestartBusy(true)
+    setError(null)
+    try {
+      const redirectUri = `${window.location.origin}/auth/yandex/callback`
+      const url = await createYandexAuthorizationUrl(clientId, redirectUri, sessionStorage, 'link')
+      window.location.assign(url)
+    } catch {
+      setError('Не удалось начать привязку Yandex ID. Попробуйте ещё раз из профиля.')
+      setRestartBusy(false)
+    }
+  }
+
+  useEffect(() => {
+    if (loading) return
+    const search = window.location.search
+    window.history.replaceState(null, '', window.location.pathname)
+    let cancelled = false
+
+    async function linkAccount(): Promise<void> {
+      try {
+        if (actor === null) {
+          clearPendingYandexAuthorization()
+          throw new Error('Войдите в FIT по email, паролю или Google, затем начните привязку Yandex ID из профиля.')
+        }
+        if (apiBaseUrl === null) {
+          clearPendingYandexAuthorization()
+          throw new Error('Привязка Yandex ID пока недоступна для этого аккаунта.')
+        }
+        linkRequest.current ??= Promise.resolve().then(async () => {
+          const authorization = consumeYandexAuthorizationCallback(search)
+          if (authorization.intent !== 'link') {
+            throw new Error('Начните привязку Yandex ID из профиля FIT.')
+          }
+          const supabaseSession = await authRepository.getSession()
+          if (supabaseSession.error) throw supabaseSession.error
+          const supabaseAccessToken = supabaseSession.data.session?.access_token
+          if (!supabaseAccessToken) {
+            throw new Error('Войдите в FIT заново и повторите привязку Yandex ID.')
+          }
+          const result = await yandexPilotRepository.linkYandexAccount(
+            apiBaseUrl,
+            supabaseAccessToken,
+            authorization.code,
+            authorization.codeVerifier,
+          )
+          if (result.appSession !== undefined
+            && result.profileId === actor.userId
+            && result.appSession.profile.id === actor.userId
+            && isYandexAppSessionPilotEnabled(result.profileId)) {
+            establish(result.appSession)
+          }
+        })
+        await linkRequest.current
+        if (!cancelled) setLinked(true)
+      } catch (caught) {
+        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Не удалось привязать Yandex ID.')
+      }
+    }
+
+    void linkAccount()
+    return () => { cancelled = true }
+  }, [actor, apiBaseUrl, establish, loading])
+
+  return <AuthIdentityScreen className="auth-yandex-link-flow">
+    <header className="auth-entry-head">
+      <div className="brand" aria-hidden="true">FIT</div>
+      <p className="eyebrow">YANDEX ID · ПРИВЯЗКА</p>
+      <h1>{linked ? 'Yandex ID привязан' : error ? 'Не удалось привязать' : 'Завершаем привязку'}</h1>
+      <p className="muted">{linked
+        ? 'Теперь этот Yandex ID связан с текущим FIT-профилем. Основной вход пока остаётся прежним.'
+        : error ?? 'Проверяем текущую FIT-сессию и подтверждение от Yandex ID…'}</p>
+    </header>
+    {linked && <section className="compact stack yandex-pilot-profile yandex-link-result" aria-label="Результат привязки">
+      <div><span>Статус</span><strong>Готово</strong></div>
+      <div><span>Доступ</span><strong>Через rollout</strong></div>
+      <p>Следующий шаг — включить полноценную Yandex ID-сессию для выбранных пользователей отдельным флагом.</p>
+    </section>}
+    {error && <StatePanel
+      tone="error"
+      title="Привязка не завершена"
+      description={error}
+      action={clientId === null
+        ? <Link className="button secondary" to={actor ? profilePath : '/auth'}>{actor ? 'Вернуться в профиль' : 'Вернуться ко входу'}</Link>
+        : <button type="button" className="secondary" aria-busy={restartBusy} disabled={restartBusy} onClick={() => void restartLinking()}>
+          {restartBusy ? 'Переходим в Yandex ID…' : 'Начать заново'}
+        </button>}
+    />}
+    <Link className="auth-back-link" to={actor ? profilePath : '/auth'}>{actor ? 'Вернуться в профиль' : 'Вернуться ко входу'}</Link>
   </AuthIdentityScreen>
 }
 

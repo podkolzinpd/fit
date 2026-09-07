@@ -183,6 +183,13 @@ export function savePlannedWorkout(
     )
     const saved = rows[0]
     if (saved === undefined) throw new Error('Workout was not saved')
+    await client.query('select public.attach_workout_stage($1, $2)', [saved.workout_id, draft.stageId ?? null])
+    if (expectedVersion === null) {
+      await client.query(
+        'select app_private.enqueue_workout_scheduled_notification($1)',
+        [saved.workout_id],
+      )
+    }
     return { id: saved.workout_id, version: safeVersion(saved.version) }
   })
 }
@@ -202,6 +209,7 @@ export function saveCompletedWorkout(
     )
     const saved = rows[0]
     if (saved === undefined) throw new Error('Completed workout was not saved')
+    await client.query('select public.attach_workout_stage($1, $2)', [saved.workout_id, draft.stageId ?? null])
     return { id: saved.workout_id, version: safeVersion(saved.version) }
   })
 }
@@ -221,6 +229,7 @@ export function recordPlannedWorkoutResult(
     )
     const saved = rows[0]
     if (saved === undefined) throw new Error('Planned result was not saved')
+    await client.query('select public.attach_workout_stage($1, $2)', [saved.workout_id, draft.stageId ?? null])
     return { id: saved.workout_id, version: safeVersion(saved.version) }
   })
 }
@@ -493,6 +502,18 @@ export function removeLiveSet(
     `,
     [setId, expectedVersion, operationId],
   )
+}
+
+export function removeLiveExercise(
+  client: DatabaseClient,
+  workoutId: string,
+  exerciseId: string,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveStructureResult> {
+  return runLiveStructureCommand(client,
+    'select resource_id, version, replayed from public.remove_live_exercise($1, $2, $3, $4)',
+    [workoutId, exerciseId, expectedVersion, operationId])
 }
 
 export function reorderLiveBlock(

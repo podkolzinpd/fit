@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { clientsRepository } from '../../data/repositories/clients.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import { bmiLabel } from '../../data/repositories/workouts.repository'
 import { AsyncView, Page } from '../../shared/ui'
 import { ChevronRightIcon, CloseIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
@@ -12,6 +12,7 @@ import { ChevronRightIcon, CloseIcon, ProfileIcon, SearchIcon } from '../../shar
 const CLIENTS_SEARCH_MIN = 6
 
 export function ClientsPage() {
+  const { clients: clientsRepository } = useDataBackend()
   const showArchived = window.localStorage?.getItem('fit.showArchivedClients') === 'true'
   // Список — рабочая очередь тренера, поэтому при каждом входе показываем
   // актуальную активность, а не данные из короткого SPA-кэша.

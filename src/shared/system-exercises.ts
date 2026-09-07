@@ -1,8 +1,12 @@
 import type { ExerciseSnapshot, MuscleGroup } from './domain'
 import { IMPORTED_EXERCISES } from './system-exercises.generated'
 import { BASE_EXERCISES } from './system-exercises.base.generated'
+import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
+import { VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
+import { VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF, VITAL_GYM_PRO_NEW_EXERCISES } from './vital-gym-pro.generated'
+import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 3
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 11
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {
@@ -139,6 +143,31 @@ const WARMUP_AND_MOBILITY = [
   { source: 'system', ref: 'cat-cow', name: 'Кошка-корова', muscleGroup: 'core', inputKind: 'duration', imageUrl: '/exercises/base-walking.jpg', equipment: 'Без оборудования', primaryMuscleDetail: 'Пресс', instructions: ['На четвереньках плавно чередуйте округление и прогиб спины. Укажите время работы.'] },
 ] as const satisfies readonly ExerciseSnapshot[]
 
+// Точечные дополнения из реальной практики тренеров. Они получают новые ref и
+// не заменяют существующие движения, поэтому старые планы и пользовательские
+// упражнения продолжают ссылаться на прежние записи без миграции.
+const CURATED_CATALOG_ADDITIONS = [
+  {
+    source: 'system',
+    ref: 'smith-single-leg-romanian-deadlift',
+    name: 'Румынская тяга на одной ноге в Смите (Тренажёр)',
+    muscleGroup: 'glutes',
+    inputKind: 'strength',
+    equipment: 'Тренажёр Смита',
+    equipmentRef: 'machine',
+    primaryMuscleDetail: 'Ягодицы',
+    secondaryMuscles: ['Задняя поверхность бедра', 'Поясница'],
+    level: 'intermediate',
+    imageUrl: '/exercises/fedb-smith-machine-stiff-legged-deadlift.jpg',
+    motionImageUrl: '/exercises/fedb-smith-machine-stiff-legged-deadlift-end.jpg',
+    instructions: [
+      'Встаньте боком или лицом к грифу Смита, перенесите вес на опорную ногу.',
+      'Отводите таз назад, сохраняя спину нейтральной, а свободную ногу вытянутой назад.',
+      'Вернитесь вверх усилием ягодицы опорной ноги и повторите на другую сторону.',
+    ],
+  },
+] as const satisfies readonly ExerciseSnapshot[]
+
 // Полный системный каталог: рукописные базовые + импортированные из открытой
 // базы. Импортированные добавляются в конец, дубли по ref отсекаются.
 const SEEN_REFS = new Set<string>(SYSTEM_EXERCISES.map((exercise) => exercise.ref))
@@ -155,12 +184,46 @@ const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
   ...FUNCTIONAL_PROTOCOLS,
   ...RUNNING_DRILLS,
   ...WARMUP_AND_MOBILITY,
+  ...CURATED_CATALOG_ADDITIONS,
+  ...VITAL_FREE_PACK_EXERCISES,
+  ...CATALOG_EXPANSION,
+  ...VITAL_GYM_PRO_NEW_EXERCISES,
 ]
 
 // Составные протоколы и СБУ переиспользуют обложки базовых упражнений. Для
 // карточки техники им нужен тот же второй кадр, но дублировать его URL в каждом
 // литерале нет смысла.
-export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_CATALOG_SOURCE.map((exercise) => ({
+export const SYSTEM_EXERCISE_LEGACY_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_CATALOG_SOURCE.map((exercise) => {
+  const freePackMedia = VITAL_FREE_PACK_MEDIA_BY_REF[exercise.ref]
+  const gymProMedia = VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF[exercise.ref]
+  const vitalMedia = freePackMedia ?? gymProMedia
+  const usesGymProMedia = !freePackMedia && Boolean(gymProMedia)
+  const correctedName = exercise.ref === 'fedb-snatch-deadlift'
+    ? 'Рывковая становая тяга (Штанга)'
+    : exercise.ref === 'fedb-car-deadlift'
+      ? 'Становая тяга в тренажёре «Автомобиль» (Тренажёр)'
+      : exercise.name
+  return {
+    ...exercise,
+    name: correctedName,
+    imageUrl: vitalMedia?.imageUrl ?? exercise.imageUrl,
+    fallbackImageUrl: usesGymProMedia && exercise.imageUrl !== gymProMedia?.imageUrl
+      ? exercise.imageUrl
+      : undefined,
+    // Gym Pro media is intentionally absent from the public checkout. Keep the
+    // existing catalog image as a resilient fallback if a licensed file cannot
+    // be prepared or fetched. The encrypted production build still uses the
+    // Gym Pro poster and video as the primary media.
+    motionImageUrl: usesGymProMedia
+      ? exercise.motionImageUrl ?? exercise.imageUrl ?? gymProMedia?.motionImageUrl
+      : freePackMedia?.motionImageUrl ?? exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
+    techniqueVideoUrl: vitalMedia?.techniqueVideoUrl,
+  }
+})
+
+// Rename display metadata only; persisted snapshots, units and historical refs
+// remain untouched. New additions absent from the approved list remain available.
+export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_LEGACY_CATALOG.map((exercise) => ({
   ...exercise,
-  motionImageUrl: exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
+  name: EXERCISE_CATALOG_DECISIONS[exercise.ref]?.name ?? exercise.name,
 }))

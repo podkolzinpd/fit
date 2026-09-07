@@ -4,12 +4,12 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 
 | Область | Обязательный результат V2 | Статус |
 |---|---|---|
-| Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset; постоянные роли trainer/client | Implemented; role-aware registration/session routing ready, production Google smoke passed, reset SMTP pending |
+| Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset; постоянные роли trainer/client | Implemented; role-aware registration/session routing ready, production Google smoke passed, reset SMTP pending. Default-off Yandex app-session and safe linking can select one rehearsed tenant without hidden Supabase fallback; production rollout remains disabled |
 | Client account | Клиент входит в тот же frontend, создаёт собственную карточку или видит ранее связанную; тренеры подключаются одноразовым кодом; несколько тренеров получают membership-доступ | Implemented auth, standalone card onboarding, invitations and author-scoped data: client sees all assignments and creates own workouts; each trainer sees only own workouts; progress is shared read-only across trainers with owner/author mutation rights |
 | Profile | Просмотр и изменение имени, корректный Cancel, выбор темы | Implemented: edit/logout ready; Cancel всегда возвращает клиента в профиль без сохранения черновика, covered iPhone WebKit 390 px; переключатель «Тёмная тема» отдаёт allowlisted-аккаунтам пилотную палитру из Figma, остальным — прежнюю тёмную |
 | Clients | List/empty/error/retry, create, detail, edit, archive/restore | Implemented; aggregate list uses one tenant-scoped RPC; core E2E + RLS ready; allowlisted-аккаунтам поиск отдаётся полем Fit с иконкой и сбросом и показывается от шести клиентов, остальным — прежним полем, covered component test |
 | Client stats | Сводка на карточке: количество выполненных, % выполнения, дата последней тренировки, дней в работе (от первой тренировки), индикатор «требует внимания» при 14+ днях без тренировки | Implemented: pure aggregation covered unit + E2E |
-| Exercises | System search/filter; custom create/edit/archive/restore | Implemented: complete catalog and shared picker covered; бег и СБУ доступны отдельным быстрым фильтром, варианты обычного бега используют единый ref; management E2E pending |
+| Exercises | System search/filter; custom create/edit/archive/restore | Implemented: shared picker and curated catalog (80 core / 279 uncommon / 215 rare + 7 formats), variant selection, new names with all prior aliases preserved; клиент с тренером и без него создаёт свои упражнения и сохраняет их в тренировке, SQL/RLS и mobile E2E; Yandex PostgreSQL сохраняет тот же `created_by`/partition ownership и cross-tenant contract; права тренера и исторические ID сохраняются, чужие клиентские упражнения скрыты; бег и СБУ доступны отдельным быстрым фильтром, варианты обычного бега используют единый ref; full management E2E pending |
 | Workout | Create/view/edit/correct/copy/delete, strength/distance/reps, atomic save | Implemented: multi-set plan, load correction, беговые интервалы с пассивным/активным восстановлением и подтверждением каждого отрезка covered; wider acceptance pending |
 | Voice notes | Browser-only Russian transcription into editable workout and client trainer notes; manual input remains available | Prototype: local whisper.cpp WASM ready; real-device acceptance pending |
 | Schedule | Week/month/local date, timed/untimed, open workout/back | Implemented: недельная лента дней + часовая сетка на день (timed по времени, untimed отдельно), закреплённая шапка с прокруткой только сетки, автоскролл к 07:00/первой тренировке, кнопка «Сегодня», выбор дня и недели в URL, календарь-переход к дате; covered unit + E2E |
@@ -19,6 +19,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Trainer response | После завершения клиент видит реакцию 👍 / 🔥 / 💪 и короткий ответ ответственного тренера | Implemented: trainer-author для назначения, root trainer для client-authored workout, автор/время, idempotent versioned RPC, realtime/refetch и RLS matrix |
 | Trainer attention | Клиент явно задаёт вопрос по завершённой тренировке, а основной тренер видит одну приоритетную задачу на клиента | Implemented: question → discomfort → planning priority, reply/explicit resolution, two-week planning snooze, realtime, RLS/SQL and mobile WebKit acceptance |
 | Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; Trainer first shows current week and the shared AI card, with running and measurements on explicit subroutes; Client starts with an interactive front/back body map of confirmed progress and performed-set load; duplicate-date create opens the existing entry without a failing DB request; visual regression covers Client 390/430 and Trainer 390/430/1440 px |
+| Assistant | Trainer-only history, idempotent turns, proposed actions and explicit confirmation | Implemented in production Supabase; default-off sticky routing can pin one migrated trainer to Yandex API for the unchanged main UI. The same app-session now selects Yandex for all main feature repositories, including Assistant dependencies; errors do not fall back per request. Production enablement and tenant data rehearsal remain pending |
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |
 
@@ -34,6 +35,9 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Основного тренера отключить нельзя. Дополнительного тренера клиент может отключить, а дополнительный тренер может самостоятельно покинуть пространство клиента.
 - Основной тренер не может покинуть пространство клиента, чтобы карточка не осталась без root-владельца.
 - Создатель видит только свои активные неиспользованные приглашения и может отозвать их; использованные, просроченные и отозванные приглашения в активном списке не показываются.
+- Новый одноразовый код у клиента и тренера имеет одинаковое явное действие
+  копирования с текстовым подтверждением; совместимый fallback сохраняет
+  сценарий в iOS/WebView, а код остаётся доступен для ручного выделения.
 - Обязательные проверки: owner/member/root/cross-tenant SQL matrix, подтверждение необратимых действий в UI и E2E invite → join → leave/remove.
 
 ### Yandex Cloud invitation lifecycle checkpoint
@@ -58,7 +62,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
   короткоживущую сессию, runtime API и RLS до принятия новой revision.
 - Checkpoint не считается полной миграционной parity. Stage API уже покрывает
   атомарные create/update/delete плана, Live start/save/confirm/finish и
-  структурные Live-действия: добавление упражнения и подхода, удаление подхода,
+  структурные Live-действия: добавление упражнения и подхода, удаление упражнения и подхода,
   замену упражнения, перестановку блока и комментарий. Все Live-команды имеют
   optimistic version и `operationId`; точный повтор не создаёт дубль, а новый
   stale-запрос получает conflict. Lifecycle без Live также перенесён: создание
@@ -68,9 +72,15 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
   версиями и tenant-проверками. Callback по-прежнему показывает тренировки
   только для чтения. Post-workout feedback, trainer reaction/response,
   questions, explicit resolution и attention snooze перенесены в отдельный
-  stage API contract с `000015`, actor/RLS и idempotency-проверками; основной UI
-  на этот API пока не переключён. Production продолжает использовать Supabase, а Yandex callback
-  не открывает основное приложение.
+  stage API contract с `000015`, actor/RLS и idempotency-проверками. Assistant
+  state в `000026` поддерживает native turn endpoint через opaque Yandex session:
+  capabilities, idempotent replay, conflict при повторе turnId с другим текстом
+  и proposed workout draft с persistent action id. Отдельный default-off sticky
+  route может подключить весь основной интерфейс одного перенесённого trainer-а
+  к Yandex API без смешивания backend внутри сессии: клиенты, профиль, цели и
+  прогресс, упражнения, полный workout lifecycle, связи/приглашения, Assistant,
+  сводки, feedback и push state используют одну app-session. Пока
+  rollout-переменные не включены, production продолжает использовать Supabase.
 - Client overview в stage возвращает последний вес, количество завершённых
   тренировок, процент выполнения, дату последней тренировки, дни в работе
   и attention-сигнал только из доступных actor-у фактов. Pilot callback обновляет
@@ -95,11 +105,13 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Клиент создаёт самостоятельную карточку без тренера и затем создаёт тренировки только для себя, используя общий workout aggregate и системный каталог упражнений.
 - Клиент может редактировать и удалять только созданную им запланированную тренировку; назначенный тренером план остаётся защищённым.
 - Клиент может скопировать назначенный тренером план в новую собственную тренировку, но не может записывать trainer comments.
+- В завершённой доступной тренировке клиент может удалить выбранное упражнение вместе с его подходами; тренер-автор имеет то же действие в своей тренировке клиента. Каталог и другие тренировки не меняются, посторонний тренер закрыт tenant/author-проверкой.
 - После завершения показывается один подтверждённый итог, точный личный рекорд
   при его наличии и один следующий шаг для текущей роли. Недельная карточка при
   наличии плана показывает состоявшиеся назначения как «N из M по плану»;
   частично выполненный `done` остаётся состоявшейся тренировкой.
 - В копии исходные упражнения по умолчанию свёрнуты в две строки; новое добавленное упражнение сразу раскрывается. Отдых и заметка доступны из «Настроек упражнения» в `⋯`; нестандартные значения имеют видимую компактную пометку.
+- Только новая копия получает актуальные названия известных системных упражнений; старые записи, custom и специальные названия не переписываются. Черновик копии не попадает в редактирование оригинала.
 - Клиент видит и выполняет назначения всех подключённых тренеров. Каждый тренер изменяет только тренировки с собственным `created_by`, видит завершённые самостоятельные тренировки клиента только для чтения и не видит назначения других тренеров; те же правила действуют при прямом UUID-доступе.
 - После завершения назначенной или самостоятельной тренировки клиент может отдельно отправить session RPE 1–10, wellbeing и дискомфорт с коротким пояснением. Feedback необязателен, не участвует в завершении workout, повтор того же submit идемпотентен; тренер читает результат, несвязанный аккаунт не видит строку.
 - Историю прогресса видят клиент и все memberships. Клиент изменяет любую запись, тренер — только созданную им; остальные записи доступны тренеру только для чтения.
@@ -145,17 +157,25 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 
 ## Exercise acceptance contract
 
-- Системный каталог содержит ровно 49 упражнений V1: ноги 11, грудь 7, спина 7, плечи 6, руки 6, кор 5, кардио 7.
+- Системный каталог содержит 662 упражнения с локальными обложками; 50 точных
+  совпадений Vital дополнены локальными видео, остальные используют кадровый
+  fallback.
 - Системные упражнения остаются versioned application constant; workout хранит стабильный `ref` и snapshot названия, категории и типа ввода.
-- Picker одинаково используется в плане и live: поиск без учёта регистра, фильтр по семи категориям, empty/loading/error/retry и создание своего упражнения.
-- Список использует статичную локальную обложку. Во вкладке техники системного
-  упражнения локальные начальный и конечный кадры сменяются без скачка
-  геометрии; системное уменьшение движения оставляет первый кадр, а ошибка
-  второго не скрывает обложку.
-- Силовой подход хранит вес и повторы; distance — время и дистанцию; cardio reps — время и повторы.
+- Picker одинаково используется в плане, Today, замене и live: поиск без учёта
+  регистра, совместимые фильтры с удаляемыми чипами, clear, empty/loading/error/
+  retry и создание своего упражнения.
+- Превью и название открывают технику внутри того же picker, отдельный `+ / ✓`
+  меняет выбор. Возврат сохраняет поиск, фильтры, выбор и scroll. До двух видимых
+  строк показывают один короткий цикл; reduced motion оставляет первый кадр, а
+  ошибка необязательного медиа не скрывает обложку.
+- Каталог рендерит первые 48 совпадений и дозагружает следующие порции явно,
+  сохраняя полное число результатов и приоритет недавних упражнений.
+- Силовой подход хранит вес и повторы; distance — время и дистанцию; cardio reps — время и повторы. Для гребного тренажёра темп рассчитывается на 500 м, а поле повторов имеет предметную семантику частоты гребков в минуту.
 - План поддерживает несколько подходов, удаление, сброс значений и изменение веса на ±5% с округлением до 2,5 кг.
 - Live поддерживает добавление подхода и упражнения отдельными транзакционными RPC, autosave факта, подтверждение, отдых 90 секунд и частичное завершение с предупреждением. Таймер отдыха считается от абсолютной метки времени и остаётся корректным при сворачивании вкладки.
-- Обязательные проверки: уникальность полного каталога, component search/filter/create, RPC rollback/cross-tenant, mobile visual snapshot и E2E plan → multi-set → live append → partial finish.
+- Обязательные проверки: уникальность полного каталога, component search/filter/
+  clear/technique/create, RPC rollback/cross-tenant, visual 390/430/1440,
+  iPhone WebKit и E2E plan → multi-set → live append → partial finish.
 
 ## Running intervals acceptance contract
 
@@ -204,7 +224,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
   тренировок и приходит вместе с RLS-защищённой страницей истории.
 - История отдаётся newest-first страницами по 20 записей с lookahead; старые
   страницы загружаются явно, весь архив в браузер не вычитывается.
-- На клиентском экране истории доступны два равноценных представления:
+- У клиента и у тренера в истории конкретного клиента доступны два представления:
   постраничный список и календарь полного месяца. Выбор вида, месяца и даты
   хранится в URL; календарь загружает только границы выбранного месяца, не
   подменяет продуктовые статусы и не вычитывает весь архив.
@@ -212,6 +232,10 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
   дату показывает все тренировки этого дня теми же chronicle-карточками;
   переход в тренировку и действие «Назад» возвращают выбранный месяц и дату.
   Будущие даты и переход за текущий месяц недоступны.
+- Workout Back совпадает с browser Back: история/календарь, расписание,
+  главная, форма, Live и история упражнения возвращают исходный экран.
+  Фильтры используют replace, отправленная форма/завершённый Live не добавляют
+  повторных экранов. Прямые ссылки имеют контекстный fallback внутри Fit.
 - Из карточки тренировки история упражнения открывается отдельным подписанным
   действием; название упражнения остаётся заголовком и не маскирует область
   перехода. Мобильная зона нажатия не меньше 44 px.

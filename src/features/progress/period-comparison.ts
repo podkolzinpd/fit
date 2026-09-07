@@ -2,7 +2,7 @@ import type { ClientGoal, GoalCriterion, ProgressEntry, Workout } from '../../sh
 import { GOAL_CRITERION_METRICS, isStandardGoalCriterionMetric } from '../../shared/goal-criterion-rules'
 import { calculateStandardGoalProgress } from '../../shared/goal-progress'
 import { calculateTrainingGoalProgress } from '../../shared/goal-training-progress'
-import { daysBetween, formatLocalDateShort, type LocalDate } from '../../shared/local-date'
+import { daysBetween, type LocalDate } from '../../shared/local-date'
 
 export type ComparisonPeriod = { start: LocalDate; end: LocalDate }
 
@@ -322,7 +322,17 @@ function groundedConclusion(facts: readonly PeriodComparisonFact[], candidates: 
 }
 
 function periodLabel(current: ComparisonPeriod, previous: ComparisonPeriod): string {
-  return `${formatLocalDateShort(previous.start)}–${formatLocalDateShort(previous.end)} → ${formatLocalDateShort(current.start)}–${formatLocalDateShort(current.end)}`
+  const month = new Intl.DateTimeFormat('ru-RU', { month: 'long' })
+  const periodMonths = (period: ComparisonPeriod) => {
+    const [startYear, startMonth] = period.start.split('-').map(Number)
+    const [endYear, endMonth] = period.end.split('-').map(Number)
+    const start = month.format(new Date(Date.UTC(startYear ?? 0, (startMonth ?? 1) - 1, 1)))
+    const end = month.format(new Date(Date.UTC(endYear ?? 0, (endMonth ?? 1) - 1, 1)))
+    return startYear === endYear && startMonth === endMonth ? start : `${start}–${end}`
+  }
+  const years = new Set([previous.start, previous.end, current.start, current.end].map((value) => value.slice(0, 4)))
+  if (years.size === 1) return `${periodMonths(previous)} → ${periodMonths(current)} ${current.start.slice(0, 4)}`
+  return `${periodMonths(previous)} ${previous.start.slice(0, 4)} → ${periodMonths(current)} ${current.start.slice(0, 4)}`
 }
 
 export function buildPeriodComparison(options: BuildPeriodComparisonOptions): PeriodComparison {
@@ -335,7 +345,7 @@ export function buildPeriodComparison(options: BuildPeriodComparisonOptions): Pe
       kind: 'limitation', factIds: [], source: 'deterministic',
       text: 'Периоды имеют разную длину, поэтому изменения не сравниваются.',
     }],
-    emptyMessage: 'Выбери периоды одинаковой длины, чтобы увидеть честное сравнение.',
+    emptyMessage: 'Для сравнения нужны периоды одинаковой длины.',
   }
 
   const currentDone = done(options.currentWorkouts)
@@ -373,13 +383,13 @@ export function buildPeriodComparison(options: BuildPeriodComparisonOptions): Pe
   if (previousDone.length === 0 && goalComparison.facts.length === 0 && measurementFacts(options.measurements ?? [], options.currentPeriod, options.previousPeriod, goalComparison.coveredStandard).length === 0) {
     return {
       title, periodLabel: label, comparable: true, facts: [], conclusions: [],
-      emptyMessage: 'Текущий период сохранён как отправная точка. Сравнение появится, когда накопится следующий сопоставимый период.',
+      emptyMessage: 'Сравнение появится, когда будут данные за два периода.',
     }
   }
 
   if (facts.length === 0) return {
     title, periodLabel: label, comparable: true, facts: [], conclusions: [],
-    emptyMessage: 'По доступным подтверждённым данным оба периода пока не различаются.',
+    emptyMessage: 'Заметных изменений между периодами нет.',
   }
 
   const llm = groundedConclusion(facts, options.llmCandidates ?? [])
@@ -391,7 +401,7 @@ export function buildPeriodComparison(options: BuildPeriodComparisonOptions): Pe
   const limitedCount = Math.min(currentDone.length, previousDone.length)
   if (limitedCount > 0 && limitedCount < 2) conclusions.push({
     kind: 'limitation', factIds: [`comparison:workouts:${previousDone.length}:${currentDone.length}`], source: 'deterministic',
-    text: `Вывод ограничен: в одном из периодов только ${limitedCount} завершённая тренировка.`,
+    text: `Мало данных: в одном из периодов только ${limitedCount} завершённая тренировка.`,
   })
 
   return { title, periodLabel: label, comparable: true, facts, conclusions: conclusions.slice(0, 2) }

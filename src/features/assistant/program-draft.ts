@@ -1,6 +1,7 @@
 import type { ExerciseSnapshot, WorkoutDraft } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { filterExercises } from '../exercises'
+import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retirement'
 
 export type ProgramExerciseDraft = { name: string; exerciseRef?: string; sets: number; reps?: number; weightKg?: number; durationMin?: number; distanceKm?: number }
 export type ProgramSessionDraft = { title: string; day: string; exercises: ProgramExerciseDraft[] }
@@ -36,6 +37,7 @@ export function updateProgramExercise(sessions: ProgramSessionDraft[], sessionIn
 }
 
 export function programWorkoutDrafts(clientId: string, sessions: readonly ProgramSessionDraft[], dates: readonly string[], requestIds: readonly string[], catalog: readonly ExerciseSnapshot[]): WorkoutDraft[] | undefined {
+  catalog = catalog.filter(isActiveCatalogExercise)
   if (sessions.length === 0 || sessions.length !== dates.length || sessions.length !== requestIds.length) return undefined
   const byName = new Map(catalog.map((exercise) => [exercise.name.toLocaleLowerCase('ru-RU'), exercise]))
   const resolveExercise = (name: string, exerciseRef?: string) => {

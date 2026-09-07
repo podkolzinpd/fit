@@ -1,4 +1,4 @@
-// schema-sha256: c6fad8ba7b605ff4b23b51965010b0198c1af3b71a2361a0e3680777618e0ba1
+// schema-sha256: 3895753d3ba3af405c8eb5379b72e0ea69aa7fbec2835a216bd4cface6b5130b
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -980,6 +980,7 @@ export type Database = {
         Row: {
           archived_at: string | null
           created_at: string
+          created_by: string
           id: string
           input_kind: string
           muscle_group: string
@@ -991,6 +992,7 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           created_at?: string
+          created_by?: string
           id?: string
           input_kind: string
           muscle_group: string
@@ -1002,6 +1004,7 @@ export type Database = {
         Update: {
           archived_at?: string | null
           created_at?: string
+          created_by?: string
           id?: string
           input_kind?: string
           muscle_group?: string
@@ -1012,11 +1015,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "custom_exercises_trainer_id_fkey"
+            foreignKeyName: "custom_exercises_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_exercises_partition_owner_fk"
             columns: ["trainer_id"]
             isOneToOne: false
-            referencedRelation: "trainers"
-            referencedColumns: ["profile_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1268,6 +1278,7 @@ export type Database = {
           auth_key: string
           created_at: string
           endpoint: string
+          id: string
           p256dh: string
           user_id: string
         }
@@ -1275,6 +1286,7 @@ export type Database = {
           auth_key: string
           created_at?: string
           endpoint: string
+          id?: string
           p256dh: string
           user_id: string
         }
@@ -1282,6 +1294,7 @@ export type Database = {
           auth_key?: string
           created_at?: string
           endpoint?: string
+          id?: string
           p256dh?: string
           user_id?: string
         }
@@ -1289,7 +1302,7 @@ export type Database = {
           {
             foreignKeyName: "push_subscriptions_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2004,6 +2017,14 @@ export type Database = {
         Args: { p_client_id: string; p_trainer_id: string }
         Returns: undefined
       }
+      remove_live_exercise: {
+        Args: {
+          p_exercise_id: string
+          p_expected_version: number
+          p_workout_id: string
+        }
+        Returns: number
+      }
       remove_live_set: {
         Args: { p_expected_version: number; p_set_id: string }
         Returns: number
@@ -2066,6 +2087,10 @@ export type Database = {
       save_workout: {
         Args: { p_expected_version?: number | null; p_workout: Json }
         Returns: string
+      }
+      send_test_push_notification: {
+        Args: { p_endpoint: string }
+        Returns: undefined
       }
       set_client_custom_metric_archived: {
         Args: {

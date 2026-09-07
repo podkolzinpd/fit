@@ -1,29 +1,32 @@
-import { hashPilotSessionToken } from './auth/pilot-session-token.js'
-import {
-  PilotSessionInvalidError,
-  withYandexPilotSessionTransaction,
-} from './db/yandex-pilot-transaction.js'
 import type { DatabasePool } from './db/types.js'
 import {
   readAccessibleTrainingData,
   type PilotTrainingDataResponse,
+  type TrainingDataPage,
 } from './training-data.js'
+import {
+  withYandexActorSession,
+  type YandexActorSessionInput,
+} from './yandex-actor-session.js'
 
 export interface PilotTrainingDataReader {
-  readTrainingData(sessionToken: string): Promise<PilotTrainingDataResponse>
+  readTrainingData(
+    session: YandexActorSessionInput,
+    page?: TrainingDataPage,
+  ): Promise<PilotTrainingDataResponse>
 }
 
 export class DatabasePilotTrainingDataReader implements PilotTrainingDataReader {
   constructor(private readonly pool: DatabasePool) {}
 
-  readTrainingData(sessionToken: string): Promise<PilotTrainingDataResponse> {
-    const tokenHash = hashPilotSessionToken(sessionToken)
-    if (tokenHash === undefined) throw new PilotSessionInvalidError()
-
-    return withYandexPilotSessionTransaction(
+  readTrainingData(
+    session: YandexActorSessionInput,
+    page?: TrainingDataPage,
+  ): Promise<PilotTrainingDataResponse> {
+    return withYandexActorSession(
       this.pool,
-      tokenHash,
-      readAccessibleTrainingData,
+      session,
+      (client) => readAccessibleTrainingData(client, page),
     )
   }
 }

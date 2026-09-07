@@ -1,21 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { clientsRepository } from '../../data/repositories/clients.repository'
-import { goalsRepository } from '../../data/repositories/goals.repository'
-import { progressRepository } from '../../data/repositories/progress.repository'
-import { createRunningFormatDrafts, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { createRunningFormatDrafts, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
 import { formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-date'
 import { isValidRpe } from '../../shared/rpe'
 import type { RunningFormat } from '../../shared/running-formats'
 import { trackGoal } from '../../shared/yandex-metrika'
-import { Page } from '../../shared/ui'
+import { OverflowMenu, Page } from '../../shared/ui'
 import { ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { ClientPicker, type ClientPickerSelection } from '../clients'
 import { useAuth } from '../../app/auth-context'
+import { useDataBackend } from '../../app/data-backend-context'
+import { useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { useRpeDisplay } from '../../app/rpe-display'
-import type { ParsedWorkoutExercise } from './quick-workout-entry'
+import { workoutTrainerComment, type ParsedWorkoutExercise } from './quick-workout-entry'
 import { formatLlmWorkoutText, parseWorkoutWithLlm } from './llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
@@ -25,7 +24,7 @@ import { VoiceInputButton, type VoiceInputPhase } from '../voice-input'
 import { WorkoutParseErrorNotice, workoutParseErrorKind, type WorkoutParseErrorKind } from './WorkoutParseErrorNotice'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
-import { formatRunDuration, runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
+import { formatRunDuration, isRowingExerciseRef, rowingPaceLabel, runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
 import { WearableHealthCard } from '../wearables'
 import { isTodayGreetingPilotEnabled, isWearablesPilotEnabled } from '../../app/feature-flags'
 import { todayHeaderProps } from './today-header'
@@ -37,7 +36,8 @@ import { TrainerFirstPlanPrompt, TrainerFirstRun } from './FirstRunExperience'
 import { takeFirstWorkoutIntent } from './first-workout-intent'
 import { groupParsedWorkoutReviewBlocks, moveParsedWorkoutReviewBlock } from './today-review-order'
 import { AppInstallPrompt } from '../install'
-import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon } from '../../shared/icons'
+import { NotificationOnboarding } from '../notifications'
+import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, KeyboardIcon } from '../../shared/icons'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -54,8 +54,9 @@ function setSummary(item: ParsedWorkoutExercise): string {
   if (item.exercise.inputKind === 'distance') {
     const duration = formatRunDuration(first.durationSec)
     const distance = runDistanceLabel(first.distanceKm)
-    const pace = runPaceLabel(first.durationSec, first.distanceKm)
-    const result = [distance, duration, pace ? `темп ${pace}` : null].filter(Boolean).join(' · ')
+    const rowing = isRowingExerciseRef(item.exercise.ref)
+    const pace = rowing ? rowingPaceLabel(first.durationSec, first.distanceKm) : runPaceLabel(first.durationSec, first.distanceKm)
+    const result = [distance, duration, pace ? `темп ${pace}` : null, rowing && first.reps !== undefined ? `${first.reps} гребков/мин` : null].filter(Boolean).join(' · ')
     return `${item.sets.length} × ${result || 'значения'}`
   }
   if (first.durationSec !== undefined) return `${item.sets.length} × ${first.durationSec} сек`
@@ -85,7 +86,7 @@ function parsedLlmItems(response: WorkoutParseResponse, catalog: readonly Exerci
       ...(typeof set.durationMin === 'number' && set.durationMin > 0 ? { durationSec: Math.round(set.durationMin * 60) } : {}),
       ...(typeof set.distanceKm === 'number' && set.distanceKm > 0 ? { distanceKm: set.distanceKm } : {}),
     })) : [{ position: 0 }]
-    return [{ line: item.sourceText, exercise, sets, hasValues: sets.some((set) => Object.keys(set).some((key) => key !== 'position' && set[key as keyof typeof set] !== undefined)) }]
+    return [{ line: item.sourceText, exercise, sets, hasValues: sets.some((set) => Object.keys(set).some((key) => key !== 'position' && set[key as keyof typeof set] !== undefined)), trainerComment: workoutTrainerComment(item.sourceText) }]
   })
 }
 
@@ -100,6 +101,7 @@ function draftExercise(item: ParsedWorkoutExercise, position: number): WorkoutDr
     restBetweenExercisesSec: item.structure?.restBetweenExercisesSec,
     restBetweenRoundsSec: item.structure?.restBetweenRoundsSec,
     restBetweenSetsSec: item.structure?.restBetweenSetsSec,
+    trainerComment: item.trainerComment,
     // Черновик мог быть создан до появления строгого ограничения RPE в БД.
     // Не даём старому значению сорвать сохранение всей тренировки.
     sets: (item.sets.length ? item.sets : [{ position: 0 }]).map((set) => ({
@@ -128,6 +130,7 @@ function runningFormatItems(exercise: ExerciseSnapshot, format: RunningFormat): 
 }
 
 export function TodayPage({ clientMode = false }: TodayPageProps) {
+  const { clients: clientsRepository, exercises: exercisesRepository, goals: goalsRepository, progress: progressRepository, workouts: workoutsRepository } = useDataBackend()
   const navigate = useNavigate()
   const location = useLocation()
   const queryClient = useQueryClient()
@@ -159,12 +162,15 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [items, setItems] = useState<ParsedWorkoutExercise[]>([])
   const [reordering, setReordering] = useState(false)
   const showRpeByDefault = useRpeDisplay(actor?.userId)
+  const showRestByDefault = useExercisePlanRestDisplay(actor?.userId)
   const [rpeOverrides, setRpeOverrides] = useState<Map<number, boolean>>(() => new Map())
+  const [restOverrides, setRestOverrides] = useState<Map<number, boolean>>(() => new Map())
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerFromCompose, setPickerFromCompose] = useState(false)
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const [clientId, setClientId] = useState('')
-  const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId), enabled: Boolean(clientId) })
+  const effectiveClientId = clientMode ? mine.data?.id ?? clientId : clientId
+  const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', effectiveClientId], queryFn: () => workoutsRepository.list(undefined, undefined, effectiveClientId), enabled: Boolean(effectiveClientId) })
   const [recordMode, setRecordMode] = useState<RecordMode>('planned')
   const [workoutDate, setWorkoutDate] = useState(today)
   const [startTime, setStartTime] = useState('')
@@ -193,7 +199,10 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const draftKey = todayDraftKey(actor!.userId)
   const todayPath = clientMode ? '/me' : '/today'
   const view = new URLSearchParams(location.search).get('view')
-  const screen: Screen = view === 'review' || view === 'save' ? view : 'compose'
+  const requestedScreen: Screen = view === 'review' || view === 'save' ? view : 'compose'
+  const screen: Screen = draftReady && requestedScreen === 'save' && items.length === 0
+    ? (text.trim() ? 'review' : 'compose')
+    : requestedScreen
   const reviewBlocks = useMemo(() => groupParsedWorkoutReviewBlocks(items), [items])
 
   function isRpeVisible(exerciseIndex: number) {
@@ -202,6 +211,14 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
 
   function toggleRpe(exerciseIndex: number) {
     setRpeOverrides((current) => new Map(current).set(exerciseIndex, !isRpeVisible(exerciseIndex)))
+  }
+
+  function isRestVisible(exerciseIndex: number) {
+    return restOverrides.get(exerciseIndex) ?? showRestByDefault
+  }
+
+  function toggleRest(exerciseIndex: number) {
+    setRestOverrides((current) => new Map(current).set(exerciseIndex, !isRestVisible(exerciseIndex)))
   }
 
   // Каждый шаг — отдельный маршрут. Так кнопка назад и системный жест iOS
@@ -241,6 +258,13 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   useEffect(() => {
     if (clientMode && mine.data?.id) setClientId(mine.data.id)
   }, [clientMode, mine.data?.id])
+
+  useEffect(() => {
+    if (!draftReady || requestedScreen !== 'save' || items.length > 0) return
+    const nextScreen: Screen = text.trim() ? 'review' : 'compose'
+    navigate(nextScreen === 'compose' ? todayPath : `${todayPath}?view=${nextScreen}`, { replace: true })
+    if (nextScreen === 'compose' && text.trim()) setTextComposerOpen(true)
+  }, [draftReady, items.length, navigate, requestedScreen, text, todayPath])
 
   useEffect(() => {
     if (!draftReady) return
@@ -285,7 +309,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   }, [noMatches, text])
   const save = useMutation({
     mutationFn: async (mode: RecordMode) => {
-      const draft = { clientId, workoutDate, startTime: mode === 'planned' ? startTime || undefined : undefined, exercises: items.map(draftExercise) }
+      const draft = { clientId: effectiveClientId, workoutDate, startTime: mode === 'planned' ? startTime || undefined : undefined, exercises: items.map(draftExercise) }
       return mode === 'planned' ? workoutsRepository.save(draft) : workoutsRepository.saveCompleted(draft)
     },
     onMutate: (mode) => trackGoal(mode === 'planned' ? 'today_plan_save_started' : 'today_workout_save_started'),
@@ -302,7 +326,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       await queryClient.invalidateQueries({ queryKey: ['workouts'] })
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
       if (!clientMode) await queryClient.invalidateQueries({ queryKey: ['clients'] })
-      navigate(`/workouts/${id}`, { state: { returnTo: clientMode ? '/me' : '/today', firstPlanClient: firstPlanClientState } })
+      navigate(`/workouts/${id}`, { replace: true, state: { returnTo: clientMode ? '/me' : '/today', firstPlanClient: firstPlanClientState } })
     }, onError: () => trackGoal('today_workout_save_error'),
   })
   const snoozeAttention = useMutation({
@@ -335,7 +359,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setParseError(null)
     setParsing(true)
     try {
-      const llm = await parseWorkoutWithLlm(text, catalog.exercises)
+      const llm = await parseWorkoutWithLlm(text, catalog.exercises, {
+        remoteParser: (sourceText, systemCatalog) => exercisesRepository.parseWorkout(sourceText, systemCatalog),
+      })
       if (request !== reviewRequest.current) return
       const parsedItems = parsedLlmItems(llm, catalog.exercises)
       const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: item.suggestedExerciseRefs.flatMap((ref) => catalog.exercises.find((exercise) => exercise.ref === ref) ?? []) }))
@@ -367,7 +393,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setVoiceRefinement({ state: 'loading', message: 'Разбираю диктовку по упражнениям…' })
     trackGoal('voice_workout_parse_started')
     try {
-      const llm = await parseWorkoutWithLlm(transcript, catalog.exercises)
+      const llm = await parseWorkoutWithLlm(transcript, catalog.exercises, {
+        remoteParser: (sourceText, systemCatalog) => exercisesRepository.parseWorkout(sourceText, systemCatalog),
+      })
       if (version !== voiceParseVersion.current) return
       const parsedItems = parsedLlmItems(llm, catalog.exercises)
       const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: item.suggestedExerciseRefs.flatMap((ref) => catalog.exercises.find((exercise) => exercise.ref === ref) ?? []) }))
@@ -420,10 +448,10 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   }, [firstWorkoutIntent])
 
   async function previousResults(selected: ExerciseSnapshot[]): Promise<Map<string, PreviousExerciseResult>> {
-    if (!clientId) return new Map()
+    if (!effectiveClientId) return new Map()
     try {
       setPrefillError(null)
-      return await workoutsRepository.latestExerciseResults(clientId, selected.map((exercise) => exercise.ref))
+      return await workoutsRepository.latestExerciseResults(effectiveClientId, selected.map((exercise) => exercise.ref))
     } catch {
       setPrefillError('Не удалось подставить значения с прошлой тренировки')
       return new Map()
@@ -489,6 +517,16 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     }))
   }
 
+  function updateRestBetweenSets(itemIndex: number, restBetweenSetsSec: number) {
+    trackGoal('today_review_edited')
+    const ref = items[itemIndex]?.exercise.ref
+    if (ref) setManualRefs((current) => current.includes(ref) ? current : [...current, ref])
+    setItems((current) => current.map((item, index) => index !== itemIndex ? item : {
+      ...item,
+      structure: { ...item.structure, restBetweenSetsSec: Math.min(600, Math.max(0, restBetweenSetsSec)) },
+    }))
+  }
+
   function addSet(itemIndex: number) {
     const ref = items[itemIndex]?.exercise.ref
     if (ref) setManualRefs((current) => current.includes(ref) ? current : [...current, ref])
@@ -516,6 +554,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setRemovedItem({ item, index: itemIndex })
     setRemovedRefs((current) => current.includes(item.exercise.ref) ? current : [...current, item.exercise.ref])
     setItems((current) => current.filter((_, index) => index !== itemIndex))
+    setRpeOverrides(new Map())
+    setRestOverrides(new Map())
   }
 
   function undoRemoveExercise() {
@@ -538,6 +578,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     // Видимость RPE — временная настройка по индексу. После перестановки
     // сбрасываем её, чтобы настройка не прикрепилась к другому упражнению.
     setRpeOverrides(new Map())
+    setRestOverrides(new Map())
   }
 
   function clearDraftAndForm(openComposer = false) {
@@ -579,6 +620,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   useEffect(() => {
     if (firstPlanClient && !clientId) setClientId(firstPlanClient.id)
   }, [clientId, firstPlanClient])
+  // Пилот приветствия в шапке (feature-flags.ts): та же allowlist, что и для
+  // компактной voice-hero карточки — визуальная доводка того же экрана.
+  const attentionHideEyebrow = Boolean(actor && isTodayGreetingPilotEnabled(actor.userId))
   const attentionSurface = !clientMode && !trainerHasNoClients && <TrainerAttentionQueue
     actions={actionItems}
     planning={planningItems}
@@ -586,6 +630,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     error={trainerAttention.error ?? attentionPreferences.error}
     snoozingClientId={snoozeAttention.isPending ? snoozeAttention.variables : undefined}
     onSnooze={(targetClientId) => snoozeAttention.mutate(targetClientId)}
+    hideEyebrow={attentionHideEyebrow}
   />
   const clientHomeError = clientMode ? mine.error ?? workouts.error ?? regularity.error ?? goal.error ?? personalRecords.error : null
   const greetingName = clientMode ? mine.data?.fullName || actor?.firstName || 'спортсмен' : actor?.firstName || 'тренер'
@@ -626,11 +671,21 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         </section>}
         showFirstRunConnection={actor?.kind === 'client' && actor.trainerId === actor.userId}
         wearable={actor && isWearablesPilotEnabled(actor.userId) ? <WearableHealthCard /> : undefined}
-      />{actor && (workouts.data?.length ?? 0) > 0 && <AppInstallPrompt userId={actor.userId} />}</> : <>
+      />{actor && (workouts.data?.length ?? 0) > 0 && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} /></>}</> : <>
       {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}
       {!clientMode && firstPlanClient && !textComposerOpen && <TrainerFirstPlanPrompt clientName={firstPlanClient.fullName} />}
-      {!textComposerOpen && <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={handleHeroTranscript} />}
-      {!textComposerOpen && voicePhase === 'idle' && <button type="button" className="link today-text-toggle" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button>}
+      {!textComposerOpen && <div className={greetingHeaderPilotEnabled ? 'today-voice-hero-compact' : undefined}>
+        <VoiceInputButton
+          variant="hero"
+          source="today_workout"
+          idleLabel="Надиктовать тренировку"
+          onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }}
+          onPhaseChange={setVoicePhase}
+          onTranscript={handleHeroTranscript}
+          secondaryAction={greetingHeaderPilotEnabled ? <button type="button" className="today-voice-text-inline" aria-label="Ввести текстом" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}><KeyboardIcon /></button> : undefined}
+        />
+      </div>}
+      {!textComposerOpen && voicePhase === 'idle' && !greetingHeaderPilotEnabled && <button type="button" className="link today-text-toggle" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button>}
       {restoredDraftScreen && !textComposerOpen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
       {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>Новая тренировка</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={() => setTextComposerOpen(false)}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setPickerFromCompose(true); setPickerOpen(true) }}>Выбрать упражнения вручную</button>}>
       {voiceRefinement && voiceRefinement.state !== 'loading' && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
@@ -652,7 +707,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {voicePhase === 'idle' && !textComposerOpen && actor && (clients.data?.length ?? 0) > 0 && <AppInstallPrompt userId={actor.userId} />}
       </>}
     </section> : <section className={`today-review workout-focused-page ${screen === 'save' ? 'today-save-step' : ''}`}>
-      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { setReordering(false); if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'} state="planned" meta={screen === 'review' ? (items.length > 0 ? `Распознано: ${items.length}` : undefined) : 'Выберите вариант и дату'} /></div>
+      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { setReordering(false); if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'} state={screen === 'save' && recordMode === 'completed' ? 'completed' : 'planned'} meta={screen === 'review' ? (items.length > 0 ? `Распознано: ${items.length}` : undefined) : 'Выберите вариант и дату'} /></div>
       {screen === 'review' && <>
       {reviewBlocks.length > 1 && <div className="today-review-order-toolbar">{reordering
         ? <div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div>
@@ -660,14 +715,20 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </div>}
       {items.length > 0 ? <div className={`today-exercise-list ${reordering ? 'is-reordering' : ''}`}>{reviewBlocks.map((block, blockIndex) => <div className="today-review-block" key={block.id}>{block.items.map(({ item, index }, itemInBlockIndex) => {
         const showRpe = isRpeVisible(index)
+        const showRest = isRestVisible(index)
         const reorderActions = itemInBlockIndex === 0 ? <span className="block-reorder today-review-order-buttons">
           <button type="button" className="reorder-btn" aria-label={`Переместить блок «${item.exercise.name}» вверх`} disabled={blockIndex === 0} onClick={() => moveReviewBlock(index, -1)}><ArrowUpIcon /></button>
           <button type="button" className="reorder-btn" aria-label={`Переместить блок «${item.exercise.name}» вниз`} disabled={blockIndex === reviewBlocks.length - 1} onClick={() => moveReviewBlock(index, 1)}><ArrowDownIcon /></button>
         </span> : undefined
         return <WorkoutExercise state="planned" className="today-exercise planned-exercise" key={`${item.exercise.ref}-${index}`}>
-          <WorkoutExerciseHeader as="header" titleAs="strong" className="today-exercise-title" name={item.exercise.name} actions={reordering ? reorderActions : <button type="button" className="icon-button" aria-label={`Удалить ${item.exercise.name}`} onClick={() => removeExercise(index)}><CloseIcon /></button>} />
+          <WorkoutExerciseHeader as="header" titleAs="strong" className="today-exercise-title" name={item.exercise.name} actions={reordering ? reorderActions : <OverflowMenu label={`Настройки упражнения «${item.exercise.name}»`} items={[
+            { label: showRest ? 'Скрыть отдых' : 'Показать отдых', onClick: () => toggleRest(index) },
+            { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(index) },
+            { label: 'Заменить', onClick: () => { setReplaceIndex(index); setPickerOpen(true) } },
+            { label: 'Удалить', danger: true, onClick: () => removeExercise(index) },
+          ]} />} />
           <p className={setSummary(item) === 'без значений' ? 'today-exercise-missing' : undefined}>{setSummary(item)}</p>
-          {!reordering && <details className="today-exercise-editor"><summary>{setSummary(item) === 'без значений' ? 'Добавить значения' : 'Править подходы'}</summary><div className="today-exercise-actions"><button type="button" className="link" onClick={() => { setReplaceIndex(index); setPickerOpen(true) }}>Заменить</button><button type="button" className="link" aria-pressed={showRpe} onClick={() => toggleRpe(index)}>{showRpe ? 'Скрыть RPE' : 'Указать RPE'}</button></div><WorkoutSetTable variant="planned" inputKind={item.exercise.inputKind} layout={item.exercise.inputKind === 'distance' ? 'full' : 'singleValue'} showRpe={showRpe} className="today-set-list">{item.sets.map((set, setIndex) => <WorkoutSetRow state="planned" className={`today-set-editor planned-set ${showRpe ? 'rpe-visible' : ''}`} key={set.position}><strong className="workout-set-number planned-set-number">{setIndex + 1}</strong>{item.exercise.inputKind === 'strength' && <><label><span className="sr-only">Кг</span><input className="planned-set-input" aria-label={`${item.exercise.name}: вес, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.weightKg ?? ''} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label></>}{item.exercise.inputKind === 'duration' && <><label><span className="sr-only">Сек.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: секунды, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.durationSec ?? ''} onChange={(event) => updateSet(index, setIndex, { durationSec: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><span /></>}{item.exercise.inputKind === 'reps' && <><label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><span /></>}{item.exercise.inputKind === 'distance' && <RunMetricsFields idPrefix={`today-run-${index}-${setIndex}`} durationSec={set.durationSec} distanceKm={set.distanceKm} inputClassName="planned-set-input" durationLabel={`${item.exercise.name}: время, подход ${setIndex + 1}`} distanceLabel={`${item.exercise.name}: расстояние, подход ${setIndex + 1}`} distanceUnitLabel={`${item.exercise.name}: единица расстояния, подход ${setIndex + 1}`} onCommit={(patch) => updateSet(index, setIndex, patch)} />}{showRpe && <label><span className="sr-only">RPE</span><input className="planned-set-rpe" aria-label={`${item.exercise.name}: RPE, подход ${setIndex + 1}`} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.sets.length > 1 && <button type="button" className="link danger planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(index, setIndex)}><CloseIcon /></button>}</WorkoutSetRow>)}</WorkoutSetTable><div className="set-add-row"><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></div></details>}
+          {!reordering && <details className="today-exercise-editor"><summary>{setSummary(item) === 'без значений' ? 'Добавить значения' : 'Править подходы'}</summary>{showRest && <label className="exercise-plan-rest-field">Отдых между подходами, с<input key={`${index}-${item.structure?.restBetweenSetsSec ?? 90}`} aria-label={`Отдых между подходами, ${item.exercise.name}`} type="number" inputMode="numeric" min="0" max="600" defaultValue={item.structure?.restBetweenSetsSec ?? 90} onFocus={(event) => event.currentTarget.select()} onBlur={(event) => { const raw = event.currentTarget.value; const next = raw === '' || Number.isNaN(Number(raw)) ? 90 : Math.min(600, Math.max(0, Number(raw))); event.currentTarget.value = String(next); updateRestBetweenSets(index, next) }} onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }} /></label>}<WorkoutSetTable variant="planned" inputKind={item.exercise.inputKind} layout={item.exercise.inputKind === 'distance' ? 'full' : 'singleValue'} showRpe={showRpe} className="today-set-list">{item.sets.map((set, setIndex) => <WorkoutSetRow state="planned" className={`today-set-editor planned-set ${showRpe ? 'rpe-visible' : ''}`} key={set.position}><strong className="workout-set-number planned-set-number">{setIndex + 1}</strong>{item.exercise.inputKind === 'strength' && <><label><span className="sr-only">Кг</span><input className="planned-set-input" aria-label={`${item.exercise.name}: вес, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.weightKg ?? ''} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label></>}{item.exercise.inputKind === 'duration' && <><label><span className="sr-only">Сек.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: секунды, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.durationSec ?? ''} onChange={(event) => updateSet(index, setIndex, { durationSec: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><span /></>}{item.exercise.inputKind === 'reps' && <><label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><span /></>}{item.exercise.inputKind === 'distance' && <RunMetricsFields idPrefix={`today-run-${index}-${setIndex}`} rowing={isRowingExerciseRef(item.exercise.ref)} durationSec={set.durationSec} distanceKm={set.distanceKm} strokeRate={set.reps} inputClassName="planned-set-input" durationLabel={`${item.exercise.name}: время, подход ${setIndex + 1}`} distanceLabel={`${item.exercise.name}: расстояние, подход ${setIndex + 1}`} distanceUnitLabel={`${item.exercise.name}: единица расстояния, подход ${setIndex + 1}`} onCommit={(patch) => updateSet(index, setIndex, patch)} />}{showRpe && <label><span className="sr-only">RPE</span><input className="planned-set-rpe" aria-label={`${item.exercise.name}: RPE, подход ${setIndex + 1}`} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.sets.length > 1 && <button type="button" className="link danger planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(index, setIndex)}><CloseIcon /></button>}</WorkoutSetRow>)}</WorkoutSetTable><div className="set-add-row"><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></div></details>}
         </WorkoutExercise>
       })}</div>)}</div> : <section className="today-empty today-exercise-empty"><p>Добавьте упражнения из каталога — можно выбрать несколько сразу.</p><button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button></section>}
       {items.length > 0 && !reordering && <button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button>}
@@ -676,34 +737,39 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </>}
       {screen === 'save' && <section className="today-assignment">
       {clientMode
-        ? <p className="today-assignment-self">Тренировка будет сохранена в ваш кабинет</p>
+        ? effectiveClientId
+          ? <p className="today-assignment-self">Тренировка будет сохранена в ваш кабинет</p>
+          : mine.isLoading
+            ? <p className="today-assignment-self">Проверяем профиль…</p>
+            : <div className="error" role="alert">Не удалось открыть профиль спортсмена. <button type="button" className="link" onClick={() => void mine.refetch()}>Повторить</button></div>
         : <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={setClientId} label="Для кого тренировка" loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
       {(prefillError || save.error) && <p className="error">{prefillError ?? save.error?.message}</p>}
       <section className="today-save-actions" aria-label="Тип записи">
         <p className="today-save-question">Как сохранить?</p>
         <div className="today-record-mode" role="group" aria-label="Как сохранить тренировку"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => setRecordMode('planned')}>Запланировать</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => setRecordMode('completed')}>Записать выполненную</button></div>
         <div className="split"><label className="today-date-field"><span>Дата</span><input aria-label="Дата тренировки" type="date" value={workoutDate} onChange={(event) => setWorkoutDate(localDate(event.target.value))} required /></label>{recordMode === 'planned' && <label className="today-date-field"><span>Время</span><input aria-label="Время тренировки" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>}</div>
-        <WorkoutCta type="button" className="wide" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!items.length || !clientId} onClick={() => save.mutate(recordMode)}>{recordMode === 'planned' ? 'Запланировать тренировку' : 'Записать тренировку'}</WorkoutCta>
+        <WorkoutCta type="button" className="wide" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!items.length || !effectiveClientId} onClick={() => save.mutate(recordMode)}>{recordMode === 'planned' ? 'Запланировать тренировку' : 'Записать тренировку'}</WorkoutCta>
       </section></section>}
     </section>}
     {(catalog.error ?? (!clientMode ? todayWorkouts.error : null)) && <p className="error">{(catalog.error ?? (!clientMode ? todayWorkouts.error : null))?.message}</p>}
-    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
   </Page>
 }
 
-function TrainerAttentionQueue({ actions, planning, loading, error, snoozingClientId, onSnooze }: {
+function TrainerAttentionQueue({ actions, planning, loading, error, snoozingClientId, onSnooze, hideEyebrow }: {
   actions: TrainerActionItem[]
   planning: TrainerPlanningItem[]
   loading: boolean
   error: Error | null
   snoozingClientId?: string
   onSnooze: (clientId: string) => void
+  hideEyebrow?: boolean
 }) {
   if (loading) return <section className="trainer-attention trainer-attention-loading" aria-label="Задачи по клиентам"><span className="skeleton-line" /><span className="skeleton-line short" /></section>
   if (error) return <p className="error">Не удалось загрузить задачи по клиентам.</p>
-  if (!actions.length && !planning.length) return <section className="trainer-attention trainer-attention-clear"><p className="eyebrow">ПО КЛИЕНТАМ</p><strong>Срочных действий нет</strong></section>
+  if (!actions.length && !planning.length) return <section className="trainer-attention trainer-attention-clear">{!hideEyebrow && <p className="eyebrow">ПО КЛИЕНТАМ</p>}<strong>Срочных действий нет</strong></section>
   return <section className="trainer-attention" aria-labelledby="trainer-attention-title">
-    {actions.length > 0 && <><div className="trainer-attention-heading"><p className="eyebrow">ПО КЛИЕНТАМ</p><h2 id="trainer-attention-title">Требует действия</h2></div><div className="trainer-attention-list">{actions.map((item) => <Link className={`trainer-attention-row reason-${item.reason}`} key={item.clientId} to={`/workouts/${item.workoutId}${item.reason === 'question' ? '?reply=1' : ''}`}>
+    {actions.length > 0 && <><div className="trainer-attention-heading">{!hideEyebrow && <p className="eyebrow">ПО КЛИЕНТАМ</p>}<h2 id="trainer-attention-title">Требует действия</h2></div><div className="trainer-attention-list">{actions.map((item) => <Link className={`trainer-attention-row reason-${item.reason}`} key={item.clientId} to={`/workouts/${item.workoutId}${item.reason === 'question' ? '?reply=1' : ''}`}>
       <span><strong>{item.clientName}</strong><small>{item.title}</small><em>{item.reason === 'past_plan' ? formatLocalDate(localDate(item.detail)) : item.detail}</em></span><b>{item.actionLabel}</b>
     </Link>)}</div></>}
     {planning.length > 0 && <details className="trainer-planning">

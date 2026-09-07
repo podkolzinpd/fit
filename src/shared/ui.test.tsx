@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -89,6 +89,14 @@ describe('system actions', () => {
 })
 
 describe('Coachmark', () => {
+  it('keeps a sheet coachmark inside its dialog stacking context', () => {
+    render(<div className="phone-frame"><section role="dialog" aria-label="Каталог"><Coachmark id="catalog-dialog" userId="catalog-user" title="Разделы" description="Поиск во всех разделах"><button>Каталог</button></Coachmark></section></div>)
+    expect(screen.getByRole('dialog', { name: 'Каталог' })).toContainElement(screen.getByRole('status'))
+    fireEvent.click(screen.getByRole('button', { name: 'Понятно' }))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
   beforeEach(() => {
     const values = new Map<string, string>()
     vi.stubGlobal('localStorage', {
@@ -128,6 +136,28 @@ describe('Coachmark', () => {
       <h2>Заголовок карточки</h2>
     </Coachmark>)
     expect(screen.getByRole('heading', { name: 'Заголовок карточки' })).toBeVisible()
+  })
+
+  it('показывает пузырь над нижней навигацией, если снизу нет места', async () => {
+    const rect = (left: number, top: number, width: number, height: number) => ({
+      x: left, y: top, left, top, width, height,
+      right: left + width, bottom: top + height,
+      toJSON: () => ({}),
+    }) as DOMRect
+    const geometry = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      if (this.classList.contains('phone-frame')) return rect(0, 0, 390, 844)
+      if (this.classList.contains('coachmark-anchor')) return rect(180, 760, 80, 60)
+      if (this.classList.contains('coachmark-bubble')) return rect(0, 0, 280, 120)
+      return rect(0, 0, 0, 0)
+    })
+    try {
+      render(<div className="phone-frame"><Coachmark id="assistant-rollout" userId="user-4" title="Новое" description="Стало иначе">
+        <a href="/assistant">Ассистент</a>
+      </Coachmark></div>)
+      await waitFor(() => expect(screen.getByRole('status')).toHaveStyle({ top: '630px', left: '102px' }))
+    } finally {
+      geometry.mockRestore()
+    }
   })
 })
 

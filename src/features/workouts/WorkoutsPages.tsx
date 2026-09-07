@@ -1,15 +1,12 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { clientsRepository } from '../../data/repositories/clients.repository'
-import { goalsRepository } from '../../data/repositories/goals.repository'
-import { invitationsRepository } from '../../data/repositories/invitations.repository'
 import { currentStage, orderedStages } from '../../shared/goal-rules'
-import { exercisesRepository } from '../../data/repositories/exercises.repository'
+import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, workoutsRepository, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
 import {
@@ -17,8 +14,9 @@ import {
   type LocalDate,
 } from '../../shared/local-date'
 import { AsyncView, Coachmark, EmptyState, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
-import { ExerciseImage, ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
-import { clientWorkoutAuthorLabel, ClientPicker, type ClientPickerSelection } from '../clients'
+import { ExerciseImage, ExercisePicker, ExerciseTechniqueSheet, hasExerciseTechnique, recentExercisesForClient, useExerciseCatalog } from '../exercises'
+import { clientWorkoutAuthorLabel, ClientPicker, ClientWorkoutHistoryCalendar, useWorkoutHistoryCalendar, type ClientPickerSelection } from '../clients'
+import { hasWorkoutBackEntry, safeWorkoutReturnTo, useWorkoutBack, workoutListFallback, type WorkoutNavigationState } from './workout-navigation'
 import { VoiceNoteField } from '../voice-input'
 import { QuickWorkoutEntry } from './QuickWorkoutEntry'
 import { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
@@ -33,13 +31,15 @@ import { setLiveScreenAwake } from './live-keep-awake'
 import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
 import { useAuth } from '../../app/auth-context'
+import { useDataBackend } from '../../app/data-backend-context'
+import { useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { useRpeDisplay } from '../../app/rpe-display'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
 import { plannedWorkoutActionLabels } from './workout-entry-rules'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
-import { parseRunDurationInput, runDistanceKmFromInput, runDistanceLabel, runPaceLabel, type RunDistanceUnit } from '../../shared/run-metrics'
+import { isRowingExerciseRef, parseRunDurationInput, rowingPaceLabel, runDistanceKmFromInput, runDistanceLabel, runPaceLabel, type RunDistanceUnit } from '../../shared/run-metrics'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 import { WorkoutCompletionCard } from './WorkoutCompletionCard'
@@ -48,10 +48,16 @@ import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, Wor
 import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
 import { formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes } from './schedule-presentation'
+import { InvitationCodeCard } from '../../shared/invitation-code-card'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
 export const WORKOUT_HISTORY_PAGE_SIZE = 20
+
+function catalogExerciseFor(exercises: readonly ExerciseSnapshot[], exercise: { ref: string; source?: 'system' | 'custom' }) {
+  return exercises.find((candidate) => candidate.ref === exercise.ref && (!exercise.source || candidate.source === exercise.source))
+    ?? exercises.find((candidate) => candidate.ref === exercise.ref)
+}
 
 function minutesOf(time: string): number {
   const [h, m] = time.split(':').map(Number)
@@ -65,6 +71,7 @@ function eventTime(workout: Workout): string {
 }
 
 export function SchedulePage() {
+  const { workouts: workoutsRepository } = useDataBackend()
   const [params, setParams] = useSearchParams()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
@@ -258,8 +265,8 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo }: { work
     <div className="workout-chronicle-exercises">
       {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
         const result = done
-          ? compactCompletedSetSummary(exercise.sets)
-          : compactPlannedSetSummary(exercise.sets)
+          ? compactCompletedSetSummary(exercise.sets, false, exercise.ref)
+          : compactPlannedSetSummary(exercise.sets, false, exercise.ref)
         return <div className="workout-chronicle-exercise" key={exercise.id}>
           <span className="workout-chronicle-exercise-name">{exercise.name}
             {exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
@@ -284,9 +291,13 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo }: { work
 }
 
 export function ClientWorkoutsPage() {
+  const { workouts: workoutsRepository } = useDataBackend()
   const { clientId = '' } = useParams()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
+  const calendar = useWorkoutHistoryCalendar(today)
+  const returnTo = `/clients/${clientId}/workouts${calendar.search}`
+  const goBack = useWorkoutBack(`/clients/${clientId}`)
   useClientRealtime(clientId)
   const query = useInfiniteQuery({
     queryKey: ['workouts', clientId, 'history', today],
@@ -296,30 +307,55 @@ export function ClientWorkoutsPage() {
   })
   const items = query.data?.pages.flatMap((page) => page.items) ?? []
   const split = splitClientWorkouts(items, today)
+  const calendarHistory = useQuery({
+    queryKey: ['workouts', clientId, 'history-calendar', calendar.range.from, calendar.range.to],
+    queryFn: () => workoutsRepository.list(calendar.range.from, calendar.range.to, clientId),
+    enabled: calendar.state.view === 'calendar',
+  })
+  const calendarItems = splitClientWorkouts(calendarHistory.data ?? [], today).history
+  const contextLabel = (workout: Workout) => workout.createdBy && workout.createdBy !== actor?.userId ? 'Создано клиентом' : null
   const hasWorkouts = split.needsDecision.length > 0 || split.history.length > 0
-  return <Page className="trainer-client-workouts-page" title="Тренировки клиента" back={`/clients/${clientId}`} action={hasWorkouts && <Link className="button" to={`/workouts/new?client=${clientId}`}>Запланировать</Link>}><AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
-    {hasWorkouts ? <div className="client-workouts-stack">
-      {split.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{split.needsDecision.map((workout) => <PastWorkoutPlanCard key={workout.id} workout={workout} returnTo={`/clients/${clientId}/workouts`} />)}</div></section>}
-      {split.history.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div><div className="cards workout-chronicle-list">{split.history.map((workout) => {
-    const clientAuthored = Boolean(workout.createdBy && workout.createdBy !== actor?.userId)
-    return <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientAuthored ? 'Создано клиентом' : null} />
-  })}</div></section>}
-      <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
+  return <Page className="trainer-client-workouts-page" title="Тренировки клиента" back={`/clients/${clientId}`} onBack={goBack} action={hasWorkouts && <Link className="button" to={`/workouts/new?client=${clientId}`} state={{ returnTo }}>Запланировать</Link>}><AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+    {hasWorkouts || calendar.state.view === 'calendar' ? <div className="client-workouts-stack">
+      {split.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{split.needsDecision.map((workout) => <PastWorkoutPlanCard key={workout.id} workout={workout} returnTo={returnTo} />)}</div></section>}
+      <section className="client-workout-section client-history-section">
+        <div className="client-workout-section-head client-history-section-head">
+          <div><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div>
+          <Coachmark id="trainer-workout-history-calendar-2026-09" userId={actor?.userId} title="История по датам" description="Переключитесь на календарь, чтобы найти тренировку по дню.">
+            <div className="client-history-view-toggle" role="group" aria-label="Вид истории тренировок">
+              <button type="button" aria-pressed={calendar.state.view === 'list'} onClick={calendar.showList}>Список</button>
+              <button type="button" aria-pressed={calendar.state.view === 'calendar'} onClick={() => calendar.showCalendar(split.history[0]?.workoutDate)}><ScheduleIcon />Календарь</button>
+            </div>
+          </Coachmark>
+        </div>
+        {calendar.state.view === 'list' ? <>
+          <div className="cards workout-chronicle-list">{split.history.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={contextLabel(workout)} returnTo={returnTo} />)}</div>
+          {split.history.length === 0 && <p className="muted">Здесь появятся завершённые тренировки.</p>}
+          <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
+        </> : <ClientWorkoutHistoryCalendar month={calendar.state.month} today={today} workouts={calendarItems}
+          selectedDate={calendar.state.selectedDate} loading={calendarHistory.isLoading} error={calendarHistory.error}
+          returnTo={returnTo} contextLabel={contextLabel} onRetry={() => void calendarHistory.refetch()}
+          onMonthChange={calendar.shiftMonth} onDateSelect={calendar.selectDate} />}
+      </section>
     </div> : <EmptyState
       title="Тренировка для клиента"
       description="Составьте план или сразу запишите готовый результат."
-      action={<Link className="button secondary" to={`/workouts/new?client=${clientId}`}>Запланировать тренировку</Link>}
+      action={<Link className="button secondary" to={`/workouts/new?client=${clientId}`} state={{ returnTo }}>Запланировать тренировку</Link>}
     />}
   </AsyncView></Page>
 }
 
 export function WorkoutFormPage() {
+  const { clients: clientsRepository, goals: goalsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId } = useParams()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
   const showRpeByDefault = useRpeDisplay(actor?.userId)
+  const showRestByDefault = useExercisePlanRestDisplay(actor?.userId)
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const navigationState = location.state as WorkoutNavigationState | null
   const queryClient = useQueryClient()
   const [confirmLeave, confirmLeaveDialog] = useConfirm()
   const sourceId = workoutId ?? params.get('copy') ?? undefined
@@ -346,10 +382,11 @@ export function WorkoutFormPage() {
   const [formDraftReady, setFormDraftReady] = useState(false)
   const [prefillError, setPrefillError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [techniqueExercise, setTechniqueExercise] = useState<ExerciseSnapshot | null>(null)
   const [pickerSearch, setPickerSearch] = useState('')
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
-  const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today)) : undefined
+  const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today, { refreshCatalogNames: true })) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
   const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`)
   // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
@@ -358,6 +395,7 @@ export function WorkoutFormPage() {
   // Копия остаётся в контексте клиента исходной тренировки: имя уже видно
   // в шапке, поэтому повторный picker только удлинял форму и создавал риск ошибки.
   const clientId = copiedWorkout ? (initial?.clientId ?? defaultClientId) : (selectedClientId || defaultClientId)
+  const goBack = useWorkoutBack(workoutId ? `/workouts/${workoutId}` : workoutListFallback(clientMode, clientId))
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId), enabled: Boolean(clientId) })
   const clientRecentExercises = useMemo(() => recentExercisesForClient(catalog.exercises, clientWorkouts.data ?? []), [catalog.exercises, clientWorkouts.data])
   const goal = useQuery({ queryKey: ['client-goal', clientId], queryFn: () => goalsRepository.get(clientId), enabled: Boolean(clientId) })
@@ -370,7 +408,8 @@ export function WorkoutFormPage() {
   const completedMode = recordCompleted || recordPlannedResult || Boolean(workoutId && source.data?.status === 'done')
   useEffect(() => {
     if (!actor || source.isLoading || (clientMode && mine.isLoading) || formDraftReady) return
-    const saved = readWorkoutFormDraft(draftKey)
+    // Only creation persists drafts. An unfinished copy must never populate an edit.
+    const saved = workoutId ? null : readWorkoutFormDraft(draftKey)
     if (saved) {
       setSelectedClientId(routeClientId || saved.clientId)
       setEntryDate(saved.workoutDate)
@@ -380,7 +419,9 @@ export function WorkoutFormPage() {
       setNotes(saved.notes)
       setStageId(saved.stageId)
       setRecordCompleted(saved.recordCompleted)
-      setDraftExercises(saved.exercises)
+      setDraftExercises(copiedWorkout
+        ? saved.exercises.map((exercise) => ({ ...exercise, name: copiedExerciseName(exercise) }))
+        : saved.exercises)
     } else if (initial) {
       setEntryDate(initial.workoutDate)
       // PostgreSQL возвращает time как HH:MM:SS, а нативный input[type=time]
@@ -409,7 +450,11 @@ export function WorkoutFormPage() {
     // version. Иначе пользователь успевает запустить только что изменённую
     // тренировку из устаревшего cache и получает ложный conflict.
     await queryClient.invalidateQueries({ queryKey: ['workout', id] })
-    navigate(`/workouts/${id}`)
+    if (workoutId === id && navigationState?.fromWorkoutDetailId === id && hasWorkoutBackEntry()) {
+      navigate(-1)
+    } else {
+      navigate(`/workouts/${id}`, { replace: true, state: { returnTo: safeWorkoutReturnTo(navigationState?.returnTo) } })
+    }
     void Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
@@ -541,12 +586,12 @@ export function WorkoutFormPage() {
       if (!shouldLeave) return
       removeWorkoutFormDraft(draftKey)
     }
-    navigate(-1)
+    goBack()
   }
   return <Page title={documentTitle} hideTitle className="workout-form-page workout-focused-page" back={-1} onBack={() => void leaveForm()}>
     <WorkoutHeader eyebrow={completedMode ? 'РЕЗУЛЬТАТ' : 'ПЛАН ТРЕНИРОВКИ'} title={pageTitle} state={completedMode ? 'history' : 'planned'}
       meta={headerMeta} showStatus={Boolean(workoutId)} />
-    <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void mine.refetch() }}>{editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={() => navigate(-1)}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Карточка ещё не подключена" description="Создайте личную карточку в кабинете — после этого можно будет добавлять самостоятельные тренировки." action={<Link className="button" to="/me">Создать карточку</Link>} /> : <form className="stack workout-form" onSubmit={(event) => void submit(event)}>
+    <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void mine.refetch() }}>{editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={goBack}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Заполните профиль спортсмена" description="После этого можно будет добавлять самостоятельные тренировки и отслеживать результаты." action={<Link className="button" to="/me/edit">Заполнить профиль</Link>} /> : <form className="stack workout-form" onSubmit={(event) => void submit(event)}>
       <section className="workout-form-section">
         {clientMode
           ? <input type="hidden" name="clientId" value={mine.data?.id ?? ''} />
@@ -575,20 +620,25 @@ export function WorkoutFormPage() {
         <div className="workout-form-section-head workout-form-exercise-heading"><h2>{completedMode ? 'Что выполнено' : 'Упражнения'}</h2></div>
         <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} />
         {exercises.length === 0 && <p className="workout-empty-hint" role="status">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
-        <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} collapseInitialExercises={copiedWorkout} initialExercisesReady={formDraftReady} />
+        <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }}
+          canOpenTechnique={(exercise) => hasExerciseTechnique(catalogExerciseFor(catalog.exercises, exercise))}
+          onOpenTechnique={(exercise) => { const meta = catalogExerciseFor(catalog.exercises, exercise); if (hasExerciseTechnique(meta)) setTechniqueExercise(meta) }}
+          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout} initialExercisesReady={formDraftReady} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>
     </form>}</AsyncView>
-    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
+    {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmLeaveDialog}
   </Page>
 }
 
 export function WorkoutDetailPage() {
+  const { goals: goalsRepository, invitations: invitationsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams(); const navigate = useNavigate(); const location = useLocation(); const queryClient = useQueryClient()
-  const navigationState = location.state as { justCompleted?: boolean; returnTo?: string; firstPlanClient?: { id: string; fullName: string } } | null
+  const navigationState = location.state as WorkoutNavigationState | null
   const { actor } = useAuth()
   const showRpe = useRpeDisplay(actor?.userId)
   const [confirm, confirmDialog] = useConfirm()
@@ -598,6 +648,17 @@ export function WorkoutDetailPage() {
   const [rescheduleTime, setRescheduleTime] = useState('')
   const [firstPlanInviteCode, setFirstPlanInviteCode] = useState<string | null>(null)
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
+  const backTo = workoutListFallback(actor?.role === 'client', query.data?.clientId)
+  const goBack = useWorkoutBack(backTo)
+  const childNavigationState: WorkoutNavigationState = { returnTo: `${location.pathname}${location.search}`, fromWorkoutDetailId: workoutId }
+  function openLive(id: string) {
+    if (id === workoutId) {
+      // Keep the existing detail entry and its origin for Back/completion.
+      // The completion card appears only when the workout data becomes done.
+      void navigate(`${location.pathname}${location.search}`, { replace: true, state: { ...navigationState, justCompleted: true } })
+    }
+    void navigate(`/workouts/${id}/live`, { state: { ...childNavigationState, fromWorkoutDetailId: id === workoutId ? id : undefined } })
+  }
   const completionRecords = useQuery({
     queryKey: ['workout-personal-records', workoutId],
     queryFn: () => workoutsRepository.personalRecords(workoutId),
@@ -621,11 +682,11 @@ export function WorkoutDetailPage() {
           confirmLabel: 'Открыть незавершённую',
           cancelLabel: 'Остаться в плане',
         })
-        if (shouldResume) navigate(`/workouts/${result.workout.id}/live`)
+        if (shouldResume) openLive(result.workout.id)
         return
       }
       await Promise.all([queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }), queryClient.invalidateQueries({ queryKey: ['clients'] })])
-      navigate(`/workouts/${result.workoutId}/live`)
+      openLive(result.workoutId)
     },
     onError: async (error) => {
       if (error instanceof Error && 'code' in error && error.code === 'active_workout_exists') {
@@ -636,7 +697,7 @@ export function WorkoutDetailPage() {
             confirmLabel: 'Открыть незавершённую',
             cancelLabel: 'Остаться в плане',
           })
-          if (shouldResume) navigate(`/workouts/${active.id}/live`)
+          if (shouldResume) openLive(active.id)
         }
       }
     },
@@ -659,7 +720,20 @@ export function WorkoutDetailPage() {
     mutationFn: () => workoutsRepository.reschedule(query.data!, rescheduleDate, rescheduleTime || null),
     onSuccess: async () => { setDecisionSheet(null); await invalidateWorkoutSurfaces() },
   })
-  const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workouts'] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); navigate(actor?.role === 'client' ? '/me/workouts' : '/schedule') } })
+  const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workouts'] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); goBack() } })
+  const removeCompletedExercise = useMutation({
+    mutationFn: ({ exerciseId, workout }: { exerciseId: string; exerciseName: string; workout: Workout }) => workoutsRepository.removeLiveExercise(workout, exerciseId),
+    onSuccess: async () => {
+      await Promise.all([
+        invalidateWorkoutSurfaces(),
+        queryClient.invalidateQueries({ queryKey: ['workout-personal-records', workoutId] }),
+        queryClient.invalidateQueries({ queryKey: ['exercise-history', query.data!.clientId] }),
+        queryClient.invalidateQueries({ queryKey: ['client-stats', query.data!.clientId] }),
+        queryClient.invalidateQueries({ queryKey: ['client-progress-story-workouts', query.data!.clientId] }),
+        queryClient.invalidateQueries({ queryKey: ['trainer-progress-story-workouts', query.data!.clientId] }),
+      ])
+    },
+  })
   const review = useMutation({ mutationFn: (value: WorkoutTrainerResponseDraft) => workoutsRepository.setWorkoutReview(query.data!, value), onSuccess: async () => {
     await invalidateWorkoutSurfaces()
   } })
@@ -686,6 +760,7 @@ export function WorkoutDetailPage() {
   const clientOwned = clientMode && workout?.createdBy === actor.userId
   const trainerOwned = !clientMode && Boolean(workout && (!workout.createdBy || workout.createdBy === actor?.userId))
   const canManage = clientMode ? clientOwned : trainerOwned
+  const canRemoveCompletedExercise = Boolean(done && workout && (clientMode || trainerOwned))
   const canExecute = clientMode || trainerOwned
   const clientAuthoredReadOnly = !clientMode && Boolean(workout && !trainerOwned)
   const canReview = !clientMode && Boolean(done && workout && (
@@ -695,9 +770,6 @@ export function WorkoutDetailPage() {
   const authorLabel = workout ? clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data) : null
   const responseAuthor = trainers.data?.find((trainer) => trainer.trainerId === workout?.trainerReviewAuthorId)
   const responseAuthorName = responseAuthor ? [responseAuthor.firstName, responseAuthor.lastName].filter(Boolean).join(' ') : null
-  // Карточка не должна угадывать источник открытия. Быстрый сценарий «Сегодня»
-  // передаёт returnTo, остальные пути сохраняют прежний безопасный fallback.
-  const backTo = navigationState?.returnTo ?? (clientMode ? '/me/workouts' : '/schedule')
   const today = todayInTimeZone(actor?.timezone)
   const statusPresentation = workout ? workoutStatusPresentation(workout, today) : null
   const detailState: WorkoutUiState = statusPresentation?.tone === 'done' ? 'completed'
@@ -709,6 +781,13 @@ export function WorkoutDetailPage() {
   const plannedActions = workout?.status === 'planned' ? plannedWorkoutActionLabels(workout.workoutDate, today) : null
   const requestWorkoutRemoval = async () => {
     if (await confirm({ message: 'Удалить тренировку?', confirmLabel: 'Удалить', danger: true })) remove.mutate()
+  }
+  const requestCompletedExerciseRemoval = async (exercise: WorkoutExerciseModel) => {
+    if (await confirm({
+      message: `Удалить «${exercise.name}» из результата тренировки вместе со всеми подходами?`,
+      confirmLabel: 'Удалить',
+      danger: true,
+    })) removeCompletedExercise.mutate({ exerciseId: exercise.id, exerciseName: exercise.name, workout: query.data! })
   }
   const requestCancelPlanned = async () => {
     setDecisionSheet(null)
@@ -724,22 +803,21 @@ export function WorkoutDetailPage() {
   }
   const manageMenuInHeader = Boolean(clientMode && canManage && workout && !done)
   const workoutManageItems = [
-    { label: 'Копировать тренировку', onClick: () => navigate(`/workouts/new?copy=${workoutId}`) },
+    { label: 'Копировать тренировку', onClick: () => navigate(`/workouts/new?copy=${workoutId}`, { state: childNavigationState }) },
     { label: 'Удалить тренировку', danger: true, disabled: remove.isPending, onClick: () => { void requestWorkoutRemoval() } },
   ]
-  return <Page title="Тренировка" hideTitle className="workout-detail-page" back={backTo}>
+  return <Page title="Тренировка" hideTitle className="workout-detail-page" back={backTo} onBack={goBack}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{workout && <>
       {!clientMode && navigationState?.firstPlanClient && <section className="first-plan-success" aria-labelledby="first-plan-success-title">
         <div><p className="eyebrow">ГОТОВО</p><h2 id="first-plan-success-title">Тренировка запланирована</h2><p>Первый план для {navigationState.firstPlanClient.fullName} готов.</p></div>
-        {firstPlanInviteCode ? <div className="first-plan-invite-code" role="status">
-          <span>Код приглашения</span><strong>{firstPlanInviteCode}</strong><small>Отправьте код спортсмену — после подключения он сразу увидит план.</small>
-        </div> : <button className="primary wide" disabled={firstPlanInvite.isPending} onClick={() => firstPlanInvite.mutate()}>{firstPlanInvite.isPending ? 'Создаём приглашение…' : 'Пригласить спортсмена'}</button>}
+        {firstPlanInviteCode ? <InvitationCodeCard code={firstPlanInviteCode} label="Код приглашения" description="Отправьте код спортсмену — после подключения он сразу увидит план." /> : <button className="primary wide" disabled={firstPlanInvite.isPending} onClick={() => firstPlanInvite.mutate()}>{firstPlanInvite.isPending ? 'Создаём приглашение…' : 'Пригласить спортсмена'}</button>}
         {firstPlanInvite.error && <p className="error" role="alert">{firstPlanInvite.error.message}</p>}
         <Link className="button secondary wide" to="/today">Перейти на главную</Link>
       </section>}
       {justCompleted && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={clientMode} clientId={workout.clientId} />}
       <WorkoutHeader eyebrow={clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? 'Ваша тренировка' : workout.clientName} state={detailState}
         statusLabel={statusPresentation?.label}
+        showStatus={detailState !== 'completed'}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>{clientMode && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · только просмотр</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />
       {plannedActions && canExecute && <div className="workout-detail-primary-actions">
@@ -749,7 +827,11 @@ export function WorkoutDetailPage() {
       </div>}
       {workout.status === 'cancelled' && canExecute && <div className="workout-detail-primary-actions"><WorkoutCta className="wide" variant="secondary" onClick={openReschedule}>Вернуть в план</WorkoutCta></div>}
       {start.error && !(start.error instanceof Error && 'code' in start.error && start.error.code === 'active_workout_exists') && <p className="error">{start.error.message}</p>}
-      {workout.status === 'in_progress' && canExecute && <Link className="button primary wide" to={`/workouts/${workoutId}/live`}>Продолжить тренировку</Link>}
+      {workout.status === 'in_progress' && canExecute && <Link className="button primary wide" to={`/workouts/${workoutId}/live`} onClick={(event) => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+        event.preventDefault()
+        openLive(workoutId)
+      }}>Продолжить тренировку</Link>}
       {done && <section className="workout-fact-summary" aria-label="Сводка тренировки">
         {duration && <p><span>Время</span><strong>{duration}</strong></p>}
         {tonnage > 0 && <p><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></p>}
@@ -763,7 +845,7 @@ export function WorkoutDetailPage() {
       {!done && <div className="workout-detail-exercise-overview"><p>ПЛАН ТРЕНИРОВКИ</p><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)} · {sets.length} {setCountLabel(sets.length)}</span></div>}
       <div className={`cards ${done ? 'completed-exercise-list' : 'planned-exercise-list'}`}>{groupIntoBlocks(workout.exercises).map((block) => {
         const articles = block.exercises.map((exercise) => {
-          const detailSummary = compactExerciseDetailSummary(exercise.inputKind, exercise.sets, done ? 'completed' : 'planned', showRpe)
+          const detailSummary = compactExerciseDetailSummary(exercise.inputKind, exercise.sets, done ? 'completed' : 'planned', showRpe, exercise.ref)
           return <WorkoutExercise state={done ? 'history' : 'planned'} className={`exercise ${done ? 'completed-exercise' : 'planned-detail-exercise'}`} key={exercise.id}>
           <div className="workout-detail-exercise-row">
             <details className={done ? 'completed-exercise-details' : 'planned-exercise-details'}>
@@ -772,10 +854,16 @@ export function WorkoutDetailPage() {
                 <span className="workout-detail-exercise-result">{detailSummary}</span>
               </summary>
               <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={[done ? 'Результат' : 'План']} className="workout-history-sets">
-                {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} />)}
+                {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} exerciseRef={exercise.ref} />)}
               </WorkoutSetTable>
             </details>
-            <Link className="exercise-history-link" aria-label={`История упражнения «${exercise.name}»`} to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><HistoryIcon /><span className="sr-only">История</span></Link>
+            <div className="workout-detail-exercise-actions">
+              <Link className="exercise-history-link" aria-label={`История упражнения «${exercise.name}»`} to={`/workouts/${workout.id}/history/${encodeURIComponent(exercise.ref)}`}><HistoryIcon /><span className="sr-only">История</span></Link>
+              {canRemoveCompletedExercise && <OverflowMenu label={`Действия с упражнением «${exercise.name}»`} items={[{
+                label: 'Удалить упражнение', danger: true, disabled: removeCompletedExercise.isPending,
+                onClick: () => { void requestCompletedExerciseRemoval(exercise) },
+              }]} />}
+            </div>
           </div>
           {exercise.trainerComment && <p className="exercise-comment-note">{exercise.trainerComment}</p>}
         </WorkoutExercise>
@@ -783,13 +871,18 @@ export function WorkoutDetailPage() {
         if (block.blockType === 'single' || block.exercises.length === 1) return articles
         return <div className={`exercise-block view${done ? ' completed-exercise-block' : ''}`} key={block.blockId}><span className="block-badge">{blockLabel(block.blockType, block.blockPreset)} · {block.blockRounds} кр.</span>{articles}</div>
       })}</div>
+      {removeCompletedExercise.error && <p className="error workout-exercise-removal-error" role="alert">Не удалось удалить упражнение. <button type="button" className="link" disabled={removeCompletedExercise.isPending} onClick={async () => {
+        if (!removeCompletedExercise.variables) return
+        const refreshed = await query.refetch()
+        if (refreshed.data) removeCompletedExercise.mutate({ ...removeCompletedExercise.variables, workout: refreshed.data })
+      }}>Повторить</button></p>}
       {workout.notes && <section className="workout-review workout-review-readonly"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
       {canManage && <div className="actions workout-detail-actions">
-        {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
+        {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
         {!manageMenuInHeader && <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} />}
       </div>}
-      {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Скопировать и отправить план</Link></div>}
-      {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`}>Создать свою копию</Link></div>}
+      {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`} state={childNavigationState}>Скопировать и отправить план</Link></div>}
+      {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`} state={childNavigationState}>Создать свою копию</Link></div>}
       {remove.error && <p className="error">{remove.error.message}</p>}
       {cancelPlanned.error && <p className="error" role="alert">{cancelPlanned.error.message}</p>}
       {reschedule.error && <p className="error" role="alert">{reschedule.error.message}</p>}
@@ -797,7 +890,7 @@ export function WorkoutDetailPage() {
         <section className="workout-decision-sheet" role="dialog" aria-modal="true" aria-label={decisionSheet === 'actions' ? 'Действия с планом' : workout.status === 'cancelled' ? 'Вернуть тренировку в план' : 'Перенести тренировку'} onClick={(event) => event.stopPropagation()}>
           <header className="picker-header"><div><p className="eyebrow">ПЛАН НА {formatLocalDate(workout.workoutDate)}</p><h2>{decisionSheet === 'actions' ? 'Что сделать с планом?' : workout.status === 'cancelled' ? 'Вернуть в план' : 'Перенести тренировку'}</h2></div><button type="button" className="picker-close" aria-label="Закрыть" disabled={cancelPlanned.isPending || reschedule.isPending} onClick={() => setDecisionSheet(null)}><CloseIcon /></button></header>
           {decisionSheet === 'actions' ? <div className="workout-decision-actions">
-            <WorkoutCta onClick={() => { setDecisionSheet(null); navigate(`/workouts/${workoutId}/edit?result=1`) }}>Записать результат</WorkoutCta>
+            <WorkoutCta onClick={() => { setDecisionSheet(null); navigate(`/workouts/${workoutId}/edit?result=1`, { state: childNavigationState }) }}>Записать результат</WorkoutCta>
             <WorkoutCta variant="secondary" onClick={openReschedule}>Перенести тренировку</WorkoutCta>
             <WorkoutCta variant="tertiary" pending={cancelPlanned.isPending} pendingLabel="Сохраняем…" onClick={() => void requestCancelPlanned()}>Тренировка не состоялась</WorkoutCta>
           </div> : <form className="stack compact" onSubmit={(event) => { event.preventDefault(); reschedule.mutate() }}>
@@ -1131,18 +1224,19 @@ function WorkoutClientComment({ workout }: { workout: Workout }) {
   </section>
 }
 
-function formatSet(set: WorkoutSet, showRpe: boolean) {
+function formatSet(set: WorkoutSet, showRpe: boolean, exerciseRef?: string) {
   const duration = durationLabel(set.durationSec, set.durationMin)
   const distance = runDistanceLabel(set.distanceKm)
-  const pace = runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
-  const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} повт.`, distance, duration, showRpe && set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × ')
+  const rowing = isRowingExerciseRef(exerciseRef)
+  const pace = rowing ? rowingPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm) : runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
+  const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} ${rowing ? 'гребков/мин' : 'повт.'}`, distance, duration, showRpe && set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × ')
   return pace && plan ? `${plan} · темп ${pace}` : plan || 'Подход без плана'
 }
 
-function WorkoutHistorySet({ set, index, done, showRpe }: { set: WorkoutSet; index: number; done: boolean; showRpe: boolean }) {
+function WorkoutHistorySet({ set, index, done, showRpe, exerciseRef }: { set: WorkoutSet; index: number; done: boolean; showRpe: boolean; exerciseRef?: string }) {
   const confirmed = Boolean(set.confirmedAt)
-  const { fact, planNote } = formatFactVsPlan(set, showRpe)
-  const result = done ? fact : formatSet(set, showRpe)
+  const { fact, planNote } = formatFactVsPlan(set, showRpe, exerciseRef)
+  const result = done ? fact : formatSet(set, showRpe, exerciseRef)
   return <WorkoutSetRow state={done ? (confirmed ? 'completed' : 'skipped') : 'planned'} className={`workout-history-set ${confirmed ? 'confirmed' : 'missed'}`}>
     <span className="workout-set-number workout-history-set-number" aria-label={`Подход ${index + 1}`}>{index + 1}</span>
     <span className="workout-history-set-result"><strong>{result}</strong>
@@ -1157,7 +1251,7 @@ function WorkoutHistorySet({ set, index, done, showRpe }: { set: WorkoutSet; ind
 // Плановое значение подхода вторичной строкой («План: 100 кг × 10») по типу
 // упражнения. Факт остаётся основным редактируемым полем, план — явно виден
 // (раньше был только тусклым placeholder). null — если план не задан.
-function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet): string | null {
+function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet, exerciseRef?: string): string | null {
   const parts: string[] = []
   if (inputKind === 'strength') {
     if (set.weightKg !== undefined) parts.push(`${set.weightKg} кг`)
@@ -1174,10 +1268,15 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet): st
     if (duration) parts.push(duration)
     const distance = runDistanceLabel(set.distanceKm)
     if (distance) parts.push(distance)
+    if (isRowingExerciseRef(exerciseRef) && set.reps !== undefined) parts.push(`${set.reps} гребков/мин`)
   }
   if (set.rpe !== undefined) parts.push(`RPE ${set.rpe}`)
   const plan = parts.length ? parts.join(' × ') : null
-  const pace = inputKind === 'distance' ? runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm) : null
+  const pace = inputKind === 'distance'
+    ? isRowingExerciseRef(exerciseRef)
+      ? rowingPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
+      : runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
+    : null
   return pace && plan ? `${plan} · темп ${pace}` : plan
 }
 
@@ -1204,7 +1303,7 @@ function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, 
   />
 }
 
-function LiveSetFields({ inputKind, set, editing = false, showRpe = false }: { inputKind: ExerciseSnapshot['inputKind']; set: WorkoutSet; editing?: boolean; showRpe?: boolean }) {
+function LiveSetFields({ inputKind, exerciseRef, set, editing = false, showRpe = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; set: WorkoutSet; editing?: boolean; showRpe?: boolean }) {
   // После подтверждения показываем зафиксированный результат (факт, иначе план)
   // как обычное яркое значение в заблокированном поле, а не тусклый placeholder.
   // Правка по карандашику временно разблокирует поля (editing).
@@ -1246,15 +1345,19 @@ function LiveSetFields({ inputKind, set, editing = false, showRpe = false }: { i
   return <>
     <RunMetricsFields
       idPrefix={`live-run-${set.id}-${k}`}
+      rowing={isRowingExerciseRef(exerciseRef)}
       durationSec={value(factDuration, planDuration)}
       distanceKm={value(set.fact.distanceKm, set.distanceKm)}
+      strokeRate={value(set.fact.reps, set.reps)}
       inputClassName="live-set-input"
       disabled={locked}
       planDurationHint={isPlanHint(factDuration, planDuration)}
       planDistanceHint={isPlanHint(set.fact.distanceKm, set.distanceKm)}
+      planStrokeRateHint={isPlanHint(set.fact.reps, set.reps)}
       durationName="runDuration"
       distanceName="runDistance"
       distanceUnitName="runDistanceUnit"
+      strokeRateName="reps"
       durationLabel="Фактическое время"
       distanceLabel="Фактическая дистанция"
       distanceUnitLabel="Единица фактической дистанции"
@@ -1292,11 +1395,26 @@ function WorkoutTimer({ startedAt, resting = false }: { startedAt: string | null
 }
 
 export function LiveWorkoutPage() {
+  const { workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
   const showRpeByDefault = useRpeDisplay(actor?.userId)
   const clientMode = actor?.role === 'client'
   const navigate = useNavigate()
+  const location = useLocation()
+  const navigationState = location.state as WorkoutNavigationState | null
+  const goBack = useWorkoutBack(`/workouts/${workoutId}`)
+  const fromDetail = navigationState?.fromWorkoutDetailId === workoutId
+  const sourceReturnTo = safeWorkoutReturnTo(navigationState?.returnTo)
+  const completionNavigated = useRef(false)
+  const showCompletedWorkout = useCallback((justCompleted: boolean) => {
+    // Refetch and StrictMode may repeat the completion effect. POP is not
+    // idempotent: a second call would skip the detail and lose the source.
+    if (completionNavigated.current) return
+    completionNavigated.current = true
+    if (fromDetail && hasWorkoutBackEntry()) void navigate(-1)
+    else void navigate(`/workouts/${workoutId}`, { replace: true, state: { justCompleted, returnTo: sourceReturnTo } })
+  }, [fromDetail, navigate, sourceReturnTo, workoutId])
   const [askConfirm, confirmDialog] = useConfirm()
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
@@ -1325,6 +1443,7 @@ export function LiveWorkoutPage() {
   const completedLocally = useRef(false)
   const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [techniqueExercise, setTechniqueExercise] = useState<ExerciseSnapshot | null>(null)
   // В обычной тренировке перестановка не нужна постоянно: включается из меню
   // и только тогда показывает стрелки у блоков.
   const [reordering, setReordering] = useState(false)
@@ -1344,6 +1463,10 @@ export function LiveWorkoutPage() {
   const [savingSetId, setSavingSetId] = useState<string | null>(null)
   const [savedSetId, setSavedSetId] = useState<string | null>(null)
   const [saveErrorSetId, setSaveErrorSetId] = useState<string | null>(null)
+  function techniqueActionFor(exercise: WorkoutExerciseModel) {
+    const meta = catalogExerciseFor(catalog.exercises, exercise)
+    return hasExerciseTechnique(meta) ? () => setTechniqueExercise(meta) : undefined
+  }
   useEffect(() => {
     if (!actor?.userId || !query.data) return
     const serverSets = new Map(query.data.exercises.flatMap((exercise) => exercise.sets).map((set) => [set.id, set]))
@@ -1373,8 +1496,8 @@ export function LiveWorkoutPage() {
     // justCompleted. Этот fallback нужен только когда ответ потерялся, но
     // refetch уже увидел завершённую тренировку, либо после reload live URL.
     if (completedLocally.current) return
-    navigate(`/workouts/${workoutId}`, { replace: true })
-  }, [actor?.userId, navigate, query.data?.status, workoutId])
+    showCompletedWorkout(false)
+  }, [actor?.userId, query.data?.status, showCompletedWorkout, workoutId])
   function rememberLiveDraft(setId: string, draft: LiveSetDraft) {
     setLocalSetDrafts((current) => new Map(current).set(setId, draft))
     if (actor?.userId) writePendingLiveSetDraft(actor.userId, workoutId, setId, draft)
@@ -1471,7 +1594,7 @@ export function LiveWorkoutPage() {
   }
   function saveOpenLiveSet(exercise: WorkoutExerciseModel, targetSetId: string) {
     // PointerDown происходит до blur: это единственный надёжный момент на iOS
-    // для чтения числа из строки, когда тренер тапаeт «Ввести» у следующей.
+    // для чтения числа из строки, когда тренер тапаeт «Заполнить» у следующей.
     // При клавиатурной активации fallback берёт единственную открытую форму.
     const focused = document.activeElement instanceof HTMLElement
       ? document.activeElement.closest<HTMLFormElement>('form[data-live-set-id]')
@@ -1551,6 +1674,21 @@ export function LiveWorkoutPage() {
   }
   const appendSet = useMutation({ mutationFn: (exerciseId: string) => runLiveWorkoutMutation(`append-set:${exerciseId}`, (workout) => workoutsRepository.appendLiveSet(workout, exerciseId)), onSuccess: async () => { await query.refetch() } })
   const removeSet = useMutation({ mutationFn: (setId: string) => runLiveWorkoutMutation(`remove-set:${setId}`, (workout) => workoutsRepository.removeLiveSet(workout, setId)), onSuccess: async () => { await query.refetch() } })
+  const removeExercise = useMutation({
+    mutationFn: async (exercise: WorkoutExerciseModel) => {
+      // Let blur saves finish before deleting their parent, including on iOS.
+      await liveSets.waitForIdle()
+      return runLiveWorkoutMutation(`remove-exercise:${exercise.id}`, (workout) => workoutsRepository.removeLiveExercise(workout, exercise.id))
+    },
+    onSuccess: async (_version, exercise) => {
+      for (const set of exercise.sets) acknowledgeLiveDraft(set.id)
+      setExpandedSetId(null)
+      stopRest()
+      await query.refetch()
+      void queryClient.invalidateQueries({ queryKey: ['workouts'] })
+      void queryClient.invalidateQueries({ queryKey: ['clients'] })
+    },
+  })
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => runLiveWorkoutMutation(`append-exercise:${exercise.ref}`, (workout) => workoutsRepository.appendLiveExercise(workout, exercise)), onSuccess: async () => { await query.refetch() } })
   const reorderBlock = useMutation({ mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => runLiveWorkoutMutation(`reorder:${blockId}:${direction}`, (workout) => workoutsRepository.reorderLiveBlock(workout, blockId, direction)), onSuccess: async () => { await query.refetch() } })
   const replaceLive = useMutation({ mutationFn: ({ exerciseId, exercise }: { exerciseId: string; exercise: ExerciseSnapshot }) => runLiveWorkoutMutation(`replace:${exerciseId}`, (workout) => workoutsRepository.replaceLiveExercise(workout, exerciseId, exercise)), onSuccess: async () => { await query.refetch() } })
@@ -1578,9 +1716,9 @@ export function LiveWorkoutPage() {
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
       clientId ? queryClient.invalidateQueries({ queryKey: ['client-stats', clientId] }) : Promise.resolve(),
     ])
-    navigate(`/workouts/${workoutId}`, { state: { justCompleted: true } })
+    showCompletedWorkout(true)
   } })
-  const rootMutationPending = appendSet.isPending || removeSet.isPending || appendExercise.isPending
+  const rootMutationPending = appendSet.isPending || removeSet.isPending || removeExercise.isPending || appendExercise.isPending
     || reorderBlock.isPending || replaceLive.isPending || commentLive.isPending || finish.isPending
   function draftFrom(form: HTMLFormElement): LiveSetDraft {
     const values = new FormData(form)
@@ -1626,7 +1764,7 @@ export function LiveWorkoutPage() {
       window.removeEventListener('pageshow', onWake)
     }
   }, [restActive])
-  const error = save.error ?? confirm.error ?? appendSet.error ?? removeSet.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
+  const error = save.error ?? confirm.error ?? appendSet.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExerciseModel) {
     if (clientMode) return null
@@ -1648,6 +1786,9 @@ export function LiveWorkoutPage() {
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
       ...(canReplace ? [{ label: 'Заменить', disabled: rootMutationPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } }] : []),
       ...(removableSet ? [{ label: 'Удалить подход', danger: true, disabled: rootMutationPending, onClick: async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(removableSet.id) } }] : []),
+      { label: 'Удалить упражнение', danger: true, disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: async () => {
+        if (await askConfirm({ message: `Удалить «${exercise.name}» из этой тренировки? Все его подходы, включая выполненные, будут удалены.`, confirmLabel: 'Удалить', danger: true })) removeExercise.mutate(exercise)
+      } },
     ]} />
   }
   // Стрелки ↑/↓ видны только во временном режиме перестановки.
@@ -1674,14 +1815,17 @@ export function LiveWorkoutPage() {
         ? 'Готово'
         : 'Готово, отдых'
     if (!isExpanded) {
-      const plan = planLine(exercise.inputKind, set)
-      const fact = set.confirmedAt ? factLine(displayedSet) : enteredFactLine(displayedSet)
+      const plan = planLine(exercise.inputKind, set, exercise.ref)
+      const fact = set.confirmedAt ? factLine(displayedSet, true, exercise.ref) : enteredFactLine(displayedSet, true, exercise.ref)
+      const compactValues = <span className="live-set-compact-values"><strong>{fact ? `${set.confirmedAt ? 'Факт' : 'Введено'} ${fact}` : plan ? `План ${plan}` : 'Без значений'}</strong>{fact && plan && <small>План {plan}</small>}</span>
       return <div className={`live-set-compact ${set.confirmedAt ? 'confirmed' : 'upcoming'}`} key={set.id}>
         <span className="live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <span className="live-set-compact-values"><strong>{fact ? `${set.confirmedAt ? 'Факт' : 'Введено'} ${fact}` : plan ? `План ${plan}` : 'Без значений'}</strong>{fact && plan && <small>План {plan}</small>}</span>
         {set.confirmedAt
-          ? <button type="button" className="link live-set-compact-action" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button>
-          : <button type="button" className="link live-set-compact-action" aria-label={`Ввести подход ${setNumber ?? ''}`} onPointerDown={() => saveOpenLiveSet(exercise, set.id)} onClick={() => openLiveSet(exercise, set.id)}>Ввести</button>}
+          ? <>{compactValues}<button type="button" className="link live-set-compact-action" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button></>
+          : <button type="button" className="link live-set-fill-action" aria-label={`Заполнить подход ${setNumber ?? ''}`} onPointerDown={() => saveOpenLiveSet(exercise, set.id)} onClick={() => openLiveSet(exercise, set.id)}>
+              {compactValues}
+              <span className="live-set-fill-label">Заполнить <ChevronRightIcon /></span>
+            </button>}
       </div>
     }
     const showRpe = isRpeVisible(exercise.id)
@@ -1697,7 +1841,7 @@ export function LiveWorkoutPage() {
     }}>
       <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <LiveSetFields inputKind={exercise.inputKind} set={displayedSet} editing={isEditing} showRpe={showRpe} />
+        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} set={displayedSet} editing={isEditing} showRpe={showRpe} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
@@ -1712,9 +1856,9 @@ export function LiveWorkoutPage() {
     </form>
   }
   const sessionProgress = liveSessionProgress(query.data?.exercises ?? [])
-  // «Назад» ведёт в карточку тренировки: таб-бар в live скрыт, поэтому нужен
-  // явный выход наружу без завершения тренировки (тренер может вернуться позже).
-  return <Page title="Live-тренировка" hideTitle className="live-workout-page workout-focused-page" back={`/workouts/${workoutId}`}>
+  // Back returns to the entry screen without finishing. A direct Live link
+  // falls back to its workout detail because the tab bar is hidden here.
+  return <Page title="Live-тренировка" hideTitle className="live-workout-page workout-focused-page" back={`/workouts/${workoutId}`} onBack={goBack}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
       <WorkoutHeader eyebrow="LIVE" title={query.data.clientName} state="current" className="live-session-header" meta={<div className="live-session-progress">
         <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : `Упражнение ${sessionProgress.activeExerciseNumber} из ${sessionProgress.exerciseCount} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}`}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
@@ -1775,22 +1919,22 @@ export function LiveWorkoutPage() {
             const collapsed = allDone && !expandedExercises.has(exercise.id)
             if (collapsed) {
               const doneCount = exercise.sets.length
-              const best = exercise.sets.map((set) => factLine(set)).filter(Boolean).slice(-1)[0] ?? null
+              const best = exercise.sets.map((set) => factLine(set, true, exercise.ref)).filter(Boolean).slice(-1)[0] ?? null
               return <WorkoutExerciseCompact key={exercise.id} state="completed" className="live-exercise-collapsed" title={exercise.name}
                 meta={`${doneCount} ${doneCount === 1 ? 'подход' : doneCount < 5 ? 'подхода' : 'подходов'}${best ? ` · ${best}` : ''}`}
                 onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))} />
             }
             if (blockStatus === 'upcoming') {
-              const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set)).find(Boolean)
+              const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set, exercise.ref)).find(Boolean)
               const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
               return <WorkoutExercise key={exercise.id} state="upcoming" className="live-exercise-upcoming">
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
                 <p className="live-upcoming-summary"><span>{exercise.sets.length} {countLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>
               </WorkoutExercise>
             }
             return <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
-              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
-              {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
+              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+              {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </WorkoutSetTable>
@@ -1816,7 +1960,7 @@ export function LiveWorkoutPage() {
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
             <div className="circuit-round-label">Круг {round.round}</div>
             {round.items.map(({ exercise, set }) => <section key={set.id}>
-              <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={exercise.name} actions={roundIndex === 0 ? exerciseMenu(exercise) : undefined} />
+              <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={roundIndex === 0 ? exerciseMenu(exercise) : undefined} />
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
               {roundIndex === 0 && liveCommentField(exercise)}
             </section>)}
@@ -1842,7 +1986,8 @@ export function LiveWorkoutPage() {
           : <WorkoutCta variant="secondary" className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => !exercise.sets.every((set) => set.confirmedAt)); if (incomplete) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>}
       </div>
     </>}</AsyncView>
-    {canManageLiveStructure && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} onPick={pickLiveExercise} onClose={closePicker} />}
+    {canManageLiveStructure && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onClose={closePicker} />}
+    {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmDialog}
   </Page>
 }
@@ -1852,7 +1997,9 @@ function numberValue(value: FormDataEntryValue | null) { return value ? Number(v
 type ExerciseCardTab = 'stats' | 'history' | 'how'
 
 export function ExerciseHistoryPage() {
+  const { exercises: exercisesRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '', exerciseRef = '' } = useParams()
+  const goBack = useWorkoutBack(`/workouts/${workoutId}`)
   const { actor } = useAuth()
   const showRpe = useRpeDisplay(actor?.userId)
   const [tab, setTab] = useState<ExerciseCardTab>('stats')
@@ -1878,10 +2025,10 @@ export function ExerciseHistoryPage() {
     .sort((a, b) => a.completedAt.localeCompare(b.completedAt)), [items])
   const unit = chartUnitFor(inputKind)
   const instructions = meta?.instructions ?? []
-  return <Page title="Упражнение" back={`/workouts/${workoutId}`}>
+  return <Page title="Упражнение" back={`/workouts/${workoutId}`} onBack={goBack}>
     <AsyncView loading={current.isLoading || history.isLoading} error={current.error ?? history.error} onRetry={() => { void current.refetch(); void history.refetch() }}>
       <section className="exercise-card-head card">
-        <ExerciseImage src={meta?.imageUrl} alt={name} variant="detail" />
+        <ExerciseImage src={meta?.imageUrl} fallbackSrc={meta?.fallbackImageUrl} alt={name} variant="detail" />
         <div className="exercise-card-meta">
           <h2>{name}</h2>
           {meta?.equipment && <p><span className="muted">Оборудование:</span> {meta.equipment}</p>}
@@ -1922,10 +2069,10 @@ export function ExerciseHistoryPage() {
             : null}
       </>}
 
-      {tab === 'history' && <ExerciseProgressHistory items={items} showRpe={showRpe} />}
+      {tab === 'history' && <ExerciseProgressHistory items={items} showRpe={showRpe} exerciseRef={exerciseRef} />}
 
       {tab === 'how' && <section className="exercise-technique">
-        <ExerciseImage src={meta?.imageUrl} motionSrc={meta?.motionImageUrl} alt={`Техника: ${name}`} variant="technique" />
+        <ExerciseImage src={meta?.imageUrl} fallbackSrc={meta?.fallbackImageUrl} motionSrc={meta?.motionImageUrl} videoSrc={meta?.techniqueVideoUrl} alt={`Техника: ${name}`} variant="technique" />
         {instructions.length
           ? <ol className="how-steps">{instructions.map((step, index) => <li key={index}>{step}</li>)}</ol>
           : <p className="muted empty-hint">Описание техники пока не добавлено.</p>}

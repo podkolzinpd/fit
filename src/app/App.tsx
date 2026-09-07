@@ -4,12 +4,12 @@ import { trackPageView } from '../shared/yandex-metrika'
 import { AppLayout } from './AppLayout'
 import { AppViewportProvider } from './app-viewport'
 import { isAssistantNavPilotEnabled, trainerHomePath } from './feature-flags'
-import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage, YandexPilotCallbackPage } from '../features/auth'
+import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage, YandexAppSessionPage, YandexPilotCallbackPage } from '../features/auth'
 import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
-import { AssistantHistoryPage } from '../features/assistant'
+import { YandexAssistantRoute } from '../features/assistant'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 
@@ -45,7 +45,7 @@ function Home() {
 }
 
 function AssistantPage() {
-  return <AssistantHistoryPage />
+  return <YandexAssistantRoute />
 }
 
 const router = createBrowserRouter([
@@ -54,6 +54,7 @@ const router = createBrowserRouter([
   { path: '/auth/reset', element: <ResetPasswordPage /> },
   { path: '/auth/callback', element: <AuthCallbackPage /> },
   { path: '/auth/yandex/callback', element: <YandexPilotCallbackPage /> },
+  { path: '/auth/yandex/session', element: <YandexAppSessionPage /> },
   { element: <Protected />, children: [{ element: <AppLayout />, children: [
     { index: true, element: <Home /> },
     { path: '/join', element: <JoinPage /> },

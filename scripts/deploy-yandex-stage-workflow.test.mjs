@@ -44,6 +44,14 @@ const databaseTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'database.tf'),
   'utf8',
 )
+const registryTerraform = readFileSync(
+  join(import.meta.dirname, '..', 'infra', 'yandex', 'registry.tf'),
+  'utf8',
+)
+const pushTerraform = readFileSync(
+  join(import.meta.dirname, '..', 'infra', 'yandex', 'push.tf'),
+  'utf8',
+)
 
 test('publishes the final yandex-stage result without restoring an approval gate', () => {
   assert.match(workflow, /^  publish_deployment:$/m)
@@ -64,6 +72,126 @@ test('publishes the final yandex-stage result without restoring an approval gate
 
 test('keeps enough time for the bounded three-attempt summary contract', () => {
   assert.match(workflow, /^  TF_VAR_api_execution_timeout: '120s'$/m)
+})
+
+test('bootstraps the private push timer only after explicit cost approval and health', () => {
+  assert.match(workflow, /^      approve_push_pipeline:$/m)
+  assert.match(workflow, /^        default: false$/m)
+  assert.match(
+    workflow,
+    /PUSH_PIPELINE_PLAN_REVIEWED: \$\{\{ \(inputs\.plan_only == true \|\| inputs\.approve_push_pipeline == true\)/,
+  )
+  assert.match(workflow, /policy_args\+=\(--allow-push-pipeline-bootstrap\)/)
+  assert.match(workflow, /YC_PUSH_FOLDER_ID: \$\{\{ vars\.YC_SUMMARY_FOLDER_ID \}\}/)
+  assert.match(workflow, /^  YC_STAGE_PUSH_LOCKBOX_NAME: fit-stage-push-transport$/m)
+  assert.match(workflow, /TF_VAR_push_function_id=\$function_id/)
+  assert.match(workflow, /TF_VAR_push_transport_secret_version_id=/)
+  assert.match(
+    workflow,
+    /lockbox payload get[\s\S]*?--key PUSH_DISPATCH_SECRET[\s\S]*?echo "::add-mask::\$dispatch_secret"/,
+  )
+  assert.match(
+    workflow,
+    /Mirror the push transport payload into stage Lockbox[\s\S]*?mirror-yandex-push-transport\.mjs[\s\S]*?--source-version-id "\$PUSH_SOURCE_SECRET_VERSION_ID"/,
+  )
+  assert.match(
+    readFileSync(join(import.meta.dirname, 'mirror-yandex-push-transport.mjs'), 'utf8'),
+    /--deletion-protection[\s\S]*?--version-description[\s\S]*?--payload', '-'/,
+  )
+  assert.doesNotMatch(
+    workflow,
+    /PUSH_DISPATCH_SECRET=.*>> "\$GITHUB_ENV"/,
+  )
+  assert.match(
+    workflow,
+    /-target=yandex_lockbox_secret_iam_member\.push_dispatcher_transport_secret_reader/,
+  )
+
+  const deployIndex = workflow.indexOf(
+    '- name: Deploy and verify the private push dispatcher',
+  )
+  const finalApplyIndex = workflow.indexOf(
+    'terraform apply -auto-approve stage-post-revision.tfplan',
+  )
+  assert.ok(deployIndex >= 0)
+  assert.ok(finalApplyIndex > deployIndex)
+  assert.match(
+    workflow,
+    /-target=yandex_serverless_container\.push_dispatcher/,
+  )
+  assert.match(
+    workflow,
+    /Pin existing push runtime identities from Terraform state[\s\S]*?TF_VAR_push_dispatcher_registry_service_account_id/,
+  )
+  assert.match(
+    workflow,
+    /Pin new push runtime identities for subsequent Terraform plans[\s\S]*?TF_VAR_push_scheduler_invoker_service_account_id/,
+  )
+  assert.match(
+    workflow,
+    /-target=yandex_serverless_container_iam_binding\.push_dispatcher_invocation/,
+  )
+  assert.match(registryTerraform, /var\.push_dispatcher_registry_service_account_id/)
+  assert.doesNotMatch(
+    registryTerraform,
+    /serviceAccount:\$\{yandex_iam_service_account\.push_dispatcher\.id\}/,
+  )
+  assert.match(pushTerraform, /var\.push_scheduler_invoker_service_account_id/)
+  assert.doesNotMatch(
+    pushTerraform,
+    /serviceAccount:\$\{yandex_iam_service_account\.push_scheduler\.id\}/,
+  )
+  assert.match(workflow, /push-dispatcher-health\.json/)
+  assert.match(workflow, /\.releaseId == \$release_id/)
+  assert.match(workflow, /The first push dispatcher revision failed health; its timer was not created/)
+  assert.match(
+    workflow,
+    /deploy-yandex-serverless-revision\.mjs rollback[\s\S]*?push_previous\.outputs\.revision_id/,
+  )
+})
+
+test('reuses the private dispatcher for optional Telegram and Tracker delivery', () => {
+  assert.match(
+    workflow,
+    /^  YC_APP_FEEDBACK_LOCKBOX_NAME: fit-stage-app-feedback-integrations$/m,
+  )
+  assert.match(
+    workflow,
+    /Resolve the optional app feedback integrations Lockbox version[\s\S]*?TF_VAR_app_feedback_integrations_secret_id=[\s\S]*?\.current_version\.id/,
+  )
+  assert.match(
+    workflow,
+    /-target=yandex_lockbox_secret_iam_member\.push_dispatcher_app_feedback_integrations_reader/,
+  )
+  assert.doesNotMatch(workflow, /-target=yandex_mdb_postgresql_user\.datalens/)
+  assert.match(
+    containerTerraform,
+    /dynamic "secrets"[\s\S]*?APP_FEEDBACK_TELEGRAM_BOT_TOKEN[\s\S]*?APP_FEEDBACK_TRACKER_TOKEN/,
+  )
+  assert.match(
+    databaseTerraform,
+    /data_lens\s+= false/,
+  )
+  assert.doesNotMatch(
+    databaseTerraform,
+    /resource "yandex_mdb_postgresql_user" "datalens"/,
+  )
+  assert.match(
+    variablesTerraform,
+    /variable "app_feedback_integrations_secret_id"[\s\S]*?== null \? true : \([\s\S]*?trimspace\(var\.app_feedback_integrations_secret_id\)/,
+  )
+  assert.match(
+    variablesTerraform,
+    /variable "app_feedback_integrations_secret_version_id"[\s\S]*?== null \? true : \([\s\S]*?trimspace\(var\.app_feedback_integrations_secret_version_id\)/,
+  )
+  assert.match(
+    variablesTerraform,
+    /var\.app_feedback_integrations_secret_id == null \? true : \([\s\S]*?trimspace\(var\.app_feedback_integrations_secret_id\)/,
+  )
+  assert.match(
+    variablesTerraform,
+    /var\.app_feedback_integrations_secret_version_id == null \? true : \([\s\S]*?trimspace\(var\.app_feedback_integrations_secret_version_id\)/,
+  )
 })
 
 test('allows the API gateway and database readiness to settle before rollback', () => {
@@ -151,6 +279,8 @@ test('probes the fit_api identity privately before changing the API revision', (
     workflow,
     /-target=yandex_lockbox_secret_iam_member\.migration_api_connection_secret_reader/,
   )
+  assert.match(workflow, /--push-dispatcher-sa-id/)
+  assert.match(workflow, /--push-scheduler-sa-id/)
   assert.match(containerTerraform, /STAGE_RUNTIME_DATABASE_PREFLIGHT_ENABLED/)
   assert.match(containerTerraform, /environment_variable = "DATABASE_PASSWORD"/)
   assert.match(
@@ -340,7 +470,7 @@ test('supports a plan-only stage diagnostic that cannot deploy resources', () =>
 test('validates feature branches without expanding the main-only Yandex OIDC trust', () => {
   const validateIndex = workflow.indexOf('name: Validate Terraform configuration')
   const planIndex = workflow.indexOf('name: Review Terraform plan')
-  const oidcIndex = workflow.indexOf('name: Exchange GitHub OIDC token for a short-lived IAM token')
+  const oidcIndex = workflow.indexOf('name: Exchange OIDC token for the push transport identity')
 
   assert.ok(validateIndex >= 0)
   assert.ok(planIndex > validateIndex)

@@ -105,8 +105,8 @@ test('today: живая диктовка с паузами и числами с�
 
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible({ timeout: 10_000 })
   await expect(page.getByText('Распознано: 2', { exact: true })).toBeVisible()
-  await expect(page.getByText('Гоблет-присед (Гиря)', { exact: true })).toBeVisible()
-  await expect(page.getByText('Планка (Своё тело)', { exact: true })).toBeVisible()
+  await expect(page.getByText('Гоблет-присед', { exact: true })).toBeVisible()
+  await expect(page.getByText('Планка', { exact: true })).toBeVisible()
   await expect(page.locator('.today-exercise')).toHaveCount(2)
 })
 
@@ -163,9 +163,19 @@ test('today: быстрый старт ведёт к единому выбору
   const firstExercise = page.locator('.today-exercise').first()
   await firstExercise.locator('.today-exercise-editor summary').click()
   await expect(firstExercise.getByLabel(/RPE, подход 1/)).toHaveCount(0)
-  await firstExercise.getByRole('button', { name: 'Указать RPE' }).click()
+  const firstExerciseMenu = firstExercise.getByRole('button', { name: /Настройки упражнения/ })
+  await firstExerciseMenu.click()
+  await page.getByRole('menuitem', { name: 'Указать RPE' }).click()
   await expect(firstExercise.getByLabel(/RPE, подход 1/)).toBeVisible()
-  await page.getByLabel('Удалить Присед со штангой (Штанга)').click()
+  await firstExerciseMenu.click()
+  await page.getByRole('menuitem', { name: 'Показать отдых' }).click()
+  const rest = firstExercise.getByLabel(/Отдых между подходами/)
+  await expect(rest).toHaveValue('90')
+  await rest.fill('120')
+  await rest.press('Tab')
+  await expect(rest).toHaveValue('120')
+  await firstExerciseMenu.click()
+  await page.getByRole('menuitem', { name: 'Удалить' }).click()
   await expect(page.locator('.today-exercise')).toHaveCount(1)
   await expect(page.getByText('Упражнение удалено', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Отменить' }).click()
@@ -206,6 +216,7 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Записать выполненную' }).click()
   await expect(page.getByRole('button', { name: 'Записать тренировку' })).toBeEnabled()
+  await expect(page.getByText('Завершена', { exact: true })).toBeVisible()
   await expect(page.getByLabel('Время тренировки')).toHaveCount(0)
   await page.getByRole('button', { name: '← К проверке' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
@@ -216,6 +227,24 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page.getByLabel('Тренировка')).toHaveValue('Присед со штангой 3×8 — 80 кг\nПланка 3×45 сек')
   await page.waitForTimeout(3600)
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+})
+
+test('today: пустой финальный шаг не оставляет пользователя с неактивной кнопкой', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/(today|clients)$/)
+  await page.evaluate(() => Object.keys(localStorage)
+    .filter((key) => key.startsWith('fit.today-draft.'))
+    .forEach((key) => localStorage.removeItem(key)))
+
+  await page.goto('/today?view=save')
+
+  await expect(page).toHaveURL(/\/today$/)
+  await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Запланировать тренировку' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
 })
 
 test('today: беговая ветка сразу добавляет интервалы с активным восстановлением', async ({ page }) => {
@@ -283,7 +312,7 @@ test('today: quick review наследует настройку RPE тренер
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/profile')
-  await page.getByRole('switch', { name: 'Показывать RPE в подходах' }).check()
+  await page.getByRole('switch', { name: 'Всегда показывать RPE в подходах', exact: true }).check()
   await page.goto('/today')
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await mockWorkoutParser(page, [{
@@ -296,7 +325,8 @@ test('today: quick review наследует настройку RPE тренер
   const exercise = page.locator('.today-exercise').first()
   await exercise.locator('.today-exercise-editor summary').click()
   await expect(exercise.getByLabel(/RPE, подход 1/)).toBeVisible()
-  await exercise.getByRole('button', { name: 'Скрыть RPE' }).click()
+  await exercise.getByRole('button', { name: /Настройки упражнения/ }).click()
+  await page.getByRole('menuitem', { name: 'Скрыть RPE' }).click()
   await expect(exercise.getByLabel(/RPE, подход 1/)).toHaveCount(0)
 })
 

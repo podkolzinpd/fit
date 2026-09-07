@@ -64,7 +64,8 @@ export function repositoryError(error: unknown): RepositoryError {
       'Сначала отключите текущего тренера в профиле. Ваши тренировки и результаты сохранятся.',
     )
   }
-  if (normalizedMessage.includes('client_requires_safe_migration')) {
+  if (normalizedMessage.includes('client_requires_safe_migration')
+    || normalizedMessage.includes('root_trainer_cannot_be_removed')) {
     return new RepositoryError(
       'client_requires_safe_migration',
       'Сейчас отключить тренера безопасно не получилось. Ваши данные не изменены. Попробуйте позже или напишите в поддержку.',
@@ -85,10 +86,22 @@ export function repositoryError(error: unknown): RepositoryError {
   if (code === 'PT403') {
     return new RepositoryError(code, 'Ответить может тренер, назначенный на эту тренировку.')
   }
+  if (code === 'PT422' && /(?:^|\W)invalid_stage(?:$|\W)/.test(normalizedMessage)) {
+    return new RepositoryError(
+      'invalid_stage',
+      'Проверьте этап: название — не более 120 символов, дата окончания — не раньше начала и не позже даты цели.',
+    )
+  }
+  if (code === 'PT422' && /(?:^|\W)invalid_goal(?:$|\W)/.test(normalizedMessage)) {
+    return new RepositoryError('invalid_goal', 'Проверьте цель: название должно содержать не более 200 символов.')
+  }
   if (code === 'PT422') {
     return new RepositoryError(code, 'Операцию нельзя выполнить с текущими данными.')
   }
   if (code === '23505') {
+    if (normalizedMessage.includes('custom_exercises_active_author_name_uidx')) {
+      return new RepositoryError('custom_exercise_exists', 'Упражнение с таким названием уже существует.')
+    }
     return new RepositoryError(code, 'Такая запись уже существует. Проверьте введённые данные.')
   }
   if (code === '23503') {

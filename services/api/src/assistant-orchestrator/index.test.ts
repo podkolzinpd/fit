@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { allowsAssistantAction, assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, createClientTurn, createProgramTurn, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './index.js'
+import { describe, expect, it, vi } from 'vitest'
+import { allowsAssistantAction, assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, createClientTurn, createProgramTurn, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, loadAssistantClientContext, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './index.js'
 
 describe('assistant orchestrator contract', () => {
   it('sends one bounded user prompt after the system message', () => {
@@ -181,6 +181,45 @@ describe('assistant orchestrator contract', () => {
     const result = recordWorkoutTurn('Запиши Анне тренировку: присед 3 по 10 40 кг', clients, null)
     expect(result?.action).toMatchObject({ tool: 'record_workout', status: 'needs_input', payload: { step: 'client' } })
     expect(result?.action?.payload).toMatchObject({ candidates: [{ id: 'client-1' }, { id: 'client-2' }] })
+  })
+
+  it('offers the client list when a nickname has no exact match', () => {
+    const clients = [
+      { id: 'client-1', fullName: 'Антон Князев', goal: null, ageYears: null, heightCm: null, gender: null },
+      { id: 'client-2', fullName: 'Борис Петров', goal: null, ageYears: null, heightCm: null, gender: null },
+    ]
+
+    const result = recordWorkoutTurn('Запиши тренировку для Антохи', clients, null)
+
+    expect(result?.action).toMatchObject({
+      tool: 'record_workout', status: 'needs_input', title: 'Выберите клиента',
+      description: 'Не нашла точного совпадения. Выберите клиента из списка.',
+      payload: {
+        step: 'client',
+        candidates: [
+          { id: 'client-1', fullName: 'Антон Князев' },
+          { id: 'client-2', fullName: 'Борис Петров' },
+        ],
+      },
+    })
+  })
+
+  it('loads every direct and connected client through the actor-scoped list', async () => {
+    const rows = Array.from({ length: 11 }, (_, index) => ({
+      id: `client-${index + 1}`,
+      full_name: index === 10 ? 'Антоха' : `Клиент ${index + 1}`,
+      goal: null,
+      age_years: null,
+      height_cm: null,
+      gender: null,
+    }))
+    const rpc = vi.fn().mockResolvedValue({ data: rows, error: null })
+
+    const clients = await loadAssistantClientContext({ rpc } as never)
+
+    expect(rpc).toHaveBeenCalledWith('list_clients', { p_include_archived: false })
+    expect(clients).toHaveLength(11)
+    expect(clients).toContainEqual(expect.objectContaining({ id: 'client-11', fullName: 'Антоха' }))
   })
 
   it('keeps a request to prepare a workout in the deterministic recording flow', () => {

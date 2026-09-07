@@ -82,7 +82,7 @@ export function replaceWorkoutParseSource(existing: WorkoutParseResponse, source
   }, fragment)
 }
 
-type WorkoutMetricPatch = { setCount?: number; reps?: number; weightKg?: number }
+type WorkoutMetricPatch = { setCount?: number; reps?: number | undefined; weightKg?: number | undefined }
 
 function patchedSets(
   sets: WorkoutParseResponse['items'][number]['sets'],
@@ -90,11 +90,18 @@ function patchedSets(
 ): WorkoutParseResponse['items'][number]['sets'] {
   const count = Math.max(1, Math.min(20, patch.setCount ?? (sets.length || 1)))
   const seed = sets[0] ?? {}
-  return Array.from({ length: count }, (_, index) => ({
-    ...(sets[index] ?? seed),
-    ...(patch.reps === undefined ? {} : { reps: patch.reps }),
-    ...(patch.weightKg === undefined ? {} : { weightKg: patch.weightKg }),
-  }))
+  return Array.from({ length: count }, (_, index) => {
+    const next = { ...(sets[index] ?? seed) }
+    if ('reps' in patch) {
+      if (patch.reps === undefined) delete next.reps
+      else next.reps = patch.reps
+    }
+    if ('weightKg' in patch) {
+      if (patch.weightKg === undefined) delete next.weightKg
+      else next.weightKg = patch.weightKg
+    }
+    return next
+  })
 }
 
 export function updateWorkoutParseMetrics(

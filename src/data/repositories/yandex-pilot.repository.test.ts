@@ -4,12 +4,18 @@ import { yandexPilotRepository } from './yandex-pilot.repository'
 
 const queries = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
+  exchangeCodeForAppSession: vi.fn(),
+  getAppSession: vi.fn(),
+  revokeAppSession: vi.fn(),
+  linkYandexAccount: vi.fn(),
   listClients: vi.fn(),
   listConnections: vi.fn(),
   listTrainingData: vi.fn(),
   parseWorkout: vi.fn(),
+  sendAssistantTurn: vi.fn(),
   listTrainingSummaries: vi.fn(),
   generateTrainingSummary: vi.fn(),
+  publishTrainingSummary: vi.fn(),
   claimInvitation: vi.fn(),
   createInvitation: vi.fn(),
   leaveClient: vi.fn(),
@@ -30,6 +36,15 @@ const session = {
   session: {
     token: 's'.repeat(43),
     expiresAt: '2026-08-20T13:15:00.000Z',
+  },
+}
+
+const appSession = {
+  ...session,
+  accessMode: 'read_write',
+  session: {
+    token: 'a'.repeat(43),
+    expiresAt: '2026-08-31T13:15:00.000Z',
   },
 }
 
@@ -168,12 +183,18 @@ const trainingData = {
 describe('yandexPilotRepository', () => {
   beforeEach(() => {
     queries.exchangeCodeForSession.mockReset()
+    queries.exchangeCodeForAppSession.mockReset()
+    queries.getAppSession.mockReset()
+    queries.revokeAppSession.mockReset()
+    queries.linkYandexAccount.mockReset()
     queries.listClients.mockReset()
     queries.listConnections.mockReset()
     queries.listTrainingData.mockReset()
     queries.parseWorkout.mockReset()
+    queries.sendAssistantTurn.mockReset()
     queries.listTrainingSummaries.mockReset()
     queries.generateTrainingSummary.mockReset()
+    queries.publishTrainingSummary.mockReset()
     queries.claimInvitation.mockReset()
     queries.createInvitation.mockReset()
     queries.leaveClient.mockReset()
@@ -215,6 +236,46 @@ describe('yandexPilotRepository', () => {
     )).resolves.toEqual({ data: generated, cached: false })
   })
 
+  it('validates native Assistant turn responses and maps turn conflicts', async () => {
+    queries.sendAssistantTurn.mockResolvedValueOnce(new Response(JSON.stringify({
+      reply: 'Продолжайте диктовку.',
+      action: {
+        tool: 'record_workout',
+        status: 'needs_input',
+        title: 'Новая тренировка',
+        description: 'Диктуйте упражнения.',
+        payload: { step: 'workout' },
+      },
+    }), { status: 200 }))
+
+    await expect(yandexPilotRepository.sendAssistantTurn(
+      'https://stage.example.test',
+      's'.repeat(43),
+      CLIENT_ID,
+      'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+      'запиши тренировку',
+    )).resolves.toMatchObject({
+      reply: 'Продолжайте диктовку.',
+      action: { tool: 'record_workout', status: 'needs_input' },
+    })
+    expect(queries.sendAssistantTurn).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      's'.repeat(43),
+      CLIENT_ID,
+      'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+      'запиши тренировку',
+    )
+
+    queries.sendAssistantTurn.mockResolvedValueOnce(new Response('{}', { status: 409 }))
+    await expect(yandexPilotRepository.sendAssistantTurn(
+      'https://stage.example.test',
+      's'.repeat(43),
+      CLIENT_ID,
+      'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+      'другой текст',
+    )).rejects.toThrow('уже был использован')
+  })
+
   it('explains an empty summary period without invitation wording', async () => {
     queries.generateTrainingSummary.mockResolvedValue(new Response('{}', { status: 422 }))
 
@@ -222,6 +283,25 @@ describe('yandexPilotRepository', () => {
       'https://stage.example.test', 's'.repeat(43), CLIENT_ID,
       '2026-08-01', '2026-08-26',
     )).rejects.toThrow('Для выбранного периода нет завершённых тренировок')
+  })
+
+  it('publishes a summary through the read-write command contract', async () => {
+    queries.publishTrainingSummary.mockResolvedValue(new Response(null, { status: 204 }))
+
+    await expect(yandexPilotRepository.publishTrainingSummary(
+      'https://stage.example.test',
+      'a'.repeat(43),
+      CLIENT_ID,
+      { headline: 'Стабильный прогресс' },
+      2,
+    )).resolves.toBeUndefined()
+    expect(queries.publishTrainingSummary).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      'a'.repeat(43),
+      CLIENT_ID,
+      { headline: 'Стабильный прогресс' },
+      2,
+    )
   })
 
   it('accepts the explicit read-only session contract', async () => {
@@ -234,6 +314,96 @@ describe('yandexPilotRepository', () => {
       'code',
       'verifier',
     )).resolves.toEqual(session)
+  })
+
+  it('accepts the explicit read-write app session contract', async () => {
+    queries.exchangeCodeForAppSession.mockResolvedValue(
+      new Response(JSON.stringify(appSession), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.exchangeCodeForAppSession(
+      'https://stage.example.test',
+      'code',
+      'verifier',
+    )).resolves.toEqual(appSession)
+  })
+
+  it('restores and revokes an opaque read-write app session', async () => {
+    const profile = { accessMode: 'read_write', profile: appSession.profile }
+    queries.getAppSession.mockResolvedValue(
+      new Response(JSON.stringify(profile), { status: 200 }),
+    )
+    queries.revokeAppSession.mockResolvedValue(new Response(null, { status: 204 }))
+
+    await expect(yandexPilotRepository.getAppSession(
+      'https://stage.example.test',
+      appSession.session.token,
+    )).resolves.toEqual(profile)
+    await expect(yandexPilotRepository.revokeAppSession(
+      'https://stage.example.test',
+      appSession.session.token,
+    )).resolves.toBeUndefined()
+  })
+
+  it('maps an invalid stored app session to an expired-session error', async () => {
+    queries.getAppSession.mockResolvedValue(new Response('{}', { status: 401 }))
+
+    await expect(yandexPilotRepository.getAppSession(
+      'https://stage.example.test',
+      appSession.session.token,
+    )).rejects.toThrow('Сессия Yandex ID истекла')
+  })
+
+  it('keeps a read-only pilot session outside the app session contract', async () => {
+    queries.exchangeCodeForAppSession.mockResolvedValue(
+      new Response(JSON.stringify(session), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.exchangeCodeForAppSession(
+      'https://stage.example.test',
+      'code',
+      'verifier',
+    )).rejects.toThrow('Stage вернул неподдерживаемый формат Yandex ID сессии')
+  })
+
+  it('maps a disabled app rollout to a Yandex Cloud rollout message', async () => {
+    queries.exchangeCodeForAppSession.mockResolvedValue(new Response('{}', { status: 403 }))
+
+    await expect(yandexPilotRepository.exchangeCodeForAppSession(
+      'https://stage.example.test',
+      'code',
+      'verifier',
+    )).rejects.toThrow('профиль ещё не включён')
+  })
+
+  it('links Yandex ID to the existing FIT profile with a validated result', async () => {
+    queries.linkYandexAccount.mockResolvedValue(new Response(JSON.stringify({
+      profileId: session.profile.id,
+    }), { status: 200 }))
+
+    await expect(yandexPilotRepository.linkYandexAccount(
+      'https://stage.example.test',
+      'supabase-session',
+      'code',
+      'verifier',
+    )).resolves.toEqual({ profileId: session.profile.id })
+    expect(queries.linkYandexAccount).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      'supabase-session',
+      'code',
+      'verifier',
+    )
+  })
+
+  it('maps Yandex ID linking conflicts without exposing identifiers', async () => {
+    queries.linkYandexAccount.mockResolvedValue(new Response('{}', { status: 409 }))
+
+    await expect(yandexPilotRepository.linkYandexAccount(
+      'https://stage.example.test',
+      'supabase-session',
+      'code',
+      'verifier',
+    )).rejects.toThrow('уже связан')
   })
 
   it('keeps non-allowlisted identities outside the pilot', async () => {

@@ -221,7 +221,7 @@ function MapPanel({ data, selected, insightCandidates, variant, side, discoverin
       data-copy-source={insight.source}
     >
       <div className="body-progress-detail-heading">
-        <div><small>{selected.metricLabel}</small><strong>{selected.label}</strong></div>
+        <strong>{selected.label}</strong>
         <span>{selected.valueLabel}</span>
       </div>
       <p className="body-progress-primary-detail">{insight.text}</p>
@@ -251,7 +251,10 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
   const [mode, setMode] = useState<BodyMapMode>(initialMode)
   const data = mode === 'progress' ? progress : load
   const [selectedGroup, setSelectedGroup] = useState<BodyMapZone | undefined>(data.regions[0]?.group)
-  const [side, setSide] = useState<BodyFigureSide>('front')
+  const [side, setSide] = useState<BodyFigureSide>(() => {
+    const firstGroup = data.regions[0]?.group
+    return firstGroup ? bodyZoneSides(variant, firstGroup)[0] ?? 'front' : 'front'
+  })
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [discovering, setDiscovering] = useState(true)
 
@@ -282,7 +285,7 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
   }
   return <section className="body-progress-map" aria-labelledby="body-progress-title">
     <header>
-      <div><span>Карта тела</span><h3 id="body-progress-title">{data.title}</h3><p>{data.description}</p></div>
+      <div><span>Карта тела</span><h3 id="body-progress-title">{data.title}</h3>{data.description && <p>{data.description}</p>}</div>
       <div className="body-progress-modes" aria-label="Режим карты">
         <button type="button" aria-pressed={mode === 'progress'} onClick={() => setMode('progress')}>Прогресс</button>
         <button type="button" aria-pressed={mode === 'load'} onClick={() => setMode('load')}>Нагрузка</button>

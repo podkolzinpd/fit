@@ -273,6 +273,11 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
+  async removeLiveExercise(workout: Workout, exerciseId: string): Promise<number> {
+    const result = await workoutQueries.removeLiveExercise(workout.id, exerciseId, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
   async reorderLiveBlock(workout: Workout, blockId: string, direction: -1 | 1): Promise<number> {
     const result = await workoutQueries.reorderLiveBlock(workout.id, blockId, direction, workout.version)
     if (result.error) throw repositoryError(result.error)

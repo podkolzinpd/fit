@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { addDays, todayInTimeZone } from '../src/shared/local-date'
 
 test('global rollout gives a new client the monochrome Progress identity', async ({ page }, testInfo) => {
   await page.goto('/auth')
@@ -93,12 +94,15 @@ test('linked client sees only the published client progress view', async ({ page
   await expect(page.getByRole('tab', { name: 'Неделя' })).toHaveCount(0)
   await expect(page.getByLabel('Прогресс тренировок').getByRole('heading', { name: 'Период', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '1 месяц' })).toHaveClass(/active/)
+  await expect(page.getByText('По завершённым тренировкам', { exact: true })).toHaveCount(0)
   const mainNow = page.locator('.client-progress-main-now')
+  const overview = page.locator('.client-progress-overview')
   await expect(mainNow.getByText('Главное сейчас', { exact: true })).toBeVisible()
   await expect(mainNow.getByRole('heading', { name: 'Настрой оценку цели' })).toBeVisible()
-  await expect(mainNow).toHaveAttribute('data-fact-id', 'goal:unconfigured')
-  await expect(mainNow).toHaveAttribute('data-copy-source', 'deterministic')
-  await expect(mainNow.getByRole('link', { name: 'Настроить цель' })).toHaveAttribute('href', '/me/goal')
+  await expect(overview).toHaveAttribute('data-fact-id', 'goal:unconfigured')
+  await expect(overview).toHaveAttribute('data-copy-source', 'deterministic')
+  await expect(mainNow.getByRole('link')).toHaveCount(0)
+  await expect(overview.getByRole('link', { name: 'Настроить оценку' })).toHaveAttribute('href', '/me/goal')
   const regularity = page.locator('.client-progress-regularity-story')
   await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
   await expect(regularity.getByRole('list', { name: 'Завершённые тренировки по неделям' })).toBeVisible()
@@ -117,6 +121,11 @@ test('linked client sees only the published client progress view', async ({ page
       && (measurements.compareDocumentPosition(regularity) & Node.DOCUMENT_POSITION_FOLLOWING)
       && (regularity.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
   })).resolves.toBe(true)
+  await expect(page.locator('.client-progress-next-step')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Подробный анализ' }).evaluate((element) => {
+    const main = document.querySelector('.client-progress-main-now')
+    return Boolean(main?.contains(element) && !document.querySelector('.client-progress-details-toggle'))
+  })).resolves.toBe(true)
   await page.getByRole('button', { name: 'Прогресс', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
@@ -125,8 +134,12 @@ test('linked client sees only the published client progress view', async ({ page
   await page.goto('/me/progress')
   await expect(page.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toBeVisible()
   await page.getByRole('button', { name: 'Подробный анализ' }).click()
-  await expect(page.getByRole('dialog', { name: 'Подробный анализ' })).toBeVisible()
-  await expect(page.getByText(/Жим лёжа: рабочий вес вырос с 72 до 75 кг/i)).toBeVisible()
+  const clientDetails = page.getByRole('dialog', { name: 'Подробный анализ' })
+  await expect(clientDetails).toBeVisible()
+  await expect(clientDetails.getByRole('heading', { name: 'Результат периода' })).toBeVisible()
+  await expect(clientDetails.getByRole('heading', { name: 'Связь с целью' })).toBeVisible()
+  await expect(clientDetails.getByRole('heading', { name: 'На что обратить внимание' })).toBeVisible()
+  await expect(clientDetails.getByText(/Жим лёжа: рабочий вес вырос с 72 до 75 кг/i)).toHaveCount(0)
   await page.getByRole('button', { name: 'Закрыть' }).click()
   await expect(page.getByText('Для твоей цели', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Повысить силовые показатели и улучшить выносливость' })).toBeVisible()
@@ -136,9 +149,15 @@ test('linked client sees only the published client progress view', async ({ page
   await expect(page.getByText(/Рост рабочего веса поддерживает цель/)).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
   await expect(page.getByText(/причина максимального перерыва/)).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Обновить' })).toBeVisible()
-  await page.getByText('УПРАВЛЕНИЕ', { exact: true }).scrollIntoViewIfNeeded()
-  await expect(page.getByRole('heading', { name: 'Замеры и показатели' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Обновить' })).toHaveCount(0)
+  await expect(page.locator('.ai-progress-footer')).toHaveCount(0)
+  const measurementSection = page.locator('.client-progress-measurements-story')
+  await measurementSection.scrollIntoViewIfNeeded()
+  await expect(measurementSection.getByRole('button', { name: 'Добавить замер' })).toBeVisible()
+  await expect(measurementSection.getByRole('button', { name: /История/ })).toBeVisible()
+  await expect(measurementSection.getByRole('button', { name: 'Настроить показатели' })).toBeVisible()
+  await expect(page.getByText('УПРАВЛЕНИЕ', { exact: true })).toHaveCount(0)
+  await expect(page.locator('.client-progress-measurement')).toHaveCount(0)
 
   await page.goto('/me/goal')
   await expect(page.locator('.phone-frame')).toHaveClass(/client-goal-identity/)
@@ -152,6 +171,9 @@ test('linked client sees only the published client progress view', async ({ page
 })
 
 test('client sees deterministic standard-measurement goal facts', async ({ page }) => {
+  const today = todayInTimeZone('Europe/Moscow')
+  const fiveDaysAgo = addDays(today, -5)
+  const twentyDaysAgo = addDays(today, -20)
   await page.goto('/auth')
   await page.getByLabel('Email').fill('client@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -174,8 +196,8 @@ test('client sees deterministic standard-measurement goal facts', async ({ page 
   await page.route('**/rest/v1/client_progress?*', (route) => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify([
-      { id: 'a4000000-0000-4000-8000-000000000004', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: '2026-08-25', weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
-      { id: 'a3000000-0000-4000-8000-000000000003', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: '2026-08-05', weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+      { id: 'a4000000-0000-4000-8000-000000000004', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: fiveDaysAgo, weight_kg: 59, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
+      { id: 'a3000000-0000-4000-8000-000000000003', client_id: '11111111-1111-4111-8111-111111111111', created_by: null, recorded_on: twentyDaysAgo, weight_kg: 60, chest_cm: null, waist_cm: null, hip_cm: null, notes: null, version: 1 },
     ]),
   }))
   await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({
@@ -189,9 +211,10 @@ test('client sees deterministic standard-measurement goal facts', async ({ page 
   const goal = page.locator('.client-progress-goal-story')
   await expect(goal.getByRole('heading', { name: 'Держать вес 59 кг' })).toBeVisible()
   await expect(goal.getByText('В диапазоне сейчас', { exact: true })).toBeVisible()
+  await expect(goal.getByText('59 кг', { exact: true })).toBeVisible()
   await expect(goal.getByText('58,5–59,5 кг')).toBeVisible()
-  await expect(goal.getByRole('link', { name: 'Смотреть значения и график' })).toHaveAttribute('href', '#progress-measurements')
-  await expect(goal.getByText(/в окне удержания был замер за его пределами/)).toBeVisible()
+  await expect(goal.getByRole('link', { name: 'Смотреть значения и график' })).toHaveCount(0)
+  await expect(goal.getByText(/в окне удержания был замер за его пределами/)).toHaveCount(0)
 
   const measurements = page.locator('.client-progress-measurements-story')
   await expect(measurements.getByRole('heading', { name: 'Тренд по значениям' })).toBeVisible()
@@ -200,6 +223,7 @@ test('client sees deterministic standard-measurement goal facts', async ({ page 
   await expect(measurements.getByText('−1 кг', { exact: true })).toBeVisible()
   await expect(measurements.getByText('Связан с целью', { exact: true })).toBeVisible()
   await expect(measurements.getByText(/Свежие данные · 5 дн. · 2 точки · достаточно для динамики/)).toBeVisible()
+  await expect(measurements.getByText('Цель · 58,5–59,5 кг').first()).toBeVisible()
   await expect(measurements.getByLabel('График показателя «Вес»')).toBeVisible()
   await expect(measurements.evaluate((element) => {
     const comparison = document.querySelector('.client-progress-comparison')
@@ -211,7 +235,7 @@ test('client sees deterministic standard-measurement goal facts', async ({ page 
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 
-test('trainer reviews the client copy separately from internal attention items', async ({ page }) => {
+test('trainer reviews verified signals separately from the client copy', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -254,12 +278,19 @@ test('trainer reviews the client copy separately from internal attention items',
   })).resolves.toBe(true)
   await expect(trainerAnalysis.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
   await expect(trainerAnalysis.getByText('Доступно клиенту')).toBeVisible()
-  await expect(trainerAnalysis.getByText('На что обратить внимание')).toBeVisible()
+  const trainerSignals = trainerAnalysis.getByRole('region', { name: /проверяем/ })
+  await expect(trainerSignals.getByText('Для тренера')).toBeVisible()
+  await expect(trainerSignals.getByRole('button', { name: 'Показать' })).toHaveAttribute('aria-expanded', 'false')
+  await trainerSignals.getByRole('button', { name: 'Показать' }).click()
+  await expect(trainerSignals.getByText('Факт', { exact: true }).first()).toBeVisible()
+  await expect(trainerSignals.getByText('Вопрос', { exact: true }).first()).toBeVisible()
   await expect(trainerAnalysis.getByText('Динамика упражнений')).toHaveCount(0)
   await trainerAnalysis.getByRole('button', { name: 'Подробный анализ' }).click()
   const detailedAnalysis = page.getByRole('dialog', { name: 'Подробный анализ' })
-  await expect(detailedAnalysis.getByText('Динамика упражнений')).toBeVisible()
-  await expect(detailedAnalysis.getByText('Ритм тренировок')).toBeVisible()
+  await expect(detailedAnalysis.getByRole('heading', { name: 'Результат периода' })).toBeVisible()
+  await expect(detailedAnalysis.getByRole('heading', { name: 'Связь с целью' })).toBeVisible()
+  await expect(detailedAnalysis.getByRole('heading', { name: 'На что обратить внимание' })).toBeVisible()
+  await expect(detailedAnalysis.getByText(/Факты из карточек выше здесь не повторяются/)).toBeVisible()
   await page.getByRole('button', { name: 'Закрыть' }).click()
   await page.getByRole('button', { name: 'Версия для спортсмена' }).click()
   const clientCopy = page.getByRole('dialog', { name: 'Версия для спортсмена' })

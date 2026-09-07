@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
 import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, createRunningFormatDrafts, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
+import { SYSTEM_EXERCISE_LEGACY_CATALOG, SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {
   return { id, workoutDate: localDate(date), status }
@@ -15,6 +16,79 @@ function bareWorkout(date: string, status: WorkoutStatus): Workout {
 }
 
 const TODAY = localDate('2026-07-22')
+
+describe('catalog names in new copies only', () => {
+  const oldBench = SYSTEM_EXERCISE_LEGACY_CATALOG.find((exercise) => exercise.ref === 'bench-press')!
+  function sourceWorkout(): Workout {
+    return {
+      ...bareWorkout('2026-07-21', 'done'),
+      exercises: [{
+        ...oldBench, id: 'original-exercise', position: 0, blockId: 'original-block',
+        blockType: 'single', blockPreset: 'set', blockRounds: 1,
+        restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 120,
+        trainerComment: 'Узкий хват, пауза внизу',
+        sets: [{ id: 'original-set', position: 0, weightKg: 50, reps: 10,
+          fact: { weightKg: 55, reps: 9 }, confirmedAt: 'now', version: 2 }],
+      }],
+    }
+  }
+
+  it('changes only the copy label, retaining fields, notes, rest and historical refs', () => {
+    const source = sourceWorkout()
+    const original = structuredClone(source)
+    const baseline = copyWorkout(source, TODAY)
+    const copy = copyWorkout(source, TODAY, { refreshCatalogNames: true })
+    const copiedExercise = copy.exercises[0]!
+    const baselineExercise = baseline.exercises[0]!
+    expect(copiedExercise.name).toBe('Жим штанги лёжа')
+    expect({ ...copiedExercise, name: baselineExercise.name, blockId: baselineExercise.blockId })
+      .toEqual(baselineExercise)
+    expect(copiedExercise.sets[0]).toMatchObject({ weightKg: 55, reps: 9 })
+    expect(source).toEqual(original)
+    expect(copiedExercise.blockId).not.toBe(source.exercises[0]!.blockId)
+    expect(copiedExercise.sourceExerciseId).toBeUndefined()
+    expect(copy.id).toBeUndefined()
+  })
+
+  it('leaves planned and completed edit drafts with their original names', () => {
+    const source = sourceWorkout()
+    expect(copyWorkout({ ...source, status: 'planned' }).exercises[0]!.name).toBe(oldBench.name)
+    const edit = completedWorkoutDraft(source)
+    expect(edit.exercises[0]!.name).toBe(oldBench.name)
+    expect(edit.exercises[0]!.sourceExerciseId).toBe('original-exercise')
+    expect(edit.exercises[0]!.sets[0]!.sourceSetId).toBe('original-set')
+  })
+
+  it('does not replace or collapse historical variants and duplicates', () => {
+    const source = sourceWorkout()
+    source.exercises = SYSTEM_EXERCISE_LEGACY_CATALOG.map((exercise, position) => ({
+      ...source.exercises[0]!, ...exercise, position, id: String(position),
+    }))
+    const copy = copyWorkout(source, TODAY, { refreshCatalogNames: true })
+    expect(copy.exercises).toHaveLength(814)
+    expect(copy.exercises.map(({ ref, inputKind }) => ({ ref, inputKind })))
+      .toEqual(source.exercises.map(({ ref, inputKind }) => ({ ref, inputKind })))
+    expect(copy.exercises.map((exercise) => exercise.name)).toEqual(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.name))
+  })
+
+  it('does not resurrect removed exercises or sets when a completed result is edited again', () => {
+    const source = sourceWorkout()
+    const exercise = source.exercises[0]!
+    source.exercises = [
+      { ...exercise, id: 'omitted-exercise', sets: [{ ...exercise.sets[0]!, id: 'omitted', confirmedAt: null, fact: {} }] },
+      { ...exercise, position: 1, sets: [
+        { ...exercise.sets[0]!, id: 'omitted-set', confirmedAt: null, fact: {} },
+        { ...exercise.sets[0]!, position: 1 },
+      ] },
+    ]
+    const draft = completedWorkoutDraft(source)
+    expect(draft.exercises).toHaveLength(1)
+    expect(draft.exercises[0]).toMatchObject({ position: 0, sourceExerciseId: 'original-exercise' })
+    expect(draft.exercises[0]?.sets).toEqual([expect.objectContaining({ position: 0, sourceSetId: 'original-set', weightKg: 55 })])
+    expect(source.exercises).toHaveLength(2)
+    expect(completedWorkoutDraft({ ...source, status: 'planned' }).exercises).toHaveLength(2)
+  })
+})
 
 describe('workouts repository rules', () => {
   it('сворачивает одинаковый план и оставляет разные подходы подробными', () => {
@@ -42,6 +116,19 @@ describe('workouts repository rules', () => {
       id: 'run', position: 0, durationSec: 1800, distanceKm: 5,
       fact: { durationSec: 1780, distanceKm: 5.2 }, confirmedAt: 'now', version: 1,
     }])).toBe('5,2 км × 29:40 · темп 5:42/км')
+  })
+
+  it('показывает темп и частоту гребли в специальных единицах', () => {
+    const rowing: WorkoutSet = {
+      id: 'rowing', position: 0, durationSec: 308, distanceKm: 0.5, reps: 30,
+      fact: { durationSec: 288, distanceKm: 0.5, reps: 32 }, confirmedAt: 'now', version: 1,
+    }
+    expect(compactPlannedSetSummary([rowing], false, 'rowing-machine'))
+      .toBe('500 м × 5:08 × 30 гребков/мин · темп 5:08/500 м')
+    expect(compactCompletedSetSummary([rowing], false, 'rowing-machine'))
+      .toBe('500 м × 4:48 × 32 гребков/мин · темп 4:48/500 м')
+    expect(compactExerciseDetailSummary('distance', [rowing], 'completed', false, 'rowing-machine'))
+      .toBe('500 м · 4:48 · 4:48/500 м · 32 гребков/мин')
   })
 
   it('даёт спокойную двухстрочную сводку для детального экрана', () => {
