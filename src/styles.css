@@ -1132,7 +1132,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-block-head select { min-height: 34px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 9px; background: var(--input); color: var(--fg); font-weight: 700 }
 /* Стрелки перемещения блока/упражнения вверх-вниз. */
 .exercise-head-actions { display: inline-flex; align-items: center; gap: 8px }
-.planned-technique-button { width:40px; height:40px; display:grid; place-items:center; padding:0; border:1px solid var(--border); border-radius:50%; background:var(--surface-sunken); color:var(--fg); box-shadow:none }
+.planned-technique-button { width:44px; height:44px; display:grid; place-items:center; padding:0; border:1px solid var(--border); border-radius:50%; background:var(--surface-sunken); color:var(--fg); box-shadow:none }
 .planned-technique-button svg { width:16px; height:16px }
 .block-reorder { display: inline-flex; gap: 4px }
 .reorder-btn { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-raised); color: var(--fg); font-size: 15px; line-height: 1; cursor: pointer }
