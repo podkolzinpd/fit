@@ -303,10 +303,10 @@ function searchTokenStem(token: string): string {
   return suffix ? token.slice(0, -suffix.length) : token
 }
 
-function tokenMatches(queryToken: string, searchableTokens: readonly string[]): boolean {
+function tokenMatches(queryToken: string, searchableTokens: readonly string[], searchableTokenStems?: readonly string[]): boolean {
   const queryStem = searchTokenStem(queryToken)
-  return searchableTokens.some((token) => {
-    const tokenStem = searchTokenStem(token)
+  return searchableTokens.some((token, index) => {
+    const tokenStem = searchableTokenStems?.[index] ?? searchTokenStem(token)
     return token.includes(queryToken)
       || tokenStem === queryStem
       || (queryToken.length >= 5 && token.length >= 5 && editDistanceAtMostOne(queryToken, token))
@@ -364,6 +364,7 @@ interface ExerciseSearchIndex {
   aliases: readonly string[]
   exactAliases: readonly string[]
   searchableTokens: readonly string[]
+  searchableTokenStems: readonly string[]
   nameTokens: readonly string[]
 }
 
@@ -378,14 +379,15 @@ function getExerciseSearchIndex(exercise: ExerciseSnapshot): ExerciseSearchIndex
   const name = normalizeExerciseSearch(nameWithoutEquipmentLabel(exercise))
   const exactAliases = (exercise.source === 'system' ? SEARCH_ALIASES[exercise.ref] ?? [] : []).map(normalizeExerciseSearch)
   const aliases = exerciseSearchAliases(exercise).map(normalizeExerciseSearch)
-  const searchableTokens = normalizeExerciseSearch([
+  const searchableTokens = [...new Set(normalizeExerciseSearch([
     name,
     exercise.equipment ?? '',
     exercise.primaryMuscleDetail ?? '',
     MUSCLE_GROUP_LABELS[exercise.muscleGroup],
     ...aliases,
-  ].join(' ')).split(/\s+/).filter(Boolean)
-  const index = { name, aliases, exactAliases, searchableTokens, nameTokens: name.split(/\s+/) }
+  ].join(' ')).split(/\s+/).filter(Boolean))]
+  const searchableTokenStems = searchableTokens.map(searchTokenStem)
+  const index = { name, aliases, exactAliases, searchableTokens, searchableTokenStems, nameTokens: name.split(/\s+/) }
   exerciseSearchIndexCache.set(exercise, index)
   return index
 }
@@ -400,8 +402,8 @@ export function rankExerciseSearch(catalog: readonly ExerciseSnapshot[], search:
   if (!queryTokens.length) return []
   const preferredIndex = new Map((options.preferredExerciseRefs ?? []).map((ref, index) => [ref, index]))
   return catalog.flatMap((exercise) => {
-    const { name, aliases: normalizedAliases, exactAliases, searchableTokens, nameTokens } = getExerciseSearchIndex(exercise)
-    const matchedTokens = queryTokens.filter((token) => tokenMatches(token, searchableTokens))
+    const { name, aliases: normalizedAliases, exactAliases, searchableTokens, searchableTokenStems, nameTokens } = getExerciseSearchIndex(exercise)
+    const matchedTokens = queryTokens.filter((token) => tokenMatches(token, searchableTokens, searchableTokenStems))
     if (matchedTokens.length !== queryTokens.length) return []
 
     const exactAlias = exactAliases.some((alias) => alias === query || isNearPhraseMatch(alias, query))
@@ -447,8 +449,8 @@ export function resolveExerciseSearch(catalog: readonly ExerciseSnapshot[], sear
 export function matchesExerciseSearch(exercise: ExerciseSnapshot, search: string): boolean {
   const queryTokens = normalizeExerciseSearch(search).split(/\s+/).filter(Boolean)
   if (queryTokens.length === 0) return true
-  const { searchableTokens } = getExerciseSearchIndex(exercise)
-  return queryTokens.every((token) => tokenMatches(token, searchableTokens))
+  const { searchableTokens, searchableTokenStems } = getExerciseSearchIndex(exercise)
+  return queryTokens.every((token) => tokenMatches(token, searchableTokens, searchableTokenStems))
 }
 
 // Точное разговорное имя — достаточное основание для разбора записи без
