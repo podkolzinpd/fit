@@ -212,7 +212,7 @@ export const SYSTEM_EXERCISE_LEGACY_CATALOG: readonly ExerciseSnapshot[] = SYSTE
     // be prepared or fetched. The encrypted production build still uses the
     // Gym Pro poster and video as the primary media.
     motionImageUrl: usesGymProMedia
-      ? exercise.motionImageUrl ?? exercise.imageUrl ?? gymProMedia?.motionImageUrl
+      ? exercise.imageUrl ?? exercise.motionImageUrl ?? gymProMedia?.motionImageUrl
       : freePackMedia?.motionImageUrl ?? exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
     techniqueVideoUrl: vitalMedia?.techniqueVideoUrl,
   }
