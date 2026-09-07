@@ -36,6 +36,7 @@ import { TrainerFirstPlanPrompt, TrainerFirstRun } from './FirstRunExperience'
 import { takeFirstWorkoutIntent } from './first-workout-intent'
 import { groupParsedWorkoutReviewBlocks, moveParsedWorkoutReviewBlock } from './today-review-order'
 import { AppInstallPrompt } from '../install'
+import { NotificationOnboarding } from '../notifications'
 import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, KeyboardIcon } from '../../shared/icons'
 
 type Screen = 'compose' | 'review' | 'save'
@@ -670,7 +671,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         </section>}
         showFirstRunConnection={actor?.kind === 'client' && actor.trainerId === actor.userId}
         wearable={actor && isWearablesPilotEnabled(actor.userId) ? <WearableHealthCard /> : undefined}
-      />{actor && (workouts.data?.length ?? 0) > 0 && <AppInstallPrompt userId={actor.userId} />}</> : <>
+      />{actor && (workouts.data?.length ?? 0) > 0 && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} /></>}</> : <>
       {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}
       {!clientMode && firstPlanClient && !textComposerOpen && <TrainerFirstPlanPrompt clientName={firstPlanClient.fullName} />}
       {!textComposerOpen && <div className={greetingHeaderPilotEnabled ? 'today-voice-hero-compact' : undefined}>

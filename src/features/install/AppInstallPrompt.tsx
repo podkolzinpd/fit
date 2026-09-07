@@ -43,7 +43,7 @@ function getInstallContent(platform: InstallPlatform): InstallContent {
   }
 }
 
-function InstallInstructions({ platform }: { platform: InstallPlatform }) {
+export function InstallInstructions({ platform }: { platform: InstallPlatform }) {
   if (platform === 'ios') return <ol className="app-install-steps">
     <li>Откройте эту страницу в Safari.</li>
     <li>Нажмите «Поделиться» внизу экрана.</li>

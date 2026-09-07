@@ -945,6 +945,15 @@ export function createYandexMainRepository(
         await unsubscribeFromPush()
         await writeEmpty(queries, '/v1/push-notifications/subscription', 'DELETE')
       },
+      async enableCategory(_userId, kind) {
+        await writeEmpty(queries, `/v1/push-notifications/preferences/${kind}`, 'PUT', { enabled: true })
+      },
+      sendTestPush() {
+        // Yandex-пилот не разворачивал отдельный тестовый эндпоинт (см.
+        // YAFIT-475) — намеренно недоступно, а не забытая заглушка.
+        // NotificationOnboarding не вызывает это для source: 'yandex'.
+        return Promise.reject(new Error('Тестовое уведомление недоступно для этого аккаунта'))
+      },
     },
     realtime: {
       subscribeToClientChanges(_clientId, onChange, onReady) {
