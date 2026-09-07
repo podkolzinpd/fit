@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ExerciseIcon } from '../../shared/icons'
-import { useVitalMediaUrl } from './vitalMedia'
+import { shouldUsePrivateVitalStorage, useVitalMediaUrl } from './vitalMedia'
 
 export type ExerciseImageVariant = 'thumbnail' | 'preview' | 'picker' | 'detail' | 'technique'
 
@@ -41,8 +41,9 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, alt = '',
   const videoRef = useRef<HTMLVideoElement>(null)
   const reducedMotion = usePrefersReducedMotion()
   const wantsVideo = variant === 'technique' || (variant === 'picker' && playVideo)
+  const privateVitalMedia = shouldUsePrivateVitalStorage(src) || shouldUsePrivateVitalStorage(videoSrc)
   const resolvedSrc = useVitalMediaUrl(src)
-  const resolvedMotionSrc = useVitalMediaUrl(motionSrc, variant === 'technique')
+  const resolvedMotionSrc = useVitalMediaUrl(motionSrc, variant === 'technique' && !privateVitalMedia)
   const resolvedVideoSrc = useVitalMediaUrl(videoSrc, wantsVideo)
 
   useEffect(() => setPrimaryFailed(false), [resolvedSrc])
@@ -73,14 +74,18 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, alt = '',
 
   const className = `exercise-image exercise-image-${variant}`
   const primaryAvailable = Boolean(resolvedSrc) && !primaryFailed
-  const stillFallbackAvailable = Boolean(fallbackSrc) && !fallbackFailed
-  const motionFallbackAvailable = Boolean(resolvedMotionSrc) && !motionFailed
+  // Licensed Gym Pro media is resolved from private storage in production.
+  // Its legacy FEDB fallback may have a different background or even the old
+  // two-frame treatment, so showing it while the signed URL is pending creates
+  // a visible flash. Keep that fallback only for ordinary/local media.
+  const stillFallbackAvailable = !privateVitalMedia && Boolean(fallbackSrc) && !fallbackFailed
+  const motionFallbackAvailable = !privateVitalMedia && Boolean(resolvedMotionSrc) && !motionFailed
   const motionAvailable = variant === 'technique' && motionFallbackAvailable
   // A compact picker video is opt-in: the picker activates exactly one card
   // after an explicit tap. Scrolling or visibility never starts playback.
   const videoAvailable = wantsVideo && Boolean(resolvedVideoSrc) && !videoFailed
   if (!primaryAvailable && !stillFallbackAvailable && !motionFallbackAvailable && !videoAvailable) {
-    return <span className={`${className} exercise-image-empty`} aria-hidden="true"><ExerciseIcon /></span>
+    return <span className={`${className} exercise-image-empty${privateVitalMedia ? ' exercise-image-loading' : ''}`} aria-hidden="true"><ExerciseIcon /></span>
   }
 
   // Compact cards never animate, but the end frame still protects them from a

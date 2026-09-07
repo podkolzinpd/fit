@@ -217,7 +217,7 @@ export const SYSTEM_EXERCISE_LEGACY_CATALOG: readonly ExerciseSnapshot[] = SYSTE
     motionImageUrl: usesGymProMedia
       ? exercise.motionImageUrl ?? exercise.imageUrl ?? gymProMedia?.motionImageUrl
       : freePackMedia?.motionImageUrl ?? exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
-    techniqueVideoUrl: vitalMedia?.techniqueVideoUrl,
+    techniqueVideoUrl: vitalMedia?.techniqueVideoUrl ?? exercise.techniqueVideoUrl,
   }
 })
 
