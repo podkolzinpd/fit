@@ -82,7 +82,15 @@ if (catalog.version !== 1 || catalog.exercises.length !== 317) {
   throw new Error(`Unexpected reviewed catalog: version=${catalog.version}, exercises=${catalog.exercises.length}`)
 }
 if (new Set(catalog.exercises.map(({ ref }) => ref)).size !== catalog.exercises.length) throw new Error('Duplicate FIT refs')
-if (new Set(catalog.exercises.map(({ purchasedId }) => purchasedId)).size !== catalog.exercises.length) throw new Error('Duplicate purchased ids')
+// Several distinct FIT exercise identities may intentionally share one safe
+// visual family. Keep their history/statistics separate while rendering the
+// same purchased source into each stable FIT media path.
+const purchasedSources = new Map()
+for (const { purchasedId, sourceFile } of catalog.exercises) {
+  const knownSource = purchasedSources.get(purchasedId)
+  if (knownSource && knownSource !== sourceFile) throw new Error(`Purchased id ${purchasedId} resolves to multiple source files`)
+  purchasedSources.set(purchasedId, sourceFile)
+}
 
 for (const exercise of catalog.exercises) {
   const sourcePath = join(sourceDir, exercise.sourceFile)
@@ -91,7 +99,10 @@ for (const exercise of catalog.exercises) {
 }
 
 await mkdir(outputDir, { recursive: true })
-const videoFilter = 'fps=30,scale=w=540:h=540:force_original_aspect_ratio=decrease,pad=540:540:(ow-iw)/2:(oh-ih)/2:color=white,setsar=1'
+// Vital Gym Pro is assembled from multiple visual series. Monochrome removes
+// the red/yellow/beige cast and shirt colour differences without destructive
+// background keying that can erase skin, hands or equipment.
+const videoFilter = 'fps=30,hue=s=0,eq=contrast=0.98:brightness=0.02:gamma=1.03,scale=w=540:h=540:force_original_aspect_ratio=decrease,pad=540:540:(ow-iw)/2:(oh-ih)/2:color=0xf7f6f2,setsar=1'
 let cursor = 0
 let complete = 0
 
