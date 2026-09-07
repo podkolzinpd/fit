@@ -217,6 +217,14 @@ describe('system exercise catalog', () => {
     }
   })
 
+  it('сохраняет прежнюю картинку как fallback для существующего упражнения Gym Pro', () => {
+    expect(SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-face-pull')).toMatchObject({
+      imageUrl: '/exercises/vital-pro/vital-cable-face-pull-ex030.jpg',
+      motionImageUrl: '/exercises/fedb-face-pull.jpg',
+      techniqueVideoUrl: '/exercises/vital-pro/vital-cable-face-pull-ex030.mp4',
+    })
+  })
+
   it('не подменяет жим в тренажёре видео жима гантелей сидя', () => {
     const seatedDumbbellPress = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'seated-dumbbell-press')
     const machineShoulderPress = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-machine-shoulder-military-press')

@@ -194,8 +194,10 @@ const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
 // карточки техники им нужен тот же второй кадр, но дублировать его URL в каждом
 // литерале нет смысла.
 export const SYSTEM_EXERCISE_LEGACY_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_CATALOG_SOURCE.map((exercise) => {
-  const vitalMedia = VITAL_FREE_PACK_MEDIA_BY_REF[exercise.ref]
-    ?? VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF[exercise.ref]
+  const freePackMedia = VITAL_FREE_PACK_MEDIA_BY_REF[exercise.ref]
+  const gymProMedia = VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF[exercise.ref]
+  const vitalMedia = freePackMedia ?? gymProMedia
+  const usesGymProMedia = !freePackMedia && Boolean(gymProMedia)
   const correctedName = exercise.ref === 'fedb-snatch-deadlift'
     ? 'Рывковая становая тяга (Штанга)'
     : exercise.ref === 'fedb-car-deadlift'
@@ -205,7 +207,13 @@ export const SYSTEM_EXERCISE_LEGACY_CATALOG: readonly ExerciseSnapshot[] = SYSTE
     ...exercise,
     name: correctedName,
     imageUrl: vitalMedia?.imageUrl ?? exercise.imageUrl,
-    motionImageUrl: vitalMedia?.motionImageUrl ?? exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
+    // Gym Pro media is intentionally absent from the public checkout. Keep the
+    // existing catalog image as a resilient fallback if a licensed file cannot
+    // be prepared or fetched. The encrypted production build still uses the
+    // Gym Pro poster and video as the primary media.
+    motionImageUrl: usesGymProMedia
+      ? exercise.imageUrl ?? exercise.motionImageUrl ?? gymProMedia?.motionImageUrl
+      : freePackMedia?.motionImageUrl ?? exercise.motionImageUrl ?? exercise.imageUrl?.replace(/\.jpg$/, '-end.jpg'),
     techniqueVideoUrl: vitalMedia?.techniqueVideoUrl,
   }
 })
