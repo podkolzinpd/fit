@@ -431,6 +431,18 @@ describe('ExercisePicker', () => {
     expect(document.querySelector('.picker-list video')).toHaveAttribute('src', '/b.mp4')
   })
 
+  it('проигрывает новую карточку Gym Pro первым тапом, не открывая технику сразу', async () => {
+    const user = userEvent.setup()
+    const exercise = SYSTEM_EXERCISE_CATALOG.find(({ ref }) => ref === 'vital-captain-s-chair-leg-raise-ex003')!
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialSearch={exercise.name} onPick={vi.fn()} onClose={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: `Проиграть технику: ${exercise.name}` }))
+
+    expect(screen.queryByRole('heading', { name: 'Техника' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: `Открыть технику: ${exercise.name}` })).toBeInTheDocument()
+    expect(document.querySelector('.picker-list video')).toHaveAttribute('src', exercise.techniqueVideoUrl)
+  })
+
   it('closes from the overlay and close button', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
