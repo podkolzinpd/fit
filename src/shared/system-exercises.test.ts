@@ -220,7 +220,7 @@ describe('system exercise catalog', () => {
   it('сохраняет прежнюю картинку как fallback для существующего упражнения Gym Pro', () => {
     expect(SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-face-pull')).toMatchObject({
       imageUrl: '/exercises/vital-pro/vital-cable-face-pull-ex030.jpg',
-      motionImageUrl: '/exercises/fedb-face-pull.jpg',
+      motionImageUrl: '/exercises/fedb-face-pull-end.jpg',
       techniqueVideoUrl: '/exercises/vital-pro/vital-cable-face-pull-ex030.mp4',
     })
   })
