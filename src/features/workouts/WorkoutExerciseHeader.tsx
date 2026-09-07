@@ -9,13 +9,16 @@ interface WorkoutExerciseHeaderProps {
   as?: HeaderElement
   titleAs?: TitleElement
   actions?: ReactNode
+  onTitleClick?: () => void
 }
 
 // Общий каркас шапки упражнения. Содержимое действий и бизнес-логика остаются
 // в конкретном сценарии, поэтому эта основа не меняет поведение карточек.
-export function WorkoutExerciseHeader({ name, className, as: Container = 'div', titleAs: Title = 'h2', actions }: WorkoutExerciseHeaderProps) {
+export function WorkoutExerciseHeader({ name, className, as: Container = 'div', titleAs: Title = 'h2', actions, onTitleClick }: WorkoutExerciseHeaderProps) {
   return <Container className={className}>
-    <Title>{name}</Title>
+    {onTitleClick
+      ? <button type="button" className="exercise-technique-trigger" aria-label={`Посмотреть технику: ${name}`} onClick={onTitleClick}><Title>{name}</Title><span>Техника</span></button>
+      : <Title>{name}</Title>}
     {actions && <span className="exercise-head-actions">{actions}</span>}
   </Container>
 }

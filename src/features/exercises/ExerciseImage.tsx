@@ -36,6 +36,8 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, alt = '',
   const [fallbackFailed, setFallbackFailed] = useState(false)
   const [motionFailed, setMotionFailed] = useState(false)
   const [videoFailed, setVideoFailed] = useState(false)
+  const [videoPlaying, setVideoPlaying] = useState(false)
+  const [manualPlay, setManualPlay] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const reducedMotion = usePrefersReducedMotion()
   const wantsVideo = variant === 'technique' || (variant === 'picker' && playVideo)
@@ -46,11 +48,28 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, alt = '',
   useEffect(() => setPrimaryFailed(false), [resolvedSrc])
   useEffect(() => setFallbackFailed(false), [fallbackSrc])
   useEffect(() => setMotionFailed(false), [resolvedMotionSrc])
-  useEffect(() => setVideoFailed(false), [resolvedVideoSrc])
+  useEffect(() => {
+    setVideoFailed(false)
+    setVideoPlaying(false)
+    setManualPlay(false)
+  }, [resolvedVideoSrc])
   useEffect(() => {
     const video = videoRef.current
-    if (video && reducedMotion && !video.paused) video.pause()
+    if (video && reducedMotion) {
+      if (!video.paused) video.pause()
+      setVideoPlaying(false)
+      setManualPlay(true)
+    }
   }, [reducedMotion, variant, playVideo])
+
+  async function startVideo(video: HTMLVideoElement) {
+    try {
+      await video.play()
+      setManualPlay(false)
+    } catch {
+      setManualPlay(true)
+    }
+  }
 
   const className = `exercise-image exercise-image-${variant}`
   const primaryAvailable = Boolean(resolvedSrc) && !primaryFailed
@@ -71,6 +90,7 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, alt = '',
   return <span className={`${className}${animated ? ' exercise-image-motion' : ''}`}>
     {displayedStillSrc && <img className="exercise-image-frame exercise-image-frame-start" src={displayedStillSrc} alt={alt} loading="lazy" decoding="async" onError={() => primaryAvailable ? setPrimaryFailed(true) : stillFallbackAvailable ? setFallbackFailed(true) : setMotionFailed(true)} />}
     {animated && <img className="exercise-image-frame exercise-image-frame-end" src={resolvedMotionSrc} alt="" aria-hidden="true" loading="lazy" decoding="async" onError={() => setMotionFailed(true)} />}
-    {videoAvailable && <video ref={videoRef} className="exercise-image-video" src={resolvedVideoSrc} poster={displayedStillSrc} autoPlay={!reducedMotion} loop muted playsInline preload="metadata" controls={variant === 'technique'} aria-label={`Техника: ${alt || 'упражнение'}`} disablePictureInPicture onCanPlay={(event) => { if (!reducedMotion) void event.currentTarget.play().catch(() => undefined) }} onError={() => setVideoFailed(true)} />}
+    {videoAvailable && <video ref={videoRef} className={`exercise-image-video${videoPlaying ? ' playing' : ''}`} src={resolvedVideoSrc} poster={displayedStillSrc} autoPlay={!reducedMotion} loop muted playsInline preload={variant === 'technique' ? 'auto' : 'metadata'} aria-label={`Техника: ${alt || 'упражнение'}`} disablePictureInPicture disableRemotePlayback onCanPlay={(event) => { if (!reducedMotion && !videoPlaying) void startVideo(event.currentTarget) }} onPlaying={() => { setVideoPlaying(true); setManualPlay(false) }} onError={() => setVideoFailed(true)} />}
+    {variant === 'technique' && videoAvailable && manualPlay && <button type="button" className="exercise-video-play" aria-label={`Запустить анимацию: ${alt || 'упражнение'}`} onClick={() => { if (videoRef.current) void startVideo(videoRef.current) }}>▶</button>}
   </span>
 }
