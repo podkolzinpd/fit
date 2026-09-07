@@ -19,9 +19,12 @@ vi.mock('../progress/BodyMapAppearanceSetting', () => ({ BodyMapAppearanceSettin
 
 const notificationsStatus = vi.hoisted(() => vi.fn())
 vi.mock('../../data/repositories/push-notifications.repository', () => ({
-  pushNotificationsRepository: { status: notificationsStatus, enable: vi.fn(), disable: vi.fn() },
+  pushNotificationsRepository: { status: notificationsStatus, enable: vi.fn(), setCategoryEnabled: vi.fn(), sendTestPush: vi.fn() },
+  WORKOUT_REMINDER_KIND: 'workout_reminder',
+  WORKOUT_SCHEDULED_KIND: 'workout_scheduled',
 }))
-vi.mock('../notifications/push-subscription', () => ({ isPushSupported: () => true }))
+vi.mock('../notifications/push-subscription', () => ({ isPushSupported: () => true, getCurrentPushSubscription: () => Promise.resolve(null) }))
+vi.mock('../install', () => ({ detectInstallPlatform: () => 'other', isAppInstalled: () => false }))
 
 const client: Client = {
   id: 'client-1', hasAccount: true, fullName: 'Тест Клиент', canonicalFullName: 'тест клиент',
@@ -43,7 +46,7 @@ describe('ClientProfilePage', () => {
     notificationsStatus.mockReset()
     useAuth.mockReturnValue({ actor: { role: 'client', userId: 'client-user-1', email: 'client@test.com' } })
     getMine.mockResolvedValue(client)
-    notificationsStatus.mockResolvedValue({ subscribed: false, workoutReminderEnabled: true })
+    notificationsStatus.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true })
   })
 
   it('renders the push notifications toggle for a client', async () => {
