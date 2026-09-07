@@ -211,9 +211,12 @@ describe('system exercise catalog', () => {
     expect(VITAL_GYM_PRO_NEW_EXERCISES).toHaveLength(151)
     expect(Object.keys(VITAL_GYM_PRO_ASSETS)).toHaveLength(317)
     expect(new Set(VITAL_GYM_PRO_MAIN_REFS).size).toBe(317)
+    const finalCatalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
+    expect(VITAL_GYM_PRO_MAIN_REFS.filter((ref) => !finalCatalogByRef.get(ref)?.techniqueVideoUrl)).toEqual([])
     for (const exercise of VITAL_GYM_PRO_NEW_EXERCISES) {
       expect(exercise.techniqueVideoUrl).toMatch(/^\/exercises\/vital-pro\/.+\.mp4$/)
       expect(EXERCISE_VIDEO_PATHS.has(exercise.techniqueVideoUrl!)).toBe(true)
+      expect(finalCatalogByRef.get(exercise.ref)?.techniqueVideoUrl).toBe(exercise.techniqueVideoUrl)
     }
   })
 
