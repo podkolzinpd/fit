@@ -47,9 +47,19 @@ export async function subscribeToPush(vapidPublicKey: string): Promise<BrowserPu
   return toBrowserSubscription(subscription)
 }
 
-export async function unsubscribeFromPush(): Promise<void> {
-  if (!isPushSupported()) return
+export async function unsubscribeFromPush(): Promise<{ endpoint: string } | null> {
+  if (!isPushSupported()) return null
   const registration = await navigator.serviceWorker.getRegistration('/sw.js')
   const subscription = await registration?.pushManager.getSubscription()
-  await subscription?.unsubscribe()
+  if (!subscription) return null
+  const endpoint = subscription.endpoint
+  await subscription.unsubscribe()
+  return { endpoint }
+}
+
+export async function getCurrentPushSubscription(): Promise<BrowserPushSubscription | null> {
+  if (!isPushSupported()) return null
+  const registration = await navigator.serviceWorker.getRegistration('/sw.js')
+  const subscription = await registration?.pushManager.getSubscription()
+  return subscription ? toBrowserSubscription(subscription) : null
 }
