@@ -4058,6 +4058,72 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-history-identity .workout-completion-record strong { color:var(--success-fg); font-size:12px; font-weight:500 }
 .workout-detail-history-identity .workout-completion-record span { color:var(--fg); font-size:16px; font-weight:600 }
 .workout-detail-history-identity .workout-completion-next { min-height:44px; color:var(--fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .workout-completion-page { display:grid; gap:14px }
+.workout-detail-history-identity .workout-completion-report { display:grid; gap:12px; margin-bottom:0 }
+.workout-detail-history-identity .workout-completion-report-hero { display:flex; align-items:center; gap:14px; padding:4px 0 10px }
+.workout-detail-history-identity .workout-completion-report-mark { flex:0 0 auto; width:52px; height:52px; display:grid; place-items:center; border:1px solid var(--success-border); border-radius:16px; background:var(--surface-sunken); color:var(--success-fg) }
+.workout-detail-history-identity .workout-completion-report.is-partial .workout-completion-report-mark { border-color:var(--border); color:var(--warning-fg) }
+.workout-detail-history-identity .workout-completion-report-mark svg { width:27px; height:27px; stroke-width:1.8 }
+.workout-detail-history-identity .workout-completion-report-hero > div { min-width:0; display:grid; gap:3px }
+.workout-detail-history-identity .workout-completion-report-kicker { margin:0; color:var(--success-fg); font-size:12px; font-weight:500; letter-spacing:.06em; text-transform:uppercase }
+.workout-detail-history-identity .workout-completion-report.is-partial .workout-completion-report-kicker { color:var(--warning-fg) }
+.workout-detail-history-identity .workout-completion-report h1 { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:25px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.workout-detail-history-identity .workout-completion-report-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0 }
+.workout-detail-history-identity .workout-completion-report-facts div { min-width:0; display:flex; flex-direction:column-reverse; gap:3px; padding:13px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken) }
+.workout-detail-history-identity .workout-completion-report-facts > :last-child:nth-child(odd) { grid-column:1 / -1 }
+.workout-detail-history-identity .workout-completion-report-facts dt { overflow-wrap:anywhere; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-detail-history-identity .workout-completion-report-facts dd { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:18px; font-weight:600; font-variant-numeric:tabular-nums }
+.workout-detail-history-identity .workout-completion-plan,
+.workout-detail-history-identity .workout-completion-highlight,
+.workout-detail-history-identity .workout-completion-muscles { display:grid; gap:10px; padding:17px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.workout-detail-history-identity .workout-completion-plan-head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px }
+.workout-detail-history-identity .workout-completion-plan-head > div { min-width:0; display:grid; gap:3px }
+.workout-detail-history-identity .workout-completion-report .eyebrow { margin:0; color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
+.workout-detail-history-identity .workout-completion-plan h2,
+.workout-detail-history-identity .workout-completion-highlight h2,
+.workout-detail-history-identity .workout-completion-muscles h2 { margin:0; color:var(--fg); font-size:18px; font-weight:600; line-height:1.25 }
+.workout-detail-history-identity .workout-completion-plan-head > strong { flex:0 0 auto; color:var(--fg); font-size:25px; font-weight:600; font-variant-numeric:tabular-nums }
+.workout-detail-history-identity .workout-completion-progress { height:7px; overflow:hidden; border-radius:999px; background:var(--surface-sunken) }
+.workout-detail-history-identity .workout-completion-progress span { display:block; height:100%; border-radius:inherit; background:var(--success-fg); transition:width .25s ease }
+.workout-detail-history-identity .workout-completion-report.is-partial .workout-completion-progress span { background:var(--warning-fg) }
+.workout-detail-history-identity .workout-completion-plan > p,
+.workout-detail-history-identity .workout-completion-highlight p,
+.workout-detail-history-identity .workout-completion-muscles > p { margin:0; color:var(--secondary-label-fg); font-size:14px; line-height:1.4 }
+.workout-detail-history-identity .workout-completion-missing { display:grid; gap:6px; padding-top:10px; border-top:1px solid var(--border) }
+.workout-detail-history-identity .workout-completion-missing strong { color:var(--fg); font-size:14px; font-weight:600 }
+.workout-detail-history-identity .workout-completion-missing ul { display:grid; gap:4px; margin:0; padding-left:19px; color:var(--secondary-label-fg); font-size:14px; line-height:1.4 }
+.workout-detail-history-identity .workout-completion-missing li { overflow-wrap:anywhere }
+.workout-detail-history-identity .workout-completion-highlight-record { display:flex; align-items:center; gap:12px }
+.workout-detail-history-identity .workout-completion-highlight-record > svg { flex:0 0 auto; width:27px; height:27px; color:var(--success-fg); stroke-width:1.8 }
+.workout-detail-history-identity .workout-completion-highlight-record > div { min-width:0; display:grid; gap:3px }
+.workout-detail-history-identity .workout-completion-highlight-record strong { overflow-wrap:anywhere; color:var(--fg); font-size:15px; font-weight:600 }
+.workout-detail-history-identity .workout-completion-highlight-record span { color:var(--secondary-label-fg); font-size:14px; font-weight:500 }
+.workout-detail-history-identity .workout-completion-highlight-loading { min-height:25px }
+.workout-detail-history-identity .workout-completion-muscles > div { display:grid; gap:3px }
+.workout-detail-history-identity .workout-completion-muscles a { width:fit-content; min-height:44px; display:inline-flex; align-items:center; gap:4px; color:var(--fg); font-size:13px; font-weight:500; text-decoration:none }
+.workout-detail-history-identity .workout-completion-muscles a svg { width:18px; height:18px }
+.workout-detail-history-identity .workout-completion-trainer-status { min-height:44px; display:flex; align-items:center; gap:8px; margin:0; padding:0 4px; color:var(--secondary-label-fg); font-size:13px; font-weight:500 }
+.workout-detail-history-identity .workout-completion-trainer-status svg { width:18px; height:18px; color:var(--success-fg); stroke-width:1.8 }
+.workout-detail-history-identity .workout-completion-recorded { overflow:hidden; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.workout-detail-history-identity .workout-completion-recorded > summary { min-height:66px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 16px; cursor:pointer; list-style:none }
+.workout-detail-history-identity .workout-completion-recorded > summary::-webkit-details-marker { display:none }
+.workout-detail-history-identity .workout-completion-recorded > summary::after { width:9px; height:9px; flex:0 0 auto; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; color:var(--secondary-label-fg); content:''; transform:rotate(45deg); transition:transform .18s ease }
+.workout-detail-history-identity .workout-completion-recorded[open] > summary::after { transform:rotate(225deg) }
+.workout-detail-history-identity .workout-completion-recorded > summary > span:first-child { min-width:0; display:grid; gap:3px }
+.workout-detail-history-identity .workout-completion-recorded > summary strong { color:var(--fg); font-size:17px; font-weight:600 }
+.workout-detail-history-identity .workout-completion-recorded > summary > span:nth-child(2) { margin-left:auto; color:var(--secondary-label-fg); font-size:12px; font-weight:500; white-space:nowrap }
+.workout-detail-history-identity .workout-completion-recorded > .completed-exercise-list { display:grid; gap:0; margin:0 14px; padding:0; border-top:1px solid var(--border) }
+.workout-detail-history-identity .workout-completion-recorded > .completed-exercise-list > .completed-exercise { margin:0; padding:15px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
+.workout-detail-history-identity .workout-completion-recorded > .completed-exercise-list > :last-child { border-bottom:0 }
+.workout-detail-history-identity .workout-completion-recorded .completed-exercise-block { padding-left:8px; border-left:2px solid var(--border) }
+.workout-detail-history-identity .workout-completion-edit { width:auto; min-height:48px; margin:8px 14px 14px }
+.workout-detail-history-identity .workout-completion-recorded:not([open]) > :not(summary) { display:none }
+.workout-detail-history-identity .workout-completion-actions { display:grid; gap:8px; margin-top:2px }
+.workout-detail-history-identity .workout-completion-actions .button { width:100%; min-height:48px }
+@media (prefers-reduced-motion: reduce) {
+  .workout-detail-history-identity .workout-completion-progress span,
+  .workout-detail-history-identity .workout-completion-recorded > summary::after { transition:none }
+}
 .workout-detail-history-identity .workout-decision-sheet {
   gap:16px;
   padding:20px 20px calc(20px + env(safe-area-inset-bottom));

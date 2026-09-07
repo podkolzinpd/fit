@@ -390,6 +390,9 @@ test('iPhone: тренер назначает интервалы, спортсм
     await client.getByRole('button', { name: 'Завершить тренировку' }).click()
     await expect(client).toHaveURL(workoutUrl)
     await expect(client.locator('.workout-detail-page .workout-status-completed')).toHaveCount(0)
+    await expect(client.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+    await expect(client.locator('.workout-completion-recorded')).toBeVisible()
+    await client.locator('.workout-completion-recorded > summary').click()
     await expect(client.locator('.completed-exercise-list')).toBeVisible()
 
     await trainer.goto(workoutUrl)
