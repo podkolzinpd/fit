@@ -95,6 +95,19 @@ Supabase для hosted PostgreSQL. Системного CA bundle для Supavis
 target вызывается только через private `fit-stage-migration` с короткоживущим
 GitHub OIDC → Yandex IAM token.
 
+Поле `tenant_selection` управляет только выбором cohort-а:
+
+- `configured` использует `FIT_TENANT_TRAINER_ID` и остаётся единственным
+  допустимым вариантом для `apply`;
+- `smallest-eligible` доступен только для `audit` и `dry-run`. Он читает
+  trainer UUID с клиентами, начиная с самого маленького cohort-а, пропускает
+  кандидатов, не прошедших обычный tenant preflight, и не выводит найденный
+  UUID. Если подходящего изолированного cohort-а нет, workflow завершается с
+  `candidate_not_found`.
+
+Автовыбор нужен только для безопасной репетиции на реальных объёмах. Он не
+фиксирует tenant для cutover и намеренно запрещён для записи в stage.
+
 Режимы выполняются последовательно:
 
 - `audit` — одна `REPEATABLE READ READ ONLY` транзакция в Supabase; показывает

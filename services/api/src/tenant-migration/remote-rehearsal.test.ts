@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
+import type { DatabaseClient } from '../db/types.js'
+import { TenantMigrationError } from './engine.js'
 import {
   buildSupabaseSourceConfig,
+  exportSelectedTenant,
   readSourceDatabaseFailureCode,
   readRemoteTenantRehearsalSettings,
   readStageTenantMigrationResponse,
@@ -10,6 +13,7 @@ import {
 import type { TenantMigrationBundle } from './types.js'
 
 const TRAINER_ID = '10000000-0000-4000-8000-000000000001'
+const SECOND_TRAINER_ID = '20000000-0000-4000-8000-000000000002'
 const PROJECT_ID = 'abcdefghijklmnopqrst'
 const SOURCE_ENVIRONMENT = {
   FIT_TENANT_REHEARSAL_MODE: 'audit',
@@ -76,6 +80,10 @@ describe('remote tenant rehearsal configuration', () => {
     )
     expect(audit.mode).toBe('audit')
     expect(audit.stageContainerUrl).toBeUndefined()
+    expect(audit.tenantSelection).toEqual({
+      kind: 'configured',
+      trainerId: TRAINER_ID,
+    })
 
     const dryRun = readRemoteTenantRehearsalSettings(
       {
@@ -103,6 +111,101 @@ describe('remote tenant rehearsal configuration', () => {
       },
       () => 'trusted-ca',
     )).toThrowError(new RemoteTenantRehearsalError('apply_not_confirmed'))
+  })
+
+  it('allows automatic selection only for audit and dry-run', () => {
+    const audit = readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_SELECTION_MODE: 'smallest-eligible',
+        FIT_TENANT_TRAINER_ID: undefined,
+      },
+      () => 'trusted-ca',
+    )
+    expect(audit.tenantSelection).toEqual({ kind: 'smallest-eligible' })
+
+    expect(() => readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_REHEARSAL_MODE: 'apply',
+        FIT_TENANT_REMOTE_APPLY_CONFIRMATION:
+          'APPLY_TENANT_TO_YANDEX_STAGE',
+        FIT_TENANT_SELECTION_MODE: 'smallest-eligible',
+        FIT_TENANT_TRAINER_ID: undefined,
+      },
+      () => 'trusted-ca',
+    )).toThrowError(
+      new RemoteTenantRehearsalError('automatic_apply_forbidden'),
+    )
+  })
+})
+
+describe('automatic source tenant selection', () => {
+  it('skips unsafe cohorts and exports the smallest eligible tenant', async () => {
+    let preflight = 0
+    const query = vi.fn((sql: string) => {
+      if (sql.includes('order by count(*) asc')) {
+        return Promise.resolve([
+          { trainer_id: TRAINER_ID },
+          { trainer_id: SECOND_TRAINER_ID },
+        ])
+      }
+      if (sql.includes('as trainer_exists')) {
+        preflight += 1
+        return Promise.resolve([{
+          trainer_exists: true,
+          client_count: 1,
+          has_shared_membership: preflight === 1,
+          has_missing_root_membership: false,
+          has_foreign_relationship: false,
+          has_cross_boundary_merge: false,
+          has_pending_push: false,
+          has_foreign_actor: false,
+        }])
+      }
+      return Promise.resolve([])
+    }) as unknown as DatabaseClient['query']
+
+    const bundle = await exportSelectedTenant(
+      { query },
+      { kind: 'smallest-eligible' },
+      new Date('2026-09-07T12:00:00.000Z'),
+    )
+
+    expect(bundle.trainerId).toBe(SECOND_TRAINER_ID)
+    expect(bundle.createdAt).toBe('2026-09-07T12:00:00.000Z')
+    expect(preflight).toBe(2)
+  })
+
+  it('does not hide an export contract failure', async () => {
+    const query = vi.fn((sql: string) => {
+      if (sql.includes('order by count(*) asc')) {
+        return Promise.resolve([{ trainer_id: TRAINER_ID }])
+      }
+      if (sql.includes('as trainer_exists')) {
+        return Promise.resolve([{
+          trainer_exists: true,
+          client_count: 1,
+          has_shared_membership: false,
+          has_missing_root_membership: false,
+          has_foreign_relationship: false,
+          has_cross_boundary_merge: false,
+          has_pending_push: false,
+          has_foreign_actor: false,
+        }])
+      }
+      if (sql.includes('from public.profiles')) {
+        return Promise.reject(new Error('schema drift'))
+      }
+      return Promise.resolve([])
+    }) as unknown as DatabaseClient['query']
+
+    await expect(exportSelectedTenant(
+      { query },
+      { kind: 'smallest-eligible' },
+    )).rejects.toEqual(
+      new TenantMigrationError('source_read_failed:public.profiles'),
+    )
   })
 })
 

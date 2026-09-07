@@ -33,6 +33,10 @@ test('keeps tenant rehearsal manual and single-flight', () => {
   assert.match(workflow, /^  workflow_dispatch:$/m)
   assert.doesNotMatch(workflow, /^  (push|pull_request):$/m)
   assert.match(workflow, /options:\n\s+- audit\n\s+- dry-run\n\s+- apply/)
+  assert.match(
+    workflow,
+    /tenant_selection:[\s\S]*?options:\n\s+- configured\n\s+- smallest-eligible/,
+  )
   assert.match(workflow, /group: yandex-tenant-migration/)
   assert.match(workflow, /cancel-in-progress: false/)
   assert.doesNotMatch(workflow, /environment:/)
@@ -46,6 +50,10 @@ test('keeps the selected profile masked and the encrypted bundle ephemeral', () 
   assert.doesNotMatch(workflow, /trainer_id:\n|--trainer-id/)
   assert.doesNotMatch(workflow, /actions\/upload-artifact|artifact\.fit/)
   assert.match(workflow, /tenant:rehearse:remote/g)
+  assert.match(
+    workflow,
+    /FIT_TENANT_SELECTION_MODE: \$\{\{ inputs\.tenant_selection \}\}/g,
+  )
 })
 
 test('uses source-only permissions for audit and OIDC only for target access', () => {
@@ -79,6 +87,7 @@ test('requires independent apply confirmation and a private stage route', () => 
     workflow,
     /test "\$APPLY_CONFIRMATION" = APPLY_TENANT_TO_YANDEX_STAGE/,
   )
+  assert.match(workflow, /test "\$TENANT_SELECTION" = configured/)
   assert.match(
     container,
     /STAGE_TENANT_MIGRATION_ENABLED\s+= var\.environment == "stage" \? "true" : "false"/,

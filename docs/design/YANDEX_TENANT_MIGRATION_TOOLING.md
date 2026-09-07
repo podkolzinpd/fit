@@ -44,6 +44,14 @@ verification use the reviewed public Supabase Root 2021 CA committed at
 never disabled. No Yandex identity or target credential is needed in `audit`
 mode.
 
+Audit and dry-run may use `smallest-eligible` selection when an operator has
+not supplied a suitable trainer UUID. The source query orders trainer cohorts
+by client count and tries them in that order; every candidate still passes the
+same isolation, actor, merge and pending-push preflight before any table is
+exported. Candidate UUIDs and rejected candidates are not logged. Automatic
+selection is rejected for `apply`, because a real write must always refer to a
+stable, explicitly configured cohort.
+
 For `dry-run` and `apply`, GitHub OIDC obtains the existing bounded deploy
 identity and invokes the private `fit-stage-migration` container. The encrypted
 envelope and a random one-run passphrase exist only in memory; the workflow
