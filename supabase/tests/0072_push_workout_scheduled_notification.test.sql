@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(10);
+select plan(13);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('62000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'push-scheduled-trainer@example.test', ''),
@@ -64,6 +64,33 @@ select is(
   '/workouts/' || (select data ->> 'workout_id' from private.push_notifications_outbox
     where kind = 'workout_scheduled' and user_id = '62000000-0000-4000-8000-000000000002'),
   'the notification carries a generic deep-link url for the service worker'
+);
+
+-- Второе устройство того же клиента — фан-аут добавляет по одной записи
+-- outbox на каждую активную подписку для новой запланированной тренировки.
+insert into public.push_subscriptions (user_id, endpoint, p256dh, auth_key) values
+  ('62000000-0000-4000-8000-000000000002', 'https://push.example/scheduled-1b', 'p256dh', 'auth');
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '62000000-0000-4000-8000-000000000001', true);
+select lives_ok(
+  format(
+    'select public.save_workout(%L::jsonb, null)',
+    jsonb_build_object('clientId', '62000000-0000-4000-8000-000000000010', 'workoutDate', '2026-09-02', 'exercises', '[]'::jsonb)
+  ),
+  'trainer creates a second planned workout for a client with two active devices'
+);
+reset role;
+select is(
+  (select count(*)::int from private.push_notifications_outbox
+    where kind = 'workout_scheduled' and user_id = '62000000-0000-4000-8000-000000000002'),
+  3,
+  'the second workout fans out to both of the client''s active devices, adding two more rows'
+);
+select is(
+  (select count(distinct subscription_id)::int from private.push_notifications_outbox
+    where kind = 'workout_scheduled' and user_id = '62000000-0000-4000-8000-000000000002'),
+  2,
+  'the fanned-out rows are addressed to two distinct subscriptions, not duplicated onto one'
 );
 
 -- Тренер создаёт тренировку клиенту без push-подписки — outbox не пополняется.

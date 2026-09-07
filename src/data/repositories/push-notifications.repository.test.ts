@@ -1,52 +1,75 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const getSubscription = vi.hoisted(() => vi.fn())
+const getSubscriptionByEndpoint = vi.hoisted(() => vi.fn())
 const getPreference = vi.hoisted(() => vi.fn())
 const upsertSubscription = vi.hoisted(() => vi.fn())
-const deleteSubscription = vi.hoisted(() => vi.fn())
+const deleteSubscriptionByEndpoint = vi.hoisted(() => vi.fn())
 const setPreference = vi.hoisted(() => vi.fn())
 const subscribeToPush = vi.hoisted(() => vi.fn())
 const unsubscribeFromPush = vi.hoisted(() => vi.fn())
+const getCurrentPushSubscription = vi.hoisted(() => vi.fn())
 
 vi.mock('../queries/push-notifications.queries', () => ({
   WORKOUT_REMINDER_KIND: 'workout_reminder',
-  pushNotificationsQueries: { getSubscription, getPreference, upsertSubscription, deleteSubscription, setPreference },
+  pushNotificationsQueries: { getSubscriptionByEndpoint, getPreference, upsertSubscription, deleteSubscriptionByEndpoint, setPreference },
 }))
-vi.mock('../../features/notifications/push-subscription', () => ({ subscribeToPush, unsubscribeFromPush }))
+vi.mock('../../features/notifications/push-subscription', () => ({ subscribeToPush, unsubscribeFromPush, getCurrentPushSubscription }))
 
 import { pushNotificationsRepository } from './push-notifications.repository'
 
 const USER_ID = 'user-1'
+const LOCAL_SUBSCRIPTION = { endpoint: 'https://push.example/this-device', p256dh: 'p', authKey: 'a' }
 
 describe('pushNotificationsRepository.status', () => {
   beforeEach(() => {
-    getSubscription.mockReset()
+    getCurrentPushSubscription.mockReset()
+    getSubscriptionByEndpoint.mockReset()
     getPreference.mockReset()
   })
 
-  it('reports subscribed and enabled when both exist', async () => {
-    getSubscription.mockResolvedValue({ data: { user_id: USER_ID }, error: null })
+  it('reports subscribed and enabled when this device has a local and a matching server subscription', async () => {
+    getCurrentPushSubscription.mockResolvedValue(LOCAL_SUBSCRIPTION)
+    getSubscriptionByEndpoint.mockResolvedValue({ data: { user_id: USER_ID }, error: null })
     getPreference.mockResolvedValue({ data: { enabled: true }, error: null })
     const status = await pushNotificationsRepository.status(USER_ID)
     expect(status).toEqual({ subscribed: true, workoutReminderEnabled: true })
+    expect(getSubscriptionByEndpoint).toHaveBeenCalledWith(USER_ID, LOCAL_SUBSCRIPTION.endpoint)
   })
 
-  it('defaults workoutReminderEnabled to true when no preference row exists (opt-out model)', async () => {
-    getSubscription.mockResolvedValue({ data: null, error: null })
+  it('reports not subscribed when the browser has no local subscription, without querying the server', async () => {
+    getCurrentPushSubscription.mockResolvedValue(null)
     getPreference.mockResolvedValue({ data: null, error: null })
     const status = await pushNotificationsRepository.status(USER_ID)
     expect(status).toEqual({ subscribed: false, workoutReminderEnabled: true })
+    expect(getSubscriptionByEndpoint).not.toHaveBeenCalled()
+  })
+
+  it('reports not subscribed when a local subscription exists but the server has no matching row', async () => {
+    getCurrentPushSubscription.mockResolvedValue(LOCAL_SUBSCRIPTION)
+    getSubscriptionByEndpoint.mockResolvedValue({ data: null, error: null })
+    getPreference.mockResolvedValue({ data: null, error: null })
+    const status = await pushNotificationsRepository.status(USER_ID)
+    expect(status.subscribed).toBe(false)
+  })
+
+  it('defaults workoutReminderEnabled to true when no preference row exists (opt-out model)', async () => {
+    getCurrentPushSubscription.mockResolvedValue(null)
+    getPreference.mockResolvedValue({ data: null, error: null })
+    const status = await pushNotificationsRepository.status(USER_ID)
+    expect(status.workoutReminderEnabled).toBe(true)
   })
 
   it('respects an explicit opt-out', async () => {
-    getSubscription.mockResolvedValue({ data: { user_id: USER_ID }, error: null })
+    getCurrentPushSubscription.mockResolvedValue(LOCAL_SUBSCRIPTION)
+    getSubscriptionByEndpoint.mockResolvedValue({ data: { user_id: USER_ID }, error: null })
     getPreference.mockResolvedValue({ data: { enabled: false }, error: null })
     const status = await pushNotificationsRepository.status(USER_ID)
     expect(status.workoutReminderEnabled).toBe(false)
   })
 
   it('throws a repository error when the subscription lookup fails', async () => {
-    getSubscription.mockResolvedValue({ data: null, error: { code: '42501', message: 'denied' } })
+    getCurrentPushSubscription.mockResolvedValue(LOCAL_SUBSCRIPTION)
+    getSubscriptionByEndpoint.mockResolvedValue({ data: null, error: { code: '42501', message: 'denied' } })
     getPreference.mockResolvedValue({ data: null, error: null })
     await expect(pushNotificationsRepository.status(USER_ID)).rejects.toThrow()
   })
@@ -92,18 +115,28 @@ describe('pushNotificationsRepository.enable', () => {
 describe('pushNotificationsRepository.disable', () => {
   beforeEach(() => {
     unsubscribeFromPush.mockReset()
-    deleteSubscription.mockReset()
+    deleteSubscriptionByEndpoint.mockReset()
     setPreference.mockReset()
   })
 
-  it('turns the preference off, unsubscribes the browser, and removes the row', async () => {
+  it('turns the preference off, unsubscribes this device, and removes only its row', async () => {
     setPreference.mockResolvedValue({ error: null })
-    deleteSubscription.mockResolvedValue({ error: null })
+    unsubscribeFromPush.mockResolvedValue({ endpoint: 'https://push.example/this-device' })
+    deleteSubscriptionByEndpoint.mockResolvedValue({ error: null })
 
     await pushNotificationsRepository.disable(USER_ID)
 
     expect(setPreference).toHaveBeenCalledWith(USER_ID, 'workout_reminder', false)
     expect(unsubscribeFromPush).toHaveBeenCalled()
-    expect(deleteSubscription).toHaveBeenCalledWith(USER_ID)
+    expect(deleteSubscriptionByEndpoint).toHaveBeenCalledWith(USER_ID, 'https://push.example/this-device')
+  })
+
+  it('does not touch the server when this device had no active browser subscription to begin with', async () => {
+    setPreference.mockResolvedValue({ error: null })
+    unsubscribeFromPush.mockResolvedValue(null)
+
+    await pushNotificationsRepository.disable(USER_ID)
+
+    expect(deleteSubscriptionByEndpoint).not.toHaveBeenCalled()
   })
 })
