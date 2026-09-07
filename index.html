@@ -5903,6 +5903,123 @@ h3 {
 .rd-distribution .distribution-footer > div { margin: 0; padding: 0; border: 0; }
 .rd-distribution .distribution-footer strong { display: block; margin-top: 10px; color: #f7f3ec; font-size: 18px; line-height: 1.28; }
 
+/* 10.2 · Distribution — user signal, one Fit action, W4 and amplification. */
+.review-distribution-v2 h2 {
+  top: 125px;
+  width: 560px;
+  font-size: 65px;
+  line-height: .94;
+}
+
+.review-distribution-v2 .distribution-lead {
+  position: absolute;
+  left: 92px;
+  top: 410px;
+  width: 545px;
+  margin: 0;
+  color: #a9a9ad;
+  font-size: 22px;
+  line-height: 1.32;
+}
+
+.review-distribution-v2 .distribution-triggers {
+  position: absolute;
+  left: 690px;
+  right: 92px;
+  top: 112px;
+}
+
+.review-distribution-v2 .route-label {
+  display: block;
+  color: #77787d;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.review-distribution-v2 .trigger-row {
+  display: grid;
+  grid-template-columns: 155px 205px 1fr;
+  gap: 20px;
+  align-items: baseline;
+  min-height: 88px;
+  padding: 22px 0 15px;
+  border-top: 1px solid rgba(246,242,234,.18);
+}
+
+.review-distribution-v2 .trigger-row:first-of-type { margin-top: 14px; }
+.review-distribution-v2 .trigger-row b { color: #77787d; font-size: 12px; letter-spacing: .08em; }
+.review-distribution-v2 .trigger-row strong { color: #f7f3ec; font-size: 21px; line-height: 1.15; }
+.review-distribution-v2 .trigger-row p { margin: 0; color: #a3a3a7; font-size: 20px; line-height: 1.24; }
+
+.review-distribution-v2 .distribution-outcome {
+  position: absolute;
+  left: 690px;
+  right: 92px;
+  top: 515px;
+  display: grid;
+  grid-template-columns: 280px 1fr 235px;
+  align-items: center;
+  min-height: 118px;
+  padding: 20px 0;
+  border-top: 1px solid rgba(246,242,234,.42);
+  border-bottom: 1px solid rgba(246,242,234,.18);
+}
+
+.review-distribution-v2 .distribution-outcome span,
+.review-distribution-v2 .distribution-scale span {
+  display: block;
+  color: #77787d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .09em;
+}
+
+.review-distribution-v2 .distribution-outcome strong {
+  display: inline-block;
+  margin-top: 7px;
+  color: #f7f3ec;
+  font-size: 52px;
+  line-height: .9;
+  letter-spacing: -.045em;
+}
+
+.review-distribution-v2 .distribution-outcome p { margin: 8px 0 0; color: #999a9f; font-size: 15px; line-height: 1.25; }
+
+.review-distribution-v2 .outcome-route { position: relative; height: 2px; margin: 0 30px; background: rgba(246,242,234,.28); }
+.review-distribution-v2 .outcome-route::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  border-top: 2px solid rgba(246,242,234,.55);
+  border-right: 2px solid rgba(246,242,234,.55);
+  transform: rotate(45deg);
+}
+
+.review-distribution-v2 .distribution-scale {
+  position: absolute;
+  left: 690px;
+  right: 92px;
+  top: 680px;
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 28px;
+  align-items: baseline;
+}
+
+.review-distribution-v2 .distribution-scale strong { color: #d2d0cb; font-size: 20px; line-height: 1.2; }
+
+.review-distribution-v2 .distribution-status {
+  top: 575px;
+  width: 520px;
+}
+
+.review-distribution-v2 .distribution-footer { bottom: 48px; }
+.review-distribution-v2 .distribution-footer strong { font-size: 19px; }
+
 /* 17 · Retention — client dominates, trainer enables, social layer connects. */
 .rd-retention {
   color: var(--ink);
@@ -8769,7 +8886,7 @@ Garmin, 22.07.2026 — приобретение TrainingPeaks и TrainHeroic; ф
 Расчёт: 74,1 млн × 78% ≈ 57,8 млн; 74,1 млн × 29% ≈ 21,5 млн. Показатели ВЦИОМ относятся ко всем взрослым и используются как ориентир. Это не TAM, не SAM, не достижимая аудитория и не прогноз активации.</aside>
     </section>
 
-    <section class="slide channel-slide acquisition-slide redesign-v2 rd-distribution" data-section="Дистрибуция" data-slide-type="product-flow" data-golden="linear/03-linear-product-flow.png">
+    <section class="slide channel-slide acquisition-slide redesign-v2 rd-distribution" data-section="Дистрибуция" data-slide-family="10" data-version="10.1" data-slide-type="product-flow" data-golden="linear/03-linear-product-flow.png">
       <div class="eyebrow">10 · ДИСТРИБУЦИЯ</div>
       <h2>Fit использует готовые точки входа Яндекса и тренеров</h2>
       <div class="channel-stack">
@@ -8810,6 +8927,60 @@ Garmin, 22.07.2026 — приобретение TrainingPeaks и TrainHeroic; ф
 
 ПЕРЕХОД
 Канал может привести человека один раз. Чтобы он возвращался без постоянной покупки трафика, продукт должен стать полезным рабочим инструментом для клиента и тренера.
+
+[Sources]
+Продвижение приложений в Директе: https://b2b.yandex.ru/adv/products/reklama-mobilnyh-prilozhenij
+Продвижение в Картах: https://yandex.ru/support/direct/ru/company-ads/maps
+UrbanAds: https://yandex.ru/support/urbanads/ru/</aside>
+    </section>
+
+    <section class="slide channel-slide acquisition-slide redesign-v2 rd-distribution review-distribution-v2" data-section="Дистрибуция" data-slide-family="10" data-version="10.2" data-slide-type="product-flow" data-golden="linear/03-linear-product-flow.png">
+      <div class="eyebrow">10 · ДИСТРИБУЦИЯ</div>
+      <h2>Fit появляется в момент, когда человек уже готов действовать</h2>
+      <p class="distribution-lead">Контекст Яндекса, тренеры и социальные сигналы ведут не к установке, а к первому полезному действию.</p>
+
+      <div class="distribution-triggers">
+        <span class="route-label">ЧЕТЫРЕ СИГНАЛА ДЛЯ ПИЛОТА</span>
+        <div class="trigger-row"><b>НАМЕРЕНИЕ</b><strong>Поиск · Карты</strong><p>Ищу зал, тренера или длинный пеший маршрут → открыть сценарий Fit</p></div>
+        <div class="trigger-row"><b>МОМЕНТ</b><strong>Музыка · Алиса</strong><p>Включаю тренировочный плейлист → открыть план или начать запись</p></div>
+        <div class="trigger-row"><b>ДОВЕРИЕ</b><strong>Тренер</strong><p>Получаю готовую программу → сразу начать её в Fit</p></div>
+        <div class="trigger-row"><b>СОЦИАЛЬНЫЙ СИГНАЛ</b><strong>Лента · авторы</strong><p>Вижу достижение → присоединиться к тренировке, группе или челленджу</p></div>
+      </div>
+
+      <div class="distribution-outcome">
+        <div class="fit-action"><span>ПЕРВОЕ ДЕЙСТВИЕ</span><strong>Fit</strong><p>программа · тренировка · тренер · челлендж</p></div>
+        <div class="outcome-route" aria-hidden="true"><i></i></div>
+        <div class="w4-action"><span>УДЕРЖАНИЕ</span><strong>W4</strong><p>тренер · Плюс · пуши · сообщество</p></div>
+      </div>
+
+      <div class="distribution-scale"><span>ПОСЛЕ ПОДТВЕРЖДЕНИЯ W4</span><strong>Директ · UrbanAds · Go — масштаб после W4</strong></div>
+      <div class="distribution-status"><span>СТАТУС</span><strong>Гипотезы интеграций. Для пилота нужны решение руководства, владельцы и доступный инвентарь сервисов</strong></div>
+      <div class="distribution-footer">
+        <div><span>КАК ИЗМЕРЯЕМ</span><strong>Дополнительный активный пользователь W4 относительно контрольной группы</strong></div>
+        <div><span>ЧТО НУЖНО ОДОБРИТЬ</span><strong>Тест интеграций и бонус тренеру только за активного клиента W4</strong></div>
+      </div>
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Показать не перечень сервисов, а конкретную систему дистрибуции: пользовательский сигнал, полезное действие в Fit и измеримый результат W4.
+
+ЧТО ГОВОРИМ
+Fit появляется не случайно, а в момент уже выраженного спортивного намерения. В пилоте проверяем четыре типа сигналов.
+
+Первый — намерение. Пользователь ищет зал или тренера, либо строит достаточно длинный пеший маршрут. Поиск или Карты предлагают не абстрактную установку, а конкретный сценарий: открыть программу, подобрать специалиста или сохранить активность в Fit. Предложение для пешего маршрута тестируем только при достаточной длительности, явной спортивной цели или согласии пользователя, чтобы не превратить механику в спам.
+
+Второй — момент занятия. Пользователь включает тренировочный плейлист или обращается к Алисе во время подготовки к тренировке. Алиса предлагает открыть текущий план либо начать запись результата в Fit.
+
+Третий — доверие. Тренер приглашает клиента сразу в готовую программу. Бонус тренеру платим только за активного клиента на четвёртой неделе, поэтому ему выгодна не установка, а сформированная привычка.
+
+Четвёртый — социальный сигнал. Друг, тренер или автор публикует достижение, тренировку или челлендж. Пользователь может присоединиться к действию, группе или сообществу одним переходом. Так собственная спортивная платформа создаёт органическую петлю распространения. Продвижение товаров и коммерческие витрины подключаются позже в монетизационном контуре и не смешиваются с задачей этого слайда.
+
+Все входы ведут к первому полезному действию: открыть программу, начать или записать тренировку, выбрать тренера либо присоединиться к челленджу. После этого тренер, Плюс, персональные пуши и социальная активность помогают дойти до W4.
+
+Директ, UrbanAds и Go — не самостоятельные пользовательские моменты, а инструменты усиления. Масштабируем ими только сценарии, которые подтвердили дополнительную активацию и W4 относительно контрольной группы.
+
+Это продуктовые гипотезы, а не согласованные интеграции. Для запуска тестов нужны решение руководства, владельцы со стороны сервисов, доступный инвентарь и согласованные правила использования контекста.
+
+ПЕРЕХОД
+Дистрибуция приводит человека к первому действию. Следующий вопрос — почему клиент и тренер продолжат возвращаться без постоянной покупки трафика.
 
 [Sources]
 Продвижение приложений в Директе: https://b2b.yandex.ru/adv/products/reklama-mobilnyh-prilozhenij
