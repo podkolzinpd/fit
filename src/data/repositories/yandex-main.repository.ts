@@ -25,6 +25,7 @@ import { validateGoalCriteriaSuggestion } from '../../shared/goal-criteria-sugge
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retirement'
 import { subscribeToPush, unsubscribeFromPush } from '../../features/notifications/push-subscription'
+import { reconcilePushSubscription } from '../../features/notifications/reconcile-push-subscription'
 import { createYandexMainQueries, type YandexMainQueries } from '../queries/yandex-main.queries'
 import { toJson } from '../queries/json'
 import { currentAppFeedbackContext } from './app-feedback.repository'
@@ -918,8 +919,19 @@ export function createYandexMainRepository(
     },
     pushNotifications: {
       async status() {
+        const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
         const payload = await readJson(queries, '/v1/push-notifications/status', z.object({ status: z.object({ subscribed: z.boolean(), preferences: z.object({ workout_reminder: z.boolean(), workout_scheduled: z.boolean() }) }) }))
-        return { subscribed: payload.status.subscribed, workoutReminderEnabled: payload.status.preferences.workout_reminder }
+        const state = await reconcilePushSubscription(vapidPublicKey, {
+          // Yandex-пилот пока не различает устройства на сервере (см.
+          // YAFIT-473 — мульти-device сделан только для Supabase-трека), так
+          // что «есть ли подписка на сервере» — тот же whole-user флаг, что и
+          // раньше, а не проверка конкретного endpoint.
+          hasServerSubscription: () => Promise.resolve(payload.status.subscribed),
+          saveSubscription: async (subscription) => {
+            await writeEmpty(queries, '/v1/push-notifications/subscription', 'PUT', subscription)
+          },
+        })
+        return { state, workoutReminderEnabled: payload.status.preferences.workout_reminder }
       },
       async enable() {
         const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
