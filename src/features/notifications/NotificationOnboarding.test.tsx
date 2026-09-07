@@ -16,21 +16,23 @@ vi.mock('../../data/repositories/push-notifications.repository', () => ({
   WORKOUT_SCHEDULED_KIND: 'workout_scheduled',
 }))
 
-const isPushSupported = vi.hoisted(() => vi.fn())
-const getCurrentPushSubscription = vi.hoisted(() => vi.fn())
+type LocalSubscription = { endpoint: string; p256dh: string; authKey: string }
+
+const isPushSupported = vi.hoisted(() => vi.fn<() => boolean>())
+const getCurrentPushSubscription = vi.hoisted(() => vi.fn<() => Promise<LocalSubscription | null>>())
 vi.mock('./push-subscription', () => ({ isPushSupported: () => isPushSupported(), getCurrentPushSubscription: () => getCurrentPushSubscription() }))
 
-const detectInstallPlatform = vi.hoisted(() => vi.fn())
-const installPromptDismissed = vi.hoisted(() => vi.fn())
-const isAppInstalled = vi.hoisted(() => vi.fn())
+const detectInstallPlatform = vi.hoisted(() => vi.fn<() => 'ios' | 'android' | 'other'>())
+const installPromptDismissed = vi.hoisted(() => vi.fn<(userId: string) => boolean>())
+const isAppInstalled = vi.hoisted(() => vi.fn<() => boolean>())
 vi.mock('../install', () => ({
   detectInstallPlatform: () => detectInstallPlatform(),
   installPromptDismissed: (userId: string) => installPromptDismissed(userId),
   isAppInstalled: () => isAppInstalled(),
 }))
 
-const pushOnboardingSeen = vi.hoisted(() => vi.fn())
-const markPushOnboardingSeen = vi.hoisted(() => vi.fn())
+const pushOnboardingSeen = vi.hoisted(() => vi.fn<(userId: string) => boolean>())
+const markPushOnboardingSeen = vi.hoisted(() => vi.fn<(userId: string) => void>())
 vi.mock('./notification-onboarding-storage', () => ({
   pushOnboardingSeen: (userId: string) => pushOnboardingSeen(userId),
   markPushOnboardingSeen: (userId: string) => markPushOnboardingSeen(userId),
@@ -89,7 +91,7 @@ describe('NotificationOnboarding', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('renders nothing on iOS before the app is installed, without ever calling subscribeToPush', async () => {
+  it('renders nothing on iOS before the app is installed, without ever calling subscribeToPush', () => {
     primeHappyPathDefaults()
     detectInstallPlatform.mockReturnValue('ios')
     isAppInstalled.mockReturnValue(false)
@@ -120,8 +122,9 @@ describe('NotificationOnboarding', () => {
     repository.enable.mockResolvedValue(undefined)
     repository.enableCategory.mockResolvedValue(undefined)
     getCurrentPushSubscription.mockResolvedValue(LOCAL_SUBSCRIPTION)
-    repository.sendTestPush.mockImplementation(async () => {
+    repository.sendTestPush.mockImplementation(() => {
       window.dispatchEvent(new MessageEvent('message', { data: { type: 'fit-test-push-received' } }))
+      return Promise.resolve(undefined)
     })
     Object.defineProperty(navigator, 'serviceWorker', {
       value: { addEventListener: window.addEventListener.bind(window), removeEventListener: window.removeEventListener.bind(window) },
