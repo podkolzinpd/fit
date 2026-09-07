@@ -19,7 +19,7 @@ export function NotificationsSetting({ userId }: { userId: string }) {
 
   if (!isPushSupported()) return null
 
-  const checked = status.data?.subscribed && status.data.workoutReminderEnabled
+  const checked = status.data?.state === 'working' && status.data.workoutReminderEnabled
 
   return <>
     <Switch

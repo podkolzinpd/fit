@@ -2,6 +2,9 @@ import type { BrowserPushSubscription } from '../../features/notifications/push-
 import { supabase } from './client'
 
 export const WORKOUT_REMINDER_KIND = 'workout_reminder'
+// kind существует в БД с 20260830140000 (push_workout_scheduled_notification),
+// но клиент его не называл — не было UI-ручки для этой категории.
+export const WORKOUT_SCHEDULED_KIND = 'workout_scheduled'
 
 export const pushNotificationsQueries = {
   upsertSubscription: (userId: string, subscription: BrowserPushSubscription) => supabase
@@ -24,4 +27,5 @@ export const pushNotificationsQueries = {
   setPreference: (userId: string, kind: string, enabled: boolean) => supabase
     .from('notification_preferences')
     .upsert({ user_id: userId, kind, enabled }, { onConflict: 'user_id,kind' }),
+  sendTestPush: (endpoint: string) => supabase.rpc('send_test_push_notification', { p_endpoint: endpoint }),
 }

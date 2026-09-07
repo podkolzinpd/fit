@@ -32,21 +32,21 @@ describe('NotificationsSetting', () => {
 
   it('shows the toggle off when the user has not subscribed', async () => {
     isPushSupported.mockReturnValue(true)
-    repository.status.mockResolvedValue({ subscribed: false, workoutReminderEnabled: true })
+    repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true })
     render(<NotificationsSetting userId="user-1" />, { wrapper: wrapper() })
     await waitFor(() => expect(screen.getByRole('switch')).not.toBeChecked())
   })
 
   it('shows the toggle on when subscribed and enabled', async () => {
     isPushSupported.mockReturnValue(true)
-    repository.status.mockResolvedValue({ subscribed: true, workoutReminderEnabled: true })
+    repository.status.mockResolvedValue({ state: 'working', workoutReminderEnabled: true })
     render(<NotificationsSetting userId="user-1" />, { wrapper: wrapper() })
     await waitFor(() => expect(screen.getByRole('switch')).toBeChecked())
   })
 
   it('calls enable when turning the toggle on', async () => {
     isPushSupported.mockReturnValue(true)
-    repository.status.mockResolvedValue({ subscribed: false, workoutReminderEnabled: true })
+    repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true })
     repository.enable.mockResolvedValue(undefined)
     render(<NotificationsSetting userId="user-1" />, { wrapper: wrapper() })
     await waitFor(() => expect(screen.getByRole('switch')).not.toBeChecked())
@@ -56,7 +56,7 @@ describe('NotificationsSetting', () => {
 
   it('calls disable when turning the toggle off', async () => {
     isPushSupported.mockReturnValue(true)
-    repository.status.mockResolvedValue({ subscribed: true, workoutReminderEnabled: true })
+    repository.status.mockResolvedValue({ state: 'working', workoutReminderEnabled: true })
     repository.disable.mockResolvedValue(undefined)
     render(<NotificationsSetting userId="user-1" />, { wrapper: wrapper() })
     await waitFor(() => expect(screen.getByRole('switch')).toBeChecked())
@@ -66,7 +66,7 @@ describe('NotificationsSetting', () => {
 
   it('shows an error message when the toggle mutation fails', async () => {
     isPushSupported.mockReturnValue(true)
-    repository.status.mockResolvedValue({ subscribed: false, workoutReminderEnabled: true })
+    repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true })
     repository.enable.mockRejectedValue(new Error('Push-уведомления сейчас недоступны'))
     render(<NotificationsSetting userId="user-1" />, { wrapper: wrapper() })
     await waitFor(() => expect(screen.getByRole('switch')).not.toBeChecked())

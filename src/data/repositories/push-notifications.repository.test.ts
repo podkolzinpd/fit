@@ -8,52 +8,60 @@ const setPreference = vi.hoisted(() => vi.fn())
 const subscribeToPush = vi.hoisted(() => vi.fn())
 const unsubscribeFromPush = vi.hoisted(() => vi.fn())
 const getCurrentPushSubscription = vi.hoisted(() => vi.fn())
+const isPushSupported = vi.hoisted(() => vi.fn())
 
 vi.mock('../queries/push-notifications.queries', () => ({
   WORKOUT_REMINDER_KIND: 'workout_reminder',
   pushNotificationsQueries: { getSubscriptionByEndpoint, getPreference, upsertSubscription, deleteSubscriptionByEndpoint, setPreference },
 }))
-vi.mock('../../features/notifications/push-subscription', () => ({ subscribeToPush, unsubscribeFromPush, getCurrentPushSubscription }))
+vi.mock('../../features/notifications/push-subscription', () => ({ subscribeToPush, unsubscribeFromPush, getCurrentPushSubscription, isPushSupported }))
 
 import { pushNotificationsRepository } from './push-notifications.repository'
 
 const USER_ID = 'user-1'
 const LOCAL_SUBSCRIPTION = { endpoint: 'https://push.example/this-device', p256dh: 'p', authKey: 'a' }
 
+// status() delegates the permission/local/server sync itself to
+// reconcilePushSubscription (unit-tested on its own in
+// reconcile-push-subscription.test.ts) — these tests only check that
+// status() wires the Supabase queries into that reconciliation correctly and
+// shapes the final { state, workoutReminderEnabled } result.
 describe('pushNotificationsRepository.status', () => {
   beforeEach(() => {
+    isPushSupported.mockReturnValue(true)
+    vi.stubGlobal('Notification', { permission: 'granted' })
     getCurrentPushSubscription.mockReset()
     getSubscriptionByEndpoint.mockReset()
     getPreference.mockReset()
   })
+  afterEach(() => vi.unstubAllGlobals())
 
-  it('reports subscribed and enabled when this device has a local and a matching server subscription', async () => {
+  it('reports a working state when this device has a local and a matching server subscription', async () => {
     getCurrentPushSubscription.mockResolvedValue(LOCAL_SUBSCRIPTION)
     getSubscriptionByEndpoint.mockResolvedValue({ data: { user_id: USER_ID }, error: null })
     getPreference.mockResolvedValue({ data: { enabled: true }, error: null })
     const status = await pushNotificationsRepository.status(USER_ID)
-    expect(status).toEqual({ subscribed: true, workoutReminderEnabled: true })
+    expect(status).toEqual({ state: 'working', workoutReminderEnabled: true })
     expect(getSubscriptionByEndpoint).toHaveBeenCalledWith(USER_ID, LOCAL_SUBSCRIPTION.endpoint)
   })
 
-  it('reports not subscribed when the browser has no local subscription, without querying the server', async () => {
-    getCurrentPushSubscription.mockResolvedValue(null)
+  it('reports needs-permission when the browser has not decided yet', async () => {
+    vi.stubGlobal('Notification', { permission: 'default' })
     getPreference.mockResolvedValue({ data: null, error: null })
     const status = await pushNotificationsRepository.status(USER_ID)
-    expect(status).toEqual({ subscribed: false, workoutReminderEnabled: true })
-    expect(getSubscriptionByEndpoint).not.toHaveBeenCalled()
+    expect(status).toEqual({ state: 'needs-permission', workoutReminderEnabled: true })
+    expect(getCurrentPushSubscription).not.toHaveBeenCalled()
   })
 
-  it('reports not subscribed when a local subscription exists but the server has no matching row', async () => {
-    getCurrentPushSubscription.mockResolvedValue(LOCAL_SUBSCRIPTION)
-    getSubscriptionByEndpoint.mockResolvedValue({ data: null, error: null })
+  it('reports denied when the browser permission was explicitly revoked', async () => {
+    vi.stubGlobal('Notification', { permission: 'denied' })
     getPreference.mockResolvedValue({ data: null, error: null })
     const status = await pushNotificationsRepository.status(USER_ID)
-    expect(status.subscribed).toBe(false)
+    expect(status.state).toBe('denied')
   })
 
   it('defaults workoutReminderEnabled to true when no preference row exists (opt-out model)', async () => {
-    getCurrentPushSubscription.mockResolvedValue(null)
+    vi.stubGlobal('Notification', { permission: 'default' })
     getPreference.mockResolvedValue({ data: null, error: null })
     const status = await pushNotificationsRepository.status(USER_ID)
     expect(status.workoutReminderEnabled).toBe(true)
