@@ -42,6 +42,7 @@ test('exercise catalog search and technique detail work in the iOS shell', async
   const photoTechnique = page.getByRole('dialog').locator('.exercise-image-technique')
   await expect(photoTechnique.locator('video')).toHaveCount(0)
   await expect(photoTechnique.locator('.exercise-image-empty')).toHaveCount(0)
-  await expect(photoTechnique.locator('img')).toHaveCount(1)
+  await expect(photoTechnique).toHaveClass(/exercise-image-motion/)
+  await expect(photoTechnique.locator('img')).toHaveCount(2)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
