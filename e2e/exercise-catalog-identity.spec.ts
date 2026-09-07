@@ -52,7 +52,7 @@ test('exercise catalog preview keeps search, media and detail transitions usable
   const techniqueVideo = detail.locator('.exercise-image-technique video')
   await expect(techniqueVideo).toBeVisible()
   await expect(techniqueVideo).toHaveAttribute('autoplay', '')
-  await expect(techniqueVideo).toHaveAttribute('controls', '')
+  await expect(techniqueVideo).not.toHaveAttribute('controls', '')
   await expect(techniqueVideo).toHaveAttribute('loop', '')
   await expect(techniqueVideo.evaluate((video: HTMLVideoElement) => video.muted)).resolves.toBe(true)
 
