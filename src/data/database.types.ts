@@ -1,4 +1,4 @@
-// schema-sha256: 306c7c6ec954c6cea0630d505b5a6e79bfa749a2d05b949b243f58f2786d533c
+// schema-sha256: 01aba5abf881c8355a3a6704e4ddb80ef45a5c7ffba38ce0550e971f2062d387
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -2087,6 +2087,10 @@ export type Database = {
       save_workout: {
         Args: { p_expected_version?: number | null; p_workout: Json }
         Returns: string
+      }
+      send_test_push_notification: {
+        Args: { p_endpoint: string }
+        Returns: undefined
       }
       set_client_custom_metric_archived: {
         Args: {
