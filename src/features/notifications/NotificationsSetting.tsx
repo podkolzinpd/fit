@@ -73,7 +73,7 @@ export function NotificationsSetting({ userId }: { userId: string }) {
 
   return <>
     <div className="push-status-row">
-      <p className={working ? 'push-status-text working' : 'push-status-text warning'} role="status">{STATUS_COPY[state]}</p>
+      <p className={working ? 'push-status-text working' : 'push-status-text warning'} aria-live="polite">{STATUS_COPY[state]}</p>
       {state === 'needs-permission' && <div className="push-status-actions">
         <button type="button" className="secondary" disabled={enableMutation.isPending} aria-busy={enableMutation.isPending} onClick={() => enableMutation.mutate()}>
           {enableMutation.isPending ? 'Включаем…' : 'Включить уведомления'}
