@@ -1,7 +1,11 @@
 import { reconcilePushSubscription, type PushSubscriptionState } from '../../features/notifications/reconcile-push-subscription'
 import { subscribeToPush, unsubscribeFromPush } from '../../features/notifications/push-subscription'
-import { pushNotificationsQueries, WORKOUT_REMINDER_KIND } from '../queries/push-notifications.queries'
+import { pushNotificationsQueries, WORKOUT_REMINDER_KIND, WORKOUT_SCHEDULED_KIND } from '../queries/push-notifications.queries'
 import { repositoryError } from './error'
+
+// UI не может импортировать queries напрямую (no-restricted-imports) — эти
+// значения kind ей всё равно нужны как параметры enableCategory(userId, kind).
+export { WORKOUT_REMINDER_KIND, WORKOUT_SCHEDULED_KIND }
 
 export type NotificationStatus = {
   state: PushSubscriptionState
@@ -42,6 +46,20 @@ export const pushNotificationsRepository = {
     if (result.error) throw repositoryError(result.error)
     const preference = await pushNotificationsQueries.setPreference(userId, WORKOUT_REMINDER_KIND, true)
     if (preference.error) throw repositoryError(preference.error)
+  },
+
+  // Отдельно от enable() (который всегда включает и подписку, и
+  // workout_reminder разом) — онбординг подписывает устройство один раз
+  // через enable(), а затем явно включает каждую существующую категорию по
+  // отдельности, не полагаясь на opt-out-дефолт молчаливо.
+  async enableCategory(userId: string, kind: string): Promise<void> {
+    const preference = await pushNotificationsQueries.setPreference(userId, kind, true)
+    if (preference.error) throw repositoryError(preference.error)
+  },
+
+  async sendTestPush(endpoint: string): Promise<void> {
+    const result = await pushNotificationsQueries.sendTestPush(endpoint)
+    if (result.error) throw repositoryError(result.error)
   },
 
   async disable(userId: string): Promise<void> {
