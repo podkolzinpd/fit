@@ -1,6 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-07. База: `main` `f4a1f103`. Активно: убрать legacy-фото и двухкадровую анимацию из ожидания приватного Gym Pro видео.
+Обновлено: 2026-09-08. База: `main` `a3bbd4b8`. Активно: безопасный автоматический выбор непустого tenant для remote audit/dry-run.
 ## Последняя проверенная продуктовая точка
 - Главные страницы обеих ролей сохраняют voice-first действие и ввод текстом; Client Home показывает ближайшее назначение, состоявшуюся неделю и максимум один вторичный акцент. Live разделяет нейтральный таймер и активный отдых.
 - Создание, Live и завершение прошлого плана сохраняют прежнюю логику без
@@ -100,18 +100,18 @@
 - Read-only callback остаётся диагностическим экраном; полноценная app-session
   использует тот же основной UI и read-write stage API без изменения rollout
   для пользователей вне allowlist.
-- Реальный invite → join → leave/remove smoke — внешняя проверка. TLS source проверен с Supabase Root CA; до первого tenant rollout остаются выбор
-  непустого cohort, target dry-run, freeze/rollback-окно и включение одного tenant.
+- Реальный invite → join → leave/remove smoke — внешняя проверка. TLS source проверен; до rollout остаются dry-run, freeze/rollback-окно и один tenant.
+- Remote rehearsal умеет без раскрытия UUID выбрать самый маленький допустимый
+  cohort для `audit`/`dry-run`; автовыбор для `apply` запрещён.
 ## Проверки активной ветки
-- Две чистые локальные репетиции прошли через export → dry-run/rollback → apply
-  → повторный apply (`inserted=0`) → validate: 35 synthetic production-like
-  строк, все 28 manifest-таблиц; временные БД и artifacts удалены.
+- Две локальные репетиции перенесли 35 synthetic строк во всех 28 таблицах;
+  dry-run откатился, повторный apply вставил 0 строк.
 - `npm run local:verify`: 947 Supabase SQL/RLS и 30 PostgreSQL actor/RLS integration-тестов прошли; generated types и migration safety актуальны.
-- Remote audit run `34048626626` подтвердил source connection/TLS и безопасно
-  остановился до target-вызова: выбранный тренер без клиентов. Полный `npm run check` зелёный.
-- Push bootstrap: два runtime SA созданы run `33761562506`; платные ресурсы не созданы; Functions Lockbox использует stage-local masked mirror без payload в state/logs.
+- Автовыбор tenant: API lint/typecheck/build, 349 API tests и 110 infra policy
+  tests прошли. Корневой check остановился на 9 существующих notification tests
+  из-за отсутствующего `localStorage`; затронутые проверки зелёные.
 ## Ближайший порядок
-1. Влить source CA fix, выбрать непустой trainer cohort и пройти remote audit/dry-run.
+1. Влить автовыбор cohort-а и пройти remote audit/dry-run.
 2. Отдельно подтвердить stage apply, связать Yandex ID и проверить основной UI.
 3. После одного успешного tenant перевести оставшихся пользователей партиями;
    Supabase держать только на rollback-окно.
