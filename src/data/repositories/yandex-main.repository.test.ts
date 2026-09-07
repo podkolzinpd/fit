@@ -21,10 +21,17 @@ vi.mock('./yandex-pilot.repository', async (importOriginal) => {
   }
 })
 
-const push = vi.hoisted(() => ({ subscribe: vi.fn(), unsubscribe: vi.fn() }))
+const push = vi.hoisted(() => ({
+  subscribe: vi.fn(),
+  unsubscribe: vi.fn(),
+  isSupported: vi.fn().mockReturnValue(true),
+  getCurrent: vi.fn().mockResolvedValue({ endpoint: 'https://push.example/pilot-device', p256dh: 'p', authKey: 'a' }),
+}))
 vi.mock('../../features/notifications/push-subscription', () => ({
   subscribeToPush: push.subscribe,
   unsubscribeFromPush: push.unsubscribe,
+  isPushSupported: push.isSupported,
+  getCurrentPushSubscription: push.getCurrent,
 }))
 
 const actor: SessionActor = {
@@ -376,7 +383,8 @@ describe('Yandex main repository', () => {
     await repository.trainingSummaries.unpublish(summary)
 
     expect(await repository.appFeedback.submit('problem', '  Сообщение  ')).toBe(progressId)
-    expect(await repository.pushNotifications.status(actor.userId)).toEqual({ subscribed: true, workoutReminderEnabled: true })
+    vi.stubGlobal('Notification', { permission: 'granted' })
+    expect(await repository.pushNotifications.status(actor.userId)).toEqual({ state: 'working', workoutReminderEnabled: true })
     await repository.pushNotifications.enable(actor.userId)
     await repository.pushNotifications.disable(actor.userId)
 

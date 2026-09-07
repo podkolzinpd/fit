@@ -1,23 +1,33 @@
-import { getCurrentPushSubscription, subscribeToPush, unsubscribeFromPush } from '../../features/notifications/push-subscription'
+import { reconcilePushSubscription, type PushSubscriptionState } from '../../features/notifications/reconcile-push-subscription'
+import { subscribeToPush, unsubscribeFromPush } from '../../features/notifications/push-subscription'
 import { pushNotificationsQueries, WORKOUT_REMINDER_KIND } from '../queries/push-notifications.queries'
 import { repositoryError } from './error'
 
 export type NotificationStatus = {
-  subscribed: boolean
+  state: PushSubscriptionState
   workoutReminderEnabled: boolean
 }
 
 export const pushNotificationsRepository = {
   async status(userId: string): Promise<NotificationStatus> {
-    const local = await getCurrentPushSubscription()
-    const [subscription, preference] = await Promise.all([
-      local ? pushNotificationsQueries.getSubscriptionByEndpoint(userId, local.endpoint) : Promise.resolve({ data: null, error: null }),
+    const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
+    const [state, preference] = await Promise.all([
+      reconcilePushSubscription(vapidPublicKey, {
+        hasServerSubscription: async (endpoint) => {
+          const result = await pushNotificationsQueries.getSubscriptionByEndpoint(userId, endpoint)
+          if (result.error) throw repositoryError(result.error)
+          return result.data !== null
+        },
+        saveSubscription: async (subscription) => {
+          const result = await pushNotificationsQueries.upsertSubscription(userId, subscription)
+          if (result.error) throw repositoryError(result.error)
+        },
+      }),
       pushNotificationsQueries.getPreference(userId, WORKOUT_REMINDER_KIND),
     ])
-    if (subscription.error) throw repositoryError(subscription.error)
     if (preference.error) throw repositoryError(preference.error)
     return {
-      subscribed: local !== null && subscription.data !== null,
+      state,
       // Реестр видов уведомлений — opt-out: строки нет, пока пользователь не
       // выключил конкретный вид явно, поэтому отсутствие строки = включено.
       workoutReminderEnabled: preference.data?.enabled ?? true,
