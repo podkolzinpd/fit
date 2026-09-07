@@ -112,6 +112,7 @@ import {
   readVersionedMetricRequest,
   readVersionedProgressRequest,
 } from './progress-request.js'
+import { readVitalMediaRequest, type VitalMediaSigner } from './vital-media.js'
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
@@ -153,6 +154,7 @@ interface BuildAppOptions {
   yandexAppSessionIssuer?: YandexAppSessionIssuer
   yandexAppSessionReader?: YandexAppSessionReader
   yandexAppSessionRevoker?: YandexAppSessionRevoker
+  vitalMediaSigner?: VitalMediaSigner
   logger?: boolean
   releaseId?: string
 }
@@ -197,6 +199,27 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     status: 'ok',
     ...(options.releaseId === undefined ? {} : { releaseId: options.releaseId }),
   }))
+
+  app.post('/v1/exercise-media/sign', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const command = readVitalMediaRequest(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (command === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.yandexAppSessionReader === undefined || options.vitalMediaSigner === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    try {
+      await options.yandexAppSessionReader.read(session.token)
+      const signedUrl = await options.vitalMediaSigner.sign(command.path)
+      return reply.header('cache-control', 'no-store').send({ signedUrl })
+    } catch (error) {
+      if (error instanceof YandexAppSessionInvalidError) {
+        return reply.code(401).send({ error: 'unauthorized' })
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
 
   app.post('/v1/legacy/parse-workout', async (request, reply) => {
     const actorToken = request.headers['x-supabase-authorization']

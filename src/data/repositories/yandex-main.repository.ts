@@ -637,6 +637,19 @@ export function createYandexMainRepository(
     },
     exercises: {
       system: SYSTEM_EXERCISE_CATALOG,
+      async createVitalMediaUrl(path, expiresIn) {
+        if (expiresIn !== 60 * 60) {
+          throw new RepositoryError('invalid_media_expiry', 'Некорректный срок ссылки на медиа')
+        }
+        const payload = await writeJson(
+          queries,
+          '/v1/exercise-media/sign',
+          'POST',
+          { path },
+          z.object({ signedUrl: z.url() }),
+        )
+        return payload.signedUrl
+      },
       parseWorkout: (text, systemCatalog) => yandexPilotRepository.parseWorkout(
         apiBaseUrl, sessionToken, text, systemCatalog, 'read_write',
       ),

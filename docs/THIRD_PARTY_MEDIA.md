@@ -59,7 +59,8 @@ family. Пять известных true duplicate схлопываются су
 
 Поскольку репозиторий публичный, открытые MP4/JPG также исключены из Git.
 Команда `node scripts/package-vital-gym-pro-media.mjs --key-file <key>` хранит
-их как AES-256-GCM authenticated bundle. Во время Vercel build закрытая
-переменная `VITAL_MEDIA_KEY` раскрывает bundle, а SHA-256 manifest проверяет все
-951 файла. Это сохраняет разрешённое EULA использование в приложении и не
-раздаёт приобретённый набор как самостоятельную библиотеку через GitHub.
+их как AES-256-GCM authenticated bundle. Ручной workflow `Deploy Vital exercise
+media` раскрывает bundle только во временном GitHub runner, проверяет все 951
+файл и загружает их в закрытый Supabase Storage bucket. Приложение выдаёт
+часовые signed URL только вошедшим пользователям; Vercel и публичный GitHub не
+получают исходные медиа или ключ.

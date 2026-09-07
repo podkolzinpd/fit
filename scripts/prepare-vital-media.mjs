@@ -48,8 +48,7 @@ if (await validateMedia(manifest).catch(() => false)) {
 const encodedKey = process.env.VITAL_MEDIA_KEY?.trim()
   ?? (process.env.VITAL_MEDIA_KEY_FILE ? (await readFile(resolve(process.env.VITAL_MEDIA_KEY_FILE), 'utf8')).trim() : undefined)
 if (!encodedKey) {
-  if (process.env.VERCEL === '1') throw new Error('VITAL_MEDIA_KEY is required for a Vercel build')
-  console.log('Gym Pro media is not prepared; skipping outside Vercel because VITAL_MEDIA_KEY is unavailable.')
+  console.log('Gym Pro media is not prepared locally; deployed clients use private signed media URLs.')
   process.exit(0)
 }
 const key = Buffer.from(encodedKey, 'base64')

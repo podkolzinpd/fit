@@ -89,6 +89,24 @@ describe('Yandex main repository', () => {
     })
   })
 
+  it('requests a private Vital media URL through the authenticated Yandex backend', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+      signedUrl: 'https://project.supabase.co/storage/v1/object/sign/fit-exercise-media/vital-pro/squat.mp4?token=redacted',
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.exercises.createVitalMediaUrl('vital-pro/squat.mp4', 60 * 60))
+      .resolves.toContain('/fit-exercise-media/vital-pro/squat.mp4')
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe(`${apiBaseUrl}/v1/exercise-media/sign`)
+    expect(init.method).toBe('POST')
+    expect(init.headers).toMatchObject({ 'x-fit-session': sessionToken })
+    expect(init.body).toBe(JSON.stringify({ path: 'vital-pro/squat.mp4' }))
+  })
+
   it('accepts the resource-specific version returned by a Live mutation', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
       set: { id: '9fcce2c2-e182-433e-bb16-a481705c75fd', replayed: false, version: 4 },
