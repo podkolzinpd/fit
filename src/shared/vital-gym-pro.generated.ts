@@ -2614,8 +2614,8 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-hammer-dumbbell-biceps-curl-ex016": {
     "publicVitalId": "EX-016",
-    "purchasedId": "1456",
-    "purchasedName": "hammer curl"
+    "purchasedId": "0016",
+    "purchasedName": "dumbbell hammer curl"
   },
   "vital-dumbbell-spider-curl-ex018": {
     "publicVitalId": "EX-018",
@@ -2779,7 +2779,7 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-barbell-rdl-ex059": {
     "publicVitalId": "EX-059",
-    "purchasedId": "0247",
+    "purchasedId": "0060",
     "purchasedName": "barbell romanian deadlift"
   },
   "vital-cable-leg-kickback-ex060": {
@@ -2824,7 +2824,7 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-hip-abduction-machine-ex068": {
     "publicVitalId": "EX-068",
-    "purchasedId": "1377",
+    "purchasedId": "0069",
     "purchasedName": "hip abduction machine"
   },
   "vital-kettlebell-hold-march-ex069": {
@@ -2849,7 +2849,7 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-lying-leg-curl-machine-ex074": {
     "publicVitalId": "EX-074",
-    "purchasedId": "0271",
+    "purchasedId": "0075",
     "purchasedName": "lying leg curl machine"
   },
   "vital-rope-wave-ex075": {
@@ -2964,13 +2964,13 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-assisted-pullup-ex100": {
     "publicVitalId": "EX-100",
-    "purchasedId": "1702",
-    "purchasedName": "assisted pull-up"
+    "purchasedId": "0102",
+    "purchasedName": "assisted pull up"
   },
   "vital-cable-crunch-ex101": {
     "publicVitalId": "EX-101",
-    "purchasedId": "0103",
-    "purchasedName": "cable crunch"
+    "purchasedId": "0002",
+    "purchasedName": "cable crunch (kneeling)"
   },
   "vital-cross-body-mountain-climbers-ex102": {
     "publicVitalId": "EX-102",
@@ -3009,7 +3009,7 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-glute-bridge-ex109": {
     "publicVitalId": "EX-109",
-    "purchasedId": "0111",
+    "purchasedId": "1139",
     "purchasedName": "glute bridge"
   },
   "vital-hanging-knee-raise-captain-s-chair-ex112": {
@@ -3019,12 +3019,12 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-jumping-jack-ex115": {
     "publicVitalId": "EX-115",
-    "purchasedId": "0117",
+    "purchasedId": "1155",
     "purchasedName": "jumping jack"
   },
   "vital-mountain-climber-ex117": {
     "publicVitalId": "EX-117",
-    "purchasedId": "0119",
+    "purchasedId": "1166",
     "purchasedName": "mountain climber"
   },
   "vital-plank-hip-dip-ex118": {
@@ -3094,8 +3094,8 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-concentration-curl-ex139": {
     "publicVitalId": "EX-139",
-    "purchasedId": "0142",
-    "purchasedName": "concentration curl"
+    "purchasedId": "0014",
+    "purchasedName": "concentration curl (seated)"
   },
   "vital-cross-body-hammer-curl-ex140": {
     "publicVitalId": "EX-140",
@@ -3104,8 +3104,8 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-diamond-pushup-ex141": {
     "publicVitalId": "EX-141",
-    "purchasedId": "0144",
-    "purchasedName": "diamond push-up"
+    "purchasedId": "1128",
+    "purchasedName": "diamond push up"
   },
   "vital-dips-ex142": {
     "publicVitalId": "EX-142",
@@ -3324,8 +3324,8 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-box-jump-ex207": {
     "publicVitalId": "EX-207",
-    "purchasedId": "0210",
-    "purchasedName": "box jump"
+    "purchasedId": "1152",
+    "purchasedName": "jump box"
   },
   "vital-high-knee-cardio-ex210": {
     "publicVitalId": "EX-210",
@@ -3364,8 +3364,8 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-decline-pushup-ex221": {
     "publicVitalId": "EX-221",
-    "purchasedId": "0224",
-    "purchasedName": "decline push-up"
+    "purchasedId": "1126",
+    "purchasedName": "decline push ups"
   },
   "vital-handstand-pushup-ex225": {
     "publicVitalId": "EX-225",
@@ -3374,13 +3374,13 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-incline-dumbbell-bench-press-ex227": {
     "publicVitalId": "EX-227",
-    "purchasedId": "0230",
-    "purchasedName": "incline dumbbell bench press"
+    "purchasedId": "0048",
+    "purchasedName": "dumbbell bench press incline"
   },
   "vital-incline-pushup-ex228": {
     "publicVitalId": "EX-228",
-    "purchasedId": "0231",
-    "purchasedName": "incline push-up"
+    "purchasedId": "1151",
+    "purchasedName": "incline push ups"
   },
   "vital-one-hand-pushup-ex230": {
     "publicVitalId": "EX-230",
@@ -3464,8 +3464,8 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-jump-squat-ex256": {
     "publicVitalId": "EX-256",
-    "purchasedId": "0265",
-    "purchasedName": "jump squat"
+    "purchasedId": "1153",
+    "purchasedName": "jump squats"
   },
   "vital-lying-leg-raise-ex260": {
     "publicVitalId": "EX-260",
@@ -3509,7 +3509,7 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-sumo-squat-ex269": {
     "publicVitalId": "EX-269",
-    "purchasedId": "0282",
+    "purchasedId": "1197",
     "purchasedName": "sumo squat"
   },
   "vital-walking-lunge-ex270": {
@@ -3564,7 +3564,7 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-burpees-ex292": {
     "publicVitalId": "EX-292",
-    "purchasedId": "0211",
+    "purchasedId": "1114",
     "purchasedName": "burpee"
   },
   "vital-cross-body-crunch-ex298": {
@@ -3604,8 +3604,8 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-pike-pushup-ex317": {
     "publicVitalId": "EX-317",
-    "purchasedId": "1734",
-    "purchasedName": "pike push-up"
+    "purchasedId": "1172",
+    "purchasedName": "pike push ups"
   },
   "vital-quad-stretch-ex320": {
     "publicVitalId": "EX-320",
@@ -3639,13 +3639,13 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-side-plank-ex326": {
     "publicVitalId": "EX-326",
-    "purchasedId": "1411",
-    "purchasedName": "side plank"
+    "purchasedId": "1186",
+    "purchasedName": "side plank hold on elbow"
   },
   "vital-situp-ex328": {
     "publicVitalId": "EX-328",
-    "purchasedId": "1445",
-    "purchasedName": "sit-ups"
+    "purchasedId": "1188",
+    "purchasedName": "sit ups version 1"
   },
   "vital-stepup-ex332": {
     "publicVitalId": "EX-332",
@@ -3659,7 +3659,7 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-bird-dog-ex343": {
     "publicVitalId": "EX-343",
-    "purchasedId": "1353",
+    "purchasedId": "1111",
     "purchasedName": "bird dog"
   },
   "vital-butt-kick-ex347": {
@@ -3719,7 +3719,7 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-pistol-squat-ex393": {
     "publicVitalId": "EX-393",
-    "purchasedId": "1499",
+    "purchasedId": "1173",
     "purchasedName": "pistol squat"
   },
   "vital-plank-jack-advanced-ex395": {
@@ -3779,8 +3779,8 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-lat-pulldown-ex531": {
     "publicVitalId": "EX-531",
-    "purchasedId": "1303",
-    "purchasedName": "lat pulldown"
+    "purchasedId": "0037",
+    "purchasedName": "lat pull down wide grip"
   },
   "vital-seated-machine-row-ex532": {
     "publicVitalId": "EX-532",
@@ -3894,8 +3894,8 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-hip-abduction-ex603": {
     "publicVitalId": "EX-603",
-    "purchasedId": "1293",
-    "purchasedName": "hip abduction"
+    "purchasedId": "0069",
+    "purchasedName": "hip abduction machine"
   },
   "vital-hip-adduction-ex604": {
     "publicVitalId": "EX-604",
@@ -4034,8 +4034,8 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-dumbbell-bench-press-ex717": {
     "publicVitalId": "EX-717",
-    "purchasedId": "1442",
-    "purchasedName": "dumbbell bench press"
+    "purchasedId": "0046",
+    "purchasedName": "dumbbell bench press (bench)"
   },
   "vital-dumbbell-farmer-carry-ex721": {
     "publicVitalId": "EX-721",
@@ -4114,8 +4114,8 @@ export const VITAL_GYM_PRO_ASSETS = {
   },
   "vital-cable-rear-delt-fly-ex771": {
     "publicVitalId": "EX-771",
-    "purchasedId": "1712",
-    "purchasedName": "cable rear delt fly"
+    "purchasedId": "0100",
+    "purchasedName": "rear delt cable fly"
   },
   "vital-crab-walk-ex773": {
     "publicVitalId": "EX-773",
