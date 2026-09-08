@@ -5,7 +5,7 @@ describe('progressFactChangeLabel', () => {
   it('formats strength without unnecessary decimals', () => {
     expect(progressFactChangeLabel({
       metric: 'max_weight', from: 50, to: 68, changePercent: 36, favorable: true,
-    })).toBe('Рабочий вес: 50 → 68 кг · +36%')
+    })).toBe('Максимальный записанный вес: 50 → 68 кг · +36%')
   })
 
   it('formats pace as minutes per kilometre and explains the direction', () => {

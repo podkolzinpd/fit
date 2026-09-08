@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { WorkoutPersonalRecord } from '../../shared/domain'
 import { CheckIcon, ChevronRightIcon, RecordIcon } from '../../shared/icons'
@@ -33,6 +34,7 @@ export function WorkoutCompletionReport({
   tonnage,
   muscleGroups,
   record,
+  personalResult,
   recordLoading = false,
   hasTrainer,
 }: {
@@ -44,6 +46,7 @@ export function WorkoutCompletionReport({
   duration: string | null
   tonnage: string | null
   muscleGroups: string[]
+  personalResult?: ReactNode
   record?: WorkoutPersonalRecord
   recordLoading?: boolean
   hasTrainer: boolean
@@ -88,7 +91,7 @@ export function WorkoutCompletionReport({
       </div>}
     </section>}
 
-    <section className="workout-completion-highlight" aria-labelledby="workout-completion-highlight-title" aria-busy={recordLoading}>
+    {personalResult ?? <section className="workout-completion-highlight" aria-labelledby="workout-completion-highlight-title" aria-busy={recordLoading}>
       <p className="eyebrow">ГЛАВНЫЙ РЕЗУЛЬТАТ</p>
       {recordLoading ? <p className="workout-completion-highlight-loading" role="status">Проверяем достижения…</p> : record ? <div className="workout-completion-highlight-record">
         <RecordIcon />
@@ -97,7 +100,7 @@ export function WorkoutCompletionReport({
         <h2 id="workout-completion-highlight-title">{partial ? `${percent}% плана подтверждено` : 'План выполнен полностью'}</h2>
         <p>{partial ? 'В прогресс попадут только выполненные подходы.' : 'Все запланированные подходы сохранены в прогрессе.'}</p>
       </div>}
-    </section>
+    </section>}
 
     {muscleGroups.length > 0 && <section className="workout-completion-muscles" aria-labelledby="workout-completion-muscles-title">
       <div><p className="eyebrow">НАГРУЗКА</p><h2 id="workout-completion-muscles-title">Основные группы мышц</h2></div>

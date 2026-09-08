@@ -1,3 +1,5 @@
+import { PersonalWorkoutResult } from '../../shared/PersonalWorkoutResult'
+import { completedWorkoutOrder } from '../../shared/workout-results'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { ClientGoal, TrainerReaction, Workout, WorkoutPersonalRecord, WorkoutRegularity } from '../../shared/domain'
@@ -38,7 +40,7 @@ export function clientHomeNextWorkout(workouts: readonly Workout[], today: Local
 export function clientHomeLatestDoneWorkout(workouts: readonly Workout[]): Workout | undefined {
   return workouts
     .filter((workout) => workout.status === 'done')
-    .sort((a, b) => workoutOrder(b).localeCompare(workoutOrder(a)))[0]
+    .sort((a, b) => completedWorkoutOrder(b, a))[0]
 }
 
 export function clientHomePastPlans(workouts: readonly Workout[], today: LocalDate): Workout[] {
@@ -208,9 +210,9 @@ export function ClientHomeOverview({ today, workouts, regularity, goal, personal
     {workoutsLoading && !workouts && <section className="client-home-next client-home-loading" role="status">Загружаем следующую тренировку…</section>}
     {!hasActiveOrTodayPlan && pastPlans.length > 0 && <PastPlanCard workouts={pastPlans} />}
     {next && <NextActionCard next={next} today={today} />}
+    <PersonalWorkoutResult workouts={workouts} loading={workoutsLoading} error={error} onRetry={onRetry} />
     <WeekCard week={week} loading={regularityLoading} />
-    {highlight && <HighlightCard highlight={highlight} today={today} />}
+    {highlight && highlight.kind !== 'record' && <HighlightCard highlight={highlight} today={today} />}
     {wearable}
-    {error && <section className="client-home-error" role="alert"><p>{error.message}</p><button type="button" className="secondary" onClick={onRetry}>Повторить</button></section>}
   </div>
 }
