@@ -13,7 +13,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Workout | Create/view/edit/correct/copy/delete, strength/distance/reps, atomic save | Implemented: multi-set plan, load correction, беговые интервалы с пассивным/активным восстановлением и подтверждением каждого отрезка covered; wider acceptance pending |
 | Voice notes | Browser-only Russian transcription into editable workout and client trainer notes; manual input remains available | Prototype: local whisper.cpp WASM ready; real-device acceptance pending |
 | Schedule | Week/month/local date, timed/untimed, open workout/back | Implemented: недельная лента дней + часовая сетка на день (timed по времени, untimed отдельно), закреплённая шапка с прокруткой только сетки, автоскролл к 07:00/первой тренировке, кнопка «Сегодня», выбор дня и недели в URL, календарь-переход к дате; covered unit + E2E |
-| Live | Start, autosave, confirm, rest, append, resume, partial finish | Implemented: rest, transactional append and non-retryable optimistic conflicts covered; wider resume acceptance pending |
+| Live | Start, autosave, confirm, rest, append, resume, partial finish | Implemented: ввод сохраняется на устройстве при каждом изменении, autosave объединяет частые правки, offline-черновики автоматически досылаются, запросы ограничены по времени, finish flush-ит открытую строку; sticky retry, transactional append и optimistic conflicts покрыты Chromium/WebKit/unit/visual |
 | History | Done workouts only, set list and max-value chart | Implemented: paginated confirmed-only exercise facts, transparent per-kind chart and computed strength PR; broader visual pending |
 | Post-workout feedback | Клиент после завершения фиксирует session RPE 1–10, самочувствие и дискомфорт; тренер видит сигнал без доступа посторонних аккаунтов | Implemented: assigned и client-authored workout, отдельный idempotent submit с version check, RLS/SQL и WebKit 390 px acceptance |
 | Trainer response | После завершения клиент видит реакцию 👍 / 🔥 / 💪 и короткий ответ ответственного тренера | Implemented: trainer-author для назначения, root trainer для client-authored workout, автор/время, idempotent versioned RPC, realtime/refetch и RLS matrix |
@@ -174,7 +174,14 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
   сохраняя полное число результатов и приоритет недавних упражнений.
 - Силовой подход хранит вес и повторы; distance — время и дистанцию; cardio reps — время и повторы. Для гребного тренажёра темп рассчитывается на 500 м, а поле повторов имеет предметную семантику частоты гребков в минуту.
 - План поддерживает несколько подходов, удаление, сброс значений и изменение веса на ±5% с округлением до 2,5 кг.
-- Live поддерживает добавление подхода и упражнения отдельными транзакционными RPC, autosave факта, подтверждение, отдых 90 секунд и частичное завершение с предупреждением. Таймер отдыха считается от абсолютной метки времени и остаётся корректным при сворачивании вкладки.
+- Live поддерживает добавление подхода и упражнения отдельными транзакционными
+  RPC, подтверждение, отдых 90 секунд и частичное завершение с предупреждением.
+  Ввод каждого поля сразу сохраняется на устройстве; debounce, blur и
+  подтверждение синхронизируют его с сервером, а `online`, `pageshow` и возврат
+  приложения автоматически досылают pending-черновики. Зависший запрос
+  ограничен по времени, ошибка остаётся в закреплённом статусе с повтором,
+  finish сначала flush-ит открытую строку. Таймер отдыха считается от
+  абсолютной метки времени и остаётся корректным при сворачивании вкладки.
 - Обязательные проверки: уникальность полного каталога, component search/filter/
   clear/technique/create, RPC rollback/cross-tenant, visual 390/430/1440,
   iPhone WebKit и E2E plan → multi-set → live append → partial finish.
