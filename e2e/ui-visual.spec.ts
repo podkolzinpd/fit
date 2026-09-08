@@ -324,6 +324,21 @@ async function mockClientWorkoutHistory(page: import('@playwright/test').Page) {
       }],
     }],
   }))
+  await page.route('**/rest/v1/workouts?*', (route) => {
+    const id = new URL(route.request().url()).searchParams.get('id')?.replace(/^eq\./, '')
+    const row = workoutRows.find((item) => item.id === id)
+    return row ? route.fulfill({ contentType: 'application/json', body: JSON.stringify(row) }) : route.fallback()
+  })
+  await page.route('**/rest/v1/workout_exercises?*', (route) => {
+    const id = new URL(route.request().url()).searchParams.get('workout_id')?.replace(/^eq\./, '')
+    const row = workoutRows.find((item) => item.id === id)
+    return row ? route.fulfill({ contentType: 'application/json', body: JSON.stringify(row.exercises) }) : route.fallback()
+  })
+  await page.route('**/rest/v1/workout_sets?*', (route) => {
+    const ids = new URL(route.request().url()).searchParams.get('workout_exercise_id') ?? ''
+    const exercises = workoutRows.flatMap((item) => item.exercises).filter((item) => ids.includes(item.id))
+    return exercises.length ? route.fulfill({ contentType: 'application/json', body: JSON.stringify(exercises.flatMap((item) => item.sets.map((set) => ({ ...set, workout_exercise_id: item.id })))) }) : route.fallback()
+  })
   await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
     const body = route.request().postDataJSON() as { p_from?: string | null; p_to?: string | null; p_offset?: number }
     const filtered = workoutRows.filter((workout) => (
@@ -635,6 +650,8 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
 test('client key routes keep their visual baselines', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client routes use mobile visual profiles')
   await openClientProgress(page)
+  await expect(page.locator('.client-body-map-disclosure')).not.toHaveAttribute('open')
+  await page.locator('.client-body-map-disclosure > summary').click()
   const bodyMap = page.locator('.client-progress-card .body-progress-map')
   await expect(bodyMap).toBeVisible()
   await bodyMap.getByRole('button', { name: 'Прогресс', exact: true }).click()
@@ -663,7 +680,7 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
     return Boolean(goal && map && summary
       && (element.compareDocumentPosition(goal) & Node.DOCUMENT_POSITION_FOLLOWING)
       && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (map.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+      && (summary.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING))
   })).resolves.toBe(true)
   const progressCoachmark = page.getByRole('button', { name: 'Понятно' })
   if (await progressCoachmark.isVisible()) await progressCoachmark.click()
@@ -731,6 +748,7 @@ test('trainer Profile and feedback keep their visual baselines in both themes', 
 test('client Progress scheme keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
   await openClientProgress(page, { scheme: true })
+  await page.locator('.client-body-map-disclosure > summary').click()
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
   await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-scheme-${process.platform}.png`)
@@ -740,6 +758,7 @@ test('client Progress scheme keeps its visual baseline', async ({ page }, testIn
 test('client Progress scheme keeps its dark visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
   await openClientProgress(page, { scheme: true, dark: true })
+  await page.locator('.client-body-map-disclosure > summary').click()
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
   await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-scheme-dark-${process.platform}.png`)
   await expectVisualBaseline(page, `client-progress-scheme-dark-${process.platform}.png`)
@@ -798,11 +817,12 @@ test('period comparison stays compact for client and trainer in both themes', as
   await expect(comparison.locator('.period-comparison-limitation')).toHaveCount(1)
   await expect(comparison.getByText('Мало данных: в одном из периодов только 1 завершённая тренировка.', { exact: true })).toBeVisible()
   expect(await comparison.evaluate((element) => {
-    const map = document.querySelector('.body-progress-map')
+    const map = document.querySelector('.client-body-map-disclosure') ?? document.querySelector('.body-progress-map')
     const summary = document.querySelector('.progress-story-summary')
+    const client = Boolean(document.querySelector('.client-body-map-disclosure'))
     return Boolean(map && summary
-      && (map.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+      && (client ? summary.compareDocumentPosition(map) : map.compareDocumentPosition(element)) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && Boolean(summary && element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING)
   })).toBe(true)
   expect(await comparison.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   if (!trainer) {
@@ -839,6 +859,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
     await gotoStable(page, `/progress/${demoClientId}`)
   } else {
     await openClientProgress(page, { scheme: true })
+  await page.locator('.client-body-map-disclosure > summary').click()
   }
 
   let measurements = page.locator('.client-progress-measurements-story')
@@ -892,6 +913,7 @@ test('weekly training rhythm stays visual and readable for client and trainer in
     await gotoStable(page, `/progress/${demoClientId}`)
   } else {
     await openClientProgress(page, { scheme: true })
+  await page.locator('.client-body-map-disclosure > summary').click()
   }
 
   let regularity = page.locator('.client-progress-regularity-story')
@@ -952,6 +974,7 @@ test('next-step suggestion stays off the main progress screen for client and tra
     await gotoStable(page, `/progress/${demoClientId}`)
   } else {
     await openClientProgress(page, { scheme: true })
+  await page.locator('.client-body-map-disclosure > summary').click()
   }
 
   await expect(page.locator('.client-progress-next-step')).toHaveCount(0)
@@ -984,6 +1007,7 @@ test('client measurement management keeps its visual baseline', async ({ page },
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client measurement management uses mobile visual profiles')
   await mockMeasurementProgress(page)
   await openClientProgress(page, { scheme: true })
+  await page.locator('.client-body-map-disclosure > summary').click()
   const management = page.locator('.client-progress-measurements-story')
   await management.scrollIntoViewIfNeeded()
   await expect(management.getByRole('button', { name: 'Добавить замер' })).toBeVisible()
@@ -1719,7 +1743,27 @@ test('personal workout result stays the same on Home and Progress without AI', a
   await expect(result.getByRole('heading', { name: 'Меньше, чем в прошлый раз' })).toBeVisible()
   await expect(result).toContainText('Максимальный записанный вес: 40 кг')
   await expect(result.getByRole('link', { name: 'Предыдущий результат' })).toHaveAttribute('href', '/workouts/b1000000-0000-4000-8000-000000000002')
-  await expect(result).toHaveScreenshot(`personal-result-home-${process.platform}.png`)
+  const homeMap = result.getByRole('region', { name: 'Распределение подходов' })
+  await expect(homeMap.getByRole('button', { name: 'Грудь: 1 подход' })).toBeVisible()
+  const mapCoachmark = page.getByRole('button', { name: 'Понятно' })
+  if (await mapCoachmark.isVisible()) await mapCoachmark.click()
+  await expectBodyMapBaseline(result, `personal-result-home-${process.platform}.png`)
+  await homeMap.getByRole('link', { name: 'Разобрать нагрузку' }).click()
+  await expect(page).toHaveURL(/mapWorkout=b1000000-0000-4000-8000-000000000001.*mapMode=load.*mapFrom=2026-08-10.*mapTo=2026-08-10.*mapZone=chest/)
+  const disclosure = page.locator('.client-body-map-disclosure')
+  await expect(disclosure).toHaveAttribute('open')
+  await expect(disclosure).toContainText('10 августа 2026 г. · одна завершённая тренировка')
+  await expect(disclosure).toContainText('Жим лёжа: 1 подход')
+  await disclosure.getByRole('link', { name: 'Открыть исходную тренировку' }).click()
+  await expect(page).toHaveURL(/\/workouts\/b1000000-0000-4000-8000-000000000001$/)
+  await expect(page.getByRole('article').getByText('Жим лёжа', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(disclosure).toHaveAttribute('open')
+  await expect(disclosure.getByRole('button', { name: 'Грудь: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
+  const mapViewport = page.viewportSize()!
+  await page.setViewportSize({ ...mapViewport, height: 1400 })
+  await expectBodyMapBaseline(disclosure, `home-map-detail-${process.platform}.png`)
+  await page.setViewportSize(mapViewport)
   await gotoStable(page, '/me/progress')
   await expect(result).toContainText('Максимальный записанный вес: 40 кг')
   await expect(result.getByRole('link', { name: 'Эта тренировка' })).toHaveAttribute('href', '/workouts/b1000000-0000-4000-8000-000000000001')
@@ -1729,6 +1773,8 @@ test('personal workout result stays the same on Home and Progress without AI', a
   await expectVisualBaseline(page, `personal-result-progress-${process.platform}.png`)
   await gotoStable(page, '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, '/me')
+  await expectBodyMapBaseline(result, `personal-result-home-dark-${process.platform}.png`)
   await gotoStable(page, '/me/progress')
   await expect(result).toContainText('Максимальный записанный вес: 40 кг')
   await expectVisualBaseline(page, `personal-result-progress-dark-${process.platform}.png`)

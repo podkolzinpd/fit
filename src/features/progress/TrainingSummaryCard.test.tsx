@@ -229,6 +229,7 @@ describe('Training summary card states', () => {
     }])
 
     render(<ClientTrainingSummaryCard clientId="client-1" gender="female" />, { wrapper: wrapper(queryClient()) })
+    await userEvent.setup().click(await screen.findByText('Карта тела · выбранный период'))
 
     expect((await screen.findAllByText((text) => text.includes(longExerciseName)))[0]).toBeVisible()
     expect(screen.getByRole('group', { name: 'Атлетичная женщина, вид сзади' })).toBeVisible()
@@ -264,6 +265,7 @@ describe('Training summary card states', () => {
     repositories.listForClient.mockResolvedValue([publishedSummary])
 
     render(<ClientTrainingSummaryCard clientId="client-1" gender="male" />, { wrapper: wrapper(queryClient()) })
+    await userEvent.setup().click(await screen.findByText('Карта тела · выбранный период'))
 
     expect(await screen.findByRole('group', { name: 'Атлетичный мужчина, вид сзади' })).toBeVisible()
     expect(screen.getByLabelText('Верх спины. Результат зоны: +36%')).toBeVisible()
@@ -419,6 +421,7 @@ describe('Training summary card states', () => {
 
     const user = userEvent.setup()
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+    await userEvent.setup().click(await screen.findByText('Карта тела · выбранный период'))
 
     await screen.findByText('После завершённой тренировки покажем распределение нагрузки по зонам.')
     await user.click(screen.getByRole('button', { name: 'Подробный анализ' }))
@@ -534,7 +537,7 @@ describe('Training summary card states', () => {
     expect(await screen.findByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
     expect(screen.getByLabelText('Верх спины. Результат зоны: +36%')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Нагрузка' }))
-    expect(await screen.findByLabelText('Верх спины. Доля всех выполненных подходов: 67%')).toBeVisible()
+    expect(await screen.findByLabelText('Верх спины. Доля подходов с определённой зоной: 67%')).toBeVisible()
     const sideSwitch = screen.getByLabelText('Сторона тела')
     expect(within(sideSwitch).getByRole('button', { name: 'Спереди' })).toBeVisible()
     expect(within(sideSwitch).getByRole('button', { name: 'Сзади' })).toHaveAttribute('aria-pressed', 'true')
@@ -583,6 +586,7 @@ describe('Training summary card states', () => {
     repositories.generate.mockRejectedValue(new Error('Не получилось создать анализ. Попробуйте ещё раз через минуту.'))
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+    await userEvent.setup().click(await screen.findByText('Карта тела · выбранный период'))
 
     expect(await screen.findByLabelText('Верх спины. Результат зоны: +36%')).toBeVisible()
     const refreshError = await screen.findByRole('alert')
@@ -606,7 +610,7 @@ describe('Training summary card states', () => {
     expect(mainNow).toHaveAttribute('data-copy-source', 'deterministic')
     expect(mainNow!.compareDocumentPosition(goalStory!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(goalStory!.compareDocumentPosition(bodyMap!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(bodyMap!.compareDocumentPosition(periodSummary!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(periodSummary!.compareDocumentPosition(bodyMap!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('shows a verified personal record as the main fact and loads it only for a marked workout', async () => {
@@ -656,10 +660,12 @@ describe('Training summary card states', () => {
       .mockResolvedValueOnce([])
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+    await userEvent.setup().click(await screen.findByText('Карта тела · выбранный период'))
 
+    const disclosure = document.querySelector<HTMLElement>('.client-body-map-disclosure')!
+    expect(within(disclosure).getByRole('alert')).toHaveTextContent('Не удалось загрузить тренировки.')
+    await user.click(within(disclosure).getByRole('button', { name: 'Повторить' }))
     await user.click(await screen.findByRole('button', { name: 'Нагрузка' }))
-    expect((await screen.findByText('Не удалось собрать нагрузку по тренировкам.')).closest('[role="alert"]')).not.toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Попробовать ещё раз' }))
     expect(await screen.findByText('После завершённой тренировки покажем распределение нагрузки по зонам.')).toBeVisible()
     expect(repositories.workouts).toHaveBeenCalledTimes(2)
   })
@@ -678,19 +684,20 @@ describe('Training summary card states', () => {
     } as Workout])
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+    await userEvent.setup().click(await screen.findByText('Карта тела · выбранный период'))
 
     expect(await screen.findByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
     expect(screen.getByLabelText('Верх спины. Результат зоны: +36%')).toHaveAttribute('aria-pressed', 'true')
     await user.click(await screen.findByRole('button', { name: 'Нагрузка' }))
-    expect(await screen.findByLabelText('Верх спины. Доля всех выполненных подходов: 67%')).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByLabelText('Верх спины. Доля подходов с определённой зоной: 67%')).toHaveAttribute('aria-pressed', 'true')
     await user.click(screen.getByRole('button', { name: 'Спереди' }))
     expect(screen.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
-    await user.click(screen.getByLabelText('Грудь. Доля всех выполненных подходов: 33%'))
+    await user.click(screen.getByLabelText('Грудь. Доля подходов с определённой зоной: 33%'))
     const loadDetail = document.querySelector<HTMLElement>('.body-progress-detail')
     expect(loadDetail).toHaveAttribute('data-copy-source', 'deterministic')
-    expect(loadDetail).toHaveTextContent('На зону «Грудь» приходится 33% всех выполненных подходов.')
+    expect(loadDetail).toHaveTextContent('На зону «Грудь» приходится 33% подходов на карте.')
     expect(screen.queryByText('Жим лёжа: 1 подход')).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Показать 2 упражнения' }))
+    await user.click(screen.getByRole('button', { name: 'Показать 1 упражнение' }))
     const loadDialog = await screen.findByRole('dialog', { name: 'Грудь' })
     expect(loadDialog).toHaveTextContent('Жим лёжа: 1 подход')
     await user.click(within(loadDialog).getByRole('button', { name: 'Закрыть' }))
@@ -717,6 +724,7 @@ describe('Training summary card states', () => {
     }])
 
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+    await userEvent.setup().click(await screen.findByText('Карта тела · выбранный период'))
 
     await screen.findByLabelText('Верх спины. Результат зоны: +36%')
     const map = document.querySelector<HTMLElement>('.body-progress-map')
