@@ -107,7 +107,9 @@ test('client and trainer receive progress and workout changes without reload', a
     await trainer.getByLabel('Дата').fill(dateOffset(-2))
     await trainer.getByLabel('Вес, кг').fill('62.2')
     await trainer.getByRole('button', { name: 'Сохранить замер' }).click()
-    await expect(client.getByText(/62,2 кг/)).toBeVisible({ timeout: 10_000 })
+    await expect(
+      client.locator('.client-progress-history').getByText('вес 62,2 кг', { exact: true }),
+    ).toBeVisible({ timeout: 10_000 })
 
     await client.goto('/me/workouts')
     await expect(client.getByRole('link', { name: 'Добавить тренировку' })).toHaveCount(1)
