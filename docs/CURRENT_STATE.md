@@ -106,7 +106,7 @@
   существующих stage tenants, прочие ошибки не скрывает. Автовыбор для `apply`
   запрещён.
 ## Проверки активной ветки
-- YAFIT-480: full check — 1262 frontend, 364 API, 111 infra; 989 SQL/RLS, 30 actor/RLS; visual Chromium/WebKit 390/430 light/dark, одинаковый факт без ИИ. CI/production ожидают выпуска.
+- YAFIT-480: #827 / aa635b3, CI и Vercel/DB production зелёные, свежий iOS запущен. Yandex smoke откатил API из-за старых first-workout PR-ожиданий; исправление сохраняет readiness gate. Full check: 1262 frontend, 364 API, 111 infra; 989 SQL/RLS, 30 actor/RLS.
 - Две локальные репетиции перенесли 36 synthetic строк во всех 28 таблицах, включая две push-подписки одного пользователя; повторный apply вставил 0 строк.
 - Remote audit `34229105217` выбрал cohort: 1 клиент, 5 строк в 28 таблицах. Dry-run `34229227201` безопасно откатил checksum-конфликт существующего stage profile; configured cohort оказался пустым.
 ## Ближайший порядок
