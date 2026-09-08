@@ -9179,13 +9179,9 @@ document.querySelectorAll('.late-material-slide').forEach(slide => deck.appendCh
 document.querySelectorAll('.colleague-order-slide').forEach(slide => deck.appendChild(slide))
 const productFlowSource = document.querySelector('.review-product-flow-v4:not(.colleague-order-slide)')
 if (productFlowSource) {
+  productFlowSource.classList.add('review-product-flow-v5')
   productFlowSource.dataset.slideFamily = '4'
-  productFlowSource.dataset.version = '4.1'
-  const productFlowRefined = productFlowSource.cloneNode(true)
-  productFlowRefined.classList.add('review-product-flow-v5')
-  productFlowRefined.dataset.slideFamily = '4'
-  productFlowRefined.dataset.version = '4.2'
-  productFlowSource.after(productFlowRefined)
+  productFlowSource.dataset.version = '4.2'
 }
 const slides = [...document.querySelectorAll('.slide:not(.legacy-competitor-slide):not(.legacy-behavior-slide)')]
 let logicalSlide = 0
