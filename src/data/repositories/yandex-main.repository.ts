@@ -935,11 +935,16 @@ export function createYandexMainRepository(
         const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
         const payload = await readJson(queries, '/v1/push-notifications/status', z.object({ status: z.object({ subscribed: z.boolean(), preferences: z.object({ workout_reminder: z.boolean(), workout_scheduled: z.boolean() }) }) }))
         const state = await reconcilePushSubscription(vapidPublicKey, {
-          // Yandex-пилот пока не различает устройства на сервере (см.
-          // YAFIT-473 — мульти-device сделан только для Supabase-трека), так
-          // что «есть ли подписка на сервере» — тот же whole-user флаг, что и
-          // раньше, а не проверка конкретного endpoint.
-          hasServerSubscription: () => Promise.resolve(payload.status.subscribed),
+          hasServerSubscription: async (endpoint) => {
+            const result = await writeJson(
+              queries,
+              '/v1/push-notifications/subscription/status',
+              'POST',
+              { endpoint },
+              z.object({ subscribed: z.boolean() }),
+            )
+            return result.subscribed
+          },
           saveSubscription: async (subscription) => {
             await writeEmpty(queries, '/v1/push-notifications/subscription', 'PUT', subscription)
           },
@@ -959,8 +964,14 @@ export function createYandexMainRepository(
       },
       async disable() {
         await writeEmpty(queries, '/v1/push-notifications/preferences/workout_reminder', 'PUT', { enabled: false })
-        await unsubscribeFromPush()
-        await writeEmpty(queries, '/v1/push-notifications/subscription', 'DELETE')
+        const unsubscribed = await unsubscribeFromPush()
+        if (unsubscribed === null) return
+        await writeEmpty(
+          queries,
+          '/v1/push-notifications/subscription',
+          'DELETE',
+          { endpoint: unsubscribed.endpoint },
+        )
       },
       async setCategoryEnabled(_userId, kind, enabled) {
         await writeEmpty(queries, `/v1/push-notifications/preferences/${kind}`, 'PUT', { enabled })

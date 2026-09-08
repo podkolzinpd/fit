@@ -90,9 +90,30 @@ export async function upsertPushSubscription(
   }
 }
 
-export async function deletePushSubscription(client: DatabaseClient): Promise<void> {
+export async function hasPushSubscription(
+  client: DatabaseClient,
+  endpoint: string,
+): Promise<boolean> {
   try {
-    await client.query('select public.delete_push_subscription()')
+    const rows = await client.query<{ subscribed: boolean } & QueryResultRow>(
+      'select public.has_push_subscription($1) as subscribed',
+      [endpoint],
+    )
+    if (typeof rows[0]?.subscribed !== 'boolean') {
+      throw new Error('Push subscription status returned an unsupported format')
+    }
+    return rows[0].subscribed
+  } catch (error) {
+    throw commandError(error) ?? error
+  }
+}
+
+export async function deletePushSubscription(
+  client: DatabaseClient,
+  endpoint: string,
+): Promise<void> {
+  try {
+    await client.query('select public.delete_push_subscription($1)', [endpoint])
   } catch (error) {
     throw commandError(error) ?? error
   }

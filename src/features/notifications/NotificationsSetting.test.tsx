@@ -45,7 +45,6 @@ function primeDefaults() {
 
 describe('NotificationsSetting', () => {
   beforeEach(() => {
-    localStorage.clear()
     repository.status.mockReset()
     repository.enable.mockReset()
     repository.setCategoryEnabled.mockReset()

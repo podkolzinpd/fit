@@ -272,11 +272,32 @@ export const yandexPilotQueries = {
     },
     body: JSON.stringify(subscription),
   }),
-  deletePushSubscription: (apiBaseUrl: string, sessionToken: string) =>
+  hasPushSubscription: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    endpoint: string,
+  ) => fetch(`${apiBaseUrl}/v1/push-notifications/subscription/status`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'x-fit-pilot-session': sessionToken,
+    },
+    body: JSON.stringify({ endpoint }),
+  }),
+  deletePushSubscription: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    endpoint: string,
+  ) =>
     fetch(`${apiBaseUrl}/v1/push-notifications/subscription`, {
       method: 'DELETE',
       cache: 'no-store',
-      headers: { 'x-fit-pilot-session': sessionToken },
+      headers: {
+        'content-type': 'application/json',
+        'x-fit-pilot-session': sessionToken,
+      },
+      body: JSON.stringify({ endpoint }),
     }),
   setPushNotificationPreference: (
     apiBaseUrl: string,
