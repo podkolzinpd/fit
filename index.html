@@ -4785,6 +4785,22 @@ h3 {
   letter-spacing: .12em;
 }
 
+/* Review cycle · 4.2 · Preserve the approved composition while separating
+   and strengthening the functional return route above the dominant UI. */
+.review-product-flow-v5 .ai-loop-return {
+  top: 70px;
+  stroke: rgba(246,242,234,.38);
+  stroke-width: 1.5;
+}
+
+.review-product-flow-v5 .ai-loop-return .ai-loop-arrow {
+  stroke: rgba(246,242,234,.68);
+}
+
+.review-product-flow-v5 .ai-loop-return-label {
+  top: 87px;
+}
+
 /* 05 · AI single feature — one dominant output, one supporting input. */
 .rd-single-feature {
   color: var(--ink);
@@ -9161,6 +9177,16 @@ if (monetizationSlide && valueSlide) valueSlide.after(monetizationSlide)
 document.querySelectorAll('.competitor-material-slide').forEach(slide => deck.appendChild(slide))
 document.querySelectorAll('.late-material-slide').forEach(slide => deck.appendChild(slide))
 document.querySelectorAll('.colleague-order-slide').forEach(slide => deck.appendChild(slide))
+const productFlowSource = document.querySelector('.review-product-flow-v4:not(.colleague-order-slide)')
+if (productFlowSource) {
+  productFlowSource.dataset.slideFamily = '4'
+  productFlowSource.dataset.version = '4.1'
+  const productFlowRefined = productFlowSource.cloneNode(true)
+  productFlowRefined.classList.add('review-product-flow-v5')
+  productFlowRefined.dataset.slideFamily = '4'
+  productFlowRefined.dataset.version = '4.2'
+  productFlowSource.after(productFlowRefined)
+}
 const slides = [...document.querySelectorAll('.slide:not(.legacy-competitor-slide):not(.legacy-behavior-slide)')]
 let logicalSlide = 0
 slides.forEach(slide => {
