@@ -32,7 +32,7 @@ function comparisonWorkoutRow(id: string, date: string, weight: number, distance
   }
 }
 
-async function mockProgressPeriodSummary(page: VisualPage) {
+async function mockProgressPeriodSummary(page: VisualPage, periodStart = '2026-08-01', periodEnd = '2026-08-31') {
   const clientSummary = {
     headline: 'Прогресс уже заметен', achievements: ['Жим лёжа стал сильнее'],
     consistency: 'Тренировки продолжаются', encouragement: 'Продолжай в том же темпе', next_steps: [],
@@ -46,17 +46,17 @@ async function mockProgressPeriodSummary(page: VisualPage) {
   await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify([{
       id: '80000000-0000-4000-8000-000000000001', source_summary_id: '80000000-0000-4000-8000-000000000002',
-      client_id: demoClientId, period_start: '2026-08-01', period_end: '2026-08-31', summary: clientSummary,
-      display_metrics: displayMetrics, generated_at: '2026-08-31T12:00:00Z', published_at: '2026-08-31T12:00:00Z',
+      client_id: demoClientId, period_start: periodStart, period_end: periodEnd, summary: clientSummary,
+      display_metrics: displayMetrics, generated_at: `${periodEnd}T12:00:00Z`, published_at: `${periodEnd}T12:00:00Z`,
     }]),
   }))
   await page.route('**/rest/v1/client_training_summaries?*', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify([{
       id: '80000000-0000-4000-8000-000000000002', client_id: demoClientId,
-      period_start: '2026-08-01', period_end: '2026-08-31',
+      period_start: periodStart, period_end: periodEnd,
       trainer_summary: { headline: 'Прогресс уже заметен', progress: ['Жим лёжа стал сильнее'], consistency: 'Тренировки продолжаются', attention: [] },
       client_summary: clientSummary, display_metrics: displayMetrics,
-      generated_at: '2026-08-31T12:00:00Z', version: 1,
+      generated_at: `${periodEnd}T12:00:00Z`, version: 1,
     }]),
   }))
 }
@@ -649,6 +649,8 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
 
 test('client key routes keep their visual baselines', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client routes use mobile visual profiles')
+  await mockClientWorkoutHistory(page)
+  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
   await openClientProgress(page)
   await expect(page.locator('.client-body-map-disclosure')).not.toHaveAttribute('open')
   await page.locator('.client-body-map-disclosure > summary').click()
@@ -684,6 +686,7 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   })).resolves.toBe(true)
   const progressCoachmark = page.getByRole('button', { name: 'Понятно' })
   if (await progressCoachmark.isVisible()) await progressCoachmark.click()
+  await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `client-progress-${process.platform}.png`)
 })
 
@@ -747,20 +750,26 @@ test('trainer Profile and feedback keep their visual baselines in both themes', 
 
 test('client Progress scheme keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
+  await mockClientWorkoutHistory(page)
+  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
   await openClientProgress(page, { scheme: true })
   await page.locator('.client-body-map-disclosure > summary').click()
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
   await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-scheme-${process.platform}.png`)
+  await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `client-progress-scheme-${process.platform}.png`)
 })
 
 test('client Progress scheme keeps its dark visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
+  await mockClientWorkoutHistory(page)
+  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
   await openClientProgress(page, { scheme: true, dark: true })
   await page.locator('.client-body-map-disclosure > summary').click()
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
   await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-scheme-dark-${process.platform}.png`)
+  await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `client-progress-scheme-dark-${process.platform}.png`)
 })
 
@@ -1007,9 +1016,12 @@ test('client measurement management keeps its visual baseline', async ({ page },
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client measurement management uses mobile visual profiles')
   await mockMeasurementProgress(page)
   await openClientProgress(page, { scheme: true })
-  await page.locator('.client-body-map-disclosure > summary').click()
   const management = page.locator('.client-progress-measurements-story')
-  await management.scrollIntoViewIfNeeded()
+  await management.evaluate((element) => {
+    element.scrollIntoView({ block: 'start' })
+    const content = document.querySelector<HTMLElement>('.content')
+    if (content) content.scrollTop = Math.max(0, content.scrollTop - 12)
+  })
   await expect(management.getByRole('button', { name: 'Добавить замер' })).toBeVisible()
   await expect(management.getByRole('button', { name: /История/ })).toBeVisible()
   await expect(management.getByRole('button', { name: /Настроить/ })).toBeVisible()
