@@ -620,6 +620,8 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
   await page.getByRole('button', { name: 'Сохранить план' }).click()
+  // Дожидаемся сохранения: переход на Home раньше ответа может прервать запись.
+  await expect(page).toHaveURL(/\/workouts\/[a-f0-9-]+$/)
 
   await gotoStable(page, '/me')
   await expect(page.locator('.phone-frame')).toHaveClass(/client-home-identity/)
