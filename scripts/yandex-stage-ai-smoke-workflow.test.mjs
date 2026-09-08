@@ -27,3 +27,14 @@ test('uses only ephemeral auth and synthetic data for one parser and summary che
   assert.match(workflow, /chmod 600 ai-smoke-/)
   assert.doesNotMatch(workflow, /actions\/upload-artifact/)
 })
+
+// The public endpoint uses the same snake_case command as the browser repository.
+test('summary smoke follows the actual API request parser', async () => {
+  const { readAssistantProgressRequest } = await import('../services/api/src/assistant-progress-request.ts')
+  const request = workflow.match(/jq -cn --arg client_id \"\$client_id\" '([\s\S]*?)' > ai-smoke-summary-request\.json/)[1]
+  const clientId = '11111111-1111-4111-8111-111111111111'
+  const payload = JSON.parse(request.replace(/\$client_id/g, JSON.stringify(clientId)).replace(/([a-z_]+):/g, '\"$1\":'))
+  assert.deepEqual(readAssistantProgressRequest(payload), {
+    clientId, periodStart: '2026-08-01', periodEnd: '2026-08-31', force: true,
+  })
+})
