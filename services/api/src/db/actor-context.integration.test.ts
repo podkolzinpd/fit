@@ -1651,7 +1651,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             version: 1,
             stageId: null,
             stageTitle: null,
-            hasPr: true,
+            hasPr: false,
             exercises: [
               {
                 id: smokeIds.strengthExerciseId,

@@ -1,3 +1,4 @@
+import { invalidateWorkoutResults } from './invalidate-workout-results'
 import { type QueryClient, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import {
@@ -25,6 +26,11 @@ const clientSpaceRoots = new Set([
   'training-summaries',
   'workout-regularity',
   'trainer-attention',
+  'workout-personal-records',
+  'training-summary-first-workout',
+  'client-progress-story-workouts',
+  'client-progress-story-measurements',
+  'progress-metrics',
 ])
 
 function recordId(change: ClientRealtimeChange, key: string): string | undefined {
@@ -52,7 +58,7 @@ export async function applyClientRealtimeChanges(
   const workoutTables: ClientRealtimeTable[] = ['workouts', 'workout_exercises', 'workout_sets']
   if (workoutTables.some((table) => tables.has(table))) {
     tasks.push(
-      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      invalidateWorkoutResults(queryClient),
       queryClient.invalidateQueries({ queryKey: ['client-stats', clientId] }),
       queryClient.invalidateQueries({ queryKey: ['exercise-history', clientId] }),
       queryClient.invalidateQueries({ queryKey: ['workout-regularity', clientId] }),
@@ -76,6 +82,7 @@ export async function applyClientRealtimeChanges(
   if (tables.has('client_progress') || tables.has('client_progress_custom')) {
     tasks.push(
       queryClient.invalidateQueries({ queryKey: ['progress', clientId] }),
+      queryClient.invalidateQueries({ queryKey: ['client-progress-story-measurements', clientId] }),
       queryClient.invalidateQueries({ queryKey: ['my-client'] }),
       queryClient.invalidateQueries({ queryKey: ['client', clientId] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
@@ -83,14 +90,14 @@ export async function applyClientRealtimeChanges(
   }
 
   if (tables.has('client_custom_metrics')) {
-    tasks.push(queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }))
+    tasks.push(queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }), queryClient.invalidateQueries({ queryKey: ['progress-metrics', clientId] }))
   }
 
   if (tables.has('client_goals') || tables.has('goal_stages')) {
     tasks.push(
       queryClient.invalidateQueries({ queryKey: ['client-goal', clientId] }),
       queryClient.invalidateQueries({ queryKey: ['client', clientId] }),
-      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      invalidateWorkoutResults(queryClient),
       queryClient.invalidateQueries({ queryKey: ['workout'] }),
     )
   }
@@ -119,7 +126,7 @@ export async function refetchClientSpace(queryClient: QueryClient, clientId: str
     predicate: (query) => {
       const [root] = query.queryKey
       if (typeof root !== 'string' || !clientSpaceRoots.has(root)) return false
-      if (root === 'clients' || root === 'workouts' || root === 'workout') return true
+      if (root === 'my-client' || root === 'clients' || root === 'workouts' || root === 'workout' || root === 'workout-personal-records') return true
       return query.queryKey.includes(clientId)
     },
     refetchType: 'active',

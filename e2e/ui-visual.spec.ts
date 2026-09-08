@@ -1700,3 +1700,34 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
     }
   }
 })
+
+
+test('personal workout result stays the same on Home and Progress without AI', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client result')
+  await mockClientWorkoutHistory(page)
+  await page.route('**/rest/v1/workouts?*', (route) => new URL(route.request().url()).searchParams.get('select') === 'workout_date'
+    ? route.fulfill({ contentType: 'application/json', body: JSON.stringify({ workout_date: '2026-08-03' }) }) : route.fallback())
+  await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await page.route('https://functions.yandexcloud.net/**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporarily unavailable' }) }))
+  await page.route('**/v1/legacy/summarize-client-training', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporarily unavailable' }) }))
+  await page.route('**/functions/v1/summarize-client-training', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporarily unavailable' }) }))
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  const result = page.getByRole('region', { name: 'После последней тренировки' })
+  await expect(result.getByRole('heading', { name: 'Меньше, чем в прошлый раз' })).toBeVisible()
+  await expect(result).toContainText('Максимальный записанный вес: 40 кг')
+  await expect(result.getByRole('link', { name: 'Предыдущий результат' })).toHaveAttribute('href', '/workouts/b1000000-0000-4000-8000-000000000002')
+  await expect(result).toHaveScreenshot(`personal-result-home-${process.platform}.png`)
+  await gotoStable(page, '/me/progress')
+  await expect(result).toContainText('Максимальный записанный вес: 40 кг')
+  await expect(result.getByRole('link', { name: 'Эта тренировка' })).toHaveAttribute('href', '/workouts/b1000000-0000-4000-8000-000000000001')
+  await expect(page.locator('.ai-progress-auto-error')).toBeVisible()
+  await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
+  await page.getByRole('heading', { name: 'Мой прогресс' }).scrollIntoViewIfNeeded()
+  await expectVisualBaseline(page, `personal-result-progress-${process.platform}.png`)
+  await gotoStable(page, '/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, '/me/progress')
+  await expect(result).toContainText('Максимальный записанный вес: 40 кг')
+  await expectVisualBaseline(page, `personal-result-progress-dark-${process.platform}.png`)
+})

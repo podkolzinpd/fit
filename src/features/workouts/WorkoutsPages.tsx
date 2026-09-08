@@ -1,3 +1,5 @@
+import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
+import { PersonalWorkoutResult } from '../../shared/PersonalWorkoutResult'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -460,7 +462,7 @@ export function WorkoutFormPage() {
       navigate(`/workouts/${id}`, { replace: true, state: { returnTo: safeWorkoutReturnTo(navigationState?.returnTo) } })
     }
     void Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      invalidateWorkoutResults(queryClient),
       queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['today-recent-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
@@ -663,10 +665,11 @@ export function WorkoutDetailPage() {
     }
     void navigate(`/workouts/${id}/live`, { state: { ...childNavigationState, fromWorkoutDetailId: id === workoutId ? id : undefined } })
   }
+  const completionHistory = useQuery({ queryKey: ['workouts', query.data?.clientId], queryFn: () => workoutsRepository.list(undefined, undefined, query.data!.clientId), enabled: actor?.role === 'client' && navigationState?.justCompleted === true && query.data?.status === 'done' })
   const completionRecords = useQuery({
     queryKey: ['workout-personal-records', workoutId],
     queryFn: () => workoutsRepository.personalRecords(workoutId),
-    enabled: navigationState?.justCompleted === true && query.data?.status === 'done',
+    enabled: actor?.role !== 'client' && navigationState?.justCompleted === true && query.data?.status === 'done',
   })
   useClientRealtime(query.data?.clientId)
   // Этап тренировки: get() отдаёт stageId, название берём из цели клиента.
@@ -709,7 +712,7 @@ export function WorkoutDetailPage() {
   const invalidateWorkoutSurfaces = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }),
-      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      invalidateWorkoutResults(queryClient),
       queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['workout-regularity'] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
@@ -724,7 +727,7 @@ export function WorkoutDetailPage() {
     mutationFn: () => workoutsRepository.reschedule(query.data!, rescheduleDate, rescheduleTime || null),
     onSuccess: async () => { setDecisionSheet(null); await invalidateWorkoutSurfaces() },
   })
-  const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workouts'] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); goBack() } })
+  const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([invalidateWorkoutResults(queryClient), queryClient.invalidateQueries({ queryKey: ['clients'] })]); goBack() } })
   const removeCompletedExercise = useMutation({
     mutationFn: ({ exerciseId, workout }: { exerciseId: string; exerciseName: string; workout: Workout }) => workoutsRepository.removeLiveExercise(workout, exerciseId),
     onSuccess: async () => {
@@ -861,8 +864,7 @@ export function WorkoutDetailPage() {
         duration={duration && duration !== '0 мин' ? duration : null}
         tonnage={tonnage > 0 ? tonnageLabel(tonnage) : null}
         muscleGroups={groups}
-        record={completionRecords.data?.[0]}
-        recordLoading={completionRecords.isLoading}
+        personalResult={<PersonalWorkoutResult workouts={completionHistory.data} workoutId={workoutId} loading={completionHistory.isLoading} error={completionHistory.error} onRetry={() => void completionHistory.refetch()} />}
         hasTrainer={Boolean(trainers.data?.length)}
       />}
       {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
@@ -1793,7 +1795,7 @@ export function LiveWorkoutPage() {
       setExpandedSetId(null)
       stopRest()
       await query.refetch()
-      void queryClient.invalidateQueries({ queryKey: ['workouts'] })
+      void invalidateWorkoutResults(queryClient)
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
   })
@@ -1832,7 +1834,7 @@ export function LiveWorkoutPage() {
     // на карточке клиента обновляются только после перезагрузки.
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }),
-      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      invalidateWorkoutResults(queryClient),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
       clientId ? queryClient.invalidateQueries({ queryKey: ['client-stats', clientId] }) : Promise.resolve(),
     ])

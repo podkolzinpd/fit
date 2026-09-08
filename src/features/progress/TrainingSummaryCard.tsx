@@ -1,3 +1,4 @@
+import { PersonalWorkoutResult } from '../../shared/PersonalWorkoutResult'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
@@ -14,7 +15,7 @@ import type {
   Workout,
 } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
-import { addDays, daysBetween, todayInTimeZone, type LocalDate } from '../../shared/local-date'
+import { formatLocalDate, addDays, daysBetween, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Field } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { TrainingBodyProgressMap } from './ClientBodyProgressMap'
@@ -677,6 +678,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   const today = todayInTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState<SummaryPeriod>('1m')
+  const allWorkouts = useQuery({ queryKey: ['workouts', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
   const firstWorkout = useQuery({
     queryKey: ['training-summary-first-workout', clientId],
     queryFn: () => trainingSummariesRepository.firstCompletedWorkoutDate(clientId),
@@ -706,11 +708,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
     start: previousRange?.start ?? workoutRange.start,
     end: addDays(today, 45),
   }
-  const workouts = useQuery({
-    queryKey: ['client-progress-story-workouts', clientId, storyRange.start, storyRange.end],
-    queryFn: () => workoutsRepository.list(storyRange.start, storyRange.end, clientId),
-    enabled: ready && Boolean(summary),
-  })
+  const workouts = allWorkouts
   const measurements = useQuery({
     queryKey: ['client-progress-story-measurements', clientId],
     queryFn: () => progressRepository.list(clientId),
@@ -753,6 +751,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
     workout.workoutDate >= today && workout.workoutDate <= storyRange.end)
 
   return <section className="ai-progress-card client-progress-card progress-story-card" aria-label="Прогресс тренировок" aria-busy={loading || (!summary && automaticGeneration.isFetching)}>
+    <PersonalWorkoutResult workouts={allWorkouts.data} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
     <section className="progress-story-period" aria-labelledby="client-progress-period-title">
       <SummaryHeader />
       <span className="sr-only" id="client-progress-period-title">Период прогресса</span>
@@ -763,6 +762,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
       error={loadError}
       onRetry={() => void Promise.all([query.refetch(), firstWorkout.refetch()])}
     >
+      {summary && <p className="muted">Сохранённый анализ: {formatLocalDate(summary.periodStart)} — {formatLocalDate(summary.periodEnd)}. Последние правки могут ещё не быть учтены; свежий результат показан выше.</p>}
       {summary ? <ClientSummaryContent
           summary={summary}
           goal={goal.data}
