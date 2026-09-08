@@ -49,6 +49,7 @@ const STAGE_ARTIFACT_LIMIT_BYTES = 3 * 1024 * 1024
 const RESPONSE_LIMIT_BYTES = 1024 * 1024
 const AUTO_CANDIDATE_LIMIT = 1_000
 const POSTGRES_SQLSTATE_PATTERN = /^[0-9A-Z]{5}$/
+const STAGE_REJECTION_CODE_PATTERN = /^[a-z0-9_.:-]{1,96}$/
 const SOURCE_TRANSPORT_ERROR_CODES = new Set([
   'CERT_HAS_EXPIRED',
   'EAI_AGAIN',
@@ -315,6 +316,26 @@ export function readStageTenantMigrationResponse(
   }
 }
 
+export function readStageTenantMigrationRejectionCode(
+  responseBody: string,
+): string | undefined {
+  if (Buffer.byteLength(responseBody) > RESPONSE_LIMIT_BYTES) return undefined
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(responseBody)
+  } catch {
+    return undefined
+  }
+  if (
+    !isRecord(parsed)
+    || Object.keys(parsed).sort().join(',') !== 'code,status'
+    || parsed.status !== 'tenant_migration_rejected'
+    || typeof parsed.code !== 'string'
+    || !STAGE_REJECTION_CODE_PATTERN.test(parsed.code)
+  ) return undefined
+  return parsed.code
+}
+
 async function requestStage(
   settings: RemoteTenantRehearsalSettings,
   bundle: TenantMigrationBundle,
@@ -354,8 +375,13 @@ async function requestStage(
   }
   const responseBody = await response.text()
   if (!response.ok) {
+    const rejectionCode = response.status === 409
+      ? readStageTenantMigrationRejectionCode(responseBody)
+      : undefined
     throw new RemoteTenantRehearsalError(
-      `stage_request_failed:${response.status}`,
+      `stage_request_failed:${response.status}${
+        rejectionCode === undefined ? '' : `:${rejectionCode}`
+      }`,
     )
   }
   if (Buffer.byteLength(responseBody) > RESPONSE_LIMIT_BYTES) {

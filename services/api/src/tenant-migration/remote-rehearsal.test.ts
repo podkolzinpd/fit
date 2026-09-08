@@ -7,6 +7,7 @@ import {
   exportSelectedTenant,
   readSourceDatabaseFailureCode,
   readRemoteTenantRehearsalSettings,
+  readStageTenantMigrationRejectionCode,
   readStageTenantMigrationResponse,
   RemoteTenantRehearsalError,
 } from './remote-rehearsal.js'
@@ -275,5 +276,30 @@ describe('stage tenant migration response', () => {
       BUNDLE,
       true,
     )).toThrowError(new RemoteTenantRehearsalError('stage_response_mismatch'))
+  })
+})
+
+describe('stage tenant migration rejection reporting', () => {
+  it('accepts only the narrow aggregate rejection contract', () => {
+    expect(readStageTenantMigrationRejectionCode(JSON.stringify({
+      status: 'tenant_migration_rejected',
+      code: 'target_import_failed:public.clients',
+    }))).toBe('target_import_failed:public.clients')
+  })
+
+  it.each([
+    'not-json',
+    JSON.stringify({
+      status: 'tenant_migration_rejected',
+      code: 'target_import_failed:public.clients',
+      detail: 'private row contents',
+    }),
+    JSON.stringify({
+      status: 'tenant_migration_rejected',
+      code: 'target failed with private detail',
+    }),
+    JSON.stringify({ status: 'tenant_migration_failed' }),
+  ])('does not forward an expanded or unsafe response: %s', (responseBody) => {
+    expect(readStageTenantMigrationRejectionCode(responseBody)).toBeUndefined()
   })
 })
