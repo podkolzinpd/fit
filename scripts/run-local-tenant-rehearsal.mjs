@@ -159,6 +159,9 @@ export function assertProductionLikeManifest(summary) {
       throw new Error(`target_only_table_not_empty:${tableName}`)
     }
   }
+  if (summary.tables.get('public.push_subscriptions')?.rows !== 2) {
+    throw new Error('multi_device_push_contract_missing')
+  }
 }
 
 export function assertIdempotentApply(report) {

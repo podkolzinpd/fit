@@ -32,6 +32,7 @@ import { PushNotificationCommandError } from './push-notifications-command.js'
 import {
   readNotificationPreferenceRequest,
   readPushNotificationKind,
+  readPushSubscriptionEndpointRequest,
   readPushSubscriptionRequest,
 } from './push-notifications-request.js'
 import { PilotConnectionCommandError } from './connection-commands.js'
@@ -1346,10 +1347,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     )
   })
 
-  app.delete('/v1/push-notifications/subscription', async (request, reply) => {
+  app.post('/v1/push-notifications/subscription/status', async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const subscription = readPushSubscriptionEndpointRequest(request.body)
     if (sessionToken === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (subscription === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
     }
     const pushNotifications = options.pilotPushNotifications
     if (pushNotifications === undefined) {
@@ -1357,7 +1362,27 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
     return sendPilotCommand(
       reply,
-      () => pushNotifications.deleteSubscription(sessionToken),
+      () => pushNotifications.hasSubscription(sessionToken, subscription.endpoint),
+      (subscribed) => reply.header('cache-control', 'no-store').send({ subscribed }),
+    )
+  })
+
+  app.delete('/v1/push-notifications/subscription', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const subscription = readPushSubscriptionEndpointRequest(request.body)
+    if (sessionToken === undefined) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (subscription === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const pushNotifications = options.pilotPushNotifications
+    if (pushNotifications === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => pushNotifications.deleteSubscription(sessionToken, subscription.endpoint),
       () => reply.header('cache-control', 'no-store').code(204).send(),
     )
   })

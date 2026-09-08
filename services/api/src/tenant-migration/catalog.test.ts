@@ -36,6 +36,8 @@ describe('tenant migration catalog', () => {
       .not.toContain("- 'tracker_issue_key'")
     expect(byName.get('public.app_feedback')?.sourceSql)
       .not.toContain("- 'telegram_notified_at'")
+    expect(byName.get('public.push_subscriptions')?.keyColumns)
+      .toEqual(['id'])
     expect(byName.get('app_private.workout_create_requests')?.sourceSql)
       .toContain("'actor_id'")
 
