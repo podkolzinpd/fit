@@ -68,7 +68,7 @@
   FIT-профиля с Yandex ID и read-write app-session только через явный
   `yandex`/`read_write` rollout assignment. Assistant, session digests и push
   secrets не выставляются через `ops_readonly`.
-- Native AI использует metadata IAM token без статического ключа; точную роль
+- Live AI smoke: parser прошёл, summary получил 400 из-за формата тестового запроса; исправление и повтор описаны в `docs/design/CLIENT_PROGRESS_AI_VERIFICATION.md`. Native AI использует metadata IAM token без статического ключа; точную роль
   один раз выдаёт `fit-stage-api` администратор, а OIDC не меняет folder IAM.
 - Yandex OAuth использует PKCE и публичный Client ID; secret browser-контракту
   не нужен, Supabase-сессия при пилотном входе не создаётся.
