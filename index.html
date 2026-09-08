@@ -7181,60 +7181,181 @@ h3 {
 .comparison-readiness-v3 .market-compare-table > .compare-group-second > b {
   color: transparent;
 }
-/* Parallel concept slides kept in the appendix after the approved main deck. */
-.audience-map {
-  margin-top: 30px;
+/* Appendix audience story — one client journey, trainer as the enabling layer. */
+.audience-journey-v3 {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.audience-journey-v3 h2 {
+  top: 124px;
+  left: 92px;
+  width: 1030px;
+  font-size: 64px;
+  line-height: .98;
+}
+
+.audience-journey-v3 .audience-journey-lead {
+  position: absolute;
+  left: 92px;
+  top: 270px;
+  width: 960px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1.32;
+}
+
+.audience-client-lane {
+  position: absolute;
+  left: 92px;
+  top: 382px;
+  width: 960px;
+}
+
+.audience-lane-label,
+.audience-trainer-layer > span,
+.audience-journey-conclusion span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: .1em;
+}
+
+.audience-client-stages {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-
-.audience-card {
-  padding: 22px 20px 20px;
-  border-radius: 18px;
-  background: var(--paper-2);
-}
-
-.audience-card-heading {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding-bottom: 14px;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 20px;
+  border-top: 2px solid var(--ink);
   border-bottom: 1px solid var(--line);
 }
 
-.audience-card-heading span {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: .08em;
+.audience-client-stage {
+  position: relative;
+  min-height: 262px;
+  padding: 30px 28px 25px 0;
 }
 
-.audience-card-heading strong {
-  font-size: 18px;
+.audience-client-stage + .audience-client-stage {
+  padding-left: 28px;
+  border-left: 1px solid var(--line);
+}
+
+.audience-client-stage:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: -7px;
+  top: -8px;
+  width: 12px;
+  height: 12px;
+  border-top: 2px solid var(--ink);
+  border-right: 2px solid var(--ink);
+  background: var(--paper);
+  transform: rotate(45deg);
+  z-index: 2;
+}
+
+.audience-client-stage > b {
+  display: block;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.audience-client-stage > strong {
+  display: block;
+  margin-top: 32px;
+  font-size: 27px;
+  line-height: 1.08;
+  letter-spacing: -.02em;
+}
+
+.audience-client-stage > p {
+  margin: 18px 0 0;
+  min-height: 50px;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.audience-client-stage > em {
+  display: block;
+  margin-top: 22px;
+  color: var(--ink);
+  font-size: 21px;
+  font-style: normal;
+  font-weight: 730;
   line-height: 1.2;
 }
 
-.audience-card p {
-  margin: 0 0 12px;
-  font-size: 14.5px;
-  line-height: 1.38;
-  color: var(--ink);
+.audience-trainer-layer {
+  position: absolute;
+  top: 340px;
+  right: 92px;
+  width: 365px;
+  min-height: 365px;
+  box-sizing: border-box;
+  padding: 31px 32px 28px;
+  border-radius: 22px;
+  color: var(--paper);
+  background: var(--dark);
 }
 
-.audience-card p:last-child {
-  margin-bottom: 0;
+.audience-trainer-layer::before {
+  content: "";
+  position: absolute;
+  left: -78px;
+  top: 181px;
+  width: 78px;
+  height: 1px;
+  background: var(--ink);
 }
 
-.audience-card p b {
-  display: block;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-  margin-bottom: 4px;
+.audience-trainer-layer::after {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 175px;
+  width: 11px;
+  height: 11px;
+  border-top: 2px solid var(--paper);
+  border-right: 2px solid var(--paper);
+  transform: rotate(45deg);
+}
+
+.audience-trainer-layer > span { color: #77787d; }
+.audience-trainer-layer > b { display: block; margin-top: 27px; color: #77787d; font-size: 14px; }
+.audience-trainer-layer h3 { margin: 8px 0 0; color: var(--paper); font-size: 39px; line-height: 1; }
+.audience-trainer-layer > p { margin: 21px 0 0; color: #aaa8a4; font-size: 20px; line-height: 1.3; }
+
+.audience-trainer-value {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(246,242,234,.2);
+}
+
+.audience-trainer-value span { display: block; color: #77787d; font-size: 12px; font-weight: 800; letter-spacing: .09em; }
+.audience-trainer-value strong { display: block; margin-top: 10px; color: var(--paper); font-size: 22px; line-height: 1.22; }
+.audience-trainer-layer > em { display: block; margin-top: 22px; color: #aaa8a4; font-size: 16px; font-style: normal; line-height: 1.2; }
+
+.audience-journey-conclusion {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  bottom: 68px;
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  gap: 34px;
+  align-items: start;
+  padding-top: 20px;
+  border-top: 1px solid var(--ink);
+}
+
+.audience-journey-conclusion strong {
+  font-size: 27px;
+  line-height: 1.22;
+  letter-spacing: -.015em;
 }
 
 .module-map {
@@ -8996,42 +9117,39 @@ ABC Trainerize features, AI builder, messaging and video coaching: https://www.t
 Keep product: https://www.gotokeep.com/</aside>
     </section>
 
-    <section class="slide colleague-order-slide" data-section="Идея" data-slide-type="audience-map">
-      <div class="eyebrow">МАТЕРИАЛЫ · КТО И ЧТО</div>
-      <h2>Fit — для четырёх разных людей</h2>
-      <p class="subhead">Каждому — своя проблема и свой вход, но все встречаются в одном продукте.</p>
-      <div class="audience-map">
-        <div class="audience-card">
-          <div class="audience-card-heading"><span>01</span><strong>Ещё не спортсмен</strong></div>
-          <p><b>Проблема</b>Хочет начать, но не знает как, боится сделать первый шаг.</p>
-          <p><b>Даёт Fit</b>Публичные вопросы-ответы — без обязательств, находит через поиск.</p>
-          <p><b>Итог</b>Сделал первый шаг, ничего не купив и никому не представившись.</p>
-        </div>
-        <div class="audience-card">
-          <div class="audience-card-heading"><span>02</span><strong>Соло-тренирующийся</strong></div>
-          <p><b>Проблема</b>Нужен план и мотивация не бросить, тренер пока не нужен.</p>
-          <p><b>Даёт Fit</b>AI-конструктор тренировок и отслеживание прогресса.</p>
-          <p><b>Итог</b>Тренируется регулярно сам; захочет — Fit подскажет тренера.</p>
-        </div>
-        <div class="audience-card">
-          <div class="audience-card-heading"><span>03</span><strong>Клиент с тренером</strong></div>
-          <p><b>Проблема</b>Теряет мотивацию и связь между тренировками.</p>
-          <p><b>Даёт Fit</b>Прогресс, связь с тренером, закрытая группа под своим тренером.</p>
-          <p><b>Итог</b>Тренер и приложение вместе держат его в привычке.</p>
-        </div>
-        <div class="audience-card">
-          <div class="audience-card-heading"><span>04</span><strong>Тренер</strong></div>
-          <p><b>Проблема</b>Ведёт учеников вручную, новых клиентов ищет сам.</p>
-          <p><b>Даёт Fit</b>Кабинет тренера и доступ к растущей аудитории через ленту.</p>
-          <p><b>Итог</b>Меньше рутины с текущими клиентами, видимость перед новыми.</p>
+    <section class="slide redesign-v2 audience-journey-v3 colleague-order-slide" data-section="Идея" data-slide-type="trainer-client" data-golden="linear/03-linear-product-flow.png">
+      <div class="eyebrow">МАТЕРИАЛЫ · АУДИТОРИЯ</div>
+      <h2>Fit ведёт человека к привычке — сам или с тренером</h2>
+      <p class="audience-journey-lead">Три состояния клиента образуют один путь. Тренер усиливает результат и получает рабочее место с доступом к аудитории.</p>
+
+      <div class="audience-client-lane">
+        <span class="audience-lane-label">КЛИЕНТСКИЙ ПУТЬ</span>
+        <div class="audience-client-stages">
+          <div class="audience-client-stage"><b>01</b><strong>Ещё не спортсмен</strong><p>Не знает, как начать</p><em>Вопросы и первый понятный шаг</em></div>
+          <div class="audience-client-stage"><b>02</b><strong>Тренируется сам</strong><p>Нужны план и мотивация</p><em>ИИ-план и измеримый прогресс</em></div>
+          <div class="audience-client-stage"><b>03</b><strong>Клиент с тренером</strong><p>Теряет связь между тренировками</p><em>Общий контекст и поддержка</em></div>
         </div>
       </div>
-      <p class="closing-line">Fit помогает человеку сделать первый шаг в спорт и не бросить — сам или с тренером. Чем больше людей проходит этот путь в Fit, тем больше тренеров хотят быть в Fit.</p>
+
+      <div class="audience-trainer-layer">
+        <span>УСИЛИВАЮЩИЙ СЛОЙ</span>
+        <b>04</b>
+        <h3>Тренер</h3>
+        <p>Ведёт учеников вручную и сам ищет новых клиентов.</p>
+        <div class="audience-trainer-value"><span>FIT ДАЁТ</span><strong>Кабинет тренера и доступ к растущей аудитории</strong></div>
+        <em>Меньше рутины · больше видимости</em>
+      </div>
+
+      <div class="audience-journey-conclusion"><span>ПЕТЛЯ РОСТА</span><strong>Чем больше людей проходит этот путь в Fit, тем больше тренеров хотят быть в Fit.</strong></div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Свести аудиторию Fit к простой карте: кто, какая у него проблема и что он получает — без терминов «B2B2C» и «флайвил».
+Показать не четыре изолированные аудитории, а один клиентский путь, который тренер усиливает и удерживает.
 
 ЧТО ГОВОРИМ
-Продукт остаётся связкой клиент-тренер, но точка входа теперь не одна, а четыре: два разных типа клиентов (ещё не спортсмен и соло-тренирующийся) заходят раньше, чем появляется тренер, а тренер приходит уже на готовую аудиторию.
+Человек может войти в Fit ещё до того, как считает себя спортсменом: через поиск и публичные вопросы-ответы он получает первый понятный шаг без обязательств. Затем может тренироваться самостоятельно — ИИ-конструктор и измеримый прогресс помогают не бросить. Если появляется тренер, Fit сохраняет общий контекст, связь между тренировками и закрытую группу под тренером.
+
+Тренер — не четвёртый равный сегмент, а усиливающий слой. Он получает кабинет для ведения текущих учеников и видимость перед растущей аудиторией. Это сокращает рутину и помогает находить новых клиентов.
+
+Чем больше людей проходит путь от первого шага к привычке, тем ценнее Fit для тренеров; чем больше тренеров в Fit, тем сильнее поддержка клиента.
 
 ПЕРЕХОД
 Дальше — конкретно, какие модули продукта закрывают эти четыре сценария.</aside>
