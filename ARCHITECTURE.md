@@ -63,7 +63,10 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
   следующей RPC последнюю подтверждённую `version`; одинаковое pending-действие
   дедуплицируется. После conflict или неоднозначного network result экран сначала
   перечитывает aggregate, а не повторяет mutation вслепую. Неподтверждённые
-  live-set drafts хранятся локально в скоупе user/workout до подтверждения сервером.
+  live-set drafts хранятся локально в скоупе user/workout с каждого изменения
+  поля до подтверждения сервером. Отправка объединяется коротким debounce,
+  повторяется после `online`/`pageshow`/возврата приложения и ограничивается
+  таймаутом; finish сначала flush-ит открытую форму и pending autosave.
 - Итоговый client feedback хранится в корне завершённого workout, но отправляется
   отдельным RPC и не входит в `finish_workout`. RPC блокирует корень, проверяет
   client ownership и `version`; точный повтор уже сохранённого payload возвращает

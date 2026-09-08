@@ -119,10 +119,12 @@ describe('repositoryError', () => {
     const conflict = repositoryError({ code: 'PT409', message: 'workout_conflict' })
     const network = repositoryError({ code: 'TypeError', message: 'Failed to fetch' })
     const webkitNetwork = repositoryError({ code: 'TypeError', message: 'Load failed' })
+    const timedOut = repositoryError({ code: 'TypeError', message: 'Live workout request timed out' })
 
     expect(isRepositoryConflict(conflict)).toBe(true)
     expect(isRepositoryNetworkError(network)).toBe(true)
     expect(isRepositoryNetworkError(webkitNetwork)).toBe(true)
+    expect(isRepositoryNetworkError(timedOut)).toBe(true)
     expect(network.code).toBe('network_unavailable')
   })
 })
