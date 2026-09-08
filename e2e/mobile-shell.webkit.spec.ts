@@ -1526,7 +1526,7 @@ test('iPhone: одиночный отдых переживает reload, сдв�
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: введённый live-факт переживает обрыв сети и reload на 390 px', async ({ page }, testInfo) => {
+test('iPhone: live-факт сохраняется без blur и досылается после возврата сети на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
   await page.goto('/workouts/new')
@@ -1539,16 +1539,71 @@ test('iPhone: введённый live-факт переживает обрыв �
 
   await page.route('**/rest/v1/rpc/save_live_set_draft', (route) => route.abort('failed'))
   await page.getByLabel('Фактический вес').fill('55')
-  await page.locator('.live-timer').click()
-  await expect(page.locator('.error').filter({ hasText: 'Ответ сервера не получен' })).toBeVisible()
-  await page.unroute('**/rest/v1/rpc/save_live_set_draft')
-
+  // Reload до blur и debounce: значение уже должно быть защищено на устройстве.
   await page.reload()
-  await expect(page.getByText(/Восстановили несохранённые данные/)).toBeVisible()
+  await expect(page.getByLabel('Фактический вес')).toHaveValue('55')
+  await expect(page.getByText('Восстановили результаты')).toBeVisible()
+
+  await page.unroute('**/rest/v1/rpc/save_live_set_draft')
+  await page.evaluate(() => window.dispatchEvent(new Event('online')))
+  await expect(page.getByText('Восстановили результаты')).toHaveCount(0)
+  await page.reload()
   await expect(page.getByLabel('Фактический вес')).toHaveValue('55')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
   await expect(page.locator('.live-exercise-collapsed')).toContainText('55 кг × 10 повт.')
   await expectNoHorizontalOverflow(page)
+})
+
+test('iPhone: кнопка подтверждения Live остаётся крупной на 360 px', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 360, height: 780 })
+  const clientName = await createIsolatedClient(page, testInfo)
+  await page.goto('/workouts/new')
+  await selectClient(page, clientName)
+  await addExercise(page, 'Присед со штангой', true)
+  await page.getByLabel('Вес, подход 1').fill('40')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await page.getByRole('button', { name: 'Начать' }).click()
+  const confirm = page.getByRole('button', { name: 'Готово, отдых' }).first()
+  const actionLabel = confirm.locator('.live-set-action-label')
+  await expect(actionLabel).toBeVisible()
+  await expect(actionLabel).toHaveText('Готово')
+  const box = await confirm.boundingBox()
+  const labelBox = await actionLabel.boundingBox()
+  expect(box).not.toBeNull()
+  expect(labelBox).not.toBeNull()
+  expect(box!.width).toBeGreaterThanOrEqual(60)
+  expect(box!.height).toBeGreaterThanOrEqual(56)
+  expect(labelBox!.y).toBeGreaterThan(box!.y + box!.height / 2)
+  expect(labelBox!.y + labelBox!.height).toBeLessThanOrEqual(box!.y + box!.height)
+  await expectNoHorizontalOverflow(page)
+})
+
+test('iPhone: завершение сначала отправляет ввод из активного поля', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const clientName = await createIsolatedClient(page, testInfo)
+  await page.goto('/workouts/new')
+  await selectClient(page, clientName)
+  await addExercise(page, 'Присед со штангой', true)
+  await page.getByLabel('Вес, подход 1').fill('40')
+  await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await page.getByRole('button', { name: 'Начать' }).click()
+
+  const liveCalls: string[] = []
+  page.on('request', (request) => {
+    const rpc = new URL(request.url()).pathname.match(/\/rpc\/([^/]+)/)?.[1]
+    if (rpc === 'save_live_set_draft' || rpc === 'finish_workout') liveCalls.push(rpc)
+  })
+  const weight = page.getByLabel('Фактический вес')
+  await weight.fill('55')
+  await expect(weight).toBeFocused()
+  // Программный tap сохраняет фокус в input и проверяет именно finish-flush,
+  // а не побочный blur браузера.
+  await page.getByRole('button', { name: 'Завершить тренировку' }).evaluate((button: HTMLButtonElement) => button.click())
+  await page.getByRole('button', { name: 'Завершить', exact: true }).evaluate((button: HTMLButtonElement) => button.click())
+  await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+  await expect.poll(() => liveCalls).toEqual(['save_live_set_draft', 'finish_workout'])
 })
 
 test('iPhone: отдых начинается после последнего подхода первого упражнения на 390 px', async ({ page }, testInfo) => {

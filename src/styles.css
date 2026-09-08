@@ -1732,7 +1732,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Панель прижата к низу вьюпорта (как таб-бар: fixed по ширине phone-frame),
    а не sticky в коротком контейнере — иначе «плавала» поверх контента в
    середине скролла. Контент скроллится под ней (зарезервирован padding-bottom). */
-.live-bottom-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 10; width: min(100%, 440px); padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); background: var(--bar-bg); border-top: 1px solid var(--border); backdrop-filter:none}
+.live-bottom-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 10; width: min(100%, 440px); display:grid; gap:10px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); background: var(--bar-bg); border-top: 1px solid var(--border); backdrop-filter:none}
 .live-bottom-bar .wide { margin: 0 }
 /* Inline-подтверждение частичного завершения (вместо нативного confirm). */
 .finish-confirm { display: flex; flex-direction: column; gap: 10px }
@@ -3251,11 +3251,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-identity .live-set-table > .live-set, .live-identity .circuit-round .live-set { padding:10px 0 }
 .live-identity .live-set-table > .live-set + .live-set, .live-identity .circuit-round .live-set + .live-set { border-color:var(--border) }
 .live-identity .live-set-grid { min-height:58px; gap:6px; padding:5px 0 }
+.live-identity .live-set-grid, .live-identity .live-set-table-head { grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) 68px }
+.live-identity .live-set.rpe-visible .live-set-grid, .live-identity .live-set-table-head.rpe-visible { grid-template-columns:20px minmax(0,1fr) minmax(0,1fr) 42px 68px }
 .live-identity .live-set-number { color:var(--muted); font-size:12px; font-weight:500 }
 .live-identity .live-set-input, .live-identity .live-set-rpe { min-height:48px; padding:8px 5px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
 .live-identity .live-set-input:focus, .live-identity .live-set-rpe:focus { border-color:var(--fg); outline:2px solid var(--border); outline-offset:1px; box-shadow:none}
 .live-identity .live-set-input.plan-hint { color:var(--secondary-label-fg); font-weight:400 }
-.live-identity .live-set-check, .live-identity .live-set-save, .live-identity .live-set-expanded .live-set-check, .live-identity .live-set-expanded .live-set-save { width:48px; min-height:48px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:18px; font-weight:500; box-shadow:none}
+.live-identity .live-set-check, .live-identity .live-set-save, .live-identity .live-set-expanded .live-set-check, .live-identity .live-set-expanded .live-set-save { width:68px; min-height:56px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:5px 2px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:16px; font-weight:500; line-height:1; box-shadow:none}
+.live-identity .live-set-action-label { font-size:12px; font-weight:500; line-height:1.1 }
 .live-identity .live-set-check.done { border-color:var(--border); background:var(--surface-sunken); color:var(--success-fg) }
 .live-identity .live-set-compact { grid-template-columns:24px minmax(0,1fr) 52px; min-height:56px; border-color:var(--border) }
 .live-identity .live-set-compact-values strong { color:var(--fg); font-size:14px; font-weight:500 }
@@ -3291,6 +3294,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-identity .live-bottom-bar .workout-cta { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
 .live-identity .live-bottom-bar .workout-cta[data-variant='secondary'] { border-color:var(--border); background:var(--surface-raised); color:var(--fg); box-shadow:none}
 .live-identity .live-bottom-bar .workout-cta:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.live-identity .live-sync-state { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--warning-border); border-radius:14px; background:var(--warning-surface); color:var(--fg) }
+.live-identity .live-sync-state.error { border-color:var(--danger-border); background:var(--danger-surface); color:var(--fg) }
+.live-identity .live-sync-state > div { min-width:0; display:grid; gap:2px }
+.live-identity .live-sync-state strong { font-size:14px; font-weight:600; line-height:1.25 }
+.live-identity .live-sync-state span { color:var(--secondary-label-fg); font-size:12px; font-weight:400; line-height:1.3 }
+.live-identity .live-sync-state button { min-height:44px; padding:8px 10px; border-color:var(--border); border-radius:10px; background:var(--surface-raised); color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
+.live-session-shell:has(.live-sync-state) .content-immersive { padding-bottom:calc(176px + env(safe-area-inset-bottom)) }
 .live-identity .finish-confirm { gap:10px }
 .live-identity .finish-confirm p { color:var(--fg); font-size:14px; font-weight:400 }
 .live-identity .finish-confirm .workout-cta[data-variant='tertiary'] { color:var(--fg) }
@@ -3301,6 +3311,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 
 @media (max-width:375px) {
   .live-identity .live-workout-page { padding-inline:14px }
+  .live-identity .live-set-grid, .live-identity .live-set-table-head { grid-template-columns:20px minmax(0,1fr) minmax(0,1fr) 64px; gap:4px }
+  .live-identity .live-set.rpe-visible .live-set-grid, .live-identity .live-set-table-head.rpe-visible { grid-template-columns:18px minmax(0,1fr) minmax(0,1fr) 38px 64px; gap:3px }
+  .live-identity .live-set-check, .live-identity .live-set-save, .live-identity .live-set-expanded .live-set-check, .live-identity .live-set-expanded .live-set-save { width:64px }
   .live-identity .live-session-header { grid-template-columns:minmax(0,1fr) }
   .live-identity .live-session-header .workout-header-side { grid-row:1; justify-self:end; margin-bottom:-37px }
   .live-identity .live-session-header h2 { padding-right:88px; font-size:18px }
@@ -5412,3 +5425,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-today-identity .voice-action:has(.voice-action-error):not(.voice-action-recording) {
   grid-template-areas:"copy button" "label button" "error error";
 }
+
+/* One factual result shared by Home, Progress and completion. */
+.personal-workout-result { display:grid; gap:8px; min-width:0; }
+.personal-workout-result > p, .personal-workout-result h2 { margin:0; }
+.personal-workout-result h2 { font-size:20px; line-height:1.25; }
+.personal-workout-result > p:not(.eyebrow) { color:var(--muted); }
+.personal-workout-result .actions { flex-wrap:wrap; justify-content:flex-start; gap:12px; }
+.personal-workout-result .actions a { display:inline-flex; align-items:center; min-height:44px; }

@@ -113,7 +113,9 @@ export function repositoryError(error: unknown): RepositoryError {
   if (code === '42501') {
     return new RepositoryError(code, 'Недостаточно прав для этого действия.')
   }
-  if (normalizedMessage.includes('failed to fetch') || normalizedMessage.includes('load failed') || normalizedMessage.includes('network')) {
+  if (normalizedMessage.includes('failed to fetch') || normalizedMessage.includes('load failed')
+    || normalizedMessage.includes('network') || normalizedMessage.includes('timed out')
+    || normalizedMessage.includes('timeout') || normalizedMessage.includes('abort')) {
     return new RepositoryError('network_unavailable', 'Не удалось подключиться к серверу. Проверьте интернет и повторите попытку.')
   }
   return new RepositoryError(code, 'Не удалось выполнить действие. Попробуйте ещё раз.')

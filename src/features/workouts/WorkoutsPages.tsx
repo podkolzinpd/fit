@@ -1,3 +1,5 @@
+import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
+import { PersonalWorkoutResult } from '../../shared/PersonalWorkoutResult'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -5,7 +7,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
-import { restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
+import { restDeadline, restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
 import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { playGong } from '../../shared/gong'
@@ -24,6 +26,7 @@ import { RPE_OPTIONS } from '../../shared/rpe'
 import type { RunningFormat } from '../../shared/running-formats'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
+import { createLiveSetAutosave } from './live-set-autosave'
 import { applyLiveSetDraft, sameLiveSetDraft, setWithLocalDraft } from './live-set-cache'
 import { clearPendingLiveSetDrafts, readPendingLiveSetDrafts, removePendingLiveSetDraft, writePendingLiveSetDraft } from './live-set-draft-storage'
 import { createLiveWorkoutCoordinator, liveWorkoutRecoveryError } from './live-workout-coordinator'
@@ -50,6 +53,8 @@ import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
 import { formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes } from './schedule-presentation'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
+import { trackGoal } from '../../shared/yandex-metrika'
+import { liveOperationWithTimeout } from './live-operation-timeout'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -457,7 +462,7 @@ export function WorkoutFormPage() {
       navigate(`/workouts/${id}`, { replace: true, state: { returnTo: safeWorkoutReturnTo(navigationState?.returnTo) } })
     }
     void Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      invalidateWorkoutResults(queryClient),
       queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['today-recent-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
@@ -660,10 +665,11 @@ export function WorkoutDetailPage() {
     }
     void navigate(`/workouts/${id}/live`, { state: { ...childNavigationState, fromWorkoutDetailId: id === workoutId ? id : undefined } })
   }
+  const completionHistory = useQuery({ queryKey: ['workouts', query.data?.clientId], queryFn: () => workoutsRepository.list(undefined, undefined, query.data!.clientId), enabled: actor?.role === 'client' && navigationState?.justCompleted === true && query.data?.status === 'done' })
   const completionRecords = useQuery({
     queryKey: ['workout-personal-records', workoutId],
     queryFn: () => workoutsRepository.personalRecords(workoutId),
-    enabled: navigationState?.justCompleted === true && query.data?.status === 'done',
+    enabled: actor?.role !== 'client' && navigationState?.justCompleted === true && query.data?.status === 'done',
   })
   useClientRealtime(query.data?.clientId)
   // Этап тренировки: get() отдаёт stageId, название берём из цели клиента.
@@ -706,7 +712,7 @@ export function WorkoutDetailPage() {
   const invalidateWorkoutSurfaces = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }),
-      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      invalidateWorkoutResults(queryClient),
       queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['workout-regularity'] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
@@ -721,7 +727,7 @@ export function WorkoutDetailPage() {
     mutationFn: () => workoutsRepository.reschedule(query.data!, rescheduleDate, rescheduleTime || null),
     onSuccess: async () => { setDecisionSheet(null); await invalidateWorkoutSurfaces() },
   })
-  const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ['workouts'] }), queryClient.invalidateQueries({ queryKey: ['clients'] })]); goBack() } })
+  const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([invalidateWorkoutResults(queryClient), queryClient.invalidateQueries({ queryKey: ['clients'] })]); goBack() } })
   const removeCompletedExercise = useMutation({
     mutationFn: ({ exerciseId, workout }: { exerciseId: string; exerciseName: string; workout: Workout }) => workoutsRepository.removeLiveExercise(workout, exerciseId),
     onSuccess: async () => {
@@ -858,8 +864,7 @@ export function WorkoutDetailPage() {
         duration={duration && duration !== '0 мин' ? duration : null}
         tonnage={tonnage > 0 ? tonnageLabel(tonnage) : null}
         muscleGroups={groups}
-        record={completionRecords.data?.[0]}
-        recordLoading={completionRecords.isLoading}
+        personalResult={<PersonalWorkoutResult workouts={completionHistory.data} workoutId={workoutId} loading={completionHistory.isLoading} error={completionHistory.error} onRetry={() => void completionHistory.refetch()} />}
         hasTrainer={Boolean(trainers.data?.length)}
       />}
       {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
@@ -1468,6 +1473,7 @@ export function LiveWorkoutPage() {
     (id, draft, version) => workoutsRepository.saveLiveSet(id, draft, version),
     (id, version) => workoutsRepository.confirmLiveSet(id, version),
   ))
+  const [liveSetAutosave] = useState(() => createLiveSetAutosave())
   const [liveWorkout] = useState(() => createLiveWorkoutCoordinator())
   const completedLocally = useRef(false)
   const skipBlurForSet = useRef<string | null>(null)
@@ -1487,11 +1493,14 @@ export function LiveWorkoutPage() {
   // Держим конкретный введённый факт до тех пор, пока серверная копия не станет
   // такой же — иначе при переходе к следующему подходу строка мигнёт пустой.
   const [localSetDrafts, setLocalSetDrafts] = useState<Map<string, LiveSetDraft>>(() => new Map())
+  const pendingSetDrafts = useRef<Map<string, LiveSetDraft>>(new Map())
   const [recoveredSetIds, setRecoveredSetIds] = useState<Set<string>>(() => new Set())
   const liveSetForms = useRef<Map<string, HTMLFormElement>>(new Map())
   const [savingSetId, setSavingSetId] = useState<string | null>(null)
   const [savedSetId, setSavedSetId] = useState<string | null>(null)
   const [saveErrorSetId, setSaveErrorSetId] = useState<string | null>(null)
+  const retryingSetDrafts = useRef(false)
+  const initialRetryWorkoutId = useRef<string | null>(null)
   function techniqueActionFor(exercise: WorkoutExerciseModel) {
     const meta = catalogExerciseFor(catalog.exercises, exercise)
     return hasExerciseTechnique(meta) ? () => setTechniqueExercise(meta) : undefined
@@ -1507,6 +1516,7 @@ export function LiveWorkoutPage() {
         pending.delete(setId)
       }
     }
+    pendingSetDrafts.current = new Map(pending)
     setRecoveredSetIds(new Set(pending.keys()))
     setLocalSetDrafts((current) => {
       const next = new Map(current)
@@ -1518,6 +1528,7 @@ export function LiveWorkoutPage() {
       return next
     })
   }, [actor?.userId, query.data, workoutId])
+  useEffect(() => () => liveSetAutosave.dispose(), [liveSetAutosave])
   useEffect(() => {
     if (query.data?.status !== 'done') return
     if (actor?.userId) clearPendingLiveSetDrafts(actor.userId, workoutId)
@@ -1527,11 +1538,15 @@ export function LiveWorkoutPage() {
     if (completedLocally.current) return
     showCompletedWorkout(false)
   }, [actor?.userId, query.data?.status, showCompletedWorkout, workoutId])
-  function rememberLiveDraft(setId: string, draft: LiveSetDraft) {
-    setLocalSetDrafts((current) => new Map(current).set(setId, draft))
+  function rememberLiveDraft(setId: string, draft: LiveSetDraft, updateVisibleDraft = true) {
+    pendingSetDrafts.current.set(setId, draft)
+    if (updateVisibleDraft) setLocalSetDrafts((current) => new Map(current).set(setId, draft))
     if (actor?.userId) writePendingLiveSetDraft(actor.userId, workoutId, setId, draft)
   }
-  function acknowledgeLiveDraft(setId: string) {
+  function acknowledgeLiveDraft(setId: string, savedDraft?: LiveSetDraft) {
+    const pendingDraft = pendingSetDrafts.current.get(setId)
+    if (savedDraft && pendingDraft && !sameLiveSetDraft(pendingDraft, savedDraft)) return
+    pendingSetDrafts.current.delete(setId)
     if (actor?.userId) removePendingLiveSetDraft(actor.userId, workoutId, setId)
     setLocalSetDrafts((current) => {
       if (!current.has(setId)) return current
@@ -1573,21 +1588,30 @@ export function LiveWorkoutPage() {
   // в БД, но без refetch локальный set остаётся старым и поле возвращает прежнее
   // число. Освежаем только для подтверждённых (в обычном вводе по blur refetch не
   // нужен и мешал бы: ремоунт полей по key сбросил бы текущий ввод).
-  async function runLiveSetMutation(operation: () => Promise<number>) {
+  async function runLiveSetMutation(set: WorkoutSet, draft: LiveSetDraft, requireConfirmed: boolean, operation: () => Promise<number>) {
     try {
       return await operation()
     } catch (error) {
-      const refreshed = await query.refetch()
+      const refreshed = await liveOperationWithTimeout(query.refetch())
+        .catch(() => { throw liveWorkoutRecoveryError(error, false) })
+      const serverSet = refreshed.data?.exercises.flatMap((exercise) => exercise.sets).find((item) => item.id === set.id)
+      if (serverSet) {
+        const applied = sameLiveSetDraft(serverSet.fact, draft) && (!requireConfirmed || Boolean(serverSet.confirmedAt))
+        liveSets.sync(serverSet, applied ? draft : undefined)
+        if (applied) {
+          trackGoal(requireConfirmed ? 'live_set_confirm_recovered' : 'live_set_save_recovered')
+          return serverSet.version
+        }
+      }
       throw liveWorkoutRecoveryError(error, !refreshed.error)
     }
   }
   const save = useMutation({
-    mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => runLiveSetMutation(() => liveSets.save(set, draft)),
+    mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => runLiveSetMutation(set, draft, false, () => liveSets.save(set, draft)),
     onMutate: ({ set }) => { setSavingSetId(set.id); setSavedSetId(null); setSaveErrorSetId(null) },
     onSuccess: async (version, { set, draft }) => {
       setSavingSetId(null)
       setSavedSetId(set.id)
-      void queryClient.invalidateQueries({ queryKey: ['clients'] })
       // Сразу закрепляем факт и новую версию в кэше для любого подхода. Раньше
       // правка уже подтверждённого подхода ждала refetch и на iOS могла
       // отрисоваться старым значением до второй попытки сохранения.
@@ -1595,7 +1619,7 @@ export function LiveWorkoutPage() {
         ['workout', workoutId],
         (workout) => workout ? applyLiveSetDraft(workout, set.id, draft, version) : workout,
       )
-      acknowledgeLiveDraft(set.id)
+      acknowledgeLiveDraft(set.id, draft)
       if (set.confirmedAt) {
         const exercise = query.data?.exercises.find((item) => item.sets.some((itemSet) => itemSet.id === set.id))
         if (exercise) setExpandedExercises((previous) => {
@@ -1607,13 +1631,29 @@ export function LiveWorkoutPage() {
         await query.refetch()
       }
     },
-    onError: (_error, { set }) => { setSavingSetId(null); setSaveErrorSetId(set.id) },
+    onError: (_error, { set }) => {
+      setSavingSetId(null)
+      setSaveErrorSetId(set.id)
+      trackGoal('live_set_save_error')
+    },
   })
-  function persistLiveDraft(set: WorkoutSet, draft: LiveSetDraft) {
+  function persistLiveDraft(set: WorkoutSet, draft: LiveSetDraft, immediate = false) {
     // Запоминаем ввод до RPC и на устройстве. Это не меняет факт на сервере,
     // но не даёт realtime-снимку или reload скрыть его при медленной сети.
     rememberLiveDraft(set.id, draft)
-    save.mutate({ set, draft })
+    const send = () => save.mutate({ set, draft })
+    if (immediate) liveSetAutosave.flush(set.id, send)
+    else liveSetAutosave.schedule(set.id, send)
+  }
+  function captureLiveDraft(set: WorkoutSet, form: HTMLFormElement) {
+    const draft = draftFrom(form)
+    // localStorage пишется синхронно на каждом вводе. React-state обновится при
+    // debounce/blur, чтобы набор текста не перерисовывал всю тренировку.
+    rememberLiveDraft(set.id, draft, false)
+    liveSetAutosave.schedule(set.id, () => {
+      rememberLiveDraft(set.id, draft)
+      save.mutate({ set, draft })
+    })
   }
   function liveFormChanged(form: HTMLFormElement) {
     return Array.from(form.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select'))
@@ -1633,11 +1673,10 @@ export function LiveWorkoutPage() {
     const currentSetId = form?.dataset.liveSetId ?? fallback?.[0]
     const currentSet = currentSetId ? exercise.sets.find((set) => set.id === currentSetId) : undefined
     if (currentSet && form && currentSet.id !== targetSetId && liveFormChanged(form)) {
-      persistLiveDraft(currentSet, draftFrom(form))
+      persistLiveDraft(currentSet, draftFrom(form), true)
     }
   }
   function openLiveSet(exercise: WorkoutExerciseModel, targetSetId: string) {
-    saveOpenLiveSet(exercise, targetSetId)
     setExpandedSetId(targetSetId)
   }
   useEffect(() => {
@@ -1646,10 +1685,10 @@ export function LiveWorkoutPage() {
     return () => window.clearTimeout(timer)
   }, [savedSetId])
   const confirm = useMutation({
-    mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => runLiveSetMutation(() => liveSets.confirm(set, draft)),
+    mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => runLiveSetMutation(set, draft, true, () => liveSets.confirm(set, draft)),
     onMutate: ({ set, draft }) => { rememberLiveDraft(set.id, draft) },
-    onSuccess: (_data, { set }) => {
-      acknowledgeLiveDraft(set.id)
+    onSuccess: (_data, { set, draft }) => {
+      acknowledgeLiveDraft(set.id, draft)
       setExpandedSetId(null)
       // Отдых берётся из настроек блока (Этап A), не хардкод:
       // - одиночное упражнение → отдых между подходами;
@@ -1664,17 +1703,58 @@ export function LiveWorkoutPage() {
       void query.refetch()
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
+    onError: () => trackGoal('live_set_confirm_error'),
   })
+  async function retryPendingLiveDrafts() {
+    if (!actor?.userId || !query.data || retryingSetDrafts.current
+      || save.isPending || confirm.isPending || (typeof navigator !== 'undefined' && !navigator.onLine)) return
+    const pending = readPendingLiveSetDrafts(actor.userId, workoutId)
+    if (!pending.size) return
+    retryingSetDrafts.current = true
+    setRecoveredSetIds(new Set(pending.keys()))
+    trackGoal('live_set_retry_started')
+    try {
+      const serverSets = new Map(query.data.exercises.flatMap((exercise) => exercise.sets).map((set) => [set.id, set]))
+      for (const [setId, draft] of pending) {
+        const set = serverSets.get(setId)
+        if (!set) { acknowledgeLiveDraft(setId); continue }
+        if (sameLiveSetDraft(set.fact, draft)) { acknowledgeLiveDraft(setId, draft); continue }
+        try {
+          await save.mutateAsync({ set, draft })
+        } catch {
+          break
+        }
+      }
+      if (pendingSetDrafts.current.size === 0) {
+        confirm.reset()
+        trackGoal('live_set_retry_completed')
+      }
+    } finally {
+      retryingSetDrafts.current = false
+    }
+  }
+  useEffect(() => {
+    const retry = () => {
+      if (document.visibilityState === 'visible') void retryPendingLiveDrafts()
+    }
+    window.addEventListener('online', retry)
+    window.addEventListener('pageshow', retry)
+    document.addEventListener('visibilitychange', retry)
+    const initialRetry = initialRetryWorkoutId.current === workoutId ? undefined : window.setTimeout(retry, 0)
+    initialRetryWorkoutId.current = workoutId
+    return () => {
+      if (initialRetry !== undefined) window.clearTimeout(initialRetry)
+      window.removeEventListener('online', retry)
+      window.removeEventListener('pageshow', retry)
+      document.removeEventListener('visibilitychange', retry)
+    }
+  }, [actor?.userId, query.data, workoutId, save.isPending, confirm.isPending])
   // Запускает отдых до абсолютного момента endsAt (мс). null — отдыха нет
   // (напр. между упражнениями суперсета, seconds=0): таймер не показываем.
   function startRestUntil(endsAt: number | null, seconds: number) {
     restEndsAt.current = endsAt
     storeRestDeadline(workoutId, endsAt)
     setRestRemaining(endsAt === null ? null : seconds)
-  }
-  // Отдых на seconds секунд от текущего момента (вызывается из обработчика).
-  function restDeadline(seconds: number): number | null {
-    return seconds > 0 ? Date.now() + seconds * 1000 : null
   }
   function stopRest() {
     restEndsAt.current = null
@@ -1695,7 +1775,8 @@ export function LiveWorkoutPage() {
       try {
         return await operation({ ...snapshot, version: expectedVersion })
       } catch (error) {
-        const refreshed = await query.refetch()
+        const refreshed = await liveOperationWithTimeout(query.refetch())
+          .catch(() => { throw liveWorkoutRecoveryError(error, false) })
         if (refreshed.data) liveWorkout.sync(refreshed.data)
         throw liveWorkoutRecoveryError(error, !refreshed.error)
       }
@@ -1714,7 +1795,7 @@ export function LiveWorkoutPage() {
       setExpandedSetId(null)
       stopRest()
       await query.refetch()
-      void queryClient.invalidateQueries({ queryKey: ['workouts'] })
+      void invalidateWorkoutResults(queryClient)
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
   })
@@ -1728,7 +1809,19 @@ export function LiveWorkoutPage() {
     else appendExercise.mutate(exercise)
     closePicker()
   }
+  async function flushOpenLiveSetDrafts() {
+    const sets = new Map((query.data?.exercises ?? []).flatMap((exercise) => exercise.sets).map((set) => [set.id, set]))
+    for (const [setId, form] of liveSetForms.current) {
+      const set = sets.get(setId)
+      if (!set || (!liveFormChanged(form) && !pendingSetDrafts.current.has(setId))) continue
+      const draft = draftFrom(form)
+      liveSetAutosave.clear(setId)
+      rememberLiveDraft(setId, draft)
+      await save.mutateAsync({ set, draft })
+    }
+  }
   const finish = useMutation({ mutationFn: async () => {
+    await flushOpenLiveSetDrafts()
     await liveSets.waitForIdle()
     const version = await runLiveWorkoutMutation('finish', (workout) => workoutsRepository.finish(workout))
     completedLocally.current = true
@@ -1741,7 +1834,7 @@ export function LiveWorkoutPage() {
     // на карточке клиента обновляются только после перезагрузки.
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['workout', workoutId] }),
-      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
+      invalidateWorkoutResults(queryClient),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
       clientId ? queryClient.invalidateQueries({ queryKey: ['client-stats', clientId] }) : Promise.resolve(),
     ])
@@ -1793,7 +1886,8 @@ export function LiveWorkoutPage() {
       window.removeEventListener('pageshow', onWake)
     }
   }, [restActive])
-  const error = save.error ?? confirm.error ?? appendSet.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
+  const liveSyncError = save.error ?? confirm.error
+  const error = appendSet.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExerciseModel) {
     if (clientMode) return null
@@ -1851,7 +1945,7 @@ export function LiveWorkoutPage() {
         <span className="live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
         {set.confirmedAt
           ? <>{compactValues}<button type="button" className="link live-set-compact-action" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button></>
-          : <button type="button" className="link live-set-fill-action" aria-label={`Заполнить подход ${setNumber ?? ''}`} onPointerDown={() => saveOpenLiveSet(exercise, set.id)} onClick={() => openLiveSet(exercise, set.id)}>
+          : <button type="button" className="link live-set-fill-action" aria-label={`Заполнить подход ${setNumber ?? ''}`} onPointerDown={() => saveOpenLiveSet(exercise, set.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') saveOpenLiveSet(exercise, set.id) }} onClick={() => openLiveSet(exercise, set.id)}>
               {compactValues}
               <span className="live-set-fill-label">Заполнить <ChevronRightIcon /></span>
             </button>}
@@ -1863,10 +1957,10 @@ export function LiveWorkoutPage() {
     // Однократный recovery-key нужен только после reload, чтобы применить
     // восстановленные defaultValue.
     const recoveryKey = recoveredSetIds.has(set.id) ? 'recovered' : 'stable'
-    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={`${set.id}:${recoveryKey}`} onBlur={(event) => {
+    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={`${set.id}:${recoveryKey}`} onInput={(event) => captureLiveDraft(set, event.currentTarget)} onBlur={(event) => {
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
-      persistLiveDraft(set, draftFrom(event.currentTarget))
+      persistLiveDraft(set, draftFrom(event.currentTarget), true)
     }}>
       <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
@@ -1874,11 +1968,11 @@ export function LiveWorkoutPage() {
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
-                onPointerDown={() => { skipBlurForSet.current = set.id }}
-                onClick={(event) => { const form = event.currentTarget.form; if (form) persistLiveDraft(set, draftFrom(form)); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}>✓</button>
+                onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
+                onClick={(event) => { const form = event.currentTarget.form; if (form) persistLiveDraft(set, draftFrom(form), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span><span className="live-set-action-label">Сохранить</span></button>
             : <button type="button" className={set.confirmedAt ? 'secondary live-set-check done' : 'live-set-check'} aria-label={confirmLabel} disabled={Boolean(set.confirmedAt) || confirm.isPending}
-                onPointerDown={() => { skipBlurForSet.current = set.id }}
-                onClick={(event) => { const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}>✓</button>}
+                onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
+                onClick={(event) => { liveSetAutosave.clear(set.id); const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span><span className="live-set-action-label">Готово</span></button>}
           <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} /></div>
         </div>
       </WorkoutSetRow>
@@ -1997,13 +2091,19 @@ export function LiveWorkoutPage() {
         </div>
       }) })()}
       {canManageLiveStructure && <button type="button" className="secondary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
-      {recoveredSetIds.size > 0 && <p className="state" role="status">Восстановили несохранённые данные. Проверьте подходы и сохраните их повторно.</p>}
       {error && <p className="error">{error.message}</p>}
       {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
           конкурировать с primary-подтверждением подхода в карточке.
           Подтверждение частичного завершения — inline (не нативный confirm,
           который не работает в WKWebView и блокировал выход). */}
       <div className="live-bottom-bar">
+        {(liveSyncError || recoveredSetIds.size > 0) && <div className={`live-sync-state ${liveSyncError ? 'error' : ''}`} role={liveSyncError ? 'alert' : 'status'}>
+          <div>
+            <strong>{liveSyncError ? 'Результаты сохранены на телефоне' : 'Восстановили результаты'}</strong>
+            <span>{liveSyncError ? 'Не удалось отправить их на сервер.' : 'Отправим их на сервер автоматически.'}</span>
+          </div>
+          <button type="button" className="secondary" disabled={save.isPending || confirm.isPending} onClick={() => void retryPendingLiveDrafts()}>{save.isPending ? 'Отправляем…' : 'Повторить'}</button>
+        </div>}
         {confirmFinish
           ? <div className="finish-confirm">
               <p>Есть незавершённые подходы. Завершить частично?</p>

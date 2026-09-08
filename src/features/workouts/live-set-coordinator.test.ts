@@ -50,6 +50,16 @@ describe('live set coordinator', () => {
     expect(saveLiveSet).toHaveBeenNthCalledWith(2, 'set-1', draft, 1)
   })
 
+  it('syncs the refreshed server version after an ambiguous response', async () => {
+    const saveLiveSet = vi.fn(() => Promise.resolve(5))
+    const coordinator = createLiveSetCoordinator(saveLiveSet, vi.fn())
+    coordinator.sync({ ...set, fact: draft, version: 4 }, draft)
+
+    await expect(coordinator.save(set, draft)).resolves.toBe(4)
+    await expect(coordinator.save(set, { ...draft, reps: 13 })).resolves.toBe(5)
+    expect(saveLiveSet).toHaveBeenCalledWith('set-1', { ...draft, reps: 13 }, 4)
+  })
+
   it('prevents finish from passing a failed pending autosave', async () => {
     let failSave: ((error: Error) => void) | undefined
     const coordinator = createLiveSetCoordinator(
