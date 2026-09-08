@@ -7180,6 +7180,46 @@ h3 {
 .comparison-v2 .comparison-conclusion {
   bottom: 48px;
 }
+
+/* 05F · Readiness-first grouping. The Fit status cell becomes one visual band
+   for each pair, while competitor facts remain a conventional comparison grid. */
+.comparison-readiness-v3 .market-compare-table > .compare-group-start:not(.compare-group-current) {
+  border-top: 2px solid var(--ink);
+}
+
+.comparison-readiness-v3 .market-compare-table > .compare-group-first > b {
+  position: relative;
+  overflow: visible;
+  color: transparent;
+  z-index: 3;
+}
+
+.comparison-readiness-v3 .market-compare-table > .compare-group-first > b::after {
+  content: attr(data-stage);
+  position: absolute;
+  inset: 0 0 auto;
+  height: calc(200% + 1px);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  background: var(--dark);
+  color: var(--paper);
+  font-size: 15px;
+  font-style: normal;
+  font-weight: 780;
+  line-height: 1.15;
+  letter-spacing: -.01em;
+  z-index: 4;
+}
+
+.comparison-readiness-v3 .market-compare-table > .compare-group-start:not(.compare-group-current) > b::after {
+  box-shadow: inset 0 2px 0 var(--paper);
+}
+
+.comparison-readiness-v3 .market-compare-table > .compare-group-second > b {
+  color: transparent;
+}
 /* Parallel concept slides kept in the appendix after the approved main deck. */
 .audience-map {
   margin-top: 30px;
@@ -7819,19 +7859,19 @@ App Store и экраны: https://apps.apple.com/cn/app/keep-ai-%E8%BF%90%E5%8A
 Federal Reserve G.5A, курс CNY/USD: https://www.federalreserve.gov/releases/g5a/current/</aside>
     </section>
 
-    <section class="slide market-comparison-slide redesign-v2 rd-comparison comparison-v2" data-section="Конкуренты" data-slide-type="feature-overview" data-golden="apple/08-apple-feature-overview.png">
+    <section class="slide market-comparison-slide redesign-v2 rd-comparison comparison-v2 comparison-readiness-v3" data-section="Конкуренты" data-slide-type="feature-overview" data-golden="apple/08-apple-feature-overview.png">
       <div class="eyebrow">05F · СРАВНЕНИЕ ПРОДУКТОВ</div>
       <h2>Fit уже собрал ядро. Следующие контуры понятны</h2>
       <p class="comparison-subhead">Работающее ядро отделено от пилота и следующего продуктового контура.</p>
       <div class="comparison-legend"><span>FIT</span><strong>Работает</strong><strong>В пилоте</strong><strong>Следующий контур</strong><em>Конкуренты: есть, частично или нет</em></div>
       <div class="market-compare-table">
         <div class="market-compare-head"><span>КОНТУР</span><strong>FIT</strong><strong>HEVY</strong><strong>FITNESS ONLINE</strong><strong>STRAVA</strong><strong>TRAINERIZE</strong><strong>KEEP</strong></div>
-        <div class="compare-current-row"><span>План → фиксация → измеримый прогресс</span><b class="fit-now">Работает</b><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em></div>
-        <div><span>ИИ создаёт тренировку и недельный план</span><b class="fit-pilot">В пилоте</b><em>Частично</em><em>Есть</em><em>Нет</em><em>Есть</em><em>Есть</em></div>
-        <div><span>Профиль, лента и спортивные сообщества</span><b class="fit-pilot">В пилоте</b><em>Есть</em><em>Есть</em><em>Есть</em><em>Частично</em><em>Есть</em></div>
-        <div class="compare-current-row"><span>Кабинет тренера и ведение клиентов</span><b class="fit-now">Работает</b><em>Есть</em><em>Есть</em><em>Нет</em><em>Есть</em><em>Частично</em></div>
-        <div><span>Чат, онлайн-тренировки и поиск тренера</span><b class="fit-next">Следующий</b><em>Частично</em><em>Частично</em><em>Нет</em><em>Частично</em><em>Частично</em></div>
-        <div><span>Питание, трекеры, восстановление, товары и услуги</span><b class="fit-next">Следующий</b><em>Нет</em><em>Частично</em><em>Частично</em><em>Частично</em><em>Есть</em></div>
+        <div class="compare-current-row compare-group-start compare-group-current compare-group-first"><span>План → фиксация → измеримый прогресс</span><b class="fit-now" data-stage="Работает">Работает</b><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em><em>Есть</em></div>
+        <div class="compare-current-row compare-group-second"><span>Кабинет тренера и ведение клиентов</span><b class="fit-now">Работает</b><em>Есть</em><em>Есть</em><em>Нет</em><em>Есть</em><em>Частично</em></div>
+        <div class="compare-group-start compare-group-first"><span>ИИ создаёт тренировку и недельный план</span><b class="fit-pilot" data-stage="К пилоту">В пилоте</b><em>Частично</em><em>Есть</em><em>Нет</em><em>Есть</em><em>Есть</em></div>
+        <div class="compare-group-second"><span>Профиль, лента и спортивные сообщества</span><b class="fit-pilot">В пилоте</b><em>Есть</em><em>Есть</em><em>Есть</em><em>Частично</em><em>Есть</em></div>
+        <div class="compare-group-start compare-group-first"><span>Чат, онлайн-тренировки и поиск тренера</span><b class="fit-next" data-stage="Следующий контур">Следующий</b><em>Частично</em><em>Частично</em><em>Нет</em><em>Частично</em><em>Частично</em></div>
+        <div class="compare-group-second"><span>Питание, трекеры, восстановление, товары и услуги</span><b class="fit-next">Следующий</b><em>Нет</em><em>Частично</em><em>Частично</em><em>Частично</em><em>Есть</em></div>
       </div>
       <div class="comparison-conclusion"><span>ВЫВОД</span><strong>Fit не начинает с нуля: базовый цикл и кабинет тренера уже работают. Пилот добавляет ИИ и социальность; следующий контур — коммуникация, данные и коммерция.</strong></div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
