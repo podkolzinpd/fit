@@ -118,6 +118,10 @@ GitHub OIDC → Yandex IAM token.
   apply, который должен вставить ноль строк. Требует точное отдельное значение
   `APPLY_TENANT_TO_YANDEX_STAGE`.
 
+При отклонении target с `409` orchestration принимает и выводит только узкий
+`tenant_migration_rejected` code, прошедший allowlist-проверку символов. Полное
+тело ответа, значения строк и database error message в Actions logs не попадают.
+
 Artifact не записывается в GitHub Artifacts, workspace или Object Storage.
 Размер запроса ограничен 3 МиБ; превышение останавливает workflow после
 read-only audit. Workflow не меняет sticky routing, Yandex ID assignment,
