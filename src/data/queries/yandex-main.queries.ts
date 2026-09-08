@@ -1,3 +1,6 @@
+import { LIVE_WORKOUT_REQUEST_TIMEOUT_MS } from './auth-fetch'
+import { fetchWithTimeout } from './request-timeout'
+
 export type YandexMainHttpMethod = 'DELETE' | 'POST' | 'PUT'
 
 export interface YandexMainQueries {
@@ -10,6 +13,10 @@ function endpoint(apiBaseUrl: string, path: string): string {
   return `${apiBaseUrl}${path}`
 }
 
+function isLiveWorkoutWrite(path: string): boolean {
+  return /^\/v1\/(?:workouts\/[^/]+\/(?:start|finish|exercises|blocks)|workout-(?:sets|exercises)\/)/.test(path)
+}
+
 export function createYandexMainQueries(
   apiBaseUrl: string,
   sessionToken: string,
@@ -20,13 +27,18 @@ export function createYandexMainQueries(
       cache: 'no-store',
       headers: sessionHeaders,
     }),
-    write: (path, method, body) => fetch(endpoint(apiBaseUrl, path), {
-      method,
-      cache: 'no-store',
-      headers: body === undefined
-        ? sessionHeaders
-        : { ...sessionHeaders, 'content-type': 'application/json' },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    }),
+    write: (path, method, body) => {
+      const init: RequestInit = {
+        method,
+        cache: 'no-store',
+        headers: body === undefined
+          ? sessionHeaders
+          : { ...sessionHeaders, 'content-type': 'application/json' },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      }
+      return isLiveWorkoutWrite(path)
+        ? fetchWithTimeout(fetch, endpoint(apiBaseUrl, path), init, LIVE_WORKOUT_REQUEST_TIMEOUT_MS, 'Live workout request timed out')
+        : fetch(endpoint(apiBaseUrl, path), init)
+    },
   }
 }

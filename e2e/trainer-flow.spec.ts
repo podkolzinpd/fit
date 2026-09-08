@@ -1163,14 +1163,15 @@ test('live: удаление подхода и наследование факт
   await expect(page.getByLabel('Фактический вес').first()).toHaveValue('100')
 
   // Если ответ autosave потерялся из-за сети, введённый факт остаётся на
-  // устройстве и восстанавливается после reload для безопасного повтора.
+  // устройстве и досылается после online без reload.
   await page.route('**/rest/v1/rpc/save_live_set_draft', (route) => route.abort('failed'))
   await page.getByLabel('Фактический вес').first().fill('105')
   await page.locator('.live-timer').click()
-  await expect(page.locator('.error').filter({ hasText: 'Ответ сервера не получен' })).toBeVisible()
+  await expect(page.getByText('Результаты сохранены на телефоне')).toBeVisible()
   await page.unroute('**/rest/v1/rpc/save_live_set_draft')
+  await page.evaluate(() => window.dispatchEvent(new Event('online')))
+  await expect(page.getByText('Результаты сохранены на телефоне')).toHaveCount(0)
   await page.reload()
-  await expect(page.getByText(/Восстановили несохранённые данные/)).toBeVisible()
   await expect(page.getByLabel('Фактический вес').first()).toHaveValue('105')
 
   // Удаляем добавленный подход — остаётся один. Подтверждаем через in-app

@@ -55,6 +55,10 @@ export function createLiveSetCoordinator(saveLiveSet: SaveLiveSet, confirmLiveSe
   }
 
   return {
+    sync: (set: WorkoutSet, draft?: LiveSetDraft) => {
+      versions.set(set.id, Math.max(versions.get(set.id) ?? set.version, set.version))
+      if (draft && draftKey(set.fact) === draftKey(draft)) savedDrafts.set(set.id, draftKey(draft))
+    },
     save: (set: WorkoutSet, draft: LiveSetDraft) =>
       enqueue(set.id, `save:${draftKey(draft)}`, () => saveChangedDraft(set, draft)),
     confirm: (set: WorkoutSet, draft: LiveSetDraft) =>
