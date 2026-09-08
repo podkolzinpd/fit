@@ -19,6 +19,10 @@ export type RemoteTenantSelection =
   | { kind: 'configured'; trainerId: string }
   | { kind: 'smallest-eligible' }
 
+type CandidateAcceptance = (
+  bundle: TenantMigrationBundle,
+) => Promise<boolean>
+
 interface RemoteTenantRehearsalSettings {
   mode: RemoteTenantRehearsalMode
   sourceConfig: PoolConfig
@@ -48,6 +52,7 @@ const STAGE_APPLY_CONFIRMATION = 'APPLY_TENANT_TO_YANDEX_STAGE'
 const STAGE_ARTIFACT_LIMIT_BYTES = 3 * 1024 * 1024
 const RESPONSE_LIMIT_BYTES = 1024 * 1024
 const AUTO_CANDIDATE_LIMIT = 1_000
+const AUTO_STAGE_CONFLICT_LIMIT = 10
 const POSTGRES_SQLSTATE_PATTERN = /^[0-9A-Z]{5}$/
 const STAGE_REJECTION_CODE_PATTERN = /^[a-z0-9_.:-]{1,96}$/
 const SOURCE_TRANSPORT_ERROR_CODES = new Set([
@@ -236,6 +241,7 @@ export async function exportSelectedTenant(
   source: DatabaseClient,
   selection: RemoteTenantSelection,
   now: Date = new Date(),
+  acceptCandidate?: CandidateAcceptance,
 ): Promise<TenantMigrationBundle> {
   if (selection.kind === 'configured') {
     return exportTenant(source, selection.trainerId, now)
@@ -248,12 +254,18 @@ export async function exportSelectedTenant(
     throw new RemoteTenantRehearsalError('candidate_discovery_failed')
   }
 
+  let stageRejectedCandidate = false
   for (const candidate of candidates) {
     if (!UUID_PATTERN.test(candidate.trainer_id)) {
       throw new RemoteTenantRehearsalError('candidate_contract_mismatch')
     }
     try {
-      return await exportTenant(source, candidate.trainer_id, now)
+      const bundle = await exportTenant(source, candidate.trainer_id, now)
+      if (acceptCandidate !== undefined && !await acceptCandidate(bundle)) {
+        stageRejectedCandidate = true
+        continue
+      }
+      return bundle
     } catch (error) {
       if (
         error instanceof TenantMigrationError
@@ -261,6 +273,9 @@ export async function exportSelectedTenant(
       ) continue
       throw error
     }
+  }
+  if (stageRejectedCandidate) {
+    throw new RemoteTenantRehearsalError('stage_candidate_not_found')
   }
   throw new RemoteTenantRehearsalError('candidate_not_found')
 }
@@ -401,6 +416,13 @@ async function requestStage(
   )
 }
 
+export function isStageTenantConflict(error: unknown): boolean {
+  return error instanceof RemoteTenantRehearsalError
+    && error.code.startsWith(
+      'stage_request_failed:409:target_validation_failed:',
+    )
+}
+
 function printBundleSummary(
   bundle: TenantMigrationBundle,
   encryptedBytes: number,
@@ -430,11 +452,50 @@ export async function runRemoteTenantRehearsal(
   const sourcePool = new PgDatabasePool(settings.sourceConfig)
   let sourceConnection: Awaited<ReturnType<PgDatabasePool['connect']>> | undefined
   let bundle: TenantMigrationBundle
+  let automaticDryRun: Readonly<{
+    encryptedBytes: number
+    response: StageTenantMigrationResponse
+  }> | undefined
+  let skippedStageConflicts = 0
   try {
     sourceConnection = await sourcePool.connect()
     bundle = await exportSelectedTenant(
       sourceConnection,
       settings.tenantSelection,
+      new Date(),
+      settings.mode === 'dry-run'
+        && settings.tenantSelection.kind === 'smallest-eligible'
+        ? async (candidate) => {
+            const passphrase = randomBytes(48).toString('base64url')
+            const envelope = await encryptMigrationBundle(candidate, passphrase)
+            const encryptedBytes = Buffer.byteLength(JSON.stringify(envelope))
+            if (encryptedBytes > STAGE_ARTIFACT_LIMIT_BYTES) {
+              throw new RemoteTenantRehearsalError(
+                'artifact_too_large_for_stage',
+              )
+            }
+            try {
+              const response = await requestStage(
+                settings,
+                candidate,
+                envelope,
+                passphrase,
+                false,
+              )
+              automaticDryRun = { encryptedBytes, response }
+              return true
+            } catch (error) {
+              if (!isStageTenantConflict(error)) throw error
+              skippedStageConflicts += 1
+              if (skippedStageConflicts >= AUTO_STAGE_CONFLICT_LIMIT) {
+                throw new RemoteTenantRehearsalError(
+                  'stage_candidate_limit_reached',
+                )
+              }
+              return false
+            }
+          }
+        : undefined,
     )
   } catch (error) {
     if (
@@ -447,6 +508,17 @@ export async function runRemoteTenantRehearsal(
   } finally {
     sourceConnection?.release()
     await sourcePool.end()
+  }
+
+  if (automaticDryRun !== undefined) {
+    printBundleSummary(bundle, automaticDryRun.encryptedBytes)
+    if (skippedStageConflicts > 0) {
+      process.stdout.write(
+        `selection: skipped_stage_conflicts=${skippedStageConflicts}\n`,
+      )
+    }
+    printStageSummary(automaticDryRun.response)
+    return
   }
 
   const passphrase = randomBytes(48).toString('base64url')

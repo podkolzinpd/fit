@@ -5,6 +5,7 @@ import { TenantMigrationError } from './engine.js'
 import {
   buildSupabaseSourceConfig,
   exportSelectedTenant,
+  isStageTenantConflict,
   readSourceDatabaseFailureCode,
   readRemoteTenantRehearsalSettings,
   readStageTenantMigrationRejectionCode,
@@ -207,6 +208,87 @@ describe('automatic source tenant selection', () => {
     )).rejects.toEqual(
       new TenantMigrationError('source_read_failed:public.profiles'),
     )
+  })
+
+  it('skips an eligible tenant rejected by stage and tries the next one', async () => {
+    const query = vi.fn((sql: string) => {
+      if (sql.includes('order by count(*) asc')) {
+        return Promise.resolve([
+          { trainer_id: TRAINER_ID },
+          { trainer_id: SECOND_TRAINER_ID },
+        ])
+      }
+      if (sql.includes('as trainer_exists')) {
+        return Promise.resolve([{
+          trainer_exists: true,
+          client_count: 1,
+          has_shared_membership: false,
+          has_missing_root_membership: false,
+          has_foreign_relationship: false,
+          has_cross_boundary_merge: false,
+          has_pending_push: false,
+          has_foreign_actor: false,
+        }])
+      }
+      return Promise.resolve([])
+    }) as unknown as DatabaseClient['query']
+    const acceptCandidate = vi.fn((bundle: TenantMigrationBundle) =>
+      Promise.resolve(bundle.trainerId === SECOND_TRAINER_ID))
+
+    const bundle = await exportSelectedTenant(
+      { query },
+      { kind: 'smallest-eligible' },
+      new Date('2026-09-07T12:00:00.000Z'),
+      acceptCandidate,
+    )
+
+    expect(bundle.trainerId).toBe(SECOND_TRAINER_ID)
+    expect(acceptCandidate.mock.calls.map(([candidate]) => candidate.trainerId))
+      .toEqual([TRAINER_ID, SECOND_TRAINER_ID])
+  })
+
+  it('reports when every eligible tenant already conflicts in stage', async () => {
+    const query = vi.fn((sql: string) => {
+      if (sql.includes('order by count(*) asc')) {
+        return Promise.resolve([{ trainer_id: TRAINER_ID }])
+      }
+      if (sql.includes('as trainer_exists')) {
+        return Promise.resolve([{
+          trainer_exists: true,
+          client_count: 1,
+          has_shared_membership: false,
+          has_missing_root_membership: false,
+          has_foreign_relationship: false,
+          has_cross_boundary_merge: false,
+          has_pending_push: false,
+          has_foreign_actor: false,
+        }])
+      }
+      return Promise.resolve([])
+    }) as unknown as DatabaseClient['query']
+
+    await expect(exportSelectedTenant(
+      { query },
+      { kind: 'smallest-eligible' },
+      new Date('2026-09-07T12:00:00.000Z'),
+      () => Promise.resolve(false),
+    )).rejects.toEqual(
+      new RemoteTenantRehearsalError('stage_candidate_not_found'),
+    )
+  })
+})
+
+describe('automatic stage candidate selection', () => {
+  it('skips only checksum conflicts caused by an existing target tenant', () => {
+    expect(isStageTenantConflict(new RemoteTenantRehearsalError(
+      'stage_request_failed:409:target_validation_failed:public.profiles',
+    ))).toBe(true)
+    expect(isStageTenantConflict(new RemoteTenantRehearsalError(
+      'stage_request_failed:409:target_import_failed:public.profiles',
+    ))).toBe(false)
+    expect(isStageTenantConflict(new RemoteTenantRehearsalError(
+      'stage_request_failed:503',
+    ))).toBe(false)
   })
 })
 
