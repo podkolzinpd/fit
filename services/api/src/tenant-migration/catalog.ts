@@ -317,7 +317,7 @@ where feedback.user_id in (select id from scope_users)`,
       'row.user_id in (select id from scope_users)',
     ),
     targetRecord: 'public.push_subscriptions',
-    keyColumns: ['user_id'],
+    keyColumns: ['id'],
   },
   {
     name: 'public.notification_preferences',

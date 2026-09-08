@@ -14,7 +14,10 @@ import {
 
 function exportOutput(overrides = new Map()) {
   const rows = [
-    ...PRODUCTION_LIKE_TABLES.map((name) => [name, 1]),
+    ...PRODUCTION_LIKE_TABLES.map((name) => [
+      name,
+      name === 'public.push_subscriptions' ? 2 : 1,
+    ]),
     ...EXPECTED_EMPTY_TABLES.map((name) => [name, 0]),
   ].map(([name, defaultRows]) => (
     `${name}: rows=${overrides.get(name) ?? defaultRows}`
@@ -81,6 +84,16 @@ describe('local tenant rehearsal safety', () => {
     assert.throws(
       () => assertProductionLikeManifest(emptyWorkouts),
       /production_like_table_empty:public\.workouts/u,
+    )
+  })
+
+  test('requires two subscriptions for one user in the rehearsal fixture', () => {
+    const singleDevice = parseExportSummary(
+      exportOutput(new Map([['public.push_subscriptions', 1]])),
+    )
+    assert.throws(
+      () => assertProductionLikeManifest(singleDevice),
+      /multi_device_push_contract_missing/u,
     )
   })
 

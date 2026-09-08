@@ -1094,6 +1094,7 @@ function buildAssistantTurnRunner(error?: Error): {
 function buildPushNotifications(error?: Error): {
   pilotPushNotifications: PilotPushNotifications
   readStatus: ReturnType<typeof vi.fn>
+  hasSubscription: ReturnType<typeof vi.fn>
   upsertSubscription: ReturnType<typeof vi.fn>
   deleteSubscription: ReturnType<typeof vi.fn>
   setPreference: ReturnType<typeof vi.fn>
@@ -1108,17 +1109,20 @@ function buildPushNotifications(error?: Error): {
       workout_scheduled: true,
     },
   }))
+  const hasSubscription = vi.fn(() => result(true))
   const upsertSubscription = vi.fn(() => result(undefined))
   const deleteSubscription = vi.fn(() => result(undefined))
   const setPreference = vi.fn(() => result(undefined))
   return {
     pilotPushNotifications: {
       readStatus,
+      hasSubscription,
       upsertSubscription,
       deleteSubscription,
       setPreference,
     },
     readStatus,
+    hasSubscription,
     upsertSubscription,
     deleteSubscription,
     setPreference,
@@ -2416,6 +2420,31 @@ describe('pilot push notification state', () => {
     })
   })
 
+  it('checks only the current browser endpoint without exposing it in the URL', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/push-notifications/subscription/status',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { endpoint: ' https://push.example/this-device ' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toEqual({ subscribed: true })
+    expect(push.hasSubscription).toHaveBeenCalledWith(
+      sessionToken,
+      'https://push.example/this-device',
+    )
+    expect(response.body).not.toContain('push.example')
+  })
+
   it('rejects malformed subscriptions before invoking the database command', async () => {
     const push = buildPushNotifications()
     const app = buildApp({
@@ -2448,10 +2477,33 @@ describe('pilot push notification state', () => {
       method: 'DELETE',
       url: '/v1/push-notifications/subscription',
       headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { endpoint: 'https://push.example/this-device' },
     })
 
     expect(response.statusCode).toBe(204)
-    expect(push.deleteSubscription).toHaveBeenCalledWith(sessionToken)
+    expect(push.deleteSubscription).toHaveBeenCalledWith(
+      sessionToken,
+      'https://push.example/this-device',
+    )
+  })
+
+  it('does not delete every device when the endpoint body is missing', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/v1/push-notifications/subscription',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(push.deleteSubscription).not.toHaveBeenCalled()
   })
 
   it('sets only a supported explicit preference', async () => {
