@@ -9197,6 +9197,51 @@ Keep product: https://www.gotokeep.com/</aside>
 Продуктовые экраны: origin/main, commit 5996f3f; visual baselines client-home-future-plan, workout-detail-completion и client-body-map-female.</aside>
     </section>
 
+    <section class="slide load-context-slide recovered-material-slide" data-section="Материалы" data-slide-type="feature-overview">
+      <div class="eyebrow">04A · ПЕРСОНАЛЬНЫЕ РЕКОМЕНДАЦИИ</div>
+      <h2>Fit учитывает всю нагрузку и предлагает следующий шаг</h2>
+      <div class="sport-depth">
+        <div>
+          <span>ДЕТАЛЬНО В ПЕРВОЙ ОЧЕРЕДИ</span>
+          <strong>Силовые и фитнес<br>Бег<br>Велосипед<br>Плавание</strong>
+          <p>Структура тренировки, объём, интенсивность, прогресс и следующий план.</p>
+        </div>
+        <div>
+          <span>ПО ОБЩЕЙ МОДЕЛИ НАГРУЗКИ</span>
+          <strong>Функциональные тренировки и HIIT<br>Ходьба и походы<br>Йога, мобильность и растяжка</strong>
+          <p>Длительность, интенсивность, восстановление и место активности в общем плане.</p>
+        </div>
+        <div>
+          <span>БЫСТРАЯ ФИКСАЦИЯ</span>
+          <strong>Футбол, падел, теннис<br>Бокс и единоборства<br>Лыжи, баскетбол и другие виды</strong>
+          <p>Активность попадает в профиль и влияет на рекомендации без отдельного глубокого модуля.</p>
+        </div>
+      </div>
+      <div class="recommendation-context">
+        <span>КОНТЕКСТ РЕКОМЕНДАЦИИ</span>
+        <strong>Сон и восстановление</strong><strong>Пульс и нагрузка</strong><strong>Питание</strong><strong>Цель, история и самочувствие</strong>
+      </div>
+      <div class="recommendation-example">
+        <span>ПРИМЕР</span>
+        <strong>Вчера была интенсивная игра в футбол, нагрузка на ноги выше обычного, а сон короче вашей нормы. Сегодня Fit предлагает верх тела или восстановительное занятие.</strong>
+      </div>
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Показать конечную продуктовую ценность: Fit собирает разрозненные данные о нагрузке и превращает их в понятное следующее действие.
+
+ЧТО ГОВОРИМ
+Мы не строим одинаково глубокий модуль для каждого вида спорта. В первой очереди подробно поддерживаем силовые тренировки и фитнес, бег, велосипед и плавание. Для функциональных занятий, ходьбы, походов, йоги и растяжки используем общую модель нагрузки. Остальные активности можно быстро добавить или импортировать, чтобы они влияли на общий спортивный контекст.
+
+Рекомендация учитывает не только тренировочный факт. При наличии разрешения пользователя Fit использует сон, пульс, восстановление, питание, цель, историю и самочувствие. Пользователь получает объяснимый следующий шаг, а не ещё один экран с данными.
+
+ГРАНИЦЫ
+Fit не ставит медицинские диагнозы. Коммерческое предложение не маскируется под рекомендацию ИИ. Глубина поддержки нового вида спорта увеличивается только после подтверждения спроса и удержания.
+
+[Sources]
+Apple HealthKit, типы данных тренировок, сна и питания: https://developer.apple.com/documentation/healthkit
+Apple Watch, Training Load: https://support.apple.com/en-ie/guide/watch/apde4c07a6cf/watchos
+Strava, поддерживаемые виды спорта: https://support.strava.com/en-us/articles/15402005-supported-sport-types-on-strava</aside>
+    </section>
+
   </main>
 
   <button class="nav nav-prev" id="prev" aria-label="Предыдущий слайд">←</button>
@@ -9211,6 +9256,7 @@ if (monetizationSlide && valueSlide) valueSlide.after(monetizationSlide)
 document.querySelectorAll('.competitor-material-slide').forEach(slide => deck.appendChild(slide))
 document.querySelectorAll('.late-material-slide').forEach(slide => deck.appendChild(slide))
 document.querySelectorAll('.colleague-order-slide').forEach(slide => deck.appendChild(slide))
+document.querySelectorAll('.recovered-material-slide').forEach(slide => deck.appendChild(slide))
 const productFlowSource = document.querySelector('.review-product-flow-v4:not(.colleague-order-slide)')
 if (productFlowSource) {
   productFlowSource.classList.add('review-product-flow-v5')
