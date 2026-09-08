@@ -383,9 +383,10 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.cards .card').first()).toContainText('Болгарский сплит-присед')
   await expect(page.locator('.cards .card').first()).toContainText('45 кг × 9 повт.')
   const personalRecordCard = page.locator('.cards .card').first()
-  await expect(personalRecordCard).toHaveClass(/has-pr/)
-  await expect(personalRecordCard.locator('.workout-pr-badge')).toHaveText('Личный рекорд')
-  await expect(personalRecordCard.locator('[data-icon="record"]')).toBeVisible()
+  // Первая тренировка после правки остаётся точкой отсчёта, не новым PR.
+  await expect(personalRecordCard).not.toHaveClass(/has-pr/)
+  await expect(personalRecordCard.locator('.workout-pr-badge')).toHaveCount(0)
+  await expect(personalRecordCard.locator('[data-icon="record"]')).toHaveCount(0)
   // Только исправленный подтверждённый подход: 45 × 9 = 405 кг.
   await expect(page.locator('.card-meta').first()).toContainText('405 кг')
   await page.locator('.card').first().click()

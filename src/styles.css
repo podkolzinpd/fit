@@ -5425,3 +5425,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-today-identity .voice-action:has(.voice-action-error):not(.voice-action-recording) {
   grid-template-areas:"copy button" "label button" "error error";
 }
+
+/* One factual result shared by Home, Progress and completion. */
+.personal-workout-result { display:grid; gap:8px; min-width:0; }
+.personal-workout-result > p, .personal-workout-result h2 { margin:0; }
+.personal-workout-result h2 { font-size:20px; line-height:1.25; }
+.personal-workout-result > p:not(.eyebrow) { color:var(--muted); }
+.personal-workout-result .actions { flex-wrap:wrap; justify-content:flex-start; gap:12px; }
+.personal-workout-result .actions a { display:inline-flex; align-items:center; min-height:44px; }

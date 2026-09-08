@@ -89,7 +89,7 @@ select results_eq(
   $$values
     ('46000000-0000-4000-8000-000000000012'::uuid, '2026-01-03'::date, 1, 55::numeric, 55::numeric, 0::numeric, 55::numeric, 10, 550::numeric, 55::numeric, 55::numeric, 550::numeric, false, false, true, 3::bigint),
     ('46000000-0000-4000-8000-000000000011'::uuid, '2026-01-02'::date, 1, 55::numeric, 50::numeric, 5::numeric, 55::numeric, 8, 440::numeric, 55::numeric, 55::numeric, 550::numeric, true, true, false, 3::bigint),
-    ('46000000-0000-4000-8000-000000000010'::uuid, '2026-01-01'::date, 2, 50::numeric, null::numeric, null::numeric, 50::numeric, 10, 500::numeric, 55::numeric, 55::numeric, 550::numeric, true, true, true, 3::bigint)$$,
+    ('46000000-0000-4000-8000-000000000010'::uuid, '2026-01-01'::date, 2, 50::numeric, null::numeric, null::numeric, 50::numeric, 10, 500::numeric, 55::numeric, 55::numeric, 550::numeric, false, false, false, 3::bigint)$$,
   'strength progress uses confirmed fact and compares PR only with earlier workouts'
 );
 
@@ -121,7 +121,7 @@ select results_eq(
   $$values
     ('46000000-0000-4000-8000-000000000012'::uuid, 55::numeric, false, true),
     ('46000000-0000-4000-8000-000000000011'::uuid, 55::numeric, true, false),
-    ('46000000-0000-4000-8000-000000000010'::uuid, 50::numeric, true, true)$$,
+    ('46000000-0000-4000-8000-000000000010'::uuid, 50::numeric, false, false)$$,
   'client receives the same result as trainer'
 );
 
@@ -167,7 +167,7 @@ select results_eq(
       '46000000-0000-4000-8000-000000000005', 'squat', 20, null, null
     ) order by completed_at$$,
   $$values
-    ('46000000-0000-4000-8000-000000000010'::uuid, true),
+    ('46000000-0000-4000-8000-000000000010'::uuid, false),
     ('46000000-0000-4000-8000-000000000011'::uuid, false),
     ('46000000-0000-4000-8000-000000000012'::uuid, false)$$,
   'corrected fact deterministically recalculates later PR flags'
@@ -184,7 +184,7 @@ select results_eq(
       '46000000-0000-4000-8000-000000000005', 'squat', 20, null, null
     ) order by completed_at$$,
   $$values
-    ('46000000-0000-4000-8000-000000000011'::uuid, true, true),
+    ('46000000-0000-4000-8000-000000000011'::uuid, false, false),
     ('46000000-0000-4000-8000-000000000012'::uuid, false, true)$$,
   'deleted fact disappears and remaining PR flags are recalculated'
 );
