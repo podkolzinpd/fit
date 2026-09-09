@@ -5524,23 +5524,37 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-body-map-disclosure > .body-progress-map { padding:12px 0 0; border:0; background:transparent; }
 
 /* Client facts remain usable while a dated AI analysis is loading. */
-.progress-identity .progress-story-period { flex-wrap:wrap; }
-.progress-period-dates { flex-basis:100%; margin:0; color:var(--muted); font-size:var(--type-caption-size); }
+.progress-identity .progress-story-period { display:grid; min-height:0; align-items:stretch; gap:10px; padding:16px 18px; }
+.progress-identity .progress-story-period .ai-progress-header { padding:0; }
+.progress-identity .progress-story-period .ai-progress-title h2 { font-size:16px; font-weight:600; letter-spacing:-.01em; text-transform:none; }
+.progress-identity .progress-story-period .ai-progress-periods { width:100%; margin:0; }
+.progress-identity .progress-story-period .ai-progress-periods.period-count-1 { width:100%; }
+.progress-period-dates { margin:0; color:var(--muted); font-size:var(--type-caption-size); }
+.progress-analysis-preview { display:grid; gap:8px; padding-top:12px; border-top:1px solid var(--border); }
+.progress-analysis-preview-head { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:4px 12px; }
+.progress-analysis-preview-head h3 { margin:0; font-size:16px; font-weight:600; }
+.progress-analysis-preview-head span { color:var(--muted); font-size:var(--type-caption-size); }
+.progress-analysis-preview p { margin:0; }
+.progress-analysis-update { color:var(--success-fg); }
+.progress-analysis-actions { display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px; }
+.progress-analysis-actions .secondary { min-height:44px; padding:10px 14px; }
+.progress-analysis-actions .link { min-height:44px; padding:10px 0; }
 .progress-identity .client-progress-goal-story.standalone { border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface); }
-.client-current-week, .period-exercise-results, .client-ai-analysis { display:grid; gap:10px; }
-.client-current-week h3, .period-exercise-results h3, .client-ai-analysis h3, .period-exercise-result h4 { margin:0; }
-.client-current-week p, .period-exercise-results p, .client-ai-analysis p { margin:0; }
+.client-current-week, .period-exercise-results { display:grid; gap:10px; }
+.client-current-week h3, .period-exercise-results h3, .period-exercise-result h4 { margin:0; }
+.client-current-week p, .period-exercise-results p { margin:0; }
 .period-exercise-result { display:grid; gap:8px; padding:14px 0; border-top:1px solid var(--border); }
 .period-exercise-result header { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:6px; }
 .period-exercise-result header span { color:var(--muted); font-size:var(--type-caption-size); }
 .period-exercise-result .actions { flex-wrap:wrap; }
 .client-progress-card > details > summary, .client-progress-card .goal-criteria-progress-list summary,
 .client-progress-card .period-exercise-results summary, .client-progress-card .measurement-story-details summary,
-.client-progress-card .period-exercise-result .link, .client-ai-analysis .link { min-height:44px; padding:10px 0; cursor:pointer; }
+.client-progress-card .period-exercise-result .link { min-height:44px; padding:10px 0; cursor:pointer; }
 .client-progress-card > details[open] > summary { margin-bottom:12px; }
 .measurement-story-details .measurement-story-facts { margin-top:12px; }
 .progress-identity .period-rhythm.card { display:block; }
 .progress-identity .period-rhythm .client-progress-regularity-story { padding:0; border:0; border-radius:0; background:transparent; }
+.progress-identity .client-progress-card > .running-progress-card { margin:0; }
 
 .client-results-center.card, .weekly-training-load.card { display:block; }
 .client-results-center > summary, .weekly-training-load > summary { font-weight:600; }
