@@ -297,11 +297,11 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
     </header>
     {mode === 'load' && loadError
       ? <div className="body-progress-empty" role="alert">
-        <span>Не удалось собрать нагрузку по тренировкам.</span>
+        <span>Не удалось загрузить карту.</span>
         <button type="button" className="link" onClick={onLoadRetry}>Попробовать ещё раз</button>
       </div>
       : mode === 'load' && loadLoading
-      ? <p className="body-progress-empty" role="status">Собираем нагрузку по тренировкам…</p>
+      ? <p className="body-progress-empty" role="status">Загружаем карту…</p>
       : <MapPanel
           data={data}
           selected={selected}
@@ -313,7 +313,11 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
           onSelect={(region) => setSelectedGroup(region.group)}
           onShowDetails={() => setDetailsOpen(true)}
         />}
-    {mode === 'load' && !loadLoading && !loadError && load.coverage && <p className="body-progress-empty">На карте {load.coverage.mappedSets} из {load.coverage.totalSets} подтверждённых подходов. Кардио: {load.coverage.cardioSets}; без определённой зоны: {load.coverage.unknownSets}. Это распределение работы, не рост или восстановление мышц.</p>}
+    {mode === 'load' && !loadLoading && !loadError && load.coverage && <p className="body-progress-empty">
+      Показано {load.coverage.mappedSets} из {load.coverage.totalSets} подходов
+      {load.coverage.cardioSets > 0 && ` · Кардио: ${load.coverage.cardioSets}`}
+      {load.coverage.unknownSets > 0 && ` · Без группы: ${load.coverage.unknownSets}`}
+    </p>}
     {detailsOpen && selected && <BodyDetailsSheet region={selected} onClose={() => setDetailsOpen(false)} />}
   </section>
 }

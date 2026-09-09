@@ -69,11 +69,11 @@ describe('personal workout facts', () => {
     const props = { workouts: data }
     const ui = (extra = {}) => createElement(MemoryRouter, {}, createElement(PersonalWorkoutResult, { ...props, ...extra }))
     const view = render(ui())
-    expect(screen.getByRole('link', { name: 'Эта тренировка' })).toHaveAttribute('href', '/workouts/b')
-    expect(screen.getByRole('link', { name: 'Предыдущий результат' })).toHaveAttribute('href', '/workouts/a')
+    expect(screen.getByRole('link', { name: 'Открыть' })).toHaveAttribute('href', '/workouts/b')
+    expect(screen.getByRole('link', { name: 'Сравнить' })).toHaveAttribute('href', '/workouts/a')
     let retried = false
     view.rerender(ui({ error: new Error('offline'), onRetry: () => { retried = true } }))
-    expect(screen.queryByText('Личный рекорд по записям')).toBeNull()
+    expect(screen.queryByText('Личный рекорд')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
     expect(retried).toBe(true)
   })

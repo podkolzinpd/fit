@@ -41,7 +41,6 @@ function VolumeExplanation({ result }: { result: WorkoutResult }) {
       <div><dt>Всего повторов</dt><dd>{change.before.reps}{arrow}{change.after.reps}</dd></div>
       <div><dt>Веса в подходах</dt><dd>{weightRange(change.before)}{arrow}{weightRange(change.after)} кг</dd></div></dl>
     <div className="volume-source-sets">{([{ label: 'Предыдущая запись', data: change.before }, { label: 'Эта запись', data: change.after }] as const).map(({ label, data }) => <div key={label}><strong>{label}</strong><ul>{data.sets.map((set, index) => <li key={index}>{resultNumber(set.weight)} кг × {set.reps} повт.</li>)}</ul><p>Итого: {resultNumber(data.volume)} кг</p></div>)}</div>
-    <p className="muted">Объём — сумма веса × повторов подтверждённых подходов. Его изменение не равно изменению силы.</p>
   </details>
 }
 
