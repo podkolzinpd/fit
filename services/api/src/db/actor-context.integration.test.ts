@@ -1670,6 +1670,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
                 restBetweenRoundsSec: 90,
                 restBetweenSetsSec: 90,
                 trainerComment: 'Проверка весов и повторов',
+                clientNote: null,
                 sets: [
                   {
                     id: smokeIds.strengthSetId,
@@ -1712,6 +1713,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
                 restBetweenRoundsSec: 90,
                 restBetweenSetsSec: 60,
                 trainerComment: 'Проверка времени и дистанции',
+                clientNote: null,
                 sets: [
                   {
                     id: smokeIds.runningSetId,
@@ -3008,7 +3010,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             6,
             LIVE_STRUCTURE_OPERATION_IDS.clientComment,
           ),
-        )).rejects.toMatchObject({ failure: 'forbidden' })
+        )).resolves.toEqual({ resourceId: ROOT_WORKOUT_EXERCISE_ID, version: 7, replayed: false })
         await expect(withActorTransaction(
           runtimePool,
           ACTOR_ID,
@@ -3016,14 +3018,19 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             client,
             ROOT_WORKOUT_EXERCISE_ID,
             'Держи спину прямо',
-            6,
+            7,
             LIVE_STRUCTURE_OPERATION_IDS.comment,
           ),
         )).resolves.toEqual({
           resourceId: ROOT_WORKOUT_EXERCISE_ID,
-          version: 7,
+          version: 8,
           replayed: false,
         })
+
+        const noteRows = await ownerPool.query<{ client_note: string; trainer_comment: string }>(
+          'select client_note, trainer_comment from public.workout_exercises where id = $1', [ROOT_WORKOUT_EXERCISE_ID],
+        )
+        expect(noteRows.rows[0]).toEqual({ client_note: 'Клиент не меняет комментарий тренера', trainer_comment: 'Держи спину прямо' })
 
         const appendedBlockRows = await ownerPool.query<{ block_id: string }>(
           'select block_id from public.workout_exercises where id = $1',
@@ -3041,12 +3048,12 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             ROOT_WORKOUT_ID,
             appendedBlockId,
             -1,
-            7,
+            8,
             LIVE_STRUCTURE_OPERATION_IDS.reorder,
           ),
         )).resolves.toEqual({
           resourceId: appendedBlockId,
-          version: 8,
+          version: 9,
           replayed: false,
         })
         await expect(withActorTransaction(
@@ -3057,12 +3064,12 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             ROOT_WORKOUT_ID,
             appendedBlockId,
             -1,
-            7,
+            8,
             LIVE_STRUCTURE_OPERATION_IDS.reorder,
           ),
         )).resolves.toEqual({
           resourceId: appendedBlockId,
-          version: 8,
+          version: 9,
           replayed: true,
         })
 
@@ -3133,7 +3140,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           (client) => removeLiveSet(
             client,
             onlyAppendedSetId,
-            8,
+            9,
             LIVE_STRUCTURE_OPERATION_IDS.lastSet,
           ),
         )).rejects.toMatchObject({ failure: 'invalid' })
@@ -3197,7 +3204,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           [[ACTOR_ID, OTHER_ACTOR_ID], operationIds],
         )
         expect(receiptRows.rows).toEqual([{
-          count: 6,
+          count: 7,
           resource_ids_present: true,
         }])
         const deleteOperation = 'd6740000-0000-4000-8000-000000000001'
@@ -3214,11 +3221,11 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 7, deleteOperation),
         )).rejects.toMatchObject({ failure: 'conflict' })
         await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
-          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 8, deleteOperation),
-        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 9, replayed: false })
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 9, deleteOperation),
+        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 10, replayed: false })
         await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
-          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 8, deleteOperation),
-        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 9, replayed: true })
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 9, deleteOperation),
+        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 10, replayed: true })
         const remaining = await ownerPool.query<{ id: string }>(
           'select id from public.workout_exercises where workout_id=$1', [ROOT_WORKOUT_ID],
         )

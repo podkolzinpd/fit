@@ -5529,3 +5529,25 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .progress-identity .period-exercise-results:has(.client-results-center[open]) > p { display:none; }
 .progress-analysis-shortcut { min-height:44px; display:inline-flex; align-items:center; }
 #ai-analysis, #results, #body-map { scroll-margin-top:20px; }
+
+.live-timer-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(148px, 1fr); align-items: stretch; gap: 8px; }
+.live-identity .live-timer-toolbar .live-timer { margin: 0; padding: 8px 12px; min-height: 56px; font-size: 24px; }
+.live-rest-trigger { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 56px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.live-rest-trigger svg { width: 20px; height: 20px; flex: none; }
+.live-timer-toolbar .coachmark-anchor, .live-timer-toolbar .live-rest-trigger { width: 100%; }
+.live-rest-sheet { display: grid; gap: 16px; }
+.live-rest-sheet button { min-height: 48px; }
+.live-rest-sheet input { min-height: 48px; font-size: 16px; }
+.live-rest-sheet .picker-close { width: 48px; height: 48px; }
+.live-rest-sheet .rest-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.live-rest-sheet .rest-controls > button { flex: 1; }
+.live-rest-countdown { margin: 0; text-align: center; font-size: 40px; font-variant-numeric: tabular-nums; }
+.live-set-plan-caption { display: block; min-height: 20px; padding-left: 32px; color: var(--secondary-label-fg); font-size: 12px; }
+.live-exercise-rest > button { min-height: 44px; padding: 8px 0; }
+.live-exercise-rest label { display: grid; gap: 6px; font-size: 14px; }
+.live-note-preview { display: block; color: var(--secondary-label-fg); font-weight: 400; overflow-wrap: anywhere; white-space: pre-wrap; }
+.live-trainer-cue { color: var(--secondary-label-fg); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.live-identity .live-previous-result { min-height: 20px; }
+.live-rest-trigger.resting { color: var(--warning-fg); }
+.live-identity .live-workout-page .live-set-table > .live-set,
+.live-identity .live-workout-page .circuit-round .live-set { border: 0; }
