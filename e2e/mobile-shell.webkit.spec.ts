@@ -367,18 +367,19 @@ test('iPhone: тренер назначает интервалы, спортсм
     await expect(client.locator('.block-badge')).toContainText('Интервалы · 6 кр.')
     await client.getByRole('button', { name: 'Начать тренировку' }).click()
     await expect(client.locator('.live-pinned .circuit-counter')).toHaveText('Круг 1 из 6')
+    await client.keyboard.press('Escape')
     await expectNoHorizontalOverflow(client)
     await client.screenshot({ path: testInfo.outputPath('running-interval-live.png'), fullPage: true })
 
     for (let round = 1; round <= 6; round += 1) {
       await expect(client.locator('.live-pinned .circuit-counter')).toHaveText(`Круг ${round} из 6`)
       for (let segment = 0; segment < 2; segment += 1) {
-        const nextConfirm = client.locator('.circuit-round.current button.live-set-check:not(:disabled)').first()
+        const nextConfirm = client.locator('.circuit-round.current .live-set:not(.confirmed) button.live-set-check:not(:disabled)').first()
         await expect(nextConfirm).toBeVisible()
         await nextConfirm.click()
-        await expect(client.getByText(/^Отдых/)).toHaveCount(0)
+        await expect(client.locator('.live-rest-trigger')).not.toHaveClass(/resting/)
         if (segment === 0) {
-          await expect(client.locator('.circuit-round.current button.live-set-check:not(:disabled)')).toHaveCount(1)
+          await expect(client.locator('.circuit-round.current .live-set:not(.confirmed) button.live-set-check:not(:disabled)')).toHaveCount(1)
         } else if (round < 6) {
           await expect(client.locator('.live-pinned .circuit-counter')).toHaveText(`Круг ${round + 1} из 6`, { timeout: 10_000 })
         } else {

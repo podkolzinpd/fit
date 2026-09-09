@@ -74,7 +74,7 @@ export function LiveRestTimer({ deadline, onChange }: {
           <div className="rest-controls"><button type="button" className="secondary" aria-label="Минус 15 секунд" onClick={() => shift(-15)}>−15 сек</button><button type="button" className="secondary" aria-label="Плюс 15 секунд" onClick={() => shift(15)}>+15 сек</button></div>
           <button type="button" className="secondary" aria-label="Пропустить" onClick={() => { onChange(null); setOpen(false) }}>Пропустить отдых</button>
         </> : <>
-          <label>Время отдыха, сек<input type="number" inputMode="numeric" min="1" max="3600" value={seconds} onChange={(event) => setSeconds(event.target.value)} /></label>
+          <label className="field">Время отдыха, сек<input type="number" inputMode="numeric" min="1" max="3600" value={seconds} onChange={(event) => setSeconds(event.target.value)} /></label>
           <div className="rest-controls">{[60, 90, 120, 180].map((value) => <button key={value} type="button" className="secondary" onClick={() => setSeconds(String(value))}>{formatRest(value)}</button>)}</div>
           <button type="button" disabled={!valid} onClick={() => { onChange(Date.now() + Number(seconds) * 1000); setOpen(false) }}>Начать отдых</button>
         </>}
