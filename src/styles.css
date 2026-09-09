@@ -2959,6 +2959,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .auth-flow-identity .auth-links > * { min-height:44px; display:flex; align-items:center; padding:0 4px; color:var(--fg); font-size:14px; font-weight:500 }
 .auth-flow-identity .auth-links .link { border:0; background:transparent; box-shadow:none}
 .auth-flow-identity .auth-back-link { min-height:44px; display:inline-flex; align-items:center; color:var(--fg); font-size:14px; font-weight:500 }
+.auth-flow-identity .auth-consent { margin:-2px 2px 0; color:var(--secondary-label-fg); font-size:12px; line-height:1.45 }
+.auth-flow-identity .auth-consent a { color:var(--fg) }
+.auth-flow-identity .auth-legal-links { display:flex; flex-wrap:wrap; gap:8px 16px; padding:2px 4px 0 }
+.auth-flow-identity .auth-legal-links a { min-height:36px; display:inline-flex; align-items:center; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .auth-flow-identity .error,
 .auth-flow-identity .success { margin:0; padding:12px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); font-size:12px; font-weight:500; line-height:1.4 }
 .auth-flow-identity .error { color:var(--danger) }
@@ -2971,6 +2975,58 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .auth-flow-identity .yandex-pilot-client p,
 .auth-flow-identity .yandex-pilot-connection p,
 .auth-flow-identity .yandex-pilot-training p { color:var(--muted); font-size:12px; font-weight:400 }
+
+/* Public legal documents and the one-time acceptance gate use the same quiet
+   identity as auth, without the product tab bar. */
+.legal-screen {
+  width:min(calc(100% - 32px), 760px);
+  min-height:calc(100dvh - 32px);
+  display:grid;
+  align-content:start;
+  gap:16px;
+  margin:16px auto;
+  padding:max(24px, calc(env(safe-area-inset-top) + 16px)) 24px max(24px, calc(env(safe-area-inset-bottom) + 16px));
+  border:1px solid var(--border);
+  border-radius:18px;
+  background:var(--bg);
+  color:var(--fg);
+}
+.legal-header { display:grid; grid-template-columns:44px minmax(0,1fr); align-items:start; gap:12px }
+.legal-header .page-back { font-size:20px; font-weight:500 }
+.legal-header > div { display:grid; gap:4px }
+.legal-header .brand { width:44px; height:44px; display:grid; place-items:center; margin-bottom:10px; border-radius:12px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:600 }
+.legal-header h1 { margin:0; font-size:28px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.legal-header p { margin:0; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.legal-document { display:grid; gap:12px; padding:22px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.legal-document h2 { margin:12px 0 0; font-size:18px; font-weight:600; line-height:1.25; letter-spacing:-.012em }
+.legal-document p, .legal-document li { color:var(--secondary-label-fg); font-size:14px; line-height:1.55 }
+.legal-document p { margin:0 }
+.legal-document ul { display:grid; gap:7px; margin:0; padding-left:20px }
+.legal-document a, .legal-footer-links a { color:var(--fg); font-weight:500 }
+.legal-footer-links { display:flex; flex-wrap:wrap; gap:8px 18px; padding:4px 2px }
+.legal-footer-links a { min-height:40px; display:inline-flex; align-items:center; font-size:12px }
+.legal-document .state-panel { border-color:var(--border); border-radius:16px; background:var(--surface-elevated); box-shadow:none }
+.legal-delete-card { display:grid; gap:12px; padding:18px; border:1px solid var(--border); border-radius:16px; background:var(--surface-elevated) }
+.legal-delete-card h2 { margin:0 }
+.legal-delete-card button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.legal-screen .error { margin:0; color:var(--danger); font-size:14px }
+
+.legal-gate { min-height:100dvh; display:grid; place-content:center; gap:16px; padding:24px; background:var(--bg); color:var(--fg) }
+.legal-gate > .brand { width:52px; height:52px; display:grid; place-items:center; justify-self:center; border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:16px; font-weight:600 }
+.legal-gate-card { width:min(100%, 420px); display:grid; gap:14px; padding:22px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.legal-gate-card .eyebrow { margin:0; color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
+.legal-gate-card h1 { margin:0; font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
+.legal-gate-card > p:not(.eyebrow):not(.error) { margin:0; color:var(--secondary-label-fg); font-size:14px; line-height:1.45 }
+.legal-gate-links { display:grid; gap:8px }
+.legal-gate-links a { min-height:44px; display:flex; align-items:center; padding:0 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--fg); font-size:14px; font-weight:500 }
+.legal-gate-card > button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
+.legal-gate-card .error { margin:0; color:var(--danger); font-size:12px; line-height:1.4 }
+
+@media (max-width: 480px) {
+  .legal-screen { width:100%; min-height:100dvh; margin:0; padding-inline:16px; border:0; border-radius:0 }
+  .legal-header h1 { font-size:24px }
+  .legal-document { padding:18px }
+}
 
 .auth-join-identity { border-color:var(--frame-border); background:var(--bg); box-shadow:none}
 .auth-join-identity .content { background:var(--bg) }

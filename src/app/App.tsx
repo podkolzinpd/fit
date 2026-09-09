@@ -11,6 +11,7 @@ import { ProgressPage } from '../features/progress'
 import { ProfilePage } from '../features/profile'
 import { YandexAssistantRoute } from '../features/assistant'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
+import { AccountDeletionPage, LegalAcceptanceGate, PrivacyPage, TermsPage } from '../features/legal'
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 
 function Protected() {
@@ -19,7 +20,7 @@ function Protected() {
   if (loading) return <main className={systemStateClass}>Восстанавливаем сессию…</main>
   if (!actor) return <Navigate to="/auth" state={{ from: `${location.pathname}${location.search}` }} replace />
   if (error) return <main className={`${systemStateClass} error`}>{error}</main>
-  return <Outlet />
+  return <LegalAcceptanceGate><Outlet /></LegalAcceptanceGate>
 }
 
 function TrainerOnly() {
@@ -55,6 +56,9 @@ const router = createBrowserRouter([
   { path: '/auth/callback', element: <AuthCallbackPage /> },
   { path: '/auth/yandex/callback', element: <YandexPilotCallbackPage /> },
   { path: '/auth/yandex/session', element: <YandexAppSessionPage /> },
+  { path: '/legal/terms', element: <TermsPage /> },
+  { path: '/legal/privacy', element: <PrivacyPage /> },
+  { path: '/legal/delete-account', element: <AccountDeletionPage /> },
   { element: <Protected />, children: [{ element: <AppLayout />, children: [
     { index: true, element: <Home /> },
     { path: '/join', element: <JoinPage /> },
