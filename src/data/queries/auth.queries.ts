@@ -12,8 +12,23 @@ export const authQueries = {
     }),
   clearLocalSession: () => supabase.auth.signOut({ scope: 'local' }),
   signIn: (email: string, password: string) => supabase.auth.signInWithPassword({ email, password }),
-  signUp: (email: string, password: string, firstName: string, role: 'trainer' | 'client') =>
-    supabase.auth.signUp({ email, password, options: { data: { first_name: firstName, account_role: role } } }),
+  signUp: (
+    email: string,
+    password: string,
+    firstName: string,
+    role: 'trainer' | 'client',
+    legal: { termsVersion: string; privacyVersion: string; acceptedAt: string },
+  ) => supabase.auth.signUp({
+    email,
+    password,
+    options: { data: {
+      first_name: firstName,
+      account_role: role,
+      legal_terms_version: legal.termsVersion,
+      legal_privacy_version: legal.privacyVersion,
+      legal_accepted_at: legal.acceptedAt,
+    } },
+  }),
   signInWithGoogle: (redirectTo: string) => supabase.auth.signInWithOAuth({
     provider: 'google', options: { redirectTo },
   }),

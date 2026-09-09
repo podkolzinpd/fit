@@ -22,6 +22,7 @@ import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme 
 import { ProfileIcon } from '../../shared/icons'
 import { AsyncView, Field, StatePanel } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
+import { LEGAL_PATHS } from '../../shared/legal'
 import {
   clearPendingYandexAuthorization,
   consumeYandexAuthorizationCallback,
@@ -107,7 +108,8 @@ export function AuthPage() {
       {error && <p className="error" role="alert">{error}</p>}
       <button className="primary" disabled={busy} aria-busy={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
     </form>
-    <button className="secondary auth-google" onClick={() => void authRepository.signInWithGoogle(mode === 'register' ? role : 'trainer')}>Продолжить с Google</button>
+    {mode === 'register' && <p className="auth-consent">Создавая аккаунт, вы принимаете <Link to={LEGAL_PATHS.terms}>Условия использования</Link> и <Link to={LEGAL_PATHS.privacy}>Политику конфиденциальности</Link>.</p>}
+    {mode === 'login' && <button className="secondary auth-google" onClick={() => void authRepository.signInWithGoogle()}>Вход через Google</button>}
     {(yandexAppSessionConfig ?? yandexPilotConfig) && <button className="secondary auth-yandex" disabled={yandexBusy} onClick={() => {
       setError(null); setYandexBusy(true)
       const redirectUri = `${window.location.origin}/auth/yandex/callback`
@@ -129,6 +131,7 @@ export function AuthPage() {
       <button className="secondary" type="button" onClick={() => void yandexAppSession.retry()}>Повторить проверку</button>
     </div>}
     <div className="auth-links"><button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Создать аккаунт' : 'У меня есть аккаунт'}</button>{mode === 'login' && <Link to="/auth/forgot">Забыли пароль?</Link>}</div>
+    <nav className="auth-legal-links" aria-label="Юридическая информация"><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Конфиденциальность</Link></nav>
   </AuthIdentityScreen>
 }
 

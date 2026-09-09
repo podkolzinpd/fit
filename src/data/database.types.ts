@@ -1,4 +1,4 @@
-// schema-sha256: 50b648f7f2c9f8374083c98048ac0f30e7ae2678a53cce5c6800981db7bcdd22
+// schema-sha256: 25a0a1ff8e7b04b22c3476b30e0447c5770130fcd79f17799dd152286ccd601c
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -56,6 +56,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_requests: {
+        Row: {
+          cancelled_at: string | null
+          completed_at: string | null
+          id: string
+          requested_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          id?: string
+          requested_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          id?: string
+          requested_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_feedback: {
         Row: {
           account_role: string
@@ -1349,14 +1376,41 @@ export type Database = {
         }
         Relationships: []
       }
+      user_legal_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          privacy_version: string
+          source: string
+          terms_version: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          privacy_version: string
+          source: string
+          terms_version: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          privacy_version?: string
+          source?: string
+          terms_version?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workout_exercises: {
         Row: {
-          client_note: string | null
           block_id: string
           block_preset: string
           block_rounds: number
           block_type: string
           client_id: string
+          client_note: string | null
           created_at: string
           custom_exercise_id: string | null
           exercise_name: string
@@ -1377,11 +1431,11 @@ export type Database = {
         }
         Insert: {
           block_id?: string
-          client_note?: string | null
           block_preset?: string
           block_rounds?: number
           block_type?: string
           client_id: string
+          client_note?: string | null
           created_at?: string
           custom_exercise_id?: string | null
           exercise_name: string
@@ -1402,11 +1456,11 @@ export type Database = {
         }
         Update: {
           block_id?: string
-          client_note?: string | null
           block_preset?: string
           block_rounds?: number
           block_type?: string
           client_id?: string
+          client_note?: string | null
           created_at?: string
           custom_exercise_id?: string | null
           exercise_name?: string
@@ -1727,6 +1781,7 @@ export type Database = {
       }
       can_access_client: { Args: { p_client_id: string }; Returns: boolean }
       can_read_workout: { Args: { p_workout_id: string }; Returns: boolean }
+      cancel_account_deletion_request: { Args: never; Returns: boolean }
       cancel_assistant_action: {
         Args: { p_action_id: string; p_expected_version?: number }
         Returns: Json
@@ -2050,6 +2105,7 @@ export type Database = {
         }
         Returns: number
       }
+      request_account_deletion: { Args: never; Returns: string }
       reschedule_workout: {
         Args: {
           p_expected_version: number

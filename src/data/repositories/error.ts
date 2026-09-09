@@ -41,7 +41,7 @@ export function repositoryError(error: unknown): RepositoryError {
     return new RepositoryError('email_address_invalid', 'Проверьте email: адрес выглядит некорректно или не поддерживается.')
   }
   if (normalizedCode === 'signup_disabled' || normalizedCode === 'email_provider_disabled') {
-    return new RepositoryError('signup_disabled', 'Регистрация по email сейчас недоступна. Попробуйте войти через Google.')
+    return new RepositoryError('signup_disabled', 'Регистрация по email сейчас недоступна. Попробуйте позже.')
   }
   if (normalizedMessage.includes('workout_sets_rpe_valid')) {
     return new RepositoryError(code, 'В одном из подходов указано некорректное RPE. Выберите значение от 6 до 10 с шагом 0,5.')
