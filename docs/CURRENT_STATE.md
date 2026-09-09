@@ -105,7 +105,7 @@
 - YAFIT-488: SQL/RLS проверяют версии согласий и изоляцию заявок. Публичные
   документы описывают фактические метрики, push, аналитику и Yandex Cloud AI;
   prompt, matching, fallback, сохранение сводок и SpeechKit не менялись.
-- Полный check: frontend 1322, API 364 (+30 skipped), infra 112; lint/typecheck/build и проверки DB types/iOS permissions пройдены. Все 1014 SQL/RLS-тестов успешны. Auth и legal e2e прошли в Chromium и iPhone WebKit; visual входа 390/430/1440 не изменился.
+- Полный check: frontend 1322, API 364 (+30 skipped), infra 112; lint/typecheck/build и проверки DB types/iOS permissions пройдены. Все 1014 SQL/RLS-тестов успешны. Auth и legal e2e прошли в Chromium и iPhone WebKit; Linux-эталон регистрации 390 обновлён по проверенному CI-снимку, visual 430/1440 уложился в допуск.
 - Remote audit `34229105217` выбрал cohort: 1 клиент, 5 строк в 28 таблицах. Dry-run `34244770314` безопасно откатил 10 stale stage cohorts; configured cohort остаётся пустым.
 ## Ближайший порядок
 1. Открыть и слить PR YAFIT-488, проверить production и свежую iOS-сборку; Android проверяется как установленное PWA в Chromium.
