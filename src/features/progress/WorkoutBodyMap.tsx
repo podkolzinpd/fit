@@ -3,7 +3,6 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import type { Gender, Workout } from '../../shared/domain'
 import { formatLocalDate, localDate, type LocalDate } from '../../shared/local-date'
-import { Coachmark } from '../../shared/ui'
 import { loadBodyMap, setCountLabel, type BodyMapZone, type BodyProgressSummary } from './body-progress-map'
 import { MapPanel, TrainingBodyProgressMap } from './ClientBodyProgressMap'
 import { bodyZoneSides, type BodyFigureSide } from './body-progress-geometry'
@@ -45,28 +44,30 @@ export function WorkoutLoadMap({ workout, gender = null, compact = false, zone, 
     const nextRegion = data.regions.find((region) => bodyZoneSides(variant, region.group).includes(next))
     if (nextRegion) select(nextRegion.group)
   }
-  const selectedDetails = selected && <div className="workout-load-map-selected" role="status">
-    <strong>{compact ? setCountLabel(selected.setCount) : selected.label}</strong>
-    <p>{selected.percent}% подходов с определённой зоной.</p>
-    {!compact && <><p>{selected.primaryDetail}</p><ul>{selected.details.map((detail) => <li key={detail}>{detail}</li>)}</ul></>}
+  const selectedDetails = !compact && selected && <div className="workout-load-map-selected" role="status">
+    <strong>{selected.label}</strong>
+    <p>{selected.primaryDetail}</p><ul>{selected.details.map((detail) => <li key={detail}>{detail}</li>)}</ul>
   </div>
+  const coverageNotes = [
+    data.coverage.cardioSets ? `Кардио: ${setCountLabel(data.coverage.cardioSets)}` : '',
+    data.coverage.unknownSets ? `Без группы: ${setCountLabel(data.coverage.unknownSets)}` : '',
+  ].filter(Boolean).join(' · ')
   return <section className={`workout-load-map${compact ? ' workout-load-map-compact' : ''}`} aria-label="Распределение подходов">
-    {compact ? <Coachmark id="home-body-map-2026-09" userId={actor?.userId} title="Карта теперь на главном" description="Выберите зону и посмотрите, какие подходы пришлись на неё."><h3>Куда пришлась нагрузка</h3></Coachmark> : <h3>Куда пришлась нагрузка</h3>}
-    <p className="muted">Подтверждённые подходы по основным зонам.</p>
-    {zone && !data.regions.some((region) => region.group === zone) && <p role="status">В выбранной зоне больше нет подтверждённых подходов. Ниже показана актуальная карта этой тренировки.</p>}
+    <h3>Распределение подходов</h3>
+    <p className="muted">Всего {setCountLabel(data.coverage.mappedSets)}</p>
+    {zone && !data.regions.some((region) => region.group === zone) && <p role="status">Для этой зоны больше нет подходов.</p>}
     {data.regions.length > 0 && <div className="workout-load-map-layout">
       <MapPanel data={data} selected={selected} insightCandidates={[]} variant={variant} side={side} discovering={false}
         onSideChange={changeSide} onSelect={(region) => select(region.group)} onShowDetails={() => undefined} hideDetail decorative={compact} />
       <div className="workout-load-map-zones" aria-label="Выбрать зону">
         {(compact ? data.regions.slice(0, 3) : data.regions).map(zoneButton)}
-        {compact && data.regions.length > 3 && <details><summary>Ещё зоны · {data.regions.length - 3}</summary>{data.regions.slice(3).map(zoneButton)}</details>}
-        {compact && selectedDetails}
+        {compact && data.regions.length > 3 && <details><summary>Все мышцы</summary>{data.regions.slice(3).map(zoneButton)}</details>}
       </div>
     </div>}
     {!compact && selectedDetails}
-    <p className="muted">На карте: {setCountLabel(data.coverage.mappedSets)}. {data.coverage.cardioSets ? `Записи кардио: ${data.coverage.cardioSets}. ` : ''}{data.coverage.unknownSets ? `Без определённой зоны: ${setCountLabel(data.coverage.unknownSets)}. ` : ''}{!data.coverage.totalSets ? 'В этой тренировке пока нет подтверждённых подходов. ' : ''}Карта показывает распределение работы, а не рост или восстановление мышц.</p>
-    {compact ? <Link className="link" to={workoutMapLink(workout, selected?.group)}>Разобрать нагрузку</Link>
-      : <Link className="link" to={`/workouts/${workout.id}`} state={{ returnTo: location.pathname + location.search + '#body-map' }}>Открыть исходную тренировку</Link>}
+    {!data.coverage.totalSets ? <p className="muted">Нет выполненных подходов.</p> : coverageNotes && <p className="muted">{coverageNotes}</p>}
+    {compact ? <Link className="link" to={workoutMapLink(workout, selected?.group)}>Подробнее</Link>
+      : <Link className="link" to={`/workouts/${workout.id}`} state={{ returnTo: location.pathname + location.search + '#body-map' }}>Открыть тренировку</Link>}
   </section>
 }
 

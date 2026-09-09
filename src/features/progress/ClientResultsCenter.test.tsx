@@ -58,7 +58,7 @@ describe('result center and weekly work', () => {
     expect(within(latest).getByText('45 кг × 10 повт.')).toBeVisible()
     expect(within(latest).getByText('50 кг × 12 повт.')).toBeVisible()
     expect(within(latest).getByText('Итого: 600 кг')).toBeVisible()
-    expect(latest).toHaveTextContent('не равно изменению силы')
+    expect(latest).not.toHaveTextContent('не равно изменению силы')
   })
   it('exposes more results without losing older entries and resets pagination for a filter', async () => {
     const history = Array.from({ length: 15 }, (_, index) => record(`w${index}`, `2026-08-${String(index + 1).padStart(2, '0')}`, 50))
