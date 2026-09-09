@@ -210,3 +210,16 @@ select
 from public.client_training_summaries summary
 where summary.client_id = '11111111-1111-4111-8111-111111111111'
 on conflict (client_id, period_start, period_end) do nothing;
+
+-- Local demo identities represent already configured fixtures. Keep them past
+-- the legal gate so product and visual tests continue from their target pages.
+insert into public.user_legal_acceptances (
+  user_id,
+  terms_version,
+  privacy_version,
+  source,
+  accepted_at
+)
+select id, '2026-09-09', '2026-09-09', 'existing_user', now()
+from auth.users
+on conflict (user_id, terms_version, privacy_version) do nothing;

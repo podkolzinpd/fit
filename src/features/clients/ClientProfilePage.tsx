@@ -12,6 +12,7 @@ import { useState } from 'react'
 import { AppInstallPanel } from '../install'
 import { NotificationsSetting } from '../notifications'
 import { BodyMapAppearanceSetting } from '../progress/BodyMapAppearanceSetting'
+import { LEGAL_PATHS } from '../../shared/legal'
 
 export function ClientProfilePage() {
   const { actor } = useAuth()
@@ -53,7 +54,7 @@ export function ClientProfilePage() {
       <NotificationsSetting userId={actor.userId} />
     </section>
     {yandexSession === null && <YandexAccountLinkingCard actor={actor} />}
-    <div className="menu"><Link to="/join">Ввести код приглашения</Link><button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button></div>
+    <div className="menu"><Link to="/join">Ввести код приглашения</Link><button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Политика конфиденциальности</Link><Link to={LEGAL_PATHS.deleteAccount}>Удаление аккаунта</Link></div>
     {installOpen && <AppInstallPanel onClose={() => setInstallOpen(false)} />}
     {feedbackOpen && <AppFeedbackForm onClose={() => setFeedbackOpen(false)} />}
     <LogoutButton />
