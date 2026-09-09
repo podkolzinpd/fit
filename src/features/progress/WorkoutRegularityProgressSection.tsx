@@ -10,8 +10,8 @@ import {
 
 function weekStatusLabel(week: RegularityWeek): string {
   if (week.status === 'active') return `${regularityWorkoutLabel(week.workoutCount)} · ${regularityWeekLabel(week)}`
-  if (week.status === 'missed') return `Без тренировок · ${regularityWeekLabel(week)}`
-  return `Текущая неделя, пока без тренировок · ${regularityWeekLabel(week)}`
+  if (week.status === 'missed') return `Нет записей · ${regularityWeekLabel(week)}`
+  return `Текущая неделя, пока нет записей · ${regularityWeekLabel(week)}`
 }
 
 function intervalLabel(value: number | null): string {
