@@ -134,6 +134,16 @@ async function rollbackQuietly(client: DatabaseClient): Promise<void> {
   }
 }
 
+async function configureMigrationTransaction(
+  client: DatabaseClient,
+): Promise<void> {
+  await client.query(`set local statement_timeout = '5min'`)
+  // jsonb renders timestamptz values in the current session timezone. Source
+  // and target clusters may use different defaults, so normalize both sides
+  // before calculating or validating deterministic row checksums.
+  await client.query(`set local timezone = 'UTC'`)
+}
+
 export async function exportTenant(
   source: DatabaseClient,
   trainerId: string,
@@ -141,7 +151,7 @@ export async function exportTenant(
 ): Promise<TenantMigrationBundle> {
   await source.query('begin isolation level repeatable read read only')
   try {
-    await source.query(`set local statement_timeout = '5min'`)
+    await configureMigrationTransaction(source)
     await inspectSource(source, trainerId)
     const tables: TenantMigrationTable[] = []
     for (const spec of TENANT_MIGRATION_TABLES) {
@@ -194,7 +204,7 @@ async function validateTargetInTransaction(
 
 async function beginTargetTransaction(target: DatabaseClient): Promise<void> {
   await target.query('begin isolation level serializable')
-  await target.query(`set local statement_timeout = '5min'`)
+  await configureMigrationTransaction(target)
 }
 
 async function lockTenant(
@@ -265,7 +275,7 @@ export async function validateTenant(
   requireExactManifest(bundle)
   await target.query('begin isolation level repeatable read read only')
   try {
-    await target.query(`set local statement_timeout = '5min'`)
+    await configureMigrationTransaction(target)
     const tables = await validateTargetInTransaction(target, bundle, new Map())
     await target.query('commit')
     return {
