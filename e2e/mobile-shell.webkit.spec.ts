@@ -573,7 +573,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
 
-  await expect(page.locator('.phone-frame')).not.toHaveClass(/live-identity/)
+  await expect(page.locator('.phone-frame')).toHaveClass(/live-identity/)
 
   await expect(page.getByRole('button', { name: '＋ Подход' })).toBeInViewport()
   await expect(page.getByRole('button', { name: '＋ Ещё упражнение' })).toBeInViewport()
@@ -622,8 +622,6 @@ test('iPhone: в live клиент видит те же действия с тр
   ])
   const selectedPlanPath = new URL(page.url()).pathname
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
-  await expect(page.locator('.live-timer')).toBeVisible()
-  await page.keyboard.press('Escape')
   const recovery = page.getByRole('alertdialog')
   await expect(recovery).toContainText('уже есть незавершённая тренировка')
   expect(new URL(page.url()).pathname).toBe(selectedPlanPath)
@@ -631,8 +629,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await expect(recovery).toHaveCount(0)
   expect(new URL(page.url()).pathname).toBe(selectedPlanPath)
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
-  await expect(page.locator('.live-timer')).toBeVisible()
-  await page.keyboard.press('Escape')
+  await expect(recovery).toBeVisible()
   await recovery.getByRole('button', { name: 'Открыть незавершённую' }).click()
   await expect(page).toHaveURL(new RegExp(`${activeWorkoutPath}/live$`))
   await page.getByRole('button', { name: 'Назад' }).click()
@@ -1653,7 +1650,8 @@ test('iPhone: отдых начинается после последнего п
 
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых 1:(2[7-9]|30)/ })).toBeVisible()
-  await expect(page.locator('.live-exercise-upcoming')).toContainText('Жим штанги лёжа')
+  await expect(page.locator('.live-exercise-collapsed')).toContainText('Присед со штангой')
+  await expect(page.locator('.live-exercise.current')).toContainText('Жим штанги лёжа')
   await expectNoHorizontalOverflow(page)
 })
 
