@@ -74,7 +74,7 @@ describe('ClientHomeOverview', () => {
     render(<MemoryRouter><ClientHomeOverview today={today} workouts={[latest]} regularity={[week]} goal={goal} personalRecords={[squatRecord]} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
     expect(screen.queryByText('НОВЫЙ ЛИЧНЫЙ РЕКОРД')).toBeNull()
     expect(screen.getByText('Здесь пока нечего сравнивать.')).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Открыть' })).toHaveAttribute('href', '/workouts/latest')
+    expect(screen.getByRole('link', { name: 'Открыть тренировку' })).toHaveAttribute('href', '/workouts/latest')
   })
 
   it('renders the next action, week progress and one secondary highlight without dashes', () => {

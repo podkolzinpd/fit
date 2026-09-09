@@ -214,7 +214,7 @@ export function ClientHomeOverview({ today, gender = null, workouts, regularity,
     {workoutsLoading && !workouts && <section className="client-home-next client-home-loading" role="status">Загружаем следующую тренировку…</section>}
     {!hasActiveOrTodayPlan && pastPlans.length > 0 && <PastPlanCard workouts={pastPlans} />}
     {next && <NextActionCard next={next} today={today} />}
-    <PersonalWorkoutResult workouts={workouts} loading={workoutsLoading} error={error} onRetry={onRetry}>
+    <PersonalWorkoutResult home workouts={workouts} loading={workoutsLoading} error={error} onRetry={onRetry}>
       {lastCompleted && <WorkoutLoadMap workout={lastCompleted} gender={gender} compact />}
     </PersonalWorkoutResult>
     <WeekCard week={week} loading={regularityLoading} />
