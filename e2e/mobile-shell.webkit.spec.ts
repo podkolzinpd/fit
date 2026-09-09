@@ -814,7 +814,7 @@ for (const width of [320, 375]) {
 
     const personal = page.locator('.personal-workout-result')
     await expect(personal).toBeVisible()
-    await expect(personal.getByText('ПОСЛЕ ПОСЛЕДНЕЙ ТРЕНИРОВКИ')).toBeVisible()
+    await expect(personal.getByText('ПОСЛЕДНЯЯ ТРЕНИРОВКА')).toBeVisible()
     await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
     const actions = personal.getByRole('link')
     for (const action of await actions.all()) expect(await action.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
