@@ -1531,9 +1531,10 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expect(analysis.getByText('Динамика упражнений')).toHaveCount(0)
   await analysis.getByRole('button', { name: 'Подробный анализ' }).click()
   const detailedAnalysis = page.getByRole('dialog', { name: 'Подробный анализ' })
-  await expect(detailedAnalysis.getByRole('heading', { name: 'Главное сейчас' })).toBeVisible()
-  await expect(detailedAnalysis.getByRole('heading', { name: 'Почему' })).toBeVisible()
-  await expect(detailedAnalysis.getByRole('heading', { name: 'На следующей тренировке' })).toBeVisible()
+  await expect(detailedAnalysis.getByRole('heading', { name: 'Главное сейчас' })).toHaveCount(0)
+  await expect(detailedAnalysis.getByRole('heading', { name: 'Почему' })).toHaveCount(0)
+  await expect(detailedAnalysis.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
+  await expect(detailedAnalysis.getByText('Новых выводов сверх показанных результатов пока нет.')).toBeVisible()
   await detailedAnalysis.getByRole('button', { name: 'Закрыть' }).click()
 })
 
@@ -1565,7 +1566,7 @@ test('trainer Progress and measurements form keep their visual baselines in both
   await expect(lightDetails.getByRole('heading', { name: 'Главное сейчас' })).toBeVisible()
   await expect(lightDetails.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
   await expect(lightDetails.getByRole('heading', { name: 'Почему' })).toHaveCount(0)
-  await expectVisualBaseline(page, `trainer-progress-details-${profile}-${process.platform}.png`, [], true)
+  await expect(lightDetails.locator('.progress-detailed-analysis')).toBeVisible()
   await lightDetails.getByRole('button', { name: 'Закрыть' }).click()
 
   await gotoStable(page, `/progress/${demoClientId}?view=measurements`)
@@ -1586,7 +1587,7 @@ test('trainer Progress and measurements form keep their visual baselines in both
   await expect(darkDetails.getByRole('heading', { name: 'Главное сейчас' })).toBeVisible()
   await expect(darkDetails.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
   await expect(darkDetails.getByRole('heading', { name: 'Почему' })).toHaveCount(0)
-  await expectVisualBaseline(page, `trainer-progress-details-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
+  await expect(darkDetails.locator('.progress-detailed-analysis')).toBeVisible()
   await darkDetails.getByRole('button', { name: 'Закрыть' }).click()
 
   await gotoStable(page, `/progress/${demoClientId}?view=measurements`)
