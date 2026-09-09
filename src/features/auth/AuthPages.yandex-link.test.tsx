@@ -152,7 +152,7 @@ describe('Yandex account linking callback', () => {
 
     render(<MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>)
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Войдите в FIT по email, паролю или Google, затем начните привязку Yandex ID из профиля.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Войдите в FIT по email и паролю, затем начните привязку Yandex ID из профиля.')
     expect(screen.getAllByRole('link', { name: 'Вернуться ко входу' })[0]).toHaveAttribute('href', '/auth')
     expect(authRepository.getSession).not.toHaveBeenCalled()
     expect(yandexPilotRepository.linkYandexAccount).not.toHaveBeenCalled()

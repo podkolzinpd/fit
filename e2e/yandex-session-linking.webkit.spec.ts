@@ -39,7 +39,7 @@ test('Yandex session linking entry is visible for an allowlisted trainer', async
 
   await expect(page.getByRole('heading', { name: 'Привязать Yandex ID' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Привязать Yandex ID' })).toBeVisible()
-  await expect(page.getByText('Текущий вход по email, паролю и Google не меняется.')).toBeVisible()
+  await expect(page.getByText('Текущий вход по email и паролю не меняется.')).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 
