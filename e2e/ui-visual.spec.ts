@@ -1532,9 +1532,8 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await analysis.getByRole('button', { name: 'Подробный анализ' }).click()
   const detailedAnalysis = page.getByRole('dialog', { name: 'Подробный анализ' })
   await expect(detailedAnalysis.getByRole('heading', { name: 'Главное сейчас' })).toHaveCount(0)
-  await expect(detailedAnalysis.getByRole('heading', { name: 'Почему' })).toHaveCount(0)
+  await expect(detailedAnalysis.getByRole('heading', { name: 'Почему' })).toBeVisible()
   await expect(detailedAnalysis.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
-  await expect(detailedAnalysis.getByText('Новых выводов сверх показанных результатов пока нет.')).toBeVisible()
   await detailedAnalysis.getByRole('button', { name: 'Закрыть' }).click()
 })
 
