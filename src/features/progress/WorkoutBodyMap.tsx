@@ -1,3 +1,4 @@
+import { ProgressDetailsSummary } from './ProgressDetailsSummary'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
@@ -85,14 +86,14 @@ export function ClientBodyMapDisclosure({ workouts, clientId, gender, summary, p
   const clearScope = () => setParams((current) => { const next = new URLSearchParams(current); mapParams.forEach((key) => next.delete(key)); return next })
   const periodSummary: BodyProgressSummary = summary?.periodStart === periodStart && summary.periodEnd === periodEnd ? summary : { id: `${periodStart}:${periodEnd}`, periodStart, periodEnd, metrics: { progressFacts: [] } }
   return <details id="body-map" className="client-body-map-disclosure card" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
-    <summary>Карта тела{workoutId ? ' · выбранная тренировка' : ' · выбранный период'}</summary>
+    <ProgressDetailsSummary>Карта тела{workoutId ? ' · тренировка' : ''}</ProgressDetailsSummary>
     {open && <>
       {workoutId && <button type="button" className="link" onClick={clearScope}>Перейти к карте за период</button>}
       {error ? <p role="alert">Не удалось загрузить тренировки. <button type="button" className="link" onClick={onRetry}>Повторить</button></p>
         : loading && !workouts ? <p role="status">Загружаем карту…</p>
         : workoutId ? !workout || invalidScope ? <p role="alert">Эта тренировка недоступна или её дата изменилась. Откройте актуальную карту с главного экрана.</p>
-          : <><p>{formatLocalDate(workout.workoutDate)} · одна завершённая тренировка</p><WorkoutLoadMap workout={workout} gender={gender} zone={zone} onZoneChange={(nextZone) => setParams((current) => { const next = new URLSearchParams(current); next.set('mapZone', nextZone); return next }, { replace: true })} /></>
-        : <>{summary && summary !== periodSummary && <p className="muted">ИИ-анализ сохранён за другие даты. Здесь показаны подходы выбранного периода; изменения по ИИ появятся после обновления анализа.</p>}<p>{formatLocalDate(localDate(periodSummary.periodStart))} — {formatLocalDate(localDate(periodSummary.periodEnd))}</p><TrainingBodyProgressMap summary={periodSummary} workouts={workouts ?? []} clientId={clientId} clientGender={gender} insightCandidates={[]} loadLoading={loading} loadError={error} onLoadRetry={onRetry} /></>}
+          : <><p>{formatLocalDate(workout.workoutDate)} · тренировка</p><WorkoutLoadMap workout={workout} gender={gender} zone={zone} onZoneChange={(nextZone) => setParams((current) => { const next = new URLSearchParams(current); next.set('mapZone', nextZone); return next }, { replace: true })} /></>
+        : <>{summary && summary !== periodSummary && <p className="muted">Для изменений по мышцам обнови анализ за этот период.</p>}<p>{formatLocalDate(localDate(periodSummary.periodStart))} — {formatLocalDate(localDate(periodSummary.periodEnd))}</p><TrainingBodyProgressMap summary={periodSummary} workouts={workouts ?? []} clientId={clientId} clientGender={gender} insightCandidates={[]} loadLoading={loading} loadError={error} onLoadRetry={onRetry} /></>}
     </>}
   </details>
 }

@@ -18,7 +18,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Post-workout feedback | Клиент после завершения фиксирует session RPE 1–10, самочувствие и дискомфорт; тренер видит сигнал без доступа посторонних аккаунтов | Implemented: assigned и client-authored workout, отдельный idempotent submit с version check, RLS/SQL и WebKit 390 px acceptance |
 | Trainer response | После завершения клиент видит реакцию 👍 / 🔥 / 💪 и короткий ответ ответственного тренера | Implemented: trainer-author для назначения, root trainer для client-authored workout, автор/время, idempotent versioned RPC, realtime/refetch и RLS matrix |
 | Trainer attention | Клиент явно задаёт вопрос по завершённой тренировке, а основной тренер видит одну приоритетную задачу на клиента | Implemented: question → discomfort → planning priority, reply/explicit resolution, two-week planning snooze, realtime, RLS/SQL and mobile WebKit acceptance |
-| Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; Trainer first shows current week and the shared AI card, with running and measurements on explicit subroutes; Client starts with an interactive front/back body map of confirmed progress and performed-set load; duplicate-date create opens the existing entry without a failing DB request; visual regression covers Client 390/430 and Trainer 390/430/1440 px |
+| Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; Trainer first shows current week and the shared AI card, with running and measurements on explicit subroutes; Client starts with the current week and period selection, then goal, unified results, measurements and the disclosed body map; duplicate-date create opens the existing entry without a failing DB request; visual regression covers Client 390/430 and Trainer 390/430/1440 px |
 | Assistant | Trainer-only history, idempotent turns, proposed actions and explicit confirmation | Implemented in production Supabase; default-off sticky routing can pin one migrated trainer to Yandex API for the unchanged main UI. The same app-session now selects Yandex for all main feature repositories, including Assistant dependencies; errors do not fall back per request. Production enablement and tenant data rehearsal remain pending |
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |
@@ -291,3 +291,10 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Максимум веса, повторы при фиксированном весе и объём разделены. Изменение объёма раскрывается через реальные подходы двух записей без вывода о росте силы.
 - Недельные подходы используют общий расчёт карты, отдельно учитывают кардио/неизвестные зоны, помечают неполные недели и не включают будущее.
 - Факты независимы от ИИ. Тренерский экран, измерения и AI-контракты сохранены. Статус выпуска фиксируется в CURRENT_STATE и журнале исполнения.
+
+### Client Progress — простые разделы (YAFIT-486)
+- Текущая неделя выше периода; ниже все факты относятся к выбранным датам, цель отдельно подписывает актуальное «Сейчас».
+- Рекорды/улучшения приоритетны в коротком превью; остальные результаты и источники доступны в той же карточке через «Все результаты».
+- Подробности названы по содержимому, краткие цифры видны сразу, личный итог не повторяет Home.
+- ИИ shortcut ведёт к анализу; дата обновления и проверяемые новые completedAt не меняют генерацию или защиту client-copy.
+- Проверяются порядок, ranking/fallback, фильтры/возврат, период карты, замеры, AI error/force race, mobile light/dark.

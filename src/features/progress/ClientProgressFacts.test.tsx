@@ -21,16 +21,16 @@ describe('Client facts independent of AI', () => {
     const workouts = [record('old', '2026-07-01', 60), record('new', '2026-08-10', 50, 'press', 'Новое название'), record('different', '2026-08-11', 80, 'different', 'Жим лёжа')]
     render(<Routes><Route path="/me/progress" element={<PeriodExerciseResults {...base} workouts={workouts} />} /><Route path="/workouts/:id" element={<Source />} /></Routes>, { wrapper })
     const row = screen.getByRole('heading', { name: 'Новое название' }).closest('article')!
-    expect(row).toHaveTextContent('Меньше прошлого результата')
-    expect(row).toHaveTextContent('Ранее: 60 кг')
-    expect(screen.getByRole('heading', { name: 'Жим лёжа' }).closest('article')).toHaveTextContent('Точка отсчёта')
+    expect(row).toHaveTextContent('Результат снизился')
+    expect(row).toHaveTextContent('Было 60 кг')
+    expect(screen.getByRole('heading', { name: 'Жим лёжа' }).closest('article')).toHaveTextContent('Первый результат')
     await userEvent.setup().click(within(row).getByRole('link', { name: /Ранее/ }))
     expect(screen.getByRole('status')).toHaveTextContent('/me/progress?period=3m&mapZone=chest#results')
   })
   it('chooses the latest workout per exercise and exposes more than three without duplicate metrics', async () => {
     const workouts = [record('old', '2026-08-01', 30), record('new', '2026-08-10', 40), ...['a', 'b', 'c'].map((key) => record(key, '2026-08-15', 20, key, key))]
     render(<PeriodExerciseResults {...base} workouts={workouts} />, { wrapper })
-    expect(screen.getByRole('heading', { name: 'Жим лёжа' })).not.toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Жим лёжа' })).toBeVisible()
     await userEvent.setup().click(screen.getByText('Все упражнения · 4'))
     expect(screen.getAllByRole('heading', { level: 4 })).toHaveLength(4)
     expect(screen.getByRole('heading', { name: 'Жим лёжа' }).closest('article')).toHaveTextContent('40 кг')
@@ -42,12 +42,12 @@ describe('Client facts independent of AI', () => {
     const { rerender } = render(<PeriodExerciseResults {...base} workouts={[duration]} />, { wrapper })
     expect(screen.getByText(/Время/)).toHaveTextContent('60 сек')
     rerender(<PeriodExerciseResults {...base} workouts={[]} />)
-    expect(screen.getByText(/За выбранный период пока нет подтверждённых результатов/)).toBeVisible()
+    expect(screen.getByText(/За этот период пока нет результатов/)).toBeVisible()
   })
   it('shows result loading and actionable errors without false empty statistics', async () => {
     const retry = vi.fn()
     const { rerender } = render(<PeriodExerciseResults {...base} loading />, { wrapper })
-    expect(screen.getByRole('status')).toHaveTextContent('Сравниваем записи')
+    expect(screen.getByRole('status')).toHaveTextContent('Загружаем результаты')
     rerender(<PeriodExerciseResults {...base} error={new Error('offline')} onRetry={retry} />)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Повторить' }))
     expect(retry).toHaveBeenCalledOnce()
@@ -58,7 +58,7 @@ describe('Client facts independent of AI', () => {
     render(<ClientCurrentWeek {...base} today={end} workouts={[record('previous', '2026-08-16', 10), unknown, cardio]} />)
     expect(screen.getByRole('region')).toHaveTextContent('17 августа 2026 г. — 23 августа 2026 г.')
     expect(screen.getByRole('region')).toHaveTextContent('2 тренировки')
-    expect(screen.getByRole('region')).toHaveTextContent('Подтверждённые подходы на сегодня: 2')
+    expect(screen.getByRole('region')).toHaveTextContent('2 подхода')
   })
   it('keeps week loading, retry and absence-of-records states explicit', async () => {
     const retry = vi.fn(); const { rerender } = render(<ClientCurrentWeek {...base} today={end} loading />)
@@ -67,7 +67,7 @@ describe('Client facts independent of AI', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Повторить' }))
     expect(retry).toHaveBeenCalledOnce()
     rerender(<ClientCurrentWeek {...base} today={end} workouts={[]} />)
-    expect(screen.getByText('Нет завершённых записей')).toBeVisible()
+    expect(screen.getByText('Пока нет тренировок')).toBeVisible()
   })
   it('keeps goal loading and retry separate from a genuinely absent goal', async () => {
     const retry = vi.fn(); const { rerender } = render(<ClientGoalFacts {...base} today={end} entries={[]} workouts={[]} loading />, { wrapper })
@@ -81,7 +81,7 @@ describe('Client facts independent of AI', () => {
   it('keeps period comparison collapsed with explicit loading, retry and baseline', async () => {
     const retry = vi.fn(); const { rerender } = render(<ClientPeriodComparison {...base} entries={[]} loading />)
     expect(screen.getByText('Сравниваем периоды…')).not.toBeVisible()
-    await userEvent.setup().click(screen.getByText('Сравнение периодов'))
+    await userEvent.setup().click(screen.getByText('Сравнить периоды'))
     expect(screen.getByRole('status')).toBeVisible()
     rerender(<ClientPeriodComparison {...base} entries={[]} error={new Error('offline')} onRetry={retry} />)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Повторить' }))
@@ -91,7 +91,34 @@ describe('Client facts independent of AI', () => {
   })
   it('retains period and body-map scope when a goal asks for a new measurement', () => {
     render(<ClientGoalFacts {...base} today={end} entries={[]} workouts={[]} goal={{ id: 'g', clientId: 'c', title: 'Вес', targetDate: null, status: 'active', version: 1, stages: [], criteria: [{ id: 'criterion', goalId: 'g', metric: 'weight', operation: 'decrease_to', targetValue: 70, rangeMin: null, rangeMax: null, unit: 'кг', baselineValue: null, baselineRecordedOn: null, confirmationStatus: 'confirmed', position: 0, version: 1 }] }} />, { wrapper })
-    expect(screen.getByRole('link', { name: 'Добавить актуальный замер' })).toHaveAttribute('href', '/me/progress?period=3m&mapZone=chest#measurements')
+    expect(screen.getByRole('link', { name: 'Добавить замер' })).toHaveAttribute('href', '/me/progress?period=3m&mapZone=chest#measurements')
+  })
+
+  it('promotes an earlier record over a newer decline and recent first results', () => {
+    render(<PeriodExerciseResults {...base} workouts={[
+      record('before', '2026-07-01', 40), record('pr', '2026-08-02', 60), record('decline', '2026-08-18', 50),
+      ...['a', 'b', 'c'].map((key) => record(key, '2026-08-19', 20, key, key)),
+    ]} />, { wrapper })
+    const first = screen.getAllByRole('article')[0]!
+    expect(first).toHaveTextContent('Жим лёжа')
+    expect(first).toHaveTextContent('Личный рекорд')
+    expect(first).toHaveTextContent('60 кг')
+    expect(within(first).getByRole('link', { name: '2 августа 2026 г.' })).toHaveAttribute('href', '/workouts/pr')
+  })
+  it('uses the latest result neutrally when a period has no achievements', () => {
+    render(<PeriodExerciseResults {...base} workouts={[
+      record('before', '2026-07-01', 80), record('older', '2026-08-02', 60), record('latest', '2026-08-18', 50),
+    ]} />, { wrapper })
+    expect(screen.getAllByRole('article')[0]).toHaveTextContent('50 кг')
+    expect(screen.queryByText('Личный рекорд')).toBeNull()
+    expect(screen.queryByText('Результат вырос')).toBeNull()
+  })
+
+  it('selects the last completed workout when neutral results share a date', () => {
+    const morning = record('morning', '2026-08-18', 60)
+    const evening = { ...record('evening', '2026-08-18', 50), completedAt: '2026-08-18T20:00:00Z' }
+    render(<PeriodExerciseResults {...base} workouts={[record('before', '2026-07-01', 80), morning, evening]} />, { wrapper })
+    expect(screen.getAllByRole('article')[0]).toHaveTextContent('50 кг')
   })
 
 })
