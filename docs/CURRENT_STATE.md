@@ -120,6 +120,7 @@
   prompt, matching, fallback, сохранение сводок и SpeechKit не менялись.
 - Полный check: frontend 1322, API 364 (+30 skipped), infra 112; lint/typecheck/build и проверки DB types/iOS permissions пройдены. Все 1014 SQL/RLS-тестов успешны. Auth и legal e2e прошли в Chromium и iPhone WebKit; Linux-эталон регистрации 390 обновлён по проверенному CI-снимку, visual 430/1440 уложился в допуск.
 - PR #841 слит в `main`; production DB и Vercel deploy успешны. Публичные legal-маршруты, вход и регистрация проверены на `fit-drab.vercel.app`. Свежий main собран, чисто установлен и запущен на iPhone 17 Simulator с production Supabase-конфигурацией; Android проверен как PWA в мобильном Chromium.
+- iOS production sync теперь до сборки проверяет обязательные HTTPS-настройки Supabase и не позволяет получить успешную чёрную сборку из-за отсутствующего env. Публичные условия и политика имеют собственную сенсорную прокрутку внутри мобильной оболочки.
 - Remote audit `34229105217` выбрал cohort: 1 клиент, 5 строк в 28 таблицах. Dry-run `34244770314` безопасно откатил 10 stale stage cohorts; configured cohort остаётся пустым.
 ## Ближайший порядок
 1. Перед отправкой в App Store/Google Play подставить утверждённые реквизиты оператора и публичный контакт; заявки на удаление обрабатывать по операционному регламенту. Для нативного iOS отдельно перевести Google OAuth из встроенного WebView в системный браузер.
