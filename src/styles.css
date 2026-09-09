@@ -5501,3 +5501,5 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-results-center summary::before, .weekly-training-load summary::before { content:""; display:inline-block; width:0; height:0; border-top:5px solid transparent; border-bottom:5px solid transparent; border-left:7px solid currentColor; margin-right:9px; vertical-align:middle; }
 .client-results-center[open] > summary::before, .client-results-center details[open] > summary::before,
 .weekly-training-load[open] > summary::before, .weekly-training-load details[open] > summary::before { transform:rotate(90deg); }
+
+.result-change-arrow { width:16px; height:16px; margin:0 4px; vertical-align:-3px; transform:rotate(90deg); }

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Workout } from '../../shared/domain'
+import { ArrowUpIcon } from '../../shared/icons'
 import { formatLocalDate, type LocalDate } from '../../shared/local-date'
 import { completedWorkoutOrder, resultNumber, workoutResults, type ResultMetric, type WorkoutResult } from '../../shared/workout-results'
 import { resultStateLabels } from './ClientProgressFacts'
@@ -32,12 +33,13 @@ function useResultsParams() {
 function VolumeExplanation({ result }: { result: WorkoutResult }) {
   const change = volumeChangeDetails(result)
   if (!change) return null
+  const arrow = <><span className="sr-only"> → </span><ArrowUpIcon className="result-change-arrow" /></>
   const weightRange = ({ minWeight, maxWeight }: { minWeight: number; maxWeight: number }) => minWeight === maxWeight ? resultNumber(minWeight) : `${resultNumber(minWeight)}–${resultNumber(maxWeight)}`
   return <details className="result-volume-explanation"><summary>Из чего сложился объём</summary>
     <p>{change.changed.length ? `Изменились: ${change.changed.join(', ')}.` : 'Записанные подходы, веса и повторы совпадают.'}</p>
-    <dl><div><dt>Подходы</dt><dd>{change.before.count} → {change.after.count}</dd></div>
-      <div><dt>Всего повторов</dt><dd>{change.before.reps} → {change.after.reps}</dd></div>
-      <div><dt>Веса в подходах</dt><dd>{weightRange(change.before)} → {weightRange(change.after)} кг</dd></div></dl>
+    <dl><div><dt>Подходы</dt><dd>{change.before.count}{arrow}{change.after.count}</dd></div>
+      <div><dt>Всего повторов</dt><dd>{change.before.reps}{arrow}{change.after.reps}</dd></div>
+      <div><dt>Веса в подходах</dt><dd>{weightRange(change.before)}{arrow}{weightRange(change.after)} кг</dd></div></dl>
     <div className="volume-source-sets">{([{ label: 'Предыдущая запись', data: change.before }, { label: 'Эта запись', data: change.after }] as const).map(({ label, data }) => <div key={label}><strong>{label}</strong><ul>{data.sets.map((set, index) => <li key={index}>{resultNumber(set.weight)} кг × {set.reps} повт.</li>)}</ul><p>Итого: {resultNumber(data.volume)} кг</p></div>)}</div>
     <p className="muted">Объём — сумма веса × повторов подтверждённых подходов. Его изменение не равно изменению силы.</p>
   </details>

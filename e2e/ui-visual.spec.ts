@@ -1806,10 +1806,10 @@ test('results center preserves sources and explains weekly work', async ({ page 
   await expect(weekly).toContainText('Неполная неделя')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.setViewportSize({ ...viewport, height: 1500 })
-  await expect(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled' })
-  await expect(volume).toHaveScreenshot(`result-volume-${process.platform}.png`, { animations: 'disabled' })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled' })
+  await expect.soft(volume).toHaveScreenshot(`result-volume-${process.platform}.png`, { animations: 'disabled' })
   await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('weight')
-  await expect(center).toHaveScreenshot(`results-center-${process.platform}.png`, { animations: 'disabled' })
+  await expect.soft(center).toHaveScreenshot(`results-center-${process.platform}.png`, { animations: 'disabled' })
 })
 
 test('results center keeps detailed analytics in dark theme', async ({ page }, testInfo) => {
@@ -1828,6 +1828,6 @@ test('results center keeps detailed analytics in dark theme', async ({ page }, t
   await darkVolume.getByText('Из чего сложился объём', { exact: true }).click()
   await weekly.getByText('Подходы по неделям', { exact: true }).click()
   await page.setViewportSize({ ...viewport, height: 1500 })
-  await expect(darkVolume).toHaveScreenshot(`result-volume-dark-${process.platform}.png`, { animations: 'disabled' })
-  await expect(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled' })
+  await expect.soft(darkVolume).toHaveScreenshot(`result-volume-dark-${process.platform}.png`, { animations: 'disabled' })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled' })
 })
