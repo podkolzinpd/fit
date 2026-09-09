@@ -5495,3 +5495,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .weekly-load-list header strong { font-size:var(--type-caption-size); }
 .weekly-load-bar { height:8px; border-radius:var(--radius-pill); background:var(--surface-sunken); margin:12px 0; overflow:hidden; }
 .weekly-load-bar span { display:block; height:100%; background:var(--fg); border-radius:inherit; }
+/* Native disclosure glyphs depend on system fonts; keep these controls consistent across devices. */
+.client-results-center summary, .weekly-training-load summary { list-style:none; }
+.client-results-center summary::-webkit-details-marker, .weekly-training-load summary::-webkit-details-marker { display:none; }
+.client-results-center summary::before, .weekly-training-load summary::before { content:""; display:inline-block; width:0; height:0; border-top:5px solid transparent; border-bottom:5px solid transparent; border-left:7px solid currentColor; margin-right:9px; vertical-align:middle; }
+.client-results-center[open] > summary::before, .client-results-center details[open] > summary::before,
+.weekly-training-load[open] > summary::before, .weekly-training-load details[open] > summary::before { transform:rotate(90deg); }
