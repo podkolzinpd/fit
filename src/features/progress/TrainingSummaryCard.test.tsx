@@ -765,7 +765,7 @@ describe('Training summary card states', () => {
     }])
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
     expect(await screen.findByText('Есть новые тренировки')).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Посмотреть анализ' })).toHaveAttribute('href', '#ai-analysis')
+    expect(screen.getByRole('button', { name: 'Посмотреть анализ' })).toHaveAttribute('aria-controls', 'ai-analysis')
     await userEvent.setup().click(screen.getByRole('button', { name: '3 месяца' }))
     expect(screen.queryByText('Есть новые тренировки')).toBeNull()
   })

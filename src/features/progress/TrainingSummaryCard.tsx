@@ -72,6 +72,24 @@ function AutomaticSummaryError({ error, onRetry }: { error: Error; onRetry: () =
   </p>
 }
 
+function scrollToProgressSection(sectionId: string) {
+  const target = document.getElementById(sectionId)
+  const content = target?.closest('.content')
+  if (!(target instanceof HTMLElement) || !(content instanceof HTMLElement)) return
+
+  const targetRect = target.getBoundingClientRect()
+  const contentRect = content.getBoundingClientRect()
+  const top = content.scrollTop + targetRect.top - contentRect.top - 20
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  content.scrollTo({ top: Math.max(0, top), behavior: reducedMotion ? 'auto' : 'smooth' })
+
+  // A native hash jump can move the root WKWebView together with `.content`,
+  // which lifts the bottom tab bar into the page. Keep the app shell pinned.
+  window.scrollTo(0, 0)
+  document.documentElement.scrollTop = 0
+  document.body.scrollTop = 0
+}
+
 export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = null }: {
   clientId: string
   profileGoal?: string | null
@@ -732,7 +750,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
       <SummaryHeader /><span className="sr-only" id="client-progress-period-title">Период прогресса</span>
       <PeriodTabs value={period} available={availablePeriods} onChange={changePeriod} />
       <p className="progress-period-dates">{formatLocalDate(range.start)} — {formatLocalDate(range.end)}</p>
-      <a className="link progress-analysis-shortcut" href="#ai-analysis">Посмотреть анализ</a>
+      <button type="button" className="link progress-analysis-shortcut" aria-controls="ai-analysis" onClick={() => scrollToProgressSection('ai-analysis')}>Посмотреть анализ</button>
     </section>
     <ClientGoalFacts goal={goal.data} profileGoal={profileGoal} entries={measurements.data ?? []} workouts={allWorkouts.data ?? []}
       periodStart={range.start} periodEnd={range.end} today={today}
