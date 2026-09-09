@@ -67,9 +67,10 @@ export async function mockResultsHistory(page: Page) {
 }
 
 export async function verifyAnalysisShortcutKeepsShell(page: Page) {
-  await page.getByRole('button', { name: 'Посмотреть анализ' }).click()
+  await page.getByRole('button', { name: 'Открыть анализ' }).click()
   expect(new URL(page.url()).hash).toBe('')
-  await expect(page.locator('#ai-analysis')).toBeInViewport()
+  const dialog = page.getByRole('dialog', { name: 'Подробный анализ' })
+  await expect(dialog).toBeVisible()
   await expect(page.locator('.client-tab-bar')).toBeInViewport()
   await expect(page.locator('.client-tab-bar').evaluate((tabBar) => {
     const rect = tabBar.getBoundingClientRect()
@@ -78,6 +79,8 @@ export async function verifyAnalysisShortcutKeepsShell(page: Page) {
       staysAtBottom: rect.top > window.innerHeight / 2 && rect.bottom <= window.innerHeight,
     }
   })).resolves.toEqual({ rootScroll: 0, staysAtBottom: true })
+  await dialog.getByRole('button', { name: 'Закрыть' }).click()
+  await expect(page.getByRole('button', { name: 'Открыть анализ' })).toBeFocused()
 }
 
 export async function verifyResultsSources(page: Page) {
@@ -90,10 +93,15 @@ export async function verifyResultsSources(page: Page) {
   await expect(center).not.toHaveAttribute('open')
   await expect(page.locator('.weekly-training-load')).not.toHaveAttribute('open')
   await center.getByText('Все результаты', { exact: true }).click()
+  await center.scrollIntoViewIfNeeded()
+  const scrollBeforeFilters = await page.locator('.content').evaluate((element) => element.scrollTop)
+  expect(scrollBeforeFilters).toBeGreaterThan(0)
   await center.getByRole('combobox', { name: 'Упражнение', exact: true }).selectOption('system:press:strength')
   await expect(page).toHaveURL(/resultExercise=system%3Apress%3Astrength/)
+  await expect(page.locator('.content').evaluate((element) => element.scrollTop)).resolves.toBeGreaterThan(0)
   await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('weight')
   await expect(page).toHaveURL(/resultMetric=weight/)
+  await expect(page.locator('.content').evaluate((element) => element.scrollTop)).resolves.toBeGreaterThan(0)
   for (const field of await center.getByRole('combobox').all()) expect((await field.boundingBox())!.height).toBeGreaterThanOrEqual(44)
   const resultRows = center.locator('.center-result-row')
   await expect(resultRows).toHaveCount(3)

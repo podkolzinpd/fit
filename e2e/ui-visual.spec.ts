@@ -407,7 +407,7 @@ async function openClientProgress(page: import('@playwright/test').Page, options
 
 async function expectClientFactsOrder(page: VisualPage) {
   await expect(page.locator('.client-progress-card').evaluate((element) => {
-    const order = ['.client-current-week', '.progress-story-period', '.client-progress-goal-story', '.period-exercise-results', '.client-progress-measurements-story', '.client-body-map-disclosure', '.period-rhythm', '.client-progress-comparison', '.client-ai-analysis']
+    const order = ['.progress-story-period', '.client-current-week', '.client-progress-goal-story', '.period-exercise-results', '.client-progress-measurements-story', '.client-body-map-disclosure', '.weekly-training-load', '.period-rhythm', '.client-progress-comparison']
     const children = Array.from(element.children)
     const positions = order.map((selector) => children.findIndex((child) => child.matches(selector)))
     return positions.every((position, index) => position >= 0 && (!index || position > positions[index - 1]!))
@@ -708,10 +708,10 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   await expectBodyMapBaseline(bodyMap, `client-body-map-female-${process.platform}.png`)
   await expect(page.locator('.client-current-week')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Текущая неделя' })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Результаты и рекорды' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Лучшие результаты за период' })).toBeVisible()
   await expect(page.getByText('Твоя цель', { exact: true })).toBeVisible()
   await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
-  await expect(page.locator('.client-ai-analysis').getByRole('button', { name: 'Выводы и рекомендации' })).toBeVisible()
+  await expect(page.locator('.progress-story-period').getByRole('button', { name: 'Открыть анализ' })).toBeVisible()
   await expectClientFactsOrder(page)
   const progressCoachmark = page.getByRole('button', { name: 'Понятно' })
   if (await progressCoachmark.isVisible()) await progressCoachmark.click()

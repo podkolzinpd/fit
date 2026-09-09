@@ -1,5 +1,5 @@
 import { ProgressDetailsSummary } from './ProgressDetailsSummary'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Workout } from '../../shared/domain'
 import { ArrowUpIcon } from '../../shared/icons'
@@ -20,14 +20,14 @@ function useResultsParams() {
   const latestLocation = useRef(location)
   useLayoutEffect(() => { latestLocation.current = location }, [location])
   const params = new URLSearchParams(location.search)
-  const update = (change: (next: URLSearchParams) => void) => {
+  const update = useCallback((change: (next: URLSearchParams) => void) => {
     const current = latestLocation.current
     const next = new URLSearchParams(current.search)
     change(next)
     const destination = { ...current, search: `?${next}`, hash: '#results-center' }
     latestLocation.current = destination
     void navigate(destination, { replace: true, preventScrollReset: true })
-  }
+  }, [navigate])
   return { location, params, update }
 }
 
@@ -60,6 +60,13 @@ function ResultsContent({ workouts, periodStart, periodEnd, loading, error, onRe
   const filtered = rows.filter((result) => (!exerciseKey || result.exerciseKey === exerciseKey) && (!metric || result.metric === metric))
     .sort((a, b) => completedWorkoutOrder(b.workout, a.workout) || metrics.findIndex((item) => item.key === a.metric) - metrics.findIndex((item) => item.key === b.metric) || a.key.localeCompare(b.key))
   const change = (key: string, value: string) => update((next) => { if (value) next.set(key, value); else next.delete(key) })
+  useEffect(() => {
+    if (!workouts || loading || error || (!invalidExercise && !invalidMetric)) return
+    update((next) => {
+      if (invalidExercise) next.delete('resultExercise')
+      if (invalidMetric) next.delete('resultMetric')
+    })
+  }, [error, invalidExercise, invalidMetric, loading, update, workouts])
   const returnTo = location.pathname + location.search + '#results-center'
   return <>
     <p className="muted">{formatLocalDate(periodStart)} — {formatLocalDate(periodEnd)}</p>

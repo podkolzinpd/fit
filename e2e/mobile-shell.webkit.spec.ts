@@ -68,8 +68,10 @@ async function expectCompactBodyMap(map: Locator) {
   expect(geometry.borderRadius).toBeGreaterThanOrEqual(16)
   expect(geometry.borderWidth).toBeGreaterThanOrEqual(1)
   expect(geometry.modes!.width).toBeLessThanOrEqual(166)
-  expect(geometry.modes!.height).toBeLessThanOrEqual(44)
-  expect(geometry.modeButtons.every((height) => height >= 44)).toBe(true)
+  // WebKit can report a 44 CSS px control a few hundredths above or below 44 px
+  // after device-scale rounding.
+  expect(geometry.modes!.height).toBeLessThanOrEqual(44.1)
+  expect(geometry.modeButtons.every((height) => height >= 43.9)).toBe(true)
   expect(geometry.visual).not.toBeNull()
   expect(geometry.visual!.width).toBeLessThanOrEqual(212)
   expect(geometry.visual!.height).toBeLessThanOrEqual(445)
@@ -743,7 +745,7 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
   await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
   await expect(page.getByText('Прогресс уже заметен, ты на верном пути.')).toHaveCount(0)
   await expect(page.locator('.client-progress-next-step')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Обновить' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Обновить', exact: true })).toHaveCount(0)
   await expect(page.locator('.ai-progress-footer')).toHaveCount(0)
   const runningProgress = page.getByLabel('Беговой прогресс')
   await expect(runningProgress).toContainText('2 пробежки')
@@ -818,7 +820,7 @@ for (const width of [320, 375]) {
 
     const personal = page.locator('.period-exercise-results')
     await expect(personal).toBeVisible()
-    await expect(personal.getByRole('heading', { name: 'Результаты и рекорды' })).toBeVisible()
+    await expect(personal.getByRole('heading', { name: 'Лучшие результаты за период' })).toBeVisible()
     await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
     const actions = personal.getByRole('link')
     for (const action of await actions.all()) expect(await action.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
@@ -1123,7 +1125,7 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     await expectCompactBodyMap(summary.locator('.body-progress-map'))
     await expect(summary.getByRole('region', { name: 'Текущая неделя' })).toBeVisible()
     await expect(summary.getByText('Твоя цель', { exact: true })).toBeVisible()
-    await expect(summary.getByText('Выводы и рекомендации', { exact: true })).toBeVisible()
+    await expect(summary.getByText('Открыть анализ', { exact: true })).toBeVisible()
     await page.evaluate(() => {
       window.localStorage.setItem('fit.appTheme', 'dark')
       window.dispatchEvent(new Event('fit-theme-change'))
@@ -1226,7 +1228,7 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     const bodyDetails = page.getByRole('dialog', { name: 'Верх спины' })
     await expect(bodyDetails.getByText('Тяга верхнего блока обратным узким хватом в кроссовере с дополнительной рукоятью', { exact: false })).toBeVisible()
     await bodyDetails.getByRole('button', { name: 'Закрыть' }).click()
-    await summary.getByRole('button', { name: 'Выводы и рекомендации' }).click()
+    await summary.getByRole('button', { name: 'Открыть анализ' }).click()
     const detailedAnalysis = page.getByRole('dialog', { name: 'Подробный анализ' })
     await expect(detailedAnalysis.getByRole('heading', { name: 'Главное сейчас' })).toHaveCount(0)
     await expect(detailedAnalysis.getByRole('heading', { name: 'Почему' })).toBeVisible()

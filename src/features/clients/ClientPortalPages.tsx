@@ -9,7 +9,7 @@ import type { CustomMetric, ProgressEntry } from '../../shared/domain'
 import { ScheduleIcon } from '../../shared/icons'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, EmptyState, Field, Page, useConfirm } from '../../shared/ui'
-import { ClientTrainingSummaryCard, groupMetricRows, RunningProgressCard } from '../progress'
+import { ClientTrainingSummaryCard, groupMetricRows } from '../progress'
 import { MetricsManager } from '../progress/MetricsManager'
 import { measurementSummaryText } from '../progress/measurement-summary'
 import { LoadMoreButton, PastWorkoutPlanCard, WorkoutChronicleCard, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE } from '../workouts'
@@ -153,11 +153,9 @@ export function MyProgressPage() {
       : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p>{entry.notes && <p className="muted">{entry.notes}</p>}</div><div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" disabled={remove.isPending} onClick={() => void confirmRemove(entry)}>Удалить</button></div></article>)}</div></section>}
     {metricsOpen && <MetricsManager metrics={metrics.data ?? []} busy={createMetric.isPending || archiveMetric.isPending} error={createMetric.error ?? archiveMetric.error} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />}
   </div> : null
-  return <Page className="client-progress-page" title="Мой прогресс"><AsyncView loading={mine.isLoading || entries.isLoading || metrics.isLoading} error={mine.error ?? entries.error ?? metrics.error} empty={!mine.data} onRetry={() => { void mine.refetch(); void entries.refetch(); void metrics.refetch() }}
+  return <Page className="client-progress-page" title="Мой прогресс"><AsyncView loading={mine.isLoading} error={mine.error} empty={!mine.data} onRetry={() => void mine.refetch()}
     emptyTitle="Заполните профиль спортсмена" emptyDescription="Он связывает тренировки, замеры и анализ прогресса в одном месте." emptyAction={<Link className="button primary" to="/me/edit">Заполнить профиль</Link>}>
-    {entries.data && mine.data && <div className="client-progress-stack"><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} gender={mine.data.gender} measurementManagement={measurementManagement} />
-      <RunningProgressCard clientId={mine.data.id} />
-    </div>}
+    {mine.data && <div className="client-progress-stack"><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} gender={mine.data.gender} measurementManagement={measurementManagement} /></div>}
     {confirmDialog}
   </AsyncView></Page>
 }

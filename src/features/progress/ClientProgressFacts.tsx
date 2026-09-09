@@ -69,8 +69,8 @@ export function PeriodExerciseResults({ workouts, periodStart, periodEnd, loadin
     <div className="actions"><Link className="link" to={`/workouts/${result.workout.id}`} state={{ returnTo: location.pathname + location.search + '#results' }}>{formatLocalDate(result.workout.workoutDate)}</Link>
       {result.previous && <Link className="link" to={`/workouts/${result.previous.workout.id}`} state={{ returnTo: location.pathname + location.search + '#results' }}>Ранее · {formatLocalDate(result.previous.workout.workoutDate)}</Link>}</div>
   </article>
-  return <section className="period-exercise-results card" id="results" aria-label="Результаты и рекорды">
-    <h3>Результаты и рекорды</h3>
+  return <section className="period-exercise-results card" id="results" aria-label="Лучшие результаты за период">
+    <h3>Лучшие результаты за период</h3>
     {error ? <p role="alert">Не удалось загрузить результаты. <button type="button" className="link" onClick={onRetry}>Повторить</button></p> : loading && !workouts ? <p role="status">Загружаем результаты…</p> : !latest.length ? <p>За этот период пока нет результатов.</p> : <>
       {latest.slice(0, 3).map(row)}{!children && (latest.length > 3 && <details><summary>Все упражнения · {latest.length}</summary>{latest.slice(3).map(row)}</details>)}
     </>}
