@@ -1,7 +1,11 @@
-import { PersonalWorkoutResult } from '../../shared/PersonalWorkoutResult'
+import { ProgressDetailsSummary } from './ProgressDetailsSummary'
+import { ClientResultsCenter } from './ClientResultsCenter'
+import { WeeklyTrainingLoad } from './WeeklyTrainingLoad'
+import { ClientBodyMapDisclosure } from './WorkoutBodyMap'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import { ClientGoalFacts, ClientCurrentWeek, PeriodExerciseResults, ClientPeriodComparison } from './ClientProgressFacts'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import type {
@@ -42,6 +46,7 @@ function PeriodTabs({ value, available, onChange }: {
       type="button"
       key={period.key}
       className={period.key === value ? 'active' : ''}
+      aria-pressed={period.key === value}
       onClick={() => onChange(period.key)}
     ><span>{period.label}</span></button>)}
   </div>
@@ -65,6 +70,24 @@ function AutomaticSummaryError({ error, onRetry }: { error: Error; onRetry: () =
     <span>{error.message}</span>
     <button type="button" className="link" onClick={onRetry}>Повторить</button>
   </p>
+}
+
+function scrollToProgressSection(sectionId: string) {
+  const target = document.getElementById(sectionId)
+  const content = target?.closest('.content')
+  if (!(target instanceof HTMLElement) || !(content instanceof HTMLElement)) return
+
+  const targetRect = target.getBoundingClientRect()
+  const contentRect = content.getBoundingClientRect()
+  const top = content.scrollTop + targetRect.top - contentRect.top - 20
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  content.scrollTo({ top: Math.max(0, top), behavior: reducedMotion ? 'auto' : 'smooth' })
+
+  // A native hash jump can move the root WKWebView together with `.content`,
+  // which lifts the bottom tab bar into the page. Keep the app shell pinned.
+  window.scrollTo(0, 0)
+  document.documentElement.scrollTop = 0
+  document.body.scrollTop = 0
 }
 
 export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = null }: {
@@ -517,7 +540,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
     {detailsOpen && <SummarySheet title="Подробный анализ" onClose={() => setDetailsOpen(false)}>
       <ProgressDetailedAnalysis sections={detailedAnalysis} />
     </SummarySheet>}
-    <TrainingBodyProgressMap
+    {role === 'trainer' && <TrainingBodyProgressMap
       summary={summary}
       workouts={currentWorkouts ?? []}
       clientId={clientId}
@@ -526,7 +549,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       loadLoading={workoutsLoading}
       loadError={workoutsError}
       onLoadRetry={onWorkoutsRetry}
-    />
+    />}
     <section className="client-progress-comparison" aria-labelledby={`${role}-progress-comparison-title`}>
       <header>
         <div>
@@ -668,193 +691,102 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
 }
 
 export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null, measurementManagement }: {
-  clientId: string
-  profileGoal?: string | null
-  gender?: Gender | null
-  measurementManagement?: ReactNode
+  clientId: string; profileGoal?: string | null; gender?: Gender | null; measurementManagement?: ReactNode
 }) {
   const { actor } = useAuth()
   const { goals: goalsRepository, progress: progressRepository, trainingSummaries: trainingSummariesRepository, workouts: workoutsRepository } = useDataBackend()
   const today = todayInTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
-  const [period, setPeriod] = useState<SummaryPeriod>('1m')
+  const [params, setParams] = useSearchParams()
+  const requestedPeriod = params.get('period')
+  const period: SummaryPeriod = requestedPeriod === '3m' || requestedPeriod === '6m' ? requestedPeriod : '1m'
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const allWorkouts = useQuery({ queryKey: ['workouts', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
-  const firstWorkout = useQuery({
-    queryKey: ['training-summary-first-workout', clientId],
-    queryFn: () => trainingSummariesRepository.firstCompletedWorkoutDate(clientId),
-  })
-  const query = useQuery({
-    queryKey: ['training-summaries', 'client', clientId],
-    queryFn: () => trainingSummariesRepository.listForClient(clientId),
-  })
-  const loading = query.isLoading || firstWorkout.isLoading
-  const loadError = query.error ?? firstWorkout.error
-  const ready = !loading && !loadError
-  const availablePeriods = availableSummaryPeriods(firstWorkout.data, today)
-  useEffect(() => {
-    if (!availablePeriods.includes(period)) setPeriod('1m')
-  }, [availablePeriods, period])
-  const summary = summaryPeriodMatch(query.data ?? [], period, today)
+  const firstWorkout = useQuery({ queryKey: ['training-summary-first-workout', clientId], queryFn: () => trainingSummariesRepository.firstCompletedWorkoutDate(clientId) })
+  const query = useQuery({ queryKey: ['training-summaries', 'client', clientId], queryFn: () => trainingSummariesRepository.listForClient(clientId) })
+  const measurements = useQuery({ queryKey: ['client-progress-story-measurements', clientId], queryFn: () => progressRepository.list(clientId) })
+  const customMetrics = useQuery({ queryKey: ['progress-metrics', clientId], queryFn: () => progressRepository.listMetrics(clientId) })
+  const goal = useQuery({ queryKey: ['client-goal', clientId], queryFn: () => goalsRepository.get(clientId) })
+  const firstDate = firstWorkout.data ?? allWorkouts.data?.filter((workout) => workout.status === 'done').map((workout) => workout.workoutDate).sort()[0]
+  const historyLoaded = firstWorkout.isSuccess || allWorkouts.isSuccess
+  const availablePeriods = historyLoaded ? availableSummaryPeriods(firstDate, today) : SUMMARY_PERIODS.map((item) => item.key)
+  const changePeriod = (nextPeriod: SummaryPeriod) => setParams((current) => { const next = new URLSearchParams(current); next.set('period', nextPeriod); ['mapWorkout', 'mapFrom', 'mapTo', 'mapMode', 'mapZone'].forEach((key) => next.delete(key)); return next })
+  useEffect(() => { if (historyLoaded && !availablePeriods.includes(period)) changePeriod('1m') }, [historyLoaded, period, availablePeriods])
   const range = summaryPeriodRange(period, today)
-  const workoutRange = summary
-    ? { start: summary.periodStart, end: summary.periodEnd }
-    : range
-  const periodDays = summary ? daysBetween(summary.periodStart, summary.periodEnd) + 1 : 0
-  const previousRange = summary ? {
-    start: addDays(summary.periodStart, -periodDays),
-    end: addDays(summary.periodStart, -1),
-  } : null
-  const storyRange = {
-    start: previousRange?.start ?? workoutRange.start,
-    end: addDays(today, 45),
-  }
-  const workouts = allWorkouts
-  const measurements = useQuery({
-    queryKey: ['client-progress-story-measurements', clientId],
-    queryFn: () => progressRepository.list(clientId),
-    enabled: ready,
-  })
-  const customMetrics = useQuery({
-    queryKey: ['progress-metrics', clientId],
-    queryFn: () => progressRepository.listMetrics(clientId),
-    enabled: ready,
-  })
-  const goal = useQuery({
-    queryKey: ['client-goal', clientId],
-    queryFn: () => goalsRepository.get(clientId),
-  })
+  // An exact current result takes precedence over an older window with a closer month length.
+  const summary = query.data?.find((item) => item.periodStart === range.start && item.periodEnd === range.end) ?? summaryPeriodMatch(query.data ?? [], period, today)
+  const ready = !query.isLoading && !firstWorkout.isLoading && !query.error && !firstWorkout.error
   const automaticGeneration = useQuery({
     queryKey: ['training-summary-generation', 'client', clientId, range.start, range.end],
     queryFn: async () => {
       const generation = await trainingSummariesRepository.generate(clientId, range.start, range.end, false)
-      const summaries = await trainingSummariesRepository.listForClient(clientId)
-      return { generation, summaries }
+      await queryClient.invalidateQueries({ queryKey: ['training-summaries', 'client', clientId] })
+      return generation
     },
     enabled: ready && firstWorkout.data !== null,
   })
-  useEffect(() => {
-    if (automaticGeneration.data) {
-      queryClient.setQueryData(
-        ['training-summaries', 'client', clientId],
-        automaticGeneration.data.summaries,
-      )
-    }
-  }, [automaticGeneration.data, clientId, queryClient])
-  const changePeriod = (nextPeriod: SummaryPeriod) => {
-    setPeriod(nextPeriod)
-  }
-  const currentWorkouts = workouts.data?.filter((workout) =>
-    workout.workoutDate >= workoutRange.start && workout.workoutDate <= workoutRange.end)
-  const previousWorkouts = previousRange ? workouts.data?.filter((workout) =>
-    workout.workoutDate >= previousRange.start && workout.workoutDate <= previousRange.end) : undefined
-  const upcomingWorkouts = workouts.data?.filter((workout) =>
-    workout.workoutDate >= today && workout.workoutDate <= storyRange.end)
-
-  return <section className="ai-progress-card client-progress-card progress-story-card" aria-label="Прогресс тренировок" aria-busy={loading || (!summary && automaticGeneration.isFetching)}>
-    <PersonalWorkoutResult workouts={allWorkouts.data} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+  const refresh = useMutation({
+    mutationFn: async (requested: { clientId: string; start: LocalDate; end: LocalDate }) => {
+      await trainingSummariesRepository.generate(requested.clientId, requested.start, requested.end, true)
+      return trainingSummariesRepository.listForClient(requested.clientId)
+    },
+    onSuccess: (summaries, requested) => queryClient.setQueryData(['training-summaries', 'client', requested.clientId], summaries),
+  })
+  const refreshIsCurrent = refresh.variables?.clientId === clientId && refresh.variables.start === range.start && refresh.variables.end === range.end
+  const refreshBusy = refresh.isPending && refreshIsCurrent
+  const generationError = refreshIsCurrent && refresh.error ? refresh.error : refreshIsCurrent && refresh.isSuccess ? null : automaticGeneration.error
+  const currentWorkouts = allWorkouts.data?.filter((workout) => workout.workoutDate >= range.start && workout.workoutDate <= range.end)
+  const previousStart = addDays(range.start, -(daysBetween(range.start, range.end) + 1))
+  const previousEnd = addDays(range.start, -1)
+  const previousWorkouts = allWorkouts.data?.filter((workout) => workout.workoutDate >= previousStart && workout.workoutDate <= previousEnd)
+  const retryMeasurements = () => void Promise.all([measurements.refetch(), customMetrics.refetch()])
+  const analysis = summary ? buildProgressDetailedAnalysis({ summary, role: 'client', goalTitle: goal.data?.title ?? profileGoal, visibleTexts: [] }) : []
+  const savedAnalysisLabel = summary ? `Период анализа: ${formatLocalDate(summary.periodStart)} — ${formatLocalDate(summary.periodEnd)}` : null
+  const newWorkouts = summary && currentWorkouts?.some((workout) => workout.status === 'done' && workout.completedAt && Date.parse(workout.completedAt) > Date.parse(summary.generatedAt))
+  const analysisDate = summary ? `Обновлён ${new Date(summary.generatedAt).toLocaleDateString('ru-RU', { timeZone: actor?.timezone })}` : null
+  return <section className="ai-progress-card client-progress-card progress-story-card" aria-label="Прогресс тренировок">
+    <ClientCurrentWeek workouts={allWorkouts.data} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
     <section className="progress-story-period" aria-labelledby="client-progress-period-title">
-      <SummaryHeader />
-      <span className="sr-only" id="client-progress-period-title">Период прогресса</span>
-      {ready && <PeriodTabs value={period} available={availablePeriods} onChange={changePeriod} />}
+      <SummaryHeader /><span className="sr-only" id="client-progress-period-title">Период прогресса</span>
+      <PeriodTabs value={period} available={availablePeriods} onChange={changePeriod} />
+      <p className="progress-period-dates">{formatLocalDate(range.start)} — {formatLocalDate(range.end)}</p>
+      <button type="button" className="link progress-analysis-shortcut" aria-controls="ai-analysis" onClick={() => scrollToProgressSection('ai-analysis')}>Посмотреть анализ</button>
     </section>
-    <AsyncView
-      loading={loading}
-      error={loadError}
-      onRetry={() => void Promise.all([query.refetch(), firstWorkout.refetch()])}
-    >
-      {summary && <p className="muted">Сохранённый анализ: {formatLocalDate(summary.periodStart)} — {formatLocalDate(summary.periodEnd)}. Последние правки могут ещё не быть учтены; свежий результат показан выше.</p>}
-      {summary ? <ClientSummaryContent
-          summary={summary}
-          goal={goal.data}
-          profileGoal={profileGoal}
-          gender={gender}
-          today={today}
-          goalLoading={goal.isLoading}
-          goalError={goal.error}
-          onGoalRetry={() => void goal.refetch()}
-          currentWorkouts={currentWorkouts}
-          previousWorkouts={previousWorkouts}
-          upcomingWorkouts={upcomingWorkouts}
-          measurements={measurements.data ?? []}
-          customMetrics={customMetrics.data ?? []}
-          measurementsLoading={measurements.isLoading || customMetrics.isLoading}
-          measurementsError={measurements.error ?? customMetrics.error}
-          onMeasurementsRetry={() => void Promise.all([measurements.refetch(), customMetrics.refetch()])}
-          measurementManagement={measurementManagement}
-          workoutsLoading={workouts.isLoading}
-          workoutsError={workouts.error}
-          onWorkoutsRetry={() => void workouts.refetch()}
-        /> : <>
-          {automaticGeneration.isFetching
-            ? <div className="ai-progress-empty" role="status"><strong>Обновляем прогресс…</strong></div>
-            : !automaticGeneration.error && <div className="ai-progress-empty"><strong>Пока нет анализа за этот период</strong></div>}
-          {measurementManagement && <MeasurementProgressSection
-            clientId={clientId}
-            entries={measurements.data ?? []}
-            customMetrics={customMetrics.data ?? []}
-            goal={goal.data}
-            periodStart={workoutRange.start}
-            periodEnd={workoutRange.end}
-            today={today}
-            role="client"
-            loading={measurements.isLoading || customMetrics.isLoading}
-            error={measurements.error ?? customMetrics.error}
-            onRetry={() => void Promise.all([measurements.refetch(), customMetrics.refetch()])}
-            management={measurementManagement}
-          />}
-        </>}
-    </AsyncView>
-    {automaticGeneration.error && <AutomaticSummaryError
-      error={automaticGeneration.error}
-      onRetry={() => void automaticGeneration.refetch()}
-    />}
+    <ClientGoalFacts goal={goal.data} profileGoal={profileGoal} entries={measurements.data ?? []} workouts={allWorkouts.data ?? []}
+      periodStart={range.start} periodEnd={range.end} today={today}
+      loading={goal.isLoading || measurements.isLoading || allWorkouts.isLoading}
+      error={goal.error ?? measurements.error ?? allWorkouts.error}
+      onRetry={() => void Promise.all([goal.refetch(), measurements.refetch(), allWorkouts.refetch()])} />
+    <PeriodExerciseResults workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()}>
+      <ClientResultsCenter workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+    </PeriodExerciseResults>
+    <MeasurementProgressSection clientId={clientId} entries={measurements.data ?? []} customMetrics={customMetrics.data ?? []} goal={goal.data}
+      periodStart={range.start} periodEnd={range.end} today={today} role="client" compact
+      loading={measurements.isLoading || customMetrics.isLoading} error={measurements.error ?? customMetrics.error} onRetry={retryMeasurements} management={measurementManagement} />
+    <ClientBodyMapDisclosure workouts={allWorkouts.data} clientId={clientId} gender={gender}
+      summary={summary} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+    <WeeklyTrainingLoad workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+    <details className="period-rhythm card"><ProgressDetailsSummary>Регулярность тренировок</ProgressDetailsSummary>
+      <WorkoutRegularityProgressSection currentWorkouts={currentWorkouts} previousWorkouts={previousWorkouts} periodStart={range.start} periodEnd={range.end}
+        previousPeriodStart={previousStart} previousPeriodEnd={previousEnd} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+    </details>
+    <ClientPeriodComparison workouts={allWorkouts.data} entries={measurements.data ?? []} goal={goal.data} periodStart={range.start} periodEnd={range.end}
+      loading={allWorkouts.isLoading || measurements.isLoading || goal.isLoading} error={allWorkouts.error ?? measurements.error ?? goal.error}
+      onRetry={() => void Promise.all([allWorkouts.refetch(), measurements.refetch(), goal.refetch()])} />
+    <section className="client-ai-analysis card" id="ai-analysis" aria-label="ИИ-анализ">
+      <h3>ИИ-анализ</h3>{analysisDate && <p className="muted">{analysisDate}</p>}{summary && (summary.periodStart !== range.start || summary.periodEnd !== range.end) && <p className="muted">{savedAnalysisLabel}</p>}{newWorkouts && <p>Есть новые тренировки</p>}
+      {query.error && <p role="alert">Не удалось обновить сохранённый анализ. <button type="button" className="link" onClick={() => void query.refetch()}>Повторить</button></p>}
+      <button type="button" className="link" onClick={() => setDetailsOpen(true)}>Выводы и рекомендации</button>
+      {(automaticGeneration.isFetching || refreshBusy) && <p role="status">Формируем ИИ-анализ…</p>}
+      {generationError && <AutomaticSummaryError error={generationError} onRetry={() => refresh.mutate({ clientId, start: range.start, end: range.end })} />}
+    </section>
+    {detailsOpen && <SummarySheet title="Подробный анализ" onClose={() => setDetailsOpen(false)}>
+      <AsyncView loading={query.isLoading || firstWorkout.isLoading} error={summary ? null : query.error ?? firstWorkout.error} onRetry={() => void Promise.all([query.refetch(), firstWorkout.refetch()])}>
+        {summary ? <><p>{savedAnalysisLabel}</p><p className="muted">{analysisDate}</p>{newWorkouts && <p>Есть новые тренировки</p>}<ProgressDetailedAnalysis sections={analysis} compact /></>
+          : <p>{firstDate ? 'За этот период анализа пока нет.' : 'Анализ появится после первой тренировки.'}</p>}
+        {firstDate && <><button type="button" className="secondary" disabled={refresh.isPending || automaticGeneration.isFetching} onClick={() => refresh.mutate({ clientId, start: range.start, end: range.end })}>{refreshBusy ? 'Формируем ИИ-анализ…' : 'Обновить анализ'}</button></>}
+        {generationError && <p role="alert">{generationError.message}</p>}
+      </AsyncView>
+    </SummarySheet>}
   </section>
-}
-
-function ClientSummaryContent({ summary, goal, profileGoal, gender, today, goalLoading, goalError, onGoalRetry, currentWorkouts, previousWorkouts, upcomingWorkouts, measurements, customMetrics, measurementsLoading, measurementsError, onMeasurementsRetry, measurementManagement, workoutsLoading, workoutsError, onWorkoutsRetry }: {
-  summary: PublishedTrainingSummary
-  goal: ClientGoal | null | undefined
-  profileGoal?: string | null
-  gender: Gender | null
-  today: LocalDate
-  goalLoading: boolean
-  goalError: Error | null
-  onGoalRetry: () => void
-  currentWorkouts?: Workout[]
-  previousWorkouts?: Workout[]
-  upcomingWorkouts?: Workout[]
-  measurements: ProgressEntry[]
-  customMetrics: CustomMetric[]
-  measurementsLoading: boolean
-  measurementsError: Error | null
-  onMeasurementsRetry: () => void
-  measurementManagement?: ReactNode
-  workoutsLoading: boolean
-  workoutsError: Error | null
-  onWorkoutsRetry: () => void
-}) {
-  return <ProgressStoryContent
-      summary={summary}
-      clientId={summary.clientId}
-      role="client"
-      gender={gender}
-      today={today}
-      goal={goal}
-      profileGoal={profileGoal}
-      goalLoading={goalLoading}
-      goalError={goalError}
-      onGoalRetry={onGoalRetry}
-      currentWorkouts={currentWorkouts}
-      previousWorkouts={previousWorkouts}
-      upcomingWorkouts={upcomingWorkouts}
-      measurements={measurements}
-      customMetrics={customMetrics}
-      measurementsLoading={measurementsLoading}
-      measurementsError={measurementsError}
-      onMeasurementsRetry={onMeasurementsRetry}
-      measurementManagement={measurementManagement}
-      workoutsLoading={workoutsLoading}
-      workoutsError={workoutsError}
-      onWorkoutsRetry={onWorkoutsRetry}
-    />
 }

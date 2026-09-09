@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Workout } from '../../shared/domain'
-import { applyLiveSetDraft, sameLiveSetDraft, setWithLocalDraft } from './live-set-cache'
+import { applyLiveSetConfirmation, applyLiveSetDraft, reconcileLiveWorkout, sameLiveSetDraft, setWithLocalDraft } from './live-set-cache'
 
 const workout = {
   id: 'workout-1', clientId: 'client-1', clientName: 'Антон', workoutDate: '2026-08-05', status: 'in_progress', version: 1,
@@ -13,6 +13,16 @@ const workout = {
 } as unknown as Workout
 
 describe('applyLiveSetDraft', () => {
+  it('applies successful confirmation once and rejects an older refetch', () => {
+    const confirmed = applyLiveSetConfirmation(workout, 'set-1', { weightKg: 55, reps: 8 }, 3, '2026-09-09T10:00:00Z')
+    const stale = reconcileLiveWorkout(confirmed, workout)
+    expect(stale.exercises[0]?.sets[0]).toMatchObject({ version: 3, confirmedAt: '2026-09-09T10:00:00Z', fact: { weightKg: 55, reps: 8 } })
+    expect(stale.exercises[0]?.sets[1]?.confirmedAt).toBeNull()
+    expect(workout.exercises[0]?.sets[0]?.confirmedAt).toBeNull()
+    expect(reconcileLiveWorkout(undefined, workout)).toBe(workout)
+    expect(reconcileLiveWorkout({ ...workout, version: 4 }, workout).version).toBe(4)
+    expect(reconcileLiveWorkout(workout, { ...workout, exercises: [] }).exercises).toEqual([])
+  })
   it('keeps an autosaved fact visible after moving to another set', () => {
     const result = applyLiveSetDraft(workout, 'set-2', { weightKg: 52.5, reps: 8 }, 2)
 

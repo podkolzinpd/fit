@@ -1,9 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { ClientGoal, Workout, WorkoutPersonalRecord, WorkoutRegularity } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { ClientHomeOverview, clientHomeHighlight, clientHomeNextWorkout, clientHomePastPlans } from './ClientHomeOverview'
+
+vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: 'client-user', role: 'client' } }) }))
 
 const today = localDate('2026-08-16')
 
@@ -71,8 +73,8 @@ describe('ClientHomeOverview', () => {
     const latest = workout({ id: 'latest', status: 'done', hasPr: true })
     render(<MemoryRouter><ClientHomeOverview today={today} workouts={[latest]} regularity={[week]} goal={goal} personalRecords={[squatRecord]} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
     expect(screen.queryByText('НОВЫЙ ЛИЧНЫЙ РЕКОРД')).toBeNull()
-    expect(screen.getByText('Подтверждённых значений для сравнения пока нет.')).toBeVisible()
-    expect(screen.getByRole('link', { name: 'Эта тренировка' })).toHaveAttribute('href', '/workouts/latest')
+    expect(screen.getByText('Здесь пока нечего сравнивать.')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Открыть тренировку' })).toHaveAttribute('href', '/workouts/latest')
   })
 
   it('renders the next action, week progress and one secondary highlight without dashes', () => {
@@ -141,7 +143,7 @@ describe('ClientHomeOverview', () => {
     render(<MemoryRouter><ClientHomeOverview today={today} workouts={undefined} regularity={undefined} goal={null} workoutsLoading regularityLoading error={new Error('Не удалось загрузить данные')} onRetry={() => { retried = true }} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
     expect(screen.getByText('Загружаем следующую тренировку…')).toHaveAttribute('role', 'status')
     expect(screen.getByText('Загружаем прогресс недели…')).toHaveAttribute('role', 'status')
-    expect(screen.getByRole('alert')).toHaveTextContent('Не удалось проверить свежий результат')
+    expect(screen.getByRole('alert')).toHaveTextContent('Не удалось загрузить результат')
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
     expect(retried).toBe(true)
     expect(screen.getByRole('button', { name: 'Своя тренировка' })).toBeVisible()

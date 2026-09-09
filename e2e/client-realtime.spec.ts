@@ -94,22 +94,20 @@ test('client and trainer receive progress and workout changes without reload', a
     await trainer.getByRole('button', { name: /История ·/ }).click()
     await client.goto('/me/progress')
     await expect(client.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
-    await client.getByRole('button', { name: /История ·/ }).click()
+    await client.getByRole('button', { name: /История замеров ·/ }).click()
     await client.getByRole('button', { name: 'Добавить замер' }).click()
     await trainer.waitForTimeout(500)
 
     await client.getByLabel('Дата').fill(dateOffset(-1))
     await client.getByLabel('Вес, кг').fill('61.1')
     await client.getByRole('button', { name: 'Сохранить замер' }).click()
-    await expect(trainer.getByText(/61,1 кг/)).toBeVisible({ timeout: 10_000 })
+    await expect(trainer.getByText('вес 61,1 кг', { exact: true })).toBeVisible({ timeout: 10_000 })
 
     await trainer.getByRole('button', { name: 'Добавить замер' }).click()
     await trainer.getByLabel('Дата').fill(dateOffset(-2))
     await trainer.getByLabel('Вес, кг').fill('62.2')
     await trainer.getByRole('button', { name: 'Сохранить замер' }).click()
-    await expect(
-      client.locator('.client-progress-history').getByText('вес 62,2 кг', { exact: true }),
-    ).toBeVisible({ timeout: 10_000 })
+    await expect(client.getByText('вес 62,2 кг', { exact: true })).toBeVisible({ timeout: 10_000 })
 
     await client.goto('/me/workouts')
     await expect(client.getByRole('link', { name: 'Добавить тренировку' })).toHaveCount(1)

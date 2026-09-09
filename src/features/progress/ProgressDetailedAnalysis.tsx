@@ -1,8 +1,8 @@
 import type { ProgressDetailedAnalysisSection } from './progress-detailed-analysis'
 
-export function ProgressDetailedAnalysis({ sections }: { sections: readonly ProgressDetailedAnalysisSection[] }) {
+export function ProgressDetailedAnalysis({ sections, compact = false }: { sections: readonly ProgressDetailedAnalysisSection[]; compact?: boolean }) {
   return <div className="progress-detailed-analysis">
-    <p className="progress-detailed-analysis-lead">ИИ собрал дополнительные выводы. Факты из карточек выше здесь не повторяются.</p>
+    {!compact && <p className="progress-detailed-analysis-lead">ИИ собрал дополнительные выводы. Факты из карточек выше здесь не повторяются.</p>}
     {sections.map((section) => <section
       key={section.id}
       className="progress-detailed-analysis-section"

@@ -1,16 +1,17 @@
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { PersonalWorkoutResult } from '../../shared/PersonalWorkoutResult'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restDeadline, restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, enteredFactLine, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
-import { playGong } from '../../shared/gong'
+import { LiveRestTimer } from './LiveRestTimer'
+import { LiveExerciseRest, readLiveRestOverrides } from './LiveExerciseRest'
 import {
   addDays, currentTimeInTimeZone, dayOfMonth, formatLocalDate, formatMonth, localDate, todayInTimeZone, weekdayShort,
   type LocalDate,
@@ -27,7 +28,7 @@ import type { RunningFormat } from '../../shared/running-formats'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
 import { createLiveSetAutosave } from './live-set-autosave'
-import { applyLiveSetDraft, sameLiveSetDraft, setWithLocalDraft } from './live-set-cache'
+import { applyLiveSetConfirmation, applyLiveSetDraft, reconcileLiveWorkout, sameLiveSetDraft, setWithLocalDraft } from './live-set-cache'
 import { clearPendingLiveSetDrafts, readPendingLiveSetDrafts, removePendingLiveSetDraft, writePendingLiveSetDraft } from './live-set-draft-storage'
 import { createLiveWorkoutCoordinator, liveWorkoutRecoveryError } from './live-workout-coordinator'
 import { setLiveScreenAwake } from './live-keep-awake'
@@ -842,6 +843,7 @@ export function WorkoutDetailPage() {
           </div>
         </div>
         {exercise.trainerComment && <p className="exercise-comment-note">{exercise.trainerComment}</p>}
+        {exercise.clientNote && <p className="exercise-comment-note">Заметка: {exercise.clientNote}</p>}
       </WorkoutExercise>
     })
     if (block.blockType === 'single' || block.exercises.length === 1) return articles
@@ -1350,7 +1352,7 @@ function LiveSetFields({ inputKind, exerciseRef, set, editing = false, showRpe =
   // В обычном вводе ответ автосохранения меняет version, но не должен
   // пересоздавать активный input: на iOS это закрывает клавиатуру и сдвигает
   // текущий подход. Версия нужна в key только для уже зафиксированного факта.
-  const k = locked || editing ? `${mode}-${set.version}` : mode
+  const k = locked ? `${mode}-${set.version}` : mode
   // Факт при первом открытии начинается с плана: тренер видит готовые значения
   // и меняет только нужное. После выполнения приоритет остаётся у факта.
   const value = (fact: number | undefined, plan: number | undefined) => fact ?? plan
@@ -1400,12 +1402,6 @@ function LiveSetFields({ inputKind, exerciseRef, set, editing = false, showRpe =
   </>
 }
 
-const REST_STEP = 15
-
-function formatRest(seconds: number): string {
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
-}
-
 // Live elapsed workout time counting up from the start timestamp, "42:07".
 function formatElapsed(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
@@ -1451,7 +1447,10 @@ export function LiveWorkoutPage() {
   }, [fromDetail, navigate, sourceReturnTo, workoutId])
   const [askConfirm, confirmDialog] = useConfirm()
   const queryClient = useQueryClient()
-  const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
+  const query = useQuery({ queryKey: ['workout', workoutId], queryFn: async () => {
+    const incoming = await workoutsRepository.get(workoutId)
+    return reconcileLiveWorkout(queryClient.getQueryData<Workout>(['workout', workoutId]), incoming)
+  } })
   // Во время live и тренер, и клиент могут корректировать структуру: добавить
   // или заменить упражнение, подход и порядок. Серверные live-RPC используют
   // тот же authorisation путь с разрешённым выполнением для подключённого
@@ -1486,8 +1485,7 @@ export function LiveWorkoutPage() {
   const [replaceExerciseId, setReplaceExerciseId] = useState<string | null>(null)
   // Подтверждённые подходы, временно разблокированные для правки (по карандашику).
   const [editingSets, setEditingSets] = useState<Set<string>>(() => new Set())
-  // В обычном live разворачиваем только текущий подход. Тап по другой строке
-  // временно открывает её для ввода без превращения всей тренировки в форму.
+  // Выбранный подход определяет подсветку и адресные действия меню.
   const [expandedSetId, setExpandedSetId] = useState<string | null>(null)
   // Realtime может принести устаревший снимок между вводом и ответом RPC.
   // Держим конкретный введённый факт до тех пор, пока серверная копия не станет
@@ -1495,12 +1493,28 @@ export function LiveWorkoutPage() {
   const [localSetDrafts, setLocalSetDrafts] = useState<Map<string, LiveSetDraft>>(() => new Map())
   const pendingSetDrafts = useRef<Map<string, LiveSetDraft>>(new Map())
   const [recoveredSetIds, setRecoveredSetIds] = useState<Set<string>>(() => new Set())
+  const [recoveredFormIds, setRecoveredFormIds] = useState<Set<string>>(() => new Set())
   const liveSetForms = useRef<Map<string, HTMLFormElement>>(new Map())
   const [savingSetId, setSavingSetId] = useState<string | null>(null)
   const [savedSetId, setSavedSetId] = useState<string | null>(null)
   const [saveErrorSetId, setSaveErrorSetId] = useState<string | null>(null)
   const retryingSetDrafts = useRef(false)
   const initialRetryWorkoutId = useRef<string | null>(null)
+  const recoveryInitializedFor = useRef<string | null>(null)
+  const nextExerciseAnchor = useRef<string | null>(null)
+  useLayoutEffect(() => {
+    const target = nextExerciseAnchor.current
+    if (!target) return
+    const row = liveSetForms.current.get(target)
+    const card = row?.closest<HTMLElement>('.live-exercise')
+    const content = row?.closest<HTMLElement>('.content')
+    const pinned = content?.querySelector<HTMLElement>('.live-pinned')
+    if (!card || !content || !pinned) return
+    nextExerciseAnchor.current = null
+    // Exactly one adjustment after the final set changes the active card.
+    // Regular saves, timer ticks and realtime refreshes never move the page.
+    content.scrollTop += card.getBoundingClientRect().top - pinned.getBoundingClientRect().bottom - 12
+  }, [query.data])
   function techniqueActionFor(exercise: WorkoutExerciseModel) {
     const meta = catalogExerciseFor(catalog.exercises, exercise)
     return hasExerciseTechnique(meta) ? () => setTechniqueExercise(meta) : undefined
@@ -1518,6 +1532,10 @@ export function LiveWorkoutPage() {
     }
     pendingSetDrafts.current = new Map(pending)
     setRecoveredSetIds(new Set(pending.keys()))
+    if (recoveryInitializedFor.current !== workoutId) {
+      recoveryInitializedFor.current = workoutId
+      setRecoveredFormIds(new Set(pending.keys()))
+    }
     setLocalSetDrafts((current) => {
       const next = new Map(current)
       for (const [setId, draft] of pending) next.set(setId, draft)
@@ -1548,15 +1566,10 @@ export function LiveWorkoutPage() {
     if (savedDraft && pendingDraft && !sameLiveSetDraft(pendingDraft, savedDraft)) return
     pendingSetDrafts.current.delete(setId)
     if (actor?.userId) removePendingLiveSetDraft(actor.userId, workoutId, setId)
+    setRecoveredSetIds((current) => { const next = new Set(current); next.delete(setId); return next })
     setLocalSetDrafts((current) => {
       if (!current.has(setId)) return current
       const next = new Map(current)
-      next.delete(setId)
-      return next
-    })
-    setRecoveredSetIds((current) => {
-      if (!current.has(setId)) return current
-      const next = new Set(current)
       next.delete(setId)
       return next
     })
@@ -1567,22 +1580,37 @@ export function LiveWorkoutPage() {
   // Общая настройка не меняет RPE-данные; меню упражнения позволяет временно
   // показать или скрыть поле только для конкретного упражнения.
   const [rpeOverrides, setRpeOverrides] = useState<Map<string, boolean>>(() => new Map())
+  const [visiblePlans, setVisiblePlans] = useState<Set<string>>(() => new Set())
   function isRpeVisible(exerciseId: string) {
     return rpeOverrides.get(exerciseId) ?? showRpeByDefault
   }
   function toggleRpe(exerciseId: string) {
     setRpeOverrides((current) => new Map(current).set(exerciseId, !isRpeVisible(exerciseId)))
   }
+  function togglePlan(exerciseId: string) {
+    setVisiblePlans((current) => {
+      const next = new Set(current)
+      if (next.has(exerciseId)) next.delete(exerciseId)
+      else next.add(exerciseId)
+      return next
+    })
+  }
   // Inline-подтверждение частичного завершения. window.confirm в нативной обёртке
   // (Capacitor/WKWebView) не показывается и блокировал выход из тренировки —
   // используем встроенный диалог в панели вместо нативного confirm.
   const [confirmFinish, setConfirmFinish] = useState(false)
-  const [restRemaining, setRestRemaining] = useState<number | null>(null)
-  const restEndsAt = useRef<number | null>(null)
+  const [restEndsAt, setRestEndsAt] = useState<number | null>(null)
+  const restOverrideKey = `fit:live-rest-settings:${actor?.userId ?? ''}:${workoutId}`
+  const [restOverrides, setRestOverrides] = useState<Record<string, number>>({})
+  useEffect(() => { setRestOverrides(readLiveRestOverrides(restOverrideKey)) }, [restOverrideKey])
+  function setExerciseRest(exerciseId: string, seconds: number) {
+    const next = { ...restOverrides, [exerciseId]: seconds }
+    setRestOverrides(next)
+    try { sessionStorage.setItem(restOverrideKey, JSON.stringify(next)) } catch { /* The current session still works when storage is unavailable. */ }
+  }
   useEffect(() => {
     const deadline = restoreRestDeadline(workoutId)
-    restEndsAt.current = deadline
-    setRestRemaining(deadline === null ? null : Math.ceil((deadline - Date.now()) / 1000))
+    setRestEndsAt(deadline)
   }, [workoutId])
   // При правке ПОДТВЕРЖДЁННОГО подхода (карандаш → «Сохранить») значение пишется
   // в БД, но без refetch локальный set остаётся старым и поле возвращает прежнее
@@ -1622,7 +1650,7 @@ export function LiveWorkoutPage() {
       acknowledgeLiveDraft(set.id, draft)
       if (set.confirmedAt) {
         const exercise = query.data?.exercises.find((item) => item.sets.some((itemSet) => itemSet.id === set.id))
-        if (exercise) setExpandedExercises((previous) => {
+        if (exercise && !editingSets.has(set.id)) setExpandedExercises((previous) => {
           if (!previous.has(exercise.id)) return previous
           const next = new Set(previous)
           next.delete(exercise.id)
@@ -1661,22 +1689,7 @@ export function LiveWorkoutPage() {
         ? field.defaultValue
         : field.options[field.selectedIndex]?.defaultSelected ? field.value : ''))
   }
-  function saveOpenLiveSet(exercise: WorkoutExerciseModel, targetSetId: string) {
-    // PointerDown происходит до blur: это единственный надёжный момент на iOS
-    // для чтения числа из строки, когда тренер тапаeт «Заполнить» у следующей.
-    // При клавиатурной активации fallback берёт единственную открытую форму.
-    const focused = document.activeElement instanceof HTMLElement
-      ? document.activeElement.closest<HTMLFormElement>('form[data-live-set-id]')
-      : null
-    const fallback = [...liveSetForms.current.entries()].find(([setId]) => setId !== targetSetId)
-    const form = focused ?? fallback?.[1]
-    const currentSetId = form?.dataset.liveSetId ?? fallback?.[0]
-    const currentSet = currentSetId ? exercise.sets.find((set) => set.id === currentSetId) : undefined
-    if (currentSet && form && currentSet.id !== targetSetId && liveFormChanged(form)) {
-      persistLiveDraft(currentSet, draftFrom(form), true)
-    }
-  }
-  function openLiveSet(exercise: WorkoutExerciseModel, targetSetId: string) {
+  function openLiveSet(targetSetId: string) {
     setExpandedSetId(targetSetId)
   }
   useEffect(() => {
@@ -1687,7 +1700,15 @@ export function LiveWorkoutPage() {
   const confirm = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => runLiveSetMutation(set, draft, true, () => liveSets.confirm(set, draft)),
     onMutate: ({ set, draft }) => { rememberLiveDraft(set.id, draft) },
-    onSuccess: (_data, { set, draft }) => {
+    onSuccess: (version, { set, draft }) => {
+      const before = queryClient.getQueryData<Workout>(['workout', workoutId])
+      const owner = before?.exercises.find((exercise) => exercise.sets.some((item) => item.id === set.id))
+      if (owner && owner.blockType === 'single' && owner.sets.every((item) => item.id === set.id || item.confirmedAt)) {
+        const next = before?.exercises.find((exercise) => exercise.id !== owner.id && exercise.sets.some((item) => !item.confirmedAt))
+        nextExerciseAnchor.current = next?.sets.find((item) => !item.confirmedAt)?.id ?? null
+      }
+      queryClient.setQueryData<Workout>(['workout', workoutId], (workout) => workout
+        ? applyLiveSetConfirmation(workout, set.id, draft, version, new Date().toISOString()) : workout)
       acknowledgeLiveDraft(set.id, draft)
       setExpandedSetId(null)
       // Отдых берётся из настроек блока (Этап A), не хардкод:
@@ -1697,8 +1718,10 @@ export function LiveWorkoutPage() {
       const workout = query.data
       const exercise = workout?.exercises.find((item) => item.sets.some((s) => s.id === set.id))
       if (workout && exercise) {
-        const sec = restSecondsAfterSet(workout, exercise, set)
-        startRestUntil(restDeadline(sec), sec)
+        const sec = exercise.blockType === 'single'
+          ? restOverrides[exercise.id] ?? restSecondsAfterSet(workout, exercise, set)
+          : restSecondsAfterSet(workout, exercise, set)
+        startRestUntil(restDeadline(sec))
       }
       void query.refetch()
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
@@ -1711,7 +1734,6 @@ export function LiveWorkoutPage() {
     const pending = readPendingLiveSetDrafts(actor.userId, workoutId)
     if (!pending.size) return
     retryingSetDrafts.current = true
-    setRecoveredSetIds(new Set(pending.keys()))
     trackGoal('live_set_retry_started')
     try {
       const serverSets = new Map(query.data.exercises.flatMap((exercise) => exercise.sets).map((set) => [set.id, set]))
@@ -1751,23 +1773,12 @@ export function LiveWorkoutPage() {
   }, [actor?.userId, query.data, workoutId, save.isPending, confirm.isPending])
   // Запускает отдых до абсолютного момента endsAt (мс). null — отдыха нет
   // (напр. между упражнениями суперсета, seconds=0): таймер не показываем.
-  function startRestUntil(endsAt: number | null, seconds: number) {
-    restEndsAt.current = endsAt
+  function startRestUntil(endsAt: number | null) {
+    setRestEndsAt(endsAt)
     storeRestDeadline(workoutId, endsAt)
-    setRestRemaining(endsAt === null ? null : seconds)
   }
   function stopRest() {
-    restEndsAt.current = null
-    storeRestDeadline(workoutId, null)
-    setRestRemaining(null)
-  }
-  // Shift the running rest deadline by ±step, never below zero.
-  function adjustRest(deltaSeconds: number) {
-    if (restEndsAt.current === null) return
-    const nextEnd = Math.max(Date.now(), restEndsAt.current + deltaSeconds * 1000)
-    restEndsAt.current = nextEnd
-    storeRestDeadline(workoutId, nextEnd)
-    setRestRemaining(Math.max(0, Math.round((nextEnd - Date.now()) / 1000)))
+    startRestUntil(null)
   }
   function runLiveWorkoutMutation(operationKey: string, operation: (workout: Workout) => Promise<number>) {
     const snapshot = query.data!
@@ -1811,8 +1822,13 @@ export function LiveWorkoutPage() {
   }
   async function flushOpenLiveSetDrafts() {
     const sets = new Map((query.data?.exercises ?? []).flatMap((exercise) => exercise.sets).map((set) => [set.id, set]))
-    for (const [setId, form] of liveSetForms.current) {
+    // Snapshot before awaiting: callback refs can reinsert forms during render,
+    // which would make a live Map iterator visit the same rows indefinitely.
+    for (const [setId, form] of [...liveSetForms.current]) {
       const set = sets.get(setId)
+      // Disabled controls are absent from FormData. Never turn a locked fact
+      // into an empty draft while finishing a partially completed exercise.
+      if (set?.confirmedAt && !editingSets.has(setId)) continue
       if (!set || (!liveFormChanged(form) && !pendingSetDrafts.current.has(setId))) continue
       const draft = draftFrom(form)
       liveSetAutosave.clear(setId)
@@ -1855,46 +1871,15 @@ export function LiveWorkoutPage() {
       rpe: numberValue(values.get('rpe')),
     }
   }
-  // Derive the countdown from a wall-clock deadline so it stays correct even
-  // when the tab is backgrounded and timers are throttled by the browser.
-  const restActive = restRemaining !== null
-  useEffect(() => {
-    if (!restActive) return
-    // Один тик отсчёта. iOS Safari замораживает setInterval при блокировке
-    // экрана/фоне — на возврате пересчитываем от абсолютного дедлайна, иначе
-    // таймер «пропадает» (застыл и тут же гонг), а не тикает как надо.
-    const tick = () => {
-      if (restEndsAt.current === null) return
-      const left = Math.ceil((restEndsAt.current - Date.now()) / 1000)
-      if (left <= 0) {
-        restEndsAt.current = null
-        storeRestDeadline(workoutId, null)
-        setRestRemaining(null)
-        playGong()
-      } else {
-        setRestRemaining(left)
-      }
-    }
-    const timer = window.setInterval(tick, 250)
-    // pageshow — возврат из bfcache (iOS), visibilitychange — разблокировка/фокус.
-    const onWake = () => { if (document.visibilityState === 'visible') tick() }
-    document.addEventListener('visibilitychange', onWake)
-    window.addEventListener('pageshow', onWake)
-    return () => {
-      window.clearInterval(timer)
-      document.removeEventListener('visibilitychange', onWake)
-      window.removeEventListener('pageshow', onWake)
-    }
-  }, [restActive])
   const liveSyncError = save.error ?? confirm.error
   const error = appendSet.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExerciseModel) {
-    if (clientMode) return null
+    const note = (clientMode ? exercise.clientNote : exercise.trainerComment) ?? ''
     return <details className="live-exercise-note">
-      <summary>Заметка тренера{exercise.trainerComment ? <span> · есть текст</span> : null}</summary>
-      <textarea className="exercise-comment" aria-label={`Комментарий: ${exercise.name}`} placeholder="Комментарий к упражнению…" rows={1} defaultValue={exercise.trainerComment ?? ''} disabled={rootMutationPending}
-        onBlur={(event) => { const next = event.target.value.trim(); if (next !== (exercise.trainerComment ?? '')) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
+      <summary>{clientMode ? 'Заметка' : 'Заметка тренера'}{note ? <span className="live-note-preview">{note}</span> : null}</summary>
+      <textarea className="exercise-comment" aria-label={`Заметка: ${exercise.name}`} placeholder="Заметка к упражнению…" maxLength={5000} rows={2} defaultValue={note} disabled={rootMutationPending}
+        onBlur={(event) => { const next = event.target.value.trim(); if (next !== note) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
     </details>
   }
   // Меню упражнения в live (⋯): «Заменить» доступно, пока нет подтверждённых
@@ -1904,8 +1889,10 @@ export function LiveWorkoutPage() {
     if (!canManageLiveStructure) return null
     const canReplace = !exercise.sets.some((set) => set.confirmedAt)
     const showRpe = isRpeVisible(exercise.id)
+    const showPlan = visiblePlans.has(exercise.id)
     return <OverflowMenu items={[
       ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
+      { label: showPlan ? 'Скрыть план' : 'Показать план', onClick: () => togglePlan(exercise.id) },
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
       ...(canReplace ? [{ label: 'Заменить', disabled: rootMutationPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } }] : []),
       ...(removableSet ? [{ label: 'Удалить подход', danger: true, disabled: rootMutationPending, onClick: async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(removableSet.id) } }] : []),
@@ -1926,7 +1913,6 @@ export function LiveWorkoutPage() {
   function renderLiveSet(exercise: WorkoutExerciseModel, set: WorkoutSet, label?: string, current = false) {
     const displayedSet = setWithLocalDraft(set, localSetDrafts.get(set.id))
     const isEditing = editingSets.has(set.id)
-    const isExpanded = current || isEditing || expandedSetId === set.id
     // «Закрыто» (подтверждён) — зелёный; «в работе» (текущий) — серый.
     const stateClass = set.confirmedAt && !isEditing ? 'confirmed' : current && !isEditing ? 'current' : ''
     const saveStatus = savingSetId === set.id ? 'saving' : saveErrorSetId === set.id ? 'error' : savedSetId === set.id ? 'saved' : 'idle'
@@ -1937,27 +1923,15 @@ export function LiveWorkoutPage() {
       : exercise.blockPreset === 'interval' && restSeconds === 0
         ? 'Готово'
         : 'Готово, отдых'
-    if (!isExpanded) {
-      const plan = planLine(exercise.inputKind, set, exercise.ref)
-      const fact = set.confirmedAt ? factLine(displayedSet, true, exercise.ref) : enteredFactLine(displayedSet, true, exercise.ref)
-      const compactValues = <span className="live-set-compact-values"><strong>{fact ? `${set.confirmedAt ? 'Факт' : 'Введено'} ${fact}` : plan ? `План ${plan}` : 'Без значений'}</strong>{fact && plan && <small>План {plan}</small>}</span>
-      return <div className={`live-set-compact ${set.confirmedAt ? 'confirmed' : 'upcoming'}`} key={set.id}>
-        <span className="live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        {set.confirmedAt
-          ? <>{compactValues}<button type="button" className="link live-set-compact-action" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>✎</button></>
-          : <button type="button" className="link live-set-fill-action" aria-label={`Заполнить подход ${setNumber ?? ''}`} onPointerDown={() => saveOpenLiveSet(exercise, set.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') saveOpenLiveSet(exercise, set.id) }} onClick={() => openLiveSet(exercise, set.id)}>
-              {compactValues}
-              <span className="live-set-fill-label">Заполнить <ChevronRightIcon /></span>
-            </button>}
-      </div>
-    }
     const showRpe = isRpeVisible(exercise.id)
+    const showPlan = visiblePlans.has(exercise.id)
     // Локальный draft меняется на каждом autosave. Он не должен быть частью
     // key активной формы: remount закрывал клавиатуру и менял scrollTop.
     // Однократный recovery-key нужен только после reload, чтобы применить
     // восстановленные defaultValue.
-    const recoveryKey = recoveredSetIds.has(set.id) ? 'recovered' : 'stable'
-    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={`${set.id}:${recoveryKey}`} onInput={(event) => captureLiveDraft(set, event.currentTarget)} onBlur={(event) => {
+    const recoveryKey = recoveredFormIds.has(set.id) ? 'recovered' : 'stable'
+    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={`${set.id}:${recoveryKey}`} onFocus={() => { if (!set.confirmedAt) openLiveSet(set.id) }} onInput={(event) => captureLiveDraft(set, event.currentTarget)} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
+      if (set.confirmedAt && !isEditing) return
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       persistLiveDraft(set, draftFrom(event.currentTarget), true)
@@ -1969,13 +1943,15 @@ export function LiveWorkoutPage() {
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
-                onClick={(event) => { const form = event.currentTarget.form; if (form) persistLiveDraft(set, draftFrom(form), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span><span className="live-set-action-label">Сохранить</span></button>
-            : <button type="button" className={set.confirmedAt ? 'secondary live-set-check done' : 'live-set-check'} aria-label={confirmLabel} disabled={Boolean(set.confirmedAt) || confirm.isPending}
+                onClick={(event) => { const form = event.currentTarget.form; if (form) persistLiveDraft(set, draftFrom(form), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>
+            : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}><span aria-hidden="true">✓</span></button>
+            : <button type="button" className="live-set-check" aria-label={confirmLabel} disabled={confirm.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
-                onClick={(event) => { liveSetAutosave.clear(set.id); const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span><span className="live-set-action-label">Готово</span></button>}
+                onClick={(event) => { liveSetAutosave.clear(set.id); const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>}
           <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} /></div>
         </div>
       </WorkoutSetRow>
+      {showPlan && <small className="live-set-plan-caption">{planLine(exercise.inputKind, set, exercise.ref) ? `План · ${planLine(exercise.inputKind, set, exercise.ref)}` : 'Без плановых значений'}</small>}
     </form>
   }
   const sessionProgress = liveSessionProgress(query.data?.exercises ?? [])
@@ -1998,15 +1974,11 @@ export function LiveWorkoutPage() {
         return (
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <div className="live-pinned">
-          <WorkoutTimer startedAt={query.data.startedAt ?? null} resting={restActive} />
-          {restRemaining !== null && <div className="rest-timer">
-            <strong>Отдых {formatRest(restRemaining)}</strong>
-            <div className="rest-controls">
-              <button type="button" className="rest-step" aria-label="Минус 15 секунд" onClick={() => adjustRest(-REST_STEP)}>−15с</button>
-              <button type="button" className="rest-step" aria-label="Плюс 15 секунд" onClick={() => adjustRest(REST_STEP)}>+15с</button>
-              <button type="button" className="link" onClick={stopRest}>Пропустить</button>
-            </div>
-          </div>}
+          <div className="live-timer-toolbar"><WorkoutTimer startedAt={query.data.startedAt ?? null} />
+            <Coachmark id="live-timer-2026-09" userId={actor?.userId} title="Отдых — в кнопке таймера" description="Нажмите, чтобы запустить отдых, добавить время или пропустить его. Подходы можно заполнять прямо в таблице.">
+              <LiveRestTimer deadline={restEndsAt} onChange={startRestUntil} />
+            </Coachmark>
+          </div>
           {activeCircuit && circuitRounds && <div className="circuit-head pinned">
             <span className="block-badge">{blockLabel(activeCircuit.blockType, activeCircuit.blockPreset)}</span>
             <span className="circuit-counter">Круг {circuitRounds[circuitCurrent]?.round ?? 1} из {circuitRounds.length}</span>
@@ -2030,9 +2002,8 @@ export function LiveWorkoutPage() {
         if (block.blockType === 'single' || block.exercises.length === 1) {
           return block.exercises.map((exercise) => {
             const currentSetIndex = exercise.sets.findIndex((set) => !set.confirmedAt)
-            // Открыта одна строка: по умолчанию первая незавершённая, после тапа
-            // — выбранная тренером. При уходе с предыдущей строки её черновик
-            // уже сохранён локально в persistLiveDraft.
+            // Все строки доступны для ввода; текущая определяет подсветку и
+            // действия меню. При смене строки её черновик сохранён локально.
             const activeSetId = expandedSetId ?? exercise.sets[currentSetIndex]?.id
             const allDone = exercise.sets.every((set) => set.confirmedAt)
             // В live рабочей остаётся только текущая карточка. Завершённые
@@ -2057,12 +2028,16 @@ export function LiveWorkoutPage() {
             }
             return <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
               <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
-              {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
+              {clientMode && exercise.trainerComment && <p className="live-trainer-cue">Тренер: {exercise.trainerComment}</p>}
+              {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return <p className="live-previous-result">{line ? `В прошлый раз: ${line}` : 'Нет предыдущего результата'}</p> })()}
+              <div className="live-exercise-tools">
+                {liveCommentField(exercise)}
+                {block.blockType === 'single' && <LiveExerciseRest seconds={restOverrides[exercise.id] ?? exercise.restBetweenSetsSec} onChange={(seconds) => setExerciseRest(exercise.id, seconds)} />}
+              </div>
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </WorkoutSetTable>
               {canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
-              {liveCommentField(exercise)}
             </WorkoutExercise>
           })
         }
@@ -2092,6 +2067,7 @@ export function LiveWorkoutPage() {
       }) })()}
       {canManageLiveStructure && <button type="button" className="secondary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
       {error && <p className="error">{error.message}</p>}
+      {commentLive.isError && commentLive.variables && <button type="button" className="secondary" onClick={() => commentLive.mutate(commentLive.variables!)}>Повторить сохранение заметки</button>}
       {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
           конкурировать с primary-подтверждением подхода в карточке.
           Подтверждение частичного завершения — inline (не нативный confirm,

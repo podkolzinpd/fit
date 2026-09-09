@@ -167,6 +167,8 @@ for (const role of ['trainer', 'client'] as const) {
     })
     await loginForHistory(page, role)
     await page.goto(`${detailPath}/live`)
+    await expect(page.locator('.live-timer')).toBeVisible()
+    await page.keyboard.press('Escape')
     await page.locator('.live-exercise-collapsed').click()
     await page.locator('.live-exercise').getByRole('button', { name: 'Ещё действия', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Удалить упражнение', exact: true }).click()

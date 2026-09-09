@@ -1,4 +1,4 @@
-// schema-sha256: bf4382b5eb1ec901e79f50ff47523f95d012c8ad53b9b06c503cb3f477be8c24
+// schema-sha256: 50b648f7f2c9f8374083c98048ac0f30e7ae2678a53cce5c6800981db7bcdd22
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1351,6 +1351,7 @@ export type Database = {
       }
       workout_exercises: {
         Row: {
+          client_note: string | null
           block_id: string
           block_preset: string
           block_rounds: number
@@ -1376,6 +1377,7 @@ export type Database = {
         }
         Insert: {
           block_id?: string
+          client_note?: string | null
           block_preset?: string
           block_rounds?: number
           block_type?: string
@@ -1400,6 +1402,7 @@ export type Database = {
         }
         Update: {
           block_id?: string
+          client_note?: string | null
           block_preset?: string
           block_rounds?: number
           block_type?: string

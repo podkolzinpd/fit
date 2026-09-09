@@ -62,7 +62,7 @@ describe('body progress map', () => {
     expect(result.description).toBeUndefined()
     expect(result.regions[0]!.metricLabel).toBe('Результат зоны')
     expect(result.regions[0]!.primaryDetail).toBe(
-      'Жим гантелей лёжа (Гантели) · Объём за тренировку: 1 000 → 1 400 кг',
+      'Жим гантелей лёжа (Гантели) · Объём: 1 000 → 1 400 кг',
     )
   })
 
@@ -104,7 +104,7 @@ describe('body progress map', () => {
     expect(result.regions.map((region) => [region.group, region.percent])).toEqual([
       ['chest', 67], ['upper_back', 33],
     ])
-    expect(result.regions[0]?.metricLabel).toBe('Доля всех выполненных подходов')
+    expect(result.regions[0]?.metricLabel).toBe('Доля подходов')
     expect(result.regions[0]?.primaryDetail).toBe('2 из 3 подходов')
   })
 

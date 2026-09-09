@@ -18,7 +18,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Post-workout feedback | Клиент после завершения фиксирует session RPE 1–10, самочувствие и дискомфорт; тренер видит сигнал без доступа посторонних аккаунтов | Implemented: assigned и client-authored workout, отдельный idempotent submit с version check, RLS/SQL и WebKit 390 px acceptance |
 | Trainer response | После завершения клиент видит реакцию 👍 / 🔥 / 💪 и короткий ответ ответственного тренера | Implemented: trainer-author для назначения, root trainer для client-authored workout, автор/время, idempotent versioned RPC, realtime/refetch и RLS matrix |
 | Trainer attention | Клиент явно задаёт вопрос по завершённой тренировке, а основной тренер видит одну приоритетную задачу на клиента | Implemented: question → discomfort → planning priority, reply/explicit resolution, two-week planning snooze, realtime, RLS/SQL and mobile WebKit acceptance |
-| Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; Trainer first shows current week and the shared AI card, with running and measurements on explicit subroutes; Client starts with an interactive front/back body map of confirmed progress and performed-set load; duplicate-date create opens the existing entry without a failing DB request; visual regression covers Client 390/430 and Trainer 390/430/1440 px |
+| Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; Trainer first shows current week and the shared AI card, with running and measurements on explicit subroutes; Client starts with the current week and period selection, then goal, unified results, measurements and the disclosed body map; duplicate-date create opens the existing entry without a failing DB request; visual regression covers Client 390/430 and Trainer 390/430/1440 px |
 | Assistant | Trainer-only history, idempotent turns, proposed actions and explicit confirmation | Implemented in production Supabase; default-off sticky routing can pin one migrated trainer to Yandex API for the unchanged main UI. The same app-session now selects Yandex for all main feature repositories, including Assistant dependencies; errors do not fall back per request. Production enablement and tenant data rehearsal remain pending |
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |
@@ -272,3 +272,29 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Supabase migration `20260908090000` и Yandex `000039` исключают baseline из прежних PR-флагов/деталей/истории. Таблицы и tenant migration catalog не меняются: только вычисляемые функции, переносимых столбцов нет.
 - SQL/RLS: baseline, сравнение, правка и удаление источника; Yandex actor smoke baseline false. Клиентские unit/component: same-day, rename, cross-client/ref, no-data, edit/delete и refresh; mobile visual 390/430 light/dark.
 - Полная перекомпоновка и карта Home — следующие уже утверждённые YAFIT-481–483, не считаются выпущенными этим этапом.
+
+### Home / Progress — компактная карта (YAFIT-481)
+
+- Карта встроена в личный итог после primary/плана; применяется клиентский выбор фигуры. Один расчёт loadBodyMap даёт абсолютные подходы, долю только определённых зон и отдельный учёт cardio/unknown.
+- Полная карта ниже в Progress и свёрнута по умолчанию. Home URL сохраняет workout/mode/from/to/zone; исходная запись и возврат сохраняют контекст. Некорректный или удалённый scope не подменяется периодом.
+- Приёмка: unit/component — coverage счётчиков, неопределённые зоны, side/keyboard/swipe, дополнительные зоны, loading/error/retry, чужой/удалённый scope и возврат; browser — Home → Progress → source → назад без ИИ, 390/430 light/dark, полная карта/тренер.
+
+### Client Progress — композиция и независимость от ИИ (YAFIT-482)
+
+- Личный итог → период/даты → отдельные критерии → текущая неделя → результаты упражнений → компактные замеры → раскрываемая карта → ритм/сравнение → ИИ. Тренерская композиция и client-copy защита сохранены.
+- Факты, цель и замеры работают при задержке/ошибке сводки; старый анализ имеет собственные даты и не сдвигает выбранный период карты. Обновление ИИ явно запрашивается пользователем, защищено от устаревшего кэша при смене периода.
+- Результаты и источники используют общий exact-identity расчёт по всей истории; числовое сравнение не подставляет план при отсутствующих фактах. История/правка замеров, график, custom metrics и переход Home → карта → источник сохранены.
+- Unit/integration покрывают ошибки и retry, переименование/разные refs, историю до периода, неполные факты, текущую неделю, раскрытия и гонку force-генерации. Реальная stage AI проверка `34291138177` успешна; это не ручная оценка каждого будущего ответа модели.
+
+### Client Progress — центр результатов и недельные подходы (YAFIT-483)
+- Свёрнутый центр с фильтрами упражнения/метрики, сохранённым контекстом возврата и постраничным показом истории. Старый PR остаётся видимым после снижения; сравнение учитывает записи до выбранного периода.
+- Максимум веса, повторы при фиксированном весе и объём разделены. Изменение объёма раскрывается через реальные подходы двух записей без вывода о росте силы.
+- Недельные подходы используют общий расчёт карты, отдельно учитывают кардио/неизвестные зоны, помечают неполные недели и не включают будущее.
+- Факты независимы от ИИ. Тренерский экран, измерения и AI-контракты сохранены. Статус выпуска фиксируется в CURRENT_STATE и журнале исполнения.
+
+### Client Progress — простые разделы (YAFIT-486)
+- Текущая неделя выше периода; ниже все факты относятся к выбранным датам, цель отдельно подписывает актуальное «Сейчас».
+- Рекорды/улучшения приоритетны в коротком превью; остальные результаты и источники доступны в той же карточке через «Все результаты».
+- Подробности названы по содержимому, краткие цифры видны сразу, личный итог не повторяет Home.
+- ИИ shortcut ведёт к анализу; дата обновления и проверяемые новые completedAt не меняют генерацию или защиту client-copy.
+- Проверяются порядок, ranking/fallback, фильтры/возврат, период карты, замеры, AI error/force race, mobile light/dark.

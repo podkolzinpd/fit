@@ -18,6 +18,23 @@ function workout(id: string, weight = 40, reps = 10, patch: Partial<Workout> = {
 }
 
 describe('personal workout facts', () => {
+  it.each([[45, '40 → 45 кг · +5 кг'], [35, '40 → 35 кг · −5 кг'], [40, '40 → 40 кг']])('compares %s kg inline on Home without a misleading previous-workout link', (weight, comparison) => {
+    render(createElement(MemoryRouter, {}, createElement(PersonalWorkoutResult, { home: true, workouts: [workout('a'), workout('b', weight)] })))
+    expect(screen.getByText((_, element) => element?.tagName === 'P' && element.textContent === comparison)).toBeVisible()
+    expect(screen.getByText(/К прошлому результату/)).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Открыть тренировку' })).toHaveAttribute('href', '/workouts/b')
+    expect(screen.queryByRole('link', { name: 'Сравнить' })).toBeNull()
+  })
+  it('keeps a first Home result without invented comparison, and handles loading and empty history', () => {
+    const ui = (props: { workouts?: Workout[]; loading?: boolean }) => createElement(MemoryRouter, {}, createElement(PersonalWorkoutResult, { home: true, ...props }))
+    const view = render(ui({ workouts: [workout('a')] }))
+    expect(screen.getByText('Первый результат')).toBeVisible()
+    expect(screen.queryByText(/К прошлому результату/)).toBeNull()
+    view.rerender(ui({ loading: true }))
+    expect(screen.getByRole('status')).toHaveTextContent('Загружаем результат')
+    view.rerender(ui({ workouts: [] }))
+    expect(screen.getByText('Здесь появится результат после первой тренировки.')).toBeVisible()
+  })
   it('has no invented fact without workouts or confirmed values', () => {
     expect(latestWorkoutFact([])).toEqual({})
     const empty = workout('a'); empty.exercises[0]!.sets[0]!.confirmedAt = null
@@ -69,11 +86,11 @@ describe('personal workout facts', () => {
     const props = { workouts: data }
     const ui = (extra = {}) => createElement(MemoryRouter, {}, createElement(PersonalWorkoutResult, { ...props, ...extra }))
     const view = render(ui())
-    expect(screen.getByRole('link', { name: 'Эта тренировка' })).toHaveAttribute('href', '/workouts/b')
-    expect(screen.getByRole('link', { name: 'Предыдущий результат' })).toHaveAttribute('href', '/workouts/a')
+    expect(screen.getByRole('link', { name: 'Открыть' })).toHaveAttribute('href', '/workouts/b')
+    expect(screen.getByRole('link', { name: 'Сравнить' })).toHaveAttribute('href', '/workouts/a')
     let retried = false
     view.rerender(ui({ error: new Error('offline'), onRetry: () => { retried = true } }))
-    expect(screen.queryByText('Личный рекорд по записям')).toBeNull()
+    expect(screen.queryByText('Личный рекорд')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
     expect(retried).toBe(true)
   })
