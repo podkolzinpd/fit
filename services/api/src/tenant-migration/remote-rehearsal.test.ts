@@ -5,7 +5,9 @@ import { TenantMigrationError } from './engine.js'
 import {
   buildSupabaseSourceConfig,
   exportSelectedTenant,
+  formatStageConflictDiagnostics,
   isStageTenantConflict,
+  readStageTenantConflictCode,
   readSourceDatabaseFailureCode,
   readRemoteTenantRehearsalSettings,
   readStageTenantMigrationRejectionCode,
@@ -279,16 +281,31 @@ describe('automatic source tenant selection', () => {
 })
 
 describe('automatic stage candidate selection', () => {
+  const profileConflict = new RemoteTenantRehearsalError(
+    'stage_request_failed:409:target_validation_failed:public.profiles',
+  )
+
   it('skips only checksum conflicts caused by an existing target tenant', () => {
-    expect(isStageTenantConflict(new RemoteTenantRehearsalError(
-      'stage_request_failed:409:target_validation_failed:public.profiles',
-    ))).toBe(true)
+    expect(isStageTenantConflict(profileConflict)).toBe(true)
+    expect(readStageTenantConflictCode(profileConflict))
+      .toBe('target_validation_failed:public.profiles')
     expect(isStageTenantConflict(new RemoteTenantRehearsalError(
       'stage_request_failed:409:target_import_failed:public.profiles',
     ))).toBe(false)
     expect(isStageTenantConflict(new RemoteTenantRehearsalError(
       'stage_request_failed:503',
     ))).toBe(false)
+  })
+
+  it('reports every safe stage conflict reason without tenant identifiers', () => {
+    expect(formatStageConflictDiagnostics(new Map([
+      ['target_validation_failed:public.workouts', 2],
+      ['target_validation_failed:public.profiles', 3],
+    ]))).toEqual([
+      'selection: skipped_stage_conflicts=5; distinct_stage_conflict_reasons=2',
+      'selection_conflict: reason=target_validation_failed:public.profiles; count=3',
+      'selection_conflict: reason=target_validation_failed:public.workouts; count=2',
+    ])
   })
 })
 
