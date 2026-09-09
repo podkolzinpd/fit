@@ -50,11 +50,12 @@ by client count and tries them in that order; every candidate still passes the
 same isolation, actor, merge and pending-push preflight before any table is
 exported. During dry-run, an eligible candidate whose existing stage rows have
 a different checksum is rolled back and skipped; the next candidate is tried,
-up to a bounded limit. Import, schema, network and authorization errors are not
-treated as collisions and still fail the rehearsal. Candidate UUIDs and
-rejected candidates are not logged. Automatic selection is rejected for
-`apply`, because a real write must always refer to a stable, explicitly
-configured cohort.
+up to 100 conflicts. This bound covers the current small source population
+without turning a stale stage into an unbounded sequence of remote requests.
+Import, schema, network and authorization errors are not treated as collisions
+and still fail the rehearsal. Candidate UUIDs and rejected candidates are not
+logged. Automatic selection is rejected for `apply`, because a real write must
+always refer to a stable, explicitly configured cohort.
 
 For `dry-run` and `apply`, GitHub OIDC obtains the existing bounded deploy
 identity and invokes the private `fit-stage-migration` container. The encrypted
