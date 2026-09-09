@@ -1576,7 +1576,7 @@ test('iPhone: live-факт сохраняется без blur и досылае
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: кнопка подтверждения Live остаётся крупной на 360 px', async ({ page }, testInfo) => {
+test('iPhone: подходы Live стоят вплотную при крупных touch-зонах на 360 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 360, height: 780 })
   const clientName = await createIsolatedClient(page, testInfo)
   await page.goto('/workouts/new')
@@ -1598,8 +1598,13 @@ test('iPhone: кнопка подтверждения Live остаётся кр
   const setRow = confirm.locator('xpath=ancestor::form')
   const setRowBox = await setRow.boundingBox()
   expect(setRowBox).not.toBeNull()
-  expect(setRowBox!.height).toBeGreaterThanOrEqual(52)
-  expect(setRowBox!.height).toBeLessThanOrEqual(56)
+  expect(setRowBox!.height).toBeGreaterThanOrEqual(44)
+  expect(setRowBox!.height).toBeLessThanOrEqual(46)
+  const activeExerciseStyle = await page.locator('.live-exercise.current').evaluate((element) => {
+    const style = getComputedStyle(element)
+    return { borderRadius: style.borderRadius, background: style.backgroundColor }
+  })
+  expect(activeExerciseStyle).toEqual({ borderRadius: '0px', background: 'rgba(0, 0, 0, 0)' })
   await expect(setRow.locator('.live-set-plan-caption')).toHaveCount(0)
   await page.getByRole('button', { name: 'Ещё действия' }).click()
   await page.getByRole('menuitem', { name: 'Показать план' }).click()
