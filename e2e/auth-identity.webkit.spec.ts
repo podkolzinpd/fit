@@ -7,10 +7,12 @@ test('auth identity remains usable in WebKit light and dark themes', async ({ pa
   await expect(page.getByLabel('Email')).toBeVisible()
   await expect(page.getByLabel('Пароль')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeEnabled()
+  await expect(page.getByRole('button', { name: /Google/ })).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await expect(page.getByRole('heading', { name: 'Регистрация' })).toBeVisible()
   await expect(page.getByLabel('Тип аккаунта')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Google/ })).toHaveCount(0)
 
   await page.addInitScript(() => window.localStorage.setItem('fit.appTheme', 'dark'))
   await page.goto('/auth/forgot')
