@@ -1580,11 +1580,20 @@ export function LiveWorkoutPage() {
   // Общая настройка не меняет RPE-данные; меню упражнения позволяет временно
   // показать или скрыть поле только для конкретного упражнения.
   const [rpeOverrides, setRpeOverrides] = useState<Map<string, boolean>>(() => new Map())
+  const [visiblePlans, setVisiblePlans] = useState<Set<string>>(() => new Set())
   function isRpeVisible(exerciseId: string) {
     return rpeOverrides.get(exerciseId) ?? showRpeByDefault
   }
   function toggleRpe(exerciseId: string) {
     setRpeOverrides((current) => new Map(current).set(exerciseId, !isRpeVisible(exerciseId)))
+  }
+  function togglePlan(exerciseId: string) {
+    setVisiblePlans((current) => {
+      const next = new Set(current)
+      if (next.has(exerciseId)) next.delete(exerciseId)
+      else next.add(exerciseId)
+      return next
+    })
   }
   // Inline-подтверждение частичного завершения. window.confirm в нативной обёртке
   // (Capacitor/WKWebView) не показывается и блокировал выход из тренировки —
@@ -1880,8 +1889,10 @@ export function LiveWorkoutPage() {
     if (!canManageLiveStructure) return null
     const canReplace = !exercise.sets.some((set) => set.confirmedAt)
     const showRpe = isRpeVisible(exercise.id)
+    const showPlan = visiblePlans.has(exercise.id)
     return <OverflowMenu items={[
       ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
+      { label: showPlan ? 'Скрыть план' : 'Показать план', onClick: () => togglePlan(exercise.id) },
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
       ...(canReplace ? [{ label: 'Заменить', disabled: rootMutationPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } }] : []),
       ...(removableSet ? [{ label: 'Удалить подход', danger: true, disabled: rootMutationPending, onClick: async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(removableSet.id) } }] : []),
@@ -1913,6 +1924,7 @@ export function LiveWorkoutPage() {
         ? 'Готово'
         : 'Готово, отдых'
     const showRpe = isRpeVisible(exercise.id)
+    const showPlan = visiblePlans.has(exercise.id)
     // Локальный draft меняется на каждом autosave. Он не должен быть частью
     // key активной формы: remount закрывал клавиатуру и менял scrollTop.
     // Однократный recovery-key нужен только после reload, чтобы применить
@@ -1931,15 +1943,15 @@ export function LiveWorkoutPage() {
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
-                onClick={(event) => { const form = event.currentTarget.form; if (form) persistLiveDraft(set, draftFrom(form), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span><span className="live-set-action-label">Сохранить</span></button>
-            : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}><span aria-hidden="true">✓</span><span className="live-set-action-label">Изменить</span></button>
+                onClick={(event) => { const form = event.currentTarget.form; if (form) persistLiveDraft(set, draftFrom(form), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>
+            : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}><span aria-hidden="true">✓</span></button>
             : <button type="button" className="live-set-check" aria-label={confirmLabel} disabled={confirm.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
-                onClick={(event) => { liveSetAutosave.clear(set.id); const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span><span className="live-set-action-label">Готово</span></button>}
+                onClick={(event) => { liveSetAutosave.clear(set.id); const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>}
           <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} /></div>
         </div>
       </WorkoutSetRow>
-      <small className="live-set-plan-caption">{planLine(exercise.inputKind, set, exercise.ref) ? `План · ${planLine(exercise.inputKind, set, exercise.ref)}` : 'Без плановых значений'}</small>
+      {showPlan && <small className="live-set-plan-caption">{planLine(exercise.inputKind, set, exercise.ref) ? `План · ${planLine(exercise.inputKind, set, exercise.ref)}` : 'Без плановых значений'}</small>}
     </form>
   }
   const sessionProgress = liveSessionProgress(query.data?.exercises ?? [])
@@ -2016,10 +2028,12 @@ export function LiveWorkoutPage() {
             }
             return <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
               <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
-              {liveCommentField(exercise)}
               {clientMode && exercise.trainerComment && <p className="live-trainer-cue">Тренер: {exercise.trainerComment}</p>}
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return <p className="live-previous-result">{line ? `В прошлый раз: ${line}` : 'Нет предыдущего результата'}</p> })()}
-              {block.blockType === 'single' && <LiveExerciseRest seconds={restOverrides[exercise.id] ?? exercise.restBetweenSetsSec} onChange={(seconds) => setExerciseRest(exercise.id, seconds)} />}
+              <div className="live-exercise-tools">
+                {liveCommentField(exercise)}
+                {block.blockType === 'single' && <LiveExerciseRest seconds={restOverrides[exercise.id] ?? exercise.restBetweenSetsSec} onChange={(seconds) => setExerciseRest(exercise.id, seconds)} />}
+              </div>
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </WorkoutSetTable>
