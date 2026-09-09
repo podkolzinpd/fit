@@ -1,36 +1,10 @@
 import { expect, test } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
+import { comparisonWorkoutRow, mockResultsHistory, verifyResultsSources } from './progress-results-fixture'
 import { expectMonochromeAccessibility } from './accessibility-helpers'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
-function comparisonWorkoutRow(id: string, date: string, weight: number, distance: number, strengthSets: number) {
-  const baseSet = (suffix: string, position: number, values: { weight?: number, reps?: number, distance?: number, duration?: number }) => ({
-    id: `${id}-${suffix}-${position}`, position,
-    plan_weight_kg: values.weight ?? null, plan_reps: values.reps ?? null,
-    plan_duration_min: values.duration ?? null, plan_duration_sec: null, plan_distance_km: values.distance ?? null, plan_rpe: null,
-    fact_weight_kg: values.weight ?? null, fact_reps: values.reps ?? null,
-    fact_duration_min: values.duration ?? null, fact_duration_sec: null, fact_distance_km: values.distance ?? null, fact_rpe: null,
-    confirmed_at: `${date}T10:00:00Z`, version: 1,
-  })
-  const exercise = (suffix: string, name: string, muscle: string, kind: string, sets: ReturnType<typeof baseSet>[]) => ({
-    id: `${id}-${suffix}`, position: suffix === 'press' ? 0 : 1, exercise_source: 'system', exercise_ref: suffix,
-    custom_exercise_id: null, exercise_name: name, muscle_group: muscle, input_kind: kind, block_id: `${id}-${suffix}-block`,
-    block_type: 'single', block_preset: 'set', block_rounds: 1, rest_between_exercises_sec: 0,
-    rest_between_rounds_sec: 0, rest_between_sets_sec: 60, trainer_comment: null, sets,
-  })
-  return {
-    id, client_id: demoClientId, trainer_id: '00000000-0000-4000-8000-000000000001', client_name: 'Анна Смирнова', created_by: null,
-    workout_date: date, start_time: null, end_time: null, started_at: `${date}T09:00:00Z`, completed_at: `${date}T10:00:00Z`,
-    status: 'done', notes: null, trainer_review: null, trainer_reaction: null, trainer_review_author_id: null,
-    trainer_reviewed_at: null, client_comment: null, session_rpe: null, wellbeing: null, discomfort: null, has_pr: false,
-    stage_id: null, stage_title: null, version: 1, total_count: 3,
-    exercises: [
-      exercise('press', 'Жим лёжа', 'chest', 'strength', Array.from({ length: strengthSets }, (_, index) => baseSet('press-set', index, { weight, reps: 10 }))),
-      exercise('run', 'Бег', 'cardio', 'distance', [baseSet('run-set', 0, { distance, duration: 30 })]),
-    ],
-  }
-}
 
 async function mockProgressPeriodSummary(page: VisualPage, periodStart = '2026-08-01', periodEnd = '2026-08-31') {
   const clientSummary = {
@@ -1801,4 +1775,59 @@ test('personal workout result stays the same on Home and Progress without AI', a
   await gotoStable(page, '/me/progress')
   await expect(result).toContainText('Максимальный записанный вес: 40 кг')
   await expectVisualBaseline(page, `personal-result-progress-dark-${process.platform}.png`)
+})
+
+
+test('results center preserves sources and explains weekly work', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client analytics')
+  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
+  await mockResultsHistory(page)
+  await openClientProgress(page)
+  await verifyResultsSources(page)
+  const center = page.locator('#results-center')
+  const viewport = page.viewportSize()!
+  await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('fixed_reps')
+  await expect(center.locator('.center-result-row').first()).toContainText('Повторы при 50 кг: 12 повт.')
+  await expect(center.locator('.center-result-row').first()).toContainText('Ранее: 10 повт.')
+  await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('volume')
+  const volume = center.locator('.center-result-row').first()
+  await volume.getByText('Из чего сложился объём', { exact: true }).click()
+  await expect(volume).toContainText('1 → 2')
+  await expect(volume).toContainText('50 кг × 12 повт.')
+  await expect(volume).toContainText('50 кг × 10 повт.')
+  await expect(volume).toContainText('45 кг × 10 повт.')
+  await expect(volume).toContainText('Итого: 1 100 кг')
+  await expect(volume).toContainText('Итого: 450 кг')
+  await expect(volume).toContainText('не равно изменению силы')
+  const weekly = page.locator('.weekly-training-load')
+  await weekly.getByText('Подходы по неделям', { exact: true }).click()
+  await expect(weekly.locator('.weekly-load-list > li').first()).toContainText('6 подходов')
+  await expect(weekly.locator('.weekly-load-list > li').first()).toContainText('По зонам: 3. Кардио: 2. Без определённой зоны: 1.')
+  await expect(weekly).toContainText('Неполная неделя')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.setViewportSize({ ...viewport, height: 1500 })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled' })
+  await expect.soft(volume).toHaveScreenshot(`result-volume-${process.platform}.png`, { animations: 'disabled' })
+  await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('weight')
+  await expect.soft(center).toHaveScreenshot(`results-center-${process.platform}.png`, { animations: 'disabled' })
+})
+
+test('results center keeps detailed analytics in dark theme', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client analytics')
+  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
+  await mockResultsHistory(page)
+  await openClientProgress(page, { dark: true })
+  const center = page.locator('#results-center')
+  await center.getByText('Все результаты и рекорды', { exact: true }).click()
+  await center.getByRole('combobox', { name: 'Упражнение', exact: true }).selectOption('system:press:strength')
+  await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('volume')
+  const weekly = page.locator('.weekly-training-load')
+  const viewport = page.viewportSize()!
+  const darkVolume = center.locator('.center-result-row').first()
+  await expect(darkVolume).toContainText('Объём за тренировку: 1 100 кг')
+  await darkVolume.getByText('Из чего сложился объём', { exact: true }).click()
+  await weekly.getByText('Подходы по неделям', { exact: true }).click()
+  await page.setViewportSize({ ...viewport, height: 1500 })
+  await expect.soft(darkVolume).toHaveScreenshot(`result-volume-dark-${process.platform}.png`, { animations: 'disabled' })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled' })
 })

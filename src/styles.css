@@ -5472,3 +5472,34 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .measurement-story-details .measurement-story-facts { margin-top:12px; }
 .progress-identity .period-rhythm.card { display:block; }
 .progress-identity .period-rhythm .client-progress-regularity-story { padding:0; border:0; border-radius:0; background:transparent; }
+
+.client-results-center.card, .weekly-training-load.card { display:block; }
+.client-results-center > summary, .weekly-training-load > summary { font-weight:600; }
+.results-center-filters { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; margin:16px 0; }
+.results-center-filters label { display:grid; gap:6px; font-size:var(--type-caption-size); }
+.results-center-filters select { width:100%; min-width:0; min-height:44px; }
+.center-result-row { padding:16px 0; border-top:1px solid var(--border); overflow-wrap:anywhere; }
+.center-result-row header { display:grid; gap:6px; }
+.center-result-row h4 { margin:0; }
+.center-result-row header span { color:var(--muted); font-size:var(--type-caption-size); }
+.center-result-row .actions { display:grid; grid-template-columns:minmax(0,1fr); gap:0; }
+.center-result-row .link, .center-result-row summary, .weekly-load-list summary { min-height:44px; padding:10px 0; cursor:pointer; }
+.result-volume-explanation dl { display:grid; gap:8px; }
+.result-volume-explanation dl > div { display:flex; justify-content:space-between; gap:12px; }
+.result-volume-explanation dd { margin:0; text-align:right; }
+.volume-source-sets { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.volume-source-sets ul { padding-left:16px; font-size:var(--type-caption-size); }
+.weekly-load-list { display:grid; gap:16px; padding:0; list-style:none; }
+.weekly-load-list > li { border-top:1px solid var(--border); padding-top:14px; }
+.weekly-load-list header { display:grid; gap:6px; }
+.weekly-load-list header strong { font-size:var(--type-caption-size); }
+.weekly-load-bar { height:8px; border-radius:var(--radius-pill); background:var(--surface-sunken); margin:12px 0; overflow:hidden; }
+.weekly-load-bar span { display:block; height:100%; background:var(--fg); border-radius:inherit; }
+/* Native disclosure glyphs depend on system fonts; keep these controls consistent across devices. */
+.client-results-center summary, .weekly-training-load summary { list-style:none; }
+.client-results-center summary::-webkit-details-marker, .weekly-training-load summary::-webkit-details-marker { display:none; }
+.client-results-center summary::before, .weekly-training-load summary::before { content:""; display:inline-block; width:0; height:0; border-top:5px solid transparent; border-bottom:5px solid transparent; border-left:7px solid currentColor; margin-right:9px; vertical-align:middle; }
+.client-results-center[open] > summary::before, .client-results-center details[open] > summary::before,
+.weekly-training-load[open] > summary::before, .weekly-training-load details[open] > summary::before { transform:rotate(90deg); }
+
+.result-change-arrow { width:16px; height:16px; margin:0 4px; vertical-align:-3px; transform:rotate(90deg); }

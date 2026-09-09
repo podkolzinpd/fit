@@ -1,3 +1,5 @@
+import { ClientResultsCenter } from './ClientResultsCenter'
+import { WeeklyTrainingLoad } from './WeeklyTrainingLoad'
 import { ClientBodyMapDisclosure } from './WorkoutBodyMap'
 import { PersonalWorkoutResult } from '../../shared/PersonalWorkoutResult'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -736,11 +738,13 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
       onRetry={() => void Promise.all([goal.refetch(), measurements.refetch(), allWorkouts.refetch()])} />
     <ClientCurrentWeek workouts={allWorkouts.data} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
     <PeriodExerciseResults workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+    <ClientResultsCenter workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
     <MeasurementProgressSection clientId={clientId} entries={measurements.data ?? []} customMetrics={customMetrics.data ?? []} goal={goal.data}
       periodStart={range.start} periodEnd={range.end} today={today} role="client" compact
       loading={measurements.isLoading || customMetrics.isLoading} error={measurements.error ?? customMetrics.error} onRetry={retryMeasurements} management={measurementManagement} />
     <ClientBodyMapDisclosure workouts={allWorkouts.data} clientId={clientId} gender={gender}
       summary={summary} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+    <WeeklyTrainingLoad workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
     <details className="period-rhythm card"><summary>Ритм выбранного периода</summary>
       <WorkoutRegularityProgressSection currentWorkouts={currentWorkouts} previousWorkouts={previousWorkouts} periodStart={range.start} periodEnd={range.end}
         previousPeriodStart={previousStart} previousPeriodEnd={previousEnd} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
