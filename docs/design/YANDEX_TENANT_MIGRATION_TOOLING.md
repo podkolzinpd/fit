@@ -54,8 +54,10 @@ up to 100 conflicts. This bound covers the current small source population
 without turning a stale stage into an unbounded sequence of remote requests.
 Import, schema, network and authorization errors are not treated as collisions
 and still fail the rehearsal. Candidate UUIDs and rejected candidates are not
-logged. Automatic selection is rejected for `apply`, because a real write must
-always refer to a stable, explicitly configured cohort.
+logged. If every candidate conflicts, CI prints the complete aggregate of safe
+rejection codes (for example, the exact validation table) and counts, without
+UUIDs or row contents. Automatic selection is rejected for `apply`, because a
+real write must always refer to a stable, explicitly configured cohort.
 
 For `dry-run` and `apply`, GitHub OIDC obtains the existing bounded deploy
 identity and invokes the private `fit-stage-migration` container. The encrypted
