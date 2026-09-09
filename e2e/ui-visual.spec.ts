@@ -8,8 +8,12 @@ const demoClientId = '11111111-1111-4111-8111-111111111111'
 
 async function mockProgressPeriodSummary(page: VisualPage, periodStart = '2026-08-01', periodEnd = '2026-08-31') {
   const clientSummary = {
-    headline: 'Прогресс уже заметен', achievements: ['Жим лёжа стал сильнее'],
-    consistency: 'Тренировки продолжаются', encouragement: 'Продолжай в том же темпе', next_steps: [],
+    headline: 'В жиме лёжа рабочий вес вырос с 72 до 75 кг.',
+    achievements: ['Жим лёжа выполнен в 2 сопоставимых тренировках.'],
+    consistency: 'За период выполнено 2 тренировки.',
+    encouragement: 'Рост рабочего веса уже подтверждён записями.',
+    goal_alignment: '',
+    next_steps: ['На следующей тренировке проверить 75 кг с тем же числом повторений.'],
   }
   const displayMetrics = {
     completed_workouts: 2, workouts_per_week: 0.5, active_weeks: 2, longest_gap_days: 7,
@@ -28,7 +32,12 @@ async function mockProgressPeriodSummary(page: VisualPage, periodStart = '2026-0
     contentType: 'application/json', body: JSON.stringify([{
       id: '80000000-0000-4000-8000-000000000002', client_id: demoClientId,
       period_start: periodStart, period_end: periodEnd,
-      trainer_summary: { headline: 'Прогресс уже заметен', progress: ['Жим лёжа стал сильнее'], consistency: 'Тренировки продолжаются', attention: [] },
+      trainer_summary: {
+        headline: 'В жиме лёжа рабочий вес вырос с 72 до 75 кг.',
+        progress: ['Жим лёжа выполнен в 2 сопоставимых тренировках.'],
+        consistency: 'За период выполнено 2 тренировки.',
+        attention: [],
+      },
       client_summary: clientSummary, display_metrics: displayMetrics,
       generated_at: `${periodEnd}T12:00:00Z`, version: 1,
     }]),
