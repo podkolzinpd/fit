@@ -275,7 +275,7 @@ test('trainer reviews verified signals separately from the client copy', async (
   await expect(trainerAnalysis.getByText('Динамика упражнений')).toHaveCount(0)
   await trainerAnalysis.getByRole('button', { name: 'Подробный анализ' }).click()
   const detailedAnalysis = page.getByRole('dialog', { name: 'Подробный анализ' })
-  await expect(detailedAnalysis.getByRole('heading', { name: 'Главное сейчас' })).toBeVisible()
+  await expect(detailedAnalysis.getByRole('heading', { name: 'Главное сейчас' })).toHaveCount(0)
   await expect(detailedAnalysis.getByRole('heading', { name: 'Почему' })).toBeVisible()
   await expect(detailedAnalysis.getByRole('heading', { name: 'На следующей тренировке' })).toBeVisible()
   await expect(detailedAnalysis.getByText(/Что означают результаты и на чём основан вывод/)).toBeVisible()
