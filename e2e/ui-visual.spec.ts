@@ -234,7 +234,7 @@ async function mockTrainerClients(page: VisualPage) {
   }))
 }
 
-async function mockClientWorkoutHistory(page: import('@playwright/test').Page, options: { includeBack?: boolean } = {}) {
+async function mockClientWorkoutHistory(page: import('@playwright/test').Page, options: { includeBack?: boolean; homeLayout?: boolean } = {}) {
   const workoutRows = ['2026-08-10', '2026-08-03'].map((workoutDate, index) => ({
     id: `b1000000-0000-4000-8000-00000000000${index + 1}`,
     client_id: demoClientId,
@@ -334,6 +334,17 @@ async function mockClientWorkoutHistory(page: import('@playwright/test').Page, o
       version: 1,
     }],
   }))
+  if (options.homeLayout) {
+    const workout = workoutRows[0]!
+    workout.exercises[0]!.exercise_name = 'Жим гантелей лёжа на скамье с длинным названием'
+    workout.exercises[0]!.sets[0]!.fact_weight_kg = 50
+    for (const [index, name, group] of [[3, 'Разгибание ног', 'legs'], [4, 'Скручивания', 'core'], [5, 'Бег', 'cardio']] as const) {
+      const base = workout.exercises[0]!
+      workout.exercises.push({ ...base, id: `b2100000-0000-4000-8000-00000000000${index}`, exercise_ref: `home-${index}`,
+        exercise_name: name, muscle_group: group, position: index,
+        sets: base.sets.map((set) => ({ ...set, id: `b3100000-0000-4000-8000-00000000000${index}` })) })
+    }
+  }
   await page.route('**/rest/v1/workouts?*', (route) => {
     const id = new URL(route.request().url()).searchParams.get('id')?.replace(/^eq\./, '')
     const row = workoutRows.find((item) => item.id === id)
@@ -1846,7 +1857,7 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
 
 test('Home body map keeps its front and back switch aligned', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Home')
-  await mockClientWorkoutHistory(page, { includeBack: true })
+  await mockClientWorkoutHistory(page, { includeBack: true, homeLayout: true })
   await page.route('**/rest/v1/workouts?*', (route) => new URL(route.request().url()).searchParams.get('select') === 'workout_date'
     ? route.fulfill({ contentType: 'application/json', body: JSON.stringify({ workout_date: '2026-08-03' }) }) : route.fallback())
   await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
@@ -1864,12 +1875,21 @@ test('Home body map keeps its front and back switch aligned', async ({ page }, t
     const buttons = Array.from(sideControl.querySelectorAll<HTMLElement>('button')).map((button) => button.getBoundingClientRect())
     const control = sideControl.getBoundingClientRect()
     const figure = visual.getBoundingClientRect()
+    const mapRect = element.getBoundingClientRect()
+    const zones = element.querySelector<HTMLElement>('.workout-load-map-zones')!.getBoundingClientRect()
+    const card = element.closest<HTMLElement>('.personal-workout-result')!
+    const cardRect = card.getBoundingClientRect()
+    const cardStyle = getComputedStyle(card)
     return {
       controlHeight: control.height,
       buttonHeights: buttons.map((button) => button.height),
       buttonWidths: buttons.map((button) => button.width),
       buttonTops: buttons.map((button) => button.top),
       gapToFigure: figure.top - control.bottom,
+      centersDelta: Math.abs((figure.left + figure.right) / 2 - (control.left + control.right) / 2),
+      topDelta: Math.abs(figure.top - zones.top),
+      rightDelta: Math.abs(mapRect.right - zones.right),
+      cardWidthDelta: Math.abs(mapRect.width - (cardRect.width - parseFloat(cardStyle.paddingLeft) - parseFloat(cardStyle.paddingRight) - 2)),
     }
   })
   expect(geometry.controlHeight).toBeGreaterThanOrEqual(44)
@@ -1877,13 +1897,24 @@ test('Home body map keeps its front and back switch aligned', async ({ page }, t
   expect(Math.abs(geometry.buttonWidths[0]! - geometry.buttonWidths[1]!)).toBeLessThanOrEqual(1)
   expect(Math.abs(geometry.buttonTops[0]! - geometry.buttonTops[1]!)).toBeLessThanOrEqual(1)
   expect(geometry.gapToFigure).toBeGreaterThanOrEqual(8)
+  expect(geometry.centersDelta).toBeLessThanOrEqual(1)
+  expect(geometry.topDelta).toBeLessThanOrEqual(1)
+  expect(geometry.rightDelta).toBeLessThanOrEqual(1)
+  expect(geometry.cardWidthDelta).toBeLessThanOrEqual(1)
+  await expectBodyMapBaseline(page.getByRole('region', { name: 'Последняя тренировка' }), `home-result-alignment-${process.platform}.png`)
   await expectBodyMapBaseline(map, `home-body-map-side-switch-${process.platform}.png`)
+  await expect(map).toContainText('Всего 5 подходов')
+  await expect(map).toContainText('Кардио: 1 подход')
+  await map.getByText('Показать все группы', { exact: true }).click()
+  await expect(map.getByRole('button', { name: 'Передняя поверхность бедра: 1 подход' })).toBeVisible()
+  await expectBodyMapBaseline(map, `home-body-map-expanded-${process.platform}.png`)
 
   await map.getByRole('button', { name: 'Сзади' }).click()
   await expect(map.getByRole('button', { name: 'Сзади' })).toHaveAttribute('aria-pressed', 'true')
   await expect(map.getByRole('button', { name: 'Верх спины: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
   await map.getByRole('button', { name: 'Спереди' }).click()
   await expect(map.getByRole('button', { name: 'Грудь: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
+  await map.getByText('Показать все группы', { exact: true }).click()
 
   await page.evaluate(() => {
     window.localStorage.setItem('fit.appTheme', 'dark')
@@ -1912,14 +1943,16 @@ test('personal workout result stays on Home and remains available in Progress hi
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   const result = page.getByRole('region', { name: 'Последняя тренировка' })
   await expect(result.getByRole('heading', { name: 'Результат снизился' })).toBeVisible()
-  await expect(result).toContainText('Максимальный вес: 40 кг')
-  await expect(result.getByRole('link', { name: 'Сравнить' })).toHaveAttribute('href', '/workouts/b1000000-0000-4000-8000-000000000002')
+  await expect(result).toContainText('45 → 40 кг · −5 кг')
+  await expect(result).toContainText('К прошлому результату')
+  await expect(result.getByRole('link', { name: 'Сравнить' })).toHaveCount(0)
+  await expect(result.getByRole('link', { name: 'Открыть тренировку' })).toHaveAttribute('href', '/workouts/b1000000-0000-4000-8000-000000000001')
   const homeMap = result.getByRole('region', { name: 'Распределение подходов' })
   await expect(homeMap.getByRole('button', { name: 'Грудь: 1 подход' })).toBeVisible()
   const mapCoachmark = page.getByRole('button', { name: 'Понятно' })
   if (await mapCoachmark.isVisible()) await mapCoachmark.click()
   await expectBodyMapBaseline(result, `personal-result-home-${process.platform}.png`)
-  await homeMap.getByRole('link', { name: 'Подробнее' }).click()
+  await homeMap.getByRole('link', { name: 'Разбор нагрузки' }).click()
   await expect(page).toHaveURL(/mapWorkout=b1000000-0000-4000-8000-000000000001.*mapMode=load.*mapFrom=2026-08-10.*mapTo=2026-08-10.*mapZone=chest/)
   const disclosure = page.locator('.client-body-map-disclosure')
   await expect(disclosure).toHaveAttribute('open')

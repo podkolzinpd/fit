@@ -5432,14 +5432,25 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .personal-workout-result > p:not(.eyebrow) { color:var(--muted); }
 .personal-workout-result .actions { flex-wrap:wrap; justify-content:flex-start; gap:12px; }
 .personal-workout-result .actions a { display:inline-flex; align-items:center; min-height:44px; }
+.client-home-overview .personal-workout-result { grid-template-columns:minmax(0,1fr); justify-content:stretch; align-items:start; }
+.client-home-overview .personal-workout-result:hover { transform:none; }
+.personal-result-comparison { display:grid; gap:4px; min-width:0; }
+.personal-result-comparison p { margin:0; }
+.personal-result-comparison p:nth-child(2) { color:var(--fg); font-variant-numeric:tabular-nums; }
+.personal-result-comparison p:last-child { font-size:var(--type-caption-size); }
 
 /* Home reuses the Progress figure and the confirmed-set distribution. */
 .workout-load-map { min-width:0; padding-top:12px; margin-top:4px; border-top:1px solid var(--border); }
 .workout-load-map h3 { margin:0 0 6px; font-size:var(--type-section-size); }
 .workout-load-map p { margin:6px 0; font-size:var(--type-caption-size); line-height:var(--leading-body); }
 .workout-load-map-layout { display:grid; gap:12px; margin:12px 0; align-items:start; }
-.workout-load-map-compact .workout-load-map-layout { grid-template-columns:96px minmax(0,1fr); }
-.workout-load-map-compact .workout-load-map-layout:has(.body-progress-sides) { grid-template-columns:136px minmax(0,1fr); }
+.workout-load-map-compact .workout-load-map-layout { grid-template-columns:136px minmax(0,1fr); gap:8px 12px; }
+.workout-load-map-compact .body-progress-figure-shell { display:contents; }
+.workout-load-map-compact .body-progress-visual { grid-column:1; grid-row:1; }
+.workout-load-map-compact .workout-load-map-zones { grid-column:2; grid-row:1; }
+.workout-load-map-compact .workout-load-map-layout:has(.body-progress-sides) .body-progress-visual,
+.workout-load-map-compact .workout-load-map-layout:has(.body-progress-sides) .workout-load-map-zones { grid-row:2; }
+.workout-load-map-compact .body-progress-sides { grid-column:1; grid-row:1; justify-self:center; }
 .workout-load-map-compact .body-progress-sides { width:136px; height:44px; }
 .workout-load-map-compact .body-progress-sides::before { inset:4px 0; }
 .workout-load-map-compact .body-progress-sides button { min-width:0; min-height:44px; margin:0; padding:4px 8px; font-size:11px; }
