@@ -150,7 +150,7 @@ test('bootstraps the private push timer only after explicit cost approval and he
   )
 })
 
-test('reuses the private dispatcher for optional Telegram and Tracker delivery', () => {
+test('reuses the private dispatcher and preserves the existing DataLens access path', () => {
   assert.match(
     workflow,
     /^  YC_APP_FEEDBACK_LOCKBOX_NAME: fit-stage-app-feedback-integrations$/m,
@@ -170,7 +170,7 @@ test('reuses the private dispatcher for optional Telegram and Tracker delivery',
   )
   assert.match(
     databaseTerraform,
-    /data_lens\s+= false/,
+    /data_lens\s+= true/,
   )
   assert.doesNotMatch(
     databaseTerraform,
