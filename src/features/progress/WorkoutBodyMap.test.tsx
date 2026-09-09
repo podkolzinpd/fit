@@ -50,7 +50,9 @@ describe('Home and Progress workout map', () => {
     const map = screen.getByRole('region', { name: 'Распределение подходов' })
     await user.click(within(map).getByRole('button', { name: 'Грудь: 2 подхода' }))
     expect(within(map).queryByRole('button', { name: /Грудь\. Доля/ })).toBeNull()
-    const link = screen.getByRole('link', { name: 'Подробнее' })
+    expect(within(map).getByText('Всего 4 подхода')).toBeVisible()
+    expect(within(map).getByText(/Кардио: 1 подход/)).toHaveTextContent('5 км')
+    const link = screen.getByRole('link', { name: 'Разбор нагрузки' })
     expect(link).toHaveAttribute('href', workoutMapLink(workout, 'chest'))
     await user.click(link)
     expect(document.querySelector('details')).toHaveAttribute('open')
@@ -87,6 +89,18 @@ describe('Home and Progress workout map', () => {
     expect(screen.getByText(/Кардио: 1 подход/)).toHaveTextContent('Без группы: 1 подход')
   })
 
+  it('shows only complete confirmed cardio totals and falls back to set count for missing metrics', () => {
+    const run = exercise('run', 'Бег', 'cardio', 'distance', 1)
+    run.sets[0]!.fact = { distanceKm: 5, durationSec: 1800 }
+    run.sets.push({ ...run.sets[0]!, id: 'draft', confirmedAt: null, fact: { distanceKm: 100, durationSec: 9000 } })
+    const ui = () => <MemoryRouter><WorkoutLoadMap workout={{ ...workout, exercises: [run] }} compact /></MemoryRouter>
+    const view = render(ui())
+    expect(screen.getByText(/Кардио:/)).toHaveTextContent('Кардио: 1 подход · 30:00 · 5 км')
+    run.sets.push({ ...run.sets[0]!, id: 'missing-values', fact: {} })
+    view.rerender(ui())
+    expect(screen.getByText(/Кардио:/)).toHaveTextContent(/^Кардио: 2 подхода$/)
+  })
+
   it('keeps additional zones accessible and switches the selected zone with the side', async () => {
     const user = userEvent.setup()
     const several = { ...workout, exercises: [workout.exercises[0]!, exercise('row', 'Тяга верхнего блока', 'back', 'strength', 1),
@@ -94,9 +108,9 @@ describe('Home and Progress workout map', () => {
     render(<MemoryRouter><WorkoutLoadMap workout={several} gender="female" compact /></MemoryRouter>)
     await user.click(screen.getByRole('button', { name: 'Сзади' }))
     expect(screen.getByRole('button', { name: 'Ягодицы: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
-    await user.click(screen.getByText('Все мышцы'))
+    await user.click(screen.getByText('Показать все группы'))
     await user.click(screen.getByRole('button', { name: 'Верх спины: 1 подход' }))
-    expect(screen.getByRole('link', { name: 'Подробнее' })).toHaveAttribute('href', workoutMapLink(workout, 'upper_back'))
+    expect(screen.getByRole('link', { name: 'Разбор нагрузки' })).toHaveAttribute('href', workoutMapLink(workout, 'upper_back'))
     await user.click(screen.getByRole('button', { name: 'Спереди' }))
     expect(screen.getByRole('button', { name: 'Грудь: 2 подхода' })).toHaveAttribute('aria-pressed', 'true')
   })

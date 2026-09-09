@@ -4,6 +4,8 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import type { Gender, Workout } from '../../shared/domain'
 import { formatLocalDate, localDate, type LocalDate } from '../../shared/local-date'
+import { formatRunDuration } from '../../shared/run-metrics'
+import { resultNumber } from '../../shared/workout-results'
 import { loadBodyMap, setCountLabel, type BodyMapZone, type BodyProgressSummary } from './body-progress-map'
 import { MapPanel, TrainingBodyProgressMap } from './ClientBodyProgressMap'
 import { bodyZoneSides, type BodyFigureSide } from './body-progress-geometry'
@@ -49,25 +51,37 @@ export function WorkoutLoadMap({ workout, gender = null, compact = false, zone, 
     <strong>{selected.label}</strong>
     <p>{selected.primaryDetail}</p><ul>{selected.details.map((detail) => <li key={detail}>{detail}</li>)}</ul>
   </div>
+  const cardioFacts = compact && workout.status === 'done' ? workout.exercises
+    .filter((exercise) => exercise.muscleGroup === 'cardio' || exercise.inputKind === 'distance')
+    .flatMap((exercise) => exercise.sets.filter((set) => set.confirmedAt).map((set) => set.fact)) : []
+  const durations = cardioFacts.map((fact) => fact.durationSec ?? (fact.durationMin === undefined ? undefined : fact.durationMin * 60))
+  const distances = cardioFacts.map((fact) => fact.distanceKm)
+  const completeTotal = (values: (number | undefined)[]) => values.length > 0 && values.every((value) => value !== undefined && Number.isFinite(value) && value >= 0)
+    ? values.reduce<number>((total, value) => total + (value ?? 0), 0) : undefined
+  const duration = completeTotal(durations)
+  const distance = completeTotal(distances)
+  const cardioMetrics = [duration ? formatRunDuration(duration) : '', distance ? `${resultNumber(distance)} км` : ''].filter(Boolean).join(' · ')
   const coverageNotes = [
-    data.coverage.cardioSets ? `Кардио: ${setCountLabel(data.coverage.cardioSets)}` : '',
+    data.coverage.cardioSets ? `Кардио: ${setCountLabel(data.coverage.cardioSets)}${cardioMetrics ? ` · ${cardioMetrics}` : ''}` : '',
     data.coverage.unknownSets ? `Без группы: ${setCountLabel(data.coverage.unknownSets)}` : '',
   ].filter(Boolean).join(' · ')
   return <section className={`workout-load-map${compact ? ' workout-load-map-compact' : ''}`} aria-label="Распределение подходов">
     <h3>Распределение подходов</h3>
-    <p className="muted">Всего {setCountLabel(data.coverage.mappedSets)}</p>
+    <p className="muted">Всего {setCountLabel(compact ? data.coverage.totalSets : data.coverage.mappedSets)}</p>
+    {compact && data.regions.length > 0 && <p className="muted">По основной группе мышц</p>}
     {zone && !data.regions.some((region) => region.group === zone) && <p role="status">Для этой зоны больше нет подходов.</p>}
     {data.regions.length > 0 && <div className="workout-load-map-layout">
       <MapPanel data={data} selected={selected} insightCandidates={[]} variant={variant} side={side} discovering={false}
         onSideChange={changeSide} onSelect={(region) => select(region.group)} onShowDetails={() => undefined} hideDetail decorative={compact} />
       <div className="workout-load-map-zones" aria-label="Выбрать зону">
         {(compact ? data.regions.slice(0, 3) : data.regions).map(zoneButton)}
-        {compact && data.regions.length > 3 && <details><summary>Все мышцы</summary>{data.regions.slice(3).map(zoneButton)}</details>}
+        {compact && data.regions.length > 3 && <details><summary>Показать все группы</summary>{data.regions.slice(3).map(zoneButton)}</details>}
+        {compact && coverageNotes && <p className="muted workout-load-map-coverage">{coverageNotes}</p>}
       </div>
     </div>}
     {!compact && selectedDetails}
-    {!data.coverage.totalSets ? <p className="muted">Нет выполненных подходов.</p> : coverageNotes && <p className="muted">{coverageNotes}</p>}
-    {compact ? <Link className="link" to={workoutMapLink(workout, selected?.group)}>Подробнее</Link>
+    {!data.coverage.totalSets ? <p className="muted">Нет выполненных подходов.</p> : (!compact || data.regions.length === 0) && coverageNotes && <p className="muted">{coverageNotes}</p>}
+    {compact ? <Link className="link" to={workoutMapLink(workout, selected?.group)}>Разбор нагрузки</Link>
       : <Link className="link" to={`/workouts/${workout.id}`} state={{ returnTo: location.pathname + location.search + '#body-map' }}>Открыть тренировку</Link>}
   </section>
 }
