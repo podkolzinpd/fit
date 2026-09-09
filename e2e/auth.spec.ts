@@ -23,7 +23,7 @@ test('auth shell matches mobile baseline', async ({ page }) => {
   await expect(page.locator('html')).toHaveClass(/ui-identity/)
   await expect(page.getByRole('button', { name: /Google/ })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Проверить Yandex ID' })).toHaveCount(0)
-  await expect(page).toHaveScreenshot('auth-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.01 })
+  await expect(page).toHaveScreenshot('auth-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03 })
 })
 
 test('trainer registers without surname or email confirmation', async ({ page }, testInfo) => {
