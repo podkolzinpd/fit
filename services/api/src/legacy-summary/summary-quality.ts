@@ -36,6 +36,16 @@ function hasRepeatedDecline(trainingData: unknown): boolean {
   )
 }
 
+function hasMeasurementChange(trainingData: unknown): boolean {
+  if (!isRecord(trainingData) || !isRecord(trainingData.measurements)) return false
+  return [trainingData.measurements.changes, trainingData.measurements.compared_to_previous_period]
+    .some((value) => Array.isArray(value) && value.length > 0)
+}
+
+function isMeasurementHeadline(value: string, trainingData: unknown): boolean {
+  return hasMeasurementChange(trainingData) && /(?:вес|тал(?:ия|ии|ию)|груд(?:ь|и)|б[её]др)/iu.test(value) && /\d/u.test(value)
+}
+
 export function summaryQualityIssues(
   summary: unknown,
   trainingData: unknown,
@@ -191,7 +201,7 @@ export function summaryQualityIssues(
       const namesExercise = changedExercises.some((exercise) =>
         typeof exercise.name === "string" && normalized.includes(exerciseNameKey(exercise.name))
       )
-      if (!/\d/.test(headline) || !namesExercise || vagueHeadline.test(headline)) {
+      if (((!/\d/.test(headline) || !namesExercise) && !isMeasurementHeadline(headline, trainingData)) || vagueHeadline.test(headline)) {
         issues.push("Headline должен называть конкретное упражнение и подтверждённое число, а не общий прогресс.")
         break
       }

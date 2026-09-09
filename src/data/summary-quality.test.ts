@@ -182,6 +182,33 @@ describe('summaryQualityIssues', () => {
 
     expect(issues).toEqual([])
   })
+
+  it('allows a grounded measurement to be the main conclusion even when exercise facts also changed', () => {
+    const issues = summaryQualityIssues({
+      trainer: {
+        headline: 'Талия уменьшилась с 91 до 88 см за 2 замера.',
+        progress: ['Изменение талии подтверждено 2 датированными замерами.'],
+        consistency: 'Выполнено 2 тренировки.',
+        attention: [],
+      },
+      client: {
+        headline: 'Талия уменьшилась с 91 до 88 см за 2 замера.',
+        achievements: ['Изменение талии подтверждено 2 датированными замерами.'],
+        consistency: 'Выполнено 2 тренировки.',
+        encouragement: 'Изменение уже подтверждено замерами.',
+        goalAlignment: '',
+        nextSteps: ['Добавить следующий замер талии через 7 дней.'],
+      },
+    }, {
+      ...trainingData,
+      measurements: {
+        changes: [{ metric: 'waist_cm', from: 91, to: 88, change: -3, evidence_points: 2 }],
+        compared_to_previous_period: [],
+      },
+    })
+
+    expect(issues).toEqual([])
+  })
 })
 
 function validCoachingSummary(nextStep: string) {
