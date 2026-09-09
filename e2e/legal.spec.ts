@@ -1,5 +1,30 @@
 import { expect, test } from '@playwright/test'
 
+for (const legalPage of [
+  { path: '/legal/terms', title: 'Условия использования', lastSection: '8. Изменение Условий' },
+  { path: '/legal/privacy', title: 'Политика конфиденциальности', lastSection: '10. Изменения Политики' },
+]) {
+  test(`${legalPage.title} scrolls to the end in the Android viewport`, async ({ page }) => {
+    await page.goto(legalPage.path)
+    await expect(page.getByRole('heading', { level: 1, name: legalPage.title })).toBeVisible()
+
+    const legalScreen = page.locator('.legal-screen')
+    const dimensions = await legalScreen.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+    }))
+    expect(dimensions.scrollHeight).toBeGreaterThan(dimensions.clientHeight)
+
+    const scrollTop = await legalScreen.evaluate((element) => {
+      element.scrollTop = element.scrollHeight
+      return element.scrollTop
+    })
+    expect(scrollTop).toBeGreaterThan(0)
+    await expect(page.getByRole('heading', { level: 2, name: legalPage.lastSection })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Юридические документы' })).toBeVisible()
+  })
+}
+
 test('legal documents are public and account deletion stays a reversible request', async ({ page }, testInfo) => {
   await page.goto('/legal/privacy')
   await expect(page.getByRole('heading', { level: 1, name: 'Политика конфиденциальности' })).toBeVisible()
