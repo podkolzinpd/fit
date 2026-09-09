@@ -104,13 +104,17 @@
 - Реальный invite → join → leave/remove smoke — внешняя проверка. TLS source проверен; до rollout остаются dry-run, freeze/rollback-окно и один tenant.
 - Remote rehearsal умеет без раскрытия UUID выбрать самый маленький допустимый
   cohort для `audit`/`dry-run`; dry-run пропускает checksum-конфликты уже
-  существующих stage tenants, прочие ошибки не скрывает. Автовыбор для `apply`
-  запрещён.
+  существующих stage tenants (до 100 для текущего малого источника), прочие
+  ошибки не скрывает. Автовыбор для `apply` запрещён.
 - В main вошёл Live #835 / 0574750: отдельный таймер, стабильные подходы и отдельная заметка клиента; изменения сохранены при объединении.
 ## Проверки активной ветки
 - Home: component-тесты сравнения, первого результата, retry/empty, подтверждённого кардио и раскрытия групп; WebKit/Chromium 390/430 и narrow 360/375, обе темы, полный переход Home → Progress → workout → back.
 - Проверены macOS и Linux-эталоны карты и карточки, включая длинное название и 4 группы; ширина блока, центры и верхние края проверяются численно.
 - Полный `npm run check`: frontend 1319, API 364 (+30 skipped), infra 112; lint/typecheck, DB types и iOS permissions. Сведения о CI/production фиксируются в PR после выпуска.
+- Remote audit `34229105217` выбрал cohort: 1 клиент, 5 строк в 28 таблицах.
+  Dry-run `34244770314` безопасно откатил 10 stale stage cohorts и подтвердил,
+  что прежний лимит автоматического выбора был недостаточен; configured cohort
+  остаётся пустым.
 ## Ближайший порядок
 1. Открыть PR `fix/client-home-result-alignment` и дождаться зелёного CI.
 2. Слить, проверить production и свежий iOS bundle.
