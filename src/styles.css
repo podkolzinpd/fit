@@ -5440,6 +5440,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-load-map p { margin:6px 0; font-size:var(--type-caption-size); line-height:var(--leading-body); }
 .workout-load-map-layout { display:grid; gap:12px; margin:12px 0; align-items:start; }
 .workout-load-map-compact .workout-load-map-layout { grid-template-columns:96px minmax(0,1fr); }
+.workout-load-map-compact .workout-load-map-layout:has(.body-progress-sides) { grid-template-columns:136px minmax(0,1fr); }
+.workout-load-map-compact .body-progress-sides { width:136px; height:44px; }
+.workout-load-map-compact .body-progress-sides::before { inset:4px 0; }
+.workout-load-map-compact .body-progress-sides button { min-width:0; min-height:44px; margin:0; padding:4px 8px; font-size:11px; }
+.workout-load-map-compact .body-progress-sides button[aria-pressed='true']::before { inset:5px 1px; }
 .workout-load-map-compact .body-progress-visual { width:90px; }
 .workout-load-map-zones { display:grid; gap:6px; min-width:0; }
 .workout-load-map-zones button { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:44px; padding:8px; border:1px solid var(--border); border-radius:var(--radius-md); background:transparent; color:var(--fg); font-size:var(--type-caption-size); text-align:left; box-shadow:none; }

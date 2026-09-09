@@ -234,7 +234,7 @@ async function mockTrainerClients(page: VisualPage) {
   }))
 }
 
-async function mockClientWorkoutHistory(page: import('@playwright/test').Page) {
+async function mockClientWorkoutHistory(page: import('@playwright/test').Page, options: { includeBack?: boolean } = {}) {
   const workoutRows = ['2026-08-10', '2026-08-03'].map((workoutDate, index) => ({
     id: `b1000000-0000-4000-8000-00000000000${index + 1}`,
     client_id: demoClientId,
@@ -296,6 +296,42 @@ async function mockClientWorkoutHistory(page: import('@playwright/test').Page) {
         confirmed_at: `${workoutDate}T15:30:00Z`,
         version: 1,
       }],
+    }],
+  }))
+  if (options.includeBack) workoutRows.forEach((workout, index) => workout.exercises.push({
+    id: `b2100000-0000-4000-8000-00000000000${index + 1}`,
+    position: 1,
+    exercise_source: 'system',
+    exercise_ref: 'lat-pulldown',
+    custom_exercise_id: null,
+    exercise_name: 'Тяга верхнего блока',
+    muscle_group: 'back',
+    input_kind: 'strength',
+    block_id: `b2100000-0000-4000-8000-00000000000${index + 1}`,
+    block_type: 'single',
+    block_preset: 'set',
+    block_rounds: 1,
+    rest_between_exercises_sec: 0,
+    rest_between_rounds_sec: 90,
+    rest_between_sets_sec: 90,
+    trainer_comment: null,
+    sets: [{
+      id: `b3100000-0000-4000-8000-00000000000${index + 1}`,
+      position: 0,
+      plan_weight_kg: 35,
+      plan_reps: 10,
+      plan_duration_min: null,
+      plan_duration_sec: null,
+      plan_distance_km: null,
+      plan_rpe: null,
+      fact_weight_kg: 35,
+      fact_reps: 10,
+      fact_duration_min: null,
+      fact_duration_sec: null,
+      fact_distance_km: null,
+      fact_rpe: null,
+      confirmed_at: `${workout.workout_date}T15:45:00Z`,
+      version: 1,
     }],
   }))
   await page.route('**/rest/v1/workouts?*', (route) => {
@@ -1721,6 +1757,60 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
       const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
       if (await darkTheme.isChecked()) await darkTheme.uncheck()
     }
+  }
+})
+
+test('Home body map keeps its front and back switch aligned', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Home')
+  await mockClientWorkoutHistory(page, { includeBack: true })
+  await page.route('**/rest/v1/workouts?*', (route) => new URL(route.request().url()).searchParams.get('select') === 'workout_date'
+    ? route.fulfill({ contentType: 'application/json', body: JSON.stringify({ workout_date: '2026-08-03' }) }) : route.fallback())
+  await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  const map = page.getByRole('region', { name: 'После последней тренировки' }).getByRole('region', { name: 'Распределение подходов' })
+  const sides = map.locator('.body-progress-sides')
+  await expect(sides).toBeVisible()
+  const coachmark = page.getByRole('button', { name: 'Понятно' })
+  if (await coachmark.isVisible()) await coachmark.click()
+
+  const geometry = await map.evaluate((element) => {
+    const sideControl = element.querySelector<HTMLElement>('.body-progress-sides')!
+    const visual = element.querySelector<HTMLElement>('.body-progress-visual')!
+    const buttons = Array.from(sideControl.querySelectorAll<HTMLElement>('button')).map((button) => button.getBoundingClientRect())
+    const control = sideControl.getBoundingClientRect()
+    const figure = visual.getBoundingClientRect()
+    return {
+      controlHeight: control.height,
+      buttonHeights: buttons.map((button) => button.height),
+      buttonWidths: buttons.map((button) => button.width),
+      buttonTops: buttons.map((button) => button.top),
+      gapToFigure: figure.top - control.bottom,
+    }
+  })
+  expect(geometry.controlHeight).toBeGreaterThanOrEqual(44)
+  expect(geometry.buttonHeights.every((height) => height >= 44)).toBe(true)
+  expect(Math.abs(geometry.buttonWidths[0]! - geometry.buttonWidths[1]!)).toBeLessThanOrEqual(1)
+  expect(Math.abs(geometry.buttonTops[0]! - geometry.buttonTops[1]!)).toBeLessThanOrEqual(1)
+  expect(geometry.gapToFigure).toBeGreaterThanOrEqual(8)
+  await expectBodyMapBaseline(map, `home-body-map-side-switch-${process.platform}.png`)
+
+  await map.getByRole('button', { name: 'Сзади' }).click()
+  await expect(map.getByRole('button', { name: 'Сзади' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(map.getByRole('button', { name: 'Верх спины: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
+  await map.getByRole('button', { name: 'Спереди' }).click()
+  await expect(map.getByRole('button', { name: 'Грудь: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
+
+  await page.evaluate(() => {
+    window.localStorage.setItem('fit.appTheme', 'dark')
+    window.dispatchEvent(new Event('fit-theme-change'))
+  })
+  await expectBodyMapBaseline(map, `home-body-map-side-switch-dark-${process.platform}.png`)
+  for (const viewport of [{ width: 360, height: 800 }, { width: 375, height: 812 }]) {
+    await page.setViewportSize(viewport)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await expect(sides).toHaveCSS('height', '44px')
+    for (const button of await sides.getByRole('button').all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44)
   }
 })
 
