@@ -328,7 +328,6 @@ p { margin: 6px 0 }
 .auth-form .field { gap: 7px }
 .auth-form input, .auth-form select { min-height: 50px; border-radius: 14px; background: var(--surface-sunken) }
 .auth-form > button { min-height: 52px; margin-top: 2px; border-radius: 16px; font-size: 17px; font-weight: 800 }
-.auth-google { min-height: 50px; border-radius: 16px }
 .auth-yandex { min-height: 50px; border-radius: 16px; border-color: #df342a; color: var(--fg-on-surface) }
 .yandex-pilot-profile { gap: 12px }
 .yandex-pilot-profile > div { display: flex; justify-content: space-between; gap: 16px }
@@ -2953,7 +2952,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .auth-flow-identity .button.secondary { border-color:var(--border); background:var(--surface); color:var(--fg); box-shadow:none}
 .auth-flow-identity button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); box-shadow:none}
 .auth-flow-identity .auth-form > button { min-height:48px; margin-top:2px; border-radius:14px; font-size:14px; font-weight:500 }
-.auth-flow-identity .auth-google,
 .auth-flow-identity .auth-yandex { min-height:48px; border-color:var(--border); border-radius:14px; color:var(--fg) }
 .auth-flow-identity .auth-links { gap:8px; align-items:stretch }
 .auth-flow-identity .auth-links > * { min-height:44px; display:flex; align-items:center; padding:0 4px; color:var(--fg); font-size:14px; font-weight:500 }

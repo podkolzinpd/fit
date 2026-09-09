@@ -109,7 +109,6 @@ export function AuthPage() {
       <button className="primary" disabled={busy} aria-busy={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
     </form>
     {mode === 'register' && <p className="auth-consent">Создавая аккаунт, вы принимаете <Link to={LEGAL_PATHS.terms}>Условия использования</Link> и <Link to={LEGAL_PATHS.privacy}>Политику конфиденциальности</Link>.</p>}
-    {mode === 'login' && <button className="secondary auth-google" onClick={() => void authRepository.signInWithGoogle()}>Вход через Google</button>}
     {(yandexAppSessionConfig ?? yandexPilotConfig) && <button className="secondary auth-yandex" disabled={yandexBusy} onClick={() => {
       setError(null); setYandexBusy(true)
       const redirectUri = `${window.location.origin}/auth/yandex/callback`
@@ -510,7 +509,7 @@ function YandexAccountLinkingCallbackPage() {
       try {
         if (actor === null) {
           clearPendingYandexAuthorization()
-          throw new Error('Войдите в FIT по email, паролю или Google, затем начните привязку Yandex ID из профиля.')
+          throw new Error('Войдите в FIT по email и паролю, затем начните привязку Yandex ID из профиля.')
         }
         if (apiBaseUrl === null) {
           clearPendingYandexAuthorization()
