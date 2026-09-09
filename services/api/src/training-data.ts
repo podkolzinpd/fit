@@ -101,6 +101,7 @@ interface WorkoutExerciseRow extends QueryResultRow {
   rest_between_rounds_sec: number
   rest_between_sets_sec: number
   trainer_comment: string | null
+  client_note: string | null
 }
 
 interface WorkoutSetRow extends QueryResultRow {
@@ -173,6 +174,7 @@ export interface PilotWorkoutExercise {
   restBetweenRoundsSec: number
   restBetweenSetsSec: number
   trainerComment: string | null
+  clientNote?: string | null
   sets: PilotWorkoutSet[]
 }
 
@@ -326,7 +328,7 @@ export async function readAccessibleTrainingData(
           custom_exercise_id, exercise_name, muscle_group, input_kind,
           block_id, block_type, block_preset, block_rounds,
           rest_between_exercises_sec, rest_between_rounds_sec,
-          rest_between_sets_sec, trainer_comment
+          rest_between_sets_sec, trainer_comment, client_note
         from public.workout_exercises
         where workout_id = any($1::uuid[])
         order by workout_id, position, id
@@ -394,6 +396,7 @@ export async function readAccessibleTrainingData(
       restBetweenRoundsSec: row.rest_between_rounds_sec,
       restBetweenSetsSec: row.rest_between_sets_sec,
       trainerComment: row.trainer_comment,
+      clientNote: row.client_note,
       sets: setsByExercise.get(row.id) ?? [],
     })
     exercisesByWorkout.set(row.workout_id, current)

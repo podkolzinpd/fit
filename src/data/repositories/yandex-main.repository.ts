@@ -343,6 +343,7 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
       restBetweenRoundsSec: exercise.restBetweenRoundsSec,
       restBetweenSetsSec: exercise.restBetweenSetsSec,
       trainerComment: exercise.trainerComment ?? undefined,
+      clientNote: exercise.clientNote ?? undefined,
       sets: exercise.sets.map((set) => ({
         id: set.id,
         position: set.position,
