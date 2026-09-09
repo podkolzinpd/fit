@@ -40,7 +40,7 @@ function safeLlmCandidate(candidate: string, region: BodyMapRegion): boolean {
 function deterministicConclusion(data: BodyMapData, region: BodyMapRegion): string {
   return data.mode === 'progress'
     ? `Результат вырос на ${region.valueLabel.replace(/^\+/, '')}.`
-    : `На зону «${region.label}» приходится ${region.valueLabel} всех выполненных подходов.`
+    : `На зону «${region.label}» приходится ${region.valueLabel} подходов на карте.`
 }
 
 /**

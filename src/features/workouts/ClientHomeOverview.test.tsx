@@ -1,9 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { ClientGoal, Workout, WorkoutPersonalRecord, WorkoutRegularity } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { ClientHomeOverview, clientHomeHighlight, clientHomeNextWorkout, clientHomePastPlans } from './ClientHomeOverview'
+
+vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: 'client-user', role: 'client' } }) }))
 
 const today = localDate('2026-08-16')
 

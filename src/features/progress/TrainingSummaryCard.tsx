@@ -1,3 +1,4 @@
+import { ClientBodyMapDisclosure } from './WorkoutBodyMap'
 import { PersonalWorkoutResult } from '../../shared/PersonalWorkoutResult'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
@@ -517,7 +518,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
     {detailsOpen && <SummarySheet title="Подробный анализ" onClose={() => setDetailsOpen(false)}>
       <ProgressDetailedAnalysis sections={detailedAnalysis} />
     </SummarySheet>}
-    <TrainingBodyProgressMap
+    {role === 'trainer' && <TrainingBodyProgressMap
       summary={summary}
       workouts={currentWorkouts ?? []}
       clientId={clientId}
@@ -526,7 +527,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       loadLoading={workoutsLoading}
       loadError={workoutsError}
       onLoadRetry={onWorkoutsRetry}
-    />
+    />}
     <section className="client-progress-comparison" aria-labelledby={`${role}-progress-comparison-title`}>
       <header>
         <div>
@@ -804,6 +805,8 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
           />}
         </>}
     </AsyncView>
+    <ClientBodyMapDisclosure workouts={allWorkouts.data} clientId={clientId} gender={gender} summary={summary}
+      periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
     {automaticGeneration.error && <AutomaticSummaryError
       error={automaticGeneration.error}
       onRetry={() => void automaticGeneration.refetch()}

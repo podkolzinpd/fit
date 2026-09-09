@@ -46,7 +46,7 @@ describe('bodyMapInsight', () => {
     expect(bodyMapInsight(load, loadRegion, [])).toEqual({
       factId: 'body-map:load:upper_back:33%',
       source: 'deterministic',
-      text: 'На зону «Верх спины» приходится 33% всех выполненных подходов.',
+      text: 'На зону «Верх спины» приходится 33% подходов на карте.',
     })
   })
 })

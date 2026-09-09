@@ -272,3 +272,9 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Supabase migration `20260908090000` и Yandex `000039` исключают baseline из прежних PR-флагов/деталей/истории. Таблицы и tenant migration catalog не меняются: только вычисляемые функции, переносимых столбцов нет.
 - SQL/RLS: baseline, сравнение, правка и удаление источника; Yandex actor smoke baseline false. Клиентские unit/component: same-day, rename, cross-client/ref, no-data, edit/delete и refresh; mobile visual 390/430 light/dark.
 - Полная перекомпоновка и карта Home — следующие уже утверждённые YAFIT-481–483, не считаются выпущенными этим этапом.
+
+### Home / Progress — компактная карта (YAFIT-481)
+
+- Карта встроена в личный итог после primary/плана; применяется клиентский выбор фигуры. Один расчёт loadBodyMap даёт абсолютные подходы, долю только определённых зон и отдельный учёт cardio/unknown.
+- Полная карта ниже в Progress и свёрнута по умолчанию. Home URL сохраняет workout/mode/from/to/zone; исходная запись и возврат сохраняют контекст. Некорректный или удалённый scope не подменяется периодом.
+- Приёмка: unit/component — coverage счётчиков, неопределённые зоны, side/keyboard/swipe, дополнительные зоны, loading/error/retry, чужой/удалённый scope и возврат; browser — Home → Progress → source → назад без ИИ, 390/430 light/dark, полная карта/тренер.
