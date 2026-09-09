@@ -66,11 +66,24 @@ export async function mockResultsHistory(page: Page) {
   })
 }
 
+export async function verifyAnalysisShortcutKeepsShell(page: Page) {
+  await page.getByRole('button', { name: 'Посмотреть анализ' }).click()
+  expect(new URL(page.url()).hash).toBe('')
+  await expect(page.locator('#ai-analysis')).toBeInViewport()
+  await expect(page.locator('.client-tab-bar')).toBeInViewport()
+  await expect(page.locator('.client-tab-bar').evaluate((tabBar) => {
+    const rect = tabBar.getBoundingClientRect()
+    return {
+      rootScroll: Math.max(window.scrollY, document.documentElement.scrollTop, document.body.scrollTop),
+      staysAtBottom: rect.top > window.innerHeight / 2 && rect.bottom <= window.innerHeight,
+    }
+  })).resolves.toEqual({ rootScroll: 0, staysAtBottom: true })
+}
+
 export async function verifyResultsSources(page: Page) {
   const center = page.locator('#results-center')
   await expect(page.locator('.period-exercise-results #results-center')).toHaveCount(1)
-  await page.getByRole('link', { name: 'Посмотреть анализ' }).click()
-  await expect(page.locator('#ai-analysis')).toBeInViewport()
+  await verifyAnalysisShortcutKeepsShell(page)
   for (const control of await page.locator('.progress-details-toggle:visible').all()) {
     expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44)
   }

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { addDays, todayInTimeZone } from '../src/shared/local-date'
+import { verifyAnalysisShortcutKeepsShell } from './progress-results-fixture'
 
 test('global rollout gives a new client the monochrome Progress identity', async ({ page }, testInfo) => {
   await page.goto('/auth')
@@ -110,6 +111,7 @@ test('linked client sees only the published client progress view', async ({ page
     return positions.every((position, index) => position >= 0 && (!index || position > positions[index - 1]!))
   })).resolves.toBe(true)
   await expect(page.locator('.client-ai-analysis').getByRole('button', { name: 'Выводы и рекомендации' })).toBeVisible()
+  await verifyAnalysisShortcutKeepsShell(page)
   await page.getByRole('button', { name: 'Прогресс', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
