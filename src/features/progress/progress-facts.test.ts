@@ -17,6 +17,6 @@ describe('progressFactChangeLabel', () => {
   it('uses at most one decimal and a readable minus sign', () => {
     expect(progressFactChangeLabel({
       metric: 'distance', from: 5.25, to: 4.8, changePercent: -9, favorable: false,
-    })).toBe('Дистанция за тренировку: 5,3 → 4,8 км · −9%')
+    })).toBe('Дистанция: 5,3 → 4,8 км · −9%')
   })
 })

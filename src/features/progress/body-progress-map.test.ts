@@ -62,7 +62,7 @@ describe('body progress map', () => {
     expect(result.description).toBeUndefined()
     expect(result.regions[0]!.metricLabel).toBe('Результат зоны')
     expect(result.regions[0]!.primaryDetail).toBe(
-      'Жим гантелей лёжа (Гантели) · Объём за тренировку: 1 000 → 1 400 кг',
+      'Жим гантелей лёжа (Гантели) · Объём: 1 000 → 1 400 кг',
     )
   })
 

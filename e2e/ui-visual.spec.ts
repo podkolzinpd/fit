@@ -1888,7 +1888,7 @@ test('results center preserves sources and explains weekly work', async ({ page 
   await expect(volume).toContainText('45 кг × 10 повт.')
   await expect(volume).toContainText('Итого: 1 100 кг')
   await expect(volume).toContainText('Итого: 450 кг')
-  await expect(volume).toContainText('не равно изменению силы')
+  await expect(volume).not.toContainText('не равно изменению силы')
   const weekly = page.locator('.weekly-training-load')
   await weekly.getByText('Подходы по неделям', { exact: true }).click()
   await expect(weekly.locator('.weekly-load-list > li').first()).toContainText('6 подходов')
@@ -1914,7 +1914,7 @@ test('results center keeps detailed analytics in dark theme', async ({ page }, t
   const weekly = page.locator('.weekly-training-load')
   const viewport = page.viewportSize()!
   const darkVolume = center.locator('.center-result-row').first()
-  await expect(darkVolume).toContainText('Объём за тренировку: 1 100 кг')
+  await expect(darkVolume).toContainText('Объём: 1 100 кг')
   await darkVolume.getByText('Из чего сложился объём', { exact: true }).click()
   await weekly.getByText('Подходы по неделям', { exact: true }).click()
   await page.setViewportSize({ ...viewport, height: 1500 })
