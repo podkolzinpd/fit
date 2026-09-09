@@ -133,7 +133,7 @@ function signed(value: number, unit: string): string {
   return `${value > 0 ? '+' : value < 0 ? '−' : ''}${number.format(Math.abs(value))} ${unit}`
 }
 
-function goalStory(summary: ProgressSummary, options: StoryOptions): ClientProgressPresentation['goal'] {
+export function goalStory(summary: Pick<ProgressSummary, 'periodStart' | 'periodEnd'>, options: StoryOptions): ClientProgressPresentation['goal'] {
   const title = options.goal?.title ?? options.profileGoal?.trim()
   if (!title) return undefined
   const criteria = options.goal?.criteria ?? []

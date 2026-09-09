@@ -66,7 +66,7 @@ export function WorkoutLoadMap({ workout, gender = null, compact = false, zone, 
     {!compact && selectedDetails}
     <p className="muted">На карте: {setCountLabel(data.coverage.mappedSets)}. {data.coverage.cardioSets ? `Записи кардио: ${data.coverage.cardioSets}. ` : ''}{data.coverage.unknownSets ? `Без определённой зоны: ${setCountLabel(data.coverage.unknownSets)}. ` : ''}{!data.coverage.totalSets ? 'В этой тренировке пока нет подтверждённых подходов. ' : ''}Карта показывает распределение работы, а не рост или восстановление мышц.</p>
     {compact ? <Link className="link" to={workoutMapLink(workout, selected?.group)}>Разобрать нагрузку</Link>
-      : <Link className="link" to={`/workouts/${workout.id}`} state={{ returnTo: location.pathname + location.search + location.hash }}>Открыть исходную тренировку</Link>}
+      : <Link className="link" to={`/workouts/${workout.id}`} state={{ returnTo: location.pathname + location.search + '#body-map' }}>Открыть исходную тренировку</Link>}
   </section>
 }
 
@@ -82,7 +82,7 @@ export function ClientBodyMapDisclosure({ workouts, clientId, gender, summary, p
   const workout = workouts?.find((item) => item.id === workoutId && item.clientId === clientId && item.status === 'done')
   const invalidScope = workout && (params.get('mapMode') !== 'load' || params.get('mapFrom') !== workout.workoutDate || params.get('mapTo') !== workout.workoutDate)
   const clearScope = () => setParams((current) => { const next = new URLSearchParams(current); mapParams.forEach((key) => next.delete(key)); return next })
-  const periodSummary: BodyProgressSummary = summary ?? { id: `${periodStart}:${periodEnd}`, periodStart, periodEnd, metrics: { progressFacts: [] } }
+  const periodSummary: BodyProgressSummary = summary?.periodStart === periodStart && summary.periodEnd === periodEnd ? summary : { id: `${periodStart}:${periodEnd}`, periodStart, periodEnd, metrics: { progressFacts: [] } }
   return <details id="body-map" className="client-body-map-disclosure card" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
     <summary>Карта тела{workoutId ? ' · выбранная тренировка' : ' · выбранный период'}</summary>
     {open && <>
@@ -91,7 +91,7 @@ export function ClientBodyMapDisclosure({ workouts, clientId, gender, summary, p
         : loading && !workouts ? <p role="status">Загружаем карту…</p>
         : workoutId ? !workout || invalidScope ? <p role="alert">Эта тренировка недоступна или её дата изменилась. Откройте актуальную карту с главного экрана.</p>
           : <><p>{formatLocalDate(workout.workoutDate)} · одна завершённая тренировка</p><WorkoutLoadMap workout={workout} gender={gender} zone={zone} onZoneChange={(nextZone) => setParams((current) => { const next = new URLSearchParams(current); next.set('mapZone', nextZone); return next }, { replace: true })} /></>
-        : <><p>{formatLocalDate(localDate(periodSummary.periodStart))} — {formatLocalDate(localDate(periodSummary.periodEnd))}</p><TrainingBodyProgressMap summary={periodSummary} workouts={workouts ?? []} clientId={clientId} clientGender={gender} insightCandidates={[]} loadLoading={loading} loadError={error} onLoadRetry={onRetry} /></>}
+        : <>{summary && summary !== periodSummary && <p className="muted">ИИ-анализ сохранён за другие даты. Здесь показаны подходы выбранного периода; изменения по ИИ появятся после обновления анализа.</p>}<p>{formatLocalDate(localDate(periodSummary.periodStart))} — {formatLocalDate(localDate(periodSummary.periodEnd))}</p><TrainingBodyProgressMap summary={periodSummary} workouts={workouts ?? []} clientId={clientId} clientGender={gender} insightCandidates={[]} loadLoading={loading} loadError={error} onLoadRetry={onRetry} /></>}
     </>}
   </details>
 }

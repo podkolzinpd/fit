@@ -371,7 +371,17 @@ async function openClientProgress(page: import('@playwright/test').Page, options
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/)
   await expect(page.locator('.client-progress-card')).toBeVisible()
-  await expect(page.locator('.client-progress-main-now')).toBeVisible()
+  await expect(page.locator('.client-progress-card .personal-workout-result')).toBeVisible()
+  await expect(page.getByText('Проверяем данные цели…')).toHaveCount(0)
+}
+
+async function expectClientFactsOrder(page: VisualPage) {
+  await expect(page.locator('.client-progress-card').evaluate((element) => {
+    const order = ['.personal-workout-result', '.progress-story-period', '.client-progress-goal-story', '.client-current-week', '.period-exercise-results', '.client-progress-measurements-story', '.client-body-map-disclosure', '.period-rhythm', '.client-progress-comparison', '.client-ai-analysis']
+    const children = Array.from(element.children)
+    const positions = order.map((selector) => children.findIndex((child) => child.matches(selector)))
+    return positions.every((position, index) => position >= 0 && (!index || position > positions[index - 1]!))
+  })).resolves.toBe(true)
 }
 
 async function expectVisualBaseline(
@@ -662,28 +672,13 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   await expect(bodyMap.getByText('Лучший результат зоны')).toHaveCount(0)
   await expect(bodyMap.evaluate((element) => Number.parseFloat(getComputedStyle(element).borderTopLeftRadius))).resolves.toBeGreaterThanOrEqual(16)
   await expectBodyMapBaseline(bodyMap, `client-body-map-female-${process.platform}.png`)
-  await expect(page.locator('.client-progress-main-now').getByText('Главное сейчас', { exact: true })).toBeVisible()
-  const progressStats = page.locator('.client-progress-card .ai-progress-stats')
-  await expect(progressStats.getByText(/трениров/).first()).toBeVisible()
-  await expect(progressStats.getByText(/недел/).first()).toBeVisible()
-  await expect(page.getByText(/\/ нед\./)).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Прогресс', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Нагрузка', exact: true })).toBeVisible()
+  await expect(page.locator('.personal-workout-result')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Текущая неделя' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Результаты упражнений' })).toBeVisible()
   await expect(page.getByText('Для твоей цели', { exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
-  await expect(page.getByText('Прогресс уже заметен, ты на верном пути.')).toHaveCount(0)
-  await expect(page.getByText('Проверяем цель…')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Обновить' })).toHaveCount(0)
-  await expect(page.locator('.ai-progress-footer')).toHaveCount(0)
-  await expect(page.locator('.client-progress-main-now').evaluate((element) => {
-    const goal = document.querySelector('.client-progress-goal-story')
-    const map = document.querySelector('.body-progress-map')
-    const summary = document.querySelector('.progress-story-summary')
-    return Boolean(goal && map && summary
-      && (element.compareDocumentPosition(goal) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (summary.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING))
-  })).resolves.toBe(true)
+  await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
+  await expect(page.locator('.client-ai-analysis').getByRole('button', { name: 'Подробный анализ' })).toBeVisible()
+  await expectClientFactsOrder(page)
   const progressCoachmark = page.getByRole('button', { name: 'Понятно' })
   if (await progressCoachmark.isVisible()) await progressCoachmark.click()
   await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
@@ -789,8 +784,8 @@ test('client Progress shows composite goal facts in both themes', async ({ page 
   await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
   await openClientProgress(page)
   const goal = page.locator('.client-progress-goal-story')
-  await expect(goal.locator('.goal-criterion-progress-row')).toHaveCount(2)
-  await expect(goal.getByText('2 показателя', { exact: true })).toBeVisible()
+  await expect(goal.locator('.goal-criterion-progress-row:visible')).toHaveCount(2)
+  await expect(goal.getByText('2 показателя · каждый оценивается отдельно', { exact: true })).toBeVisible()
   await expect(goal.getByText(/из 2 выполнено/)).toHaveCount(0)
   await expect(goal.getByRole('button', { name: /критери/ })).toHaveCount(0)
   await goal.evaluate((element) => element.scrollIntoView({ block: 'start' }))
@@ -800,7 +795,7 @@ test('client Progress shows composite goal facts in both themes', async ({ page 
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/me/progress')
   const darkGoal = page.locator('.client-progress-goal-story')
-  await expect(darkGoal.locator('.goal-criterion-progress-row')).toHaveCount(2)
+  await expect(darkGoal.locator('.goal-criterion-progress-row:visible')).toHaveCount(2)
   await darkGoal.evaluate((element) => element.scrollIntoView({ block: 'start' }))
   await expectVisualBaseline(page, `client-progress-composite-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
@@ -819,12 +814,15 @@ test('period comparison stays compact for client and trainer in both themes', as
   }
 
   let comparison = page.locator('.client-progress-comparison')
-  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(3)
-  await expect(comparison.getByText('июль → август 2026', { exact: true })).toBeVisible()
+  if (!trainer) await comparison.locator(':scope > summary').click()
+  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(trainer ? 3 : 8)
+  if (trainer) await expect(comparison.getByText('июль → август 2026', { exact: true })).toBeVisible()
   await expect(comparison.getByRole('button', { name: /Показать ещё/ })).toHaveCount(0)
   await expect(comparison.getByText('Главное изменение', { exact: true })).toHaveCount(0)
-  await expect(comparison.locator('.period-comparison-limitation')).toHaveCount(1)
+  if (trainer) await expect(comparison.locator('.period-comparison-limitation')).toHaveCount(1)
   await expect(comparison.getByText('Мало данных: в одном из периодов только 1 завершённая тренировка.', { exact: true })).toBeVisible()
+  if (!trainer) await expectClientFactsOrder(page)
+  else {
   expect(await comparison.evaluate((element) => {
     const map = document.querySelector('.client-body-map-disclosure') ?? document.querySelector('.body-progress-map')
     const summary = document.querySelector('.progress-story-summary')
@@ -833,6 +831,7 @@ test('period comparison stays compact for client and trainer in both themes', as
       && (client ? summary.compareDocumentPosition(map) : map.compareDocumentPosition(element)) & Node.DOCUMENT_POSITION_FOLLOWING)
       && Boolean(summary && element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING)
   })).toBe(true)
+  }
   expect(await comparison.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   if (!trainer) {
     for (const width of [320, 375, 390, 430]) {
@@ -851,7 +850,8 @@ test('period comparison stays compact for client and trainer in both themes', as
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
   comparison = page.locator('.client-progress-comparison')
-  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(3)
+  if (!trainer) await comparison.locator(':scope > summary').click()
+  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(trainer ? 3 : 8)
   await comparison.scrollIntoViewIfNeeded()
   await expect(comparison).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-period-comparison-dark-${process.platform}.png`, {
     animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
@@ -879,6 +879,8 @@ test('measurement trends stay readable for client and trainer in both themes', a
   await expect(measurements.getByText('Цель · 83 кг').first()).toBeVisible()
   await expect(measurements.locator('.recharts-tooltip-wrapper')).toHaveCount(0)
   await expect(measurements.getByText('5 августа 2026 г.', { exact: true })).toHaveCount(0)
+  if (!trainer) await expectClientFactsOrder(page)
+  else {
   expect(await measurements.evaluate((element) => {
     const comparison = document.querySelector('.client-progress-comparison')
     const summary = document.querySelector('.progress-story-summary')
@@ -886,6 +888,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
       && (comparison.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
       && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
   })).toBe(true)
+  }
   expect(await measurements.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   expect(await measurements.getByRole('tab', { name: /Вес/ }).evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
   if (!trainer) {
@@ -925,22 +928,28 @@ test('weekly training rhythm stays visual and readable for client and trainer in
   await page.locator('.client-body-map-disclosure > summary').click()
   }
 
+  if (!trainer) await page.getByText('Ритм выбранного периода', { exact: true }).click()
   let regularity = page.locator('.client-progress-regularity-story')
   await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
-  await expect(regularity.getByText('3 тренировки', { exact: true })).toBeVisible()
-  await expect(regularity.getByText('Активные: 2 из 3', { exact: true })).toBeVisible()
+  await expect(regularity.getByText(trainer ? '3 тренировки' : '6 тренировок', { exact: true })).toBeVisible()
+  await expect(regularity.getByText(trainer ? 'Активные: 2 из 3' : 'Активные: 4 из 5', { exact: true })).toBeVisible()
   await expect(regularity.getByText('Серия', { exact: true })).toBeVisible()
-  await expect(regularity.getByText('2 нед.', { exact: true })).toBeVisible()
+  await expect(regularity.getByText(trainer ? '2 нед.' : '4 нед.', { exact: true })).toBeVisible()
   await expect(regularity.getByText('Интервал', { exact: true })).toBeVisible()
-  await expect(regularity.getByText('4,5 дн.', { exact: true })).toBeVisible()
+  await expect(regularity.getByText(trainer ? '4,5 дн.' : '4,6 дн.', { exact: true })).toBeVisible()
   await expect(regularity.getByText('Макс. перерыв', { exact: true })).toBeVisible()
   await expect(regularity.getByText('7 дн.', { exact: true })).toBeVisible()
   await expect(regularity.getByText('Регулярность', { exact: true })).toHaveCount(0)
   await expect(regularity.getByText('Частота к прошлому периоду', { exact: true })).toHaveCount(0)
   await expect(regularity.locator('.regularity-story-explanation')).toHaveCount(0)
-  await expect(regularity.getByRole('list', { name: 'Завершённые тренировки по неделям' }).locator('li')).toHaveCount(3)
-  await expect(regularity.locator('li[aria-label*="Без тренировок"]')).toHaveCount(1)
+  await expect(regularity.getByRole('list', { name: 'Завершённые тренировки по неделям' }).locator('li')).toHaveCount(trainer ? 3 : 5)
+  await expect(regularity.locator('li[aria-label*="Нет записей"]')).toHaveCount(1)
   await expect(regularity.locator('li[aria-label*="Текущая неделя"]')).toHaveCount(0)
+  if (!trainer) {
+    await expectClientFactsOrder(page)
+    expect(await regularity.evaluate((element) => element.clientWidth / element.parentElement!.clientWidth)).toBeGreaterThan(0.85)
+  }
+  else {
   expect(await regularity.evaluate((element) => {
     const measurements = document.querySelector('.client-progress-measurements-story')
     const summary = document.querySelector('.progress-story-summary')
@@ -948,6 +957,7 @@ test('weekly training rhythm stays visual and readable for client and trainer in
       && (measurements.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
       && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
   })).toBe(true)
+  }
   expect(await regularity.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   if (!trainer) {
     for (const width of [320, 375, 390, 430]) {
@@ -965,6 +975,7 @@ test('weekly training rhythm stays visual and readable for client and trainer in
   await gotoStable(page, trainer ? '/profile' : '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
+  if (!trainer) await page.getByText('Ритм выбранного периода', { exact: true }).click()
   regularity = page.locator('.client-progress-regularity-story')
   await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
   await regularity.scrollIntoViewIfNeeded()

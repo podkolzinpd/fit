@@ -2,6 +2,7 @@ import type { ClientGoal, GoalCriterion, ProgressEntry, Workout } from '../../sh
 import { GOAL_CRITERION_METRICS, isStandardGoalCriterionMetric } from '../../shared/goal-criterion-rules'
 import { calculateStandardGoalProgress } from '../../shared/goal-progress'
 import { calculateTrainingGoalProgress } from '../../shared/goal-training-progress'
+import { workoutResults } from '../../shared/workout-results'
 import { daysBetween, type LocalDate } from '../../shared/local-date'
 
 export type ComparisonPeriod = { start: LocalDate; end: LocalDate }
@@ -138,12 +139,13 @@ function valueFact(options: {
   factId: string
   kind: PeriodComparisonFactKind
   subject: string
-  current: number
-  previous: number
+  current: number | null
+  previous: number | null
   unit: string
   priority: number
   favorable?: boolean
 }): PeriodComparisonFact | null {
+  if (options.current === null || options.previous === null) return null
   if (Math.abs(options.current - options.previous) < 0.001 || options.previous <= 0) return null
   return {
     factId: options.factId,
@@ -159,35 +161,30 @@ function valueFact(options: {
   }
 }
 
-function strengthVolume(workouts: readonly Workout[]): number {
-  return confirmedSets(workouts).reduce((sum, { exercise, set }) => {
-    if (exercise.inputKind !== 'strength') return sum
-    const weight = set.fact.weightKg ?? set.weightKg
-    const reps = set.fact.reps ?? set.reps
-    return typeof weight === 'number' && typeof reps === 'number' ? sum + weight * reps : sum
-  }, 0)
+const finiteFact = (value: number | undefined): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0
+
+function strengthVolume(workouts: readonly Workout[]): number | null {
+  const sets = confirmedSets(workouts).filter(({ exercise }) => exercise.inputKind === 'strength')
+  if (sets.some(({ set }) => !finiteFact(set.fact.weightKg) || !finiteFact(set.fact.reps) || set.fact.reps <= 0)) return null
+  return sets.reduce((sum, { set }) => sum + set.fact.weightKg! * set.fact.reps!, 0)
 }
 
-function cardioTotals(workouts: readonly Workout[]): { distance: number; duration: number } {
-  return confirmedSets(workouts).reduce((totals, { exercise, set }) => {
-    if (exercise.inputKind !== 'distance' && exercise.muscleGroup !== 'cardio') return totals
-    totals.distance += set.fact.distanceKm ?? set.distanceKm ?? 0
-    totals.duration += (set.fact.durationSec ?? set.durationSec ?? ((set.fact.durationMin ?? set.durationMin ?? 0) * 60)) / 60
-    return totals
-  }, { distance: 0, duration: 0 })
+function cardioTotals(workouts: readonly Workout[]): { distance: number | null; duration: number | null } {
+  const sets = confirmedSets(workouts).filter(({ exercise }) => exercise.inputKind === 'distance' || exercise.inputKind === 'duration' || exercise.muscleGroup === 'cardio')
+  const distances = sets.map(({ set }) => set.fact.distanceKm)
+  const durations = sets.map(({ set }) => set.fact.durationSec ?? (finiteFact(set.fact.durationMin) ? set.fact.durationMin * 60 : undefined))
+  return { distance: distances.every(finiteFact) ? distances.reduce((sum, value) => sum + value, 0) : null,
+    duration: durations.every(finiteFact) ? durations.reduce((sum, value) => sum + value, 0) / 60 : null }
 }
 
 type ExerciseResult = { subject: string; value: number }
 
 function bestStrengthResults(workouts: readonly Workout[]): Map<string, ExerciseResult> {
   const results = new Map<string, ExerciseResult>()
-  for (const { exercise, set } of confirmedSets(workouts)) {
-    if (exercise.inputKind !== 'strength') continue
-    const value = set.fact.weightKg ?? set.weightKg
-    if (typeof value !== 'number' || value <= 0) continue
-    const key = `${exercise.ref}:${exercise.name}`.toLocaleLowerCase('ru-RU')
-    const existing = results.get(key)
-    if (!existing || value > existing.value) results.set(key, { subject: exercise.name, value })
+  for (const result of workoutResults(workouts)) {
+    if (result.metric !== 'weight') continue
+    const existing = results.get(result.exerciseKey)
+    if (!existing || result.value >= existing.value) results.set(result.exerciseKey, { subject: result.exerciseName, value: result.value })
   }
   return results
 }
@@ -199,7 +196,7 @@ function strengthFacts(current: readonly Workout[], previous: readonly Workout[]
     const before = previousResults.get(key)
     if (!before) return []
     const fact = valueFact({
-      factId: `comparison:strength:${searchable(result.subject)}:${before.value}:${result.value}`,
+      factId: `comparison:strength:${key}:${before.value}:${result.value}`,
       kind: 'strength', subject: `${result.subject} · рабочий вес`,
       current: result.value, previous: before.value, unit: 'кг', priority: 92,
       favorable: result.value > before.value,
