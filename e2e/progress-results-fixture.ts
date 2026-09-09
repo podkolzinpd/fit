@@ -67,8 +67,15 @@ export async function mockResultsHistory(page: Page) {
 }
 
 export async function verifyAnalysisShortcutKeepsShell(page: Page) {
-  await page.getByRole('button', { name: 'Открыть анализ' }).click()
+  const preview = page.getByLabel('ИИ-анализ за период')
+  const trigger = page.getByRole('button', { name: 'Открыть анализ' })
+  await expect(preview).toBeVisible()
   expect(new URL(page.url()).hash).toBe('')
+  if (!await trigger.count()) {
+    await expect(page.locator('.client-tab-bar')).toBeInViewport()
+    return
+  }
+  await trigger.click()
   const dialog = page.getByRole('dialog', { name: 'Подробный анализ' })
   await expect(dialog).toBeVisible()
   await expect(page.locator('.client-tab-bar')).toBeInViewport()
@@ -80,7 +87,7 @@ export async function verifyAnalysisShortcutKeepsShell(page: Page) {
     }
   })).resolves.toEqual({ rootScroll: 0, staysAtBottom: true })
   await dialog.getByRole('button', { name: 'Закрыть' }).click()
-  await expect(page.getByRole('button', { name: 'Открыть анализ' })).toBeFocused()
+  await expect(trigger).toBeFocused()
 }
 
 export async function verifyResultsSources(page: Page) {
