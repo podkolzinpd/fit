@@ -8,8 +8,12 @@ const demoClientId = '11111111-1111-4111-8111-111111111111'
 
 async function mockProgressPeriodSummary(page: VisualPage, periodStart = '2026-08-01', periodEnd = '2026-08-31') {
   const clientSummary = {
-    headline: 'Прогресс уже заметен', achievements: ['Жим лёжа стал сильнее'],
-    consistency: 'Тренировки продолжаются', encouragement: 'Продолжай в том же темпе', next_steps: [],
+    headline: 'В жиме лёжа рабочий вес вырос с 72 до 75 кг.',
+    achievements: ['Жим лёжа выполнен в 2 сопоставимых тренировках.'],
+    consistency: 'За период выполнено 2 тренировки.',
+    encouragement: 'Рост рабочего веса уже подтверждён записями.',
+    goal_alignment: '',
+    next_steps: ['На следующей тренировке проверить 75 кг с тем же числом повторений.'],
   }
   const displayMetrics = {
     completed_workouts: 2, workouts_per_week: 0.5, active_weeks: 2, longest_gap_days: 7,
@@ -28,7 +32,12 @@ async function mockProgressPeriodSummary(page: VisualPage, periodStart = '2026-0
     contentType: 'application/json', body: JSON.stringify([{
       id: '80000000-0000-4000-8000-000000000002', client_id: demoClientId,
       period_start: periodStart, period_end: periodEnd,
-      trainer_summary: { headline: 'Прогресс уже заметен', progress: ['Жим лёжа стал сильнее'], consistency: 'Тренировки продолжаются', attention: [] },
+      trainer_summary: {
+        headline: 'В жиме лёжа рабочий вес вырос с 72 до 75 кг.',
+        progress: ['Жим лёжа выполнен в 2 сопоставимых тренировках.'],
+        consistency: 'За период выполнено 2 тренировки.',
+        attention: [],
+      },
       client_summary: clientSummary, display_metrics: displayMetrics,
       generated_at: `${periodEnd}T12:00:00Z`, version: 1,
     }]),
@@ -1522,9 +1531,9 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expect(analysis.getByText('Динамика упражнений')).toHaveCount(0)
   await analysis.getByRole('button', { name: 'Подробный анализ' }).click()
   const detailedAnalysis = page.getByRole('dialog', { name: 'Подробный анализ' })
-  await expect(detailedAnalysis.getByRole('heading', { name: 'Результат периода' })).toBeVisible()
-  await expect(detailedAnalysis.getByRole('heading', { name: 'Связь с целью' })).toBeVisible()
-  await expect(detailedAnalysis.getByRole('heading', { name: 'На что обратить внимание' })).toBeVisible()
+  await expect(detailedAnalysis.getByRole('heading', { name: 'Главное сейчас' })).toHaveCount(0)
+  await expect(detailedAnalysis.getByRole('heading', { name: 'Почему' })).toBeVisible()
+  await expect(detailedAnalysis.getByRole('heading', { name: 'На следующей тренировке' })).toBeVisible()
   await detailedAnalysis.getByRole('button', { name: 'Закрыть' }).click()
 })
 
@@ -1553,10 +1562,10 @@ test('trainer Progress and measurements form keep their visual baselines in both
   await expectVisualBaseline(page, `trainer-progress-${profile}-${process.platform}.png`, [], true)
   await page.getByRole('button', { name: 'Подробный анализ' }).click()
   const lightDetails = page.getByRole('dialog', { name: 'Подробный анализ' })
-  await expect(lightDetails.getByRole('heading', { name: 'Результат периода' })).toBeVisible()
-  await expect(lightDetails.getByRole('heading', { name: 'Связь с целью' })).toBeVisible()
-  await expect(lightDetails.getByRole('heading', { name: 'На что обратить внимание' })).toBeVisible()
-  await expectVisualBaseline(page, `trainer-progress-details-${profile}-${process.platform}.png`, [], true)
+  await expect(lightDetails.getByRole('heading', { name: 'Главное сейчас' })).toBeVisible()
+  await expect(lightDetails.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
+  await expect(lightDetails.getByRole('heading', { name: 'Почему' })).toHaveCount(0)
+  await expect(lightDetails.locator('.progress-detailed-analysis')).toBeVisible()
   await lightDetails.getByRole('button', { name: 'Закрыть' }).click()
 
   await gotoStable(page, `/progress/${demoClientId}?view=measurements`)
@@ -1574,10 +1583,10 @@ test('trainer Progress and measurements form keep their visual baselines in both
   await expectVisualBaseline(page, `trainer-progress-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
   await page.getByRole('button', { name: 'Подробный анализ' }).click()
   const darkDetails = page.getByRole('dialog', { name: 'Подробный анализ' })
-  await expect(darkDetails.getByRole('heading', { name: 'Результат периода' })).toBeVisible()
-  await expect(darkDetails.getByRole('heading', { name: 'Связь с целью' })).toBeVisible()
-  await expect(darkDetails.getByRole('heading', { name: 'На что обратить внимание' })).toBeVisible()
-  await expectVisualBaseline(page, `trainer-progress-details-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
+  await expect(darkDetails.getByRole('heading', { name: 'Главное сейчас' })).toBeVisible()
+  await expect(darkDetails.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
+  await expect(darkDetails.getByRole('heading', { name: 'Почему' })).toHaveCount(0)
+  await expect(darkDetails.locator('.progress-detailed-analysis')).toBeVisible()
   await darkDetails.getByRole('button', { name: 'Закрыть' }).click()
 
   await gotoStable(page, `/progress/${demoClientId}?view=measurements`)

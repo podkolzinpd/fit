@@ -18,6 +18,34 @@ function exerciseNameKey(name: string): string {
   return firstWord.length > 6 ? firstWord.slice(0, -2) : firstWord
 }
 
+function hasRecoverySignal(trainingData: unknown): boolean {
+  if (!isRecord(trainingData) || !Array.isArray(trainingData.feedback_signals)) return false
+  return trainingData.feedback_signals.filter(isRecord).some((signal) =>
+    Number(signal.session_rpe) >= 9 || signal.wellbeing === "hard" ||
+    signal.discomfort === true ||
+    (typeof signal.client_comment === "string" && /устал|разбит|тяжело|не восстанов|нет сил/iu.test(signal.client_comment))
+  )
+}
+
+function hasRepeatedDecline(trainingData: unknown): boolean {
+  if (!isRecord(trainingData) || !Array.isArray(trainingData.exercises)) return false
+  return trainingData.exercises.filter(isRecord).some((exercise) =>
+    Array.isArray(exercise.derived_observations) && exercise.derived_observations
+      .filter(isRecord)
+      .some((observation) => observation.kind === "repeated_load_decline" && Number(observation.evidence_sessions) >= 3)
+  )
+}
+
+function hasMeasurementChange(trainingData: unknown): boolean {
+  if (!isRecord(trainingData) || !isRecord(trainingData.measurements)) return false
+  return [trainingData.measurements.changes, trainingData.measurements.compared_to_previous_period]
+    .some((value) => Array.isArray(value) && value.length > 0)
+}
+
+function isMeasurementHeadline(value: string, trainingData: unknown): boolean {
+  return hasMeasurementChange(trainingData) && /(?:вес|тал(?:ия|ии|ию)|груд(?:ь|и)|б[её]др)/iu.test(value) && /\d/u.test(value)
+}
+
 export function summaryQualityIssues(
   summary: unknown,
   trainingData: unknown,
@@ -94,7 +122,7 @@ export function summaryQualityIssues(
     if (!/\d/.test(item)) {
       issues.push("Каждый trainer.attention должен содержать число из входа.")
     }
-    if (/устал|перенапряж|травм|боль|самочув/i.test(item)) {
+    if (/устал|перенапряж|травм|боль|самочув/i.test(item) && !hasRecoverySignal(trainingData)) {
       issues.push(
         "trainer.attention не должен предполагать усталость, травму или самочувствие без входных данных.",
       )
@@ -143,8 +171,14 @@ export function summaryQualityIssues(
     issues.push("Без заданной цели client.goalAlignment должен быть пустым.")
   }
   const nextSteps = stringList(client.nextSteps)
-  if (nextSteps.length < 1 || nextSteps.length > 3) {
-    issues.push("client.nextSteps должен содержать от одного до трёх ориентиров.")
+  if (nextSteps.length !== 1) {
+    issues.push("client.nextSteps должен содержать ровно один ориентир.")
+  }
+  if (nextSteps.some((item) => /^(?:продолжать?|отслеживать прогресс|собрать больше данных)[.!]?$/iu.test(item.trim()))) {
+    issues.push("client.nextSteps должен быть конкретным действием, а не общей рекомендацией.")
+  }
+  if (clientAchievements.length < 1 || clientAchievements.length > 2) {
+    issues.push("client.achievements должен содержать одно или два доказательства главного вывода.")
   }
 
   const exercises = isRecord(trainingData) && Array.isArray(trainingData.exercises)
@@ -167,29 +201,16 @@ export function summaryQualityIssues(
       const namesExercise = changedExercises.some((exercise) =>
         typeof exercise.name === "string" && normalized.includes(exerciseNameKey(exercise.name))
       )
-      if (!/\d/.test(headline) || !namesExercise || vagueHeadline.test(headline)) {
+      if (((!/\d/.test(headline) || !namesExercise) && !isMeasurementHeadline(headline, trainingData)) || vagueHeadline.test(headline)) {
         issues.push("Headline должен называть конкретное упражнение и подтверждённое число, а не общий прогресс.")
         break
       }
     }
   }
 
-  if (changedExercises.length >= 2 && changedExercises.length <= 4) {
-    for (const exercise of changedExercises) {
-      if (typeof exercise.name !== "string") continue
-      const nameKey = exerciseNameKey(exercise.name)
-      const trainerMatches = trainerProgress.filter((item) =>
-        item.toLocaleLowerCase("ru").includes(nameKey)
-      ).length
-      const clientMatches = clientAchievements.filter((item) =>
-        item.toLocaleLowerCase("ru").includes(nameKey)
-      ).length
-      if (trainerMatches !== 1 || clientMatches !== 1) {
-        issues.push(
-          `Для упражнения «${exercise.name}» нужен ровно один пункт в trainer.progress и client.achievements.`,
-        )
-      }
-    }
+  const recoveryAdvice = /облегч|разгруз|снизить нагруз|снижени[ея] нагруз|уменьшить (?:вес|нагруз)/iu.test(allText)
+  if (recoveryAdvice && !(hasRepeatedDecline(trainingData) && hasRecoverySignal(trainingData))) {
+    issues.push("Совет снизить нагрузку требует повторяющегося спада и отдельного сигнала восстановления.")
   }
 
   if (
