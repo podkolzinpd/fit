@@ -35,6 +35,7 @@ export function MeasurementProgressSection({
   onRetry,
   llmCandidates = [],
   management,
+  compact = false,
 }: {
   entries: readonly ProgressEntry[]
   customMetrics: readonly CustomMetric[]
@@ -49,6 +50,7 @@ export function MeasurementProgressSection({
   onRetry: () => void
   llmCandidates?: readonly string[]
   management?: ReactNode
+  compact?: boolean
 }) {
   const progress = buildMeasurementProgress({ entries, customMetrics, goal, periodStart, periodEnd, today, llmCandidates })
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
@@ -91,14 +93,22 @@ export function MeasurementProgressSection({
           compact
           goalGuide={selected.goalGuide}
         />
-        <dl className="measurement-story-facts">
+        {compact ? <details className="measurement-story-details"><summary>Подробности замеров</summary>        <dl className="measurement-story-facts">
           <div><dt>Начало / конец</dt><dd>{observationValue(selected, selected.periodStart)} → {observationValue(selected, selected.periodEnd)}</dd></div>
           <div><dt>Минимум / максимум</dt><dd>{selected.min && selected.max ? `${formatMeasurementValue(selected.min.value, selected.unit)} / ${formatMeasurementValue(selected.max.value, selected.unit)}` : 'Недостаточно точек'}</dd></div>
           <div><dt>Связь с целью</dt><dd>{selected.goalRelated ? 'Связан с целью' : 'Только наблюдение'}</dd></div>
           <div><dt>Данные</dt><dd>{measurementFreshnessLabel(selected)} · {measurementSufficiencyLabel(selected)}</dd></div>
         </dl>
-        {selected.hasNewerValueAfterPeriod && <p className="measurement-story-after-period">Самое свежее значение получено после выбранного периода; график и delta относятся только к периоду.</p>}
-        {explanation && <div className="measurement-story-explanation" data-copy-source={explanation.source} data-fact-ids={explanation.factIds.join(',')}><p>{explanation.text}</p></div>}
+        {selected.hasNewerValueAfterPeriod && <p className="measurement-story-after-period">Самое свежее значение получено после выбранного периода; график и изменение относятся только к периоду.</p>}
+        {explanation && <div className="measurement-story-explanation" data-copy-source={explanation.source} data-fact-ids={explanation.factIds.join(',')}><p>{explanation.text}</p></div>}</details> : <>        <dl className="measurement-story-facts">
+          <div><dt>Начало / конец</dt><dd>{observationValue(selected, selected.periodStart)} → {observationValue(selected, selected.periodEnd)}</dd></div>
+          <div><dt>Минимум / максимум</dt><dd>{selected.min && selected.max ? `${formatMeasurementValue(selected.min.value, selected.unit)} / ${formatMeasurementValue(selected.max.value, selected.unit)}` : 'Недостаточно точек'}</dd></div>
+          <div><dt>Связь с целью</dt><dd>{selected.goalRelated ? 'Связан с целью' : 'Только наблюдение'}</dd></div>
+          <div><dt>Данные</dt><dd>{measurementFreshnessLabel(selected)} · {measurementSufficiencyLabel(selected)}</dd></div>
+        </dl>
+        {selected.hasNewerValueAfterPeriod && <p className="measurement-story-after-period">Самое свежее значение получено после выбранного периода; график и изменение относятся только к периоду.</p>}
+        {explanation && <div className="measurement-story-explanation" data-copy-source={explanation.source} data-fact-ids={explanation.factIds.join(',')}><p>{explanation.text}</p></div>}</>}
+
       </>}
     {management && <div className="measurement-story-management">{management}</div>}
   </section>

@@ -53,7 +53,7 @@ export interface WorkoutRegularityProgress {
 
 const number = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 })
 
-function mondayStart(value: LocalDate): LocalDate {
+export function mondayStart(value: LocalDate): LocalDate {
   const [year, month, day] = value.split('-').map(Number)
   const weekday = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1)).getUTCDay()
   return addDays(value, -((weekday + 6) % 7))
