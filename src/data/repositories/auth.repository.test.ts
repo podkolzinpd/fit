@@ -6,6 +6,7 @@ const queries = vi.hoisted(() => ({
   getSession: vi.fn(),
   signOut: vi.fn(),
   signIn: vi.fn(),
+  signUp: vi.fn(),
   getLinkedClient: vi.fn(),
   getTrainer: vi.fn(),
   initializeAccount: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock('../queries/auth.queries', () => ({
     getSession: queries.getSession,
     signOut: queries.signOut,
     signIn: queries.signIn,
+    signUp: queries.signUp,
     getLinkedClient: queries.getLinkedClient,
     getTrainer: queries.getTrainer,
     initializeAccount: queries.initializeAccount,
@@ -27,12 +29,17 @@ vi.mock('../queries/auth.queries', () => ({
   },
 }))
 
+const acceptCurrent = vi.hoisted(() => vi.fn())
+vi.mock('./legal.repository', () => ({ legalRepository: { acceptCurrent } }))
+
 describe('authRepository.initialize', () => {
   beforeEach(() => {
     queries.clearLocalSession.mockReset().mockResolvedValue({ error: null })
     queries.getSession.mockReset().mockResolvedValue({ data: { session: null }, error: null })
     queries.signOut.mockReset().mockResolvedValue({ error: null })
     queries.signIn.mockReset()
+    queries.signUp.mockReset()
+    acceptCurrent.mockReset().mockResolvedValue('2026-09-09T10:00:00Z')
     queries.getLinkedClient.mockReset()
     queries.getTrainer.mockReset()
     queries.initializeAccount.mockReset()
@@ -103,6 +110,21 @@ describe('authRepository.initialize', () => {
     await vi.runAllTimersAsync()
     await result
     expect(queries.signIn).toHaveBeenCalledTimes(2)
+  })
+
+  it('records the current legal versions when creating an email account', async () => {
+    queries.signUp.mockResolvedValue({ data: { session: { user: { id: 'user-1' } } }, error: null })
+
+    await expect(authRepository.signUp('new@example.test', 'FitLocal123!', 'Анна', 'client')).resolves.toBeUndefined()
+
+    expect(queries.signUp).toHaveBeenCalledWith(
+      'new@example.test',
+      'FitLocal123!',
+      'Анна',
+      'client',
+      expect.objectContaining({ termsVersion: '2026-09-09', privacyVersion: '2026-09-09' }),
+    )
+    expect(acceptCurrent).toHaveBeenCalledWith('registration')
   })
 
   it('завершает выход без дополнительной проверки при успешном revoke', async () => {
