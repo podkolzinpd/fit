@@ -154,4 +154,78 @@ describe('summaryQualityIssues', () => {
       expect.stringContaining('goalAlignment'),
     ]))
   })
+
+  it('rejects a lighter-week recommendation based on weight alone', () => {
+    const issues = summaryQualityIssues({
+      ...validCoachingSummary('Обсудить с тренером снижение нагрузки на следующей неделе.'),
+    }, trainingData)
+
+    expect(issues).toEqual(expect.arrayContaining([
+      expect.stringContaining('повторяющегося спада'),
+    ]))
+  })
+
+  it('allows a lighter-week discussion only with repeated decline and recovery feedback', () => {
+    const issues = summaryQualityIssues(
+      validCoachingSummary('Обсудить с тренером снижение нагрузки на следующей неделе.'),
+      {
+        ...trainingData,
+        feedback_signals: [{ date: '2026-08-20', session_rpe: 9, wellbeing: 'hard' }],
+        exercises: [{
+          name: 'Жим лёжа',
+          session_count: 3,
+          change_percent: { max_weight: -10 },
+          derived_observations: [{ kind: 'repeated_load_decline', evidence_sessions: 3 }],
+        }],
+      },
+    )
+
+    expect(issues).toEqual([])
+  })
+
+  it('allows a grounded measurement to be the main conclusion even when exercise facts also changed', () => {
+    const issues = summaryQualityIssues({
+      trainer: {
+        headline: 'Талия уменьшилась с 91 до 88 см за 2 замера.',
+        progress: ['Изменение талии подтверждено 2 датированными замерами.'],
+        consistency: 'Выполнено 2 тренировки.',
+        attention: [],
+      },
+      client: {
+        headline: 'Талия уменьшилась с 91 до 88 см за 2 замера.',
+        achievements: ['Изменение талии подтверждено 2 датированными замерами.'],
+        consistency: 'Выполнено 2 тренировки.',
+        encouragement: 'Изменение уже подтверждено замерами.',
+        goalAlignment: '',
+        nextSteps: ['Добавить следующий замер талии через 7 дней.'],
+      },
+    }, {
+      ...trainingData,
+      measurements: {
+        changes: [{ metric: 'waist_cm', from: 91, to: 88, change: -3, evidence_points: 2 }],
+        compared_to_previous_period: [],
+      },
+    })
+
+    expect(issues).toEqual([])
+  })
 })
+
+function validCoachingSummary(nextStep: string) {
+  return {
+    trainer: {
+      headline: 'В жиме лёжа вес снизился на 10% за 3 тренировки.',
+      progress: ['Вес снизился с 70 до 63 кг за 3 тренировки.'],
+      consistency: 'Выполнено 3 тренировки.',
+      attention: [],
+    },
+    client: {
+      headline: 'В жиме лёжа вес снизился на 10% за 3 тренировки.',
+      achievements: ['Вес снизился с 70 до 63 кг за 3 тренировки.'],
+      consistency: 'Выполнено 3 тренировки.',
+      encouragement: 'Три записи уже позволяют увидеть направление изменений.',
+      goalAlignment: '',
+      nextSteps: [nextStep],
+    },
+  }
+}
