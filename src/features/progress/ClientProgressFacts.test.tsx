@@ -40,7 +40,7 @@ describe('Client facts independent of AI', () => {
     const duration = record('duration', '2026-08-10', 0)
     duration.exercises[0]!.inputKind = 'duration'; duration.exercises[0]!.sets[0]!.fact = { durationSec: 60 }
     const { rerender } = render(<PeriodExerciseResults {...base} workouts={[duration]} />, { wrapper })
-    expect(screen.getByText(/Записанная длительность/)).toHaveTextContent('60 сек')
+    expect(screen.getByText(/Время/)).toHaveTextContent('60 сек')
     rerender(<PeriodExerciseResults {...base} workouts={[]} />)
     expect(screen.getByText(/За выбранный период пока нет подтверждённых результатов/)).toBeVisible()
   })

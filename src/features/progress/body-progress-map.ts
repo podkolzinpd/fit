@@ -271,8 +271,8 @@ export function loadBodyMap(workouts: readonly Workout[], periodStart: string, p
         percent,
         setCount: value.sets,
         valueLabel: `${percent}%`,
-        metricLabel: 'Доля подходов с определённой зоной',
-        primaryDetail: `Подходы на карте: ${value.sets} из ${coverage.mappedSets}`,
+        metricLabel: 'Доля подходов',
+        primaryDetail: `${value.sets} из ${coverage.mappedSets} подходов`,
         details,
         intensity: Math.min(1, Math.max(.28, percent / 45)),
       }
@@ -281,12 +281,12 @@ export function loadBodyMap(workouts: readonly Workout[], periodStart: string, p
 
   return {
     mode: 'load',
-    title: 'Куда пришлась нагрузка',
-    description: 'Распределение подтверждённых подходов за выбранный период',
+    title: 'Распределение подходов',
+    description: 'Подходы по мышечным группам',
     regions,
     coverage,
     emptyMessage: coverage.totalSets > 0
-      ? 'Работа сохранена. Для этих записей нет зон на карте.'
-      : 'После завершённой тренировки покажем распределение нагрузки по зонам.',
+      ? 'Нет данных по мышечным группам.'
+      : 'Здесь появится распределение после тренировки.',
   }
 }

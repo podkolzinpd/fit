@@ -1,7 +1,7 @@
 import type { TrainingProgressFactChange } from '../../shared/domain'
 
 const metricLabels: Record<TrainingProgressFactChange['metric'], string> = {
-  max_weight: 'Максимальный записанный вес',
+  max_weight: 'Максимальный вес',
   volume: 'Объём за тренировку',
   total_reps: 'Повторы за тренировку',
   distance: 'Дистанция за тренировку',

@@ -60,19 +60,19 @@ export function workoutResults(workouts: readonly Workout[]): WorkoutResult[] {
       if (exercise.inputKind === 'strength') {
         const weighted = facts.filter((fact) => finite(fact.weightKg) && finite(fact.reps) && fact.reps > 0)
         if (weighted.length) {
-          add('weight', 'Максимальный записанный вес', 'кг', Math.max(...weighted.map((fact) => fact.weightKg!)))
+          add('weight', 'Максимальный вес', 'кг', Math.max(...weighted.map((fact) => fact.weightKg!)))
           for (const weight of [...new Set(weighted.map((fact) => fact.weightKg!))].sort((a, b) => b - a)) {
             add('fixed_reps', `Повторы при ${resultNumber(weight)} кг`, 'повт.', Math.max(...weighted.filter((fact) => fact.weightKg === weight).map((fact) => fact.reps!)), weight)
           }
-          if (weighted.length === facts.length) add('volume', 'Объём за тренировку', 'кг', weighted.reduce((sum, fact) => sum + fact.weightKg! * fact.reps!, 0))
+          if (weighted.length === facts.length) add('volume', 'Объём', 'кг', weighted.reduce((sum, fact) => sum + fact.weightKg! * fact.reps!, 0))
         }
       } else if (exercise.inputKind === 'reps') {
         const values = facts.map((fact) => fact.reps).filter(finite)
-        if (values.length) add('reps', 'Максимум повторов в подходе', 'повт.', Math.max(...values))
+        if (values.length) add('reps', 'Максимум повторов', 'повт.', Math.max(...values))
       } else {
         const distance = exercise.inputKind === 'distance'
         const values = facts.map((fact) => distance ? fact.distanceKm : fact.durationSec ?? (finite(fact.durationMin) ? fact.durationMin * 60 : undefined)).filter(finite)
-        if (values.length) add(distance ? 'distance' : 'duration', distance ? 'Записанная дистанция' : 'Записанная длительность', distance ? 'км' : 'сек', values.reduce((a, b) => a + b, 0))
+        if (values.length) add(distance ? 'distance' : 'duration', distance ? 'Дистанция' : 'Время', distance ? 'км' : 'сек', values.reduce((a, b) => a + b, 0))
       }
     }
   }

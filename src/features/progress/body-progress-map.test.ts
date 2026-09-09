@@ -104,8 +104,8 @@ describe('body progress map', () => {
     expect(result.regions.map((region) => [region.group, region.percent])).toEqual([
       ['chest', 67], ['upper_back', 33],
     ])
-    expect(result.regions[0]?.metricLabel).toBe('Доля подходов с определённой зоной')
-    expect(result.regions[0]?.primaryDetail).toBe('Подходы на карте: 2 из 3')
+    expect(result.regions[0]?.metricLabel).toBe('Доля подходов')
+    expect(result.regions[0]?.primaryDetail).toBe('2 из 3 подходов')
   })
 
   it('ignores drafts and workouts outside the period and uses correct set plurals', () => {
