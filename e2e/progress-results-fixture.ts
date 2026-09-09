@@ -68,9 +68,15 @@ export async function mockResultsHistory(page: Page) {
 
 export async function verifyResultsSources(page: Page) {
   const center = page.locator('#results-center')
+  await expect(page.locator('.period-exercise-results #results-center')).toHaveCount(1)
+  await page.getByRole('link', { name: 'Посмотреть анализ' }).click()
+  await expect(page.locator('#ai-analysis')).toBeInViewport()
+  for (const control of await page.locator('.progress-details-toggle:visible').all()) {
+    expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  }
   await expect(center).not.toHaveAttribute('open')
   await expect(page.locator('.weekly-training-load')).not.toHaveAttribute('open')
-  await center.getByText('Все результаты и рекорды', { exact: true }).click()
+  await center.getByText('Все результаты', { exact: true }).click()
   await center.getByRole('combobox', { name: 'Упражнение', exact: true }).selectOption('system:press:strength')
   await expect(page).toHaveURL(/resultExercise=system%3Apress%3Astrength/)
   await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('weight')
@@ -80,7 +86,7 @@ export async function verifyResultsSources(page: Page) {
   await expect(resultRows).toHaveCount(3)
   const record = resultRows.filter({ hasText: 'Личный рекорд' })
   await expect(record).toHaveCount(1)
-  await expect(resultRows.filter({ hasText: 'Меньше прошлого' })).toHaveCount(1)
+  await expect(resultRows.filter({ hasText: 'Результат снизился' })).toHaveCount(1)
   await record.getByRole('link', { name: 'Ранее · 1 июля 2026 г.' }).click()
   await expect(page).toHaveURL(/workouts\/c1000000-0000-4000-8000-000000000001$/)
   await expect(page.locator('.workout-detail-page')).toBeVisible()

@@ -381,13 +381,13 @@ async function openClientProgress(page: import('@playwright/test').Page, options
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/)
   await expect(page.locator('.client-progress-card')).toBeVisible()
-  await expect(page.locator('.client-progress-card .personal-workout-result')).toBeVisible()
+  await expect(page.locator('.client-progress-card .client-current-week')).toBeVisible()
   await expect(page.getByText('Проверяем данные цели…')).toHaveCount(0)
 }
 
 async function expectClientFactsOrder(page: VisualPage) {
   await expect(page.locator('.client-progress-card').evaluate((element) => {
-    const order = ['.personal-workout-result', '.progress-story-period', '.client-progress-goal-story', '.client-current-week', '.period-exercise-results', '.client-progress-measurements-story', '.client-body-map-disclosure', '.period-rhythm', '.client-progress-comparison', '.client-ai-analysis']
+    const order = ['.client-current-week', '.progress-story-period', '.client-progress-goal-story', '.period-exercise-results', '.client-progress-measurements-story', '.client-body-map-disclosure', '.period-rhythm', '.client-progress-comparison', '.client-ai-analysis']
     const children = Array.from(element.children)
     const positions = order.map((selector) => children.findIndex((child) => child.matches(selector)))
     return positions.every((position, index) => position >= 0 && (!index || position > positions[index - 1]!))
@@ -682,12 +682,12 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   await expect(bodyMap.getByText('Лучший результат зоны')).toHaveCount(0)
   await expect(bodyMap.evaluate((element) => Number.parseFloat(getComputedStyle(element).borderTopLeftRadius))).resolves.toBeGreaterThanOrEqual(16)
   await expectBodyMapBaseline(bodyMap, `client-body-map-female-${process.platform}.png`)
-  await expect(page.locator('.personal-workout-result')).toBeVisible()
+  await expect(page.locator('.client-current-week')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Текущая неделя' })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Результаты упражнений' })).toBeVisible()
-  await expect(page.getByText('Для твоей цели', { exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Результаты и рекорды' })).toBeVisible()
+  await expect(page.getByText('Твоя цель', { exact: true })).toBeVisible()
   await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
-  await expect(page.locator('.client-ai-analysis').getByRole('button', { name: 'Подробный анализ' })).toBeVisible()
+  await expect(page.locator('.client-ai-analysis').getByRole('button', { name: 'Выводы и рекомендации' })).toBeVisible()
   await expectClientFactsOrder(page)
   const progressCoachmark = page.getByRole('button', { name: 'Понятно' })
   if (await progressCoachmark.isVisible()) await progressCoachmark.click()
@@ -795,7 +795,7 @@ test('client Progress shows composite goal facts in both themes', async ({ page 
   await openClientProgress(page)
   const goal = page.locator('.client-progress-goal-story')
   await expect(goal.locator('.goal-criterion-progress-row:visible')).toHaveCount(2)
-  await expect(goal.getByText('2 показателя · каждый оценивается отдельно', { exact: true })).toBeVisible()
+  await expect(goal.getByText('2 показателя · каждый оценивается отдельно', { exact: true })).toHaveCount(0)
   await expect(goal.getByText(/из 2 выполнено/)).toHaveCount(0)
   await expect(goal.getByRole('button', { name: /критери/ })).toHaveCount(0)
   await goal.evaluate((element) => element.scrollIntoView({ block: 'start' }))
@@ -830,7 +830,7 @@ test('period comparison stays compact for client and trainer in both themes', as
   await expect(comparison.getByRole('button', { name: /Показать ещё/ })).toHaveCount(0)
   await expect(comparison.getByText('Главное изменение', { exact: true })).toHaveCount(0)
   if (trainer) await expect(comparison.locator('.period-comparison-limitation')).toHaveCount(1)
-  await expect(comparison.getByText('Мало данных: в одном из периодов только 1 завершённая тренировка.', { exact: true })).toBeVisible()
+  if (trainer) await expect(comparison.getByText('Мало данных: в одном из периодов только 1 завершённая тренировка.', { exact: true })).toBeVisible()
   if (!trainer) await expectClientFactsOrder(page)
   else {
   expect(await comparison.evaluate((element) => {
@@ -882,7 +882,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
   }
 
   let measurements = page.locator('.client-progress-measurements-story')
-  await expect(measurements.getByRole('heading', { name: 'Тренд по значениям' })).toBeVisible()
+  await expect(measurements.getByRole('heading', { name: trainer ? 'Тренд по значениям' : 'Замеры' })).toBeVisible()
   await expect(measurements.getByRole('tab', { name: /Вес/ })).toBeVisible()
   await expect(measurements.getByRole('tab', { name: /Плечи/ })).toBeVisible()
   await expect(measurements.getByLabel('График показателя «Вес»')).toBeVisible()
@@ -918,7 +918,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
   measurements = page.locator('.client-progress-measurements-story')
-  await expect(measurements.getByRole('heading', { name: 'Тренд по значениям' })).toBeVisible()
+  await expect(measurements.getByRole('heading', { name: trainer ? 'Тренд по значениям' : 'Замеры' })).toBeVisible()
   await measurements.scrollIntoViewIfNeeded()
   await expect(measurements).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-measurement-trends-dark-${process.platform}.png`, {
     animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
@@ -938,7 +938,7 @@ test('weekly training rhythm stays visual and readable for client and trainer in
   await page.locator('.client-body-map-disclosure > summary').click()
   }
 
-  if (!trainer) await page.getByText('Ритм выбранного периода', { exact: true }).click()
+  if (!trainer) await page.getByText('Регулярность тренировок', { exact: true }).click()
   let regularity = page.locator('.client-progress-regularity-story')
   await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
   await expect(regularity.getByText(trainer ? '3 тренировки' : '6 тренировок', { exact: true })).toBeVisible()
@@ -985,7 +985,7 @@ test('weekly training rhythm stays visual and readable for client and trainer in
   await gotoStable(page, trainer ? '/profile' : '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
-  if (!trainer) await page.getByText('Ритм выбранного периода', { exact: true }).click()
+  if (!trainer) await page.getByText('Регулярность тренировок', { exact: true }).click()
   regularity = page.locator('.client-progress-regularity-story')
   await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
   await regularity.scrollIntoViewIfNeeded()
@@ -1815,7 +1815,7 @@ test('Home body map keeps its front and back switch aligned', async ({ page }, t
 })
 
 
-test('personal workout result stays the same on Home and Progress without AI', async ({ page }, testInfo) => {
+test('personal workout result stays on Home and remains available in Progress history without AI', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client result')
   await mockClientWorkoutHistory(page)
   await page.route('**/rest/v1/workouts?*', (route) => new URL(route.request().url()).searchParams.get('select') === 'workout_date'
@@ -1839,7 +1839,7 @@ test('personal workout result stays the same on Home and Progress without AI', a
   await expect(page).toHaveURL(/mapWorkout=b1000000-0000-4000-8000-000000000001.*mapMode=load.*mapFrom=2026-08-10.*mapTo=2026-08-10.*mapZone=chest/)
   const disclosure = page.locator('.client-body-map-disclosure')
   await expect(disclosure).toHaveAttribute('open')
-  await expect(disclosure).toContainText('10 августа 2026 г. · одна завершённая тренировка')
+  await expect(disclosure).toContainText('10 августа 2026 г. · тренировка')
   await expect(disclosure).toContainText('Жим лёжа: 1 подход')
   await disclosure.getByRole('link', { name: 'Открыть тренировку' }).click()
   await expect(page).toHaveURL(/\/workouts\/b1000000-0000-4000-8000-000000000001$/)
@@ -1852,8 +1852,8 @@ test('personal workout result stays the same on Home and Progress without AI', a
   await expectBodyMapBaseline(disclosure, `home-map-detail-${process.platform}.png`)
   await page.setViewportSize(mapViewport)
   await gotoStable(page, '/me/progress')
-  await expect(result).toContainText('Максимальный вес: 40 кг')
-  await expect(result.getByRole('link', { name: 'Открыть' })).toHaveAttribute('href', '/workouts/b1000000-0000-4000-8000-000000000001')
+  await expect(page.locator('.period-exercise-results')).toContainText('Жим лёжа')
+  await expect(page.locator('.personal-workout-result')).toHaveCount(0)
   await expect(page.locator('.ai-progress-auto-error')).toBeVisible()
   await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
   await page.getByRole('heading', { name: 'Мой прогресс' }).scrollIntoViewIfNeeded()
@@ -1863,7 +1863,7 @@ test('personal workout result stays the same on Home and Progress without AI', a
   await gotoStable(page, '/me')
   await expectBodyMapBaseline(result, `personal-result-home-dark-${process.platform}.png`)
   await gotoStable(page, '/me/progress')
-  await expect(result).toContainText('Максимальный вес: 40 кг')
+  await expect(page.locator('.period-exercise-results')).toContainText('Жим лёжа')
   await expectVisualBaseline(page, `personal-result-progress-dark-${process.platform}.png`)
 })
 
@@ -1878,10 +1878,10 @@ test('results center preserves sources and explains weekly work', async ({ page 
   const viewport = page.viewportSize()!
   await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('fixed_reps')
   await expect(center.locator('.center-result-row').first()).toContainText('Повторы при 50 кг: 12 повт.')
-  await expect(center.locator('.center-result-row').first()).toContainText('Ранее: 10 повт.')
+  await expect(center.locator('.center-result-row').first()).toContainText('Было 10 повт.')
   await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('volume')
   const volume = center.locator('.center-result-row').first()
-  await volume.getByText('Из чего сложился объём', { exact: true }).click()
+  await volume.getByText('Подходы, вес и повторы', { exact: true }).click()
   await expect(volume).toContainText('1 → 2')
   await expect(volume).toContainText('50 кг × 12 повт.')
   await expect(volume).toContainText('50 кг × 10 повт.')
@@ -1890,10 +1890,10 @@ test('results center preserves sources and explains weekly work', async ({ page 
   await expect(volume).toContainText('Итого: 450 кг')
   await expect(volume).not.toContainText('не равно изменению силы')
   const weekly = page.locator('.weekly-training-load')
-  await weekly.getByText('Подходы по неделям', { exact: true }).click()
+  await weekly.getByText('Нагрузка по неделям', { exact: true }).click()
   await expect(weekly.locator('.weekly-load-list > li').first()).toContainText('6 подходов')
-  await expect(weekly.locator('.weekly-load-list > li').first()).toContainText('По зонам: 3. Кардио: 2. Без определённой зоны: 1.')
-  await expect(weekly).toContainText('Неполная неделя')
+  await expect(weekly.locator('.weekly-load-list > li').first()).toContainText('Кардио: 2 · Без группы: 1')
+  await expect(weekly).toContainText('Часть недели')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.setViewportSize({ ...viewport, height: 1500 })
   await expect.soft(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled' })
@@ -1908,15 +1908,15 @@ test('results center keeps detailed analytics in dark theme', async ({ page }, t
   await mockResultsHistory(page)
   await openClientProgress(page, { dark: true })
   const center = page.locator('#results-center')
-  await center.getByText('Все результаты и рекорды', { exact: true }).click()
+  await center.getByText('Все результаты', { exact: true }).click()
   await center.getByRole('combobox', { name: 'Упражнение', exact: true }).selectOption('system:press:strength')
   await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('volume')
   const weekly = page.locator('.weekly-training-load')
   const viewport = page.viewportSize()!
   const darkVolume = center.locator('.center-result-row').first()
   await expect(darkVolume).toContainText('Объём: 1 100 кг')
-  await darkVolume.getByText('Из чего сложился объём', { exact: true }).click()
-  await weekly.getByText('Подходы по неделям', { exact: true }).click()
+  await darkVolume.getByText('Подходы, вес и повторы', { exact: true }).click()
+  await weekly.getByText('Нагрузка по неделям', { exact: true }).click()
   await page.setViewportSize({ ...viewport, height: 1500 })
   await expect.soft(darkVolume).toHaveScreenshot(`result-volume-dark-${process.platform}.png`, { animations: 'disabled' })
   await expect.soft(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled' })

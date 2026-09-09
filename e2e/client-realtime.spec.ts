@@ -94,7 +94,7 @@ test('client and trainer receive progress and workout changes without reload', a
     await trainer.getByRole('button', { name: /История ·/ }).click()
     await client.goto('/me/progress')
     await expect(client.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
-    await client.getByRole('button', { name: /История ·/ }).click()
+    await client.getByRole('button', { name: /История замеров ·/ }).click()
     await client.getByRole('button', { name: 'Добавить замер' }).click()
     await trainer.waitForTimeout(500)
 
