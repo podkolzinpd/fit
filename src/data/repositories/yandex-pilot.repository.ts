@@ -133,6 +133,7 @@ const workoutExerciseSchema = z.object({
   restBetweenRoundsSec: z.number().int().nonnegative(),
   restBetweenSetsSec: z.number().int().nonnegative(),
   trainerComment: z.string().nullable(),
+  clientNote: z.string().nullish(),
   sets: z.array(workoutSetSchema),
 })
 const workoutSchema = z.object({

@@ -452,9 +452,10 @@ async function createStandaloneClient(
   await page.getByRole('button', { name: 'Скрыть' }).click()
 }
 
-async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
+async function openPreviewLiveWorkout(page: import('@playwright/test').Page, fresh = false) {
   await page.clock.install({ time: new Date('2026-08-29T18:00:00+03:00') })
-  await signIn(page, 'client@fit.local', /\/me$/)
+  if (fresh) await createStandaloneClient(page, 'live-notes', 'Live клиент')
+  else await signIn(page, 'client@fit.local', /\/me$/)
 
   await gotoStable(page, '/me/workouts')
   const activeWorkout = page.getByRole('link', { name: /Идёт/ }).first()
@@ -464,6 +465,7 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
     await activeWorkout.click()
     await page.getByRole('link', { name: 'Продолжить тренировку' }).click()
     await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
+    await page.keyboard.press('Escape')
     return
   }
   await expect(addAction).toHaveCount(1)
@@ -480,6 +482,8 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
   await page.getByLabel('Повторы, подход 2').fill('10')
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  await expect(page.locator('.live-timer')).toBeVisible()
+  await page.keyboard.press('Escape')
   await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
 }
 
@@ -1240,7 +1244,7 @@ test('workout save dark keeps its visual baseline', async ({ page }, testInfo) =
   await expectVisualBaseline(page, `workout-save-dark-${process.platform}.png`, [], false, '#1d1e21')
 })
 
-async function openWorkoutForDetailReview(page: import('@playwright/test').Page, trainer: boolean) {
+async function openWorkoutForDetailReview(page: import('@playwright/test').Page, trainer: boolean, resume = false) {
   if (!trainer) {
     await openPreviewLiveWorkout(page)
     return
@@ -1257,6 +1261,13 @@ async function openWorkoutForDetailReview(page: import('@playwright/test').Page,
   await page.getByRole('button', { name: '＋ Подход' }).click()
   await page.getByRole('button', { name: /^Сохранить(?: план)?$/ }).click()
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  if (resume) {
+    const resumeAction = page.getByRole('button', { name: 'Открыть незавершённую' })
+    await expect(page.locator('.live-timer').or(resumeAction)).toBeVisible()
+    if (await resumeAction.isVisible()) await resumeAction.click()
+  }
+  await expect(page.locator('.live-timer')).toBeVisible()
+  await page.keyboard.press('Escape')
   await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
 }
 
@@ -1273,7 +1284,7 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.getByLabel('Фактический вес').first().fill('42.5')
   await page.getByLabel('Фактические повторы').first().fill('9')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await expect(page.locator('.live-set-compact.confirmed')).toBeVisible()
+  await expect(page.locator('.live-set.confirmed')).toBeVisible()
   // Добавляем реальное незавершённое упражнение, чтобы деталь стабильно
   // покрывала partial независимо от числа подходов в исходном плане.
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
@@ -1338,6 +1349,79 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
   const deleteConfirmation = page.getByRole('alertdialog', { name: 'Удалить тренировку?' })
   await deleteConfirmation.getByRole('button', { name: 'Удалить', exact: true }).click()
+})
+
+test('trainer Live keeps desktop controls accessible in both themes', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'visual-trainer-1440', 'Trainer desktop acceptance')
+  await openWorkoutForDetailReview(page, true, true)
+  const livePath = new URL(page.url()).pathname
+  await expect(page.locator('.live-set')).toHaveCount(2)
+  await expectMonochromeAccessibility(page)
+  await page.screenshot({ path: testInfo.outputPath('trainer-live-light.png') })
+  await gotoStable(page, '/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, livePath)
+  await page.getByRole('button', { name: 'Таймер отдыха', exact: true }).click()
+  await expectMonochromeAccessibility(page)
+  await page.screenshot({ path: testInfo.outputPath('trainer-live-timer-dark.png') })
+  await page.getByRole('button', { name: 'Закрыть таймер' }).click()
+  await gotoStable(page, '/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
+  await gotoStable(page, livePath.replace(/\/live$/, ''))
+  await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
+  await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+})
+
+test('client Live keeps row geometry, notes and timer independent', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'visual-client-390', 'One iPhone profile for the session transition contract')
+  await openPreviewLiveWorkout(page, true)
+  const path = new URL(page.url()).pathname
+  await page.locator('.live-exercise-note summary').click()
+  const note = page.getByLabel(/^Заметка:/)
+  await note.fill('Скамья 3, удобная высота')
+  const saved = page.waitForResponse((response) => response.url().includes('/rpc/set_exercise_comment') && response.ok())
+  await page.locator('.live-timer').click()
+  await saved
+  await page.reload()
+  await expect(page.locator('.live-note-preview')).toHaveText('Скамья 3, удобная высота')
+  const rows = page.locator('.live-set-table > .live-set')
+  const firstBefore = await rows.first().boundingBox()
+  const secondBefore = await rows.nth(1).boundingBox()
+  const secondInput = rows.nth(1).getByLabel('Фактический вес')
+  await secondInput.fill('43')
+  await expect(secondInput).toBeFocused()
+  await page.clock.runFor(1500)
+  await expect(secondInput).toBeFocused()
+  await expect(secondInput).toHaveValue('43')
+  expect((await rows.nth(1).boundingBox())!.height).toBe(secondBefore!.height)
+  await rows.first().getByRole('button', { name: 'Готово, отдых' }).click()
+  await expect(rows.first()).toHaveClass(/confirmed/)
+  expect((await rows.first().boundingBox())!.height).toBe(firstBefore!.height)
+  expect(Math.abs((await rows.nth(1).boundingBox())!.y - secondBefore!.y)).toBeLessThanOrEqual(1)
+  await page.getByRole('button', { name: /^Таймер отдыха:/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Таймер отдыха' })).toBeVisible()
+  await expectMonochromeAccessibility(page)
+  await page.screenshot({ path: testInfo.outputPath('live-timer-sheet-390.png') })
+  await page.getByRole('button', { name: 'Пропустить', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Таймер отдыха', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Бег')
+  await page.locator('[data-exercise-ref="running"]').click()
+  await expect(page.locator('.live-exercise-upcoming')).toContainText('Бег')
+  await rows.nth(1).getByRole('button', { name: 'Готово, отдых' }).click()
+  await expect(page.locator('.live-exercise-collapsed')).toContainText('Жим')
+  const nextCard = page.locator('.live-exercise.current')
+  await expect(nextCard).toContainText('Бег')
+  const nextPosition = await nextCard.boundingBox()
+  await page.clock.runFor(2000)
+  expect(Math.abs((await nextCard.boundingBox())!.y - nextPosition!.y)).toBeLessThanOrEqual(1)
+  await expect(page.locator('.live-exercise-upcoming')).toHaveCount(0)
+  await gotoStable(page, path.replace(/\/live$/, ''))
+  await expect(page.getByText('Заметка: Скамья 3, удобная высота')).toBeVisible()
+  await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
+  await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
 })
 
 test('client live workout keeps its visual baseline', async ({ page }, testInfo) => {

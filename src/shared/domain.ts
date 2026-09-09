@@ -322,6 +322,7 @@ export interface WorkoutSet extends WorkoutSetDraft {
 }
 
 export interface WorkoutExercise extends ExerciseSnapshot {
+  clientNote?: string
   id: UUID
   position: number
   blockId: UUID
