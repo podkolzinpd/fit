@@ -53,6 +53,7 @@ const STAGE_ARTIFACT_LIMIT_BYTES = 3 * 1024 * 1024
 const RESPONSE_LIMIT_BYTES = 1024 * 1024
 const AUTO_CANDIDATE_LIMIT = 1_000
 const AUTO_STAGE_CONFLICT_LIMIT = 100
+const STAGE_CONFLICT_ERROR_PREFIX = 'stage_request_failed:409:'
 const POSTGRES_SQLSTATE_PATTERN = /^[0-9A-Z]{5}$/
 const STAGE_REJECTION_CODE_PATTERN = /^[a-z0-9_.:-]{1,96}$/
 const SOURCE_TRANSPORT_ERROR_CODES = new Set([
@@ -416,11 +417,42 @@ async function requestStage(
   )
 }
 
-export function isStageTenantConflict(error: unknown): boolean {
-  return error instanceof RemoteTenantRehearsalError
-    && error.code.startsWith(
-      'stage_request_failed:409:target_validation_failed:',
+export function readStageTenantConflictCode(
+  error: unknown,
+): string | undefined {
+  if (
+    !(error instanceof RemoteTenantRehearsalError)
+    || !error.code.startsWith(
+      `${STAGE_CONFLICT_ERROR_PREFIX}target_validation_failed:`,
     )
+  ) return undefined
+  return error.code.slice(STAGE_CONFLICT_ERROR_PREFIX.length)
+}
+
+export function isStageTenantConflict(error: unknown): boolean {
+  return readStageTenantConflictCode(error) !== undefined
+}
+
+export function formatStageConflictDiagnostics(
+  conflicts: ReadonlyMap<string, number>,
+): readonly string[] {
+  const entries = [...conflicts.entries()].sort(([left], [right]) =>
+    left.localeCompare(right))
+  const total = entries.reduce((sum, [, count]) => sum + count, 0)
+  return [
+    `selection: skipped_stage_conflicts=${total}; distinct_stage_conflict_reasons=${entries.length}`,
+    ...entries.map(([reason, count]) =>
+      `selection_conflict: reason=${reason}; count=${count}`),
+  ]
+}
+
+function printStageConflictDiagnostics(
+  conflicts: ReadonlyMap<string, number>,
+): void {
+  if (conflicts.size === 0) return
+  for (const line of formatStageConflictDiagnostics(conflicts)) {
+    process.stdout.write(`${line}\n`)
+  }
 }
 
 function printBundleSummary(
@@ -457,6 +489,7 @@ export async function runRemoteTenantRehearsal(
     response: StageTenantMigrationResponse
   }> | undefined
   let skippedStageConflicts = 0
+  const stageConflictCounts = new Map<string, number>()
   try {
     sourceConnection = await sourcePool.connect()
     bundle = await exportSelectedTenant(
@@ -485,8 +518,13 @@ export async function runRemoteTenantRehearsal(
               automaticDryRun = { encryptedBytes, response }
               return true
             } catch (error) {
-              if (!isStageTenantConflict(error)) throw error
+              const conflictCode = readStageTenantConflictCode(error)
+              if (conflictCode === undefined) throw error
               skippedStageConflicts += 1
+              stageConflictCounts.set(
+                conflictCode,
+                (stageConflictCounts.get(conflictCode) ?? 0) + 1,
+              )
               if (skippedStageConflicts >= AUTO_STAGE_CONFLICT_LIMIT) {
                 throw new RemoteTenantRehearsalError(
                   'stage_candidate_limit_reached',
@@ -498,6 +536,7 @@ export async function runRemoteTenantRehearsal(
         : undefined,
     )
   } catch (error) {
+    printStageConflictDiagnostics(stageConflictCounts)
     if (
       error instanceof RemoteTenantRehearsalError
       || error instanceof TenantMigrationError
@@ -512,11 +551,7 @@ export async function runRemoteTenantRehearsal(
 
   if (automaticDryRun !== undefined) {
     printBundleSummary(bundle, automaticDryRun.encryptedBytes)
-    if (skippedStageConflicts > 0) {
-      process.stdout.write(
-        `selection: skipped_stage_conflicts=${skippedStageConflicts}\n`,
-      )
-    }
+    printStageConflictDiagnostics(stageConflictCounts)
     printStageSummary(automaticDryRun.response)
     return
   }
