@@ -89,7 +89,8 @@
 - Yandex migration `000035` сохраняет author-scoped пользовательские упражнения; доступ и `created_by` остаются tenant-safe.
 - Yandex migration `000038` приводит push к multi-device контракту Supabase: отдельный PK подписки, `(user_id, endpoint)`, адресная строка outbox и удаление только протухшего устройства. API принимает endpoint только в actor-authenticated body; tenant catalog переносит подписки по `id`.
 - `main` содержит `000036`: receipts/retry Telegram/Tracker и четыре analytics
-  views; DataLens stage access и отдельный пользователь отложены.
+  views. В кластере сохранён уже включённый managed access для DataLens, но
+  отдельный пользователь, подключение и перенос дашбордов пока не выполнялись.
 - Стабильный Vercel Preview синхронизируется с каждым verified `main`; callback,
   CORS и история не меняются, прочие ветки исключены из Git deployments.
 - Read-only callback остаётся диагностическим экраном; полноценная app-session
