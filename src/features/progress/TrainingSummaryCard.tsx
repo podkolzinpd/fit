@@ -1,7 +1,7 @@
+import { ProgressDetailsSummary } from './ProgressDetailsSummary'
 import { ClientResultsCenter } from './ClientResultsCenter'
 import { WeeklyTrainingLoad } from './WeeklyTrainingLoad'
 import { ClientBodyMapDisclosure } from './WorkoutBodyMap'
-import { PersonalWorkoutResult } from '../../shared/PersonalWorkoutResult'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -692,7 +692,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   const firstDate = firstWorkout.data ?? allWorkouts.data?.filter((workout) => workout.status === 'done').map((workout) => workout.workoutDate).sort()[0]
   const historyLoaded = firstWorkout.isSuccess || allWorkouts.isSuccess
   const availablePeriods = historyLoaded ? availableSummaryPeriods(firstDate, today) : SUMMARY_PERIODS.map((item) => item.key)
-  const changePeriod = (nextPeriod: SummaryPeriod) => setParams((current) => { const next = new URLSearchParams(current); next.set('period', nextPeriod); return next })
+  const changePeriod = (nextPeriod: SummaryPeriod) => setParams((current) => { const next = new URLSearchParams(current); next.set('period', nextPeriod); ['mapWorkout', 'mapFrom', 'mapTo', 'mapMode', 'mapZone'].forEach((key) => next.delete(key)); return next })
   useEffect(() => { if (historyLoaded && !availablePeriods.includes(period)) changePeriod('1m') }, [historyLoaded, period, availablePeriods])
   const range = summaryPeriodRange(period, today)
   // An exact current result takes precedence over an older window with a closer month length.
@@ -723,47 +723,50 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   const previousWorkouts = allWorkouts.data?.filter((workout) => workout.workoutDate >= previousStart && workout.workoutDate <= previousEnd)
   const retryMeasurements = () => void Promise.all([measurements.refetch(), customMetrics.refetch()])
   const analysis = summary ? buildProgressDetailedAnalysis({ summary, role: 'client', goalTitle: goal.data?.title ?? profileGoal, visibleTexts: [] }) : []
-  const savedAnalysisLabel = summary ? `Сохранённый анализ: ${formatLocalDate(summary.periodStart)} — ${formatLocalDate(summary.periodEnd)}` : null
+  const savedAnalysisLabel = summary ? `Период анализа: ${formatLocalDate(summary.periodStart)} — ${formatLocalDate(summary.periodEnd)}` : null
+  const newWorkouts = summary && currentWorkouts?.some((workout) => workout.status === 'done' && workout.completedAt && Date.parse(workout.completedAt) > Date.parse(summary.generatedAt))
+  const analysisDate = summary ? `Обновлён ${new Date(summary.generatedAt).toLocaleDateString('ru-RU', { timeZone: actor?.timezone })}` : null
   return <section className="ai-progress-card client-progress-card progress-story-card" aria-label="Прогресс тренировок">
-    <PersonalWorkoutResult workouts={allWorkouts.data} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+    <ClientCurrentWeek workouts={allWorkouts.data} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
     <section className="progress-story-period" aria-labelledby="client-progress-period-title">
       <SummaryHeader /><span className="sr-only" id="client-progress-period-title">Период прогресса</span>
       <PeriodTabs value={period} available={availablePeriods} onChange={changePeriod} />
       <p className="progress-period-dates">{formatLocalDate(range.start)} — {formatLocalDate(range.end)}</p>
+      <a className="link progress-analysis-shortcut" href="#ai-analysis">Посмотреть анализ</a>
     </section>
     <ClientGoalFacts goal={goal.data} profileGoal={profileGoal} entries={measurements.data ?? []} workouts={allWorkouts.data ?? []}
       periodStart={range.start} periodEnd={range.end} today={today}
       loading={goal.isLoading || measurements.isLoading || allWorkouts.isLoading}
       error={goal.error ?? measurements.error ?? allWorkouts.error}
       onRetry={() => void Promise.all([goal.refetch(), measurements.refetch(), allWorkouts.refetch()])} />
-    <ClientCurrentWeek workouts={allWorkouts.data} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
-    <PeriodExerciseResults workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
-    <ClientResultsCenter workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+    <PeriodExerciseResults workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()}>
+      <ClientResultsCenter workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+    </PeriodExerciseResults>
     <MeasurementProgressSection clientId={clientId} entries={measurements.data ?? []} customMetrics={customMetrics.data ?? []} goal={goal.data}
       periodStart={range.start} periodEnd={range.end} today={today} role="client" compact
       loading={measurements.isLoading || customMetrics.isLoading} error={measurements.error ?? customMetrics.error} onRetry={retryMeasurements} management={measurementManagement} />
     <ClientBodyMapDisclosure workouts={allWorkouts.data} clientId={clientId} gender={gender}
       summary={summary} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
     <WeeklyTrainingLoad workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
-    <details className="period-rhythm card"><summary>Ритм выбранного периода</summary>
+    <details className="period-rhythm card"><ProgressDetailsSummary>Регулярность тренировок</ProgressDetailsSummary>
       <WorkoutRegularityProgressSection currentWorkouts={currentWorkouts} previousWorkouts={previousWorkouts} periodStart={range.start} periodEnd={range.end}
         previousPeriodStart={previousStart} previousPeriodEnd={previousEnd} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
     </details>
     <ClientPeriodComparison workouts={allWorkouts.data} entries={measurements.data ?? []} goal={goal.data} periodStart={range.start} periodEnd={range.end}
       loading={allWorkouts.isLoading || measurements.isLoading || goal.isLoading} error={allWorkouts.error ?? measurements.error ?? goal.error}
       onRetry={() => void Promise.all([allWorkouts.refetch(), measurements.refetch(), goal.refetch()])} />
-    <section className="client-ai-analysis card" aria-label="ИИ-анализ">
-      <h3>ИИ-анализ</h3><p className="muted">{savedAnalysisLabel ?? 'Анализ выбранного периода и связь с целью.'}</p>
+    <section className="client-ai-analysis card" id="ai-analysis" aria-label="ИИ-анализ">
+      <h3>ИИ-анализ</h3>{analysisDate && <p className="muted">{analysisDate}</p>}{summary && (summary.periodStart !== range.start || summary.periodEnd !== range.end) && <p className="muted">{savedAnalysisLabel}</p>}{newWorkouts && <p>Есть новые тренировки</p>}
       {query.error && <p role="alert">Не удалось обновить сохранённый анализ. <button type="button" className="link" onClick={() => void query.refetch()}>Повторить</button></p>}
-      <button type="button" className="link" onClick={() => setDetailsOpen(true)}>Подробный анализ</button>
+      <button type="button" className="link" onClick={() => setDetailsOpen(true)}>Выводы и рекомендации</button>
       {(automaticGeneration.isFetching || refreshBusy) && <p role="status">Формируем ИИ-анализ…</p>}
       {generationError && <AutomaticSummaryError error={generationError} onRetry={() => refresh.mutate({ clientId, start: range.start, end: range.end })} />}
     </section>
     {detailsOpen && <SummarySheet title="Подробный анализ" onClose={() => setDetailsOpen(false)}>
       <AsyncView loading={query.isLoading || firstWorkout.isLoading} error={summary ? null : query.error ?? firstWorkout.error} onRetry={() => void Promise.all([query.refetch(), firstWorkout.refetch()])}>
-        {summary ? <><p>{savedAnalysisLabel}</p><p className="muted">Сформирован {new Date(summary.generatedAt).toLocaleDateString('ru-RU', { timeZone: actor?.timezone })}. Последние правки могут ещё не быть учтены; свежие факты показаны на экране прогресса.</p><ProgressDetailedAnalysis sections={analysis} /></>
-          : <p>{firstDate ? 'Сохранённого анализа за этот период пока нет.' : 'После первой записанной тренировки здесь появится анализ.'}</p>}
-        {firstDate && <><p className="muted">Новый анализ заменит сохранённую версию за выбранный период.</p><button type="button" className="secondary" disabled={refresh.isPending || automaticGeneration.isFetching} onClick={() => refresh.mutate({ clientId, start: range.start, end: range.end })}>{refreshBusy ? 'Формируем ИИ-анализ…' : 'Создать новый ИИ-анализ'}</button></>}
+        {summary ? <><p>{savedAnalysisLabel}</p><p className="muted">{analysisDate}</p>{newWorkouts && <p>Есть новые тренировки</p>}<ProgressDetailedAnalysis sections={analysis} compact /></>
+          : <p>{firstDate ? 'За этот период анализа пока нет.' : 'Анализ появится после первой тренировки.'}</p>}
+        {firstDate && <><button type="button" className="secondary" disabled={refresh.isPending || automaticGeneration.isFetching} onClick={() => refresh.mutate({ clientId, start: range.start, end: range.end })}>{refreshBusy ? 'Формируем ИИ-анализ…' : 'Обновить анализ'}</button></>}
         {generationError && <p role="alert">{generationError.message}</p>}
       </AsyncView>
     </SummarySheet>}

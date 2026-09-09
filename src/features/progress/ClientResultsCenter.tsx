@@ -1,3 +1,4 @@
+import { ProgressDetailsSummary } from './ProgressDetailsSummary'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Workout } from '../../shared/domain'
@@ -35,12 +36,12 @@ function VolumeExplanation({ result }: { result: WorkoutResult }) {
   if (!change) return null
   const arrow = <><span className="sr-only"> → </span><ArrowUpIcon className="result-change-arrow" /></>
   const weightRange = ({ minWeight, maxWeight }: { minWeight: number; maxWeight: number }) => minWeight === maxWeight ? resultNumber(minWeight) : `${resultNumber(minWeight)}–${resultNumber(maxWeight)}`
-  return <details className="result-volume-explanation"><summary>Из чего сложился объём</summary>
-    <p>{change.changed.length ? `Изменились: ${change.changed.join(', ')}.` : 'Записанные подходы, веса и повторы совпадают.'}</p>
+  return <details className="result-volume-explanation"><summary>Подходы, вес и повторы</summary>
+    <p>{change.changed.length ? `Изменились: ${change.changed.join(', ')}.` : 'Без изменений.'}</p>
     <dl><div><dt>Подходы</dt><dd>{change.before.count}{arrow}{change.after.count}</dd></div>
       <div><dt>Всего повторов</dt><dd>{change.before.reps}{arrow}{change.after.reps}</dd></div>
       <div><dt>Веса в подходах</dt><dd>{weightRange(change.before)}{arrow}{weightRange(change.after)} кг</dd></div></dl>
-    <div className="volume-source-sets">{([{ label: 'Предыдущая запись', data: change.before }, { label: 'Эта запись', data: change.after }] as const).map(({ label, data }) => <div key={label}><strong>{label}</strong><ul>{data.sets.map((set, index) => <li key={index}>{resultNumber(set.weight)} кг × {set.reps} повт.</li>)}</ul><p>Итого: {resultNumber(data.volume)} кг</p></div>)}</div>
+    <div className="volume-source-sets">{([{ label: 'Было', data: change.before }, { label: 'Сейчас', data: change.after }] as const).map(({ label, data }) => <div key={label}><strong>{label}</strong><ul>{data.sets.map((set, index) => <li key={index}>{resultNumber(set.weight)} кг × {set.reps} повт.</li>)}</ul><p>Итого: {resultNumber(data.volume)} кг</p></div>)}</div>
   </details>
 }
 
@@ -61,15 +62,15 @@ function ResultsContent({ workouts, periodStart, periodEnd, loading, error, onRe
   const change = (key: string, value: string) => update((next) => { if (value) next.set(key, value); else next.delete(key) })
   const returnTo = location.pathname + location.search + '#results-center'
   return <>
-    <p className="muted">{formatLocalDate(periodStart)} — {formatLocalDate(periodEnd)}. Сравнение учитывает и более раннюю историю.</p>
+    <p className="muted">{formatLocalDate(periodStart)} — {formatLocalDate(periodEnd)}</p>
     <div className="results-center-filters"><label>Упражнение<select value={exerciseKey} onChange={(event) => change('resultExercise', event.target.value)}><option value="">Все упражнения</option>{invalidExercise && <option value={exerciseKey}>Недоступное упражнение</option>}{exercises.map(([key, name]) => <option value={key} key={key}>{name}</option>)}</select></label>
       <label>Показатель<select value={metric} onChange={(event) => change('resultMetric', event.target.value)}><option value="">Все показатели</option>{invalidMetric && <option value={metric}>Неизвестный показатель</option>}{metrics.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label></div>
-    {error ? <p role="alert">Не удалось загрузить историю результатов. <button type="button" className="link" onClick={onRetry}>Повторить</button></p> : loading && !workouts ? <p role="status">Загружаем результаты…</p> : invalidExercise || invalidMetric ? <p role="status">Выбранный фильтр больше недоступен за этот период. Выберите упражнение и показатель из списка.</p> : !filtered.length ? <p>Подтверждённых результатов с такими условиями пока нет.</p> : <>
+    {error ? <p role="alert">Не удалось загрузить историю результатов. <button type="button" className="link" onClick={onRetry}>Повторить</button></p> : loading && !workouts ? <p role="status">Загружаем результаты…</p> : invalidExercise || invalidMetric ? <p role="status">Выбери другое упражнение или показатель.</p> : !filtered.length ? <p>Нет результатов.</p> : <>
       <p className="muted">Показано {Math.min(limit, filtered.length)} из {filtered.length} результатов.</p>
       {filtered.slice(0, limit).map((result) => <article className="center-result-row" key={`${result.workout.id}:${result.key}`}>
         <header><h4>{result.exerciseName}</h4><span>{resultStateLabels[result.state]}</span></header>
         <p>{result.label}: <strong>{resultNumber(result.value)} {result.unit}</strong></p>
-        {result.previous ? <p>Ранее: {resultNumber(result.previous.value)} {result.unit}. Разница: {resultNumber(result.value - result.previous.value)} {result.unit}.</p> : <p className="muted">Первая сопоставимая запись — точка отсчёта.</p>}
+        {result.previous ? <p>Было {resultNumber(result.previous.value)} {result.unit} · {result.value > result.previous.value ? '+' : ''}{resultNumber(result.value - result.previous.value)} {result.unit}</p> : null}
         <div className="actions"><Link className="link" to={`/workouts/${result.workout.id}`} state={{ returnTo }}>{formatLocalDate(result.workout.workoutDate)}</Link>{result.previous && <Link className="link" to={`/workouts/${result.previous.workout.id}`} state={{ returnTo }}>Ранее · {formatLocalDate(result.previous.workout.workoutDate)}</Link>}</div>
         <VolumeExplanation result={result} />
       </article>)}
@@ -81,8 +82,8 @@ function ResultsContent({ workouts, periodStart, periodEnd, loading, error, onRe
 export function ClientResultsCenter(props: Props) {
   const { params, update } = useResultsParams()
   const open = params.get('resultsOpen') === '1'
-  return <details className="client-results-center card" id="results-center" open={open} onToggle={(event) => {
+  return <details className="client-results-center" id="results-center" open={open} onToggle={(event) => {
     const nextOpen = event.currentTarget.open
     if (nextOpen !== open) update((next) => { if (nextOpen) next.set('resultsOpen', '1'); else next.delete('resultsOpen') })
-  }}><summary>Все результаты и рекорды</summary>{open && <ResultsContent {...props} />}</details>
+  }}><ProgressDetailsSummary>Все результаты</ProgressDetailsSummary>{open && <ResultsContent {...props} />}</details>
 }

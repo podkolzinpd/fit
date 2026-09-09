@@ -5508,6 +5508,28 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .weekly-training-load[open] > summary::before, .weekly-training-load details[open] > summary::before { transform:rotate(90deg); }
 
 .result-change-arrow { width:16px; height:16px; margin:0 4px; vertical-align:-3px; transform:rotate(90deg); }
+
+/* Explicit client progress disclosures: the label names the content behind the control. */
+.progress-identity .client-progress-card summary.progress-details-toggle {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  min-height:48px; padding:12px 14px; margin:0;
+  border:1px solid var(--border); border-radius:var(--radius-md);
+  background:var(--surface); color:var(--fg); font-size:var(--type-body-size);
+  font-weight:500; cursor:pointer; list-style:none;
+}
+.progress-identity .client-progress-card summary.progress-details-toggle::before { display:none; }
+.progress-details-toggle::-webkit-details-marker { display:none; }
+.progress-details-toggle svg { width:20px; height:20px; flex-shrink:0; }
+details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
+.progress-identity .client-progress-card > details.card { padding:0; border:0; background:transparent; }
+.progress-identity .client-progress-card > details.card[open] { padding:16px; border:1px solid var(--border); background:var(--surface); }
+.progress-identity .client-progress-card > details.card[open] > .progress-details-toggle { padding:0; border:0; }
+.progress-identity .client-results-center { margin-top:8px; }
+.progress-identity .period-exercise-results:has(.client-results-center[open]) > .period-exercise-result,
+.progress-identity .period-exercise-results:has(.client-results-center[open]) > p { display:none; }
+.progress-analysis-shortcut { min-height:44px; display:inline-flex; align-items:center; }
+#ai-analysis, #results, #body-map { scroll-margin-top:20px; }
+
 .live-timer-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(148px, 1fr); align-items: stretch; gap: 8px; }
 .live-identity .live-timer-toolbar .live-timer { margin: 0; padding: 8px 12px; min-height: 56px; font-size: 24px; }
 .live-rest-trigger { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 56px; font-variant-numeric: tabular-nums; white-space: nowrap; }
