@@ -105,12 +105,12 @@ test('linked client sees only the published client progress view', async ({ page
   await page.getByText('Регулярность тренировок', { exact: true }).click()
   await expect(page.getByRole('list', { name: 'Завершённые тренировки по неделям' })).toBeVisible()
   await expect(page.locator('.client-progress-card').evaluate((element) => {
-    const order = ['.client-current-week', '.progress-story-period', '.client-progress-goal-story', '.period-exercise-results', '.client-progress-measurements-story', '.client-body-map-disclosure', '.period-rhythm', '.client-progress-comparison', '.client-ai-analysis']
+    const order = ['.progress-story-period', '.client-current-week', '.client-progress-goal-story', '.period-exercise-results', '.client-progress-measurements-story', '.client-body-map-disclosure', '.weekly-training-load', '.period-rhythm', '.client-progress-comparison']
     const children = Array.from(element.children)
     const positions = order.map((selector) => children.findIndex((child) => child.matches(selector)))
     return positions.every((position, index) => position >= 0 && (!index || position > positions[index - 1]!))
   })).resolves.toBe(true)
-  await expect(page.locator('.client-ai-analysis').getByRole('button', { name: 'Выводы и рекомендации' })).toBeVisible()
+  await expect(page.locator('.progress-story-period').getByRole('button', { name: 'Открыть анализ' })).toBeVisible()
   await verifyAnalysisShortcutKeepsShell(page)
   await page.getByRole('button', { name: 'Прогресс', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
@@ -120,7 +120,7 @@ test('linked client sees only the published client progress view', async ({ page
   await page.goto('/me/progress')
   await page.locator('.client-body-map-disclosure > summary').click()
   await expect(page.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toBeVisible()
-  await page.getByRole('button', { name: 'Выводы и рекомендации' }).click()
+  await page.getByRole('button', { name: 'Открыть анализ' }).click()
   const clientDetails = page.getByRole('dialog', { name: 'Подробный анализ' })
   await expect(clientDetails).toBeVisible()
   await expect(clientDetails.getByRole('heading', { name: 'Главное сейчас' })).toBeVisible()
@@ -136,7 +136,7 @@ test('linked client sees only the published client progress view', async ({ page
   await expect(page.getByText(/Рост рабочего веса поддерживает цель/)).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
   await expect(page.getByText(/причина максимального перерыва/)).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Обновить' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Обновить', exact: true })).toHaveCount(0)
   await expect(page.locator('.ai-progress-footer')).toHaveCount(0)
   const measurementSection = page.locator('.client-progress-measurements-story')
   await measurementSection.scrollIntoViewIfNeeded()
@@ -215,10 +215,10 @@ test('client sees deterministic standard-measurement goal facts', async ({ page 
   await expect(measurements.getByLabel('График показателя «Вес»')).toBeVisible()
   await expect(measurements.evaluate((element) => {
     const comparison = document.querySelector('.client-progress-comparison')
-    const summary = document.querySelector('.client-ai-analysis')
-    return Boolean(comparison && summary
+    const analysis = document.querySelector('.progress-story-period')
+    return Boolean(comparison && analysis
       && (element.compareDocumentPosition(comparison) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+      && (analysis.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING))
   })).resolves.toBe(true)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })

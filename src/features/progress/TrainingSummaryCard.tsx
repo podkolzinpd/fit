@@ -1,9 +1,10 @@
 import { ProgressDetailsSummary } from './ProgressDetailsSummary'
 import { ClientResultsCenter } from './ClientResultsCenter'
 import { WeeklyTrainingLoad } from './WeeklyTrainingLoad'
+import { RunningProgressCard } from './RunningProgressCard'
 import { ClientBodyMapDisclosure } from './WorkoutBodyMap'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ClientGoalFacts, ClientCurrentWeek, PeriodExerciseResults, ClientPeriodComparison } from './ClientProgressFacts'
 import { useAuth } from '../../app/auth-context'
@@ -70,24 +71,6 @@ function AutomaticSummaryError({ error, onRetry }: { error: Error; onRetry: () =
     <span>{error.message}</span>
     <button type="button" className="link" onClick={onRetry}>Повторить</button>
   </p>
-}
-
-function scrollToProgressSection(sectionId: string) {
-  const target = document.getElementById(sectionId)
-  const content = target?.closest('.content')
-  if (!(target instanceof HTMLElement) || !(content instanceof HTMLElement)) return
-
-  const targetRect = target.getBoundingClientRect()
-  const contentRect = content.getBoundingClientRect()
-  const top = content.scrollTop + targetRect.top - contentRect.top - 20
-  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-  content.scrollTo({ top: Math.max(0, top), behavior: reducedMotion ? 'auto' : 'smooth' })
-
-  // A native hash jump can move the root WKWebView together with `.content`,
-  // which lifts the bottom tab bar into the page. Keep the app shell pinned.
-  window.scrollTo(0, 0)
-  document.documentElement.scrollTop = 0
-  document.body.scrollTop = 0
 }
 
 export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = null }: {
@@ -713,6 +696,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   const requestedPeriod = params.get('period')
   const period: SummaryPeriod = requestedPeriod === '3m' || requestedPeriod === '6m' ? requestedPeriod : '1m'
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const analysisTriggerRef = useRef<HTMLButtonElement>(null)
   const allWorkouts = useQuery({ queryKey: ['workouts', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
   const firstWorkout = useQuery({ queryKey: ['training-summary-first-workout', clientId], queryFn: () => trainingSummariesRepository.firstCompletedWorkoutDate(clientId) })
   const query = useQuery({ queryKey: ['training-summaries', 'client', clientId], queryFn: () => trainingSummariesRepository.listForClient(clientId) })
@@ -722,7 +706,7 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   const firstDate = firstWorkout.data ?? allWorkouts.data?.filter((workout) => workout.status === 'done').map((workout) => workout.workoutDate).sort()[0]
   const historyLoaded = firstWorkout.isSuccess || allWorkouts.isSuccess
   const availablePeriods = historyLoaded ? availableSummaryPeriods(firstDate, today) : SUMMARY_PERIODS.map((item) => item.key)
-  const changePeriod = (nextPeriod: SummaryPeriod) => setParams((current) => { const next = new URLSearchParams(current); next.set('period', nextPeriod); ['mapWorkout', 'mapFrom', 'mapTo', 'mapMode', 'mapZone'].forEach((key) => next.delete(key)); return next })
+  const changePeriod = (nextPeriod: SummaryPeriod) => setParams((current) => { const next = new URLSearchParams(current); next.set('period', nextPeriod); ['mapWorkout', 'mapFrom', 'mapTo', 'mapMode', 'mapZone'].forEach((key) => next.delete(key)); return next }, { replace: true, preventScrollReset: true })
   useEffect(() => { if (historyLoaded && !availablePeriods.includes(period)) changePeriod('1m') }, [historyLoaded, period, availablePeriods])
   const range = summaryPeriodRange(period, today)
   // An exact current result takes precedence over an older window with a closer month length.
@@ -761,14 +745,30 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   const savedAnalysisLabel = summary ? `Период анализа: ${formatLocalDate(summary.periodStart)} — ${formatLocalDate(summary.periodEnd)}` : null
   const newWorkouts = summary && currentWorkouts?.some((workout) => workout.status === 'done' && workout.completedAt && Date.parse(workout.completedAt) > Date.parse(summary.generatedAt))
   const analysisDate = summary ? `Обновлён ${new Date(summary.generatedAt).toLocaleDateString('ru-RU', { timeZone: actor?.timezone })}` : null
+  const exactAnalysis = Boolean(summary && summary.periodStart === range.start && summary.periodEnd === range.end)
+  const analysisPreview = analysis.flatMap((section) => section.items)[0]
+  const periodMonths = period === '1m' ? 1 : period === '3m' ? 3 : 6
+  const closeDetails = () => {
+    setDetailsOpen(false)
+    window.requestAnimationFrame(() => analysisTriggerRef.current?.focus())
+  }
   return <section className="ai-progress-card client-progress-card progress-story-card" aria-label="Прогресс тренировок">
-    <ClientCurrentWeek workouts={allWorkouts.data} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
     <section className="progress-story-period" aria-labelledby="client-progress-period-title">
       <SummaryHeader /><span className="sr-only" id="client-progress-period-title">Период прогресса</span>
       <PeriodTabs value={period} available={availablePeriods} onChange={changePeriod} />
       <p className="progress-period-dates">{formatLocalDate(range.start)} — {formatLocalDate(range.end)}</p>
-      <button type="button" className="link progress-analysis-shortcut" aria-controls="ai-analysis" onClick={() => scrollToProgressSection('ai-analysis')}>Посмотреть анализ</button>
+      <div className="progress-analysis-preview" aria-label="ИИ-анализ за период">
+        <div className="progress-analysis-preview-head"><h3>{exactAnalysis ? 'ИИ-анализ' : summary ? 'Предыдущий ИИ-анализ' : 'ИИ-анализ'}</h3>{analysisDate && <span>{analysisDate}</span>}</div>
+        {summary && !exactAnalysis && <p className="muted">{savedAnalysisLabel}</p>}
+        {analysisPreview ? <p>{analysisPreview}</p> : summary ? <p>Новых выводов сверх показанных результатов пока нет.</p> : firstDate ? <p>Анализ за выбранный период ещё формируется.</p> : <p>Анализ появится после первой тренировки.</p>}
+        {newWorkouts && <p className="progress-analysis-update">Есть новые тренировки — анализ можно обновить.</p>}
+        {query.error && <p role="alert">Не удалось загрузить сохранённый анализ. <button type="button" className="link" onClick={() => void query.refetch()}>Повторить</button></p>}
+        {(automaticGeneration.isFetching || refreshBusy) && <p role="status">Формируем ИИ-анализ…</p>}
+        {generationError && <AutomaticSummaryError error={generationError} onRetry={() => refresh.mutate({ clientId, start: range.start, end: range.end })} />}
+        {summary && <div className="progress-analysis-actions"><button ref={analysisTriggerRef} type="button" className="secondary" aria-haspopup="dialog" onClick={() => setDetailsOpen(true)}>Открыть анализ</button>{(newWorkouts || !exactAnalysis) && <button type="button" className="link" disabled={refreshBusy || automaticGeneration.isFetching} onClick={() => refresh.mutate({ clientId, start: range.start, end: range.end })}>Обновить анализ</button>}</div>}
+      </div>
     </section>
+    <ClientCurrentWeek workouts={allWorkouts.data} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
     <ClientGoalFacts goal={goal.data} profileGoal={profileGoal} entries={measurements.data ?? []} workouts={allWorkouts.data ?? []}
       periodStart={range.start} periodEnd={range.end} today={today}
       loading={goal.isLoading || measurements.isLoading || allWorkouts.isLoading}
@@ -790,14 +790,8 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
     <ClientPeriodComparison workouts={allWorkouts.data} entries={measurements.data ?? []} goal={goal.data} periodStart={range.start} periodEnd={range.end}
       loading={allWorkouts.isLoading || measurements.isLoading || goal.isLoading} error={allWorkouts.error ?? measurements.error ?? goal.error}
       onRetry={() => void Promise.all([allWorkouts.refetch(), measurements.refetch(), goal.refetch()])} />
-    <section className="client-ai-analysis card" id="ai-analysis" aria-label="ИИ-анализ">
-      <h3>ИИ-анализ</h3>{analysisDate && <p className="muted">{analysisDate}</p>}{summary && (summary.periodStart !== range.start || summary.periodEnd !== range.end) && <p className="muted">{savedAnalysisLabel}</p>}{newWorkouts && <p>Есть новые тренировки</p>}
-      {query.error && <p role="alert">Не удалось обновить сохранённый анализ. <button type="button" className="link" onClick={() => void query.refetch()}>Повторить</button></p>}
-      <button type="button" className="link" onClick={() => setDetailsOpen(true)}>Выводы и рекомендации</button>
-      {(automaticGeneration.isFetching || refreshBusy) && <p role="status">Формируем ИИ-анализ…</p>}
-      {generationError && <AutomaticSummaryError error={generationError} onRetry={() => refresh.mutate({ clientId, start: range.start, end: range.end })} />}
-    </section>
-    {detailsOpen && <SummarySheet title="Подробный анализ" onClose={() => setDetailsOpen(false)}>
+    <RunningProgressCard clientId={clientId} periodMonths={periodMonths} keepVisible />
+    {detailsOpen && <SummarySheet title="Подробный анализ" onClose={closeDetails}>
       <AsyncView loading={query.isLoading || firstWorkout.isLoading} error={summary ? null : query.error ?? firstWorkout.error} onRetry={() => void Promise.all([query.refetch(), firstWorkout.refetch()])}>
         {summary ? <><p>{savedAnalysisLabel}</p><p className="muted">{analysisDate}</p>{newWorkouts && <p>Есть новые тренировки</p>}<ProgressDetailedAnalysis sections={analysis} compact /></>
           : <p>{firstDate ? 'За этот период анализа пока нет.' : 'Анализ появится после первой тренировки.'}</p>}

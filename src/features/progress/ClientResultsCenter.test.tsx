@@ -71,10 +71,11 @@ describe('result center and weekly work', () => {
     expect(screen.getAllByRole('article')).toHaveLength(10)
     expect(screen.getByText('Показано 10 из 15 результатов.')).toBeVisible()
   })
-  it('does not silently replace a missing exercise filter with all exercises', () => {
+  it('clears a missing exercise filter while preserving the valid metric', async () => {
     renderCenter({}, '/me/progress?resultsOpen=1&resultExercise=missing&resultMetric=weight')
-    expect(screen.getByRole('status')).toHaveTextContent('Выбери другое упражнение или показатель')
-    expect(screen.queryByRole('article')).toBeNull()
+    await waitFor(() => expect(screen.getByLabelText('Упражнение')).toHaveValue(''))
+    expect(screen.getByLabelText('Показатель')).toHaveValue('weight')
+    expect(screen.getAllByRole('article').length).toBeGreaterThan(0)
   })
   it('keeps load failure actionable and avoids a fabricated empty result', async () => {
     const retry = vi.fn(); const user = userEvent.setup()
@@ -105,7 +106,7 @@ describe('result center and weekly work', () => {
     expect(down).toHaveTextContent('Личный рекорд')
     expect(down).toHaveTextContent('Было 40 кг')
   })
-  it('distinguishes pending history from an empty period and rejects unknown metrics', () => {
+  it('distinguishes pending history from an empty period and clears unknown metrics', async () => {
     const view = (overrides: object) => <MemoryRouter initialEntries={['/me/progress?resultsOpen=1']}><ClientResultsCenter {...props} {...overrides} /></MemoryRouter>
     const { rerender, unmount } = render(view({ workouts: undefined, loading: true }))
     expect(screen.getByRole('status')).toHaveTextContent('Загружаем результаты')
@@ -113,7 +114,8 @@ describe('result center and weekly work', () => {
     expect(screen.getByText('Нет результатов.')).toBeVisible()
     unmount()
     renderCenter({}, '/me/progress?resultsOpen=1&resultMetric=unavailable')
-    expect(screen.getByRole('status')).toHaveTextContent('Выбери другое упражнение или показатель')
+    await waitFor(() => expect(screen.getByLabelText('Показатель')).toHaveValue(''))
+    expect(screen.getAllByRole('article').length).toBeGreaterThan(0)
   })
   it('expands older weeks and distinguishes pending, failed and future-only ranges', async () => {
     const user = userEvent.setup(); const retry = vi.fn()

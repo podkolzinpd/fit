@@ -97,7 +97,7 @@ export function ClientBodyMapDisclosure({ workouts, clientId, gender, summary, p
   useEffect(() => { if (workoutId) setOpen(true) }, [workoutId])
   const workout = workouts?.find((item) => item.id === workoutId && item.clientId === clientId && item.status === 'done')
   const invalidScope = workout && (params.get('mapMode') !== 'load' || params.get('mapFrom') !== workout.workoutDate || params.get('mapTo') !== workout.workoutDate)
-  const clearScope = () => setParams((current) => { const next = new URLSearchParams(current); mapParams.forEach((key) => next.delete(key)); return next })
+  const clearScope = () => setParams((current) => { const next = new URLSearchParams(current); mapParams.forEach((key) => next.delete(key)); return next }, { replace: true, preventScrollReset: true })
   const periodSummary: BodyProgressSummary = summary?.periodStart === periodStart && summary.periodEnd === periodEnd ? summary : { id: `${periodStart}:${periodEnd}`, periodStart, periodEnd, metrics: { progressFacts: [] } }
   return <details id="body-map" className="client-body-map-disclosure card" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
     <ProgressDetailsSummary>Карта тела{workoutId ? ' · тренировка' : ''}</ProgressDetailsSummary>
@@ -106,7 +106,7 @@ export function ClientBodyMapDisclosure({ workouts, clientId, gender, summary, p
       {error ? <p role="alert">Не удалось загрузить тренировки. <button type="button" className="link" onClick={onRetry}>Повторить</button></p>
         : loading && !workouts ? <p role="status">Загружаем карту…</p>
         : workoutId ? !workout || invalidScope ? <p role="alert">Эта тренировка недоступна или её дата изменилась. Откройте актуальную карту с главного экрана.</p>
-          : <><p>{formatLocalDate(workout.workoutDate)} · тренировка</p><WorkoutLoadMap workout={workout} gender={gender} zone={zone} onZoneChange={(nextZone) => setParams((current) => { const next = new URLSearchParams(current); next.set('mapZone', nextZone); return next }, { replace: true })} /></>
+          : <><p>{formatLocalDate(workout.workoutDate)} · тренировка</p><WorkoutLoadMap workout={workout} gender={gender} zone={zone} onZoneChange={(nextZone) => setParams((current) => { const next = new URLSearchParams(current); next.set('mapZone', nextZone); return next }, { replace: true, preventScrollReset: true })} /></>
         : <>{summary && summary !== periodSummary && <p className="muted">Для изменений по мышцам обнови анализ за этот период.</p>}<p>{formatLocalDate(localDate(periodSummary.periodStart))} — {formatLocalDate(localDate(periodSummary.periodEnd))}</p><TrainingBodyProgressMap summary={periodSummary} workouts={workouts ?? []} clientId={clientId} clientGender={gender} insightCandidates={[]} loadLoading={loading} loadError={error} onLoadRetry={onRetry} /></>}
     </>}
   </details>
