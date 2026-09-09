@@ -642,6 +642,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {!greetingHeaderPilotEnabled && <p className="today-greeting">{greeting} 👋</p>}
       {clientMode && !textComposerOpen ? <><ClientHomeOverview
         today={today}
+        gender={mine.data?.gender}
         workouts={workouts.data}
         regularity={regularity.data}
         goal={goal.data}

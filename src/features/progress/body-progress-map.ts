@@ -32,6 +32,14 @@ export interface BodyMapRegion {
   primaryDetail: string
   details: string[]
   intensity: number
+  setCount?: number
+}
+
+export interface BodyMapCoverage {
+  totalSets: number
+  mappedSets: number
+  unknownSets: number
+  cardioSets: number
 }
 
 export interface BodyMapData {
@@ -40,13 +48,19 @@ export interface BodyMapData {
   description?: string
   regions: BodyMapRegion[]
   emptyMessage: string
+  coverage?: BodyMapCoverage
+}
+
+export interface BodyLoadMapData extends BodyMapData {
+  regions: Array<BodyMapRegion & { setCount: number }>
+  coverage: BodyMapCoverage
 }
 
 export interface BodyProgressSummary {
   id: string
   periodStart: string
   periodEnd: string
-  metrics: TrainingSummaryMetrics
+  metrics: Pick<TrainingSummaryMetrics, 'progressFacts'>
 }
 
 const BODY_ZONE_LABELS: Record<BodyMapZone, string> = {
@@ -176,7 +190,7 @@ function favorableChange(changes: readonly TrainingProgressFactChange[]): Traini
   return undefined
 }
 
-function setCountLabel(count: number): string {
+export function setCountLabel(count: number): string {
   if (count % 10 === 1 && count % 100 !== 11) return `${count} подход`
   if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return `${count} подхода`
   return `${count} подходов`
@@ -222,17 +236,22 @@ export function progressBodyMap(summary: BodyProgressSummary): BodyMapData {
   }
 }
 
-export function loadBodyMap(workouts: readonly Workout[], periodStart: string, periodEnd: string): BodyMapData {
+export function loadBodyMap(workouts: readonly Workout[], periodStart: string, periodEnd: string): BodyLoadMapData {
   const counts = new Map<BodyMapZone, { sets: number; exercises: Map<string, number> }>()
-  let totalSets = 0
+  const coverage: BodyMapCoverage = { totalSets: 0, mappedSets: 0, unknownSets: 0, cardioSets: 0 }
   for (const workout of workouts) {
     if (workout.status !== 'done' || workout.workoutDate < periodStart || workout.workoutDate > periodEnd) continue
     for (const exercise of workout.exercises) {
       const confirmedSets = exercise.sets.filter((set) => Boolean(set.confirmedAt)).length
       if (confirmedSets === 0) continue
+      coverage.totalSets += confirmedSets
+      if (exercise.muscleGroup === 'cardio' || exercise.inputKind === 'distance') {
+        coverage.cardioSets += confirmedSets
+        continue
+      }
       const group = bodyZoneForExerciseName(exercise.name, exercise.muscleGroup)
-      if (!group) continue
-      totalSets += confirmedSets
+      if (!group) { coverage.unknownSets += confirmedSets; continue }
+      coverage.mappedSets += confirmedSets
       const current = counts.get(group) ?? { sets: 0, exercises: new Map<string, number>() }
       current.sets += confirmedSets
       current.exercises.set(exercise.name, (current.exercises.get(exercise.name) ?? 0) + confirmedSets)
@@ -242,28 +261,32 @@ export function loadBodyMap(workouts: readonly Workout[], periodStart: string, p
 
   const regions = [...counts.entries()]
     .map(([group, value]) => {
-      const percent = totalSets > 0 ? Math.max(1, Math.round(value.sets / totalSets * 100)) : 0
+      const percent = coverage.mappedSets > 0 ? Math.max(1, Math.round(value.sets / coverage.mappedSets * 100)) : 0
       const details = [...value.exercises.entries()]
-        .sort((left, right) => right[1] - left[1])
+        .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
         .map(([name, sets]) => `${name}: ${setCountLabel(sets)}`)
       return {
         group,
         label: BODY_ZONE_LABELS[group],
         percent,
+        setCount: value.sets,
         valueLabel: `${percent}%`,
-        metricLabel: 'Доля всех выполненных подходов',
-        primaryDetail: `${value.sets} из ${totalSets} подходов`,
+        metricLabel: 'Доля подходов с определённой зоной',
+        primaryDetail: `Подходы на карте: ${value.sets} из ${coverage.mappedSets}`,
         details,
         intensity: Math.min(1, Math.max(.28, percent / 45)),
       }
     })
-    .sort((left, right) => right.percent - left.percent)
+    .sort((left, right) => right.percent - left.percent || left.group.localeCompare(right.group))
 
   return {
     mode: 'load',
     title: 'Куда пришлась нагрузка',
-    description: 'Распределение выполненных подходов за выбранный период',
+    description: 'Распределение подтверждённых подходов за выбранный период',
     regions,
-    emptyMessage: 'После завершённой тренировки покажем распределение нагрузки по зонам.',
+    coverage,
+    emptyMessage: coverage.totalSets > 0
+      ? 'Работа сохранена. Для этих записей нет зон на карте.'
+      : 'После завершённой тренировки покажем распределение нагрузки по зонам.',
   }
 }

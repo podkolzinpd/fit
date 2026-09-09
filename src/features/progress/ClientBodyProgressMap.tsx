@@ -92,7 +92,7 @@ function BodyDetailsSheet({ region, onClose }: { region: BodyMapRegion; onClose:
   </div>
 }
 
-function BodyRegion({ region, variant, side, selected, mode, index, filterId, onSelect }: {
+function BodyRegion({ region, variant, side, selected, mode, index, filterId, onSelect, decorative = false }: {
   region: BodyMapRegion
   variant: BodyFigureVariant
   side: BodyFigureSide
@@ -100,6 +100,7 @@ function BodyRegion({ region, variant, side, selected, mode, index, filterId, on
   mode: BodyMapMode
   index: number
   filterId: string
+  decorative?: boolean
   onSelect: () => void
 }) {
   const shapes = bodyZoneShapes(variant, region.group, side)
@@ -110,22 +111,22 @@ function BodyRegion({ region, variant, side, selected, mode, index, filterId, on
     onSelect()
   }
   return <g
-    role="button"
-    tabIndex={0}
+    role={decorative ? undefined : "button"}
+    tabIndex={decorative ? undefined : 0}
     aria-label={regionAriaLabel(region)}
     aria-pressed={selected}
     className={`body-progress-region body-progress-region-${mode}${selected ? ' selected' : ''}`}
     data-body-zone={region.group}
     style={regionStyle(region, index, mode)}
-    onClick={onSelect}
-    onKeyDown={selectFromKeyboard}
+    onClick={decorative ? undefined : onSelect}
+    onKeyDown={decorative ? undefined : selectFromKeyboard}
   >
     <g className="body-progress-region-fill" filter={variant === 'neutral' ? undefined : `url(#${filterId})`}><RegionShapes shapes={shapes} className="body-progress-region-shape" /></g>
     <RegionShapes shapes={shapes} className="body-progress-region-hit" />
   </g>
 }
 
-function MapPanel({ data, selected, insightCandidates, variant, side, discovering, onSideChange, onSelect, onShowDetails }: {
+export function MapPanel({ data, selected, insightCandidates, variant, side, discovering, onSideChange, onSelect, onShowDetails, hideDetail = false, decorative = false }: {
   data: BodyMapData
   selected: BodyMapRegion | undefined
   insightCandidates: readonly string[]
@@ -135,6 +136,8 @@ function MapPanel({ data, selected, insightCandidates, variant, side, discoverin
   onSideChange: (side: BodyFigureSide) => void
   onSelect: (region: BodyMapRegion) => void
   onShowDetails: () => void
+  hideDetail?: boolean
+  decorative?: boolean
 }) {
   const figure = BODY_FIGURES[variant]
   const canvas = bodyFigureCanvas(variant)
@@ -173,7 +176,7 @@ function MapPanel({ data, selected, insightCandidates, variant, side, discoverin
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <svg className="body-progress-overlay" viewBox={bodyFigureViewBox(variant, side)} role="group" aria-label={figure.alt[side]}>
+        <svg className="body-progress-overlay" viewBox={bodyFigureViewBox(variant, side)} role="group" aria-label={figure.alt[side]} aria-hidden={decorative || undefined}>
           <title>{figure.alt[side]}</title>
           <defs>
             <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
@@ -207,6 +210,7 @@ function MapPanel({ data, selected, insightCandidates, variant, side, discoverin
               mode={data.mode}
               index={index}
               filterId={filterId}
+              decorative={decorative}
               onSelect={() => onSelect(region)}
             />)}
           </g>
@@ -214,7 +218,7 @@ function MapPanel({ data, selected, insightCandidates, variant, side, discoverin
       </div>
     </div>
     {data.regions.length === 0 && <p className="body-progress-empty">{data.emptyMessage}</p>}
-    {selected && insight && <div
+    {!hideDetail && selected && insight && <div
       className="body-progress-detail"
       role="status"
       data-fact-id={insight.factId}
@@ -226,7 +230,7 @@ function MapPanel({ data, selected, insightCandidates, variant, side, discoverin
       </div>
       <p className="body-progress-primary-detail">{insight.text}</p>
       <button type="button" className="link body-progress-more" onClick={onShowDetails}>
-        Показать {1 + selected.details.length} {exercisesCountLabel(1 + selected.details.length)}
+        Показать {selected.details.length + (data.mode === 'progress' ? 1 : 0)} {exercisesCountLabel(selected.details.length + (data.mode === 'progress' ? 1 : 0))}
       </button>
     </div>}
   </>
@@ -309,6 +313,7 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
           onSelect={(region) => setSelectedGroup(region.group)}
           onShowDetails={() => setDetailsOpen(true)}
         />}
+    {mode === 'load' && !loadLoading && !loadError && load.coverage && <p className="body-progress-empty">На карте {load.coverage.mappedSets} из {load.coverage.totalSets} подтверждённых подходов. Кардио: {load.coverage.cardioSets}; без определённой зоны: {load.coverage.unknownSets}. Это распределение работы, не рост или восстановление мышц.</p>}
     {detailsOpen && selected && <BodyDetailsSheet region={selected} onClose={() => setDetailsOpen(false)} />}
   </section>
 }
