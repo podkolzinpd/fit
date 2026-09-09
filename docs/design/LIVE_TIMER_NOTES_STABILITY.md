@@ -33,7 +33,7 @@
 | 3 | Ручной/автоматический отдых, фон, выключение, суперсет | Component + WebKit: deadline, reload, ±15, пропуск, суперсет/круг |
 | 4 | Обе роли, раздельное хранение, reload, ошибка/retry | PostgreSQL/RLS и client E2E: note отдельно от trainer cue; retry без удаления текста |
 | 5 | Медленная сеть, повторное нажатие, realtime и фокус | Cache unit + offline WebKit + редактирование подтверждённого подхода |
-| 6 | Client 390/430, Trainer 1440, WebKit, обе темы | Client visual проверен, desktop acceptance перед PR |
+| 6 | Client 390/430, Trainer 1440, WebKit, обе темы | Client visual и Trainer desktop accessibility/screenshot прошли в обеих темах |
 
 ## Проверки и ограничения
 

@@ -1244,7 +1244,7 @@ test('workout save dark keeps its visual baseline', async ({ page }, testInfo) =
   await expectVisualBaseline(page, `workout-save-dark-${process.platform}.png`, [], false, '#1d1e21')
 })
 
-async function openWorkoutForDetailReview(page: import('@playwright/test').Page, trainer: boolean) {
+async function openWorkoutForDetailReview(page: import('@playwright/test').Page, trainer: boolean, resume = false) {
   if (!trainer) {
     await openPreviewLiveWorkout(page)
     return
@@ -1261,6 +1261,11 @@ async function openWorkoutForDetailReview(page: import('@playwright/test').Page,
   await page.getByRole('button', { name: '＋ Подход' }).click()
   await page.getByRole('button', { name: /^Сохранить(?: план)?$/ }).click()
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  if (resume) {
+    const resumeAction = page.getByRole('button', { name: 'Открыть незавершённую' })
+    await expect(page.locator('.live-timer').or(resumeAction)).toBeVisible()
+    if (await resumeAction.isVisible()) await resumeAction.click()
+  }
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
@@ -1348,7 +1353,7 @@ test('workout detail, completion and exercise history keep their visual baseline
 
 test('trainer Live keeps desktop controls accessible in both themes', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'visual-trainer-1440', 'Trainer desktop acceptance')
-  await openWorkoutForDetailReview(page, true)
+  await openWorkoutForDetailReview(page, true, true)
   const livePath = new URL(page.url()).pathname
   await expect(page.locator('.live-set')).toHaveCount(2)
   await expectMonochromeAccessibility(page)
