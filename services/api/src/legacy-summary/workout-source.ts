@@ -14,12 +14,12 @@ const LOCAL_DATE = /^\d{4}-\d{2}-\d{2}$/
  * same conditions, but this keeps malformed rows from corrupting the prompt
  * if a view or a future query changes its shape.
  */
-export function completedWorkoutsInPeriod(
-  rows: SummaryWorkoutRow[],
+export function completedWorkoutsInPeriod<T extends SummaryWorkoutRow>(
+  rows: T[],
   periodStart: string,
   periodEnd: string,
-): CompletedSummaryWorkoutRow[] {
-  return rows.filter((workout): workout is CompletedSummaryWorkoutRow =>
+): Array<T & { workout_date: string }> {
+  return rows.filter((workout): workout is T & { workout_date: string } =>
     workout.status === "done" &&
     workout.deleted_at === null &&
     typeof workout.workout_date === "string" &&
