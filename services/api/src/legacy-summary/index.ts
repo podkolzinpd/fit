@@ -37,6 +37,10 @@ export type WorkoutRow = {
   workout_date: string
   status: string
   deleted_at: string | null
+  session_rpe: number | null
+  wellbeing: string | null
+  discomfort: boolean | null
+  client_comment: string | null
 }
 
 export type ExerciseRow = {
@@ -51,11 +55,27 @@ export type ExerciseRow = {
 export type SetRow = {
   workout_exercise_id: string
   position: number
+  plan_weight_kg: number | null
+  plan_reps: number | null
+  plan_duration_min: number | null
+  plan_duration_sec: number | null
+  plan_distance_km: number | null
+  plan_rpe: number | null
   fact_weight_kg: number | null
   fact_reps: number | null
   fact_duration_min: number | null
   fact_duration_sec: number | null
   fact_distance_km: number | null
+  fact_rpe: number | null
+  confirmed_at: string | null
+}
+
+type ProgressRow = {
+  recorded_on: string
+  weight_kg: number | null
+  chest_cm: number | null
+  waist_cm: number | null
+  hip_cm: number | null
 }
 
 type YandexCompletionResponse = {
@@ -262,12 +282,18 @@ async function fingerprint(value: unknown): Promise<string> {
 type SessionMetrics = {
   date: string
   set_count: number
+  planned_set_count: number
+  set_completion_percent: number
+  planned_max_weight_kg?: number | undefined
+  planned_total_reps?: number | undefined
+  planned_volume_kg?: number | undefined
   max_weight_kg?: number | undefined
   total_reps?: number | undefined
   volume_kg?: number | undefined
   total_duration_min?: number | undefined
   total_distance_km?: number | undefined
   pace_min_per_km?: number | undefined
+  average_rpe?: number | undefined
 }
 
 function rounded(value: number): number {
@@ -277,6 +303,16 @@ function rounded(value: number): number {
 function percentChange(start?: number, end?: number): number | undefined {
   if (start === undefined || end === undefined || start <= 0) return undefined
   return Math.round(((end - start) / start) * 100)
+}
+
+function addUtcDays(value: string, amount: number): string {
+  const date = new Date(`${value}T00:00:00.000Z`)
+  date.setUTCDate(date.getUTCDate() + amount)
+  return date.toISOString().slice(0, 10)
+}
+
+function inclusivePeriodDays(start: string, end: string): number {
+  return Math.round((Date.parse(`${end}T00:00:00.000Z`) - Date.parse(`${start}T00:00:00.000Z`)) / 86_400_000) + 1
 }
 
 export function buildProgressData(
@@ -308,20 +344,24 @@ export function buildProgressData(
     if (!date) continue
 
     const exerciseSets = setsByExercise.get(exercise.id) ?? []
-    const weights = exerciseSets.flatMap((set) =>
+    const confirmedSets = exerciseSets.filter((set) => set.confirmed_at !== null)
+    const weights = confirmedSets.flatMap((set) =>
       set.fact_weight_kg === null ? [] : [Number(set.fact_weight_kg)]
     )
-    const reps = exerciseSets.flatMap((set) =>
+    const reps = confirmedSets.flatMap((set) =>
       set.fact_reps === null ? [] : [Number(set.fact_reps)]
     )
-    const durations = exerciseSets.flatMap((set) => {
+    const durations = confirmedSets.flatMap((set) => {
       if (set.fact_duration_sec !== null) return [Number(set.fact_duration_sec) / 60]
       return set.fact_duration_min === null ? [] : [Number(set.fact_duration_min)]
     })
-    const distances = exerciseSets.flatMap((set) =>
+    const distances = confirmedSets.flatMap((set) =>
       set.fact_distance_km === null ? [] : [Number(set.fact_distance_km)]
     )
-    const volume = exerciseSets.reduce(
+    const rpes = confirmedSets.flatMap((set) =>
+      set.fact_rpe === null ? [] : [Number(set.fact_rpe)]
+    )
+    const volume = confirmedSets.reduce(
       (sum, set) =>
         sum + (
           set.fact_weight_kg === null || set.fact_reps === null
@@ -330,6 +370,10 @@ export function buildProgressData(
         ),
       0,
     )
+    const plannedWeights = exerciseSets.flatMap((set) => set.plan_weight_kg === null ? [] : [Number(set.plan_weight_kg)])
+    const plannedReps = exerciseSets.flatMap((set) => set.plan_reps === null ? [] : [Number(set.plan_reps)])
+    const plannedVolume = exerciseSets.reduce((sum, set) =>
+      sum + (set.plan_weight_kg === null || set.plan_reps === null ? 0 : Number(set.plan_weight_kg) * Number(set.plan_reps)), 0)
 
     const progress = exerciseProgress.get(exercise.exercise_ref) ?? {
       name: exercise.exercise_name,
@@ -339,7 +383,18 @@ export function buildProgressData(
     const existing = progress.sessions.get(date)
     const session: SessionMetrics = {
       date,
-      set_count: (existing?.set_count ?? 0) + exerciseSets.length,
+      set_count: (existing?.set_count ?? 0) + confirmedSets.length,
+      planned_set_count: (existing?.planned_set_count ?? 0) + exerciseSets.length,
+      set_completion_percent: 0,
+      planned_max_weight_kg: plannedWeights.length
+        ? Math.max(existing?.planned_max_weight_kg ?? 0, ...plannedWeights)
+        : existing?.planned_max_weight_kg,
+      planned_total_reps: plannedReps.length
+        ? rounded((existing?.planned_total_reps ?? 0) + plannedReps.reduce((a, b) => a + b, 0))
+        : existing?.planned_total_reps,
+      planned_volume_kg: plannedVolume > 0
+        ? rounded((existing?.planned_volume_kg ?? 0) + plannedVolume)
+        : existing?.planned_volume_kg,
       max_weight_kg: weights.length
         ? Math.max(existing?.max_weight_kg ?? 0, ...weights)
         : existing?.max_weight_kg,
@@ -361,7 +416,13 @@ export function buildProgressData(
             distances.reduce((a, b) => a + b, 0),
         )
         : existing?.total_distance_km,
+      average_rpe: rpes.length
+        ? rounded(rpes.reduce((a, b) => a + b, 0) / rpes.length)
+        : existing?.average_rpe,
     }
+    session.set_completion_percent = session.planned_set_count > 0
+      ? Math.round((session.set_count / session.planned_set_count) * 100)
+      : 100
     if (
       session.total_duration_min !== undefined &&
       session.total_distance_km !== undefined &&
@@ -393,6 +454,20 @@ export function buildProgressData(
       requested_start: periodStart,
     },
     consistency,
+    feedback_signals: workouts.flatMap((workout) => {
+      const comment = workout.client_comment?.trim().slice(0, 240)
+      if (
+        workout.session_rpe === null && !workout.wellbeing &&
+        workout.discomfort === null && !comment
+      ) return []
+      return [{
+        date: workout.workout_date,
+        session_rpe: workout.session_rpe,
+        wellbeing: workout.wellbeing,
+        discomfort: workout.discomfort,
+        client_comment: comment || null,
+      }]
+    }).slice(-8),
     exercises: Array.from(exerciseProgress.values())
       .map((progress) => {
         const sessions = Array.from(progress.sessions.values())
@@ -745,14 +820,17 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         throw new HttpError(500, "first_workout_lookup_failed")
       }
 
+      const periodDays = inclusivePeriodDays(input.period_start, input.period_end)
+      const previousPeriodEnd = addUtcDays(input.period_start, -1)
+      const previousPeriodStart = addUtcDays(previousPeriodEnd, -periodDays + 1)
       const { data: workouts, error: workoutsError } = await userClient
         .from("workouts")
-        .select("id,workout_date,status,deleted_at")
+        .select("id,workout_date,status,deleted_at,session_rpe,wellbeing,discomfort,client_comment")
         .eq("client_id", input.client_id)
         .eq("trainer_id", trainerId)
         .eq("status", "done")
         .is("deleted_at", null)
-        .gte("workout_date", input.period_start)
+        .gte("workout_date", previousPeriodStart)
         .lte("workout_date", input.period_end)
         .order("workout_date")
         .limit(MAX_SOURCE_ROWS)
@@ -764,6 +842,11 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         input.period_start,
         input.period_end,
       )
+      const previousWorkouts = completedWorkoutsInPeriod(
+        workouts,
+        previousPeriodStart,
+        previousPeriodEnd,
+      )
       if (completedWorkouts.length === 0) {
         throw new HttpError(422, "no_completed_workouts")
       }
@@ -771,8 +854,21 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         throw new HttpError(422, "source_row_limit_reached")
       }
 
-      const workoutIds = completedWorkouts.map((workout) => workout.id)
-        const { data: exercises, error: exercisesError } = await userClient
+      const { data: measurements, error: measurementsError } = await userClient
+        .from("client_progress")
+        .select("recorded_on,weight_kg,chest_cm,waist_cm,hip_cm")
+        .eq("client_id", input.client_id)
+        .eq("trainer_id", trainerId)
+        .is("deleted_at", null)
+        .gte("recorded_on", previousPeriodStart)
+        .lte("recorded_on", input.period_end)
+        .order("recorded_on")
+        .limit(MAX_SOURCE_ROWS)
+      if (measurementsError) throw new HttpError(500, "measurements_lookup_failed")
+      if (measurements.length === MAX_SOURCE_ROWS) throw new HttpError(422, "source_row_limit_reached")
+
+      const workoutIds = [...completedWorkouts, ...previousWorkouts].map((workout) => workout.id)
+      const { data: exercises, error: exercisesError } = await userClient
         .from("workout_exercises")
         .select("id,workout_id,exercise_ref,exercise_name,input_kind,position")
         .in("workout_id", workoutIds)
@@ -791,10 +887,9 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         const { data, error } = await userClient
           .from("workout_sets")
           .select(
-            "workout_exercise_id,position,fact_weight_kg,fact_reps,fact_duration_min,fact_duration_sec,fact_distance_km",
+            "workout_exercise_id,position,plan_weight_kg,plan_reps,plan_duration_min,plan_duration_sec,plan_distance_km,plan_rpe,fact_weight_kg,fact_reps,fact_duration_min,fact_duration_sec,fact_distance_km,fact_rpe,confirmed_at",
           )
           .in("workout_exercise_id", exerciseIds)
-          .not("confirmed_at", "is", null)
           .order("position")
           .limit(MAX_SOURCE_ROWS)
         if (error) {
@@ -806,16 +901,42 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         sets = data
       }
 
-      const trainingData = {
-        ...buildProgressData(
-          completedWorkouts,
-          exercises,
-          sets,
-          input.period_start,
-          input.period_end,
+      const currentWorkoutIds = new Set(completedWorkouts.map((workout) => workout.id))
+      const previousWorkoutIds = new Set(previousWorkouts.map((workout) => workout.id))
+      const currentExercises = exercises.filter((exercise) => currentWorkoutIds.has(exercise.workout_id))
+      const previousExercises = exercises.filter((exercise) => previousWorkoutIds.has(exercise.workout_id))
+      const currentExerciseIds = new Set(currentExercises.map((exercise) => exercise.id))
+      const previousExerciseIds = new Set(previousExercises.map((exercise) => exercise.id))
+      const currentMeasurements = (measurements as ProgressRow[])
+        .filter((item) => item.recorded_on >= input.period_start)
+      const previousMeasurements = (measurements as ProgressRow[])
+        .filter((item) => item.recorded_on <= previousPeriodEnd)
+      const currentProgress = buildProgressData(
+        completedWorkouts,
+        currentExercises,
+        sets.filter((set) => currentExerciseIds.has(set.workout_exercise_id)),
+        input.period_start,
+        input.period_end,
+        firstCompletedWorkout?.workout_date ?? null,
+      )
+      const previousProgress = previousWorkouts.length > 0 || previousMeasurements.length > 0
+        ? buildProgressData(
+          previousWorkouts,
+          previousExercises,
+          sets.filter((set) => previousExerciseIds.has(set.workout_exercise_id)),
+          previousPeriodStart,
+          previousPeriodEnd,
           firstCompletedWorkout?.workout_date ?? null,
-        ),
+        )
+        : null
+      const trainingData = {
+        ...currentProgress,
         goal: goalContext,
+        measurements: currentMeasurements,
+        previous_period: previousProgress ? {
+          ...previousProgress,
+          measurements: previousMeasurements,
+        } : null,
       }
       const inputFingerprint = await fingerprint(trainingData)
       const modelInput = buildSummaryModelInput(trainingData)

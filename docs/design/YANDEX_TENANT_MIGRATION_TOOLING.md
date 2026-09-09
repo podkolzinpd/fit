@@ -25,7 +25,9 @@ write to a remote database by default.
    A conflicting or changed target row fails checksum validation and rolls the
    whole import back.
 8. Validation compares the complete scoped row count and deterministic SHA-256
-   checksum for every manifest table.
+   checksum for every manifest table. Export, import and validation transactions
+   normalize their PostgreSQL session timezone to UTC so identical `timestamptz`
+   values remain byte-stable across Supabase and Yandex cluster defaults.
 9. Remote source or target access requires both `--allow-remote` and the exact
    remote confirmation environment value. A remote apply has a second,
    independent confirmation.
@@ -54,8 +56,10 @@ up to 100 conflicts. This bound covers the current small source population
 without turning a stale stage into an unbounded sequence of remote requests.
 Import, schema, network and authorization errors are not treated as collisions
 and still fail the rehearsal. Candidate UUIDs and rejected candidates are not
-logged. Automatic selection is rejected for `apply`, because a real write must
-always refer to a stable, explicitly configured cohort.
+logged. If every candidate conflicts, CI prints the complete aggregate of safe
+rejection codes (for example, the exact validation table) and counts, without
+UUIDs or row contents. Automatic selection is rejected for `apply`, because a
+real write must always refer to a stable, explicitly configured cohort.
 
 For `dry-run` and `apply`, GitHub OIDC obtains the existing bounded deploy
 identity and invokes the private `fit-stage-migration` container. The encrypted
@@ -112,10 +116,12 @@ trainer-owned rows.
 - [x] Source and target remain local Podman PostgreSQL instances during the
   implementation check.
 - [x] Run two complete local rehearsals with production-like, non-production
-  synthetic data (`npm run tenant:rehearse:local`, 2026-09-08): each clean
+  synthetic data (`npm run tenant:rehearse:local`, 2026-09-09): each clean
   target imported and validated 36 rows across all 28 manifest tables,
   including two subscriptions for one user; the
-  dry-run left the target empty and the repeated apply inserted zero rows.
+  dry-run left the target empty and the repeated apply inserted zero rows. The
+  target fixture deliberately uses `Europe/Moscow` while migration transactions
+  normalize to UTC, covering cross-cluster timestamp checksums.
 - [ ] Review a production export window, remote credentials and the exact
   target before the first remote command.
 - [ ] Run the selected cohort through remote `audit` and target `dry-run` using

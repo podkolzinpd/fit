@@ -239,6 +239,27 @@ function createTargetDatabase(databaseName) {
   )
 }
 
+function configureTargetDatabaseTimezone(databaseName) {
+  assertRehearsalDatabaseName(databaseName)
+  run(
+    'podman',
+    [
+      'exec',
+      TARGET_CONTAINER,
+      'psql',
+      '--username',
+      'postgres',
+      '--dbname',
+      'postgres',
+      '--set',
+      'ON_ERROR_STOP=1',
+      '--command',
+      `alter database ${databaseName} set timezone to 'Europe/Moscow'`,
+    ],
+    { capture: true, label: 'target_database_timezone' },
+  )
+}
+
 function dropTargetDatabase(databaseName) {
   assertRehearsalDatabaseName(databaseName)
   run(
@@ -362,6 +383,7 @@ async function rehearse(runNumber) {
     console.log(`[tenant-rehearsal] ${runNumber}/2: создаю чистую локальную БД.`)
     createTargetDatabase(databaseName)
     databaseCreated = true
+    configureTargetDatabaseTimezone(databaseName)
     migrateTargetDatabase(databaseUrl)
 
     const exported = parseExportSummary(

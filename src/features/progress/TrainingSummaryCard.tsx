@@ -321,6 +321,17 @@ function measurementCopyCandidates(summary: ProgressStorySummary, role: 'client'
     : [summary.client.headline, ...summary.client.achievements, summary.client.goalAlignment ?? '']
 }
 
+function measurementGroundingValues(entries: readonly ProgressEntry[]): string[] {
+  return entries.flatMap((entry) => [
+    entry.recordedOn,
+    entry.weightKg,
+    entry.chestCm,
+    entry.waistCm,
+    entry.hipCm,
+  ]).filter((value) => value !== undefined)
+    .map(String)
+}
+
 function russianCount(value: number, one: string, few: string, many: string): string {
   const mod100 = Math.abs(value) % 100
   const mod10 = Math.abs(value) % 10
@@ -480,6 +491,7 @@ function ProgressStoryContent({ summary, clientId, role, gender, today, goal, pr
       nextStep.recommendation.title,
       nextStep.recommendation.explanation,
       nextStep.recommendation.evidence,
+      ...measurementGroundingValues(measurements),
     ],
   })
   const goalStory = <>
@@ -740,7 +752,12 @@ export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null
   const previousEnd = addDays(range.start, -1)
   const previousWorkouts = allWorkouts.data?.filter((workout) => workout.workoutDate >= previousStart && workout.workoutDate <= previousEnd)
   const retryMeasurements = () => void Promise.all([measurements.refetch(), customMetrics.refetch()])
-  const analysis = summary ? buildProgressDetailedAnalysis({ summary, role: 'client', goalTitle: goal.data?.title ?? profileGoal, visibleTexts: [] }) : []
+  const analysis = summary ? buildProgressDetailedAnalysis({
+    summary,
+    role: 'client',
+    goalTitle: goal.data?.title ?? profileGoal,
+    visibleTexts: measurementGroundingValues(measurements.data ?? []),
+  }) : []
   const savedAnalysisLabel = summary ? `Период анализа: ${formatLocalDate(summary.periodStart)} — ${formatLocalDate(summary.periodEnd)}` : null
   const newWorkouts = summary && currentWorkouts?.some((workout) => workout.status === 'done' && workout.completedAt && Date.parse(workout.completedAt) > Date.parse(summary.generatedAt))
   const analysisDate = summary ? `Обновлён ${new Date(summary.generatedAt).toLocaleDateString('ru-RU', { timeZone: actor?.timezone })}` : null
