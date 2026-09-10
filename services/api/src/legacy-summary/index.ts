@@ -1345,6 +1345,10 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
           workouts: completedWorkouts.length,
           exercises: exercises.length,
           sets: sets.length,
+          model_input_chars: JSON.stringify(modelInput).length,
+          request_strategy: JSON.stringify(modelInput).length > MAX_DIRECT_MODEL_INPUT_CHARS
+            ? 'chunked'
+            : 'direct',
         },
       })
       const generated = await requestYandexSummary(
