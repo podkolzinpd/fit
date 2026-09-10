@@ -74,7 +74,7 @@ export function workoutCopyNamesCases() {
       const hints = page.locator('.coachmark-bubble').getByRole('button', { name: 'Понятно', exact: true })
       while (await hints.count()) await hints.first().click()
       for (const dark of [false, true]) {
-        await page.goto(role === 'client' ? '/me/profile' : '/profile')
+        await page.goto(role === 'client' ? '/me/profile' : '/profile/settings')
         await page.getByRole('switch', { name: 'Тёмная тема' }).setChecked(dark)
         await page.goto(`/workouts/${sourceId}`)
         await expect(page.getByText(oldName, { exact: true })).toHaveCount(2)

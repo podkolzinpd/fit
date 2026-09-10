@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { forgetPublicTrainerProfile } from '../../data/repositories/trainer-profiles.repository'
 import type { TrainerCertificate, TrainerProfileDraft, TrainerTrainingMode } from '../../shared/domain'
 import { copyText } from '../../shared/clipboard'
+import { ChevronDownIcon } from '../../shared/icons'
 import { prepareProfileImage } from '../../shared/profile-image'
-import { emptyTrainerProfileDraft, validatePublishableTrainerProfile } from '../../shared/trainer-profile'
+import { emptyTrainerProfileDraft, trainerProfileDraftSchema, validatePublishableTrainerProfile } from '../../shared/trainer-profile'
 import { AsyncView, Field, SaveStatus, Switch } from '../../shared/ui'
 import { TrainerProfileCard } from './TrainerProfileCard'
 
@@ -17,13 +18,54 @@ function commaList(value: string): string[] {
   return [...new Set(value.split(',').map((item) => item.trim()).filter(Boolean))].slice(0, 12)
 }
 
+function hasProfileContent(draft: TrainerProfileDraft): boolean {
+  return Boolean(
+    draft.avatarDataUrl
+    || draft.bio.trim()
+    || draft.specialties.length
+    || draft.city.trim()
+    || draft.trainingModes.length
+    || draft.experienceStartYear
+    || draft.education.trim()
+    || draft.formats.trim()
+    || draft.price.trim()
+    || draft.acceptingClients
+    || draft.certificates.length,
+  )
+}
+
+function profilesMatch(first: TrainerProfileDraft | null | undefined, second: TrainerProfileDraft | null | undefined): boolean {
+  if (!first || !second) return false
+  return first.displayName === second.displayName
+    && first.bio === second.bio
+    && first.city === second.city
+    && first.experienceStartYear === second.experienceStartYear
+    && first.education === second.education
+    && first.formats === second.formats
+    && first.price === second.price
+    && first.acceptingClients === second.acceptingClients
+    && first.avatarDataUrl === second.avatarDataUrl
+    && first.specialties.length === second.specialties.length
+    && first.specialties.every((value, index) => value === second.specialties[index])
+    && first.trainingModes.length === second.trainingModes.length
+    && first.trainingModes.every((value, index) => value === second.trainingModes[index])
+    && first.certificates.length === second.certificates.length
+    && first.certificates.every((value, index) => {
+      const other = second.certificates[index]
+      return other !== undefined
+        && value.title === other.title
+        && value.organization === other.organization
+        && value.year === other.year
+    })
+}
+
 export function TrainerProfessionalProfileSection() {
   const { actor } = useAuth()
   const { trainerProfiles } = useDataBackend()
   const queryClient = useQueryClient()
   const profile = useQuery({ queryKey: key, queryFn: () => trainerProfiles.getOwn() })
   const [draft, setDraft] = useState<TrainerProfileDraft | null>(null)
-  const [preview, setPreview] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [specialtiesText, setSpecialtiesText] = useState('')
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle')
   const [localError, setLocalError] = useState<string | null>(null)
@@ -39,7 +81,13 @@ export function TrainerProfessionalProfileSection() {
 
   const save = useMutation({
     mutationFn: (value: TrainerProfileDraft) => trainerProfiles.saveDraft(value),
-    onSuccess: (value) => { queryClient.setQueryData(key, value); setDraft(value.draft); setStatus('saved') },
+    onSuccess: (value) => {
+      queryClient.setQueryData(key, value)
+      setDraft(value.draft)
+      setSpecialtiesText(value.draft.specialties.join(', '))
+      setStatus('saved')
+      setEditing(false)
+    },
     onError: () => setStatus('error'),
   })
   const publish = useMutation({
@@ -47,21 +95,43 @@ export function TrainerProfessionalProfileSection() {
       await trainerProfiles.saveDraft(value)
       return trainerProfiles.publish()
     },
-    onSuccess: (value) => { forgetPublicTrainerProfile(value.publicId); queryClient.setQueryData(key, value); setDraft(value.draft); setStatus('saved'); setLocalError(null) },
+    onSuccess: (value) => {
+      forgetPublicTrainerProfile(value.publicId)
+      queryClient.setQueryData(key, value)
+      setDraft(value.draft)
+      setSpecialtiesText(value.draft.specialties.join(', '))
+      setStatus('saved')
+      setLocalError(null)
+    },
     onError: (error) => { setStatus('error'); setLocalError(error.message) },
   })
   const unpublish = useMutation({
     mutationFn: () => trainerProfiles.unpublish(),
-    onSuccess: (value) => { forgetPublicTrainerProfile(value.publicId); queryClient.setQueryData(key, value); setStatus('saved') },
+    onSuccess: (value) => {
+      forgetPublicTrainerProfile(value.publicId)
+      queryClient.setQueryData(key, value)
+      setStatus('saved')
+      setLocalError(null)
+    },
+    onError: (error) => { setStatus('error'); setLocalError(error.message) },
   })
   const catalogListing = useMutation({
     mutationFn: (listed: boolean) => trainerProfiles.setCatalogListing(listed),
-    onSuccess: (value) => { queryClient.setQueryData(key, value); setStatus('saved') },
+    onSuccess: (value) => { queryClient.setQueryData(key, value); setStatus('saved'); setLocalError(null) },
+    onError: (error) => { setStatus('error'); setLocalError(error.message) },
   })
+
+  const publishedMatchesDraft = useMemo(
+    () => profilesMatch(draft, profile.data?.published),
+    [draft, profile.data?.published],
+  )
+  const publishValidation = useMemo(() => draft ? validatePublishableTrainerProfile(draft) : null, [draft])
+  const pending = save.isPending || publish.isPending || unpublish.isPending || catalogListing.isPending
 
   function set<K extends keyof TrainerProfileDraft>(field: K, value: TrainerProfileDraft[K]) {
     setDraft((current) => current === null ? current : { ...current, [field]: value })
-    setStatus('idle'); setLocalError(null)
+    setStatus('idle')
+    setLocalError(null)
   }
   function toggleMode(mode: TrainerTrainingMode, checked: boolean) {
     if (!draft) return
@@ -79,54 +149,72 @@ export function TrainerProfessionalProfileSection() {
     if (!draft) return
     set('certificates', draft.certificates.map((item, itemIndex) => itemIndex === index ? value : item))
   }
-  function submit(event: FormEvent) { event.preventDefault(); if (draft) save.mutate(draft) }
+  function prepareDraft(): TrainerProfileDraft | null {
+    if (!draft) return null
+    const result = trainerProfileDraftSchema.safeParse(draft)
+    if (result.success) return result.data
+    const certificateError = result.error.issues.some((issue) => issue.path[0] === 'certificates')
+    setLocalError(certificateError ? 'Укажите название сертификата или удалите его.' : 'Проверьте заполнение анкеты.')
+    return null
+  }
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    const value = prepareDraft()
+    if (value) save.mutate(value)
+  }
+  function cancelEditing() {
+    const name = [actor?.firstName, actor?.lastName].filter(Boolean).join(' ')
+    const savedDraft = profile.data?.draft ?? emptyTrainerProfileDraft(name)
+    setDraft(savedDraft)
+    setSpecialtiesText(savedDraft.specialties.join(', '))
+    setStatus('idle')
+    setLocalError(null)
+    setEditing(false)
+  }
   function publishNow() {
-    if (!draft) return
-    const error = validatePublishableTrainerProfile(draft)
+    const value = prepareDraft()
+    if (!value) return
+    const error = validatePublishableTrainerProfile(value)
     if (error) { setLocalError(error); return }
-    publish.mutate(draft)
+    publish.mutate(value)
   }
   async function copyLink() {
     if (!profile.data?.published) return
     await copyText(`${window.location.origin}/trainers/${profile.data.publicId}`)
-    setCopied(true); window.setTimeout(() => setCopied(false), 1800)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1800)
   }
 
-  return <section className="trainer-professional-editor trainer-professional-embedded ui-identity" aria-labelledby="trainer-professional-title">
-    <div className="trainer-professional-heading"><p className="eyebrow">ПРОФИЛЬ ТРЕНЕРА</p><h2 id="trainer-professional-title">Профессиональная анкета</h2></div>
+  return <section className="trainer-professional-editor trainer-professional-embedded ui-identity" aria-label="Анкета тренера">
     <AsyncView loading={profile.isLoading} error={profile.error} onRetry={() => void profile.refetch()}>
-      {draft && <>
-        <section className="trainer-profile-state">
-          <div><strong>{profile.data?.published ? 'Анкета опубликована' : 'Анкета пока скрыта'}</strong>
-            <p>{profile.data?.published ? 'Спортсмены видят последнюю опубликованную версию.' : 'Заполните анкету и опубликуйте её.'}</p></div>
-          {profile.data?.published && <Link className="button secondary" to={`/trainers/${profile.data.publicId}`}>Открыть</Link>}
-        </section>
-        <form className="trainer-profile-form" onSubmit={submit}>
-          <section className="card trainer-profile-fields">
-            <h2>О вас</h2>
-            <div className="trainer-avatar-editor">
-              {draft.avatarDataUrl ? <img src={draft.avatarDataUrl} alt="Фото тренера" /> : <span aria-hidden="true">{draft.displayName.slice(0, 1).toUpperCase() || 'Ф'}</span>}
-              <div><label className="button secondary trainer-photo-button">Выбрать фото<input type="file" accept="image/*" onChange={(event) => void imageChanged(event)} /></label>
-                {draft.avatarDataUrl && <button type="button" className="link" onClick={() => set('avatarDataUrl', null)}>Удалить фото</button>}</div>
-            </div>
-            <Field label="Как вас увидят спортсмены"><input value={draft.displayName} maxLength={120} onChange={(event) => set('displayName', event.target.value)} /></Field>
-            <Field label="О себе"><textarea value={draft.bio} maxLength={1200} placeholder="Опыт, подход и кому вы помогаете" onChange={(event) => set('bio', event.target.value)} /></Field>
-            <Field label="Направления"><input value={specialtiesText} placeholder="Силовые, бег, снижение веса" onChange={(event) => { setSpecialtiesText(event.target.value); set('specialties', commaList(event.target.value)) }} /></Field>
-          </section>
-          <section className="card trainer-profile-fields">
-            <h2>Работа</h2>
-            <div className="trainer-mode-fields" role="group" aria-label="Формат занятий">
-              <Switch label="Онлайн" checked={draft.trainingModes.includes('online')} onChange={(checked) => toggleMode('online', checked)} />
-              <Switch label="Лично" checked={draft.trainingModes.includes('in_person')} onChange={(checked) => toggleMode('in_person', checked)} />
-            </div>
+      {draft && editing && <form className="trainer-profile-form trainer-profile-edit-card card" onSubmit={submit} aria-label="Редактирование анкеты тренера">
+        <header className="trainer-profile-edit-head"><div><p className="eyebrow">АНКЕТА ТРЕНЕРА</p><h2>Редактирование</h2></div></header>
+        <div className="trainer-avatar-editor">
+          {draft.avatarDataUrl ? <img src={draft.avatarDataUrl} alt="Фото тренера" /> : <span aria-hidden="true">{draft.displayName.slice(0, 1).toUpperCase() || 'Ф'}</span>}
+          <div><label className="button secondary trainer-photo-button">Выбрать фото<input type="file" accept="image/*" onChange={(event) => void imageChanged(event)} /></label>
+            {draft.avatarDataUrl && <button type="button" className="link" onClick={() => set('avatarDataUrl', null)}>Удалить фото</button>}</div>
+        </div>
+        <div className="trainer-profile-form-section">
+          <Field label="Имя в анкете"><input value={draft.displayName} maxLength={120} onChange={(event) => set('displayName', event.target.value)} /></Field>
+          <Field label="О себе"><textarea value={draft.bio} maxLength={1200} placeholder="Опыт, подход и кому вы помогаете" onChange={(event) => set('bio', event.target.value)} /></Field>
+          <Field label="Направления"><input value={specialtiesText} placeholder="Силовые, бег, снижение веса" onChange={(event) => { setSpecialtiesText(event.target.value); set('specialties', commaList(event.target.value)) }} /></Field>
+        </div>
+        <div className="trainer-profile-form-section">
+          <div className="trainer-profile-form-grid">
             <Field label="Город"><input value={draft.city} maxLength={100} onChange={(event) => set('city', event.target.value)} /></Field>
             <Field label="Год начала практики"><input type="number" min="1950" max={new Date().getFullYear()} value={draft.experienceStartYear ?? ''} onChange={(event) => set('experienceStartYear', event.target.value ? Number(event.target.value) : null)} /></Field>
-            <Field label="Как проходят занятия"><textarea value={draft.formats} maxLength={800} onChange={(event) => set('formats', event.target.value)} /></Field>
-            <Field label="Стоимость"><input value={draft.price} maxLength={120} placeholder="Например, от 3 000 ₽ за занятие" onChange={(event) => set('price', event.target.value)} /></Field>
-            <Switch label="Беру новых клиентов" checked={draft.acceptingClients} onChange={(checked) => set('acceptingClients', checked)} />
-          </section>
-          <section className="card trainer-profile-fields">
-            <h2>Образование</h2>
+            <Field label="Стоимость"><input value={draft.price} maxLength={120} placeholder="От 3 000 ₽" onChange={(event) => set('price', event.target.value)} /></Field>
+          </div>
+          <div className="trainer-mode-fields" role="group" aria-label="Формат занятий">
+            <Switch label="Онлайн" checked={draft.trainingModes.includes('online')} onChange={(checked) => toggleMode('online', checked)} />
+            <Switch label="Лично" checked={draft.trainingModes.includes('in_person')} onChange={(checked) => toggleMode('in_person', checked)} />
+          </div>
+          <Field label="Как проходят занятия"><textarea value={draft.formats} maxLength={800} onChange={(event) => set('formats', event.target.value)} /></Field>
+          <Switch label="Беру новых клиентов" checked={draft.acceptingClients} onChange={(checked) => set('acceptingClients', checked)} />
+        </div>
+        <details className="trainer-profile-form-disclosure">
+          <summary><span>Образование и сертификаты{draft.certificates.length > 0 ? ` · ${draft.certificates.length}` : ''}</span><ChevronDownIcon /></summary>
+          <div className="trainer-profile-education-fields">
             <Field label="Образование и квалификация"><textarea value={draft.education} maxLength={800} onChange={(event) => set('education', event.target.value)} /></Field>
             <div className="trainer-certificates-editor"><strong>Сертификаты</strong>
               {draft.certificates.map((item, index) => <div className="trainer-certificate-fields" key={index}>
@@ -137,23 +225,44 @@ export function TrainerProfessionalProfileSection() {
               </div>)}
               {draft.certificates.length < 10 && <button type="button" className="secondary" onClick={() => set('certificates', [...draft.certificates, { title: '', organization: '', year: null }])}>Добавить сертификат</button>}
             </div>
-            <div className="trainer-profile-actions-panel">
+          </div>
+        </details>
+        {localError && <p className="error" role="alert">{localError}</p>}
+        <SaveStatus status={pending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message} />
+        <div className="trainer-profile-actions">
+          <button type="button" className="secondary" onClick={cancelEditing} disabled={pending}>Отмена</button>
+          <button type="submit" className="primary" disabled={pending} aria-busy={save.isPending}>{save.isPending ? 'Сохраняем…' : 'Сохранить'}</button>
+        </div>
+      </form>}
+      {draft && !editing && !hasProfileContent(draft) && <article className="trainer-card trainer-card-compact trainer-profile-empty">
+        <header className="trainer-card-head">
+          <span className="trainer-card-avatar trainer-card-avatar-placeholder" aria-hidden="true">{draft.displayName.slice(0, 1).toUpperCase() || 'Ф'}</span>
+          <div className="trainer-card-identity"><h2>{draft.displayName || 'Профиль тренера'}</h2><p>Анкета пока не заполнена</p></div>
+        </header>
+        <p className="trainer-profile-empty-copy">Добавьте направления, опыт и формат занятий — спортсмены увидят всё в одной анкете.</p>
+        <button type="button" className="primary" onClick={() => setEditing(true)}>Заполнить анкету</button>
+      </article>}
+      {draft && !editing && hasProfileContent(draft) && <TrainerProfileCard
+        profile={draft}
+        compact
+        action={<button type="button" className="primary trainer-profile-edit-action" onClick={() => setEditing(true)}>Редактировать</button>}
+        footer={<>
+          <SaveStatus status={pending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message} />
+          <details className="trainer-card-disclosure trainer-publication-disclosure">
+            <summary><span><strong>Публикация</strong><small>{profile.data?.published ? publishedMatchesDraft ? profile.data.listedInCatalog ? 'Видна в каталоге' : 'Доступна по ссылке' : 'Есть сохранённые изменения' : publishValidation ? 'Пока не опубликована' : 'Готова к публикации'}</small></span><ChevronDownIcon /></summary>
+            <div className="trainer-publication-controls">
               {localError && <p className="error" role="alert">{localError}</p>}
-              <SaveStatus status={save.isPending || publish.isPending || unpublish.isPending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message} />
-              <div className="trainer-profile-actions">
-                <button type="submit" className="secondary" disabled={save.isPending || publish.isPending}>Сохранить анкету</button>
-                <button type="button" className="secondary" onClick={() => setPreview((value) => !value)}>{preview ? 'Скрыть предпросмотр' : 'Предпросмотр'}</button>
-                <button type="button" className="primary" onClick={publishNow} disabled={publish.isPending}>Опубликовать</button>
+              {!profile.data?.published && publishValidation && <p>{publishValidation}</p>}
+              {profile.data?.published && <div className="trainer-catalog-visibility"><Switch label="Показывать в каталоге" checked={profile.data.listedInCatalog} disabled={pending} onChange={(listed) => catalogListing.mutate(listed)} /></div>}
+              <div className="trainer-publication-actions">
+                {profile.data?.published && <Link className="button secondary" to={`/trainers/${profile.data.publicId}`}>Открыть анкету</Link>}
+                {(!profile.data?.published || !publishedMatchesDraft) && !publishValidation && <button type="button" className="secondary" onClick={publishNow} disabled={pending} aria-busy={publish.isPending}>{publish.isPending ? 'Публикуем…' : profile.data?.published ? 'Обновить публикацию' : 'Опубликовать'}</button>}
               </div>
+              {profile.data?.published && <div className="trainer-publication-links"><button type="button" className="link" onClick={() => void copyLink()}>{copied ? 'Скопировано' : 'Скопировать ссылку'}</button><button type="button" className="link danger" onClick={() => unpublish.mutate()} disabled={pending}>Снять с публикации</button></div>}
             </div>
-          </section>
-        </form>
-        {preview && <section className="trainer-profile-preview"><p className="eyebrow">ПРЕДПРОСМОТР</p><TrainerProfileCard profile={draft} /></section>}
-        {profile.data?.published && <section className="trainer-profile-publish-tools card"><h2>Опубликованная анкета</h2>
-          <div className="trainer-catalog-visibility"><Switch label="Показывать в каталоге" checked={profile.data.listedInCatalog} disabled={catalogListing.isPending} onChange={(listed) => catalogListing.mutate(listed)} /><p>Спортсмены смогут найти вашу анкету.</p></div>
-          {catalogListing.error && <p className="error">{catalogListing.error.message}</p>}
-          <p>Ссылку можно отправить спортсмену напрямую.</p><div className="actions"><button type="button" className="secondary" onClick={() => void copyLink()}>{copied ? 'Скопировано' : 'Скопировать ссылку'}</button><button type="button" className="link danger" onClick={() => unpublish.mutate()}>Снять с публикации</button></div></section>}
-      </>}
+          </details>
+        </>}
+      />}
     </AsyncView>
   </section>
 }

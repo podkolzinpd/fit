@@ -39,7 +39,7 @@ export function AppLayout() {
   const monochromeTrainerSchedule = Boolean(actor?.role === 'trainer' && pathname === '/schedule')
   const monochromeTrainerProgress = Boolean(actor?.role === 'trainer' && /^\/progress\/[^/]+$/.test(pathname))
   const monochromeExerciseCatalog = Boolean(actor?.role === 'trainer' && pathname === '/exercises')
-  const monochromeTrainerProfile = Boolean(actor?.role === 'trainer' && pathname === '/profile')
+  const monochromeTrainerProfile = Boolean(actor?.role === 'trainer' && (pathname === '/profile' || pathname === '/profile/settings'))
   const monochromeAuthJoin = pathname === '/join'
   const monochromeAssistant = pathname === '/assistant'
   const themeVariant = resolveThemeVariant(theme)
