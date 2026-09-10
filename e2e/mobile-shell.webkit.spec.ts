@@ -1946,6 +1946,8 @@ test('iPhone: сет не ставит отдых внутри круга и н�
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
   await createGroupedWorkout(page, clientName, 'set')
+  await expect(page.locator('.circuit-exercise-notes .live-exercise-note')).toHaveCount(2)
+  await expect(page.locator('.circuit-round .live-exercise-note')).toHaveCount(0)
   await confirmCurrentSet(page)
   await expect(currentRound(page).locator('.live-set.confirmed')).toHaveCount(1)
   await expect(page.locator('.live-rest-trigger')).not.toHaveClass(/resting/)
