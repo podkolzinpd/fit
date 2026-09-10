@@ -12,6 +12,7 @@ import { AppFeedbackForm } from './AppFeedbackForm'
 import { AppInstallPanel } from '../install'
 import { BodyMapAppearanceSetting } from '../progress/BodyMapAppearanceSetting'
 import { LEGAL_PATHS } from '../../shared/legal'
+import { TrainerProfessionalProfileSection } from './TrainerProfileEditorPage'
 
 export function ProfilePage() {
   const { actor, refresh, updateProfile } = useAuth(); const [saved, setSaved] = useState(false)
@@ -60,7 +61,8 @@ export function ProfilePage() {
     </section>
     {actor && yandexSession === null && <YandexAccountLinkingCard actor={actor} />}
     {actor?.role === 'trainer' && <BodyMapAppearanceSetting viewerUserId={actor.userId} role={actor.role} gender={null} />}
-    <div className="menu"><Link to="/join">Ввести код приглашения</Link>{actor?.role === 'trainer' && <><Link to="/profile/trainer">Анкета тренера</Link><Link to="/exercises">Управление упражнениями</Link></>}<button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Политика конфиденциальности</Link><Link to={LEGAL_PATHS.deleteAccount}>Удаление аккаунта</Link></div>
+    {actor?.role === 'trainer' && <TrainerProfessionalProfileSection />}
+    <div className="menu"><Link to="/join">Ввести код приглашения</Link>{actor?.role === 'trainer' && <Link to="/exercises">Управление упражнениями</Link>}<button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Политика конфиденциальности</Link><Link to={LEGAL_PATHS.deleteAccount}>Удаление аккаунта</Link></div>
     {installOpen && <AppInstallPanel onClose={() => setInstallOpen(false)} />}
     {feedbackOpen && <AppFeedbackForm onClose={() => setFeedbackOpen(false)} />}
     <LogoutButton />
