@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(8);
+select plan(13);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('50000000-0000-4000-8000-00000000000b', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'replace-a@example.test', ''),
@@ -56,10 +56,32 @@ select is(
   2::bigint, 'version bumped'
 );
 
--- Начатое упражнение (B) заменять нельзя.
-select throws_ok(
+-- Начатое упражнение (B): выполненный факт остаётся отдельной записью,
+-- а замена получает новый пустой подход.
+select lives_ok(
   $$select public.replace_live_exercise('d0000000-0000-4000-8000-00000000000b', 'b0000000-0000-4000-8000-00000000000b', '{"source":"system","ref":"row","name":"Тяга","muscleGroup":"back","inputKind":"strength"}', 2)$$,
-  'PT409', 'exercise_already_started', 'cannot replace a started exercise'
+  'started exercise replacement succeeds'
+);
+select is(
+  (select exercise_ref from public.workout_exercises where id = 'b0000000-0000-4000-8000-00000000000b'),
+  'row', 'unfinished exercise receives replacement identity'
+);
+select is(
+  (select count(*) from public.workout_exercises where workout_id = 'd0000000-0000-4000-8000-00000000000b' and exercise_ref = 'bench'),
+  1::bigint, 'old exercise remains once in history'
+);
+select is(
+  (select count(*) from public.workout_sets workout_set join public.workout_exercises exercise on exercise.id = workout_set.workout_exercise_id
+    where exercise.workout_id = 'd0000000-0000-4000-8000-00000000000b' and exercise.exercise_ref = 'bench' and workout_set.confirmed_at is not null),
+  1::bigint, 'confirmed set remains attached to old exercise'
+);
+select is(
+  (select count(*) from public.workout_sets where workout_exercise_id = 'b0000000-0000-4000-8000-00000000000b' and confirmed_at is null),
+  1::bigint, 'replacement starts with one unfinished set when no remainder exists'
+);
+select is(
+  (select version from public.workouts where id = 'd0000000-0000-4000-8000-00000000000b'),
+  3::bigint, 'started replacement bumps version once'
 );
 reset role;
 
@@ -67,7 +89,7 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '60000000-0000-4000-8000-00000000000c', true);
 select throws_ok(
-  $$select public.replace_live_exercise('d0000000-0000-4000-8000-00000000000b', 'a0000000-0000-4000-8000-00000000000b', '{"source":"system","ref":"row","name":"Тяга","muscleGroup":"back","inputKind":"strength"}', 2)$$,
+  $$select public.replace_live_exercise('d0000000-0000-4000-8000-00000000000b', 'a0000000-0000-4000-8000-00000000000b', '{"source":"system","ref":"row","name":"Тяга","muscleGroup":"back","inputKind":"strength"}', 3)$$,
   'PT403', 'workout_access_denied', 'foreign trainer cannot replace'
 );
 reset role;

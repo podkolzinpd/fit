@@ -626,13 +626,20 @@ test('замена упражнения: в форме плана и в live', a
   await page.getByLabel('Поиск упражнения').fill('Тяга верхнего блока')
   await page.getByRole('button', { name: /Добавить: Тяга верхнего блока/ }).first().click()
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Тяга верхнего блока')
-  // После подтверждения меню остаётся для редких действий, но «Заменить»
-  // пропадает: начатое упражнение нельзя подменить другим.
+  // После подтверждения упражнение всё ещё можно заменить. Выполненный подход
+  // остаётся в истории под старым названием, а замена начинает новый подход.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
   await page.locator('.live-exercise-collapsed').click()
   await page.getByRole('button', { name: 'Ещё действия' }).click()
-  await expect(page.getByRole('menuitem', { name: 'Заменить' })).toHaveCount(0)
+  await page.getByRole('menuitem', { name: 'Заменить' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Планка')
+  await page.getByRole('button', { name: /^Добавить: Планка/ }).first().click()
+  await expect(page.getByText(/1 выполненный подход останется в истории/)).toBeVisible()
+  await page.getByRole('button', { name: 'Заменить', exact: true }).click()
+  await expect(page.locator('.live-exercise-head h2').filter({ hasText: 'Тяга верхнего блока' })).toBeVisible()
+  await expect(page.locator('.live-exercise-head h2').filter({ hasText: 'Планка' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Готово, отдых' })).toBeVisible()
 })
 
 test('карточка упражнения: шапка с оборудованием/мышцами и табы', async ({ page }, testInfo) => {
