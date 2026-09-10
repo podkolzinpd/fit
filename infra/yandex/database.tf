@@ -18,7 +18,7 @@ resource "yandex_mdb_postgresql_cluster_v2" "fit" {
     }
 
     access = {
-      data_lens     = false
+      data_lens     = true
       data_transfer = false
       serverless    = true
       web_sql       = true
@@ -162,6 +162,14 @@ resource "yandex_lockbox_secret_iam_member" "push_dispatcher_connection_secret_r
 
 resource "yandex_lockbox_secret_iam_member" "push_dispatcher_transport_secret_reader" {
   secret_id = var.push_transport_secret_id
+  role      = "lockbox.payloadViewer"
+  member    = "serviceAccount:${yandex_iam_service_account.push_dispatcher.id}"
+}
+
+resource "yandex_lockbox_secret_iam_member" "push_dispatcher_app_feedback_integrations_reader" {
+  count = var.app_feedback_integrations_secret_id == null ? 0 : 1
+
+  secret_id = var.app_feedback_integrations_secret_id
   role      = "lockbox.payloadViewer"
   member    = "serviceAccount:${yandex_iam_service_account.push_dispatcher.id}"
 }

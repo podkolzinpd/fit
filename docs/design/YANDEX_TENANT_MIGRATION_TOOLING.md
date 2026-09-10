@@ -25,12 +25,54 @@ write to a remote database by default.
    A conflicting or changed target row fails checksum validation and rolls the
    whole import back.
 8. Validation compares the complete scoped row count and deterministic SHA-256
-   checksum for every manifest table.
+   checksum for every manifest table. Export, import and validation transactions
+   normalize their PostgreSQL session timezone to UTC so identical `timestamptz`
+   values remain byte-stable across Supabase and Yandex cluster defaults.
 9. Remote source or target access requires both `--allow-remote` and the exact
    remote confirmation environment value. A remote apply has a second,
    independent confirmation.
 10. This tooling does not implement dual-write, reverse migration, routing or
     production cutover. Those remain separate reviewed gates.
+
+## Remote stage orchestration
+
+The manually dispatched `Rehearse Yandex tenant migration` workflow removes
+the need to copy credentials or run migration commands on an operator laptop.
+The selected trainer UUID is a masked repository secret rather
+than a visible workflow input. The source step resolves the reviewed Supabase
+session pooler and performs the same read-only export. TLS hostname and chain
+verification use the reviewed public Supabase Root 2021 CA committed at
+`services/api/certs/supabase-prod-ca-2021.crt`; certificate verification is
+never disabled. No Yandex identity or target credential is needed in `audit`
+mode.
+
+Audit and dry-run may use `smallest-eligible` selection when an operator has
+not supplied a suitable trainer UUID. The source query orders trainer cohorts
+by client count and tries them in that order; every candidate still passes the
+same isolation, actor, merge and pending-push preflight before any table is
+exported. During dry-run, an eligible candidate whose existing stage rows have
+a different checksum is rolled back and skipped; the next candidate is tried,
+up to 100 conflicts. This bound covers the current small source population
+without turning a stale stage into an unbounded sequence of remote requests.
+Import, schema, network and authorization errors are not treated as collisions
+and still fail the rehearsal. Candidate UUIDs and rejected candidates are not
+logged. If every candidate conflicts, CI prints the complete aggregate of safe
+rejection codes (for example, the exact validation table) and counts, without
+UUIDs or row contents. Automatic selection is rejected for `apply`, because a
+real write must always refer to a stable, explicitly configured cohort.
+
+For `dry-run` and `apply`, GitHub OIDC obtains the existing bounded deploy
+identity and invokes the private `fit-stage-migration` container. The encrypted
+envelope and a random one-run passphrase exist only in memory; the workflow
+does not upload an artifact. The runner accepts at most 3 MiB, exposes neither
+row contents nor identifiers, and is registered only when
+`APP_ENV=stage`. Dry-run rolls back after full import validation. Apply requires
+the independent `APPLY_TENANT_TO_YANDEX_STAGE` confirmation and immediately
+repeats the import, requiring zero inserted rows.
+
+This stage workflow still does not change routing or provision a rollout
+assignment. It adds no always-on resource: only the invoked execution time of
+the existing cold migration container is billable.
 
 ## Manifest v1
 
@@ -49,10 +91,19 @@ copied; any unsent cohort notification blocks export so a message cannot be
 delivered twice. Identity mappings, app sessions and rollout assignments are
 provisioned separately and are deliberately absent from the artifact.
 
+Push subscriptions use their subscription `id` as the import key on both
+backends. The production-like fixture contains two endpoints for one user, so
+the rehearsal fails before rollout if either schema regresses to the former
+one-device-per-user contract.
+
 Yandex migration `000029_tenant_migration_parity.sql` preserves the V1
 `workouts.stage_id` goal-stage binding and `client_progress.updated_by` audit
 field. The exporter derives Yandex-required creator/fingerprint fields only
 where the V1 schema did not persist them directly.
+Migration `000035_client_custom_exercise_self_service.sql` additionally
+preserves `custom_exercises.created_by`: client-authored exercises keep their
+author and root data partition instead of being silently converted into
+trainer-owned rows.
 
 ## Acceptance checklist
 
@@ -64,8 +115,21 @@ where the V1 schema did not persist them directly.
 - [x] A changed target row is detected by validation.
 - [x] Source and target remain local Podman PostgreSQL instances during the
   implementation check.
-- [ ] Run two complete rehearsals with production-like, non-production data.
+- [x] Run two complete local rehearsals with production-like, non-production
+  synthetic data (`npm run tenant:rehearse:local`, 2026-09-09): each clean
+  target imported and validated 36 rows across all 28 manifest tables,
+  including two subscriptions for one user; the
+  dry-run left the target empty and the repeated apply inserted zero rows. The
+  target fixture deliberately uses `Europe/Moscow` while migration transactions
+  normalize to UTC, covering cross-cluster timestamp checksums.
 - [ ] Review a production export window, remote credentials and the exact
   target before the first remote command.
+- [ ] Run the selected cohort through remote `audit` and target `dry-run` using
+  the private stage workflow; keep `apply` blocked until both reports match.
 - [ ] Freeze writes, validate the selected real cohort and change its sticky
   routing only in the separately approved cutover step.
+
+The local rehearsals exercise a clean PostgreSQL 17 migration chain and the
+complete data contract. They deliberately do not prove VPC/IAM connectivity,
+remote TLS credentials, production volume or cutover timing; those remain part
+of the separately reviewed remote gate.

@@ -225,9 +225,11 @@ export interface ExerciseSnapshot {
   secondaryMuscles?: string[]
   level?: string | null
   imageUrl?: string
-  /** Второй локальный кадр техники: конечное положение упражнения. */
+  /** Optional same-family poster fallback; legacy exercise photos are forbidden. */
+  fallbackImageUrl?: string
+  /** Второй кадр современной анимации: конечное положение упражнения. */
   motionImageUrl?: string
-  /** Короткая локальная петля техники; изображения остаются обязательным fallback. */
+  /** Короткая петля техники; без неё медиаблок упражнения не показывается. */
   techniqueVideoUrl?: string
   instructions?: string[]
 }
@@ -320,6 +322,7 @@ export interface WorkoutSet extends WorkoutSetDraft {
 }
 
 export interface WorkoutExercise extends ExerciseSnapshot {
+  clientNote?: string
   id: UUID
   position: number
   blockId: UUID
@@ -526,6 +529,8 @@ export interface ClientTrainingSummary {
   encouragement: string
   goalAlignment?: string
   nextSteps?: string[]
+  missingContext?: string[]
+  analysisVersion?: string
 }
 
 export interface TrainingSummaryMetrics {
@@ -582,4 +587,45 @@ export interface PublishedTrainingSummary {
   metrics: TrainingSummaryMetrics
   generatedAt: string
   publishedAt: string
+}
+
+export type TrainerTrainingMode = 'online' | 'in_person'
+
+export interface TrainerCertificate {
+  title: string
+  organization: string
+  year: number | null
+}
+
+export interface TrainerProfileDraft {
+  displayName: string
+  bio: string
+  specialties: string[]
+  city: string
+  trainingModes: TrainerTrainingMode[]
+  experienceStartYear: number | null
+  education: string
+  formats: string
+  price: string
+  acceptingClients: boolean
+  avatarDataUrl: string | null
+  certificates: TrainerCertificate[]
+}
+
+export interface TrainerProfessionalProfile {
+  publicId: UUID
+  draft: TrainerProfileDraft
+  published: TrainerProfileDraft | null
+  listedInCatalog: boolean
+  publishedAt: string | null
+  updatedAt: string
+  version: number
+}
+
+export interface TrainerCatalogFilters {
+  query: string
+  specialty: string
+  city: string
+  mode: TrainerTrainingMode | ''
+  acceptingClients: boolean | null
 }

@@ -504,6 +504,18 @@ export function removeLiveSet(
   )
 }
 
+export function removeLiveExercise(
+  client: DatabaseClient,
+  workoutId: string,
+  exerciseId: string,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveStructureResult> {
+  return runLiveStructureCommand(client,
+    'select resource_id, version, replayed from public.remove_live_exercise($1, $2, $3, $4)',
+    [workoutId, exerciseId, expectedVersion, operationId])
+}
+
 export function reorderLiveBlock(
   client: DatabaseClient,
   workoutId: string,

@@ -9,16 +9,16 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Profile | Просмотр и изменение имени, корректный Cancel, выбор темы | Implemented: edit/logout ready; Cancel всегда возвращает клиента в профиль без сохранения черновика, covered iPhone WebKit 390 px; переключатель «Тёмная тема» отдаёт allowlisted-аккаунтам пилотную палитру из Figma, остальным — прежнюю тёмную |
 | Clients | List/empty/error/retry, create, detail, edit, archive/restore | Implemented; aggregate list uses one tenant-scoped RPC; core E2E + RLS ready; allowlisted-аккаунтам поиск отдаётся полем Fit с иконкой и сбросом и показывается от шести клиентов, остальным — прежним полем, covered component test |
 | Client stats | Сводка на карточке: количество выполненных, % выполнения, дата последней тренировки, дней в работе (от первой тренировки), индикатор «требует внимания» при 14+ днях без тренировки | Implemented: pure aggregation covered unit + E2E |
-| Exercises | System search/filter; custom create/edit/archive/restore | Implemented: shared picker and curated catalog (80 core / 279 uncommon / 215 rare + 7 formats), variant selection, new names with all prior aliases preserved; клиент с тренером и без него создаёт свои упражнения и сохраняет их в тренировке, SQL/RLS и mobile E2E; права тренера и исторические ID сохраняются, чужие клиентские упражнения скрыты; бег и СБУ доступны отдельным быстрым фильтром, варианты обычного бега используют единый ref; full management E2E pending |
+| Exercises | System search/filter; custom create/edit/archive/restore | Implemented: shared picker and curated catalog (80 core / 279 uncommon / 215 rare + 7 formats), variant selection, new names with all prior aliases preserved; клиент с тренером и без него создаёт свои упражнения и сохраняет их в тренировке, SQL/RLS и mobile E2E; Yandex PostgreSQL сохраняет тот же `created_by`/partition ownership и cross-tenant contract; права тренера и исторические ID сохраняются, чужие клиентские упражнения скрыты; бег и СБУ доступны отдельным быстрым фильтром, варианты обычного бега используют единый ref; full management E2E pending |
 | Workout | Create/view/edit/correct/copy/delete, strength/distance/reps, atomic save | Implemented: multi-set plan, load correction, беговые интервалы с пассивным/активным восстановлением и подтверждением каждого отрезка covered; wider acceptance pending |
 | Voice notes | Browser-only Russian transcription into editable workout and client trainer notes; manual input remains available | Prototype: local whisper.cpp WASM ready; real-device acceptance pending |
 | Schedule | Week/month/local date, timed/untimed, open workout/back | Implemented: недельная лента дней + часовая сетка на день (timed по времени, untimed отдельно), закреплённая шапка с прокруткой только сетки, автоскролл к 07:00/первой тренировке, кнопка «Сегодня», выбор дня и недели в URL, календарь-переход к дате; covered unit + E2E |
-| Live | Start, autosave, confirm, rest, append, resume, partial finish | Implemented: rest, transactional append and non-retryable optimistic conflicts covered; wider resume acceptance pending |
+| Live | Start, autosave, confirm, rest, append, resume, partial finish | Implemented: ввод сохраняется на устройстве при каждом изменении, autosave объединяет частые правки, offline-черновики автоматически досылаются, запросы ограничены по времени, finish flush-ит открытую строку; sticky retry, transactional append и optimistic conflicts покрыты Chromium/WebKit/unit/visual |
 | History | Done workouts only, set list and max-value chart | Implemented: paginated confirmed-only exercise facts, transparent per-kind chart and computed strength PR; broader visual pending |
-| Post-workout feedback | Клиент после завершения фиксирует session RPE 1–10, самочувствие и дискомфорт; тренер видит сигнал без доступа посторонних аккаунтов | Implemented: assigned и client-authored workout, отдельный idempotent submit с version check, RLS/SQL и WebKit 390 px acceptance |
+| Post-workout feedback | Клиент после завершения фиксирует session RPE 1–10, самочувствие и дискомфорт; тренер видит сигнал без доступа посторонних аккаунтов | Implemented: assigned и client-authored workout, отдельный idempotent submit с version check; подтверждение и вопрос тренеру доступны только при активной связи, после disconnect бывший тренер теряет доступ; RLS/SQL и WebKit 390/430 px acceptance |
 | Trainer response | После завершения клиент видит реакцию 👍 / 🔥 / 💪 и короткий ответ ответственного тренера | Implemented: trainer-author для назначения, root trainer для client-authored workout, автор/время, idempotent versioned RPC, realtime/refetch и RLS matrix |
 | Trainer attention | Клиент явно задаёт вопрос по завершённой тренировке, а основной тренер видит одну приоритетную задачу на клиента | Implemented: question → discomfort → planning priority, reply/explicit resolution, two-week planning snooze, realtime, RLS/SQL and mobile WebKit acceptance |
-| Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; Trainer first shows current week and the shared AI card, with running and measurements on explicit subroutes; Client starts with an interactive front/back body map of confirmed progress and performed-set load; duplicate-date create opens the existing entry without a failing DB request; visual regression covers Client 390/430 and Trainer 390/430/1440 px |
+| Progress | Base/custom atomic save, edit/delete, chronological charts | Implemented; Trainer first shows current week and the shared AI card, with running and measurements on explicit subroutes; Client starts with the current week and period selection, then goal, unified results, measurements and the disclosed body map; duplicate-date create opens the existing entry without a failing DB request; visual regression covers Client 390/430 and Trainer 390/430/1440 px |
 | Assistant | Trainer-only history, idempotent turns, proposed actions and explicit confirmation | Implemented in production Supabase; default-off sticky routing can pin one migrated trainer to Yandex API for the unchanged main UI. The same app-session now selects Yandex for all main feature repositories, including Assistant dependencies; errors do not fall back per request. Production enablement and tenant data rehearsal remain pending |
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; acceptance matrix pending |
@@ -62,7 +62,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
   короткоживущую сессию, runtime API и RLS до принятия новой revision.
 - Checkpoint не считается полной миграционной parity. Stage API уже покрывает
   атомарные create/update/delete плана, Live start/save/confirm/finish и
-  структурные Live-действия: добавление упражнения и подхода, удаление подхода,
+  структурные Live-действия: добавление упражнения и подхода, удаление упражнения и подхода,
   замену упражнения, перестановку блока и комментарий. Все Live-команды имеют
   optimistic version и `operationId`; точный повтор не создаёт дубль, а новый
   stale-запрос получает conflict. Lifecycle без Live также перенесён: создание
@@ -79,7 +79,9 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
   route может подключить весь основной интерфейс одного перенесённого trainer-а
   к Yandex API без смешивания backend внутри сессии: клиенты, профиль, цели и
   прогресс, упражнения, полный workout lifecycle, связи/приглашения, Assistant,
-  сводки, feedback и push state используют одну app-session. Пока
+  сводки, feedback и push state используют одну app-session. Push state на
+  обоих backend хранит отдельную подписку каждого устройства и удаляет только
+  конкретный отключённый или протухший endpoint. Пока
   rollout-переменные не включены, production продолжает использовать Supabase.
 - Client overview в stage возвращает последний вес, количество завершённых
   тренировок, процент выполнения, дату последней тренировки, дни в работе
@@ -105,6 +107,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Клиент создаёт самостоятельную карточку без тренера и затем создаёт тренировки только для себя, используя общий workout aggregate и системный каталог упражнений.
 - Клиент может редактировать и удалять только созданную им запланированную тренировку; назначенный тренером план остаётся защищённым.
 - Клиент может скопировать назначенный тренером план в новую собственную тренировку, но не может записывать trainer comments.
+- В завершённой доступной тренировке клиент может удалить выбранное упражнение вместе с его подходами; тренер-автор имеет то же действие в своей тренировке клиента. Каталог и другие тренировки не меняются, посторонний тренер закрыт tenant/author-проверкой.
 - После завершения показывается один подтверждённый итог, точный личный рекорд
   при его наличии и один следующий шаг для текущей роли. Недельная карточка при
   наличии плана показывает состоявшиеся назначения как «N из M по плану»;
@@ -112,7 +115,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - В копии исходные упражнения по умолчанию свёрнуты в две строки; новое добавленное упражнение сразу раскрывается. Отдых и заметка доступны из «Настроек упражнения» в `⋯`; нестандартные значения имеют видимую компактную пометку.
 - Только новая копия получает актуальные названия известных системных упражнений; старые записи, custom и специальные названия не переписываются. Черновик копии не попадает в редактирование оригинала.
 - Клиент видит и выполняет назначения всех подключённых тренеров. Каждый тренер изменяет только тренировки с собственным `created_by`, видит завершённые самостоятельные тренировки клиента только для чтения и не видит назначения других тренеров; те же правила действуют при прямом UUID-доступе.
-- После завершения назначенной или самостоятельной тренировки клиент может отдельно отправить session RPE 1–10, wellbeing и дискомфорт с коротким пояснением. Feedback необязателен, не участвует в завершении workout, повтор того же submit идемпотентен; тренер читает результат, несвязанный аккаунт не видит строку.
+- После завершения назначенной или самостоятельной тренировки клиент может отдельно отправить session RPE 1–10, wellbeing и дискомфорт с коротким пояснением. Feedback необязателен, не участвует в завершении workout, повтор того же submit идемпотентен. Подтверждение обещает передачу тренеру и действие вопроса показывается только при активном membership; без связи текст нейтрален, а после disconnect бывший тренер не видит строку.
 - Историю прогресса видят клиент и все memberships. Клиент изменяет любую запись, тренер — только созданную им; остальные записи доступны тренеру только для чтения.
 - Самостоятельная карточка принадлежит клиентскому профилю и не создаёт строку `trainers`; тренеры появляются только через явное приглашение.
 - Обязательные проверки: owner/trainer/cross-tenant SQL matrix и E2E client create → edit → perform → finish.
@@ -167,11 +170,24 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
   меняет выбор. Возврат сохраняет поиск, фильтры, выбор и scroll. До двух видимых
   строк показывают один короткий цикл; reduced motion оставляет первый кадр, а
   ошибка необязательного медиа не скрывает обложку.
+- «Тяга верхнего блока узким хватом» использует отдельную проверенную пару
+  кадров узкого прямого хвата; общий и широкий варианты сохраняют wide-grip
+  Vital-ролик. Тест фиксирует разные media URL и согласованные инструкции.
 - Каталог рендерит первые 48 совпадений и дозагружает следующие порции явно,
   сохраняя полное число результатов и приоритет недавних упражнений.
 - Силовой подход хранит вес и повторы; distance — время и дистанцию; cardio reps — время и повторы. Для гребного тренажёра темп рассчитывается на 500 м, а поле повторов имеет предметную семантику частоты гребков в минуту.
 - План поддерживает несколько подходов, удаление, сброс значений и изменение веса на ±5% с округлением до 2,5 кг.
-- Live поддерживает добавление подхода и упражнения отдельными транзакционными RPC, autosave факта, подтверждение, отдых 90 секунд и частичное завершение с предупреждением. Таймер отдыха считается от абсолютной метки времени и остаётся корректным при сворачивании вкладки.
+- Live поддерживает добавление подхода и упражнения отдельными транзакционными
+  RPC, подтверждение, отдых 90 секунд и частичное завершение с предупреждением.
+  Ввод каждого поля сразу сохраняется на устройстве; debounce, blur и
+  подтверждение синхронизируют его с сервером, а `online`, `pageshow` и возврат
+  приложения автоматически досылают pending-черновики. Зависший запрос
+  ограничен по времени, ошибка остаётся в закреплённом статусе с повтором,
+  finish сначала flush-ит открытую строку. Таймер отдыха считается от
+  абсолютной метки времени и остаётся корректным при сворачивании вкладки.
+  Последний подтверждённый фактический вес подставляется в следующие
+  нетронутые подходы той же плановой весовой группы, не изменяя план и не
+  перезаписывая ручной ввод.
 - Обязательные проверки: уникальность полного каталога, component search/filter/
   clear/technique/create, RPC rollback/cross-tenant, visual 390/430/1440,
   iPhone WebKit и E2E plan → multi-set → live append → partial finish.
@@ -255,3 +271,36 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Клиент может сам запросить или обновить сводку. Тренерская публикация/правка остаётся необязательной; клиент не может редактировать внутреннюю версию, публиковать или скрывать анализ.
 - Роль определяется по защищённым строкам `trainers` / `clients.auth_user_id`, а не по `user_metadata`.
 - Приглашение создаётся Edge Function с server-only ключом и привязывает только нового приглашённого Auth-пользователя. Уже существующий email не связывается без отдельного proof-of-control flow.
+
+### Home / Progress — достоверный личный итог (YAFIT-480)
+
+- Общий факт по confirmed sets, exact source/ref/inputKind; базовая запись отделена от PR, есть стабильность/снижение и источники двух тренировок. История для нового факта загружается полностью существующим paginated list, независимо от ИИ.
+- Supabase migration `20260908090000` и Yandex `000039` исключают baseline из прежних PR-флагов/деталей/истории. Таблицы и tenant migration catalog не меняются: только вычисляемые функции, переносимых столбцов нет.
+- SQL/RLS: baseline, сравнение, правка и удаление источника; Yandex actor smoke baseline false. Клиентские unit/component: same-day, rename, cross-client/ref, no-data, edit/delete и refresh; mobile visual 390/430 light/dark.
+- Полная перекомпоновка и карта Home — следующие уже утверждённые YAFIT-481–483, не считаются выпущенными этим этапом.
+
+### Home / Progress — компактная карта (YAFIT-481)
+
+- Карта встроена в личный итог после primary/плана; применяется клиентский выбор фигуры. Один расчёт loadBodyMap даёт абсолютные подходы, долю только определённых зон и отдельный учёт cardio/unknown.
+- Полная карта ниже в Progress и свёрнута по умолчанию. Home URL сохраняет workout/mode/from/to/zone; исходная запись и возврат сохраняют контекст. Некорректный или удалённый scope не подменяется периодом.
+- Приёмка: unit/component — coverage счётчиков, неопределённые зоны, side/keyboard/swipe, дополнительные зоны, loading/error/retry, чужой/удалённый scope и возврат; browser — Home → Progress → source → назад без ИИ, 390/430 light/dark, полная карта/тренер.
+
+### Client Progress — композиция и независимость от ИИ (YAFIT-482)
+
+- Личный итог → период/даты → отдельные критерии → текущая неделя → результаты упражнений → компактные замеры → раскрываемая карта → ритм/сравнение → ИИ. Тренерская композиция и client-copy защита сохранены.
+- Факты, цель и замеры работают при задержке/ошибке сводки; старый анализ имеет собственные даты и не сдвигает выбранный период карты. Обновление ИИ явно запрашивается пользователем, защищено от устаревшего кэша при смене периода.
+- Результаты и источники используют общий exact-identity расчёт по всей истории; числовое сравнение не подставляет план при отсутствующих фактах. История/правка замеров, график, custom metrics и переход Home → карта → источник сохранены.
+- Unit/integration покрывают ошибки и retry, переименование/разные refs, историю до периода, неполные факты, текущую неделю, раскрытия и гонку force-генерации. Реальная stage AI проверка `34291138177` успешна; это не ручная оценка каждого будущего ответа модели.
+
+### Client Progress — центр результатов и недельные подходы (YAFIT-483)
+- Свёрнутый центр с фильтрами упражнения/метрики, сохранённым контекстом возврата и постраничным показом истории. Старый PR остаётся видимым после снижения; сравнение учитывает записи до выбранного периода.
+- Максимум веса, повторы при фиксированном весе и объём разделены. Изменение объёма раскрывается через реальные подходы двух записей без вывода о росте силы.
+- Недельные подходы используют общий расчёт карты, отдельно учитывают кардио/неизвестные зоны, помечают неполные недели и не включают будущее.
+- Факты независимы от ИИ. Тренерский экран, измерения и AI-контракты сохранены. Статус выпуска фиксируется в CURRENT_STATE и журнале исполнения.
+
+### Client Progress — простые разделы (YAFIT-486)
+- Текущая неделя выше периода; ниже все факты относятся к выбранным датам, цель отдельно подписывает актуальное «Сейчас».
+- Рекорды/улучшения приоритетны в коротком превью; остальные результаты и источники доступны в той же карточке через «Все результаты».
+- Подробности названы по содержимому, краткие цифры видны сразу, личный итог не повторяет Home.
+- ИИ shortcut ведёт к анализу; дата обновления и проверяемые новые completedAt не меняют генерацию или защиту client-copy.
+- Проверяются порядок, ranking/fallback, фильтры/возврат, период карты, замеры, AI error/force race, mobile light/dark.

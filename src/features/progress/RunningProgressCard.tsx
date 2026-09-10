@@ -34,14 +34,17 @@ function runCountLabel(count: number): string {
   return 'пробежек'
 }
 
-export function RunningProgressCard({ clientId, compact = false, detailsPath }: {
+export function RunningProgressCard({ clientId, compact = false, detailsPath, periodMonths, keepVisible = false }: {
   clientId: string
   compact?: boolean
   detailsPath?: string
+  periodMonths?: 1 | 3 | 6
+  keepVisible?: boolean
 }) {
   const { progress: progressRepository } = useDataBackend()
   const { actor } = useAuth()
-  const [months, setMonths] = useState<1 | 3 | 6>(1)
+  const [localMonths, setLocalMonths] = useState<1 | 3 | 6>(1)
+  const months = periodMonths ?? localMonths
   const today = todayInTimeZone(actor?.timezone)
   const periodStart = addDays(addMonths(today, -months), 1)
   const query = useQuery({
@@ -50,12 +53,20 @@ export function RunningProgressCard({ clientId, compact = false, detailsPath }: 
   })
   const view = useMemo(() => runningProgressView(query.data ?? []), [query.data])
 
-  if (query.isLoading) return null
+  if (query.isLoading && !keepVisible) return null
+  if (query.isLoading) return <section className="running-progress-card" aria-label="Беговой прогресс">
+    <div><p className="eyebrow">БЕГ</p><h2>Беговой прогресс</h2></div>
+    <p role="status">Загружаем беговой прогресс…</p>
+  </section>
   if (query.error) return <section className={`running-progress-card error-state${compact ? ' compact' : ''}`} aria-label="Беговой прогресс">
     <div><p className="eyebrow">БЕГ</p><h2>Прогресс временно недоступен</h2></div>
     <button type="button" className="link" onClick={() => void query.refetch()}>Повторить</button>
   </section>
-  if (!view.runCount) return null
+  if (!view.runCount && !keepVisible) return null
+  if (!view.runCount) return <section className="running-progress-card" aria-label="Беговой прогресс">
+    <div><p className="eyebrow">БЕГ</p><h2>Беговой прогресс</h2></div>
+    <p>За этот период пробежек нет.</p>
+  </section>
 
   if (compact && detailsPath) {
     return <Link className="trainer-progress-route-card running" to={detailsPath} aria-label="Открыть беговой прогресс">
@@ -71,16 +82,16 @@ export function RunningProgressCard({ clientId, compact = false, detailsPath }: 
   return <section className="running-progress-card" aria-label="Беговой прогресс">
     <header className="running-progress-header">
       <div><p className="eyebrow">БЕГ</p><h2>Беговой прогресс</h2></div>
-      <div className="running-progress-periods" role="tablist" aria-label="Период бегового прогресса">
+      {periodMonths === undefined && <div className="running-progress-periods" role="tablist" aria-label="Период бегового прогресса">
         {PERIODS.map((period) => <button
           type="button"
           role="tab"
           aria-selected={months === period.months}
           className={months === period.months ? 'active' : ''}
           key={period.months}
-          onClick={() => setMonths(period.months)}
+          onClick={() => setLocalMonths(period.months)}
         >{period.label}</button>)}
-      </div>
+      </div>}
     </header>
     <div className="running-progress-total">
       <strong>{view.runCount} {runCountLabel(view.runCount)}</strong>

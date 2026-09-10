@@ -1,7 +1,9 @@
 import type { AccountRole, SessionActor, TrainerActor } from '../../shared/domain'
+import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 import { isValidTimeZone, normalizeTimeZone, systemTimeZone } from '../../shared/local-date'
 import { authQueries } from '../queries/auth.queries'
 import { RepositoryError, repositoryError } from './error'
+import { legalRepository } from './legal.repository'
 
 const signupFailedMessage = 'Не удалось создать аккаунт. Попробуйте войти или используйте другой email.'
 const signInUnavailableMessage = 'Не удалось войти. Проверьте интернет и попробуйте ещё раз.'
@@ -77,12 +79,18 @@ export const authRepository = {
     await signInWithNetworkRetry(email, password)
   },
   async signUp(email: string, password: string, firstName: string, role: AccountRole) {
-    const { data, error } = await authQueries.signUp(email, password, firstName, role)
+    const acceptedAt = new Date().toISOString()
+    const { data, error } = await authQueries.signUp(email, password, firstName, role, {
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+      acceptedAt,
+    })
     if (error?.code === 'user_already_exists' || error?.message === 'User already registered') {
       throw new Error(signupFailedMessage)
     }
     if (error) throw repositoryError(error)
     if (!data.session) throw new Error(signupFailedMessage)
+    await legalRepository.acceptCurrent('registration')
   },
   async signInWithGoogle(role: AccountRole = 'trainer') {
     sessionStorage.setItem('fit.pendingAccountRole', role)
@@ -100,7 +108,19 @@ export const authRepository = {
   },
   async signOut() {
     const { error } = await authQueries.signOut()
-    if (error) throw repositoryError(error)
+    if (!error) return
+
+    const normalized = repositoryError(error)
+    try {
+      const local = await authQueries.getSession()
+      // Supabase удаляет локальную сессию даже когда серверный revoke оборвался.
+      // Проверяем фактическое состояние storage: завершённый локальный выход не
+      // должен превращаться в необработанную ошибку интерфейса.
+      if (!local.error && local.data.session === null) return
+    } catch {
+      // Сохраняем исходную понятную ошибку logout, если storage нельзя проверить.
+    }
+    throw normalized
   },
   async initialize(user: { id: string; email?: string; user_metadata: Record<string, unknown> }): Promise<SessionActor> {
     const [linkedClient, existing] = await Promise.all([

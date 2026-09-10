@@ -6,6 +6,13 @@ const exercises: ExerciseSnapshot[] = [{ source: 'system', ref: 'running', name:
 const metrics: CustomMetric[] = [{ id: 'sleep', clientId: 'client', name: 'Сон', unit: 'ч', archivedAt: null, version: 1 }]
 
 describe('goal criteria LLM suggestion boundary', () => {
+  it('rejects retired system suggestions but preserves a custom exercise with the same ref', () => {
+    const retired: ExerciseSnapshot = { source: 'system', ref: 'fedb-atlas-stones', name: 'Камни Атласа', muscleGroup: 'other', inputKind: 'strength' }
+    const suggestion = { criteria: [{ metric: 'exercise_reps', operation: 'increase_to', targetValue: 10, unit: 'повт.', exerciseRef: retired.ref }], needsInput: [], unsupportedReason: null }
+    expect(() => validateGoalCriteriaSuggestion(suggestion, [retired], [])).toThrow('invalid_goal_suggestion')
+    expect(validateGoalCriteriaSuggestion(suggestion, [{ ...retired, source: 'custom', customExerciseId: 'custom' }], []).criteria[0]?.exerciseSource).toBe('custom')
+  })
+
   it('turns strict output into ordinary unconfirmed UI drafts without calculating progress', () => {
     const result = validateGoalCriteriaSuggestion({ criteria: [{
       metric: 'cardio_distance_time', operation: 'increase_to', targetValue: 5, rangeMin: null, rangeMax: null,

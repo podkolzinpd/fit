@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   readNotificationPreferenceRequest,
   readPushNotificationKind,
+  readPushSubscriptionEndpointRequest,
   readPushSubscriptionRequest,
 } from './push-notifications-request.js'
 
@@ -29,6 +30,24 @@ describe('readPushSubscriptionRequest', () => {
     [{ endpoint: 'https://push.example/subscription', p256dh: 'key' }],
   ])('rejects malformed or incomplete subscriptions', (body) => {
     expect(readPushSubscriptionRequest(body)).toBeUndefined()
+  })
+})
+
+describe('readPushSubscriptionEndpointRequest', () => {
+  it('accepts only a normalized HTTPS endpoint in the request body', () => {
+    expect(readPushSubscriptionEndpointRequest({
+      endpoint: ' https://push.example/this-device ',
+      userId: '974f21af-f304-421f-81bd-050dbfabdd46',
+    })).toEqual({ endpoint: 'https://push.example/this-device' })
+  })
+
+  it.each([
+    undefined,
+    {},
+    { endpoint: 'http://push.example/this-device' },
+    { endpoint: 'https://user:password@push.example/this-device' },
+  ])('rejects an invalid endpoint body', (body) => {
+    expect(readPushSubscriptionEndpointRequest(body)).toBeUndefined()
   })
 })
 

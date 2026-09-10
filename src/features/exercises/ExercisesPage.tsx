@@ -8,10 +8,11 @@ import { ChevronRightIcon, CloseIcon, PlayIcon, SearchIcon } from '../../shared/
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { ExerciseImage } from './ExerciseImage'
+import { hasExerciseAnimation, hasExerciseMedia } from './ExerciseTechnique'
 import { matchesExerciseSearch, rankExerciseSearch } from './exercise-search'
-import { exerciseCatalogSection, groupCatalogResults, isCatalogRoot, type CatalogSection } from '../../shared/exercise-catalog-curation'
+import { compareCatalogBrowseOrder, groupCatalogResults, isCatalogRoot } from '../../shared/exercise-catalog-curation'
 import { selectableExercises } from './selectable-exercises'
-import { CatalogSectionField, CatalogVariantField } from './CatalogControls'
+import { CatalogVariantField } from './CatalogControls'
 
 const INPUT_KIND_LABELS: Record<InputKind, string> = {
   strength: 'Вес + повторы',
@@ -60,19 +61,17 @@ function useCustomExercises() {
 
 export function ExercisesPage() {
   const { exercises: exercisesRepository } = useDataBackend()
-  const { actor } = useAuth()
   const { archive, editing, query, save, setEditing, submit } = useCustomExercises()
   const [search, setSearch] = useState('')
-  const [section, setSection] = useState<CatalogSection>('core')
   const [selected, setSelected] = useState<ExerciseSnapshot | null>(null)
   const [visibleCount, setVisibleCount] = useState(48)
   const systemMatches = useMemo(() => {
     const selectable = selectableExercises(exercisesRepository.system)
-    if (!search.trim()) return selectable.filter((exercise) => isCatalogRoot(exercise) && exerciseCatalogSection(exercise) === section).sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+    if (!search.trim()) return selectable.filter(isCatalogRoot).sort(compareCatalogBrowseOrder)
     return groupCatalogResults(rankExerciseSearch(selectable, search)
       .filter(({ exercise }) => matchesExerciseSearch(exercise, search))
       .map(({ exercise }) => exercise))
-  }, [search, section])
+  }, [search])
   const visibleExercises = systemMatches.slice(0, visibleCount)
   const activeCustomCount = query.data?.filter((exercise) => !exercise.archivedAt).length ?? 0
   function updateSearch(value: string) {
@@ -95,15 +94,14 @@ export function ExercisesPage() {
         <input type="search" value={search} placeholder="Название, мышца или оборудование" onChange={(event) => updateSearch(event.target.value)} />
         {search && <button type="button" aria-label="Очистить поиск" onClick={() => updateSearch('')}><CloseIcon /></button>}
       </label>
-      {!search.trim() && <CatalogSectionField value={section} onChange={(value) => { setSection(value); setVisibleCount(48) }} userId={actor?.userId} />}
       <div className="catalog-results-meta" aria-live="polite">
-        <span>{search.trim() ? `Найдено: ${systemMatches.length} · Во всех разделах` : 'Выбранный раздел'}</span>
+        <span>{search.trim() ? `Найдено: ${systemMatches.length}` : `${systemMatches.length} упражнений`}</span>
         <span>Нажмите, чтобы открыть технику</span>
       </div>
       {systemMatches.length > 0 ? <>
         <div className="catalog-media-grid">
-          {visibleExercises.map((exercise) => <button type="button" className="catalog-media-card" key={exercise.ref} onClick={() => setSelected(exercise)}>
-            <span className="catalog-media-card-visual"><ExerciseImage src={exercise.imageUrl} motionSrc={exercise.motionImageUrl} alt="" variant="preview" />{exercise.techniqueVideoUrl && <span className="catalog-media-card-play" aria-hidden="true"><PlayIcon /></span>}</span>
+          {visibleExercises.map((exercise) => <button type="button" className={`catalog-media-card${hasExerciseMedia(exercise) ? '' : ' without-media'}`} key={exercise.ref} onClick={() => setSelected(exercise)}>
+            {hasExerciseMedia(exercise) && <span className="catalog-media-card-visual"><ExerciseImage src={exercise.imageUrl} motionSrc={exercise.motionImageUrl} alt="" variant="preview" />{hasExerciseAnimation(exercise) && <span className="catalog-media-card-play" aria-hidden="true"><PlayIcon /></span>}</span>}
             <span className="catalog-media-card-copy"><strong>{exercise.name}</strong><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small></span>
             <ChevronRightIcon />
           </button>)}
@@ -131,7 +129,7 @@ export function ExercisesPage() {
     {selected && <div className="catalog-detail-overlay" onClick={() => setSelected(null)}>
       <section className="catalog-detail" role="dialog" aria-modal="true" aria-labelledby="catalog-detail-title" onClick={stopPropagation}>
         <header><div><p className="eyebrow">ТЕХНИКА</p><h2 id="catalog-detail-title">{selected.name}</h2></div><button type="button" className="catalog-detail-close" aria-label="Закрыть" onClick={() => setSelected(null)}><CloseIcon /></button></header>
-        <ExerciseImage src={selected.imageUrl} motionSrc={selected.motionImageUrl} videoSrc={selected.techniqueVideoUrl} alt={selected.name} variant="technique" />
+        {hasExerciseMedia(selected) && <ExerciseImage src={selected.imageUrl} motionSrc={selected.motionImageUrl} videoSrc={selected.techniqueVideoUrl} alt={selected.name} variant="technique" />}
         <CatalogVariantField exercise={selected} catalog={exercisesRepository.system} onChange={setSelected} />
         <div className="catalog-detail-facts"><span><small>Группа</small><strong>{MUSCLE_GROUP_LABELS[selected.muscleGroup]}</strong></span><span><small>Оборудование</small><strong>{selected.equipment ?? 'Без оборудования'}</strong></span><span><small>Тип ввода</small><strong>{INPUT_KIND_LABELS[selected.inputKind]}</strong></span><span><small>Уровень</small><strong>{selected.level ? LEVEL_LABELS[selected.level.toLocaleLowerCase()] ?? selected.level : 'Не указан'}</strong></span></div>
         {selected.instructions?.length ? <div className="catalog-detail-instructions"><h3>Как выполнять</h3><ol>{selected.instructions.map((instruction, index) => <li key={`${selected.ref}-${index}`}>{instruction}</li>)}</ol></div> : <p className="catalog-detail-note">Для этого упражнения пока нет пошагового описания.</p>}

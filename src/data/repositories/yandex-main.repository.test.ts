@@ -21,10 +21,17 @@ vi.mock('./yandex-pilot.repository', async (importOriginal) => {
   }
 })
 
-const push = vi.hoisted(() => ({ subscribe: vi.fn(), unsubscribe: vi.fn() }))
+const push = vi.hoisted(() => ({
+  subscribe: vi.fn(),
+  unsubscribe: vi.fn(),
+  isSupported: vi.fn().mockReturnValue(true),
+  getCurrent: vi.fn().mockResolvedValue({ endpoint: 'https://push.example/pilot-device', p256dh: 'p', authKey: 'a' }),
+}))
 vi.mock('../../features/notifications/push-subscription', () => ({
   subscribeToPush: push.subscribe,
   unsubscribeFromPush: push.unsubscribe,
+  isPushSupported: push.isSupported,
+  getCurrentPushSubscription: push.getCurrent,
 }))
 
 const actor: SessionActor = {
@@ -87,6 +94,24 @@ describe('Yandex main repository', () => {
       ageUpdatedAt: null, heightCm: null, goal: null, note: null,
       initialWeightKg: null, initialWeightRecordedOn: null,
     })
+  })
+
+  it('requests a private Vital media URL through the authenticated Yandex backend', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+      signedUrl: 'https://project.supabase.co/storage/v1/object/sign/fit-exercise-media/vital-pro/squat.mp4?token=redacted',
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.exercises.createVitalMediaUrl('vital-pro/squat.mp4', 60 * 60))
+      .resolves.toContain('/fit-exercise-media/vital-pro/squat.mp4')
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe(`${apiBaseUrl}/v1/exercise-media/sign`)
+    expect(init.method).toBe('POST')
+    expect(init.headers).toMatchObject({ 'x-fit-session': sessionToken })
+    expect(init.body).toBe(JSON.stringify({ path: 'vital-pro/squat.mp4' }))
   })
 
   it('accepts the resource-specific version returned by a Live mutation', async () => {
@@ -234,6 +259,7 @@ describe('Yandex main repository', () => {
     await repository.workouts.appendLiveExercise(item, exerciseSnapshot())
     await repository.workouts.appendLiveSet(item, exerciseId)
     await repository.workouts.removeLiveSet(item, setId)
+    await repository.workouts.removeLiveExercise(item, exerciseId)
     await repository.workouts.reorderLiveBlock(item, blockId, -1)
     await repository.workouts.setExerciseComment(item, exerciseId, 'Комментарий')
     await repository.workouts.setWorkoutReview(item, { reaction: 'fire', review: 'Отлично' })
@@ -347,10 +373,11 @@ describe('Yandex main repository', () => {
   it('implements invitations, summaries, feedback, push and polling', async () => {
     vi.useFakeTimers()
     vi.stubEnv('VITE_VAPID_PUBLIC_KEY', 'public-key')
-    vi.stubGlobal('fetch', installContractFetch())
+    const fetchMock = installContractFetch()
+    vi.stubGlobal('fetch', fetchMock)
     installTrainingData()
     push.subscribe.mockResolvedValue({ endpoint: 'https://push.example.test', p256dh: 'p', authKey: 'a' })
-    push.unsubscribe.mockResolvedValue(undefined)
+    push.unsubscribe.mockResolvedValue({ endpoint: 'https://push.example/pilot-device' })
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
 
     expect(await repository.invitations.create(clientId, 'trainer')).toBe('ABCDEF123456')
@@ -375,9 +402,28 @@ describe('Yandex main repository', () => {
     await repository.trainingSummaries.unpublish(summary)
 
     expect(await repository.appFeedback.submit('problem', '  Сообщение  ')).toBe(progressId)
-    expect(await repository.pushNotifications.status(actor.userId)).toEqual({ subscribed: true, workoutReminderEnabled: true })
+    vi.stubGlobal('Notification', { permission: 'granted' })
+    expect(await repository.pushNotifications.status(actor.userId)).toEqual({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: false })
     await repository.pushNotifications.enable(actor.userId)
     await repository.pushNotifications.disable(actor.userId)
+    const pushRequests = fetchMock.mock.calls.filter(([input]) =>
+      new URL(String(input)).pathname.startsWith('/v1/push-notifications/'))
+    expect(pushRequests).toEqual(expect.arrayContaining([
+      [
+        `${apiBaseUrl}/v1/push-notifications/subscription/status`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ endpoint: 'https://push.example/pilot-device' }),
+        }),
+      ],
+      [
+        `${apiBaseUrl}/v1/push-notifications/subscription`,
+        expect.objectContaining({
+          method: 'DELETE',
+          body: JSON.stringify({ endpoint: 'https://push.example/pilot-device' }),
+        }),
+      ],
+    ]))
 
     const onChange = vi.fn()
     const onReady = vi.fn()
@@ -527,6 +573,7 @@ function installContractFetch() {
         : jsonResponse({ summaries: [{ id: summaryId, client_id: clientId, period_start: '2026-08-01', period_end: '2026-08-31', trainer_summary: { headline: 'Итог', progress: ['Рост'], consistency: 'Стабильно', attention: [] }, client_summary: clientSummary, display_metrics: metrics, generated_at: '2026-09-01T00:00:00.000Z', version: 1, published: false }] })
     }
     if (method === 'GET' && path === '/v1/push-notifications/status') return jsonResponse({ status: { subscribed: true, preferences: { workout_reminder: true, workout_scheduled: false } } })
+    if (method === 'POST' && path === '/v1/push-notifications/subscription/status') return jsonResponse({ subscribed: true })
     if (path === '/v1/assistant/yandex/suggest-goal-criteria') return jsonResponse({ criteria: [], needsInput: [], unsupportedReason: null })
     if (path.endsWith('/training-summaries/generate')) return jsonResponse({ data: { generated_at: '2026-09-01T00:00:00.000Z' }, cached: false })
     if (path === '/v1/invitations' && method === 'POST') return jsonResponse({ invitation: { code: 'ABCDEF123456' } }, 201)

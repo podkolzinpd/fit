@@ -1,5 +1,6 @@
-import { render, screen, within } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AppLayout, appViewportMetrics } from './AppLayout'
 
@@ -33,6 +34,18 @@ function renderLayout(path: string) {
         <Route path="*" element={<div>Содержимое</div>} />
       </Route>
     </Routes>
+  </MemoryRouter>)
+}
+
+function ProgressQueryControl() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  return <><button type="button" onClick={() => navigate('/me/progress?mapZone=chest', { replace: true, preventScrollReset: true })}>Выбрать мышцу</button><output>{location.search}</output></>
+}
+
+function renderProgressQueryControl() {
+  return render(<MemoryRouter initialEntries={['/me/progress']}>
+    <Routes><Route element={<AppLayout />}><Route path="*" element={<ProgressQueryControl />} /></Route></Routes>
   </MemoryRouter>)
 }
 
@@ -122,6 +135,19 @@ describe('AppLayout: единственная UI Identity', () => {
 })
 
 describe('AppLayout navigation', () => {
+  it('не сбрасывает позицию Progress при изменении параметров карты', async () => {
+    renderProgressQueryControl()
+    const content = document.querySelector('.content') as HTMLDivElement
+    const scrollTo = vi.fn()
+    Object.defineProperty(content, 'scrollTo', { configurable: true, value: scrollTo })
+    await new Promise((resolve) => window.requestAnimationFrame(resolve))
+    scrollTo.mockClear()
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Выбрать мышцу' }))
+    await waitFor(() => expect(screen.getByText('?mapZone=chest')).toBeVisible())
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
   it('восстанавливает полную высоту оболочки после закрытия iOS-клавиатуры', () => {
     expect(appViewportMetrics(844, 508, 844)).toEqual({ height: 844, visibleHeight: 508, keyboardOpen: true })
     expect(appViewportMetrics(844, 843.6, 844)).toEqual({ height: 844, visibleHeight: 844, keyboardOpen: false })

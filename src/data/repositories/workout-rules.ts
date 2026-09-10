@@ -884,17 +884,28 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate, o
 // Завершённую тренировку редактируем по факту, а не по исходному плану.
 // Если факт у конкретного поля не записан, оставляем план как ориентир.
 export function completedWorkoutDraft(source: Workout): WorkoutDraft {
-  const draft = copyWorkout(source)
+  // Omitted results stay in the original plan. Do not turn them back into
+  // performed sets when the saved result is opened for another edit.
+  const editable = source.status === 'done' ? {
+    ...source,
+    exercises: source.exercises.flatMap((exercise) => {
+      const sets = exercise.sets.filter((set) => set.confirmedAt)
+      return sets.length ? [{ ...exercise, sets }] : []
+    }),
+  } : source
+  const draft = copyWorkout(editable)
   return {
     ...draft,
     exercises: draft.exercises.map((exercise, exerciseIndex) => ({
       ...exercise,
-      sourceExerciseId: source.exercises[exerciseIndex]?.id,
+      position: exerciseIndex,
+      sourceExerciseId: editable.exercises[exerciseIndex]?.id,
       sets: exercise.sets.map((set, setIndex) => {
-        const sourceSet = source.exercises[exerciseIndex]?.sets[setIndex]
+        const sourceSet = editable.exercises[exerciseIndex]?.sets[setIndex]
         const fact = sourceSet?.fact
         return {
           ...set,
+          position: setIndex,
           sourceSetId: sourceSet?.id,
           weightKg: fact?.weightKg ?? set.weightKg,
           reps: fact?.reps ?? set.reps,

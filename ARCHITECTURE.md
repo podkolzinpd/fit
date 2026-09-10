@@ -50,7 +50,9 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
 - Возраст — число лет; дата рождения не хранится.
 - Вес — только временной ряд progress; карточка показывает последний замер.
 - System exercises — versioned application catalog; workout хранит snapshot.
-- Все существующие заметки считаются тренерскими.
+- Legacy `trainer_comment` остаётся указанием тренера; `client_note` — отдельная
+  заметка клиента к упражнению конкретной Live-сессии. Роль автора проверяется
+  на сервере; запись одного поля никогда не перезаписывает другое.
 - `workout_date`, `start_time` и `end_time` остаются календарными значениями и
   обрабатываются без UTC-конверсии: смена timezone не переносит уже сохранённую
   тренировку на другой день или час.
@@ -63,7 +65,10 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
   следующей RPC последнюю подтверждённую `version`; одинаковое pending-действие
   дедуплицируется. После conflict или неоднозначного network result экран сначала
   перечитывает aggregate, а не повторяет mutation вслепую. Неподтверждённые
-  live-set drafts хранятся локально в скоупе user/workout до подтверждения сервером.
+  live-set drafts хранятся локально в скоупе user/workout с каждого изменения
+  поля до подтверждения сервером. Отправка объединяется коротким debounce,
+  повторяется после `online`/`pageshow`/возврата приложения и ограничивается
+  таймаутом; finish сначала flush-ит открытую форму и pending autosave.
 - Итоговый client feedback хранится в корне завершённого workout, но отправляется
   отдельным RPC и не входит в `finish_workout`. RPC блокирует корень, проверяет
   client ownership и `version`; точный повтор уже сохранённого payload возвращает

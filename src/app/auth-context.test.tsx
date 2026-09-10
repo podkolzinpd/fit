@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider, useAuth } from './auth-context'
 
@@ -72,6 +73,11 @@ function RefreshProbe() {
 function YandexProbe() {
   const state = useAuth()
   return <><p>{state.loading ? 'loading' : state.actor?.userId ?? state.error ?? 'anonymous'}</p><button onClick={() => void state.refresh()}>Обновить</button><button onClick={() => void state.signOut()}>Выйти</button></>
+}
+
+function SignOutProbe() {
+  const state = useAuth()
+  return <><p>{state.actor?.email ?? 'anonymous'}</p><button onClick={() => void state.signOut().catch(() => undefined)}>Выйти</button></>
 }
 
 function authCallback(): TestAuthCallback {
@@ -205,5 +211,31 @@ describe('AuthProvider', () => {
 
     await waitFor(() => expect(screen.getByText(otherUser.email)).toBeInTheDocument())
     expect(queryClient.getQueryData(['workouts', 'client-1'])).toBeUndefined()
+  })
+
+  it('очищает кэш только после подтверждённого локального выхода', async () => {
+    const { queryClient } = renderAuth(<SignOutProbe />)
+    authCallback()('INITIAL_SESSION', { user })
+    await waitFor(() => expect(screen.getByText(user.email)).toBeInTheDocument())
+    queryClient.setQueryData(['my-client'], { fullName: 'Анна' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Выйти' }))
+
+    await waitFor(() => expect(auth.signOut).toHaveBeenCalledOnce())
+    expect(queryClient.getQueryData(['my-client'])).toBeUndefined()
+  })
+
+  it('сохраняет кэш и текущий интерфейс, если локальный выход не состоялся', async () => {
+    auth.signOut.mockRejectedValue(new Error('Не удалось выйти'))
+    const { queryClient } = renderAuth(<SignOutProbe />)
+    authCallback()('INITIAL_SESSION', { user })
+    await waitFor(() => expect(screen.getByText(user.email)).toBeInTheDocument())
+    queryClient.setQueryData(['my-client'], { fullName: 'Анна' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Выйти' }))
+
+    await waitFor(() => expect(auth.signOut).toHaveBeenCalledOnce())
+    expect(queryClient.getQueryData(['my-client'])).toEqual({ fullName: 'Анна' })
+    expect(screen.getByText(user.email)).toBeInTheDocument()
   })
 })

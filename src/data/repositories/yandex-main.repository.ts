@@ -14,6 +14,8 @@ import type {
   SessionActor,
   TrainerAttentionWorkout,
   TrainerMembership,
+  TrainerCatalogFilters,
+  TrainerProfileDraft,
   Workout,
   WorkoutDraft,
   WorkoutPersonalRecord,
@@ -23,7 +25,9 @@ import type {
 import { localDate } from '../../shared/local-date'
 import { validateGoalCriteriaSuggestion } from '../../shared/goal-criteria-suggestions'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
+import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retirement'
 import { subscribeToPush, unsubscribeFromPush } from '../../features/notifications/push-subscription'
+import { reconcilePushSubscription } from '../../features/notifications/reconcile-push-subscription'
 import { createYandexMainQueries, type YandexMainQueries } from '../queries/yandex-main.queries'
 import { toJson } from '../queries/json'
 import { currentAppFeedbackContext } from './app-feedback.repository'
@@ -35,6 +39,7 @@ import {
   trainingSummaryFromRow,
 } from './training-summaries.repository'
 import { yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pilot.repository'
+import { trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
 
 const uuid = z.uuid()
 const clientSchema = z.object({
@@ -341,6 +346,7 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
       restBetweenRoundsSec: exercise.restBetweenRoundsSec,
       restBetweenSetsSec: exercise.restBetweenSetsSec,
       trainerComment: exercise.trainerComment ?? undefined,
+      clientNote: exercise.clientNote ?? undefined,
       sets: exercise.sets.map((set) => ({
         id: set.id,
         position: set.position,
@@ -544,7 +550,7 @@ export function createYandexMainRepository(
     invalidate()
     return payload.workout.version
   }
-  const liveCommand = async (path: string, method: 'POST' | 'PUT', expectedVersion: number, body: object = {}) => {
+  const liveCommand = async (path: string, method: 'POST' | 'PUT' | 'DELETE', expectedVersion: number, body: object = {}) => {
     const payload = await writeJson(queries, path, method, {
       ...body, expectedVersion, operationId: crypto.randomUUID(),
     }, z.union([
@@ -562,6 +568,33 @@ export function createYandexMainRepository(
 
   return {
     source: 'yandex',
+    trainerProfiles: {
+      async getOwn() {
+        return readJson(queries, '/v1/trainer-profile', trainerProfessionalProfileSchema.nullable())
+      },
+      async saveDraft(draft: TrainerProfileDraft) {
+        return writeJson(queries, '/v1/trainer-profile', 'PUT', draft, trainerProfessionalProfileSchema)
+      },
+      async publish() {
+        return writeJson(queries, '/v1/trainer-profile/publish', 'POST', {}, trainerProfessionalProfileSchema)
+      },
+      async unpublish() {
+        return writeJson(queries, '/v1/trainer-profile/unpublish', 'POST', {}, trainerProfessionalProfileSchema)
+      },
+      async setCatalogListing(listed: boolean) {
+        return writeJson(queries, '/v1/trainer-profile/catalog', 'POST', { listed }, trainerProfessionalProfileSchema)
+      },
+      async listCatalog(filters: TrainerCatalogFilters) {
+        const params = new URLSearchParams()
+        if (filters.query) params.set('query', filters.query)
+        if (filters.specialty) params.set('specialty', filters.specialty)
+        if (filters.city) params.set('city', filters.city)
+        if (filters.mode) params.set('mode', filters.mode)
+        if (filters.acceptingClients !== null) params.set('accepting', String(filters.acceptingClients))
+        const suffix = params.size > 0 ? `?${params.toString()}` : ''
+        return readJson(queries, `/v1/trainers/catalog${suffix}`, z.array(trainerProfessionalProfileSchema))
+      },
+    },
     clients: {
       async getMine() {
         if (actor.kind !== 'client') return null
@@ -636,13 +669,26 @@ export function createYandexMainRepository(
     },
     exercises: {
       system: SYSTEM_EXERCISE_CATALOG,
+      async createVitalMediaUrl(path, expiresIn) {
+        if (expiresIn !== 60 * 60) {
+          throw new RepositoryError('invalid_media_expiry', 'Некорректный срок ссылки на медиа')
+        }
+        const payload = await writeJson(
+          queries,
+          '/v1/exercise-media/sign',
+          'POST',
+          { path },
+          z.object({ signedUrl: z.url() }),
+        )
+        return payload.signedUrl
+      },
       parseWorkout: (text, systemCatalog) => yandexPilotRepository.parseWorkout(
         apiBaseUrl, sessionToken, text, systemCatalog, 'read_write',
       ),
       async suggestGoalCriteria(text, catalog, metrics) {
         const result = await response(() => queries.write('/v1/assistant/yandex/suggest-goal-criteria', 'POST', {
           kind: 'goal_criteria', text,
-          systemCatalog: catalog.filter((item) => item.source === 'system'),
+          systemCatalog: catalog.filter((item) => item.source === 'system' && isActiveCatalogExercise(item)),
           customMetrics: metrics,
         }))
         return validateGoalCriteriaSuggestion(await result.json(), catalog, metrics)
@@ -842,6 +888,7 @@ export function createYandexMainRepository(
         const payload = await writeJson(queries, `/v1/workout-sets/${setId}`, 'DELETE', { expectedVersion: item.version, operationId: crypto.randomUUID() }, z.object({ set: z.object({ version: z.number().int().positive() }) }))
         invalidate(); return payload.set.version
       },
+      async removeLiveExercise(item, exerciseId) { return liveCommand(`/v1/workouts/${item.id}/exercises/${exerciseId}`, 'DELETE', item.version) },
       async reorderLiveBlock(item, blockId, direction) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/reorder`, 'POST', item.version, { direction }) },
       async setExerciseComment(item, exerciseId, comment) { return liveCommand(`/v1/workout-exercises/${exerciseId}/comment`, 'PUT', item.version, { comment }) },
       async setWorkoutReview(item, value) { return commandVersion(`/v1/workouts/${item.id}/review`, 'PUT', { reaction: value.reaction, review: value.review, expectedVersion: item.version }) },
@@ -916,8 +963,28 @@ export function createYandexMainRepository(
     },
     pushNotifications: {
       async status() {
+        const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
         const payload = await readJson(queries, '/v1/push-notifications/status', z.object({ status: z.object({ subscribed: z.boolean(), preferences: z.object({ workout_reminder: z.boolean(), workout_scheduled: z.boolean() }) }) }))
-        return { subscribed: payload.status.subscribed, workoutReminderEnabled: payload.status.preferences.workout_reminder }
+        const state = await reconcilePushSubscription(vapidPublicKey, {
+          hasServerSubscription: async (endpoint) => {
+            const result = await writeJson(
+              queries,
+              '/v1/push-notifications/subscription/status',
+              'POST',
+              { endpoint },
+              z.object({ subscribed: z.boolean() }),
+            )
+            return result.subscribed
+          },
+          saveSubscription: async (subscription) => {
+            await writeEmpty(queries, '/v1/push-notifications/subscription', 'PUT', subscription)
+          },
+        })
+        return {
+          state,
+          workoutReminderEnabled: payload.status.preferences.workout_reminder,
+          workoutScheduledEnabled: payload.status.preferences.workout_scheduled,
+        }
       },
       async enable() {
         const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
@@ -928,8 +995,23 @@ export function createYandexMainRepository(
       },
       async disable() {
         await writeEmpty(queries, '/v1/push-notifications/preferences/workout_reminder', 'PUT', { enabled: false })
-        await unsubscribeFromPush()
-        await writeEmpty(queries, '/v1/push-notifications/subscription', 'DELETE')
+        const unsubscribed = await unsubscribeFromPush()
+        if (unsubscribed === null) return
+        await writeEmpty(
+          queries,
+          '/v1/push-notifications/subscription',
+          'DELETE',
+          { endpoint: unsubscribed.endpoint },
+        )
+      },
+      async setCategoryEnabled(_userId, kind, enabled) {
+        await writeEmpty(queries, `/v1/push-notifications/preferences/${kind}`, 'PUT', { enabled })
+      },
+      sendTestPush() {
+        // Yandex-пилот не разворачивал отдельный тестовый эндпоинт (см.
+        // YAFIT-475) — намеренно недоступно, а не забытая заглушка.
+        // NotificationOnboarding не вызывает это для source: 'yandex'.
+        return Promise.reject(new Error('Тестовое уведомление недоступно для этого аккаунта'))
       },
     },
     realtime: {

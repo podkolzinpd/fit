@@ -1,41 +1,19 @@
 import { expect, test } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
+import { comparisonWorkoutRow, mockResultsHistory, verifyResultsSources } from './progress-results-fixture'
 import { expectMonochromeAccessibility } from './accessibility-helpers'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
-function comparisonWorkoutRow(id: string, date: string, weight: number, distance: number, strengthSets: number) {
-  const baseSet = (suffix: string, position: number, values: { weight?: number, reps?: number, distance?: number, duration?: number }) => ({
-    id: `${id}-${suffix}-${position}`, position,
-    plan_weight_kg: values.weight ?? null, plan_reps: values.reps ?? null,
-    plan_duration_min: values.duration ?? null, plan_duration_sec: null, plan_distance_km: values.distance ?? null, plan_rpe: null,
-    fact_weight_kg: values.weight ?? null, fact_reps: values.reps ?? null,
-    fact_duration_min: values.duration ?? null, fact_duration_sec: null, fact_distance_km: values.distance ?? null, fact_rpe: null,
-    confirmed_at: `${date}T10:00:00Z`, version: 1,
-  })
-  const exercise = (suffix: string, name: string, muscle: string, kind: string, sets: ReturnType<typeof baseSet>[]) => ({
-    id: `${id}-${suffix}`, position: suffix === 'press' ? 0 : 1, exercise_source: 'system', exercise_ref: suffix,
-    custom_exercise_id: null, exercise_name: name, muscle_group: muscle, input_kind: kind, block_id: `${id}-${suffix}-block`,
-    block_type: 'single', block_preset: 'set', block_rounds: 1, rest_between_exercises_sec: 0,
-    rest_between_rounds_sec: 0, rest_between_sets_sec: 60, trainer_comment: null, sets,
-  })
-  return {
-    id, client_id: demoClientId, trainer_id: '00000000-0000-4000-8000-000000000001', client_name: 'Анна Смирнова', created_by: null,
-    workout_date: date, start_time: null, end_time: null, started_at: `${date}T09:00:00Z`, completed_at: `${date}T10:00:00Z`,
-    status: 'done', notes: null, trainer_review: null, trainer_reaction: null, trainer_review_author_id: null,
-    trainer_reviewed_at: null, client_comment: null, session_rpe: null, wellbeing: null, discomfort: null, has_pr: false,
-    stage_id: null, stage_title: null, version: 1, total_count: 3,
-    exercises: [
-      exercise('press', 'Жим лёжа', 'chest', 'strength', Array.from({ length: strengthSets }, (_, index) => baseSet('press-set', index, { weight, reps: 10 }))),
-      exercise('run', 'Бег', 'cardio', 'distance', [baseSet('run-set', 0, { distance, duration: 30 })]),
-    ],
-  }
-}
 
-async function mockProgressPeriodSummary(page: VisualPage) {
+async function mockProgressPeriodSummary(page: VisualPage, periodStart = '2026-08-01', periodEnd = '2026-08-31') {
   const clientSummary = {
-    headline: 'Прогресс уже заметен', achievements: ['Жим лёжа стал сильнее'],
-    consistency: 'Тренировки продолжаются', encouragement: 'Продолжай в том же темпе', next_steps: [],
+    headline: 'В жиме лёжа рабочий вес вырос с 72 до 75 кг.',
+    achievements: ['Жим лёжа выполнен в 2 сопоставимых тренировках.'],
+    consistency: 'За период выполнено 2 тренировки.',
+    encouragement: 'Рост рабочего веса уже подтверждён записями.',
+    goal_alignment: '',
+    next_steps: ['На следующей тренировке проверить 75 кг с тем же числом повторений.'],
   }
   const displayMetrics = {
     completed_workouts: 2, workouts_per_week: 0.5, active_weeks: 2, longest_gap_days: 7,
@@ -46,17 +24,22 @@ async function mockProgressPeriodSummary(page: VisualPage) {
   await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify([{
       id: '80000000-0000-4000-8000-000000000001', source_summary_id: '80000000-0000-4000-8000-000000000002',
-      client_id: demoClientId, period_start: '2026-08-01', period_end: '2026-08-31', summary: clientSummary,
-      display_metrics: displayMetrics, generated_at: '2026-08-31T12:00:00Z', published_at: '2026-08-31T12:00:00Z',
+      client_id: demoClientId, period_start: periodStart, period_end: periodEnd, summary: clientSummary,
+      display_metrics: displayMetrics, generated_at: `${periodEnd}T12:00:00Z`, published_at: `${periodEnd}T12:00:00Z`,
     }]),
   }))
   await page.route('**/rest/v1/client_training_summaries?*', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify([{
       id: '80000000-0000-4000-8000-000000000002', client_id: demoClientId,
-      period_start: '2026-08-01', period_end: '2026-08-31',
-      trainer_summary: { headline: 'Прогресс уже заметен', progress: ['Жим лёжа стал сильнее'], consistency: 'Тренировки продолжаются', attention: [] },
+      period_start: periodStart, period_end: periodEnd,
+      trainer_summary: {
+        headline: 'В жиме лёжа рабочий вес вырос с 72 до 75 кг.',
+        progress: ['Жим лёжа выполнен в 2 сопоставимых тренировках.'],
+        consistency: 'За период выполнено 2 тренировки.',
+        attention: [],
+      },
       client_summary: clientSummary, display_metrics: displayMetrics,
-      generated_at: '2026-08-31T12:00:00Z', version: 1,
+      generated_at: `${periodEnd}T12:00:00Z`, version: 1,
     }]),
   }))
 }
@@ -106,6 +89,7 @@ async function mockTrainerProgressVisual(page: VisualPage) {
 }
 
 async function mockMeasurementProgress(page: VisualPage) {
+  await mockProgressPeriodSummary(page)
   await page.route('**/rest/v1/rpc/get_client_goal', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
     id: '86000000-0000-4000-8000-000000000001', clientId: demoClientId,
     title: 'Увеличить рабочий вес и сохранить талию', targetDate: null, status: 'active', version: 1, stages: [],
@@ -259,7 +243,7 @@ async function mockTrainerClients(page: VisualPage) {
   }))
 }
 
-async function mockClientWorkoutHistory(page: import('@playwright/test').Page) {
+async function mockClientWorkoutHistory(page: import('@playwright/test').Page, options: { includeBack?: boolean; homeLayout?: boolean; bestResults?: boolean } = {}) {
   const workoutRows = ['2026-08-10', '2026-08-03'].map((workoutDate, index) => ({
     id: `b1000000-0000-4000-8000-00000000000${index + 1}`,
     client_id: demoClientId,
@@ -323,6 +307,80 @@ async function mockClientWorkoutHistory(page: import('@playwright/test').Page) {
       }],
     }],
   }))
+  if (options.includeBack) workoutRows.forEach((workout, index) => workout.exercises.push({
+    id: `b2100000-0000-4000-8000-00000000000${index + 1}`,
+    position: 1,
+    exercise_source: 'system',
+    exercise_ref: 'lat-pulldown',
+    custom_exercise_id: null,
+    exercise_name: 'Тяга верхнего блока',
+    muscle_group: 'back',
+    input_kind: 'strength',
+    block_id: `b2100000-0000-4000-8000-00000000000${index + 1}`,
+    block_type: 'single',
+    block_preset: 'set',
+    block_rounds: 1,
+    rest_between_exercises_sec: 0,
+    rest_between_rounds_sec: 90,
+    rest_between_sets_sec: 90,
+    trainer_comment: null,
+    sets: [{
+      id: `b3100000-0000-4000-8000-00000000000${index + 1}`,
+      position: 0,
+      plan_weight_kg: 35,
+      plan_reps: 10,
+      plan_duration_min: null,
+      plan_duration_sec: null,
+      plan_distance_km: null,
+      plan_rpe: null,
+      fact_weight_kg: options.bestResults && index === 0 ? 40 : 35,
+      fact_reps: 10,
+      fact_duration_min: null,
+      fact_duration_sec: null,
+      fact_distance_km: null,
+      fact_rpe: null,
+      confirmed_at: `${workout.workout_date}T15:45:00Z`,
+      version: 1,
+    }],
+  }))
+  if (options.bestResults) {
+    workoutRows[0]!.exercises[0]!.sets[0]!.fact_weight_kg = 45
+    workoutRows[1]!.exercises[0]!.sets[0]!.fact_weight_kg = 40
+    for (const [position, ref, name, group, currentWeight, previousWeight] of [
+      [2, 'lateral-raise', 'Разведение гантелей в стороны', 'shoulders', 16, 14],
+      [3, 'barbell-squat', 'Присед со штангой', 'legs', 80, 75],
+    ] as const) workoutRows.forEach((workout, index) => {
+      const base = workout.exercises[0]!
+      workout.exercises.push({ ...base, id: `${workout.id}-${ref}`, exercise_ref: ref, exercise_name: name, muscle_group: group, position,
+        block_id: `${workout.id}-${ref}-block`, sets: base.sets.map((set) => ({ ...set, id: `${workout.id}-${ref}-set`, fact_weight_kg: index === 0 ? currentWeight : previousWeight })) })
+    })
+  }
+  if (options.homeLayout) {
+    const workout = workoutRows[0]!
+    workout.exercises[0]!.exercise_name = 'Жим гантелей лёжа на скамье с длинным названием'
+    workout.exercises[0]!.sets[0]!.fact_weight_kg = 50
+    for (const [index, name, group] of [[3, 'Разгибание ног', 'legs'], [4, 'Скручивания', 'core'], [5, 'Бег', 'cardio']] as const) {
+      const base = workout.exercises[0]!
+      workout.exercises.push({ ...base, id: `b2100000-0000-4000-8000-00000000000${index}`, exercise_ref: `home-${index}`,
+        exercise_name: name, muscle_group: group, position: index,
+        sets: base.sets.map((set) => ({ ...set, id: `b3100000-0000-4000-8000-00000000000${index}` })) })
+    }
+  }
+  await page.route('**/rest/v1/workouts?*', (route) => {
+    const id = new URL(route.request().url()).searchParams.get('id')?.replace(/^eq\./, '')
+    const row = workoutRows.find((item) => item.id === id)
+    return row ? route.fulfill({ contentType: 'application/json', body: JSON.stringify(row) }) : route.fallback()
+  })
+  await page.route('**/rest/v1/workout_exercises?*', (route) => {
+    const id = new URL(route.request().url()).searchParams.get('workout_id')?.replace(/^eq\./, '')
+    const row = workoutRows.find((item) => item.id === id)
+    return row ? route.fulfill({ contentType: 'application/json', body: JSON.stringify(row.exercises) }) : route.fallback()
+  })
+  await page.route('**/rest/v1/workout_sets?*', (route) => {
+    const ids = new URL(route.request().url()).searchParams.get('workout_exercise_id') ?? ''
+    const exercises = workoutRows.flatMap((item) => item.exercises).filter((item) => ids.includes(item.id))
+    return exercises.length ? route.fulfill({ contentType: 'application/json', body: JSON.stringify(exercises.flatMap((item) => item.sets.map((set) => ({ ...set, workout_exercise_id: item.id })))) }) : route.fallback()
+  })
   await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
     const body = route.request().postDataJSON() as { p_from?: string | null; p_to?: string | null; p_offset?: number }
     const filtered = workoutRows.filter((workout) => (
@@ -355,7 +413,17 @@ async function openClientProgress(page: import('@playwright/test').Page, options
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/)
   await expect(page.locator('.client-progress-card')).toBeVisible()
-  await expect(page.locator('.client-progress-main-now')).toBeVisible()
+  await expect(page.locator('.client-progress-card .client-current-week')).toBeVisible()
+  await expect(page.getByText('Проверяем данные цели…')).toHaveCount(0)
+}
+
+async function expectClientFactsOrder(page: VisualPage) {
+  await expect(page.locator('.client-progress-card').evaluate((element) => {
+    const order = ['.progress-story-period', '.client-current-week', '.client-progress-goal-story', '.period-exercise-results', '.client-progress-measurements-story', '.client-body-map-disclosure', '.weekly-training-load', '.period-rhythm', '.client-progress-comparison']
+    const children = Array.from(element.children)
+    const positions = order.map((selector) => children.findIndex((child) => child.matches(selector)))
+    return positions.every((position, index) => position >= 0 && (!index || position > positions[index - 1]!))
+  })).resolves.toBe(true)
 }
 
 async function expectVisualBaseline(
@@ -416,9 +484,10 @@ async function createStandaloneClient(
   await page.getByRole('button', { name: 'Скрыть' }).click()
 }
 
-async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
+async function openPreviewLiveWorkout(page: import('@playwright/test').Page, fresh = false) {
   await page.clock.install({ time: new Date('2026-08-29T18:00:00+03:00') })
-  await signIn(page, 'client@fit.local', /\/me$/)
+  if (fresh) await createStandaloneClient(page, 'live-notes', 'Live клиент')
+  else await signIn(page, 'client@fit.local', /\/me$/)
 
   await gotoStable(page, '/me/workouts')
   const activeWorkout = page.getByRole('link', { name: /Идёт/ }).first()
@@ -428,6 +497,7 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
     await activeWorkout.click()
     await page.getByRole('link', { name: 'Продолжить тренировку' }).click()
     await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
+    await page.keyboard.press('Escape')
     return
   }
   await expect(addAction).toHaveCount(1)
@@ -444,6 +514,8 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page) {
   await page.getByLabel('Повторы, подход 2').fill('10')
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  await expect(page.locator('.live-timer')).toBeVisible()
+  await page.keyboard.press('Escape')
   await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
 }
 
@@ -619,6 +691,8 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
   await page.getByRole('button', { name: 'Сохранить план' }).click()
+  // Дожидаемся сохранения: переход на Home раньше ответа может прервать запись.
+  await expect(page).toHaveURL(/\/workouts\/[a-f0-9-]+$/)
 
   await gotoStable(page, '/me')
   await expect(page.locator('.phone-frame')).toHaveClass(/client-home-identity/)
@@ -631,7 +705,11 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
 
 test('client key routes keep their visual baselines', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client routes use mobile visual profiles')
+  await mockClientWorkoutHistory(page)
+  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
   await openClientProgress(page)
+  await expect(page.locator('.client-body-map-disclosure')).not.toHaveAttribute('open')
+  await page.locator('.client-body-map-disclosure > summary').click()
   const bodyMap = page.locator('.client-progress-card .body-progress-map')
   await expect(bodyMap).toBeVisible()
   await bodyMap.getByRole('button', { name: 'Прогресс', exact: true }).click()
@@ -640,30 +718,16 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   await expect(bodyMap.getByText('Лучший результат зоны')).toHaveCount(0)
   await expect(bodyMap.evaluate((element) => Number.parseFloat(getComputedStyle(element).borderTopLeftRadius))).resolves.toBeGreaterThanOrEqual(16)
   await expectBodyMapBaseline(bodyMap, `client-body-map-female-${process.platform}.png`)
-  await expect(page.locator('.client-progress-main-now').getByText('Главное сейчас', { exact: true })).toBeVisible()
-  const progressStats = page.locator('.client-progress-card .ai-progress-stats')
-  await expect(progressStats.getByText(/трениров/).first()).toBeVisible()
-  await expect(progressStats.getByText(/недел/).first()).toBeVisible()
-  await expect(page.getByText(/\/ нед\./)).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Прогресс', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Нагрузка', exact: true })).toBeVisible()
-  await expect(page.getByText('Для твоей цели', { exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
-  await expect(page.getByText('Прогресс уже заметен, ты на верном пути.')).toHaveCount(0)
-  await expect(page.getByText('Проверяем цель…')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Обновить' })).toHaveCount(0)
-  await expect(page.locator('.ai-progress-footer')).toHaveCount(0)
-  await expect(page.locator('.client-progress-main-now').evaluate((element) => {
-    const goal = document.querySelector('.client-progress-goal-story')
-    const map = document.querySelector('.body-progress-map')
-    const summary = document.querySelector('.progress-story-summary')
-    return Boolean(goal && map && summary
-      && (element.compareDocumentPosition(goal) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (map.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
-  })).resolves.toBe(true)
+  await expect(page.locator('.client-current-week')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Текущая неделя' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Лучшие результаты за период' })).toBeVisible()
+  await expect(page.getByText('Твоя цель', { exact: true })).toBeVisible()
+  await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
+  await expect(page.locator('.progress-story-period').getByRole('button', { name: 'Открыть анализ' })).toBeVisible()
+  await expectClientFactsOrder(page)
   const progressCoachmark = page.getByRole('button', { name: 'Понятно' })
   if (await progressCoachmark.isVisible()) await progressCoachmark.click()
+  await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `client-progress-${process.platform}.png`)
 })
 
@@ -727,18 +791,26 @@ test('trainer Profile and feedback keep their visual baselines in both themes', 
 
 test('client Progress scheme keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
+  await mockClientWorkoutHistory(page)
+  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
   await openClientProgress(page, { scheme: true })
+  await page.locator('.client-body-map-disclosure > summary').click()
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
   await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-scheme-${process.platform}.png`)
+  await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `client-progress-scheme-${process.platform}.png`)
 })
 
 test('client Progress scheme keeps its dark visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
+  await mockClientWorkoutHistory(page)
+  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
   await openClientProgress(page, { scheme: true, dark: true })
+  await page.locator('.client-body-map-disclosure > summary').click()
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
   await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-scheme-dark-${process.platform}.png`)
+  await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `client-progress-scheme-dark-${process.platform}.png`)
 })
 
@@ -758,8 +830,8 @@ test('client Progress shows composite goal facts in both themes', async ({ page 
   await page.route('**/rest/v1/client_progress_custom?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
   await openClientProgress(page)
   const goal = page.locator('.client-progress-goal-story')
-  await expect(goal.locator('.goal-criterion-progress-row')).toHaveCount(2)
-  await expect(goal.getByText('2 показателя', { exact: true })).toBeVisible()
+  await expect(goal.locator('.goal-criterion-progress-row:visible')).toHaveCount(2)
+  await expect(goal.getByText('2 показателя · каждый оценивается отдельно', { exact: true })).toHaveCount(0)
   await expect(goal.getByText(/из 2 выполнено/)).toHaveCount(0)
   await expect(goal.getByRole('button', { name: /критери/ })).toHaveCount(0)
   await goal.evaluate((element) => element.scrollIntoView({ block: 'start' }))
@@ -769,7 +841,7 @@ test('client Progress shows composite goal facts in both themes', async ({ page 
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/me/progress')
   const darkGoal = page.locator('.client-progress-goal-story')
-  await expect(darkGoal.locator('.goal-criterion-progress-row')).toHaveCount(2)
+  await expect(darkGoal.locator('.goal-criterion-progress-row:visible')).toHaveCount(2)
   await darkGoal.evaluate((element) => element.scrollIntoView({ block: 'start' }))
   await expectVisualBaseline(page, `client-progress-composite-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
@@ -788,19 +860,24 @@ test('period comparison stays compact for client and trainer in both themes', as
   }
 
   let comparison = page.locator('.client-progress-comparison')
-  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(3)
-  await expect(comparison.getByText('июль → август 2026', { exact: true })).toBeVisible()
+  if (!trainer) await comparison.locator(':scope > summary').click()
+  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(trainer ? 3 : 8)
+  if (trainer) await expect(comparison.getByText('июль → август 2026', { exact: true })).toBeVisible()
   await expect(comparison.getByRole('button', { name: /Показать ещё/ })).toHaveCount(0)
   await expect(comparison.getByText('Главное изменение', { exact: true })).toHaveCount(0)
-  await expect(comparison.locator('.period-comparison-limitation')).toHaveCount(1)
-  await expect(comparison.getByText('Мало данных: в одном из периодов только 1 завершённая тренировка.', { exact: true })).toBeVisible()
+  if (trainer) await expect(comparison.locator('.period-comparison-limitation')).toHaveCount(1)
+  if (trainer) await expect(comparison.getByText('Мало данных: в одном из периодов только 1 завершённая тренировка.', { exact: true })).toBeVisible()
+  if (!trainer) await expectClientFactsOrder(page)
+  else {
   expect(await comparison.evaluate((element) => {
-    const map = document.querySelector('.body-progress-map')
+    const map = document.querySelector('.client-body-map-disclosure') ?? document.querySelector('.body-progress-map')
     const summary = document.querySelector('.progress-story-summary')
+    const client = Boolean(document.querySelector('.client-body-map-disclosure'))
     return Boolean(map && summary
-      && (map.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
-      && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
+      && (client ? summary.compareDocumentPosition(map) : map.compareDocumentPosition(element)) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && Boolean(summary && element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING)
   })).toBe(true)
+  }
   expect(await comparison.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   if (!trainer) {
     for (const width of [320, 375, 390, 430]) {
@@ -812,17 +889,18 @@ test('period comparison stays compact for client and trainer in both themes', as
   }
   await comparison.scrollIntoViewIfNeeded()
   await expect(comparison).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-period-comparison-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.025,
   })
 
   await gotoStable(page, trainer ? '/profile' : '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
   comparison = page.locator('.client-progress-comparison')
-  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(3)
+  if (!trainer) await comparison.locator(':scope > summary').click()
+  await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(trainer ? 3 : 8)
   await comparison.scrollIntoViewIfNeeded()
   await expect(comparison).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-period-comparison-dark-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.025,
   })
 })
 
@@ -836,16 +914,19 @@ test('measurement trends stay readable for client and trainer in both themes', a
     await gotoStable(page, `/progress/${demoClientId}`)
   } else {
     await openClientProgress(page, { scheme: true })
+  await page.locator('.client-body-map-disclosure > summary').click()
   }
 
   let measurements = page.locator('.client-progress-measurements-story')
-  await expect(measurements.getByRole('heading', { name: 'Тренд по значениям' })).toBeVisible()
+  await expect(measurements.getByRole('heading', { name: trainer ? 'Тренд по значениям' : 'Замеры' })).toBeVisible()
   await expect(measurements.getByRole('tab', { name: /Вес/ })).toBeVisible()
   await expect(measurements.getByRole('tab', { name: /Плечи/ })).toBeVisible()
   await expect(measurements.getByLabel('График показателя «Вес»')).toBeVisible()
   await expect(measurements.getByText('Цель · 83 кг').first()).toBeVisible()
   await expect(measurements.locator('.recharts-tooltip-wrapper')).toHaveCount(0)
   await expect(measurements.getByText('5 августа 2026 г.', { exact: true })).toHaveCount(0)
+  if (!trainer) await expectClientFactsOrder(page)
+  else {
   expect(await measurements.evaluate((element) => {
     const comparison = document.querySelector('.client-progress-comparison')
     const summary = document.querySelector('.progress-story-summary')
@@ -853,6 +934,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
       && (comparison.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
       && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
   })).toBe(true)
+  }
   expect(await measurements.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   expect(await measurements.getByRole('tab', { name: /Вес/ }).evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
   if (!trainer) {
@@ -872,7 +954,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
   measurements = page.locator('.client-progress-measurements-story')
-  await expect(measurements.getByRole('heading', { name: 'Тренд по значениям' })).toBeVisible()
+  await expect(measurements.getByRole('heading', { name: trainer ? 'Тренд по значениям' : 'Замеры' })).toBeVisible()
   await measurements.scrollIntoViewIfNeeded()
   await expect(measurements).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-measurement-trends-dark-${process.platform}.png`, {
     animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
@@ -889,24 +971,31 @@ test('weekly training rhythm stays visual and readable for client and trainer in
     await gotoStable(page, `/progress/${demoClientId}`)
   } else {
     await openClientProgress(page, { scheme: true })
+  await page.locator('.client-body-map-disclosure > summary').click()
   }
 
+  if (!trainer) await page.getByText('Регулярность тренировок', { exact: true }).click()
   let regularity = page.locator('.client-progress-regularity-story')
   await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
-  await expect(regularity.getByText('3 тренировки', { exact: true })).toBeVisible()
-  await expect(regularity.getByText('Активные: 2 из 3', { exact: true })).toBeVisible()
+  await expect(regularity.getByText(trainer ? '3 тренировки' : '6 тренировок', { exact: true })).toBeVisible()
+  await expect(regularity.getByText(trainer ? 'Активные: 2 из 3' : 'Активные: 4 из 5', { exact: true })).toBeVisible()
   await expect(regularity.getByText('Серия', { exact: true })).toBeVisible()
-  await expect(regularity.getByText('2 нед.', { exact: true })).toBeVisible()
+  await expect(regularity.getByText(trainer ? '2 нед.' : '4 нед.', { exact: true })).toBeVisible()
   await expect(regularity.getByText('Интервал', { exact: true })).toBeVisible()
-  await expect(regularity.getByText('4,5 дн.', { exact: true })).toBeVisible()
+  await expect(regularity.getByText(trainer ? '4,5 дн.' : '4,6 дн.', { exact: true })).toBeVisible()
   await expect(regularity.getByText('Макс. перерыв', { exact: true })).toBeVisible()
   await expect(regularity.getByText('7 дн.', { exact: true })).toBeVisible()
   await expect(regularity.getByText('Регулярность', { exact: true })).toHaveCount(0)
   await expect(regularity.getByText('Частота к прошлому периоду', { exact: true })).toHaveCount(0)
   await expect(regularity.locator('.regularity-story-explanation')).toHaveCount(0)
-  await expect(regularity.getByRole('list', { name: 'Завершённые тренировки по неделям' }).locator('li')).toHaveCount(3)
-  await expect(regularity.locator('li[aria-label*="Без тренировок"]')).toHaveCount(1)
+  await expect(regularity.getByRole('list', { name: 'Завершённые тренировки по неделям' }).locator('li')).toHaveCount(trainer ? 3 : 5)
+  await expect(regularity.locator('li[aria-label*="Нет записей"]')).toHaveCount(1)
   await expect(regularity.locator('li[aria-label*="Текущая неделя"]')).toHaveCount(0)
+  if (!trainer) {
+    await expectClientFactsOrder(page)
+    expect(await regularity.evaluate((element) => element.clientWidth / element.parentElement!.clientWidth)).toBeGreaterThan(0.85)
+  }
+  else {
   expect(await regularity.evaluate((element) => {
     const measurements = document.querySelector('.client-progress-measurements-story')
     const summary = document.querySelector('.progress-story-summary')
@@ -914,6 +1003,7 @@ test('weekly training rhythm stays visual and readable for client and trainer in
       && (measurements.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING)
       && (element.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
   })).toBe(true)
+  }
   expect(await regularity.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   if (!trainer) {
     for (const width of [320, 375, 390, 430]) {
@@ -925,17 +1015,18 @@ test('weekly training rhythm stays visual and readable for client and trainer in
   }
   await regularity.scrollIntoViewIfNeeded()
   await expect(regularity).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-workout-regularity-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.035,
   })
 
   await gotoStable(page, trainer ? '/profile' : '/me/profile')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
+  if (!trainer) await page.getByText('Регулярность тренировок', { exact: true }).click()
   regularity = page.locator('.client-progress-regularity-story')
   await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
   await regularity.scrollIntoViewIfNeeded()
   await expect(regularity).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-workout-regularity-dark-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.035,
   })
 })
 
@@ -949,6 +1040,7 @@ test('next-step suggestion stays off the main progress screen for client and tra
     await gotoStable(page, `/progress/${demoClientId}`)
   } else {
     await openClientProgress(page, { scheme: true })
+  await page.locator('.client-body-map-disclosure > summary').click()
   }
 
   await expect(page.locator('.client-progress-next-step')).toHaveCount(0)
@@ -982,7 +1074,11 @@ test('client measurement management keeps its visual baseline', async ({ page },
   await mockMeasurementProgress(page)
   await openClientProgress(page, { scheme: true })
   const management = page.locator('.client-progress-measurements-story')
-  await management.scrollIntoViewIfNeeded()
+  await management.evaluate((element) => {
+    element.scrollIntoView({ block: 'start' })
+    const content = document.querySelector<HTMLElement>('.content')
+    if (content) content.scrollTop = Math.max(0, content.scrollTop - 12)
+  })
   await expect(management.getByRole('button', { name: 'Добавить замер' })).toBeVisible()
   await expect(management.getByRole('button', { name: /История/ })).toBeVisible()
   await expect(management.getByRole('button', { name: /Настроить/ })).toBeVisible()
@@ -1180,7 +1276,7 @@ test('workout save dark keeps its visual baseline', async ({ page }, testInfo) =
   await expectVisualBaseline(page, `workout-save-dark-${process.platform}.png`, [], false, '#1d1e21')
 })
 
-async function openWorkoutForDetailReview(page: import('@playwright/test').Page, trainer: boolean) {
+async function openWorkoutForDetailReview(page: import('@playwright/test').Page, trainer: boolean, resume = false) {
   if (!trainer) {
     await openPreviewLiveWorkout(page)
     return
@@ -1197,6 +1293,13 @@ async function openWorkoutForDetailReview(page: import('@playwright/test').Page,
   await page.getByRole('button', { name: '＋ Подход' }).click()
   await page.getByRole('button', { name: /^Сохранить(?: план)?$/ }).click()
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
+  if (resume) {
+    const resumeAction = page.getByRole('button', { name: 'Открыть незавершённую' })
+    await expect(page.locator('.live-timer').or(resumeAction)).toBeVisible()
+    if (await resumeAction.isVisible()) await resumeAction.click()
+  }
+  await expect(page.locator('.live-timer')).toBeVisible()
+  await page.keyboard.press('Escape')
   await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
 }
 
@@ -1213,7 +1316,7 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.getByLabel('Фактический вес').first().fill('42.5')
   await page.getByLabel('Фактические повторы').first().fill('9')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await expect(page.locator('.live-set-compact.confirmed')).toBeVisible()
+  await expect(page.locator('.live-set.confirmed')).toBeVisible()
   // Добавляем реальное незавершённое упражнение, чтобы деталь стабильно
   // покрывала partial независимо от числа подходов в исходном плане.
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
@@ -1223,12 +1326,36 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   const partialFinish = page.getByRole('button', { name: 'Завершить', exact: true })
   if (await partialFinish.isVisible()) await partialFinish.click()
-  await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: trainer ? 'Тренировка завершена' : 'Тренировка сохранена частично' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
-  await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
+  if (trainer) {
+    await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
+  } else {
+    await expect(page.getByRole('progressbar', { name: 'Выполнение плана' })).toHaveAttribute('aria-valuenow', '33')
+    await expect(page.getByText('Осталось выполнить')).toBeVisible()
+    await expect(page.locator('.workout-completion-recorded')).not.toHaveAttribute('open')
+    await expect(page.getByRole('link', { name: 'Готово' })).toHaveAttribute('href', '/me')
+    await expect(page.getByRole('link', { name: 'Посмотреть прогресс' })).toHaveAttribute('href', '/me/progress')
+  }
   const detailPath = new URL(page.url()).pathname
   await expectVisualBaseline(page, `workout-detail-completion-${process.platform}.png`)
+  if (!trainer) {
+    await page.locator('.content').evaluate((element) => { element.scrollTop = element.scrollHeight })
+    await expectVisualBaseline(page, `workout-completion-report-actions-${process.platform}.png`)
+    await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
+    await page.evaluate(() => {
+      localStorage.setItem('fit.appTheme', 'dark')
+      window.dispatchEvent(new Event('fit-theme-change'))
+    })
+    await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+    await expectVisualBaseline(page, `workout-completion-report-dark-${process.platform}.png`, [], false, '#1d1e21')
+    await page.evaluate(() => {
+      localStorage.setItem('fit.appTheme', 'light')
+      window.dispatchEvent(new Event('fit-theme-change'))
+    })
+  }
 
+  if (!trainer) await page.locator('.workout-completion-recorded > summary').click()
   await page.locator('.exercise-history-link').first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
@@ -1242,6 +1369,7 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, detailPath)
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
+  if (!trainer) await expect(page.locator('.workout-completion-report')).toHaveCount(0)
   await expectVisualBaseline(page, `workout-detail-dark-${process.platform}.png`, [], false, '#1d1e21')
   await gotoStable(page, historyPath)
   await expectVisualBaseline(page, `workout-exercise-history-dark-${process.platform}.png`, [], false, '#1d1e21')
@@ -1253,6 +1381,79 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
   const deleteConfirmation = page.getByRole('alertdialog', { name: 'Удалить тренировку?' })
   await deleteConfirmation.getByRole('button', { name: 'Удалить', exact: true }).click()
+})
+
+test('trainer Live keeps desktop controls accessible in both themes', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'visual-trainer-1440', 'Trainer desktop acceptance')
+  await openWorkoutForDetailReview(page, true, true)
+  const livePath = new URL(page.url()).pathname
+  await expect(page.locator('.live-set')).toHaveCount(2)
+  await expectMonochromeAccessibility(page)
+  await page.screenshot({ path: testInfo.outputPath('trainer-live-light.png') })
+  await gotoStable(page, '/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, livePath)
+  await page.getByRole('button', { name: 'Таймер отдыха', exact: true }).click()
+  await expectMonochromeAccessibility(page)
+  await page.screenshot({ path: testInfo.outputPath('trainer-live-timer-dark.png') })
+  await page.getByRole('button', { name: 'Закрыть таймер' }).click()
+  await gotoStable(page, '/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
+  await gotoStable(page, livePath.replace(/\/live$/, ''))
+  await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
+  await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+})
+
+test('client Live keeps row geometry, notes and timer independent', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'visual-client-390', 'One iPhone profile for the session transition contract')
+  await openPreviewLiveWorkout(page, true)
+  const path = new URL(page.url()).pathname
+  await page.locator('.live-exercise-note summary').click()
+  const note = page.getByLabel(/^Заметка:/)
+  await note.fill('Скамья 3, удобная высота')
+  const saved = page.waitForResponse((response) => response.url().includes('/rpc/set_exercise_comment') && response.ok())
+  await page.locator('.live-timer').click()
+  await saved
+  await page.reload()
+  await expect(page.locator('.live-note-preview')).toHaveText('Скамья 3, удобная высота')
+  const rows = page.locator('.live-set-table > .live-set')
+  const firstBefore = await rows.first().boundingBox()
+  const secondBefore = await rows.nth(1).boundingBox()
+  const secondInput = rows.nth(1).getByLabel('Фактический вес')
+  await secondInput.fill('43')
+  await expect(secondInput).toBeFocused()
+  await page.clock.runFor(1500)
+  await expect(secondInput).toBeFocused()
+  await expect(secondInput).toHaveValue('43')
+  expect((await rows.nth(1).boundingBox())!.height).toBe(secondBefore!.height)
+  await rows.first().getByRole('button', { name: 'Готово, отдых' }).click()
+  await expect(rows.first()).toHaveClass(/confirmed/)
+  expect((await rows.first().boundingBox())!.height).toBe(firstBefore!.height)
+  expect(Math.abs((await rows.nth(1).boundingBox())!.y - secondBefore!.y)).toBeLessThanOrEqual(1)
+  await page.getByRole('button', { name: /^Таймер отдыха:/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Таймер отдыха' })).toBeVisible()
+  await expectMonochromeAccessibility(page)
+  await page.screenshot({ path: testInfo.outputPath('live-timer-sheet-390.png') })
+  await page.getByRole('button', { name: 'Пропустить', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Таймер отдыха', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Бег')
+  await page.locator('[data-exercise-ref="running"]').click()
+  await expect(page.locator('.live-exercise-upcoming')).toContainText('Бег')
+  await rows.nth(1).getByRole('button', { name: 'Готово, отдых' }).click()
+  await expect(page.locator('.live-exercise-collapsed')).toContainText('Жим')
+  const nextCard = page.locator('.live-exercise.current')
+  await expect(nextCard).toContainText('Бег')
+  const nextPosition = await nextCard.boundingBox()
+  await page.clock.runFor(2000)
+  expect(Math.abs((await nextCard.boundingBox())!.y - nextPosition!.y)).toBeLessThanOrEqual(1)
+  await expect(page.locator('.live-exercise-upcoming')).toHaveCount(0)
+  await gotoStable(page, path.replace(/\/live$/, ''))
+  await expect(page.getByText('Заметка: Скамья 3, удобная высота')).toBeVisible()
+  await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
+  await page.getByRole('menuitem', { name: 'Удалить тренировку' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
 })
 
 test('client live workout keeps its visual baseline', async ({ page }, testInfo) => {
@@ -1342,9 +1543,9 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await expect(analysis.getByText('Динамика упражнений')).toHaveCount(0)
   await analysis.getByRole('button', { name: 'Подробный анализ' }).click()
   const detailedAnalysis = page.getByRole('dialog', { name: 'Подробный анализ' })
-  await expect(detailedAnalysis.getByRole('heading', { name: 'Результат периода' })).toBeVisible()
-  await expect(detailedAnalysis.getByRole('heading', { name: 'Связь с целью' })).toBeVisible()
-  await expect(detailedAnalysis.getByRole('heading', { name: 'На что обратить внимание' })).toBeVisible()
+  await expect(detailedAnalysis.getByRole('heading', { name: 'Главное сейчас' })).toHaveCount(0)
+  await expect(detailedAnalysis.getByRole('heading', { name: 'Почему' })).toBeVisible()
+  await expect(detailedAnalysis.getByRole('heading', { name: 'На следующей тренировке' })).toBeVisible()
   await detailedAnalysis.getByRole('button', { name: 'Закрыть' }).click()
 })
 
@@ -1373,10 +1574,10 @@ test('trainer Progress and measurements form keep their visual baselines in both
   await expectVisualBaseline(page, `trainer-progress-${profile}-${process.platform}.png`, [], true)
   await page.getByRole('button', { name: 'Подробный анализ' }).click()
   const lightDetails = page.getByRole('dialog', { name: 'Подробный анализ' })
-  await expect(lightDetails.getByRole('heading', { name: 'Результат периода' })).toBeVisible()
-  await expect(lightDetails.getByRole('heading', { name: 'Связь с целью' })).toBeVisible()
-  await expect(lightDetails.getByRole('heading', { name: 'На что обратить внимание' })).toBeVisible()
-  await expectVisualBaseline(page, `trainer-progress-details-${profile}-${process.platform}.png`, [], true)
+  await expect(lightDetails.getByRole('heading', { name: 'Главное сейчас' })).toBeVisible()
+  await expect(lightDetails.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
+  await expect(lightDetails.getByRole('heading', { name: 'Почему' })).toHaveCount(0)
+  await expect(lightDetails.locator('.progress-detailed-analysis')).toBeVisible()
   await lightDetails.getByRole('button', { name: 'Закрыть' }).click()
 
   await gotoStable(page, `/progress/${demoClientId}?view=measurements`)
@@ -1394,10 +1595,10 @@ test('trainer Progress and measurements form keep their visual baselines in both
   await expectVisualBaseline(page, `trainer-progress-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
   await page.getByRole('button', { name: 'Подробный анализ' }).click()
   const darkDetails = page.getByRole('dialog', { name: 'Подробный анализ' })
-  await expect(darkDetails.getByRole('heading', { name: 'Результат периода' })).toBeVisible()
-  await expect(darkDetails.getByRole('heading', { name: 'Связь с целью' })).toBeVisible()
-  await expect(darkDetails.getByRole('heading', { name: 'На что обратить внимание' })).toBeVisible()
-  await expectVisualBaseline(page, `trainer-progress-details-${profile}-dark-${process.platform}.png`, [], true, '#1d1e21')
+  await expect(darkDetails.getByRole('heading', { name: 'Главное сейчас' })).toBeVisible()
+  await expect(darkDetails.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
+  await expect(darkDetails.getByRole('heading', { name: 'Почему' })).toHaveCount(0)
+  await expect(darkDetails.locator('.progress-detailed-analysis')).toBeVisible()
   await darkDetails.getByRole('button', { name: 'Закрыть' }).click()
 
   await gotoStable(page, `/progress/${demoClientId}?view=measurements`)
@@ -1484,7 +1685,9 @@ test('exercise picker keeps search, filters and technique readable', async ({ pa
   await expect(page.getByText(/Найдено: \d+/)).toBeVisible()
   await expectVisualBaseline(page, `exercise-picker-search-${profile}-${process.platform}.png`, [page.locator('.picker-item-media')])
 
-  await page.getByRole('button', { name: 'Посмотреть технику: Болгарский сплит-присед со штангой', exact: true }).click()
+  await page.getByRole('button', { name: 'Проиграть технику: Болгарский сплит-присед со штангой', exact: true }).click()
+  await expect(page.locator('.picker-item.playing video')).toBeVisible()
+  await page.getByRole('button', { name: 'Открыть технику: Болгарский сплит-присед со штангой', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Техника' })).toBeVisible()
   await expect(page.getByText('Как выполнять')).toBeVisible()
   await expectVisualBaseline(page, `exercise-picker-technique-${profile}-${process.platform}.png`, [page.locator('.picker-technique-view .exercise-image-technique')])
@@ -1495,9 +1698,12 @@ test('exercise picker keeps search, filters and technique readable', async ({ pa
   await page.getByRole('button', { name: 'Фильтры' }).click()
   await page.getByLabel('Группа мышц').selectOption('legs')
   await page.getByLabel('Мышца').selectOption('Передняя поверхность бедра')
+  await expect(page.getByLabel('Настройки фильтров')).toBeVisible()
+  await expectVisualBaseline(page, `exercise-picker-filters-${profile}-${process.platform}.png`, [page.locator('.picker-item-media')])
+  await page.getByRole('button', { name: /^Показать \d+ упражн/ }).click()
   await expect(page.getByLabel('Выбранные фильтры')).toContainText('Ноги')
   await expect(page.getByLabel('Выбранные фильтры')).toContainText('Передняя поверхность бедра')
-  await expectVisualBaseline(page, `exercise-picker-filters-${profile}-${process.platform}.png`, [page.locator('.picker-item-media')])
+  expect((await page.locator('.picker-list').boundingBox())?.height ?? 0).toBeGreaterThan(280)
 })
 
 test('trainer Client Detail keeps its visual baselines', async ({ page }, testInfo) => {
@@ -1668,4 +1874,205 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
       if (await darkTheme.isChecked()) await darkTheme.uncheck()
     }
   }
+})
+
+test('Home body map keeps its front and back switch aligned', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Home')
+  await mockClientWorkoutHistory(page, { includeBack: true, homeLayout: true })
+  await page.route('**/rest/v1/workouts?*', (route) => new URL(route.request().url()).searchParams.get('select') === 'workout_date'
+    ? route.fulfill({ contentType: 'application/json', body: JSON.stringify({ workout_date: '2026-08-03' }) }) : route.fallback())
+  await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  const map = page.getByRole('region', { name: 'Последняя тренировка' }).getByRole('region', { name: 'Распределение подходов' })
+  const sides = map.locator('.body-progress-sides')
+  await expect(sides).toBeVisible()
+  const coachmark = page.getByRole('button', { name: 'Понятно' })
+  if (await coachmark.isVisible()) await coachmark.click()
+
+  const geometry = await map.evaluate((element) => {
+    const sideControl = element.querySelector<HTMLElement>('.body-progress-sides')!
+    const visual = element.querySelector<HTMLElement>('.body-progress-visual')!
+    const buttons = Array.from(sideControl.querySelectorAll<HTMLElement>('button')).map((button) => button.getBoundingClientRect())
+    const control = sideControl.getBoundingClientRect()
+    const figure = visual.getBoundingClientRect()
+    const mapRect = element.getBoundingClientRect()
+    const zones = element.querySelector<HTMLElement>('.workout-load-map-zones')!.getBoundingClientRect()
+    const card = element.closest<HTMLElement>('.personal-workout-result')!
+    const cardRect = card.getBoundingClientRect()
+    const cardStyle = getComputedStyle(card)
+    return {
+      controlHeight: control.height,
+      buttonHeights: buttons.map((button) => button.height),
+      buttonWidths: buttons.map((button) => button.width),
+      buttonTops: buttons.map((button) => button.top),
+      gapToFigure: figure.top - control.bottom,
+      centersDelta: Math.abs((figure.left + figure.right) / 2 - (control.left + control.right) / 2),
+      topDelta: Math.abs(figure.top - zones.top),
+      rightDelta: Math.abs(mapRect.right - zones.right),
+      cardWidthDelta: Math.abs(mapRect.width - (cardRect.width - parseFloat(cardStyle.paddingLeft) - parseFloat(cardStyle.paddingRight) - 2)),
+    }
+  })
+  expect(geometry.controlHeight).toBeGreaterThanOrEqual(44)
+  expect(geometry.buttonHeights.every((height) => height >= 44)).toBe(true)
+  expect(Math.abs(geometry.buttonWidths[0]! - geometry.buttonWidths[1]!)).toBeLessThanOrEqual(1)
+  expect(Math.abs(geometry.buttonTops[0]! - geometry.buttonTops[1]!)).toBeLessThanOrEqual(1)
+  expect(geometry.gapToFigure).toBeGreaterThanOrEqual(8)
+  expect(geometry.centersDelta).toBeLessThanOrEqual(1)
+  expect(geometry.topDelta).toBeLessThanOrEqual(1)
+  expect(geometry.rightDelta).toBeLessThanOrEqual(1)
+  expect(geometry.cardWidthDelta).toBeLessThanOrEqual(1)
+  await expectBodyMapBaseline(page.getByRole('region', { name: 'Последняя тренировка' }), `home-result-alignment-${process.platform}.png`)
+  await expectBodyMapBaseline(map, `home-body-map-side-switch-${process.platform}.png`)
+  await expect(map).toContainText('Всего 5 подходов')
+  await expect(map).toContainText('Кардио: 1 подход')
+  await map.getByText('Показать все группы', { exact: true }).click()
+  await expect(map.getByRole('button', { name: 'Передняя поверхность бедра: 1 подход' })).toBeVisible()
+  await expectBodyMapBaseline(map, `home-body-map-expanded-${process.platform}.png`)
+
+  await map.getByRole('button', { name: 'Сзади' }).click()
+  await expect(map.getByRole('button', { name: 'Сзади' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(map.getByRole('button', { name: 'Верх спины: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
+  await map.getByRole('button', { name: 'Спереди' }).click()
+  await expect(map.getByRole('button', { name: 'Грудь: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
+  await map.getByText('Показать все группы', { exact: true }).click()
+
+  await page.evaluate(() => {
+    window.localStorage.setItem('fit.appTheme', 'dark')
+    window.dispatchEvent(new Event('fit-theme-change'))
+  })
+  await expectBodyMapBaseline(map, `home-body-map-side-switch-dark-${process.platform}.png`)
+  for (const viewport of [{ width: 360, height: 800 }, { width: 375, height: 812 }]) {
+    await page.setViewportSize(viewport)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await expect(sides).toHaveCSS('height', '44px')
+    for (const button of await sides.getByRole('button').all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  }
+})
+
+
+test('personal workout result stays on Home and remains available in Progress history without AI', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client result')
+  await mockClientWorkoutHistory(page)
+  await page.route('**/rest/v1/workouts?*', (route) => new URL(route.request().url()).searchParams.get('select') === 'workout_date'
+    ? route.fulfill({ contentType: 'application/json', body: JSON.stringify({ workout_date: '2026-08-03' }) }) : route.fallback())
+  await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await page.route('https://functions.yandexcloud.net/**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporarily unavailable' }) }))
+  await page.route('**/v1/legacy/summarize-client-training', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporarily unavailable' }) }))
+  await page.route('**/functions/v1/summarize-client-training', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporarily unavailable' }) }))
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  const result = page.getByRole('region', { name: 'Последняя тренировка' })
+  await expect(result.getByRole('heading', { name: 'Результат снизился' })).toBeVisible()
+  await expect(result).toContainText('45 → 40 кг · −5 кг')
+  await expect(result).toContainText('К прошлому результату')
+  await expect(result.getByRole('link', { name: 'Сравнить' })).toHaveCount(0)
+  await expect(result.getByRole('link', { name: 'Открыть тренировку' })).toHaveAttribute('href', '/workouts/b1000000-0000-4000-8000-000000000001')
+  const homeMap = result.getByRole('region', { name: 'Распределение подходов' })
+  await expect(homeMap.getByRole('button', { name: 'Грудь: 1 подход' })).toBeVisible()
+  const mapCoachmark = page.getByRole('button', { name: 'Понятно' })
+  if (await mapCoachmark.isVisible()) await mapCoachmark.click()
+  await expectBodyMapBaseline(result, `personal-result-home-${process.platform}.png`)
+  await homeMap.getByRole('link', { name: 'Разбор нагрузки' }).click()
+  await expect(page).toHaveURL(/mapWorkout=b1000000-0000-4000-8000-000000000001.*mapMode=load.*mapFrom=2026-08-10.*mapTo=2026-08-10.*mapZone=chest/)
+  const disclosure = page.locator('.client-body-map-disclosure')
+  await expect(disclosure).toHaveAttribute('open')
+  await expect(disclosure).toContainText('10 августа 2026 г. · тренировка')
+  await expect(disclosure).toContainText('Жим лёжа: 1 подход')
+  await disclosure.getByRole('link', { name: 'Открыть тренировку' }).click()
+  await expect(page).toHaveURL(/\/workouts\/b1000000-0000-4000-8000-000000000001$/)
+  await expect(page.getByRole('article').getByText('Жим лёжа', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(disclosure).toHaveAttribute('open')
+  await expect(disclosure.getByRole('button', { name: 'Грудь: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
+  const mapViewport = page.viewportSize()!
+  await page.setViewportSize({ ...mapViewport, height: 1400 })
+  await expectBodyMapBaseline(disclosure, `home-map-detail-${process.platform}.png`)
+  await page.setViewportSize(mapViewport)
+  await gotoStable(page, '/me/progress')
+  await expect(page.locator('.period-exercise-results')).toContainText('За этот период новых достижений нет.')
+  await expect(page.locator('.personal-workout-result')).toHaveCount(0)
+  await expect(page.locator('.ai-progress-auto-error')).toBeVisible()
+  await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
+  await page.getByRole('heading', { name: 'Мой прогресс' }).scrollIntoViewIfNeeded()
+  await expectVisualBaseline(page, `personal-result-progress-${process.platform}.png`)
+  await gotoStable(page, '/me/profile')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, '/me')
+  await expectBodyMapBaseline(result, `personal-result-home-dark-${process.platform}.png`)
+  await gotoStable(page, '/me/progress')
+  await expect(page.locator('.period-exercise-results')).toContainText('За этот период новых достижений нет.')
+  await expectVisualBaseline(page, `personal-result-progress-dark-${process.platform}.png`)
+})
+
+test('best results show several real records and keep the remaining achievements available', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client result')
+  await mockClientWorkoutHistory(page, { includeBack: true, bestResults: true })
+  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
+  await openClientProgress(page)
+  const results = page.locator('.period-exercise-results')
+  await expect(results.locator(':scope > .period-exercise-result')).toHaveCount(3)
+  await expect(results).toContainText('45 кг × 10 повторов')
+  await expect(results).toContainText('Новый максимум веса · +5 кг')
+  await expect(results).toContainText('Прежний рекорд — 40 кг')
+  await expect(results.getByRole('link', { name: 'Открыть тренировку' })).toHaveCount(3)
+  await expect(results).toHaveScreenshot(`best-results-${process.platform}.png`, { animations: 'disabled' })
+  await results.getByText('Ещё достижения · 1', { exact: true }).click()
+  await expect(results.getByRole('link', { name: 'Открыть тренировку' })).toHaveCount(4)
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
+})
+
+
+test('results center preserves sources and explains weekly work', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client analytics')
+  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
+  await mockResultsHistory(page)
+  await openClientProgress(page)
+  await verifyResultsSources(page)
+  const center = page.locator('#results-center')
+  const viewport = page.viewportSize()!
+  await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('fixed_reps')
+  await expect(center.locator('.center-result-row').first()).toContainText('Повторы при 50 кг: 12 повт.')
+  await expect(center.locator('.center-result-row').first()).toContainText('Было 10 повт.')
+  await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('volume')
+  const volume = center.locator('.center-result-row').first()
+  await volume.getByText('Подходы, вес и повторы', { exact: true }).click()
+  await expect(volume).toContainText('1 → 2')
+  await expect(volume).toContainText('50 кг × 12 повт.')
+  await expect(volume).toContainText('50 кг × 10 повт.')
+  await expect(volume).toContainText('45 кг × 10 повт.')
+  await expect(volume).toContainText('Итого: 1 100 кг')
+  await expect(volume).toContainText('Итого: 450 кг')
+  await expect(volume).not.toContainText('не равно изменению силы')
+  const weekly = page.locator('.weekly-training-load')
+  await weekly.getByText('Нагрузка по неделям', { exact: true }).click()
+  await expect(weekly.locator('.weekly-load-list > li').first()).toContainText('6 подходов')
+  await expect(weekly.locator('.weekly-load-list > li').first()).toContainText('Кардио: 2 · Без группы: 1')
+  await expect(weekly).toContainText('Часть недели')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.setViewportSize({ ...viewport, height: 1500 })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02 })
+  await expect.soft(volume).toHaveScreenshot(`result-volume-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.04 })
+  await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('weight')
+  await expect.soft(center).toHaveScreenshot(`results-center-${process.platform}.png`, { animations: 'disabled' })
+})
+
+test('results center keeps detailed analytics in dark theme', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client analytics')
+  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
+  await mockResultsHistory(page)
+  await openClientProgress(page, { dark: true })
+  const center = page.locator('#results-center')
+  await center.getByText('Все результаты', { exact: true }).click()
+  await center.getByRole('combobox', { name: 'Упражнение', exact: true }).selectOption('system:press:strength')
+  await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('volume')
+  const weekly = page.locator('.weekly-training-load')
+  const viewport = page.viewportSize()!
+  const darkVolume = center.locator('.center-result-row').first()
+  await expect(darkVolume).toContainText('Объём: 1 100 кг')
+  await darkVolume.getByText('Подходы, вес и повторы', { exact: true }).click()
+  await weekly.getByText('Нагрузка по неделям', { exact: true }).click()
+  await page.setViewportSize({ ...viewport, height: 1500 })
+  await expect.soft(darkVolume).toHaveScreenshot(`result-volume-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.04 })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02 })
 })

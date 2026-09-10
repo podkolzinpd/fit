@@ -2,6 +2,7 @@ import type { ExerciseSnapshot } from '../../shared/domain'
 import { exercisesRepository, type WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { matchesExplicitWorkoutEquipment, parseQuickWorkoutEntry, splitWorkoutText, workoutCandidates, type ParsedWorkoutExercise } from './quick-workout-entry'
 import { selectableExercises } from '../exercises/selectable-exercises'
+import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retirement'
 
 /**
  * Ниже этого порога выбор модели нужно подтвердить. Локальный строгий матчинг
@@ -19,6 +20,7 @@ type WorkoutParseOptions = {
 }
 
 export async function parseWorkoutWithLlm(text: string, catalog: readonly ExerciseSnapshot[], options: WorkoutParseOptions = {}) {
+  catalog = catalog.filter(isActiveCatalogExercise)
   // Сначала отделяем однозначно найденные упражнения. Это даёт LLM и
   // детерминированному парсеру одинаковые исходные строки и не создаёт дублей,
   // когда одна разговорная связка означает два упражнения.
@@ -45,7 +47,10 @@ export async function parseWorkoutWithLlm(text: string, catalog: readonly Exerci
  * каталога и ждём явного выбора человека.
  */
 export function requireExerciseConfirmation(response: WorkoutParseResponse, catalog: readonly ExerciseSnapshot[], options: WorkoutParseOptions = {}): WorkoutParseResponse {
-  const byRef = new Map(catalog.map((exercise) => [exercise.ref, exercise]))
+  const byRef = new Map(catalog.filter(isActiveCatalogExercise).map((exercise) => [exercise.ref, exercise]))
+  response = { ...response, unmatched: response.unmatched.map((item) => ({
+    ...item, suggestedExerciseRefs: item.suggestedExerciseRefs.filter((ref) => byRef.has(ref)),
+  })) }
   // Уверенность модели не отменяет локальный конфликт названия или оборудования:
   // во всех пользовательских входах неоднозначность требует явного выбора.
   const locallyAmbiguousSources = new Set(options.requireLocalDisambiguation !== false ? response.items.flatMap((item) =>
@@ -54,7 +59,7 @@ export function requireExerciseConfirmation(response: WorkoutParseResponse, cata
       .map((unparsed) => sourceKey(unparsed.line)),
   ) : [])
   const uncertain = response.items.filter((item) =>
-    item.confidence < REQUIRED_EXERCISE_CONFIDENCE || locallyAmbiguousSources.has(sourceKey(item.sourceText)),
+    !byRef.has(item.exerciseRef) || item.confidence < REQUIRED_EXERCISE_CONFIDENCE || locallyAmbiguousSources.has(sourceKey(item.sourceText)),
   )
   if (!uncertain.length) return response
   const unresolved = uncertain.map((item) => {
@@ -63,7 +68,8 @@ export function requireExerciseConfirmation(response: WorkoutParseResponse, cata
       .slice(0, 4)
     return {
       sourceText: item.sourceText,
-      reason: item.confidence >= REQUIRED_EXERCISE_CONFIDENCE && locallyAmbiguousSources.has(sourceKey(item.sourceText))
+      reason: !byRef.has(item.exerciseRef) ? 'Упражнение недоступно в каталоге. Выберите другое или создайте своё.'
+        : item.confidence >= REQUIRED_EXERCISE_CONFIDENCE && locallyAmbiguousSources.has(sourceKey(item.sourceText))
         ? 'Нужно уточнить вариант упражнения'
         : 'Нужно выбрать упражнение: модель не уверена в совпадении',
       suggestedExerciseRefs: candidates,

@@ -149,4 +149,25 @@ describe('buildPeriodComparison', () => {
     expect(result.facts.some((fact) => fact.kind === 'regularity')).toBe(false)
     expect(result.facts.some((fact) => fact.kind === 'cardio')).toBe(true)
   })
+  it('retains exact exercise history through a rename but never compares a different ref', () => {
+    const previous = workout('before', '2026-07-03', 50, 5)
+    const current = workout('after', '2026-08-03', 60, 5)
+    current.exercises[0]!.name = 'Жим с новым названием'
+    const compare = () => buildPeriodComparison({ currentPeriod, previousPeriod, currentWorkouts: [current], previousWorkouts: [previous] }).facts.filter((fact) => fact.kind === 'strength')
+    expect(compare()).toEqual([expect.objectContaining({ subject: 'Жим с новым названием · рабочий вес', previousLabel: '50 кг', currentLabel: '60 кг' })])
+    current.exercises[0]!.ref = 'another-press'
+    expect(compare()).toEqual([])
+  })
+
+  it('never substitutes planned values or incomplete confirmed sets in numeric comparisons', () => {
+    const previous = workout('before', '2026-07-03', 50, 5)
+    const current = workout('after', '2026-08-03', 90, 20)
+    current.exercises[0]!.sets[0]!.fact = { weightKg: 60 }
+    current.exercises[1]!.sets[0]!.fact = {}
+    const result = buildPeriodComparison({ currentPeriod, previousPeriod, currentWorkouts: [current], previousWorkouts: [previous] })
+    expect(result.facts.some((fact) => fact.kind === 'strength' || fact.kind === 'cardio' || fact.subject === 'Силовой объём')).toBe(false)
+    current.exercises[0]!.sets[0]!.fact = { weightKg: Number.NaN, reps: 10 }
+    expect(buildPeriodComparison({ currentPeriod, previousPeriod, currentWorkouts: [current], previousWorkouts: [previous] }).facts.some((fact) => fact.label.includes('NaN'))).toBe(false)
+  })
+
 })

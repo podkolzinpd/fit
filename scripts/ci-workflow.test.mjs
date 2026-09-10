@@ -8,6 +8,8 @@ const workflow = readFileSync(
   'utf8',
 )
 
+const supportedSupabaseCliVersion = '2.116.0'
+
 test('runs isolated WebKit shards in two parallel lanes and retries only a failed shard', () => {
   assert.match(workflow, /e2e-webkit:/)
   assert.match(workflow, /max-parallel: 2/)
@@ -26,25 +28,31 @@ test('runs isolated WebKit shards in two parallel lanes and retries only a faile
 test('keeps one required E2E result while skipping heavy jobs only for a safe scope', () => {
   assert.match(workflow, /e2e-scope:/)
   assert.match(workflow, /node scripts\/e2e-scope\.mjs "\$BASE_SHA" "\$HEAD_SHA"/)
-  assert.match(workflow, /e2e-chromium-visual:/)
+  assert.match(workflow, /e2e-visual:/)
+  assert.match(workflow, /e2e-chromium:/)
   assert.match(workflow, /if: needs\.e2e-scope\.outputs\.required == 'true'/)
-  assert.match(workflow, /e2e:\n    needs: \[e2e-scope, e2e-chromium-visual, e2e-webkit\]/)
+  assert.match(workflow, /e2e:\n    needs: \[e2e-scope, e2e-visual, e2e-chromium, e2e-webkit\]/)
+  assert.match(workflow, /VISUAL_RESULT: \$\{\{ needs\.e2e-visual\.result \}\}/)
+  assert.match(workflow, /CHROMIUM_RESULT: \$\{\{ needs\.e2e-chromium\.result \}\}/)
   assert.match(workflow, /E2E skipped: changes do not affect the browser runtime/)
 })
 
-test('resets the visual database between viewport profiles', () => {
-  assert.match(
-    workflow,
-    /for project in visual-client-390 visual-client-430 visual-trainer-1440; do\n\s+supabase db reset --local\n\s+node scripts\/wait-for-local-auth\.mjs/,
-  )
-  assert.match(workflow, /--env PLAYWRIGHT_PROJECT="\$project"/)
+test('runs visual viewport profiles in parallel with an isolated database each', () => {
+  assert.match(workflow, /e2e-visual:[\s\S]*max-parallel: 3/)
+  assert.match(workflow, /project: \[visual-client-390, visual-client-430, visual-trainer-1440\]/)
+  assert.match(workflow, /--env PLAYWRIGHT_PROJECT="\$\{\{ matrix\.project \}\}"/)
   assert.match(workflow, /--project="\$PLAYWRIGHT_PROJECT" --workers=1/)
+  assert.doesNotMatch(workflow, /for project in visual-client-390/)
 })
 
 test('waits for local auth readiness before auth-dependent E2E jobs', () => {
   assert.match(
     workflow,
-    /e2e-chromium-visual:[\s\S]*supabase db reset --local\n\s+node scripts\/wait-for-local-auth\.mjs/,
+    /e2e-visual:[\s\S]*?- run: supabase db reset --local\n\s+- run: node scripts\/wait-for-local-auth\.mjs/,
+  )
+  assert.match(
+    workflow,
+    /e2e-chromium:[\s\S]*?- run: supabase db reset --local\n\s+- run: node scripts\/wait-for-local-auth\.mjs/,
   )
   assert.match(
     workflow,
@@ -52,7 +60,24 @@ test('waits for local auth readiness before auth-dependent E2E jobs', () => {
   )
 })
 
+test('runs the complete Yandex API check independently from browser E2E', () => {
+  assert.match(workflow, /api:[\s\S]*cache-dependency-path: services\/api\/package-lock\.json/)
+  assert.match(workflow, /api:[\s\S]*- run: npm ci --prefix services\/api/)
+  assert.match(workflow, /api:[\s\S]*- run: npm --prefix services\/api run check/)
+})
+
 test('cancels a superseded CI run for the same pull request', () => {
   assert.match(workflow, /concurrency:\n  group: ci-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}/)
   assert.match(workflow, /cancel-in-progress: true/)
+})
+
+test('uses a Supabase CLI version that reloads Kong after db reset', () => {
+  const configuredVersions = [...workflow.matchAll(/uses: supabase\/setup-cli@v1\n\s+with:[\s\S]*?\n\s+version: ([^\s]+)/g)]
+    .map((match) => match[1])
+
+  assert.ok(configuredVersions.length > 0)
+  assert.deepEqual(
+    [...new Set(configuredVersions)],
+    [supportedSupabaseCliVersion],
+  )
 })

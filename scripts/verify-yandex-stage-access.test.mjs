@@ -92,6 +92,57 @@ test('waits for IAM propagation and then succeeds', async () => {
   assert.equal(calls, 10)
 })
 
+test('retries a transient network failure and then succeeds', async () => {
+  let calls = 0
+  let sleeps = 0
+  const fetchImpl = async () => {
+    calls += 1
+    if (calls <= 5) throw new TypeError('fetch failed')
+    return response({ accessBindings: [runtimeBinding] })
+  }
+
+  await waitForRuntimeBindings({
+    deployerServiceAccountId: deployerId,
+    apiRuntimeServiceAccountId: 'api-sa',
+    migrationRuntimeServiceAccountId: 'migration-sa',
+    pushDispatcherServiceAccountId: pushDispatcherId,
+    pushSchedulerServiceAccountId: pushSchedulerId,
+    token: 'token',
+    timeoutMs: 1_000,
+    pollIntervalMs: 1,
+    fetchImpl,
+    sleep: async () => { sleeps += 1 },
+  })
+
+  assert.equal(calls, 10)
+  assert.equal(sleeps, 1)
+})
+
+test('retries a transient IAM API response and then succeeds', async () => {
+  let calls = 0
+  const fetchImpl = async () => {
+    calls += 1
+    return calls <= 5
+      ? response({ message: 'Service unavailable' }, 503)
+      : response({ accessBindings: [runtimeBinding] })
+  }
+
+  await waitForRuntimeBindings({
+    deployerServiceAccountId: deployerId,
+    apiRuntimeServiceAccountId: 'api-sa',
+    migrationRuntimeServiceAccountId: 'migration-sa',
+    pushDispatcherServiceAccountId: pushDispatcherId,
+    pushSchedulerServiceAccountId: pushSchedulerId,
+    token: 'token',
+    timeoutMs: 1_000,
+    pollIntervalMs: 1,
+    fetchImpl,
+    sleep: async () => {},
+  })
+
+  assert.equal(calls, 10)
+})
+
 test('fails before image work when a required binding never appears', async () => {
   await assert.rejects(
     waitForRuntimeBindings({

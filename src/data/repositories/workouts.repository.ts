@@ -61,6 +61,7 @@ async function get(id: string): Promise<Workout> {
     blockId: row.block_id, blockType: row.block_type as BlockType, blockPreset: row.block_preset as BlockPreset, blockRounds: row.block_rounds,
     restBetweenExercisesSec: row.rest_between_exercises_sec, restBetweenRoundsSec: row.rest_between_rounds_sec, restBetweenSetsSec: row.rest_between_sets_sec,
     trainerComment: row.trainer_comment ?? undefined,
+    clientNote: row.client_note ?? undefined,
     sets: grouped.get(row.id) ?? [],
   }))
   const client = await clientsRepository.get(root.data.client_id)
@@ -270,6 +271,11 @@ export const workoutsRepository = {
   },
   async removeLiveSet(workout: Workout, setId: string): Promise<number> {
     const result = await workoutQueries.removeLiveSet(setId, workout.version)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async removeLiveExercise(workout: Workout, exerciseId: string): Promise<number> {
+    const result = await workoutQueries.removeLiveExercise(workout.id, exerciseId, workout.version)
     if (result.error) throw repositoryError(result.error)
     return result.data
   },

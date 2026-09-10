@@ -34,6 +34,21 @@ npm run tenant:migrate -- import --in <artifact.fit> --apply
 npm run tenant:migrate -- validate --in <artifact.fit>
 ```
 
+Для повторяемой проверки всего цикла одной командой используйте:
+
+```text
+npm run tenant:rehearse:local
+```
+
+Команда работает только с loopback-портами локального Podman, дополняет
+исключительно синтетический demo cohort production-like данными, дважды создаёт
+чистую временную PostgreSQL 17 базу и для каждой выполняет export, dry-run,
+проверку rollback, apply, повторный apply с `inserted=0` и validate всех 28
+таблиц. Зашифрованные artifacts и обе временные базы удаляются после прогона.
+Подключить этой командой stage или production нельзя. Она проверяет данные,
+чистую цепочку миграций и идемпотентность, но не заменяет отдельную проверку
+сетевого доступа, IAM, remote credentials и согласованного окна переноса.
+
 Первый `import` — обязательный dry-run: он открывает транзакцию, проверяет все
 FK/unique/check constraints и checksums, затем делает rollback. `--apply`
 фиксирует данные только после полной проверки. Повторный apply безопасен и
@@ -65,6 +80,55 @@ trainer-связей и pending push, freeze writes, target, backup и rollback 
 Точные границы manifest и ограничения описаны в
 `docs/design/YANDEX_TENANT_MIGRATION_TOOLING.md`.
 
+### Удалённая репетиция на Yandex stage
+
+Workflow `Rehearse Yandex tenant migration` запускается только вручную из
+`main` и использует выбранный profile UUID из masked repository secret
+`FIT_TENANT_TRAINER_ID`. UUID не является workflow input и не выводится в
+команды или отчёт. Существующие `SUPABASE_PROJECT_ID` и
+`SUPABASE_DB_PASSWORD` дают source-доступ через связанный session pooler;
+TLS проверяется с `verify-full`-эквивалентной настройкой и публичным корневым
+сертификатом `services/api/certs/supabase-prod-ca-2021.crt`, опубликованным
+Supabase для hosted PostgreSQL. Системного CA bundle для Supavisor недостаточно;
+проверку сертификата отключать запрещено. Сертификат не является секретом, но
+при его ротации новый файл и fingerprint должны попасть в обычный review;
+target вызывается только через private `fit-stage-migration` с короткоживущим
+GitHub OIDC → Yandex IAM token.
+
+Поле `tenant_selection` управляет только выбором cohort-а:
+
+- `configured` использует `FIT_TENANT_TRAINER_ID` и остаётся единственным
+  допустимым вариантом для `apply`;
+- `smallest-eligible` доступен только для `audit` и `dry-run`. Он читает
+  trainer UUID с клиентами, начиная с самого маленького cohort-а, пропускает
+  кандидатов, не прошедших обычный tenant preflight, и не выводит найденный
+  UUID. Если подходящего изолированного cohort-а нет, workflow завершается с
+  `candidate_not_found`.
+
+Автовыбор нужен только для безопасной репетиции на реальных объёмах. Он не
+фиксирует tenant для cutover и намеренно запрещён для записи в stage.
+
+Режимы выполняются последовательно:
+
+- `audit` — одна `REPEATABLE READ READ ONLY` транзакция в Supabase; показывает
+  только fingerprint, таблицы, количества строк и размер encrypted envelope;
+- `dry-run` — повторяет audit, передаёт envelope только в памяти private runner
+  и откатывает полную target-транзакцию после constraints/checksum validation;
+- `apply` — сначала выполняет dry-run, затем commit и обязательный повторный
+  apply, который должен вставить ноль строк. Требует точное отдельное значение
+  `APPLY_TENANT_TO_YANDEX_STAGE`.
+
+При отклонении target с `409` orchestration принимает и выводит только узкий
+`tenant_migration_rejected` code, прошедший allowlist-проверку символов. Полное
+тело ответа, значения строк и database error message в Actions logs не попадают.
+
+Artifact не записывается в GitHub Artifacts, workspace или Object Storage.
+Размер запроса ограничен 3 МиБ; превышение останавливает workflow после
+read-only audit. Workflow не меняет sticky routing, Yandex ID assignment,
+production frontend или Supabase. Перенос на stage оплачивает только фактические
+холодные вызовы уже существующего Serverless Container; новый постоянно
+работающий или provisioned ресурс не создаётся.
+
 ## Первый запуск Yandex push pipeline
 
 Миграция `000030` сама не отправляет уведомления. Доставку включает только
@@ -91,6 +155,44 @@ GitHub outputs/env, логи или Terraform state. Dispatcher получает
 `approve_push_pipeline=true`. Это одноразовое разрешение: timer создаётся лишь
 после health-check точной ревизии, а последующие image-only обновления снова
 выкатываются автоматически. Ручной SQL и копирование Lockbox payload не нужны.
+
+## Feedback operations in Yandex stage
+
+Миграция `000036` добавляет live views `analytics.trainers_metrics`,
+`analytics.trainer_overview`, `analytics.client_overview` и
+`analytics.app_feedback`. Для текущего небольшого объёма данных это обычные
+PostgreSQL views: отдельный refresh и `pg_cron` не нужны, поэтому включение
+views не перезапускает кластер. Stage сохраняет уже включённый управляемый
+Yandex Cloud путь доступа DataLens (`data_lens=true`), чтобы Terraform не
+отключал живую настройку. Отдельный пользователь и подключение DataLens не
+создаются, а перенос существующих дашбордов из другого Yandex Cloud остаётся
+отложенным шагом; сами views готовы в PostgreSQL.
+
+Telegram и Tracker не создают новый container или timer. Уже существующий
+private `fit-stage-push-dispatcher` раз в минуту забирает ограниченную lease-
+пачку `app_feedback`, отправляет её в оба сервиса и независимо фиксирует два
+результата. Подтверждённый канал повторно не отправляется, неуспешный имеет не
+более 10 попыток. Tracker получает `unique=<feedback UUID>`, поэтому повторный
+запрос не создаёт вторую задачу. Telegram Bot API не поддерживает idempotency
+key: после подтверждённого ответа повтора не будет, но авария контейнера между
+приёмом сообщения Telegram и записью receipt теоретически может дать дубль;
+`Код сообщения` позволяет его однозначно распознать.
+
+Создайте в каталоге stage один Lockbox secret с именем
+`fit-stage-app-feedback-integrations` и одной версией, содержащей ровно:
+
+- `APP_FEEDBACK_TELEGRAM_BOT_TOKEN`;
+- `APP_FEEDBACK_TELEGRAM_CHAT_ID`;
+- `APP_FEEDBACK_TRACKER_TOKEN`;
+- `APP_FEEDBACK_TRACKER_ORG_ID`.
+
+Workflow сам находит текущую immutable-версию по имени и монтирует значения
+только в private dispatcher. При отсутствующем секрете deployment остаётся
+рабочим, feedback сохраняется в PostgreSQL, но внешняя доставка не запускается.
+Queue по умолчанию — `YAFIT`; заголовок организации — `X-Org-ID`.
+Для Identity Hub задайте Terraform input
+`app_feedback_tracker_org_header="X-Cloud-Org-ID"`. Секреты нельзя добавлять в
+GitHub/Vercel variables, `.env`, команды или логи.
 
 ## GitHub Secrets
 
@@ -134,6 +236,13 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key>
 ```
 
 `SUPABASE_DB_PASSWORD`, `SUPABASE_ACCESS_TOKEN`, service-role key и OAuth Client Secret в Vercel не добавляются. После первого production deploy его канонический URL фиксируется в Supabase Auth URL Configuration:
+
+Лицензированные Vital Gym Pro media также не требуют закрытых переменных в
+Vercel. Зашифрованный bundle публикуется только workflow `Deploy Vital exercise
+media`, использующим GitHub secrets `VITAL_MEDIA_KEY`, `SUPABASE_ACCESS_TOKEN`
+и `SUPABASE_PROJECT_ID`. Файлы находятся в private bucket
+`fit-exercise-media`; policy разрешает чтение только роли `authenticated`, а
+frontend создаёт короткоживущие signed URL.
 
 Закрытый пилот Apple Health управляется build-time переменными Vercel:
 

@@ -1,5 +1,9 @@
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
+import { AppFeedbackDispatcher } from './app-feedback-dispatcher.js'
+import { readAppFeedbackIntegrationsConfig } from './app-feedback-integrations/config.js'
+import { HttpAppFeedbackSender } from './app-feedback-integrations/sender.js'
+import { BackgroundDispatcher } from './background-dispatcher.js'
 import { buildPushDispatcherApp } from './push-dispatcher-app.js'
 import { PushDispatcher } from './push-dispatcher.js'
 import { YandexPushNotificationSender } from './push-notifications/http-sender.js'
@@ -27,8 +31,19 @@ const sender = new YandexPushNotificationSender(
   requiredEnv('PUSH_FUNCTION_URL'),
   requiredEnv('PUSH_DISPATCH_SECRET'),
 )
+const pushDispatcher = new PushDispatcher(databasePool, sender)
+const appFeedbackConfig = readAppFeedbackIntegrationsConfig(process.env)
+const dispatcher = appFeedbackConfig === undefined
+  ? pushDispatcher
+  : new BackgroundDispatcher(
+      pushDispatcher,
+      new AppFeedbackDispatcher(
+        databasePool,
+        new HttpAppFeedbackSender(appFeedbackConfig),
+      ),
+    )
 const app = buildPushDispatcherApp({
-  dispatcher: new PushDispatcher(databasePool, sender),
+  dispatcher,
   releaseId: requiredEnv('FIT_RELEASE_ID'),
 })
 

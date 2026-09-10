@@ -11,7 +11,6 @@ import { buildTrainingGoalContext } from "./summary-goal.ts"
 import {
   authorizeSummaryActor,
   parseYandexJson,
-  shouldUseClientCache,
   yandexHttpError,
 } from "./self-service.ts"
 import { completedWorkoutsInPeriod } from "./workout-source.ts"
@@ -23,7 +22,8 @@ import { resolveSupabasePublicKey } from "./supabase-public-key.ts"
 const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
 const MAX_PERIOD_DAYS = 366
-const MAX_SOURCE_ROWS = 1000
+const MAX_SOURCE_ROWS = 10_000
+const MAX_DIRECT_MODEL_INPUT_CHARS = 80_000
 
 type SummarizeRequest = {
   client_id: string
@@ -37,6 +37,10 @@ type WorkoutRow = {
   workout_date: string
   status: string
   deleted_at: string | null
+  session_rpe: number | null
+  wellbeing: string | null
+  discomfort: boolean | null
+  client_comment: string | null
 }
 
 type ExerciseRow = {
@@ -44,6 +48,8 @@ type ExerciseRow = {
   workout_id: string
   exercise_ref: string
   exercise_name: string
+  exercise_source?: string
+  muscle_group?: string
   input_kind: string
   position: number
 }
@@ -51,11 +57,27 @@ type ExerciseRow = {
 type SetRow = {
   workout_exercise_id: string
   position: number
+  plan_weight_kg: number | null
+  plan_reps: number | null
+  plan_duration_min: number | null
+  plan_duration_sec: number | null
+  plan_distance_km: number | null
+  plan_rpe: number | null
   fact_weight_kg: number | null
   fact_reps: number | null
   fact_duration_min: number | null
   fact_duration_sec: number | null
   fact_distance_km: number | null
+  fact_rpe: number | null
+  confirmed_at: string | null
+}
+
+type ProgressRow = {
+  recorded_on: string
+  weight_kg: number | null
+  chest_cm: number | null
+  waist_cm: number | null
+  hip_cm: number | null
 }
 
 type YandexCompletionResponse = {
@@ -84,11 +106,20 @@ type ClientSummary = {
   encouragement: string
   goalAlignment: string
   nextSteps: string[]
+  missingContext: string[]
+  analysisVersion: string
 }
 
 type GeneratedSummary = {
   trainer: TrainerSummary
   client: ClientSummary
+}
+
+type YandexSummaryResult = {
+  summary: GeneratedSummary
+  modelUri: string
+  modelVersion: string | null
+  usage: Record<string, string>
 }
 
 class HttpError extends Error {
@@ -134,6 +165,8 @@ function parseGeneratedSummary(value: string): GeneratedSummary {
     typeof client.encouragement !== "string" ||
     typeof client.goalAlignment !== "string" ||
     !isStringArray(client.nextSteps)
+    || !isStringArray(client.missingContext)
+    || typeof client.analysisVersion !== "string"
   ) {
     throw new HttpError(502, "yandex_cloud_invalid_summary")
   }
@@ -152,6 +185,8 @@ function parseGeneratedSummary(value: string): GeneratedSummary {
       encouragement: client.encouragement.trim(),
       goalAlignment: client.goalAlignment.trim(),
       nextSteps: client.nextSteps.map((item) => item.trim()),
+      missingContext: client.missingContext.map((item) => item.trim()),
+      analysisVersion: client.analysisVersion.trim(),
     },
   }
 }
@@ -262,12 +297,24 @@ async function fingerprint(value: unknown): Promise<string> {
 type SessionMetrics = {
   date: string
   set_count: number
+  planned_set_count: number
+  set_completion_percent: number
+  planned_max_weight_kg?: number
+  planned_total_reps?: number
+  planned_volume_kg?: number
   max_weight_kg?: number
   total_reps?: number
   volume_kg?: number
   total_duration_min?: number
   total_distance_km?: number
   pace_min_per_km?: number
+  average_rpe?: number
+  sets: Array<{
+    exercise_position: number
+    set_position: number
+    planned: Record<string, number> | null
+    performed: Record<string, number> | null
+  }>
 }
 
 function rounded(value: number): number {
@@ -277,6 +324,31 @@ function rounded(value: number): number {
 function percentChange(start?: number, end?: number): number | undefined {
   if (start === undefined || end === undefined || start <= 0) return undefined
   return Math.round(((end - start) / start) * 100)
+}
+
+function addUtcDays(value: string, amount: number): string {
+  const date = new Date(`${value}T00:00:00.000Z`)
+  date.setUTCDate(date.getUTCDate() + amount)
+  return date.toISOString().slice(0, 10)
+}
+
+function inclusivePeriodDays(start: string, end: string): number {
+  return Math.round((Date.parse(`${end}T00:00:00.000Z`) - Date.parse(`${start}T00:00:00.000Z`)) / 86_400_000) + 1
+}
+
+function setValues(set: SetRow, kind: "plan" | "fact"): Record<string, number> | null {
+  const values = {
+    weight_kg: set[`${kind}_weight_kg`],
+    reps: set[`${kind}_reps`],
+    duration_min: set[`${kind}_duration_min`],
+    duration_sec: set[`${kind}_duration_sec`],
+    distance_km: set[`${kind}_distance_km`],
+    rpe: set[`${kind}_rpe`],
+  }
+  const present = Object.entries(values).filter((entry): entry is [string, number] =>
+    entry[1] !== null && Number.isFinite(Number(entry[1]))
+  )
+  return present.length > 0 ? Object.fromEntries(present.map(([key, value]) => [key, Number(value)])) : null
 }
 
 function buildProgressData(
@@ -298,8 +370,11 @@ function buildProgressData(
     workouts.map((workout) => [workout.id, workout.workout_date]),
   )
   const exerciseProgress = new Map<string, {
+    ref: string
     name: string
     kind: string
+    muscle_group: string
+    source: string
     sessions: Map<string, SessionMetrics>
   }>()
 
@@ -308,20 +383,24 @@ function buildProgressData(
     if (!date) continue
 
     const exerciseSets = setsByExercise.get(exercise.id) ?? []
-    const weights = exerciseSets.flatMap((set) =>
+    const confirmedSets = exerciseSets.filter((set) => set.confirmed_at !== null)
+    const weights = confirmedSets.flatMap((set) =>
       set.fact_weight_kg === null ? [] : [Number(set.fact_weight_kg)]
     )
-    const reps = exerciseSets.flatMap((set) =>
+    const reps = confirmedSets.flatMap((set) =>
       set.fact_reps === null ? [] : [Number(set.fact_reps)]
     )
-    const durations = exerciseSets.flatMap((set) => {
+    const durations = confirmedSets.flatMap((set) => {
       if (set.fact_duration_sec !== null) return [Number(set.fact_duration_sec) / 60]
       return set.fact_duration_min === null ? [] : [Number(set.fact_duration_min)]
     })
-    const distances = exerciseSets.flatMap((set) =>
+    const distances = confirmedSets.flatMap((set) =>
       set.fact_distance_km === null ? [] : [Number(set.fact_distance_km)]
     )
-    const volume = exerciseSets.reduce(
+    const rpes = confirmedSets.flatMap((set) =>
+      set.fact_rpe === null ? [] : [Number(set.fact_rpe)]
+    )
+    const volume = confirmedSets.reduce(
       (sum, set) =>
         sum + (
           set.fact_weight_kg === null || set.fact_reps === null
@@ -330,16 +409,43 @@ function buildProgressData(
         ),
       0,
     )
+    const plannedWeights = exerciseSets.flatMap((set) => set.plan_weight_kg === null ? [] : [Number(set.plan_weight_kg)])
+    const plannedReps = exerciseSets.flatMap((set) => set.plan_reps === null ? [] : [Number(set.plan_reps)])
+    const plannedVolume = exerciseSets.reduce((sum, set) =>
+      sum + (set.plan_weight_kg === null || set.plan_reps === null ? 0 : Number(set.plan_weight_kg) * Number(set.plan_reps)), 0)
 
     const progress = exerciseProgress.get(exercise.exercise_ref) ?? {
+      ref: exercise.exercise_ref,
       name: exercise.exercise_name,
       kind: exercise.input_kind,
+      muscle_group: exercise.muscle_group ?? "other",
+      source: exercise.exercise_source ?? "unknown",
       sessions: new Map<string, SessionMetrics>(),
     }
     const existing = progress.sessions.get(date)
     const session: SessionMetrics = {
       date,
-      set_count: (existing?.set_count ?? 0) + exerciseSets.length,
+      set_count: (existing?.set_count ?? 0) + confirmedSets.length,
+      planned_set_count: (existing?.planned_set_count ?? 0) + exerciseSets.length,
+      set_completion_percent: 0,
+      sets: [
+        ...(existing?.sets ?? []),
+        ...exerciseSets.map((set) => ({
+          exercise_position: exercise.position,
+          set_position: set.position,
+          planned: setValues(set, "plan"),
+          performed: set.confirmed_at === null ? null : setValues(set, "fact"),
+        })),
+      ],
+      planned_max_weight_kg: plannedWeights.length
+        ? Math.max(existing?.planned_max_weight_kg ?? 0, ...plannedWeights)
+        : existing?.planned_max_weight_kg,
+      planned_total_reps: plannedReps.length
+        ? rounded((existing?.planned_total_reps ?? 0) + plannedReps.reduce((a, b) => a + b, 0))
+        : existing?.planned_total_reps,
+      planned_volume_kg: plannedVolume > 0
+        ? rounded((existing?.planned_volume_kg ?? 0) + plannedVolume)
+        : existing?.planned_volume_kg,
       max_weight_kg: weights.length
         ? Math.max(existing?.max_weight_kg ?? 0, ...weights)
         : existing?.max_weight_kg,
@@ -361,7 +467,13 @@ function buildProgressData(
             distances.reduce((a, b) => a + b, 0),
         )
         : existing?.total_distance_km,
+      average_rpe: rpes.length
+        ? rounded(rpes.reduce((a, b) => a + b, 0) / rpes.length)
+        : existing?.average_rpe,
     }
+    session.set_completion_percent = session.planned_set_count > 0
+      ? Math.round((session.set_count / session.planned_set_count) * 100)
+      : 100
     if (
       session.total_duration_min !== undefined &&
       session.total_distance_km !== undefined &&
@@ -393,6 +505,20 @@ function buildProgressData(
       requested_start: periodStart,
     },
     consistency,
+    feedback_signals: workouts.flatMap((workout) => {
+      const comment = workout.client_comment?.trim().slice(0, 240)
+      if (
+        workout.session_rpe === null && !workout.wellbeing &&
+        workout.discomfort === null && !comment
+      ) return []
+      return [{
+        date: workout.workout_date,
+        session_rpe: workout.session_rpe,
+        wellbeing: workout.wellbeing,
+        discomfort: workout.discomfort,
+        client_comment: comment || null,
+      }]
+    }),
     exercises: Array.from(exerciseProgress.values())
       .map((progress) => {
         const sessions = Array.from(progress.sessions.values())
@@ -400,8 +526,11 @@ function buildProgressData(
         const first = sessions[0]
         const last = sessions.at(-1)
         return {
+          ref: progress.ref,
           name: progress.name,
           kind: progress.kind,
+          muscle_group: progress.muscle_group,
+          source: progress.source,
           session_count: sessions.length,
           first_session: first,
           last_session: last,
@@ -478,11 +607,100 @@ function buildProgressData(
   }
 }
 
+type YandexRequestOptions = {
+  skipChunking?: boolean
+  qualityData?: unknown
+}
+
+function modelInputChunks(value: unknown): unknown[] {
+  if (!isRecord(value) || !Array.isArray(value.exercises)) return [value]
+  const previous = isRecord(value.previous_period) ? value.previous_period : null
+  const units = [
+    ...value.exercises.map((exercise) => ({ period: 'current', exercise })),
+    ...(Array.isArray(previous?.exercises)
+      ? previous.exercises.map((exercise) => ({ period: 'previous', exercise }))
+      : []),
+  ]
+  if (units.length === 0) return [value]
+
+  const base = {
+    ...value,
+    input_coverage: isRecord(value.input_coverage)
+      ? { ...value.input_coverage, complete: false }
+      : { complete: false },
+    chunk_scope: 'Это непересекающаяся часть полного входа. Найди локальные сигналы, не делай вывод о полноте всего периода.',
+    exercises: [] as unknown[],
+    previous_period: previous ? { ...previous, exercises: [] as unknown[] } : null,
+  }
+  const chunks: Array<typeof base> = []
+  let chunk = structuredClone(base)
+  for (const unit of units) {
+    const target = unit.period === 'current'
+      ? chunk.exercises
+      : (chunk.previous_period?.exercises ?? chunk.exercises)
+    target.push(unit.exercise)
+    if (JSON.stringify(chunk).length > MAX_DIRECT_MODEL_INPUT_CHARS && target.length > 1) {
+      target.pop()
+      chunks.push(chunk)
+      chunk = structuredClone(base)
+      const nextTarget = unit.period === 'current'
+        ? chunk.exercises
+        : (chunk.previous_period?.exercises ?? chunk.exercises)
+      nextTarget.push(unit.exercise)
+    }
+  }
+  if (chunk.exercises.length > 0 || (chunk.previous_period?.exercises.length ?? 0) > 0) {
+    chunks.push(chunk)
+  }
+  return chunks
+}
+
+function mergeUsage(results: Array<{ usage: Record<string, string> }>): Record<string, string> {
+  const merged: Record<string, string> = {}
+  for (const result of results) {
+    for (const [key, value] of Object.entries(result.usage)) {
+      const numeric = Number(value)
+      if (Number.isFinite(numeric)) merged[key] = String(Number(merged[key] ?? 0) + numeric)
+    }
+  }
+  return merged
+}
+
 async function requestYandexSummary(
   trainingData: unknown,
   periodStart: string,
   periodEnd: string,
-) {
+  options: YandexRequestOptions = {},
+): Promise<YandexSummaryResult> {
+  if (!options.skipChunking && JSON.stringify(trainingData).length > MAX_DIRECT_MODEL_INPUT_CHARS) {
+    const chunks = modelInputChunks(trainingData)
+    const partials: YandexSummaryResult[] = []
+    for (let offset = 0; offset < chunks.length; offset += 3) {
+      const batch = chunks.slice(offset, offset + 3)
+      partials.push(...await Promise.all(batch.map((chunk) =>
+        requestYandexSummary(chunk, periodStart, periodEnd, {
+          skipChunking: true,
+          qualityData: chunk,
+        })
+      )))
+    }
+    const source = isRecord(trainingData) ? trainingData : {}
+    const synthesisInput = {
+      period: source.period,
+      consistency: source.consistency,
+      goal: source.goal,
+      feedback_signals: source.feedback_signals,
+      measurements: source.measurements,
+      input_coverage: source.input_coverage,
+      aggregation_note: 'Каждый элемент chunk_analyses получен из отдельной непересекающейся части полного списка упражнений.',
+      chunk_analyses: partials.map((result) => result.summary),
+    }
+    const final = await requestYandexSummary(synthesisInput, periodStart, periodEnd, {
+      skipChunking: true,
+      qualityData: trainingData,
+    })
+    return { ...final, usage: mergeUsage([...partials, final]) }
+  }
   const apiKey = requiredSecret("YANDEX_CLOUD_API_KEY")
   const folderId = requiredSecret("YANDEX_CLOUD_FOLDER_ID")
   const modelId = Deno.env.get("YANDEX_CLOUD_MODEL_ID") ?? "yandexgpt"
@@ -556,18 +774,13 @@ async function requestYandexSummary(
     }
 
     const summary = parseGeneratedSummary(text)
-    const issues = summaryQualityIssues(summary, trainingData)
+    const issues = summaryQualityIssues(summary, options.qualityData ?? trainingData)
     if (issues.length === 0) {
       return { summary, modelUri, modelVersion, usage }
     }
     if (attempt === 3) {
-      // The model has already returned schema-valid JSON three times. Quality
-      // rules are an editorial guard, not a reason to make Progress entirely
-      // unavailable. The UI independently renders deterministic progress
-      // facts and sanitizes legacy metric names, so keeping the final valid
-      // answer is safer than turning a wording mismatch into a hard failure.
-      console.warn("summary quality fallback accepted", { issues })
-      return { summary, modelUri, modelVersion, usage }
+      console.warn("summary quality check rejected response", { issues })
+      throw new HttpError(502, "yandex_cloud_quality_check_failed")
     }
 
     messages.push(
@@ -639,22 +852,6 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
       }
       const { isTrainer, isClient, isConnectedTrainer, trainerId } = actor
 
-      if (isClient && !input.force) {
-        const { data: cached, error: cacheError } = await userClient
-          .from("client_published_training_summaries")
-          .select(
-            "id,source_summary_id,client_id,period_start,period_end,summary,display_metrics,generated_at,published_at",
-          )
-          .eq("client_id", input.client_id)
-          .eq("period_start", input.period_start)
-          .eq("period_end", input.period_end)
-          .maybeSingle()
-        if (cacheError) throw new HttpError(500, "summary_cache_lookup_failed")
-        if (shouldUseClientCache(input.force, cached)) {
-          return Response.json({ data: cached, cached: true })
-        }
-      }
-
       const { data: structuredGoal, error: goalError } = await userClient
         .rpc("get_client_goal", { p_client_id: input.client_id })
       if (goalError) {
@@ -682,17 +879,20 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
         throw new HttpError(500, "first_workout_lookup_failed")
       }
 
+      const periodDays = inclusivePeriodDays(input.period_start, input.period_end)
+      const previousPeriodEnd = addUtcDays(input.period_start, -1)
+      const previousPeriodStart = addUtcDays(previousPeriodEnd, -periodDays + 1)
       const { data: workouts, error: workoutsError } = await userClient
         .from("workouts")
-        .select("id,workout_date,status,deleted_at")
+        .select("id,workout_date,status,deleted_at,session_rpe,wellbeing,discomfort,client_comment")
         .eq("client_id", input.client_id)
         .eq("trainer_id", trainerId)
         .eq("status", "done")
         .is("deleted_at", null)
-        .gte("workout_date", input.period_start)
+        .gte("workout_date", previousPeriodStart)
         .lte("workout_date", input.period_end)
         .order("workout_date")
-        .limit(MAX_SOURCE_ROWS)
+        .limit(MAX_SOURCE_ROWS + 1)
       if (workoutsError) {
         throw new HttpError(500, "workouts_lookup_failed")
       }
@@ -701,24 +901,44 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
         input.period_start,
         input.period_end,
       )
+      const previousWorkouts = completedWorkoutsInPeriod(
+        workouts,
+        previousPeriodStart,
+        previousPeriodEnd,
+      )
       if (completedWorkouts.length === 0) {
         throw new HttpError(422, "no_completed_workouts")
       }
-      if (workouts.length === MAX_SOURCE_ROWS) {
+      if (workouts.length > MAX_SOURCE_ROWS) {
         throw new HttpError(422, "source_row_limit_reached")
       }
 
-      const workoutIds = completedWorkouts.map((workout) => workout.id)
-        const { data: exercises, error: exercisesError } = await userClient
+      const { data: measurements, error: measurementsError } = await userClient
+        .from("client_progress")
+        .select("recorded_on,weight_kg,chest_cm,waist_cm,hip_cm")
+        .eq("client_id", input.client_id)
+        .eq("trainer_id", trainerId)
+        .is("deleted_at", null)
+        .gte("recorded_on", previousPeriodStart)
+        .lte("recorded_on", input.period_end)
+        .order("recorded_on")
+        .limit(MAX_SOURCE_ROWS + 1)
+      if (measurementsError) throw new HttpError(500, "measurements_lookup_failed")
+      if (measurements.length > MAX_SOURCE_ROWS) throw new HttpError(422, "source_row_limit_reached")
+
+      const workoutIds = [...completedWorkouts, ...previousWorkouts].map((workout) => workout.id)
+      const { data: exercises, error: exercisesError } = await userClient
         .from("workout_exercises")
-        .select("id,workout_id,exercise_ref,exercise_name,input_kind,position")
+        .select("id,workout_id,exercise_source,exercise_ref,exercise_name,muscle_group,input_kind,position")
         .in("workout_id", workoutIds)
+        .order("workout_id")
         .order("position")
-        .limit(MAX_SOURCE_ROWS)
+        .order("id")
+        .limit(MAX_SOURCE_ROWS + 1)
       if (exercisesError) {
         throw new HttpError(500, "exercises_lookup_failed")
       }
-      if (exercises.length === MAX_SOURCE_ROWS) {
+      if (exercises.length > MAX_SOURCE_ROWS) {
         throw new HttpError(422, "source_row_limit_reached")
       }
 
@@ -728,34 +948,80 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
         const { data, error } = await userClient
           .from("workout_sets")
           .select(
-            "workout_exercise_id,position,fact_weight_kg,fact_reps,fact_duration_min,fact_duration_sec,fact_distance_km",
+            "workout_exercise_id,position,plan_weight_kg,plan_reps,plan_duration_min,plan_duration_sec,plan_distance_km,plan_rpe,fact_weight_kg,fact_reps,fact_duration_min,fact_duration_sec,fact_distance_km,fact_rpe,confirmed_at",
           )
           .in("workout_exercise_id", exerciseIds)
-          .not("confirmed_at", "is", null)
+          .order("workout_exercise_id")
           .order("position")
-          .limit(MAX_SOURCE_ROWS)
+          .order("id")
+          .limit(MAX_SOURCE_ROWS + 1)
         if (error) {
           throw new HttpError(500, "sets_lookup_failed")
         }
-        if (data.length === MAX_SOURCE_ROWS) {
+        if (data.length > MAX_SOURCE_ROWS) {
           throw new HttpError(422, "source_row_limit_reached")
         }
         sets = data
       }
 
+      const currentWorkoutIds = new Set(completedWorkouts.map((workout) => workout.id))
+      const previousWorkoutIds = new Set(previousWorkouts.map((workout) => workout.id))
+      const currentExercises = exercises.filter((exercise) => currentWorkoutIds.has(exercise.workout_id))
+      const previousExercises = exercises.filter((exercise) => previousWorkoutIds.has(exercise.workout_id))
+      const currentExerciseIds = new Set(currentExercises.map((exercise) => exercise.id))
+      const previousExerciseIds = new Set(previousExercises.map((exercise) => exercise.id))
+      const currentMeasurements = (measurements as ProgressRow[])
+        .filter((item) => item.recorded_on >= input.period_start)
+      const previousMeasurements = (measurements as ProgressRow[])
+        .filter((item) => item.recorded_on <= previousPeriodEnd)
+      const currentProgress = buildProgressData(
+        completedWorkouts,
+        currentExercises,
+        sets.filter((set) => currentExerciseIds.has(set.workout_exercise_id)),
+        input.period_start,
+        input.period_end,
+        firstCompletedWorkout?.workout_date ?? null,
+      )
+      const previousProgress = previousWorkouts.length > 0 || previousMeasurements.length > 0
+        ? buildProgressData(
+          previousWorkouts,
+          previousExercises,
+          sets.filter((set) => previousExerciseIds.has(set.workout_exercise_id)),
+          previousPeriodStart,
+          previousPeriodEnd,
+          firstCompletedWorkout?.workout_date && firstCompletedWorkout.workout_date <= previousPeriodEnd
+            ? firstCompletedWorkout.workout_date
+            : null,
+        )
+        : null
       const trainingData = {
-        ...buildProgressData(
-          completedWorkouts,
-          exercises,
-          sets,
-          input.period_start,
-          input.period_end,
-          firstCompletedWorkout?.workout_date ?? null,
-        ),
+        ...currentProgress,
         goal: goalContext,
+        measurements: currentMeasurements,
+        previous_period: previousProgress ? {
+          ...previousProgress,
+          measurements: previousMeasurements,
+        } : null,
       }
       const inputFingerprint = await fingerprint(trainingData)
       const modelInput = buildSummaryModelInput(trainingData)
+
+      if (isClient && !input.force) {
+        const { data: cached, error: cacheError } = await userClient
+          .from("client_published_training_summaries")
+          .select("id,source_summary_id,client_id,period_start,period_end,summary,display_metrics,generated_at,published_at")
+          .eq("client_id", input.client_id)
+          .eq("period_start", input.period_start)
+          .eq("period_end", input.period_end)
+          .maybeSingle()
+        if (cacheError) throw new HttpError(500, "summary_cache_lookup_failed")
+        const cachedSummary = cached?.summary && typeof cached.summary === "object" && !Array.isArray(cached.summary)
+          ? cached.summary as Record<string, unknown>
+          : null
+        if (cached && cachedSummary?.analysisVersion === "whole-period-v1" && cachedSummary.inputFingerprint === inputFingerprint) {
+          return Response.json({ data: cached, cached: true })
+        }
+      }
 
       if (isTrainer && !input.force) {
         const { data: cached, error: cacheError } = await userClient
@@ -782,6 +1048,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
         trainingData.period.start,
         trainingData.period.end,
       )
+      const generatedClientSummary = { ...generated.summary.client, inputFingerprint }
       const displayMetrics = {
         ...trainingData.consistency,
         progress_facts: buildSummaryProgressFacts(trainingData.exercises),
@@ -797,7 +1064,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
           period_end: input.period_end,
           summary: trainerSummaryAsText(generated.summary.trainer),
           trainer_summary: generated.summary.trainer,
-          client_summary: generated.summary.client,
+          client_summary: generatedClientSummary,
           display_metrics: displayMetrics,
           model_uri: generated.modelUri,
           prompt_version: PROMPT_VERSION,
@@ -830,7 +1097,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
             client_id: input.client_id,
             period_start: input.period_start,
             period_end: input.period_end,
-            summary: generated.summary.client,
+            summary: generatedClientSummary,
             display_metrics: displayMetrics,
             generated_at: saved.generated_at,
             published_at: new Date().toISOString(),

@@ -18,6 +18,11 @@ const plan = JSON.parse(readFileSync(planPath, 'utf8'))
 const changes = (plan.resource_changes ?? []).filter(
   (resource) => resource.change.actions.join(',') !== 'no-op',
 )
+const collectPlannedResources = (module) => [
+  ...(module?.resources ?? []),
+  ...(module?.child_modules ?? []).flatMap(collectPlannedResources),
+]
+const plannedResources = collectPlannedResources(plan.planned_values?.root_module)
 const destructive = changes.filter((resource) =>
   resource.change.actions.includes('delete'),
 )
@@ -43,6 +48,11 @@ const automaticLockboxAddresses = new Set([
 ])
 const runtimePreflightSecretAccessAddress =
   'yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader[0]'
+const appFeedbackSecretAccessAddress =
+  'yandex_lockbox_secret_iam_member.push_dispatcher_app_feedback_integrations_reader[0]'
+const pushDispatcherAddress = 'yandex_serverless_container.push_dispatcher'
+const pushDispatcherTriggerAddress = 'yandex_function_trigger.push_dispatcher_timer'
+const apiImagePullerAddress = 'yandex_container_registry_iam_binding.api_image_puller'
 const pushPipelineBootstrapAddresses = new Set([
   'yandex_iam_service_account.push_dispatcher',
   'yandex_iam_service_account.push_scheduler',
@@ -130,6 +140,50 @@ const hasBoundedApiExecutionTimeout = (resource) => {
     && Number(after[1]) <= 120
 }
 
+const pushDispatcherServiceAccountId = changes.find(
+  (resource) => resource.address === pushDispatcherAddress,
+)?.change.after?.service_account_id
+  ?? plannedResources.find(
+    (resource) => resource.address === pushDispatcherAddress,
+  )?.values?.service_account_id
+
+const isExactPushDispatcherImagePullerUpdate = (resource) => {
+  if (
+    resource.address !== apiImagePullerAddress
+    || resource.change.actions.join(',') !== 'update'
+    || !isServiceAccountMember(`serviceAccount:${pushDispatcherServiceAccountId ?? ''}`)
+  ) return false
+
+  const before = resource.change.before ?? {}
+  const after = resource.change.after ?? {}
+  const beforeMembers = before.members
+  const afterMembers = after.members
+  if (
+    before.role !== 'container-registry.images.puller'
+    || after.role !== before.role
+    || !Array.isArray(beforeMembers)
+    || !Array.isArray(afterMembers)
+    || afterMembers.length !== beforeMembers.length + 1
+    || !beforeMembers.every(isServiceAccountMember)
+    || !afterMembers.every(isServiceAccountMember)
+    || !beforeMembers.every((member) => afterMembers.includes(member))
+  ) return false
+
+  const addedMembers = afterMembers.filter((member) => !beforeMembers.includes(member))
+  return addedMembers.length === 1
+    && addedMembers[0] === `serviceAccount:${pushDispatcherServiceAccountId}`
+    && hasOnlyTopLevelChanges(resource, new Set(['id', 'members']))
+}
+
+const isExactPushDispatcherTriggerDescriptionUpdate = (resource) =>
+  resource.address === pushDispatcherTriggerAddress
+  && resource.change.actions.join(',') === 'update'
+  && resource.change.before?.description
+    === 'Run the private Fit push producer and dispatcher every minute'
+  && resource.change.after?.description
+    === 'Run private Fit push and app-feedback delivery every minute'
+  && hasOnlyTopLevelChanges(resource, new Set(['description']))
+
 const isServiceAccountMember = (value) =>
   /^serviceAccount:[a-z0-9]+$/u.test(value ?? '')
 
@@ -211,11 +265,22 @@ const isAutomaticStageChange = (resource) => {
         && resource.change.after?.role === 'lockbox.payloadViewer'
         && /^serviceAccount:[a-z0-9]+$/u.test(resource.change.after?.member ?? '')
       )
+      || (
+        resource.address === appFeedbackSecretAccessAddress
+        && resource.change.after?.role === 'lockbox.payloadViewer'
+        && isKnownOrComputedServiceAccountMember(resource)
+      )
   }
   if (actions !== 'update') {
     return false
   }
   if (isExactPublicApiBinding(resource)) {
+    return true
+  }
+  if (
+    isExactPushDispatcherImagePullerUpdate(resource)
+    || isExactPushDispatcherTriggerDescriptionUpdate(resource)
+  ) {
     return true
   }
   if (automaticContainerAddresses.has(resource.address)) {

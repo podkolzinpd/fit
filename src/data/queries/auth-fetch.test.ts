@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AUTH_PASSWORD_REQUEST_TIMEOUT_MS, createAuthFetch } from './auth-fetch'
+import { AUTH_PASSWORD_REQUEST_TIMEOUT_MS, createAuthFetch, LIVE_WORKOUT_REQUEST_TIMEOUT_MS } from './auth-fetch'
 
 describe('createAuthFetch', () => {
   afterEach(() => {
@@ -30,5 +30,18 @@ describe('createAuthFetch', () => {
     await expect(authFetch('https://example.supabase.co/rest/v1/profiles')).resolves.toBe(response)
     await vi.advanceTimersByTimeAsync(AUTH_PASSWORD_REQUEST_TIMEOUT_MS)
     expect(fetchImplementation).toHaveBeenCalledTimes(1)
+  })
+
+  it('прерывает зависший Live RPC и не оставляет интерфейс заблокированным', async () => {
+    vi.useFakeTimers()
+    const fetchImplementation = vi.fn<typeof fetch>((_input, init) => new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+    }))
+    const authFetch = createAuthFetch(fetchImplementation)
+
+    const request = authFetch('https://example.supabase.co/rest/v1/rpc/save_live_set_draft', { method: 'POST' })
+    const result = expect(request).rejects.toThrow('Live workout request timed out')
+    await vi.advanceTimersByTimeAsync(LIVE_WORKOUT_REQUEST_TIMEOUT_MS)
+    await result
   })
 })

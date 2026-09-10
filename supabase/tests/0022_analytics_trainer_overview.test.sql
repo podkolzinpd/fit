@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(26);
+select plan(30);
 
 select ok(
   exists(select 1 from pg_matviews where schemaname = 'analytics' and matviewname = 'trainer_overview'),
@@ -28,7 +28,8 @@ values
   ('60000000-0000-4000-8000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'test@test.com', ''),
   ('60000000-0000-4000-8000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'overview-d@example.test', ''),
   ('60000000-0000-4000-8000-000000000005', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'Knyaz187@mail.ru', ''),
-  ('60000000-0000-4000-8000-000000000009', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'overview-client@example.test', '');
+  ('60000000-0000-4000-8000-000000000009', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'overview-client@example.test', ''),
+  ('60000000-0000-4000-8000-000000000010', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'overview-client2@example.test', '');
 insert into public.profiles (id) values
   ('60000000-0000-4000-8000-000000000001'),
   ('60000000-0000-4000-8000-000000000002'),
@@ -52,6 +53,19 @@ insert into public.clients (id, trainer_id, auth_user_id, full_name, gender, age
   ('61000000-0000-4000-8000-000000000002', '60000000-0000-4000-8000-000000000001', null, 'Overview Archived', 'male', 31, 180, '2026-07-11', '2026-07-11'),
   ('61000000-0000-4000-8000-000000000003', '60000000-0000-4000-8000-000000000001', null, 'Overview Paper', 'female', 32, 165, null, '2026-07-12'),
   ('62000000-0000-4000-8000-000000000001', '60000000-0000-4000-8000-000000000003', null, 'Test Trainer Client', 'female', 33, 160, null, '2026-07-13');
+
+-- Клиент "Overview Connected": корневой тренер 4, но сам подключился ещё и к
+-- тренеру 1 (member-строка в client_trainers, без смены root) — та же схема,
+-- по которой клиенты видят "Подключённый тренер" в своём профиле. Должен
+-- попасть в clients_total обоих тренеров. Заодно у существующего клиента
+-- 61...0001 добавляется избыточная client_trainers-строка на его же root
+-- (60...001) — проверяет, что UNION схлопывает дубликат и не считает клиента
+-- дважды на одного тренера.
+insert into public.clients (id, trainer_id, auth_user_id, full_name, gender, age_years, height_cm, created_at) values
+  ('61000000-0000-4000-8000-000000000005', '60000000-0000-4000-8000-000000000004', '60000000-0000-4000-8000-000000000010', 'Overview Connected', 'female', 27, 165, '2026-07-21');
+insert into public.client_trainers (client_id, trainer_id) values
+  ('61000000-0000-4000-8000-000000000005', '60000000-0000-4000-8000-000000000001'),
+  ('61000000-0000-4000-8000-000000000001', '60000000-0000-4000-8000-000000000001');
 
 -- updated_at задан явно (а не оставлен на default now()), чтобы
 -- last_workout_at/days_since_last_activity/trainer_status были
@@ -90,7 +104,7 @@ select is(
 
 select is(
   (select clients_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
-  3::bigint, 'clients_total includes archived clients'
+  4::bigint, 'clients_total includes archived clients plus the client connected via client_trainers (root trainer is 4), the redundant client_trainers row on the root client does not double-count'
 );
 select is(
   (select clients_archived from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
@@ -98,7 +112,23 @@ select is(
 );
 select is(
   (select clients_app_linked from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
-  1::bigint, 'clients_app_linked counts auth_user_id is not null'
+  2::bigint, 'clients_app_linked counts auth_user_id is not null, including the client connected via client_trainers'
+);
+select is(
+  (select clients_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000004'),
+  2::bigint, 'clients_total for the root trainer of the shared client still counts it once (Overview Recent + Overview Connected)'
+);
+select is(
+  (select clients_archived from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000004'),
+  0::bigint, 'clients_archived for trainer 4 unaffected by the shared client'
+);
+select is(
+  (select clients_app_linked from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000004'),
+  1::bigint, 'clients_app_linked for trainer 4 counts only the shared client (its own root client has no auth_user_id)'
+);
+select is(
+  (select workouts_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000004'),
+  1::bigint, 'workouts_total for trainer 4 is unaffected by the roster UNION (Overview Connected has no workouts)'
 );
 
 select is(

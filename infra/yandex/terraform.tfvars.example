@@ -21,6 +21,13 @@ migration_image_tag = "foundation"
 # push_transport_secret_id = "e6q..."
 # push_transport_secret_version_id = "e6q..."
 
+# Optional stage-local Lockbox payload. When absent, feedback remains stored in
+# PostgreSQL/DataLens and the dispatcher skips Telegram/Tracker delivery.
+# app_feedback_integrations_secret_id = "e6q..."
+# app_feedback_integrations_secret_version_id = "e6q..."
+# app_feedback_tracker_org_header = "X-Org-ID"
+# app_feedback_tracker_queue = "YAFIT"
+
 # Optional temporary bridge while selected handlers execute in Yandex Cloud but
 # use the existing Supabase auth and tables. Store the four payload values only
 # in this existing Lockbox secret, never in Terraform variables or Git.

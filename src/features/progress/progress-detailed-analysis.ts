@@ -1,7 +1,7 @@
 import type { PublishedTrainingSummary, TrainingSummary } from '../../shared/domain'
 import { formatSummaryText } from './summary-format'
 
-export type ProgressDetailedAnalysisSectionId = 'result' | 'goal' | 'attention'
+export type ProgressDetailedAnalysisSectionId = 'main' | 'why' | 'goal' | 'observations' | 'next' | 'missing'
 
 export type ProgressDetailedAnalysisSection = {
   id: ProgressDetailedAnalysisSectionId
@@ -19,7 +19,7 @@ type BuildProgressDetailedAnalysisOptions = {
   visibleTexts: readonly string[]
 }
 
-const CLIENT_UNSAFE = /(?:риск|провер(?:ить|ка)|уточн(?:ить|ение)|тренер(?:у|ом|а)?|необходимо увеличить|следует повысить|корректировать программу)/iu
+const CLIENT_UNSAFE = /(?:риск|провер(?:ить|ка)|уточн(?:ить|ение)|необходимо увеличить|следует повысить|корректировать программу)/iu
 const LOW_VALUE = /(?:служебн|показатель равен|продолжать отслеживать|поддерживать регулярность|на верном пути)/iu
 const STOP_WORDS = new Set(['этот', 'этого', 'этом', 'после', 'перед', 'между', 'когда', 'котор', 'только', 'пока', 'данн'])
 
@@ -102,6 +102,7 @@ function groundedNumbers(value: string, allowedNumbers: ReadonlySet<string>): bo
 
 function groundedResult(value: string, summary: ProgressSummary, allowedNumbers: ReadonlySet<string>): boolean {
   if (numbers(value).length === 0 || !groundedNumbers(value, allowedNumbers)) return false
+  if (/(?:вес|тал(?:ия|ии|ию)|груд(?:ь|и)|б[её]др)/iu.test(value)) return true
   const anchors = exerciseAnchors(summary)
   if (anchors.length === 0) return true
   const text = normalized(value)
@@ -128,35 +129,68 @@ function uniqueItems(
 
 export function buildProgressDetailedAnalysis({ summary, role, goalTitle, visibleTexts }: BuildProgressDetailedAnalysisOptions): ProgressDetailedAnalysisSection[] {
   const client = 'summary' in summary ? summary.summary : summary.client
-  const resultCopy = 'summary' in summary || role === 'client'
-    ? [client.headline, ...client.achievements]
-    : [summary.trainer.headline, ...summary.trainer.progress]
-  const attentionCopy = 'summary' in summary || role === 'client'
-    ? [client.consistency, ...(client.nextSteps ?? [])]
-    : [summary.trainer.consistency, ...(client.nextSteps ?? [])]
-  const goalCopy = goalTitle?.trim() && client.goalAlignment?.trim() ? [client.goalAlignment] : []
+  if (client.analysisVersion === 'whole-period-v1') {
+    const observationCopy = 'summary' in summary || role === 'client'
+      ? [client.headline, ...client.achievements]
+      : [summary.trainer.headline, ...summary.trainer.progress]
+    return [
+      {
+        id: 'goal',
+        title: 'Движение к цели',
+        items: goalTitle?.trim() && client.goalAlignment?.trim()
+          ? uniqueItems([client.goalAlignment], visibleTexts, role, () => true, 1)
+          : [],
+        emptyMessage: 'Цель не указана или данных для оценки пока недостаточно.',
+      },
+      {
+        id: 'observations',
+        title: 'Что заметил ИИ',
+        items: uniqueItems(observationCopy, visibleTexts, role, () => true, 3),
+        emptyMessage: 'Значимых наблюдений сверх показанных результатов пока нет.',
+      },
+      {
+        id: 'next',
+        title: 'Что делать дальше',
+        items: uniqueItems(client.nextSteps ?? [], visibleTexts, role, () => true, 2),
+        emptyMessage: 'Отдельного действия пока нет.',
+      },
+      {
+        id: 'missing',
+        title: 'Чего не хватает',
+        items: uniqueItems(client.missingContext ?? [], visibleTexts, role, () => true, 1),
+        emptyMessage: 'Существенных пробелов для текущего вывода нет.',
+      },
+    ]
+  }
+  const mainCopy = 'summary' in summary || role === 'client'
+    ? [client.headline]
+    : [summary.trainer.headline]
+  const whyCopy = 'summary' in summary || role === 'client'
+    ? [...client.achievements, ...(goalTitle?.trim() && client.goalAlignment?.trim() ? [client.goalAlignment] : []), client.consistency]
+    : [...summary.trainer.progress, summary.trainer.consistency]
+  const nextCopy = 'summary' in summary || role === 'client'
+    ? (client.nextSteps ?? [])
+    : (client.nextSteps ?? [])
   const allowedNumbers = knownNumbers(summary, [...visibleTexts, goalTitle ?? ''])
 
   return [
     {
-      id: 'result',
-      title: 'Результат периода',
-      items: uniqueItems(resultCopy, visibleTexts, role, (value) => groundedResult(value, summary, allowedNumbers), 2),
-      emptyMessage: 'Все подтверждённые результаты уже показаны в карточках выше.',
+      id: 'main',
+      title: 'Главное сейчас',
+      items: uniqueItems(mainCopy, visibleTexts, role, (value) => groundedResult(value, summary, allowedNumbers), 1),
+      emptyMessage: 'Нового вывода сверх показанных результатов пока нет.',
     },
     {
-      id: 'goal',
-      title: 'Связь с целью',
-      items: uniqueItems(goalCopy, visibleTexts, role, (value) => groundedNumbers(value, allowedNumbers), 1),
-      emptyMessage: goalTitle?.trim()
-        ? 'Дополнительной подтверждённой связи с целью нет.'
-        : 'Цель не настроена, поэтому отдельная интерпретация не добавлена.',
+      id: 'why',
+      title: 'Почему',
+      items: uniqueItems(whyCopy, visibleTexts, role, (value) => groundedNumbers(value, allowedNumbers), 2),
+      emptyMessage: 'Дополнительных подтверждений сверх карточек выше пока нет.',
     },
     {
-      id: 'attention',
-      title: 'На что обратить внимание',
-      items: uniqueItems(attentionCopy, visibleTexts, role, (value) => groundedNumbers(value, allowedNumbers) && (numbers(value).length > 0 || exerciseAnchors(summary).some((anchor) => normalized(value).includes(anchor))), 2),
-      emptyMessage: 'Дополнительных наблюдений за период нет.',
+      id: 'next',
+      title: 'На следующей тренировке',
+      items: uniqueItems(nextCopy, visibleTexts, role, (value) => groundedNumbers(value, allowedNumbers), 1),
+      emptyMessage: 'Отдельного действия на следующую тренировку пока нет.',
     },
   ]
 }

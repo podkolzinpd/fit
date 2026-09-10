@@ -5,9 +5,11 @@ import { pathToFileURL } from 'node:url'
 const SAFE_WITHOUT_E2E = [
   /^docs\//,
   /^infra\/yandex\//,
+  /^services\/api\//,
   /^\.github\/(?:copilot-instructions\.md|pull_request_template\.md)$/,
   /^\.github\/workflows\/(?:deploy-database|deploy-summary-function|deploy-yandex-[^/]+|manage-yandex-stage-database-access|sync-yandex-stage-preview)\.yml$/,
-  /^(?:AGENTS|README|FEATURE_PARITY)\.md$/,
+  /^(?:AGENTS|README|FEATURE_PARITY|OPERATIONS)\.md$/,
+  /^scripts\/(?:check-yandex-terraform-plan|deploy-yandex-serverless-revision|deploy-yandex-stage-workflow|e2e-scope|verify-yandex-stage-access)(?:\.test)?\.mjs$/,
   /^vercel\.json$/,
 ]
 
@@ -33,7 +35,7 @@ function main() {
   process.stdout.write(output)
   process.stdout.write(required
     ? 'Full browser suite is required for these changes.\n'
-    : 'Only documentation or deployment infrastructure changed; browser runtime is unaffected.\n')
+    : 'Only documentation, backend API or deployment infrastructure changed; browser runtime is unaffected.\n')
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) main()

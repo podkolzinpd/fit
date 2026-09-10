@@ -12,7 +12,7 @@ resource "yandex_serverless_container_iam_binding" "push_dispatcher_invocation" 
 resource "yandex_function_trigger" "push_dispatcher_timer" {
   folder_id   = var.folder_id
   name        = "${local.name_prefix}-push-dispatcher"
-  description = "Run the private Fit push producer and dispatcher every minute"
+  description = "Run private Fit push and app-feedback delivery every minute"
   labels      = local.labels
 
   timer {

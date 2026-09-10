@@ -7,6 +7,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
 import { submitAppFeedback } from '../app-feedback-command.js'
 import {
+  claimAppFeedbackDeliveries,
+  finalizeAppFeedbackDeliveries,
+} from '../app-feedback-dispatcher-command.js'
+import {
   applyAssistantAction,
   appendAssistantUserMessage,
   createAssistantConversation,
@@ -17,6 +21,7 @@ import {
 } from '../assistant-state.js'
 import {
   deletePushSubscription,
+  hasPushSubscription,
   readPushNotificationStatus,
   setNotificationPreference,
   upsertPushSubscription,
@@ -61,6 +66,7 @@ import {
   finishLiveWorkout,
   recordPlannedWorkoutResult,
   removeLiveSet,
+  removeLiveExercise,
   reorderLiveBlock,
   rescheduleWorkout,
   replaceLiveExercise,
@@ -171,6 +177,8 @@ const OTHER_LINK_SUBJECT_HASH = '7'.repeat(64)
 const RUNTIME_PASSWORD = 'fit-api-test-only'
 const READER_ROLE = 'fit_ops_reader_test'
 const READER_PASSWORD = 'fit-ops-reader-test-only'
+const DATALENS_ROLE = 'fit_datalens'
+const DATALENS_PASSWORD = 'fit-datalens-test-only'
 const migrationsDirectory = fileURLToPath(
   new URL('../../db/migrations', import.meta.url),
 )
@@ -323,6 +331,18 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         end
         $$;
       `)
+      await ownerPool.query(`
+        do $$
+        begin
+          if not exists (select 1 from pg_roles where rolname = '${DATALENS_ROLE}') then
+            create role ${DATALENS_ROLE} login password '${DATALENS_PASSWORD}';
+          else
+            alter role ${DATALENS_ROLE} login password '${DATALENS_PASSWORD}';
+          end if;
+        end
+        $$;
+        alter role ${DATALENS_ROLE} set default_transaction_read_only = on;
+      `)
 
       await runner({
         databaseUrl: ownerUrl,
@@ -333,6 +353,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         createMigrationsSchema: true,
         verbose: false,
       })
+
+      // The local PostgreSQL volume survives repeated verification runs. A
+      // developer may therefore create fit_datalens after migration 000036 was
+      // already recorded; restore the same narrow grants that a clean CI/stage
+      // run receives from that migration.
+      await ownerPool.query(`
+        grant usage on schema analytics to ${DATALENS_ROLE};
+        grant select on all tables in schema analytics to ${DATALENS_ROLE};
+      `)
 
       // The local PostgreSQL container is persistent. Remove only rows carrying
       // the explicit synthetic marker so earlier assertions stay isolated
@@ -516,12 +545,13 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await ownerPool.query(
         `
           insert into public.custom_exercises (
-            id, trainer_id, name, muscle_group, input_kind
+            id, trainer_id, created_by, name, muscle_group, input_kind
           ) values
-            ($1, $3, 'Тяга саней', 'legs', 'strength'),
-            ($2, $4, 'Темповый бег', 'cardio', 'duration')
+            ($1, $3, $3, 'Тяга саней', 'legs', 'strength'),
+            ($2, $4, $4, 'Темповый бег', 'cardio', 'duration')
           on conflict (id) do update set
             trainer_id = excluded.trainer_id,
+            created_by = excluded.created_by,
             name = excluded.name,
             muscle_group = excluded.muscle_group,
             input_kind = excluded.input_kind,
@@ -1176,7 +1206,13 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         OTHER_ACTOR_ID,
         readAccessibleTrainingData,
       )
-      expect(clientData.customExercises).toEqual([])
+      expect(clientData.customExercises).toMatchObject([
+        {
+          id: ROOT_CUSTOM_EXERCISE_ID,
+          name: 'Тяга саней',
+          createdBy: ACTOR_ID,
+        },
+      ])
       expect(clientData.workouts.map((workout) => workout.id)).toEqual([
         MEMBER_WORKOUT_ID,
         ROOT_WORKOUT_ID,
@@ -1197,6 +1233,88 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         hasMoreWorkouts: false,
         totalWorkouts: 0,
       })
+    })
+
+    it('preserves client ownership for custom exercises in a shared partition', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      const draft = {
+        name: 'Клиентская тяга блока',
+        muscleGroup: 'back' as const,
+        inputKind: 'strength' as const,
+      }
+      const exercise = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => createCustomExercise(client, draft),
+      )
+      try {
+        const stored = await ownerPool.query<{
+          created_by: string
+          trainer_id: string
+        } & QueryResultRow>(
+          'select created_by, trainer_id from public.custom_exercises where id = $1',
+          [exercise.id],
+        )
+        expect(stored.rows).toEqual([{
+          created_by: OTHER_ACTOR_ID,
+          trainer_id: ACTOR_ID,
+        }])
+
+        const updated = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => updateCustomExercise(
+            client,
+            exercise.id,
+            { ...draft, name: 'Клиентская тяга блока с паузой' },
+            1,
+          ),
+        )
+        expect(updated).toMatchObject({
+          name: 'Клиентская тяга блока с паузой',
+          version: 2,
+        })
+
+        for (const actorId of [ACTOR_ID, MEMBER_TRAINER_ID, OTHER_ACTOR_ID]) {
+          const data = await withActorTransaction(
+            runtimePool,
+            actorId,
+            readAccessibleTrainingData,
+          )
+          expect(data.customExercises).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+              id: exercise.id,
+              createdBy: OTHER_ACTOR_ID,
+            }),
+          ]))
+        }
+        const outside = await withActorTransaction(
+          runtimePool,
+          OUTSIDE_TRAINER_ID,
+          readAccessibleTrainingData,
+        )
+        expect(outside.customExercises.some((item) => item.id === exercise.id)).toBe(false)
+        await expect(withActorTransaction(
+          runtimePool,
+          OUTSIDE_TRAINER_ID,
+          (client) => updateCustomExercise(client, exercise.id, draft, 2),
+        )).rejects.toMatchObject({ failure: 'forbidden' })
+
+        const archived = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => setCustomExerciseArchived(client, exercise.id, true, 2),
+        )
+        expect(archived).toMatchObject({ version: 3 })
+        expect(archived.archivedAt).not.toBeNull()
+      } finally {
+        await ownerPool.query(
+          'delete from public.custom_exercises where id = $1',
+          [exercise.id],
+        )
+      }
     })
 
     it('shows memberships to the client cohort and active invitations only to their creator', async () => {
@@ -1533,7 +1651,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             version: 1,
             stageId: null,
             stageTitle: null,
-            hasPr: true,
+            hasPr: false,
             exercises: [
               {
                 id: smokeIds.strengthExerciseId,
@@ -1552,6 +1670,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
                 restBetweenRoundsSec: 90,
                 restBetweenSetsSec: 90,
                 trainerComment: 'Проверка весов и повторов',
+                clientNote: null,
                 sets: [
                   {
                     id: smokeIds.strengthSetId,
@@ -1594,6 +1713,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
                 restBetweenRoundsSec: 90,
                 restBetweenSetsSec: 60,
                 trainerComment: 'Проверка времени и дистанции',
+                clientNote: null,
                 sets: [
                   {
                     id: smokeIds.runningSetId,
@@ -2890,7 +3010,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             6,
             LIVE_STRUCTURE_OPERATION_IDS.clientComment,
           ),
-        )).rejects.toMatchObject({ failure: 'forbidden' })
+        )).resolves.toEqual({ resourceId: ROOT_WORKOUT_EXERCISE_ID, version: 7, replayed: false })
         await expect(withActorTransaction(
           runtimePool,
           ACTOR_ID,
@@ -2898,14 +3018,19 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             client,
             ROOT_WORKOUT_EXERCISE_ID,
             'Держи спину прямо',
-            6,
+            7,
             LIVE_STRUCTURE_OPERATION_IDS.comment,
           ),
         )).resolves.toEqual({
           resourceId: ROOT_WORKOUT_EXERCISE_ID,
-          version: 7,
+          version: 8,
           replayed: false,
         })
+
+        const noteRows = await ownerPool.query<{ client_note: string; trainer_comment: string }>(
+          'select client_note, trainer_comment from public.workout_exercises where id = $1', [ROOT_WORKOUT_EXERCISE_ID],
+        )
+        expect(noteRows.rows[0]).toEqual({ client_note: 'Клиент не меняет комментарий тренера', trainer_comment: 'Держи спину прямо' })
 
         const appendedBlockRows = await ownerPool.query<{ block_id: string }>(
           'select block_id from public.workout_exercises where id = $1',
@@ -2923,12 +3048,12 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             ROOT_WORKOUT_ID,
             appendedBlockId,
             -1,
-            7,
+            8,
             LIVE_STRUCTURE_OPERATION_IDS.reorder,
           ),
         )).resolves.toEqual({
           resourceId: appendedBlockId,
-          version: 8,
+          version: 9,
           replayed: false,
         })
         await expect(withActorTransaction(
@@ -2939,12 +3064,12 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             ROOT_WORKOUT_ID,
             appendedBlockId,
             -1,
-            7,
+            8,
             LIVE_STRUCTURE_OPERATION_IDS.reorder,
           ),
         )).resolves.toEqual({
           resourceId: appendedBlockId,
-          version: 8,
+          version: 9,
           replayed: true,
         })
 
@@ -3015,7 +3140,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           (client) => removeLiveSet(
             client,
             onlyAppendedSetId,
-            8,
+            9,
             LIVE_STRUCTURE_OPERATION_IDS.lastSet,
           ),
         )).rejects.toMatchObject({ failure: 'invalid' })
@@ -3079,9 +3204,33 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           [[ACTOR_ID, OTHER_ACTOR_ID], operationIds],
         )
         expect(receiptRows.rows).toEqual([{
-          count: 6,
+          count: 7,
           resource_ids_present: true,
         }])
+        const deleteOperation = 'd6740000-0000-4000-8000-000000000001'
+        const removalId = appendedExerciseId
+        if (removalId === undefined) throw new Error('Live exercise fixture is missing')
+        await ownerPool.query(
+          `update public.workouts set status='done',completed_at=now() where id=$1`,
+          [ROOT_WORKOUT_ID],
+        )
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID,
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 8, deleteOperation),
+        )).rejects.toMatchObject({ failure: 'forbidden' })
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 7, deleteOperation),
+        )).rejects.toMatchObject({ failure: 'conflict' })
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 9, deleteOperation),
+        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 10, replayed: false })
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 9, deleteOperation),
+        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 10, replayed: true })
+        const remaining = await ownerPool.query<{ id: string }>(
+          'select id from public.workout_exercises where workout_id=$1', [ROOT_WORKOUT_ID],
+        )
+        expect(remaining.rows).toEqual([{ id: ROOT_WORKOUT_EXERCISE_ID }])
+        await ownerPool.query('delete from app_private.live_workout_operations where operation_id=$1', [deleteOperation])
       } finally {
         await ownerPool.query(
           `
@@ -3242,6 +3391,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       const createdIds: string[] = []
 
       try {
+        await ownerPool.query(
+          'delete from public.app_feedback where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
         const actorFeedbackId = await withActorTransaction(
           runtimePool,
           ACTOR_ID,
@@ -3303,6 +3456,107 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           { id: actorFeedbackId, user_id: ACTOR_ID },
           { id: otherFeedbackId, user_id: OTHER_ACTOR_ID },
         ]))
+
+        const dispatchTime = new Date('2026-09-04T12:01:00.000Z')
+        const batch = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => claimAppFeedbackDeliveries(client, dispatchTime),
+        )
+        if (batch === null) throw new Error('App feedback batch was not claimed')
+        expect(batch.deliveries).toHaveLength(2)
+        expect(batch.deliveries.every(
+          (delivery) => delivery.sendTracker && delivery.sendTelegram,
+        )).toBe(true)
+
+        const results = batch.deliveries.map((delivery, index) => ({
+          id: delivery.id,
+          tracker: index === 0
+            ? { ok: true as const, issueKey: 'YAFIT-42' }
+            : { ok: false as const, error: 'tracker_http_503' },
+          telegram: { ok: true as const },
+        }))
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => finalizeAppFeedbackDeliveries(
+            client,
+            batch.dispatchToken,
+            results.slice(0, 1),
+            dispatchTime,
+          ),
+        )).rejects.toMatchObject({ code: 'PT422' })
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => finalizeAppFeedbackDeliveries(
+            client,
+            batch.dispatchToken,
+            results,
+            dispatchTime,
+          ),
+        )).resolves.toEqual({
+          trackerSucceeded: 1,
+          trackerFailed: 1,
+          trackerDiscarded: 0,
+          telegramSucceeded: 2,
+          telegramFailed: 0,
+          telegramDiscarded: 0,
+        })
+
+        const retryBatch = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => claimAppFeedbackDeliveries(
+            client,
+            new Date('2026-09-04T12:02:00.000Z'),
+          ),
+        )
+        if (retryBatch === null) throw new Error('Tracker retry was not claimed')
+        expect(retryBatch.deliveries).toEqual([expect.objectContaining({
+          id: otherFeedbackId,
+          sendTracker: true,
+          sendTelegram: false,
+        })])
+        await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => finalizeAppFeedbackDeliveries(
+            client,
+            retryBatch.dispatchToken,
+            [{
+              id: otherFeedbackId,
+              tracker: { ok: true, issueKey: 'YAFIT-43' },
+            }],
+            new Date('2026-09-04T12:02:00.000Z'),
+          ),
+        )
+
+        const dataLensUrl = new URL(requireLocalTestDatabaseUrl())
+        dataLensUrl.username = DATALENS_ROLE
+        dataLensUrl.password = DATALENS_PASSWORD
+        const dataLensPool = new Pool({
+          connectionString: dataLensUrl.toString(),
+          max: 1,
+        })
+        try {
+          await expect(dataLensPool.query(
+            'select tracker_issue_key from analytics.app_feedback where id = $1',
+            [actorFeedbackId],
+          )).resolves.toMatchObject({
+            rows: [{ tracker_issue_key: 'YAFIT-42' }],
+          })
+          await expect(dataLensPool.query('show transaction_read_only'))
+            .resolves.toMatchObject({ rows: [{ transaction_read_only: 'on' }] })
+          await expect(dataLensPool.query('select id from public.app_feedback'))
+            .rejects.toMatchObject({ code: '42501' })
+          await expect(dataLensPool.query(
+            "update analytics.app_feedback set kind = 'suggestion' where id = $1",
+            [actorFeedbackId],
+          )).rejects.toMatchObject({ code: '55000' })
+        } finally {
+          await dataLensPool.end()
+        }
       } finally {
         await ownerPool.query(
           'delete from public.app_feedback where id = any($1::uuid[])',
@@ -3345,6 +3599,12 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             p256dh: 'actor-public-key',
             authKey: 'actor-auth-secret',
           }))
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          upsertPushSubscription(client, {
+            endpoint: 'https://push.example/actor-tablet',
+            p256dh: 'actor-tablet-public-key',
+            authKey: 'actor-tablet-auth-secret',
+          }))
         expect((await ownerPool.query(
           `select enabled from public.notification_preferences
            where user_id = $1 and kind = 'workout_reminder'`,
@@ -3379,14 +3639,34 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         })
 
         const stored = await ownerPool.query<PushSubscriptionAuditRow>(
-          'select user_id, endpoint, p256dh, auth_key from public.push_subscriptions',
+          `select user_id, endpoint, p256dh, auth_key
+           from public.push_subscriptions
+           order by endpoint`,
         )
-        expect(stored.rows).toEqual([{
-          user_id: ACTOR_ID,
-          endpoint: 'https://push.example/actor',
-          p256dh: 'actor-public-key',
-          auth_key: 'actor-auth-secret',
-        }])
+        expect(stored.rows).toEqual([
+          {
+            user_id: ACTOR_ID,
+            endpoint: 'https://push.example/actor',
+            p256dh: 'actor-public-key',
+            auth_key: 'actor-auth-secret',
+          },
+          {
+            user_id: ACTOR_ID,
+            endpoint: 'https://push.example/actor-tablet',
+            p256dh: 'actor-tablet-public-key',
+            auth_key: 'actor-tablet-auth-secret',
+          },
+        ])
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => hasPushSubscription(client, 'https://push.example/actor'),
+        )).resolves.toBe(true)
+        await expect(withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => hasPushSubscription(client, 'https://push.example/actor'),
+        )).resolves.toBe(false)
 
         await expect(withActorTransaction(
           runtimePool,
@@ -3418,22 +3698,35 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await withActorTransaction(
           runtimePool,
           ACTOR_ID,
-          deletePushSubscription,
+          (client) => deletePushSubscription(client, 'https://push.example/actor'),
         )
         await withActorTransaction(
           runtimePool,
           ACTOR_ID,
-          deletePushSubscription,
+          (client) => deletePushSubscription(client, 'https://push.example/actor'),
         )
         expect((await ownerPool.query(
-          'select user_id from public.push_subscriptions where user_id = $1',
+          `select endpoint from public.push_subscriptions
+           where user_id = $1 order by endpoint`,
           [ACTOR_ID],
-        )).rows).toEqual([])
+        )).rows).toEqual([{ endpoint: 'https://push.example/actor-tablet' }])
         expect((await ownerPool.query(
           `select enabled from public.notification_preferences
            where user_id = $1 and kind = 'workout_reminder'`,
           [ACTOR_ID],
         )).rows).toEqual([{ enabled: false }])
+        await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => deletePushSubscription(
+            client,
+            'https://push.example/actor-tablet',
+          ),
+        )
+        expect((await ownerPool.query(
+          'select user_id from public.push_subscriptions where user_id = $1',
+          [ACTOR_ID],
+        )).rows).toEqual([])
       } finally {
         await ownerPool.query(
           'delete from public.notification_preferences where user_id = any($1::uuid[])',
@@ -3490,9 +3783,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
         await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
           upsertPushSubscription(client, {
-            endpoint: 'https://push.example/yandex-pipeline',
-            p256dh: 'pipeline-public-key',
-            authKey: 'pipeline-auth-key',
+            endpoint: 'https://push.example/yandex-pipeline-phone',
+            p256dh: 'pipeline-phone-public-key',
+            authKey: 'pipeline-phone-auth-key',
+          }))
+        await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+          upsertPushSubscription(client, {
+            endpoint: 'https://push.example/yandex-pipeline-tablet',
+            p256dh: 'pipeline-tablet-public-key',
+            authKey: 'pipeline-tablet-auth-key',
           }))
 
         const trainerWorkout = await withActorTransaction(
@@ -3513,7 +3812,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await ownerPool.query(
           `delete from app_private.push_notifications_outbox
            where kind = 'workout_scheduled'
-             and data = jsonb_build_object('workout_id', $1::uuid)`,
+             and data->>'workout_id' = $1::text`,
           [trainerWorkout.id],
         )
         const outsideEnqueued = await withActorTransaction(
@@ -3568,19 +3867,25 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
            where user_id = $1`,
           [OTHER_ACTOR_ID],
         )
-        expect(scheduled.rows).toHaveLength(1)
-        expect(scheduled.rows[0]).toMatchObject({
-          kind: 'workout_scheduled',
-          title: 'Новая тренировка',
-        })
-        expect(scheduled.rows[0]?.body).toContain(actorName)
+        expect(scheduled.rows).toHaveLength(2)
+        for (const notification of scheduled.rows) {
+          expect(notification).toMatchObject({
+            kind: 'workout_scheduled',
+            title: 'Новая тренировка',
+          })
+          expect(notification.body).toContain(actorName)
+        }
 
         await ownerPool.query(
           `insert into app_private.push_notifications_outbox (
-             kind, user_id, title, body, data, attempts
-           ) values (
-             'retry_limit_test', $1, 'Retry limit', 'Retry limit', $2::jsonb, 9
-           )`,
+             kind, user_id, title, body, data, attempts, subscription_id
+           )
+           select
+             'retry_limit_test', $1, 'Retry limit', 'Retry limit', $2::jsonb,
+             9, subscription.id
+           from public.push_subscriptions subscription
+           where subscription.user_id = $1
+             and subscription.endpoint = 'https://push.example/yandex-pipeline-tablet'`,
           [OTHER_ACTOR_ID, JSON.stringify({ test: 'retry-limit' })],
         )
 
@@ -3589,7 +3894,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           runtimePool,
           ACTOR_ID,
           (client) => enqueueWorkoutReminders(client, dispatchTime),
-        )).resolves.toBe(1)
+        )).resolves.toBe(2)
         await expect(withActorTransaction(
           runtimePool,
           ACTOR_ID,
@@ -3601,24 +3906,25 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           ACTOR_ID,
           (client) => claimPushNotifications(client, dispatchTime),
         )
-        expect(batch?.notifications).toHaveLength(3)
+        expect(batch?.notifications).toHaveLength(5)
         if (batch === null) throw new Error('Push batch was not claimed')
         const results = batch.notifications.map((notification) =>
-          notification.title === 'Новая тренировка'
-            ? { id: notification.id, ok: true as const }
-            : notification.title === 'Retry limit'
+          notification.title === 'Retry limit'
+            ? {
+                id: notification.id,
+                ok: false as const,
+                status: 503,
+                error: 'web_push_503',
+              }
+            : notification.title === 'Тренировка сегодня'
+              && notification.subscription.endpoint.endsWith('-phone')
               ? {
-                  id: notification.id,
-                  ok: false as const,
-                  status: 503,
-                  error: 'web_push_503',
-                }
-            : {
                 id: notification.id,
                 ok: false as const,
                 status: 410,
                 error: 'web_push_410',
-              })
+                }
+              : { id: notification.id, ok: true as const })
         await expect(withActorTransaction(
           runtimePool,
           ACTOR_ID,
@@ -3638,7 +3944,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             results,
             dispatchTime,
           ),
-        )).resolves.toEqual({ succeeded: 1, failed: 2, discarded: 2 })
+        )).resolves.toEqual({ succeeded: 3, failed: 2, discarded: 2 })
 
         const finalized = await ownerPool.query<{
           attempts: number
@@ -3653,18 +3959,23 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
              attempts
            from app_private.push_notifications_outbox
            where user_id = $1
-           order by kind`,
+           order by kind, sent, discarded`,
           [OTHER_ACTOR_ID],
         )
         expect(finalized.rows).toEqual([
           { kind: 'retry_limit_test', sent: false, discarded: true, attempts: 10 },
           { kind: 'workout_reminder', sent: false, discarded: true, attempts: 1 },
+          { kind: 'workout_reminder', sent: true, discarded: false, attempts: 0 },
+          { kind: 'workout_scheduled', sent: true, discarded: false, attempts: 0 },
           { kind: 'workout_scheduled', sent: true, discarded: false, attempts: 0 },
         ])
         expect((await ownerPool.query(
-          'select user_id from public.push_subscriptions where user_id = $1',
+          `select endpoint from public.push_subscriptions
+           where user_id = $1 order by endpoint`,
           [OTHER_ACTOR_ID],
-        )).rows).toEqual([])
+        )).rows).toEqual([{
+          endpoint: 'https://push.example/yandex-pipeline-tablet',
+        }])
         await expect(withActorTransaction(
           runtimePool,
           ACTOR_ID,
@@ -3873,6 +4184,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         [DOMAIN_CLIENT_ACTOR_ID],
       )
       let clientId: string | undefined
+      let exerciseId: string | undefined
       try {
         const draft = {
           fullName: 'Самостоятельный клиент',
@@ -3934,7 +4246,35 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           created_by: DOMAIN_CLIENT_ACTOR_ID,
           trainer_id: DOMAIN_CLIENT_ACTOR_ID,
         })
+
+        const exercise = await withActorTransaction(
+          runtimePool,
+          DOMAIN_CLIENT_ACTOR_ID,
+          (client) => createCustomExercise(client, {
+            name: 'Самостоятельная планка',
+            muscleGroup: 'core',
+            inputKind: 'duration',
+          }),
+        )
+        exerciseId = exercise.id
+        const storedExercise = await ownerPool.query<{
+          created_by: string
+          trainer_id: string
+        } & QueryResultRow>(
+          'select created_by, trainer_id from public.custom_exercises where id = $1',
+          [exercise.id],
+        )
+        expect(storedExercise.rows).toEqual([{
+          created_by: DOMAIN_CLIENT_ACTOR_ID,
+          trainer_id: DOMAIN_CLIENT_ACTOR_ID,
+        }])
       } finally {
+        if (exerciseId !== undefined) {
+          await ownerPool.query(
+            'delete from public.custom_exercises where id = $1',
+            [exerciseId],
+          )
+        }
         if (clientId !== undefined) {
           await ownerPool.query('delete from public.clients where id = $1', [clientId])
         }

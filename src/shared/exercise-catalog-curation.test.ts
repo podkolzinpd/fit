@@ -4,6 +4,7 @@ import { COMPATIBLE_EXERCISE_REPLACEMENTS, copiedExerciseName, exerciseCatalogRo
 import { SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISE_LEGACY_CATALOG } from './system-exercises'
 import { ORIGINAL_SEARCH_ALIASES, SEARCH_ALIASES, matchesExerciseSearch, normalizeExerciseSearch, resolveExerciseSearch } from '../features/exercises/exercise-search'
 import { selectableExercises } from '../features/exercises/selectable-exercises'
+import { RETIRED_SYSTEM_EXERCISE_REFS } from './exercise-catalog-retirement'
 
 const byRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
 const selectable = selectableExercises(SYSTEM_EXERCISE_CATALOG)
@@ -42,9 +43,9 @@ describe('approved catalog curation', () => {
 
   it('accounts for all approved rows, and preserves the later Smith addition', () => {
     expect(Object.keys(EXERCISE_CATALOG_DECISIONS)).toHaveLength(662)
-    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(663)
+    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(814)
     const roots = SYSTEM_EXERCISE_CATALOG.filter(isCatalogRoot)
-    expect(['core', 'uncommon', 'rare', 'formats'].map((section) => roots.filter((exercise) => exerciseCatalogSection(exercise) === section).length)).toEqual([80, 279, 215, 7])
+    expect(['core', 'uncommon', 'rare', 'formats'].map((section) => roots.filter((exercise) => exerciseCatalogSection(exercise) === section).length)).toEqual([80, 430, 215, 7])
     expect(roots.find((exercise) => exercise.ref === 'smith-single-leg-romanian-deadlift')).toBeDefined()
     for (const [ref, decision] of Object.entries(EXERCISE_CATALOG_DECISIONS)) {
       expect(byRef.has(ref), ref).toBe(true)
@@ -95,7 +96,8 @@ describe('approved catalog curation', () => {
       // English source aliases remain hints, not newly exact aliases.
       const english = original.ref.replace(/^(?:fedb|vital)-/u, '').replaceAll('-', ' ')
       expect(matchesExerciseSearch(target, english), original.ref).toBe(true)
-      expect(selectable).toContain(target)
+      if (RETIRED_SYSTEM_EXERCISE_REFS.has(target.ref)) expect(selectable).not.toContain(target)
+      else expect(selectable).toContain(target)
     }
     expect(checkedAliases).toBeGreaterThan(1500)
   })

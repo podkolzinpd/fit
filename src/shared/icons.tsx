@@ -26,6 +26,10 @@ export function ScheduleIcon(props: IconProps) {
   return <Icon data-icon="schedule" {...props}><rect x="3" y="4.5" width="18" height="16" rx="3" /><path d="M7.5 2.5v4M16.5 2.5v4M3 9h18" /><path d="M7.5 13h.01M12 13h.01M16.5 13h.01M7.5 17h.01M12 17h.01" /></Icon>
 }
 
+export function TimerIcon(props: IconProps) {
+  return <Icon data-icon="timer" {...props}><circle cx="12" cy="14" r="7.5" /><path d="M9 2h6M12 2v4.5M12 10v4l2.5 1.5M18 6l2 2" /></Icon>
+}
+
 export function AnalyticsIcon(props: IconProps) {
   return <Icon data-icon="analytics" {...props}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /><path d="m4 7 5-3 6 5 5-4" /></Icon>
 }

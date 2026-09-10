@@ -65,6 +65,8 @@ import type { LegacyWorkoutParser } from './legacy-workout-parser.js'
 import type { PilotProgressData } from './progress-data.js'
 import type { PilotWorkoutParser } from './pilot-workout-parser.js'
 import type { PilotTrainingSummaries } from './training-summary.js'
+import type { VitalMediaSigner } from './vital-media.js'
+import type { PilotTrainerProfiles, TrainerProfileDraft } from './trainer-profile.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -95,6 +97,134 @@ describe('health endpoint', () => {
       releaseId: 'api-tree-hash',
     })
     expect(response.headers['x-fit-release-id']).toBe('api-tree-hash')
+  })
+})
+
+describe('trainer professional profile', () => {
+  const draft: TrainerProfileDraft = {
+    displayName: 'Анна Иванова',
+    bio: 'Помогаю безопасно начать силовые тренировки и видеть понятный прогресс.',
+    specialties: ['Силовые'], city: 'Москва', trainingModes: ['online'],
+    experienceStartYear: 2020, education: '', formats: '', price: '',
+    acceptingClients: true, avatarDataUrl: null, certificates: [],
+  }
+  const value = {
+    publicId: '11111111-1111-4111-8111-111111111111', draft, published: draft,
+    listedInCatalog: false,
+    publishedAt: '2026-09-10T09:00:00.000Z', updatedAt: '2026-09-10T09:00:00.000Z', version: 2,
+  }
+
+  function profiles(): PilotTrainerProfiles {
+    return {
+      getOwn: vi.fn().mockResolvedValue(value),
+      saveDraft: vi.fn().mockResolvedValue(value),
+      publish: vi.fn().mockResolvedValue(value),
+      unpublish: vi.fn().mockResolvedValue({ ...value, published: null, publishedAt: null }),
+      setCatalogListing: vi.fn().mockResolvedValue({ ...value, listedInCatalog: true }),
+      getPublic: vi.fn().mockResolvedValue(value),
+      listPublic: vi.fn().mockResolvedValue([{ ...value, listedInCatalog: true }]),
+    }
+  }
+
+  it('saves and publishes through a read-write session', async () => {
+    const pilotTrainerProfiles = profiles()
+    const saveDraft = vi.fn().mockResolvedValue(value)
+    pilotTrainerProfiles.saveDraft = saveDraft
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': 'a'.repeat(43) }
+    const saved = await app.inject({ method: 'PUT', url: '/v1/trainer-profile', headers, payload: draft })
+    const published = await app.inject({ method: 'POST', url: '/v1/trainer-profile/publish', headers })
+    expect(saved.statusCode).toBe(200)
+    expect(published.statusCode).toBe(200)
+    expect(saveDraft).toHaveBeenCalledWith({ accessMode: 'read_write', token: 'a'.repeat(43) }, draft)
+  })
+
+  it('serves only the public profile without a session', async () => {
+    const app = buildApp({ pilotTrainerProfiles: profiles(), logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'GET', url: `/v1/trainers/${value.publicId}/public-profile` })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(value)
+  })
+
+  it('lists published catalog profiles with validated filters', async () => {
+    const pilotTrainerProfiles = profiles()
+    const listPublic = vi.fn().mockResolvedValue([{ ...value, listedInCatalog: true }])
+    pilotTrainerProfiles.listPublic = listPublic
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/trainers/catalog?query=%D0%90%D0%BD%D0%BD%D0%B0&specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&mode=online&accepting=true',
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(listPublic).toHaveBeenCalledWith({
+      query: 'Анна', specialty: 'Силовые', city: 'Москва', mode: 'online', acceptingClients: true,
+    })
+  })
+
+  it('lets a trainer opt into the catalog only from a read-write session', async () => {
+    const pilotTrainerProfiles = profiles()
+    const setCatalogListing = vi.fn().mockResolvedValue({ ...value, listedInCatalog: true })
+    pilotTrainerProfiles.setCatalogListing = setCatalogListing
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': 'a'.repeat(43) }
+    const response = await app.inject({ method: 'POST', url: '/v1/trainer-profile/catalog', headers, payload: { listed: true } })
+
+    expect(response.statusCode).toBe(200)
+    expect(setCatalogListing).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: 'a'.repeat(43) }, true,
+    )
+  })
+})
+
+describe('Vital exercise media', () => {
+  it('signs only reviewed paths for a valid read-write session', async () => {
+    const read = vi.fn().mockResolvedValue({})
+    const sign = vi.fn().mockResolvedValue('https://signed.example/vital')
+    const vitalMediaSigner: VitalMediaSigner = { sign }
+    const app = buildApp({
+      yandexAppSessionReader: { read },
+      vitalMediaSigner,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/exercise-media/sign',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { path: 'vital-pro/vital-barbell-squat-ex001.mp4' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ signedUrl: 'https://signed.example/vital' })
+    expect(read).toHaveBeenCalledWith('a'.repeat(43))
+    expect(sign).toHaveBeenCalledWith('vital-pro/vital-barbell-squat-ex001.mp4')
+  })
+
+  it('rejects invalid paths and read-only pilot sessions', async () => {
+    const app = buildApp({
+      yandexAppSessionReader: { read: vi.fn() },
+      vitalMediaSigner: { sign: vi.fn() },
+      logger: false,
+    })
+    apps.push(app)
+
+    const invalid = await app.inject({
+      method: 'POST',
+      url: '/v1/exercise-media/sign',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { path: 'vital-pro/../private.txt' },
+    })
+    const readOnly = await app.inject({
+      method: 'POST',
+      url: '/v1/exercise-media/sign',
+      headers: { 'x-fit-pilot-session': 'a'.repeat(43) },
+      payload: { path: 'vital-pro/vital-barbell-squat-ex001.mp4' },
+    })
+
+    expect(invalid.statusCode).toBe(400)
+    expect(readOnly.statusCode).toBe(403)
   })
 })
 
@@ -1042,6 +1172,7 @@ function buildAssistantTurnRunner(error?: Error): {
 function buildPushNotifications(error?: Error): {
   pilotPushNotifications: PilotPushNotifications
   readStatus: ReturnType<typeof vi.fn>
+  hasSubscription: ReturnType<typeof vi.fn>
   upsertSubscription: ReturnType<typeof vi.fn>
   deleteSubscription: ReturnType<typeof vi.fn>
   setPreference: ReturnType<typeof vi.fn>
@@ -1056,17 +1187,20 @@ function buildPushNotifications(error?: Error): {
       workout_scheduled: true,
     },
   }))
+  const hasSubscription = vi.fn(() => result(true))
   const upsertSubscription = vi.fn(() => result(undefined))
   const deleteSubscription = vi.fn(() => result(undefined))
   const setPreference = vi.fn(() => result(undefined))
   return {
     pilotPushNotifications: {
       readStatus,
+      hasSubscription,
       upsertSubscription,
       deleteSubscription,
       setPreference,
     },
     readStatus,
+    hasSubscription,
     upsertSubscription,
     deleteSubscription,
     setPreference,
@@ -1234,6 +1368,7 @@ function buildWorkoutsWriter(error?: Error): {
   deleteWorkout: ReturnType<typeof vi.fn>
   finishLive: ReturnType<typeof vi.fn>
   removeLiveSet: ReturnType<typeof vi.fn>
+  removeLiveExercise: ReturnType<typeof vi.fn>
   reorderLiveBlock: ReturnType<typeof vi.fn>
   replaceLiveExercise: ReturnType<typeof vi.fn>
   recordPlannedResult: ReturnType<typeof vi.fn>
@@ -1287,6 +1422,7 @@ function buildWorkoutsWriter(error?: Error): {
     version: 5,
     replayed: false,
   }))
+  const removeLiveExercise = vi.fn(() => result({ resourceId: WORKOUT_EXERCISE_ID, version: 2, replayed: false }))
   const reorderLiveBlock = vi.fn(() => result({
     resourceId: WORKOUT_BLOCK_ID,
     version: 6,
@@ -1318,6 +1454,7 @@ function buildWorkoutsWriter(error?: Error): {
       deleteWorkout,
       finishLive,
       removeLiveSet,
+      removeLiveExercise,
       reorderLiveBlock,
       replaceLiveExercise,
       recordPlannedResult,
@@ -1337,6 +1474,7 @@ function buildWorkoutsWriter(error?: Error): {
     deleteWorkout,
     finishLive,
     removeLiveSet,
+    removeLiveExercise,
     reorderLiveBlock,
     replaceLiveExercise,
     recordPlannedResult,
@@ -2360,6 +2498,31 @@ describe('pilot push notification state', () => {
     })
   })
 
+  it('checks only the current browser endpoint without exposing it in the URL', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/push-notifications/subscription/status',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { endpoint: ' https://push.example/this-device ' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toEqual({ subscribed: true })
+    expect(push.hasSubscription).toHaveBeenCalledWith(
+      sessionToken,
+      'https://push.example/this-device',
+    )
+    expect(response.body).not.toContain('push.example')
+  })
+
   it('rejects malformed subscriptions before invoking the database command', async () => {
     const push = buildPushNotifications()
     const app = buildApp({
@@ -2392,10 +2555,33 @@ describe('pilot push notification state', () => {
       method: 'DELETE',
       url: '/v1/push-notifications/subscription',
       headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { endpoint: 'https://push.example/this-device' },
     })
 
     expect(response.statusCode).toBe(204)
-    expect(push.deleteSubscription).toHaveBeenCalledWith(sessionToken)
+    expect(push.deleteSubscription).toHaveBeenCalledWith(
+      sessionToken,
+      'https://push.example/this-device',
+    )
+  })
+
+  it('does not delete every device when the endpoint body is missing', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/v1/push-notifications/subscription',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(push.deleteSubscription).not.toHaveBeenCalled()
   })
 
   it('sets only a supported explicit preference', async () => {
@@ -3247,6 +3433,24 @@ describe('pilot live workout structural commands', () => {
       },
     })
     expect(commented.headers['cache-control']).toBe('no-store')
+    const removedExercise = await app.inject({
+      method: 'DELETE',
+      url: `/v1/workouts/${WORKOUT_ID}/exercises/${WORKOUT_EXERCISE_ID}`,
+      headers: { 'x-fit-session': sessionToken },
+      payload: { expectedVersion: 8, operationId: OPERATION_IDS.removeSet },
+    })
+    expect(removedExercise.statusCode).toBe(200)
+    expect(removedExercise.json()).toEqual({ exercise: {
+      id: WORKOUT_EXERCISE_ID, version: 2, replayed: false,
+    } })
+    expect(writer.removeLiveExercise).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: sessionToken }, WORKOUT_ID, WORKOUT_EXERCISE_ID, 8, OPERATION_IDS.removeSet,
+    )
+    const unauthorizedDelete = await app.inject({
+      method: 'DELETE', url: `/v1/workouts/${WORKOUT_ID}/exercises/${WORKOUT_EXERCISE_ID}`,
+      payload: { expectedVersion: 8, operationId: OPERATION_IDS.removeSet },
+    })
+    expect(unauthorizedDelete.statusCode).toBe(401)
     expect(writer.appendLiveExercise).toHaveBeenCalledWith(
       sessionToken,
       WORKOUT_ID,

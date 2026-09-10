@@ -53,7 +53,7 @@ export function YandexAccountLinkingCard({
     </button>
     {error && <p className="error" role="alert">{error}</p>}
     <p className="yandex-account-linking-note">
-      Текущий вход по email, паролю и Google не меняется. Доступ к данным по-прежнему проверяется сервером.
+      Текущий вход по email и паролю не меняется. Доступ к данным по-прежнему проверяется сервером.
     </p>
   </section>
 }

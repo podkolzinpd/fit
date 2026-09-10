@@ -32,7 +32,7 @@ export const workoutQueries = {
   }),
   getRoot: (id: string) => supabase.from('workouts').select(rootColumns).eq('id', id).is('deleted_at', null).single(),
   getExercises: (id: string) => supabase.from('workout_exercises')
-    .select('id,position,exercise_source,exercise_ref,custom_exercise_id,exercise_name,muscle_group,input_kind,block_id,block_type,block_preset,block_rounds,rest_between_exercises_sec,rest_between_rounds_sec,rest_between_sets_sec,trainer_comment')
+    .select('id,position,exercise_source,exercise_ref,custom_exercise_id,exercise_name,muscle_group,input_kind,block_id,block_type,block_preset,block_rounds,rest_between_exercises_sec,rest_between_rounds_sec,rest_between_sets_sec,trainer_comment,client_note')
     .eq('workout_id', id).order('position'),
   getSets: (exerciseIds: string[]) => supabase.from('workout_sets')
     .select('id,workout_exercise_id,position,plan_weight_kg,plan_reps,plan_duration_min,plan_duration_sec,plan_distance_km,plan_rpe,fact_weight_kg,fact_reps,fact_duration_min,fact_duration_sec,fact_distance_km,fact_rpe,confirmed_at,version')
@@ -65,6 +65,9 @@ export const workoutQueries = {
   }),
   removeLiveSet: (setId: string, version: number) => supabase.rpc('remove_live_set', {
     p_set_id: setId, p_expected_version: version,
+  }),
+  removeLiveExercise: (workoutId: string, exerciseId: string, version: number) => supabase.rpc('remove_live_exercise', {
+    p_workout_id: workoutId, p_exercise_id: exerciseId, p_expected_version: version,
   }),
   reorderLiveBlock: (workoutId: string, blockId: string, direction: -1 | 1, version: number) => supabase.rpc('reorder_live_block', {
     p_workout_id: workoutId, p_block_id: blockId, p_direction: direction, p_expected_version: version,

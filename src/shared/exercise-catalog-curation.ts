@@ -55,6 +55,14 @@ export function exerciseCatalogSection(exercise: ExerciseSnapshot): CatalogSecti
   return decision?.tier === 'core' || decision?.tier === 'rare' ? decision.tier : 'uncommon'
 }
 
+const CATALOG_BROWSE_PRIORITY: Record<CatalogSection, number> = { core: 0, uncommon: 1, formats: 2, rare: 3 }
+
+/** One catalog, ordered by usefulness: familiar movements first, special cases later. */
+export function compareCatalogBrowseOrder(left: ExerciseSnapshot, right: ExerciseSnapshot): number {
+  return CATALOG_BROWSE_PRIORITY[exerciseCatalogSection(left)] - CATALOG_BROWSE_PRIORITY[exerciseCatalogSection(right)]
+    || left.name.localeCompare(right.name, 'ru')
+}
+
 /** Collapse ranked results by movement, retaining the best matching variant. */
 export function groupCatalogResults(exercises: readonly ExerciseSnapshot[]): ExerciseSnapshot[] {
   const seen = new Set<string>()
