@@ -13,6 +13,9 @@ const vagueHeadline = /(?:наблюдается|отмечается|есть)\
 const causalClaim = /(?:способству(?:ет|ют)|привод(?:ит|ят)|гарантиру(?:ет|ют)).{0,60}(?:рост|сниж|увелич|уменьш)/iu
 const indecisiveAction = /(?:возможност[ьи]|\bили\b|при текущем или|чуть повышенн)/iu
 const interpretation = /(?:пока|разов|устойчив|закреп|сопостав|ценой|однако|но\b|не\s+(?:означает|доказывает|подтверждает)|вероятн)/iu
+const machineCopy = /(?:наблюдается|отмечается)\s+(?:увеличение|улучшение|снижение)|данные подтверждают (?:прогресс|рост)|в некоторых упражнениях/iu
+const topicPrefix = /^[А-ЯЁ][^:]{1,28}:\s+\S/u
+const CURRENT_ANALYSIS_VERSION = "trainer-summary-v2"
 
 function numericRestatement(value: string): boolean {
   return /\d/u.test(value) && /(?:вес|повтор|объ[её]м|темп|дистанц).{0,50}(?:вырос|увелич|сниз|уменьш|измен)/iu.test(value) && !interpretation.test(value)
@@ -76,7 +79,7 @@ export function summaryQualityIssues(
   ].filter((item): item is string => typeof item === "string").join(" ")
   const issues: string[] = []
 
-  if (client.analysisVersion !== 'whole-period-v1') {
+  if (client.analysisVersion !== CURRENT_ANALYSIS_VERSION) {
     issues.push('client.analysisVersion не соответствует актуальному контракту анализа.')
   }
   if (clientMissingContext.length > 1) {
@@ -111,6 +114,12 @@ export function summaryQualityIssues(
   }
   if (clientText.includes("**") || clientText.includes("__")) {
     issues.push("В client есть Markdown-разметка.")
+  }
+  if (/\b\d+\s*\/\s*10\b/u.test(clientText)) {
+    issues.push("Клиентский анализ не должен содержать произвольную оценку по десятибалльной шкале.")
+  }
+  if (machineCopy.test(clientText)) {
+    issues.push("Клиентский анализ должен называть конкретные движения и выводы человеческим языком.")
   }
   if (
     typeof client.encouragement === "string" &&
@@ -183,8 +192,11 @@ export function summaryQualityIssues(
   if (nextSteps.some((item) => /^(?:продолжать?|отслеживать прогресс|собрать больше данных)[.!]?$/iu.test(item.trim()))) {
     issues.push("client.nextSteps должен быть конкретным действием, а не общей рекомендацией.")
   }
-  if (clientAchievements.length < 1 || clientAchievements.length > 3) {
-    issues.push("client.achievements должен содержать от одного до трёх наблюдений.")
+  if (clientAchievements.length < 1 || clientAchievements.length > 4) {
+    issues.push("client.achievements должен содержать от одного до четырёх наблюдений.")
+  }
+  if (clientAchievements.some((item) => !topicPrefix.test(item.trim()))) {
+    issues.push("Каждое client.achievements должно начинаться с короткой темы и двоеточия.")
   }
   if (clientAchievements.some((item) => !groundedEvidence(item, trainingData))) {
     issues.push('Числа в client.achievements должны присутствовать во входных данных.')
@@ -211,6 +223,13 @@ export function summaryQualityIssues(
   const recoveryAdvice = /облегч|разгруз|снизить нагруз|снижени[ея] нагруз|уменьшить (?:вес|нагруз)/iu.test(allText)
   if (recoveryAdvice && !(hasRepeatedDecline(trainingData) && hasRecoverySignal(trainingData))) {
     issues.push("Совет снизить нагрузку требует повторяющегося спада и отдельного сигнала восстановления.")
+  }
+  const sourceText = JSON.stringify(trainingData)
+  if (/сон|недосып|спал/iu.test(clientText) && !/сон|недосып|спал/iu.test(sourceText)) {
+    issues.push("Нельзя делать выводы о сне без такого показателя или комментария во входных данных.")
+  }
+  if (/локт|колен|плечев.{0,8}(?:боль|сустав)|травм|болит/iu.test(clientText) && !hasRecoverySignal(trainingData)) {
+    issues.push("Нельзя делать выводы о боли или травме без сигнала во входных данных.")
   }
 
   if (

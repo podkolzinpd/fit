@@ -72,10 +72,10 @@ const fixtureSet = {
 }
 
 async function mockNavigationWorkouts(page: Page) {
-  const state = { status: 'done', version: 1, deleted: false, createdId: historyRow.id, monthError: false, delayMonth: false, count: 1 }
+  const state = { status: 'done', version: 1, deleted: false, createdId: historyRow.id, monthError: false, delayMonth: false, count: 1, setConfirmed: true }
   const row = () => ({ ...historyRow, id: state.createdId, trainer_id: trainerId, created_by: trainerId,
     status: state.status, version: state.version, workout_date: state.status !== 'done' ? '2026-08-16' : historyRow.workout_date,
-    exercises: [{ ...fixtureExercise, sets: [fixtureSet] }],
+    exercises: [{ ...fixtureExercise, sets: [{ ...fixtureSet, confirmed_at: state.setConfirmed ? fixtureSet.confirmed_at : null }] }],
   })
   await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
     const body = route.request().postDataJSON() as { p_from?: string; p_to?: string; p_offset?: number; p_limit?: number }
@@ -91,7 +91,10 @@ async function mockNavigationWorkouts(page: Page) {
   })
   await page.route('**/rest/v1/workouts?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(row()) }))
   await page.route('**/rest/v1/workout_exercises?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([fixtureExercise]) }))
-  await page.route('**/rest/v1/workout_sets?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([fixtureSet]) }))
+  await page.route('**/rest/v1/workout_sets?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+    ...fixtureSet,
+    confirmed_at: state.setConfirmed ? fixtureSet.confirmed_at : null,
+  }]) }))
   for (const rpc of ['list_latest_exercise_results', 'list_workout_personal_records', 'list_exercise_progress', 'list_workout_summaries']) {
     await page.route(`**/rest/v1/rpc/${rpc}`, (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
   }
@@ -141,6 +144,33 @@ async function dismissCalendarHint(page: Page) {
   await hint.getByRole('button', { name: 'Понятно' }).click()
   await dismissVisibleHints(page)
 }
+
+test('client: unfinished Live workout reminds once after twenty minutes of inactivity', async ({ page }, testInfo) => {
+  const state = await mockNavigationWorkouts(page)
+  state.status = 'in_progress'
+  state.setConfirmed = false
+  await loginForHistory(page, 'client')
+  await page.goto(`${detailPath}/live`)
+  await expect(page.getByRole('heading', { name: 'Live-тренировка' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect.poll(() => page.evaluate(() => Object.keys(localStorage).some((key) => key.startsWith('fit:workout-inactivity:')))).toBe(true)
+
+  await page.clock.fastForward(20 * 60 * 1_000)
+  const reminder = page.getByRole('alert').filter({ hasText: 'Тренировка ещё идёт' })
+  await expect(reminder).toBeVisible()
+  await expect(reminder.getByRole('button', { name: 'Продолжить' })).toBeVisible()
+  await expect(reminder.getByRole('button', { name: 'Завершить' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('client-inactivity-reminder-390.png') })
+
+  await reminder.getByRole('button', { name: 'Завершить' }).click()
+  await expect(reminder).toBeHidden()
+  const finishConfirmation = page.locator('.finish-confirm')
+  await expect(finishConfirmation).toContainText('Есть незавершённые подходы. Завершить частично?')
+  await finishConfirmation.getByRole('button', { name: 'Отмена' }).click()
+  await page.clock.fastForward(40 * 60 * 1_000)
+  await expect(reminder).toBeHidden()
+})
 
 for (const role of ['trainer', 'client'] as const) {
   test(`${role}: Live exercise removal confirms, recovers and persists on reload`, async ({ page }, testInfo) => {
@@ -280,7 +310,7 @@ for (const role of ['trainer', 'client'] as const) {
     await expect(page.getByText('В этом месяце тренировок нет.')).toBeVisible()
     await page.getByRole('button', { name: 'Следующий месяц' }).click()
     await expect(page.getByRole('button', { name: 'Следующий месяц' })).toBeDisabled()
-    await page.goto(role === 'trainer' ? '/profile' : '/me/profile')
+    await page.goto(role === 'trainer' ? '/profile/settings' : '/me/profile')
     await page.getByRole('switch', { name: 'Тёмная тема' }).click()
     await page.goto(calendarUrl)
     await expect(page.locator('.client-history-calendar-day.selected')).toBeVisible()

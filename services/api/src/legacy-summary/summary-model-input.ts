@@ -56,15 +56,27 @@ type DerivedObservation = {
 }
 
 type SummaryMeasurement = {
+  id?: unknown
   recorded_on?: unknown
   weight_kg?: unknown
   chest_cm?: unknown
   waist_cm?: unknown
   hip_cm?: unknown
+  custom_metrics?: SummaryCustomMeasurement[]
+}
+
+type SummaryCustomMeasurement = {
+  metric_id?: unknown
+  name?: unknown
+  unit?: unknown
+  value?: unknown
 }
 
 type MeasurementChange = {
-  metric: "weight_kg" | "chest_cm" | "waist_cm" | "hip_cm"
+  metric: "weight_kg" | "chest_cm" | "waist_cm" | "hip_cm" | "custom"
+  metric_id?: string
+  name?: string
+  unit?: string | null
   from: number
   to: number
   change: number
@@ -88,7 +100,7 @@ function sameLoad(left: number, right: number): boolean {
 const MEASUREMENT_METRICS = ["weight_kg", "chest_cm", "waist_cm", "hip_cm"] as const
 
 export function deriveMeasurementChanges(measurements: SummaryMeasurement[]): MeasurementChange[] {
-  return MEASUREMENT_METRICS.flatMap((metric) => {
+  const standardChanges = MEASUREMENT_METRICS.flatMap((metric) => {
     const points = measurements
       .map((measurement) => ({ date: measurement.recorded_on, value: finite(measurement[metric]) }))
       .filter((point): point is { date: unknown; value: number } => point.value !== undefined)
@@ -105,12 +117,50 @@ export function deriveMeasurementChanges(measurements: SummaryMeasurement[]): Me
       evidence_points: points.length,
     }]
   })
+  const customPoints = new Map<string, Array<{ date: unknown; value: number; name: string; unit: string | null }>>()
+  for (const measurement of measurements) {
+    for (const custom of measurement.custom_metrics ?? []) {
+      const metricId = typeof custom.metric_id === "string" ? custom.metric_id : ""
+      const name = typeof custom.name === "string" ? custom.name.trim() : ""
+      const value = finite(custom.value)
+      if (!metricId || !name || value === undefined) continue
+      const unit = typeof custom.unit === "string" ? custom.unit : null
+      const points = customPoints.get(metricId) ?? []
+      points.push({ date: measurement.recorded_on, value, name, unit })
+      customPoints.set(metricId, points)
+    }
+  }
+  const customChanges = [...customPoints.entries()].flatMap(([metricId, points]): MeasurementChange[] => {
+    const first = points[0]
+    const last = points.at(-1)
+    if (!first || !last || points.length < 2 || first.value === last.value) return []
+    return [{
+      metric: "custom",
+      metric_id: metricId,
+      name: last.name,
+      unit: last.unit,
+      from: rounded(first.value),
+      to: rounded(last.value),
+      change: rounded(last.value - first.value),
+      first_date: first.date,
+      last_date: last.date,
+      evidence_points: points.length,
+    }]
+  })
+  return [...standardChanges, ...customChanges]
 }
 
 function measurementContext(measurements: SummaryMeasurement[] | undefined) {
   const recent = measurements ?? []
   return {
-    recent_entries: recent,
+    recent_entries: recent.map(({ recorded_on, weight_kg, chest_cm, waist_cm, hip_cm, custom_metrics }) => ({
+      recorded_on,
+      weight_kg,
+      chest_cm,
+      waist_cm,
+      hip_cm,
+      custom_metrics: custom_metrics ?? [],
+    })),
     changes: deriveMeasurementChanges(recent),
   }
 }
@@ -119,7 +169,7 @@ function measurementComparison(
   current: SummaryMeasurement[] | undefined,
   previous: SummaryMeasurement[] | undefined,
 ): MeasurementChange[] {
-  return MEASUREMENT_METRICS.flatMap((metric) => {
+  const standardChanges = MEASUREMENT_METRICS.flatMap((metric) => {
     const currentPoint = [...(current ?? [])].reverse()
       .map((measurement) => ({ date: measurement.recorded_on, value: finite(measurement[metric]) }))
       .find((point) => point.value !== undefined)
@@ -137,6 +187,39 @@ function measurementComparison(
       evidence_points: 2,
     }]
   })
+  const latestCustom = (values: SummaryMeasurement[] | undefined) => {
+    const result = new Map<string, { date: unknown; value: number; name: string; unit: string | null }>()
+    for (const measurement of values ?? []) {
+      for (const custom of measurement.custom_metrics ?? []) {
+        const metricId = typeof custom.metric_id === "string" ? custom.metric_id : ""
+        const name = typeof custom.name === "string" ? custom.name.trim() : ""
+        const value = finite(custom.value)
+        if (metricId && name && value !== undefined) {
+          result.set(metricId, { date: measurement.recorded_on, value, name, unit: typeof custom.unit === "string" ? custom.unit : null })
+        }
+      }
+    }
+    return result
+  }
+  const currentCustom = latestCustom(current)
+  const previousCustom = latestCustom(previous)
+  const customChanges = [...currentCustom.entries()].flatMap(([metricId, currentPoint]): MeasurementChange[] => {
+    const previousPoint = previousCustom.get(metricId)
+    if (!previousPoint || previousPoint.value === currentPoint.value) return []
+    return [{
+      metric: "custom",
+      metric_id: metricId,
+      name: currentPoint.name,
+      unit: currentPoint.unit,
+      from: rounded(previousPoint.value),
+      to: rounded(currentPoint.value),
+      change: rounded(currentPoint.value - previousPoint.value),
+      first_date: previousPoint.date,
+      last_date: currentPoint.date,
+      evidence_points: 2,
+    }]
+  })
+  return [...standardChanges, ...customChanges]
 }
 
 export function deriveExerciseObservations(exercise: SummaryExercise): DerivedObservation[] {

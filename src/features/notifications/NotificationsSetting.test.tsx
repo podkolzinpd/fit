@@ -27,6 +27,19 @@ vi.mock('../install', () => ({
   isAppInstalled: () => isAppInstalled(),
 }))
 
+const nativeReminder = vi.hoisted(() => ({
+  supported: vi.fn<() => boolean>(),
+  permission: vi.fn<() => Promise<'granted' | 'denied' | 'prompt' | 'unsupported'>>(),
+  requestPermission: vi.fn<() => Promise<boolean>>(),
+  cancelAll: vi.fn<() => Promise<void>>(),
+}))
+vi.mock('../workouts/workout-inactivity-reminder', () => ({
+  isNativeWorkoutInactivityReminderSupported: () => nativeReminder.supported(),
+  workoutInactivityNotificationPermission: () => nativeReminder.permission(),
+  requestWorkoutInactivityNotificationPermission: () => nativeReminder.requestPermission(),
+  cancelAllNativeWorkoutInactivityReminders: () => nativeReminder.cancelAll(),
+}))
+
 import { NotificationsSetting } from './NotificationsSetting'
 
 const USER_ID = 'user-1'
@@ -41,6 +54,7 @@ function primeDefaults() {
   isPushSupported.mockReturnValue(true)
   detectInstallPlatform.mockReturnValue('android')
   isAppInstalled.mockReturnValue(true)
+  nativeReminder.supported.mockReturnValue(false)
 }
 
 describe('NotificationsSetting', () => {
@@ -53,6 +67,10 @@ describe('NotificationsSetting', () => {
     getCurrentPushSubscription.mockReset()
     detectInstallPlatform.mockReset()
     isAppInstalled.mockReset()
+    nativeReminder.supported.mockReset()
+    nativeReminder.permission.mockReset()
+    nativeReminder.requestPermission.mockReset()
+    nativeReminder.cancelAll.mockReset()
   })
   afterEach(() => vi.restoreAllMocks())
 
@@ -160,5 +178,26 @@ describe('NotificationsSetting', () => {
     await user.click(await screen.findByRole('button', { name: 'Включить уведомления' }))
 
     expect(await screen.findByText('Push-уведомления сейчас недоступны')).toBeVisible()
+  })
+
+  it('uses local notifications in the native app and cancels them when reminders are disabled', async () => {
+    primeDefaults()
+    const user = userEvent.setup()
+    nativeReminder.supported.mockReturnValue(true)
+    nativeReminder.permission.mockResolvedValue('granted')
+    nativeReminder.cancelAll.mockResolvedValue(undefined)
+    repository.status.mockResolvedValue({ state: 'unavailable', workoutReminderEnabled: true, workoutScheduledEnabled: true })
+    repository.setCategoryEnabled.mockResolvedValue(undefined)
+
+    render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
+    await screen.findByText('Уведомления работают')
+    const reminderSwitch = screen.getByRole('switch', { name: 'Напоминания о тренировках' })
+    expect(screen.queryByRole('switch', { name: 'Новые тренировки от тренера' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Отправить тестовое уведомление' })).not.toBeInTheDocument()
+
+    await user.click(reminderSwitch)
+
+    expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'workout_reminder', false)
+    expect(nativeReminder.cancelAll).toHaveBeenCalledOnce()
   })
 })

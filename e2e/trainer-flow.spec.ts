@@ -274,6 +274,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toBeVisible()
   // Подтверждённый подход становится компактной строкой с зафиксированным фактом.
   await expect(page.locator('.live-set.confirmed').getByLabel('Фактический вес')).toHaveValue('42.5')
+  expect(await page.locator('.live-set.confirmed > .live-set-grid').evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
   await expect(page.locator('.live-rest-trigger')).toContainText(/Отдых 1:(30|29)/)
   await expect(page.locator('.live-timer')).not.toHaveClass(/resting/)
   expect(await page.locator('.live-timer').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(neutralTimerBackground)
@@ -807,10 +808,9 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
-  // В новом стартовом маршруте профиль открывается из аватара, а не из таббара.
-  // Прямой переход исключает зависимость настройки профиля от структуры навигации.
-  await page.goto('/profile')
-  await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
+  // Настройки профиля открываются отдельным экраном из шестерёнки анкеты.
+  await page.goto('/profile/settings')
+  await expect(page.getByRole('heading', { name: 'Настройки' })).toBeVisible()
   const firstName = page.getByLabel('Имя', { exact: true })
   const original = await firstName.inputValue()
   await firstName.fill('Черновик Который Отменим')
@@ -1061,6 +1061,9 @@ test('комментарий тренера к упражнению: план �
   await expect(page.locator('.live-timer')).toBeVisible()
   const liveNote = page.locator('.live-exercise-note').first()
   await expect(liveNote.locator('summary')).toContainText('Заметка тренера')
+  const addSetBox = await page.locator('.live-add-set').boundingBox()
+  const noteBox = await liveNote.boundingBox()
+  expect(noteBox!.y).toBeGreaterThan(addSetBox!.y)
   await expect(liveNote).not.toHaveAttribute('open')
   await expect(page.getByLabel(/Заметка: Присед/)).not.toBeVisible()
   await liveNote.locator('summary').click()

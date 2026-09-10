@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.110.8"
 import { withSupabase } from "@supabase/server"
 import {
   PROMPT_VERSION,
+  SUMMARY_ANALYSIS_VERSION,
   SUMMARY_JSON_SCHEMA,
   SUMMARY_SYSTEM_PROMPT,
 } from "./summary-contract.ts"
@@ -73,12 +74,22 @@ type SetRow = {
 }
 
 type ProgressRow = {
+  id: string
   recorded_on: string
   weight_kg: number | null
   chest_cm: number | null
   waist_cm: number | null
   hip_cm: number | null
+  custom_metrics?: Array<{
+    metric_id: string
+    name: string
+    unit: string | null
+    value: number
+  }>
 }
+
+type CustomMetricRow = { id: string; name: string; unit: string | null }
+type ProgressCustomRow = { progress_id: string; metric_id: string; value: number | string }
 
 type YandexCompletionResponse = {
   result?: {
@@ -734,7 +745,7 @@ async function requestYandexSummary(
           modelUri,
           completionOptions: {
             stream: false,
-            temperature: 0.1,
+            temperature: 0.2,
             maxTokens: "1800",
           },
           jsonSchema: { schema: SUMMARY_JSON_SCHEMA },
@@ -915,7 +926,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
 
       const { data: measurements, error: measurementsError } = await userClient
         .from("client_progress")
-        .select("recorded_on,weight_kg,chest_cm,waist_cm,hip_cm")
+        .select("id,recorded_on,weight_kg,chest_cm,waist_cm,hip_cm")
         .eq("client_id", input.client_id)
         .eq("trainer_id", trainerId)
         .is("deleted_at", null)
@@ -925,6 +936,51 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
         .limit(MAX_SOURCE_ROWS + 1)
       if (measurementsError) throw new HttpError(500, "measurements_lookup_failed")
       if (measurements.length > MAX_SOURCE_ROWS) throw new HttpError(422, "source_row_limit_reached")
+
+      const progressIds = measurements.map((measurement) => measurement.id)
+      let customMetrics: CustomMetricRow[] = []
+      let customValues: ProgressCustomRow[] = []
+      if (progressIds.length > 0) {
+        const [{ data: metrics, error: metricsError }, { data: values, error: valuesError }] = await Promise.all([
+          userClient
+            .from("client_custom_metrics")
+            .select("id,name,unit")
+            .eq("client_id", input.client_id)
+            .eq("trainer_id", trainerId)
+            .order("name")
+            .order("id")
+            .limit(MAX_SOURCE_ROWS + 1),
+          userClient
+            .from("client_progress_custom")
+            .select("progress_id,metric_id,value")
+            .eq("client_id", input.client_id)
+            .eq("trainer_id", trainerId)
+            .in("progress_id", progressIds)
+            .order("progress_id")
+            .order("metric_id")
+            .limit(MAX_SOURCE_ROWS + 1),
+        ])
+        if (metricsError || valuesError) throw new HttpError(500, "custom_measurements_lookup_failed")
+        if (metrics.length > MAX_SOURCE_ROWS || values.length > MAX_SOURCE_ROWS) {
+          throw new HttpError(422, "source_row_limit_reached")
+        }
+        customMetrics = metrics as CustomMetricRow[]
+        customValues = values as ProgressCustomRow[]
+      }
+      const metricById = new Map(customMetrics.map((metric) => [metric.id, metric]))
+      const valuesByProgress = new Map<string, ProgressRow["custom_metrics"]>()
+      for (const row of customValues) {
+        const metric = metricById.get(row.metric_id)
+        const value = Number(row.value)
+        if (!metric || !Number.isFinite(value)) continue
+        const current = valuesByProgress.get(row.progress_id) ?? []
+        current.push({ metric_id: metric.id, name: metric.name, unit: metric.unit, value })
+        valuesByProgress.set(row.progress_id, current)
+      }
+      const enrichedMeasurements = (measurements as ProgressRow[]).map((measurement) => ({
+        ...measurement,
+        custom_metrics: valuesByProgress.get(measurement.id) ?? [],
+      }))
 
       const workoutIds = [...completedWorkouts, ...previousWorkouts].map((workout) => workout.id)
       const { data: exercises, error: exercisesError } = await userClient
@@ -970,9 +1026,9 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
       const previousExercises = exercises.filter((exercise) => previousWorkoutIds.has(exercise.workout_id))
       const currentExerciseIds = new Set(currentExercises.map((exercise) => exercise.id))
       const previousExerciseIds = new Set(previousExercises.map((exercise) => exercise.id))
-      const currentMeasurements = (measurements as ProgressRow[])
+      const currentMeasurements = enrichedMeasurements
         .filter((item) => item.recorded_on >= input.period_start)
-      const previousMeasurements = (measurements as ProgressRow[])
+      const previousMeasurements = enrichedMeasurements
         .filter((item) => item.recorded_on <= previousPeriodEnd)
       const currentProgress = buildProgressData(
         completedWorkouts,
@@ -1018,7 +1074,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
         const cachedSummary = cached?.summary && typeof cached.summary === "object" && !Array.isArray(cached.summary)
           ? cached.summary as Record<string, unknown>
           : null
-        if (cached && cachedSummary?.analysisVersion === "whole-period-v1" && cachedSummary.inputFingerprint === inputFingerprint) {
+        if (cached && cachedSummary?.analysisVersion === SUMMARY_ANALYSIS_VERSION && cachedSummary.inputFingerprint === inputFingerprint) {
           return Response.json({ data: cached, cached: true })
         }
       }

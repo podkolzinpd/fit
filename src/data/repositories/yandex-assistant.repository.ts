@@ -204,6 +204,8 @@ function clientSummaryPayload(summary: ClientTrainingSummary): Record<string, un
     encouragement: summary.encouragement,
     goalAlignment: summary.goalAlignment ?? '',
     nextSteps: summary.nextSteps ?? [],
+    missingContext: summary.missingContext ?? [],
+    analysisVersion: summary.analysisVersion ?? '',
   }
 }
 

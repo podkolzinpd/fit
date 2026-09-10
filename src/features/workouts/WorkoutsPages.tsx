@@ -57,6 +57,8 @@ import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { liveOperationWithTimeout } from './live-operation-timeout'
 import { workoutFeedbackConfirmation } from './workout-feedback-copy'
+import { clearWorkoutInactivityReminder } from './workout-inactivity-reminder'
+import { useWorkoutInactivityReminder } from './use-workout-inactivity-reminder'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -729,7 +731,11 @@ export function WorkoutDetailPage() {
     mutationFn: () => workoutsRepository.reschedule(query.data!, rescheduleDate, rescheduleTime || null),
     onSuccess: async () => { setDecisionSheet(null); await invalidateWorkoutSurfaces() },
   })
-  const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => { await Promise.all([invalidateWorkoutResults(queryClient), queryClient.invalidateQueries({ queryKey: ['clients'] })]); goBack() } })
+  const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => {
+    if (actor?.userId) clearWorkoutInactivityReminder(actor.userId, workoutId)
+    await Promise.all([invalidateWorkoutResults(queryClient), queryClient.invalidateQueries({ queryKey: ['clients'] })])
+    goBack()
+  } })
   const removeCompletedExercise = useMutation({
     mutationFn: ({ exerciseId, workout }: { exerciseId: string; exerciseName: string; workout: Workout }) => workoutsRepository.removeLiveExercise(workout, exerciseId),
     onSuccess: async () => {
@@ -1428,7 +1434,7 @@ function WorkoutTimer({ startedAt, resting = false }: { startedAt: string | null
 }
 
 export function LiveWorkoutPage() {
-  const { workouts: workoutsRepository } = useDataBackend()
+  const { pushNotifications: pushNotificationsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
   const showRpeByDefault = useRpeDisplay(actor?.userId)
@@ -1454,6 +1460,11 @@ export function LiveWorkoutPage() {
     const incoming = await workoutsRepository.get(workoutId)
     return reconcileLiveWorkout(queryClient.getQueryData<Workout>(['workout', workoutId]), incoming)
   } })
+  const reminderPreference = useQuery({
+    queryKey: ['push-notifications-status', actor?.userId],
+    queryFn: () => pushNotificationsRepository.status(actor!.userId),
+    enabled: clientMode && Boolean(actor?.userId),
+  })
   // Во время live и тренер, и клиент могут корректировать структуру: добавить
   // или заменить упражнение, подход и порядок. Серверные live-RPC используют
   // тот же authorisation путь с разрешённым выполнением для подключённого
@@ -1560,6 +1571,7 @@ export function LiveWorkoutPage() {
     showCompletedWorkout(false)
   }, [actor?.userId, query.data?.status, showCompletedWorkout, workoutId])
   function rememberLiveDraft(setId: string, draft: LiveSetDraft, updateVisibleDraft = true) {
+    inactivityReminder.noteActivity(restEndsAt)
     pendingSetDrafts.current.set(setId, draft)
     if (updateVisibleDraft) setLocalSetDrafts((current) => new Map(current).set(setId, draft))
     if (actor?.userId) writePendingLiveSetDraft(actor.userId, workoutId, setId, draft)
@@ -1603,6 +1615,14 @@ export function LiveWorkoutPage() {
   // используем встроенный диалог в панели вместо нативного confirm.
   const [confirmFinish, setConfirmFinish] = useState(false)
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null)
+  const inactivityReminder = useWorkoutInactivityReminder({
+    userId: actor?.userId,
+    workoutId,
+    status: !query.data ? 'loading' : query.data.status === 'in_progress' ? 'active' : 'inactive',
+    enabled: clientMode ? reminderPreference.data?.workoutReminderEnabled ?? null : false,
+    activeUntil: restEndsAt,
+    onFinishIntent: () => setConfirmFinish(true),
+  })
   const restOverrideKey = `fit:live-rest-settings:${actor?.userId ?? ''}:${workoutId}`
   const [restOverrides, setRestOverrides] = useState<Record<string, number>>({})
   useEffect(() => { setRestOverrides(readLiveRestOverrides(restOverrideKey)) }, [restOverrideKey])
@@ -1779,11 +1799,13 @@ export function LiveWorkoutPage() {
   function startRestUntil(endsAt: number | null) {
     setRestEndsAt(endsAt)
     storeRestDeadline(workoutId, endsAt)
+    inactivityReminder.noteActivity(endsAt)
   }
   function stopRest() {
     startRestUntil(null)
   }
   function runLiveWorkoutMutation(operationKey: string, operation: (workout: Workout) => Promise<number>) {
+    inactivityReminder.noteActivity(restEndsAt)
     const snapshot = query.data!
     return liveWorkout.run(snapshot, operationKey, async (expectedVersion) => {
       try {
@@ -1848,6 +1870,7 @@ export function LiveWorkoutPage() {
   }, onSuccess: async () => {
     const clientId = query.data?.clientId
     if (actor?.userId) clearPendingLiveSetDrafts(actor.userId, workoutId)
+    if (actor?.userId) clearWorkoutInactivityReminder(actor.userId, workoutId)
     // Освежаем не только саму тренировку, но и статистику клиента и списки
     // тренировок (карточка, история, расписание), иначе кол-во/% выполнения
     // на карточке клиента обновляются только после перезагрузки.
@@ -1859,6 +1882,11 @@ export function LiveWorkoutPage() {
     ])
     showCompletedWorkout(true)
   } })
+  const hasIncompleteLiveSets = query.data?.exercises.some((exercise) => !exercise.sets.every((set) => set.confirmedAt)) ?? false
+  function finishFromInactivityReminder() {
+    inactivityReminder.dismiss()
+    setConfirmFinish(true)
+  }
   const rootMutationPending = appendSet.isPending || removeSet.isPending || removeExercise.isPending || appendExercise.isPending
     || reorderBlock.isPending || replaceLive.isPending || commentLive.isPending || finish.isPending
   function draftFrom(form: HTMLFormElement): LiveSetDraft {
@@ -1967,6 +1995,13 @@ export function LiveWorkoutPage() {
         <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : `Упражнение ${sessionProgress.activeExerciseNumber} из ${sessionProgress.exerciseCount} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}`}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
         <span className="live-session-progress-track" role="progressbar" aria-label="Выполненные подходы" aria-valuemin={0} aria-valuemax={sessionProgress.setCount} aria-valuenow={sessionProgress.completedSetCount}><span style={{ width: `${sessionProgress.percent}%` }} /></span>
       </div>} />
+      {inactivityReminder.visible && <section className="live-inactivity-reminder" role="alert" aria-labelledby="live-inactivity-reminder-title">
+        <div><strong id="live-inactivity-reminder-title">Тренировка ещё идёт</strong><span>Продолжить или завершить её?</span></div>
+        <div className="actions">
+          <button type="button" className="secondary" onClick={inactivityReminder.dismiss}>Продолжить</button>
+          <button type="button" onClick={finishFromInactivityReminder}>Завершить</button>
+        </div>
+      </section>}
       {(() => {
         // Активная круговая (многоэлементный блок с незавершёнными подходами) —
         // её счётчик «Круг N из M» + точки закрепляем вместе с таймером, чтобы при
@@ -2034,14 +2069,12 @@ export function LiveWorkoutPage() {
               <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
               {clientMode && exercise.trainerComment && <p className="live-trainer-cue">Тренер: {exercise.trainerComment}</p>}
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return <p className="live-previous-result">{line ? `В прошлый раз: ${line}` : 'Нет предыдущего результата'}</p> })()}
-              <div className="live-exercise-tools">
-                {liveCommentField(exercise)}
-                {block.blockType === 'single' && <LiveExerciseRest seconds={restOverrides[exercise.id] ?? exercise.restBetweenSetsSec} onChange={(seconds) => setExerciseRest(exercise.id, seconds)} />}
-              </div>
+              {block.blockType === 'single' && <div className="live-exercise-rest-row"><LiveExerciseRest seconds={restOverrides[exercise.id] ?? exercise.restBetweenSetsSec} onChange={(seconds) => setExerciseRest(exercise.id, seconds)} /></div>}
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </WorkoutSetTable>
               {canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
+              {liveCommentField(exercise)}
             </WorkoutExercise>
           })
         }
@@ -2064,9 +2097,14 @@ export function LiveWorkoutPage() {
             {round.items.map(({ exercise, set }) => <section key={set.id}>
               <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={roundIndex === 0 ? exerciseMenu(exercise) : undefined} />
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
-              {roundIndex === 0 && liveCommentField(exercise)}
             </section>)}
           </div> })}
+          <div className="circuit-exercise-notes" aria-label="Заметки к упражнениям">
+            {block.exercises.map((exercise) => <section className="circuit-exercise-note" key={exercise.id}>
+              <h3>{exercise.name}</h3>
+              {liveCommentField(exercise)}
+            </section>)}
+          </div>
         </div>
       }) })()}
       {canManageLiveStructure && <button type="button" className="secondary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
@@ -2086,13 +2124,13 @@ export function LiveWorkoutPage() {
         </div>}
         {confirmFinish
           ? <div className="finish-confirm">
-              <p>Есть незавершённые подходы. Завершить частично?</p>
+              <p>{hasIncompleteLiveSets ? 'Есть незавершённые подходы. Завершить частично?' : 'Все подходы выполнены. Завершить тренировку?'}</p>
               <div className="actions workout-action-row">
                 <WorkoutCta type="button" variant="tertiary" onClick={() => setConfirmFinish(false)}>Отмена</WorkoutCta>
                 <WorkoutCta pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>Завершить</WorkoutCta>
               </div>
             </div>
-          : <WorkoutCta variant="secondary" className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { const incomplete = query.data!.exercises.some((exercise) => !exercise.sets.every((set) => set.confirmedAt)); if (incomplete) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>}
+          : <WorkoutCta variant="secondary" className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>}
       </div>
     </>}</AsyncView>
     {canManageLiveStructure && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onClose={closePicker} />}

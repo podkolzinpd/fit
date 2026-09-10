@@ -418,7 +418,7 @@ test('iPhone: новое имя профиля сохраняется после
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
-  await page.goto('/profile')
+  await page.goto('/profile/settings')
   await page.getByLabel('Имя', { exact: true }).fill('Новое имя')
   await page.getByLabel('Часовой пояс').fill('Europe/Berlin')
   await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
@@ -653,7 +653,7 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   await page.getByRole('button', { name: 'Добавить', exact: true }).last().click()
   await expect(page.getByText(`${metricName}, балл`, { exact: true }).first()).toBeVisible()
 
-  await page.goto('/profile')
+  await page.goto('/profile/settings')
   await page.getByRole('button', { name: 'Выйти' }).click()
   await login(page, 'client@fit.local')
   await page.goto('/me/progress')
@@ -1946,6 +1946,8 @@ test('iPhone: сет не ставит отдых внутри круга и н�
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
   await createGroupedWorkout(page, clientName, 'set')
+  await expect(page.locator('.circuit-exercise-notes .live-exercise-note')).toHaveCount(2)
+  await expect(page.locator('.circuit-round .live-exercise-note')).toHaveCount(0)
   await confirmCurrentSet(page)
   await expect(currentRound(page).locator('.live-set.confirmed')).toHaveCount(1)
   await expect(page.locator('.live-rest-trigger')).not.toHaveClass(/resting/)

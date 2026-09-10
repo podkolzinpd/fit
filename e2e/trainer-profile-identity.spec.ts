@@ -22,15 +22,20 @@ test('global rollout gives a new trainer the monochrome profile', async ({ page 
   await page.goto('/profile')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-profile-identity/)
   await expect(page.locator('html')).toHaveClass(/ui-identity/)
-  await expect(page.getByRole('heading', { name: 'Основные данные' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Анкета тренера' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Настройки профиля' })).toBeVisible()
 })
 
-test('trainer profile preview keeps settings, panels and form actions usable', async ({ page }) => {
+test('trainer profile keeps the questionnaire compact and settings usable on a separate screen', async ({ page }) => {
   await signInPreviewTrainer(page)
   await page.goto('/profile')
 
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-profile-identity/)
   await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Настройки' })).toHaveCount(0)
+  await page.getByRole('link', { name: 'Настройки профиля' }).click()
+  await expect(page).toHaveURL(/\/profile\/settings$/)
+  await expect(page.getByRole('heading', { name: 'Настройки' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Настройки' })).toBeVisible()
 
   await expect(page.getByText('Поля плана упражнений', { exact: true })).toBeVisible()
@@ -70,6 +75,10 @@ test('trainer profile preview keeps settings, panels and form actions usable', a
   await expect(feedback.getByRole('button', { name: 'Отправить' })).toBeDisabled()
   await feedback.getByRole('button', { name: 'Отмена' }).click()
   await expect(feedback).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(/\/profile$/)
+  await expect(page.getByRole('region', { name: 'Анкета тренера' })).toBeVisible()
 
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
