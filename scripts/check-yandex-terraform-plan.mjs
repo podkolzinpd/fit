@@ -184,6 +184,31 @@ const isExactPushDispatcherTriggerDescriptionUpdate = (resource) =>
     === 'Run private Fit push and app-feedback delivery every minute'
   && hasOnlyTopLevelChanges(resource, new Set(['description']))
 
+const isExactDatabasePublicAccessRemoval = (resource) => {
+  if (
+    resource.address !== 'yandex_mdb_postgresql_cluster_v2.fit'
+    || resource.change.actions.join(',') !== 'update'
+    || !hasOnlyTopLevelChanges(resource, new Set(['hosts']))
+  ) return false
+
+  const beforeHosts = resource.change.before?.hosts
+  const afterHosts = resource.change.after?.hosts
+  const beforePrimary = beforeHosts?.primary
+  const afterPrimary = afterHosts?.primary
+  if (
+    beforePrimary?.assign_public_ip !== true
+    || afterPrimary?.assign_public_ip !== false
+  ) return false
+
+  return isDeepStrictEqual(
+    {
+      ...beforeHosts,
+      primary: { ...beforePrimary, assign_public_ip: false },
+    },
+    afterHosts,
+  )
+}
+
 const isServiceAccountMember = (value) =>
   /^serviceAccount:[a-z0-9]+$/u.test(value ?? '')
 
@@ -280,6 +305,7 @@ const isAutomaticStageChange = (resource) => {
   if (
     isExactPushDispatcherImagePullerUpdate(resource)
     || isExactPushDispatcherTriggerDescriptionUpdate(resource)
+    || isExactDatabasePublicAccessRemoval(resource)
   ) {
     return true
   }

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useDataBackend } from '../../app/data-backend-context'
-import { WORKOUT_REMINDER_KIND, WORKOUT_SCHEDULED_KIND } from '../../data/repositories/push-notifications.repository'
+import { CHAT_MESSAGE_KIND, WORKOUT_REMINDER_KIND, WORKOUT_SCHEDULED_KIND } from '../../data/repositories/push-notifications.repository'
 import { detectInstallPlatform, installPromptDismissed, isAppInstalled } from '../install'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { markPushOnboardingSeen, pushOnboardingSeen } from './notification-onboarding-storage'
@@ -73,6 +73,7 @@ export function NotificationOnboarding({ userId }: { userId: string }) {
       }
       await pushNotificationsRepository.enable(userId)
       await pushNotificationsRepository.setCategoryEnabled(userId, WORKOUT_SCHEDULED_KIND, true)
+      await pushNotificationsRepository.setCategoryEnabled(userId, CHAT_MESSAGE_KIND, true)
 
       if (source === 'supabase') {
         const local = await getCurrentPushSubscription()

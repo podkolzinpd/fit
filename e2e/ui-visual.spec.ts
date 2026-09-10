@@ -2130,3 +2130,30 @@ test('results center keeps detailed analytics in dark theme', async ({ page }, t
   await expect.soft(darkVolume).toHaveScreenshot(`result-volume-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.04 })
   await expect.soft(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02 })
 })
+
+test('reliable chat stays compact on client phones and trainer desktop', async ({ page }, testInfo) => {
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  const conversationId = 'b9000000-0000-4000-8000-000000000001'
+  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+    conversation_id: conversationId,
+    client_id: '11111111-1111-4111-8111-111111111111',
+    trainer_id: '90000000-0000-4000-8000-000000000009',
+    partner_user_id: trainer ? '92000000-0000-4000-8000-000000000029' : '90000000-0000-4000-8000-000000000009',
+    partner_name: trainer ? 'Анна Смирнова' : 'Тест Тренер',
+    active_connection: true,
+    last_message_body: 'Хорошо, тогда до встречи завтра',
+    last_message_at: '2026-09-10T16:45:00.000Z',
+    last_message_sender_id: trainer ? '90000000-0000-4000-8000-000000000009' : '92000000-0000-4000-8000-000000000029',
+    unread_count: trainer ? 2 : 0,
+  }]) }))
+  await page.route('**/rest/v1/rpc/list_chat_messages', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
+    { id: 'b9000000-0000-4000-8000-000000000012', conversation_id: conversationId, sender_id: trainer ? '90000000-0000-4000-8000-000000000009' : '92000000-0000-4000-8000-000000000029', body: 'Хорошо, тогда до встречи завтра', created_at: '2026-09-10T16:45:00.000Z' },
+    { id: 'b9000000-0000-4000-8000-000000000011', conversation_id: conversationId, sender_id: trainer ? '92000000-0000-4000-8000-000000000029' : '90000000-0000-4000-8000-000000000009', body: 'Как самочувствие после тренировки?', created_at: '2026-09-10T16:42:00.000Z' },
+  ]) }))
+  await page.route('**/rest/v1/rpc/mark_chat_read', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
+  await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
+  await gotoStable(page, `/chat/${conversationId}`)
+  await expect(page.getByLabel('Сообщение')).toBeVisible()
+  await expect(page.locator('.tab-bar')).toHaveCount(0)
+  await expectVisualBaseline(page, `chat-${trainer ? 'trainer' : 'client'}-${process.platform}.png`)
+})
