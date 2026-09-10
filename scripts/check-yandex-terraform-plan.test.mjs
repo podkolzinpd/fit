@@ -357,6 +357,75 @@ describe('Yandex Terraform plan policy', () => {
     assert.notEqual(broaderChange.status, 0)
   })
 
+  test('allows only removing the legacy public DataLens ingress automatically', () => {
+    const privateRule = {
+      description: 'Odyssey PostgreSQL pooler from private subnet',
+      protocol: 'TCP',
+      port: 6432,
+      v4_cidr_blocks: ['10.42.0.0/24'],
+    }
+    const serviceRule = {
+      description: 'Odyssey PostgreSQL pooler from Serverless Containers service network',
+      protocol: 'TCP',
+      port: 6432,
+      v4_cidr_blocks: ['198.19.0.0/16'],
+    }
+    const dataLensRule = {
+      description: 'Yandex DataLens public PostgreSQL connector',
+      protocol: 'TCP',
+      port: 6432,
+      from_port: -1,
+      to_port: -1,
+      v4_cidr_blocks: [
+        '178.154.242.176/28',
+        '178.154.242.192/28',
+        '178.154.242.208/28',
+        '178.154.242.128/28',
+        '178.154.242.144/28',
+        '178.154.242.160/28',
+        '130.193.60.0/28',
+      ],
+      v6_cidr_blocks: [],
+    }
+    const exactRemoval = runPolicy(
+      [{
+        address: 'yandex_vpc_security_group.postgres',
+        change: {
+          actions: ['update'],
+          before: { name: 'fit-stage-postgres', ingress: [serviceRule, privateRule, dataLensRule] },
+          after: { name: 'fit-stage-postgres', ingress: [serviceRule, privateRule] },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+    const broaderChange = runPolicy(
+      [{
+        address: 'yandex_vpc_security_group.postgres',
+        change: {
+          actions: ['update'],
+          before: { ingress: [serviceRule, privateRule, dataLensRule] },
+          after: { ingress: [privateRule, { ...serviceRule, port: 5432 }] },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+    const arbitraryRemoval = runPolicy(
+      [{
+        address: 'yandex_vpc_security_group.postgres',
+        change: {
+          actions: ['update'],
+          before: { ingress: [serviceRule, privateRule] },
+          after: { ingress: [serviceRule] },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(exactRemoval.status, 0)
+    assert.notEqual(broaderChange.status, 0)
+    assert.notEqual(arbitraryRemoval.status, 0)
+  })
+
   test('allows the optional app-feedback Lockbox grant automatically', () => {
     const result = runPolicy(
       [{
