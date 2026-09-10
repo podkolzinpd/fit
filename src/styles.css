@@ -5714,6 +5714,9 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-certificates li { display:grid; gap:2px; padding:12px 0; border-top:1px solid var(--border); }
 .trainer-profile-publish-tools { padding:18px; }
 .trainer-profile-publish-tools .actions { justify-content:space-between; align-items:center; }
+.trainer-catalog-visibility { overflow:hidden; border:1px solid var(--border); border-radius:14px; }
+.trainer-catalog-visibility .switch-row { border-top:0; }
+.trainer-catalog-visibility > p { padding:0 14px 12px; }
 .public-trainer-page { min-height:100dvh; padding-top:max(20px,env(safe-area-inset-top)); }
 .public-trainer-page .page-header { margin-bottom:0; }
 
