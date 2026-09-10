@@ -5650,6 +5650,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
    readable card in preview and on the public link. */
 .trainer-professional-editor, .public-trainer-page { display:grid; gap:16px; width:min(100%, 720px); margin:0 auto; padding-bottom:calc(32px + env(safe-area-inset-bottom)); }
 .trainer-profile-state { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px 18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); }
+.trainer-profile-state > .button { min-height:44px; }
 .trainer-profile-state p, .trainer-profile-publish-tools p { margin:4px 0 0; color:var(--muted); font-size:var(--type-caption-size); }
 .trainer-profile-form, .trainer-profile-fields, .trainer-profile-preview, .trainer-profile-publish-tools { display:grid; gap:14px; }
 .trainer-profile-fields { padding:18px; border-radius:20px; }
@@ -5664,6 +5665,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-mode-fields { overflow:hidden; border:1px solid var(--border); border-radius:14px; }
 .trainer-mode-fields .switch-row:first-child { border-top:0; }
 .trainer-certificates-editor { display:grid; gap:10px; }
+.trainer-certificates-editor > .secondary { min-height:44px; }
 .trainer-certificate-fields { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 94px auto; gap:8px; align-items:center; padding-top:10px; border-top:1px solid var(--border); }
 .trainer-certificate-fields input { min-width:0; }
 .trainer-profile-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
