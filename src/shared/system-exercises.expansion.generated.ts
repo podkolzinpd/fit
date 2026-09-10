@@ -21,8 +21,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Плечи"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-prowler-sprint.jpg",
-    "motionImageUrl": "/exercises/fedb-prowler-sprint-end.jpg",
     "instructions": [
       "Настройте оборудование и начните упражнение «Спринт с силовыми санями» в контролируемом темпе.",
       "Сохраняйте устойчивое положение корпуса; зафиксируйте время и дистанцию."
@@ -43,8 +41,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-recumbent-bike.jpg",
-    "motionImageUrl": "/exercises/fedb-recumbent-bike-end.jpg",
     "instructions": [
       "Настройте оборудование и начните упражнение «Горизонтальный велотренажёр» в контролируемом темпе.",
       "Сохраняйте устойчивое положение корпуса; зафиксируйте время и дистанцию."
@@ -67,8 +63,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-skating.jpg",
-    "motionImageUrl": "/exercises/fedb-skating-end.jpg",
     "instructions": [
       "Настройте оборудование и начните упражнение «Конькобежный бег» в контролируемом темпе.",
       "Сохраняйте устойчивое положение корпуса; зафиксируйте время и дистанцию."
@@ -91,8 +85,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Передняя поверхность бедра"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-atlas-stone-trainer.jpg",
-    "motionImageUrl": "/exercises/fedb-atlas-stone-trainer-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Подъём тренировочного камня Атласа».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -120,8 +112,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "expert",
-    "imageUrl": "/exercises/fedb-atlas-stones.jpg",
-    "motionImageUrl": "/exercises/fedb-atlas-stones-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Подъём камня Атласа».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -145,8 +135,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-axle-deadlift.jpg",
-    "motionImageUrl": "/exercises/fedb-axle-deadlift-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Становая тяга с аксель-грифом».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -167,8 +155,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-bear-crawl-sled-drags.jpg",
-    "motionImageUrl": "/exercises/fedb-bear-crawl-sled-drags-end.jpg",
     "instructions": [
       "Настройте оборудование и начните упражнение «Медвежья ходьба с санями» в контролируемом темпе.",
       "Сохраняйте устойчивое положение корпуса; зафиксируйте время и дистанцию."
@@ -191,8 +177,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-car-deadlift.jpg",
-    "motionImageUrl": "/exercises/fedb-car-deadlift-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Становая тяга в рычажном тренажёре».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -216,8 +200,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "expert",
-    "imageUrl": "/exercises/fedb-circus-bell.jpg",
-    "motionImageUrl": "/exercises/fedb-circus-bell-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Жим цирковой гантели».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -242,8 +224,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-conans-wheel.jpg",
-    "motionImageUrl": "/exercises/fedb-conans-wheel-end.jpg",
     "instructions": [
       "Настройте оборудование и начните упражнение «Переноска «Колесо Конана»» в контролируемом темпе.",
       "Сохраняйте устойчивое положение корпуса; зафиксируйте время и дистанцию."
@@ -262,8 +242,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Предплечья"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-crucifix.jpg",
-    "motionImageUrl": "/exercises/fedb-crucifix-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Удержание веса в стороны».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -287,8 +265,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-forward-drag-with-press.jpg",
-    "motionImageUrl": "/exercises/fedb-forward-drag-with-press-end.jpg",
     "instructions": [
       "Настройте оборудование и начните упражнение «Тяга саней вперёд с жимом» в контролируемом темпе.",
       "Сохраняйте устойчивое положение корпуса; зафиксируйте время и дистанцию."
@@ -316,8 +292,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-keg-load.jpg",
-    "motionImageUrl": "/exercises/fedb-keg-load-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Подъём бочонка на платформу».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -344,8 +318,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-log-lift.jpg",
-    "motionImageUrl": "/exercises/fedb-log-lift-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Подъём и жим бревна».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -370,8 +342,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-power-stairs.jpg",
-    "motionImageUrl": "/exercises/fedb-power-stairs-end.jpg",
     "instructions": [
       "Настройте оборудование и начните упражнение «Силовая лестница с грузом» в контролируемом темпе.",
       "Сохраняйте устойчивое положение корпуса; зафиксируйте время и дистанцию."
@@ -396,8 +366,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-rickshaw-carry.jpg",
-    "motionImageUrl": "/exercises/fedb-rickshaw-carry-end.jpg",
     "instructions": [
       "Настройте оборудование и начните упражнение «Прогулка с рамой» в контролируемом темпе.",
       "Сохраняйте устойчивое положение корпуса; зафиксируйте время и дистанцию."
@@ -420,8 +388,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-rickshaw-deadlift.jpg",
-    "motionImageUrl": "/exercises/fedb-rickshaw-deadlift-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Становая тяга с рамой».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -449,8 +415,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-sandbag-load.jpg",
-    "motionImageUrl": "/exercises/fedb-sandbag-load-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Подъём мешка на платформу».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -471,8 +435,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-sled-drag-harness.jpg",
-    "motionImageUrl": "/exercises/fedb-sled-drag-harness-end.jpg",
     "instructions": [
       "Настройте оборудование и начните упражнение «Тяга саней в упряжи» в контролируемом темпе.",
       "Сохраняйте устойчивое положение корпуса; зафиксируйте время и дистанцию."
@@ -499,8 +461,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-tire-flip.jpg",
-    "motionImageUrl": "/exercises/fedb-tire-flip-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Переворот покрышки».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -525,8 +485,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Поясница"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-yoke-walk.jpg",
-    "motionImageUrl": "/exercises/fedb-yoke-walk-end.jpg",
     "instructions": [
       "Настройте оборудование и начните упражнение «Прогулка с коромыслом» в контролируемом темпе.",
       "Сохраняйте устойчивое положение корпуса; зафиксируйте время и дистанцию."
@@ -551,8 +509,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-clean.jpg",
-    "motionImageUrl": "/exercises/fedb-clean-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Взятие штанги на грудь».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -577,8 +533,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "expert",
-    "imageUrl": "/exercises/fedb-clean-and-jerk.jpg",
-    "motionImageUrl": "/exercises/fedb-clean-and-jerk-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Толчок штанги».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -602,8 +556,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-clean-deadlift.jpg",
-    "motionImageUrl": "/exercises/fedb-clean-deadlift-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Тяга для взятия на грудь».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -626,8 +578,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-clean-from-blocks.jpg",
-    "motionImageUrl": "/exercises/fedb-clean-from-blocks-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Взятие на грудь с блоков».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -650,8 +600,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-clean-pull.jpg",
-    "motionImageUrl": "/exercises/fedb-clean-pull-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Тяга штанги для взятия».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -671,8 +619,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Плечи"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-clean-shrug.jpg",
-    "motionImageUrl": "/exercises/fedb-clean-shrug-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Шраги в тяге для взятия».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -694,8 +640,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-frankenstein-squat.jpg",
-    "motionImageUrl": "/exercises/fedb-frankenstein-squat-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Присед Франкенштейна».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -720,8 +664,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-hang-clean.jpg",
-    "motionImageUrl": "/exercises/fedb-hang-clean-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Взятие на грудь с виса».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -746,8 +688,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-hang-clean-below-the-knees.jpg",
-    "motionImageUrl": "/exercises/fedb-hang-clean-below-the-knees-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Взятие на грудь с виса ниже колен».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -773,8 +713,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "expert",
-    "imageUrl": "/exercises/fedb-hang-snatch.jpg",
-    "motionImageUrl": "/exercises/fedb-hang-snatch-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Рывок с виса».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -800,8 +738,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "expert",
-    "imageUrl": "/exercises/fedb-hang-snatch-below-knees.jpg",
-    "motionImageUrl": "/exercises/fedb-hang-snatch-below-knees-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Рывок с виса ниже колен».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -824,8 +760,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-muscle-snatch.jpg",
-    "motionImageUrl": "/exercises/fedb-muscle-snatch-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Силовой рывок без подседа».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -850,8 +784,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "expert",
-    "imageUrl": "/exercises/fedb-overhead-squat.jpg",
-    "motionImageUrl": "/exercises/fedb-overhead-squat-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Присед со штангой над головой».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -870,8 +802,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Передняя поверхность бедра"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-power-clean-from-blocks.jpg",
-    "motionImageUrl": "/exercises/fedb-power-clean-from-blocks-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Силовое взятие с блоков».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -895,8 +825,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "expert",
-    "imageUrl": "/exercises/fedb-power-jerk.jpg",
-    "motionImageUrl": "/exercises/fedb-power-jerk-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Силовой швунг».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -921,8 +849,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "expert",
-    "imageUrl": "/exercises/fedb-power-snatch.jpg",
-    "motionImageUrl": "/exercises/fedb-power-snatch-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Силовой рывок».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -948,8 +874,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-power-snatch-from-blocks.jpg",
-    "motionImageUrl": "/exercises/fedb-power-snatch-from-blocks-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Силовой рывок с блоков».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -969,8 +893,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "expert",
-    "imageUrl": "/exercises/fedb-push-press.jpg",
-    "motionImageUrl": "/exercises/fedb-push-press-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Жимовой швунг».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -992,8 +914,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-romanian-deadlift-from-deficit.jpg",
-    "motionImageUrl": "/exercises/fedb-romanian-deadlift-from-deficit-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Румынская тяга с возвышения».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -1018,8 +938,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-snatch.jpg",
-    "motionImageUrl": "/exercises/fedb-snatch-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Рывок штанги».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -1042,8 +960,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-snatch-balance.jpg",
-    "motionImageUrl": "/exercises/fedb-snatch-balance-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Рывковый уход в сед».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -1067,8 +983,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-snatch-deadlift.jpg",
-    "motionImageUrl": "/exercises/fedb-snatch-deadlift-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Рывковая тяга».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -1094,8 +1008,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "expert",
-    "imageUrl": "/exercises/fedb-snatch-from-blocks.jpg",
-    "motionImageUrl": "/exercises/fedb-snatch-from-blocks-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Рывок с блоков».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -1117,8 +1029,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-split-jerk.jpg",
-    "motionImageUrl": "/exercises/fedb-split-jerk-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Толчок в ножницы».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -1135,8 +1045,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Плечи",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-backward-medicine-ball-throw.jpg",
-    "motionImageUrl": "/exercises/fedb-backward-medicine-ball-throw-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Бросок медбола назад через голову».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1157,8 +1065,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-bench-sprint.jpg",
-    "motionImageUrl": "/exercises/fedb-bench-sprint-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Быстрые зашагивания на скамью».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1181,8 +1087,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Передняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-box-skip.jpg",
-    "motionImageUrl": "/exercises/fedb-box-skip-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Прыжковые зашагивания на тумбу».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1205,8 +1109,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-depth-jump-leap.jpg",
-    "motionImageUrl": "/exercises/fedb-depth-jump-leap-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Прыжок в глубину с выпрыгиванием».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1229,8 +1131,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-double-leg-butt-kick.jpg",
-    "motionImageUrl": "/exercises/fedb-double-leg-butt-kick-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Прыжок с захлёстом двух ног».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1253,8 +1153,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-fast-skipping.jpg",
-    "motionImageUrl": "/exercises/fedb-fast-skipping-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Быстрые прыжки на месте».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1277,8 +1175,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Передняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-front-box-jump.jpg",
-    "motionImageUrl": "/exercises/fedb-front-box-jump-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Запрыгивание на тумбу».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1301,8 +1197,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-hurdle-hops.jpg",
-    "motionImageUrl": "/exercises/fedb-hurdle-hops-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Прыжки через барьеры».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1325,8 +1219,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Передняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-knee-tuck-jump.jpg",
-    "motionImageUrl": "/exercises/fedb-knee-tuck-jump-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Прыжок с подтягиванием коленей».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1349,8 +1241,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Передняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-lateral-bound.jpg",
-    "motionImageUrl": "/exercises/fedb-lateral-bound-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Боковые прыжки с ноги на ногу».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1373,8 +1263,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Передняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-lateral-box-jump.jpg",
-    "motionImageUrl": "/exercises/fedb-lateral-box-jump-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Боковое запрыгивание на тумбу».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1397,8 +1285,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Передняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-lateral-cone-hops.jpg",
-    "motionImageUrl": "/exercises/fedb-lateral-cone-hops-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Боковые прыжки через конусы».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1417,8 +1303,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Плечи"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-medicine-ball-full-twist.jpg",
-    "motionImageUrl": "/exercises/fedb-medicine-ball-full-twist-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Бросок медбола с полным разворотом».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1439,8 +1323,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Передняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-medicine-ball-scoop-throw.jpg",
-    "motionImageUrl": "/exercises/fedb-medicine-ball-scoop-throw-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Бросок медбола снизу вверх».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1460,8 +1342,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-rocket-jump.jpg",
-    "motionImageUrl": "/exercises/fedb-rocket-jump-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Прыжок вверх из полуприседа».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1481,8 +1361,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-scissors-jump.jpg",
-    "motionImageUrl": "/exercises/fedb-scissors-jump-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Прыжки «ножницы»».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1504,8 +1382,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-side-to-side-box-shuffle.jpg",
-    "motionImageUrl": "/exercises/fedb-side-to-side-box-shuffle-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Боковые переступания через тумбу».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1525,8 +1401,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-single-leg-push-off.jpg",
-    "motionImageUrl": "/exercises/fedb-single-leg-push-off-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Выпрыгивание с опорой одной ногой».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1548,8 +1422,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-single-leg-hop-progression.jpg",
-    "motionImageUrl": "/exercises/fedb-single-leg-hop-progression-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Серия прыжков на одной ноге».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1570,8 +1442,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-split-jump.jpg",
-    "motionImageUrl": "/exercises/fedb-split-jump-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Прыжки в выпаде».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1592,8 +1462,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-standing-long-jump.jpg",
-    "motionImageUrl": "/exercises/fedb-standing-long-jump-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Прыжок в длину с места».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1615,8 +1483,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Плечи"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-star-jump.jpg",
-    "motionImageUrl": "/exercises/fedb-star-jump-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Прыжок «звезда»».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1639,8 +1505,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Плечи"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-sledgehammer-swings.jpg",
-    "motionImageUrl": "/exercises/fedb-sledgehammer-swings-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Удары кувалдой по покрышке».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1661,8 +1525,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Плечи"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-vertical-swing.jpg",
-    "motionImageUrl": "/exercises/fedb-vertical-swing-end.jpg",
     "instructions": [
       "Подготовьте устойчивую площадку для упражнения «Вертикальный мах гантелью».",
       "Приземляйтесь мягко, удерживайте колени по линии стоп и прекращайте подход при потере техники."
@@ -1679,8 +1541,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Внутренняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-adductor.jpg",
-    "motionImageUrl": "/exercises/fedb-adductor-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Прокатка приводящих мышц» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1697,8 +1557,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Икроножные",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-anterior-tibialis-smr.jpg",
-    "motionImageUrl": "/exercises/fedb-anterior-tibialis-smr-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Прокатка передней поверхности голени» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1717,8 +1575,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Плечи"
     ],
     "level": "expert",
-    "imageUrl": "/exercises/fedb-behind-head-chest-stretch.jpg",
-    "motionImageUrl": "/exercises/fedb-behind-head-chest-stretch-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Растяжка груди с руками за головой» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1737,8 +1593,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Внутренняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-chair-leg-extended-stretch.jpg",
-    "motionImageUrl": "/exercises/fedb-chair-leg-extended-stretch-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Растяжка задней поверхности бедра на стуле» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1757,8 +1611,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Плечи"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-chest-and-front-of-shoulder-stretch.jpg",
-    "motionImageUrl": "/exercises/fedb-chest-and-front-of-shoulder-stretch-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Растяжка груди и передней дельты» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1775,8 +1627,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Икроножные",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-foot-smr.jpg",
-    "motionImageUrl": "/exercises/fedb-foot-smr-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Прокатка стопы» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1793,8 +1643,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Внутренняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-groiners.jpg",
-    "motionImageUrl": "/exercises/fedb-groiners-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Динамическая растяжка паха в выпаде» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1811,8 +1659,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-hamstring-smr.jpg",
-    "motionImageUrl": "/exercises/fedb-hamstring-smr-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Прокатка задней поверхности бедра» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1831,8 +1677,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Внутренняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-hip-circles-prone.jpg",
-    "motionImageUrl": "/exercises/fedb-hip-circles-prone-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Круги бедром лёжа» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1849,8 +1693,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Наружная поверхность бедра",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-it-band-and-glute-stretch.jpg",
-    "motionImageUrl": "/exercises/fedb-it-band-and-glute-stretch-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Растяжка ягодиц и наружной поверхности бедра» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1867,8 +1709,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-inchworm.jpg",
-    "motionImageUrl": "/exercises/fedb-inchworm-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Выход руками в планку» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1885,8 +1725,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Широчайшие",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-latissimus-dorsi-smr.jpg",
-    "motionImageUrl": "/exercises/fedb-latissimus-dorsi-smr-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Прокатка широчайших мышц» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1903,8 +1741,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Поясница",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-lower-back-smr.jpg",
-    "motionImageUrl": "/exercises/fedb-lower-back-smr-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Мягкая прокатка поясницы» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1921,8 +1757,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Наружная поверхность бедра",
     "secondaryMuscles": [],
     "level": "expert",
-    "imageUrl": "/exercises/fedb-lying-crossover.jpg",
-    "motionImageUrl": "/exercises/fedb-lying-crossover-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Скручивание лёжа для ягодиц» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1941,8 +1775,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Бицепс"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-one-handed-hang.jpg",
-    "motionImageUrl": "/exercises/fedb-one-handed-hang-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Вис на одной руке» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1961,8 +1793,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Широчайшие"
     ],
     "level": "expert",
-    "imageUrl": "/exercises/fedb-overhead-triceps.jpg",
-    "motionImageUrl": "/exercises/fedb-overhead-triceps-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Растяжка трицепса над головой» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1979,8 +1809,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-quad-stretch.jpg",
-    "motionImageUrl": "/exercises/fedb-quad-stretch-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Растяжка передней поверхности бедра стоя» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -1997,8 +1825,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-quadriceps-smr.jpg",
-    "motionImageUrl": "/exercises/fedb-quadriceps-smr-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Прокатка передней поверхности бедра» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -2017,8 +1843,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-rhomboids-smr.jpg",
-    "motionImageUrl": "/exercises/fedb-rhomboids-smr-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Прокатка ромбовидных мышц» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -2035,8 +1859,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Задняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-standing-hamstring-and-calf-stretch.jpg",
-    "motionImageUrl": "/exercises/fedb-standing-hamstring-and-calf-stretch-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Растяжка задней поверхности бедра и икр» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -2053,8 +1875,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Пресс",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-stomach-vacuum.jpg",
-    "motionImageUrl": "/exercises/fedb-stomach-vacuum-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Вакуум живота» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -2071,8 +1891,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Предплечья",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-wrist-circles.jpg",
-    "motionImageUrl": "/exercises/fedb-wrist-circles-end.jpg",
     "instructions": [
       "Примите исходное положение для упражнения «Круговые движения кистями» и двигайтесь только в комфортной амплитуде.",
       "Дышите спокойно, не пружиньте и остановитесь при боли."
@@ -2089,8 +1907,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Грудь (середина)",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-cable-iron-cross.jpg",
-    "motionImageUrl": "/exercises/fedb-cable-iron-cross-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Сведение рук крест-накрест в блоках».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2107,8 +1923,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Икроножные",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-donkey-calf-raises.jpg",
-    "motionImageUrl": "/exercises/fedb-donkey-calf-raises-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Подъём на носки в наклоне».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2127,8 +1941,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-dumbbell-incline-shoulder-raise.jpg",
-    "motionImageUrl": "/exercises/fedb-dumbbell-incline-shoulder-raise-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Подъём плеч с гантелями на наклонной».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2145,8 +1957,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Предплечья",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-dumbbell-lying-pronation.jpg",
-    "motionImageUrl": "/exercises/fedb-dumbbell-lying-pronation-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Пронация предплечья с гантелью лёжа».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2163,8 +1973,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Предплечья",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-dumbbell-lying-supination.jpg",
-    "motionImageUrl": "/exercises/fedb-dumbbell-lying-supination-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Супинация предплечья с гантелью лёжа».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2181,8 +1989,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Трицепс",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-dumbbell-one-arm-triceps-extension.jpg",
-    "motionImageUrl": "/exercises/fedb-dumbbell-one-arm-triceps-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Разгибание гантели одной рукой из-за головы».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2201,8 +2007,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трапеции"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-dumbbell-scaption.jpg",
-    "motionImageUrl": "/exercises/fedb-dumbbell-scaption-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Подъём гантелей в плоскости лопаток».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2219,8 +2023,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Плечи",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-external-rotation.jpg",
-    "motionImageUrl": "/exercises/fedb-external-rotation-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Внешняя ротация плеча с гантелью».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2237,8 +2039,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Плечи",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-external-rotation-with-cable.jpg",
-    "motionImageUrl": "/exercises/fedb-external-rotation-with-cable-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Внешняя ротация плеча в блоке».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2255,8 +2055,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-front-cable-raise.jpg",
-    "motionImageUrl": "/exercises/fedb-front-cable-raise-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Подъём руки перед собой в блоке».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2273,8 +2071,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-front-dumbbell-raise.jpg",
-    "motionImageUrl": "/exercises/fedb-front-dumbbell-raise-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Подъём гантелей перед собой».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2291,8 +2087,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Передняя дельта",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-front-plate-raise.jpg",
-    "motionImageUrl": "/exercises/fedb-front-plate-raise-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Подъём блина перед собой».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2309,8 +2103,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Плечи",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-internal-rotation-with-band.jpg",
-    "motionImageUrl": "/exercises/fedb-internal-rotation-with-band-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Внутренняя ротация плеча с резинкой».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2335,8 +2127,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-kipping-muscle-up.jpg",
-    "motionImageUrl": "/exercises/fedb-kipping-muscle-up-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Выход силой с махом».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2353,8 +2143,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Пресс",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-knee-hip-raise-on-parallel-bars.jpg",
-    "motionImageUrl": "/exercises/fedb-knee-hip-raise-on-parallel-bars-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Подъём коленей в упоре на брусьях».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2371,8 +2159,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Трицепс",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-kneeling-cable-triceps-extension.jpg",
-    "motionImageUrl": "/exercises/fedb-kneeling-cable-triceps-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Разгибание рук на трицепс с колен в блоке».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2392,8 +2178,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Плечи"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-kettlebell-figure-8.jpg",
-    "motionImageUrl": "/exercises/fedb-kettlebell-figure-8-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Восьмёрка с гирей между ног».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2410,8 +2194,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Средняя дельта",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-lateral-raise-with-bands.jpg",
-    "motionImageUrl": "/exercises/fedb-lateral-raise-with-bands-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Разведение рук в стороны с резинкой».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2430,8 +2212,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Предплечья"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-leverage-shrug.jpg",
-    "motionImageUrl": "/exercises/fedb-leverage-shrug-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Шраги в рычажном тренажёре».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2448,8 +2228,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Бицепс",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-lying-cable-curl.jpg",
-    "motionImageUrl": "/exercises/fedb-lying-cable-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Сгибание рук лёжа в блоке».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2474,8 +2252,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Трицепс"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-muscle-up.jpg",
-    "motionImageUrl": "/exercises/fedb-muscle-up-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Выход силой на перекладине».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2492,8 +2268,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Бицепс",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-overhead-cable-curl.jpg",
-    "motionImageUrl": "/exercises/fedb-overhead-cable-curl-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Сгибание рук над головой в блоках».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2510,8 +2284,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Предплечья",
     "secondaryMuscles": [],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-plate-pinch.jpg",
-    "motionImageUrl": "/exercises/fedb-plate-pinch-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Удержание блинов пальцами».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2530,8 +2302,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Ягодицы"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-platform-hamstring-slides.jpg",
-    "motionImageUrl": "/exercises/fedb-platform-hamstring-slides-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Сгибание ног со скольжением пяток».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2551,8 +2321,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Ягодицы"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-reverse-hyperextension.jpg",
-    "motionImageUrl": "/exercises/fedb-reverse-hyperextension-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Обратная гиперэкстензия».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2569,8 +2337,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Задняя дельта",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-reverse-machine-flyes.jpg",
-    "motionImageUrl": "/exercises/fedb-reverse-machine-flyes-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Обратная разводка в тренажёре».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2590,8 +2356,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Плечи"
     ],
     "level": "intermediate",
-    "imageUrl": "/exercises/fedb-ring-dips.jpg",
-    "motionImageUrl": "/exercises/fedb-ring-dips-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Отжимания на кольцах».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2608,8 +2372,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
     "primaryMuscleDetail": "Передняя поверхность бедра",
     "secondaryMuscles": [],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-single-leg-leg-extension.jpg",
-    "motionImageUrl": "/exercises/fedb-single-leg-leg-extension-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Разгибание одной ноги в тренажёре».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."
@@ -2629,8 +2391,6 @@ export const CATALOG_EXPANSION: readonly ImportedExercise[] = [
       "Задняя поверхность бедра"
     ],
     "level": "beginner",
-    "imageUrl": "/exercises/fedb-trap-bar-deadlift.jpg",
-    "motionImageUrl": "/exercises/fedb-trap-bar-deadlift-end.jpg",
     "instructions": [
       "Подготовьте оборудование и примите устойчивое исходное положение для упражнения «Становая тяга с трэп-грифом».",
       "Выполняйте движение плавно и подконтрольно, без рывков и потери нейтрального положения корпуса."

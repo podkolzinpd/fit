@@ -18,6 +18,20 @@ describe('ExerciseImage', () => {
     expect(container.firstElementChild).toHaveClass('exercise-image-detail')
   })
 
+  it('never renders removed legacy exercise photos even if stale metadata passes one', () => {
+    const { container } = render(<ExerciseImage
+      src="/exercises/fedb-front-dumbbell-raise.jpg"
+      fallbackSrc="/exercises/base-running.jpg"
+      motionSrc="/exercises/fedb-front-dumbbell-raise-end.jpg"
+      alt="Подъём гантелей"
+      variant="technique"
+    />)
+    expect(container.querySelector('img, video')).not.toBeInTheDocument()
+    expect(container.firstElementChild).toHaveClass('exercise-image-empty')
+    expect(container.innerHTML).not.toContain('fedb-')
+    expect(container.innerHTML).not.toContain('base-')
+  })
+
   it('cycles through start and end frames only in the technique variant', () => {
     const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" alt="Жим лёжа" variant="technique" />)
     expect(container.firstElementChild).toHaveClass('exercise-image-motion')

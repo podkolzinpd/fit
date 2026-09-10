@@ -17,7 +17,7 @@ import {
   type LocalDate,
 } from '../../shared/local-date'
 import { AsyncView, Coachmark, EmptyState, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
-import { ExerciseImage, ExercisePicker, ExerciseTechniqueSheet, hasExerciseTechnique, recentExercisesForClient, useExerciseCatalog } from '../exercises'
+import { ExerciseImage, ExercisePicker, ExerciseTechniqueSheet, hasExerciseAnimation, hasExerciseTechnique, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { clientWorkoutAuthorLabel, ClientPicker, ClientWorkoutHistoryCalendar, useWorkoutHistoryCalendar, type ClientPickerSelection } from '../clients'
 import { hasWorkoutBackEntry, safeWorkoutReturnTo, useWorkoutBack, workoutListFallback, type WorkoutNavigationState } from './workout-navigation'
 import { VoiceNoteField } from '../voice-input'
@@ -2133,7 +2133,7 @@ export function ExerciseHistoryPage() {
   return <Page title="Упражнение" back={`/workouts/${workoutId}`} onBack={goBack}>
     <AsyncView loading={current.isLoading || history.isLoading} error={current.error ?? history.error} onRetry={() => { void current.refetch(); void history.refetch() }}>
       <section className="exercise-card-head card">
-        <ExerciseImage src={meta?.imageUrl} fallbackSrc={meta?.fallbackImageUrl} alt={name} variant="detail" />
+        {hasExerciseAnimation(meta) && <ExerciseImage src={meta.imageUrl} alt={name} variant="detail" />}
         <div className="exercise-card-meta">
           <h2>{name}</h2>
           {meta?.equipment && <p><span className="muted">Оборудование:</span> {meta.equipment}</p>}
@@ -2177,7 +2177,7 @@ export function ExerciseHistoryPage() {
       {tab === 'history' && <ExerciseProgressHistory items={items} showRpe={showRpe} exerciseRef={exerciseRef} />}
 
       {tab === 'how' && <section className="exercise-technique">
-        <ExerciseImage src={meta?.imageUrl} fallbackSrc={meta?.fallbackImageUrl} motionSrc={meta?.motionImageUrl} videoSrc={meta?.techniqueVideoUrl} alt={`Техника: ${name}`} variant="technique" />
+        {hasExerciseAnimation(meta) && <ExerciseImage src={meta.imageUrl} motionSrc={meta.motionImageUrl} videoSrc={meta.techniqueVideoUrl} alt={`Техника: ${name}`} variant="technique" />}
         {instructions.length
           ? <ol className="how-steps">{instructions.map((step, index) => <li key={index}>{step}</li>)}</ol>
           : <p className="muted empty-hint">Описание техники пока не добавлено.</p>}

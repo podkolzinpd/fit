@@ -11,7 +11,7 @@ import { selectableExercises } from './selectable-exercises'
 import { compareCatalogBrowseOrder, exerciseCatalogRoot, groupCatalogResults, isCatalogRoot } from '../../shared/exercise-catalog-curation'
 import { VITAL_GYM_PRO_MAIN_REF_CANDIDATES } from '../../shared/vital-gym-pro.generated'
 import { CatalogVariantField } from './CatalogControls'
-import { ExerciseTechniqueContent } from './ExerciseTechnique'
+import { ExerciseTechniqueContent, hasExerciseAnimation } from './ExerciseTechnique'
 
 export function filterExercises(
   exercises: readonly ExerciseSnapshot[],
@@ -292,15 +292,15 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   function item(exercise: ExerciseSnapshot, keyPrefix: string) {
     const key = exerciseKey(exercise)
     const checked = selected.has(key)
-    const hasTechniqueVideo = Boolean(exercise.techniqueVideoUrl)
+    const hasTechniqueVideo = hasExerciseAnimation(exercise)
     const playing = hasTechniqueVideo && playingExerciseKey === key
     const showTechnique = () => {
       if (!hasTechniqueVideo || playing) openTechnique(exercise)
       else setPlayingExerciseKey(key)
     }
     return <article className={`picker-item${checked ? ' selected' : ''}${playing ? ' playing' : ''}`} key={`${keyPrefix}-${exercise.source}-${exercise.ref}`}>
-      <button type="button" className="picker-item-technique" aria-label={`${playing ? 'Открыть технику' : hasTechniqueVideo ? 'Проиграть технику' : 'Посмотреть технику'}: ${exercise.name}`} aria-pressed={hasTechniqueVideo ? playing : undefined} onClick={showTechnique}>
-        <span className="picker-item-media"><ExerciseImage src={exercise.imageUrl} fallbackSrc={exercise.fallbackImageUrl} motionSrc={exercise.motionImageUrl} videoSrc={exercise.techniqueVideoUrl} alt={exercise.name} variant="picker" playVideo={playing} />{hasTechniqueVideo && !playing && <span className="picker-item-play" aria-hidden="true"><PlayIcon /></span>}</span>
+      <button type="button" className={`picker-item-technique${hasTechniqueVideo ? '' : ' without-media'}`} aria-label={`${playing ? 'Открыть технику' : hasTechniqueVideo ? 'Проиграть технику' : 'Посмотреть технику'}: ${exercise.name}`} aria-pressed={hasTechniqueVideo ? playing : undefined} onClick={showTechnique}>
+        {hasTechniqueVideo && <span className="picker-item-media"><ExerciseImage src={exercise.imageUrl} motionSrc={exercise.motionImageUrl} videoSrc={exercise.techniqueVideoUrl} alt={exercise.name} variant="picker" playVideo={playing} />{!playing && <span className="picker-item-play" aria-hidden="true"><PlayIcon /></span>}</span>}
         <span className="picker-item-copy"><span className="picker-item-name">{exercise.name}</span><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small>{playing && <small className="picker-item-playing-note">Нажмите ещё раз, чтобы открыть технику</small>}</span>
       </button>
       <button type="button" className="picker-select-mark" aria-label={checked ? `Убрать: ${exercise.name}` : multiple ? `Выбрать: ${exercise.name}` : `Добавить: ${exercise.name}`} aria-pressed={multiple ? checked : undefined} data-exercise-ref={exercise.ref} data-exercise-source={exercise.source} onClick={() => pick(exercise)}>{checked ? <CheckIcon /> : <AddIcon />}</button>
