@@ -274,6 +274,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toBeVisible()
   // Подтверждённый подход становится компактной строкой с зафиксированным фактом.
   await expect(page.locator('.live-set.confirmed').getByLabel('Фактический вес')).toHaveValue('42.5')
+  expect(await page.locator('.live-set.confirmed > .live-set-grid').evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
   await expect(page.locator('.live-rest-trigger')).toContainText(/Отдых 1:(30|29)/)
   await expect(page.locator('.live-timer')).not.toHaveClass(/resting/)
   expect(await page.locator('.live-timer').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(neutralTimerBackground)
