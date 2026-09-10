@@ -504,6 +504,8 @@ function feedbackPayload(summary: ClientTrainingSummary): Record<string, unknown
     encouragement: summary.encouragement,
     goalAlignment: summary.goalAlignment ?? '',
     nextSteps: summary.nextSteps ?? [],
+    missingContext: summary.missingContext ?? [],
+    analysisVersion: summary.analysisVersion ?? '',
   }
 }
 

@@ -11,13 +11,13 @@ const validSummary = {
   },
   client: {
     headline: 'За период завершено 2 тренировки.',
-    achievements: ['Подтверждены результаты двух тренировок.'],
+    achievements: ['Стабильность: подтверждены результаты двух тренировок.'],
     consistency: 'За период завершено 2 тренировки.',
     encouragement: 'Результаты сохранены.',
     goalAlignment: '',
     nextSteps: ['Сохранить текущий ритм.'],
     missingContext: [],
-    analysisVersion: 'whole-period-v1',
+    analysisVersion: 'trainer-summary-v2',
   },
 }
 
