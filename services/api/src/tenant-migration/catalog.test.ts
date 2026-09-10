@@ -4,7 +4,7 @@ import { TENANT_MIGRATION_TABLES } from './catalog.js'
 
 describe('tenant migration catalog', () => {
   it('keeps a unique, parameterized and identifier-safe manifest', () => {
-    expect(TENANT_MIGRATION_TABLES).toHaveLength(28)
+    expect(TENANT_MIGRATION_TABLES).toHaveLength(30)
     const names = TENANT_MIGRATION_TABLES.map((spec) => spec.name)
     expect(new Set(names).size).toBe(names.length)
     for (const spec of TENANT_MIGRATION_TABLES) {

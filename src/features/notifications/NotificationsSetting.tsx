@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useDataBackend } from '../../app/data-backend-context'
 import { Switch } from '../../shared/ui'
-import { WORKOUT_REMINDER_KIND, WORKOUT_SCHEDULED_KIND } from '../../data/repositories/push-notifications.repository'
+import { CHAT_MESSAGE_KIND, WORKOUT_REMINDER_KIND, WORKOUT_SCHEDULED_KIND } from '../../data/repositories/push-notifications.repository'
 import { detectInstallPlatform, isAppInstalled } from '../install'
 import { getCurrentPushSubscription, isPushSupported } from './push-subscription'
 import { waitForTestPushConfirmation } from './wait-for-test-push-confirmation'
@@ -57,6 +57,7 @@ export function NotificationsSetting({ userId }: { userId: string }) {
       }
       await pushNotificationsRepository.enable(userId)
       await pushNotificationsRepository.setCategoryEnabled(userId, WORKOUT_SCHEDULED_KIND, true)
+      await pushNotificationsRepository.setCategoryEnabled(userId, CHAT_MESSAGE_KIND, true)
     },
     onSuccess: async () => {
       await Promise.all([
@@ -132,6 +133,12 @@ export function NotificationsSetting({ userId }: { userId: string }) {
       disabled={status.isLoading || categoryMutation.isPending}
       onChange={(next) => categoryMutation.mutate({ kind: WORKOUT_SCHEDULED_KIND, enabled: next })}
     />}
+    <Switch
+      label="Новые сообщения"
+      checked={status.data?.chatMessageEnabled ?? true}
+      disabled={status.isLoading || categoryMutation.isPending}
+      onChange={(next) => categoryMutation.mutate({ kind: CHAT_MESSAGE_KIND, enabled: next })}
+    />
     {categoryMutation.error && <small className="error">{categoryMutation.error instanceof Error ? categoryMutation.error.message : 'Не удалось изменить настройку.'}</small>}
   </>
 }

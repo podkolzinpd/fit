@@ -67,11 +67,55 @@ import type { PilotWorkoutParser } from './pilot-workout-parser.js'
 import type { PilotTrainingSummaries } from './training-summary.js'
 import type { VitalMediaSigner } from './vital-media.js'
 import type { PilotTrainerProfiles, TrainerProfileDraft } from './trainer-profile.js'
+import type { PilotChat } from './pilot-chat.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()))
+})
+
+describe('reliable chat API', () => {
+  const sessionToken = 'c'.repeat(43)
+  const conversationId = '10000000-0000-4000-8000-000000000001'
+  const clientId = '10000000-0000-4000-8000-000000000002'
+  const trainerId = '10000000-0000-4000-8000-000000000003'
+  const messageId = '10000000-0000-4000-8000-000000000004'
+  function chat() {
+    const send = vi.fn<PilotChat['send']>().mockResolvedValue({ id: messageId, conversationId, senderId: trainerId, body: 'Привет', createdAt: '2026-09-10T12:00:00.000Z' })
+    const open = vi.fn<PilotChat['open']>().mockResolvedValue(conversationId)
+    const pilotChat: PilotChat = {
+      listThreads: vi.fn<PilotChat['listThreads']>().mockResolvedValue([{ conversationId, clientId, trainerId, partnerUserId: trainerId, partnerName: 'Анна', activeConnection: true, lastMessageBody: null, lastMessageAt: null, lastMessageSenderId: null, unreadCount: 0 }]),
+      open,
+      listMessages: vi.fn<PilotChat['listMessages']>().mockResolvedValue({ messages: [], nextCursor: null }),
+      send,
+      markRead: vi.fn<PilotChat['markRead']>().mockResolvedValue(undefined),
+    }
+    return { pilotChat, open, send }
+  }
+
+  it('lists actor conversations without caching', async () => {
+    const { pilotChat } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'GET', url: '/v1/chat/threads', headers: { 'x-fit-session': sessionToken } })
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toMatchObject({ threads: [{ partnerName: 'Анна' }] })
+  })
+
+  it('passes the client generated message id to idempotent send', async () => {
+    const { pilotChat, send } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'POST', url: `/v1/chat/conversations/${conversationId}/messages`, headers: { 'x-fit-session': sessionToken }, payload: { id: messageId, body: 'Привет' } })
+    expect(response.statusCode).toBe(200)
+    expect(send).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId, 'Привет')
+    expect(response.json()).toMatchObject({ message: { id: messageId } })
+  })
+
+  it('does not allow a read-only pilot session to write', async () => {
+    const { pilotChat, open } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'POST', url: '/v1/chat/conversations', headers: { 'x-fit-pilot-session': sessionToken }, payload: { clientId, trainerId } })
+    expect(response.statusCode).toBe(403)
+    expect(open).not.toHaveBeenCalled()
+  })
 })
 
 describe('health endpoint', () => {
@@ -1185,6 +1229,7 @@ function buildPushNotifications(error?: Error): {
     preferences: {
       workout_reminder: false,
       workout_scheduled: true,
+      chat_message: true,
     },
   }))
   const hasSubscription = vi.fn(() => result(true))
@@ -2462,6 +2507,7 @@ describe('pilot push notification state', () => {
         preferences: {
           workout_reminder: false,
           workout_scheduled: true,
+          chat_message: true,
         },
       },
     })

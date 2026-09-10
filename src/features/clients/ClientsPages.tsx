@@ -17,6 +17,7 @@ import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, ScheduleIcon } from '../../shared/icons'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
+import { ChatStartButton } from '../chat'
 
 export function MyClientPage() {
   const { clients: clientsRepository } = useDataBackend()
@@ -306,6 +307,7 @@ export function ClientDetailPage() {
       </section>
       {stats.data?.needsAttention && <p className="attention">Давно не тренировался</p>}
       <div className="client-detail-actions">
+        {query.data.hasAccount && actor?.role === 'trainer' && <ChatStartButton clientId={clientId} trainerId={actor.userId} className="secondary wide client-detail-message" />}
         <Link className="client-detail-plan" to={`/workouts/new?client=${clientId}`}>
           <ScheduleIcon />
           <span>Запланировать тренировку</span>

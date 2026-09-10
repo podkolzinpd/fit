@@ -104,6 +104,24 @@ where membership.client_id in (select id from scope_clients)`,
     targetRecord: 'public.client_merge_operations',
   },
   {
+    name: 'public.chat_conversations',
+    sourceSql: publicRows('chat_conversations', 'row.client_id in (select id from scope_clients) and row.trainer_id = $1'),
+    targetSql: publicRows('chat_conversations', 'row.client_id in (select id from scope_clients) and row.trainer_id = $1'),
+    targetRecord: 'public.chat_conversations',
+  },
+  {
+    name: 'public.chat_messages',
+    sourceSql: `${scopeCte}
+select to_jsonb(message) as row from public.chat_messages message
+join public.chat_conversations conversation on conversation.id = message.conversation_id
+where conversation.client_id in (select id from scope_clients) and conversation.trainer_id = $1`,
+    targetSql: `${scopeCte}
+select to_jsonb(message) as row from public.chat_messages message
+join public.chat_conversations conversation on conversation.id = message.conversation_id
+where conversation.client_id in (select id from scope_clients) and conversation.trainer_id = $1`,
+    targetRecord: 'public.chat_messages',
+  },
+  {
     name: 'public.custom_exercises',
     sourceSql: publicRows('custom_exercises', 'row.trainer_id = $1'),
     targetSql: publicRows('custom_exercises', 'row.trainer_id = $1'),
