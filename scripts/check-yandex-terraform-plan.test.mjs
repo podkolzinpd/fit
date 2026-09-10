@@ -291,6 +291,72 @@ describe('Yandex Terraform plan policy', () => {
     )
   })
 
+  test('allows only removing the stage database public IP automatically', () => {
+    const privateOnly = runPolicy(
+      [{
+        address: 'yandex_mdb_postgresql_cluster_v2.fit',
+        change: {
+          actions: ['update'],
+          before: {
+            name: 'fit-stage-postgres',
+            hosts: {
+              primary: {
+                zone: 'ru-central1-a',
+                subnet_id: 'subnet',
+                assign_public_ip: true,
+              },
+            },
+          },
+          after: {
+            name: 'fit-stage-postgres',
+            hosts: {
+              primary: {
+                zone: 'ru-central1-a',
+                subnet_id: 'subnet',
+                assign_public_ip: false,
+              },
+            },
+          },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+    const publicAgain = runPolicy(
+      [{
+        address: 'yandex_mdb_postgresql_cluster_v2.fit',
+        change: {
+          actions: ['update'],
+          before: { hosts: { primary: { assign_public_ip: false } } },
+          after: { hosts: { primary: { assign_public_ip: true } } },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+    const broaderChange = runPolicy(
+      [{
+        address: 'yandex_mdb_postgresql_cluster_v2.fit',
+        change: {
+          actions: ['update'],
+          before: {
+            hosts: {
+              primary: { zone: 'ru-central1-a', assign_public_ip: true },
+            },
+          },
+          after: {
+            hosts: {
+              primary: { zone: 'ru-central1-b', assign_public_ip: false },
+            },
+          },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(privateOnly.status, 0)
+    assert.notEqual(publicAgain.status, 0)
+    assert.notEqual(broaderChange.status, 0)
+  })
+
   test('allows the optional app-feedback Lockbox grant automatically', () => {
     const result = runPolicy(
       [{
