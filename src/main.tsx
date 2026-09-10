@@ -7,11 +7,13 @@ import { QueryProvider } from './app/query-provider'
 import { YandexAppSessionProvider } from './app/yandex-app-session-context'
 import { DataBackendProvider } from './app/data-backend-context'
 import { applyAppTheme, getAppTheme } from './app/theme'
+import { initializeWorkoutInactivityNotificationActions } from './features/workouts/workout-inactivity-reminder'
 import '@fontsource-variable/onest/wght.css'
 import './styles.css'
 
 // Ставим сохранённую тему до первого React-render, чтобы при запуске и
 // восстановлении сессии не было вспышки другой палитры.
 applyAppTheme(getAppTheme())
+initializeWorkoutInactivityNotificationActions()
 
 createRoot(document.getElementById('root')!).render(<StrictMode><AppErrorBoundary><QueryProvider><YandexAppSessionProvider><AuthProvider><DataBackendProvider><App /></DataBackendProvider></AuthProvider></YandexAppSessionProvider></QueryProvider></AppErrorBoundary></StrictMode>)
