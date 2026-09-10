@@ -654,17 +654,17 @@ test('карточка упражнения: шапка с оборудован�
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await selectClient(page, 'Карточка Клиент')
   await expect(page.locator('.workout-notes summary')).toBeVisible()
-  // Импортированное упражнение с картинкой/оборудованием/мышцами.
+  // Упражнение с публичной Vital-анимацией, оборудованием и мышцами.
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
-  await page.getByLabel('Поиск упражнения').fill('тяга штанги в наклоне (штанга)')
-  await page.locator('.picker-item').filter({ hasText: 'Тяга штанги в наклоне' }).first().locator('.picker-select-mark').click()
+  await page.getByLabel('Поиск упражнения').fill('румынская тяга (штанга)')
+  await page.locator('.picker-item').filter({ hasText: 'Румынская тяга' }).first().locator('.picker-select-mark').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   // Открываем карточку упражнения через отдельное действие «История».
-  await page.getByRole('link', { name: /Тяга штанги в наклоне/ }).first().click()
+  await page.getByRole('link', { name: /Румынская тяга/ }).first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   // Шапка: оборудование и группы мышц из каталога.
   const detailExerciseImage = page.locator('.exercise-image-detail')
@@ -681,17 +681,15 @@ test('карточка упражнения: шапка с оборудован�
   await expect(page.getByRole('tab', { name: 'Статистика' })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('tab', { name: 'Техника' }).click()
   await expect(page.getByRole('tab', { name: 'Техника' })).toHaveAttribute('aria-selected', 'true')
-  // Каталог остаётся статичным, а второй кадр загружается только в крупной
-  // демонстрации техники.
+  // Каталог остаётся статичным, а крупная техника использует новую анимацию.
   const techniqueImage = page.locator('.exercise-image-technique')
-  await expect(techniqueImage.locator('img')).toHaveCount(2)
+  await expect(techniqueImage.locator('img')).toHaveCount(1)
+  await expect(techniqueImage.locator('video')).toHaveCount(1)
   await expect(techniqueImage.locator('img').first()).toHaveCSS('position', 'absolute')
   await expect(techniqueImage.locator('img').first()).toHaveCSS('object-fit', 'contain')
-  await expect(techniqueImage).toHaveClass(/exercise-image-motion/)
-  await expect(techniqueImage.locator('.exercise-image-frame-end')).not.toHaveCSS('animation-name', 'none')
+  await expect(techniqueImage.locator('img')).not.toHaveAttribute('src', /\/exercises\/(?:fedb-|base-)/)
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await expect(techniqueImage.locator('.exercise-image-frame-end')).toHaveCSS('animation-name', 'none')
-  await expect(techniqueImage.locator('.exercise-image-frame-end')).toHaveCSS('opacity', '0')
+  await expect(page.getByRole('button', { name: /Запустить анимацию/ })).toBeVisible()
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   const techniqueImageBox = await techniqueImage.boundingBox()
   if (techniqueImageBox === null) throw new Error('Technique image is not visible')
