@@ -1,6 +1,7 @@
 export const PUSH_NOTIFICATION_KINDS = [
   'workout_reminder',
   'workout_scheduled',
+  'chat_message',
 ] as const
 
 export type PushNotificationKind = typeof PUSH_NOTIFICATION_KINDS[number]

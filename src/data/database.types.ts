@@ -1,4 +1,4 @@
-// schema-sha256: 3dc8cac4a9b49738136b7bb3b53fd0dd1b41a8f1a0a717b79f565251b46ad135
+// schema-sha256: d5a7bf8b8804dbadba37e2a4c9f330511afe16427c3eea691bb7fb5a146fb7a2
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -287,6 +287,100 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "assistant_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_conversations: {
+        Row: {
+          client_id: string
+          client_last_read_at: string | null
+          client_user_id: string
+          created_at: string
+          id: string
+          trainer_id: string
+          trainer_last_read_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          client_last_read_at?: string | null
+          client_user_id: string
+          created_at?: string
+          id?: string
+          trainer_id: string
+          trainer_last_read_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          client_last_read_at?: string | null
+          client_user_id?: string
+          created_at?: string
+          id?: string
+          trainer_id?: string
+          trainer_last_read_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversations_client_user_id_fkey"
+            columns: ["client_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversations_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          conversation_id: string
+          created_at?: string
+          id: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1335,6 +1429,50 @@ export type Database = {
           },
         ]
       }
+      trainer_professional_profiles: {
+        Row: {
+          created_at: string
+          draft_data: Json
+          listed_in_catalog: boolean
+          public_id: string
+          published_at: string | null
+          published_data: Json | null
+          trainer_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          draft_data?: Json
+          listed_in_catalog?: boolean
+          public_id?: string
+          published_at?: string | null
+          published_data?: Json | null
+          trainer_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          draft_data?: Json
+          listed_in_catalog?: boolean
+          public_id?: string
+          published_at?: string | null
+          published_data?: Json | null
+          trainer_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainer_professional_profiles_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: true
+            referencedRelation: "trainers"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
       trainers: {
         Row: {
           created_at: string
@@ -1739,28 +1877,6 @@ export type Database = {
         }
         Returns: number
       }
-      get_own_trainer_profile: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      get_public_trainer_profile: {
-        Args: { p_public_id: string }
-        Returns: Json
-      }
-      list_public_trainer_profiles: {
-        Args: {
-          p_accepting_clients?: boolean | null
-          p_city?: string | null
-          p_mode?: string | null
-          p_query?: string | null
-          p_specialty?: string | null
-        }
-        Returns: Json[]
-      }
-      set_trainer_profile_catalog_listing: {
-        Args: { p_listed: boolean }
-        Returns: Json
-      }
       append_live_exercise: {
         Args: {
           p_exercise: Json
@@ -1877,6 +1993,11 @@ export type Database = {
           version: number
         }[]
       }
+      get_own_trainer_profile: { Args: never; Returns: Json }
+      get_public_trainer_profile: {
+        Args: { p_public_id: string }
+        Returns: Json
+      }
       get_workout_regularity: {
         Args: { p_client_id: string; p_reference_time?: string }
         Returns: {
@@ -1937,6 +2058,36 @@ export type Database = {
         }
       }
       leave_client_space: { Args: { p_client_id: string }; Returns: undefined }
+      list_chat_messages: {
+        Args: {
+          p_before_created_at?: string
+          p_before_id?: string
+          p_conversation_id: string
+          p_limit?: number
+        }
+        Returns: {
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          sender_id: string
+        }[]
+      }
+      list_chat_threads: {
+        Args: never
+        Returns: {
+          active_connection: boolean
+          client_id: string
+          conversation_id: string
+          last_message_at: string
+          last_message_body: string
+          last_message_sender_id: string
+          partner_name: string
+          partner_user_id: string
+          trainer_id: string
+          unread_count: number
+        }[]
+      }
       list_client_trainers: {
         Args: { p_client_id: string }
         Returns: {
@@ -1976,11 +2127,11 @@ export type Database = {
           p_limit?: number
         }
         Returns: {
-          all_time_best_weight_kg: number | null
-          all_time_best_weight_reps: number | null
-          all_time_primary_value: number | null
-          best_weight_kg: number | null
-          best_weight_reps: number | null
+          all_time_best_weight_kg: number
+          all_time_best_weight_reps: number
+          all_time_primary_value: number
+          best_weight_kg: number
+          best_weight_reps: number
           completed_at: string
           confirmed_set_count: number
           exercise_name: string
@@ -1988,10 +2139,10 @@ export type Database = {
           is_primary_pr: boolean
           is_weight_pr: boolean
           is_weight_reps_pr: boolean
-          previous_primary_value: number | null
-          primary_change: number | null
-          primary_value: number | null
-          reps_at_best_weight: number | null
+          previous_primary_value: number
+          primary_change: number
+          primary_value: number
+          reps_at_best_weight: number
           sets: Json
           total_count: number
           trainer_comment: string | null
@@ -2006,6 +2157,16 @@ export type Database = {
           sets: Json
           workout_date: string
         }[]
+      }
+      list_public_trainer_profiles: {
+        Args: {
+          p_accepting_clients?: boolean
+          p_city?: string
+          p_mode?: string
+          p_query?: string
+          p_specialty?: string
+        }
+        Returns: Json[]
       }
       list_running_progress: {
         Args: {
@@ -2066,7 +2227,42 @@ export type Database = {
           p_offset?: number
           p_to?: string | null
         }
-        Returns: WorkoutListRow[]
+        Returns: {
+          client_comment: string
+          client_id: string
+          client_name: string
+          completed_at: string
+          created_by: string
+          discomfort: boolean
+          end_time: string
+          exercises: Json
+          has_pr: boolean
+          id: string
+          notes: string
+          session_rpe: number
+          stage_id: string
+          stage_title: string
+          start_time: string
+          started_at: string
+          status: string
+          total_count: number
+          trainer_id: string
+          trainer_reaction: string
+          trainer_review: string
+          trainer_review_author_id: string
+          trainer_reviewed_at: string
+          version: number
+          wellbeing: string
+          workout_date: string
+        }[]
+      }
+      mark_chat_read: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
+      }
+      open_chat: {
+        Args: { p_client_id: string; p_trainer_id: string }
+        Returns: string
       }
       persist_assistant_response: {
         Args: {
@@ -2077,6 +2273,7 @@ export type Database = {
         }
         Returns: Json
       }
+      publish_trainer_profile: { Args: never; Returns: Json }
       publish_training_summary: {
         Args: {
           p_client_summary: Json
@@ -2165,9 +2362,24 @@ export type Database = {
         Args: { p_expected_version?: number | null; p_progress: Json }
         Returns: string
       }
+      save_trainer_profile_draft: { Args: { p_draft: Json }; Returns: Json }
       save_workout: {
         Args: { p_expected_version?: number | null; p_workout: Json }
         Returns: string
+      }
+      send_chat_message: {
+        Args: {
+          p_body: string
+          p_conversation_id: string
+          p_message_id: string
+        }
+        Returns: {
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          sender_id: string
+        }[]
       }
       send_test_push_notification: {
         Args: { p_endpoint: string }
@@ -2212,6 +2424,10 @@ export type Database = {
           p_expected_version: number
         }
         Returns: number
+      }
+      set_trainer_profile_catalog_listing: {
+        Args: { p_listed: boolean }
+        Returns: Json
       }
       set_workout_review: {
         Args: {
@@ -2260,18 +2476,13 @@ export type Database = {
         }
         Returns: number
       }
-      publish_trainer_profile: {
-        Args: Record<PropertyKey, never>
+      trainer_profile_response: {
+        Args: {
+          p_row: Database["public"]["Tables"]["trainer_professional_profiles"]["Row"]
+        }
         Returns: Json
       }
-      save_trainer_profile_draft: {
-        Args: { p_draft: Json }
-        Returns: Json
-      }
-      unpublish_trainer_profile: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      unpublish_trainer_profile: { Args: never; Returns: Json }
       unpublish_training_summary: {
         Args: { p_expected_version: number; p_summary_id: string }
         Returns: number

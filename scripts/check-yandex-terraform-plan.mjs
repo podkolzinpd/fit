@@ -50,6 +50,16 @@ const runtimePreflightSecretAccessAddress =
   'yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader[0]'
 const appFeedbackSecretAccessAddress =
   'yandex_lockbox_secret_iam_member.push_dispatcher_app_feedback_integrations_reader[0]'
+const postgresSecurityGroupAddress = 'yandex_vpc_security_group.postgres'
+const legacyDataLensPublicCidrs = [
+  '130.193.60.0/28',
+  '178.154.242.128/28',
+  '178.154.242.144/28',
+  '178.154.242.160/28',
+  '178.154.242.176/28',
+  '178.154.242.192/28',
+  '178.154.242.208/28',
+]
 const pushDispatcherAddress = 'yandex_serverless_container.push_dispatcher'
 const pushDispatcherTriggerAddress = 'yandex_function_trigger.push_dispatcher_timer'
 const apiImagePullerAddress = 'yandex_container_registry_iam_binding.api_image_puller'
@@ -184,6 +194,66 @@ const isExactPushDispatcherTriggerDescriptionUpdate = (resource) =>
     === 'Run private Fit push and app-feedback delivery every minute'
   && hasOnlyTopLevelChanges(resource, new Set(['description']))
 
+const isExactDatabasePublicAccessRemoval = (resource) => {
+  if (
+    resource.address !== 'yandex_mdb_postgresql_cluster_v2.fit'
+    || resource.change.actions.join(',') !== 'update'
+    || !hasOnlyTopLevelChanges(resource, new Set(['hosts']))
+  ) return false
+
+  const beforeHosts = resource.change.before?.hosts
+  const afterHosts = resource.change.after?.hosts
+  const beforePrimary = beforeHosts?.primary
+  const afterPrimary = afterHosts?.primary
+  if (
+    beforePrimary?.assign_public_ip !== true
+    || afterPrimary?.assign_public_ip !== false
+  ) return false
+
+  return isDeepStrictEqual(
+    {
+      ...beforeHosts,
+      primary: { ...beforePrimary, assign_public_ip: false },
+    },
+    afterHosts,
+  )
+}
+
+const isExactLegacyDataLensIngressRemoval = (resource) => {
+  if (
+    resource.address !== postgresSecurityGroupAddress
+    || resource.change.actions.join(',') !== 'update'
+    || !hasOnlyTopLevelChanges(resource, new Set(['ingress']))
+  ) return false
+
+  const beforeIngress = resource.change.before?.ingress
+  const afterIngress = resource.change.after?.ingress
+  if (
+    !Array.isArray(beforeIngress)
+    || !Array.isArray(afterIngress)
+    || afterIngress.length !== beforeIngress.length - 1
+    || !afterIngress.every((rule) =>
+      beforeIngress.some((candidate) => isDeepStrictEqual(candidate, rule)))
+  ) return false
+
+  const removed = beforeIngress.filter((rule) =>
+    !afterIngress.some((candidate) => isDeepStrictEqual(candidate, rule)))
+  if (removed.length !== 1) return false
+
+  const rule = removed[0]
+  return rule.description === 'Yandex DataLens public PostgreSQL connector'
+    && rule.protocol === 'TCP'
+    && Number(rule.port) === 6432
+    && Number(rule.from_port) === -1
+    && Number(rule.to_port) === -1
+    && isDeepStrictEqual(
+      [...(rule.v4_cidr_blocks ?? [])].sort(),
+      legacyDataLensPublicCidrs,
+    )
+    && Array.isArray(rule.v6_cidr_blocks)
+    && rule.v6_cidr_blocks.length === 0
+}
+
 const isServiceAccountMember = (value) =>
   /^serviceAccount:[a-z0-9]+$/u.test(value ?? '')
 
@@ -280,6 +350,8 @@ const isAutomaticStageChange = (resource) => {
   if (
     isExactPushDispatcherImagePullerUpdate(resource)
     || isExactPushDispatcherTriggerDescriptionUpdate(resource)
+    || isExactDatabasePublicAccessRemoval(resource)
+    || isExactLegacyDataLensIngressRemoval(resource)
   ) {
     return true
   }

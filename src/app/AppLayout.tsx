@@ -73,7 +73,8 @@ export function AppLayout() {
   // тренировки. Нижняя навигация возвращается на списках и после выхода из
   // сценария, но внутри не конкурирует с текущим действием.
   const assistant = pathname === '/assistant'
-  const immersive = liveSession || workoutForm || todayStep
+  const chat = pathname === '/chat' || pathname.startsWith('/chat/')
+  const immersive = liveSession || workoutForm || todayStep || chat
   const contentClass = immersive ? 'content content-immersive' : 'content'
 
   const frameClass = [
@@ -104,6 +105,7 @@ export function AppLayout() {
     monochromeTrainerProfile ? 'trainer-profile-identity' : '',
     monochromeAuthJoin ? 'auth-join-identity' : '',
     monochromeAssistant ? 'assistant-identity' : '',
+    chat ? 'chat-identity' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">

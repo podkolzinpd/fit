@@ -12,6 +12,7 @@ const repository = vi.hoisted(() => ({
 }))
 vi.mock('../../data/repositories/push-notifications.repository', () => ({
   pushNotificationsRepository: repository,
+  CHAT_MESSAGE_KIND: 'chat_message',
   WORKOUT_REMINDER_KIND: 'workout_reminder',
   WORKOUT_SCHEDULED_KIND: 'workout_scheduled',
 }))
@@ -153,6 +154,7 @@ describe('NotificationOnboarding', () => {
     expect(await screen.findByText('Уведомления работают.')).toBeVisible()
     expect(repository.enable).toHaveBeenCalledWith(USER_ID)
     expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'workout_scheduled', true)
+    expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'chat_message', true)
     expect(repository.sendTestPush).toHaveBeenCalledWith(LOCAL_SUBSCRIPTION.endpoint)
     expect(markPushOnboardingSeen).toHaveBeenCalledWith(USER_ID)
 
