@@ -1,7 +1,7 @@
 import type { PublishedTrainingSummary, TrainingSummary } from '../../shared/domain'
 import { formatSummaryText } from './summary-format'
 
-export type ProgressDetailedAnalysisSectionId = 'main' | 'why' | 'next'
+export type ProgressDetailedAnalysisSectionId = 'main' | 'why' | 'goal' | 'observations' | 'next' | 'missing'
 
 export type ProgressDetailedAnalysisSection = {
   id: ProgressDetailedAnalysisSectionId
@@ -129,6 +129,39 @@ function uniqueItems(
 
 export function buildProgressDetailedAnalysis({ summary, role, goalTitle, visibleTexts }: BuildProgressDetailedAnalysisOptions): ProgressDetailedAnalysisSection[] {
   const client = 'summary' in summary ? summary.summary : summary.client
+  if (client.analysisVersion === 'whole-period-v1') {
+    const observationCopy = 'summary' in summary || role === 'client'
+      ? [client.headline, ...client.achievements]
+      : [summary.trainer.headline, ...summary.trainer.progress]
+    return [
+      {
+        id: 'goal',
+        title: 'Движение к цели',
+        items: goalTitle?.trim() && client.goalAlignment?.trim()
+          ? uniqueItems([client.goalAlignment], visibleTexts, role, () => true, 1)
+          : [],
+        emptyMessage: 'Цель не указана или данных для оценки пока недостаточно.',
+      },
+      {
+        id: 'observations',
+        title: 'Что заметил ИИ',
+        items: uniqueItems(observationCopy, visibleTexts, role, () => true, 3),
+        emptyMessage: 'Значимых наблюдений сверх показанных результатов пока нет.',
+      },
+      {
+        id: 'next',
+        title: 'Что делать дальше',
+        items: uniqueItems(client.nextSteps ?? [], visibleTexts, role, () => true, 2),
+        emptyMessage: 'Отдельного действия пока нет.',
+      },
+      {
+        id: 'missing',
+        title: 'Чего не хватает',
+        items: uniqueItems(client.missingContext ?? [], visibleTexts, role, () => true, 1),
+        emptyMessage: 'Существенных пробелов для текущего вывода нет.',
+      },
+    ]
+  }
   const mainCopy = 'summary' in summary || role === 'client'
     ? [client.headline]
     : [summary.trainer.headline]
