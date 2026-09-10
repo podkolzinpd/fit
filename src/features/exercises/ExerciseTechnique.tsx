@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import type { ExerciseSnapshot, InputKind } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
-import { ExerciseImage } from './ExerciseImage'
+import { ExerciseImage, reviewedExerciseImageSource } from './ExerciseImage'
 
 const INPUT_KIND_LABELS: Record<InputKind, string> = {
   strength: 'Вес и повторы',
@@ -26,11 +26,20 @@ export function hasExerciseAnimation(exercise?: ExerciseSnapshot): exercise is E
   return Boolean(exercise?.techniqueVideoUrl)
 }
 
+export function hasExerciseMedia(exercise?: ExerciseSnapshot): exercise is ExerciseSnapshot {
+  return Boolean(exercise && (
+    reviewedExerciseImageSource(exercise.imageUrl)
+    || reviewedExerciseImageSource(exercise.fallbackImageUrl)
+    || reviewedExerciseImageSource(exercise.motionImageUrl)
+    || exercise.techniqueVideoUrl
+  ))
+}
+
 export function ExerciseTechniqueContent({ exercise, beforeFacts }: {
   exercise: ExerciseSnapshot
   beforeFacts?: ReactNode
 }) {
-  const hasMedia = hasExerciseAnimation(exercise)
+  const hasMedia = hasExerciseMedia(exercise)
   return <div className="picker-technique-scroll">
     {hasMedia && <ExerciseImage src={exercise.imageUrl} fallbackSrc={exercise.fallbackImageUrl} motionSrc={exercise.motionImageUrl} videoSrc={exercise.techniqueVideoUrl} alt={exercise.name} variant="technique" />}
     <div className="picker-technique-title"><h2>{exercise.name}</h2><p>{[exercise.equipment ?? 'Без оборудования', MUSCLE_GROUP_LABELS[exercise.muscleGroup]].join(' · ')}</p></div>

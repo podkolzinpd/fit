@@ -4,7 +4,7 @@ import { shouldUsePrivateVitalStorage, useVitalMediaUrl } from './vitalMedia'
 
 export type ExerciseImageVariant = 'thumbnail' | 'preview' | 'picker' | 'detail' | 'technique'
 
-function withoutLegacyExercisePhoto(source: string | undefined) {
+export function reviewedExerciseImageSource(source: string | undefined) {
   return source && !/^\/exercises\/(?:fedb-|base-)/.test(source) ? source : undefined
 }
 
@@ -36,9 +36,9 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, alt = '',
   variant?: ExerciseImageVariant
   playVideo?: boolean
 }) {
-  const safeSrc = withoutLegacyExercisePhoto(src)
-  const safeFallbackSrc = withoutLegacyExercisePhoto(fallbackSrc)
-  const safeMotionSrc = withoutLegacyExercisePhoto(motionSrc)
+  const safeSrc = reviewedExerciseImageSource(src)
+  const safeFallbackSrc = reviewedExerciseImageSource(fallbackSrc)
+  const safeMotionSrc = reviewedExerciseImageSource(motionSrc)
   const [primaryFailed, setPrimaryFailed] = useState(false)
   const [fallbackFailed, setFallbackFailed] = useState(false)
   const [motionFailed, setMotionFailed] = useState(false)
