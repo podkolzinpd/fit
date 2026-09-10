@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildSummaryModelInput, deriveExerciseObservations, deriveMeasurementChanges } from '../../supabase/functions/summarize-client-training/summary-model-input'
 
 describe('buildSummaryModelInput', () => {
-  it('keeps a bounded recent series and includes the previous period separately', () => {
+  it('keeps the complete current and previous periods with explicit coverage', () => {
     const exercises = Array.from({ length: 20 }, (_, index) => ({
       name: `Упражнение ${index + 1}`,
       kind: 'strength',
@@ -33,23 +33,26 @@ describe('buildSummaryModelInput', () => {
       },
     })
 
-    expect(result.exercises).toHaveLength(12)
+    expect(result.exercises).toHaveLength(20)
     expect(result.exercises[0]).toMatchObject({
       name: 'Упражнение 1',
-      first_session: { max_weight_kg: 50 },
-      last_session: { max_weight_kg: 60 },
     })
     expect(result.exercises[0]?.derived_observations.map((item) => item.kind)).toContain('load_up_reps_held')
-    expect(result.exercises[0]?.recent_sessions).toHaveLength(6)
-    expect(result.previous_period?.exercises).toHaveLength(8)
+    expect(result.exercises[0]?.sessions).toHaveLength(10)
+    expect(result.previous_period?.exercises).toHaveLength(10)
+    expect(result.input_coverage).toEqual({
+      current: { exercises: 20, sessions: 200, sets: 0 },
+      previous: { exercises: 10, sessions: 100, sets: 0 },
+      complete: true,
+    })
     expect(result.previous_period?.period).toEqual({ start: '2026-07-01', end: '2026-07-31' })
     expect(result.measurements.changes).toContainEqual(expect.objectContaining({ metric: 'waist_cm', from: 91, to: 88, change: -3 }))
     expect(result.measurements.compared_to_previous_period).toContainEqual(expect.objectContaining({ metric: 'weight_kg', from: 82.5, to: 80, change: -2.5 }))
     expect(result.previous_period?.measurements.recent_entries).toHaveLength(1)
-    expect(JSON.stringify(result).length).toBeLessThan(30_000)
+    expect(JSON.stringify(result)).toContain('Упражнение 20')
   })
 
-  it('prioritizes a goal-related meaningful exercise over a frequently used unchanged one', () => {
+  it('does not drop or reorder exercises to prioritize a goal keyword', () => {
     const result = buildSummaryModelInput({
       period: {}, consistency: {}, goal: { title: 'Увеличить результат в приседаниях' },
       exercises: [
@@ -64,9 +67,12 @@ describe('buildSummaryModelInput', () => {
           ],
         },
       ],
-    }, 1)
+    })
 
-    expect(result.exercises[0]?.name).toBe('Приседания со штангой')
+    expect(result.exercises.map((exercise) => exercise.name)).toEqual([
+      'Жим лёжа',
+      'Приседания со штангой',
+    ])
   })
 })
 

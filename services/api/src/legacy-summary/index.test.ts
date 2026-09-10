@@ -16,6 +16,8 @@ const validSummary = {
     encouragement: 'Результаты сохранены.',
     goalAlignment: '',
     nextSteps: ['Сохранить текущий ритм.'],
+    missingContext: [],
+    analysisVersion: 'whole-period-v1',
   },
 }
 
@@ -65,6 +67,10 @@ describe('summary training picture', () => {
       max_weight_kg: 80,
       planned_max_weight_kg: 80,
       average_rpe: 9,
+      sets: [
+        { set_position: 0, planned: { weight_kg: 80, reps: 8, rpe: 8 }, performed: { weight_kg: 80, reps: 8, rpe: 9 } },
+        { set_position: 1, planned: { weight_kg: 80, reps: 8, rpe: 8 }, performed: null },
+      ],
     })
   })
 })
@@ -170,5 +176,66 @@ describe('summarizeClientTraining cloud handler', () => {
       sleep: () => Promise.resolve(),
     })).rejects.toThrow('yandex_cloud_request_rejected')
     expect(fetchImpl).toHaveBeenCalledOnce()
+  })
+
+  it('does not publish a schema-valid answer that fails the coaching quality gate three times', async () => {
+    vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
+    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const unsafeSummary = {
+      ...validSummary,
+      client: {
+        ...validSummary.client,
+        headline: 'Вес вырос на 25%.',
+      },
+    }
+    const fetchImpl = vi.fn().mockImplementation(() => Promise.resolve(Response.json({
+      result: {
+        alternatives: [{ message: { text: JSON.stringify(unsafeSummary) } }],
+        usage: { totalTokens: '100' },
+        modelVersion: 'test',
+      },
+    })))
+
+    await expect(requestYandexSummary({ change_percent: 25 }, '2026-08-01', '2026-08-25', {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      requestId: 'request-quality',
+      sleep: () => Promise.resolve(),
+    })).rejects.toThrow('yandex_cloud_quality_check_failed')
+    expect(fetchImpl).toHaveBeenCalledTimes(3)
+  })
+
+  it('analyzes a large complete input in non-overlapping chunks before final synthesis', async () => {
+    vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
+    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
+    const requestBodies: string[] = []
+    const fetchImpl = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
+      if (typeof init?.body !== 'string') throw new Error('Expected a JSON request body')
+      requestBodies.push(init.body)
+      return Promise.resolve(completionResponse())
+    })
+    const largeInput = {
+      input_coverage: { current: { exercises: 5 }, previous: { exercises: 0 }, complete: true },
+      goal: null,
+      exercises: Array.from({ length: 5 }, (_, index) => ({
+        name: `Упражнение ${index + 1}`,
+        sessions: [{ evidence: 'x'.repeat(30_000) }],
+      })),
+      previous_period: null,
+    }
+
+    await requestYandexSummary(largeInput, '2026-08-01', '2026-08-31', {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      requestId: 'request-large',
+    })
+
+    expect(fetchImpl).toHaveBeenCalledTimes(4)
+    const sentInputs = requestBodies.map((requestBody) => {
+      const body = JSON.parse(requestBody) as { messages: Array<{ text: string }> }
+      return JSON.parse(body.messages[1]!.text) as { completed_workouts: Record<string, unknown> }
+    })
+    expect(sentInputs.slice(0, 3).every((item) =>
+      (item.completed_workouts.input_coverage as { complete: boolean }).complete === false)).toBe(true)
+    expect((sentInputs[3]!.completed_workouts.chunk_analyses as unknown[])).toHaveLength(3)
   })
 })

@@ -34,6 +34,38 @@ const publishedSummary: PublishedTrainingSummary = {
 }
 
 describe('buildProgressDetailedAnalysis', () => {
+  it('shows the whole-period analysis as four decision-oriented answers', () => {
+    const sections = buildProgressDetailedAnalysis({
+      summary: {
+        ...publishedSummary,
+        summary: {
+          headline: 'Рост нагрузки пока подтверждён отдельными сильными тренировками, а не устойчивой серией.',
+          achievements: ['Вес в тяге вырос с 50 до 68 кг без сокращения числа подходов.'],
+          consistency: 'За период выполнено 6 тренировок.',
+          encouragement: 'Сильные точки уже есть, теперь важна их повторяемость.',
+          goalAlignment: 'До цели 70 кг остался один небольшой шаг, но результат ещё стоит закрепить.',
+          nextSteps: ['На следующей тяге повторить 68 кг с тем же числом подходов.'],
+          missingContext: ['Не хватает оценки тяжести последней тренировки.'],
+          analysisVersion: 'whole-period-v1',
+        },
+      },
+      role: 'client',
+      goalTitle: 'Увеличить рабочий вес в тяге до 70 кг',
+      visibleTexts: [],
+    })
+
+    expect(sections.map((section) => section.title)).toEqual([
+      'Движение к цели',
+      'Что заметил ИИ',
+      'Что делать дальше',
+      'Чего не хватает',
+    ])
+    expect(sections[0]?.items[0]).toContain('До цели 70 кг')
+    expect(sections[1]?.items).toHaveLength(2)
+    expect(sections[2]?.items).toEqual(['На следующей тяге повторить 68 кг с тем же числом подходов.'])
+    expect(sections[3]?.items).toEqual(['Не хватает оценки тяжести последней тренировки.'])
+  })
+
   it('builds the coaching story from safe, grounded LLM copy', () => {
     const sections = buildProgressDetailedAnalysis({
       summary: publishedSummary,
