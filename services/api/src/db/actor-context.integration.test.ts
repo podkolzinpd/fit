@@ -3092,6 +3092,14 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           `,
           [ROOT_WORKOUT_SET_ID],
         )
+        const startedReplacement = {
+          source: 'system' as const,
+          ref: 'squat',
+          customExerciseId: null,
+          name: 'Присед',
+          muscleGroup: 'legs' as const,
+          inputKind: 'strength' as const,
+        }
         await expect(withActorTransaction(
           runtimePool,
           OTHER_ACTOR_ID,
@@ -3099,26 +3107,18 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             client,
             ROOT_WORKOUT_ID,
             ROOT_WORKOUT_EXERCISE_ID,
-            replacement,
-            8,
+            startedReplacement,
+            9,
             LIVE_STRUCTURE_OPERATION_IDS.replaceStarted,
           ),
-        )).rejects.toMatchObject({ failure: 'conflict' })
-        await ownerPool.query(
-          `
-            update public.workout_sets
-            set confirmed_at = null
-            where id = $1
-          `,
-          [ROOT_WORKOUT_SET_ID],
-        )
+        )).resolves.toEqual({ resourceId: ROOT_WORKOUT_EXERCISE_ID, version: 10, replayed: false })
         await expect(withActorTransaction(
           runtimePool,
           OUTSIDE_TRAINER_ID,
           (client) => appendLiveSet(
             client,
             ROOT_WORKOUT_EXERCISE_ID,
-            8,
+            10,
             LIVE_STRUCTURE_OPERATION_IDS.outside,
           ),
         )).rejects.toMatchObject({ failure: 'forbidden' })
@@ -3140,7 +3140,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           (client) => removeLiveSet(
             client,
             onlyAppendedSetId,
-            9,
+            10,
             LIVE_STRUCTURE_OPERATION_IDS.lastSet,
           ),
         )).rejects.toMatchObject({ failure: 'invalid' })
@@ -3168,6 +3168,13 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             input_kind: 'strength',
             position: 1,
             trainer_comment: 'Держи спину прямо',
+            updated_by: OTHER_ACTOR_ID,
+          },
+          {
+            exercise_name: 'Присед',
+            input_kind: 'strength',
+            position: 2,
+            trainer_comment: null,
             updated_by: OTHER_ACTOR_ID,
           },
         ])
@@ -3204,7 +3211,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           [[ACTOR_ID, OTHER_ACTOR_ID], operationIds],
         )
         expect(receiptRows.rows).toEqual([{
-          count: 7,
+          count: 8,
           resource_ids_present: true,
         }])
         const deleteOperation = 'd6740000-0000-4000-8000-000000000001'
@@ -3215,21 +3222,21 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           [ROOT_WORKOUT_ID],
         )
         await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID,
-          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 8, deleteOperation),
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 9, deleteOperation),
         )).rejects.toMatchObject({ failure: 'forbidden' })
         await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
-          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 7, deleteOperation),
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 8, deleteOperation),
         )).rejects.toMatchObject({ failure: 'conflict' })
         await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
-          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 9, deleteOperation),
-        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 10, replayed: false })
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 10, deleteOperation),
+        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 11, replayed: false })
         await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID,
-          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 9, deleteOperation),
-        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 10, replayed: true })
-        const remaining = await ownerPool.query<{ id: string }>(
-          'select id from public.workout_exercises where workout_id=$1', [ROOT_WORKOUT_ID],
+          (client) => removeLiveExercise(client, ROOT_WORKOUT_ID, removalId, 10, deleteOperation),
+        )).resolves.toEqual({ resourceId: appendedExerciseId, version: 11, replayed: true })
+        const remaining = await ownerPool.query<{ exercise_name: string }>(
+          'select exercise_name from public.workout_exercises where workout_id=$1 order by position', [ROOT_WORKOUT_ID],
         )
-        expect(remaining.rows).toEqual([{ id: ROOT_WORKOUT_EXERCISE_ID }])
+        expect(remaining.rows).toEqual([{ exercise_name: 'Становая тяга' }, { exercise_name: 'Присед' }])
         await ownerPool.query('delete from app_private.live_workout_operations where operation_id=$1', [deleteOperation])
       } finally {
         await ownerPool.query(
