@@ -616,7 +616,16 @@ export interface TrainerProfessionalProfile {
   publicId: UUID
   draft: TrainerProfileDraft
   published: TrainerProfileDraft | null
+  listedInCatalog: boolean
   publishedAt: string | null
   updatedAt: string
   version: number
+}
+
+export interface TrainerCatalogFilters {
+  query: string
+  specialty: string
+  city: string
+  mode: TrainerTrainingMode | ''
+  acceptingClients: boolean | null
 }

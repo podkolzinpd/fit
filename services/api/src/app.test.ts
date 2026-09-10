@@ -110,6 +110,7 @@ describe('trainer professional profile', () => {
   }
   const value = {
     publicId: '11111111-1111-4111-8111-111111111111', draft, published: draft,
+    listedInCatalog: false,
     publishedAt: '2026-09-10T09:00:00.000Z', updatedAt: '2026-09-10T09:00:00.000Z', version: 2,
   }
 
@@ -119,7 +120,9 @@ describe('trainer professional profile', () => {
       saveDraft: vi.fn().mockResolvedValue(value),
       publish: vi.fn().mockResolvedValue(value),
       unpublish: vi.fn().mockResolvedValue({ ...value, published: null, publishedAt: null }),
+      setCatalogListing: vi.fn().mockResolvedValue({ ...value, listedInCatalog: true }),
       getPublic: vi.fn().mockResolvedValue(value),
+      listPublic: vi.fn().mockResolvedValue([{ ...value, listedInCatalog: true }]),
     }
   }
 
@@ -141,6 +144,36 @@ describe('trainer professional profile', () => {
     const response = await app.inject({ method: 'GET', url: `/v1/trainers/${value.publicId}/public-profile` })
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual(value)
+  })
+
+  it('lists published catalog profiles with validated filters', async () => {
+    const pilotTrainerProfiles = profiles()
+    const listPublic = vi.fn().mockResolvedValue([{ ...value, listedInCatalog: true }])
+    pilotTrainerProfiles.listPublic = listPublic
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/trainers/catalog?query=%D0%90%D0%BD%D0%BD%D0%B0&specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&mode=online&accepting=true',
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(listPublic).toHaveBeenCalledWith({
+      query: 'Анна', specialty: 'Силовые', city: 'Москва', mode: 'online', acceptingClients: true,
+    })
+  })
+
+  it('lets a trainer opt into the catalog only from a read-write session', async () => {
+    const pilotTrainerProfiles = profiles()
+    const setCatalogListing = vi.fn().mockResolvedValue({ ...value, listedInCatalog: true })
+    pilotTrainerProfiles.setCatalogListing = setCatalogListing
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': 'a'.repeat(43) }
+    const response = await app.inject({ method: 'POST', url: '/v1/trainer-profile/catalog', headers, payload: { listed: true } })
+
+    expect(response.statusCode).toBe(200)
+    expect(setCatalogListing).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: 'a'.repeat(43) }, true,
+    )
   })
 })
 

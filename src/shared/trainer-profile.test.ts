@@ -19,6 +19,7 @@ describe('trainer profile', () => {
       publicId: '11111111-1111-4111-8111-111111111111',
       draft,
       published: draft,
+      listedInCatalog: false,
       publishedAt: '2026-09-10T09:00:00.000Z',
       updatedAt: '2026-09-10T09:00:00.044607+00:00',
       version: 2,
@@ -32,7 +33,7 @@ describe('trainer profile', () => {
       specialties: ['Силовые', 'снижение веса'], trainingModes: ['online' as const], city: 'Москва',
     }
     expect(parseTrainerProfile({ publicId: '9190a86f-a191-42d8-912e-a7e0ea0f331d', draft,
-      published: draft, updatedAt: '2026-09-10T09:37:38.59182+00:00',
+      published: draft, listedInCatalog: true, updatedAt: '2026-09-10T09:37:38.59182+00:00',
       publishedAt: '2026-09-10T09:37:38.59182+00:00', version: 10 }).published).toEqual(draft)
   })
 })

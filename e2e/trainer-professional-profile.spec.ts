@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('trainer saves, previews and publishes a professional profile', async ({ page }) => {
+test('trainer publishes a profile and athlete finds it in the catalog', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -35,5 +35,44 @@ test('trainer saves, previews and publishes a professional profile', async ({ pa
   expect(publicResponse.status()).toBe(200)
   await expect(page.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
   await expect(page.getByText('Спортсмены видят последнюю опубликованную версию.')).toHaveCount(0)
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+
+  await page.goto('/profile')
+  const profileAfterPublish = page.getByRole('region', { name: 'Профессиональная анкета' })
+  const catalogSwitch = profileAfterPublish.getByRole('switch', { name: 'Показывать в каталоге' })
+  if (await catalogSwitch.isChecked()) {
+    const hideFromCatalogRequest = page.waitForResponse((response) => response.url().includes('/rpc/set_trainer_profile_catalog_listing'))
+    await catalogSwitch.click()
+    expect((await hideFromCatalogRequest).status()).toBe(200)
+    await expect(catalogSwitch).not.toBeChecked()
+  }
+  const catalogRequest = page.waitForResponse((response) => response.url().includes('/rpc/set_trainer_profile_catalog_listing'))
+  await catalogSwitch.click()
+  expect((await catalogRequest).status()).toBe(200)
+  await expect(catalogSwitch).toBeChecked()
+
+  await page.getByRole('button', { name: 'Выйти' }).click()
+  await expect(page).toHaveURL(/\/auth$/)
+  await page.getByLabel('Email').fill('client@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+
+  await page.goto('/me/profile')
+  await page.getByRole('link', { name: /Найти тренера/ }).click()
+  await expect(page).toHaveURL(/\/me\/trainers$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Тренеры' })).toBeVisible()
+  const results = page.getByRole('region', { name: 'Найденные тренеры' })
+  await expect(results.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Фильтры' }).click()
+  await page.getByLabel('Направление').fill('снижение веса')
+  await page.getByRole('button', { name: 'Найти' }).click()
+  await expect(results.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
+  await results.getByRole('link', { name: 'Посмотреть анкету' }).click()
+  await expect(page).toHaveURL(/\/trainers\/[0-9a-f-]+$/)
+  await expect(page.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(/\/me\/trainers$/)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
