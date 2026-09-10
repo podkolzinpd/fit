@@ -36,6 +36,42 @@ async function setRpe(page: Page, value: number) {
   await expect(scale).toHaveValue(String(value))
 }
 
+async function loginDemo(page: Page, email: string, destination: RegExp) {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Пароль').fill(password)
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(destination)
+}
+
+test('trainer and athlete exchange messages, keep a draft and update unread state', async ({ browser }) => {
+  const trainerContext = await browser.newContext()
+  const clientContext = await browser.newContext()
+  const trainer = await trainerContext.newPage()
+  const client = await clientContext.newPage()
+  const text = `Проверка чата ${Date.now()}`
+  try {
+    await Promise.all([loginDemo(trainer, 'trainer@fit.local', /\/today$/), loginDemo(client, 'client@fit.local', /\/me$/)])
+    await client.getByRole('link', { name: 'Сообщения' }).click()
+    await client.getByRole('button', { name: /Тест Тренер/ }).click()
+    await client.getByLabel('Сообщение').fill(text)
+    await client.getByRole('button', { name: 'Отправить' }).click()
+    await expect(client.getByText('Отправлено', { exact: true })).toBeVisible()
+
+    await trainer.getByRole('link', { name: /Сообщения/ }).click()
+    const thread = trainer.getByRole('button', { name: new RegExp(`Анна Смирнова.*${text}`) })
+    await expect(thread).toBeVisible({ timeout: 10_000 })
+    await thread.click()
+    await expect(trainer.getByText(text, { exact: true })).toBeVisible()
+
+    await trainer.getByLabel('Сообщение').fill('Черновик ответа')
+    await trainer.reload()
+    await expect(trainer.getByLabel('Сообщение')).toHaveValue('Черновик ответа')
+  } finally {
+    await Promise.allSettled([trainerContext.close(), clientContext.close()])
+  }
+})
+
 test('client and trainer receive progress and workout changes without reload', async ({ browser }, testInfo) => {
   testInfo.setTimeout(120_000)
   const suffix = `${testInfo.workerIndex}-${Date.now()}`

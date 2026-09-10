@@ -13,6 +13,7 @@ import { YandexAssistantRoute } from '../features/assistant'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 import { AccountDeletionPage, LegalAcceptanceGate, PrivacyPage, TermsPage } from '../features/legal'
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
+import { ChatConversationPage, ChatListPage } from '../features/chat'
 
 function Protected() {
   const { actor, loading, error } = useAuth(); const location = useLocation()
@@ -63,6 +64,8 @@ const router = createBrowserRouter([
   { element: <Protected />, children: [{ element: <AppLayout />, children: [
     { index: true, element: <Home /> },
     { path: '/join', element: <JoinPage /> },
+    { path: '/chat', element: <ChatListPage /> },
+    { path: '/chat/:conversationId', element: <ChatConversationPage /> },
     { element: <ClientOnly />, children: [
       { path: '/me', element: <MyClientPage /> },
       { path: '/me/edit', element: <MyClientEditPage /> },

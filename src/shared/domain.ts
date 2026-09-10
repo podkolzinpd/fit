@@ -14,6 +14,32 @@ export type BlockPreset = 'set' | 'circuit' | 'interval'
 export type AccountRole = 'trainer' | 'client'
 export type TrainerReaction = 'thumbs_up' | 'fire' | 'strong'
 
+export interface ChatThread {
+  conversationId: UUID | null
+  clientId: UUID
+  trainerId: UUID
+  partnerUserId: UUID
+  partnerName: string
+  activeConnection: boolean
+  lastMessageBody: string | null
+  lastMessageAt: string | null
+  lastMessageSenderId: UUID | null
+  unreadCount: number
+}
+
+export interface ChatMessage {
+  id: UUID
+  conversationId: UUID
+  senderId: UUID
+  body: string
+  createdAt: string
+}
+
+export interface ChatMessagePage {
+  messages: ChatMessage[]
+  nextCursor: { createdAt: string; id: UUID } | null
+}
+
 interface SessionActorBase {
   userId: UUID
   role: AccountRole

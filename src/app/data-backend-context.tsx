@@ -1,6 +1,7 @@
 import { createContext, use, useMemo, type PropsWithChildren } from 'react'
 import { appFeedbackRepository } from '../data/repositories/app-feedback.repository'
 import { clientsRepository } from '../data/repositories/clients.repository'
+import { chatRepository } from '../data/repositories/chat.repository'
 import { exercisesRepository } from '../data/repositories/exercises.repository'
 import { goalsRepository } from '../data/repositories/goals.repository'
 import { invitationsRepository } from '../data/repositories/invitations.repository'
@@ -18,6 +19,7 @@ import { useYandexAppSession } from './yandex-app-session-context'
 export interface DataBackend {
   source: 'supabase' | 'yandex'
   clients: typeof clientsRepository
+  chat: typeof chatRepository
   exercises: typeof exercisesRepository
   goals: typeof goalsRepository
   invitations: typeof invitationsRepository
@@ -33,6 +35,7 @@ export interface DataBackend {
 const supabaseDataBackend: DataBackend = {
   source: 'supabase',
   clients: clientsRepository,
+  chat: chatRepository,
   exercises: exercisesRepository,
   goals: goalsRepository,
   invitations: invitationsRepository,

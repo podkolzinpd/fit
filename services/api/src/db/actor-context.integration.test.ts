@@ -3597,6 +3597,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           preferences: {
             workout_reminder: true,
             workout_scheduled: true,
+            chat_message: true,
           },
         })
 
@@ -3630,6 +3631,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           preferences: {
             workout_reminder: false,
             workout_scheduled: true,
+            chat_message: true,
           },
         })
         const otherStatus = await withActorTransaction(
@@ -3642,6 +3644,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           preferences: {
             workout_reminder: true,
             workout_scheduled: true,
+            chat_message: true,
           },
         })
 

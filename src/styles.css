@@ -5795,6 +5795,39 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .public-trainer-page { min-height:100dvh; padding-top:max(20px,env(safe-area-inset-top)); }
 .public-trainer-page .page-header { margin-bottom:0; }
 
+/* YAFIT-490: личные диалоги */
+.today-header-actions { display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+.chat-header-action { position:relative; width:44px; height:44px; display:grid; place-items:center; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); text-decoration:none; }
+.chat-header-action svg { width:22px; height:22px; }
+.chat-unread-badge { position:absolute; top:-5px; right:-5px; min-width:19px; height:19px; display:grid; place-items:center; padding:0 5px; border:2px solid var(--frame-bg); border-radius:var(--radius-pill); background:var(--danger); color:var(--surface); font-size:10px; font-weight:var(--weight-bold); line-height:1; }
+.chat-list-page, .chat-conversation-page { min-height:100%; padding-bottom:max(18px,env(safe-area-inset-bottom)); }
+.chat-thread-list { display:grid; gap:8px; }
+.chat-thread { width:100%; min-height:76px; display:grid; grid-template-columns:48px minmax(0,1fr) auto; align-items:center; gap:12px; padding:12px; border-radius:18px; background:var(--surface-raised); color:var(--fg); text-align:left; }
+.chat-avatar { width:48px; height:48px; display:grid; place-items:center; border-radius:16px; background:var(--surface-sunken); font-size:18px; font-weight:var(--weight-bold); }
+.chat-thread-copy { min-width:0; display:grid; gap:3px; }
+.chat-thread-copy strong, .chat-thread-copy small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chat-thread-copy small { color:var(--muted); font-weight:var(--weight-regular); }
+.chat-thread-copy em { color:var(--muted); font-size:11px; font-style:normal; font-weight:var(--weight-medium); }
+.chat-thread-meta { align-self:stretch; display:flex; flex-direction:column; align-items:flex-end; justify-content:space-between; gap:6px; color:var(--muted); font-size:11px; }
+.chat-thread-meta b { min-width:22px; height:22px; display:grid; place-items:center; padding:0 6px; border-radius:var(--radius-pill); background:var(--accent); color:var(--on-accent); font-size:11px; }
+.chat-conversation-page { height:100%; display:flex; flex-direction:column; padding-bottom:env(safe-area-inset-bottom); }
+.chat-conversation-page > .page-header { flex:0 0 auto; margin-bottom:12px; }
+.chat-surface { min-height:0; flex:1; overflow:auto; display:flex; flex-direction:column; }
+.chat-load-older { align-self:center; }
+.chat-messages { margin-top:auto; display:flex; flex-direction:column; gap:8px; padding:12px 0; }
+.chat-message { width:fit-content; max-width:min(82%,560px); padding:10px 12px 7px; border:1px solid var(--border); border-radius:18px 18px 18px 5px; background:var(--surface-raised); }
+.chat-message.own { align-self:flex-end; border-radius:18px 18px 5px 18px; background:var(--surface-sunken); }
+.chat-message p { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.4; }
+.chat-message small { display:flex; justify-content:flex-end; gap:7px; margin-top:4px; color:var(--muted); font-size:10px; }
+.chat-message > .link { display:block; margin:4px 0 0 auto; padding:2px; font-size:11px; }
+.chat-composer { position:sticky; bottom:0; display:grid; grid-template-columns:minmax(0,1fr) 46px; align-items:end; gap:8px; padding:10px 0 max(10px,env(safe-area-inset-bottom)); background:var(--frame-bg); }
+.chat-composer textarea { min-height:46px; max-height:120px; resize:none; padding:12px 14px; border-radius:17px; background:var(--surface-raised); }
+.chat-send { width:46px; height:46px; display:grid; place-items:center; padding:0; border-radius:15px; background:var(--accent); color:var(--on-accent); }
+.chat-send svg { width:21px; height:21px; }
+.client-trainer-actions { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+.chat-start-wrap { display:grid; gap:2px; }
+.client-detail-message { min-height:44px; margin-bottom:8px; }
+
 @media (max-width:560px) {
   .trainer-professional-editor, .public-trainer-page, .trainer-catalog-page { padding-inline:16px; }
   .trainer-catalog-filters { grid-template-columns:1fr; }
@@ -5805,4 +5838,5 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
   .trainer-profile-actions .primary { grid-column:1 / -1; }
   .trainer-card-facts { grid-template-columns:1fr; }
   .trainer-profile-identity .trainer-profile-form-grid { grid-template-columns:1fr; }
+  .chat-list-page, .chat-conversation-page { padding-inline:16px; }
 }
