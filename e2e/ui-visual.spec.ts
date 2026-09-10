@@ -2064,7 +2064,13 @@ test('best results show several real records and keep the remaining achievements
   await expect(results).toContainText('Новый максимум веса · +5 кг')
   await expect(results).toContainText('Прежний рекорд — 40 кг')
   await expect(results.getByRole('link', { name: 'Открыть тренировку' })).toHaveCount(3)
-  await expect(results).toHaveScreenshot(`best-results-${process.platform}.png`, { animations: 'disabled' })
+  await expect(results).toHaveScreenshot(`best-results-${process.platform}.png`, {
+    animations: 'disabled',
+    // The element can land on a fractional document offset after the summary
+    // above it changes height. Chromium then rounds the same card to one extra
+    // device pixel, without a visible layout change.
+    maxDiffPixelRatio: 0.01,
+  })
   await results.getByText('Ещё достижения · 1', { exact: true }).click()
   await expect(results.getByRole('link', { name: 'Открыть тренировку' })).toHaveCount(4)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)

@@ -1,5 +1,11 @@
 import type { ProgressDetailedAnalysisSection } from './progress-detailed-analysis'
 
+function analysisItem(item: string) {
+  const match = item.match(/^([^:]{2,30}:)\s+(.+)$/u)
+  if (!match) return item
+  return <><strong>{match[1]}</strong> {match[2]}</>
+}
+
 export function ProgressDetailedAnalysis({ sections, compact = false }: { sections: readonly ProgressDetailedAnalysisSection[]; compact?: boolean }) {
   const visibleSections = sections.filter((section) => section.items.length > 0)
   return <div className="progress-detailed-analysis">
@@ -11,7 +17,7 @@ export function ProgressDetailedAnalysis({ sections, compact = false }: { sectio
       aria-labelledby={`progress-detailed-analysis-${section.id}`}
     >
       <h3 id={`progress-detailed-analysis-${section.id}`}>{section.title}</h3>
-      <ul>{section.items.map((item) => <li key={item} data-copy-source="llm">{item}</li>)}</ul>
+      <ul>{section.items.map((item) => <li key={item} data-copy-source="llm">{analysisItem(item)}</li>)}</ul>
     </section>)}
   </div>
 }

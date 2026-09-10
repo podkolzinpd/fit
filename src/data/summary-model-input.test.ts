@@ -68,10 +68,42 @@ describe('buildSummaryModelInput', () => {
         },
       ],
     })
-
     expect(result.exercises.map((exercise) => exercise.name)).toEqual([
       'Жим лёжа',
       'Приседания со штангой',
+    ])
+  })
+})
+
+describe('summary model measurements', () => {
+  it('includes named custom metrics and derives their period change', () => {
+    const measurements = [
+      {
+        id: 'progress-1', recorded_on: '2026-08-11', weight_kg: 80,
+        custom_metrics: [{ metric_id: 'shoulders', name: 'Плечи', unit: 'см', value: 116 }],
+      },
+      {
+        id: 'progress-2', recorded_on: '2026-09-10', weight_kg: 81,
+        custom_metrics: [{ metric_id: 'shoulders', name: 'Плечи', unit: 'см', value: 118 }],
+      },
+    ]
+
+    expect(deriveMeasurementChanges(measurements)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        metric: 'custom', metric_id: 'shoulders', name: 'Плечи', unit: 'см',
+        from: 116, to: 118, change: 2, evidence_points: 2,
+      }),
+    ]))
+
+    const input = buildSummaryModelInput({
+      period: { start: '2026-08-11', end: '2026-09-10' },
+      consistency: { completed_workouts: 1 },
+      exercises: [], goal: null, measurements,
+    })
+
+    expect(input.measurements.recent_entries[0]).not.toHaveProperty('id')
+    expect(input.measurements.recent_entries[1]?.custom_metrics).toEqual([
+      { metric_id: 'shoulders', name: 'Плечи', unit: 'см', value: 118 },
     ])
   })
 })
