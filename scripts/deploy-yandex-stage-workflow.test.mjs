@@ -355,6 +355,8 @@ test('loads synthetic fixtures and verifies every read model through the runtime
     /\/v1\/workouts\/\$live_workout_id\/blocks\/\$appended_block_id\/reorder/,
   )
   assert.match(workflow, /\.block\.version == 8/)
+  assert.match(workflow, /live_set_version=\$\(jq -er/)
+  assert.match(workflow, /expectedVersion: \$expected_version/)
   assert.match(workflow, /\/v1\/workout-sets\/\$live_set_id\/draft/)
   assert.match(workflow, /\.set\.replayed == true/)
   assert.match(workflow, /\/v1\/workout-sets\/\$live_set_id\/confirm/)
