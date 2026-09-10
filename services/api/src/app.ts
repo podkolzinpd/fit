@@ -656,8 +656,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (typeof body !== 'object' || body === null || !('listed' in body) || typeof body.listed !== 'boolean') {
       return reply.code(400).send({ error: 'invalid_request' })
     }
+    const listed = body.listed
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
-    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.setCatalogListing(session, body.listed),
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.setCatalogListing(session, listed),
       (profile) => reply.header('cache-control', 'no-store').send(profile))
   })
 

@@ -148,6 +148,8 @@ describe('trainer professional profile', () => {
 
   it('lists published catalog profiles with validated filters', async () => {
     const pilotTrainerProfiles = profiles()
+    const listPublic = vi.fn().mockResolvedValue([{ ...value, listedInCatalog: true }])
+    pilotTrainerProfiles.listPublic = listPublic
     const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
     const response = await app.inject({
       method: 'GET',
@@ -155,19 +157,21 @@ describe('trainer professional profile', () => {
     })
 
     expect(response.statusCode).toBe(200)
-    expect(pilotTrainerProfiles.listPublic).toHaveBeenCalledWith({
+    expect(listPublic).toHaveBeenCalledWith({
       query: 'Анна', specialty: 'Силовые', city: 'Москва', mode: 'online', acceptingClients: true,
     })
   })
 
   it('lets a trainer opt into the catalog only from a read-write session', async () => {
     const pilotTrainerProfiles = profiles()
+    const setCatalogListing = vi.fn().mockResolvedValue({ ...value, listedInCatalog: true })
+    pilotTrainerProfiles.setCatalogListing = setCatalogListing
     const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
     const headers = { 'x-fit-session': 'a'.repeat(43) }
     const response = await app.inject({ method: 'POST', url: '/v1/trainer-profile/catalog', headers, payload: { listed: true } })
 
     expect(response.statusCode).toBe(200)
-    expect(pilotTrainerProfiles.setCatalogListing).toHaveBeenCalledWith(
+    expect(setCatalogListing).toHaveBeenCalledWith(
       { accessMode: 'read_write', token: 'a'.repeat(43) }, true,
     )
   })
