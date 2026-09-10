@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(49);
 
 select ok(
   exists(select 1 from pg_matviews where schemaname = 'analytics' and matviewname = 'trainer_overview'),
@@ -42,6 +42,10 @@ insert into public.trainers (profile_id, created_at) values
   ('60000000-0000-4000-8000-000000000003', '2026-07-03'),
   ('60000000-0000-4000-8000-000000000004', '2026-07-20'),
   ('60000000-0000-4000-8000-000000000005', '2026-07-21');
+-- Профиль клиента 0009 нужен отдельно (не только auth.users) — он играет
+-- роль self-service актора в регрессионных фикстурах ниже (client_progress.
+-- updated_by/custom_exercises.created_by ссылаются на public.profiles).
+insert into public.profiles (id) values ('60000000-0000-4000-8000-000000000009');
 
 insert into public.clients (id, trainer_id, full_name, gender, age_years, height_cm, created_at) values
   ('61000000-0000-4000-8000-000000000004', '60000000-0000-4000-8000-000000000004', 'Overview Recent', 'female', 29, 168, '2026-07-20');
@@ -87,6 +91,53 @@ insert into public.workout_exercises (workout_id, trainer_id, client_id, positio
   ('63000000-0000-4000-8000-000000000003', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', 0, 'system', 'squat', 'Squat', 'legs', 'strength'),
   ('63000000-0000-4000-8000-000000000003', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', 1, 'system', 'bench_press', 'Bench Press', 'chest', 'strength'),
   ('63000000-0000-4000-8000-000000000004', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', 0, 'system', 'deadlift', 'Deadlift', 'back', 'strength');
+
+-- Активность тренера 1 вне тренировок — по одной фикстуре на каждую новую
+-- категорию. Где у фичи есть self-service путь для клиента (замеры, свои
+-- упражнения), добавляется вторая, более поздняя по времени строка с
+-- актором-клиентом (0009) — она обязана НЕ попасть в total/last_*_at,
+-- иначе фильтр по created_by/updated_by не отличает тренера от клиента.
+insert into public.client_private_details (client_id, trainer_id, note, updated_at) values
+  ('61000000-0000-4000-8000-000000000001', '60000000-0000-4000-8000-000000000001', 'Trainer note', '2026-07-19 00:00:00+00'),
+  ('61000000-0000-4000-8000-000000000002', '60000000-0000-4000-8000-000000000001', null, '2026-07-20 00:00:00+00');
+
+insert into public.client_progress (id, trainer_id, client_id, recorded_on, updated_by, updated_at) values
+  ('64000000-0000-4000-8000-000000000001', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', '2026-07-18', '60000000-0000-4000-8000-000000000001', '2026-07-18 12:00:00+00'),
+  ('64000000-0000-4000-8000-000000000002', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', '2026-07-25', '60000000-0000-4000-8000-000000000009', '2026-07-25 12:00:00+00');
+
+insert into public.custom_exercises (id, trainer_id, created_by, name, muscle_group, input_kind, updated_at) values
+  ('65000000-0000-4000-8000-000000000001', '60000000-0000-4000-8000-000000000001', '60000000-0000-4000-8000-000000000001', 'Trainer Exercise', 'legs', 'reps', '2026-07-18 08:00:00+00'),
+  ('65000000-0000-4000-8000-000000000002', '60000000-0000-4000-8000-000000000001', '60000000-0000-4000-8000-000000000009', 'Client Exercise', 'legs', 'reps', '2026-07-26 08:00:00+00');
+
+insert into public.client_goals (id, client_id, trainer_id, created_by, title, updated_at) values
+  ('66000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', '60000000-0000-4000-8000-000000000001', '60000000-0000-4000-8000-000000000001', 'Goal', '2026-07-19 09:00:00+00');
+
+insert into public.client_training_summaries (
+  id, trainer_id, client_id, period_start, period_end, summary, trainer_summary, client_summary, model_uri, prompt_version, input_fingerprint
+) values (
+  '67000000-0000-4000-8000-000000000001', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001',
+  '2026-07-01', '2026-07-31', 'Progress summary', '{}', '{}', 'gpt://folder/yandexgpt-lite/latest', 'training-summary-v1', 'fingerprint'
+);
+insert into public.client_published_training_summaries (
+  id, source_summary_id, trainer_id, client_id, period_start, period_end, summary, display_metrics, generated_at, published_at, published_by
+) values (
+  '67000000-0000-4000-8000-000000000002', '67000000-0000-4000-8000-000000000001', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001',
+  '2026-07-01', '2026-07-31', '{}', '{}', '2026-07-19 10:00:00+00', '2026-07-19 10:00:00+00', '60000000-0000-4000-8000-000000000001'
+);
+
+insert into public.assistant_conversations (id, owner_id) values
+  ('68000000-0000-4000-8000-000000000001', '60000000-0000-4000-8000-000000000001');
+insert into public.assistant_messages (id, conversation_id, author, content, created_at) values
+  ('69000000-0000-4000-8000-000000000001', '68000000-0000-4000-8000-000000000001', 'user', 'Запиши тренировку', '2026-07-19 11:00:00+00'),
+  ('69000000-0000-4000-8000-000000000002', '68000000-0000-4000-8000-000000000001', 'assistant', 'Готово', '2026-07-19 12:00:00+00');
+
+update auth.users set last_sign_in_at = '2026-07-21 08:00:00+00' where id = '60000000-0000-4000-8000-000000000001';
+
+-- Тренер 5: ключевой регрессионный сценарий всей миграции — активность есть
+-- ТОЛЬКО в одной не-тренировочной категории (ноль клиентов, ноль тренировок),
+-- и это уже обязано поднимать trainer_status до 'active'.
+insert into public.custom_exercises (id, trainer_id, created_by, name, muscle_group, input_kind, updated_at) values
+  ('65000000-0000-4000-8000-000000000005', '60000000-0000-4000-8000-000000000005', '60000000-0000-4000-8000-000000000005', 'Trainer5 Exercise', 'legs', 'reps', now() - interval '1 day');
 
 refresh materialized view analytics.trainer_overview;
 
@@ -185,12 +236,12 @@ select is(
 );
 select is(
   (select days_since_last_activity from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
-  (select floor(extract(epoch from (now() - '2026-07-16 09:00:00+00'::timestamptz)) / 86400)::bigint),
-  'days_since_last_activity is the whole-day difference between refreshed_at and last_workout_at'
+  (select floor(extract(epoch from (now() - '2026-07-20 00:00:00+00'::timestamptz)) / 86400)::bigint),
+  'days_since_last_activity is the whole-day difference between refreshed_at and last_active_at (client_private_details touch is later than last_workout_at here)'
 );
 select is(
   (select trainer_status from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
-  'not_active', 'trainer with last activity from 2026-07-16 is not_active (well over 7 days ago)'
+  'not_active', 'trainer with last activity from 2026-07-20 (last_active_at, not just last_workout_at) is not_active (well over 7 days ago)'
 );
 
 select ok(
@@ -217,6 +268,98 @@ select is(
   (select count(distinct refreshed_at) from analytics.trainer_overview),
   1::bigint,
   'refreshed_at is the same snapshot moment across every row'
+);
+
+-- Детальный breakdown по не-тренировочным категориям для тренера 1 — по
+-- каждой: total считает только строки с актором-тренером (created_by/
+-- updated_by), last_*_at игнорирует более позднюю self-service строку
+-- клиента там, где она есть (progress, custom_exercises) и LLM-реплику
+-- ассистента (author='assistant').
+select is(
+  (select clients_with_notes_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  1::bigint, 'clients_with_notes_total counts only rows with a non-null note'
+);
+select is(
+  (select last_client_notes_at from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  '2026-07-20 00:00:00+00'::timestamptz,
+  'last_client_notes_at is the latest touch on client_private_details regardless of note content'
+);
+select is(
+  (select progress_entries_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  1::bigint, 'progress_entries_total excludes the client self-service entry (updated_by is the client, not the trainer)'
+);
+select is(
+  (select last_progress_entry_at from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  '2026-07-18 12:00:00+00'::timestamptz,
+  'last_progress_entry_at ignores the later client self-service entry'
+);
+select is(
+  (select custom_exercises_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  1::bigint, 'custom_exercises_total excludes the client-authored exercise (created_by is the client, not the trainer)'
+);
+select is(
+  (select last_custom_exercise_at from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  '2026-07-18 08:00:00+00'::timestamptz,
+  'last_custom_exercise_at ignores the later client-authored exercise'
+);
+select is(
+  (select goals_created_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  1::bigint, 'goals_created_total counts goals created by the trainer'
+);
+select is(
+  (select last_goal_activity_at from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  '2026-07-19 09:00:00+00'::timestamptz,
+  'last_goal_activity_at matches the goal update timestamp'
+);
+select is(
+  (select summaries_published_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  1::bigint, 'summaries_published_total counts summaries published by the trainer'
+);
+select is(
+  (select last_summary_published_at from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  '2026-07-19 10:00:00+00'::timestamptz,
+  'last_summary_published_at matches published_at'
+);
+select is(
+  (select assistant_messages_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  1::bigint, 'assistant_messages_total counts only author=user messages, not the assistant reply'
+);
+select is(
+  (select last_assistant_message_at from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  '2026-07-19 11:00:00+00'::timestamptz,
+  'last_assistant_message_at ignores the later assistant-authored reply'
+);
+select is(
+  (select last_sign_in_at from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  '2026-07-21 08:00:00+00'::timestamptz,
+  'last_sign_in_at passes through auth.users.last_sign_in_at'
+);
+select is(
+  (select last_active_at from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  '2026-07-20 00:00:00+00'::timestamptz,
+  'last_active_at is the greatest last-touch across all activity categories (client_private_details wins here), excluding last_sign_in_at'
+);
+select ok(
+  (select last_active_at from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000002') is null,
+  'trainer with zero activity in every category gets a null last_active_at, not a fabricated zero'
+);
+
+select is(
+  (select custom_exercises_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000005'),
+  1::bigint, 'trainer 5 fixture: one trainer-authored custom exercise, zero clients/workouts'
+);
+select ok(
+  (select last_custom_exercise_at from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000005') is not null,
+  'trainer 5 last_custom_exercise_at is set'
+);
+select is(
+  (select last_active_at from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000005'),
+  (select last_custom_exercise_at from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000005'),
+  'trainer 5 last_active_at is driven purely by the non-workout category'
+);
+select is(
+  (select trainer_status from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000005'),
+  'active', 'trainer with zero clients and zero workouts is still active thanks to recent non-workout activity — the core behavior this migration adds'
 );
 
 select * from finish();
