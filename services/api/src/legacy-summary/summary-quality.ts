@@ -134,9 +134,6 @@ export function summaryQualityIssues(
         "Каждый trainer.attention должен начинаться с «Проверить:» или «Уточнить:».",
       )
     }
-    if (!/\d/.test(item)) {
-      issues.push("Каждый trainer.attention должен содержать число из входа.")
-    }
     if (/устал|перенапряж|травм|боль|самочув/i.test(item) && !hasRecoverySignal(trainingData)) {
       issues.push(
         "trainer.attention не должен предполагать усталость, травму или самочувствие без входных данных.",

@@ -318,7 +318,20 @@ function selectExercises(exercises: SummaryExercise[]) {
       session_count: exercise.session_count,
       change_percent: exercise.change_percent,
       best: exercise.best,
-      sessions: exercise.sessions ?? [],
+      sessions: (exercise.sessions ?? []).map((session) => ({
+        date: session.date,
+        set_count: session.set_count,
+        planned_set_count: session.planned_set_count,
+        set_completion_percent: session.set_completion_percent,
+        planned_max_weight_kg: session.planned_max_weight_kg,
+        max_weight_kg: session.max_weight_kg,
+        total_reps: session.total_reps,
+        volume_kg: session.volume_kg,
+        total_duration_min: session.total_duration_min,
+        total_distance_km: session.total_distance_km,
+        pace_min_per_km: session.pace_min_per_km,
+        average_rpe: session.average_rpe,
+      })),
       derived_observations: deriveExerciseObservations(exercise),
     }))
 }
@@ -333,9 +346,11 @@ function coverage(exercises: SummaryExercise[]) {
 }
 
 /**
- * Sends the complete chronological training picture for both periods. Numeric
- * comparisons remain precomputed, while raw plan/fact sets preserve the
- * evidence needed to interpret those comparisons.
+ * Sends every exercise and session from both periods. Individual set rows are
+ * rolled up into the session metrics above: retaining them as well duplicates
+ * the same evidence and can push an otherwise small period into a slow
+ * multi-request model path. input_coverage still records the exact source set
+ * count so the model can distinguish a complete rollup from missing data.
  */
 export function buildSummaryModelInput(
   trainingData: SummaryTrainingData,

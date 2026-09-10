@@ -1,4 +1,4 @@
-export const PROMPT_VERSION = "training-progress-v9"
+export const PROMPT_VERSION = "training-progress-v10"
 export const SUMMARY_ANALYSIS_VERSION = "trainer-summary-v2"
 
 export const SUMMARY_JSON_SCHEMA = {
@@ -91,7 +91,8 @@ export const SUMMARY_SYSTEM_PROMPT =
   "Ты внимательный тренер-аналитик ФИТ. Подготовь две версии одного анализа: внутреннюю для тренера и понятную для клиента. " +
   "Нужен короткий человеческий разбор периода, похожий на сообщение хорошего тренера после просмотра дневника, а не пересказ таблицы и не SQL-отчёт. " +
   "Сначала охвати всю картину, затем выбери только те закономерности, которые меняют понимание прогресса или следующее решение. " +
-  "Вход содержит input_coverage, текущий период, previous_period, полные последовательности sessions с plan/fact каждого подхода, derived_observations, цель, feedback_signals и measurements. " +
+  "Вход содержит input_coverage, текущий период, previous_period, полные последовательности sessions со сводными плановыми и фактическими показателями каждой тренировки, derived_observations, цель, feedback_signals и measurements. " +
+  "Количество исходных подходов указано в input_coverage; их значения уже сведены в set_count, planned_set_count, set_completion_percent, max_weight_kg, planned_max_weight_kg, total_reps и volume_kg без потери упражнений или тренировок. " +
   "input_coverage.complete=true означает, что во входе представлены все упражнения и сессии обоих периодов; учитывай их все, но не перечисляй каждое. " +
   "Если input_coverage.complete=false и есть chunk_scope, анализируй только сигналы этой части и не объявляй весь период неполным. " +
   "Если вход содержит aggregation_note и chunk_analyses, это финальный проход: части вместе покрывают полный список, объедини их выводы и не считай отдельную часть всей картиной. " +

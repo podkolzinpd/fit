@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(28);
+select plan(41);
 
 select ok(
   exists(select 1 from pg_matviews where schemaname = 'analytics' and matviewname = 'client_overview'),
@@ -86,6 +86,30 @@ insert into public.clients (id, trainer_id, auth_user_id, full_name, created_at)
 insert into public.workouts (id, trainer_id, client_id, created_by, updated_by, workout_date, status, updated_at) values
   ('72000000-0000-4000-8000-000000000008', '70000000-0000-4000-8000-000000000006', '71000000-0000-4000-8000-000000000006', '70000000-0000-4000-8000-000000000006', '70000000-0000-4000-8000-000000000006', (now() - interval '2 days')::date, 'planned', now() - interval '2 days');
 
+-- YAFIT-507: новые категории собственной активности, по одной фикстуре
+-- на клиента C (self-registered, trainer_id = auth_user_id = 70...0003),
+-- каждая с датой позже предыдущего максимума (2026-08-09, прогресс) —
+-- проверяет, что каждая категория корректно участвует в greatest() и
+-- последняя по времени (подключение к тренеру) в итоге побеждает.
+insert into public.custom_exercises (id, trainer_id, created_by, name, muscle_group, input_kind, updated_at) values
+  ('74000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', 'Client C Exercise', 'legs', 'reps', '2026-08-10 08:00:00+00');
+insert into public.client_goals (id, client_id, trainer_id, created_by, title, updated_at) values
+  ('75000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', 'Client C Goal', '2026-08-11 08:00:00+00');
+insert into public.workouts (id, trainer_id, client_id, created_by, updated_by, workout_date, status, client_question, client_question_asked_at, updated_at) values
+  ('72000000-0000-4000-8000-000000000009', '70000000-0000-4000-8000-000000000003', '71000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', '2026-08-12', 'planned', 'Сколько отдыхать между подходами?', '2026-08-12 08:00:00+00', '2026-08-12 08:00:00+00');
+insert into public.client_trainer_relationships (client_id, trainer_id, connected_by, connected_at, status) values
+  ('71000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000003', '2026-08-13 08:00:00+00', 'active');
+update auth.users set last_sign_in_at = '2026-08-14 08:00:00+00' where id = '70000000-0000-4000-8000-000000000003';
+
+-- Клиент B: регрессия на partition vs actor для custom_exercises (та же
+-- проблема, что и в trainer_overview YAFIT-500) — обе строки лежат в
+-- партиции тренера 1 (trainer_id), но только created_by = сам клиент B
+-- должен засчитаться. Дата старше уже проверенного last_client_activity_at
+-- клиента B (2026-08-08 12:00), чтобы не задеть тот ассерт.
+insert into public.custom_exercises (id, trainer_id, created_by, name, muscle_group, input_kind, updated_at) values
+  ('74000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', 'Trainer Exercise In Client B Partition', 'legs', 'reps', '2026-08-06 08:00:00+00'),
+  ('74000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000002', 'Client B Own Exercise', 'legs', 'reps', '2026-08-07 09:00:00+00');
+
 refresh materialized view analytics.client_overview;
 
 select is(
@@ -137,8 +161,8 @@ select is(
 );
 select is(
   (select last_client_activity_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
-  '2026-08-09 09:00:00+00'::timestamptz,
-  'last_client_activity_at is greatest() of self-edited workout and progress entry'
+  '2026-08-13 08:00:00+00'::timestamptz,
+  'last_client_activity_at is greatest() across all activity categories; the later trainer-connection fixture (added below) wins over the self-edited workout and progress entry'
 );
 
 select is(
@@ -178,12 +202,12 @@ select is(
 
 select is(
   (select days_since_last_activity from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
-  (select floor(extract(epoch from (now() - '2026-08-09 09:00:00+00'::timestamptz)) / 86400)::bigint),
-  'days_since_last_activity is the whole-day difference between refreshed_at and last_client_activity_at'
+  (select floor(extract(epoch from (now() - '2026-08-13 08:00:00+00'::timestamptz)) / 86400)::bigint),
+  'days_since_last_activity is the whole-day difference between refreshed_at and last_client_activity_at (the trainer-connection event is the latest touch here, not the progress entry)'
 );
 select is(
   (select client_status from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
-  'not_active', 'client with last activity from 2026-08-09 is not_active (well over 7 days ago)'
+  'not_active', 'client with last activity from 2026-08-13 is not_active (well over 7 days ago)'
 );
 
 select ok(
@@ -210,6 +234,69 @@ select is(
   (select count(distinct refreshed_at) from analytics.client_overview),
   1::bigint,
   'refreshed_at is the same snapshot moment across every row'
+);
+
+-- YAFIT-507: детальный breakdown для клиента C и итоговый greatest().
+select is(
+  (select custom_exercises_total from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
+  1::bigint, 'custom_exercises_total counts the client-authored exercise'
+);
+select is(
+  (select last_custom_exercise_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
+  '2026-08-10 08:00:00+00'::timestamptz, 'last_custom_exercise_at matches the exercise updated_at'
+);
+select is(
+  (select goals_created_total from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
+  1::bigint, 'goals_created_total counts the client-authored goal'
+);
+select is(
+  (select last_goal_activity_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
+  '2026-08-11 08:00:00+00'::timestamptz, 'last_goal_activity_at matches the goal updated_at'
+);
+select is(
+  (select questions_asked_total from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
+  1::bigint, 'questions_asked_total counts the workout with a client question'
+);
+select is(
+  (select last_question_asked_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
+  '2026-08-12 08:00:00+00'::timestamptz, 'last_question_asked_at matches client_question_asked_at'
+);
+select is(
+  (select connection_changes_total from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
+  1::bigint, 'connection_changes_total counts the client-initiated connect event'
+);
+select is(
+  (select last_connection_change_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
+  '2026-08-13 08:00:00+00'::timestamptz, 'last_connection_change_at matches connected_at'
+);
+select is(
+  (select last_sign_in_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
+  '2026-08-14 08:00:00+00'::timestamptz, 'last_sign_in_at passes through auth.users.last_sign_in_at, independent of last_client_activity_at'
+);
+select is(
+  (select last_client_activity_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
+  '2026-08-13 08:00:00+00'::timestamptz,
+  'last_client_activity_at is the greatest() across all 6 activity categories (the connection event wins here), excluding last_sign_in_at'
+);
+
+-- Клиент B: partition (trainer_id) не равно актор (created_by) — регрессия
+-- на ту же ошибку, что чинили в trainer_overview (YAFIT-500).
+select is(
+  (select custom_exercises_total from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000002'),
+  1::bigint, 'custom_exercises_total excludes the trainer-authored exercise in the same trainer_id partition'
+);
+select is(
+  (select last_custom_exercise_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000002'),
+  '2026-08-07 09:00:00+00'::timestamptz, 'last_custom_exercise_at ignores the trainer-authored exercise'
+);
+
+-- Клиент D: без auth_user_id новые категории тоже дают ноль/null через
+-- coalesce, не фейково падают в ошибку.
+select is(
+  (select row(custom_exercises_total, goals_created_total, questions_asked_total, connection_changes_total)
+   from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000004'),
+  row(0::bigint, 0::bigint, 0::bigint, 0::bigint),
+  'client without auth_user_id gets all-zero new-category aggregates via coalesce, not null'
 );
 
 select * from finish();
