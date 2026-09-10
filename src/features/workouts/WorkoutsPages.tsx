@@ -37,6 +37,7 @@ import { workoutCountLabel } from './workout-count-label'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
+import { useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { useRpeDisplay } from '../../app/rpe-display'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
@@ -59,6 +60,7 @@ import { liveOperationWithTimeout } from './live-operation-timeout'
 import { workoutFeedbackConfirmation } from './workout-feedback-copy'
 import { clearWorkoutInactivityReminder } from './workout-inactivity-reminder'
 import { useWorkoutInactivityReminder } from './use-workout-inactivity-reminder'
+import { LiveExerciseTechnique } from './LiveExerciseTechnique'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -1438,6 +1440,7 @@ export function LiveWorkoutPage() {
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
   const showRpeByDefault = useRpeDisplay(actor?.userId)
+  const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
   const clientMode = actor?.role === 'client'
   const navigate = useNavigate()
   const location = useLocation()
@@ -1492,6 +1495,9 @@ export function LiveWorkoutPage() {
   const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [techniqueExercise, setTechniqueExercise] = useState<ExerciseSnapshot | null>(null)
+  // Сворачивание относится к конкретному упражнению и живёт до выхода из Live.
+  // ref входит в ключ, поэтому замена упражнения с тем же id раскрывает новое.
+  const [collapsedLiveTechniques, setCollapsedLiveTechniques] = useState<Set<string>>(() => new Set())
   // В обычной тренировке перестановка не нужна постоянно: включается из меню
   // и только тогда показывает стрелки у блоков.
   const [reordering, setReordering] = useState(false)
@@ -1532,6 +1538,23 @@ export function LiveWorkoutPage() {
   function techniqueActionFor(exercise: WorkoutExerciseModel) {
     const meta = catalogExerciseFor(catalog.exercises, exercise)
     return hasExerciseTechnique(meta) ? () => setTechniqueExercise(meta) : undefined
+  }
+  function liveTechniqueFor(exercise: WorkoutExerciseModel, active: boolean) {
+    if (!showLiveExerciseAnimation || !active) return null
+    const meta = catalogExerciseFor(catalog.exercises, exercise)
+    if (!meta || !hasExerciseTechnique(meta)) return null
+    const key = `${exercise.id}:${exercise.source}:${exercise.ref}`
+    return <LiveExerciseTechnique
+      exercise={meta}
+      collapsed={collapsedLiveTechniques.has(key)}
+      onCollapsedChange={(collapsed) => setCollapsedLiveTechniques((current) => {
+        const next = new Set(current)
+        if (collapsed) next.add(key)
+        else next.delete(key)
+        return next
+      })}
+      onOpenTechnique={() => setTechniqueExercise(meta)}
+    />
   }
   useEffect(() => {
     if (!actor?.userId || !query.data) return
@@ -2110,6 +2133,7 @@ export function LiveWorkoutPage() {
             }
             return <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
               <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+              {liveTechniqueFor(exercise, blockStatus === 'current')}
               {clientMode && exercise.trainerComment && <p className="live-trainer-cue">Тренер: {exercise.trainerComment}</p>}
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return <p className="live-previous-result">{line ? `В прошлый раз: ${line}` : 'Нет предыдущего результата'}</p> })()}
               {block.blockType === 'single' && <div className="live-exercise-rest-row"><LiveExerciseRest seconds={restOverrides[exercise.id] ?? exercise.restBetweenSetsSec} onChange={(seconds) => setExerciseRest(exercise.id, seconds)} /></div>}
@@ -2124,6 +2148,9 @@ export function LiveWorkoutPage() {
         // Многоэлементный блок — по кругам, со счётчиком «Круг R из N».
         const rounds = blockRoundsView(block)
         const current = currentRoundIndex(rounds)
+        const activeCircuitSetId = blockStatus === 'current'
+          ? rounds.flatMap((round) => round.items).find(({ set }) => !set.confirmedAt)?.set.id
+          : undefined
         // Счётчик «Круг N из M» + точки закреплены сверху (.live-pinned) для
         // активной круговой; здесь в шапке блока — бейдж, счётчик и стрелки.
         // Точки не дублируем (они в закрепе), но счётчик оставляем как заголовок
@@ -2139,6 +2166,7 @@ export function LiveWorkoutPage() {
             <div className="circuit-round-label">Круг {round.round}</div>
             {round.items.map(({ exercise, set }) => <section key={set.id}>
               <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={roundIndex === 0 ? exerciseMenu(exercise) : undefined} />
+              {liveTechniqueFor(exercise, set.id === activeCircuitSetId)}
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
             </section>)}
           </div> })}
