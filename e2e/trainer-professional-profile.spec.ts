@@ -39,8 +39,14 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
 
   await page.goto('/profile')
   const profileAfterPublish = page.getByRole('region', { name: 'Профессиональная анкета' })
-  const catalogRequest = page.waitForResponse((response) => response.url().includes('/rpc/set_trainer_profile_catalog_listing'))
   const catalogSwitch = profileAfterPublish.getByRole('switch', { name: 'Показывать в каталоге' })
+  if (await catalogSwitch.isChecked()) {
+    const hideFromCatalogRequest = page.waitForResponse((response) => response.url().includes('/rpc/set_trainer_profile_catalog_listing'))
+    await catalogSwitch.click()
+    expect((await hideFromCatalogRequest).status()).toBe(200)
+    await expect(catalogSwitch).not.toBeChecked()
+  }
+  const catalogRequest = page.waitForResponse((response) => response.url().includes('/rpc/set_trainer_profile_catalog_listing'))
   await catalogSwitch.click()
   expect((await catalogRequest).status()).toBe(200)
   await expect(catalogSwitch).toBeChecked()
