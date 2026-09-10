@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(14);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('47000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'chronicle-trainer@example.test', ''),
@@ -71,7 +71,7 @@ select results_eq(
   $$select id, has_pr from public.list_workouts(
       null, null, '47000000-0000-4000-8000-000000000004', 2, 2
     )$$,
-  $$values ('47000000-0000-4000-8000-000000000010'::uuid, true)$$,
+  $$values ('47000000-0000-4000-8000-000000000010'::uuid, false)$$,
   'offset page loads the older chronicle without rereading the first page'
 );
 select results_eq(
@@ -145,5 +145,7 @@ select ok(
   'anon has no execute grant for PR details'
 );
 
+select set_config('request.jwt.claim.sub', '47000000-0000-4000-8000-000000000001', true);
+select is((select count(*) from public.list_workout_personal_records('47000000-0000-4000-8000-000000000010')), 0::bigint, 'first workout has no personal record details');
 select * from finish();
 rollback;

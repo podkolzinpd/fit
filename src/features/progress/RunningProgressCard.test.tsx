@@ -52,6 +52,16 @@ describe('RunningProgressCard', () => {
     expect(repository.running).toHaveBeenCalledTimes(2)
   })
 
+  it('follows the shared progress period and keeps an empty running section stable', async () => {
+    repository.running.mockResolvedValue([])
+    render(<RunningProgressCard clientId="client-1" periodMonths={3} keepVisible />, { wrapper: wrapper() })
+
+    expect(await screen.findByText('За этот период пробежек нет.')).toBeVisible()
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+    expect(repository.running).toHaveBeenCalledOnce()
+    expect(repository.running.mock.calls[0]?.[1]).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
   it('uses one compact navigation row on the trainer overview', async () => {
     repository.running.mockResolvedValue([
       { workoutId: 'w1', workoutDate: localDate('2026-08-01'), format: 'easy', distanceKm: 5, durationSec: 1800, paceSecPerKm: 360 },

@@ -14,6 +14,8 @@ import type {
   SessionActor,
   TrainerAttentionWorkout,
   TrainerMembership,
+  TrainerCatalogFilters,
+  TrainerProfileDraft,
   Workout,
   WorkoutDraft,
   WorkoutPersonalRecord,
@@ -37,6 +39,7 @@ import {
   trainingSummaryFromRow,
 } from './training-summaries.repository'
 import { yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pilot.repository'
+import { trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
 
 const uuid = z.uuid()
 const clientSchema = z.object({
@@ -343,6 +346,7 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
       restBetweenRoundsSec: exercise.restBetweenRoundsSec,
       restBetweenSetsSec: exercise.restBetweenSetsSec,
       trainerComment: exercise.trainerComment ?? undefined,
+      clientNote: exercise.clientNote ?? undefined,
       sets: exercise.sets.map((set) => ({
         id: set.id,
         position: set.position,
@@ -564,6 +568,33 @@ export function createYandexMainRepository(
 
   return {
     source: 'yandex',
+    trainerProfiles: {
+      async getOwn() {
+        return readJson(queries, '/v1/trainer-profile', trainerProfessionalProfileSchema.nullable())
+      },
+      async saveDraft(draft: TrainerProfileDraft) {
+        return writeJson(queries, '/v1/trainer-profile', 'PUT', draft, trainerProfessionalProfileSchema)
+      },
+      async publish() {
+        return writeJson(queries, '/v1/trainer-profile/publish', 'POST', {}, trainerProfessionalProfileSchema)
+      },
+      async unpublish() {
+        return writeJson(queries, '/v1/trainer-profile/unpublish', 'POST', {}, trainerProfessionalProfileSchema)
+      },
+      async setCatalogListing(listed: boolean) {
+        return writeJson(queries, '/v1/trainer-profile/catalog', 'POST', { listed }, trainerProfessionalProfileSchema)
+      },
+      async listCatalog(filters: TrainerCatalogFilters) {
+        const params = new URLSearchParams()
+        if (filters.query) params.set('query', filters.query)
+        if (filters.specialty) params.set('specialty', filters.specialty)
+        if (filters.city) params.set('city', filters.city)
+        if (filters.mode) params.set('mode', filters.mode)
+        if (filters.acceptingClients !== null) params.set('accepting', String(filters.acceptingClients))
+        const suffix = params.size > 0 ? `?${params.toString()}` : ''
+        return readJson(queries, `/v1/trainers/catalog${suffix}`, z.array(trainerProfessionalProfileSchema))
+      },
+    },
     clients: {
       async getMine() {
         if (actor.kind !== 'client') return null
@@ -935,11 +966,16 @@ export function createYandexMainRepository(
         const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
         const payload = await readJson(queries, '/v1/push-notifications/status', z.object({ status: z.object({ subscribed: z.boolean(), preferences: z.object({ workout_reminder: z.boolean(), workout_scheduled: z.boolean() }) }) }))
         const state = await reconcilePushSubscription(vapidPublicKey, {
-          // Yandex-пилот пока не различает устройства на сервере (см.
-          // YAFIT-473 — мульти-device сделан только для Supabase-трека), так
-          // что «есть ли подписка на сервере» — тот же whole-user флаг, что и
-          // раньше, а не проверка конкретного endpoint.
-          hasServerSubscription: () => Promise.resolve(payload.status.subscribed),
+          hasServerSubscription: async (endpoint) => {
+            const result = await writeJson(
+              queries,
+              '/v1/push-notifications/subscription/status',
+              'POST',
+              { endpoint },
+              z.object({ subscribed: z.boolean() }),
+            )
+            return result.subscribed
+          },
           saveSubscription: async (subscription) => {
             await writeEmpty(queries, '/v1/push-notifications/subscription', 'PUT', subscription)
           },
@@ -959,8 +995,14 @@ export function createYandexMainRepository(
       },
       async disable() {
         await writeEmpty(queries, '/v1/push-notifications/preferences/workout_reminder', 'PUT', { enabled: false })
-        await unsubscribeFromPush()
-        await writeEmpty(queries, '/v1/push-notifications/subscription', 'DELETE')
+        const unsubscribed = await unsubscribeFromPush()
+        if (unsubscribed === null) return
+        await writeEmpty(
+          queries,
+          '/v1/push-notifications/subscription',
+          'DELETE',
+          { endpoint: unsubscribed.endpoint },
+        )
       },
       async setCategoryEnabled(_userId, kind, enabled) {
         await writeEmpty(queries, `/v1/push-notifications/preferences/${kind}`, 'PUT', { enabled })

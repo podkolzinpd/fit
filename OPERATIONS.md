@@ -95,6 +95,19 @@ Supabase для hosted PostgreSQL. Системного CA bundle для Supavis
 target вызывается только через private `fit-stage-migration` с короткоживущим
 GitHub OIDC → Yandex IAM token.
 
+Поле `tenant_selection` управляет только выбором cohort-а:
+
+- `configured` использует `FIT_TENANT_TRAINER_ID` и остаётся единственным
+  допустимым вариантом для `apply`;
+- `smallest-eligible` доступен только для `audit` и `dry-run`. Он читает
+  trainer UUID с клиентами, начиная с самого маленького cohort-а, пропускает
+  кандидатов, не прошедших обычный tenant preflight, и не выводит найденный
+  UUID. Если подходящего изолированного cohort-а нет, workflow завершается с
+  `candidate_not_found`.
+
+Автовыбор нужен только для безопасной репетиции на реальных объёмах. Он не
+фиксирует tenant для cutover и намеренно запрещён для записи в stage.
+
 Режимы выполняются последовательно:
 
 - `audit` — одна `REPEATABLE READ READ ONLY` транзакция в Supabase; показывает
@@ -104,6 +117,10 @@ GitHub OIDC → Yandex IAM token.
 - `apply` — сначала выполняет dry-run, затем commit и обязательный повторный
   apply, который должен вставить ноль строк. Требует точное отдельное значение
   `APPLY_TENANT_TO_YANDEX_STAGE`.
+
+При отклонении target с `409` orchestration принимает и выводит только узкий
+`tenant_migration_rejected` code, прошедший allowlist-проверку символов. Полное
+тело ответа, значения строк и database error message в Actions logs не попадают.
 
 Artifact не записывается в GitHub Artifacts, workspace или Object Storage.
 Размер запроса ограничен 3 МиБ; превышение останавливает workflow после
@@ -145,10 +162,11 @@ GitHub outputs/env, логи или Terraform state. Dispatcher получает
 `analytics.trainer_overview`, `analytics.client_overview` и
 `analytics.app_feedback`. Для текущего небольшого объёма данных это обычные
 PostgreSQL views: отдельный refresh и `pg_cron` не нужны, поэтому включение
-views не перезапускает кластер. Существующий DataLens настроен в другом Yandex
-Cloud, поэтому stage сохраняет `data_lens=false` и не создаёт отдельного
-пользователя DataLens. Подключение, пользователь и перенос дашбордов являются
-отдельным отложенным шагом; сами views остаются готовы в PostgreSQL.
+views не перезапускает кластер. Stage сохраняет уже включённый управляемый
+Yandex Cloud путь доступа DataLens (`data_lens=true`), чтобы Terraform не
+отключал живую настройку. Отдельный пользователь и подключение DataLens не
+создаются, а перенос существующих дашбордов из другого Yandex Cloud остаётся
+отложенным шагом; сами views готовы в PostgreSQL.
 
 Telegram и Tracker не создают новый container или timer. Уже существующий
 private `fit-stage-push-dispatcher` раз в минуту забирает ограниченную lease-

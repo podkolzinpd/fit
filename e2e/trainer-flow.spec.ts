@@ -247,30 +247,20 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer')).toBeVisible()
+  await page.keyboard.press('Escape')
   // Крупный таймер тренировки по центру над подходами, идущий от старта (мм:сс).
   await expect(page.locator('.live-timer')).toContainText(/\d\d:\d\d/)
   await expect(page.locator('.live-session-header .workout-status')).toHaveCount(1)
   await expect(page.locator('.live-exercise-head .workout-status')).toHaveCount(0)
   await expect(page.locator('.live-timer')).not.toHaveClass(/resting/)
   const neutralTimerBackground = await page.locator('.live-timer').evaluate((element) => getComputedStyle(element).backgroundColor)
-  // Текущий подход раскрыт для ввода, следующий — компактной строкой.
+  // Все подходы активного упражнения имеют стабильную геометрию и прямой ввод.
   await expect(page.locator('.live-set-table')).toHaveCount(1)
-  await expect(page.locator('.live-set-table > .live-set')).toHaveCount(1)
-  await expect(page.locator('.live-set-table > .live-set-compact')).toHaveCount(1)
-  const compactInputAction = page.getByRole('button', { name: 'Заполнить подход 2' })
-  await expect(compactInputAction).toBeVisible()
-  await expect(compactInputAction).toContainText('План 35 кг × 12 повт.')
-  await expect(compactInputAction).toContainText('Заполнить')
-  const compactActionStyle = await compactInputAction.evaluate((element) => {
-    const style = getComputedStyle(element)
-    const box = element.getBoundingClientRect()
-    return { backgroundColor: style.backgroundColor, color: style.color, height: box.height, width: box.width }
-  })
-  expect(compactActionStyle.backgroundColor).toBe('rgba(0, 0, 0, 0)')
-  const liveForeground = await page.locator('.phone-frame').evaluate((element) => getComputedStyle(element).color)
-  expect(compactActionStyle.color).toBe(liveForeground)
-  expect(compactActionStyle.height).toBeGreaterThanOrEqual(44)
-  expect(compactActionStyle.width).toBeGreaterThan(200)
+  await expect(page.locator('.live-set-table > .live-set')).toHaveCount(2)
+  await expect(page.getByRole('button', { name: /Заполнить подход/ })).toHaveCount(0)
+  await expect(page.getByLabel('Фактический вес').nth(1)).toHaveValue('35')
+  const secondRowBefore = await page.locator('.live-set').nth(1).boundingBox()
   const addSetBackground = await page.getByRole('button', { name: '＋ Подход' }).evaluate((element) => getComputedStyle(element).backgroundColor)
   expect(addSetBackground).toBe('rgba(0, 0, 0, 0)')
   // Факт сразу начинается с плановых значений; тренер правит число напрямую.
@@ -283,19 +273,22 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toBeVisible()
   // Подтверждённый подход становится компактной строкой с зафиксированным фактом.
-  await expect(page.locator('.live-set-compact.confirmed')).toContainText('42.5 кг')
-  await expect(page.getByText(/Отдых 1:30/)).toBeVisible()
-  await expect(page.locator('.live-timer')).toHaveClass(/resting/)
-  await expect.poll(() => page.locator('.live-timer').evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe(neutralTimerBackground)
+  await expect(page.locator('.live-set.confirmed').getByLabel('Фактический вес')).toHaveValue('42.5')
+  await expect(page.locator('.live-rest-trigger')).toContainText(/Отдых 1:(30|29)/)
+  await expect(page.locator('.live-timer')).not.toHaveClass(/resting/)
+  expect(await page.locator('.live-timer').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(neutralTimerBackground)
+  expect((await page.locator('.live-set').nth(1).boundingBox())!.height).toBe(secondRowBefore!.height)
   // Отдых считается от абсолютного времени: через ~2 с значение должно уменьшиться.
-  await expect(page.getByText(/Отдых 1:2\d/)).toBeVisible({ timeout: 4000 })
+  await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых 1:2\d/ })).toBeVisible({ timeout: 4000 })
   // Дедлайн переживает reload: тренер может вернуться к live после перехода
   // или перезагрузки WebView, не теряя текущий отдых.
   await page.reload()
-  await expect(page.getByText(/Отдых 1:2\d/)).toBeVisible()
+  await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых 1:2\d/ })).toBeVisible()
   // Кнопка +15с продлевает текущий отдых.
+  if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click()
   await page.getByRole('button', { name: 'Плюс 15 секунд' }).click()
-  await expect(page.getByText(/Отдых 1:3\d/)).toBeVisible()
+  await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых 1:3\d/ })).toBeVisible()
+  if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click()
   await page.getByRole('button', { name: 'Пропустить' }).click()
   await page.getByRole('button', { name: '＋ Подход' }).click()
   // Дождаться, пока добавленный подход подтянется (refetch завершён и version
@@ -303,10 +296,11 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.live-set-number', { hasText: '3' })).toBeVisible()
   // Быстрый переход к третьему подходу не теряет введённый факт второго:
   // строка сворачивается, но показывает только что сохранённые числа.
-  await page.getByLabel('Фактический вес').first().fill('37.5')
-  await page.getByLabel('Фактические повторы').first().fill('11')
-  await page.getByRole('button', { name: 'Заполнить подход 3' }).click()
-  await expect(page.locator('.live-set-compact.upcoming')).toContainText('Введено 37.5 кг × 11 повт.')
+  await page.getByLabel('Фактический вес').nth(1).fill('37.5')
+  await page.getByLabel('Фактические повторы').nth(1).fill('11')
+  await page.getByLabel('Фактический вес').nth(2).focus()
+  await expect(page.getByLabel('Фактический вес').nth(1)).toHaveValue('37.5')
+  await expect(page.getByLabel('Фактические повторы').nth(1)).toHaveValue('11')
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Берпи')
   await page.getByRole('button', { name: /^Добавить: Берпи/ }).click()
@@ -383,9 +377,10 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.locator('.cards .card').first()).toContainText('Болгарский сплит-присед')
   await expect(page.locator('.cards .card').first()).toContainText('45 кг × 9 повт.')
   const personalRecordCard = page.locator('.cards .card').first()
-  await expect(personalRecordCard).toHaveClass(/has-pr/)
-  await expect(personalRecordCard.locator('.workout-pr-badge')).toHaveText('Личный рекорд')
-  await expect(personalRecordCard.locator('[data-icon="record"]')).toBeVisible()
+  // Первая тренировка после правки остаётся точкой отсчёта, не новым PR.
+  await expect(personalRecordCard).not.toHaveClass(/has-pr/)
+  await expect(personalRecordCard.locator('.workout-pr-badge')).toHaveCount(0)
+  await expect(personalRecordCard.locator('[data-icon="record"]')).toHaveCount(0)
   // Только исправленный подтверждённый подход: 45 × 9 = 405 кг.
   await expect(page.locator('.card-meta').first()).toContainText('405 кг')
   await page.locator('.card').first().click()
@@ -455,6 +450,8 @@ test('live: планка вводится в секундах, таймер за
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer')).toBeVisible()
+  await page.keyboard.press('Escape')
   await expect(page.locator('.live-set-table-head')).toContainText('Сек.')
   await expect(page.locator('.live-set-table-head')).not.toContainText('Кг')
   await expect(page.locator('.live-timer')).toContainText(/\d\d:\d\d/)
@@ -547,6 +544,8 @@ test('live: порядок упражнений меняется в отдель
 
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.live-timer')).toBeVisible()
   // В live рабочей остаётся только текущая карточка. Будущее упражнение —
   // компактный ориентир: название, ближайший план, число подходов и меню,
   // без таблицы подходов и RPE.
@@ -618,6 +617,8 @@ test('замена упражнения: в форме плана и в live', a
   // Live: заменяем нетронутое упражнение на «Тяга верхнего блока».
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.live-timer')).toBeVisible()
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим штанги лёжа')
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
   await page.getByRole('menuitem', { name: 'Заменить' }).click()
@@ -653,17 +654,17 @@ test('карточка упражнения: шапка с оборудован�
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await selectClient(page, 'Карточка Клиент')
   await expect(page.locator('.workout-notes summary')).toBeVisible()
-  // Импортированное упражнение с картинкой/оборудованием/мышцами.
+  // Упражнение с публичной Vital-анимацией, оборудованием и мышцами.
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
-  await page.getByLabel('Поиск упражнения').fill('тяга штанги в наклоне (штанга)')
-  await page.locator('.picker-item').filter({ hasText: 'Тяга штанги в наклоне' }).first().locator('.picker-select-mark').click()
+  await page.getByLabel('Поиск упражнения').fill('румынская тяга (штанга)')
+  await page.locator('.picker-item').filter({ hasText: 'Румынская тяга' }).first().locator('.picker-select-mark').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   // Открываем карточку упражнения через отдельное действие «История».
-  await page.getByRole('link', { name: /Тяга штанги в наклоне/ }).first().click()
+  await page.getByRole('link', { name: /Румынская тяга/ }).first().click()
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   // Шапка: оборудование и группы мышц из каталога.
   const detailExerciseImage = page.locator('.exercise-image-detail')
@@ -680,17 +681,15 @@ test('карточка упражнения: шапка с оборудован�
   await expect(page.getByRole('tab', { name: 'Статистика' })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('tab', { name: 'Техника' }).click()
   await expect(page.getByRole('tab', { name: 'Техника' })).toHaveAttribute('aria-selected', 'true')
-  // Каталог остаётся статичным, а второй кадр загружается только в крупной
-  // демонстрации техники.
+  // Каталог остаётся статичным, а крупная техника использует новую анимацию.
   const techniqueImage = page.locator('.exercise-image-technique')
-  await expect(techniqueImage.locator('img')).toHaveCount(2)
+  await expect(techniqueImage.locator('img')).toHaveCount(1)
+  await expect(techniqueImage.locator('video')).toHaveCount(1)
   await expect(techniqueImage.locator('img').first()).toHaveCSS('position', 'absolute')
   await expect(techniqueImage.locator('img').first()).toHaveCSS('object-fit', 'contain')
-  await expect(techniqueImage).toHaveClass(/exercise-image-motion/)
-  await expect(techniqueImage.locator('.exercise-image-frame-end')).not.toHaveCSS('animation-name', 'none')
+  await expect(techniqueImage.locator('img')).not.toHaveAttribute('src', /\/exercises\/(?:fedb-|base-)/)
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await expect(techniqueImage.locator('.exercise-image-frame-end')).toHaveCSS('animation-name', 'none')
-  await expect(techniqueImage.locator('.exercise-image-frame-end')).toHaveCSS('opacity', '0')
+  await expect(page.getByRole('button', { name: /Запустить анимацию/ })).toBeVisible()
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   const techniqueImageBox = await techniqueImage.boundingBox()
   if (techniqueImageBox === null) throw new Error('Technique image is not visible')
@@ -766,17 +765,19 @@ test('план: два упражнения объединяются в супе
   // текущий круг; отдых — после завершения круга (последнего упражнения круга).
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.live-timer')).toBeVisible()
   // Счётчик круга закреплён с таймером (.live-pinned) и продублирован в шапке
   // блока — проверяем закреплённый (всегда виден при скролле по кругам).
   await expect(page.locator('.live-pinned .circuit-counter')).toHaveText('Круг 1 из 2')
   // Первое упражнение круга 1 — отдых НЕ запускается (круг ещё не завершён).
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toHaveCount(1)
-  await expect(page.getByText(/Отдых/)).toHaveCount(0)
+  await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых/ })).toHaveCount(0)
   // Второе (последнее) упражнение круга 1 — круг завершён, отдых запускается,
   // счётчик переключается на «Круг 2 из 2».
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
-  await expect(page.getByText(/Отдых/)).toBeVisible()
+  await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых/ })).toBeVisible()
   await expect(page.locator('.live-pinned .circuit-counter')).toHaveText('Круг 2 из 2')
   // Подсветка: круг 1 закрыт (зелёный, done), круг 2 в работе (серый, current).
   await expect(page.locator('.circuit-round').nth(0)).toHaveClass(/done/)
@@ -784,6 +785,7 @@ test('план: два упражнения объединяются в супе
 
   // Круг 2: упр.A → отдыха нет; упр.B — последнее упражнение последнего круга,
   // блок завершён → отдых НЕ запускается (регресс: раньше запускался лишний).
+  if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click()
   await page.getByRole('button', { name: 'Пропустить' }).click()
   // Берём кнопки именно из текущего круга. На странице остаются disabled-кнопки
   // уже завершённого круга, поэтому глобальный `.first()` иногда выбирал их,
@@ -795,7 +797,7 @@ test('план: два упражнения объединяются в супе
   await currentRoundConfirm.first().click()
   await expect(currentRoundConfirm.last()).toBeEnabled()
   await currentRoundConfirm.last().click()
-  await expect(page.getByText(/Отдых/)).toHaveCount(0)
+  await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых/ })).toHaveCount(0)
 })
 
 test('profile Cancel resets unsaved edits', async ({ page }) => {
@@ -809,7 +811,7 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   // Прямой переход исключает зависимость настройки профиля от структуры навигации.
   await page.goto('/profile')
   await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
-  const firstName = page.getByLabel('Имя')
+  const firstName = page.getByLabel('Имя', { exact: true })
   const original = await firstName.inputValue()
   await firstName.fill('Черновик Который Отменим')
   await page.getByRole('button', { name: 'Отмена' }).click()
@@ -1055,12 +1057,14 @@ test('комментарий тренера к упражнению: план �
   // остаётся доступен для правки.
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.live-timer')).toBeVisible()
   const liveNote = page.locator('.live-exercise-note').first()
   await expect(liveNote.locator('summary')).toContainText('Заметка тренера')
   await expect(liveNote).not.toHaveAttribute('open')
-  await expect(page.getByLabel(/Комментарий: Присед/)).not.toBeVisible()
+  await expect(page.getByLabel(/Заметка: Присед/)).not.toBeVisible()
   await liveNote.locator('summary').click()
-  await expect(page.getByLabel(/Комментарий: Присед/)).toBeVisible()
+  await expect(page.getByLabel(/Заметка: Присед/)).toBeVisible()
   await page.getByLabel('Фактический вес').first().fill('92.5')
   await page.getByLabel('Фактические повторы').first().fill('8')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
@@ -1122,6 +1126,8 @@ test('live: удаление подхода и наследование факт
 
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.live-timer')).toBeVisible()
 
   // Подтверждаем факт 92.5×8.
   await page.getByLabel('Фактический вес').first().fill('92.5')
@@ -1133,13 +1139,16 @@ test('live: удаление подхода и наследование факт
   // Правка подтверждённого подхода: 100×10 — значение должно сохраниться на экране.
   await page.getByRole('button', { name: 'Редактировать подход' }).first().click()
   await page.getByLabel('Фактический вес').first().fill('100')
+  await page.waitForTimeout(1000)
+  await expect(page.getByLabel('Фактический вес').first()).toBeFocused()
   await page.getByLabel('Фактические повторы').first().fill('10')
   await page.getByRole('button', { name: 'Сохранить' }).first().click()
   await page.locator('.live-exercise-collapsed').click()
-  await expect(page.locator('.live-set-compact.confirmed')).toContainText('100 кг')
+  await expect(page.locator('.live-set.confirmed').getByLabel('Фактический вес')).toHaveValue('100')
   await page.reload()
   await page.locator('.live-exercise-collapsed').click()
-  await expect(page.locator('.live-set-compact.confirmed')).toContainText('100 кг × 10 повт.')
+  await expect(page.locator('.live-set.confirmed').getByLabel('Фактический вес')).toHaveValue('100')
+  await expect(page.locator('.live-set.confirmed').getByLabel('Фактические повторы')).toHaveValue('10')
 
   // Параллельная правка возвращает бизнес-конфликт: live перечитывает сервер,
   // объясняет результат и не делает blind overwrite. Повтор уже с новой
@@ -1160,25 +1169,29 @@ test('live: удаление подхода и наследование факт
   await page.unroute('**/rest/v1/rpc/append_live_set')
 
   // Добавленный подход наследует факт (100), а не план (90).
-  await expect(page.getByLabel('Фактический вес').first()).toHaveValue('100')
+  const pendingWeight = page.locator('.live-set:not(.confirmed)').getByLabel('Фактический вес')
+  await expect(pendingWeight).toHaveValue('100')
 
   // Если ответ autosave потерялся из-за сети, введённый факт остаётся на
-  // устройстве и восстанавливается после reload для безопасного повтора.
+  // устройстве и досылается после online без reload.
   await page.route('**/rest/v1/rpc/save_live_set_draft', (route) => route.abort('failed'))
-  await page.getByLabel('Фактический вес').first().fill('105')
+  await pendingWeight.fill('105')
   await page.locator('.live-timer').click()
-  await expect(page.locator('.error').filter({ hasText: 'Ответ сервера не получен' })).toBeVisible()
+  await expect(page.getByText('Результаты сохранены на телефоне')).toBeVisible()
   await page.unroute('**/rest/v1/rpc/save_live_set_draft')
+  await page.evaluate(() => window.dispatchEvent(new Event('online')))
+  await expect(page.getByText('Результаты сохранены на телефоне')).toHaveCount(0)
   await page.reload()
-  await expect(page.getByText(/Восстановили несохранённые данные/)).toBeVisible()
-  await expect(page.getByLabel('Фактический вес').first()).toHaveValue('105')
+  await expect(pendingWeight).toHaveValue('105')
 
   // Удаляем добавленный подход — остаётся один. Подтверждаем через in-app
   // confirm (useConfirm), а не нативный window.confirm.
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
   await page.getByRole('menuitem', { name: 'Удалить подход' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click()
-  await expect(page.locator('.exercise')).toHaveCount(1)
+  await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
+  await page.locator('.live-exercise-collapsed').click()
+  await expect(page.locator('.live-set')).toHaveCount(1)
 })
 
 test('live: «Готово» без ввода факта — подход считается выполненным по плану', async ({ page }) => {
@@ -1209,6 +1222,8 @@ test('live: «Готово» без ввода факта — подход сч�
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer')).toBeVisible()
+  await page.keyboard.press('Escape')
   await expect(page.locator('.live-timer')).toBeVisible()
   // Не вводим факт — сразу «Готово»: план должен стать фактом.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()

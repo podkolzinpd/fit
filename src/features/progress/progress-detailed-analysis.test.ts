@@ -34,7 +34,39 @@ const publishedSummary: PublishedTrainingSummary = {
 }
 
 describe('buildProgressDetailedAnalysis', () => {
-  it('builds the three client sections from safe, grounded LLM copy', () => {
+  it('shows the whole-period analysis as four decision-oriented answers', () => {
+    const sections = buildProgressDetailedAnalysis({
+      summary: {
+        ...publishedSummary,
+        summary: {
+          headline: 'Рост нагрузки пока подтверждён отдельными сильными тренировками, а не устойчивой серией.',
+          achievements: ['Вес в тяге вырос с 50 до 68 кг без сокращения числа подходов.'],
+          consistency: 'За период выполнено 6 тренировок.',
+          encouragement: 'Сильные точки уже есть, теперь важна их повторяемость.',
+          goalAlignment: 'До цели 70 кг остался один небольшой шаг, но результат ещё стоит закрепить.',
+          nextSteps: ['На следующей тяге повторить 68 кг с тем же числом подходов.'],
+          missingContext: ['Не хватает оценки тяжести последней тренировки.'],
+          analysisVersion: 'whole-period-v1',
+        },
+      },
+      role: 'client',
+      goalTitle: 'Увеличить рабочий вес в тяге до 70 кг',
+      visibleTexts: [],
+    })
+
+    expect(sections.map((section) => section.title)).toEqual([
+      'Движение к цели',
+      'Что заметил ИИ',
+      'Что делать дальше',
+      'Чего не хватает',
+    ])
+    expect(sections[0]?.items[0]).toContain('До цели 70 кг')
+    expect(sections[1]?.items).toHaveLength(2)
+    expect(sections[2]?.items).toEqual(['На следующей тяге повторить 68 кг с тем же числом подходов.'])
+    expect(sections[3]?.items).toEqual(['Не хватает оценки тяжести последней тренировки.'])
+  })
+
+  it('builds the coaching story from safe, grounded LLM copy', () => {
     const sections = buildProgressDetailedAnalysis({
       summary: publishedSummary,
       role: 'client',
@@ -43,14 +75,16 @@ describe('buildProgressDetailedAnalysis', () => {
     })
 
     expect(sections.map((section) => section.title)).toEqual([
-      'Результат периода',
-      'Связь с целью',
-      'На что обратить внимание',
+      'Главное сейчас',
+      'Почему',
+      'На следующей тренировке',
     ])
     expect(sections[0]?.items).toEqual(['Тяга верхнего блока: рабочий вес вырос с 50 до 68 кг.'])
-    expect(sections[1]?.items).toEqual(['Рабочий вес приблизился к цели 70 кг.'])
-    expect(sections[2]?.items).toEqual([
+    expect(sections[1]?.items).toEqual([
+      'Рабочий вес приблизился к цели 70 кг.',
       'Тяга верхнего блока выполнена в 3 тренировках без длинных пауз.',
+    ])
+    expect(sections[2]?.items).toEqual([
       'Самая длинная пауза между тренировками составила 5 дней.',
     ])
     expect(sections.flatMap((section) => section.items).join(' ')).not.toMatch(/тренер|риск/iu)
@@ -70,7 +104,7 @@ describe('buildProgressDetailedAnalysis', () => {
     })
 
     expect(sections.every((section) => section.items.length === 0)).toBe(true)
-    expect(sections[0]?.emptyMessage).toBe('Все подтверждённые результаты уже показаны в карточках выше.')
+    expect(sections[0]?.emptyMessage).toBe('Нового вывода сверх показанных результатов пока нет.')
   })
 
   it('removes a semantic repeat without requiring the exact same wording', () => {
@@ -87,9 +121,7 @@ describe('buildProgressDetailedAnalysis', () => {
       visibleTexts: ['Продолжать текущий ритм тренировок.'],
     })
 
-    expect(sections[2]?.items).toEqual([
-      'Тяга верхнего блока выполнена в 3 тренировках без длинных пауз.',
-    ])
+    expect(sections[2]?.items).toEqual([])
   })
 
   it('does not duplicate private trainer attention in detailed analysis', () => {
@@ -114,6 +146,32 @@ describe('buildProgressDetailedAnalysis', () => {
     })
 
     expect(sections.flatMap((section) => section.items).join(' ')).not.toContain('Внутренний риск')
-    expect(sections[1]?.emptyMessage).toBe('Цель не настроена, поэтому отдельная интерпретация не добавлена.')
+    expect(sections[1]?.emptyMessage).toBe('Дополнительных подтверждений сверх карточек выше пока нет.')
+  })
+
+  it('accepts a body-measurement conclusion only when its numbers are grounded', () => {
+    const measurementSummary: PublishedTrainingSummary = {
+      ...publishedSummary,
+      summary: {
+        ...publishedSummary.summary,
+        headline: 'Талия уменьшилась с 91 до 88 см за период.',
+      },
+    }
+
+    const grounded = buildProgressDetailedAnalysis({
+      summary: measurementSummary,
+      role: 'client',
+      goalTitle: 'Снизить объём талии',
+      visibleTexts: ['91', '88'],
+    })
+    const invented = buildProgressDetailedAnalysis({
+      summary: measurementSummary,
+      role: 'client',
+      goalTitle: 'Снизить объём талии',
+      visibleTexts: ['91'],
+    })
+
+    expect(grounded[0]?.items).toEqual(['Талия уменьшилась с 91 до 88 см за период.'])
+    expect(invented[0]?.items).toEqual([])
   })
 })

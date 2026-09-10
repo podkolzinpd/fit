@@ -18,7 +18,7 @@ resource "yandex_mdb_postgresql_cluster_v2" "fit" {
     }
 
     access = {
-      data_lens     = false
+      data_lens     = true
       data_transfer = false
       serverless    = true
       web_sql       = true

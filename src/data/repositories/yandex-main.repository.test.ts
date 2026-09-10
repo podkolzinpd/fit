@@ -373,10 +373,11 @@ describe('Yandex main repository', () => {
   it('implements invitations, summaries, feedback, push and polling', async () => {
     vi.useFakeTimers()
     vi.stubEnv('VITE_VAPID_PUBLIC_KEY', 'public-key')
-    vi.stubGlobal('fetch', installContractFetch())
+    const fetchMock = installContractFetch()
+    vi.stubGlobal('fetch', fetchMock)
     installTrainingData()
     push.subscribe.mockResolvedValue({ endpoint: 'https://push.example.test', p256dh: 'p', authKey: 'a' })
-    push.unsubscribe.mockResolvedValue(undefined)
+    push.unsubscribe.mockResolvedValue({ endpoint: 'https://push.example/pilot-device' })
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
 
     expect(await repository.invitations.create(clientId, 'trainer')).toBe('ABCDEF123456')
@@ -405,6 +406,24 @@ describe('Yandex main repository', () => {
     expect(await repository.pushNotifications.status(actor.userId)).toEqual({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: false })
     await repository.pushNotifications.enable(actor.userId)
     await repository.pushNotifications.disable(actor.userId)
+    const pushRequests = fetchMock.mock.calls.filter(([input]) =>
+      new URL(String(input)).pathname.startsWith('/v1/push-notifications/'))
+    expect(pushRequests).toEqual(expect.arrayContaining([
+      [
+        `${apiBaseUrl}/v1/push-notifications/subscription/status`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ endpoint: 'https://push.example/pilot-device' }),
+        }),
+      ],
+      [
+        `${apiBaseUrl}/v1/push-notifications/subscription`,
+        expect.objectContaining({
+          method: 'DELETE',
+          body: JSON.stringify({ endpoint: 'https://push.example/pilot-device' }),
+        }),
+      ],
+    ]))
 
     const onChange = vi.fn()
     const onReady = vi.fn()
@@ -554,6 +573,7 @@ function installContractFetch() {
         : jsonResponse({ summaries: [{ id: summaryId, client_id: clientId, period_start: '2026-08-01', period_end: '2026-08-31', trainer_summary: { headline: 'Итог', progress: ['Рост'], consistency: 'Стабильно', attention: [] }, client_summary: clientSummary, display_metrics: metrics, generated_at: '2026-09-01T00:00:00.000Z', version: 1, published: false }] })
     }
     if (method === 'GET' && path === '/v1/push-notifications/status') return jsonResponse({ status: { subscribed: true, preferences: { workout_reminder: true, workout_scheduled: false } } })
+    if (method === 'POST' && path === '/v1/push-notifications/subscription/status') return jsonResponse({ subscribed: true })
     if (path === '/v1/assistant/yandex/suggest-goal-criteria') return jsonResponse({ criteria: [], needsInput: [], unsupportedReason: null })
     if (path.endsWith('/training-summaries/generate')) return jsonResponse({ data: { generated_at: '2026-09-01T00:00:00.000Z' }, cached: false })
     if (path === '/v1/invitations' && method === 'POST') return jsonResponse({ invitation: { code: 'ABCDEF123456' } }, 201)

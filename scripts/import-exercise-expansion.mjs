@@ -2,15 +2,13 @@
 // Источник: https://github.com/yuhonas/free-exercise-db (Unlicense / public domain).
 //
 // Набор отделён от основного импорта, чтобы расширение не меняло ref и порядок
-// уже опубликованных 451 упражнений. Скрипт скачивает два фото техники и
-// генерирует типизированный каталог с русскими названиями и подсказками.
-import { mkdir, writeFile } from 'node:fs/promises'
+// уже опубликованных 451 упражнений. Старые фотографии больше не входят в
+// продукт: скрипт генерирует только русские метаданные и подсказки.
+import { writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
 const SOURCE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json'
-const RAW_IMAGES = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/'
 const projectRoot = new URL('..', import.meta.url)
-const imagesDir = new URL('public/exercises/', projectRoot)
 const generatedFile = new URL('src/shared/system-exercises.expansion.generated.ts', projectRoot)
 
 // Имена намеренно короткие и тренерские. В каталог не включаем близкие дубли
@@ -235,26 +233,11 @@ async function main() {
 
   const all = await (await fetch(SOURCE)).json()
   const byId = new Map(all.map((exercise) => [exercise.id, exercise]))
-  await mkdir(fileURLToPath(imagesDir), { recursive: true })
-
   const rows = await mapConcurrent(EXPANSION, 10, async ([id, name]) => {
     const exercise = byId.get(id)
     if (!exercise) throw new Error(`Не найдено упражнение ${id}`)
-    if (!exercise.images?.[0] || !exercise.images?.[1]) throw new Error(`Нет двух фото у ${id}`)
 
     const ref = refFor(id)
-    const imageName = `${ref}.jpg`
-    const motionImageName = `${ref}-end.jpg`
-    const [startResponse, endResponse] = await Promise.all([
-      fetch(RAW_IMAGES + exercise.images[0]),
-      fetch(RAW_IMAGES + exercise.images[1]),
-    ])
-    if (!startResponse.ok || !endResponse.ok) throw new Error(`Не удалось скачать фото ${id}`)
-    await Promise.all([
-      writeFile(new URL(imageName, imagesDir), Buffer.from(await startResponse.arrayBuffer())),
-      writeFile(new URL(motionImageName, imagesDir), Buffer.from(await endResponse.arrayBuffer())),
-    ])
-
     const sourceDetail = exercise.primaryMuscles[0]
     const cardio = exercise.category === 'cardio'
     return {
@@ -268,8 +251,6 @@ async function main() {
       primaryMuscleDetail: cardio ? 'Кардио' : (PRIMARY_DETAIL_OVERRIDES[id] ?? MUSCLE_LABEL[sourceDetail] ?? sourceDetail),
       secondaryMuscles: (exercise.secondaryMuscles ?? []).map((muscle) => MUSCLE_LABEL[muscle] ?? muscle),
       level: exercise.level ?? null,
-      imageUrl: `/exercises/${imageName}`,
-      motionImageUrl: `/exercises/${motionImageName}`,
       instructions: instructionsFor(name, exercise),
     }
   })
@@ -280,7 +261,7 @@ async function main() {
     `import type { ImportedExercise } from './system-exercises'\n\n` +
     `export const CATALOG_EXPANSION: readonly ImportedExercise[] = ${JSON.stringify(rows, null, 2)}\n`
   await writeFile(fileURLToPath(generatedFile), header)
-  console.log(`Готово: ${rows.length} упражнений и ${rows.length * 2} фото`)
+  console.log(`Готово: ${rows.length} упражнений без legacy-фотографий`)
 }
 
 main().catch((error) => { console.error(error); process.exit(1) })

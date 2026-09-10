@@ -1,3 +1,4 @@
+import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -28,7 +29,7 @@ import { formatRunDuration, isRowingExerciseRef, rowingPaceLabel, runDistanceLab
 import { WearableHealthCard } from '../wearables'
 import { isTodayGreetingPilotEnabled, isWearablesPilotEnabled } from '../../app/feature-flags'
 import { todayHeaderProps } from './today-header'
-import { ClientHomeOverview, clientHomeLatestDoneWorkout } from './ClientHomeOverview'
+import { ClientHomeOverview } from './ClientHomeOverview'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { WorkoutCta, WorkoutExercise, WorkoutHeader, WorkoutSetRow } from './WorkoutSurface'
 import { trainerActionItems, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
@@ -149,12 +150,6 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const attentionPreferences = useQuery({ queryKey: ['trainer-attention-preferences', actor?.userId], queryFn: () => clientsRepository.listAttentionPreferences(actor!.userId), enabled: !clientMode && Boolean(actor?.userId) })
   const goal = useQuery({ queryKey: ['client-goal', mine.data?.id], queryFn: () => goalsRepository.get(mine.data!.id), enabled: clientMode && Boolean(mine.data) })
   const regularity = useQuery({ queryKey: ['workout-regularity', mine.data?.id], queryFn: () => progressRepository.regularity(mine.data!.id), enabled: clientMode && Boolean(mine.data) })
-  const latestClientWorkout = workouts.data ? clientHomeLatestDoneWorkout(workouts.data) : undefined
-  const personalRecords = useQuery({
-    queryKey: ['workout-personal-records', latestClientWorkout?.id],
-    queryFn: () => workoutsRepository.personalRecords(latestClientWorkout!.id),
-    enabled: clientMode && Boolean(latestClientWorkout?.hasPr),
-  })
   const catalog = useExerciseCatalog()
   const [firstWorkoutIntent] = useState(() => clientMode && actor ? takeFirstWorkoutIntent(actor.userId) : null)
   const [text, setText] = useState('')
@@ -323,7 +318,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       trackGoal('today_review_confirmed')
       setDraftReady(false)
       removeTodayDraft(draftKey)
-      await queryClient.invalidateQueries({ queryKey: ['workouts'] })
+      await invalidateWorkoutResults(queryClient)
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
       if (!clientMode) await queryClient.invalidateQueries({ queryKey: ['clients'] })
       navigate(`/workouts/${id}`, { replace: true, state: { returnTo: clientMode ? '/me' : '/today', firstPlanClient: firstPlanClientState } })
@@ -632,7 +627,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     onSnooze={(targetClientId) => snoozeAttention.mutate(targetClientId)}
     hideEyebrow={attentionHideEyebrow}
   />
-  const clientHomeError = clientMode ? mine.error ?? workouts.error ?? regularity.error ?? goal.error ?? personalRecords.error : null
+  const clientHomeError = clientMode ? mine.error ?? workouts.error ?? regularity.error ?? goal.error : null
   const greetingName = clientMode ? mine.data?.fullName || actor?.firstName || 'спортсмен' : actor?.firstName || 'тренер'
   const greeting = `${new Date().getHours() < 12 ? 'Доброе утро' : new Date().getHours() < 18 ? 'Добрый день' : 'Добрый вечер'}, ${greetingName}`
   // Пилот: заголовок вкладки заменяется приветствием в шапке, а дублирующая
@@ -647,10 +642,10 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {!greetingHeaderPilotEnabled && <p className="today-greeting">{greeting} 👋</p>}
       {clientMode && !textComposerOpen ? <><ClientHomeOverview
         today={today}
+        gender={mine.data?.gender}
         workouts={workouts.data}
         regularity={regularity.data}
         goal={goal.data}
-        personalRecords={personalRecords.data}
         workoutsLoading={mine.isLoading || workouts.isLoading}
         regularityLoading={mine.isLoading || regularity.isLoading}
         error={clientHomeError}
@@ -660,7 +655,6 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
             void workouts.refetch()
             void regularity.refetch()
             void goal.refetch()
-            if (latestClientWorkout?.hasPr) void personalRecords.refetch()
           }
         }}
         selfTraining={<section className="client-home-self-training primary">

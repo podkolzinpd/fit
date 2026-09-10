@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest'
 describe('iOS build scripts', () => {
   it('keeps the default native bundle on the release-parity environment', () => {
     expect(packageJson.scripts['ios:sync']).toBe('npm run build && npx cap sync ios')
-    expect(packageJson.scripts['ios:open']).toBe('npm run ios:sync && npx cap open ios')
+    expect(packageJson.scripts['ios:env:check']).toBe('node scripts/check-ios-production-env.mjs')
+    expect(packageJson.scripts['ios:sync:production']).toBe('npm run ios:env:check && npm run ios:sync')
+    expect(packageJson.scripts['ios:open']).toBe('npm run ios:sync:production && npx cap open ios')
   })
 
   it('keeps local Supabase behind an explicit command', () => {

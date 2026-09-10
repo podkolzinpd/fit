@@ -43,6 +43,11 @@ export function AppLayout() {
   const monochromeAuthJoin = pathname === '/join'
   const monochromeAssistant = pathname === '/assistant'
   const themeVariant = resolveThemeVariant(theme)
+  const routeStep = todayStep
+    ? search
+    : monochromeTrainerProgress
+      ? new URLSearchParams(search).get('view') ?? ''
+      : ''
 
   useEffect(() => {
     // Класс живёт на <html>: фон вне рамки телефона и цвет системной панели
@@ -62,7 +67,7 @@ export function AppLayout() {
     // action after a longer form or review screen.
     const frame = window.requestAnimationFrame(() => contentRef.current?.scrollTo(0, 0))
     return () => window.cancelAnimationFrame(frame)
-  }, [pathname, search])
+  }, [pathname, routeStep])
 
   // Создание, проверка, редактирование и live — один сфокусированный путь
   // тренировки. Нижняя навигация возвращается на списках и после выхода из

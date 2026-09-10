@@ -21,7 +21,7 @@ import {
   type YandexActorSessionInput,
 } from './yandex-actor-session.js'
 
-const MAX_SOURCE_ROWS = 1000
+const MAX_SOURCE_ROWS = 10_000
 
 interface ClientRow extends QueryResultRow {
   auth_user_id: string | null
@@ -32,6 +32,13 @@ interface GoalRow extends QueryResultRow {
   goal: unknown
 }
 interface FirstWorkoutRow extends QueryResultRow { workout_date: string }
+interface ProgressRow extends QueryResultRow {
+  recorded_on: string
+  weight_kg: number | string | null
+  chest_cm: number | string | null
+  waist_cm: number | string | null
+  hip_cm: number | string | null
+}
 interface SummaryRow extends QueryResultRow {
   input_fingerprint: string
   result: unknown
@@ -84,6 +91,19 @@ function asNumber(value: unknown): number | null {
   if (value === null) return null
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+function addUtcDays(value: string, amount: number): string {
+  const date = new Date(`${value}T00:00:00.000Z`)
+  date.setUTCDate(date.getUTCDate() + amount)
+  return date.toISOString().slice(0, 10)
+}
+
+function inclusivePeriodDays(start: string, end: string): number {
+  return Math.round(
+    (Date.parse(`${end}T00:00:00.000Z`) - Date.parse(`${start}T00:00:00.000Z`)) /
+      86_400_000,
+  ) + 1
 }
 
 export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
@@ -256,6 +276,9 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
     const clientRow = clientRows[0]
     if (clientRow === undefined) throw new PilotTrainingSummaryError(404, 'client_not_found')
     const actor = await this.readActor(client, request.clientId)
+    const periodDays = inclusivePeriodDays(request.periodStart, request.periodEnd)
+    const previousPeriodEnd = addUtcDays(request.periodStart, -1)
+    const previousPeriodStart = addUtcDays(previousPeriodEnd, -(periodDays - 1))
     const goalRows = await client.query<GoalRow>(`
       select jsonb_build_object(
         'title', goal.title, 'targetDate', goal.target_date,
@@ -274,22 +297,26 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
         and workout.deleted_at is null and workout.workout_date <= $2
       order by workout.workout_date, workout.id limit 1
     `, [request.clientId, request.periodEnd])
-    const workoutRows = await client.query<WorkoutRow>(`
-      select workout.id, workout.workout_date, workout.status, workout.deleted_at
+    const allWorkoutRows = await client.query<WorkoutRow>(`
+      select workout.id, workout.workout_date, workout.status, workout.deleted_at,
+        workout.session_rpe, workout.wellbeing, workout.discomfort, workout.client_comment
       from public.workouts workout
       where workout.client_id = $1 and workout.status = 'done'
         and workout.deleted_at is null
         and workout.workout_date between $2 and $3
       order by workout.workout_date, workout.id limit $4
-    `, [request.clientId, request.periodStart, request.periodEnd, MAX_SOURCE_ROWS + 1])
-    if (workoutRows.length === 0) throw new PilotTrainingSummaryError(422, 'no_completed_workouts')
-    if (workoutRows.length > MAX_SOURCE_ROWS) {
+    `, [request.clientId, previousPeriodStart, request.periodEnd, MAX_SOURCE_ROWS + 1])
+    if (allWorkoutRows.length > MAX_SOURCE_ROWS) {
       throw new PilotTrainingSummaryError(422, 'source_row_limit_reached')
     }
-    const workoutIds = workoutRows.map((row) => row.id)
+    const workoutRows = allWorkoutRows.filter((row) => row.workout_date >= request.periodStart)
+    const previousWorkoutRows = allWorkoutRows.filter((row) => row.workout_date <= previousPeriodEnd)
+    if (workoutRows.length === 0) throw new PilotTrainingSummaryError(422, 'no_completed_workouts')
+    const workoutIds = allWorkoutRows.map((row) => row.id)
     const exerciseRows = await client.query<ExerciseRow>(`
       select exercise.id, exercise.workout_id, exercise.exercise_ref,
-        exercise.exercise_name, exercise.input_kind, exercise.position
+        exercise.exercise_name, exercise.exercise_source, exercise.muscle_group,
+        exercise.input_kind, exercise.position
       from public.workout_exercises exercise
       where exercise.workout_id = any($1::uuid[])
       order by exercise.workout_id, exercise.position, exercise.id limit $2
@@ -300,12 +327,14 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
     const exerciseIds = exerciseRows.map((row) => row.id)
     const rawSets = exerciseIds.length === 0 ? [] : await client.query<SetRow>(`
       select workout_set.workout_exercise_id, workout_set.position,
+        workout_set.plan_weight_kg, workout_set.plan_reps,
+        workout_set.plan_duration_min, workout_set.plan_duration_sec,
+        workout_set.plan_distance_km, workout_set.plan_rpe,
         workout_set.fact_weight_kg, workout_set.fact_reps,
         workout_set.fact_duration_min, workout_set.fact_duration_sec,
-        workout_set.fact_distance_km
+        workout_set.fact_distance_km, workout_set.fact_rpe, workout_set.confirmed_at
       from public.workout_sets workout_set
       where workout_set.workout_exercise_id = any($1::uuid[])
-        and workout_set.confirmed_at is not null
       order by workout_set.workout_exercise_id, workout_set.position, workout_set.id limit $2
     `, [exerciseIds, MAX_SOURCE_ROWS + 1])
     if (rawSets.length > MAX_SOURCE_ROWS) {
@@ -313,27 +342,77 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
     }
     const sets = rawSets.map((row): SetRow => ({
       ...row,
+      plan_weight_kg: asNumber(row.plan_weight_kg),
+      plan_reps: asNumber(row.plan_reps),
+      plan_duration_min: asNumber(row.plan_duration_min),
+      plan_duration_sec: asNumber(row.plan_duration_sec),
+      plan_distance_km: asNumber(row.plan_distance_km),
+      plan_rpe: asNumber(row.plan_rpe),
       fact_weight_kg: asNumber(row.fact_weight_kg),
       fact_reps: asNumber(row.fact_reps),
       fact_duration_min: asNumber(row.fact_duration_min),
       fact_duration_sec: asNumber(row.fact_duration_sec),
       fact_distance_km: asNumber(row.fact_distance_km),
+      fact_rpe: asNumber(row.fact_rpe),
     }))
+    const measurementRows = await client.query<ProgressRow>(`
+      select progress.recorded_on, progress.weight_kg, progress.chest_cm,
+        progress.waist_cm, progress.hip_cm
+      from public.client_progress progress
+      where progress.client_id = $1 and progress.deleted_at is null
+        and progress.recorded_on between $2 and $3
+      order by progress.recorded_on, progress.id limit $4
+    `, [request.clientId, previousPeriodStart, request.periodEnd, MAX_SOURCE_ROWS + 1])
+    if (measurementRows.length > MAX_SOURCE_ROWS) {
+      throw new PilotTrainingSummaryError(422, 'source_row_limit_reached')
+    }
+    const measurements = measurementRows.map((row) => ({
+      recorded_on: row.recorded_on,
+      weight_kg: asNumber(row.weight_kg),
+      chest_cm: asNumber(row.chest_cm),
+      waist_cm: asNumber(row.waist_cm),
+      hip_cm: asNumber(row.hip_cm),
+    }))
+    const currentMeasurements = measurements.filter((row) => row.recorded_on >= request.periodStart)
+    const previousMeasurements = measurements.filter((row) => row.recorded_on <= previousPeriodEnd)
+    const currentWorkoutIds = new Set(workoutRows.map((row) => row.id))
+    const previousWorkoutIds = new Set(previousWorkoutRows.map((row) => row.id))
+    const currentExercises = exerciseRows.filter((row) => currentWorkoutIds.has(row.workout_id))
+    const previousExercises = exerciseRows.filter((row) => previousWorkoutIds.has(row.workout_id))
+    const currentExerciseIds = new Set(currentExercises.map((row) => row.id))
+    const previousExerciseIds = new Set(previousExercises.map((row) => row.id))
     const progress = buildProgressData(
       workoutRows,
-      exerciseRows,
-      sets,
+      currentExercises,
+      sets.filter((row) => currentExerciseIds.has(row.workout_exercise_id)),
       request.periodStart,
       request.periodEnd,
       firstRows[0]?.workout_date ?? null,
     )
+    const previousProgress = previousWorkoutRows.length > 0 || previousMeasurements.length > 0
+      ? buildProgressData(
+          previousWorkoutRows,
+          previousExercises,
+          sets.filter((row) => previousExerciseIds.has(row.workout_exercise_id)),
+          previousPeriodStart,
+          previousPeriodEnd,
+          firstRows[0]?.workout_date && firstRows[0].workout_date <= previousPeriodEnd
+            ? firstRows[0].workout_date
+            : null,
+        )
+      : null
     return {
       actor,
       trainingData: {
         ...progress,
         goal: buildTrainingGoalContext(clientRow.goal, goalRows[0]?.goal, request.periodEnd),
+        measurements: currentMeasurements,
+        previous_period: previousProgress === null ? null : {
+          ...previousProgress,
+          measurements: previousMeasurements,
+        },
       },
-      workouts: workoutRows.length,
+      workouts: allWorkoutRows.length,
       exercises: exerciseRows.length,
       sets: sets.length,
     }

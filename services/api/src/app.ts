@@ -32,6 +32,7 @@ import { PushNotificationCommandError } from './push-notifications-command.js'
 import {
   readNotificationPreferenceRequest,
   readPushNotificationKind,
+  readPushSubscriptionEndpointRequest,
   readPushSubscriptionRequest,
 } from './push-notifications-request.js'
 import { PilotConnectionCommandError } from './connection-commands.js'
@@ -113,6 +114,7 @@ import {
   readVersionedProgressRequest,
 } from './progress-request.js'
 import { readVitalMediaRequest, type VitalMediaSigner } from './vital-media.js'
+import { readTrainerProfileDraft, TrainerProfileError, type PilotTrainerProfiles, type TrainerCatalogFilters } from './trainer-profile.js'
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
@@ -155,6 +157,7 @@ interface BuildAppOptions {
   yandexAppSessionReader?: YandexAppSessionReader
   yandexAppSessionRevoker?: YandexAppSessionRevoker
   vitalMediaSigner?: VitalMediaSigner
+  pilotTrainerProfiles?: PilotTrainerProfiles
   logger?: boolean
   releaseId?: string
 }
@@ -608,6 +611,99 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return sendPilotProfile(token, reply)
   })
 
+  app.get('/v1/trainer-profile', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.getOwn(session),
+      (profile) => reply.header('cache-control', 'no-store').send(profile))
+  })
+
+  app.put('/v1/trainer-profile', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const draft = readTrainerProfileDraft(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (draft === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.saveDraft(session, draft),
+      (profile) => reply.header('cache-control', 'no-store').send(profile))
+  })
+
+  app.post('/v1/trainer-profile/publish', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.publish(session),
+      (profile) => reply.header('cache-control', 'no-store').send(profile))
+  })
+
+  app.post('/v1/trainer-profile/unpublish', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.unpublish(session),
+      (profile) => reply.header('cache-control', 'no-store').send(profile))
+  })
+
+  app.post('/v1/trainer-profile/catalog', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const body = request.body
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof body !== 'object' || body === null || !('listed' in body) || typeof body.listed !== 'boolean') {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const listed = body.listed
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.setCatalogListing(session, listed),
+      (profile) => reply.header('cache-control', 'no-store').send(profile))
+  })
+
+  app.get('/v1/trainers/catalog', async (request, reply) => {
+    const query = request.query as Record<string, unknown>
+    const textFilter = (value: unknown, max: number) =>
+      typeof value === 'string' && value.trim().length <= max ? value.trim() : undefined
+    const accepting = query.accepting === undefined ? null
+      : query.accepting === 'true' ? true
+        : query.accepting === 'false' ? false : undefined
+    const mode = query.mode === undefined || query.mode === '' ? ''
+      : query.mode === 'online' || query.mode === 'in_person' ? query.mode : undefined
+    const filters: TrainerCatalogFilters = {
+      query: textFilter(query.query, 100) ?? '',
+      specialty: textFilter(query.specialty, 60) ?? '',
+      city: textFilter(query.city, 100) ?? '',
+      mode: mode ?? '',
+      acceptingClients: accepting ?? null,
+    }
+    if ((query.query !== undefined && textFilter(query.query, 100) === undefined)
+      || (query.specialty !== undefined && textFilter(query.specialty, 60) === undefined)
+      || (query.city !== undefined && textFilter(query.city, 100) === undefined)
+      || mode === undefined || accepting === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    try {
+      return reply.send(await options.pilotTrainerProfiles.listPublic(filters))
+    } catch (error) {
+      return sendSafeDatabaseFailure(reply, error, 'Trainer catalog query failed')
+    }
+  })
+
+  app.get('/v1/trainers/:publicId/public-profile', async (request, reply) => {
+    const { publicId } = request.params as { publicId?: unknown }
+    if (typeof publicId !== 'string' || !uuidPattern.test(publicId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    try {
+      const profile = await options.pilotTrainerProfiles.getPublic(publicId)
+      return profile === null ? reply.code(404).send({ error: 'not_found' }) : reply.send(profile)
+    } catch (error) {
+      return sendSafeDatabaseFailure(reply, error, 'Public trainer profile query failed')
+    }
+  })
+
   app.post('/v1/auth/yandex/pilot', async (request, reply) => {
     const body = request.body
     if (typeof body !== 'object' || body === null || !('code' in body) || !('codeVerifier' in body)) {
@@ -1059,6 +1155,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
             ? 'action_not_allowed'
             : 'invalid_feedback' })
       }
+      if (error instanceof TrainerProfileError) {
+        if (error.failure === 'forbidden') return reply.code(403).send({ error: 'action_not_allowed' })
+        if (error.failure === 'not_found') return reply.code(404).send({ error: 'resource_not_found' })
+        return reply.code(422).send({ error: 'invalid_trainer_profile' })
+      }
       if (error instanceof AssistantStateError) {
         if (error.failure === 'forbidden') {
           return reply.code(403).send({ error: 'action_not_allowed' })
@@ -1346,10 +1447,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     )
   })
 
-  app.delete('/v1/push-notifications/subscription', async (request, reply) => {
+  app.post('/v1/push-notifications/subscription/status', async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const subscription = readPushSubscriptionEndpointRequest(request.body)
     if (sessionToken === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (subscription === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
     }
     const pushNotifications = options.pilotPushNotifications
     if (pushNotifications === undefined) {
@@ -1357,7 +1462,27 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
     return sendPilotCommand(
       reply,
-      () => pushNotifications.deleteSubscription(sessionToken),
+      () => pushNotifications.hasSubscription(sessionToken, subscription.endpoint),
+      (subscribed) => reply.header('cache-control', 'no-store').send({ subscribed }),
+    )
+  })
+
+  app.delete('/v1/push-notifications/subscription', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const subscription = readPushSubscriptionEndpointRequest(request.body)
+    if (sessionToken === undefined) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (subscription === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const pushNotifications = options.pilotPushNotifications
+    if (pushNotifications === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    return sendPilotCommand(
+      reply,
+      () => pushNotifications.deleteSubscription(sessionToken, subscription.endpoint),
       () => reply.header('cache-control', 'no-store').code(204).send(),
     )
   })

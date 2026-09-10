@@ -26,7 +26,7 @@ const EXERCISE_VIDEO_PATHS = new Set(
 
 describe('system exercise catalog', () => {
   it('matches the current catalog contract', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(11)
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(12)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
@@ -82,7 +82,7 @@ describe('system exercise catalog', () => {
     expect(new Set(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.ref)).size).toBe(SYSTEM_EXERCISE_CATALOG.length)
   })
 
-  it('добавляет 120 отобранных упражнений с двумя фото и русскими данными', () => {
+  it('добавляет 120 отобранных упражнений с русскими данными', () => {
     expect(new Set(CATALOG_EXPANSION.map((exercise) => exercise.ref)).size).toBe(CATALOG_EXPANSION.length)
     expect(new Set(CATALOG_EXPANSION.map((exercise) => exercise.name)).size).toBe(CATALOG_EXPANSION.length)
     for (const exercise of CATALOG_EXPANSION) {
@@ -92,8 +92,6 @@ describe('system exercise catalog', () => {
       expect(exercise.equipment).toBeTruthy()
       expect(exercise.primaryMuscleDetail).toBeTruthy()
       expect(exercise.instructions?.length).toBeGreaterThanOrEqual(2)
-      expect(EXERCISE_MEDIA_PATHS.has(exercise.imageUrl)).toBe(true)
-      expect(EXERCISE_MEDIA_PATHS.has(exercise.motionImageUrl)).toBe(true)
     }
   })
 
@@ -113,7 +111,8 @@ describe('system exercise catalog', () => {
       expect(exercise.ref).toMatch(/^fedb-/)
       expect(exercise.equipment).toBeTruthy()
       expect(exercise.primaryMuscleDetail).toBeTruthy()
-      expect(exercise.imageUrl).toMatch(/^\/exercises\/fedb-.+\.jpg$/)
+      expect(exercise.imageUrl).toBeUndefined()
+      expect(exercise.motionImageUrl).toBeUndefined()
     }
   })
 
@@ -172,32 +171,65 @@ describe('system exercise catalog', () => {
       expect(exercise.equipment).toBeTruthy()
       expect(exercise.primaryMuscleDetail).toBeTruthy()
     }
-    // Все базовые получили оба кадра (кардио/берпи — из близкого аналога).
-    expect(BASE_EXERCISES.every((exercise) => exercise.imageUrl)).toBe(true)
-    expect(BASE_EXERCISES.every((exercise) => exercise.motionImageUrl)).toBe(true)
+    // Исходные метаданные больше не несут ссылок на удалённые фотографии.
+    expect(BASE_EXERCISES.every((exercise) => !exercise.imageUrl)).toBe(true)
+    expect(BASE_EXERCISES.every((exercise) => !exercise.motionImageUrl)).toBe(true)
   })
 
-  it('весь каталог имеет обложку и второй кадр техники', () => {
-    expect(SYSTEM_EXERCISE_CATALOG.every((exercise) => exercise.imageUrl)).toBe(true)
-    expect(SYSTEM_EXERCISE_CATALOG.every((exercise) => exercise.motionImageUrl)).toBe(true)
+  it('показывает только проверенное медиа, а непокрытые упражнения оставляет без медиаблока', () => {
     for (const exercise of SYSTEM_EXERCISE_CATALOG) {
-      for (const url of [exercise.imageUrl, exercise.motionImageUrl]) {
-        expect(EXERCISE_MEDIA_PATHS.has(url!), `${exercise.name}: отсутствует ${url}`).toBe(true)
+      expect(exercise.fallbackImageUrl).toBeUndefined()
+      const urls = [exercise.imageUrl, exercise.motionImageUrl, exercise.techniqueVideoUrl].filter(Boolean) as string[]
+      if (!exercise.techniqueVideoUrl) expect([0, 2]).toContain(urls.length)
+      for (const url of urls) {
+        expect(url).toMatch(/^\/exercises\/(?:vital(?:-pro)?|reference)\//)
+        expect(url).not.toMatch(/^\/exercises\/(?:fedb-|base-)/)
+        expect((url.endsWith('.mp4') ? EXERCISE_VIDEO_PATHS : EXERCISE_MEDIA_PATHS).has(url), `${exercise.name}: отсутствует ${url}`).toBe(true)
       }
     }
   })
 
-  it('подключает все 50 видео бесплатного пака только к точным упражнениям', () => {
+  it('не подменяет узкую тягу верхнего блока широким хватом', () => {
+    const closeGrip = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-close-grip-front-lat-pulldown')
+    const wideGrip = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-wide-grip-lat-pulldown')
+    const genericPulldown = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'lat-pulldown')
+
+    expect(closeGrip).toMatchObject({
+      name: 'Тяга верхнего блока узким хватом',
+      imageUrl: '/exercises/reference/close-grip-lat-pulldown.jpg',
+      motionImageUrl: '/exercises/reference/close-grip-lat-pulldown-end.jpg',
+      techniqueVideoUrl: undefined,
+      instructions: [
+        'Сядьте в тренажёр и возьмитесь за прямой гриф хватом уже плеч, ладони направлены вперёд.',
+        'На выдохе притяните гриф к верху груди, сводя лопатки.',
+        'На вдохе плавно верните гриф вверх.',
+      ],
+    })
+    for (const exercise of [wideGrip, genericPulldown]) {
+      expect(exercise).toMatchObject({
+        imageUrl: '/exercises/vital-pro/vital-lat-pulldown-ex531.jpg',
+        motionImageUrl: '/exercises/vital-pro/vital-lat-pulldown-ex531-end.jpg',
+        techniqueVideoUrl: '/exercises/vital-pro/vital-lat-pulldown-ex531.mp4',
+      })
+    }
+    expect(closeGrip?.imageUrl).not.toBe(wideGrip?.imageUrl)
+  })
+
+  it('подключает все 50 видео бесплатного пака и разрешённые исторические дубли', () => {
     const expected = new Map<string, string>(VITAL_FREE_PACK_ASSETS.map((asset) => [asset.ref, `/exercises/vital/${asset.file}.mp4`]))
     expect(VITAL_FREE_PACK_ASSETS).toHaveLength(50)
     expect(new Set(VITAL_FREE_PACK_ASSETS.map((asset) => asset.id))).toEqual(new Set(Array.from({ length: 50 }, (_, index) => String(index + 51).padStart(4, '0'))))
     expect(new Set(VITAL_FREE_PACK_ASSETS.map((asset) => asset.ref)).size).toBe(50)
     expect(new Set(VITAL_FREE_PACK_ASSETS.map((asset) => asset.file)).size).toBe(50)
     const freePackVideos = SYSTEM_EXERCISE_CATALOG.filter((exercise) => exercise.techniqueVideoUrl?.startsWith('/exercises/vital/'))
-    expect(freePackVideos).toHaveLength(expected.size)
+    expect(freePackVideos.length).toBeGreaterThanOrEqual(expected.size)
+    for (const [ref, techniqueVideoUrl] of expected) {
+      const exercise = SYSTEM_EXERCISE_CATALOG.find((item) => item.ref === ref)
+      expect(exercise).toMatchObject(VITAL_FREE_PACK_MEDIA_BY_REF[ref]!)
+      expect(exercise?.techniqueVideoUrl).toBe(techniqueVideoUrl)
+    }
     for (const exercise of freePackVideos) {
-      expect(exercise).toMatchObject(VITAL_FREE_PACK_MEDIA_BY_REF[exercise.ref]!)
-      expect(exercise.techniqueVideoUrl).toBe(expected.get(exercise.ref))
+      expect([...expected.values()]).toContain(exercise.techniqueVideoUrl)
       expect(EXERCISE_VIDEO_PATHS.has(exercise.techniqueVideoUrl!)).toBe(true)
     }
   })
@@ -211,19 +243,34 @@ describe('system exercise catalog', () => {
     expect(VITAL_GYM_PRO_NEW_EXERCISES).toHaveLength(151)
     expect(Object.keys(VITAL_GYM_PRO_ASSETS)).toHaveLength(317)
     expect(new Set(VITAL_GYM_PRO_MAIN_REFS).size).toBe(317)
+    const finalCatalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
+    expect(VITAL_GYM_PRO_MAIN_REFS.filter((ref) => !finalCatalogByRef.get(ref)?.techniqueVideoUrl)).toEqual([])
     for (const exercise of VITAL_GYM_PRO_NEW_EXERCISES) {
       expect(exercise.techniqueVideoUrl).toMatch(/^\/exercises\/vital-pro\/.+\.mp4$/)
       expect(EXERCISE_VIDEO_PATHS.has(exercise.techniqueVideoUrl!)).toBe(true)
+      expect(finalCatalogByRef.get(exercise.ref)?.techniqueVideoUrl).toBe(exercise.techniqueVideoUrl)
     }
   })
 
-  it('сохраняет прежнюю картинку как fallback для существующего упражнения Gym Pro', () => {
+  it('не сохраняет старую картинку как fallback для существующего упражнения Gym Pro', () => {
     expect(SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-face-pull')).toMatchObject({
       imageUrl: '/exercises/vital-pro/vital-cable-face-pull-ex030.jpg',
-      fallbackImageUrl: '/exercises/fedb-face-pull.jpg',
-      motionImageUrl: '/exercises/fedb-face-pull-end.jpg',
+      fallbackImageUrl: undefined,
+      motionImageUrl: '/exercises/vital-pro/vital-cable-face-pull-ex030-end.jpg',
       techniqueVideoUrl: '/exercises/vital-pro/vital-cable-face-pull-ex030.mp4',
     })
+  })
+
+  it('даёт историческому дублю современную анимацию канонического упражнения', () => {
+    const canonical = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-dumbbell-raise')
+    const historicalDuplicate = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-front-dumbbell-raise')
+    expect(historicalDuplicate).toMatchObject({
+      imageUrl: canonical?.imageUrl,
+      motionImageUrl: canonical?.motionImageUrl,
+      techniqueVideoUrl: canonical?.techniqueVideoUrl,
+      fallbackImageUrl: undefined,
+    })
+    expect(historicalDuplicate?.imageUrl).toBe('/exercises/vital/dumbbell-front-raise.jpg')
   })
 
   it('не подменяет жим в тренажёре видео жима гантелей сидя', () => {

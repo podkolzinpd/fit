@@ -2,18 +2,17 @@
 // Unlicense / public domain: https://github.com/yuhonas/free-exercise-db
 //
 // Отбирает 451 популярное силовое упражнение с покрытием всех групп мышц,
-// маппит детальные мышцы/оборудование в нашу модель, скачивает начальный и
-// конечный кадры техники (JPG-фото поз) в public/exercises/ и генерирует
+// маппит детальные мышцы/оборудование в нашу модель и генерирует
 // src/shared/system-exercises.generated.ts.
 //
 // Запускать вручную: `node scripts/import-exercises.mjs`. Результат
-// (сгенерированный .ts + картинки) коммитится в репозиторий.
-import { mkdir, writeFile } from 'node:fs/promises'
+// сгенерированный .ts. Старые фотографии не импортируются: runtime показывает
+// медиа только из Vital-паков.
+import { writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { INSTRUCTIONS_RU } from './instructions-ru.mjs'
 
 const SOURCE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json'
-const RAW_IMAGES = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/'
 // Вторая ступень расширения: 49 базовых + 451 импортированное = 500.
 // В отбор попадают только упражнения с проверенным русским названием.
 const TARGET_COUNT = 451
@@ -57,7 +56,6 @@ const FORCE_INCLUDE = new Set([
 ])
 
 const projectRoot = new URL('..', import.meta.url)
-const imagesDir = new URL('public/exercises/', projectRoot)
 const generatedFile = new URL('src/shared/system-exercises.generated.ts', projectRoot)
 const baseGeneratedFile = new URL('src/shared/system-exercises.base.generated.ts', projectRoot)
 
@@ -833,8 +831,7 @@ async function main() {
     round++
   }
 
-  console.log(`Отобрано ${picked.length} упражнений. Скачиваю картинки...`)
-  await mkdir(fileURLToPath(imagesDir), { recursive: true })
+  console.log(`Отобрано ${picked.length} упражнений. Генерирую метаданные без legacy-фотографий...`)
 
   const rows = (await mapConcurrent(picked, 10, async (ex) => {
     const ref = `fedb-${ex.id.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`
@@ -843,16 +840,6 @@ async function main() {
     if (DEDUP_REFS.has(ref)) return null
     const name = TRANSLATIONS[ref]
     if (!name) { console.warn(`  нет перевода, пропуск: ${ref} (${ex.name})`); return null }
-
-    const imageName = `${ref}.jpg`
-    const motionImageName = `${ref}-end.jpg`
-    const response = await fetch(RAW_IMAGES + ex.images[0])
-    const motionResponse = ex.images[1] && await fetch(RAW_IMAGES + ex.images[1])
-    if (!response.ok || !motionResponse?.ok) { console.warn(`  пропуск (нет двух кадров): ${ex.name}`); return null }
-    await Promise.all([
-      writeFile(new URL(imageName, imagesDir), Buffer.from(await response.arrayBuffer())),
-      writeFile(new URL(motionImageName, imagesDir), Buffer.from(await motionResponse.arrayBuffer())),
-    ])
 
     const detail = ex.primaryMuscles[0]
     const secondary = (ex.secondaryMuscles ?? []).map(muscleLabelFor)
@@ -869,8 +856,6 @@ async function main() {
       primaryMuscleDetail: fix.primaryMuscleDetail ?? primaryMuscleLabelFor(muscleGroup, detail),
       secondaryMuscles: secondary,
       level: ex.level ?? null,
-      imageUrl: `/exercises/${imageName}`,
-      motionImageUrl: `/exercises/${motionImageName}`,
       instructions: INSTRUCTIONS_RU[ref] ?? defaultRussianInstructions(name, ex),
     }
   })).filter(Boolean)
@@ -881,7 +866,7 @@ async function main() {
     `import type { ImportedExercise } from './system-exercises'\n\n` +
     `export const IMPORTED_EXERCISES: readonly ImportedExercise[] = ${JSON.stringify(rows, null, 2)}\n`
   await writeFile(fileURLToPath(generatedFile), header)
-  console.log(`Готово: ${rows.length} упражнений, картинки в public/exercises/, данные в system-exercises.generated.ts`)
+  console.log(`Готово: ${rows.length} упражнений без legacy-фотографий, данные в system-exercises.generated.ts`)
 
   await generateBase(byId)
 }
@@ -907,20 +892,6 @@ async function generateBase(byId) {
     if (match.id) {
       const ex = byId[match.id]
       if (!ex) { console.warn(`  аналог не найден: ${base.ref} -> ${match.id}`); rows.push(base); continue }
-      const imageName = `base-${base.ref}.jpg`
-      const motionImageName = `base-${base.ref}-end.jpg`
-      const response = await fetch(RAW_IMAGES + ex.images[0])
-      const motionResponse = ex.images[1] && await fetch(RAW_IMAGES + ex.images[1])
-      if (response.ok && motionResponse?.ok) {
-        await Promise.all([
-          writeFile(new URL(imageName, imagesDir), Buffer.from(await response.arrayBuffer())),
-          writeFile(new URL(motionImageName, imagesDir), Buffer.from(await motionResponse.arrayBuffer())),
-        ])
-        row.imageUrl = `/exercises/${imageName}`
-        row.motionImageUrl = `/exercises/${motionImageName}`
-      } else {
-        console.warn(`  нет двух кадров: ${base.ref}`)
-      }
       row.equipment = equipmentLabelFor(ex.equipment)
       row.equipmentRef = ex.equipment
       row.primaryMuscleDetail = fix.primaryMuscleDetail ?? primaryMuscleLabelFor(row.muscleGroup, ex.primaryMuscles[0])
@@ -928,31 +899,13 @@ async function generateBase(byId) {
       row.level = ex.level ?? null
       row.instructions = INSTRUCTIONS_RU[base.ref] ?? ex.instructions ?? []
     } else {
-      // Кардио/берпи: метаданные из маппинга. Картинку берём из близкого
-      // аналога (match.imageId), если задан.
+      // Кардио/берпи: метаданные из маппинга без приблизительной картинки.
       row.equipment = match.equipment
       row.equipmentRef = 'other'
       row.primaryMuscleDetail = match.detail
       row.secondaryMuscles = []
       row.level = 'beginner'
       row.instructions = INSTRUCTIONS_RU[base.ref] ?? match.instructions
-      if (match.imageId) {
-        const source = byId[match.imageId]
-        const imageName = `base-${base.ref}.jpg`
-        const motionImageName = `base-${base.ref}-end.jpg`
-        const response = source && await fetch(RAW_IMAGES + source.images[0])
-        const motionResponse = source?.images[1] && await fetch(RAW_IMAGES + source.images[1])
-        if (response?.ok && motionResponse?.ok) {
-          await Promise.all([
-            writeFile(new URL(imageName, imagesDir), Buffer.from(await response.arrayBuffer())),
-            writeFile(new URL(motionImageName, imagesDir), Buffer.from(await motionResponse.arrayBuffer())),
-          ])
-          row.imageUrl = `/exercises/${imageName}`
-          row.motionImageUrl = `/exercises/${motionImageName}`
-        } else {
-          console.warn(`  нет двух кадров аналога: ${base.ref} (${match.imageId})`)
-        }
-      }
     }
     rows.push(row)
   }
@@ -963,8 +916,7 @@ async function generateBase(byId) {
     `import type { ExerciseSnapshot } from './domain'\n\n` +
     `export const BASE_EXERCISES: readonly ExerciseSnapshot[] = ${JSON.stringify(rows, null, 2)}\n`
   await writeFile(fileURLToPath(baseGeneratedFile), header)
-  const withImg = rows.filter((r) => r.imageUrl).length
-  console.log(`Базовые: ${rows.length} упражнений (${withImg} с картинками), данные в system-exercises.base.generated.ts`)
+  console.log(`Базовые: ${rows.length} упражнений без legacy-фотографий, данные в system-exercises.base.generated.ts`)
 }
 
 // Читает ref/name/muscleGroup/inputKind рукописных базовых из system-exercises.ts.

@@ -113,9 +113,9 @@ jobs:
             )
           ' ai-smoke-parser-response.json >/dev/null
           jq -cn --arg client_id "$client_id" '{
-            clientId: $client_id,
-            periodStart: "2026-08-01",
-            periodEnd: "2026-08-31",
+            client_id: $client_id,
+            period_start: "2026-08-01",
+            period_end: "2026-08-31",
             force: true
           }' > ai-smoke-summary-request.json
           chmod 600 ai-smoke-summary-request.json

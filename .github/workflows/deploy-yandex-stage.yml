@@ -717,6 +717,7 @@ jobs:
             | .exercises[] | select(.source == "custom") | .ref
           ' <<<"$training")
           stage_smoke_check=exercise-progress
+          # У synthetic fixture одна завершённая тренировка: это baseline, не PR.
           exercise_progress=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --get --data-urlencode "limit=20" \
             --header "Authorization: Bearer $YC_TOKEN" \
@@ -726,7 +727,7 @@ jobs:
             .totalCount == 1 and .nextCursor == null
             and (.items | any(
               .confirmedSetCount == 1 and .bestWeightKg == 42.5
-              and .isPrimaryPr == true
+              and .isPrimaryPr == false
             ))
           ' <<<"$exercise_progress" >/dev/null
           stage_smoke_check=running-progress
@@ -747,7 +748,7 @@ jobs:
             .totalCount == 1 and .nextCursor == null
             and (.items | any(
               .workoutDate == "2026-08-22" and .confirmedSetCount == 2
-              and .durationSec == 3600 and .hasPr == true
+              and .durationSec == 3600 and .hasPr == false
             ))
           ' <<<"$chronicle" >/dev/null
           stage_smoke_check=training-summaries

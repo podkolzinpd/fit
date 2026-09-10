@@ -11,6 +11,10 @@ export interface PushSubscriptionDraft {
   authKey: string
 }
 
+export interface PushSubscriptionEndpoint {
+  endpoint: string
+}
+
 function record(value: unknown): Record<string, unknown> | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return undefined
@@ -29,6 +33,17 @@ function validHttpsEndpoint(value: string): boolean {
   }
 }
 
+function readPushEndpoint(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const endpoint = value.trim()
+  if (endpoint.length === 0
+    || endpoint.length > 2048
+    || !validHttpsEndpoint(endpoint)) {
+    return undefined
+  }
+  return endpoint
+}
+
 export function readPushNotificationKind(value: unknown): PushNotificationKind | undefined {
   if (typeof value !== 'string') return undefined
   const normalized = value.trim().toLowerCase()
@@ -44,12 +59,10 @@ export function readPushSubscriptionRequest(body: unknown): PushSubscriptionDraf
     return undefined
   }
 
-  const endpoint = input.endpoint.trim()
+  const endpoint = readPushEndpoint(input.endpoint)
   const p256dh = input.p256dh.trim()
   const authKey = input.authKey.trim()
-  if (endpoint.length === 0
-    || endpoint.length > 2048
-    || !validHttpsEndpoint(endpoint)
+  if (endpoint === undefined
     || p256dh.length === 0
     || p256dh.length > 512
     || authKey.length === 0
@@ -58,6 +71,15 @@ export function readPushSubscriptionRequest(body: unknown): PushSubscriptionDraf
   }
 
   return { endpoint, p256dh, authKey }
+}
+
+export function readPushSubscriptionEndpointRequest(
+  body: unknown,
+): PushSubscriptionEndpoint | undefined {
+  const input = record(body)
+  if (input === undefined) return undefined
+  const endpoint = readPushEndpoint(input.endpoint)
+  return endpoint === undefined ? undefined : { endpoint }
 }
 
 export function readNotificationPreferenceRequest(

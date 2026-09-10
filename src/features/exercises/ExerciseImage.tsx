@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { ExerciseIcon } from '../../shared/icons'
-import { useVitalMediaUrl } from './vitalMedia'
+import { shouldUsePrivateVitalStorage, useVitalMediaUrl } from './vitalMedia'
 
 export type ExerciseImageVariant = 'thumbnail' | 'preview' | 'picker' | 'detail' | 'technique'
+
+export function reviewedExerciseImageSource(source: string | undefined) {
+  return source && !/^\/exercises\/(?:fedb-|base-)/.test(source) ? source : undefined
+}
 
 function usePrefersReducedMotion() {
   const [reducedMotion, setReducedMotion] = useState(() => (
@@ -32,6 +36,9 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, alt = '',
   variant?: ExerciseImageVariant
   playVideo?: boolean
 }) {
+  const safeSrc = reviewedExerciseImageSource(src)
+  const safeFallbackSrc = reviewedExerciseImageSource(fallbackSrc)
+  const safeMotionSrc = reviewedExerciseImageSource(motionSrc)
   const [primaryFailed, setPrimaryFailed] = useState(false)
   const [fallbackFailed, setFallbackFailed] = useState(false)
   const [motionFailed, setMotionFailed] = useState(false)
@@ -41,12 +48,13 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, alt = '',
   const videoRef = useRef<HTMLVideoElement>(null)
   const reducedMotion = usePrefersReducedMotion()
   const wantsVideo = variant === 'technique' || (variant === 'picker' && playVideo)
-  const resolvedSrc = useVitalMediaUrl(src)
-  const resolvedMotionSrc = useVitalMediaUrl(motionSrc, variant === 'technique')
+  const privateVitalMedia = shouldUsePrivateVitalStorage(safeSrc) || shouldUsePrivateVitalStorage(videoSrc)
+  const resolvedSrc = useVitalMediaUrl(safeSrc)
+  const resolvedMotionSrc = useVitalMediaUrl(safeMotionSrc, variant === 'technique' && !privateVitalMedia)
   const resolvedVideoSrc = useVitalMediaUrl(videoSrc, wantsVideo)
 
   useEffect(() => setPrimaryFailed(false), [resolvedSrc])
-  useEffect(() => setFallbackFailed(false), [fallbackSrc])
+  useEffect(() => setFallbackFailed(false), [safeFallbackSrc])
   useEffect(() => setMotionFailed(false), [resolvedMotionSrc])
   useEffect(() => {
     setVideoFailed(false)
@@ -73,19 +81,19 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, alt = '',
 
   const className = `exercise-image exercise-image-${variant}`
   const primaryAvailable = Boolean(resolvedSrc) && !primaryFailed
-  const stillFallbackAvailable = Boolean(fallbackSrc) && !fallbackFailed
-  const motionFallbackAvailable = Boolean(resolvedMotionSrc) && !motionFailed
+  const stillFallbackAvailable = !privateVitalMedia && Boolean(safeFallbackSrc) && !fallbackFailed
+  const motionFallbackAvailable = !privateVitalMedia && Boolean(resolvedMotionSrc) && !motionFailed
   const motionAvailable = variant === 'technique' && motionFallbackAvailable
   // A compact picker video is opt-in: the picker activates exactly one card
   // after an explicit tap. Scrolling or visibility never starts playback.
   const videoAvailable = wantsVideo && Boolean(resolvedVideoSrc) && !videoFailed
   if (!primaryAvailable && !stillFallbackAvailable && !motionFallbackAvailable && !videoAvailable) {
-    return <span className={`${className} exercise-image-empty`} aria-hidden="true"><ExerciseIcon /></span>
+    return <span className={`${className} exercise-image-empty${privateVitalMedia ? ' exercise-image-loading' : ''}`} aria-hidden="true"><ExerciseIcon /></span>
   }
 
   // Compact cards never animate, but the end frame still protects them from a
   // broken start frame so the picker does not collapse to an empty placeholder.
-  const displayedStillSrc = primaryAvailable ? resolvedSrc : stillFallbackAvailable ? fallbackSrc : motionFallbackAvailable ? resolvedMotionSrc : undefined
+  const displayedStillSrc = primaryAvailable ? resolvedSrc : stillFallbackAvailable ? safeFallbackSrc : motionFallbackAvailable ? resolvedMotionSrc : undefined
   const animated = !videoAvailable && (primaryAvailable || stillFallbackAvailable) && motionAvailable
   return <span className={`${className}${animated ? ' exercise-image-motion' : ''}`}>
     {displayedStillSrc && <img className="exercise-image-frame exercise-image-frame-start" src={displayedStillSrc} alt={alt} loading="lazy" decoding="async" onError={() => primaryAvailable ? setPrimaryFailed(true) : stillFallbackAvailable ? setFallbackFailed(true) : setMotionFailed(true)} />}

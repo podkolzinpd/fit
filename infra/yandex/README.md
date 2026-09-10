@@ -43,10 +43,10 @@ registry and dispatcher bindings without folder-wide roles or configuration drif
 The same dispatcher optionally mounts the immutable stage-local
 `fit-stage-app-feedback-integrations` Lockbox version. When the secret is
 absent, Telegram/Tracker delivery is disabled without preventing ordinary API
-or migration delivery. Migration `000036` prepares narrow `analytics` views,
-but the existing DataLens lives in another cloud. Internal DataLens access and
-a dedicated database user therefore remain disabled until a separate
-connection decision is reviewed; PostgreSQL remains private.
+or migration delivery. Migration `000036` prepares narrow `analytics` views.
+The cluster keeps the existing Yandex-managed DataLens access path enabled so
+Terraform does not remove a live setting, but no dedicated database user,
+connection or dashboard migration is managed here; PostgreSQL remains private.
 
 ## Safe workflow
 
@@ -163,8 +163,9 @@ automatically deploys only when policy confirms an existing API/migration image
 update with no new paid resource, resize, identity change, delete or replacement.
 The only additional automatic bootstrap allowed here is the narrow Lockbox
 payload viewer grant for the existing dispatcher; it does not add compute
-resources. DataLens access and database-user creation are not part of the
-automatic stage plan.
+resources. The existing DataLens access flag is preserved, while DataLens
+connection and database-user creation are not part of the automatic stage
+plan.
 Every other infrastructure plan stops before image push, migration or apply.
 Feature branches initialize Terraform without the remote backend and validate
 the configuration without Yandex OIDC or state credentials; remote plan and

@@ -70,6 +70,8 @@ function clientSummary(value: Json): ClientTrainingSummary {
     encouragement: stringValue(item.encouragement, 'encouragement'),
     goalAlignment: optionalString(item.goalAlignment),
     nextSteps: optionalStringArray(item.nextSteps),
+    missingContext: optionalStringArray(item.missingContext),
+    analysisVersion: optionalString(item.analysisVersion),
   }
 }
 

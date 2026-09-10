@@ -66,6 +66,7 @@ import type { PilotProgressData } from './progress-data.js'
 import type { PilotWorkoutParser } from './pilot-workout-parser.js'
 import type { PilotTrainingSummaries } from './training-summary.js'
 import type { VitalMediaSigner } from './vital-media.js'
+import type { PilotTrainerProfiles, TrainerProfileDraft } from './trainer-profile.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -96,6 +97,83 @@ describe('health endpoint', () => {
       releaseId: 'api-tree-hash',
     })
     expect(response.headers['x-fit-release-id']).toBe('api-tree-hash')
+  })
+})
+
+describe('trainer professional profile', () => {
+  const draft: TrainerProfileDraft = {
+    displayName: 'Анна Иванова',
+    bio: 'Помогаю безопасно начать силовые тренировки и видеть понятный прогресс.',
+    specialties: ['Силовые'], city: 'Москва', trainingModes: ['online'],
+    experienceStartYear: 2020, education: '', formats: '', price: '',
+    acceptingClients: true, avatarDataUrl: null, certificates: [],
+  }
+  const value = {
+    publicId: '11111111-1111-4111-8111-111111111111', draft, published: draft,
+    listedInCatalog: false,
+    publishedAt: '2026-09-10T09:00:00.000Z', updatedAt: '2026-09-10T09:00:00.000Z', version: 2,
+  }
+
+  function profiles(): PilotTrainerProfiles {
+    return {
+      getOwn: vi.fn().mockResolvedValue(value),
+      saveDraft: vi.fn().mockResolvedValue(value),
+      publish: vi.fn().mockResolvedValue(value),
+      unpublish: vi.fn().mockResolvedValue({ ...value, published: null, publishedAt: null }),
+      setCatalogListing: vi.fn().mockResolvedValue({ ...value, listedInCatalog: true }),
+      getPublic: vi.fn().mockResolvedValue(value),
+      listPublic: vi.fn().mockResolvedValue([{ ...value, listedInCatalog: true }]),
+    }
+  }
+
+  it('saves and publishes through a read-write session', async () => {
+    const pilotTrainerProfiles = profiles()
+    const saveDraft = vi.fn().mockResolvedValue(value)
+    pilotTrainerProfiles.saveDraft = saveDraft
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': 'a'.repeat(43) }
+    const saved = await app.inject({ method: 'PUT', url: '/v1/trainer-profile', headers, payload: draft })
+    const published = await app.inject({ method: 'POST', url: '/v1/trainer-profile/publish', headers })
+    expect(saved.statusCode).toBe(200)
+    expect(published.statusCode).toBe(200)
+    expect(saveDraft).toHaveBeenCalledWith({ accessMode: 'read_write', token: 'a'.repeat(43) }, draft)
+  })
+
+  it('serves only the public profile without a session', async () => {
+    const app = buildApp({ pilotTrainerProfiles: profiles(), logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'GET', url: `/v1/trainers/${value.publicId}/public-profile` })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(value)
+  })
+
+  it('lists published catalog profiles with validated filters', async () => {
+    const pilotTrainerProfiles = profiles()
+    const listPublic = vi.fn().mockResolvedValue([{ ...value, listedInCatalog: true }])
+    pilotTrainerProfiles.listPublic = listPublic
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/trainers/catalog?query=%D0%90%D0%BD%D0%BD%D0%B0&specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&mode=online&accepting=true',
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(listPublic).toHaveBeenCalledWith({
+      query: 'Анна', specialty: 'Силовые', city: 'Москва', mode: 'online', acceptingClients: true,
+    })
+  })
+
+  it('lets a trainer opt into the catalog only from a read-write session', async () => {
+    const pilotTrainerProfiles = profiles()
+    const setCatalogListing = vi.fn().mockResolvedValue({ ...value, listedInCatalog: true })
+    pilotTrainerProfiles.setCatalogListing = setCatalogListing
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': 'a'.repeat(43) }
+    const response = await app.inject({ method: 'POST', url: '/v1/trainer-profile/catalog', headers, payload: { listed: true } })
+
+    expect(response.statusCode).toBe(200)
+    expect(setCatalogListing).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: 'a'.repeat(43) }, true,
+    )
   })
 })
 
@@ -1094,6 +1172,7 @@ function buildAssistantTurnRunner(error?: Error): {
 function buildPushNotifications(error?: Error): {
   pilotPushNotifications: PilotPushNotifications
   readStatus: ReturnType<typeof vi.fn>
+  hasSubscription: ReturnType<typeof vi.fn>
   upsertSubscription: ReturnType<typeof vi.fn>
   deleteSubscription: ReturnType<typeof vi.fn>
   setPreference: ReturnType<typeof vi.fn>
@@ -1108,17 +1187,20 @@ function buildPushNotifications(error?: Error): {
       workout_scheduled: true,
     },
   }))
+  const hasSubscription = vi.fn(() => result(true))
   const upsertSubscription = vi.fn(() => result(undefined))
   const deleteSubscription = vi.fn(() => result(undefined))
   const setPreference = vi.fn(() => result(undefined))
   return {
     pilotPushNotifications: {
       readStatus,
+      hasSubscription,
       upsertSubscription,
       deleteSubscription,
       setPreference,
     },
     readStatus,
+    hasSubscription,
     upsertSubscription,
     deleteSubscription,
     setPreference,
@@ -2416,6 +2498,31 @@ describe('pilot push notification state', () => {
     })
   })
 
+  it('checks only the current browser endpoint without exposing it in the URL', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/push-notifications/subscription/status',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { endpoint: ' https://push.example/this-device ' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toEqual({ subscribed: true })
+    expect(push.hasSubscription).toHaveBeenCalledWith(
+      sessionToken,
+      'https://push.example/this-device',
+    )
+    expect(response.body).not.toContain('push.example')
+  })
+
   it('rejects malformed subscriptions before invoking the database command', async () => {
     const push = buildPushNotifications()
     const app = buildApp({
@@ -2448,10 +2555,33 @@ describe('pilot push notification state', () => {
       method: 'DELETE',
       url: '/v1/push-notifications/subscription',
       headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { endpoint: 'https://push.example/this-device' },
     })
 
     expect(response.statusCode).toBe(204)
-    expect(push.deleteSubscription).toHaveBeenCalledWith(sessionToken)
+    expect(push.deleteSubscription).toHaveBeenCalledWith(
+      sessionToken,
+      'https://push.example/this-device',
+    )
+  })
+
+  it('does not delete every device when the endpoint body is missing', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({
+      pilotPushNotifications: push.pilotPushNotifications,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/v1/push-notifications/subscription',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(push.deleteSubscription).not.toHaveBeenCalled()
   })
 
   it('sets only a supported explicit preference', async () => {

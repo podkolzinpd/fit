@@ -1,6 +1,10 @@
+import { useMemo } from 'react'
+import { WorkoutLoadMap } from '../progress'
+import { PersonalWorkoutResult } from '../../shared/PersonalWorkoutResult'
+import { completedWorkoutOrder } from '../../shared/workout-results'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import type { ClientGoal, TrainerReaction, Workout, WorkoutPersonalRecord, WorkoutRegularity } from '../../shared/domain'
+import type { ClientGoal, Gender, TrainerReaction, Workout, WorkoutPersonalRecord, WorkoutRegularity } from '../../shared/domain'
 import { currentStage } from '../../shared/goal-rules'
 import { addDays, formatLocalDate, type LocalDate } from '../../shared/local-date'
 import { ChevronRightIcon, RecordIcon } from '../../shared/icons'
@@ -38,7 +42,7 @@ export function clientHomeNextWorkout(workouts: readonly Workout[], today: Local
 export function clientHomeLatestDoneWorkout(workouts: readonly Workout[]): Workout | undefined {
   return workouts
     .filter((workout) => workout.status === 'done')
-    .sort((a, b) => workoutOrder(b).localeCompare(workoutOrder(a)))[0]
+    .sort((a, b) => completedWorkoutOrder(b, a))[0]
 }
 
 export function clientHomePastPlans(workouts: readonly Workout[], today: LocalDate): Workout[] {
@@ -183,6 +187,7 @@ function HighlightCard({ highlight, today }: { highlight: HomeHighlight; today: 
 
 interface ClientHomeOverviewProps {
   today: LocalDate
+  gender?: Gender | null
   workouts: Workout[] | undefined
   regularity: WorkoutRegularity[] | undefined
   goal: ClientGoal | null | undefined
@@ -196,7 +201,8 @@ interface ClientHomeOverviewProps {
   showFirstRunConnection?: boolean
 }
 
-export function ClientHomeOverview({ today, workouts, regularity, goal, personalRecords = [], workoutsLoading, regularityLoading, error, onRetry, selfTraining, wearable, showFirstRunConnection = true }: ClientHomeOverviewProps) {
+export function ClientHomeOverview({ today, gender = null, workouts, regularity, goal, personalRecords = [], workoutsLoading, regularityLoading, error, onRetry, selfTraining, wearable, showFirstRunConnection = true }: ClientHomeOverviewProps) {
+  const lastCompleted = useMemo(() => workouts?.filter((item) => item.status === 'done').sort(completedWorkoutOrder).at(-1), [workouts])
   const next = workouts ? clientHomeNextWorkout(workouts, today) : null
   const pastPlans = workouts ? clientHomePastPlans(workouts, today) : []
   const hasActiveOrTodayPlan = Boolean(next && (next.kind === 'active' || next.workout.workoutDate === today))
@@ -208,9 +214,11 @@ export function ClientHomeOverview({ today, workouts, regularity, goal, personal
     {workoutsLoading && !workouts && <section className="client-home-next client-home-loading" role="status">Загружаем следующую тренировку…</section>}
     {!hasActiveOrTodayPlan && pastPlans.length > 0 && <PastPlanCard workouts={pastPlans} />}
     {next && <NextActionCard next={next} today={today} />}
+    <PersonalWorkoutResult home workouts={workouts} loading={workoutsLoading} error={error} onRetry={onRetry}>
+      {lastCompleted && <WorkoutLoadMap workout={lastCompleted} gender={gender} compact />}
+    </PersonalWorkoutResult>
     <WeekCard week={week} loading={regularityLoading} />
-    {highlight && <HighlightCard highlight={highlight} today={today} />}
+    {highlight && highlight.kind !== 'record' && <HighlightCard highlight={highlight} today={today} />}
     {wearable}
-    {error && <section className="client-home-error" role="alert"><p>{error.message}</p><button type="button" className="secondary" onClick={onRetry}>Повторить</button></section>}
   </div>
 }

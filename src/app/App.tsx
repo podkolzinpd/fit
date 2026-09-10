@@ -8,9 +8,10 @@ import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPassword
 import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
-import { ProfilePage } from '../features/profile'
+import { ProfilePage, PublicTrainerProfilePage, TrainerCatalogPage, TrainerProfileEditorPage } from '../features/profile'
 import { YandexAssistantRoute } from '../features/assistant'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
+import { AccountDeletionPage, LegalAcceptanceGate, PrivacyPage, TermsPage } from '../features/legal'
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 
 function Protected() {
@@ -19,7 +20,7 @@ function Protected() {
   if (loading) return <main className={systemStateClass}>Восстанавливаем сессию…</main>
   if (!actor) return <Navigate to="/auth" state={{ from: `${location.pathname}${location.search}` }} replace />
   if (error) return <main className={`${systemStateClass} error`}>{error}</main>
-  return <Outlet />
+  return <LegalAcceptanceGate><Outlet /></LegalAcceptanceGate>
 }
 
 function TrainerOnly() {
@@ -55,6 +56,10 @@ const router = createBrowserRouter([
   { path: '/auth/callback', element: <AuthCallbackPage /> },
   { path: '/auth/yandex/callback', element: <YandexPilotCallbackPage /> },
   { path: '/auth/yandex/session', element: <YandexAppSessionPage /> },
+  { path: '/legal/terms', element: <TermsPage /> },
+  { path: '/legal/privacy', element: <PrivacyPage /> },
+  { path: '/legal/delete-account', element: <AccountDeletionPage /> },
+  { path: '/trainers/:publicId', element: <PublicTrainerProfilePage /> },
   { element: <Protected />, children: [{ element: <AppLayout />, children: [
     { index: true, element: <Home /> },
     { path: '/join', element: <JoinPage /> },
@@ -65,6 +70,7 @@ const router = createBrowserRouter([
       { path: '/me/progress', element: <MyProgressPage /> },
       { path: '/me/goal', element: <MyGoalPage /> },
       { path: '/me/profile', element: <ClientProfilePage /> },
+      { path: '/me/trainers', element: <TrainerCatalogPage /> },
     ] },
     { element: <CanonicalWorkoutClientRoute />, children: [
       { path: '/workouts/new', element: <WorkoutFormPage /> },
@@ -90,6 +96,7 @@ const router = createBrowserRouter([
       { path: '/schedule', element: <SchedulePage /> },
       { path: '/exercises', element: <ExercisesPage /> },
       { path: '/profile', element: <ProfilePage /> },
+      { path: '/profile/trainer', element: <TrainerProfileEditorPage /> },
     ] },
   ] }] },
   { path: '*', element: <Navigate to="/" replace /> },

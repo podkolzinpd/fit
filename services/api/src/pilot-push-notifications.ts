@@ -5,6 +5,7 @@ import {
 } from './yandex-actor-session.js'
 import {
   deletePushSubscription,
+  hasPushSubscription,
   readPushNotificationStatus,
   setNotificationPreference,
   type PushNotificationStatus,
@@ -17,11 +18,18 @@ import type {
 
 export interface PilotPushNotifications {
   readStatus(session: YandexActorSessionInput): Promise<PushNotificationStatus>
+  hasSubscription(
+    session: YandexActorSessionInput,
+    endpoint: string,
+  ): Promise<boolean>
   upsertSubscription(
     session: YandexActorSessionInput,
     draft: PushSubscriptionDraft,
   ): Promise<void>
-  deleteSubscription(session: YandexActorSessionInput): Promise<void>
+  deleteSubscription(
+    session: YandexActorSessionInput,
+    endpoint: string,
+  ): Promise<void>
   setPreference(
     session: YandexActorSessionInput,
     kind: PushNotificationKind,
@@ -43,6 +51,14 @@ export class DatabasePilotPushNotifications implements PilotPushNotifications {
     return this.withSession(session, readPushNotificationStatus)
   }
 
+  hasSubscription(
+    session: YandexActorSessionInput,
+    endpoint: string,
+  ): Promise<boolean> {
+    return this.withSession(session, (client) =>
+      hasPushSubscription(client, endpoint))
+  }
+
   upsertSubscription(
     session: YandexActorSessionInput,
     draft: PushSubscriptionDraft,
@@ -51,8 +67,12 @@ export class DatabasePilotPushNotifications implements PilotPushNotifications {
       upsertPushSubscription(client, draft))
   }
 
-  deleteSubscription(session: YandexActorSessionInput): Promise<void> {
-    return this.withSession(session, deletePushSubscription)
+  deleteSubscription(
+    session: YandexActorSessionInput,
+    endpoint: string,
+  ): Promise<void> {
+    return this.withSession(session, (client) =>
+      deletePushSubscription(client, endpoint))
   }
 
   setPreference(

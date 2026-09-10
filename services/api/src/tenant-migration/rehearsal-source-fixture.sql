@@ -531,6 +531,7 @@ values (
 on conflict do nothing;
 
 insert into public.push_subscriptions (
+  id,
   user_id,
   endpoint,
   p256dh,
@@ -538,11 +539,19 @@ insert into public.push_subscriptions (
   created_at
 )
 values (
+  '98000000-0000-4000-8000-000000000089',
   '92000000-0000-4000-8000-000000000029',
-  'https://push.invalid/local-rehearsal',
-  'local-rehearsal-p256dh',
-  'local-rehearsal-auth-key',
+  'https://push.invalid/local-rehearsal-phone',
+  'local-rehearsal-phone-p256dh',
+  'local-rehearsal-phone-auth-key',
   timestamptz '2026-08-05 09:20:00+00'
+), (
+  '99000000-0000-4000-8000-000000000099',
+  '92000000-0000-4000-8000-000000000029',
+  'https://push.invalid/local-rehearsal-tablet',
+  'local-rehearsal-tablet-p256dh',
+  'local-rehearsal-tablet-auth-key',
+  timestamptz '2026-08-05 09:21:00+00'
 )
 on conflict do nothing;
 

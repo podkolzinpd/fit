@@ -213,6 +213,25 @@ describe('yandexPilotQueries', () => {
     )
     expect(fetchMock.mock.calls.at(-1)?.[0]).not.toContain('auth-secret')
 
+    await yandexPilotQueries.hasPushSubscription(
+      'https://stage.example.test',
+      token,
+      'https://push.example/subscription',
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/push-notifications/subscription/status',
+      {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          'content-type': 'application/json',
+          'x-fit-pilot-session': token,
+        },
+        body: JSON.stringify({ endpoint: 'https://push.example/subscription' }),
+      },
+    )
+    expect(fetchMock.mock.calls.at(-1)?.[0]).not.toContain('push.example')
+
     await yandexPilotQueries.setPushNotificationPreference(
       'https://stage.example.test',
       token,
@@ -227,10 +246,14 @@ describe('yandexPilotQueries', () => {
     await yandexPilotQueries.deletePushSubscription(
       'https://stage.example.test',
       token,
+      'https://push.example/subscription',
     )
     expect(fetchMock).toHaveBeenLastCalledWith(
       'https://stage.example.test/v1/push-notifications/subscription',
-      expect.objectContaining({ method: 'DELETE' }),
+      expect.objectContaining({
+        method: 'DELETE',
+        body: JSON.stringify({ endpoint: 'https://push.example/subscription' }),
+      }),
     )
   })
 

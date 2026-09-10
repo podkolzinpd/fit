@@ -159,6 +159,9 @@ export function assertProductionLikeManifest(summary) {
       throw new Error(`target_only_table_not_empty:${tableName}`)
     }
   }
+  if (summary.tables.get('public.push_subscriptions')?.rows !== 2) {
+    throw new Error('multi_device_push_contract_missing')
+  }
 }
 
 export function assertIdempotentApply(report) {
@@ -233,6 +236,27 @@ function createTargetDatabase(databaseName) {
       databaseName,
     ],
     { capture: true, label: 'target_database_create' },
+  )
+}
+
+function configureTargetDatabaseTimezone(databaseName) {
+  assertRehearsalDatabaseName(databaseName)
+  run(
+    'podman',
+    [
+      'exec',
+      TARGET_CONTAINER,
+      'psql',
+      '--username',
+      'postgres',
+      '--dbname',
+      'postgres',
+      '--set',
+      'ON_ERROR_STOP=1',
+      '--command',
+      `alter database ${databaseName} set timezone to 'Europe/Moscow'`,
+    ],
+    { capture: true, label: 'target_database_timezone' },
   )
 }
 
@@ -359,6 +383,7 @@ async function rehearse(runNumber) {
     console.log(`[tenant-rehearsal] ${runNumber}/2: создаю чистую локальную БД.`)
     createTargetDatabase(databaseName)
     databaseCreated = true
+    configureTargetDatabaseTimezone(databaseName)
     migrateTargetDatabase(databaseUrl)
 
     const exported = parseExportSummary(

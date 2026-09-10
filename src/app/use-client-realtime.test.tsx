@@ -1,3 +1,4 @@
+import { invalidateWorkoutResults } from './invalidate-workout-results'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render } from '@testing-library/react'
 import type { ReactNode } from 'react'
@@ -59,6 +60,17 @@ describe('client realtime', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
+  })
+
+  it('expires all factual views after local edits and remote deletes', async () => {
+    const client = new QueryClient()
+    const keys = [['workouts', 'client-1'], ['workout-personal-records', 'workout-1'], ['training-summary-first-workout', 'client-1'], ['client-progress-story-workouts', 'client-1'], ['exercise-history', 'client-1']]
+    for (const key of keys) client.setQueryData(key, ['old result'])
+    await invalidateWorkoutResults(client)
+    for (const key of keys) expect(client.getQueryState(key)?.isInvalidated).toBe(true)
+    for (const key of keys) client.setQueryData(key, ['new result'])
+    await applyClientRealtimeChanges(client, 'client-1', [{ table: 'workouts', eventType: 'DELETE', new: {}, old: { id: 'workout-1' } }])
+    for (const key of keys) expect(client.getQueryState(key)?.isInvalidated).toBe(true)
   })
 
   it('invalidates only query families affected by the received tables', async () => {

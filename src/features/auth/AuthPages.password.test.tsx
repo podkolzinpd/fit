@@ -9,7 +9,6 @@ vi.mock('../../data/repositories/auth.repository', () => ({
   authRepository: {
     signIn,
     signUp: vi.fn(),
-    signInWithGoogle: vi.fn(),
   },
 }))
 
@@ -43,5 +42,18 @@ describe('AuthPage password sign-in', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось войти. Проверьте интернет и попробуйте ещё раз.')
     expect(screen.getByRole('button', { name: /^Войти$/ })).toBeEnabled()
     expect(screen.getByRole('button', { name: /^Войти$/ })).toHaveAttribute('aria-busy', 'false')
+  })
+
+  it('не предлагает Google ни для входа, ни для регистрации', async () => {
+    const user = userEvent.setup()
+    render(<MemoryRouter><AuthPage /></MemoryRouter>)
+
+    expect(screen.queryByRole('button', { name: /Google/ })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Создать аккаунт' }))
+    expect(screen.queryByRole('button', { name: /Google/ })).not.toBeInTheDocument()
+    expect(screen.getByText(/Создавая аккаунт, вы принимаете/)).toBeVisible()
+    expect(screen.getAllByRole('link', { name: 'Условия использования' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: /Политик|Конфиденциальность/ }).length).toBeGreaterThan(0)
   })
 })
