@@ -2069,14 +2069,12 @@ export function LiveWorkoutPage() {
               <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
               {clientMode && exercise.trainerComment && <p className="live-trainer-cue">Тренер: {exercise.trainerComment}</p>}
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return <p className="live-previous-result">{line ? `В прошлый раз: ${line}` : 'Нет предыдущего результата'}</p> })()}
-              <div className="live-exercise-tools">
-                {liveCommentField(exercise)}
-                {block.blockType === 'single' && <LiveExerciseRest seconds={restOverrides[exercise.id] ?? exercise.restBetweenSetsSec} onChange={(seconds) => setExerciseRest(exercise.id, seconds)} />}
-              </div>
+              {block.blockType === 'single' && <div className="live-exercise-rest-row"><LiveExerciseRest seconds={restOverrides[exercise.id] ?? exercise.restBetweenSetsSec} onChange={(seconds) => setExerciseRest(exercise.id, seconds)} /></div>}
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </WorkoutSetTable>
               {canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
+              {liveCommentField(exercise)}
             </WorkoutExercise>
           })
         }
@@ -2099,9 +2097,14 @@ export function LiveWorkoutPage() {
             {round.items.map(({ exercise, set }) => <section key={set.id}>
               <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} actions={roundIndex === 0 ? exerciseMenu(exercise) : undefined} />
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
-              {roundIndex === 0 && liveCommentField(exercise)}
             </section>)}
           </div> })}
+          <div className="circuit-exercise-notes" aria-label="Заметки к упражнениям">
+            {block.exercises.map((exercise) => <section className="circuit-exercise-note" key={exercise.id}>
+              <h3>{exercise.name}</h3>
+              {liveCommentField(exercise)}
+            </section>)}
+          </div>
         </div>
       }) })()}
       {canManageLiveStructure && <button type="button" className="secondary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
