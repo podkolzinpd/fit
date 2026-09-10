@@ -1,4 +1,4 @@
-import type { TrainerProfileDraft, TrainerProfessionalProfile } from '../../shared/domain'
+import type { TrainerCatalogFilters, TrainerProfileDraft, TrainerProfessionalProfile } from '../../shared/domain'
 import { parseTrainerProfile } from '../../shared/trainer-profile'
 import { getYandexMainRoutingConfig } from '../../app/feature-flags'
 import { supabase } from '../queries/client'
@@ -10,6 +10,8 @@ export interface TrainerProfilesRepository {
   saveDraft(draft: TrainerProfileDraft): Promise<TrainerProfessionalProfile>
   publish(): Promise<TrainerProfessionalProfile>
   unpublish(): Promise<TrainerProfessionalProfile>
+  setCatalogListing(listed: boolean): Promise<TrainerProfessionalProfile>
+  listCatalog(filters: TrainerCatalogFilters): Promise<TrainerProfessionalProfile[]>
 }
 
 function parseNullable(value: unknown): TrainerProfessionalProfile | null {
@@ -36,6 +38,22 @@ export const trainerProfilesRepository: TrainerProfilesRepository = {
     const result = await supabase.rpc('unpublish_trainer_profile')
     if (result.error) throw repositoryError(result.error)
     return parseTrainerProfile(result.data)
+  },
+  async setCatalogListing(listed) {
+    const result = await supabase.rpc('set_trainer_profile_catalog_listing', { p_listed: listed })
+    if (result.error) throw repositoryError(result.error)
+    return parseTrainerProfile(result.data)
+  },
+  async listCatalog(filters) {
+    const result = await supabase.rpc('list_public_trainer_profiles', {
+      p_query: filters.query || undefined,
+      p_specialty: filters.specialty || undefined,
+      p_city: filters.city || undefined,
+      p_mode: filters.mode || undefined,
+      p_accepting_clients: filters.acceptingClients ?? undefined,
+    })
+    if (result.error) throw repositoryError(result.error)
+    return (result.data ?? []).map(parseTrainerProfile)
   },
 }
 

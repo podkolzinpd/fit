@@ -8,7 +8,7 @@ import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPassword
 import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
-import { ProfilePage, PublicTrainerProfilePage, TrainerProfileEditorPage } from '../features/profile'
+import { ProfilePage, PublicTrainerProfilePage, TrainerCatalogPage, TrainerProfileEditorPage } from '../features/profile'
 import { YandexAssistantRoute } from '../features/assistant'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 import { AccountDeletionPage, LegalAcceptanceGate, PrivacyPage, TermsPage } from '../features/legal'
@@ -70,6 +70,7 @@ const router = createBrowserRouter([
       { path: '/me/progress', element: <MyProgressPage /> },
       { path: '/me/goal', element: <MyGoalPage /> },
       { path: '/me/profile', element: <ClientProfilePage /> },
+      { path: '/me/trainers', element: <TrainerCatalogPage /> },
     ] },
     { element: <CanonicalWorkoutClientRoute />, children: [
       { path: '/workouts/new', element: <WorkoutFormPage /> },

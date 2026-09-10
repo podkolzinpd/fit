@@ -1747,6 +1747,20 @@ export type Database = {
         Args: { p_public_id: string }
         Returns: Json
       }
+      list_public_trainer_profiles: {
+        Args: {
+          p_accepting_clients?: boolean | null
+          p_city?: string | null
+          p_mode?: string | null
+          p_query?: string | null
+          p_specialty?: string | null
+        }
+        Returns: Json[]
+      }
+      set_trainer_profile_catalog_listing: {
+        Args: { p_listed: boolean }
+        Returns: Json
+      }
       append_live_exercise: {
         Args: {
           p_exercise: Json

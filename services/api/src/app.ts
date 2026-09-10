@@ -114,7 +114,7 @@ import {
   readVersionedProgressRequest,
 } from './progress-request.js'
 import { readVitalMediaRequest, type VitalMediaSigner } from './vital-media.js'
-import { readTrainerProfileDraft, TrainerProfileError, type PilotTrainerProfiles } from './trainer-profile.js'
+import { readTrainerProfileDraft, TrainerProfileError, type PilotTrainerProfiles, type TrainerCatalogFilters } from './trainer-profile.js'
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
@@ -646,6 +646,49 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.unpublish(session),
       (profile) => reply.header('cache-control', 'no-store').send(profile))
+  })
+
+  app.post('/v1/trainer-profile/catalog', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const body = request.body
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof body !== 'object' || body === null || !('listed' in body) || typeof body.listed !== 'boolean') {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.setCatalogListing(session, body.listed),
+      (profile) => reply.header('cache-control', 'no-store').send(profile))
+  })
+
+  app.get('/v1/trainers/catalog', async (request, reply) => {
+    const query = request.query as Record<string, unknown>
+    const textFilter = (value: unknown, max: number) =>
+      typeof value === 'string' && value.trim().length <= max ? value.trim() : undefined
+    const accepting = query.accepting === undefined ? null
+      : query.accepting === 'true' ? true
+        : query.accepting === 'false' ? false : undefined
+    const mode = query.mode === undefined || query.mode === '' ? ''
+      : query.mode === 'online' || query.mode === 'in_person' ? query.mode : undefined
+    const filters: TrainerCatalogFilters = {
+      query: textFilter(query.query, 100) ?? '',
+      specialty: textFilter(query.specialty, 60) ?? '',
+      city: textFilter(query.city, 100) ?? '',
+      mode: mode ?? '',
+      acceptingClients: accepting ?? null,
+    }
+    if ((query.query !== undefined && textFilter(query.query, 100) === undefined)
+      || (query.specialty !== undefined && textFilter(query.specialty, 60) === undefined)
+      || (query.city !== undefined && textFilter(query.city, 100) === undefined)
+      || mode === undefined || accepting === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    try {
+      return reply.send(await options.pilotTrainerProfiles.listPublic(filters))
+    } catch (error) {
+      return sendSafeDatabaseFailure(reply, error, 'Trainer catalog query failed')
+    }
   })
 
   app.get('/v1/trainers/:publicId/public-profile', async (request, reply) => {

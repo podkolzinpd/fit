@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import { ClientTrainerConnections } from './ClientTrainerConnections'
 
 const repository = vi.hoisted(() => ({
@@ -20,7 +21,7 @@ const connectedTrainer = {
 
 function renderConnections() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={queryClient}><ClientTrainerConnections clientId="client-1" /></QueryClientProvider>)
+  return render(<MemoryRouter><QueryClientProvider client={queryClient}><ClientTrainerConnections clientId="client-1" /></QueryClientProvider></MemoryRouter>)
 }
 
 describe('ClientTrainerConnections safe disconnect', () => {
@@ -91,6 +92,12 @@ describe('ClientTrainerConnections safe disconnect', () => {
 
     expect(await screen.findByText(/Код для тренера:/)).toHaveTextContent('ABC123DEF456')
     expect(screen.getByRole('button', { name: 'Скопировать код для тренера' })).toBeVisible()
+  })
+
+  it('keeps the trainer catalog available as a quiet link in the profile', async () => {
+    renderConnections()
+
+    expect(await screen.findByRole('link', { name: /Найти тренера/ })).toHaveAttribute('href', '/me/trainers')
   })
 
 })

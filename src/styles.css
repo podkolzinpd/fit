@@ -827,6 +827,11 @@ p { margin: 6px 0 }
 .client-home-section-head .secondary { min-height: 38px; padding: 8px 11px }
 .client-home-connections > .card, .client-home-invitations { box-shadow:none}
 .client-home-connections > .card, .client-home-invitations .card { border-radius: 14px; background: var(--surface-sunken) }
+.client-trainer-catalog-link { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:56px; padding:10px 2px 0; border-top:1px solid var(--border); color:var(--fg); text-decoration:none; }
+.client-trainer-catalog-link > span:first-child { display:grid; gap:2px; }
+.client-trainer-catalog-link strong { font-size:14px; font-weight:600; }
+.client-trainer-catalog-link small { color:var(--muted); font-size:12px; }
+.client-trainer-catalog-link > span:last-child { color:var(--muted); font-size:24px; line-height:1; }
 .invitation-code-card { display:grid; align-items:stretch; gap:10px }
 .invitation-code-row { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:12px }
 .invitation-code-content { min-width:0 }
@@ -5648,7 +5653,22 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 
 /* Trainer professional profile: a quiet form for the trainer and the same
    readable card in preview and on the public link. */
-.trainer-professional-editor, .public-trainer-page { display:grid; gap:16px; width:min(100%, 720px); margin:0 auto; padding-bottom:calc(32px + env(safe-area-inset-bottom)); }
+.trainer-professional-editor, .public-trainer-page, .trainer-catalog-page { display:grid; gap:16px; width:min(100%, 720px); margin:0 auto; padding-bottom:calc(32px + env(safe-area-inset-bottom)); }
+.trainer-catalog-intro { margin:-8px 0 0; color:var(--muted); }
+.trainer-catalog-search { display:grid; gap:12px; }
+.trainer-catalog-search-actions { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; }
+.trainer-catalog-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding-top:12px; border-top:1px solid var(--border); }
+.trainer-catalog-filters > .link { grid-column:1 / -1; justify-self:start; }
+.trainer-catalog-results { display:grid; gap:12px; }
+.trainer-catalog-results > .muted { margin:0; }
+.trainer-catalog-card { display:grid; gap:14px; box-shadow:none; }
+.trainer-catalog-card-head { display:flex; align-items:center; gap:12px; }
+.trainer-catalog-card-head > div { min-width:0; }
+.trainer-catalog-card-head h2 { margin:0; font-size:19px; line-height:1.2; }
+.trainer-catalog-card-head p, .trainer-catalog-facts, .trainer-catalog-bio { margin:3px 0 0; color:var(--muted); }
+.trainer-catalog-facts { font-size:13px; }
+.trainer-catalog-bio { display:-webkit-box; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3; }
+.trainer-catalog-card > .button { width:100%; }
 .trainer-profile-state { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px 18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); }
 .trainer-profile-state > .button { min-height:44px; }
 .trainer-profile-state p, .trainer-profile-publish-tools p { margin:4px 0 0; color:var(--muted); font-size:var(--type-caption-size); }
@@ -5698,7 +5718,8 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .public-trainer-page .page-header { margin-bottom:0; }
 
 @media (max-width:560px) {
-  .trainer-professional-editor, .public-trainer-page { padding-inline:16px; }
+  .trainer-professional-editor, .public-trainer-page, .trainer-catalog-page { padding-inline:16px; }
+  .trainer-catalog-filters { grid-template-columns:1fr; }
   .trainer-certificate-fields { grid-template-columns:minmax(0,1fr) 88px; }
   .trainer-certificate-fields input:nth-child(2) { grid-column:1 / -1; grid-row:2; }
   .trainer-certificate-fields .link { grid-column:2; grid-row:2; justify-self:end; }
