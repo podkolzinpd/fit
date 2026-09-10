@@ -31,7 +31,10 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const data = event.notification.data || {}
-  const url = data.url || (data.workout_id ? `/workouts/${data.workout_id}` : '/')
+  const inactivity = data.type === 'workout-inactivity' && data.workout_id
+  const url = inactivity
+    ? `/workouts/${data.workout_id}/live${event.action === 'finish' ? '?reminder=finish' : ''}`
+    : data.url || (data.workout_id ? `/workouts/${data.workout_id}` : '/')
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       const existing = clients.find((client) => 'focus' in client)

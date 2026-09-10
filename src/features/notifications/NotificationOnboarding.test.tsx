@@ -31,6 +31,17 @@ vi.mock('../install', () => ({
   isAppInstalled: () => isAppInstalled(),
 }))
 
+const nativeReminder = vi.hoisted(() => ({
+  supported: vi.fn<() => boolean>(),
+  permission: vi.fn<() => Promise<'granted' | 'denied' | 'prompt' | 'unsupported'>>(),
+  requestPermission: vi.fn<() => Promise<boolean>>(),
+}))
+vi.mock('../workouts/workout-inactivity-reminder', () => ({
+  isNativeWorkoutInactivityReminderSupported: () => nativeReminder.supported(),
+  workoutInactivityNotificationPermission: () => nativeReminder.permission(),
+  requestWorkoutInactivityNotificationPermission: () => nativeReminder.requestPermission(),
+}))
+
 const pushOnboardingSeen = vi.hoisted(() => vi.fn<(userId: string) => boolean>())
 const markPushOnboardingSeen = vi.hoisted(() => vi.fn<(userId: string) => void>())
 vi.mock('./notification-onboarding-storage', () => ({
@@ -60,6 +71,7 @@ function primeHappyPathDefaults() {
   isAppInstalled.mockReturnValue(true)
   installPromptDismissed.mockReturnValue(true)
   repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true })
+  nativeReminder.supported.mockReturnValue(false)
 }
 
 describe('NotificationOnboarding', () => {
@@ -75,6 +87,9 @@ describe('NotificationOnboarding', () => {
     isAppInstalled.mockReset()
     pushOnboardingSeen.mockReset()
     markPushOnboardingSeen.mockReset()
+    nativeReminder.supported.mockReset()
+    nativeReminder.permission.mockReset()
+    nativeReminder.requestPermission.mockReset()
   })
 
   it('renders nothing when the browser does not support push', () => {
@@ -164,5 +179,25 @@ describe('NotificationOnboarding', () => {
     await user.click(await screen.findByRole('button', { name: 'Не сейчас' }))
     expect(repository.enable).not.toHaveBeenCalled()
     expect(markPushOnboardingSeen).toHaveBeenCalledWith(USER_ID)
+  })
+
+  it('enables the unfinished-workout reminder through native notification permission', async () => {
+    primeHappyPathDefaults()
+    const user = userEvent.setup()
+    nativeReminder.supported.mockReturnValue(true)
+    nativeReminder.permission.mockResolvedValue('prompt')
+    nativeReminder.requestPermission.mockResolvedValue(true)
+    isAppInstalled.mockReturnValue(false)
+    installPromptDismissed.mockReturnValue(false)
+    repository.setCategoryEnabled.mockResolvedValue(undefined)
+
+    render(<NotificationOnboarding userId={USER_ID} />, { wrapper: wrapper() })
+    expect(await screen.findByText('Напомним, если активная тренировка останется незавершённой.')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Включить уведомления' }))
+
+    expect(nativeReminder.requestPermission).toHaveBeenCalledOnce()
+    expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'workout_reminder', true)
+    expect(repository.enable).not.toHaveBeenCalled()
+    expect(await screen.findByRole('status')).toHaveTextContent('Напомним, если активная тренировка останется незавершённой.')
   })
 })

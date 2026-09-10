@@ -1,18 +1,26 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useDataBackend } from '../../app/data-backend-context'
-import { WORKOUT_SCHEDULED_KIND } from '../../data/repositories/push-notifications.repository'
+import { WORKOUT_REMINDER_KIND, WORKOUT_SCHEDULED_KIND } from '../../data/repositories/push-notifications.repository'
 import { detectInstallPlatform, installPromptDismissed, isAppInstalled } from '../install'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { markPushOnboardingSeen, pushOnboardingSeen } from './notification-onboarding-storage'
 import { getCurrentPushSubscription, isPushSupported } from './push-subscription'
 import { waitForTestPushConfirmation } from './wait-for-test-push-confirmation'
+import {
+  isNativeWorkoutInactivityReminderSupported,
+  requestWorkoutInactivityNotificationPermission,
+  workoutInactivityNotificationPermission,
+} from '../workouts/workout-inactivity-reminder'
 
 const TEST_PUSH_TIMEOUT_MS = 12_000
 
 export function NotificationOnboarding({ userId }: { userId: string }) {
   const { pushNotifications: pushNotificationsRepository, source } = useDataBackend()
-  const supported = isPushSupported()
+  const queryClient = useQueryClient()
+  const webSupported = isPushSupported()
+  const nativeSupported = isNativeWorkoutInactivityReminderSupported()
+  const supported = webSupported || nativeSupported
   const [dismissed, setDismissed] = useState(() => pushOnboardingSeen(userId))
   const [phase, setPhase] = useState<'idle' | 'working' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState<string | null>(null)
@@ -22,7 +30,14 @@ export function NotificationOnboarding({ userId }: { userId: string }) {
     queryFn: () => pushNotificationsRepository.status(userId),
     enabled: supported && !dismissed,
   })
-  const alreadyWorking = statusQuery.data?.state === 'working'
+  const nativePermission = useQuery({
+    queryKey: ['local-notification-permission'],
+    queryFn: workoutInactivityNotificationPermission,
+    enabled: nativeSupported && !dismissed,
+  })
+  const alreadyWorking = nativeSupported
+    ? nativePermission.data === 'granted' && statusQuery.data?.workoutReminderEnabled !== false
+    : statusQuery.data?.state === 'working'
 
   // Уже включено (сам добрался до Настроек раньше, или это не первый визит
   // после установки) — карточка не нужна, скрываем без явного действия
@@ -38,16 +53,24 @@ export function NotificationOnboarding({ userId }: { userId: string }) {
   // Web Push на iOS работает только для установленного на «Домой» приложения
   // — до установки предлагать включить нечего, AppInstallPrompt уже ведёт
   // через этот шаг отдельной карточкой.
-  if (platform === 'ios' && !installed) return null
+  if (!nativeSupported && platform === 'ios' && !installed) return null
   // Одна nudge-карточка на экране одновременно: пока не установлено (и не
   // отклонено) предложение установить — не показываем следом ещё одно.
-  if (!installed && !installPromptDismissed(userId)) return null
+  if (!nativeSupported && !installed && !installPromptDismissed(userId)) return null
 
   async function enable() {
     trackGoal('push_onboarding_opened')
     setPhase('working')
     setMessage(null)
     try {
+      if (nativeSupported) {
+        if (!await requestWorkoutInactivityNotificationPermission()) throw new Error('Уведомления не разрешены в настройках телефона')
+        await pushNotificationsRepository.setCategoryEnabled(userId, WORKOUT_REMINDER_KIND, true)
+        await queryClient.invalidateQueries({ queryKey: ['push-notifications-status', userId] })
+        setMessage('Напомним, если активная тренировка останется незавершённой.')
+        setPhase('success')
+        return
+      }
       await pushNotificationsRepository.enable(userId)
       await pushNotificationsRepository.setCategoryEnabled(userId, WORKOUT_SCHEDULED_KIND, true)
 
@@ -86,7 +109,7 @@ export function NotificationOnboarding({ userId }: { userId: string }) {
     <div>
       <p className="eyebrow">УВЕДОМЛЕНИЯ</p>
       <h2 id="push-onboarding-title">Включите уведомления</h2>
-      <p>Получайте напоминания о тренировках и новые записи от тренера.</p>
+      <p>{nativeSupported ? 'Напомним, если активная тренировка останется незавершённой.' : 'Получайте напоминания о тренировках и новые записи от тренера.'}</p>
     </div>
     {phase === 'success' && <p className="app-install-success" role="status">{message}</p>}
     {phase === 'error' && <small className="error">{message}</small>}
