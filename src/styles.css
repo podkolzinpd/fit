@@ -3353,6 +3353,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-identity .live-bottom-bar .workout-cta { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
 .live-identity .live-bottom-bar .workout-cta[data-variant='secondary'] { border-color:var(--border); background:var(--surface-raised); color:var(--fg); box-shadow:none}
 .live-identity .live-bottom-bar .workout-cta:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.live-identity .live-inactivity-reminder { display:grid; gap:12px; margin:0 0 14px; padding:14px; border:1px solid var(--warning-border); border-radius:16px; background:var(--warning-surface); color:var(--fg) }
+.live-identity .live-inactivity-reminder > div:first-child { display:grid; gap:3px }
+.live-identity .live-inactivity-reminder strong { font-size:15px; font-weight:600; line-height:1.25 }
+.live-identity .live-inactivity-reminder span { color:var(--secondary-label-fg); font-size:13px; line-height:1.35 }
+.live-identity .live-inactivity-reminder .actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 }
+.live-identity .live-inactivity-reminder button { min-height:44px; border-radius:12px; font-size:14px; font-weight:500 }
+.live-identity .live-inactivity-reminder button:not(.secondary) { border-color:var(--fg); background:var(--fg); color:var(--bg) }
 .live-identity .live-sync-state { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--warning-border); border-radius:14px; background:var(--warning-surface); color:var(--fg) }
 .live-identity .live-sync-state.error { border-color:var(--danger-border); background:var(--danger-surface); color:var(--fg) }
 .live-identity .live-sync-state > div { min-width:0; display:grid; gap:2px }
