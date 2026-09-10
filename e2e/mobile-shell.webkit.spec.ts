@@ -1265,7 +1265,6 @@ test('iPhone: ручной выбор начинает с недавних, а �
   }
 
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.route('**/exercises/base-bench-press.jpg', (route) => route.abort())
   await loginAsTrainer(page)
   await page.evaluate(() => window.localStorage.setItem('fit.recent-exercises', JSON.stringify(['bench-press'])))
   await page.goto('/workouts/new')
@@ -1278,9 +1277,10 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await expect(page.getByText('Разминка и мобилити')).toHaveCount(0)
   const recentExercise = page.locator('.picker-item').filter({ has: page.locator('[data-exercise-ref="bench-press"]') })
   await expect(recentExercise).toHaveCount(1)
-  // Если основной кадр недоступен, превью техники остаётся рабочим на втором кадре.
-  await expect(recentExercise.locator('.exercise-image-empty')).toHaveCount(0)
-  await expect(recentExercise.locator('img')).toHaveCount(1)
+  // Приватная Vital-анимация в локальном окружении недоступна: старую
+  // фотографию не подставляем, оставляем нейтральное состояние загрузки.
+  await expect(recentExercise.locator('.exercise-image-empty')).toHaveCount(1)
+  await expect(recentExercise.locator('img')).toHaveCount(0)
   const catalogImage = page.locator('.picker-item').nth(1).locator('.exercise-image')
   await expect(catalogImage.locator('img').first()).toHaveCSS('object-fit', 'contain')
   const catalogImageBox = await catalogImage.boundingBox()
