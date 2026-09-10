@@ -125,3 +125,7 @@ export function StopIcon(props: IconProps) {
 export function KeyboardIcon(props: IconProps) {
   return <Icon data-icon="keyboard" {...props}><rect x="3" y="6" width="18" height="12" rx="2.5" /><path d="M7 10h.01M11 10h.01M15 10h.01M17 10h.01M7 14h10" /></Icon>
 }
+
+export function MessageIcon(props: IconProps) {
+  return <Icon data-icon="message" {...props}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-5.5 4v-4.8A2.5 2.5 0 0 1 4 13.7V5.5Z" /><path d="M8 8.5h8M8 12h5" /></Icon>
+}

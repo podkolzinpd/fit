@@ -56,6 +56,7 @@ import type { PilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
 import type { PilotAssistantState } from './pilot-assistant-state.js'
 import type { PilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import type { PilotPushNotifications } from './pilot-push-notifications.js'
+import { ChatCommandError, type PilotChat } from './pilot-chat.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
@@ -136,6 +137,7 @@ interface BuildAppOptions {
   pilotAssistantState?: PilotAssistantState
   pilotAssistantTurnRunner?: PilotAssistantTurnRunner
   pilotPushNotifications?: PilotPushNotifications
+  pilotChat?: PilotChat
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
   pilotConnectionsWriter?: PilotConnectionsWriter
@@ -1179,6 +1181,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
             ? 'action_not_allowed'
             : 'invalid_push_notifications' })
       }
+      if (error instanceof ChatCommandError) {
+        if (error.failure === 'forbidden') return reply.code(403).send({ error: 'action_not_allowed' })
+        if (error.failure === 'conflict') return reply.code(409).send({ error: 'message_conflict' })
+        return reply.code(422).send({ error: 'invalid_message' })
+      }
       if (error instanceof PilotConnectionCommandError) {
         if (error.failure === 'forbidden') {
           return reply.code(403).send({ error: 'action_not_allowed' })
@@ -1411,6 +1418,64 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       ),
       (result) => reply.header('cache-control', 'no-store').send({ result }),
     )
+  })
+
+  app.get('/v1/chat/threads', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotChat!.listThreads(session),
+      (threads) => reply.header('cache-control','no-store').send({ threads }))
+  })
+
+  app.post('/v1/chat/conversations', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const body = request.body as { clientId?: unknown; trainerId?: unknown } | null
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof body?.clientId !== 'string' || !uuidPattern.test(body.clientId) || typeof body.trainerId !== 'string' || !uuidPattern.test(body.trainerId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotChat!.open(session, body.clientId as string, body.trainerId as string),
+      (conversationId) => reply.header('cache-control','no-store').send({ conversationId }))
+  })
+
+  app.get('/v1/chat/conversations/:conversationId/messages', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    const { conversationId } = request.params as { conversationId?: unknown }
+    const query = request.query as { beforeCreatedAt?: unknown; beforeId?: unknown; limit?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    const limit = query.limit === undefined ? 50 : Number(query.limit)
+    const hasCursor = query.beforeCreatedAt !== undefined || query.beforeId !== undefined
+    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId) || !Number.isInteger(limit) || limit < 1 || limit > 100
+      || (hasCursor && (typeof query.beforeCreatedAt !== 'string' || !Number.isFinite(Date.parse(query.beforeCreatedAt)) || typeof query.beforeId !== 'string' || !uuidPattern.test(query.beforeId)))) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    const cursor = hasCursor ? { createdAt: query.beforeCreatedAt as string, id: query.beforeId as string } : null
+    return sendPilotCommand(reply, () => options.pilotChat!.listMessages(session, conversationId, cursor, limit),
+      (result) => reply.header('cache-control','no-store').send(result))
+  })
+
+  app.post('/v1/chat/conversations/:conversationId/messages', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { conversationId } = request.params as { conversationId?: unknown }
+    const body = request.body as { id?: unknown; body?: unknown } | null
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId) || typeof body?.id !== 'string' || !uuidPattern.test(body.id)
+      || typeof body.body !== 'string' || body.body.trim().length < 1 || body.body.trim().length > 4000) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotChat!.send(session, conversationId, body.id as string, body.body as string),
+      (message) => reply.header('cache-control','no-store').send({ message }))
+  })
+
+  app.put('/v1/chat/conversations/:conversationId/read', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { conversationId } = request.params as { conversationId?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotChat!.markRead(session, conversationId),
+      () => reply.header('cache-control','no-store').code(204).send())
   })
 
   app.get('/v1/push-notifications/status', async (request, reply) => {

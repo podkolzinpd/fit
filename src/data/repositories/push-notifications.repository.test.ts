@@ -11,6 +11,7 @@ const getCurrentPushSubscription = vi.hoisted(() => vi.fn())
 const isPushSupported = vi.hoisted(() => vi.fn())
 
 vi.mock('../queries/push-notifications.queries', () => ({
+  CHAT_MESSAGE_KIND: 'chat_message',
   WORKOUT_REMINDER_KIND: 'workout_reminder',
   WORKOUT_SCHEDULED_KIND: 'workout_scheduled',
   pushNotificationsQueries: { getSubscriptionByEndpoint, getPreference, upsertSubscription, deleteSubscriptionByEndpoint, setPreference },
@@ -42,7 +43,7 @@ describe('pushNotificationsRepository.status', () => {
     getSubscriptionByEndpoint.mockResolvedValue({ data: { user_id: USER_ID }, error: null })
     getPreference.mockResolvedValue({ data: { enabled: true }, error: null })
     const status = await pushNotificationsRepository.status(USER_ID)
-    expect(status).toEqual({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: true })
+    expect(status).toEqual({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
     expect(getSubscriptionByEndpoint).toHaveBeenCalledWith(USER_ID, LOCAL_SUBSCRIPTION.endpoint)
   })
 
@@ -55,6 +56,7 @@ describe('pushNotificationsRepository.status', () => {
     const status = await pushNotificationsRepository.status(USER_ID)
     expect(getPreference).toHaveBeenCalledWith(USER_ID, 'workout_reminder')
     expect(getPreference).toHaveBeenCalledWith(USER_ID, 'workout_scheduled')
+    expect(getPreference).toHaveBeenCalledWith(USER_ID, 'chat_message')
     expect(status.workoutReminderEnabled).toBe(true)
     expect(status.workoutScheduledEnabled).toBe(false)
   })
@@ -63,7 +65,7 @@ describe('pushNotificationsRepository.status', () => {
     vi.stubGlobal('Notification', { permission: 'default' })
     getPreference.mockResolvedValue({ data: null, error: null })
     const status = await pushNotificationsRepository.status(USER_ID)
-    expect(status).toEqual({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true })
+    expect(status).toEqual({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
     expect(getCurrentPushSubscription).not.toHaveBeenCalled()
   })
 
@@ -80,6 +82,7 @@ describe('pushNotificationsRepository.status', () => {
     const status = await pushNotificationsRepository.status(USER_ID)
     expect(status.workoutReminderEnabled).toBe(true)
     expect(status.workoutScheduledEnabled).toBe(true)
+    expect(status.chatMessageEnabled).toBe(true)
   })
 
   it('respects an explicit opt-out', async () => {
@@ -89,6 +92,7 @@ describe('pushNotificationsRepository.status', () => {
     const status = await pushNotificationsRepository.status(USER_ID)
     expect(status.workoutReminderEnabled).toBe(false)
     expect(status.workoutScheduledEnabled).toBe(false)
+    expect(status.chatMessageEnabled).toBe(false)
   })
 
   it('throws a repository error when the subscription lookup fails', async () => {

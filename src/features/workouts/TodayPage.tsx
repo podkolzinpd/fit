@@ -39,6 +39,7 @@ import { groupParsedWorkoutReviewBlocks, moveParsedWorkoutReviewBlock } from './
 import { AppInstallPrompt } from '../install'
 import { NotificationOnboarding } from '../notifications'
 import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, KeyboardIcon } from '../../shared/icons'
+import { ChatHeaderAction } from '../chat'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -637,7 +638,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
 
   const header = todayHeaderProps(clientMode, actor)
   const pageTitle = greetingHeaderPilotEnabled ? greeting : header.title
-  return <Page title={pageTitle} hideTitle={header.hideTitle} className="today-page today-start-page" action={header.showProfileAvatar ? <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link> : undefined}>
+  return <Page title={pageTitle} hideTitle={header.hideTitle} className="today-page today-start-page" action={<div className="today-header-actions"><ChatHeaderAction />{header.showProfileAvatar && <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}</div>}>
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
       {!greetingHeaderPilotEnabled && <p className="today-greeting">{greeting} 👋</p>}
       {clientMode && !textComposerOpen ? <><ClientHomeOverview

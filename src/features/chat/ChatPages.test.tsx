@@ -1,0 +1,221 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import type { ChatMessage, ChatMessagePage, ChatThread } from '../../shared/domain'
+
+type MockChat = {
+  listThreads: ReturnType<typeof vi.fn<() => Promise<ChatThread[]>>>
+  open: ReturnType<typeof vi.fn<(clientId: string, trainerId: string) => Promise<string>>>
+  listMessages: ReturnType<typeof vi.fn<(conversationId: string, cursor?: { createdAt: string; id: string } | null) => Promise<ChatMessagePage>>>
+  send: ReturnType<typeof vi.fn<(conversationId: string, messageId: string, body: string) => Promise<ChatMessage>>>
+  markRead: ReturnType<typeof vi.fn<(conversationId: string) => Promise<void>>>
+  subscribe: ReturnType<typeof vi.fn<(conversationId: string, onChange: () => void) => () => void>>
+}
+type MockActor = { kind: 'client'; role: 'client'; userId: string; email: string; firstName: string; lastName: null; timezone: string; clientId: string; trainerId: string; fullName: string }
+const backend = vi.hoisted(() => vi.fn<() => { chat: MockChat }>())
+const auth = vi.hoisted(() => vi.fn<() => { actor: MockActor | null }>())
+vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => backend() }))
+vi.mock('../../app/auth-context', () => ({ useAuth: () => auth() }))
+
+import { ChatConversationPage, ChatListPage } from './ChatPages'
+import { ChatHeaderAction, ChatStartButton } from './ChatEntry'
+
+const actor: MockActor = { kind: 'client', role: 'client', userId: 'client-user', email: 'client@example.test', firstName: 'Иван', lastName: null, timezone: 'Europe/Moscow', clientId: 'client-1', trainerId: 'trainer-1', fullName: 'Иван' }
+const thread: ChatThread = { conversationId: 'conversation-1', clientId: 'client-1', trainerId: 'trainer-1', partnerUserId: 'trainer-1', partnerName: 'Анна', activeConnection: true, lastMessageBody: 'До встречи', lastMessageAt: '2026-09-10T12:00:00.000Z', lastMessageSenderId: 'trainer-1', unreadCount: 2 }
+const incoming: ChatMessage = { id: 'message-1', conversationId: 'conversation-1', senderId: 'trainer-1', body: 'До встречи', createdAt: '2026-09-10T12:00:00.000Z' }
+
+function chatBackend(): MockChat {
+  return {
+    listThreads: vi.fn<() => Promise<ChatThread[]>>().mockResolvedValue([thread]),
+    open: vi.fn<(clientId: string, trainerId: string) => Promise<string>>().mockResolvedValue('conversation-1'),
+    listMessages: vi.fn<(conversationId: string, cursor?: { createdAt: string; id: string } | null) => Promise<ChatMessagePage>>().mockResolvedValue({ messages: [incoming], nextCursor: null }),
+    send: vi.fn<(conversationId: string, messageId: string, body: string) => Promise<ChatMessage>>().mockImplementation((_conversationId, messageId, body) => Promise.resolve({ ...incoming, id: messageId, senderId: actor.userId, body })),
+    markRead: vi.fn<(conversationId: string) => Promise<void>>().mockResolvedValue(undefined),
+    subscribe: vi.fn<(conversationId: string, onChange: () => void) => () => void>().mockReturnValue(() => undefined),
+  }
+}
+
+function Location() {
+  return <output aria-label="route">{useLocation().pathname}</output>
+}
+
+function renderAt(path: string, chat = chatBackend()) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  backend.mockReturnValue({ chat })
+  const view = render(<QueryClientProvider client={queryClient}><MemoryRouter initialEntries={[path]}><Routes>
+    <Route path="/chat" element={<><ChatListPage /><Location /></>} />
+    <Route path="/chat/:conversationId" element={<><ChatConversationPage /><Location /></>} />
+  </Routes></MemoryRouter></QueryClientProvider>)
+  return { ...view, chat, queryClient }
+}
+
+describe('reliable chat screens', () => {
+  beforeEach(() => {
+    const values = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      clear: () => values.clear(),
+      getItem: (key: string) => values.get(key) ?? null,
+      removeItem: (key: string) => values.delete(key),
+      setItem: (key: string, value: string) => values.set(key, value),
+    })
+    backend.mockReset()
+    auth.mockReset()
+    auth.mockReturnValue({ actor })
+    Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() })
+  })
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
+
+  it('shows unread and disconnected state, then opens an existing dialog', async () => {
+    const user = userEvent.setup()
+    const chat = chatBackend()
+    chat.listThreads.mockResolvedValue([{ ...thread, activeConnection: false }])
+    renderAt('/chat', chat)
+
+    expect(await screen.findByText('Анна')).toBeVisible()
+    expect(screen.getByText('Связь отключена')).toBeVisible()
+    expect(screen.getByText('2')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: /Анна/ }))
+    expect(screen.getByLabelText('route')).toHaveTextContent('/chat/conversation-1')
+    expect(chat.open).not.toHaveBeenCalled()
+  })
+
+  it('creates a dialog for a connected person when it has no history', async () => {
+    const user = userEvent.setup()
+    const chat = chatBackend()
+    chat.listThreads.mockResolvedValue([{ ...thread, conversationId: null, lastMessageBody: null, unreadCount: 0 }])
+    renderAt('/chat', chat)
+
+    await user.click(await screen.findByRole('button', { name: /Анна/ }))
+    await waitFor(() => expect(chat.open).toHaveBeenCalledWith('client-1', 'trainer-1'))
+    await waitFor(() => expect(screen.getByLabelText('route')).toHaveTextContent('/chat/conversation-1'))
+  })
+
+  it('shows a clear empty state when there are no available dialogs', async () => {
+    const chat = chatBackend()
+    chat.listThreads.mockResolvedValue([])
+    renderAt('/chat', chat)
+
+    expect(await screen.findByText('Диалогов пока нет')).toBeVisible()
+    expect(screen.getByText('Подключите тренера или спортсмена, чтобы начать переписку.')).toBeVisible()
+  })
+
+  it('keeps a failed message, retries with the same id and clears the draft', async () => {
+    const user = userEvent.setup()
+    const chat = chatBackend()
+    chat.send.mockRejectedValueOnce(new Error('offline'))
+    renderAt('/chat/conversation-1', chat)
+
+    expect(await screen.findByText('До встречи')).toBeVisible()
+    const input = screen.getByRole('textbox', { name: 'Сообщение' })
+    await user.type(input, 'Привет')
+    await user.click(screen.getByRole('button', { name: 'Отправить' }))
+    expect(await screen.findByText('Ошибка')).toBeVisible()
+    const firstId = chat.send.mock.calls[0]?.[1]
+    expect(firstId).toBeTruthy()
+    expect(input).toHaveValue('')
+
+    await user.click(screen.getByRole('button', { name: 'Повторить' }))
+    await waitFor(() => expect(chat.send).toHaveBeenCalledTimes(2))
+    expect(chat.send.mock.calls[1]?.[1]).toBe(firstId)
+    await waitFor(() => expect(screen.queryByText('Ошибка')).not.toBeInTheDocument())
+  })
+
+  it('restores a saved draft, loads older history and refreshes on return', async () => {
+    const user = userEvent.setup()
+    localStorage.setItem('fit:chat-draft:client-user:conversation-1', 'Сохранённый текст')
+    const chat = chatBackend()
+    const old: ChatMessage = { ...incoming, id: 'message-old', body: 'Старое сообщение', createdAt: '2026-09-09T12:00:00.000Z' }
+    chat.listMessages
+      .mockResolvedValueOnce({ messages: [incoming], nextCursor: { createdAt: incoming.createdAt, id: incoming.id } })
+      .mockResolvedValueOnce({ messages: [old], nextCursor: null })
+      .mockResolvedValue({ messages: [incoming], nextCursor: null })
+    renderAt('/chat/conversation-1', chat)
+
+    expect(await screen.findByRole('textbox', { name: 'Сообщение' })).toHaveValue('Сохранённый текст')
+    await user.click(screen.getByRole('button', { name: 'Ранее' }))
+    expect(await screen.findByText('Старое сообщение')).toBeVisible()
+    window.dispatchEvent(new Event('online'))
+    await waitFor(() => expect(chat.listMessages.mock.calls.length).toBeGreaterThanOrEqual(3))
+    expect(chat.markRead).toHaveBeenCalledWith('conversation-1')
+    expect(chat.subscribe).toHaveBeenCalledWith('conversation-1', expect.any(Function))
+  })
+
+  it('ignores a damaged local queue and shows the first-message state', async () => {
+    localStorage.setItem('fit:chat-pending:client-user:conversation-1', '{bad json')
+    const chat = chatBackend()
+    chat.listThreads.mockResolvedValue([])
+    chat.listMessages.mockResolvedValue({ messages: [], nextCursor: null })
+    renderAt('/chat/conversation-1', chat)
+
+    expect(await screen.findByText('Начните диалог')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Диалог' })).toBeVisible()
+  })
+
+  it('shows the total unread badge and opens the chat list from the header', async () => {
+    const user = userEvent.setup()
+    const chat = chatBackend()
+    chat.listThreads.mockResolvedValue([{ ...thread, unreadCount: 105 }])
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    backend.mockReturnValue({ chat })
+    render(<QueryClientProvider client={queryClient}><MemoryRouter><ChatHeaderAction /><Routes>
+      <Route path="/chat" element={<Location />} />
+    </Routes></MemoryRouter></QueryClientProvider>)
+
+    expect(await screen.findByText('99+')).toBeVisible()
+    await user.click(screen.getByRole('link', { name: /непрочитанных: 105/ }))
+    expect(screen.getByLabelText('route')).toHaveTextContent('/chat')
+  })
+
+  it('shows the quiet header action when every dialog is read', async () => {
+    const chat = chatBackend()
+    chat.listThreads.mockResolvedValue([{ ...thread, unreadCount: 0 }])
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    backend.mockReturnValue({ chat })
+    render(<QueryClientProvider client={queryClient}><MemoryRouter><ChatHeaderAction /></MemoryRouter></QueryClientProvider>)
+
+    expect(await screen.findByRole('link', { name: 'Сообщения' })).toBeVisible()
+    expect(screen.queryByText('99+')).not.toBeInTheDocument()
+  })
+
+  it('shows delivered state, keeps a line break and removes a recovered duplicate', async () => {
+    const user = userEvent.setup()
+    const own: ChatMessage = { ...incoming, id: 'recovered', senderId: actor.userId, body: 'Уже доставлено' }
+    localStorage.setItem('fit:chat-pending:client-user:conversation-1', JSON.stringify([{ ...own, state: 'sending' }]))
+    const chat = chatBackend()
+    chat.listThreads.mockResolvedValue([{ ...thread, activeConnection: false }])
+    chat.listMessages.mockResolvedValue({ messages: [own], nextCursor: null })
+    renderAt('/chat/conversation-1', chat)
+
+    expect(await screen.findByText('Отправлено')).toBeVisible()
+    expect(screen.getAllByText('Уже доставлено')).toHaveLength(1)
+    expect(screen.getByText('Связь отключена')).toBeVisible()
+    const input = screen.getByRole('textbox', { name: 'Сообщение' })
+    await user.type(input, 'Строка{shift>}{enter}{/shift}дальше')
+    expect(chat.send).not.toHaveBeenCalled()
+    expect(input).toHaveValue('Строка\nдальше')
+  })
+
+  it('opens a contextual chat and reports an opening error', async () => {
+    const user = userEvent.setup()
+    const chat = chatBackend()
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    backend.mockReturnValue({ chat })
+    const view = render(<QueryClientProvider client={queryClient}><MemoryRouter><ChatStartButton clientId="client-1" trainerId="trainer-1" /><Routes>
+      <Route path="/chat/:conversationId" element={<Location />} />
+    </Routes></MemoryRouter></QueryClientProvider>)
+
+    await user.click(screen.getByRole('button', { name: 'Написать' }))
+    expect(await screen.findByLabelText('route')).toHaveTextContent('/chat/conversation-1')
+    view.unmount()
+
+    const failed = chatBackend()
+    failed.open.mockRejectedValue(new Error('offline'))
+    const failedClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    backend.mockReturnValue({ chat: failed })
+    render(<QueryClientProvider client={failedClient}><MemoryRouter><ChatStartButton clientId="client-1" trainerId="trainer-1" /></MemoryRouter></QueryClientProvider>)
+    await user.click(screen.getByRole('button', { name: 'Написать' }))
+    expect(await screen.findByText('Не удалось открыть чат')).toBeVisible()
+  })
+})
