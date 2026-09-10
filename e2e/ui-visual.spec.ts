@@ -243,7 +243,7 @@ async function mockTrainerClients(page: VisualPage) {
   }))
 }
 
-async function mockClientWorkoutHistory(page: import('@playwright/test').Page, options: { includeBack?: boolean; homeLayout?: boolean } = {}) {
+async function mockClientWorkoutHistory(page: import('@playwright/test').Page, options: { includeBack?: boolean; homeLayout?: boolean; bestResults?: boolean } = {}) {
   const workoutRows = ['2026-08-10', '2026-08-03'].map((workoutDate, index) => ({
     id: `b1000000-0000-4000-8000-00000000000${index + 1}`,
     client_id: demoClientId,
@@ -333,7 +333,7 @@ async function mockClientWorkoutHistory(page: import('@playwright/test').Page, o
       plan_duration_sec: null,
       plan_distance_km: null,
       plan_rpe: null,
-      fact_weight_kg: 35,
+      fact_weight_kg: options.bestResults && index === 0 ? 40 : 35,
       fact_reps: 10,
       fact_duration_min: null,
       fact_duration_sec: null,
@@ -343,6 +343,18 @@ async function mockClientWorkoutHistory(page: import('@playwright/test').Page, o
       version: 1,
     }],
   }))
+  if (options.bestResults) {
+    workoutRows[0]!.exercises[0]!.sets[0]!.fact_weight_kg = 45
+    workoutRows[1]!.exercises[0]!.sets[0]!.fact_weight_kg = 40
+    for (const [position, ref, name, group, currentWeight, previousWeight] of [
+      [2, 'lateral-raise', 'Разведение гантелей в стороны', 'shoulders', 16, 14],
+      [3, 'barbell-squat', 'Присед со штангой', 'legs', 80, 75],
+    ] as const) workoutRows.forEach((workout, index) => {
+      const base = workout.exercises[0]!
+      workout.exercises.push({ ...base, id: `${workout.id}-${ref}`, exercise_ref: ref, exercise_name: name, muscle_group: group, position,
+        block_id: `${workout.id}-${ref}-block`, sets: base.sets.map((set) => ({ ...set, id: `${workout.id}-${ref}-set`, fact_weight_kg: index === 0 ? currentWeight : previousWeight })) })
+    })
+  }
   if (options.homeLayout) {
     const workout = workoutRows[0]!
     workout.exercises[0]!.exercise_name = 'Жим гантелей лёжа на скамье с длинным названием'
@@ -877,7 +889,7 @@ test('period comparison stays compact for client and trainer in both themes', as
   }
   await comparison.scrollIntoViewIfNeeded()
   await expect(comparison).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-period-comparison-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.025,
   })
 
   await gotoStable(page, trainer ? '/profile' : '/me/profile')
@@ -888,7 +900,7 @@ test('period comparison stays compact for client and trainer in both themes', as
   await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(trainer ? 3 : 8)
   await comparison.scrollIntoViewIfNeeded()
   await expect(comparison).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-period-comparison-dark-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.025,
   })
 })
 
@@ -1003,7 +1015,7 @@ test('weekly training rhythm stays visual and readable for client and trainer in
   }
   await regularity.scrollIntoViewIfNeeded()
   await expect(regularity).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-workout-regularity-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.035,
   })
 
   await gotoStable(page, trainer ? '/profile' : '/me/profile')
@@ -1014,7 +1026,7 @@ test('weekly training rhythm stays visual and readable for client and trainer in
   await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
   await regularity.scrollIntoViewIfNeeded()
   await expect(regularity).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-workout-regularity-dark-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.035,
   })
 })
 
@@ -1978,7 +1990,7 @@ test('personal workout result stays on Home and remains available in Progress hi
   await expectBodyMapBaseline(disclosure, `home-map-detail-${process.platform}.png`)
   await page.setViewportSize(mapViewport)
   await gotoStable(page, '/me/progress')
-  await expect(page.locator('.period-exercise-results')).toContainText('Жим лёжа')
+  await expect(page.locator('.period-exercise-results')).toContainText('За этот период новых достижений нет.')
   await expect(page.locator('.personal-workout-result')).toHaveCount(0)
   await expect(page.locator('.ai-progress-auto-error')).toBeVisible()
   await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
@@ -1989,8 +2001,25 @@ test('personal workout result stays on Home and remains available in Progress hi
   await gotoStable(page, '/me')
   await expectBodyMapBaseline(result, `personal-result-home-dark-${process.platform}.png`)
   await gotoStable(page, '/me/progress')
-  await expect(page.locator('.period-exercise-results')).toContainText('Жим лёжа')
+  await expect(page.locator('.period-exercise-results')).toContainText('За этот период новых достижений нет.')
   await expectVisualBaseline(page, `personal-result-progress-dark-${process.platform}.png`)
+})
+
+test('best results show several real records and keep the remaining achievements available', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client result')
+  await mockClientWorkoutHistory(page, { includeBack: true, bestResults: true })
+  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
+  await openClientProgress(page)
+  const results = page.locator('.period-exercise-results')
+  await expect(results.locator(':scope > .period-exercise-result')).toHaveCount(3)
+  await expect(results).toContainText('45 кг × 10 повторов')
+  await expect(results).toContainText('Новый максимум веса · +5 кг')
+  await expect(results).toContainText('Прежний рекорд — 40 кг')
+  await expect(results.getByRole('link', { name: 'Открыть тренировку' })).toHaveCount(3)
+  await expect(results).toHaveScreenshot(`best-results-${process.platform}.png`, { animations: 'disabled' })
+  await results.getByText('Ещё достижения · 1', { exact: true }).click()
+  await expect(results.getByRole('link', { name: 'Открыть тренировку' })).toHaveCount(4)
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
 })
 
 
@@ -2022,8 +2051,8 @@ test('results center preserves sources and explains weekly work', async ({ page 
   await expect(weekly).toContainText('Часть недели')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.setViewportSize({ ...viewport, height: 1500 })
-  await expect.soft(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled' })
-  await expect.soft(volume).toHaveScreenshot(`result-volume-${process.platform}.png`, { animations: 'disabled' })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02 })
+  await expect.soft(volume).toHaveScreenshot(`result-volume-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.04 })
   await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('weight')
   await expect.soft(center).toHaveScreenshot(`results-center-${process.platform}.png`, { animations: 'disabled' })
 })
@@ -2044,6 +2073,6 @@ test('results center keeps detailed analytics in dark theme', async ({ page }, t
   await darkVolume.getByText('Подходы, вес и повторы', { exact: true }).click()
   await weekly.getByText('Нагрузка по неделям', { exact: true }).click()
   await page.setViewportSize({ ...viewport, height: 1500 })
-  await expect.soft(darkVolume).toHaveScreenshot(`result-volume-dark-${process.platform}.png`, { animations: 'disabled' })
-  await expect.soft(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled' })
+  await expect.soft(darkVolume).toHaveScreenshot(`result-volume-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.04 })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02 })
 })

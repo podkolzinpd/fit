@@ -17,32 +17,35 @@ const wrapper = ({ children }: { children: React.ReactNode }) => <MemoryRouter i
 function Source() { const location = useLocation(); return <output>{JSON.stringify(location.state)}</output> }
 
 describe('Client facts independent of AI', () => {
-  it('compares renamed exact exercises with history before the selected period and preserves source return context', async () => {
-    const workouts = [record('old', '2026-07-01', 60), record('new', '2026-08-10', 50, 'press', 'Новое название'), record('different', '2026-08-11', 80, 'different', 'Жим лёжа')]
+  it('compares a renamed exercise with its previous record and preserves source return context', async () => {
+    const workouts = [record('old', '2026-07-01', 60), record('new', '2026-08-10', 65, 'press', 'Новое название'), record('different', '2026-08-11', 80, 'different', 'Жим лёжа')]
     render(<Routes><Route path="/me/progress" element={<PeriodExerciseResults {...base} workouts={workouts} />} /><Route path="/workouts/:id" element={<Source />} /></Routes>, { wrapper })
     const row = screen.getByRole('heading', { name: 'Новое название' }).closest('article')!
-    expect(row).toHaveTextContent('Результат снизился')
-    expect(row).toHaveTextContent('Было 60 кг')
-    expect(screen.getByRole('heading', { name: 'Жим лёжа' }).closest('article')).toHaveTextContent('Первый результат')
-    await userEvent.setup().click(within(row).getByRole('link', { name: /Ранее/ }))
+    expect(row).toHaveTextContent('65 кг × 10 повторов')
+    expect(row).toHaveTextContent('Новый максимум веса · +5 кг')
+    expect(row).toHaveTextContent('Прежний рекорд — 60 кг')
+    expect(screen.queryByRole('heading', { name: 'Жим лёжа' })).toBeNull()
+    await userEvent.setup().click(within(row).getByRole('link', { name: 'Открыть тренировку' }))
     expect(screen.getByRole('status')).toHaveTextContent('/me/progress?period=3m&mapZone=chest#results')
   })
-  it('chooses the latest workout per exercise and exposes more than three without duplicate metrics', async () => {
-    const workouts = [record('old', '2026-08-01', 30), record('new', '2026-08-10', 40), ...['a', 'b', 'c'].map((key) => record(key, '2026-08-15', 20, key, key))]
+  it('shows three different achievements and exposes the remaining achievements without duplicate metrics', async () => {
+    const workouts = [record('old', '2026-07-01', 30), record('new', '2026-08-10', 40),
+      ...['a', 'b', 'c'].flatMap((key) => [record(`${key}-old`, '2026-07-02', 10, key, key), record(`${key}-new`, '2026-08-15', 20, key, key)])]
     render(<PeriodExerciseResults {...base} workouts={workouts} />, { wrapper })
+    for (const key of ['a', 'b', 'c']) expect(screen.getByRole('heading', { name: key })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Жим лёжа' })).not.toBeVisible()
+    await userEvent.setup().click(screen.getByText('Ещё достижения · 1'))
     expect(screen.getByRole('heading', { name: 'Жим лёжа' })).toBeVisible()
-    await userEvent.setup().click(screen.getByText('Все упражнения · 4'))
-    expect(screen.getAllByRole('heading', { level: 4 })).toHaveLength(4)
     expect(screen.getByRole('heading', { name: 'Жим лёжа' }).closest('article')).toHaveTextContent('40 кг')
     expect(screen.queryByText(/Объём за тренировку/)).toBeNull()
   })
-  it('retains supported reps and cardio metrics and recalculates after deletion', () => {
+  it('does not present cardio facts as records and recalculates after deletion', () => {
     const duration = record('duration', '2026-08-10', 0)
     duration.exercises[0]!.inputKind = 'duration'; duration.exercises[0]!.sets[0]!.fact = { durationSec: 60 }
     const { rerender } = render(<PeriodExerciseResults {...base} workouts={[duration]} />, { wrapper })
-    expect(screen.getByText(/Время/)).toHaveTextContent('60 сек')
+    expect(screen.getByText('За этот период новых достижений нет.')).toBeVisible()
     rerender(<PeriodExerciseResults {...base} workouts={[]} />)
-    expect(screen.getByText(/За этот период пока нет результатов/)).toBeVisible()
+    expect(screen.getByText('За этот период новых достижений нет.')).toBeVisible()
   })
   it('shows result loading and actionable errors without false empty statistics', async () => {
     const retry = vi.fn()
@@ -101,24 +104,23 @@ describe('Client facts independent of AI', () => {
     ]} />, { wrapper })
     const first = screen.getAllByRole('article')[0]!
     expect(first).toHaveTextContent('Жим лёжа')
-    expect(first).toHaveTextContent('Личный рекорд')
-    expect(first).toHaveTextContent('60 кг')
-    expect(within(first).getByRole('link', { name: '2 августа 2026 г.' })).toHaveAttribute('href', '/workouts/pr')
+    expect(first).toHaveTextContent('Новый максимум веса · +20 кг')
+    expect(first).toHaveTextContent('Прежний рекорд — 40 кг')
+    expect(within(first).getByRole('link', { name: 'Открыть тренировку' })).toHaveAttribute('href', '/workouts/pr')
   })
-  it('uses the latest result neutrally when a period has no achievements', () => {
+  it('does not substitute a recent decline when a period has no achievements', () => {
     render(<PeriodExerciseResults {...base} workouts={[
       record('before', '2026-07-01', 80), record('older', '2026-08-02', 60), record('latest', '2026-08-18', 50),
     ]} />, { wrapper })
-    expect(screen.getAllByRole('article')[0]).toHaveTextContent('50 кг')
-    expect(screen.queryByText('Личный рекорд')).toBeNull()
-    expect(screen.queryByText('Результат вырос')).toBeNull()
+    expect(screen.getByText('За этот период новых достижений нет.')).toBeVisible()
+    expect(screen.queryByRole('article')).toBeNull()
   })
 
-  it('selects the last completed workout when neutral results share a date', () => {
+  it('selects the last completed record when achievements share a date', () => {
     const morning = record('morning', '2026-08-18', 60)
-    const evening = { ...record('evening', '2026-08-18', 50), completedAt: '2026-08-18T20:00:00Z' }
-    render(<PeriodExerciseResults {...base} workouts={[record('before', '2026-07-01', 80), morning, evening]} />, { wrapper })
-    expect(screen.getAllByRole('article')[0]).toHaveTextContent('50 кг')
+    const evening = { ...record('evening', '2026-08-18', 65), completedAt: '2026-08-18T20:00:00Z' }
+    render(<PeriodExerciseResults {...base} workouts={[record('before', '2026-07-01', 40), morning, evening]} />, { wrapper })
+    expect(screen.getAllByRole('article')[0]).toHaveTextContent('65 кг')
   })
 
 })

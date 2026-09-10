@@ -583,7 +583,7 @@ describe('Training summary card states', () => {
       clientName: 'Тест', startTime: null, endTime: null, startedAt: null, notes: null, stageId: null, stageTitle: null, version: 1,
     } as Workout])
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
-    expect(await screen.findByText('За этот период пока нет результатов.')).toBeVisible()
+    expect(await screen.findByText('За этот период новых достижений нет.')).toBeVisible()
     expect(screen.queryByText(/Новый личный рекорд/)).toBeNull()
     expect(repositories.personalRecords).not.toHaveBeenCalled()
   })
@@ -593,7 +593,7 @@ describe('Training summary card states', () => {
     repositories.listForClient.mockResolvedValue([])
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
     expect(await screen.findByText('Цель пока не указана')).toBeVisible()
-    expect(screen.getByText('За этот период пока нет результатов.')).toBeVisible()
+    expect(screen.getByText('За этот период новых достижений нет.')).toBeVisible()
     expect(screen.getByRole('region', { name: 'Текущая неделя' })).toHaveTextContent('Пока нет тренировок')
     expect(document.querySelector('.client-progress-next-step')).toBeNull()
   })

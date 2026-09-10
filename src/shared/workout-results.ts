@@ -10,8 +10,10 @@ export interface WorkoutResult {
   unit: string
   value: number
   fixedWeight?: number
+  performedReps?: number
   workout: Workout
   previous?: { workout: Workout; value: number }
+  previousBest?: { workout: Workout; value: number }
   state: 'baseline' | 'record' | 'increase' | 'stable' | 'decrease'
 }
 
@@ -31,7 +33,7 @@ const finite = (value: number | undefined): value is number => typeof value === 
 export const resultNumber = (value: number) => value.toLocaleString('ru-RU', { maximumFractionDigits: 1 })
 
 export function workoutResults(workouts: readonly Workout[]): WorkoutResult[] {
-  const history = new Map<string, { last: WorkoutResult; best: number }>()
+  const history = new Map<string, { last: WorkoutResult; best: WorkoutResult }>()
   const results: WorkoutResult[] = []
   for (const workout of workouts.filter((item) => item.status === 'done').sort(completedWorkoutOrder)) {
     const groups = new Map<string, WorkoutExercise[]>()
@@ -43,26 +45,30 @@ export function workoutResults(workouts: readonly Workout[]): WorkoutResult[] {
     for (const [exerciseKey, exercises] of groups) {
       const exercise = exercises[0]!
       const facts = exercises.flatMap((item) => item.sets.filter((set) => set.confirmedAt).map((set) => set.fact))
-      const add = (metric: ResultMetric, label: string, unit: string, value: number, fixedWeight?: number) => {
-        const key = `${exerciseKey}:${metric}:${fixedWeight ?? ''}`
+      const add = (metric: ResultMetric, label: string, unit: string, value: number, options: { fixedWeight?: number; performedReps?: number } = {}) => {
+        const key = `${exerciseKey}:${metric}:${options.fixedWeight ?? ''}`
         const historyKey = `${workout.clientId}:${key}`
         const prior = history.get(historyKey)
         const previous = prior?.last
-        const best = prior?.best ?? -Infinity
+        const previousBest = prior?.best
         const canRecord = exercise.inputKind !== 'distance' && exercise.inputKind !== 'duration'
         const state = !previous ? 'baseline' : value === previous.value ? 'stable'
-          : value < previous.value ? 'decrease' : canRecord && value > best ? 'record' : 'increase'
-        const result: WorkoutResult = { key, exerciseKey, exerciseName: exercise.name, metric, label, unit, value, fixedWeight, workout,
-          previous: previous ? { workout: previous.workout, value: previous.value } : undefined, state }
+          : value < previous.value ? 'decrease' : canRecord && previousBest && value > previousBest.value ? 'record' : 'increase'
+        const result: WorkoutResult = { key, exerciseKey, exerciseName: exercise.name, metric, label, unit, value,
+          fixedWeight: options.fixedWeight, performedReps: options.performedReps, workout,
+          previous: previous ? { workout: previous.workout, value: previous.value } : undefined,
+          previousBest: previousBest ? { workout: previousBest.workout, value: previousBest.value } : undefined, state }
         results.push(result)
-        history.set(historyKey, { last: result, best: Math.max(best, value) })
+        history.set(historyKey, { last: result, best: !previousBest || value > previousBest.value ? result : previousBest })
       }
       if (exercise.inputKind === 'strength') {
         const weighted = facts.filter((fact) => finite(fact.weightKg) && finite(fact.reps) && fact.reps > 0)
         if (weighted.length) {
-          add('weight', 'Максимальный вес', 'кг', Math.max(...weighted.map((fact) => fact.weightKg!)))
+          const maxWeight = Math.max(...weighted.map((fact) => fact.weightKg!))
+          add('weight', 'Максимальный вес', 'кг', maxWeight, { performedReps: Math.max(...weighted.filter((fact) => fact.weightKg === maxWeight).map((fact) => fact.reps!)) })
           for (const weight of [...new Set(weighted.map((fact) => fact.weightKg!))].sort((a, b) => b - a)) {
-            add('fixed_reps', `Повторы при ${resultNumber(weight)} кг`, 'повт.', Math.max(...weighted.filter((fact) => fact.weightKg === weight).map((fact) => fact.reps!)), weight)
+            const reps = Math.max(...weighted.filter((fact) => fact.weightKg === weight).map((fact) => fact.reps!))
+            add('fixed_reps', `Повторы при ${resultNumber(weight)} кг`, 'повт.', reps, { fixedWeight: weight, performedReps: reps })
           }
           if (weighted.length === facts.length) add('volume', 'Объём', 'кг', weighted.reduce((sum, fact) => sum + fact.weightKg! * fact.reps!, 0))
         }
