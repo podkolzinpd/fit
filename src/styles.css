@@ -5643,3 +5643,58 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-identity .live-workout-page .circuit-round .live-set { border:0; }
 .live-identity .live-workout-page .live-set-table > .live-set + .live-set,
 .live-identity .live-workout-page .circuit-round .live-set + .live-set { box-shadow:inset 0 1px 0 var(--hairline); }
+
+/* Trainer professional profile: a quiet form for the trainer and the same
+   readable card in preview and on the public link. */
+.trainer-professional-editor, .public-trainer-page { display:grid; gap:16px; width:min(100%, 720px); margin:0 auto; padding-bottom:calc(32px + env(safe-area-inset-bottom)); }
+.trainer-profile-state { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px 18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); }
+.trainer-profile-state p, .trainer-profile-publish-tools p { margin:4px 0 0; color:var(--muted); font-size:var(--type-caption-size); }
+.trainer-profile-form, .trainer-profile-fields, .trainer-profile-preview, .trainer-profile-publish-tools { display:grid; gap:14px; }
+.trainer-profile-fields { padding:18px; border-radius:20px; }
+.trainer-profile-fields h2, .trainer-profile-publish-tools h2 { margin:0; font-size:18px; }
+.trainer-profile-fields textarea { min-height:104px; }
+.trainer-avatar-editor { display:flex; align-items:center; gap:14px; }
+.trainer-avatar-editor > img, .trainer-avatar-editor > span { width:82px; height:82px; flex:0 0 82px; border-radius:24px; object-fit:cover; }
+.trainer-avatar-editor > span { display:grid; place-items:center; background:var(--surface-sunken); color:var(--fg); font-size:28px; font-weight:600; }
+.trainer-avatar-editor > div { display:grid; justify-items:start; gap:4px; }
+.trainer-photo-button { position:relative; overflow:hidden; cursor:pointer; }
+.trainer-photo-button input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+.trainer-mode-fields { overflow:hidden; border:1px solid var(--border); border-radius:14px; }
+.trainer-mode-fields .switch-row:first-child { border-top:0; }
+.trainer-certificates-editor { display:grid; gap:10px; }
+.trainer-certificate-fields { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 94px auto; gap:8px; align-items:center; padding-top:10px; border-top:1px solid var(--border); }
+.trainer-certificate-fields input { min-width:0; }
+.trainer-profile-actions { position:sticky; bottom:calc(76px + env(safe-area-inset-bottom)); z-index:3; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:8px; border:1px solid var(--border); border-radius:17px; background:color-mix(in srgb,var(--surface-raised) 92%,transparent); backdrop-filter:blur(16px); }
+.trainer-profile-actions button { min-width:0; min-height:48px; padding:8px; }
+.trainer-profile-preview { padding-top:8px; }
+.trainer-profile-preview > .eyebrow { margin:0; color:var(--muted); }
+.trainer-card { display:grid; gap:18px; padding:20px; border:1px solid var(--border); border-radius:22px; background:var(--surface-raised); }
+.trainer-card-head { display:flex; align-items:center; gap:14px; }
+.trainer-card-avatar { width:88px; height:88px; flex:0 0 88px; border-radius:26px; object-fit:cover; }
+.trainer-card-avatar-placeholder { display:grid; place-items:center; background:var(--surface-sunken); font-size:32px; font-weight:600; }
+.trainer-card h2, .trainer-card h3, .trainer-card p { margin:0; }
+.trainer-card h2 { font-size:24px; line-height:1.15; }
+.trainer-card h3 { margin-bottom:6px; font-size:16px; }
+.trainer-card-head p, .trainer-card-facts dt, .trainer-certificates span { color:var(--muted); font-size:var(--type-caption-size); }
+.trainer-card-bio, .trainer-card section p { white-space:pre-wrap; line-height:1.5; }
+.trainer-specialties { display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:0; list-style:none; }
+.trainer-specialties li { padding:7px 10px; border-radius:var(--radius-pill); background:var(--surface-sunken); font-size:var(--type-caption-size); }
+.trainer-card-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:0; }
+.trainer-card-facts > div { display:grid; gap:3px; padding:12px; border:1px solid var(--border); border-radius:14px; }
+.trainer-card-facts dd { margin:0; overflow-wrap:anywhere; }
+.trainer-certificates { display:grid; gap:10px; margin:0; padding:0; list-style:none; }
+.trainer-certificates li { display:grid; gap:2px; padding:12px 0; border-top:1px solid var(--border); }
+.trainer-profile-publish-tools { padding:18px; }
+.trainer-profile-publish-tools .actions { justify-content:space-between; align-items:center; }
+.public-trainer-page { min-height:100dvh; padding-top:max(20px,env(safe-area-inset-top)); }
+.public-trainer-page .page-header { margin-bottom:0; }
+
+@media (max-width:560px) {
+  .trainer-professional-editor, .public-trainer-page { padding-inline:16px; }
+  .trainer-certificate-fields { grid-template-columns:minmax(0,1fr) 88px; }
+  .trainer-certificate-fields input:nth-child(2) { grid-column:1 / -1; grid-row:2; }
+  .trainer-certificate-fields .link { grid-column:2; grid-row:2; justify-self:end; }
+  .trainer-profile-actions { grid-template-columns:1fr 1fr; }
+  .trainer-profile-actions .primary { grid-column:1 / -1; grid-row:1; }
+  .trainer-card-facts { grid-template-columns:1fr; }
+}

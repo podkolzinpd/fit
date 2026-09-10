@@ -33,6 +33,7 @@ import {
 import { summarizeClientTraining } from './legacy-summary/index.js'
 import { buildYandexAiAuthorization } from './yandex-ai-authorization.js'
 import { SupabaseVitalMediaSigner } from './vital-media.js'
+import { DatabasePilotTrainerProfiles } from './trainer-profile.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -131,6 +132,9 @@ const pilotTrainingDataReader =
   databasePool === undefined
     ? undefined
     : new DatabasePilotTrainingDataReader(databasePool)
+const pilotTrainerProfiles = databasePool === undefined
+  ? undefined
+  : new DatabasePilotTrainerProfiles(databasePool)
 const pilotWorkoutsWriter =
   databasePool === undefined
     ? undefined
@@ -214,6 +218,7 @@ const app = buildApp(
     ...(yandexAccountLinker === undefined ? {} : { yandexAccountLinker }),
     ...(existingActorProvider === undefined ? {} : { existingActorProvider }),
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
+    ...(pilotTrainerProfiles === undefined ? {} : { pilotTrainerProfiles }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
     ...(pilotProgressData === undefined ? {} : { pilotProgressData }),
     ...(pilotWorkoutParser === undefined ? {} : { pilotWorkoutParser }),

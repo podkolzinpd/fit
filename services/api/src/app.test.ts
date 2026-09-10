@@ -66,6 +66,7 @@ import type { PilotProgressData } from './progress-data.js'
 import type { PilotWorkoutParser } from './pilot-workout-parser.js'
 import type { PilotTrainingSummaries } from './training-summary.js'
 import type { VitalMediaSigner } from './vital-media.js'
+import type { PilotTrainerProfiles, TrainerProfileDraft } from './trainer-profile.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -96,6 +97,50 @@ describe('health endpoint', () => {
       releaseId: 'api-tree-hash',
     })
     expect(response.headers['x-fit-release-id']).toBe('api-tree-hash')
+  })
+})
+
+describe('trainer professional profile', () => {
+  const draft: TrainerProfileDraft = {
+    displayName: 'Анна Иванова',
+    bio: 'Помогаю безопасно начать силовые тренировки и видеть понятный прогресс.',
+    specialties: ['Силовые'], city: 'Москва', trainingModes: ['online'],
+    experienceStartYear: 2020, education: '', formats: '', price: '',
+    acceptingClients: true, avatarDataUrl: null, certificates: [],
+  }
+  const value = {
+    publicId: '11111111-1111-4111-8111-111111111111', draft, published: draft,
+    publishedAt: '2026-09-10T09:00:00.000Z', updatedAt: '2026-09-10T09:00:00.000Z', version: 2,
+  }
+
+  function profiles(): PilotTrainerProfiles {
+    return {
+      getOwn: vi.fn().mockResolvedValue(value),
+      saveDraft: vi.fn().mockResolvedValue(value),
+      publish: vi.fn().mockResolvedValue(value),
+      unpublish: vi.fn().mockResolvedValue({ ...value, published: null, publishedAt: null }),
+      getPublic: vi.fn().mockResolvedValue(value),
+    }
+  }
+
+  it('saves and publishes through a read-write session', async () => {
+    const pilotTrainerProfiles = profiles()
+    const saveDraft = vi.fn().mockResolvedValue(value)
+    pilotTrainerProfiles.saveDraft = saveDraft
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': 'a'.repeat(43) }
+    const saved = await app.inject({ method: 'PUT', url: '/v1/trainer-profile', headers, payload: draft })
+    const published = await app.inject({ method: 'POST', url: '/v1/trainer-profile/publish', headers })
+    expect(saved.statusCode).toBe(200)
+    expect(published.statusCode).toBe(200)
+    expect(saveDraft).toHaveBeenCalledWith({ accessMode: 'read_write', token: 'a'.repeat(43) }, draft)
+  })
+
+  it('serves only the public profile without a session', async () => {
+    const app = buildApp({ pilotTrainerProfiles: profiles(), logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'GET', url: `/v1/trainers/${value.publicId}/public-profile` })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(value)
   })
 })
 

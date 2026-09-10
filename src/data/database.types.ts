@@ -1,4 +1,4 @@
-// schema-sha256: 25a0a1ff8e7b04b22c3476b30e0447c5770130fcd79f17799dd152286ccd601c
+// schema-sha256: d12db7889aca580d855428c20ada550e0cd456415d3ff096d8f1382b16e4012a
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1739,6 +1739,14 @@ export type Database = {
         }
         Returns: number
       }
+      get_own_trainer_profile: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_public_trainer_profile: {
+        Args: { p_public_id: string }
+        Returns: Json
+      }
       append_live_exercise: {
         Args: {
           p_exercise: Json
@@ -2237,6 +2245,18 @@ export type Database = {
           p_workout_id: string
         }
         Returns: number
+      }
+      publish_trainer_profile: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      save_trainer_profile_draft: {
+        Args: { p_draft: Json }
+        Returns: Json
+      }
+      unpublish_trainer_profile: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       unpublish_training_summary: {
         Args: { p_expected_version: number; p_summary_id: string }
