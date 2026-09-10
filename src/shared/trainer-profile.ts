@@ -26,6 +26,7 @@ export const trainerProfessionalProfileSchema = z.object({
   publicId: z.uuid(),
   draft: trainerProfileDraftSchema,
   published: trainerProfileDraftSchema.nullable(),
+  listedInCatalog: z.boolean(),
   publishedAt: z.iso.datetime({ offset: true }).nullable(),
   updatedAt: z.iso.datetime({ offset: true }),
   version: z.number().int().positive(),

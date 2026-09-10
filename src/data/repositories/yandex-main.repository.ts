@@ -14,6 +14,7 @@ import type {
   SessionActor,
   TrainerAttentionWorkout,
   TrainerMembership,
+  TrainerCatalogFilters,
   TrainerProfileDraft,
   Workout,
   WorkoutDraft,
@@ -579,6 +580,19 @@ export function createYandexMainRepository(
       },
       async unpublish() {
         return writeJson(queries, '/v1/trainer-profile/unpublish', 'POST', {}, trainerProfessionalProfileSchema)
+      },
+      async setCatalogListing(listed: boolean) {
+        return writeJson(queries, '/v1/trainer-profile/catalog', 'POST', { listed }, trainerProfessionalProfileSchema)
+      },
+      async listCatalog(filters: TrainerCatalogFilters) {
+        const params = new URLSearchParams()
+        if (filters.query) params.set('query', filters.query)
+        if (filters.specialty) params.set('specialty', filters.specialty)
+        if (filters.city) params.set('city', filters.city)
+        if (filters.mode) params.set('mode', filters.mode)
+        if (filters.acceptingClients !== null) params.set('accepting', String(filters.acceptingClients))
+        const suffix = params.size > 0 ? `?${params.toString()}` : ''
+        return readJson(queries, `/v1/trainers/catalog${suffix}`, z.array(trainerProfessionalProfileSchema))
       },
     },
     clients: {

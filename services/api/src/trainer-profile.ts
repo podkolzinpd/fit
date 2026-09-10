@@ -17,10 +17,19 @@ export type TrainerProfileDraft = {
   certificates: Array<{ title: string; organization: string; year: number | null }>
 }
 
+export type TrainerCatalogFilters = {
+  query: string
+  specialty: string
+  city: string
+  mode: 'online' | 'in_person' | ''
+  acceptingClients: boolean | null
+}
+
 interface TrainerProfileRow extends QueryResultRow {
   public_id: string
   draft_data: TrainerProfileDraft
   published_data: TrainerProfileDraft | null
+  listed_in_catalog: boolean
   published_at: string | null
   updated_at: string
   version: string | number
@@ -38,6 +47,7 @@ function response(row: TrainerProfileRow) {
     publicId: row.public_id,
     draft: row.draft_data,
     published: row.published_data,
+    listedInCatalog: row.listed_in_catalog,
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
     version: Number(row.version),
@@ -87,7 +97,9 @@ export interface PilotTrainerProfiles {
   saveDraft(session: YandexActorSessionInput, draft: TrainerProfileDraft): Promise<ReturnType<typeof response>>
   publish(session: YandexActorSessionInput): Promise<ReturnType<typeof response>>
   unpublish(session: YandexActorSessionInput): Promise<ReturnType<typeof response>>
+  setCatalogListing(session: YandexActorSessionInput, listed: boolean): Promise<ReturnType<typeof response>>
   getPublic(publicId: string): Promise<ReturnType<typeof response> | null>
+  listPublic(filters: TrainerCatalogFilters): Promise<Array<ReturnType<typeof response>>>
 }
 
 export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
@@ -139,10 +151,24 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
     return this.withSession(session, async (client) => {
       const rows = await client.query<TrainerProfileRow>(`
         update public.trainer_professional_profiles set published_data = null,
-          published_at = null, version = version + 1
+          published_at = null, listed_in_catalog = false, version = version + 1
         where trainer_id = auth.uid() returning *
       `)
       if (rows[0] === undefined) throw new TrainerProfileError('not_found')
+      return response(rows[0])
+    })
+  }
+
+  setCatalogListing(session: YandexActorSessionInput, listed: boolean) {
+    return this.withSession(session, async (client) => {
+      const rows = await client.query<TrainerProfileRow>(`
+        update public.trainer_professional_profiles
+        set listed_in_catalog = $1, version = version + 1
+        where trainer_id = auth.uid()
+          and (not $1 or published_data is not null)
+        returning *
+      `, [listed])
+      if (rows[0] === undefined) throw new TrainerProfileError('invalid')
       return response(rows[0])
     })
   }
@@ -155,6 +181,38 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
         where public_id = $1 and published_data is not null
       `, [publicId])
       return rows[0] === undefined ? null : response(rows[0])
+    } finally {
+      connection.release()
+    }
+  }
+
+  async listPublic(filters: TrainerCatalogFilters) {
+    const connection = await this.pool.connect()
+    const clauses = ['published_data is not null', 'listed_in_catalog = true']
+    const values: unknown[] = []
+    const add = (value: unknown) => {
+      values.push(value)
+      return `$${values.length}`
+    }
+    if (filters.query) clauses.push(`published_data->>'displayName' ilike '%' || ${add(filters.query)} || '%'`)
+    if (filters.specialty) clauses.push(`exists (
+      select 1 from jsonb_array_elements_text(coalesce(published_data->'specialties', '[]'::jsonb)) item
+      where item ilike '%' || ${add(filters.specialty)} || '%'
+    )`)
+    if (filters.city) clauses.push(`published_data->>'city' ilike '%' || ${add(filters.city)} || '%'`)
+    if (filters.mode) clauses.push(`published_data->'trainingModes' ? ${add(filters.mode)}`)
+    if (filters.acceptingClients !== null) {
+      clauses.push(`(published_data->>'acceptingClients')::boolean = ${add(filters.acceptingClients)}`)
+    }
+    try {
+      const rows = await connection.query<TrainerProfileRow>(`
+        select * from public.trainer_professional_profiles
+        where ${clauses.join(' and ')}
+        order by ((published_data->>'acceptingClients')::boolean) desc,
+          published_at desc, published_data->>'displayName'
+        limit 100
+      `, values)
+      return rows.map(response)
     } finally {
       connection.release()
     }

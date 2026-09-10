@@ -54,6 +54,10 @@ export function TrainerProfessionalProfileSection() {
     mutationFn: () => trainerProfiles.unpublish(),
     onSuccess: (value) => { forgetPublicTrainerProfile(value.publicId); queryClient.setQueryData(key, value); setStatus('saved') },
   })
+  const catalogListing = useMutation({
+    mutationFn: (listed: boolean) => trainerProfiles.setCatalogListing(listed),
+    onSuccess: (value) => { queryClient.setQueryData(key, value); setStatus('saved') },
+  })
 
   function set<K extends keyof TrainerProfileDraft>(field: K, value: TrainerProfileDraft[K]) {
     setDraft((current) => current === null ? current : { ...current, [field]: value })
@@ -145,7 +149,10 @@ export function TrainerProfessionalProfileSection() {
           </section>
         </form>
         {preview && <section className="trainer-profile-preview"><p className="eyebrow">ПРЕДПРОСМОТР</p><TrainerProfileCard profile={draft} /></section>}
-        {profile.data?.published && <section className="trainer-profile-publish-tools card"><h2>Ссылка на анкету</h2><p>Её можно отправить спортсмену.</p><div className="actions"><button type="button" className="secondary" onClick={() => void copyLink()}>{copied ? 'Скопировано' : 'Скопировать ссылку'}</button><button type="button" className="link danger" onClick={() => unpublish.mutate()}>Снять с публикации</button></div></section>}
+        {profile.data?.published && <section className="trainer-profile-publish-tools card"><h2>Опубликованная анкета</h2>
+          <div className="trainer-catalog-visibility"><Switch label="Показывать в каталоге" checked={profile.data.listedInCatalog} disabled={catalogListing.isPending} onChange={(listed) => catalogListing.mutate(listed)} /><p>Спортсмены смогут найти вашу анкету.</p></div>
+          {catalogListing.error && <p className="error">{catalogListing.error.message}</p>}
+          <p>Ссылку можно отправить спортсмену напрямую.</p><div className="actions"><button type="button" className="secondary" onClick={() => void copyLink()}>{copied ? 'Скопировано' : 'Скопировать ссылку'}</button><button type="button" className="link danger" onClick={() => unpublish.mutate()}>Снять с публикации</button></div></section>}
       </>}
     </AsyncView>
   </section>
