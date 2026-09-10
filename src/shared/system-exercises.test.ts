@@ -176,17 +176,43 @@ describe('system exercise catalog', () => {
     expect(BASE_EXERCISES.every((exercise) => !exercise.motionImageUrl)).toBe(true)
   })
 
-  it('показывает только новое Vital-медиа, а непокрытые упражнения оставляет без медиаблока', () => {
+  it('показывает только проверенное медиа, а непокрытые упражнения оставляет без медиаблока', () => {
     for (const exercise of SYSTEM_EXERCISE_CATALOG) {
       expect(exercise.fallbackImageUrl).toBeUndefined()
       const urls = [exercise.imageUrl, exercise.motionImageUrl, exercise.techniqueVideoUrl].filter(Boolean) as string[]
-      if (!exercise.techniqueVideoUrl) expect(urls).toHaveLength(0)
+      if (!exercise.techniqueVideoUrl) expect([0, 2]).toContain(urls.length)
       for (const url of urls) {
-        expect(url).toMatch(/^\/exercises\/vital(?:-pro)?\//)
+        expect(url).toMatch(/^\/exercises\/(?:vital(?:-pro)?|reference)\//)
         expect(url).not.toMatch(/^\/exercises\/(?:fedb-|base-)/)
         expect((url.endsWith('.mp4') ? EXERCISE_VIDEO_PATHS : EXERCISE_MEDIA_PATHS).has(url), `${exercise.name}: отсутствует ${url}`).toBe(true)
       }
     }
+  })
+
+  it('не подменяет узкую тягу верхнего блока широким хватом', () => {
+    const closeGrip = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-close-grip-front-lat-pulldown')
+    const wideGrip = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-wide-grip-lat-pulldown')
+    const genericPulldown = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'lat-pulldown')
+
+    expect(closeGrip).toMatchObject({
+      name: 'Тяга верхнего блока узким хватом',
+      imageUrl: '/exercises/reference/close-grip-lat-pulldown.jpg',
+      motionImageUrl: '/exercises/reference/close-grip-lat-pulldown-end.jpg',
+      techniqueVideoUrl: undefined,
+      instructions: [
+        'Сядьте в тренажёр и возьмитесь за прямой гриф хватом уже плеч, ладони направлены вперёд.',
+        'На выдохе притяните гриф к верху груди, сводя лопатки.',
+        'На вдохе плавно верните гриф вверх.',
+      ],
+    })
+    for (const exercise of [wideGrip, genericPulldown]) {
+      expect(exercise).toMatchObject({
+        imageUrl: '/exercises/vital-pro/vital-lat-pulldown-ex531.jpg',
+        motionImageUrl: '/exercises/vital-pro/vital-lat-pulldown-ex531-end.jpg',
+        techniqueVideoUrl: '/exercises/vital-pro/vital-lat-pulldown-ex531.mp4',
+      })
+    }
+    expect(closeGrip?.imageUrl).not.toBe(wideGrip?.imageUrl)
   })
 
   it('подключает все 50 видео бесплатного пака и разрешённые исторические дубли', () => {

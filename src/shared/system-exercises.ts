@@ -188,9 +188,21 @@ const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
   ...VITAL_GYM_PRO_NEW_EXERCISES,
 ]
 
-type VitalMedia = { imageUrl: string; motionImageUrl: string; techniqueVideoUrl: string }
+type ReviewedExerciseMedia = { imageUrl: string; motionImageUrl: string; techniqueVideoUrl?: string }
 
-function vitalMediaForExercise(exercise: ExerciseSnapshot): VitalMedia | undefined {
+// Exact public-domain reference frames for movements that must not inherit a
+// visually similar Vital video. Keep this keyed by the persisted exercise ref:
+// the generic and wide-grip pulldowns intentionally retain their own video.
+const REVIEWED_REFERENCE_MEDIA_BY_REF: Readonly<Record<string, ReviewedExerciseMedia>> = {
+  'fedb-close-grip-front-lat-pulldown': {
+    imageUrl: '/exercises/reference/close-grip-lat-pulldown.jpg',
+    motionImageUrl: '/exercises/reference/close-grip-lat-pulldown-end.jpg',
+  },
+}
+
+function reviewedMediaForExercise(exercise: ExerciseSnapshot): ReviewedExerciseMedia | undefined {
+  const exactReferenceMedia = REVIEWED_REFERENCE_MEDIA_BY_REF[exercise.ref]
+  if (exactReferenceMedia) return exactReferenceMedia
   if (exercise.techniqueVideoUrl?.startsWith('/exercises/vital/') || exercise.techniqueVideoUrl?.startsWith('/exercises/vital-pro/')) {
     return exercise.imageUrl && exercise.motionImageUrl
       ? { imageUrl: exercise.imageUrl, motionImageUrl: exercise.motionImageUrl, techniqueVideoUrl: exercise.techniqueVideoUrl }
@@ -209,11 +221,12 @@ function vitalMediaForExercise(exercise: ExerciseSnapshot): VitalMedia | undefin
   return undefined
 }
 
-// Исторические ref и метаданные остаются в каталоге, но медиа берётся только
-// из новых Vital-паков. Совместимый duplicate наследует точную анимацию своей
-// канонической карточки; для остальных непокрытых упражнений медиа отсутствует.
+// Исторические ref и метаданные остаются в каталоге, а медиа берётся из
+// проверенных Vital-паков или из точечной reference-пары выше. Совместимый
+// duplicate наследует точную анимацию своей канонической карточки; для
+// остальных непокрытых упражнений медиа отсутствует.
 export const SYSTEM_EXERCISE_LEGACY_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_CATALOG_SOURCE.map((exercise) => {
-  const vitalMedia = vitalMediaForExercise(exercise)
+  const reviewedMedia = reviewedMediaForExercise(exercise)
   const correctedName = exercise.ref === 'fedb-snatch-deadlift'
     ? 'Рывковая становая тяга (Штанга)'
     : exercise.ref === 'fedb-car-deadlift'
@@ -222,10 +235,10 @@ export const SYSTEM_EXERCISE_LEGACY_CATALOG: readonly ExerciseSnapshot[] = SYSTE
   return {
     ...exercise,
     name: correctedName,
-    imageUrl: vitalMedia?.imageUrl,
+    imageUrl: reviewedMedia?.imageUrl,
     fallbackImageUrl: undefined,
-    motionImageUrl: vitalMedia?.motionImageUrl,
-    techniqueVideoUrl: vitalMedia?.techniqueVideoUrl,
+    motionImageUrl: reviewedMedia?.motionImageUrl,
+    techniqueVideoUrl: reviewedMedia?.techniqueVideoUrl,
   }
 })
 
