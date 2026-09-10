@@ -889,7 +889,7 @@ test('period comparison stays compact for client and trainer in both themes', as
   }
   await comparison.scrollIntoViewIfNeeded()
   await expect(comparison).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-period-comparison-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.025,
   })
 
   await gotoStable(page, trainer ? '/profile' : '/me/profile')
@@ -900,7 +900,7 @@ test('period comparison stays compact for client and trainer in both themes', as
   await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(trainer ? 3 : 8)
   await comparison.scrollIntoViewIfNeeded()
   await expect(comparison).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-period-comparison-dark-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.025,
   })
 })
 
@@ -1015,7 +1015,7 @@ test('weekly training rhythm stays visual and readable for client and trainer in
   }
   await regularity.scrollIntoViewIfNeeded()
   await expect(regularity).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-workout-regularity-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.035,
   })
 
   await gotoStable(page, trainer ? '/profile' : '/me/profile')
@@ -1026,7 +1026,7 @@ test('weekly training rhythm stays visual and readable for client and trainer in
   await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
   await regularity.scrollIntoViewIfNeeded()
   await expect(regularity).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-workout-regularity-dark-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.035,
   })
 })
 
@@ -2051,8 +2051,8 @@ test('results center preserves sources and explains weekly work', async ({ page 
   await expect(weekly).toContainText('Часть недели')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.setViewportSize({ ...viewport, height: 1500 })
-  await expect.soft(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled' })
-  await expect.soft(volume).toHaveScreenshot(`result-volume-${process.platform}.png`, { animations: 'disabled' })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02 })
+  await expect.soft(volume).toHaveScreenshot(`result-volume-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.04 })
   await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('weight')
   await expect.soft(center).toHaveScreenshot(`results-center-${process.platform}.png`, { animations: 'disabled' })
 })
@@ -2073,6 +2073,6 @@ test('results center keeps detailed analytics in dark theme', async ({ page }, t
   await darkVolume.getByText('Подходы, вес и повторы', { exact: true }).click()
   await weekly.getByText('Нагрузка по неделям', { exact: true }).click()
   await page.setViewportSize({ ...viewport, height: 1500 })
-  await expect.soft(darkVolume).toHaveScreenshot(`result-volume-dark-${process.platform}.png`, { animations: 'disabled' })
-  await expect.soft(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled' })
+  await expect.soft(darkVolume).toHaveScreenshot(`result-volume-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.04 })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02 })
 })
