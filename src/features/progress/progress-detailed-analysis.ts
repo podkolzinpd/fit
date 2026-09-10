@@ -1,7 +1,7 @@
 import type { PublishedTrainingSummary, TrainingSummary } from '../../shared/domain'
 import { formatSummaryText } from './summary-format'
 
-export type ProgressDetailedAnalysisSectionId = 'main' | 'why' | 'goal' | 'observations' | 'next' | 'missing'
+export type ProgressDetailedAnalysisSectionId = 'main' | 'why' | 'goal' | 'observations' | 'next' | 'missing' | 'breakdown' | 'conclusion'
 
 export type ProgressDetailedAnalysisSection = {
   id: ProgressDetailedAnalysisSectionId
@@ -127,8 +127,42 @@ function uniqueItems(
   return accepted
 }
 
+function labeled(label: string, value: string | null | undefined): string | null {
+  const clean = value ? concise(value) : null
+  if (!clean) return null
+  const withoutExistingLabel = clean.replace(/^[А-ЯЁ][^:]{1,28}:\s*/u, '')
+  return `${label}: ${withoutExistingLabel}`
+}
+
+function trainerBreakdownItems(client: PublishedTrainingSummary['summary']): string[] {
+  return [
+    labeled('Стабильность', client.consistency),
+    labeled('Цель', client.goalAlignment),
+    ...client.achievements.map((item) => concise(item)),
+    labeled('Дальше', client.nextSteps?.[0]),
+    labeled('Следующий контроль', client.nextSteps?.[1]),
+    labeled('Для точной оценки', client.missingContext?.[0]),
+  ].filter((item): item is string => Boolean(item) && !CLIENT_UNSAFE.test(item!))
+}
+
 export function buildProgressDetailedAnalysis({ summary, role, goalTitle, visibleTexts }: BuildProgressDetailedAnalysisOptions): ProgressDetailedAnalysisSection[] {
   const client = 'summary' in summary ? summary.summary : summary.client
+  if (client.analysisVersion === 'trainer-summary-v2') {
+    return [
+      {
+        id: 'breakdown',
+        title: 'Разбор периода',
+        items: trainerBreakdownItems(client),
+        emptyMessage: 'Для содержательного разбора пока недостаточно данных.',
+      },
+      {
+        id: 'conclusion',
+        title: 'Итог',
+        items: [concise(client.encouragement)].filter((item): item is string => Boolean(item)),
+        emptyMessage: 'Итог появится после следующего обновления анализа.',
+      },
+    ]
+  }
   if (client.analysisVersion === 'whole-period-v1') {
     const observationCopy = 'summary' in summary || role === 'client'
       ? [client.headline, ...client.achievements]

@@ -6,6 +6,12 @@ import { WORKOUT_REMINDER_KIND, WORKOUT_SCHEDULED_KIND } from '../../data/reposi
 import { detectInstallPlatform, isAppInstalled } from '../install'
 import { getCurrentPushSubscription, isPushSupported } from './push-subscription'
 import { waitForTestPushConfirmation } from './wait-for-test-push-confirmation'
+import {
+  cancelAllNativeWorkoutInactivityReminders,
+  isNativeWorkoutInactivityReminderSupported,
+  requestWorkoutInactivityNotificationPermission,
+  workoutInactivityNotificationPermission,
+} from '../workouts/workout-inactivity-reminder'
 
 const TEST_PUSH_TIMEOUT_MS = 12_000
 
@@ -21,30 +27,50 @@ const STATUS_COPY: Record<DisplayState, string> = {
 export function NotificationsSetting({ userId }: { userId: string }) {
   const { pushNotifications: pushNotificationsRepository, source } = useDataBackend()
   const queryClient = useQueryClient()
-  const supported = isPushSupported()
+  const webSupported = isPushSupported()
+  const nativeSupported = isNativeWorkoutInactivityReminderSupported()
+  const supported = webSupported || nativeSupported
   const statusKey = ['push-notifications-status', userId]
 
   // На iOS Web Push не работает вне установленного на «Домой» приложения —
   // это решается фактом установки, а не разрешением браузера, поэтому
   // считается отдельно от reconcile-состояния и раньше самого запроса статуса.
-  const iosNotInstalled = detectInstallPlatform() === 'ios' && !isAppInstalled()
+  const iosNotInstalled = !nativeSupported && detectInstallPlatform() === 'ios' && !isAppInstalled()
 
   const status = useQuery({
     queryKey: statusKey,
     queryFn: () => pushNotificationsRepository.status(userId),
     enabled: supported && !iosNotInstalled,
   })
+  const nativePermission = useQuery({
+    queryKey: ['local-notification-permission'],
+    queryFn: workoutInactivityNotificationPermission,
+    enabled: nativeSupported,
+  })
 
   const enableMutation = useMutation({
     mutationFn: async () => {
+      if (nativeSupported) {
+        if (!await requestWorkoutInactivityNotificationPermission()) throw new Error('Уведомления не разрешены в настройках телефона')
+        await pushNotificationsRepository.setCategoryEnabled(userId, WORKOUT_REMINDER_KIND, true)
+        return
+      }
       await pushNotificationsRepository.enable(userId)
       await pushNotificationsRepository.setCategoryEnabled(userId, WORKOUT_SCHEDULED_KIND, true)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: statusKey }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: statusKey }),
+        queryClient.invalidateQueries({ queryKey: ['local-notification-permission'] }),
+      ])
+    },
   })
 
   const categoryMutation = useMutation({
-    mutationFn: ({ kind, enabled }: { kind: string; enabled: boolean }) => pushNotificationsRepository.setCategoryEnabled(userId, kind, enabled),
+    mutationFn: async ({ kind, enabled }: { kind: string; enabled: boolean }) => {
+      await pushNotificationsRepository.setCategoryEnabled(userId, kind, enabled)
+      if (nativeSupported && kind === WORKOUT_REMINDER_KIND && !enabled) await cancelAllNativeWorkoutInactivityReminders()
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: statusKey }),
   })
 
@@ -52,7 +78,11 @@ export function NotificationsSetting({ userId }: { userId: string }) {
 
   if (!supported) return null
 
-  const state: DisplayState = iosNotInstalled ? 'ios-not-installed' : (status.data?.state === 'working' ? 'working' : status.data?.state === 'denied' ? 'denied' : 'needs-permission')
+  const state: DisplayState = iosNotInstalled
+    ? 'ios-not-installed'
+    : nativeSupported
+      ? nativePermission.data === 'granted' ? 'working' : nativePermission.data === 'denied' ? 'denied' : 'needs-permission'
+      : status.data?.state === 'working' ? 'working' : status.data?.state === 'denied' ? 'denied' : 'needs-permission'
   const working = state === 'working'
 
   async function sendTest() {
@@ -81,7 +111,7 @@ export function NotificationsSetting({ userId }: { userId: string }) {
       </div>}
       {state === 'denied' && <small className="push-test-result">Разрешите уведомления для Fit в настройках телефона, затем обновите страницу.</small>}
       {enableMutation.error && <small className="error">{enableMutation.error instanceof Error ? enableMutation.error.message : 'Не удалось включить уведомления.'}</small>}
-      {working && source === 'supabase' && <div className="push-status-actions">
+      {working && !nativeSupported && source === 'supabase' && <div className="push-status-actions">
         <button type="button" className="link" disabled={testPhase === 'sending'} aria-busy={testPhase === 'sending'} onClick={() => void sendTest()}>
           {testPhase === 'sending' ? 'Отправляем…' : 'Отправить тестовое уведомление'}
         </button>
@@ -96,12 +126,12 @@ export function NotificationsSetting({ userId }: { userId: string }) {
       disabled={status.isLoading || categoryMutation.isPending}
       onChange={(next) => categoryMutation.mutate({ kind: WORKOUT_REMINDER_KIND, enabled: next })}
     />
-    <Switch
+    {!nativeSupported && <Switch
       label="Новые тренировки от тренера"
       checked={status.data?.workoutScheduledEnabled ?? true}
       disabled={status.isLoading || categoryMutation.isPending}
       onChange={(next) => categoryMutation.mutate({ kind: WORKOUT_SCHEDULED_KIND, enabled: next })}
-    />
+    />}
     {categoryMutation.error && <small className="error">{categoryMutation.error instanceof Error ? categoryMutation.error.message : 'Не удалось изменить настройку.'}</small>}
   </>
 }

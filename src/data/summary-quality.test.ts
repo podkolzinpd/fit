@@ -3,6 +3,7 @@ import { summaryQualityIssues } from '../../supabase/functions/summarize-client-
 
 const trainingData = {
   consistency: {
+    completed_workouts: 24,
     workouts_per_week: 0.9,
     longest_gap_days: 21,
   },
@@ -35,15 +36,15 @@ describe('summaryQualityIssues', () => {
       client: {
         headline: 'Силовой прогресс сейчас заметнее изменений в беге.',
         achievements: [
-          'В жиме лёжа рабочий вес вырос на 25%.',
-          'В беге темп улучшился на 10%.',
+          'Грудь: в жиме лёжа рабочий вес вырос на 25%.',
+          'Кардио: в беге темп улучшился на 10%.',
         ],
         consistency: 'Выполнено 24 тренировки, перерыв — 21 день.',
         encouragement: 'Прогресс уже заметен в цифрах.',
         goalAlignment: '',
         nextSteps: ['Сравнить результат после следующих 4 тренировок.'],
         missingContext: [],
-        analysisVersion: 'whole-period-v1',
+        analysisVersion: 'trainer-summary-v2',
       },
     }, trainingData)
 
@@ -66,7 +67,7 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Сравнить ещё 4 тренировки.'],
         missingContext: [],
-        analysisVersion: 'whole-period-v1',
+        analysisVersion: 'trainer-summary-v2',
       },
     }, trainingData)
 
@@ -92,7 +93,7 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Сравнить ещё 4 тренировки.'],
         missingContext: [],
-        analysisVersion: 'whole-period-v1',
+        analysisVersion: 'trainer-summary-v2',
       },
     }, {
       ...trainingData,
@@ -125,7 +126,7 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Увеличить вес.'],
         missingContext: [],
-        analysisVersion: 'whole-period-v1',
+        analysisVersion: 'trainer-summary-v2',
       },
     }, trainingData)
 
@@ -154,7 +155,7 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Сравнить ещё 4 тренировки.'],
         missingContext: [],
-        analysisVersion: 'whole-period-v1',
+        analysisVersion: 'trainer-summary-v2',
       },
     }, { ...trainingData, goal: { title: 'Рост силы' } })
 
@@ -172,6 +173,20 @@ describe('summaryQualityIssues', () => {
 
     expect(issues).toEqual(expect.arrayContaining([
       expect.stringContaining('повторяющегося спада'),
+    ]))
+  })
+
+  it('rejects machine-like copy, invented sleep claims and arbitrary ratings', () => {
+    const summary = validCoachingSummary('Сравнить результат ещё через 3 тренировки.')
+    summary.client.achievements = ['Плечи: наблюдается увеличение силы в некоторых упражнениях.']
+    summary.client.encouragement = 'Главный ограничитель — сон. Итог месяца: 9/10.'
+
+    const issues = summaryQualityIssues(summary, trainingData)
+
+    expect(issues).toEqual(expect.arrayContaining([
+      expect.stringContaining('человеческим языком'),
+      expect.stringContaining('десятибалльной'),
+      expect.stringContaining('выводы о сне'),
     ]))
   })
 
@@ -204,13 +219,13 @@ describe('summaryQualityIssues', () => {
       },
       client: {
         headline: 'Изменение талии подтверждено повторным замером, а не одной точкой.',
-        achievements: ['Изменение талии подтверждено 2 датированными замерами.'],
+        achievements: ['Талия: изменение подтверждено 2 датированными замерами.'],
         consistency: 'Выполнено 2 тренировки.',
         encouragement: 'Изменение уже подтверждено замерами.',
         goalAlignment: '',
         nextSteps: ['Добавить следующий замер талии через 7 дней.'],
         missingContext: [],
-        analysisVersion: 'whole-period-v1',
+        analysisVersion: 'trainer-summary-v2',
       },
     }, {
       ...trainingData,
@@ -234,13 +249,13 @@ function validCoachingSummary(nextStep: string) {
     },
     client: {
       headline: 'Снижение рабочего веса повторилось в трёх тренировках.',
-      achievements: ['Вес снизился с 70 до 63 кг за 3 тренировки.'],
+      achievements: ['Нагрузка: вес снизился с 70 до 63 кг за 3 тренировки.'],
       consistency: 'Выполнено 3 тренировки.',
       encouragement: 'Три записи уже позволяют увидеть направление изменений.',
       goalAlignment: '',
       nextSteps: [nextStep],
       missingContext: [],
-      analysisVersion: 'whole-period-v1',
+      analysisVersion: 'trainer-summary-v2',
     },
   }
 }
