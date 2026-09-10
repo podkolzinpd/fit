@@ -811,7 +811,7 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   // Прямой переход исключает зависимость настройки профиля от структуры навигации.
   await page.goto('/profile')
   await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
-  const firstName = page.getByLabel('Имя')
+  const firstName = page.getByLabel('Имя', { exact: true })
   const original = await firstName.inputValue()
   await firstName.fill('Черновик Который Отменим')
   await page.getByRole('button', { name: 'Отмена' }).click()

@@ -12,7 +12,7 @@ test('trainer saves, previews and publishes a professional profile', async ({ pa
   await expect(page.getByRole('link', { name: 'Анкета тренера' })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Профессиональная анкета' })).toBeVisible()
   const profile = page.getByRole('region', { name: 'Профессиональная анкета' })
-  await profile.getByLabel('Имя', { exact: true }).fill('Анна Иванова')
+  await profile.getByLabel('Как вас увидят спортсмены').fill('Анна Иванова')
   await profile.getByLabel('О себе').fill('Помогаю безопасно начать силовые тренировки и видеть понятный прогресс.')
   await profile.getByLabel('Направления').fill('Силовые, снижение веса')
   await profile.getByRole('switch', { name: 'Онлайн' }).check()

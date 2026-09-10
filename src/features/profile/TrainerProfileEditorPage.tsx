@@ -105,7 +105,7 @@ export function TrainerProfessionalProfileSection() {
               <div><label className="button secondary trainer-photo-button">Выбрать фото<input type="file" accept="image/*" onChange={(event) => void imageChanged(event)} /></label>
                 {draft.avatarDataUrl && <button type="button" className="link" onClick={() => set('avatarDataUrl', null)}>Удалить фото</button>}</div>
             </div>
-            <Field label="Имя"><input value={draft.displayName} maxLength={120} onChange={(event) => set('displayName', event.target.value)} /></Field>
+            <Field label="Как вас увидят спортсмены"><input value={draft.displayName} maxLength={120} onChange={(event) => set('displayName', event.target.value)} /></Field>
             <Field label="О себе"><textarea value={draft.bio} maxLength={1200} placeholder="Опыт, подход и кому вы помогаете" onChange={(event) => set('bio', event.target.value)} /></Field>
             <Field label="Направления"><input value={specialtiesText} placeholder="Силовые, бег, снижение веса" onChange={(event) => { setSpecialtiesText(event.target.value); set('specialties', commaList(event.target.value)) }} /></Field>
           </section>
@@ -137,7 +137,7 @@ export function TrainerProfessionalProfileSection() {
               {localError && <p className="error" role="alert">{localError}</p>}
               <SaveStatus status={save.isPending || publish.isPending || unpublish.isPending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message} />
               <div className="trainer-profile-actions">
-                <button type="submit" className="secondary" disabled={save.isPending || publish.isPending}>Сохранить</button>
+                <button type="submit" className="secondary" disabled={save.isPending || publish.isPending}>Сохранить анкету</button>
                 <button type="button" className="secondary" onClick={() => setPreview((value) => !value)}>{preview ? 'Скрыть предпросмотр' : 'Предпросмотр'}</button>
                 <button type="button" className="primary" onClick={publishNow} disabled={publish.isPending}>Опубликовать</button>
               </div>
