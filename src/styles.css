@@ -5646,16 +5646,17 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-rest-sheet .rest-controls > button { flex: 1; }
 .live-rest-countdown { margin: 0; text-align: center; font-size: 40px; font-variant-numeric: tabular-nums; }
 .live-set-plan-caption { display: block; min-height: 20px; padding-left: 32px; color: var(--secondary-label-fg); font-size: 12px; }
-.live-exercise-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 6px 12px; min-height: 44px; }
-.live-exercise-tools .live-exercise-note { min-width: 0; margin: 0; padding: 0; border: 0; }
-.live-exercise-tools .live-exercise-note[open] { grid-column: 1 / -1; }
-.live-exercise-tools .live-exercise-note summary { min-height: 44px; display: flex; align-items: center; min-width: 0; overflow: hidden; padding: 0; white-space: nowrap; }
-.live-exercise-tools .live-exercise-note[open] summary { margin-bottom: 6px; }
-.live-exercise-tools .live-exercise-note:not([open]) .live-note-preview { min-width: 0; margin-left: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.live-exercise-tools .live-exercise-note[open] .live-note-preview { display: none; }
+.live-exercise-rest-row { min-height:44px; display:flex; justify-content:flex-end; }
+.live-exercise-note:not([open]) .live-note-preview { display:inline; min-width:0; margin-left:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.live-exercise-note[open] .live-note-preview { display:none; }
 .live-exercise-rest > button { min-height: 44px; padding: 0; }
 .live-exercise-rest label { display: grid; gap: 6px; font-size: 14px; }
 .live-note-preview { display: block; color: var(--secondary-label-fg); font-weight: 400; overflow-wrap: anywhere; white-space: pre-wrap; }
+.circuit-exercise-notes { display:grid; gap:0; margin-top:12px; border-top:1px solid var(--border); }
+.circuit-exercise-note { min-width:0; padding-top:10px; }
+.circuit-exercise-note + .circuit-exercise-note { margin-top:6px; border-top:1px solid var(--hairline); }
+.circuit-exercise-note > h3 { margin:0; color:var(--fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold); }
+.circuit-exercise-note .live-exercise-note { margin-top:2px; padding-top:0; border-top:0; }
 .live-trainer-cue { color: var(--secondary-label-fg); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .live-identity .live-previous-result { min-height: 20px; }
 .live-rest-trigger.resting { color: var(--warning-fg); }
