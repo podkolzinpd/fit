@@ -28,7 +28,7 @@ import type { RunningFormat } from '../../shared/running-formats'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
 import { createLiveSetAutosave } from './live-set-autosave'
-import { applyLiveSetConfirmation, applyLiveSetDraft, reconcileLiveWorkout, sameLiveSetDraft, setWithLocalDraft } from './live-set-cache'
+import { applyLiveSetConfirmation, applyLiveSetDraft, carriedLiveWeightKey, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight } from './live-set-cache'
 import { clearPendingLiveSetDrafts, readPendingLiveSetDrafts, removePendingLiveSetDraft, writePendingLiveSetDraft } from './live-set-draft-storage'
 import { createLiveWorkoutCoordinator, liveWorkoutRecoveryError } from './live-workout-coordinator'
 import { setLiveScreenAwake } from './live-keep-awake'
@@ -1339,7 +1339,7 @@ function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, 
   />
 }
 
-function LiveSetFields({ inputKind, exerciseRef, set, editing = false, showRpe = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; set: WorkoutSet; editing?: boolean; showRpe?: boolean }) {
+function LiveSetFields({ inputKind, exerciseRef, set, editing = false, showRpe = false, carriedWeightKey = 'plan' }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string }) {
   // После подтверждения показываем зафиксированный результат (факт, иначе план)
   // как обычное яркое значение в заблокированном поле, а не тусклый placeholder.
   // Правка по карандашику временно разблокирует поля (editing).
@@ -1364,7 +1364,7 @@ function LiveSetFields({ inputKind, exerciseRef, set, editing = false, showRpe =
     {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
   </select> : null
   if (inputKind === 'strength') return <>
-    <LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step={2.5} disabled={locked} inputKey={`w-${k}`} decimal />
+    <LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step={2.5} disabled={locked} inputKey={`w-${k}-${carriedWeightKey}`} decimal />
     <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
     {rpeField}
   </>
@@ -1911,7 +1911,8 @@ export function LiveWorkoutPage() {
   }
   // Форма одного подхода в live: подтверждение / правка / удаление / автосейв по blur.
   function renderLiveSet(exercise: WorkoutExerciseModel, set: WorkoutSet, label?: string, current = false) {
-    const displayedSet = setWithLocalDraft(set, localSetDrafts.get(set.id))
+    const localDraft = localSetDrafts.get(set.id)
+    const displayedSet = setWithCarriedLiveWeight(exercise, set, localDraft)
     const isEditing = editingSets.has(set.id)
     // «Закрыто» (подтверждён) — зелёный; «в работе» (текущий) — серый.
     const stateClass = set.confirmedAt && !isEditing ? 'confirmed' : current && !isEditing ? 'current' : ''
@@ -1938,7 +1939,7 @@ export function LiveWorkoutPage() {
     }}>
       <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} set={displayedSet} editing={isEditing} showRpe={showRpe} />
+        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
