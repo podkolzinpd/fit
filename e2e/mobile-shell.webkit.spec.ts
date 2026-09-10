@@ -422,7 +422,7 @@ test('iPhone: новое имя профиля сохраняется после
   await page.getByLabel('Имя', { exact: true }).fill('Новое имя')
   await page.getByLabel('Часовой пояс').fill('Europe/Berlin')
   await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
-  await expect(page.getByRole('status')).toContainText('Сохранено')
+  await expect(page.getByRole('status').filter({ hasText: 'Сохранено' })).toBeVisible()
   await page.reload()
   await expect(page.getByLabel('Имя', { exact: true })).toHaveValue('Новое имя')
   await expect(page.getByLabel('Часовой пояс')).toHaveValue('Europe/Berlin')
