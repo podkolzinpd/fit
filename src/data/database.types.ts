@@ -1,4 +1,4 @@
-// schema-sha256: d12db7889aca580d855428c20ada550e0cd456415d3ff096d8f1382b16e4012a
+// schema-sha256: 25310e3be01494ce031a17a4d7be01ab9c4b1c9d50363075c152934463485069
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
