@@ -5546,7 +5546,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .period-exercise-result { display:grid; gap:8px; padding:14px 0; border-top:1px solid var(--border); }
 .period-exercise-result header { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:6px; }
 .period-exercise-result header span { color:var(--muted); font-size:var(--type-caption-size); }
-.period-exercise-result .actions { flex-wrap:wrap; }
+.period-exercise-result .period-result-value { font-size:var(--type-numeric-size); font-variant-numeric:tabular-nums; }
+.period-exercise-result .period-result-achievement { color:var(--success-fg); font-size:var(--type-caption-size); font-weight:600; }
+.period-exercise-result .actions { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0 12px; }
+.period-exercise-result .actions .link { white-space:nowrap; }
+.period-achievements-more { border-top:1px solid var(--border); }
 .client-progress-card > details > summary, .client-progress-card .goal-criteria-progress-list summary,
 .client-progress-card .period-exercise-results summary, .client-progress-card .measurement-story-details summary,
 .client-progress-card .period-exercise-result .link { min-height:44px; padding:10px 0; cursor:pointer; }
@@ -5604,6 +5608,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .progress-identity .client-progress-card > details.card[open] > .progress-details-toggle { padding:0; border:0; }
 .progress-identity .client-results-center { margin-top:8px; }
 .progress-identity .period-exercise-results:has(.client-results-center[open]) > .period-exercise-result,
+.progress-identity .period-exercise-results:has(.client-results-center[open]) > .period-achievements-more,
 .progress-identity .period-exercise-results:has(.client-results-center[open]) > p { display:none; }
 .progress-analysis-shortcut { min-height:44px; display:inline-flex; align-items:center; }
 #ai-analysis, #results, #body-map { scroll-margin-top:20px; }
