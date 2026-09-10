@@ -403,7 +403,7 @@ describe('Yandex main repository', () => {
 
     expect(await repository.appFeedback.submit('problem', '  Сообщение  ')).toBe(progressId)
     vi.stubGlobal('Notification', { permission: 'granted' })
-    expect(await repository.pushNotifications.status(actor.userId)).toEqual({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: false })
+    expect(await repository.pushNotifications.status(actor.userId)).toEqual({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: false, chatMessageEnabled: true })
     await repository.pushNotifications.enable(actor.userId)
     await repository.pushNotifications.disable(actor.userId)
     const pushRequests = fetchMock.mock.calls.filter(([input]) =>
@@ -572,7 +572,7 @@ function installContractFetch() {
         ? jsonResponse({ summaries: [{ id: publishedSummaryId, source_summary_id: summaryId, client_id: clientId, period_start: '2026-08-01', period_end: '2026-08-31', summary: clientSummary, display_metrics: metrics, generated_at: '2026-09-01T00:00:00.000Z', published_at: '2026-09-02T00:00:00.000Z' }] })
         : jsonResponse({ summaries: [{ id: summaryId, client_id: clientId, period_start: '2026-08-01', period_end: '2026-08-31', trainer_summary: { headline: 'Итог', progress: ['Рост'], consistency: 'Стабильно', attention: [] }, client_summary: clientSummary, display_metrics: metrics, generated_at: '2026-09-01T00:00:00.000Z', version: 1, published: false }] })
     }
-    if (method === 'GET' && path === '/v1/push-notifications/status') return jsonResponse({ status: { subscribed: true, preferences: { workout_reminder: true, workout_scheduled: false } } })
+    if (method === 'GET' && path === '/v1/push-notifications/status') return jsonResponse({ status: { subscribed: true, preferences: { workout_reminder: true, workout_scheduled: false, chat_message: true } } })
     if (method === 'POST' && path === '/v1/push-notifications/subscription/status') return jsonResponse({ subscribed: true })
     if (path === '/v1/assistant/yandex/suggest-goal-criteria') return jsonResponse({ criteria: [], needsInput: [], unsupportedReason: null })
     if (path.endsWith('/training-summaries/generate')) return jsonResponse({ data: { generated_at: '2026-09-01T00:00:00.000Z' }, cached: false })

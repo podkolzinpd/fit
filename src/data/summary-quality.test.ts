@@ -51,6 +51,23 @@ describe('summaryQualityIssues', () => {
     expect(issues).toEqual([])
   })
 
+  it('allows a grounded trainer question without forcing a numeric restatement', () => {
+    const base = validCoachingSummary('Сравнить результат ещё через 3 тренировки.')
+    const summary = {
+      ...base,
+      trainer: {
+        ...base.trainer,
+        attention: ['Уточнить: одинаково ли выполнялся жим лёжа в сопоставимых тренировках.'],
+      },
+    }
+
+    expect(summaryQualityIssues(summary, {
+      ...trainingData,
+      consistency: { completed_workouts: 3, workouts_per_week: 2, longest_gap_days: 4 },
+      exercises: [{ name: 'Жим лёжа', session_count: 3, sessions: [{ max_weight_kg: 70 }, { max_weight_kg: 63 }] }],
+    })).toEqual([])
+  })
+
   it('rejects technical keys and a vague headline', () => {
     const issues = summaryQualityIssues({
       trainer: {

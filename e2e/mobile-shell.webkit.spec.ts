@@ -24,6 +24,16 @@ async function login(page: import('@playwright/test').Page, email: string) {
   await expect(page).toHaveURL(/\/me$/)
 }
 
+test('chat entry and conversation list fit the iPhone shell', async ({ page }) => {
+  await login(page, 'client@fit.local')
+  const entry = page.getByRole('link', { name: /Сообщения/ })
+  await expect(entry).toBeVisible()
+  await entry.click()
+  await expect(page.getByRole('heading', { name: 'Сообщения' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Тест Тренер/ })).toBeVisible()
+  await expect(page.locator('.tab-bar')).toHaveCount(0)
+})
+
 async function mockAutomaticSummaryGeneration(page: Page) {
   const response = {
     contentType: 'application/json',

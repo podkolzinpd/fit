@@ -51,7 +51,8 @@ function parseStatus(value: unknown): PushNotificationStatus {
   }
   const preferenceRecord = preferences as Record<string, unknown>
   if (typeof preferenceRecord.workout_reminder !== 'boolean'
-    || typeof preferenceRecord.workout_scheduled !== 'boolean') {
+    || typeof preferenceRecord.workout_scheduled !== 'boolean'
+    || typeof preferenceRecord.chat_message !== 'boolean') {
     throw new Error('Push notification status returned an unsupported format')
   }
   return {
@@ -59,6 +60,7 @@ function parseStatus(value: unknown): PushNotificationStatus {
     preferences: {
       workout_reminder: preferenceRecord.workout_reminder,
       workout_scheduled: preferenceRecord.workout_scheduled,
+      chat_message: preferenceRecord.chat_message,
     },
   }
 }

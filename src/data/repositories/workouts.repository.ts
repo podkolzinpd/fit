@@ -158,7 +158,7 @@ async function listPage(from?: string, to?: string, clientId?: string, offset = 
   const result = await workoutQueries.listPage(from, to, clientId, pageSize + 1, offset)
   if (result.error) throw repositoryError(result.error)
   return {
-    ...pageFromLookahead(result.data.map(mapWorkout), pageSize, offset),
+    ...pageFromLookahead((result.data as unknown as WorkoutListRow[]).map(mapWorkout), pageSize, offset),
     totalCount: Number(result.data[0]?.total_count ?? 0),
   }
 }

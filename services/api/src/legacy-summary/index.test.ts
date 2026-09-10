@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { buildProgressData, requestYandexSummary, summarizeClientTraining } from './index.js'
+import { buildSummaryModelInput } from './summary-model-input.js'
 
 const validSummary = {
   trainer: {
@@ -429,5 +430,63 @@ describe('summarizeClientTraining cloud handler', () => {
     expect(chunkInputs.flatMap((item) => item.exercises)
       .reduce((total, exercise) => total + exercise.sessions[0]!.sets.length, 0)).toBe(710)
     expect(sentInputs.at(-1)?.completed_workouts.chunk_analyses).toHaveLength(chunkInputs.length)
+  })
+
+  it('keeps a production-sized monthly history complete and uses one bounded model request', async () => {
+    vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
+    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
+    const buildExercises = (count: number, setCount: number) => Array.from({ length: count }, (_, exerciseIndex) => ({
+      ref: `exercise-${exerciseIndex + 1}`,
+      name: `Упражнение ${exerciseIndex + 1}`,
+      kind: 'strength',
+      session_count: 1,
+      sessions: [{
+        date: '2026-09-01',
+        set_count: setCount,
+        planned_set_count: setCount,
+        set_completion_percent: 100,
+        planned_max_weight_kg: 40,
+        max_weight_kg: 40,
+        total_reps: setCount * 10,
+        volume_kg: setCount * 400,
+        sets: Array.from({ length: setCount }, (_, setIndex) => ({
+          exercise_position: exerciseIndex,
+          set_position: setIndex,
+          planned: { weight_kg: 40, reps: 10 },
+          performed: { weight_kg: 40, reps: 10 },
+        })),
+      }],
+    }))
+    const currentExercises = buildExercises(28, 10)
+    const previousExercises = buildExercises(14, 5)
+    const input = buildSummaryModelInput({
+      period: { start: '2026-08-11', end: '2026-09-10' },
+      consistency: { completed_workouts: 13, workouts_per_week: 2.9 },
+      goal: null,
+      feedback_signals: [],
+      measurements: [],
+      exercises: currentExercises,
+      previous_period: {
+        period: { start: '2026-07-11', end: '2026-08-10' },
+        consistency: { completed_workouts: 3, workouts_per_week: 0.7 },
+        feedback_signals: [],
+        measurements: [],
+        exercises: previousExercises,
+      },
+    })
+    const fetchImpl = vi.fn(() => Promise.resolve(completionResponse()))
+
+    await requestYandexSummary(input, '2026-08-11', '2026-09-10', { fetchImpl })
+
+    expect(input.input_coverage).toMatchObject({
+      current: { exercises: 28, sessions: 28, sets: 280 },
+      previous: { exercises: 14, sessions: 14, sets: 70 },
+      complete: true,
+    })
+    expect(input.exercises).toHaveLength(28)
+    expect(input.previous_period?.exercises).toHaveLength(14)
+    expect(input.exercises[0]?.sessions[0]).not.toHaveProperty('sets')
+    expect(JSON.stringify(input).length).toBeLessThan(80_000)
+    expect(fetchImpl).toHaveBeenCalledOnce()
   })
 })

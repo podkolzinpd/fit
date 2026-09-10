@@ -4,6 +4,9 @@ import type {
   Client,
   ClientGoal,
   ClientTrainingSummary,
+  ChatMessage,
+  ChatMessagePage,
+  ChatThread,
   ExerciseProgressPage,
   ExerciseSnapshot,
   ProgressDraft,
@@ -42,6 +45,12 @@ import { yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pi
 import { trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
 
 const uuid = z.uuid()
+const chatThreadSchema = z.object({
+  conversationId: uuid.nullable(), clientId: uuid, trainerId: uuid, partnerUserId: uuid,
+  partnerName: z.string(), activeConnection: z.boolean(), lastMessageBody: z.string().nullable(),
+  lastMessageAt: z.iso.datetime().nullable(), lastMessageSenderId: uuid.nullable(), unreadCount: z.number().int().nonnegative(),
+})
+const chatMessageSchema = z.object({ id: uuid, conversationId: uuid, senderId: uuid, body: z.string(), createdAt: z.iso.datetime() })
 const clientSchema = z.object({
   id: uuid,
   hasAccount: z.boolean(),
@@ -963,10 +972,33 @@ export function createYandexMainRepository(
         return payload.feedback.id
       },
     },
+    chat: {
+      async listThreads(): Promise<ChatThread[]> {
+        return (await readJson(queries, '/v1/chat/threads', z.object({ threads: z.array(chatThreadSchema) }))).threads
+      },
+      async open(clientId, trainerId): Promise<string> {
+        return (await writeJson(queries, '/v1/chat/conversations', 'POST', { clientId, trainerId }, z.object({ conversationId: uuid }))).conversationId
+      },
+      async listMessages(conversationId, cursor): Promise<ChatMessagePage> {
+        const params = new URLSearchParams({ limit: '50' })
+        if (cursor) { params.set('beforeCreatedAt', cursor.createdAt); params.set('beforeId', cursor.id) }
+        return readJson(queries, `/v1/chat/conversations/${conversationId}/messages?${params}`, z.object({ messages: z.array(chatMessageSchema), nextCursor: z.object({ createdAt: z.iso.datetime(), id: uuid }).nullable() }))
+      },
+      async send(conversationId, messageId, body): Promise<ChatMessage> {
+        return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/messages`, 'POST', { id: messageId, body }, z.object({ message: chatMessageSchema }))).message
+      },
+      async markRead(conversationId): Promise<void> {
+        await writeEmpty(queries, `/v1/chat/conversations/${conversationId}/read`, 'PUT')
+      },
+      subscribe(_conversationId, onChange) {
+        const interval = window.setInterval(onChange, 15_000)
+        return () => window.clearInterval(interval)
+      },
+    },
     pushNotifications: {
       async status() {
         const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
-        const payload = await readJson(queries, '/v1/push-notifications/status', z.object({ status: z.object({ subscribed: z.boolean(), preferences: z.object({ workout_reminder: z.boolean(), workout_scheduled: z.boolean() }) }) }))
+        const payload = await readJson(queries, '/v1/push-notifications/status', z.object({ status: z.object({ subscribed: z.boolean(), preferences: z.object({ workout_reminder: z.boolean(), workout_scheduled: z.boolean(), chat_message: z.boolean() }) }) }))
         const state = await reconcilePushSubscription(vapidPublicKey, {
           hasServerSubscription: async (endpoint) => {
             const result = await writeJson(
@@ -986,6 +1018,7 @@ export function createYandexMainRepository(
           state,
           workoutReminderEnabled: payload.status.preferences.workout_reminder,
           workoutScheduledEnabled: payload.status.preferences.workout_scheduled,
+          chatMessageEnabled: payload.status.preferences.chat_message,
         }
       },
       async enable() {

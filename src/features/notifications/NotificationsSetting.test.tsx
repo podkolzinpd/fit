@@ -12,6 +12,7 @@ const repository = vi.hoisted(() => ({
 }))
 vi.mock('../../data/repositories/push-notifications.repository', () => ({
   pushNotificationsRepository: repository,
+  CHAT_MESSAGE_KIND: 'chat_message',
   WORKOUT_REMINDER_KIND: 'workout_reminder',
   WORKOUT_SCHEDULED_KIND: 'workout_scheduled',
 }))
@@ -93,7 +94,7 @@ describe('NotificationsSetting', () => {
   it('shows needs-permission with an enable button, and enables the subscription plus the scheduled category on click', async () => {
     primeDefaults()
     const user = userEvent.setup()
-    repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true })
+    repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
     repository.enable.mockResolvedValue(undefined)
     repository.setCategoryEnabled.mockResolvedValue(undefined)
 
@@ -103,11 +104,12 @@ describe('NotificationsSetting', () => {
 
     expect(repository.enable).toHaveBeenCalledWith(USER_ID)
     expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'workout_scheduled', true)
+    expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'chat_message', true)
   })
 
   it('shows denied with an instruction and no button', async () => {
     primeDefaults()
-    repository.status.mockResolvedValue({ state: 'denied', workoutReminderEnabled: true, workoutScheduledEnabled: true })
+    repository.status.mockResolvedValue({ state: 'denied', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
     render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
     await screen.findByText('Отключены в настройках телефона')
     expect(screen.getByText('Разрешите уведомления для Fit в настройках телефона, затем обновите страницу.')).toBeVisible()
@@ -116,7 +118,7 @@ describe('NotificationsSetting', () => {
 
   it('shows the working state with both category switches reflecting their preference', async () => {
     primeDefaults()
-    repository.status.mockResolvedValue({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: false })
+    repository.status.mockResolvedValue({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: false, chatMessageEnabled: true })
     render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
     await screen.findByText('Уведомления работают')
     const switches = screen.getAllByRole('switch')
@@ -127,7 +129,7 @@ describe('NotificationsSetting', () => {
   it('toggles a category switch independently, without touching the other one', async () => {
     primeDefaults()
     const user = userEvent.setup()
-    repository.status.mockResolvedValue({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: true })
+    repository.status.mockResolvedValue({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
     repository.setCategoryEnabled.mockResolvedValue(undefined)
 
     render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
@@ -140,7 +142,7 @@ describe('NotificationsSetting', () => {
   it('sends a test push and shows a confirmed result once the service worker responds', async () => {
     primeDefaults()
     const user = userEvent.setup()
-    repository.status.mockResolvedValue({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: true })
+    repository.status.mockResolvedValue({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
     getCurrentPushSubscription.mockResolvedValue(LOCAL_SUBSCRIPTION)
     repository.sendTestPush.mockImplementation(() => {
       window.dispatchEvent(new MessageEvent('message', { data: { type: 'fit-test-push-received' } }))
@@ -162,7 +164,7 @@ describe('NotificationsSetting', () => {
 
   it('does not offer a test-push button outside the working state', async () => {
     primeDefaults()
-    repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true })
+    repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
     render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
     await screen.findByText('Нужно разрешение')
     expect(screen.queryByRole('button', { name: 'Отправить тестовое уведомление' })).not.toBeInTheDocument()
@@ -171,7 +173,7 @@ describe('NotificationsSetting', () => {
   it('shows an error message when enabling fails', async () => {
     primeDefaults()
     const user = userEvent.setup()
-    repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true })
+    repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
     repository.enable.mockRejectedValue(new Error('Push-уведомления сейчас недоступны'))
 
     render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
@@ -186,7 +188,7 @@ describe('NotificationsSetting', () => {
     nativeReminder.supported.mockReturnValue(true)
     nativeReminder.permission.mockResolvedValue('granted')
     nativeReminder.cancelAll.mockResolvedValue(undefined)
-    repository.status.mockResolvedValue({ state: 'unavailable', workoutReminderEnabled: true, workoutScheduledEnabled: true })
+    repository.status.mockResolvedValue({ state: 'unavailable', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
     repository.setCategoryEnabled.mockResolvedValue(undefined)
 
     render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
