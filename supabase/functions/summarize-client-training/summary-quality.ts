@@ -10,12 +10,19 @@ function stringList(value: unknown): string[] {
 
 const technicalLanguage = /\b(?:workouts?|week|active|session|change|distance|pace|volume|weight|reps?|completed)(?:_[a-z]+)*\b|\b[a-z]+_[a-z_]+\b/i
 const vagueHeadline = /(?:наблюдается|отмечается|есть)\s+(?:улучшение|прогресс|динамика).*(?:некотор|ряд)|(?:показатели|результаты)\s+(?:улучшились|выросли)\s*(?:в целом)?[.!]?$/i
+const causalClaim = /(?:способству(?:ет|ют)|привод(?:ит|ят)|гарантиру(?:ет|ют)).{0,60}(?:рост|сниж|увелич|уменьш)/iu
+const indecisiveAction = /(?:возможност[ьи]|\bили\b|при текущем или|чуть повышенн)/iu
+const interpretation = /(?:пока|разов|устойчив|закреп|сопостав|ценой|однако|но\b|не\s+(?:означает|доказывает|подтверждает)|вероятн)/iu
 
-function exerciseNameKey(name: string): string {
-  const firstWord = name.toLocaleLowerCase("ru")
-    .split(/[^а-яёa-z0-9]+/i)
-    .find(Boolean) ?? ""
-  return firstWord.length > 6 ? firstWord.slice(0, -2) : firstWord
+function numericRestatement(value: string): boolean {
+  return /\d/u.test(value) && /(?:вес|повтор|объ[её]м|темп|дистанц).{0,50}(?:вырос|увелич|сниз|уменьш|измен)/iu.test(value) && !interpretation.test(value)
+}
+
+function groundedEvidence(value: string, trainingData: unknown): boolean {
+  const allowed = new Set(JSON.stringify(trainingData).match(/\d+(?:[.,]\d+)?/gu) ?? [])
+  return (value.match(/\d+(?:[.,]\d+)?/gu) ?? []).every((item) =>
+    allowed.has(item) || allowed.has(item.replace(',', '.')) || allowed.has(item.replace('.', ','))
+  )
 }
 
 function hasRecoverySignal(trainingData: unknown): boolean {
@@ -36,16 +43,6 @@ function hasRepeatedDecline(trainingData: unknown): boolean {
   )
 }
 
-function hasMeasurementChange(trainingData: unknown): boolean {
-  if (!isRecord(trainingData) || !isRecord(trainingData.measurements)) return false
-  return [trainingData.measurements.changes, trainingData.measurements.compared_to_previous_period]
-    .some((value) => Array.isArray(value) && value.length > 0)
-}
-
-function isMeasurementHeadline(value: string, trainingData: unknown): boolean {
-  return hasMeasurementChange(trainingData) && /(?:вес|тал(?:ия|ии|ию)|груд(?:ь|и)|б[её]др)/iu.test(value) && /\d/u.test(value)
-}
-
 export function summaryQualityIssues(
   summary: unknown,
   trainingData: unknown,
@@ -60,6 +57,7 @@ export function summaryQualityIssues(
   const trainerProgress = stringList(trainer.progress)
   const trainerAttention = stringList(trainer.attention)
   const clientAchievements = stringList(client.achievements)
+  const clientMissingContext = stringList(client.missingContext)
   const clientText = [
     client.headline,
     ...clientAchievements,
@@ -67,6 +65,7 @@ export function summaryQualityIssues(
     client.encouragement,
     client.goalAlignment,
     ...stringList(client.nextSteps),
+    ...clientMissingContext,
   ].filter((item): item is string => typeof item === "string").join(" ")
   const allText = [
     trainer.headline,
@@ -76,6 +75,13 @@ export function summaryQualityIssues(
     clientText,
   ].filter((item): item is string => typeof item === "string").join(" ")
   const issues: string[] = []
+
+  if (client.analysisVersion !== 'whole-period-v1') {
+    issues.push('client.analysisVersion не соответствует актуальному контракту анализа.')
+  }
+  if (clientMissingContext.length > 1) {
+    issues.push('client.missingContext должен содержать не больше одного существенного пробела.')
+  }
 
   if (/\d+[.,]\d+\s*%/.test(allText)) {
     issues.push("Процентные изменения должны быть округлены до целых процентов.")
@@ -171,40 +177,34 @@ export function summaryQualityIssues(
     issues.push("Без заданной цели client.goalAlignment должен быть пустым.")
   }
   const nextSteps = stringList(client.nextSteps)
-  if (nextSteps.length !== 1) {
-    issues.push("client.nextSteps должен содержать ровно один ориентир.")
+  if (nextSteps.length < 1 || nextSteps.length > 2) {
+    issues.push("client.nextSteps должен содержать один или два ориентира.")
   }
   if (nextSteps.some((item) => /^(?:продолжать?|отслеживать прогресс|собрать больше данных)[.!]?$/iu.test(item.trim()))) {
     issues.push("client.nextSteps должен быть конкретным действием, а не общей рекомендацией.")
   }
-  if (clientAchievements.length < 1 || clientAchievements.length > 2) {
-    issues.push("client.achievements должен содержать одно или два доказательства главного вывода.")
+  if (clientAchievements.length < 1 || clientAchievements.length > 3) {
+    issues.push("client.achievements должен содержать от одного до трёх наблюдений.")
   }
-
-  const exercises = isRecord(trainingData) && Array.isArray(trainingData.exercises)
-    ? trainingData.exercises.filter(isRecord)
-    : []
-  const changedExercises = exercises.filter((exercise) => {
-    if (Number(exercise.session_count) < 2 || !isRecord(exercise.change_percent)) {
-      return false
-    }
-    return Object.values(exercise.change_percent).some((value) =>
-      typeof value === "number" && value !== 0
-    )
-  })
+  if (clientAchievements.some((item) => !groundedEvidence(item, trainingData))) {
+    issues.push('Числа в client.achievements должны присутствовать во входных данных.')
+  }
+  if (typeof client.headline === 'string' && numericRestatement(client.headline)) {
+    issues.push('client.headline должен интерпретировать картину, а не только пересказывать изменение показателя.')
+  }
+  if (causalClaim.test(clientText)) {
+    issues.push('Клиентский анализ не должен выдавать тренировочную корреляцию за доказанную причину результата.')
+  }
+  if (nextSteps.some((item) => indecisiveAction.test(item))) {
+    issues.push('client.nextSteps должен содержать однозначное действие без взаимоисключающих вариантов.')
+  }
 
   const headlineText = [trainer.headline, client.headline]
     .filter((item): item is string => typeof item === "string")
-  if (changedExercises.length > 0) {
-    for (const headline of headlineText) {
-      const normalized = headline.toLocaleLowerCase("ru")
-      const namesExercise = changedExercises.some((exercise) =>
-        typeof exercise.name === "string" && normalized.includes(exerciseNameKey(exercise.name))
-      )
-      if (((!/\d/.test(headline) || !namesExercise) && !isMeasurementHeadline(headline, trainingData)) || vagueHeadline.test(headline)) {
-        issues.push("Headline должен называть конкретное упражнение и подтверждённое число, а не общий прогресс.")
-        break
-      }
+  for (const headline of headlineText) {
+    if (vagueHeadline.test(headline)) {
+      issues.push("Headline должен содержать конкретный смысловой вывод, а не общий прогресс.")
+      break
     }
   }
 

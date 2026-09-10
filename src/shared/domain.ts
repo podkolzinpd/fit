@@ -529,6 +529,8 @@ export interface ClientTrainingSummary {
   encouragement: string
   goalAlignment?: string
   nextSteps?: string[]
+  missingContext?: string[]
+  analysisVersion?: string
 }
 
 export interface TrainingSummaryMetrics {

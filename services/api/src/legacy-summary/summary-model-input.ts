@@ -11,11 +11,22 @@ type SummarySession = {
   total_distance_km?: unknown
   pace_min_per_km?: unknown
   average_rpe?: unknown
+  sets?: SummarySet[]
+}
+
+type SummarySet = {
+  exercise_position: number
+  set_position: number
+  planned: Record<string, unknown> | null
+  performed: Record<string, unknown> | null
 }
 
 type SummaryExercise = {
+  ref?: string
   name: string
   kind: string
+  muscle_group?: string
+  source?: string
   session_count: number
   first_session?: SummarySession | undefined
   last_session?: SummarySession | undefined
@@ -62,26 +73,12 @@ type MeasurementChange = {
   evidence_points: number
 }
 
-const STOP_WORDS = new Set([
-  'цель', 'этап', 'увеличить', 'улучшить', 'снизить', 'набрать', 'период',
-  'текущий', 'текущая', 'текущем', 'килограмм', 'повторение', 'тренировка',
-])
-
 function finite(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
 }
 
 function rounded(value: number): number {
   return Math.round(value * 10) / 10
-}
-
-function tokens(value: unknown): Set<string> {
-  return new Set(JSON.stringify(value ?? '')
-    .toLocaleLowerCase('ru-RU')
-    .replace(/ё/g, 'е')
-    .split(/[^а-яa-z0-9]+/u)
-    .filter((word) => word.length >= 4 && !STOP_WORDS.has(word))
-    .map((word) => word.slice(0, 6)))
 }
 
 function sameLoad(left: number, right: number): boolean {
@@ -111,7 +108,7 @@ export function deriveMeasurementChanges(measurements: SummaryMeasurement[]): Me
 }
 
 function measurementContext(measurements: SummaryMeasurement[] | undefined) {
-  const recent = (measurements ?? []).slice(-8)
+  const recent = measurements ?? []
   return {
     recent_entries: recent,
     changes: deriveMeasurementChanges(recent),
@@ -227,47 +224,46 @@ export function deriveExerciseObservations(exercise: SummaryExercise): DerivedOb
   return observations.slice(0, 4)
 }
 
-function exerciseScore(exercise: SummaryExercise, goalTokens: ReadonlySet<string>): number {
-  const nameTokens = tokens(exercise.name)
-  const goalMatch = [...nameTokens].some((word) => goalTokens.has(word)) ? 100 : 0
-  const change = Object.values(exercise.change_percent ?? {})
-    .map(finite)
-    .filter((value): value is number => value !== undefined)
-    .reduce((maximum, value) => Math.max(maximum, Math.abs(value)), 0)
-  return goalMatch + Math.min(exercise.session_count, 12) * 4 +
-    Math.min(change, 50) + deriveExerciseObservations(exercise).length * 12
-}
-
-function selectExercises(exercises: SummaryExercise[], goal: unknown, limit: number) {
-  const goalTokens = tokens(goal)
+function selectExercises(exercises: SummaryExercise[]) {
   return exercises
-    .map((exercise, index) => ({ exercise, index, score: exerciseScore(exercise, goalTokens) }))
-    .sort((left, right) => right.score - left.score || left.index - right.index)
-    .slice(0, Math.max(0, limit))
-    .map(({ exercise }) => ({
+    .map((exercise) => ({
+      ref: exercise.ref,
       name: exercise.name,
       kind: exercise.kind,
+      muscle_group: exercise.muscle_group,
+      source: exercise.source,
       session_count: exercise.session_count,
-      first_session: exercise.first_session,
-      last_session: exercise.last_session,
       change_percent: exercise.change_percent,
       best: exercise.best,
-      recent_sessions: (exercise.sessions ?? []).slice(-6),
+      sessions: exercise.sessions ?? [],
       derived_observations: deriveExerciseObservations(exercise),
     }))
 }
 
+function coverage(exercises: SummaryExercise[]) {
+  const sessions = exercises.flatMap((exercise) => exercise.sessions ?? [])
+  return {
+    exercises: exercises.length,
+    sessions: sessions.length,
+    sets: sessions.reduce((total, session) => total + (session.sets?.length ?? 0), 0),
+  }
+}
+
 /**
- * Sends a bounded but chronological training picture to the model. Numeric
- * comparisons and trend candidates are computed before the LLM call; the model
- * interprets them and is not asked to invent or recalculate evidence.
+ * Sends the complete chronological training picture for both periods. Numeric
+ * comparisons remain precomputed, while raw plan/fact sets preserve the
+ * evidence needed to interpret those comparisons.
  */
 export function buildSummaryModelInput(
   trainingData: SummaryTrainingData,
-  exerciseLimit = 12,
 ) {
   const previous = trainingData.previous_period
   return {
+    input_coverage: {
+      current: coverage(trainingData.exercises),
+      previous: coverage(previous?.exercises ?? []),
+      complete: true,
+    },
     period: trainingData.period,
     consistency: trainingData.consistency,
     goal: trainingData.goal,
@@ -276,13 +272,13 @@ export function buildSummaryModelInput(
       ...measurementContext(trainingData.measurements),
       compared_to_previous_period: measurementComparison(trainingData.measurements, previous?.measurements),
     },
-    exercises: selectExercises(trainingData.exercises, trainingData.goal, exerciseLimit),
+    exercises: selectExercises(trainingData.exercises),
     previous_period: previous ? {
       period: previous.period,
       consistency: previous.consistency,
       feedback_signals: previous.feedback_signals ?? [],
       measurements: measurementContext(previous.measurements),
-      exercises: selectExercises(previous.exercises, trainingData.goal, Math.min(8, exerciseLimit)),
+      exercises: selectExercises(previous.exercises),
     } : null,
   }
 }

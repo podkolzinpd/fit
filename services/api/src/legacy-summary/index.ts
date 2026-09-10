@@ -12,7 +12,6 @@ import { buildTrainingGoalContext } from "./summary-goal.js"
 import {
   authorizeSummaryActor,
   parseYandexJson,
-  shouldUseClientCache,
 } from "./self-service.js"
 import { completedWorkoutsInPeriod } from "./workout-source.js"
 import { buildSummaryConsistency } from "./summary-consistency.js"
@@ -23,7 +22,8 @@ import { resolveSupabasePublicKey } from "./supabase-public-key.js"
 const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
 const MAX_PERIOD_DAYS = 366
-const MAX_SOURCE_ROWS = 1000
+const MAX_SOURCE_ROWS = 10_000
+const MAX_DIRECT_MODEL_INPUT_CHARS = 80_000
 
 type SummarizeRequest = {
   client_id: string
@@ -48,6 +48,8 @@ export type ExerciseRow = {
   workout_id: string
   exercise_ref: string
   exercise_name: string
+  exercise_source?: string
+  muscle_group?: string
   input_kind: string
   position: number
 }
@@ -104,11 +106,20 @@ export type ClientSummary = {
   encouragement: string
   goalAlignment: string
   nextSteps: string[]
+  missingContext: string[]
+  analysisVersion: string
 }
 
 export type GeneratedSummary = {
   trainer: TrainerSummary
   client: ClientSummary
+}
+
+type YandexSummaryResult = {
+  summary: GeneratedSummary
+  modelUri: string
+  modelVersion: string | null
+  usage: Record<string, string>
 }
 
 export class HttpError extends Error {
@@ -154,6 +165,8 @@ function parseGeneratedSummary(value: string): GeneratedSummary {
     typeof client.encouragement !== "string" ||
     typeof client.goalAlignment !== "string" ||
     !isStringArray(client.nextSteps)
+    || !isStringArray(client.missingContext)
+    || typeof client.analysisVersion !== "string"
   ) {
     throw new HttpError(502, "yandex_cloud_invalid_summary")
   }
@@ -172,6 +185,8 @@ function parseGeneratedSummary(value: string): GeneratedSummary {
       encouragement: client.encouragement.trim(),
       goalAlignment: client.goalAlignment.trim(),
       nextSteps: client.nextSteps.map((item) => item.trim()),
+      missingContext: client.missingContext.map((item) => item.trim()),
+      analysisVersion: client.analysisVersion.trim(),
     },
   }
 }
@@ -294,6 +309,12 @@ type SessionMetrics = {
   total_distance_km?: number | undefined
   pace_min_per_km?: number | undefined
   average_rpe?: number | undefined
+  sets: Array<{
+    exercise_position: number
+    set_position: number
+    planned: Record<string, number> | null
+    performed: Record<string, number> | null
+  }>
 }
 
 function rounded(value: number): number {
@@ -315,6 +336,21 @@ function inclusivePeriodDays(start: string, end: string): number {
   return Math.round((Date.parse(`${end}T00:00:00.000Z`) - Date.parse(`${start}T00:00:00.000Z`)) / 86_400_000) + 1
 }
 
+function setValues(set: SetRow, kind: 'plan' | 'fact'): Record<string, number> | null {
+  const values = {
+    weight_kg: set[`${kind}_weight_kg`],
+    reps: set[`${kind}_reps`],
+    duration_min: set[`${kind}_duration_min`],
+    duration_sec: set[`${kind}_duration_sec`],
+    distance_km: set[`${kind}_distance_km`],
+    rpe: set[`${kind}_rpe`],
+  }
+  const present = Object.entries(values).filter((entry): entry is [string, number] =>
+    entry[1] !== null && Number.isFinite(Number(entry[1]))
+  )
+  return present.length > 0 ? Object.fromEntries(present.map(([key, value]) => [key, Number(value)])) : null
+}
+
 export function buildProgressData(
   workouts: readonly WorkoutRow[],
   exercises: readonly ExerciseRow[],
@@ -334,8 +370,11 @@ export function buildProgressData(
     workouts.map((workout) => [workout.id, workout.workout_date]),
   )
   const exerciseProgress = new Map<string, {
+    ref: string
     name: string
     kind: string
+    muscle_group: string
+    source: string
     sessions: Map<string, SessionMetrics>
   }>()
 
@@ -376,8 +415,11 @@ export function buildProgressData(
       sum + (set.plan_weight_kg === null || set.plan_reps === null ? 0 : Number(set.plan_weight_kg) * Number(set.plan_reps)), 0)
 
     const progress = exerciseProgress.get(exercise.exercise_ref) ?? {
+      ref: exercise.exercise_ref,
       name: exercise.exercise_name,
       kind: exercise.input_kind,
+      muscle_group: exercise.muscle_group ?? 'other',
+      source: exercise.exercise_source ?? 'unknown',
       sessions: new Map<string, SessionMetrics>(),
     }
     const existing = progress.sessions.get(date)
@@ -386,6 +428,15 @@ export function buildProgressData(
       set_count: (existing?.set_count ?? 0) + confirmedSets.length,
       planned_set_count: (existing?.planned_set_count ?? 0) + exerciseSets.length,
       set_completion_percent: 0,
+      sets: [
+        ...(existing?.sets ?? []),
+        ...exerciseSets.map((set) => ({
+          exercise_position: exercise.position,
+          set_position: set.position,
+          planned: setValues(set, 'plan'),
+          performed: set.confirmed_at === null ? null : setValues(set, 'fact'),
+        })),
+      ],
       planned_max_weight_kg: plannedWeights.length
         ? Math.max(existing?.planned_max_weight_kg ?? 0, ...plannedWeights)
         : existing?.planned_max_weight_kg,
@@ -467,7 +518,7 @@ export function buildProgressData(
         discomfort: workout.discomfort,
         client_comment: comment || null,
       }]
-    }).slice(-8),
+    }),
     exercises: Array.from(exerciseProgress.values())
       .map((progress) => {
         const sessions = Array.from(progress.sessions.values())
@@ -475,8 +526,11 @@ export function buildProgressData(
         const first = sessions[0]
         const last = sessions.at(-1)
         return {
+          ref: progress.ref,
           name: progress.name,
           kind: progress.kind,
+          muscle_group: progress.muscle_group,
+          source: progress.source,
           session_count: sessions.length,
           first_session: first,
           last_session: last,
@@ -558,6 +612,62 @@ type YandexRequestOptions = {
   fetchImpl?: typeof fetch
   requestId?: string
   sleep?: (delayMs: number) => Promise<void>
+  skipChunking?: boolean
+  qualityData?: unknown
+}
+
+function modelInputChunks(value: unknown): unknown[] {
+  if (!isRecord(value) || !Array.isArray(value.exercises)) return [value]
+  const previous = isRecord(value.previous_period) ? value.previous_period : null
+  const units = [
+    ...value.exercises.map((exercise) => ({ period: 'current', exercise })),
+    ...(Array.isArray(previous?.exercises)
+      ? previous.exercises.map((exercise) => ({ period: 'previous', exercise }))
+      : []),
+  ]
+  if (units.length === 0) return [value]
+
+  const base = {
+    ...value,
+    input_coverage: isRecord(value.input_coverage)
+      ? { ...value.input_coverage, complete: false }
+      : { complete: false },
+    chunk_scope: 'Это непересекающаяся часть полного входа. Найди локальные сигналы, не делай вывод о полноте всего периода.',
+    exercises: [] as unknown[],
+    previous_period: previous ? { ...previous, exercises: [] as unknown[] } : null,
+  }
+  const chunks: Array<typeof base> = []
+  let chunk = structuredClone(base)
+  for (const unit of units) {
+    const target = unit.period === 'current'
+      ? chunk.exercises
+      : (chunk.previous_period?.exercises ?? chunk.exercises)
+    target.push(unit.exercise)
+    if (JSON.stringify(chunk).length > MAX_DIRECT_MODEL_INPUT_CHARS && target.length > 1) {
+      target.pop()
+      chunks.push(chunk)
+      chunk = structuredClone(base)
+      const nextTarget = unit.period === 'current'
+        ? chunk.exercises
+        : (chunk.previous_period?.exercises ?? chunk.exercises)
+      nextTarget.push(unit.exercise)
+    }
+  }
+  if (chunk.exercises.length > 0 || (chunk.previous_period?.exercises.length ?? 0) > 0) {
+    chunks.push(chunk)
+  }
+  return chunks
+}
+
+function mergeUsage(results: Array<{ usage: Record<string, string> }>): Record<string, string> {
+  const merged: Record<string, string> = {}
+  for (const result of results) {
+    for (const [key, value] of Object.entries(result.usage)) {
+      const numeric = Number(value)
+      if (Number.isFinite(numeric)) merged[key] = String(Number(merged[key] ?? 0) + numeric)
+    }
+  }
+  return merged
 }
 
 function yandexResponseError(status: number): HttpError {
@@ -589,7 +699,40 @@ export async function requestYandexSummary(
   periodStart: string,
   periodEnd: string,
   options: YandexRequestOptions = {},
-) {
+): Promise<YandexSummaryResult> {
+  if (!options.skipChunking && JSON.stringify(trainingData).length > MAX_DIRECT_MODEL_INPUT_CHARS) {
+    const chunks = modelInputChunks(trainingData)
+    const partials: YandexSummaryResult[] = []
+    for (let offset = 0; offset < chunks.length; offset += 3) {
+      const batch = chunks.slice(offset, offset + 3)
+      partials.push(...await Promise.all(batch.map((chunk, batchIndex) =>
+        requestYandexSummary(chunk, periodStart, periodEnd, {
+          ...options,
+          requestId: `${options.requestId ?? 'summary'}-chunk-${offset + batchIndex + 1}`,
+          skipChunking: true,
+          qualityData: chunk,
+        })
+      )))
+    }
+    const source = isRecord(trainingData) ? trainingData : {}
+    const synthesisInput = {
+      period: source.period,
+      consistency: source.consistency,
+      goal: source.goal,
+      feedback_signals: source.feedback_signals,
+      measurements: source.measurements,
+      input_coverage: source.input_coverage,
+      aggregation_note: 'Каждый элемент chunk_analyses получен из отдельной непересекающейся части полного списка упражнений.',
+      chunk_analyses: partials.map((result) => result.summary),
+    }
+    const final = await requestYandexSummary(synthesisInput, periodStart, periodEnd, {
+      ...options,
+      requestId: `${options.requestId ?? 'summary'}-synthesis`,
+      skipChunking: true,
+      qualityData: trainingData,
+    })
+    return { ...final, usage: mergeUsage([...partials, final]) }
+  }
   const apiKey = options.authorization === undefined
     ? requiredSecret("YANDEX_CLOUD_API_KEY")
     : undefined
@@ -691,18 +834,13 @@ export async function requestYandexSummary(
     }
 
     const summary = parseGeneratedSummary(text)
-    const issues = summaryQualityIssues(summary, trainingData)
+    const issues = summaryQualityIssues(summary, options.qualityData ?? trainingData)
     if (issues.length === 0) {
       return { summary, modelUri, modelVersion, usage }
     }
     if (attempt === 3) {
-      // The model has already returned schema-valid JSON three times. Quality
-      // rules are an editorial guard, not a reason to make Progress entirely
-      // unavailable. The UI independently renders deterministic progress
-      // facts and sanitizes legacy metric names, so keeping the final valid
-      // answer is safer than turning a wording mismatch into a hard failure.
-      console.warn("summary quality fallback accepted", { issues })
-      return { summary, modelUri, modelVersion, usage }
+      console.warn("summary quality check rejected response", { issues })
+      throw new HttpError(502, "yandex_cloud_quality_check_failed")
     }
 
     messages.push(
@@ -777,22 +915,6 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
       }
       const { isTrainer, isClient, isConnectedTrainer, trainerId } = actor
 
-      if (isClient && !input.force) {
-        const { data: cached, error: cacheError } = await userClient
-          .from("client_published_training_summaries")
-          .select(
-            "id,source_summary_id,client_id,period_start,period_end,summary,display_metrics,generated_at,published_at",
-          )
-          .eq("client_id", input.client_id)
-          .eq("period_start", input.period_start)
-          .eq("period_end", input.period_end)
-          .maybeSingle()
-        if (cacheError) throw new HttpError(500, "summary_cache_lookup_failed")
-        if (shouldUseClientCache(input.force, cached)) {
-          return Response.json({ data: cached, cached: true })
-        }
-      }
-
       const { data: structuredGoal, error: goalError } = await userClient
         .rpc("get_client_goal", { p_client_id: input.client_id })
       if (goalError) {
@@ -833,7 +955,7 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         .gte("workout_date", previousPeriodStart)
         .lte("workout_date", input.period_end)
         .order("workout_date")
-        .limit(MAX_SOURCE_ROWS)
+        .limit(MAX_SOURCE_ROWS + 1)
       if (workoutsError) {
         throw new HttpError(500, "workouts_lookup_failed")
       }
@@ -850,7 +972,7 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
       if (completedWorkouts.length === 0) {
         throw new HttpError(422, "no_completed_workouts")
       }
-      if (workouts.length === MAX_SOURCE_ROWS) {
+      if (workouts.length > MAX_SOURCE_ROWS) {
         throw new HttpError(422, "source_row_limit_reached")
       }
 
@@ -863,21 +985,23 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         .gte("recorded_on", previousPeriodStart)
         .lte("recorded_on", input.period_end)
         .order("recorded_on")
-        .limit(MAX_SOURCE_ROWS)
+        .limit(MAX_SOURCE_ROWS + 1)
       if (measurementsError) throw new HttpError(500, "measurements_lookup_failed")
-      if (measurements.length === MAX_SOURCE_ROWS) throw new HttpError(422, "source_row_limit_reached")
+      if (measurements.length > MAX_SOURCE_ROWS) throw new HttpError(422, "source_row_limit_reached")
 
       const workoutIds = [...completedWorkouts, ...previousWorkouts].map((workout) => workout.id)
       const { data: exercises, error: exercisesError } = await userClient
         .from("workout_exercises")
-        .select("id,workout_id,exercise_ref,exercise_name,input_kind,position")
+        .select("id,workout_id,exercise_source,exercise_ref,exercise_name,muscle_group,input_kind,position")
         .in("workout_id", workoutIds)
+        .order("workout_id")
         .order("position")
-        .limit(MAX_SOURCE_ROWS)
+        .order("id")
+        .limit(MAX_SOURCE_ROWS + 1)
       if (exercisesError) {
         throw new HttpError(500, "exercises_lookup_failed")
       }
-      if (exercises.length === MAX_SOURCE_ROWS) {
+      if (exercises.length > MAX_SOURCE_ROWS) {
         throw new HttpError(422, "source_row_limit_reached")
       }
 
@@ -890,12 +1014,14 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
             "workout_exercise_id,position,plan_weight_kg,plan_reps,plan_duration_min,plan_duration_sec,plan_distance_km,plan_rpe,fact_weight_kg,fact_reps,fact_duration_min,fact_duration_sec,fact_distance_km,fact_rpe,confirmed_at",
           )
           .in("workout_exercise_id", exerciseIds)
+          .order("workout_exercise_id")
           .order("position")
-          .limit(MAX_SOURCE_ROWS)
+          .order("id")
+          .limit(MAX_SOURCE_ROWS + 1)
         if (error) {
           throw new HttpError(500, "sets_lookup_failed")
         }
-        if (data.length === MAX_SOURCE_ROWS) {
+        if (data.length > MAX_SOURCE_ROWS) {
           throw new HttpError(422, "source_row_limit_reached")
         }
         sets = data
@@ -926,7 +1052,9 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
           sets.filter((set) => previousExerciseIds.has(set.workout_exercise_id)),
           previousPeriodStart,
           previousPeriodEnd,
-          firstCompletedWorkout?.workout_date ?? null,
+          firstCompletedWorkout?.workout_date && firstCompletedWorkout.workout_date <= previousPeriodEnd
+            ? firstCompletedWorkout.workout_date
+            : null,
         )
         : null
       const trainingData = {
@@ -940,6 +1068,23 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
       }
       const inputFingerprint = await fingerprint(trainingData)
       const modelInput = buildSummaryModelInput(trainingData)
+
+      if (isClient && !input.force) {
+        const { data: cached, error: cacheError } = await userClient
+          .from("client_published_training_summaries")
+          .select("id,source_summary_id,client_id,period_start,period_end,summary,display_metrics,generated_at,published_at")
+          .eq("client_id", input.client_id)
+          .eq("period_start", input.period_start)
+          .eq("period_end", input.period_end)
+          .maybeSingle()
+        if (cacheError) throw new HttpError(500, "summary_cache_lookup_failed")
+        const cachedSummary = cached?.summary && typeof cached.summary === 'object' && !Array.isArray(cached.summary)
+          ? cached.summary as Record<string, unknown>
+          : null
+        if (cached && cachedSummary?.analysisVersion === 'whole-period-v1' && cachedSummary.inputFingerprint === inputFingerprint) {
+          return Response.json({ data: cached, cached: true })
+        }
+      }
 
       if (isTrainer && !input.force) {
         const { data: cached, error: cacheError } = await userClient
@@ -975,6 +1120,7 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         trainingData.period.end,
         { requestId },
       )
+      const generatedClientSummary = { ...generated.summary.client, inputFingerprint }
       const displayMetrics = {
         ...trainingData.consistency,
         progress_facts: buildSummaryProgressFacts(trainingData.exercises),
@@ -990,7 +1136,7 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
           period_end: input.period_end,
           summary: trainerSummaryAsText(generated.summary.trainer),
           trainer_summary: generated.summary.trainer,
-          client_summary: generated.summary.client,
+          client_summary: generatedClientSummary,
           display_metrics: displayMetrics,
           model_uri: generated.modelUri,
           prompt_version: PROMPT_VERSION,
@@ -1023,7 +1169,7 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
             client_id: input.client_id,
             period_start: input.period_start,
             period_end: input.period_end,
-            summary: generated.summary.client,
+            summary: generatedClientSummary,
             display_metrics: displayMetrics,
             generated_at: saved.generated_at,
             published_at: new Date().toISOString(),
