@@ -22,11 +22,15 @@ export function hasExerciseTechnique(exercise?: ExerciseSnapshot): exercise is E
   ))
 }
 
+export function hasExerciseAnimation(exercise?: ExerciseSnapshot): exercise is ExerciseSnapshot {
+  return Boolean(exercise?.techniqueVideoUrl)
+}
+
 export function ExerciseTechniqueContent({ exercise, beforeFacts }: {
   exercise: ExerciseSnapshot
   beforeFacts?: ReactNode
 }) {
-  const hasMedia = Boolean(exercise.imageUrl || exercise.fallbackImageUrl || exercise.motionImageUrl || exercise.techniqueVideoUrl)
+  const hasMedia = hasExerciseAnimation(exercise)
   return <div className="picker-technique-scroll">
     {hasMedia && <ExerciseImage src={exercise.imageUrl} fallbackSrc={exercise.fallbackImageUrl} motionSrc={exercise.motionImageUrl} videoSrc={exercise.techniqueVideoUrl} alt={exercise.name} variant="technique" />}
     <div className="picker-technique-title"><h2>{exercise.name}</h2><p>{[exercise.equipment ?? 'Без оборудования', MUSCLE_GROUP_LABELS[exercise.muscleGroup]].join(' · ')}</p></div>
