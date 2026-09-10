@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(49);
+select plan(57);
 
 select ok(
   exists(select 1 from pg_matviews where schemaname = 'analytics' and matviewname = 'trainer_overview'),
@@ -139,6 +139,36 @@ update auth.users set last_sign_in_at = '2026-07-21 08:00:00+00' where id = '600
 insert into public.custom_exercises (id, trainer_id, created_by, name, muscle_group, input_kind, updated_at) values
   ('65000000-0000-4000-8000-000000000005', '60000000-0000-4000-8000-000000000005', '60000000-0000-4000-8000-000000000005', 'Trainer5 Exercise', 'legs', 'reps', now() - interval '1 day');
 
+-- YAFIT-506: недельные rolling-метрики. Новый клиент трейнера 1 (root,
+-- created_at = now() - 5 дней) — тестирует clients_added_* через путь
+-- "новый клиент завёл тренер". Второй путь — уже существующая
+-- membership-строка 61...0005 (client_trainers, joined_at по умолчанию =
+-- now() текущей транзакции) — тестирует путь "клиент подключился сам",
+-- без новой фикстуры. Редундантная membership-строка на 61...0001 (root
+-- created_at 2026-07-10, давно) обязана НЕ протечь в clients_added_* —
+-- min(created_at, joined_at) должен взять более раннюю дату root-связи.
+insert into public.clients (id, trainer_id, full_name, gender, age_years, height_cm, created_at) values
+  ('61000000-0000-4000-8000-000000000006', '60000000-0000-4000-8000-000000000001', 'Overview New', 'female', 26, 170, now() - interval '5 days');
+
+-- Явно резолвнутый несостоявшийся план (не удалён, не притворяется
+-- выполненным) — updated_at зафиксирован старой датой, чтобы не сдвинуть
+-- last_workout_at/last_active_at/trainer_status, уже проверенные выше.
+insert into public.workouts (id, trainer_id, client_id, workout_date, status, started_at, completed_at, updated_at) values
+  ('63000000-0000-4000-8000-000000000006', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', '2026-07-13', 'cancelled', null, null, '2026-07-13 08:00:00+00');
+
+-- Три тренировки "на этой неделе" (completed_at в пределах последних 7
+-- дней от реального now() на момент прогона теста) — updated_at всё равно
+-- зафиксирован старой датой по той же причине, что и выше.
+-- 0007 — провёл тренер (created_by = trainer_id); 0008 — self-service
+-- клиента (created_by = его собственный auth id, тот же клиент 61...0001,
+-- чтобы проверить, что active_clients_7d считает клиента один раз, а не
+-- дважды); 0009 — легаси-строка без актора (created_by is null) на другом
+-- клиенте — должна засчитаться тренеру по умолчанию.
+insert into public.workouts (id, trainer_id, client_id, workout_date, status, started_at, completed_at, created_by, updated_at) values
+  ('63000000-0000-4000-8000-000000000007', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', '2026-07-12', 'done', now() - interval '1 day' - interval '1 hour', now() - interval '1 day', '60000000-0000-4000-8000-000000000001', '2026-07-12 08:00:00+00'),
+  ('63000000-0000-4000-8000-000000000008', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', '2026-07-11', 'done', now() - interval '2 days' - interval '1 hour', now() - interval '2 days', '60000000-0000-4000-8000-000000000009', '2026-07-11 08:00:00+00'),
+  ('63000000-0000-4000-8000-000000000009', '60000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000003', '2026-07-10', 'done', now() - interval '3 days' - interval '1 hour', now() - interval '3 days', null, '2026-07-10 08:00:00+00');
+
 refresh materialized view analytics.trainer_overview;
 
 select is(
@@ -155,7 +185,7 @@ select is(
 
 select is(
   (select clients_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
-  4::bigint, 'clients_total includes archived clients plus the client connected via client_trainers (root trainer is 4), the redundant client_trainers row on the root client does not double-count'
+  5::bigint, 'clients_total includes archived clients, the client connected via client_trainers (root trainer is 4), and the newly created Overview New client; the redundant client_trainers row on the root client does not double-count'
 );
 select is(
   (select clients_archived from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
@@ -184,7 +214,7 @@ select is(
 
 select is(
   (select workouts_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
-  3::bigint, 'workouts_total ignores the deleted workout and avoids a cartesian product with clients'
+  7::bigint, 'workouts_total ignores the deleted workout, avoids a cartesian product with clients, and includes the cancelled workout plus the 3 this-week done workouts'
 );
 select is(
   (select workouts_planned from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
@@ -196,12 +226,16 @@ select is(
 );
 select is(
   (select workouts_done from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
-  1::bigint, 'workouts_done'
+  4::bigint, 'workouts_done includes the original done workout plus the 3 new this-week done workouts'
 );
 select ok(
-  (select workouts_planned + workouts_in_progress + workouts_done = workouts_total
+  (select workouts_planned + workouts_in_progress + workouts_done + workouts_cancelled_total = workouts_total
    from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
-  'status breakdown sums to workouts_total'
+  'status breakdown (including cancelled) sums to workouts_total'
+);
+select is(
+  (select workouts_cancelled_total from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  1::bigint, 'workouts_cancelled_total counts the explicitly resolved-as-cancelled workout'
 );
 
 select is(
@@ -210,9 +244,9 @@ select is(
 );
 
 select is(
-  (select row(clients_total, clients_archived, clients_app_linked, workouts_total, workouts_planned, workouts_in_progress, workouts_done, exercises_unique_used)
+  (select row(clients_total, clients_archived, clients_app_linked, workouts_total, workouts_planned, workouts_in_progress, workouts_done, exercises_unique_used, workouts_cancelled_total, active_clients_7d, workouts_done_7d_by_trainer, workouts_done_7d_by_client, clients_added_7d, clients_added_30d)
    from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000002'),
-  row(0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint),
+  row(0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint, 0::bigint),
   'trainer with no clients/workouts gets all-zero aggregates via coalesce, not null'
 );
 
@@ -360,6 +394,47 @@ select is(
 select is(
   (select trainer_status from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000005'),
   'active', 'trainer with zero clients and zero workouts is still active thanks to recent non-workout activity — the core behavior this migration adds'
+);
+
+-- YAFIT-506: недельные rolling-метрики для тренера 1. active_clients_7d
+-- считает клиента 61...0001 один раз (у него две done-тренировки на этой
+-- неделе — 0007 от тренера и 0008 self-service клиента), плюс клиента
+-- 61...0003 (0009, без актора) — итого 2 разных клиента, не 3 тренировки.
+select is(
+  (select active_clients_7d from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  2::bigint, 'active_clients_7d counts distinct clients with a done workout this week, not workout rows'
+);
+select is(
+  (select workouts_done_7d_by_trainer from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  2::bigint, 'workouts_done_7d_by_trainer counts created_by = trainer_id plus the legacy created_by is null row'
+);
+select is(
+  (select workouts_done_7d_by_client from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  1::bigint, 'workouts_done_7d_by_client counts only the self-service workout (created_by is the client, not the trainer)'
+);
+select is(
+  (select clients_added_7d from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  2::bigint, 'clients_added_7d counts the new root client plus the client connected via client_trainers this week; the redundant membership row on the old root client does not leak in'
+);
+select is(
+  (select clients_added_30d from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000001'),
+  2::bigint, 'clients_added_30d matches clients_added_7d here since both new connections are within 7 days'
+);
+
+-- Тренер 4: единственная его тренировка в статусе 'planned' (не 'done'),
+-- оба его клиента подключены давно — контроль, что недельные метрики
+-- корректно дают ноль там, где реальной активности "на этой неделе" нет.
+select is(
+  (select row(active_clients_7d, workouts_done_7d_by_trainer, workouts_done_7d_by_client)
+   from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000004'),
+  row(0::bigint, 0::bigint, 0::bigint),
+  'trainer 4 has zero this-week metrics: its only recent workout is planned, not done'
+);
+select is(
+  (select row(clients_added_7d, clients_added_30d)
+   from analytics.trainer_overview where trainer_id = '60000000-0000-4000-8000-000000000004'),
+  row(0::bigint, 0::bigint),
+  'trainer 4 has zero client growth: both its clients connected long ago'
 );
 
 select * from finish();
