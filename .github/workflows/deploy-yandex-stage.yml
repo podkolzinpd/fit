@@ -1552,6 +1552,18 @@ jobs:
               | select(.id == $exercise_id)
               | .blockId
             ' <<<"$structure_read")
+          # Replacing an exercise clears unfinished facts and advances their
+          # optimistic-concurrency versions. Read the actual set version instead
+          # of assuming that structure mutations leave it at the creation value.
+          live_set_version=$(jq -er \
+            --arg workout_id "$live_workout_id" \
+            --arg set_id "$live_set_id" '
+              .workouts[]
+              | select(.id == $workout_id)
+              | .exercises[].sets[]
+              | select(.id == $set_id)
+              | .version
+            ' <<<"$structure_read")
           reorder_operation_id=$(cat /proc/sys/kernel/random/uuid)
           reorder_payload=$(jq -cn \
             --arg operation_id "$reorder_operation_id" \
@@ -1575,8 +1587,9 @@ jobs:
           save_operation_id=$(cat /proc/sys/kernel/random/uuid)
           save_payload=$(jq -cn \
             --arg operation_id "$save_operation_id" \
+            --argjson expected_version "$live_set_version" \
             '{
-              expectedVersion: 1,
+              expectedVersion: $expected_version,
               operationId: $operation_id,
               draft: {
                 weightKg: 42.5,
@@ -1594,9 +1607,9 @@ jobs:
             --header "Content-Type: application/json" \
             --data "$save_payload" \
             "${api_url%/}/v1/workout-sets/$live_set_id/draft")
-          jq -e --arg set_id "$live_set_id" '
+          jq -e --arg set_id "$live_set_id" --argjson expected_version "$((live_set_version + 1))" '
             .set.id == $set_id
-            and .set.version == 2
+            and .set.version == $expected_version
             and .set.replayed == false
           ' <<<"$saved_live_set" >/dev/null
           saved_live_set_replayed=$(curl --fail --silent --show-error \
@@ -1606,13 +1619,14 @@ jobs:
             --header "Content-Type: application/json" \
             --data "$save_payload" \
             "${api_url%/}/v1/workout-sets/$live_set_id/draft")
-          jq -e '
-            .set.version == 2 and .set.replayed == true
+          jq -e --argjson expected_version "$((live_set_version + 1))" '
+            .set.version == $expected_version and .set.replayed == true
           ' <<<"$saved_live_set_replayed" >/dev/null
           confirm_operation_id=$(cat /proc/sys/kernel/random/uuid)
           confirm_payload=$(jq -cn \
             --arg operation_id "$confirm_operation_id" \
-            '{expectedVersion: 2, operationId: $operation_id}')
+            --argjson expected_version "$((live_set_version + 1))" \
+            '{expectedVersion: $expected_version, operationId: $operation_id}')
           confirmed_live_set=$(curl --fail --silent --show-error \
             --request POST \
             --header "Authorization: Bearer $YC_TOKEN" \
@@ -1620,8 +1634,8 @@ jobs:
             --header "Content-Type: application/json" \
             --data "$confirm_payload" \
             "${api_url%/}/v1/workout-sets/$live_set_id/confirm")
-          jq -e '
-            .set.version == 3 and .set.replayed == false
+          jq -e --argjson expected_version "$((live_set_version + 2))" '
+            .set.version == $expected_version and .set.replayed == false
           ' <<<"$confirmed_live_set" >/dev/null
           finish_operation_id=$(cat /proc/sys/kernel/random/uuid)
           finish_payload=$(jq -cn \
@@ -1658,7 +1672,8 @@ jobs:
             --arg workout_id "$live_workout_id" \
             --arg set_id "$live_set_id" \
             --arg original_exercise_id "$live_exercise_id" \
-            --arg appended_exercise_id "$appended_exercise_id" '
+            --arg appended_exercise_id "$appended_exercise_id" \
+            --argjson expected_set_version "$((live_set_version + 2))" '
             .workouts | any(
               .id == $workout_id
               and .status == "done"
@@ -1669,7 +1684,7 @@ jobs:
               and .exercises[1].trainerComment == "Держи спину прямо"
               and (.exercises[1].sets | any(
                   .id == $set_id
-                  and .version == 3
+                and .version == $expected_set_version
                   and .fact.weightKg == 42.5
                   and .fact.reps == 9
                   and .fact.rpe == 7.5
