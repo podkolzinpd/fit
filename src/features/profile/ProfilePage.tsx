@@ -60,7 +60,7 @@ export function ProfilePage() {
     </section>
     {actor && yandexSession === null && <YandexAccountLinkingCard actor={actor} />}
     {actor?.role === 'trainer' && <BodyMapAppearanceSetting viewerUserId={actor.userId} role={actor.role} gender={null} />}
-    <div className="menu"><Link to="/join">Ввести код приглашения</Link>{actor?.role === 'trainer' && <Link to="/exercises">Управление упражнениями</Link>}<button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Политика конфиденциальности</Link><Link to={LEGAL_PATHS.deleteAccount}>Удаление аккаунта</Link></div>
+    <div className="menu"><Link to="/join">Ввести код приглашения</Link>{actor?.role === 'trainer' && <><Link to="/profile/trainer">Анкета тренера</Link><Link to="/exercises">Управление упражнениями</Link></>}<button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Политика конфиденциальности</Link><Link to={LEGAL_PATHS.deleteAccount}>Удаление аккаунта</Link></div>
     {installOpen && <AppInstallPanel onClose={() => setInstallOpen(false)} />}
     {feedbackOpen && <AppFeedbackForm onClose={() => setFeedbackOpen(false)} />}
     <LogoutButton />
