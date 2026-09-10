@@ -586,3 +586,35 @@ export interface PublishedTrainingSummary {
   generatedAt: string
   publishedAt: string
 }
+
+export type TrainerTrainingMode = 'online' | 'in_person'
+
+export interface TrainerCertificate {
+  title: string
+  organization: string
+  year: number | null
+}
+
+export interface TrainerProfileDraft {
+  displayName: string
+  bio: string
+  specialties: string[]
+  city: string
+  trainingModes: TrainerTrainingMode[]
+  experienceStartYear: number | null
+  education: string
+  formats: string
+  price: string
+  acceptingClients: boolean
+  avatarDataUrl: string | null
+  certificates: TrainerCertificate[]
+}
+
+export interface TrainerProfessionalProfile {
+  publicId: UUID
+  draft: TrainerProfileDraft
+  published: TrainerProfileDraft | null
+  publishedAt: string | null
+  updatedAt: string
+  version: number
+}

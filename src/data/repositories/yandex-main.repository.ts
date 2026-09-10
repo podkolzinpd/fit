@@ -14,6 +14,7 @@ import type {
   SessionActor,
   TrainerAttentionWorkout,
   TrainerMembership,
+  TrainerProfileDraft,
   Workout,
   WorkoutDraft,
   WorkoutPersonalRecord,
@@ -37,6 +38,7 @@ import {
   trainingSummaryFromRow,
 } from './training-summaries.repository'
 import { yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pilot.repository'
+import { trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
 
 const uuid = z.uuid()
 const clientSchema = z.object({
@@ -565,6 +567,20 @@ export function createYandexMainRepository(
 
   return {
     source: 'yandex',
+    trainerProfiles: {
+      async getOwn() {
+        return readJson(queries, '/v1/trainer-profile', trainerProfessionalProfileSchema.nullable())
+      },
+      async saveDraft(draft: TrainerProfileDraft) {
+        return writeJson(queries, '/v1/trainer-profile', 'PUT', draft, trainerProfessionalProfileSchema)
+      },
+      async publish() {
+        return writeJson(queries, '/v1/trainer-profile/publish', 'POST', {}, trainerProfessionalProfileSchema)
+      },
+      async unpublish() {
+        return writeJson(queries, '/v1/trainer-profile/unpublish', 'POST', {}, trainerProfessionalProfileSchema)
+      },
+    },
     clients: {
       async getMine() {
         if (actor.kind !== 'client') return null

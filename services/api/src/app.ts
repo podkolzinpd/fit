@@ -114,6 +114,7 @@ import {
   readVersionedProgressRequest,
 } from './progress-request.js'
 import { readVitalMediaRequest, type VitalMediaSigner } from './vital-media.js'
+import { readTrainerProfileDraft, TrainerProfileError, type PilotTrainerProfiles } from './trainer-profile.js'
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
@@ -156,6 +157,7 @@ interface BuildAppOptions {
   yandexAppSessionReader?: YandexAppSessionReader
   yandexAppSessionRevoker?: YandexAppSessionRevoker
   vitalMediaSigner?: VitalMediaSigner
+  pilotTrainerProfiles?: PilotTrainerProfiles
   logger?: boolean
   releaseId?: string
 }
@@ -609,6 +611,55 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return sendPilotProfile(token, reply)
   })
 
+  app.get('/v1/trainer-profile', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.getOwn(session),
+      (profile) => reply.header('cache-control', 'no-store').send(profile))
+  })
+
+  app.put('/v1/trainer-profile', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const draft = readTrainerProfileDraft(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (draft === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.saveDraft(session, draft),
+      (profile) => reply.header('cache-control', 'no-store').send(profile))
+  })
+
+  app.post('/v1/trainer-profile/publish', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.publish(session),
+      (profile) => reply.header('cache-control', 'no-store').send(profile))
+  })
+
+  app.post('/v1/trainer-profile/unpublish', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.unpublish(session),
+      (profile) => reply.header('cache-control', 'no-store').send(profile))
+  })
+
+  app.get('/v1/trainers/:publicId/public-profile', async (request, reply) => {
+    const { publicId } = request.params as { publicId?: unknown }
+    if (typeof publicId !== 'string' || !uuidPattern.test(publicId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    try {
+      const profile = await options.pilotTrainerProfiles.getPublic(publicId)
+      return profile === null ? reply.code(404).send({ error: 'not_found' }) : reply.send(profile)
+    } catch (error) {
+      return sendSafeDatabaseFailure(reply, error, 'Public trainer profile query failed')
+    }
+  })
+
   app.post('/v1/auth/yandex/pilot', async (request, reply) => {
     const body = request.body
     if (typeof body !== 'object' || body === null || !('code' in body) || !('codeVerifier' in body)) {
@@ -1059,6 +1110,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           .send({ error: error.failure === 'forbidden'
             ? 'action_not_allowed'
             : 'invalid_feedback' })
+      }
+      if (error instanceof TrainerProfileError) {
+        if (error.failure === 'forbidden') return reply.code(403).send({ error: 'action_not_allowed' })
+        if (error.failure === 'not_found') return reply.code(404).send({ error: 'resource_not_found' })
+        return reply.code(422).send({ error: 'invalid_trainer_profile' })
       }
       if (error instanceof AssistantStateError) {
         if (error.failure === 'forbidden') {
