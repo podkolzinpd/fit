@@ -1837,13 +1837,58 @@ export function LiveWorkoutPage() {
   })
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => runLiveWorkoutMutation(`append-exercise:${exercise.ref}`, (workout) => workoutsRepository.appendLiveExercise(workout, exercise)), onSuccess: async () => { await query.refetch() } })
   const reorderBlock = useMutation({ mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => runLiveWorkoutMutation(`reorder:${blockId}:${direction}`, (workout) => workoutsRepository.reorderLiveBlock(workout, blockId, direction)), onSuccess: async () => { await query.refetch() } })
-  const replaceLive = useMutation({ mutationFn: ({ exerciseId, exercise }: { exerciseId: string; exercise: ExerciseSnapshot }) => runLiveWorkoutMutation(`replace:${exerciseId}`, (workout) => workoutsRepository.replaceLiveExercise(workout, exerciseId, exercise)), onSuccess: async () => { await query.refetch() } })
+  const replaceLive = useMutation({
+    mutationFn: async ({ exerciseId, exercise, discardedSetIds }: { exerciseId: string; exercise: ExerciseSnapshot; discardedSetIds: string[] }) => {
+      // A blur-save may already be in flight when the picker opens. Let it
+      // settle before the structural mutation and cancel only queued drafts;
+      // the server then deliberately clears unfinished facts on replacement.
+      for (const setId of discardedSetIds) liveSetAutosave.clear(setId)
+      await liveSets.waitForIdle()
+      return runLiveWorkoutMutation(`replace:${exerciseId}`, (workout) => workoutsRepository.replaceLiveExercise(workout, exerciseId, exercise))
+    },
+    onSuccess: async (_version, { discardedSetIds }) => {
+      for (const setId of discardedSetIds) acknowledgeLiveDraft(setId)
+      setExpandedSetId(null)
+      stopRest()
+      await query.refetch()
+      void invalidateWorkoutResults(queryClient)
+      void queryClient.invalidateQueries({ queryKey: ['clients'] })
+    },
+  })
   const commentLive = useMutation({ mutationFn: ({ exerciseId, comment }: { exerciseId: string; comment: string }) => runLiveWorkoutMutation(`comment:${exerciseId}`, (workout) => workoutsRepository.setExerciseComment(workout, exerciseId, comment)), onSuccess: async () => { await query.refetch() } })
   function closePicker() { setPickerOpen(false); setReplaceExerciseId(null) }
-  function pickLiveExercise(exercise: ExerciseSnapshot) {
-    if (replaceExerciseId) replaceLive.mutate({ exerciseId: replaceExerciseId, exercise })
-    else appendExercise.mutate(exercise)
+  async function pickLiveExercise(exercise: ExerciseSnapshot) {
+    const targetId = replaceExerciseId
+    if (!targetId) {
+      appendExercise.mutate(exercise)
+      closePicker()
+      return
+    }
+    const target = query.data?.exercises.find((item) => item.id === targetId)
     closePicker()
+    if (!target) return
+    const completedCount = target.sets.filter((set) => set.confirmedAt).length
+    const unfinishedSets = target.sets.filter((set) => !set.confirmedAt)
+    if (completedCount > 0) {
+      const remainingText = unfinishedSets.length > 0
+        ? `Оставшиеся подходы (${unfinishedSets.length}) продолжатся уже в «${exercise.name}». Их введённые фактические значения будут очищены.`
+        : `Для «${exercise.name}» будет создан новый пустой подход.`
+      const countTail = completedCount % 100
+      const countDigit = completedCount % 10
+      const completedText = countTail >= 11 && countTail <= 14
+        ? `${completedCount} выполненных подходов останутся`
+        : countDigit === 1
+          ? `${completedCount} выполненный подход останется`
+          : countDigit >= 2 && countDigit <= 4
+            ? `${completedCount} выполненных подхода останутся`
+            : `${completedCount} выполненных подходов останутся`
+      const confirmed = await askConfirm({
+        message: `${completedText} в истории как «${target.name}». ${remainingText}`,
+        confirmLabel: 'Заменить',
+      })
+      if (!confirmed) return
+    }
+    replaceLive.mutate({ exerciseId: targetId, exercise, discardedSetIds: unfinishedSets.map((set) => set.id) })
   }
   async function flushOpenLiveSetDrafts() {
     const sets = new Map((query.data?.exercises ?? []).flatMap((exercise) => exercise.sets).map((set) => [set.id, set]))
@@ -1913,19 +1958,17 @@ export function LiveWorkoutPage() {
         onBlur={(event) => { const next = event.target.value.trim(); if (next !== note) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
     </details>
   }
-  // Меню упражнения в live (⋯): «Заменить» доступно, пока нет подтверждённых
-  // подходов (начатое заменять нельзя — факт относился к старому упражнению).
-  // В меню, чтобы редкое действие не конкурировало с подтверждением подхода.
+  // Меню упражнения в live (⋯). Если упражнение уже начато, сервер отделит
+  // подтверждённый факт в самостоятельную запись, а заменит лишь остаток.
   function exerciseMenu(exercise: WorkoutExerciseModel, canReorder = false, removableSet?: WorkoutSet) {
     if (!canManageLiveStructure) return null
-    const canReplace = !exercise.sets.some((set) => set.confirmedAt)
     const showRpe = isRpeVisible(exercise.id)
     const showPlan = visiblePlans.has(exercise.id)
     return <OverflowMenu items={[
       ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
       { label: showPlan ? 'Скрыть план' : 'Показать план', onClick: () => togglePlan(exercise.id) },
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
-      ...(canReplace ? [{ label: 'Заменить', disabled: rootMutationPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } }] : []),
+      { label: 'Заменить', disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } },
       ...(removableSet ? [{ label: 'Удалить подход', danger: true, disabled: rootMutationPending, onClick: async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(removableSet.id) } }] : []),
       { label: 'Удалить упражнение', danger: true, disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: async () => {
         if (await askConfirm({ message: `Удалить «${exercise.name}» из этой тренировки? Все его подходы, включая выполненные, будут удалены.`, confirmLabel: 'Удалить', danger: true })) removeExercise.mutate(exercise)

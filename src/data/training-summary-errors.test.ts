@@ -9,6 +9,12 @@ describe('generationErrorMessage', () => {
     expect(generationErrorMessage('internal_error')).toContain('подготовить анализ')
   })
 
+  it('distinguishes truncated, malformed model, and invalid upstream responses', () => {
+    expect(generationErrorMessage('yandex_cloud_truncated_response')).toContain('не успел завершить')
+    expect(generationErrorMessage('yandex_cloud_invalid_model_json')).toContain('неполный ответ')
+    expect(generationErrorMessage('yandex_cloud_invalid_upstream_json')).toContain('через минуту')
+  })
+
   it('does not expose infrastructure names in user-facing failures', () => {
     const messages = [
       generationErrorMessage('yandex_cloud_unavailable'),

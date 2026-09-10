@@ -3,6 +3,15 @@ export function generationErrorMessage(code: string): string {
   if (code === 'source_row_limit_reached') return 'Для этого периода слишком много данных. Выберите меньший период.'
   if (code === 'yandex_cloud_invalid_summary') return 'Не получилось подготовить полный анализ. Попробуйте ещё раз.'
   if (code === 'yandex_cloud_invalid_json') return 'Не получилось обработать анализ. Попробуйте ещё раз.'
+  if (code === 'yandex_cloud_invalid_model_json') {
+    return 'ИИ вернул неполный ответ. Попробуйте обновить анализ ещё раз.'
+  }
+  if (code === 'yandex_cloud_invalid_upstream_json') {
+    return 'Сервис анализа вернул некорректный ответ. Попробуйте ещё раз через минуту.'
+  }
+  if (code === 'yandex_cloud_truncated_response') {
+    return 'ИИ не успел завершить анализ. Попробуйте обновить его ещё раз.'
+  }
   if (code === 'yandex_cloud_quality_check_failed') {
     return 'Не получилось проверить качество анализа. Попробуйте ещё раз.'
   }
