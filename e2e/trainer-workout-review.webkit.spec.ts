@@ -103,6 +103,7 @@ async function expectActionTextVerticallyCentered(action: Locator) {
 }
 
 test('iPhone: trainer review and client post-workout feedback stay visible to the other side only', async ({ page }) => {
+  test.setTimeout(60_000)
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page, 'trainer@fit.local')
   await expect(page.getByRole('heading', { name: 'Сегодня' })).toBeVisible()
@@ -157,6 +158,27 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await page.goto('/profile')
   await page.getByRole('button', { name: 'Выйти' }).click()
   await login(page, 'client@fit.local')
+
+  // Seed сохраняет legacy root ownership для старых сценариев, но не создаёт
+  // active membership. Явно подключаем тренера: именно membership является
+  // источником истины для обещания доставить новый отзыв.
+  await page.goto('/me/profile')
+  await expect(page.getByRole('button', { name: 'Пригласить тренера' })).toBeVisible()
+  if (!await page.getByText('Тест Тренер', { exact: true }).count()) {
+    await page.getByRole('button', { name: 'Пригласить тренера' }).click()
+    const trainerCodeText = await page.getByText(/Код для тренера:/).textContent()
+    const trainerCode = trainerCodeText?.match(/[A-F0-9]{12}/)?.[0]
+    expect(trainerCode).toBeTruthy()
+    await page.getByRole('button', { name: 'Выйти' }).click()
+    await login(page, 'trainer@fit.local')
+    await page.goto('/join')
+    await page.getByLabel('Код приглашения').fill(trainerCode!)
+    await page.getByRole('button', { name: 'Присоединиться' }).click()
+    await expect(page.getByRole('heading', { name: 'Клиент подключён' })).toBeVisible()
+    await page.goto('/profile')
+    await page.getByRole('button', { name: 'Выйти' }).click()
+    await login(page, 'client@fit.local')
+  }
   await page.goto('/me')
   // Client Home показывает только один дополнительный акцент. Свежий ответ
   // тренера приоритетнее цели, поэтому оба блока не конкурируют на главной.

@@ -56,6 +56,7 @@ import { formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, schedule
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { liveOperationWithTimeout } from './live-operation-timeout'
+import { workoutFeedbackConfirmation } from './workout-feedback-copy'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -775,6 +776,7 @@ export function WorkoutDetailPage() {
     trainerOwned || (clientAuthoredReadOnly && workout.trainerId === actor?.userId)
   ))
   const trainers = useQuery({ queryKey: ['client-trainers', workout?.clientId], queryFn: () => invitationsRepository.listTrainers(workout!.clientId), enabled: clientMode && Boolean(workout?.clientId) })
+  const hasActiveTrainer = Boolean(trainers.data?.length)
   const clientCompletionReport = Boolean(justCompleted && clientMode)
   const completedExercises = workout?.exercises.filter((exercise) => exercise.sets.length > 0 && exercise.sets.every((set) => Boolean(set.confirmedAt))).length ?? 0
   const incompleteExercises = workout?.exercises.flatMap((exercise) => {
@@ -867,7 +869,7 @@ export function WorkoutDetailPage() {
         tonnage={tonnage > 0 ? tonnageLabel(tonnage) : null}
         muscleGroups={groups}
         personalResult={<PersonalWorkoutResult workouts={completionHistory.data} workoutId={workoutId} loading={completionHistory.isLoading} error={completionHistory.error} onRetry={() => void completionHistory.refetch()} />}
-        hasTrainer={Boolean(trainers.data?.length)}
+        hasTrainer={hasActiveTrainer}
       />}
       {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
       {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? 'Ваша тренировка' : workout.clientName} state={detailState}
@@ -892,8 +894,8 @@ export function WorkoutDetailPage() {
         {tonnage > 0 && <p><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></p>}
         {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
       </section>}
-      {done && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
-      {done && clientMode && !clientCompletionReport && <WorkoutClientQuestion workout={workout} saving={question.isPending} error={question.error} onSave={(value) => question.mutateAsync(value)} />}
+      {done && <WorkoutClientFeedback workout={workout} canEdit={clientMode} hasActiveTrainer={hasActiveTrainer} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
+      {done && clientMode && hasActiveTrainer && !clientCompletionReport && <WorkoutClientQuestion workout={workout} saving={question.isPending} error={question.error} onSave={(value) => question.mutateAsync(value)} />}
       {done && !clientMode && workout.clientQuestion && <WorkoutTrainerQuestion workout={workout} canReply={canReview} startEditing={new URLSearchParams(location.search).get('reply') === '1'} authorName={responseAuthorName} saving={questionAnswer.isPending} error={questionAnswer.error} onSave={(value) => questionAnswer.mutateAsync(value)} />}
       {done && (clientMode || !workout.clientQuestion) && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {!clientMode && workout.clientComment && workout.sessionRpe === undefined && <WorkoutClientComment workout={workout} />}
@@ -960,9 +962,10 @@ function trainerResponseTime(value: string | undefined) {
   }).format(new Date(value))
 }
 
-function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
+function WorkoutClientFeedback({ workout, canEdit, hasActiveTrainer, saving, error, onSave }: {
   workout: Workout
   canEdit: boolean
+  hasActiveTrainer: boolean
   saving: boolean
   error: Error | null
   onSave: (value: WorkoutFeedbackDraft) => Promise<unknown>
@@ -992,7 +995,7 @@ function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
       <div><p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p><h2 id="workout-feedback-title">{canEdit ? 'Ваш итог' : 'Самочувствие клиента'}</h2></div>
       {canEdit && <button type="button" className="secondary" onClick={() => { setSaved(false); setEditing(true) }}>Изменить</button>}
     </div>
-    {saved && <p className="workout-feedback-confirmation" role="status">✓ Спасибо, тренер увидит ваш отзыв.</p>}
+    {saved && <p className="workout-feedback-confirmation" role="status">{workoutFeedbackConfirmation(hasActiveTrainer)}</p>}
     <div className="workout-feedback-summary">
       <p><span>Общая тяжесть</span><strong>RPE {workout.sessionRpe}/10</strong></p>
       <p><span>Самочувствие</span><strong>{workout.wellbeing ? wellbeingLabels[workout.wellbeing] : '—'}</strong></p>
