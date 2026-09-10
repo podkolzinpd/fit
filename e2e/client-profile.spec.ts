@@ -37,7 +37,7 @@ test('invited trainer stays disconnected after profile reload and client card di
   await page.getByRole('button', { name: 'Присоединиться' }).click()
   await page.getByRole('button', { name: 'Открыть карточку' }).click()
   await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+$/)
-  await page.goto('/profile')
+  await page.goto('/profile/settings')
   await page.getByRole('button', { name: 'Выйти' }).click()
 
   await page.getByLabel('Email').fill(clientEmail)

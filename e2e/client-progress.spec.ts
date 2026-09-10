@@ -229,7 +229,7 @@ test('trainer reviews verified signals separately from the client copy', async (
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page).toHaveURL(/\/today$/)
-  await page.goto('/profile')
+  await page.goto('/profile/settings')
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible()
   await expect(page.getByRole('radio', { name: 'Реальная фигура' })).toBeChecked()
   await page.getByRole('radio', { name: 'Схема' }).click()

@@ -1,7 +1,11 @@
 import { expect, test } from '@playwright/test'
 
 async function logoutFromProfile(page: import('@playwright/test').Page) {
+  if (new URL(page.url()).pathname === '/profile') {
+    await page.goto('/profile/settings')
+  }
   const logout = page.getByRole('button', { name: 'Выйти' })
+  await expect(logout).toBeVisible()
   await logout.scrollIntoViewIfNeeded()
   // First-visit tips must not intercept account-switching scenarios.
   await page.keyboard.press('Escape')
@@ -44,7 +48,7 @@ test('trainer registers without surname or email confirmation', async ({ page },
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/me/profile')
   await expect(page).toHaveURL(/\/today$/)
-  await page.goto('/profile')
+  await page.goto('/profile/settings')
   await expect(page.getByLabel('Имя', { exact: true })).toHaveValue('Тест')
   await page.getByLabel('Имя', { exact: true }).fill('Тест Обновлённый')
   await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
@@ -230,7 +234,7 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await page.getByLabel('Email').fill(wrongRoleEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page).toHaveURL(/\/(today|profile)$/)
+  await expect(page).toHaveURL(/\/(today|profile(?:\/settings)?)$/)
   await page.goto('/join')
   await page.getByLabel('Код приглашения').fill(clientCode!)
   await page.getByRole('button', { name: 'Присоединиться' }).click()
@@ -271,7 +275,7 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await page.getByLabel('Email').fill(wrongRoleEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/(today|profile)$/)
+  await expect(page).toHaveURL(/\/(today|profile(?:\/settings)?)$/)
   await page.goto('/join')
   await page.getByLabel('Код приглашения').fill(trainerCode!)
   await page.getByRole('button', { name: 'Присоединиться' }).click()
@@ -289,7 +293,7 @@ test('client safely switches trainers after an explicit disconnect', async ({ pa
     await page.getByLabel('Email').fill(email)
     await page.getByLabel('Пароль').fill('FitLocal123!')
     await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-    await expect(page).toHaveURL(/\/(today|profile)$/)
+    await expect(page).toHaveURL(/\/(today|profile(?:\/settings)?)$/)
   }
 
   async function createClientInvitation(clientName: string) {

@@ -6,7 +6,8 @@ import { useOptionalYandexAppSession } from '../../app/yandex-app-session-contex
 import { setExercisePlanRestDisplay, useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { setRpeDisplay, useRpeDisplay } from '../../app/rpe-display'
 import { setAppTheme, useAppTheme } from '../../app/theme'
-import { Field, Page, SaveStatus, Switch } from '../../shared/ui'
+import { SettingsIcon } from '../../shared/icons'
+import { Coachmark, Field, Page, SaveStatus, Switch } from '../../shared/ui'
 import { LogoutButton, YandexAccountLinkingCard } from '../auth'
 import { AppFeedbackForm } from './AppFeedbackForm'
 import { AppInstallPanel } from '../install'
@@ -15,6 +16,20 @@ import { LEGAL_PATHS } from '../../shared/legal'
 import { TrainerProfessionalProfileSection } from './TrainerProfileEditorPage'
 
 export function ProfilePage() {
+  const { actor } = useAuth()
+  return <Page title="Профиль" className="profile-page" action={<Coachmark
+    id="trainer-profile-settings-2026-09"
+    userId={actor?.userId}
+    title="Настройки переехали"
+    description="Тема, параметры тренировок и аккаунт теперь открываются по шестерёнке."
+  >
+    <Link className="profile-settings-link" to="/profile/settings" aria-label="Настройки профиля"><SettingsIcon /></Link>
+  </Coachmark>}>
+    <TrainerProfessionalProfileSection />
+  </Page>
+}
+
+export function TrainerProfileSettingsPage() {
   const { actor, refresh, updateProfile } = useAuth(); const [saved, setSaved] = useState(false)
   const yandexSession = useOptionalYandexAppSession()?.session ?? null
   const theme = useAppTheme()
@@ -39,7 +54,7 @@ export function ProfilePage() {
     setShowArchived(checked)
     localStorage.setItem('fit.showArchivedClients', String(checked))
   }
-  return <Page title="Профиль" className="profile-page">
+  return <Page title="Настройки" back="/profile" className="profile-page profile-settings-page">
     <form ref={formRef} className="stack profile-form" onSubmit={(event) => void submit(event)}>
       <section className="profile-form-section">
         <div className="profile-form-section-head"><p className="eyebrow">МОЙ ПРОФИЛЬ</p><h2>Основные данные</h2></div>
@@ -61,7 +76,6 @@ export function ProfilePage() {
     </section>
     {actor && yandexSession === null && <YandexAccountLinkingCard actor={actor} />}
     {actor?.role === 'trainer' && <BodyMapAppearanceSetting viewerUserId={actor.userId} role={actor.role} gender={null} />}
-    {actor?.role === 'trainer' && <TrainerProfessionalProfileSection />}
     <div className="menu"><Link to="/join">Ввести код приглашения</Link>{actor?.role === 'trainer' && <Link to="/exercises">Управление упражнениями</Link>}<button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button><button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Политика конфиденциальности</Link><Link to={LEGAL_PATHS.deleteAccount}>Удаление аккаунта</Link></div>
     {installOpen && <AppInstallPanel onClose={() => setInstallOpen(false)} />}
     {feedbackOpen && <AppFeedbackForm onClose={() => setFeedbackOpen(false)} />}
