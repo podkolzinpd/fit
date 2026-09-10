@@ -7,6 +7,17 @@ const certificateSchema = z.object({
   year: z.number().int().min(1950).max(new Date().getFullYear()).nullable(),
 })
 
+function removeEmptyCertificates(value: unknown): unknown {
+  if (!Array.isArray(value)) return value
+  return value.filter((item) => {
+    if (typeof item !== 'object' || item === null) return true
+    const certificate = item as Record<string, unknown>
+    return (typeof certificate.title === 'string' && certificate.title.trim() !== '')
+      || (typeof certificate.organization === 'string' && certificate.organization.trim() !== '')
+      || typeof certificate.year === 'number'
+  })
+}
+
 export const trainerProfileDraftSchema = z.object({
   displayName: z.string().trim().min(2).max(120),
   bio: z.string().trim().max(1200),
@@ -19,7 +30,7 @@ export const trainerProfileDraftSchema = z.object({
   price: z.string().trim().max(120),
   acceptingClients: z.boolean(),
   avatarDataUrl: z.string().max(900_000).regex(/^data:image\/(?:jpeg|png|webp);base64,/).nullable(),
-  certificates: z.array(certificateSchema).max(10),
+  certificates: z.preprocess(removeEmptyCertificates, z.array(certificateSchema).max(10)),
 })
 
 export const trainerProfessionalProfileSchema = z.object({

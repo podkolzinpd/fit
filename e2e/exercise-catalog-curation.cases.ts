@@ -9,7 +9,7 @@ for (const role of ['trainer', 'client'] as const) {
     await page.getByLabel('Пароль').fill('FitLocal123!')
     await page.getByRole('button', { name: 'Войти', exact: true }).click()
     await expect(page).toHaveURL(role === 'client' ? /\/me$/ : /\/(today|clients)$/)
-    const profile = role === 'client' ? '/me/profile' : '/profile'
+    const profile = role === 'client' ? '/me/profile' : '/profile/settings'
     for (const dark of [false, true]) {
       const draftUrl = `/workouts/new?date=2026-09-${dark ? '17' : '16'}`
       await page.goto(profile)

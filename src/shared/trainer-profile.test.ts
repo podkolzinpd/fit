@@ -36,4 +36,21 @@ describe('trainer profile', () => {
       published: draft, listedInCatalog: true, updatedAt: '2026-09-10T09:37:38.59182+00:00',
       publishedAt: '2026-09-10T09:37:38.59182+00:00', version: 10 }).published).toEqual(draft)
   })
+
+  it('recovers a legacy draft with an entirely empty certificate row', () => {
+    const draft = {
+      ...emptyTrainerProfileDraft('Анна Иванова'),
+      certificates: [{ title: '', organization: '', year: null }],
+    }
+    const profile = parseTrainerProfile({
+      publicId: '9190a86f-a191-42d8-912e-a7e0ea0f331d',
+      draft,
+      published: null,
+      listedInCatalog: false,
+      updatedAt: '2026-09-10T09:37:38.59182+00:00',
+      publishedAt: null,
+      version: 1,
+    })
+    expect(profile.draft.certificates).toEqual([])
+  })
 })

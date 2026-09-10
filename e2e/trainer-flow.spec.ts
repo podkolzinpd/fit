@@ -807,10 +807,9 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
-  // В новом стартовом маршруте профиль открывается из аватара, а не из таббара.
-  // Прямой переход исключает зависимость настройки профиля от структуры навигации.
-  await page.goto('/profile')
-  await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
+  // Настройки профиля открываются отдельным экраном из шестерёнки анкеты.
+  await page.goto('/profile/settings')
+  await expect(page.getByRole('heading', { name: 'Настройки' })).toBeVisible()
   const firstName = page.getByLabel('Имя', { exact: true })
   const original = await firstName.inputValue()
   await firstName.fill('Черновик Который Отменим')
