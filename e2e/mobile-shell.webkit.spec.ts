@@ -1578,6 +1578,50 @@ test('iPhone: live-факт сохраняется без blur и досылае
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: фактический вес переносится в следующие подходы и переживает reload', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const clientName = await createIsolatedClient(page, testInfo)
+  await page.goto('/workouts/new')
+  await selectClient(page, clientName)
+  await addExercise(page, 'Присед со штангой', true)
+  const exercise = page.locator('.planned-exercise').first()
+  for (let index = 1; index < 3; index += 1) await exercise.getByRole('button', { name: '＋ Подход' }).click()
+  for (let index = 1; index <= 3; index += 1) {
+    await exercise.getByLabel(`Вес, подход ${index}`).fill('20')
+    await exercise.getByLabel(`Повторы, подход ${index}`).fill('10')
+  }
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.locator('.live-timer')).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  const weights = page.getByLabel('Фактический вес')
+  await expect(weights).toHaveCount(3)
+  await weights.nth(0).fill('25')
+  await page.getByRole('button', { name: 'Готово, отдых' }).nth(0).click()
+  await expect(page.locator('.live-session-progress')).toContainText('Готово 1 из 3')
+  await expect(weights.nth(1)).toHaveValue('25')
+  await expect(weights.nth(2)).toHaveValue('25')
+
+  // Ручной ввод в будущем подходе важнее автоподстановки.
+  await weights.nth(2).fill('30')
+  const thirdSetForm = weights.nth(2).locator('xpath=ancestor::form')
+  await page.locator('.live-timer').click()
+  await expect(thirdSetForm.getByRole('status')).toContainText('Сохранено')
+  await weights.nth(1).fill('27')
+  await page.getByRole('button', { name: 'Готово, отдых' }).nth(0).click()
+  await expect(page.locator('.live-session-progress')).toContainText('Готово 2 из 3')
+  await expect(weights.nth(2)).toHaveValue('30')
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('live-weight-carry-390.png'), fullPage: true })
+
+  await page.reload()
+  await expect(weights.nth(2)).toHaveValue('30')
+  await page.setViewportSize({ width: 430, height: 932 })
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('live-weight-carry-430.png'), fullPage: true })
+})
+
 test('iPhone: подходы Live стоят вплотную при крупных touch-зонах на 360 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 360, height: 780 })
   const clientName = await createIsolatedClient(page, testInfo)
