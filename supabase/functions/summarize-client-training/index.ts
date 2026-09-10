@@ -3,6 +3,8 @@ import { createClient } from "npm:@supabase/supabase-js@2.110.8"
 import { withSupabase } from "@supabase/server"
 import {
   PROMPT_VERSION,
+  SUMMARY_CHUNK_JSON_SCHEMA,
+  SUMMARY_CHUNK_SYSTEM_PROMPT,
   SUMMARY_ANALYSIS_VERSION,
   SUMMARY_JSON_SCHEMA,
   SUMMARY_SYSTEM_PROMPT,
@@ -12,7 +14,6 @@ import { buildTrainingGoalContext } from "./summary-goal.ts"
 import {
   authorizeSummaryActor,
   parseYandexJson,
-  yandexHttpError,
 } from "./self-service.ts"
 import { completedWorkoutsInPeriod } from "./workout-source.ts"
 import { buildSummaryConsistency } from "./summary-consistency.ts"
@@ -97,6 +98,7 @@ type YandexCompletionResponse = {
       message?: {
         text?: string
       }
+      status?: string
     }>
     usage?: Record<string, string>
     modelVersion?: string
@@ -133,6 +135,18 @@ type YandexSummaryResult = {
   usage: Record<string, string>
 }
 
+type ChunkAnalysis = {
+  observations: string[]
+  goal_evidence: string[]
+  recovery_signals: string[]
+  data_gaps: string[]
+}
+
+type YandexChunkResult = {
+  analysis: ChunkAnalysis
+  usage: Record<string, string>
+}
+
 class HttpError extends Error {
   constructor(
     readonly status: number,
@@ -156,7 +170,7 @@ function parseGeneratedSummary(value: string): GeneratedSummary {
   try {
     parsed = JSON.parse(value)
   } catch {
-    throw new HttpError(502, "yandex_cloud_invalid_json")
+    throw new HttpError(502, "yandex_cloud_invalid_model_json")
   }
 
   if (!isRecord(parsed) || !isRecord(parsed.trainer) || !isRecord(parsed.client)) {
@@ -199,6 +213,36 @@ function parseGeneratedSummary(value: string): GeneratedSummary {
       missingContext: client.missingContext.map((item) => item.trim()),
       analysisVersion: client.analysisVersion.trim(),
     },
+  }
+}
+
+function parseChunkAnalysis(value: string): ChunkAnalysis {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(value)
+  } catch {
+    throw new HttpError(502, "yandex_cloud_invalid_model_json")
+  }
+  if (!isRecord(parsed)) {
+    throw new HttpError(502, "yandex_cloud_invalid_summary")
+  }
+  const observations = parsed.observations
+  const goalEvidence = parsed.goal_evidence
+  const recoverySignals = parsed.recovery_signals
+  const dataGaps = parsed.data_gaps
+  if (
+    !Array.isArray(observations) || observations.length > 6 || !observations.every((item) => typeof item === "string") ||
+    !Array.isArray(goalEvidence) || goalEvidence.length > 3 || !goalEvidence.every((item) => typeof item === "string") ||
+    !Array.isArray(recoverySignals) || recoverySignals.length > 2 || !recoverySignals.every((item) => typeof item === "string") ||
+    !Array.isArray(dataGaps) || dataGaps.length > 1 || !dataGaps.every((item) => typeof item === "string")
+  ) {
+    throw new HttpError(502, "yandex_cloud_invalid_summary")
+  }
+  return {
+    observations: observations.map((item) => item.trim()).filter(Boolean),
+    goal_evidence: goalEvidence.map((item) => item.trim()).filter(Boolean),
+    recovery_signals: recoverySignals.map((item) => item.trim()).filter(Boolean),
+    data_gaps: dataGaps.map((item) => item.trim()).filter(Boolean),
   }
 }
 
@@ -621,6 +665,10 @@ function buildProgressData(
 type YandexRequestOptions = {
   skipChunking?: boolean
   qualityData?: unknown
+  requestId?: string
+  stage?: 'direct' | 'chunk' | 'synthesis'
+  chunkIndex?: number
+  chunkTotal?: number
 }
 
 function modelInputChunks(value: unknown): unknown[] {
@@ -677,48 +725,65 @@ function mergeUsage(results: Array<{ usage: Record<string, string> }>): Record<s
   return merged
 }
 
-async function requestYandexSummary(
+type StructuredYandexConfig<T> = {
+  systemPrompt: string
+  schema: unknown
+  maxTokens: string
+  parse: (text: string) => T
+  qualityIssues?: (value: T) => string[]
+}
+
+function yandexResponseError(status: number): HttpError {
+  if (status === 408 || status === 504) return new HttpError(504, "yandex_cloud_timeout")
+  if (status === 429) return new HttpError(503, "yandex_cloud_rate_limited")
+  if (status >= 500) return new HttpError(502, "yandex_cloud_unavailable")
+  if (status === 401 || status === 403) return new HttpError(502, "yandex_cloud_access_rejected")
+  return new HttpError(502, "yandex_cloud_request_rejected")
+}
+
+function isRetryableYandexStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500
+}
+
+function yandexRetryDelay(attempt: number): number {
+  return attempt === 1 ? 600 : 1_800
+}
+
+function structuredRetryLog(
+  options: YandexRequestOptions,
+  attempt: number,
+  code: string,
+  alternativeStatus: string | null,
+  outputChars: number,
+  completionTokens: string | null,
+): void {
+  console.warn("summary structured response retry", {
+    request_id: options.requestId ?? null,
+    stage: options.stage ?? 'direct',
+    chunk_index: options.chunkIndex ?? null,
+    chunk_total: options.chunkTotal ?? null,
+    attempt,
+    code,
+    alternative_status: alternativeStatus,
+    output_chars: outputChars,
+    completion_tokens: completionTokens,
+  })
+}
+
+async function requestStructuredYandex<T>(
   trainingData: unknown,
   periodStart: string,
   periodEnd: string,
-  options: YandexRequestOptions = {},
-): Promise<YandexSummaryResult> {
-  if (!options.skipChunking && JSON.stringify(trainingData).length > MAX_DIRECT_MODEL_INPUT_CHARS) {
-    const chunks = modelInputChunks(trainingData)
-    const partials: YandexSummaryResult[] = []
-    for (let offset = 0; offset < chunks.length; offset += 3) {
-      const batch = chunks.slice(offset, offset + 3)
-      partials.push(...await Promise.all(batch.map((chunk) =>
-        requestYandexSummary(chunk, periodStart, periodEnd, {
-          skipChunking: true,
-          qualityData: chunk,
-        })
-      )))
-    }
-    const source = isRecord(trainingData) ? trainingData : {}
-    const synthesisInput = {
-      period: source.period,
-      consistency: source.consistency,
-      goal: source.goal,
-      feedback_signals: source.feedback_signals,
-      measurements: source.measurements,
-      input_coverage: source.input_coverage,
-      aggregation_note: 'Каждый элемент chunk_analyses получен из отдельной непересекающейся части полного списка упражнений.',
-      chunk_analyses: partials.map((result) => result.summary),
-    }
-    const final = await requestYandexSummary(synthesisInput, periodStart, periodEnd, {
-      skipChunking: true,
-      qualityData: trainingData,
-    })
-    return { ...final, usage: mergeUsage([...partials, final]) }
-  }
+  config: StructuredYandexConfig<T>,
+  options: YandexRequestOptions,
+): Promise<{ value: T; modelUri: string; modelVersion: string | null; usage: Record<string, string> }> {
   const apiKey = requiredSecret("YANDEX_CLOUD_API_KEY")
   const folderId = requiredSecret("YANDEX_CLOUD_FOLDER_ID")
   const modelId = Deno.env.get("YANDEX_CLOUD_MODEL_ID") ?? "yandexgpt"
   const modelUri = `gpt://${folderId}/${modelId}/latest`
 
   const messages = [
-    { role: "system", text: SUMMARY_SYSTEM_PROMPT },
+    { role: "system", text: config.systemPrompt },
     {
       role: "user",
       text: JSON.stringify({
@@ -727,7 +792,7 @@ async function requestYandexSummary(
       }),
     },
   ]
-  let usage: Record<string, string> = {}
+  const usage: Record<string, string> = {}
   let modelVersion: string | null = null
 
   for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -745,25 +810,36 @@ async function requestYandexSummary(
           modelUri,
           completionOptions: {
             stream: false,
-            temperature: 0.2,
-            maxTokens: "1800",
+            temperature: attempt === 1 ? 0.2 : 0,
+            maxTokens: config.maxTokens,
           },
-          jsonSchema: { schema: SUMMARY_JSON_SCHEMA },
+          jsonSchema: { schema: config.schema },
           messages,
         }),
         signal: controller.signal,
       })
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        throw new HttpError(504, "yandex_cloud_timeout")
+      const failure = error instanceof DOMException && error.name === "AbortError"
+        ? new HttpError(504, "yandex_cloud_timeout")
+        : new HttpError(502, "yandex_cloud_unavailable")
+      if (attempt < 3) {
+        structuredRetryLog(options, attempt, failure.message, null, 0, null)
+        await new Promise((resolve) => setTimeout(resolve, yandexRetryDelay(attempt)))
+        continue
       }
-      throw new HttpError(502, "yandex_cloud_unavailable")
+      throw failure
     } finally {
       clearTimeout(timeout)
     }
 
     if (!response.ok) {
-      throw new HttpError(502, yandexHttpError(response.status, await response.text()))
+      const failure = yandexResponseError(response.status)
+      if (attempt < 3 && isRetryableYandexStatus(response.status)) {
+        structuredRetryLog(options, attempt, failure.message, null, 0, null)
+        await new Promise((resolve) => setTimeout(resolve, yandexRetryDelay(attempt)))
+        continue
+      }
+      throw failure
     }
 
     const payloadText = await response.text()
@@ -771,10 +847,16 @@ async function requestYandexSummary(
     try {
       payload = parseYandexJson<YandexCompletionResponse>(payloadText)
     } catch {
-      throw new HttpError(502, "yandex_cloud_invalid_json")
+      const code = "yandex_cloud_invalid_upstream_json"
+      if (attempt < 3) {
+        structuredRetryLog(options, attempt, code, null, 0, null)
+        continue
+      }
+      throw new HttpError(502, code)
     }
-    const text = payload.result?.alternatives?.[0]?.message?.text?.trim()
-    if (!text) throw new HttpError(502, "yandex_cloud_empty_response")
+    const alternative = payload.result?.alternatives?.[0]
+    const alternativeStatus = alternative?.status ?? null
+    const text = alternative?.message?.text?.trim() ?? ""
 
     modelVersion = payload.result?.modelVersion ?? modelVersion
     for (const [key, value] of Object.entries(payload.result?.usage ?? {})) {
@@ -783,19 +865,68 @@ async function requestYandexSummary(
         usage[key] = String(Number(usage[key] ?? 0) + numeric)
       }
     }
+    const completionTokens = payload.result?.usage?.completionTokens ?? null
+    if (
+      alternativeStatus === "ALTERNATIVE_STATUS_TRUNCATED_FINAL" ||
+      alternativeStatus === "ALTERNATIVE_STATUS_PARTIAL"
+    ) {
+      const code = "yandex_cloud_truncated_response"
+      if (attempt < 3) {
+        structuredRetryLog(options, attempt, code, alternativeStatus, text.length, completionTokens)
+        messages.push({
+          role: "user",
+          text: "Предыдущий ответ оборвался по лимиту. Верни более короткий полный JSON без Markdown и пояснений.",
+        })
+        continue
+      }
+      throw new HttpError(502, code)
+    }
+    if (alternativeStatus === "ALTERNATIVE_STATUS_CONTENT_FILTER") {
+      throw new HttpError(502, "yandex_cloud_request_rejected")
+    }
+    if (!text) {
+      const code = "yandex_cloud_empty_response"
+      if (attempt < 3) {
+        structuredRetryLog(options, attempt, code, alternativeStatus, 0, completionTokens)
+        continue
+      }
+      throw new HttpError(502, code)
+    }
 
-    const summary = parseGeneratedSummary(text)
-    const issues = summaryQualityIssues(summary, options.qualityData ?? trainingData)
+    let value: T
+    try {
+      value = config.parse(text)
+    } catch (error) {
+      const code = error instanceof HttpError
+        ? error.message
+        : "yandex_cloud_invalid_summary"
+      if (attempt < 3) {
+        structuredRetryLog(options, attempt, code, alternativeStatus, text.length, completionTokens)
+        messages.push({
+          role: "user",
+          text: "Предыдущий ответ нельзя разобрать. Верни заново только полный корректный JSON по схеме, без Markdown и пояснений.",
+        })
+        continue
+      }
+      throw error instanceof HttpError ? error : new HttpError(502, code)
+    }
+    const issues = config.qualityIssues?.(value) ?? []
     if (issues.length === 0) {
-      return { summary, modelUri, modelVersion, usage }
+      return { value, modelUri, modelVersion, usage }
     }
     if (attempt === 3) {
-      console.warn("summary quality check rejected response", { issues })
+      console.warn("summary quality check rejected response", {
+        request_id: options.requestId ?? null,
+        stage: options.stage ?? 'direct',
+        chunk_index: options.chunkIndex ?? null,
+        chunk_total: options.chunkTotal ?? null,
+        attempt,
+        issue_count: issues.length,
+      })
       throw new HttpError(502, "yandex_cloud_quality_check_failed")
     }
 
     messages.push(
-      { role: "assistant", text },
       {
         role: "user",
         text:
@@ -809,7 +940,93 @@ async function requestYandexSummary(
   throw new HttpError(502, "yandex_cloud_quality_check_failed")
 }
 
+async function requestYandexChunkAnalysis(
+  trainingData: unknown,
+  periodStart: string,
+  periodEnd: string,
+  options: YandexRequestOptions,
+): Promise<YandexChunkResult> {
+  const result = await requestStructuredYandex(trainingData, periodStart, periodEnd, {
+    systemPrompt: SUMMARY_CHUNK_SYSTEM_PROMPT,
+    schema: SUMMARY_CHUNK_JSON_SCHEMA,
+    maxTokens: "900",
+    parse: parseChunkAnalysis,
+  }, options)
+  return { analysis: result.value, usage: result.usage }
+}
+
+async function requestFinalYandexSummary(
+  trainingData: unknown,
+  periodStart: string,
+  periodEnd: string,
+  options: YandexRequestOptions,
+): Promise<YandexSummaryResult> {
+  const result = await requestStructuredYandex(trainingData, periodStart, periodEnd, {
+    systemPrompt: SUMMARY_SYSTEM_PROMPT,
+    schema: SUMMARY_JSON_SCHEMA,
+    maxTokens: "2000",
+    parse: parseGeneratedSummary,
+    qualityIssues: (summary) => summaryQualityIssues(summary, options.qualityData ?? trainingData),
+  }, options)
+  return {
+    summary: result.value,
+    modelUri: result.modelUri,
+    modelVersion: result.modelVersion,
+    usage: result.usage,
+  }
+}
+
+async function requestYandexSummary(
+  trainingData: unknown,
+  periodStart: string,
+  periodEnd: string,
+  options: YandexRequestOptions = {},
+): Promise<YandexSummaryResult> {
+  if (!options.skipChunking && JSON.stringify(trainingData).length > MAX_DIRECT_MODEL_INPUT_CHARS) {
+    const chunks = modelInputChunks(trainingData)
+    const partials: YandexChunkResult[] = []
+    for (let offset = 0; offset < chunks.length; offset += 3) {
+      const batch = chunks.slice(offset, offset + 3)
+      partials.push(...await Promise.all(batch.map((chunk, batchIndex) => {
+        const chunkIndex = offset + batchIndex + 1
+        return requestYandexChunkAnalysis(chunk, periodStart, periodEnd, {
+          ...options,
+          requestId: `${options.requestId ?? 'summary'}-chunk-${chunkIndex}`,
+          skipChunking: true,
+          stage: 'chunk',
+          chunkIndex,
+          chunkTotal: chunks.length,
+        })
+      })))
+    }
+    const source = isRecord(trainingData) ? trainingData : {}
+    const synthesisInput = {
+      period: source.period,
+      consistency: source.consistency,
+      goal: source.goal,
+      feedback_signals: source.feedback_signals,
+      measurements: source.measurements,
+      input_coverage: source.input_coverage,
+      aggregation_note: 'Каждый элемент chunk_analyses содержит компактные доказательства из отдельной непересекающейся части полного списка упражнений.',
+      chunk_analyses: partials.map((result) => result.analysis),
+    }
+    const final = await requestFinalYandexSummary(synthesisInput, periodStart, periodEnd, {
+      ...options,
+      requestId: `${options.requestId ?? 'summary'}-synthesis`,
+      skipChunking: true,
+      qualityData: trainingData,
+      stage: 'synthesis',
+    })
+    return { ...final, usage: mergeUsage([...partials, final]) }
+  }
+  return requestFinalYandexSummary(trainingData, periodStart, periodEnd, {
+    ...options,
+    stage: options.stage ?? 'direct',
+  })
+}
+
 const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
+    const requestId = crypto.randomUUID()
     try {
       if (req.method !== "POST") {
         return Response.json(
@@ -823,10 +1040,10 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
       const { data: { user }, error: authError } = await userClient.auth.getUser()
       const actorId = user?.id
       console.log("summary auth diagnostics", {
+        request_id: requestId,
         authorizationPresent: Boolean(req.headers.get("authorization")),
         actorIdPresent: Boolean(actorId),
         authError: authError?.message ?? null,
-        clientId: input.client_id,
       })
       if (!actorId) {
         console.error("summary authentication_required", {
@@ -1103,6 +1320,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
         modelInput,
         trainingData.period.start,
         trainingData.period.end,
+        { requestId },
       )
       const generatedClientSummary = { ...generated.summary.client, inputFingerprint }
       const displayMetrics = {
@@ -1173,6 +1391,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
     } catch (error) {
       if (error instanceof HttpError) {
         console.warn("summarize-client-training request failed", {
+          request_id: requestId,
           code: error.message,
           status: error.status,
         })
