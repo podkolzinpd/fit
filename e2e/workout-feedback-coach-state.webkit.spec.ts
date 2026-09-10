@@ -22,7 +22,7 @@ async function login(page: Page, email: string) {
 }
 
 async function logout(page: Page, role: 'trainer' | 'client') {
-  await page.goto(role === 'client' ? '/me/profile' : '/profile')
+  await page.goto(role === 'client' ? '/me/profile' : '/profile/settings')
   await page.getByRole('button', { name: 'Выйти' }).click()
 }
 

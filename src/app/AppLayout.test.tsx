@@ -80,6 +80,7 @@ describe('AppLayout: единственная UI Identity', () => {
     ['trainer', '/progress/client-1', 'trainer-progress-identity'],
     ['trainer', '/exercises', 'exercise-catalog-identity'],
     ['trainer', '/profile', 'trainer-profile-identity'],
+    ['trainer', '/profile/settings', 'trainer-profile-identity'],
     ['trainer', '/assistant', 'assistant-identity'],
   ] as const)('применяет identity для %s %s', (role, path, routeClass) => {
     authState.role = role

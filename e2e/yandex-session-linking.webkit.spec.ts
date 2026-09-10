@@ -19,7 +19,7 @@ test('Yandex session linking entry stays hidden by default', async ({ page }) =>
   test.skip(process.env.VITE_YANDEX_SESSION_LINKING_ENABLED === 'true', 'This check covers the default-off build.')
   await signInAsTrainer(page)
 
-  await page.goto('/profile')
+  await page.goto('/profile/settings')
 
   await expect(page.getByRole('heading', { name: 'Привязать Yandex ID' })).toHaveCount(0)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
@@ -35,7 +35,7 @@ test('Yandex session linking entry is visible for an allowlisted trainer', async
   )
   await signInAsTrainer(page)
 
-  await page.goto('/profile')
+  await page.goto('/profile/settings')
 
   await expect(page.getByRole('heading', { name: 'Привязать Yandex ID' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Привязать Yandex ID' })).toBeVisible()

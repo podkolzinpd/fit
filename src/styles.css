@@ -5701,6 +5701,67 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-professional-heading { display:grid; gap:4px; }
 .trainer-professional-heading h2 { margin:0; font-size:22px; }
 .trainer-professional-embedded { width:100%; margin:4px 0 0; padding-bottom:0; }
+.trainer-profile-identity .profile-settings-link { width:44px; height:44px; display:grid; place-items:center; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); }
+.trainer-profile-identity .profile-settings-link svg { width:22px; height:22px; }
+.trainer-profile-identity .profile-settings-link:focus-visible { outline:2px solid var(--fg); outline-offset:2px; }
+.trainer-profile-identity .trainer-professional-embedded { gap:0; margin:0; padding:0; }
+.trainer-profile-identity .trainer-card-compact { gap:12px; padding:16px; border-radius:18px; box-shadow:none; }
+.trainer-profile-identity .trainer-card-compact .trainer-card-head { gap:12px; min-width:0; }
+.trainer-profile-identity .trainer-card-compact .trainer-card-avatar { width:64px; height:64px; flex-basis:64px; border-radius:18px; }
+.trainer-profile-identity .trainer-card-compact .trainer-card-avatar-placeholder { font-size:24px; }
+.trainer-profile-identity .trainer-card-identity { flex:1 1 auto; min-width:0; }
+.trainer-profile-identity .trainer-card-identity h2 { overflow-wrap:anywhere; font-size:18px; }
+.trainer-profile-identity .trainer-card-action { flex:0 0 auto; }
+.trainer-profile-identity .trainer-profile-edit-action { min-height:44px; padding:0 14px; border-radius:14px; font-size:14px; font-weight:500; }
+.trainer-profile-identity .trainer-card-compact .trainer-specialties { gap:6px; }
+.trainer-profile-identity .trainer-card-compact .trainer-specialties li { padding:5px 9px; }
+.trainer-profile-identity .trainer-card-compact .trainer-card-facts { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 16px; padding:12px 0; border-block:1px solid var(--border); }
+.trainer-profile-identity .trainer-card-compact .trainer-card-facts:empty { display:none; }
+.trainer-profile-identity .trainer-card-compact .trainer-card-facts > div { gap:2px; padding:0; border:0; border-radius:0; }
+.trainer-profile-identity .trainer-card-compact .trainer-card-facts dt { color:var(--secondary-label-fg); font-size:12px; font-weight:500; }
+.trainer-profile-identity .trainer-card-compact .trainer-card-facts dd { color:var(--fg); font-size:14px; font-weight:500; }
+.trainer-profile-identity .trainer-card-disclosure,
+.trainer-profile-identity .trainer-profile-form-disclosure { overflow:hidden; border-top:1px solid var(--border); }
+.trainer-profile-identity .trainer-card-disclosure > summary,
+.trainer-profile-identity .trainer-profile-form-disclosure > summary { min-height:44px; display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; list-style:none; color:var(--fg); font-size:14px; font-weight:500; }
+.trainer-profile-identity .trainer-card-disclosure > summary::-webkit-details-marker,
+.trainer-profile-identity .trainer-profile-form-disclosure > summary::-webkit-details-marker { display:none; }
+.trainer-profile-identity .trainer-card-disclosure > summary svg,
+.trainer-profile-identity .trainer-profile-form-disclosure > summary svg { width:18px; height:18px; flex:0 0 auto; color:var(--secondary-label-fg); transition:transform .18s ease; }
+.trainer-profile-identity .trainer-card-disclosure[open] > summary svg,
+.trainer-profile-identity .trainer-profile-form-disclosure[open] > summary svg { transform:rotate(180deg); }
+.trainer-profile-identity .trainer-card-disclosure > p { margin:0 0 12px; color:var(--fg); font-size:14px; line-height:1.45; white-space:pre-wrap; }
+.trainer-profile-identity .trainer-card-disclosure .trainer-certificates { margin-bottom:10px; }
+.trainer-profile-identity .trainer-publication-disclosure > summary > span { display:grid; gap:2px; }
+.trainer-profile-identity .trainer-publication-disclosure > summary small { color:var(--secondary-label-fg); font-size:12px; font-weight:500; }
+.trainer-profile-identity .trainer-publication-controls { display:grid; gap:12px; padding:0 0 4px; }
+.trainer-profile-identity .trainer-publication-controls > p { margin:0; color:var(--secondary-label-fg); font-size:12px; line-height:1.4; }
+.trainer-profile-identity .trainer-publication-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.trainer-profile-identity .trainer-publication-actions > :only-child { grid-column:1 / -1; }
+.trainer-profile-identity .trainer-publication-actions .button,
+.trainer-profile-identity .trainer-publication-actions button { min-height:44px; display:flex; align-items:center; justify-content:center; padding:0 12px; border-radius:14px; font-size:14px; font-weight:500; }
+.trainer-profile-identity .trainer-publication-links { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; }
+.trainer-profile-identity .trainer-publication-links .link { min-height:44px; padding:0; font-size:13px; }
+.trainer-profile-identity .trainer-catalog-visibility .switch-row { min-height:56px; }
+.trainer-profile-identity .trainer-profile-empty { gap:14px; }
+.trainer-profile-identity .trainer-profile-empty-copy { margin:0; color:var(--secondary-label-fg); font-size:14px; line-height:1.45; }
+.trainer-profile-identity .trainer-profile-empty > .primary { min-height:48px; border-radius:14px; font-size:14px; font-weight:500; }
+.trainer-profile-identity .trainer-profile-edit-card { gap:16px; padding:18px; border-radius:18px; box-shadow:none; }
+.trainer-profile-identity .trainer-profile-edit-head h2 { margin:3px 0 0; color:var(--fg); font-size:18px; font-weight:600; }
+.trainer-profile-identity .trainer-profile-form-section { display:grid; gap:12px; padding-top:16px; border-top:1px solid var(--border); }
+.trainer-profile-identity .trainer-profile-form-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.trainer-profile-identity .trainer-profile-edit-card .field { gap:6px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; }
+.trainer-profile-identity .trainer-profile-edit-card input,
+.trainer-profile-identity .trainer-profile-edit-card textarea { min-width:0; min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400; box-shadow:none; }
+.trainer-profile-identity .trainer-profile-edit-card textarea { min-height:96px; }
+.trainer-profile-identity .trainer-profile-edit-card input:focus,
+.trainer-profile-identity .trainer-profile-edit-card textarea:focus { border-color:var(--mono-primary); outline:2px solid var(--accent-ring); outline-offset:1px; }
+.trainer-profile-identity .trainer-profile-edit-card .trainer-mode-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.trainer-profile-identity .trainer-profile-edit-card .trainer-mode-fields .switch-row { min-height:52px; border-top:0; }
+.trainer-profile-identity .trainer-profile-edit-card .trainer-mode-fields .switch-row + .switch-row { border-left:1px solid var(--border); }
+.trainer-profile-identity .trainer-profile-education-fields { display:grid; gap:12px; padding:4px 0 0; }
+.trainer-profile-identity .trainer-profile-actions { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.trainer-profile-identity .trainer-profile-actions .primary { grid-column:auto; }
 .trainer-profile-preview { padding-top:8px; }
 .trainer-profile-preview > .eyebrow { margin:0; color:var(--muted); }
 .trainer-card { display:grid; gap:18px; padding:20px; border:1px solid var(--border); border-radius:22px; background:var(--surface-raised); }
@@ -5736,4 +5797,5 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
   .trainer-profile-actions { grid-template-columns:1fr 1fr; }
   .trainer-profile-actions .primary { grid-column:1 / -1; }
   .trainer-card-facts { grid-template-columns:1fr; }
+  .trainer-profile-identity .trainer-profile-form-grid { grid-template-columns:1fr; }
 }

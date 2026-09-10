@@ -155,7 +155,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 
   const workoutUrl = page.url()
-  await page.goto('/profile')
+  await page.goto('/profile/settings')
   await page.getByRole('button', { name: 'Выйти' }).click()
   await login(page, 'client@fit.local')
 
@@ -175,7 +175,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
     await page.getByLabel('Код приглашения').fill(trainerCode!)
     await page.getByRole('button', { name: 'Присоединиться' }).click()
     await expect(page.getByRole('heading', { name: 'Клиент подключён' })).toBeVisible()
-    await page.goto('/profile')
+    await page.goto('/profile/settings')
     await page.getByRole('button', { name: 'Выйти' }).click()
     await login(page, 'client@fit.local')
   }
@@ -345,7 +345,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await expect(ownTrainerReviewCard).toHaveClass(/workout-review-readonly/)
   await expect(ownTrainerReviewCard.getByText(ownTrainerReview, { exact: true })).toBeVisible()
 
-  await page.goto('/profile')
+  await page.goto('/profile/settings')
   await page.getByRole('button', { name: 'Выйти' }).click()
   await login(page, 'client@fit.local')
   await page.goto(ownWorkoutUrl)

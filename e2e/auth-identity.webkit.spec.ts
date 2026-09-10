@@ -97,7 +97,7 @@ test('Yandex ID app session restores and logs out in mobile WebKit', async ({ pa
 })
 
 for (const account of [
-  { role: 'тренера', email: 'trainer@fit.local', home: /\/today$/, profile: '/profile' },
+  { role: 'тренера', email: 'trainer@fit.local', home: /\/today$/, profile: '/profile/settings' },
   { role: 'клиента', email: 'client@fit.local', home: /\/me$/, profile: '/me/profile' },
 ]) {
   test(`выход ${account.role} не падает при обрыве серверного revoke`, async ({ page }) => {
