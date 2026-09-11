@@ -48,14 +48,17 @@ test('trainer chat stays at the bottom and exits with swipe and back', async ({ 
     last_message_sender_id: '92000000-0000-4000-8000-000000000029',
     unread_count: 1,
   }]) }))
-  await page.route('**/rest/v1/rpc/list_chat_messages_v2', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+  await page.route('**/rest/v1/rpc/list_chat_messages_v3', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
     id: 'b9000000-0000-4000-8000-000000000012',
     conversation_id: conversationId,
     sender_id: '92000000-0000-4000-8000-000000000029',
     body: 'До встречи',
     created_at: '2026-09-10T16:45:00.000Z',
+    edited_at: null,
+    reply_to_message_id: null,
   }]) }))
-  await page.route('**/rest/v1/rpc/mark_chat_read', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
+  await page.route('**/rest/v1/rpc/get_chat_unread_state', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ first_message_id: 'b9000000-0000-4000-8000-000000000012', first_created_at: '2026-09-10T16:45:00.000Z', unread_count: 1 }]) }))
+  await page.route('**/rest/v1/rpc/mark_chat_read_v2', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
 
   await loginAsTrainer(page)
   await page.getByRole('link', { name: /Сообщения/ }).click()

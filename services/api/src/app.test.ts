@@ -83,20 +83,27 @@ describe('reliable chat API', () => {
   const trainerId = '10000000-0000-4000-8000-000000000003'
   const messageId = '10000000-0000-4000-8000-000000000004'
   function chat() {
-    const send = vi.fn<PilotChat['send']>().mockResolvedValue({ id: messageId, conversationId, senderId: trainerId, body: 'Привет', image: null, createdAt: '2026-09-10T12:00:00.000Z' })
+    const baseMessage = { id: messageId, conversationId, senderId: trainerId, body: 'Привет', image: null, createdAt: '2026-09-10T12:00:00.000Z', editedAt: null, replyTo: null }
+    const send = vi.fn<PilotChat['send']>().mockResolvedValue(baseMessage)
     const open = vi.fn<PilotChat['open']>().mockResolvedValue(conversationId)
     const authorize = vi.fn<PilotChat['authorize']>().mockResolvedValue(undefined)
     const remove = vi.fn<PilotChat['remove']>().mockResolvedValue(null)
+    const edit = vi.fn<PilotChat['edit']>().mockResolvedValue({ ...baseMessage, editedAt: '2026-09-10T12:10:00.000Z' })
+    const unreadState = vi.fn<PilotChat['unreadState']>().mockResolvedValue({ firstMessageId: messageId, firstCreatedAt: baseMessage.createdAt, unreadCount: 1 })
+    const markRead = vi.fn<PilotChat['markRead']>().mockResolvedValue(undefined)
+    const search = vi.fn<PilotChat['search']>().mockResolvedValue([baseMessage])
+    const window = vi.fn<PilotChat['window']>().mockResolvedValue([baseMessage])
     const pilotChat: PilotChat = {
       listThreads: vi.fn<PilotChat['listThreads']>().mockResolvedValue([{ conversationId, clientId, trainerId, partnerUserId: trainerId, partnerName: 'Анна', activeConnection: true, lastMessageBody: null, lastMessageAt: null, lastMessageSenderId: null, unreadCount: 0 }]),
       open,
       listMessages: vi.fn<PilotChat['listMessages']>().mockResolvedValue({ messages: [], nextCursor: null }),
       authorize,
       send,
+      edit,
       remove,
-      markRead: vi.fn<PilotChat['markRead']>().mockResolvedValue(undefined),
+      unreadState, markRead, search, window,
     }
-    return { pilotChat, open, send, remove, authorize }
+    return { pilotChat, open, send, edit, remove, authorize, unreadState, markRead, search, window }
   }
 
   it('lists actor conversations without caching', async () => {
@@ -111,13 +118,13 @@ describe('reliable chat API', () => {
     const { pilotChat, send } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
     const response = await app.inject({ method: 'POST', url: `/v1/chat/conversations/${conversationId}/messages`, headers: { 'x-fit-session': sessionToken }, payload: { id: messageId, body: 'Привет' } })
     expect(response.statusCode).toBe(200)
-    expect(send).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId, 'Привет', null)
+    expect(send).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId, 'Привет', null, undefined)
     expect(response.json()).toMatchObject({ message: { id: messageId } })
   })
 
   it('uploads a private JPEG before sending a photo message', async () => {
     const { pilotChat, send, authorize } = chat()
-    send.mockResolvedValueOnce({ id: messageId, conversationId, senderId: trainerId, body: '', image: { path: `${conversationId}/${messageId}.jpg`, mimeType: 'image/jpeg', width: 100, height: 80, sizeBytes: 3 }, createdAt: '2026-09-10T12:00:00.000Z' })
+    send.mockResolvedValueOnce({ id: messageId, conversationId, senderId: trainerId, body: '', image: { path: `${conversationId}/${messageId}.jpg`, mimeType: 'image/jpeg', width: 100, height: 80, sizeBytes: 3 }, createdAt: '2026-09-10T12:00:00.000Z', editedAt: null, replyTo: null })
     const upload = vi.fn<ChatMediaStore['upload']>().mockResolvedValue(undefined)
     const sign = vi.fn<ChatMediaStore['sign']>().mockResolvedValue('https://media.example/photo.jpg')
     const removeMedia = vi.fn<ChatMediaStore['remove']>().mockResolvedValue(undefined)
@@ -127,7 +134,7 @@ describe('reliable chat API', () => {
     expect(response.statusCode).toBe(200)
     expect(authorize).toHaveBeenCalled()
     expect(upload).toHaveBeenCalledWith(`${conversationId}/${messageId}.jpg`, expect.objectContaining({ sizeBytes: 3 }))
-    expect(send).toHaveBeenCalledWith(expect.anything(), conversationId, messageId, '', expect.objectContaining({ path: `${conversationId}/${messageId}.jpg` }))
+    expect(send).toHaveBeenCalledWith(expect.anything(), conversationId, messageId, '', expect.objectContaining({ path: `${conversationId}/${messageId}.jpg` }), undefined)
     expect(response.json()).toMatchObject({ message: { image: { url: 'https://media.example/photo.jpg' } } })
   })
 
@@ -147,6 +154,32 @@ describe('reliable chat API', () => {
     expect(response.statusCode).toBe(204)
     expect(remove).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId)
     expect(removeMedia).toHaveBeenCalledWith(path)
+  })
+
+  it('edits a message without changing its identity', async () => {
+    const { pilotChat, edit } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'PATCH', url: `/v1/chat/conversations/${conversationId}/messages/${messageId}`, headers: { 'x-fit-session': sessionToken }, payload: { body: 'Исправленный текст' } })
+    expect(response.statusCode).toBe(200)
+    expect(edit).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId, 'Исправленный текст')
+    expect(response.json()).toMatchObject({ message: { id: messageId, editedAt: '2026-09-10T12:10:00.000Z' } })
+  })
+
+  it('searches history and loads a message window', async () => {
+    const { pilotChat, search, window } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
+    const found = await app.inject({ method: 'GET', url: `/v1/chat/conversations/${conversationId}/search?q=Привет`, headers: { 'x-fit-session': sessionToken } })
+    const context = await app.inject({ method: 'GET', url: `/v1/chat/conversations/${conversationId}/messages/${messageId}/window`, headers: { 'x-fit-session': sessionToken } })
+    expect(found.statusCode).toBe(200); expect(context.statusCode).toBe(200)
+    expect(search).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, 'Привет')
+    expect(window).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId)
+  })
+
+  it('reads unread state and marks only the visible message', async () => {
+    const { pilotChat, unreadState, markRead } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
+    const state = await app.inject({ method: 'GET', url: `/v1/chat/conversations/${conversationId}/unread`, headers: { 'x-fit-session': sessionToken } })
+    const marked = await app.inject({ method: 'PUT', url: `/v1/chat/conversations/${conversationId}/read`, headers: { 'x-fit-session': sessionToken }, payload: { throughMessageId: messageId } })
+    expect(state.statusCode).toBe(200); expect(marked.statusCode).toBe(204)
+    expect(unreadState).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId)
+    expect(markRead).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId)
   })
 
   it('does not allow a read-only pilot session to write', async () => {
