@@ -67,6 +67,7 @@ describe('AppLayout: единственная UI Identity', () => {
     ['client', '/me/progress', 'progress-identity'],
     ['client', '/me/workouts', 'client-workouts-identity'],
     ['client', '/me/profile', 'client-profile-shell-identity'],
+    ['client', '/me/settings', 'client-profile-shell-identity'],
     ['client', '/me/edit', 'client-card-edit-identity'],
     ['client', '/me/goal', 'client-goal-identity'],
     ['trainer', '/today', 'trainer-today-identity'],

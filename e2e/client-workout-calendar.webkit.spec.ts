@@ -310,7 +310,7 @@ for (const role of ['trainer', 'client'] as const) {
     await expect(page.getByText('В этом месяце тренировок нет.')).toBeVisible()
     await page.getByRole('button', { name: 'Следующий месяц' }).click()
     await expect(page.getByRole('button', { name: 'Следующий месяц' })).toBeDisabled()
-    await page.goto(role === 'trainer' ? '/profile/settings' : '/me/profile')
+    await page.goto(role === 'trainer' ? '/profile/settings' : '/me/settings')
     await page.getByRole('switch', { name: 'Тёмная тема' }).click()
     await page.goto(calendarUrl)
     await expect(page.locator('.client-history-calendar-day.selected')).toBeVisible()
