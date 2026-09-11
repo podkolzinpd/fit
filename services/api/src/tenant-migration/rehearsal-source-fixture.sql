@@ -122,6 +122,44 @@ values (
 )
 on conflict do nothing;
 
+insert into public.chat_conversations (
+  id,
+  client_id,
+  client_user_id,
+  trainer_id,
+  client_last_read_at,
+  trainer_last_read_at,
+  created_at,
+  updated_at
+)
+values (
+  '96000000-0000-4000-8000-000000000070',
+  '11111111-1111-4111-8111-111111111111',
+  '92000000-0000-4000-8000-000000000029',
+  '90000000-0000-4000-8000-000000000009',
+  timestamptz '2026-08-01 10:00:00+00',
+  timestamptz '2026-08-01 10:00:00+00',
+  timestamptz '2026-08-01 10:00:00+00',
+  timestamptz '2026-08-01 10:01:00+00'
+)
+on conflict do nothing;
+
+insert into public.chat_messages (
+  id,
+  conversation_id,
+  sender_id,
+  body,
+  created_at
+)
+values (
+  '96000000-0000-4000-8000-000000000071',
+  '96000000-0000-4000-8000-000000000070',
+  '90000000-0000-4000-8000-000000000009',
+  'Тестовое сообщение для переноса',
+  timestamptz '2026-08-01 10:01:00+00'
+)
+on conflict do nothing;
+
 insert into public.custom_exercises (
   id,
   trainer_id,
