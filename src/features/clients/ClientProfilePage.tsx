@@ -4,6 +4,7 @@ import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useOptionalYandexAppSession } from '../../app/yandex-app-session-context'
 import { setAppTheme, useAppTheme } from '../../app/theme'
+import { setLiveExerciseAnimation, useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { AsyncView, Page, Switch } from '../../shared/ui'
 import { LogoutButton, YandexAccountLinkingCard } from '../auth'
 import { ClientTrainerConnections } from './ClientTrainerConnections'
@@ -19,6 +20,7 @@ export function ClientProfilePage() {
   const { clients: clientsRepository } = useDataBackend()
   const yandexSession = useOptionalYandexAppSession()?.session ?? null
   const theme = useAppTheme()
+  const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [installOpen, setInstallOpen] = useState(false)
   const client = useQuery({
@@ -51,6 +53,8 @@ export function ClientProfilePage() {
     </AsyncView>
     <section className="profile-settings" aria-label="Настройки">
       <Switch label="Тёмная тема" checked={theme === 'dark'} onChange={(checked) => setAppTheme(checked ? 'dark' : 'light')} />
+      <div className="profile-settings-group-head"><strong>Live-тренировка</strong><span>Быстрая подсказка по движению у текущего упражнения.</span></div>
+      <Switch label="Показывать анимацию текущего упражнения" checked={showLiveExerciseAnimation} onChange={(checked) => setLiveExerciseAnimation(actor.userId, checked)} />
       <NotificationsSetting userId={actor.userId} />
     </section>
     {yandexSession === null && <YandexAccountLinkingCard actor={actor} />}
