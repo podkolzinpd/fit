@@ -91,6 +91,12 @@ merge, pending push or chat media. Dry-run/apply use the same fingerprint pin
 and conflict-skipping behavior as trainer cohorts, so repeated manual runs can
 advance through the small population without adding one secret per client.
 
+`most-complete-standalone-client` is used for a representative real-data
+rehearsal. It considers only standalone client accounts that own a client card
+and at least one workout, tries candidates with the most workouts first, and
+still runs the complete standalone safety preflight. Output remains limited to
+the masked fingerprint and aggregate table counts.
+
 For `dry-run` and `apply`, GitHub OIDC obtains the existing bounded deploy
 identity and invokes the private `fit-stage-migration` container. The encrypted
 envelope and a random one-run passphrase exist only in memory; the workflow

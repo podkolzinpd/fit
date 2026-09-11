@@ -180,6 +180,18 @@ describe('remote tenant rehearsal configuration', () => {
     expect(standalone.tenantSelection).toEqual({
       kind: 'smallest-eligible-standalone-client',
     })
+
+    const completeStandalone = readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_SELECTION_MODE: 'most-complete-standalone-client',
+        FIT_TENANT_TRAINER_ID: undefined,
+      },
+      () => 'trusted-ca',
+    )
+    expect(completeStandalone.tenantSelection).toEqual({
+      kind: 'most-complete-standalone-client',
+    })
   })
 
   it('rejects a malformed or changed tenant fingerprint', () => {
@@ -371,6 +383,38 @@ describe('automatic source tenant selection', () => {
       format: 'fit-standalone-client-bundle-v1',
       clientProfileId: CLIENT_PROFILE_ID,
       createdAt: '2026-09-11T12:00:00.000Z',
+    })
+  })
+
+  it('selects the standalone client with the most workouts for a full rehearsal', async () => {
+    const query = vi.fn((sql: string) => {
+      if (sql.includes('order by count(workout.id) desc')) {
+        return Promise.resolve([{ profile_id: CLIENT_PROFILE_ID }])
+      }
+      if (sql.includes('as client_profile_exists')) {
+        return Promise.resolve([{
+          client_profile_exists: true,
+          owned_client_count: 1,
+          has_non_standalone_root: false,
+          has_membership: false,
+          has_active_relationship: false,
+          has_cross_boundary_merge: false,
+          has_pending_push: false,
+          has_chat_media: false,
+        }])
+      }
+      return Promise.resolve([])
+    }) as unknown as DatabaseClient['query']
+
+    const bundle = await exportSelectedTenant(
+      { query },
+      { kind: 'most-complete-standalone-client' },
+      new Date('2026-09-11T12:00:00.000Z'),
+    )
+
+    expect(bundle).toMatchObject({
+      format: 'fit-standalone-client-bundle-v1',
+      clientProfileId: CLIENT_PROFILE_ID,
     })
   })
 })

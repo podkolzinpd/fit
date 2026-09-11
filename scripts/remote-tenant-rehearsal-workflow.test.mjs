@@ -35,7 +35,7 @@ test('keeps tenant rehearsal manual and single-flight', () => {
   assert.match(workflow, /options:\n\s+- audit\n\s+- dry-run\n\s+- apply/)
   assert.match(
     workflow,
-    /tenant_selection:[\s\S]*?options:\n\s+- configured\n\s+- smallest-eligible\n\s+- smallest-eligible-standalone-client/,
+    /tenant_selection:[\s\S]*?options:\n\s+- configured\n\s+- smallest-eligible\n\s+- smallest-eligible-standalone-client\n\s+- most-complete-standalone-client/,
   )
   assert.match(workflow, /group: yandex-tenant-migration/)
   assert.match(workflow, /cancel-in-progress: false/)
@@ -89,7 +89,7 @@ test('requires independent apply confirmation and a private stage route', () => 
   )
   assert.match(
     workflow,
-    /smallest-eligible\|smallest-eligible-standalone-client\)[\s\S]*?TENANT_FINGERPRINT_CONFIRMATION[\s\S]*?\^\[0-9a-f\]\{16\}\$/,
+    /smallest-eligible\|smallest-eligible-standalone-client\|most-complete-standalone-client\)[\s\S]*?TENANT_FINGERPRINT_CONFIRMATION[\s\S]*?\^\[0-9a-f\]\{16\}\$/,
   )
   assert.match(
     workflow,
