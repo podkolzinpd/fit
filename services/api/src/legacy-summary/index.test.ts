@@ -287,7 +287,7 @@ describe('summarizeClientTraining cloud handler', () => {
     expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
-  it('repairs the actual rejected answer and logs only fixed quality rules', async () => {
+  it('requests one repair for a stylistic issue and logs only the rule', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -307,14 +307,33 @@ describe('summarizeClientTraining cloud handler', () => {
     const request = JSON.parse(init.body) as { messages: { role: string; text: string }[] }
     expect(request.messages.at(-2)).toEqual({ role: 'assistant', text: JSON.stringify(rejected) })
     expect(request.messages.at(-1)?.text).toContain('client.headline должен интерпретировать')
-    expect(warn).toHaveBeenCalledWith('summary quality check rejected response', expect.objectContaining({
+    expect(warn).toHaveBeenCalledWith('summary style check requested one repair', expect.objectContaining({
       request_id: 'quality-repair', attempt: 1,
       issues: [expect.stringContaining('client.headline должен интерпретировать')],
     }))
     expect(JSON.stringify(warn.mock.calls)).not.toContain(rejected.client.headline)
   })
 
-  it('does not publish a schema-valid answer that fails the coaching quality gate three times', async () => {
+  it('accepts a factually safe answer after one unsuccessful style repair', async () => {
+    vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
+    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const safeButGeneric = {
+      ...validSummary,
+      client: { ...validSummary.client, encouragement: 'Продолжай в том же духе.' },
+    }
+    const fetchImpl = vi.fn().mockImplementation(() => Promise.resolve(completionResponse(200, safeButGeneric)))
+
+    await expect(requestYandexSummary({}, '2026-08-01', '2026-08-25', {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      requestId: 'style-advisory',
+      sleep: () => Promise.resolve(),
+    })).resolves.toMatchObject({ summary: safeButGeneric })
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not publish a schema-valid answer with invented technique claims after three attempts', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -322,7 +341,7 @@ describe('summarizeClientTraining cloud handler', () => {
       ...validSummary,
       client: {
         ...validSummary.client,
-        headline: 'Вес вырос на 25%.',
+        headline: 'В жиме лёжа улучшилась техника выполнения движения.',
       },
     }
     const fetchImpl = vi.fn().mockImplementation(() => Promise.resolve(Response.json({

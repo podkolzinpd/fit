@@ -10,7 +10,7 @@ import {
   SUMMARY_JSON_SCHEMA,
   SUMMARY_SYSTEM_PROMPT,
 } from "./summary-contract.js"
-import { summaryQualityIssues } from "./summary-quality.js"
+import { assessSummaryQuality, type SummaryQualityAssessment } from "./summary-quality.js"
 import { buildTrainingGoalContext } from "./summary-goal.js"
 import {
   authorizeSummaryActor,
@@ -770,7 +770,7 @@ type StructuredYandexConfig<T> = {
   schema: unknown
   maxTokens: string
   parse: (text: string) => T
-  qualityIssues?: (value: T) => string[]
+  qualityAssessment?: (value: T) => SummaryQualityAssessment
 }
 
 function structuredRetryLog(
@@ -825,6 +825,7 @@ async function requestStructuredYandex<T>(
     new Promise<void>((resolve) => setTimeout(resolve, delayMs)))
 
   const maxAttempts = options.diagnostic ? 1 : 3
+  let advisoryRepairAttempted = false
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 30_000)
@@ -903,7 +904,8 @@ async function requestStructuredYandex<T>(
     if (options.diagnostic) {
       let issues: string[]
       try {
-        issues = config.qualityIssues?.(config.parse(text)) ?? []
+        const quality = config.qualityAssessment?.(config.parse(text))
+        issues = [...(quality?.blockingIssues ?? []), ...(quality?.advisories ?? [])]
       } catch {
         issues = ['diagnostic_response_parse_failed']
       }
@@ -953,9 +955,32 @@ async function requestStructuredYandex<T>(
       }
       throw error instanceof HttpError ? error : new HttpError(502, code)
     }
-    const issues = config.qualityIssues?.(value) ?? []
-    if (issues.length === 0) {
+    const quality = config.qualityAssessment?.(value) ?? { blockingIssues: [], advisories: [] }
+    const issues = quality.blockingIssues
+    if (issues.length === 0 && (quality.advisories.length === 0 || advisoryRepairAttempted || attempt === maxAttempts)) {
       return { value, modelUri, modelVersion, usage }
+    }
+    if (issues.length === 0) {
+      advisoryRepairAttempted = true
+      console.warn("summary style check requested one repair", {
+        request_id: options.requestId ?? null,
+        stage: options.stage ?? 'direct',
+        chunk_index: options.chunkIndex ?? null,
+        chunk_total: options.chunkTotal ?? null,
+        attempt,
+        issue_count: quality.advisories.length,
+        issues: quality.advisories,
+      })
+      messages.push(
+        { role: "assistant", text },
+        {
+          role: "user",
+          text:
+            "Содержание допустимо, но текст звучит шаблонно. Верни полный JSON ещё раз, сохранив факты и исправив стиль:\n- " +
+            quality.advisories.join("\n- "),
+        },
+      )
+      continue
     }
     console.warn("summary quality check rejected response", {
       request_id: options.requestId ?? null,
@@ -1011,7 +1036,7 @@ async function requestFinalYandexSummary(
     schema: SUMMARY_JSON_SCHEMA,
     maxTokens: "2000",
     parse: parseGeneratedSummary,
-    qualityIssues: (summary) => summaryQualityIssues(summary, options.qualityData ?? trainingData),
+    qualityAssessment: (summary) => assessSummaryQuality(summary, options.qualityData ?? trainingData),
   }, options)
   return {
     summary: result.value,
