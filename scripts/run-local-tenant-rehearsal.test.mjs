@@ -22,13 +22,13 @@ function exportOutput(overrides = new Map()) {
   ].map(([name, defaultRows]) => (
     `${name}: rows=${overrides.get(name) ?? defaultRows}`
   ))
-  return `exported: tenant da877b834123f5a0; 28 tables\n${rows.join('\n')}\n`
+  return `exported: tenant da877b834123f5a0; 30 tables\n${rows.join('\n')}\n`
 }
 
 function reportOutput(mode, inserted = 0) {
   const rows = [...PRODUCTION_LIKE_TABLES, ...EXPECTED_EMPTY_TABLES]
     .map((name) => `${name}: rows=1, inserted=${inserted}`)
-  return `${mode}: tenant da877b834123f5a0; 28 tables\n${rows.join('\n')}\n`
+  return `${mode}: tenant da877b834123f5a0; 30 tables\n${rows.join('\n')}\n`
 }
 
 describe('local tenant rehearsal safety', () => {

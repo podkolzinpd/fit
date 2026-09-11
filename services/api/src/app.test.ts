@@ -86,15 +86,17 @@ describe('reliable chat API', () => {
     const send = vi.fn<PilotChat['send']>().mockResolvedValue({ id: messageId, conversationId, senderId: trainerId, body: 'Привет', image: null, createdAt: '2026-09-10T12:00:00.000Z' })
     const open = vi.fn<PilotChat['open']>().mockResolvedValue(conversationId)
     const authorize = vi.fn<PilotChat['authorize']>().mockResolvedValue(undefined)
+    const remove = vi.fn<PilotChat['remove']>().mockResolvedValue(null)
     const pilotChat: PilotChat = {
       listThreads: vi.fn<PilotChat['listThreads']>().mockResolvedValue([{ conversationId, clientId, trainerId, partnerUserId: trainerId, partnerName: 'Анна', activeConnection: true, lastMessageBody: null, lastMessageAt: null, lastMessageSenderId: null, unreadCount: 0 }]),
       open,
       listMessages: vi.fn<PilotChat['listMessages']>().mockResolvedValue({ messages: [], nextCursor: null }),
       authorize,
       send,
+      remove,
       markRead: vi.fn<PilotChat['markRead']>().mockResolvedValue(undefined),
     }
-    return { pilotChat, open, send, authorize }
+    return { pilotChat, open, send, remove, authorize }
   }
 
   it('lists actor conversations without caching', async () => {
@@ -118,7 +120,8 @@ describe('reliable chat API', () => {
     send.mockResolvedValueOnce({ id: messageId, conversationId, senderId: trainerId, body: '', image: { path: `${conversationId}/${messageId}.jpg`, mimeType: 'image/jpeg', width: 100, height: 80, sizeBytes: 3 }, createdAt: '2026-09-10T12:00:00.000Z' })
     const upload = vi.fn<ChatMediaStore['upload']>().mockResolvedValue(undefined)
     const sign = vi.fn<ChatMediaStore['sign']>().mockResolvedValue('https://media.example/photo.jpg')
-    const app = buildApp({ pilotChat, chatMediaStore: { upload, sign }, logger: false }); apps.push(app)
+    const removeMedia = vi.fn<ChatMediaStore['remove']>().mockResolvedValue(undefined)
+    const app = buildApp({ pilotChat, chatMediaStore: { upload, sign, remove: removeMedia }, logger: false }); apps.push(app)
     const response = await app.inject({ method: 'POST', url: `/v1/chat/conversations/${conversationId}/messages`, headers: { 'x-fit-session': sessionToken }, payload: { id: messageId, body: '', image: { dataUrl: 'data:image/jpeg;base64,AQID', mimeType: 'image/jpeg', width: 100, height: 80, sizeBytes: 3 } } })
 
     expect(response.statusCode).toBe(200)
@@ -126,6 +129,24 @@ describe('reliable chat API', () => {
     expect(upload).toHaveBeenCalledWith(`${conversationId}/${messageId}.jpg`, expect.objectContaining({ sizeBytes: 3 }))
     expect(send).toHaveBeenCalledWith(expect.anything(), conversationId, messageId, '', expect.objectContaining({ path: `${conversationId}/${messageId}.jpg` }))
     expect(response.json()).toMatchObject({ message: { image: { url: 'https://media.example/photo.jpg' } } })
+  })
+
+  it('deletes an own message and its private photo', async () => {
+    const { pilotChat, remove } = chat()
+    const path = `${conversationId}/${messageId}.jpg`
+    remove.mockResolvedValueOnce(path)
+    const removeMedia = vi.fn<ChatMediaStore['remove']>().mockResolvedValue(undefined)
+    const app = buildApp({ pilotChat, chatMediaStore: {
+      upload: vi.fn<ChatMediaStore['upload']>().mockResolvedValue(undefined),
+      sign: vi.fn<ChatMediaStore['sign']>().mockResolvedValue('https://media.example/photo.jpg'),
+      remove: removeMedia,
+    }, logger: false }); apps.push(app)
+
+    const response = await app.inject({ method: 'DELETE', url: `/v1/chat/conversations/${conversationId}/messages/${messageId}`, headers: { 'x-fit-session': sessionToken } })
+
+    expect(response.statusCode).toBe(204)
+    expect(remove).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId)
+    expect(removeMedia).toHaveBeenCalledWith(path)
   })
 
   it('does not allow a read-only pilot session to write', async () => {

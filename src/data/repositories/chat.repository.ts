@@ -67,6 +67,14 @@ export const chatRepository = {
     if (!row) throw new Error('Сообщение не сохранилось')
     return message(row as MessageRow)
   },
+  async remove(conversationId: string, messageId: string): Promise<void> {
+    const result = await chatQueries.remove(conversationId, messageId)
+    if (result.error) throw repositoryError(result.error)
+    if (result.data) {
+      const removed = await chatMedia.remove([result.data])
+      if (removed.error && !/not found/i.test(removed.error.message)) throw repositoryError(removed.error)
+    }
+  },
   async markRead(conversationId: string): Promise<void> {
     const result = await chatQueries.markRead(conversationId)
     if (result.error) throw repositoryError(result.error)

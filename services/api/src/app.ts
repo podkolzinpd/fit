@@ -1489,6 +1489,20 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }, (message) => reply.header('cache-control','no-store').send({ message }))
   })
 
+  app.delete('/v1/chat/conversations/:conversationId/messages/:messageId', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { conversationId, messageId } = request.params as { conversationId?: unknown; messageId?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId)
+      || typeof messageId !== 'string' || !uuidPattern.test(messageId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, async () => {
+      const imagePath = await options.pilotChat!.remove(session, conversationId, messageId)
+      if (imagePath && options.chatMediaStore) await options.chatMediaStore.remove(imagePath)
+    }, () => reply.header('cache-control','no-store').code(204).send())
+  })
+
   app.put('/v1/chat/conversations/:conversationId/read', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     const { conversationId } = request.params as { conversationId?: unknown }

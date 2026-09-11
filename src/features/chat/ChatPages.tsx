@@ -5,7 +5,7 @@ import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { ChatImageDraft, ChatMessage } from '../../shared/domain'
 import { CloseIcon, MessageIcon, PhotoIcon } from '../../shared/icons'
-import { AsyncView, Page, StatePanel } from '../../shared/ui'
+import { AsyncView, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { prepareChatImage } from './chat-image'
 
 function timeLabel(value: string) {
@@ -66,10 +66,22 @@ export function ChatConversationPage() {
   const [photo, setPhoto] = useState<ChatImageDraft | null>(null)
   const [photoBusy, setPhotoBusy] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null)
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null)
+  const [deleteErrorMessageId, setDeleteErrorMessageId] = useState<string | null>(null)
+  const [hiddenMessageIds, setHiddenMessageIds] = useState<Set<string>>(() => new Set())
+  const [confirm, confirmDialog] = useConfirm()
   const photoInputRef = useRef<HTMLInputElement>(null)
+  const messageInputRef = useRef<HTMLTextAreaElement>(null)
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { localStorage.setItem(draftKey, draft) }, [draft, draftKey])
+  useEffect(() => {
+    const field = messageInputRef.current
+    if (!field) return
+    field.style.height = 'auto'
+    field.style.height = `${Math.min(field.scrollHeight, 120)}px`
+  }, [draft])
   useEffect(() => { localStorage.setItem(pendingKey, JSON.stringify(pending)) }, [pending, pendingKey])
   useEffect(() => { if (messages.data) setNextCursor(messages.data.nextCursor) }, [messages.data])
   useEffect(() => {
@@ -96,8 +108,9 @@ export function ChatConversationPage() {
   const visible = useMemo(() => {
     const items = [...older, ...(messages.data?.messages ?? []), ...pending]
     return [...new Map(items.map((item) => [item.id, item])).values()]
+      .filter((item) => !hiddenMessageIds.has(item.id))
       .sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id))
-  }, [messages.data?.messages, older, pending])
+  }, [hiddenMessageIds, messages.data?.messages, older, pending])
 
   async function deliver(item: PendingMessage) {
     setPending((current) => current.map((message) => message.id === item.id ? { ...message, state: 'sending' } : message))
@@ -133,12 +146,27 @@ export function ChatConversationPage() {
       setNextCursor(page.nextCursor)
     } finally { setLoadingOlder(false) }
   }
+  async function removeMessage(item: ChatMessage, local: PendingMessage | undefined) {
+    const accepted = await confirm({ message: 'Удалить это сообщение у обоих?', confirmLabel: 'Удалить', danger: true })
+    if (!accepted) return
+    setDeletingMessageId(item.id); setDeleteErrorMessageId(null)
+    try {
+      if (local) setPending((current) => current.filter((message) => message.id !== item.id))
+      else await chat.remove(conversationId, item.id)
+      setHiddenMessageIds((current) => new Set(current).add(item.id))
+      setOlder((current) => current.filter((message) => message.id !== item.id))
+      setSelectedMessageId(null)
+      await Promise.all([messages.refetch(), queryClient.invalidateQueries({ queryKey: ['chat-threads'] })])
+    } catch {
+      setDeleteErrorMessageId(item.id)
+    } finally { setDeletingMessageId(null) }
+  }
 
   const leaveConversation = () => location.state && (location.state as { chatBack?: string }).chatBack === 'history'
     ? navigate(-1)
     : navigate('/chat', { replace: true })
 
-  return <Page title={thread?.partnerName ?? 'Диалог'} subtitle={!thread?.activeConnection && thread ? 'Связь отключена' : undefined}
+  return <><Page title={thread?.partnerName ?? 'Диалог'} subtitle={!thread?.activeConnection && thread ? 'Связь отключена' : undefined}
     back="/chat" onBack={leaveConversation} swipeBack className="chat-conversation-page">
     <AsyncView loading={messages.isLoading || threads.isLoading} error={messages.error ?? threads.error} onRetry={() => { void messages.refetch(); void threads.refetch() }}>
       <section className="chat-surface" aria-label="Переписка">
@@ -147,11 +175,19 @@ export function ChatConversationPage() {
         <div className="chat-messages">{visible.map((item) => {
           const local = pending.find((candidate) => candidate.id === item.id)
           const own = item.senderId === actor?.userId
-          return <article className={`chat-message ${own ? 'own' : 'partner'} ${item.image ? 'with-photo' : ''}`} key={item.id}>
+          const selected = own && selectedMessageId === item.id
+          return <article className={`chat-message ${own ? 'own' : 'partner'} ${item.image ? 'with-photo' : ''} ${selected ? 'selected' : ''}`} key={item.id}
+            {...(own ? { role: 'button', tabIndex: 0, 'aria-label': `Действия с сообщением: ${item.body || 'Фото'}`, onClick: () => setSelectedMessageId((current) => current === item.id ? null : item.id), onKeyDown: (event: React.KeyboardEvent) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); setSelectedMessageId((current) => current === item.id ? null : item.id) } } } : {})}>
             {item.image?.url
-              ? <a className="chat-photo-link" href={item.image.url} target="_blank" rel="noreferrer" aria-label="Открыть фото"><img src={item.image.url} alt="Фото в сообщении" width={item.image.width} height={item.image.height} /></a>
+              ? <a className="chat-photo-link" href={item.image.url} target="_blank" rel="noreferrer" aria-label="Открыть фото" onClick={(event) => event.stopPropagation()}><img src={item.image.url} alt="Фото в сообщении" width={item.image.width} height={item.image.height} /></a>
               : item.image && <div className="chat-photo-unavailable">Фото недоступно</div>}
-            {item.body && <p>{item.body}</p>}<small><time>{timeLabel(item.createdAt)}</time>{own && <span>{local?.state === 'sending' ? 'Отправляется' : local?.state === 'error' ? 'Ошибка' : 'Отправлено'}</span>}</small>{local?.state === 'error' && <button type="button" className="link" onClick={() => void deliver(local)}>Повторить</button>}</article>
+            {item.body && <p>{item.body}</p>}<small><time>{timeLabel(item.createdAt)}</time>{own && <span>{local?.state === 'sending' ? 'Отправляется' : local?.state === 'error' ? 'Ошибка' : 'Отправлено'}</span>}</small>
+            {local?.state === 'error' && <button type="button" className="link" onClick={(event) => { event.stopPropagation(); void deliver(local) }}>Повторить</button>}
+            {selected && <div className="chat-message-actions" onClick={(event) => event.stopPropagation()}>
+              <button type="button" className="chat-delete-message" disabled={deletingMessageId === item.id} onClick={() => void removeMessage(item, local)}>{deletingMessageId === item.id ? 'Удаляем…' : 'Удалить'}</button>
+              {deleteErrorMessageId === item.id && <small role="alert">Не удалось удалить. Попробуйте ещё раз.</small>}
+            </div>}
+          </article>
         })}<div ref={endRef} /></div>
       </section>
       <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); send() }}>
@@ -161,12 +197,10 @@ export function ChatConversationPage() {
           <input ref={photoInputRef} hidden type="file" accept="image/*" aria-label="Выбрать фото" onChange={(event) => void choosePhoto(event.target.files?.[0])} />
           <button type="button" className="chat-attach" disabled={photoBusy} aria-label={photoBusy ? 'Подготавливаем фото' : 'Прикрепить фото'} onClick={() => photoInputRef.current?.click()}><PhotoIcon /></button>
           <label className="sr-only" htmlFor="chat-message">Сообщение</label>
-          <textarea id="chat-message" value={draft} maxLength={4000} rows={1} placeholder={photo ? 'Добавить подпись' : 'Сообщение'} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send() }
-          }} />
+          <textarea ref={messageInputRef} id="chat-message" value={draft} maxLength={4000} rows={1} placeholder={photo ? 'Добавить подпись' : 'Сообщение'} onChange={(event) => setDraft(event.target.value)} />
           <button type="submit" className="chat-send" disabled={(!draft.trim() && !photo) || photoBusy} aria-label="Отправить"><MessageIcon /></button>
         </div>
       </form>
     </AsyncView>
-  </Page>
+  </Page>{confirmDialog}</>
 }
