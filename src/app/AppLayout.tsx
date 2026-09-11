@@ -27,7 +27,7 @@ export function AppLayout() {
   const monochromeClientGoal = pathname === '/me/goal'
   const monochromeClientWorkouts = pathname === '/me/workouts'
   const monochromeTrainerClientWorkouts = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+\/workouts$/.test(pathname))
-  const monochromeClientProfile = pathname === '/me/profile'
+  const monochromeClientProfile = pathname === '/me/profile' || pathname === '/me/settings'
   const monochromeClientCardEdit = pathname === '/me/edit'
   const monochromeWorkoutCreateEdit = workoutForm || todayStep
   const monochromeWorkoutDetailHistory = workoutDetail || exerciseHistory

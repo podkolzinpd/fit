@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Client } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
-import { ClientProfilePage } from './ClientProfilePage'
+import { ClientProfilePage, ClientProfileSettingsPage } from './ClientProfilePage'
 
 type MockActor = { role: 'client'; userId: string; email: string }
 const useAuth = vi.hoisted(() => vi.fn<() => { actor: MockActor | null }>())
@@ -50,8 +50,14 @@ describe('ClientProfilePage', () => {
     notificationsStatus.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
   })
 
-  it('renders the push notifications toggle for a client', async () => {
+  it('keeps the profile focused and links to separate settings', async () => {
     render(<ClientProfilePage />, { wrapper: wrapper() })
-    await waitFor(() => expect(screen.getByText('Напоминания о тренировках')).toBeVisible())
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Настройки профиля' })).toHaveAttribute('href', '/me/settings'))
+    expect(screen.queryByText('Уведомления')).not.toBeInTheDocument()
+  })
+
+  it('renders notification controls on the client settings page', async () => {
+    render(<ClientProfileSettingsPage />, { wrapper: wrapper() })
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Напоминать о незавершённой тренировке' })).toBeVisible())
   })
 })

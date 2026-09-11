@@ -397,7 +397,7 @@ async function openClientProgress(page: import('@playwright/test').Page, options
   await signIn(page, 'client@fit.local', /\/me$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   if (options.scheme || options.dark) {
-    await gotoStable(page, '/me/profile')
+    await gotoStable(page, '/me/settings')
     if (options.scheme) {
       const schemeOption = page.getByRole('radio', { name: 'Схема' })
       await schemeOption.click()
@@ -605,7 +605,7 @@ test('Join keeps manual and invitation states in the auth family', async ({ page
   await expect(page.getByRole('heading', { name: 'Тренер пригласил вас в Fit' })).toBeVisible()
   await expectVisualBaseline(page, `auth-join-invitation-${process.platform}.png`, [], true)
 
-  await gotoStable(page, '/me/profile')
+  await gotoStable(page, '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/join')
   await expect(page.locator('.phone-frame')).toHaveClass(/auth-join-identity/)
@@ -637,7 +637,7 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
   await expectVisualBaseline(page, trainer ? `trainer-today-${process.platform}.png` : 'role-home.png', [], true)
 
   if (!trainer) {
-    await gotoStable(page, '/me/profile')
+    await gotoStable(page, '/me/settings')
     await page.getByRole('switch', { name: 'Тёмная тема' }).check()
     await gotoStable(page, '/me')
     await expect(page.locator('.phone-frame')).toHaveClass(/client-home-identity/)
@@ -816,7 +816,7 @@ test('trainer Profile and feedback keep their visual baselines in both themes', 
 
   await page.getByRole('link', { name: 'Настройки профиля' }).click()
   await expect(page).toHaveURL(/\/profile\/settings$/)
-  await expect(page.getByRole('region', { name: 'Настройки' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Уведомления' })).toBeVisible()
   await page.getByRole('button', { name: 'Предложение или проблема' }).click()
   await expect(page.getByRole('form', { name: 'Напишите команде Fit' })).toBeVisible()
   await expectVisualBaseline(page, `trainer-profile-feedback-${process.platform}.png`, [], true)
@@ -885,7 +885,7 @@ test('client Progress shows composite goal facts in both themes', async ({ page 
   await goal.evaluate((element) => element.scrollIntoView({ block: 'start' }))
   await expectVisualBaseline(page, `client-progress-composite-${process.platform}.png`, [], true)
 
-  await gotoStable(page, '/me/profile')
+  await gotoStable(page, '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/me/progress')
   const darkGoal = page.locator('.client-progress-goal-story')
@@ -940,7 +940,7 @@ test('period comparison stays compact for client and trainer in both themes', as
     animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.025,
   })
 
-  await gotoStable(page, trainer ? '/profile/settings' : '/me/profile')
+  await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
   comparison = page.locator('.client-progress-comparison')
@@ -998,7 +998,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
     animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
   })
 
-  await gotoStable(page, trainer ? '/profile/settings' : '/me/profile')
+  await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
   measurements = page.locator('.client-progress-measurements-story')
@@ -1066,7 +1066,7 @@ test('weekly training rhythm stays visual and readable for client and trainer in
     animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.035,
   })
 
-  await gotoStable(page, trainer ? '/profile/settings' : '/me/profile')
+  await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
   if (!trainer) await page.getByText('Регулярность тренировок', { exact: true }).click()
@@ -1110,7 +1110,7 @@ test('next-step suggestion stays off the main progress screen for client and tra
     if (initialViewport) await page.setViewportSize(initialViewport)
   }
 
-  await gotoStable(page, trainer ? '/profile/settings' : '/me/profile')
+  await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
   await expect(page.locator('.client-progress-next-step')).toHaveCount(0)
@@ -1155,7 +1155,7 @@ test('client workouts keep their visual baseline', async ({ page }, testInfo) =>
   await expect(page.locator('.client-history-calendar-selection')).toBeVisible()
   await expectVisualBaseline(page, `client-workouts-calendar-${process.platform}.png`, [], true)
 
-  await gotoStable(page, '/me/profile')
+  await gotoStable(page, '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/me/workouts')
   await expect(page.locator('.phone-frame')).toHaveClass(/client-workouts-identity/)
@@ -1170,7 +1170,7 @@ test('client workouts keep their visual baseline', async ({ page }, testInfo) =>
   await expect(page.locator('.client-history-calendar-selection')).toBeVisible()
   await expectVisualBaseline(page, `client-workouts-calendar-dark-${process.platform}.png`, [], true, '#1d1e21')
 
-  await gotoStable(page, '/me/profile')
+  await gotoStable(page, '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })
 
@@ -1181,8 +1181,14 @@ test('client Profile keeps its visual baseline', async ({ page }, testInfo) => {
   await expect(page.getByRole('heading', { name: 'Профиль' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/client-profile-shell-identity/)
   await expect(page.getByRole('link', { name: 'Изменить данные' })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Вид карты тела' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Настройки профиля' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Вид карты тела' })).toHaveCount(0)
   await expectVisualBaseline(page, `client-profile-${process.platform}.png`)
+
+  await page.getByRole('link', { name: 'Настройки профиля' }).click()
+  await expect(page).toHaveURL(/\/me\/settings$/)
+  await expect(page.getByRole('heading', { name: 'Уведомления' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Вид карты тела' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Предложение или проблема' }).click()
   await page.getByRole('form', { name: 'Напишите команде Fit' }).scrollIntoViewIfNeeded()
@@ -1209,19 +1215,19 @@ test('client card edit keeps its visual baseline', async ({ page }, testInfo) =>
   await expect(page.getByRole('button', { name: 'Сохранить' })).toBeVisible()
   await expectVisualBaseline(page, `client-card-edit-${process.platform}.png`, [], true)
 
-  await gotoStable(page, '/me/profile')
+  await gotoStable(page, '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/me/edit')
   await expect(page.locator('.phone-frame')).toHaveClass(/client-card-edit-identity/)
   await expectVisualBaseline(page, `client-card-edit-dark-${process.platform}.png`, [], true, '#1d1e21')
 
-  await gotoStable(page, '/me/profile')
+  await gotoStable(page, '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })
 
 async function openWorkoutCreate(page: import('@playwright/test').Page, dark = false) {
   await signIn(page, 'client@fit.local', /\/me$/)
-  await gotoStable(page, '/me/profile')
+  await gotoStable(page, '/me/settings')
   const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
   if (dark) await darkTheme.check()
   else await darkTheme.uncheck()
@@ -1260,7 +1266,7 @@ async function openWorkoutReview(page: import('@playwright/test').Page, trainer:
     })
   })
   await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
-  await gotoStable(page, trainer ? '/profile/settings' : '/me/profile')
+  await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
   const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
   if (dark) await darkTheme.check()
   else await darkTheme.uncheck()
@@ -1413,7 +1419,7 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.getByRole('tab', { name: 'История' }).click()
   await expectVisualBaseline(page, `workout-exercise-history-list-${process.platform}.png`)
 
-  await gotoStable(page, trainer ? '/profile/settings' : '/me/profile')
+  await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, detailPath)
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
@@ -1422,7 +1428,7 @@ test('workout detail, completion and exercise history keep their visual baseline
   await gotoStable(page, historyPath)
   await expectVisualBaseline(page, `workout-exercise-history-dark-${process.platform}.png`, [], false, '#1d1e21')
 
-  await gotoStable(page, trainer ? '/profile/settings' : '/me/profile')
+  await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
   await gotoStable(page, detailPath)
   await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
@@ -1512,7 +1518,7 @@ test('client live workout keeps its visual baseline', async ({ page }, testInfo)
   await expectVisualBaseline(page, 'client-live.png', [page.locator('.live-timer')])
 
   const livePath = new URL(page.url()).pathname
-  await gotoStable(page, '/me/profile')
+  await gotoStable(page, '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, livePath)
   await expect(page.locator('.phone-frame')).toHaveClass(/live-identity/)
@@ -1521,7 +1527,7 @@ test('client live workout keeps its visual baseline', async ({ page }, testInfo)
 
   // Visual projects share the seeded preview account. Restore both appearance
   // and product data so later projects still exercise their committed fixtures.
-  await gotoStable(page, '/me/profile')
+  await gotoStable(page, '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
   await gotoStable(page, livePath.replace(/\/live$/, ''))
   await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
@@ -2044,7 +2050,7 @@ test('personal workout result stays on Home and remains available in Progress hi
   await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
   await page.getByRole('heading', { name: 'Мой прогресс' }).scrollIntoViewIfNeeded()
   await expectVisualBaseline(page, `personal-result-progress-${process.platform}.png`)
-  await gotoStable(page, '/me/profile')
+  await gotoStable(page, '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/me')
   await expectBodyMapBaseline(result, `personal-result-home-dark-${process.platform}.png`)

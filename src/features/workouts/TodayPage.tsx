@@ -639,6 +639,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const header = todayHeaderProps(clientMode, actor)
   const pageTitle = greetingHeaderPilotEnabled ? greeting : header.title
   return <Page title={pageTitle} hideTitle={header.hideTitle} className="today-page today-start-page" action={<div className="today-header-actions"><ChatHeaderAction />{header.showProfileAvatar && <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}</div>}>
+    {actor && screen === 'compose' && !textComposerOpen && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} role={clientMode ? 'client' : 'trainer'} /></>}
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
       {!greetingHeaderPilotEnabled && <p className="today-greeting">{greeting} 👋</p>}
       {clientMode && !textComposerOpen ? <><ClientHomeOverview
@@ -666,7 +667,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         </section>}
         showFirstRunConnection={actor?.kind === 'client' && actor.trainerId === actor.userId}
         wearable={actor && isWearablesPilotEnabled(actor.userId) ? <WearableHealthCard /> : undefined}
-      />{actor && (workouts.data?.length ?? 0) > 0 && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} /></>}</> : <>
+      /></> : <>
       {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}
       {!clientMode && firstPlanClient && !textComposerOpen && <TrainerFirstPlanPrompt clientName={firstPlanClient.fullName} />}
       {!textComposerOpen && <div className={greetingHeaderPilotEnabled ? 'today-voice-hero-compact' : undefined}>

@@ -24,6 +24,7 @@ test('invited trainer stays disconnected after profile reload and client card di
   await page.getByRole('button', { name: 'Пригласить тренера' }).click()
   const code = (await page.getByText(/Код для тренера:/).textContent())?.match(/[A-F0-9]{12}/)?.[0]
   expect(code).toBeTruthy()
+  await page.goto('/me/settings')
   await page.getByRole('button', { name: 'Выйти' }).click()
 
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -53,6 +54,7 @@ test('invited trainer stays disconnected after profile reload and client card di
   await expect(page.getByText('Сейчас вы занимаетесь самостоятельно.')).toBeVisible()
   await expect(page.getByText('Приглашённый тренер отвязки', { exact: true })).toHaveCount(0)
   await page.setViewportSize({ width: 430, height: 932 })
+  await page.goto('/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.getByRole('button', { name: 'Выйти' }).click()
@@ -60,9 +62,10 @@ test('invited trainer stays disconnected after profile reload and client card di
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
   // The auth guard may restore the profile route after signing out there.
-  await expect(page).toHaveURL(/\/me(?:\/profile)?$/)
+  await expect(page).toHaveURL(/\/me(?:\/settings)?$/)
   await page.goto('/me/profile')
   await expect(page.getByText('Сейчас вы занимаетесь самостоятельно.')).toBeVisible()
+  await page.goto('/me/settings')
   await page.getByRole('button', { name: 'Выйти' }).click()
 
   await page.getByLabel('Email').fill(trainerEmail)
