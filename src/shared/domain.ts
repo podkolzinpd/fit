@@ -34,6 +34,16 @@ export interface ChatMessage {
   body: string
   image: ChatImageAttachment | null
   createdAt: string
+  editedAt: string | null
+  replyTo: ChatReplyPreview | null
+}
+
+export interface ChatReplyPreview {
+  messageId: UUID
+  senderId: UUID | null
+  body: string | null
+  hasImage: boolean
+  deleted: boolean
 }
 
 export interface ChatImageAttachment {
@@ -51,6 +61,12 @@ export interface ChatImageDraft extends Omit<ChatImageAttachment, 'url'> {
 export interface ChatMessagePage {
   messages: ChatMessage[]
   nextCursor: { createdAt: string; id: UUID } | null
+}
+
+export interface ChatUnreadState {
+  firstMessageId: UUID | null
+  firstCreatedAt: string | null
+  unreadCount: number
 }
 
 interface SessionActorBase {

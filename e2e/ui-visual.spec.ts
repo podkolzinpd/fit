@@ -2179,14 +2179,16 @@ test('reliable chat stays compact on client phones and trainer desktop', async (
     last_message_sender_id: trainer ? '90000000-0000-4000-8000-000000000009' : '92000000-0000-4000-8000-000000000029',
     unread_count: trainer ? 2 : 0,
   }]) }))
-  await page.route('**/rest/v1/rpc/list_chat_messages_v2', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
-    { id: 'b9000000-0000-4000-8000-000000000012', conversation_id: conversationId, sender_id: trainer ? '90000000-0000-4000-8000-000000000009' : '92000000-0000-4000-8000-000000000029', body: 'Хорошо, тогда до встречи завтра', created_at: '2026-09-10T16:45:00.000Z' },
-    { id: 'b9000000-0000-4000-8000-000000000011', conversation_id: conversationId, sender_id: trainer ? '92000000-0000-4000-8000-000000000029' : '90000000-0000-4000-8000-000000000009', body: 'Как самочувствие после тренировки?', created_at: '2026-09-10T16:42:00.000Z' },
+  await page.route('**/rest/v1/rpc/list_chat_messages_v3', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
+    { id: 'b9000000-0000-4000-8000-000000000012', conversation_id: conversationId, sender_id: trainer ? '90000000-0000-4000-8000-000000000009' : '92000000-0000-4000-8000-000000000029', body: 'Хорошо, тогда до встречи завтра', created_at: '2026-09-10T16:45:00.000Z', edited_at: null, reply_to_message_id: null },
+    { id: 'b9000000-0000-4000-8000-000000000011', conversation_id: conversationId, sender_id: trainer ? '92000000-0000-4000-8000-000000000029' : '90000000-0000-4000-8000-000000000009', body: 'Как самочувствие после тренировки?', created_at: '2026-09-10T16:42:00.000Z', edited_at: null, reply_to_message_id: null },
   ]) }))
-  await page.route('**/rest/v1/rpc/mark_chat_read', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
+  await page.route('**/rest/v1/rpc/get_chat_unread_state', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await page.route('**/rest/v1/rpc/mark_chat_read_v2', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
   await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
   await gotoStable(page, `/chat/${conversationId}`)
   await expect(page.getByLabel('Сообщение')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Поиск по переписке' })).toBeVisible()
   await expect(page.locator('.tab-bar')).toHaveCount(0)
   const composerBottom = await page.locator('.chat-composer').evaluate((element) => element.getBoundingClientRect().bottom)
   const frameBottom = await page.locator('.phone-frame').evaluate((element) => element.getBoundingClientRect().bottom)

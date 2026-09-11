@@ -1,4 +1,4 @@
-// schema-sha256: 8b2e84be7fd43b70e8cec64d55737d45f0288d00bc383968abe69e0fefb37d93
+// schema-sha256: 146fd46731907d2215c961a0442e94d6219d0387f1a922e0c7d355ddb72ccc2b
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -295,31 +295,37 @@ export type Database = {
         Row: {
           client_id: string
           client_last_read_at: string | null
+          client_last_read_message_id: string | null
           client_user_id: string
           created_at: string
           id: string
           trainer_id: string
           trainer_last_read_at: string | null
+          trainer_last_read_message_id: string | null
           updated_at: string
         }
         Insert: {
           client_id: string
           client_last_read_at?: string | null
+          client_last_read_message_id?: string | null
           client_user_id: string
           created_at?: string
           id?: string
           trainer_id: string
           trainer_last_read_at?: string | null
+          trainer_last_read_message_id?: string | null
           updated_at?: string
         }
         Update: {
           client_id?: string
           client_last_read_at?: string | null
+          client_last_read_message_id?: string | null
           client_user_id?: string
           created_at?: string
           id?: string
           trainer_id?: string
           trainer_last_read_at?: string | null
+          trainer_last_read_message_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -352,12 +358,14 @@ export type Database = {
           conversation_id: string
           created_at: string
           deleted_at: string | null
+          edited_at: string | null
           id: string
           image_height: number | null
           image_mime_type: string | null
           image_path: string | null
           image_size_bytes: number | null
           image_width: number | null
+          reply_to_message_id: string | null
           sender_id: string
         }
         Insert: {
@@ -365,12 +373,14 @@ export type Database = {
           conversation_id: string
           created_at?: string
           deleted_at?: string | null
+          edited_at?: string | null
           id: string
           image_height?: number | null
           image_mime_type?: string | null
           image_path?: string | null
           image_size_bytes?: number | null
           image_width?: number | null
+          reply_to_message_id?: string | null
           sender_id: string
         }
         Update: {
@@ -378,12 +388,14 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           deleted_at?: string | null
+          edited_at?: string | null
           id?: string
           image_height?: number | null
           image_mime_type?: string | null
           image_path?: string | null
           image_size_bytes?: number | null
           image_width?: number | null
+          reply_to_message_id?: string | null
           sender_id?: string
         }
         Relationships: [
@@ -399,6 +411,13 @@ export type Database = {
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
             referencedColumns: ["id"]
           },
         ]
@@ -1990,6 +2009,10 @@ export type Database = {
         Args: { p_conversation_id: string; p_message_id: string }
         Returns: string
       }
+      edit_chat_message: {
+        Args: { p_body: string; p_conversation_id: string; p_message_id: string }
+        Returns: Database["public"]["Tables"]["chat_messages"]["Row"][]
+      }
       delete_goal_stage: { Args: { p_stage_id: string }; Returns: undefined }
       disconnect_client_trainer: {
         Args: { p_client_id: string }
@@ -2000,6 +2023,18 @@ export type Database = {
         Returns: number
       }
       get_client_goal: { Args: { p_client_id: string }; Returns: Json }
+      get_chat_message_window: {
+        Args: { p_conversation_id: string; p_message_id: string; p_radius?: number }
+        Returns: {
+          body: string; conversation_id: string; created_at: string; edited_at: string | null; id: string
+          image_height: number | null; image_mime_type: string | null; image_path: string | null; image_size_bytes: number | null; image_width: number | null
+          reply_to_body: string | null; reply_to_deleted: boolean; reply_to_has_image: boolean; reply_to_message_id: string | null; reply_to_sender_id: string | null; sender_id: string
+        }[]
+      }
+      get_chat_unread_state: {
+        Args: { p_conversation_id: string }
+        Returns: { first_created_at: string | null; first_message_id: string | null; unread_count: number }[]
+      }
       get_my_client: {
         Args: never
         Returns: {
@@ -2113,6 +2148,14 @@ export type Database = {
           image_size_bytes: number | null
           image_width: number | null
           sender_id: string
+        }[]
+      }
+      list_chat_messages_v3: {
+        Args: { p_before_created_at?: string; p_before_id?: string; p_conversation_id: string; p_limit?: number }
+        Returns: {
+          body: string; conversation_id: string; created_at: string; edited_at: string | null; id: string
+          image_height: number | null; image_mime_type: string | null; image_path: string | null; image_size_bytes: number | null; image_width: number | null
+          reply_to_body: string | null; reply_to_deleted: boolean; reply_to_has_image: boolean; reply_to_message_id: string | null; reply_to_sender_id: string | null; sender_id: string
         }[]
       }
       list_chat_threads: {
@@ -2445,6 +2488,22 @@ export type Database = {
           image_size_bytes: number | null
           image_width: number | null
           sender_id: string
+        }[]
+      }
+      send_chat_message_v3: {
+        Args: {
+          p_body: string; p_conversation_id: string; p_image_height: number | null; p_image_mime_type: string | null
+          p_image_path: string | null; p_image_size_bytes: number | null; p_image_width: number | null; p_message_id: string; p_reply_to_message_id?: string | null
+        }
+        Returns: Database["public"]["Tables"]["chat_messages"]["Row"][]
+      }
+      mark_chat_read_v2: { Args: { p_conversation_id: string; p_through_message_id: string }; Returns: undefined }
+      search_chat_messages: {
+        Args: { p_conversation_id: string; p_limit?: number; p_query: string }
+        Returns: {
+          body: string; conversation_id: string; created_at: string; edited_at: string | null; id: string
+          image_height: number | null; image_mime_type: string | null; image_path: string | null; image_size_bytes: number | null; image_width: number | null
+          reply_to_body: string | null; reply_to_deleted: boolean; reply_to_has_image: boolean; reply_to_message_id: string | null; reply_to_sender_id: string | null; sender_id: string
         }[]
       }
       send_test_push_notification: {
