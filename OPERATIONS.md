@@ -391,6 +391,26 @@ Vercel deployment. До завершения export/import и rehearsal вклю
 нельзя. Rollback после начала mutations требует согласованного окна и проверки
 расхождений данных, а не только выключения frontend-флага.
 
+Серверное назначение для первого перенесённого tenant управляется отдельно от
+Vercel через ручной GitHub Actions workflow `Manage Yandex stage rollout`.
+Workflow всегда берёт UUID из существующего masked secret
+`FIT_TENANT_TRAINER_ID`, не принимает UUID открытым input и не печатает его.
+Запускать его можно только из `main`:
+
+- `inspect` без confirmation только проверяет наличие role-specific domain root,
+  привязки Yandex ID и активного `yandex/read_write` назначения;
+- `enable` требует confirmation `ENABLE_YANDEX_READ_WRITE` и идемпотентно
+  включает назначение только для уже перенесённого профиля;
+- `disable` требует confirmation `DISABLE_YANDEX_READ_WRITE`, немедленно
+  выключает разрешение новых и существующих app-session, но не удаляет данные и
+  не меняет Vercel-флаги.
+
+Операция использует short-lived GitHub OIDC и private migration runner. Она не
+создаёт облачные ресурсы, не запускает DB migration и не требует Dashboard SQL.
+Для полного rollback сначала выключите frontend sticky routing новым Vercel
+deployment, затем выполните `disable`; обратный порядок мгновенно завершит
+доступ выбранного пользователя к Yandex API.
+
 Светлая и тёмная палитры Foundation UI Identity v1 доступны всем пользователям
 и выбираются обычной настройкой темы в профиле. Отдельных Figma/dark pilot
 переменных и allowlist нет. Обновлённый поиск клиентов также является штатным
