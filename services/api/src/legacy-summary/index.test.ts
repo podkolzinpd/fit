@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { buildProgressData, requestYandexSummary, summarizeClientTraining } from './index.js'
+import { buildProgressData, requestYandexSummary, requestYandexSummaryDeduplicated, summarizeClientTraining } from './index.js'
 import { buildSummaryModelInput } from './summary-model-input.js'
 
 const validSummary = {
@@ -18,7 +18,7 @@ const validSummary = {
     goalAlignment: '',
     nextSteps: ['Сохранить текущий ритм.'],
     missingContext: [],
-    analysisVersion: 'trainer-summary-v2',
+    analysisVersion: 'trainer-summary-v3',
   },
 }
 
@@ -88,6 +88,30 @@ describe('summary training picture', () => {
 })
 
 describe('summarizeClientTraining cloud handler', () => {
+  it('blocks accidental live AI calls from automated tests', async () => {
+    vi.stubEnv('NODE_ENV', 'test')
+    vi.stubEnv('YANDEX_CLOUD_API_KEY', 'must-not-be-used')
+    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'must-not-be-used')
+
+    await expect(requestYandexSummary({}, '2026-08-01', '2026-08-25'))
+      .rejects.toThrow('live_ai_disabled_in_tests')
+  })
+
+  it('shares one model call between concurrent requests with the same fingerprint', async () => {
+    vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
+    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
+    const fetchImpl = vi.fn(() => Promise.resolve(completionResponse()))
+
+    const [first, second] = await Promise.all([
+      requestYandexSummaryDeduplicated('same-input', {}, '2026-08-01', '2026-08-25', { fetchImpl }),
+      requestYandexSummaryDeduplicated('same-input', {}, '2026-08-01', '2026-08-25', { fetchImpl }),
+    ])
+
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    expect([first.shared, second.shared].sort()).toEqual([false, true])
+    expect(first.result.summary).toEqual(second.result.summary)
+  })
+
   it('runs in Node and retains the Edge Function request contract before contacting Supabase', async () => {
     const response = await summarizeClientTraining(new Request('https://api.example.test/v1/legacy/summarize-client-training', {
       method: 'POST',
@@ -305,8 +329,11 @@ describe('summarizeClientTraining cloud handler', () => {
     const init = fetchImpl.mock.calls[1]?.[1] as RequestInit
     if (typeof init.body !== 'string') throw new Error('Expected a JSON request body')
     const request = JSON.parse(init.body) as { messages: { role: string; text: string }[] }
-    expect(request.messages.at(-2)).toEqual({ role: 'assistant', text: JSON.stringify(rejected) })
-    expect(request.messages.at(-1)?.text).toContain('client.headline должен интерпретировать')
+    expect(request.messages).toHaveLength(2)
+    expect(request.messages[0]?.text).toContain('Исправь уже подготовленный анализ')
+    const repair = JSON.parse(request.messages[1]!.text) as { previous_answer: string; violations: string[] }
+    expect(repair.previous_answer).toBe(JSON.stringify(rejected))
+    expect(repair.violations).toEqual([expect.stringContaining('client.headline должен интерпретировать')])
     expect(warn).toHaveBeenCalledWith('summary style check requested one repair', expect.objectContaining({
       request_id: 'quality-repair', attempt: 1,
       issues: [expect.stringContaining('client.headline должен интерпретировать')],
@@ -333,7 +360,7 @@ describe('summarizeClientTraining cloud handler', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2)
   })
 
-  it('does not publish a schema-valid answer with invented technique claims after three attempts', async () => {
+  it('does not publish an unsafe answer after one targeted repair', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -357,7 +384,7 @@ describe('summarizeClientTraining cloud handler', () => {
       requestId: 'request-quality',
       sleep: () => Promise.resolve(),
     })).rejects.toThrow('yandex_cloud_quality_check_failed')
-    expect(fetchImpl).toHaveBeenCalledTimes(3)
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
   })
 
   it('analyzes a large complete input in non-overlapping chunks before final synthesis', async () => {
@@ -409,7 +436,7 @@ describe('summarizeClientTraining cloud handler', () => {
   it('handles an anonymized 45-workout and 710-set history with one final style repair', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
-    const sentInputs: Array<{ completed_workouts: Record<string, unknown> }> = []
+    const sentInputs: Array<{ completed_workouts?: Record<string, unknown>; previous_answer?: string }> = []
     let finalRequests = 0
     const volumeSummary = {
       trainer: {
@@ -426,7 +453,7 @@ describe('summarizeClientTraining cloud handler', () => {
         goalAlignment: '',
         nextSteps: ['Сохранить основные движения для следующей контрольной точки.'],
         missingContext: [],
-        analysisVersion: 'trainer-summary-v2',
+        analysisVersion: 'trainer-summary-v3',
       },
     }
     const fetchImpl = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
@@ -435,7 +462,7 @@ describe('summarizeClientTraining cloud handler', () => {
         jsonSchema: { schema: { properties?: Record<string, unknown> } }
         messages: Array<{ text: string }>
       }
-      sentInputs.push(JSON.parse(request.messages[1]!.text) as { completed_workouts: Record<string, unknown> })
+      sentInputs.push(JSON.parse(request.messages[1]!.text) as { completed_workouts?: Record<string, unknown>; previous_answer?: string })
       const isChunk = request.jsonSchema.schema.properties?.observations !== undefined
       if (!isChunk) finalRequests += 1
       return Promise.resolve(completionResponse(200, isChunk ? validChunkAnalysis : volumeSummary))
@@ -468,14 +495,16 @@ describe('summarizeClientTraining cloud handler', () => {
     })
 
     const chunkInputs = sentInputs
-      .filter((item) => item.completed_workouts.chunk_scope !== undefined)
+      .filter((item) => item.completed_workouts?.chunk_scope !== undefined)
       .map((item) => item.completed_workouts as { exercises: typeof exercises })
     expect(chunkInputs.length).toBeGreaterThan(1)
     expect(finalRequests).toBe(2)
     expect(chunkInputs.flatMap((item) => item.exercises)).toHaveLength(45)
     expect(chunkInputs.flatMap((item) => item.exercises)
       .reduce((total, exercise) => total + exercise.sessions[0]!.sets.length, 0)).toBe(710)
-    expect(sentInputs.at(-1)?.completed_workouts.chunk_analyses).toHaveLength(chunkInputs.length)
+    const synthesis = sentInputs.find((item) => item.completed_workouts?.chunk_analyses !== undefined)
+    expect(synthesis?.completed_workouts?.chunk_analyses).toHaveLength(chunkInputs.length)
+    expect(sentInputs.at(-1)?.previous_answer).toBe(JSON.stringify(volumeSummary))
   })
 
   it('keeps a production-sized monthly history complete and uses one bounded style repair', async () => {
@@ -530,9 +559,11 @@ describe('summarizeClientTraining cloud handler', () => {
       complete: true,
     })
     expect(input.exercises).toHaveLength(28)
-    expect(input.previous_period?.exercises).toHaveLength(14)
-    expect(input.exercises[0]?.sessions[0]).not.toHaveProperty('sets')
-    expect(JSON.stringify(input).length).toBeLessThan(80_000)
+    expect(input.exercises).toHaveLength(28)
+    expect(input.exercises[0]?.current?.control_points[0]?.sets).toBe(10)
+    expect(input.exercises[0]?.current?.control_points[0]?.sets).not.toBeInstanceOf(Array)
+    expect(input.exercises[0]?.previous).not.toBeNull()
+    expect(JSON.stringify(input).length).toBeLessThan(30_000)
     expect(fetchImpl).toHaveBeenCalledTimes(2)
   })
 })

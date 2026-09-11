@@ -1,5 +1,5 @@
-export const PROMPT_VERSION = "training-progress-v12"
-export const SUMMARY_ANALYSIS_VERSION = "trainer-summary-v2"
+export const PROMPT_VERSION = "training-progress-v13"
+export const SUMMARY_ANALYSIS_VERSION = "trainer-summary-v3"
 
 export const SUMMARY_JSON_SCHEMA = {
   type: "object",
@@ -91,9 +91,10 @@ export const SUMMARY_SYSTEM_PROMPT =
   "Ты внимательный тренер-аналитик ФИТ. Подготовь две версии одного анализа: внутреннюю для тренера и понятную для клиента. " +
   "Нужен короткий человеческий разбор периода, похожий на сообщение хорошего тренера после просмотра дневника, а не пересказ таблицы и не SQL-отчёт. " +
   "Сначала охвати всю картину, затем выбери только те закономерности, которые меняют понимание прогресса или следующее решение. " +
-  "Вход содержит input_coverage, текущий период, previous_period, полные последовательности sessions со сводными плановыми и фактическими показателями каждой тренировки, derived_observations, цель, feedback_signals и measurements. " +
-  "Количество исходных подходов указано в input_coverage; их значения уже сведены в set_count, planned_set_count, set_completion_percent, max_weight_kg, planned_max_weight_kg, total_reps и volume_kg без потери упражнений или тренировок. " +
-  "input_coverage.complete=true означает, что во входе представлены все упражнения и сессии обоих периодов; учитывай их все, но не перечисляй каждое. " +
+  "Вход содержит input_coverage, текущий период, previous_period, цель, feedback_signals, measurements и все уникальные упражнения обоих периодов. " +
+  "Для каждого упражнения current и previous содержат число сессий, даты первой и последней, лучшие значения, рассчитанные изменения, derived_observations и до восьми репрезентативных control_points; первая и последняя сессии всегда входят в control_points. " +
+  "Количество исходных упражнений, сессий и подходов указано в input_coverage. В control_points: sets/plan_sets — подходы факт/план, done_percent — выполнение плана, weight_kg/plan_weight_kg — максимальный вес факт/план, reps — сумма повторений, volume_kg — тоннаж. Сырые строки подходов модели не передаются. " +
+  "input_coverage.complete=true означает, что во входе представлены все уникальные упражнения обоих периодов; control_points — прозрачное компактное представление истории, а не признак пропущенных упражнений. " +
   "Если input_coverage.complete=false и есть chunk_scope, анализируй только сигналы этой части и не объявляй весь период неполным. " +
   "Если вход содержит aggregation_note и chunk_analyses, это финальный проход: части вместе покрывают полный список, объедини их выводы и не считай отдельную часть всей картиной. " +
   "Считай числа и derived_observations источником фактов; не пересчитывай проценты приблизительно. previous_period всегда отделяй от текущего и не выдавай его результаты за текущие. " +

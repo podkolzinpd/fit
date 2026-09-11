@@ -47,7 +47,7 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Сравнить результат после следующих 4 тренировок.'],
         missingContext: [],
-        analysisVersion: 'trainer-summary-v2',
+        analysisVersion: 'trainer-summary-v3',
       },
     }, trainingData)
 
@@ -87,7 +87,7 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Сравнить ещё 4 тренировки.'],
         missingContext: [],
-        analysisVersion: 'trainer-summary-v2',
+        analysisVersion: 'trainer-summary-v3',
       },
     }, trainingData)
 
@@ -113,7 +113,7 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Сравнить ещё 4 тренировки.'],
         missingContext: [],
-        analysisVersion: 'trainer-summary-v2',
+        analysisVersion: 'trainer-summary-v3',
       },
     }, {
       ...trainingData,
@@ -146,7 +146,7 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Увеличить вес.'],
         missingContext: [],
-        analysisVersion: 'trainer-summary-v2',
+        analysisVersion: 'trainer-summary-v3',
       },
     }, trainingData)
 
@@ -175,7 +175,7 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Сравнить ещё 4 тренировки.'],
         missingContext: [],
-        analysisVersion: 'trainer-summary-v2',
+        analysisVersion: 'trainer-summary-v3',
       },
     }, { ...trainingData, goal: { title: 'Рост силы' } })
 
@@ -355,7 +355,7 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Добавить следующий замер талии через 7 дней.'],
         missingContext: [],
-        analysisVersion: 'trainer-summary-v2',
+        analysisVersion: 'trainer-summary-v3',
       },
     }, {
       ...trainingData,
@@ -385,7 +385,7 @@ function validCoachingSummary(nextStep: string) {
       goalAlignment: '',
       nextSteps: [nextStep],
       missingContext: [],
-      analysisVersion: 'trainer-summary-v2',
+      analysisVersion: 'trainer-summary-v3',
     },
   }
 }

@@ -4,6 +4,8 @@ type SummarySession = {
   planned_set_count?: unknown
   set_completion_percent?: unknown
   planned_max_weight_kg?: unknown
+  planned_total_reps?: unknown
+  planned_volume_kg?: unknown
   max_weight_kg?: unknown
   total_reps?: unknown
   volume_kg?: unknown
@@ -13,6 +15,11 @@ type SummarySession = {
   average_rpe?: unknown
   sets?: SummarySet[]
 }
+
+export const SUMMARY_AGGREGATOR_VERSION = "summary-aggregate-v1"
+
+const MAX_EXERCISE_CONTROL_POINTS = 8
+const MAX_MEASUREMENT_CONTROL_POINTS = 8
 
 type SummarySet = {
   exercise_position: number
@@ -150,17 +157,29 @@ export function deriveMeasurementChanges(measurements: SummaryMeasurement[]): Me
   return [...standardChanges, ...customChanges]
 }
 
+function evenlySpacedIndices(length: number, limit: number): number[] {
+  if (length <= limit) return Array.from({ length }, (_, index) => index)
+  return [...new Set(Array.from({ length: limit }, (_, index) =>
+    Math.round((index * (length - 1)) / (limit - 1))))]
+}
+
+function measurementPoint(measurement: SummaryMeasurement) {
+  return {
+    recorded_on: measurement.recorded_on,
+    weight_kg: measurement.weight_kg,
+    chest_cm: measurement.chest_cm,
+    waist_cm: measurement.waist_cm,
+    hip_cm: measurement.hip_cm,
+    custom_metrics: measurement.custom_metrics ?? [],
+  }
+}
+
 function measurementContext(measurements: SummaryMeasurement[] | undefined) {
   const recent = measurements ?? []
+  const indices = evenlySpacedIndices(recent.length, MAX_MEASUREMENT_CONTROL_POINTS)
   return {
-    recent_entries: recent.map(({ recorded_on, weight_kg, chest_cm, waist_cm, hip_cm, custom_metrics }) => ({
-      recorded_on,
-      weight_kg,
-      chest_cm,
-      waist_cm,
-      hip_cm,
-      custom_metrics: custom_metrics ?? [],
-    })),
+    entry_count: recent.length,
+    control_points: indices.map((index) => measurementPoint(recent[index]!)),
     changes: deriveMeasurementChanges(recent),
   }
 }
@@ -307,33 +326,135 @@ export function deriveExerciseObservations(exercise: SummaryExercise): DerivedOb
   return observations.slice(0, 4)
 }
 
-function selectExercises(exercises: SummaryExercise[]) {
-  return exercises
-    .map((exercise) => ({
-      ref: exercise.ref,
-      name: exercise.name,
-      kind: exercise.kind,
-      muscle_group: exercise.muscle_group,
-      source: exercise.source,
-      session_count: exercise.session_count,
-      change_percent: exercise.change_percent,
-      best: exercise.best,
-      sessions: (exercise.sessions ?? []).map((session) => ({
-        date: session.date,
-        set_count: session.set_count,
-        planned_set_count: session.planned_set_count,
-        set_completion_percent: session.set_completion_percent,
-        planned_max_weight_kg: session.planned_max_weight_kg,
-        max_weight_kg: session.max_weight_kg,
-        total_reps: session.total_reps,
-        volume_kg: session.volume_kg,
-        total_duration_min: session.total_duration_min,
-        total_distance_km: session.total_distance_km,
-        pace_min_per_km: session.pace_min_per_km,
-        average_rpe: session.average_rpe,
-      })),
-      derived_observations: deriveExerciseObservations(exercise),
-    }))
+function sessionSnapshot(session: SummarySession | undefined) {
+  if (!session) return null
+  return {
+    date: session.date,
+    sets: session.set_count,
+    plan_sets: session.planned_set_count,
+    done_percent: session.set_completion_percent,
+    plan_weight_kg: session.planned_max_weight_kg,
+    plan_reps: session.planned_total_reps,
+    plan_volume_kg: session.planned_volume_kg,
+    weight_kg: session.max_weight_kg,
+    reps: session.total_reps,
+    volume_kg: session.volume_kg,
+    duration_min: session.total_duration_min,
+    distance_km: session.total_distance_km,
+    pace_min_per_km: session.pace_min_per_km,
+    rpe: session.average_rpe,
+  }
+}
+
+function exerciseControlPoints(sessions: SummarySession[]): Array<ReturnType<typeof sessionSnapshot>> {
+  if (sessions.length <= MAX_EXERCISE_CONTROL_POINTS) return sessions.map(sessionSnapshot)
+
+  const preferred = new Set([0, sessions.length - 1])
+  const metrics: Array<keyof SummarySession> = [
+    "max_weight_kg", "volume_kg", "total_reps", "total_distance_km",
+  ]
+  for (const metric of metrics) {
+    let bestIndex: number | null = null
+    let bestValue = Number.NEGATIVE_INFINITY
+    sessions.forEach((session, index) => {
+      const value = finite(session[metric])
+      if (value !== undefined && value > bestValue) {
+        bestValue = value
+        bestIndex = index
+      }
+    })
+    if (bestIndex !== null && preferred.size < MAX_EXERCISE_CONTROL_POINTS) preferred.add(bestIndex)
+  }
+  let bestPaceIndex: number | null = null
+  let bestPace = Number.POSITIVE_INFINITY
+  sessions.forEach((session, index) => {
+    const value = finite(session.pace_min_per_km)
+    if (value !== undefined && value < bestPace) {
+      bestPace = value
+      bestPaceIndex = index
+    }
+  })
+  if (bestPaceIndex !== null && preferred.size < MAX_EXERCISE_CONTROL_POINTS) preferred.add(bestPaceIndex)
+  for (const index of evenlySpacedIndices(sessions.length, MAX_EXERCISE_CONTROL_POINTS)) {
+    if (preferred.size >= MAX_EXERCISE_CONTROL_POINTS) break
+    preferred.add(index)
+  }
+
+  return [...preferred]
+    .sort((left, right) => left - right)
+    .map((index) => sessionSnapshot(sessions[index]))
+}
+
+function compactExercisePeriod(exercise: SummaryExercise | undefined) {
+  if (!exercise) return null
+  const sessions = exercise.sessions ?? []
+  return {
+    session_count: exercise.session_count,
+    comparison_confidence: exercise.session_count >= 4 ? "high" : exercise.session_count >= 2 ? "medium" : "low",
+    first_date: (exercise.first_session ?? sessions[0])?.date,
+    latest_date: (exercise.last_session ?? sessions.at(-1))?.date,
+    best: exercise.best,
+    change_percent: exercise.change_percent,
+    derived_observations: deriveExerciseObservations(exercise),
+    control_points: exerciseControlPoints(sessions),
+  }
+}
+
+function combinedExercises(current: SummaryExercise[], previous: SummaryExercise[]) {
+  const currentByRef = new Map(current.map((exercise) => [exercise.ref ?? exercise.name, exercise]))
+  const previousByRef = new Map(previous.map((exercise) => [exercise.ref ?? exercise.name, exercise]))
+  const orderedRefs = [
+    ...currentByRef.keys(),
+    ...[...previousByRef.keys()].filter((ref) => !currentByRef.has(ref)),
+  ]
+  return orderedRefs.map((ref) => {
+    const currentExercise = currentByRef.get(ref)
+    const previousExercise = previousByRef.get(ref)
+    const identity = currentExercise ?? previousExercise!
+    return {
+      ref: identity.ref,
+      name: identity.name,
+      kind: identity.kind,
+      muscle_group: identity.muscle_group,
+      source: identity.source,
+      presence: currentExercise && previousExercise
+        ? "both_periods"
+        : currentExercise ? "current_only" : "previous_only",
+      current: compactExercisePeriod(currentExercise),
+      previous: compactExercisePeriod(previousExercise),
+    }
+  })
+}
+
+function compactFeedback(signals: unknown) {
+  if (!Array.isArray(signals)) return []
+  const grouped = new Map<string, Record<string, unknown>>()
+  for (const value of signals) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue
+    const signal = value as Record<string, unknown>
+    const compact = {
+      session_rpe: signal.session_rpe,
+      wellbeing: signal.wellbeing,
+      discomfort: signal.discomfort,
+      client_comment: typeof signal.client_comment === "string"
+        ? signal.client_comment.trim().slice(0, 160)
+        : signal.client_comment,
+    }
+    const key = JSON.stringify(compact)
+    const existing = grouped.get(key)
+    if (existing) {
+      existing.occurrences = Number(existing.occurrences ?? 1) + 1
+      existing.last_date = signal.date
+    } else {
+      grouped.set(key, {
+        first_date: signal.date,
+        last_date: signal.date,
+        occurrences: 1,
+        ...compact,
+      })
+    }
+  }
+  return [...grouped.values()]
 }
 
 function coverage(exercises: SummaryExercise[]) {
@@ -346,37 +467,38 @@ function coverage(exercises: SummaryExercise[]) {
 }
 
 /**
- * Sends every exercise and session from both periods. Individual set rows are
- * rolled up into the session metrics above: retaining them as well duplicates
- * the same evidence and can push an otherwise small period into a slow
- * multi-request model path. input_coverage still records the exact source set
- * count so the model can distinguish a complete rollup from missing data.
+ * Sends every unique exercise from both periods while replacing repetitive
+ * session rows with first/latest/best/trend and at most eight representative
+ * control points. Raw sets never leave the backend aggregator. input_coverage
+ * records the exact source counts, so compaction is explicit rather than a
+ * silent omission.
  */
 export function buildSummaryModelInput(
   trainingData: SummaryTrainingData,
 ) {
   const previous = trainingData.previous_period
   return {
+    aggregation_version: SUMMARY_AGGREGATOR_VERSION,
     input_coverage: {
       current: coverage(trainingData.exercises),
       previous: coverage(previous?.exercises ?? []),
       complete: true,
+      representation: "all_unique_exercises_with_compact_session_evidence",
     },
     period: trainingData.period,
     consistency: trainingData.consistency,
     goal: trainingData.goal,
-    feedback_signals: trainingData.feedback_signals ?? [],
+    feedback_signals: compactFeedback(trainingData.feedback_signals),
     measurements: {
       ...measurementContext(trainingData.measurements),
       compared_to_previous_period: measurementComparison(trainingData.measurements, previous?.measurements),
     },
-    exercises: selectExercises(trainingData.exercises),
+    exercises: combinedExercises(trainingData.exercises, previous?.exercises ?? []),
     previous_period: previous ? {
       period: previous.period,
       consistency: previous.consistency,
-      feedback_signals: previous.feedback_signals ?? [],
+      feedback_signals: compactFeedback(previous.feedback_signals),
       measurements: measurementContext(previous.measurements),
-      exercises: selectExercises(previous.exercises),
     } : null,
   }
 }
