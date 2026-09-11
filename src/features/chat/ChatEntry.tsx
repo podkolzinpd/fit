@@ -16,7 +16,7 @@ export function ChatHeaderAction() {
 export function ChatStartButton({ clientId, trainerId, className = 'link' }: { clientId: string; trainerId: string; className?: string }) {
   const { chat } = useDataBackend()
   const navigate = useNavigate()
-  const open = useMutation({ mutationFn: () => chat.open(clientId, trainerId), onSuccess: (id) => navigate(`/chat/${id}`) })
+  const open = useMutation({ mutationFn: () => chat.open(clientId, trainerId), onSuccess: (id) => navigate(`/chat/${id}`, { state: { chatBack: 'history' } }) })
   return <span className="chat-start-wrap">
     <button type="button" className={className} disabled={open.isPending} onClick={() => open.mutate()}>{open.isPending ? 'Открываем…' : 'Написать'}</button>
     {open.error && <small className="error">Не удалось открыть чат</small>}

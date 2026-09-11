@@ -34,6 +34,54 @@ test('chat entry and conversation list fit the iPhone shell', async ({ page }) =
   await expect(page.locator('.tab-bar')).toHaveCount(0)
 })
 
+test('trainer chat stays at the bottom and exits with swipe and back', async ({ page }) => {
+  const conversationId = 'b9000000-0000-4000-8000-000000000001'
+  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+    conversation_id: conversationId,
+    client_id: demoClientId,
+    trainer_id: '90000000-0000-4000-8000-000000000009',
+    partner_user_id: '92000000-0000-4000-8000-000000000029',
+    partner_name: 'Тест Клиент',
+    active_connection: true,
+    last_message_body: 'До встречи',
+    last_message_at: '2026-09-10T16:45:00.000Z',
+    last_message_sender_id: '92000000-0000-4000-8000-000000000029',
+    unread_count: 1,
+  }]) }))
+  await page.route('**/rest/v1/rpc/list_chat_messages', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+    id: 'b9000000-0000-4000-8000-000000000012',
+    conversation_id: conversationId,
+    sender_id: '92000000-0000-4000-8000-000000000029',
+    body: 'До встречи',
+    created_at: '2026-09-10T16:45:00.000Z',
+  }]) }))
+  await page.route('**/rest/v1/rpc/mark_chat_read', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
+
+  await loginAsTrainer(page)
+  await page.getByRole('link', { name: /Сообщения/ }).click()
+  await page.getByRole('button', { name: /Тест Клиент/ }).click()
+  await expect(page.getByRole('heading', { name: 'Тест Клиент' })).toBeVisible()
+  const bottomGap = await page.evaluate(() => {
+    const frame = document.querySelector('.phone-frame')!.getBoundingClientRect()
+    const composer = document.querySelector('.chat-composer')!.getBoundingClientRect()
+    return Math.abs(frame.bottom - composer.bottom)
+  })
+  expect(bottomGap).toBeLessThanOrEqual(1)
+
+  await page.locator('.chat-conversation-page').evaluate((element) => {
+    const swipe = (type: 'touchstart' | 'touchend', clientX: number) => {
+      const event = new Event(type, { bubbles: true })
+      Object.defineProperty(event, 'changedTouches', { value: [{ clientX, clientY: 120 }] })
+      element.dispatchEvent(event)
+    }
+    swipe('touchstart', 12)
+    swipe('touchend', 100)
+  })
+  await expect(page.getByRole('heading', { name: 'Сообщения' })).toBeVisible()
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(/\/today$/)
+})
+
 async function mockAutomaticSummaryGeneration(page: Page) {
   const response = {
     contentType: 'application/json',
