@@ -1166,7 +1166,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .theme-light .coachmark-bubble { background: var(--surface-elevated) }
 .live-exercise-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
 .live-exercise-head h2, .live-exercise-head h3 { margin: 0; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere }
-.exercise-technique-trigger { min-width:0; flex:1 1 auto; display:grid; justify-items:start; gap:3px; padding:4px 0; border:0; border-radius:var(--radius-sm); background:transparent; color:var(--fg); text-align:left; box-shadow:none }
+.exercise-technique-trigger { min-width:0; min-height:44px; flex:1 1 auto; display:grid; align-content:center; justify-items:start; gap:3px; padding:4px 0; border:0; border-radius:var(--radius-sm); background:transparent; color:var(--fg); text-align:left; box-shadow:none }
 .exercise-technique-trigger:hover { background:transparent }
 .exercise-technique-trigger:focus-visible { outline:3px solid var(--accent-ring); outline-offset:2px }
 .exercise-technique-trigger > h2, .exercise-technique-trigger > h3, .exercise-technique-trigger > strong { width:100% }
@@ -1174,18 +1174,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-previous-result { margin:2px 0 0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .live-exercise-head .exercise-head-actions { flex: 0 0 auto }
 .live-technique { display:grid; gap:8px; margin:8px 0 10px; padding:8px; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-sunken) }
-.live-technique-head { min-height:44px; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 2px }
-.live-technique-head strong { font-size:var(--type-caption-size); line-height:var(--leading-snug) }
-.live-technique-head > span { display:flex; align-items:center; gap:12px }
-.live-technique-head .link { min-height:44px; padding:2px 0; font-size:var(--text-sm) }
+.live-technique-actions { min-height:44px; display:flex; align-items:center; justify-content:flex-end; gap:20px; padding:0 4px }
+.live-technique-actions .link { min-height:44px; padding:2px 0; font-size:var(--text-sm) }
 .live-technique .exercise-image-technique { width:100%; max-height:176px; aspect-ratio:16 / 9; border:0; border-radius:var(--radius-md); background:var(--surface-raised) }
 .live-technique-hint { margin:0; padding:8px 4px 10px; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
 .live-technique-collapsed { min-height:44px; display:flex; align-items:center; gap:8px; margin:6px 0 8px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken); color:var(--muted); font-size:var(--text-sm); font-weight:var(--weight-semibold); box-shadow:none }
 .live-technique-collapsed > span { font-size:11px }
 @media (max-width:640px) {
-  .live-technique.has-media { position:relative; gap:0 }
-  .live-technique.has-media .live-technique-head { position:absolute; z-index:2; top:8px; right:8px; left:8px; padding:0 6px; border-radius:var(--radius-sm); background:linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 94%, transparent), color-mix(in srgb, var(--surface-elevated) 72%, transparent)) }
-  .live-technique.has-media .live-technique-head .link { padding-inline:6px; color:var(--fg) }
   .live-technique .exercise-image-technique { max-height:120px }
 }
 .block-badge { align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: var(--surface-raised); border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 700 }
@@ -3340,6 +3335,29 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-identity .live-set-input.plan-hint { color:var(--secondary-label-fg); font-weight:400 }
 .live-identity .live-set-check, .live-identity .live-set-save, .live-identity .live-set-expanded .live-set-check, .live-identity .live-set-expanded .live-set-save { width:48px; min-height:44px; display:flex; align-items:center; justify-content:center; padding:0; border:1px solid var(--mono-primary); border-radius:12px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:18px; font-weight:500; line-height:1; box-shadow:none}
 .live-identity .live-set-check.done { border-color:var(--border); background:var(--surface-sunken); color:var(--success-fg) }
+.live-identity .live-set.confirmed > .live-set-grid {
+  gap:0;
+  min-height:44px;
+  padding:0;
+  overflow:hidden;
+  border-radius:12px;
+  background:color-mix(in srgb, var(--success) 18%, var(--surface-raised));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--success) 42%, var(--border));
+}
+.live-identity .live-set.confirmed > .live-set-grid > :not(:first-child) { border-left:1px solid color-mix(in srgb, var(--success) 30%, var(--border)) }
+.live-identity .live-set.confirmed .live-set-number,
+.live-identity .live-set.confirmed .live-set-confirm { min-height:44px }
+.live-identity .live-set.confirmed .live-set-number { color:var(--success-fg) }
+.live-identity .live-set.confirmed .live-set-input,
+.live-identity .live-set.confirmed .live-set-rpe,
+.live-identity .live-set.confirmed .live-set-check.done {
+  min-height:44px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:var(--fg);
+}
+.live-identity .live-set.confirmed .live-set-check.done { width:100%; color:var(--success-fg) }
 .live-identity .live-set-compact { grid-template-columns:24px minmax(0,1fr) 52px; min-height:56px; border-color:var(--border) }
 .live-identity .live-set-compact-values strong { color:var(--fg); font-size:14px; font-weight:500 }
 .live-identity .live-set-compact-values small { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
