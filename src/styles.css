@@ -1024,6 +1024,34 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .push-status-text.warning { color: var(--warning-fg) }
 .push-status-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
 .push-status-actions .secondary, .push-status-actions .link { min-height: var(--control-height-standard) }
+.push-unavailable { margin:0; padding:14px; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.notification-channel-note { min-height:58px; display:grid; align-content:center; gap:2px; margin:0; padding:10px 14px; border-top:1px solid var(--border) }
+.notification-channel-note strong { color:var(--fg); font-size:var(--text-ui); font-weight:var(--weight-medium) }
+.notification-channel-note span { color:var(--muted); font-size:var(--type-caption-size) }
+.notification-settings-error { display:block; padding:0 14px 14px }
+
+.settings-page { align-content:start }
+.settings-section { display:grid; gap:8px }
+.settings-section > h2 { margin:6px 2px 0; color:var(--secondary-label-fg); font-size:13px; font-weight:600; line-height:1.3 }
+.settings-section > .profile-settings,
+.settings-section > .body-map-appearance-setting,
+.settings-section > .menu,
+.settings-section > .yandex-account-linking-card,
+.settings-section > .app-install-card,
+.settings-section > .app-feedback-card { margin:0 }
+.account-settings-card { overflow:hidden; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.account-settings-summary { min-height:76px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px }
+.account-settings-summary > div { min-width:0; display:grid; gap:3px }
+.account-settings-summary strong,
+.account-settings-summary span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.account-settings-summary strong { color:var(--fg); font-size:15px; font-weight:600 }
+.account-settings-summary span { color:var(--muted); font-size:12px; line-height:1.35 }
+.account-settings-summary .link { flex:0 0 auto; min-height:44px; padding:0; color:var(--fg); font-size:12px; font-weight:500 }
+.account-settings-form { gap:12px; padding:0 14px 14px; border-top:1px solid var(--border) }
+.account-settings-form .field:first-child { padding-top:14px }
+.account-settings-form .actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0; padding:0 }
+.account-settings-form .actions button { min-height:48px; margin:0; border-radius:14px }
+.account-settings-card > .save-status { margin:0 14px 14px }
 .push-test-result { color: var(--muted) }
 .push-test-result.success { color: var(--success-fg) }
 .push-test-result.error { color: var(--danger) }
@@ -3805,6 +3833,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-profile-shell-identity .client-profile-identity strong { color:var(--fg); font-size:18px; font-weight:600; line-height:1.2 }
 .client-profile-shell-identity .client-profile-identity p { margin:4px 0 0; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
 .client-profile-shell-identity .client-profile-edit { min-height:48px; border-color:var(--border); border-radius:14px; background:var(--surface-elevated); color:var(--fg); font-size:14px; font-weight:500; box-shadow:none}
+.client-profile-shell-identity .profile-settings-link { width:44px; height:44px; display:grid; place-items:center; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg) }
+.client-profile-shell-identity .profile-settings-link svg { width:22px; height:22px }
+.client-profile-shell-identity .profile-settings-link:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
 
 .client-profile-shell-identity .client-home-connections { gap:12px; padding:18px }
 .client-profile-shell-identity .client-home-section-head { align-items:center; gap:12px }
@@ -3848,6 +3879,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-profile-shell-identity .menu a:hover,
 .client-profile-shell-identity .menu > button:hover { background:var(--surface-elevated) }
 .client-profile-shell-identity .client-profile-page > .danger.secondary { min-height:48px; margin:0; border-color:var(--border); border-radius:14px; background:transparent; color:var(--danger); font-size:14px; font-weight:500; box-shadow:none}
+.client-profile-shell-identity .settings-section > .danger.secondary { min-height:48px; margin:0; border-color:var(--border); border-radius:14px; background:transparent; color:var(--danger); font-size:14px; font-weight:500; box-shadow:none}
 
 .client-profile-shell-identity .app-install-card,
 .client-profile-shell-identity .yandex-account-linking-card,
@@ -5240,6 +5272,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-profile-identity .app-feedback-card button:disabled { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
 .trainer-profile-identity .app-feedback-card .error { color:var(--danger); font-size:12px; font-weight:500 }
 .trainer-profile-identity .profile-page > .danger.secondary { min-height:48px; margin:0; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--danger); font-size:14px; font-weight:500; box-shadow:none}
+.trainer-profile-identity .settings-section > .danger.secondary { min-height:48px; margin:0; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--danger); font-size:14px; font-weight:500; box-shadow:none}
 .trainer-profile-identity .tab-bar { border-color:var(--border); background:var(--bar-bg); box-shadow:none}
 .trainer-profile-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
 .trainer-profile-identity .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
