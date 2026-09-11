@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { ChatMessage } from '../../shared/domain'
@@ -12,15 +12,18 @@ function timeLabel(value: string) {
 }
 
 export function ChatListPage() {
+  const { actor } = useAuth()
   const { chat } = useDataBackend()
   const navigate = useNavigate()
+  const homePath = actor?.role === 'trainer' ? '/today' : '/me'
+  const exitChat = () => navigate(homePath, { replace: true })
   const query = useQuery({ queryKey: ['chat-threads'], queryFn: () => chat.listThreads(), refetchOnMount: 'always', refetchInterval: 5_000 })
-  const open = useMutation({ mutationFn: (item: { clientId: string; trainerId: string }) => chat.open(item.clientId, item.trainerId), onSuccess: (id) => navigate(`/chat/${id}`) })
-  return <Page title="Сообщения" back={-1} className="chat-list-page">
+  const open = useMutation({ mutationFn: (item: { clientId: string; trainerId: string }) => chat.open(item.clientId, item.trainerId), onSuccess: (id) => navigate(`/chat/${id}`, { state: { chatBack: 'history' } }) })
+  return <Page title="Сообщения" back={homePath} onBack={exitChat} swipeBack className="chat-list-page">
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}
       empty={query.data?.length === 0} emptyTitle="Диалогов пока нет" emptyDescription="Подключите тренера или спортсмена, чтобы начать переписку.">
       <div className="chat-thread-list">{query.data?.map((item) => <button type="button" className="chat-thread" key={`${item.clientId}:${item.trainerId}`}
-        disabled={open.isPending} onClick={() => item.conversationId ? navigate(`/chat/${item.conversationId}`) : open.mutate(item)}>
+        disabled={open.isPending} onClick={() => item.conversationId ? navigate(`/chat/${item.conversationId}`, { state: { chatBack: 'history' } }) : open.mutate(item)}>
         <span className="chat-avatar" aria-hidden="true">{item.partnerName.slice(0, 1).toUpperCase()}</span>
         <span className="chat-thread-copy"><strong>{item.partnerName}</strong><small>{item.lastMessageBody ?? 'Начать диалог'}</small>{!item.activeConnection && <em>Связь отключена</em>}</span>
         <span className="chat-thread-meta">{item.lastMessageAt && <time>{timeLabel(item.lastMessageAt)}</time>}{item.unreadCount > 0 && <b>{item.unreadCount > 99 ? '99+' : item.unreadCount}</b>}</span>
@@ -47,6 +50,8 @@ export function ChatConversationPage() {
   const { actor } = useAuth()
   const { chat } = useDataBackend()
   const queryClient = useQueryClient()
+  const location = useLocation()
+  const navigate = useNavigate()
   const threads = useQuery({ queryKey: ['chat-threads'], queryFn: () => chat.listThreads() })
   const messages = useQuery({ queryKey: ['chat-messages', conversationId], queryFn: () => chat.listMessages(conversationId), enabled: Boolean(conversationId) })
   const [older, setOlder] = useState<ChatMessage[]>([])
@@ -116,7 +121,12 @@ export function ChatConversationPage() {
     } finally { setLoadingOlder(false) }
   }
 
-  return <Page title={thread?.partnerName ?? 'Диалог'} subtitle={!thread?.activeConnection && thread ? 'Связь отключена' : undefined} back="/chat" className="chat-conversation-page">
+  const leaveConversation = () => location.state && (location.state as { chatBack?: string }).chatBack === 'history'
+    ? navigate(-1)
+    : navigate('/chat', { replace: true })
+
+  return <Page title={thread?.partnerName ?? 'Диалог'} subtitle={!thread?.activeConnection && thread ? 'Связь отключена' : undefined}
+    back="/chat" onBack={leaveConversation} swipeBack className="chat-conversation-page">
     <AsyncView loading={messages.isLoading || threads.isLoading} error={messages.error ?? threads.error} onRetry={() => { void messages.refetch(); void threads.refetch() }}>
       <section className="chat-surface" aria-label="Переписка">
         {nextCursor && <button type="button" className="link chat-load-older" disabled={loadingOlder} onClick={() => void loadOlder()}>{loadingOlder ? 'Загружаем…' : 'Ранее'}</button>}
