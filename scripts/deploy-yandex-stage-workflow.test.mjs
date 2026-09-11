@@ -32,6 +32,16 @@ const databaseAccessWorkflow = readFileSync(
   ),
   'utf8',
 )
+const rolloutWorkflow = readFileSync(
+  join(
+    import.meta.dirname,
+    '..',
+    '.github',
+    'workflows',
+    'manage-yandex-stage-rollout.yml',
+  ),
+  'utf8',
+)
 const containerTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'container.tf'),
   'utf8',
@@ -463,6 +473,30 @@ test('manages curated database readers only through an explicit private run', ()
   assert.doesNotMatch(databaseAccessWorkflow, /terraform apply/)
   assert.doesNotMatch(databaseAccessWorkflow, /^    environment:/m)
   assert.doesNotMatch(databaseAccessWorkflow, /fit_api|mdb_read_all_data/)
+})
+
+test('manages the configured tenant rollout only through an explicit private run', () => {
+  assert.match(rolloutWorkflow, /^  workflow_dispatch:$/m)
+  assert.doesNotMatch(rolloutWorkflow, /^  (?:push|pull_request):$/m)
+  assert.match(rolloutWorkflow, /^  id-token: write$/m)
+  assert.match(rolloutWorkflow, /^  group: yandex-stage$/m)
+  assert.match(rolloutWorkflow, /scripts\/yandex-github-oidc\.sh/)
+  assert.match(rolloutWorkflow, /GITHUB_REF.*refs\/heads\/main/)
+  assert.match(
+    rolloutWorkflow,
+    /PROFILE_ID: \$\{\{ secrets\.FIT_TENANT_TRAINER_ID \}\}/g,
+  )
+  assert.match(rolloutWorkflow, /ENABLE_YANDEX_READ_WRITE/)
+  assert.match(rolloutWorkflow, /DISABLE_YANDEX_READ_WRITE/)
+  assert.match(rolloutWorkflow, /Authorization: Bearer \$YC_TOKEN/)
+  assert.match(rolloutWorkflow, /\/stage\/rollout-assignments\/yandex/)
+  assert.doesNotMatch(rolloutWorkflow, /terraform apply/)
+  assert.doesNotMatch(rolloutWorkflow, /^    environment:/m)
+  assert.match(rolloutWorkflow, /echo "::add-mask::\$PROFILE_ID"/)
+  assert.doesNotMatch(
+    rolloutWorkflow,
+    /echo (?!"::add-mask::)[^\n]*\$PROFILE_ID/,
+  )
 })
 
 test('supports a plan-only stage diagnostic that cannot deploy resources', () => {

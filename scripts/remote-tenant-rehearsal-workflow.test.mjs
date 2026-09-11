@@ -99,5 +99,9 @@ test('requires independent apply confirmation and a private stage route', () => 
     container,
     /STAGE_TENANT_MIGRATION_ENABLED\s+= var\.environment == "stage" \? "true" : "false"/,
   )
+  assert.match(
+    container,
+    /STAGE_ROLLOUT_ASSIGNMENTS_ENABLED\s+= var\.environment == "stage" \? "true" : "false"/,
+  )
   assert.doesNotMatch(workflow, /system:allUsers/)
 })
