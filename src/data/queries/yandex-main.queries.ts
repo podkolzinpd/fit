@@ -1,7 +1,7 @@
 import { LIVE_WORKOUT_REQUEST_TIMEOUT_MS } from './auth-fetch'
 import { fetchWithTimeout } from './request-timeout'
 
-export type YandexMainHttpMethod = 'DELETE' | 'POST' | 'PUT'
+export type YandexMainHttpMethod = 'DELETE' | 'PATCH' | 'POST' | 'PUT'
 
 export interface YandexMainQueries {
   read(path: string): Promise<Response>

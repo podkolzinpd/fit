@@ -56,7 +56,7 @@ import type { PilotAppFeedbackWriter } from './pilot-app-feedback-writer.js'
 import type { PilotAssistantState } from './pilot-assistant-state.js'
 import type { PilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import type { PilotPushNotifications } from './pilot-push-notifications.js'
-import { ChatCommandError, type PilotChat } from './pilot-chat.js'
+import { ChatCommandError, type ChatMessage, type PilotChat } from './pilot-chat.js'
 import { readChatImageUpload, type ChatMediaStore } from './chat-media.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
@@ -171,6 +171,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     logger: options.logger ?? true,
   })
   const allowedOrigins = new Set(options.allowedOrigins ?? [])
+  const publicChatMessage = async (message: ChatMessage) => {
+    if (!message.image) return { ...message, image: null }
+    let url: string | null
+    try { url = options.chatMediaStore ? await options.chatMediaStore.sign(message.image.path) : null } catch { url = null }
+    return { ...message, image: { url, mimeType: message.image.mimeType, width: message.image.width,
+      height: message.image.height, sizeBytes: message.image.sizeBytes } }
+  }
 
   app.addHook('onRequest', async (request, reply) => {
     if (options.releaseId !== undefined) {
@@ -183,7 +190,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (origin !== undefined && allowedOrigins.has(origin)) {
       reply
         .header('access-control-allow-origin', origin)
-        .header('access-control-allow-methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        .header('access-control-allow-methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
         .header(
           'access-control-allow-headers',
           'authorization, content-type, x-fit-pilot-session, x-fit-session, x-supabase-authorization',
@@ -1454,12 +1461,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const cursor = hasCursor ? { createdAt: query.beforeCreatedAt as string, id: query.beforeId as string } : null
     return sendPilotCommand(reply, async () => {
       const result = await options.pilotChat!.listMessages(session, conversationId, cursor, limit)
-      const messages = await Promise.all(result.messages.map(async (message) => {
-        if (!message.image) return { ...message, image: null }
-        let url: string | null
-        try { url = options.chatMediaStore ? await options.chatMediaStore.sign(message.image.path) : null } catch { url = null }
-        return { ...message, image: { url, mimeType: message.image.mimeType, width: message.image.width, height: message.image.height, sizeBytes: message.image.sizeBytes } }
-      }))
+      const messages = await Promise.all(result.messages.map(publicChatMessage))
       return { ...result, messages }
     }, (result) => reply.header('cache-control','no-store').send(result))
   })
@@ -1467,12 +1469,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.post('/v1/chat/conversations/:conversationId/messages', { bodyLimit: 3 * 1024 * 1024 }, async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     const { conversationId } = request.params as { conversationId?: unknown }
-    const body = request.body as { id?: unknown; body?: unknown; image?: unknown } | null
+    const body = request.body as { id?: unknown; body?: unknown; image?: unknown; replyToMessageId?: unknown } | null
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
     if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
     const image = body?.image === undefined || body.image === null ? null : readChatImageUpload(body.image)
     if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId) || typeof body?.id !== 'string' || !uuidPattern.test(body.id)
       || typeof body.body !== 'string' || body.body.trim().length > 4000 || (body.body.trim().length < 1 && image === null)
+      || (body.replyToMessageId !== undefined && body.replyToMessageId !== null
+        && (typeof body.replyToMessageId !== 'string' || !uuidPattern.test(body.replyToMessageId)))
       || (body.image !== undefined && body.image !== null && image === undefined)) return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     if (image && options.chatMediaStore === undefined) return reply.code(503).send({ error: 'service_unavailable' })
@@ -1481,12 +1485,60 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       await options.pilotChat!.authorize(session, conversationId)
       const storedImage = image ? { path: `${conversationId}/${messageId}.jpg`, mimeType: image.mimeType, width: image.width, height: image.height, sizeBytes: image.sizeBytes } : null
       if (image && storedImage) await options.chatMediaStore!.upload(storedImage.path, image)
-      const message = await options.pilotChat!.send(session, conversationId, messageId, body.body as string, storedImage)
-      if (!message.image) return { ...message, image: null }
-      let url: string | null
-      try { url = options.chatMediaStore ? await options.chatMediaStore.sign(message.image.path) : null } catch { url = null }
-      return { ...message, image: { url, mimeType: message.image.mimeType, width: message.image.width, height: message.image.height, sizeBytes: message.image.sizeBytes } }
+      const message = await options.pilotChat!.send(session, conversationId, messageId, body.body as string, storedImage,
+        body.replyToMessageId as string | null | undefined)
+      return publicChatMessage(message)
     }, (message) => reply.header('cache-control','no-store').send({ message }))
+  })
+
+  app.patch('/v1/chat/conversations/:conversationId/messages/:messageId', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { conversationId, messageId } = request.params as { conversationId?: unknown; messageId?: unknown }
+    const body = request.body as { body?: unknown } | null
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId) || typeof messageId !== 'string'
+      || !uuidPattern.test(messageId) || typeof body?.body !== 'string' || body.body.trim().length < 1
+      || body.body.trim().length > 4000) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      async () => publicChatMessage(await options.pilotChat!.edit(session, conversationId, messageId, body.body as string)),
+      (message) => reply.header('cache-control','no-store').send({ message }))
+  })
+
+  app.get('/v1/chat/conversations/:conversationId/search', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    const { conversationId } = request.params as { conversationId?: unknown }
+    const { q } = request.query as { q?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId) || typeof q !== 'string'
+      || q.trim().length < 2 || q.trim().length > 100) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      async () => Promise.all((await options.pilotChat!.search(session, conversationId, q)).map(publicChatMessage)),
+      (messages) => reply.header('cache-control','no-store').send({ messages }))
+  })
+
+  app.get('/v1/chat/conversations/:conversationId/messages/:messageId/window', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    const { conversationId, messageId } = request.params as { conversationId?: unknown; messageId?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId) || typeof messageId !== 'string'
+      || !uuidPattern.test(messageId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      async () => Promise.all((await options.pilotChat!.window(session, conversationId, messageId)).map(publicChatMessage)),
+      (messages) => reply.header('cache-control','no-store').send({ messages }))
+  })
+
+  app.get('/v1/chat/conversations/:conversationId/unread', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    const { conversationId } = request.params as { conversationId?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotChat!.unreadState(session, conversationId),
+      (unread) => reply.header('cache-control','no-store').send({ unread }))
   })
 
   app.delete('/v1/chat/conversations/:conversationId/messages/:messageId', async (request, reply) => {
@@ -1506,11 +1558,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.put('/v1/chat/conversations/:conversationId/read', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     const { conversationId } = request.params as { conversationId?: unknown }
+    const body = request.body as { throughMessageId?: unknown } | null
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
     if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
-    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId) || typeof body?.throughMessageId !== 'string'
+      || !uuidPattern.test(body.throughMessageId)) return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
-    return sendPilotCommand(reply, () => options.pilotChat!.markRead(session, conversationId),
+    return sendPilotCommand(reply, () => options.pilotChat!.markRead(session, conversationId, body.throughMessageId as string),
       () => reply.header('cache-control','no-store').code(204).send())
   })
 
