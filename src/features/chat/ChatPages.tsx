@@ -177,7 +177,7 @@ export function ChatConversationPage() {
           const own = item.senderId === actor?.userId
           const selected = own && selectedMessageId === item.id
           return <article className={`chat-message ${own ? 'own' : 'partner'} ${item.image ? 'with-photo' : ''} ${selected ? 'selected' : ''}`} key={item.id}
-            {...(own ? { role: 'button', tabIndex: 0, 'aria-label': `Действия с сообщением: ${item.body || 'Фото'}`, onClick: () => setSelectedMessageId((current) => current === item.id ? null : item.id), onKeyDown: (event: React.KeyboardEvent) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); setSelectedMessageId((current) => current === item.id ? null : item.id) } } } : {})}>
+            {...(own ? { role: 'button', tabIndex: 0, 'aria-label': `Открыть действия: ${item.body || 'Фото'}`, onClick: () => setSelectedMessageId((current) => current === item.id ? null : item.id), onKeyDown: (event: React.KeyboardEvent) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); setSelectedMessageId((current) => current === item.id ? null : item.id) } } } : {})}>
             {item.image?.url
               ? <a className="chat-photo-link" href={item.image.url} target="_blank" rel="noreferrer" aria-label="Открыть фото" onClick={(event) => event.stopPropagation()}><img src={item.image.url} alt="Фото в сообщении" width={item.image.width} height={item.image.height} /></a>
               : item.image && <div className="chat-photo-unavailable">Фото недоступно</div>}

@@ -278,7 +278,7 @@ describe('reliable chat screens', () => {
     chat.listMessages.mockResolvedValue({ messages: [incoming, own], nextCursor: null })
     renderAt('/chat/conversation-1', chat)
 
-    await user.click(await screen.findByRole('button', { name: 'Действия с сообщением: Удалить меня' }))
+    await user.click(await screen.findByRole('button', { name: 'Открыть действия: Удалить меня' }))
     expect(screen.getByRole('button', { name: 'Удалить' })).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Удалить' }))
     const dialog = await screen.findByRole('alertdialog')
