@@ -33,6 +33,7 @@ export interface PilotChat {
   listMessages(session: YandexActorSessionInput, conversationId: string, cursor: ChatCursor | null, limit: number): Promise<{ messages: ChatMessage[]; nextCursor: ChatCursor | null }>
   authorize(session: YandexActorSessionInput, conversationId: string): Promise<void>
   send(session: YandexActorSessionInput, conversationId: string, messageId: string, body: string, image: ChatStoredImage | null): Promise<ChatMessage>
+  remove(session: YandexActorSessionInput, conversationId: string, messageId: string): Promise<string | null>
   markRead(session: YandexActorSessionInput, conversationId: string): Promise<void>
 }
 
@@ -75,6 +76,12 @@ export class DatabasePilotChat implements PilotChat {
       ])
       if (!rows[0]) throw new Error('Chat send returned an unsupported format')
       return message(rows[0])
+    })
+  }
+  remove(session: YandexActorSessionInput, conversationId: string, messageId: string) {
+    return this.run(session, async (client) => {
+      const rows = await client.query<QueryResultRow & { image_path: string | null }>('select public.delete_chat_message($1,$2) as image_path',[conversationId,messageId])
+      return rows[0]?.image_path ?? null
     })
   }
   markRead(session: YandexActorSessionInput, conversationId: string) {

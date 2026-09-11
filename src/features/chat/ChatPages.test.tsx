@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -10,6 +10,7 @@ type MockChat = {
   open: ReturnType<typeof vi.fn<(clientId: string, trainerId: string) => Promise<string>>>
   listMessages: ReturnType<typeof vi.fn<(conversationId: string, cursor?: { createdAt: string; id: string } | null) => Promise<ChatMessagePage>>>
   send: ReturnType<typeof vi.fn<(conversationId: string, messageId: string, body: string, image?: import('../../shared/domain').ChatImageDraft | null) => Promise<ChatMessage>>>
+  remove: ReturnType<typeof vi.fn<(conversationId: string, messageId: string) => Promise<void>>>
   markRead: ReturnType<typeof vi.fn<(conversationId: string) => Promise<void>>>
   subscribe: ReturnType<typeof vi.fn<(conversationId: string, onChange: () => void) => () => void>>
 }
@@ -34,6 +35,7 @@ function chatBackend(): MockChat {
     open: vi.fn<(clientId: string, trainerId: string) => Promise<string>>().mockResolvedValue('conversation-1'),
     listMessages: vi.fn<(conversationId: string, cursor?: { createdAt: string; id: string } | null) => Promise<ChatMessagePage>>().mockResolvedValue({ messages: [incoming], nextCursor: null }),
     send: vi.fn<(conversationId: string, messageId: string, body: string, image?: import('../../shared/domain').ChatImageDraft | null) => Promise<ChatMessage>>().mockImplementation((_conversationId, messageId, body, image) => Promise.resolve({ ...incoming, id: messageId, senderId: actor.userId, body, image: image ? { url: image.dataUrl, mimeType: image.mimeType, width: image.width, height: image.height, sizeBytes: image.sizeBytes } : null })),
+    remove: vi.fn<(conversationId: string, messageId: string) => Promise<void>>().mockResolvedValue(undefined),
     markRead: vi.fn<(conversationId: string) => Promise<void>>().mockResolvedValue(undefined),
     subscribe: vi.fn<(conversationId: string, onChange: () => void) => () => void>().mockReturnValue(() => undefined),
   }
@@ -264,9 +266,27 @@ describe('reliable chat screens', () => {
     expect(screen.getAllByText('Уже доставлено')).toHaveLength(1)
     expect(screen.getByText('Связь отключена')).toBeVisible()
     const input = screen.getByRole('textbox', { name: 'Сообщение' })
-    await user.type(input, 'Строка{shift>}{enter}{/shift}дальше')
+    await user.type(input, 'Строка{enter}дальше')
     expect(chat.send).not.toHaveBeenCalled()
     expect(input).toHaveValue('Строка\nдальше')
+  })
+
+  it('deletes only an own message after confirmation', async () => {
+    const user = userEvent.setup()
+    const own: ChatMessage = { ...incoming, id: '10000000-0000-4000-8000-000000000099', senderId: actor.userId, body: 'Удалить меня' }
+    const chat = chatBackend()
+    chat.listMessages.mockResolvedValue({ messages: [incoming, own], nextCursor: null })
+    renderAt('/chat/conversation-1', chat)
+
+    await user.click(await screen.findByRole('button', { name: 'Открыть действия: Удалить меня' }))
+    expect(screen.getByRole('button', { name: 'Удалить' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Удалить' }))
+    const dialog = await screen.findByRole('alertdialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Удалить' }))
+
+    await waitFor(() => expect(chat.remove).toHaveBeenCalledWith('conversation-1', own.id))
+    expect(screen.queryByText('Удалить меня')).not.toBeInTheDocument()
+    expect(screen.getByText('До встречи')).toBeVisible()
   })
 
   it('opens a contextual chat and reports an opening error', async () => {
