@@ -2155,5 +2155,8 @@ test('reliable chat stays compact on client phones and trainer desktop', async (
   await gotoStable(page, `/chat/${conversationId}`)
   await expect(page.getByLabel('Сообщение')).toBeVisible()
   await expect(page.locator('.tab-bar')).toHaveCount(0)
+  const composerBottom = await page.locator('.chat-composer').evaluate((element) => element.getBoundingClientRect().bottom)
+  const frameBottom = await page.locator('.phone-frame').evaluate((element) => element.getBoundingClientRect().bottom)
+  expect(Math.abs(frameBottom - composerBottom)).toBeLessThanOrEqual(1)
   await expectVisualBaseline(page, `chat-${trainer ? 'trainer' : 'client'}-${process.platform}.png`)
 })

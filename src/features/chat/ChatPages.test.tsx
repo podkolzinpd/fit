@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -13,7 +13,7 @@ type MockChat = {
   markRead: ReturnType<typeof vi.fn<(conversationId: string) => Promise<void>>>
   subscribe: ReturnType<typeof vi.fn<(conversationId: string, onChange: () => void) => () => void>>
 }
-type MockActor = { kind: 'client'; role: 'client'; userId: string; email: string; firstName: string; lastName: null; timezone: string; clientId: string; trainerId: string; fullName: string }
+type MockActor = { kind: 'client' | 'trainer'; role: 'client' | 'trainer'; userId: string; email: string; firstName: string; lastName: null; timezone: string; clientId: string; trainerId: string; fullName: string }
 const backend = vi.hoisted(() => vi.fn<() => { chat: MockChat }>())
 const auth = vi.hoisted(() => vi.fn<() => { actor: MockActor | null }>())
 vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => backend() }))
@@ -41,12 +41,14 @@ function Location() {
   return <output aria-label="route">{useLocation().pathname}</output>
 }
 
-function renderAt(path: string, chat = chatBackend()) {
+function renderAt(path: string | Array<string | { pathname: string; state?: unknown }>, chat = chatBackend()) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   backend.mockReturnValue({ chat })
-  const view = render(<QueryClientProvider client={queryClient}><MemoryRouter initialEntries={[path]}><Routes>
+  const initialEntries = Array.isArray(path) ? path : [path]
+  const view = render(<QueryClientProvider client={queryClient}><MemoryRouter initialEntries={initialEntries} initialIndex={initialEntries.length - 1}><Routes>
     <Route path="/chat" element={<><ChatListPage /><Location /></>} />
     <Route path="/chat/:conversationId" element={<><ChatConversationPage /><Location /></>} />
+    <Route path="*" element={<Location />} />
   </Routes></MemoryRouter></QueryClientProvider>)
   return { ...view, chat, queryClient }
 }
@@ -79,6 +81,31 @@ describe('reliable chat screens', () => {
     await user.click(screen.getByRole('button', { name: /Анна/ }))
     expect(screen.getByLabelText('route')).toHaveTextContent('/chat/conversation-1')
     expect(chat.open).not.toHaveBeenCalled()
+  })
+
+  it('lets a trainer leave a dialog and the message list without a history loop', async () => {
+    const user = userEvent.setup()
+    auth.mockReturnValue({ actor: { ...actor, kind: 'trainer', role: 'trainer' } })
+    renderAt(['/today', '/chat', { pathname: '/chat/conversation-1', state: { chatBack: 'history' } }])
+
+    await user.click(await screen.findByRole('button', { name: 'Назад' }))
+    expect(screen.getByLabelText('route')).toHaveTextContent('/chat')
+    await user.click(screen.getByRole('button', { name: 'Назад' }))
+    expect(screen.getByLabelText('route')).toHaveTextContent('/today')
+  })
+
+  it('supports an edge swipe back and ignores a vertical edge gesture', () => {
+    auth.mockReturnValue({ actor: { ...actor, kind: 'trainer', role: 'trainer' } })
+    const view = renderAt('/chat')
+    const page = view.container.querySelector('main')!
+
+    fireEvent.touchStart(page, { changedTouches: [{ clientX: 12, clientY: 100 }] })
+    fireEvent.touchEnd(page, { changedTouches: [{ clientX: 40, clientY: 190 }] })
+    expect(screen.getByLabelText('route')).toHaveTextContent('/chat')
+
+    fireEvent.touchStart(page, { changedTouches: [{ clientX: 12, clientY: 100 }] })
+    fireEvent.touchEnd(page, { changedTouches: [{ clientX: 100, clientY: 108 }] })
+    expect(screen.getByLabelText('route')).toHaveTextContent('/today')
   })
 
   it('creates a dialog for a connected person when it has no history', async () => {
