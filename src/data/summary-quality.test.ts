@@ -255,6 +255,52 @@ describe('summaryQualityIssues', () => {
     ])
   })
 
+  it('rejects the exact unsafe production advice while keeping gender as a repairable issue', () => {
+    const base = validCoachingSummary('Планировать тренировки так, чтобы избегать больших перерывов между ними.')
+    const summary = {
+      ...base,
+      client: {
+        ...base.client,
+        consistency: 'Ты поддерживал хороший ритм тренировок, несмотря на небольшие перерывы.',
+        encouragement: 'Продолжай следить за интенсивностью и техникой выполнения упражнений.',
+        nextSteps: [
+          'Планировать тренировки так, чтобы избегать больших перерывов между ними.',
+        ],
+      },
+    }
+
+    const quality = assessSummaryQuality(summary, {
+      ...trainingData,
+      consistency: { completed_workouts: 14, workouts_per_week: 3, longest_gap_days: 3 },
+    })
+
+    expect(quality.blockingIssues).toEqual(expect.arrayContaining([
+      expect.stringContaining('нет наблюдений за выполнением'),
+      expect.stringContaining('короткий обычный перерыв'),
+    ]))
+    expect(quality.advisories).toEqual(expect.arrayContaining([
+      expect.stringContaining('зависящая от рода'),
+      expect.stringContaining('императив'),
+    ]))
+  })
+
+  it('requests one style repair when a rich period produces a terse client analysis', () => {
+    const quality = assessSummaryQuality(
+      validCoachingSummary('Сравнить результат ещё через 3 тренировки.'),
+      {
+        ...trainingData,
+        input_coverage: {
+          complete: true,
+          current: { exercises: 149, sessions: 14, sets: 376 },
+        },
+      },
+    )
+
+    expect(quality.advisories).toEqual(expect.arrayContaining([
+      expect.stringContaining('не меньше 120 слов'),
+    ]))
+  })
+
   it('blocks invented conclusions about exercise technique', () => {
     const base = validCoachingSummary('Сравнить результат ещё через 3 тренировки.')
     const summary = {
