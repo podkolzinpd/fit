@@ -5833,6 +5833,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .chat-header-action { position:relative; width:44px; height:44px; display:grid; place-items:center; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); text-decoration:none; }
 .chat-header-action svg { width:22px; height:22px; }
 .chat-unread-badge { position:absolute; top:-5px; right:-5px; min-width:19px; height:19px; display:grid; place-items:center; padding:0 5px; border:2px solid var(--frame-bg); border-radius:var(--radius-pill); background:var(--danger); color:var(--surface); font-size:10px; font-weight:var(--weight-bold); line-height:1; }
+.chat-identity .content-immersive { padding-bottom:0; overflow:hidden; }
 .chat-list-page, .chat-conversation-page { min-height:100%; padding-bottom:max(18px,env(safe-area-inset-bottom)); }
 .chat-thread-list { display:grid; gap:8px; }
 .chat-thread { width:100%; min-height:76px; display:grid; grid-template-columns:48px minmax(0,1fr) auto; align-items:center; gap:12px; padding:12px; border-radius:18px; background:var(--surface-raised); color:var(--fg); text-align:left; }
@@ -5843,7 +5844,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .chat-thread-copy em { color:var(--muted); font-size:11px; font-style:normal; font-weight:var(--weight-medium); }
 .chat-thread-meta { align-self:stretch; display:flex; flex-direction:column; align-items:flex-end; justify-content:space-between; gap:6px; color:var(--muted); font-size:11px; }
 .chat-thread-meta b { min-width:22px; height:22px; display:grid; place-items:center; padding:0 6px; border-radius:var(--radius-pill); background:var(--accent); color:var(--on-accent); font-size:11px; }
-.chat-conversation-page { height:100%; display:flex; flex-direction:column; padding-bottom:env(safe-area-inset-bottom); }
+.chat-conversation-page { height:100%; display:flex; flex-direction:column; padding-bottom:0; }
 .chat-conversation-page > .page-header { flex:0 0 auto; margin-bottom:12px; }
 .chat-surface { min-height:0; flex:1; overflow:auto; display:flex; flex-direction:column; }
 .chat-load-older { align-self:center; }

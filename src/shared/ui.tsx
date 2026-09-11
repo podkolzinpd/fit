@@ -1,17 +1,35 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PropsWithChildren, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PropsWithChildren, type ReactNode, type TouchEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { isCoachmarkSeen, markCoachmarkSeen } from './coachmarks'
 import { AddIcon, AlertIcon, BackIcon, CheckIcon, InfoIcon, MoreIcon, PendingIcon } from './icons'
 
-export function Page({ title, subtitle, action, back, onBack, center, hideTitle, className, children }: PropsWithChildren<{
-  title: string; subtitle?: string; action?: ReactNode; back?: string | number; onBack?: () => void; center?: boolean; hideTitle?: boolean; className?: string
+export function Page({ title, subtitle, action, back, onBack, swipeBack = false, center, hideTitle, className, children }: PropsWithChildren<{
+  title: string; subtitle?: string; action?: ReactNode; back?: string | number; onBack?: () => void; swipeBack?: boolean; center?: boolean; hideTitle?: boolean; className?: string
 }>) {
   const navigate = useNavigate()
+  const swipeStart = useRef<{ x: number; y: number } | null>(null)
   const classes = ['page', center ? 'page-center' : '', className].filter(Boolean).join(' ')
-  return <main className={classes}>
+  const goBack = () => onBack ? onBack() : navigate(back as never)
+  const beginBackSwipe = (event: TouchEvent<HTMLElement>) => {
+    const touch = event.changedTouches[0]
+    swipeStart.current = touch && touch.clientX <= 28 ? { x: touch.clientX, y: touch.clientY } : null
+  }
+  const finishBackSwipe = (event: TouchEvent<HTMLElement>) => {
+    const start = swipeStart.current
+    swipeStart.current = null
+    const touch = event.changedTouches[0]
+    if (!start || !touch) return
+    const horizontal = touch.clientX - start.x
+    const vertical = Math.abs(touch.clientY - start.y)
+    if (horizontal >= 72 && horizontal > vertical * 1.25) goBack()
+  }
+  return <main className={classes}
+    onTouchStart={swipeBack ? beginBackSwipe : undefined}
+    onTouchEnd={swipeBack ? finishBackSwipe : undefined}
+    onTouchCancel={swipeBack ? () => { swipeStart.current = null } : undefined}>
     <header className="page-header">
-      {back !== undefined && <button type="button" className="page-back" aria-label="Назад" onClick={() => onBack ? onBack() : navigate(back as never)}><BackIcon /></button>}
+      {back !== undefined && <button type="button" className="page-back" aria-label="Назад" onClick={goBack}><BackIcon /></button>}
       {/* hideTitle — заголовок дублируется таб-баром (напр. «Расписание»);
           прячем визуально, но оставляем для скринридеров. */}
       {subtitle
