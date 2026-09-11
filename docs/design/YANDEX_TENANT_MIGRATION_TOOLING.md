@@ -126,12 +126,12 @@ trainer-owned rows.
   dry-run left the target empty and the repeated apply inserted zero rows. The
   target fixture deliberately uses `Europe/Moscow` while migration transactions
   normalize to UTC, covering cross-cluster timestamp checksums.
-- [ ] Review a production export window, remote credentials and the exact
+- [x] Review a production export window, remote credentials and the exact
   target before the first remote command.
-- [x] Run a selected real cohort through target `dry-run` using the private
-  stage workflow (run `34404487168`, 2026-09-10): all 28 manifest tables
-  validated and the transaction rolled back. Keep `apply` blocked unless the
-  exact reported fingerprint is confirmed.
+- [x] Run a selected real cohort through target `dry-run` and fingerprint-pinned
+  `apply` using the private stage workflow. Run `34589510827` (2026-09-11)
+  validated all 30 current manifest tables, inserted 5 rows and proved
+  idempotency with a second apply inserting zero rows.
 - [ ] Freeze writes, validate the selected real cohort and change its sticky
   routing only in the separately approved cutover step.
 
