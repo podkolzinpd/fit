@@ -935,19 +935,21 @@ async function requestStructuredYandex<T>(
     if (issues.length === 0) {
       return { value, modelUri, modelVersion, usage }
     }
+    console.warn("summary quality check rejected response", {
+      request_id: options.requestId ?? null,
+      stage: options.stage ?? 'direct',
+      chunk_index: options.chunkIndex ?? null,
+      chunk_total: options.chunkTotal ?? null,
+      attempt,
+      issue_count: issues.length,
+      issues,
+    })
     if (attempt === 3) {
-      console.warn("summary quality check rejected response", {
-        request_id: options.requestId ?? null,
-        stage: options.stage ?? 'direct',
-        chunk_index: options.chunkIndex ?? null,
-        chunk_total: options.chunkTotal ?? null,
-        attempt,
-        issue_count: issues.length,
-      })
       throw new HttpError(502, "yandex_cloud_quality_check_failed")
     }
 
     messages.push(
+      { role: "assistant", text },
       {
         role: "user",
         text:
