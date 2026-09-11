@@ -117,6 +117,7 @@
   смена выбранного cohort останавливает запись.
 - В main вошёл Live #835 / 0574750: отдельный таймер, стабильные подходы и отдельная заметка клиента; изменения сохранены при объединении.
 ## Проверки текущей ветки
+- Подготовлена временная read-only диагностика существующей summary-функции: auth/ownership, один подтверждённый тестовый аккаунт, expiry, preflight/fingerprint, один model call, no-store ответ и отсутствие сохранения. Реальный ответ ещё не получен; исправление quality gate не объявлено завершённым. План: `docs/design/SUMMARY_PRIVATE_DIAGNOSTIC.md`.
 - YAFIT-510: полный `npm run check` прошёл — frontend 1 404, API 383
   (+30 skipped), infra 115; lint, types, build, DB types и iOS permissions
   успешны. Chromium 91/91; обе роли и возвраты проверены в

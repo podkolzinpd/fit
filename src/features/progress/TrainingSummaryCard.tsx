@@ -1,4 +1,5 @@
 import { ProgressDetailsSummary } from './ProgressDetailsSummary'
+import { SummaryDiagnosticPanel } from './SummaryDiagnosticPanel'
 import { ClientResultsCenter } from './ClientResultsCenter'
 import { WeeklyTrainingLoad } from './WeeklyTrainingLoad'
 import { RunningProgressCard } from './RunningProgressCard'
@@ -685,7 +686,16 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
   </form>
 }
 
-export function ClientTrainingSummaryCard({ clientId, profileGoal, gender = null, measurementManagement }: {
+export function ClientTrainingSummaryCard(props: {
+  clientId: string; profileGoal?: string | null; gender?: Gender | null; measurementManagement?: ReactNode
+}) {
+  const [params] = useSearchParams()
+  const [diagnosticWindow] = useState(() => Date.now() < Date.parse('2026-09-13T00:00:00Z'))
+  if (params.get('summaryDiagnostic') === '1' && diagnosticWindow) return <SummaryDiagnosticPanel clientId={props.clientId} />
+  return <ClientTrainingSummaryContent {...props} />
+}
+
+function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, measurementManagement }: {
   clientId: string; profileGoal?: string | null; gender?: Gender | null; measurementManagement?: ReactNode
 }) {
   const { actor } = useAuth()
