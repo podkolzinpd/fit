@@ -64,6 +64,7 @@ export async function handler(event: FunctionEvent): Promise<FunctionResponse> {
     headers: {
       ...cors,
       'content-type': upstream.headers.get('content-type') ?? 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
       ...(errorCode === null ? {} : { 'x-fit-error-code': errorCode }),
     },
     body: await upstream.text(),

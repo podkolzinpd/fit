@@ -110,6 +110,7 @@
   с одним клиентом, проверил все 30 manifest-таблиц и повторным apply
   подтвердил идемпотентность (`inserted=0`). Production Supabase не изменён.
 ## Проверки текущей ветки
+- Подготовлена временная read-only диагностика существующей summary-функции: auth/ownership, один подтверждённый тестовый аккаунт, expiry, preflight/fingerprint, один model call, no-store ответ и отсутствие сохранения. Реальный ответ ещё не получен; исправление quality gate не объявлено завершённым. План: `docs/design/SUMMARY_PRIVATE_DIAGNOSTIC.md`.
 - #880: локальный `npm run check` и CI зелёные — frontend 1 404, API 384
   (+30 skipped), infra 115; clean Supabase/Yandex DB chains, Chromium, обе
   WebKit lane и визуальные профили 390/430/1440 px прошли.

@@ -5,6 +5,30 @@ import { expectMonochromeAccessibility } from './accessibility-helpers'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
+test('private summary diagnostic has a safe one-call mobile path', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client-only incident screen')
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.clock.install({ time: new Date('2026-09-11T10:00:00Z') })
+  let paidCalls = 0
+  await page.route('https://functions.yandexcloud.net/d4eq75uad5lps1chbidk', async (route) => {
+    const body = route.request().postDataJSON() as { diagnostic: string }
+    if (body.diagnostic === 'run_once') paidCalls += 1
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      diagnostic: true, fingerprint: 'fixture-only', stats: { workouts: 14, exercises: 149, sets: 376, model_input_chars: 44511 },
+      ...(body.diagnostic === 'run_once' ? { answer: 'Плечи: стабильность техники важнее дальнейшего повышения веса. Это синтетический ответ для проверки интерфейса.', issues: ['Обычный перерыв короче 7 дней сам по себе не требует внимания тренера.'] } : {}),
+    }) })
+  })
+  await gotoStable(page, '/me/progress?summaryDiagnostic=1')
+  await page.getByRole('button', { name: 'Сверить данные без ИИ' }).click()
+  await expect(page.getByText(/Тренировок: 14/)).toBeVisible()
+  expect(paidCalls).toBe(0)
+  await page.getByRole('button', { name: 'Один запрос к ИИ' }).click()
+  await expect(page.getByRole('heading', { name: 'Исходный ответ' })).toBeVisible()
+  expect(paidCalls).toBe(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('private-diagnostic.png'), fullPage: true })
+})
+
 
 async function mockProgressPeriodSummary(page: VisualPage, periodStart = '2026-08-01', periodEnd = '2026-08-31') {
   const clientSummary = {
