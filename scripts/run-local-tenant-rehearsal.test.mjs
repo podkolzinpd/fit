@@ -109,7 +109,7 @@ describe('local tenant rehearsal safety', () => {
 
   test('parses all report modes and rejects a non-idempotent repeat', () => {
     for (const mode of ['dry-run', 'applied', 'validated']) {
-      assert.equal(parseMigrationReport(reportOutput(mode), mode).tables.size, 28)
+      assert.equal(parseMigrationReport(reportOutput(mode), mode).tables.size, 30)
     }
     assert.doesNotThrow(() => {
       assertIdempotentApply(parseMigrationReport(reportOutput('applied'), 'applied'))
@@ -125,7 +125,7 @@ describe('local tenant rehearsal safety', () => {
   test('rejects incomplete, duplicated and mismatched reports', () => {
     assert.throws(
       () => parseExportSummary(
-        exportOutput().replace('28 tables', '27 tables'),
+        exportOutput().replace('30 tables', '29 tables'),
       ),
       /migration_manifest_count_invalid/u,
     )
