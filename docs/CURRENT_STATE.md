@@ -108,11 +108,11 @@
   production остаётся на Supabase.
 - Реальный invite → join → leave/remove smoke — внешняя проверка.
 - Remote rehearsal маскированно выбирает cohort и закрепляет fingerprint; run `34589510827` перенёс 5 строк tenant, проверил 30 таблиц и идемпотентность. Production Supabase не изменён.
-- Текущая ветка: 22 строки standalone-client прошли две полные локальные
-  репетиции без `client_trainers`; чат-фото ждут переноса private object storage.
+- Source-only audit `34621729406` нашёл masked standalone-client на 196 строк:
+  13 тренировок, 60 упражнений и 108 подходов; stage dry-run ждёт merge режима.
 ## Проверки текущей ветки
 - Временная read-only диагностика summary получила реальный ответ без сохранения; исправления закрывают ложные советы, гендерные формы и слишком короткий разбор, приёмка ведётся по `docs/design/SUMMARY_PRIVATE_DIAGNOSTIC.md`.
-- `npm run check` зелёный (frontend 1 443, API 406 tests); tenant workflow tests и две локальные PostgreSQL 17 репетиции также зелёные.
+- `npm run check` зелёный (frontend 1 443, API 407 tests); tenant workflow tests и две локальные PostgreSQL 17 репетиции также зелёные.
 ## Ближайший порядок
 1. Перед отправкой в App Store/Google Play подставить утверждённые реквизиты оператора и публичный контакт; заявки на удаление обрабатывать по операционному регламенту. Для нативного iOS отдельно перевести Google OAuth из встроенного WebView в системный браузер.
 ## Отложено
