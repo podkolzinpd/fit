@@ -1,0 +1,138 @@
+name: Manage Yandex stage rollout
+
+run-name: ${{ inputs.rollout_action }} Yandex read-write rollout
+
+on:
+  workflow_dispatch:
+    inputs:
+      rollout_action:
+        description: Inspect, enable, or disable the configured tenant rollout
+        required: true
+        type: choice
+        options:
+          - inspect
+          - enable
+          - disable
+      confirmation:
+        description: 'For writes: ENABLE_YANDEX_READ_WRITE or DISABLE_YANDEX_READ_WRITE'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: yandex-stage
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-provider-cache
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
+
+jobs:
+  rollout:
+    name: Apply bounded stage rollout
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require main and validate the requested operation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          PROFILE_ID: ${{ secrets.FIT_TENANT_TRAINER_ID }}
+          ROLLOUT_ACTION: ${{ inputs.rollout_action }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          echo "::add-mask::$PROFILE_ID"
+          [[ "$PROFILE_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$ ]]
+          case "$ROLLOUT_ACTION" in
+            inspect)
+              test -z "$CONFIRMATION"
+              ;;
+            enable)
+              test "$CONFIRMATION" = ENABLE_YANDEX_READ_WRITE
+              ;;
+            disable)
+              test "$CONFIRMATION" = DISABLE_YANDEX_READ_WRITE
+              ;;
+            *)
+              exit 1
+              ;;
+          esac
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - uses: actions/cache@v4
+        with:
+          path: .terraform-provider-cache
+          key: terraform-yandex-${{ runner.os }}-${{ hashFiles('infra/yandex/.terraform.lock.hcl') }}
+      - name: Prepare Terraform provider cache
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - name: Exchange GitHub OIDC token for a short-lived IAM token
+        run: scripts/yandex-github-oidc.sh
+      - name: Read the private runner URL from remote state
+        working-directory: infra/yandex
+        run: >-
+          terraform init
+          -backend-config=backend.hcl.example
+          -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
+          -backend-config=key=fit/stage/terraform.tfstate
+      - name: Apply the configured tenant rollout operation
+        working-directory: infra/yandex
+        env:
+          PROFILE_ID: ${{ secrets.FIT_TENANT_TRAINER_ID }}
+          ROLLOUT_ACTION: ${{ inputs.rollout_action }}
+        run: |
+          set -euo pipefail
+          umask 077
+          echo "::add-mask::$PROFILE_ID"
+          migration_url=$(terraform output -raw migration_container_url)
+          jq -n \
+            --arg action "$ROLLOUT_ACTION" \
+            --arg profileId "$PROFILE_ID" \
+            '{action: $action, profileId: $profileId}' \
+            > rollout-request.json
+          status=$(curl --silent --show-error \
+            --output rollout-response.json --write-out '%{http_code}' \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header 'Content-Type: application/json' \
+            --data-binary @rollout-request.json \
+            "${migration_url%/}/stage/rollout-assignments/yandex")
+          if test "$status" = 409; then
+            echo 'The configured profile or its role-specific domain root is absent from Yandex stage.' >&2
+            exit 1
+          fi
+          if test "$status" != 200; then
+            echo "Rollout runner returned HTTP $status." >&2
+            exit 1
+          fi
+          expected_status="rollout_${ROLLOUT_ACTION}d"
+          if test "$ROLLOUT_ACTION" = inspect; then
+            expected_status=rollout_inspected
+          fi
+          jq -e --arg expected "$expected_status" \
+            '.status == $expected and .domainReady == true' \
+            rollout-response.json >/dev/null
+          if test "$ROLLOUT_ACTION" = enable; then
+            jq -e '.rolloutEnabled == true' rollout-response.json >/dev/null
+          elif test "$ROLLOUT_ACTION" = disable; then
+            jq -e '.rolloutEnabled == false' rollout-response.json >/dev/null
+          fi
+          linked=$(jq -r 'if .identityLinked then "linked" else "not linked yet" end' rollout-response.json)
+          enabled=$(jq -r 'if .rolloutEnabled then "enabled" else "disabled" end' rollout-response.json)
+          {
+            echo '### Yandex stage read-write rollout'
+            echo "- Operation: \`$ROLLOUT_ACTION\`"
+            echo '- Migrated domain root: ready'
+            echo "- Yandex ID: $linked"
+            echo "- Read-write rollout: $enabled"
+          } >> "$GITHUB_STEP_SUMMARY"

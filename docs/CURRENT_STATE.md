@@ -72,6 +72,11 @@
   зарегистрирован для `fit-drab.vercel.app`; stage API допускает этот origin,
   но production rollout остаётся default-off до настройки Vercel allowlist.
 - `main` содержит 14-дневную read-write Yandex ID-сессию: stage валидирует/отзывает opaque token, frontend восстанавливает профиль и блокирует истёкшую/неразрешённую сессию.
+- Серверный `yandex/read_write` rollout первого перенесённого tenant управляется
+  отдельным manual-only workflow из `main`: он использует уже существующий
+  masked `FIT_TENANT_TRAINER_ID`, проверяет role-specific domain root и имеет
+  идемпотентные `inspect`/`enable`/`disable`. Операция не применяет миграции,
+  не создаёт платные ресурсы и не выводит UUID профиля.
 - `main` расширяет единый Yandex API-контракт на read-write app-session:
   клиенты, связи, замеры/цели, тренировки, feedback и push state принимают
   `x-fit-session`; одновременная отправка read-only и read-write credentials

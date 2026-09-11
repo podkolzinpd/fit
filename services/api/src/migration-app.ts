@@ -17,6 +17,11 @@ import {
   type StageDatabaseReaderAccessAction,
   type StageDatabaseReaderAccessManager,
 } from './db/stage-database-reader-access.js'
+import {
+  StageRolloutProfileNotReadyError,
+  type StageRolloutAssignmentAction,
+  type StageRolloutAssignmentManager,
+} from './db/stage-rollout-assignment.js'
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
 import type { StageTenantMigrationRunner } from './tenant-migration/stage-runner.js'
@@ -30,6 +35,7 @@ interface BuildMigrationAppOptions {
   databaseReaderAccess?: StageDatabaseReaderAccessManager
   logger?: boolean
   pilotEnrollment?: PilotEnrollmentOptions
+  rolloutAssignment?: StageRolloutAssignmentManager
   runMigrations: () => Promise<readonly string[]>
   runtimeDatabaseReadiness?: (
     sessionToken: string,
@@ -105,6 +111,22 @@ function readEnrollmentRequest(body: unknown): {
   return { accessToken, accountRole }
 }
 
+function readRolloutAssignmentRequest(body: unknown): {
+  action: StageRolloutAssignmentAction
+  profileId: string
+} | undefined {
+  if (typeof body !== 'object' || body === null) return undefined
+  if (!('action' in body) || !('profileId' in body)) return undefined
+  const action = body.action
+  const profileId = body.profileId
+  if (
+    (action !== 'inspect' && action !== 'enable' && action !== 'disable')
+    || typeof profileId !== 'string'
+    || !UUID_PATTERN.test(profileId)
+  ) return undefined
+  return { action, profileId }
+}
+
 export function buildMigrationApp(
   options: BuildMigrationAppOptions,
 ): FastifyInstance {
@@ -174,6 +196,39 @@ export function buildMigrationApp(
           return reply.code(409).send({ status: 'database_user_not_ready' })
         }
         return reply.code(500).send({ status: 'database_access_failed' })
+      }
+    })
+  }
+
+  if (options.rolloutAssignment !== undefined) {
+    const rolloutAssignment = options.rolloutAssignment
+    app.post('/stage/rollout-assignments/yandex', async (request, reply) => {
+      const rolloutRequest = readRolloutAssignmentRequest(request.body)
+      if (rolloutRequest === undefined) {
+        return reply.code(400).send({ status: 'invalid_request' })
+      }
+
+      try {
+        const result = await rolloutAssignment.apply(
+          rolloutRequest.action,
+          rolloutRequest.profileId,
+        )
+        return {
+          status: rolloutRequest.action === 'inspect'
+            ? 'rollout_inspected'
+            : rolloutRequest.action === 'enable'
+              ? 'rollout_enabled'
+              : 'rollout_disabled',
+          accountRole: result.accountRole,
+          domainReady: result.domainReady,
+          identityLinked: result.identityLinked,
+          rolloutEnabled: result.rolloutEnabled,
+        }
+      } catch (error) {
+        if (error instanceof StageRolloutProfileNotReadyError) {
+          return reply.code(409).send({ status: 'profile_not_ready' })
+        }
+        return reply.code(500).send({ status: 'rollout_assignment_failed' })
       }
     })
   }
