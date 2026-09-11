@@ -583,4 +583,384 @@ values (
 )
 on conflict do nothing;
 
+-- A separate self-owned client keeps personal history and a disconnected
+-- trainer relationship without recreating an active membership on import.
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token,
+  email_change_token_new, email_change, last_sign_in_at, is_super_admin,
+  created_at, updated_at
+)
+values (
+  '00000000-0000-0000-0000-000000000000',
+  'a1000000-0000-4000-8000-000000000001',
+  'authenticated',
+  'authenticated',
+  'standalone-migration-fixture@fit.invalid',
+  crypt('LocalFixtureOnly123!', gen_salt('bf')),
+  now(),
+  '{"provider":"email","providers":["email"]}',
+  '{}',
+  '', '', '', '', now(), false, now(), now()
+)
+on conflict (id) do nothing;
+
+insert into public.profiles (
+  id, first_name, last_name, timezone, account_role, created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000001',
+  'Самостоятельный',
+  'Спортсмен',
+  'Europe/Moscow',
+  'client',
+  timestamptz '2026-08-06 08:00:00+00',
+  timestamptz '2026-08-06 08:00:00+00'
+)
+on conflict do nothing;
+
+insert into public.clients (
+  id, trainer_id, auth_user_id, full_name, gender, age_years,
+  age_updated_at, height_cm, goal, created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000002',
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000001',
+  'Самостоятельный спортсмен',
+  'male',
+  29,
+  date '2026-08-06',
+  180,
+  'Поддерживать регулярность',
+  timestamptz '2026-08-06 08:00:00+00',
+  timestamptz '2026-08-06 08:00:00+00'
+)
+on conflict do nothing;
+
+insert into public.client_private_details (client_id, trainer_id)
+values (
+  'a1000000-0000-4000-8000-000000000002',
+  'a1000000-0000-4000-8000-000000000001'
+)
+on conflict do nothing;
+
+insert into public.client_invitations (
+  id, client_id, created_by, target_role, code_hash, expires_at,
+  revoked_at, created_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000003',
+  'a1000000-0000-4000-8000-000000000002',
+  'a1000000-0000-4000-8000-000000000001',
+  'trainer',
+  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  timestamptz '2026-08-14 08:00:00+00',
+  timestamptz '2026-08-07 08:00:00+00',
+  timestamptz '2026-08-06 08:00:00+00'
+)
+on conflict do nothing;
+
+insert into public.client_trainer_relationships (
+  id, client_id, trainer_id, status, connected_at, disconnected_at,
+  connected_by, disconnected_by, created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000004',
+  'a1000000-0000-4000-8000-000000000002',
+  '90000000-0000-4000-8000-000000000009',
+  'disconnected',
+  timestamptz '2026-08-06 09:00:00+00',
+  timestamptz '2026-08-07 09:00:00+00',
+  '90000000-0000-4000-8000-000000000009',
+  'a1000000-0000-4000-8000-000000000001',
+  timestamptz '2026-08-06 09:00:00+00',
+  timestamptz '2026-08-07 09:00:00+00'
+)
+on conflict do nothing;
+
+insert into public.chat_conversations (
+  id, client_id, client_user_id, trainer_id, client_last_read_at,
+  trainer_last_read_at, created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000005',
+  'a1000000-0000-4000-8000-000000000002',
+  'a1000000-0000-4000-8000-000000000001',
+  '90000000-0000-4000-8000-000000000009',
+  timestamptz '2026-08-07 09:05:00+00',
+  timestamptz '2026-08-07 09:05:00+00',
+  timestamptz '2026-08-06 09:05:00+00',
+  timestamptz '2026-08-07 09:05:00+00'
+)
+on conflict do nothing;
+
+insert into public.chat_messages (
+  id, conversation_id, sender_id, body, created_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000006',
+  'a1000000-0000-4000-8000-000000000005',
+  'a1000000-0000-4000-8000-000000000001',
+  'Историческое сообщение остаётся доступным после отключения.',
+  timestamptz '2026-08-07 09:05:00+00'
+)
+on conflict do nothing;
+
+insert into public.custom_exercises (
+  id, trainer_id, created_by, name, muscle_group, input_kind,
+  created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000007',
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000001',
+  'Самостоятельная тяга',
+  'back',
+  'strength',
+  timestamptz '2026-08-08 08:00:00+00',
+  timestamptz '2026-08-08 08:00:00+00'
+)
+on conflict do nothing;
+
+insert into public.workouts (
+  id, trainer_id, client_id, created_by, updated_by, workout_date,
+  status, completed_at, version, created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000008',
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000002',
+  '90000000-0000-4000-8000-000000000009',
+  'a1000000-0000-4000-8000-000000000001',
+  date '2026-08-08',
+  'done',
+  timestamptz '2026-08-08 09:00:00+00',
+  2,
+  timestamptz '2026-08-08 08:00:00+00',
+  timestamptz '2026-08-08 09:00:00+00'
+)
+on conflict do nothing;
+
+insert into public.workout_exercises (
+  id, workout_id, trainer_id, client_id, position, exercise_source,
+  exercise_ref, custom_exercise_id, exercise_name, muscle_group, input_kind,
+  block_id, updated_by, created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000009',
+  'a1000000-0000-4000-8000-000000000008',
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000002',
+  0,
+  'custom',
+  'standalone-client-custom-row',
+  'a1000000-0000-4000-8000-000000000007',
+  'Самостоятельная тяга',
+  'back',
+  'strength',
+  'a1000000-0000-4000-8000-000000000010',
+  '90000000-0000-4000-8000-000000000009',
+  timestamptz '2026-08-08 08:00:00+00',
+  timestamptz '2026-08-08 09:00:00+00'
+)
+on conflict do nothing;
+
+insert into public.workout_sets (
+  id, workout_exercise_id, trainer_id, client_id, position, fact_weight_kg,
+  fact_reps, confirmed_at, updated_by, created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000011',
+  'a1000000-0000-4000-8000-000000000009',
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000002',
+  0,
+  40,
+  10,
+  timestamptz '2026-08-08 08:55:00+00',
+  'a1000000-0000-4000-8000-000000000001',
+  timestamptz '2026-08-08 08:10:00+00',
+  timestamptz '2026-08-08 08:55:00+00'
+)
+on conflict do nothing;
+
+insert into public.client_progress (
+  id, trainer_id, client_id, created_by, updated_by, recorded_on,
+  weight_kg, created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000012',
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000002',
+  'a1000000-0000-4000-8000-000000000001',
+  '90000000-0000-4000-8000-000000000009',
+  date '2026-08-08',
+  78.5,
+  timestamptz '2026-08-08 09:10:00+00',
+  timestamptz '2026-08-08 09:10:00+00'
+)
+on conflict do nothing;
+
+insert into public.client_custom_metrics (
+  id, trainer_id, client_id, name, unit, created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000013',
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000002',
+  'Самочувствие',
+  'балл',
+  timestamptz '2026-08-08 09:15:00+00',
+  timestamptz '2026-08-08 09:15:00+00'
+)
+on conflict do nothing;
+
+insert into public.client_progress_custom (
+  id, trainer_id, client_id, progress_id, metric_id, value,
+  created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000014',
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000002',
+  'a1000000-0000-4000-8000-000000000012',
+  'a1000000-0000-4000-8000-000000000013',
+  8,
+  timestamptz '2026-08-08 09:20:00+00',
+  timestamptz '2026-08-08 09:20:00+00'
+)
+on conflict do nothing;
+
+insert into public.client_goals (
+  id, client_id, trainer_id, created_by, title, status, created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000015',
+  'a1000000-0000-4000-8000-000000000002',
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000001',
+  'Сохранить режим',
+  'active',
+  timestamptz '2026-08-08 09:30:00+00',
+  timestamptz '2026-08-08 09:30:00+00'
+)
+on conflict do nothing;
+
+insert into public.goal_stages (
+  id, goal_id, trainer_id, client_id, title, starts_on, ends_on,
+  position, created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000016',
+  'a1000000-0000-4000-8000-000000000015',
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000002',
+  'Самостоятельный этап',
+  date '2026-08-08',
+  date '2026-09-08',
+  0,
+  timestamptz '2026-08-08 09:30:00+00',
+  timestamptz '2026-08-08 09:30:00+00'
+)
+on conflict do nothing;
+
+insert into public.goal_criteria (
+  id, goal_id, trainer_id, client_id, created_by, metric, operation,
+  unit, confirmation_status, position, created_at, updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000017',
+  'a1000000-0000-4000-8000-000000000015',
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000002',
+  'a1000000-0000-4000-8000-000000000001',
+  'weight',
+  'track_only',
+  'кг',
+  'suggested',
+  0,
+  timestamptz '2026-08-08 09:35:00+00',
+  timestamptz '2026-08-08 09:35:00+00'
+)
+on conflict do nothing;
+
+insert into public.app_feedback (
+  id, user_id, account_role, kind, message, screen_path, app_version,
+  display_mode, user_agent, created_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000018',
+  'a1000000-0000-4000-8000-000000000001',
+  'client',
+  'suggestion',
+  'Синтетический отзыв самостоятельного клиента.',
+  '/me/settings',
+  'local-rehearsal',
+  'browser',
+  'fit-local-rehearsal',
+  timestamptz '2026-08-08 09:40:00+00'
+)
+on conflict do nothing;
+
+insert into public.push_subscriptions (
+  id, user_id, endpoint, p256dh, auth_key, created_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000019',
+  'a1000000-0000-4000-8000-000000000001',
+  'https://push.invalid/standalone-client',
+  'standalone-client-p256dh',
+  'standalone-client-auth-key',
+  timestamptz '2026-08-08 09:45:00+00'
+)
+on conflict do nothing;
+
+insert into public.notification_preferences (user_id, kind, enabled, updated_at)
+values (
+  'a1000000-0000-4000-8000-000000000001',
+  'workout_reminder',
+  true,
+  timestamptz '2026-08-08 09:45:00+00'
+)
+on conflict do nothing;
+
+insert into private.workout_create_requests (
+  owner_id, request_id, workout_id, created_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000020',
+  'a1000000-0000-4000-8000-000000000008',
+  timestamptz '2026-08-08 08:00:00+00'
+)
+on conflict do nothing;
+
+-- The trainer cohort also includes a chat row so every current manifest table
+-- is exercised by the local rehearsal.
+insert into public.chat_conversations (
+  id, client_id, client_user_id, trainer_id, created_at, updated_at
+)
+values (
+  'a2000000-0000-4000-8000-000000000001',
+  '11111111-1111-4111-8111-111111111111',
+  '92000000-0000-4000-8000-000000000029',
+  '90000000-0000-4000-8000-000000000009',
+  timestamptz '2026-08-08 10:00:00+00',
+  timestamptz '2026-08-08 10:00:00+00'
+)
+on conflict do nothing;
+
+insert into public.chat_messages (
+  id, conversation_id, sender_id, body, created_at
+)
+values (
+  'a2000000-0000-4000-8000-000000000002',
+  'a2000000-0000-4000-8000-000000000001',
+  '92000000-0000-4000-8000-000000000029',
+  'Синтетическое сообщение для полной репетиции.',
+  timestamptz '2026-08-08 10:00:00+00'
+)
+on conflict do nothing;
+
 commit;

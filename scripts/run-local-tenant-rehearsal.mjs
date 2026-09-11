@@ -21,7 +21,8 @@ const TARGET_DATABASE_PORT = '55432'
 const TARGET_DATABASE_PREFIX = 'fit_tenant_rehearsal_'
 const DATABASE_NAME_PATTERN = /^fit_tenant_rehearsal_[1-9][0-9]*_[12]$/u
 const SYNTHETIC_TRAINER_ID = '90000000-0000-4000-8000-000000000009'
-const EXPECTED_TABLE_COUNT = 28
+const STANDALONE_CLIENT_PROFILE_ID = 'a1000000-0000-4000-8000-000000000001'
+const EXPECTED_TABLE_COUNT = 30
 const FIXTURE_PATH = join(
   ROOT_DIRECTORY,
   'services/api/src/tenant-migration/rehearsal-source-fixture.sql',
@@ -40,6 +41,8 @@ export const PRODUCTION_LIKE_TABLES = Object.freeze([
   'public.client_invitations',
   'public.client_trainer_relationships',
   'public.client_merge_operations',
+  'public.chat_conversations',
+  'public.chat_messages',
   'public.custom_exercises',
   'public.client_progress',
   'public.client_custom_metrics',
@@ -64,6 +67,30 @@ export const PRODUCTION_LIKE_TABLES = Object.freeze([
 export const EXPECTED_EMPTY_TABLES = Object.freeze([
   'app_private.push_notifications_outbox',
   'app_private.live_workout_operations',
+])
+
+export const STANDALONE_CLIENT_DATA_TABLES = Object.freeze([
+  'public.profiles',
+  'public.trainers',
+  'public.clients',
+  'public.client_invitations',
+  'public.client_trainer_relationships',
+  'public.chat_conversations',
+  'public.chat_messages',
+  'public.custom_exercises',
+  'public.client_progress',
+  'public.client_custom_metrics',
+  'public.client_progress_custom',
+  'public.client_goals',
+  'public.goal_stages',
+  'public.goal_criteria',
+  'public.workouts',
+  'public.workout_exercises',
+  'public.workout_sets',
+  'public.app_feedback',
+  'public.push_subscriptions',
+  'public.notification_preferences',
+  'app_private.workout_create_requests',
 ])
 
 export function assertRehearsalDatabaseName(databaseName) {
@@ -161,6 +188,22 @@ export function assertProductionLikeManifest(summary) {
   }
   if (summary.tables.get('public.push_subscriptions')?.rows !== 2) {
     throw new Error('multi_device_push_contract_missing')
+  }
+}
+
+export function assertStandaloneClientManifest(summary) {
+  for (const tableName of STANDALONE_CLIENT_DATA_TABLES) {
+    if ((summary.tables.get(tableName)?.rows ?? 0) < 1) {
+      throw new Error(`standalone_client_table_empty:${tableName}`)
+    }
+  }
+  if (summary.tables.get('public.client_trainers')?.rows !== 0) {
+    throw new Error('standalone_client_membership_restored')
+  }
+  for (const tableName of EXPECTED_EMPTY_TABLES) {
+    if (summary.tables.get(tableName)?.rows !== 0) {
+      throw new Error(`target_only_table_not_empty:${tableName}`)
+    }
   }
 }
 
@@ -309,7 +352,7 @@ function runMigrationCli(args, databaseUrl, passphrase, label) {
   })
 }
 
-function assertDryRunRolledBack(databaseName) {
+function assertDryRunRolledBack(databaseName, profileId) {
   assertRehearsalDatabaseName(databaseName)
   const count = run(
     'podman',
@@ -326,14 +369,14 @@ function assertDryRunRolledBack(databaseName) {
       '--set',
       'ON_ERROR_STOP=1',
       '--command',
-      `select count(*) from public.profiles where id = '${SYNTHETIC_TRAINER_ID}'::uuid`,
+      `select count(*) from public.profiles where id = '${profileId}'::uuid`,
     ],
     { capture: true, label: 'dry_run_rollback_check' },
   ).trim()
   if (count !== '0') throw new Error('dry_run_changed_target')
 }
 
-function assertEncryptedArtifact(artifactPath) {
+function assertEncryptedArtifact(artifactPath, rootProfileId) {
   const artifact = lstatSync(artifactPath)
   if (!artifact.isFile() || artifact.isSymbolicLink()) {
     throw new Error('migration_artifact_not_regular_file')
@@ -341,31 +384,111 @@ function assertEncryptedArtifact(artifactPath) {
   if ((artifact.mode & 0o777) !== 0o600) {
     throw new Error('migration_artifact_permissions_invalid')
   }
-  if (readFileSync(artifactPath, 'utf8').includes(SYNTHETIC_TRAINER_ID)) {
+  if (readFileSync(artifactPath, 'utf8').includes(rootProfileId)) {
     throw new Error('migration_artifact_contains_plaintext_tenant_id')
   }
 }
 
-function cleanupArtifact(directory, artifactPath) {
-  try {
-    const artifact = lstatSync(artifactPath)
-    if (!artifact.isFile() || artifact.isSymbolicLink()) {
-      throw new Error('unsafe_artifact_cleanup_target')
+function cleanupArtifacts(directory, artifactPaths) {
+  for (const artifactPath of artifactPaths) {
+    try {
+      const artifact = lstatSync(artifactPath)
+      if (!artifact.isFile() || artifact.isSymbolicLink()) {
+        throw new Error('unsafe_artifact_cleanup_target')
+      }
+      unlinkSync(artifactPath)
+    } catch (error) {
+      if (
+        typeof error !== 'object'
+        || error === null
+        || !('code' in error)
+        || error.code !== 'ENOENT'
+      ) throw error
     }
-    unlinkSync(artifactPath)
-  } catch (error) {
-    if (
-      typeof error !== 'object'
-      || error === null
-      || !('code' in error)
-      || error.code !== 'ENOENT'
-    ) throw error
   }
   const temporaryDirectory = lstatSync(directory)
   if (!temporaryDirectory.isDirectory() || temporaryDirectory.isSymbolicLink()) {
     throw new Error('unsafe_artifact_directory_cleanup_target')
   }
   rmdirSync(directory)
+}
+
+function rehearseMigrationRoot({
+  artifactPath,
+  assertManifest,
+  databaseName,
+  databaseUrl,
+  exportArguments,
+  label,
+  passphrase,
+  rootProfileId,
+}) {
+  const exported = parseExportSummary(
+    runMigrationCli(
+      [...exportArguments, '--out', artifactPath],
+      databaseUrl,
+      passphrase,
+      `${label}_export`,
+    ),
+  )
+  assertManifest(exported)
+  assertEncryptedArtifact(artifactPath, rootProfileId)
+
+  const dryRun = parseMigrationReport(
+    runMigrationCli(
+      ['import', '--in', artifactPath],
+      databaseUrl,
+      passphrase,
+      `${label}_dry_run`,
+    ),
+    'dry-run',
+  )
+  if (dryRun.fingerprint !== exported.fingerprint) {
+    throw new Error('dry_run_tenant_fingerprint_mismatch')
+  }
+  assertDryRunRolledBack(databaseName, rootProfileId)
+
+  const applied = parseMigrationReport(
+    runMigrationCli(
+      ['import', '--in', artifactPath, '--apply'],
+      databaseUrl,
+      passphrase,
+      `${label}_apply`,
+    ),
+    'applied',
+  )
+  const repeated = parseMigrationReport(
+    runMigrationCli(
+      ['import', '--in', artifactPath, '--apply'],
+      databaseUrl,
+      passphrase,
+      `${label}_repeated_apply`,
+    ),
+    'applied',
+  )
+  assertIdempotentApply(repeated)
+  const validated = parseMigrationReport(
+    runMigrationCli(
+      ['validate', '--in', artifactPath],
+      databaseUrl,
+      passphrase,
+      `${label}_validate`,
+    ),
+    'validated',
+  )
+  if (
+    applied.fingerprint !== exported.fingerprint
+    || repeated.fingerprint !== exported.fingerprint
+    || validated.fingerprint !== exported.fingerprint
+  ) throw new Error('tenant_fingerprint_mismatch')
+
+  return {
+    fingerprint: exported.fingerprint,
+    rows: [...exported.tables.values()].reduce(
+      (total, table) => total + table.rows,
+      0,
+    ),
+  }
 }
 
 async function rehearse(runNumber) {
@@ -376,7 +499,8 @@ async function rehearse(runNumber) {
   const temporaryDirectory = mkdtempSync(
     join(tmpdir(), `fit-tenant-rehearsal-${runNumber}-`),
   )
-  const artifactPath = join(temporaryDirectory, 'tenant.fit')
+  const trainerArtifactPath = join(temporaryDirectory, 'trainer.fit')
+  const standaloneArtifactPath = join(temporaryDirectory, 'standalone-client.fit')
   const passphrase = randomBytes(32).toString('base64url')
   let databaseCreated = false
   try {
@@ -386,76 +510,39 @@ async function rehearse(runNumber) {
     configureTargetDatabaseTimezone(databaseName)
     migrateTargetDatabase(databaseUrl)
 
-    const exported = parseExportSummary(
-      runMigrationCli(
-        ['export', '--trainer-id', SYNTHETIC_TRAINER_ID, '--out', artifactPath],
-        databaseUrl,
-        passphrase,
-        'tenant_export',
-      ),
-    )
-    assertProductionLikeManifest(exported)
-    assertEncryptedArtifact(artifactPath)
-
-    const dryRun = parseMigrationReport(
-      runMigrationCli(
-        ['import', '--in', artifactPath],
-        databaseUrl,
-        passphrase,
-        'tenant_dry_run',
-      ),
-      'dry-run',
-    )
-    if (dryRun.fingerprint !== exported.fingerprint) {
-      throw new Error('dry_run_tenant_fingerprint_mismatch')
-    }
-    assertDryRunRolledBack(databaseName)
-
-    const applied = parseMigrationReport(
-      runMigrationCli(
-        ['import', '--in', artifactPath, '--apply'],
-        databaseUrl,
-        passphrase,
-        'tenant_apply',
-      ),
-      'applied',
-    )
-    const repeated = parseMigrationReport(
-      runMigrationCli(
-        ['import', '--in', artifactPath, '--apply'],
-        databaseUrl,
-        passphrase,
-        'tenant_repeated_apply',
-      ),
-      'applied',
-    )
-    assertIdempotentApply(repeated)
-    const validated = parseMigrationReport(
-      runMigrationCli(
-        ['validate', '--in', artifactPath],
-        databaseUrl,
-        passphrase,
-        'tenant_validate',
-      ),
-      'validated',
-    )
-    if (
-      applied.fingerprint !== exported.fingerprint
-      || repeated.fingerprint !== exported.fingerprint
-      || validated.fingerprint !== exported.fingerprint
-    ) throw new Error('tenant_fingerprint_mismatch')
-
-    const rowCount = [...exported.tables.values()].reduce(
-      (total, table) => total + table.rows,
-      0,
-    )
+    const trainer = rehearseMigrationRoot({
+      artifactPath: trainerArtifactPath,
+      assertManifest: assertProductionLikeManifest,
+      databaseName,
+      databaseUrl,
+      exportArguments: ['export', '--trainer-id', SYNTHETIC_TRAINER_ID],
+      label: 'trainer_tenant',
+      passphrase,
+      rootProfileId: SYNTHETIC_TRAINER_ID,
+    })
+    const standaloneClient = rehearseMigrationRoot({
+      artifactPath: standaloneArtifactPath,
+      assertManifest: assertStandaloneClientManifest,
+      databaseName,
+      databaseUrl,
+      exportArguments: [
+        'export', '--client-profile-id', STANDALONE_CLIENT_PROFILE_ID,
+      ],
+      label: 'standalone_client',
+      passphrase,
+      rootProfileId: STANDALONE_CLIENT_PROFILE_ID,
+    })
     console.log(
-      `[tenant-rehearsal] ${runNumber}/2 пройдена: tenant ${exported.fingerprint}; `
-        + `${exported.tables.size} таблиц; ${rowCount} строк.`,
+      `[tenant-rehearsal] ${runNumber}/2 пройдена: trainer ${trainer.fingerprint} `
+        + `(${trainer.rows} строк), standalone client ${standaloneClient.fingerprint} `
+        + `(${standaloneClient.rows} строк); ${EXPECTED_TABLE_COUNT} таблиц.`,
     )
   } finally {
     if (databaseCreated) dropTargetDatabase(databaseName)
-    cleanupArtifact(temporaryDirectory, artifactPath)
+    cleanupArtifacts(
+      temporaryDirectory,
+      [trainerArtifactPath, standaloneArtifactPath],
+    )
   }
 }
 

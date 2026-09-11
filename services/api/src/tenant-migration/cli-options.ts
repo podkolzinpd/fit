@@ -1,7 +1,9 @@
 export type TenantMigrationCliOptions =
   | {
       command: 'export'
-      trainerId: string
+      root:
+        | { kind: 'trainer'; profileId: string }
+        | { kind: 'standalone-client'; profileId: string }
       artifactPath: string
       allowRemote: boolean
     }
@@ -56,7 +58,12 @@ export function parseTenantMigrationCliOptions(
       flags.add(argument)
       continue
     }
-    if (argument !== '--trainer-id' && argument !== '--out' && argument !== '--in') {
+    if (
+      argument !== '--trainer-id'
+      && argument !== '--client-profile-id'
+      && argument !== '--out'
+      && argument !== '--in'
+    ) {
       throw new TenantMigrationCliOptionsError('invalid_arguments')
     }
     const value = argv[index + 1]
@@ -69,16 +76,22 @@ export function parseTenantMigrationCliOptions(
 
   const allowRemote = flags.has('--allow-remote')
   if (command === 'export') {
-    const trainerId = readValue(values, '--trainer-id')
+    const trainerId = values.get('--trainer-id')
+    const clientProfileId = values.get('--client-profile-id')
+    const rootProfileId = trainerId ?? clientProfileId
     if (
-      !UUID_PATTERN.test(trainerId)
+      rootProfileId === undefined
+      || !UUID_PATTERN.test(rootProfileId)
+      || (trainerId !== undefined) === (clientProfileId !== undefined)
       || values.size !== 2
       || !values.has('--out')
       || flags.has('--apply')
     ) throw new TenantMigrationCliOptionsError('invalid_arguments')
     return {
       command,
-      trainerId,
+      root: trainerId === undefined
+        ? { kind: 'standalone-client', profileId: rootProfileId }
+        : { kind: 'trainer', profileId: rootProfileId },
       artifactPath: readValue(values, '--out'),
       allowRemote,
     }
