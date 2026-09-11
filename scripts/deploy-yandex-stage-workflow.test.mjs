@@ -74,6 +74,13 @@ test('keeps enough time for the bounded three-attempt summary contract', () => {
   assert.match(workflow, /^  TF_VAR_api_execution_timeout: '120s'$/m)
 })
 
+test('allows the reviewed local, preview, and production frontend origins', () => {
+  assert.match(
+    workflow,
+    /^  TF_VAR_api_cors_allowed_origins: '\["http:\/\/localhost:5173","https:\/\/fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects\.vercel\.app","https:\/\/fit-drab\.vercel\.app"\]'$/m,
+  )
+})
+
 test('bootstraps the private push timer only after explicit cost approval and health', () => {
   assert.match(workflow, /^      approve_push_pipeline:$/m)
   assert.match(workflow, /^        default: false$/m)

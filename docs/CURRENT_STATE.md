@@ -68,7 +68,9 @@
 - Live AI smoke: parser прошёл, summary получил 400 из-за формата тестового запроса; исправление и повтор описаны в `docs/design/CLIENT_PROGRESS_AI_VERIFICATION.md`. Native AI использует metadata IAM token без статического ключа; точную роль
   один раз выдаёт `fit-stage-api` администратор, а OIDC не меняет folder IAM.
 - Yandex OAuth использует PKCE и публичный Client ID; secret browser-контракту
-  не нужен, Supabase-сессия при пилотном входе не создаётся.
+  не нужен, Supabase-сессия при пилотном входе не создаётся. Production callback
+  зарегистрирован для `fit-drab.vercel.app`; stage API допускает этот origin,
+  но production rollout остаётся default-off до настройки Vercel allowlist.
 - `main` содержит 14-дневную read-write Yandex ID-сессию: stage валидирует/отзывает opaque token, frontend восстанавливает профиль и блокирует истёкшую/неразрешённую сессию.
 - `main` расширяет единый Yandex API-контракт на read-write app-session:
   клиенты, связи, замеры/цели, тренировки, feedback и push state принимают
