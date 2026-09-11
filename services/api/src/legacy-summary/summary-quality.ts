@@ -16,8 +16,7 @@ const interpretation = /(?:пока|разов|устойчив|закреп|с�
 const machineCopy = /(?:наблюдается|отмечается)\s+(?:увеличение|улучшение|снижение)|данные подтверждают (?:прогресс|рост)|в некоторых упражнениях/iu
 const topicPrefix = /^[А-ЯЁ][^:]{1,28}:\s+\S/u
 const gapConcern = /(?:избег(?:ать|ай)|сократ|не\s+допуска|больш(?:ой|их|ие)|длительн).{0,48}(?:перерыв|пауз|без тренировок)|(?:перерыв|пауз|без тренировок).{0,48}(?:избег|сократ|больш|длительн)/iu
-const CURRENT_ANALYSIS_VERSION = "trainer-summary-v2"
-
+const CURRENT_ANALYSIS_VERSION = "trainer-summary-v3"
 function numericRestatement(value: string): boolean {
   return /\d/u.test(value) && /(?:вес|повтор|объ[её]м|темп|дистанц).{0,50}(?:вырос|увелич|сниз|уменьш|измен)/iu.test(value) && !interpretation.test(value)
 }

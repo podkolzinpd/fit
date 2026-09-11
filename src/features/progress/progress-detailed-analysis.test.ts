@@ -52,7 +52,7 @@ describe('buildProgressDetailedAnalysis', () => {
             'Повторить замеры плеч и талии через 4 недели в тех же условиях.',
           ],
           missingContext: [],
-          analysisVersion: 'trainer-summary-v2',
+          analysisVersion: 'trainer-summary-v3',
         },
       },
       role: 'client',
