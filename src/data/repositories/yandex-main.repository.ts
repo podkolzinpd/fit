@@ -50,7 +50,10 @@ const chatThreadSchema = z.object({
   partnerName: z.string(), activeConnection: z.boolean(), lastMessageBody: z.string().nullable(),
   lastMessageAt: z.iso.datetime().nullable(), lastMessageSenderId: uuid.nullable(), unreadCount: z.number().int().nonnegative(),
 })
-const chatMessageSchema = z.object({ id: uuid, conversationId: uuid, senderId: uuid, body: z.string(), createdAt: z.iso.datetime() })
+const chatMessageSchema = z.object({
+  id: uuid, conversationId: uuid, senderId: uuid, body: z.string(), createdAt: z.iso.datetime(),
+  image: z.object({ url: z.url().nullable(), mimeType: z.literal('image/jpeg'), width: z.number().int().positive(), height: z.number().int().positive(), sizeBytes: z.number().int().positive() }).nullable(),
+})
 const clientSchema = z.object({
   id: uuid,
   hasAccount: z.boolean(),
@@ -984,8 +987,8 @@ export function createYandexMainRepository(
         if (cursor) { params.set('beforeCreatedAt', cursor.createdAt); params.set('beforeId', cursor.id) }
         return readJson(queries, `/v1/chat/conversations/${conversationId}/messages?${params}`, z.object({ messages: z.array(chatMessageSchema), nextCursor: z.object({ createdAt: z.iso.datetime(), id: uuid }).nullable() }))
       },
-      async send(conversationId, messageId, body): Promise<ChatMessage> {
-        return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/messages`, 'POST', { id: messageId, body }, z.object({ message: chatMessageSchema }))).message
+      async send(conversationId, messageId, body, image): Promise<ChatMessage> {
+        return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/messages`, 'POST', { id: messageId, body, image }, z.object({ message: chatMessageSchema }))).message
       },
       async markRead(conversationId): Promise<void> {
         await writeEmpty(queries, `/v1/chat/conversations/${conversationId}/read`, 'PUT')

@@ -57,6 +57,7 @@ import type { PilotAssistantState } from './pilot-assistant-state.js'
 import type { PilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import type { PilotPushNotifications } from './pilot-push-notifications.js'
 import { ChatCommandError, type PilotChat } from './pilot-chat.js'
+import { readChatImageUpload, type ChatMediaStore } from './chat-media.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
@@ -138,6 +139,7 @@ interface BuildAppOptions {
   pilotAssistantTurnRunner?: PilotAssistantTurnRunner
   pilotPushNotifications?: PilotPushNotifications
   pilotChat?: PilotChat
+  chatMediaStore?: ChatMediaStore
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
   pilotConnectionsWriter?: PilotConnectionsWriter
@@ -1450,21 +1452,41 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       || (hasCursor && (typeof query.beforeCreatedAt !== 'string' || !Number.isFinite(Date.parse(query.beforeCreatedAt)) || typeof query.beforeId !== 'string' || !uuidPattern.test(query.beforeId)))) return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     const cursor = hasCursor ? { createdAt: query.beforeCreatedAt as string, id: query.beforeId as string } : null
-    return sendPilotCommand(reply, () => options.pilotChat!.listMessages(session, conversationId, cursor, limit),
-      (result) => reply.header('cache-control','no-store').send(result))
+    return sendPilotCommand(reply, async () => {
+      const result = await options.pilotChat!.listMessages(session, conversationId, cursor, limit)
+      const messages = await Promise.all(result.messages.map(async (message) => {
+        if (!message.image) return { ...message, image: null }
+        let url: string | null
+        try { url = options.chatMediaStore ? await options.chatMediaStore.sign(message.image.path) : null } catch { url = null }
+        return { ...message, image: { url, mimeType: message.image.mimeType, width: message.image.width, height: message.image.height, sizeBytes: message.image.sizeBytes } }
+      }))
+      return { ...result, messages }
+    }, (result) => reply.header('cache-control','no-store').send(result))
   })
 
-  app.post('/v1/chat/conversations/:conversationId/messages', async (request, reply) => {
+  app.post('/v1/chat/conversations/:conversationId/messages', { bodyLimit: 3 * 1024 * 1024 }, async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     const { conversationId } = request.params as { conversationId?: unknown }
-    const body = request.body as { id?: unknown; body?: unknown } | null
+    const body = request.body as { id?: unknown; body?: unknown; image?: unknown } | null
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
     if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const image = body?.image === undefined || body.image === null ? null : readChatImageUpload(body.image)
     if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId) || typeof body?.id !== 'string' || !uuidPattern.test(body.id)
-      || typeof body.body !== 'string' || body.body.trim().length < 1 || body.body.trim().length > 4000) return reply.code(400).send({ error: 'invalid_request' })
+      || typeof body.body !== 'string' || body.body.trim().length > 4000 || (body.body.trim().length < 1 && image === null)
+      || (body.image !== undefined && body.image !== null && image === undefined)) return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
-    return sendPilotCommand(reply, () => options.pilotChat!.send(session, conversationId, body.id as string, body.body as string),
-      (message) => reply.header('cache-control','no-store').send({ message }))
+    if (image && options.chatMediaStore === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, async () => {
+      const messageId = body.id as string
+      await options.pilotChat!.authorize(session, conversationId)
+      const storedImage = image ? { path: `${conversationId}/${messageId}.jpg`, mimeType: image.mimeType, width: image.width, height: image.height, sizeBytes: image.sizeBytes } : null
+      if (image && storedImage) await options.chatMediaStore!.upload(storedImage.path, image)
+      const message = await options.pilotChat!.send(session, conversationId, messageId, body.body as string, storedImage)
+      if (!message.image) return { ...message, image: null }
+      let url: string | null
+      try { url = options.chatMediaStore ? await options.chatMediaStore.sign(message.image.path) : null } catch { url = null }
+      return { ...message, image: { url, mimeType: message.image.mimeType, width: message.image.width, height: message.image.height, sizeBytes: message.image.sizeBytes } }
+    }, (message) => reply.header('cache-control','no-store').send({ message }))
   })
 
   app.put('/v1/chat/conversations/:conversationId/read', async (request, reply) => {
