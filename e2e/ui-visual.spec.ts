@@ -2176,7 +2176,7 @@ test('reliable chat stays compact on client phones and trainer desktop', async (
     last_message_sender_id: trainer ? '90000000-0000-4000-8000-000000000009' : '92000000-0000-4000-8000-000000000029',
     unread_count: trainer ? 2 : 0,
   }]) }))
-  await page.route('**/rest/v1/rpc/list_chat_messages', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
+  await page.route('**/rest/v1/rpc/list_chat_messages_v2', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([
     { id: 'b9000000-0000-4000-8000-000000000012', conversation_id: conversationId, sender_id: trainer ? '90000000-0000-4000-8000-000000000009' : '92000000-0000-4000-8000-000000000029', body: 'Хорошо, тогда до встречи завтра', created_at: '2026-09-10T16:45:00.000Z' },
     { id: 'b9000000-0000-4000-8000-000000000011', conversation_id: conversationId, sender_id: trainer ? '92000000-0000-4000-8000-000000000029' : '90000000-0000-4000-8000-000000000009', body: 'Как самочувствие после тренировки?', created_at: '2026-09-10T16:42:00.000Z' },
   ]) }))
