@@ -32,7 +32,20 @@ export interface ChatMessage {
   conversationId: UUID
   senderId: UUID
   body: string
+  image: ChatImageAttachment | null
   createdAt: string
+}
+
+export interface ChatImageAttachment {
+  url: string | null
+  mimeType: 'image/jpeg'
+  width: number
+  height: number
+  sizeBytes: number
+}
+
+export interface ChatImageDraft extends Omit<ChatImageAttachment, 'url'> {
+  dataUrl: string
 }
 
 export interface ChatMessagePage {

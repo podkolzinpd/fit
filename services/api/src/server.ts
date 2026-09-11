@@ -9,6 +9,7 @@ import { DatabasePilotAssistantState } from './pilot-assistant-state.js'
 import { DatabasePilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import { DatabasePilotPushNotifications } from './pilot-push-notifications.js'
 import { DatabasePilotChat } from './pilot-chat.js'
+import { SupabaseChatMediaStore } from './chat-media.js'
 import { DatabasePilotConnectionsReader } from './pilot-connections-reader.js'
 import { DatabasePilotConnectionsWriter } from './pilot-connections-writer.js'
 import { DatabasePilotDomainWriter } from './pilot-domain-writer.js'
@@ -117,7 +118,6 @@ const pilotPushNotifications =
   databasePool === undefined
     ? undefined
     : new DatabasePilotPushNotifications(databasePool)
-const pilotChat = databasePool === undefined ? undefined : new DatabasePilotChat(databasePool)
 const pilotConnectionsReader =
   databasePool === undefined
     ? undefined
@@ -170,6 +170,10 @@ const pilotTrainingSummaryGenerator =
     ? undefined
     : pilotTrainingSummaryReader
 const supabaseBridgeConfig = readSupabaseBridgeConfig()
+const chatMediaStore = supabaseBridgeConfig === undefined
+  ? undefined
+  : new SupabaseChatMediaStore(supabaseBridgeConfig)
+const pilotChat = databasePool === undefined ? undefined : new DatabasePilotChat(databasePool)
 const vitalMediaSigner = supabaseBridgeConfig === undefined
   ? undefined
   : new SupabaseVitalMediaSigner(supabaseBridgeConfig)
@@ -208,6 +212,7 @@ const app = buildApp(
     ...(pilotAssistantTurnRunner === undefined ? {} : { pilotAssistantTurnRunner }),
     ...(pilotPushNotifications === undefined ? {} : { pilotPushNotifications }),
     ...(pilotChat === undefined ? {} : { pilotChat }),
+    ...(chatMediaStore === undefined ? {} : { chatMediaStore }),
     ...(pilotClientsReader === undefined ? {} : { pilotClientsReader }),
     ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),
     ...(pilotConnectionsWriter === undefined ? {} : { pilotConnectionsWriter }),

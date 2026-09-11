@@ -19,7 +19,7 @@ describe('AppFeedbackForm', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Сообщение' }), { target: { value: 'Добавьте календарь' } })
     fireEvent.click(screen.getByRole('button', { name: 'Отправить' }))
     await waitFor(() => expect(repository.submit).toHaveBeenCalledWith('suggestion', 'Добавьте календарь'))
-    expect(screen.getByRole('status')).toHaveTextContent('Сообщение отправлено')
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Сообщение отправлено'))
   })
 
   it('switches to a problem without losing the draft', () => {

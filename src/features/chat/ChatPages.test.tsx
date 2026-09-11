@@ -9,29 +9,31 @@ type MockChat = {
   listThreads: ReturnType<typeof vi.fn<() => Promise<ChatThread[]>>>
   open: ReturnType<typeof vi.fn<(clientId: string, trainerId: string) => Promise<string>>>
   listMessages: ReturnType<typeof vi.fn<(conversationId: string, cursor?: { createdAt: string; id: string } | null) => Promise<ChatMessagePage>>>
-  send: ReturnType<typeof vi.fn<(conversationId: string, messageId: string, body: string) => Promise<ChatMessage>>>
+  send: ReturnType<typeof vi.fn<(conversationId: string, messageId: string, body: string, image?: import('../../shared/domain').ChatImageDraft | null) => Promise<ChatMessage>>>
   markRead: ReturnType<typeof vi.fn<(conversationId: string) => Promise<void>>>
   subscribe: ReturnType<typeof vi.fn<(conversationId: string, onChange: () => void) => () => void>>
 }
 type MockActor = { kind: 'client' | 'trainer'; role: 'client' | 'trainer'; userId: string; email: string; firstName: string; lastName: null; timezone: string; clientId: string; trainerId: string; fullName: string }
 const backend = vi.hoisted(() => vi.fn<() => { chat: MockChat }>())
 const auth = vi.hoisted(() => vi.fn<() => { actor: MockActor | null }>())
+const prepareChatImage = vi.hoisted(() => vi.fn())
 vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => backend() }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => auth() }))
+vi.mock('./chat-image', () => ({ prepareChatImage }))
 
 import { ChatConversationPage, ChatListPage } from './ChatPages'
 import { ChatHeaderAction, ChatStartButton } from './ChatEntry'
 
 const actor: MockActor = { kind: 'client', role: 'client', userId: 'client-user', email: 'client@example.test', firstName: 'Иван', lastName: null, timezone: 'Europe/Moscow', clientId: 'client-1', trainerId: 'trainer-1', fullName: 'Иван' }
 const thread: ChatThread = { conversationId: 'conversation-1', clientId: 'client-1', trainerId: 'trainer-1', partnerUserId: 'trainer-1', partnerName: 'Анна', activeConnection: true, lastMessageBody: 'До встречи', lastMessageAt: '2026-09-10T12:00:00.000Z', lastMessageSenderId: 'trainer-1', unreadCount: 2 }
-const incoming: ChatMessage = { id: 'message-1', conversationId: 'conversation-1', senderId: 'trainer-1', body: 'До встречи', createdAt: '2026-09-10T12:00:00.000Z' }
+const incoming: ChatMessage = { id: 'message-1', conversationId: 'conversation-1', senderId: 'trainer-1', body: 'До встречи', image: null, createdAt: '2026-09-10T12:00:00.000Z' }
 
 function chatBackend(): MockChat {
   return {
     listThreads: vi.fn<() => Promise<ChatThread[]>>().mockResolvedValue([thread]),
     open: vi.fn<(clientId: string, trainerId: string) => Promise<string>>().mockResolvedValue('conversation-1'),
     listMessages: vi.fn<(conversationId: string, cursor?: { createdAt: string; id: string } | null) => Promise<ChatMessagePage>>().mockResolvedValue({ messages: [incoming], nextCursor: null }),
-    send: vi.fn<(conversationId: string, messageId: string, body: string) => Promise<ChatMessage>>().mockImplementation((_conversationId, messageId, body) => Promise.resolve({ ...incoming, id: messageId, senderId: actor.userId, body })),
+    send: vi.fn<(conversationId: string, messageId: string, body: string, image?: import('../../shared/domain').ChatImageDraft | null) => Promise<ChatMessage>>().mockImplementation((_conversationId, messageId, body, image) => Promise.resolve({ ...incoming, id: messageId, senderId: actor.userId, body, image: image ? { url: image.dataUrl, mimeType: image.mimeType, width: image.width, height: image.height, sizeBytes: image.sizeBytes } : null })),
     markRead: vi.fn<(conversationId: string) => Promise<void>>().mockResolvedValue(undefined),
     subscribe: vi.fn<(conversationId: string, onChange: () => void) => () => void>().mockReturnValue(() => undefined),
   }
@@ -64,6 +66,8 @@ describe('reliable chat screens', () => {
     })
     backend.mockReset()
     auth.mockReset()
+    prepareChatImage.mockReset()
+    prepareChatImage.mockResolvedValue({ dataUrl: 'data:image/jpeg;base64,AQID', mimeType: 'image/jpeg', width: 1200, height: 900, sizeBytes: 3 })
     auth.mockReturnValue({ actor })
     Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() })
   })
@@ -147,6 +151,47 @@ describe('reliable chat screens', () => {
     await waitFor(() => expect(chat.send).toHaveBeenCalledTimes(2))
     expect(chat.send.mock.calls[1]?.[1]).toBe(firstId)
     await waitFor(() => expect(screen.queryByText('Ошибка')).not.toBeInTheDocument())
+  })
+
+  it('attaches and sends a photo without requiring a caption', async () => {
+    const user = userEvent.setup()
+    const chat = chatBackend()
+    renderAt('/chat/conversation-1', chat)
+
+    await screen.findByText('До встречи')
+    const file = new File(['photo'], 'progress.png', { type: 'image/png' })
+    await user.upload(screen.getByLabelText('Выбрать фото'), file)
+    expect(await screen.findByAltText('Фото для отправки')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Отправить' }))
+
+    await waitFor(() => expect(chat.send).toHaveBeenCalledWith('conversation-1', expect.any(String), '', expect.objectContaining({ mimeType: 'image/jpeg', width: 1200, height: 900 })))
+    expect(screen.queryByAltText('Фото для отправки')).not.toBeInTheDocument()
+  })
+
+  it('shows delivered and unavailable photos in message history', async () => {
+    const chat = chatBackend()
+    chat.listMessages.mockResolvedValue({ messages: [
+      { ...incoming, id: 'photo-ready', body: '', image: { url: 'data:image/jpeg;base64,AQID', mimeType: 'image/jpeg', width: 100, height: 80, sizeBytes: 3 } },
+      { ...incoming, id: 'photo-missing', body: '', image: { url: null, mimeType: 'image/jpeg', width: 100, height: 80, sizeBytes: 3 } },
+    ], nextCursor: null })
+    renderAt('/chat/conversation-1', chat)
+
+    expect(await screen.findByAltText('Фото в сообщении')).toBeVisible()
+    expect(screen.getByText('Фото недоступно')).toBeVisible()
+  })
+
+  it('lets the user remove a selected photo and reports preparation errors', async () => {
+    const user = userEvent.setup()
+    renderAt('/chat/conversation-1')
+    await screen.findByText('До встречи')
+    const input = screen.getByLabelText('Выбрать фото')
+    await user.upload(input, new File(['photo'], 'progress.png', { type: 'image/png' }))
+    await user.click(await screen.findByRole('button', { name: 'Убрать фото' }))
+    expect(screen.getByRole('button', { name: 'Отправить' })).toBeDisabled()
+
+    prepareChatImage.mockRejectedValueOnce(new Error('Фото слишком большое'))
+    await user.upload(input, new File(['large'], 'large.png', { type: 'image/png' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Фото слишком большое')
   })
 
   it('restores a saved draft, loads older history and refreshes on return', async () => {

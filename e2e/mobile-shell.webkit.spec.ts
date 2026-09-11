@@ -48,7 +48,7 @@ test('trainer chat stays at the bottom and exits with swipe and back', async ({ 
     last_message_sender_id: '92000000-0000-4000-8000-000000000029',
     unread_count: 1,
   }]) }))
-  await page.route('**/rest/v1/rpc/list_chat_messages', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+  await page.route('**/rest/v1/rpc/list_chat_messages_v2', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
     id: 'b9000000-0000-4000-8000-000000000012',
     conversation_id: conversationId,
     sender_id: '92000000-0000-4000-8000-000000000029',

@@ -1,4 +1,4 @@
-// schema-sha256: e8139d9a1b7320616bdb680823d7fa91154c20d42afbe2f2568a397796b971a1
+// schema-sha256: 74a732ab65e1fb96a9e551ab76ced85ef9039764d880bec5ee42fc4361083e0e
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -352,13 +352,23 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
+          image_height: number | null
+          image_mime_type: string | null
+          image_path: string | null
+          image_size_bytes: number | null
+          image_width: number | null
           sender_id: string
         }
         Insert: {
-          body: string
+          body?: string
           conversation_id: string
           created_at?: string
           id: string
+          image_height?: number | null
+          image_mime_type?: string | null
+          image_path?: string | null
+          image_size_bytes?: number | null
+          image_width?: number | null
           sender_id: string
         }
         Update: {
@@ -366,6 +376,11 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           id?: string
+          image_height?: number | null
+          image_mime_type?: string | null
+          image_path?: string | null
+          image_size_bytes?: number | null
+          image_width?: number | null
           sender_id?: string
         }
         Relationships: [
@@ -2073,6 +2088,26 @@ export type Database = {
           sender_id: string
         }[]
       }
+      list_chat_messages_v2: {
+        Args: {
+          p_before_created_at?: string
+          p_before_id?: string
+          p_conversation_id: string
+          p_limit?: number
+        }
+        Returns: {
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          image_height: number | null
+          image_mime_type: string | null
+          image_path: string | null
+          image_size_bytes: number | null
+          image_width: number | null
+          sender_id: string
+        }[]
+      }
       list_chat_threads: {
         Args: never
         Returns: {
@@ -2378,6 +2413,30 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
+          sender_id: string
+        }[]
+      }
+      send_chat_message_v2: {
+        Args: {
+          p_body: string
+          p_conversation_id: string
+          p_image_height: number | null
+          p_image_mime_type: string | null
+          p_image_path: string | null
+          p_image_size_bytes: number | null
+          p_image_width: number | null
+          p_message_id: string
+        }
+        Returns: {
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          image_height: number | null
+          image_mime_type: string | null
+          image_path: string | null
+          image_size_bytes: number | null
+          image_width: number | null
           sender_id: string
         }[]
       }
