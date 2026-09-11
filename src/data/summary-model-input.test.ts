@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildSummaryModelInput, deriveExerciseObservations, deriveMeasurementChanges } from '../../supabase/functions/summarize-client-training/summary-model-input'
 
 describe('buildSummaryModelInput', () => {
-  it('keeps the complete current and previous periods with explicit coverage', () => {
+  it('keeps every unique exercise while compacting repetitive sessions', () => {
     const exercises = Array.from({ length: 20 }, (_, index) => ({
       name: `Упражнение ${index + 1}`,
       kind: 'strength',
@@ -37,19 +37,23 @@ describe('buildSummaryModelInput', () => {
     expect(result.exercises[0]).toMatchObject({
       name: 'Упражнение 1',
     })
-    expect(result.exercises[0]?.derived_observations.map((item) => item.kind)).toContain('load_up_reps_held')
-    expect(result.exercises[0]?.sessions).toHaveLength(10)
-    expect(result.previous_period?.exercises).toHaveLength(10)
+    expect(result.exercises[0]?.current?.derived_observations.map((item) => item.kind)).toContain('load_up_reps_held')
+    expect(result.exercises[0]?.current?.control_points.length).toBeLessThanOrEqual(8)
+    expect(result.exercises[0]?.previous?.control_points.length).toBeLessThanOrEqual(8)
+    expect(result.exercises[0]?.current?.control_points.length).toBeLessThan(10)
+    expect(result.exercises).toHaveLength(20)
     expect(result.input_coverage).toEqual({
       current: { exercises: 20, sessions: 200, sets: 0 },
       previous: { exercises: 10, sessions: 100, sets: 0 },
       complete: true,
+      representation: 'all_unique_exercises_with_compact_session_evidence',
     })
     expect(result.previous_period?.period).toEqual({ start: '2026-07-01', end: '2026-07-31' })
     expect(result.measurements.changes).toContainEqual(expect.objectContaining({ metric: 'waist_cm', from: 91, to: 88, change: -3 }))
     expect(result.measurements.compared_to_previous_period).toContainEqual(expect.objectContaining({ metric: 'weight_kg', from: 82.5, to: 80, change: -2.5 }))
-    expect(result.previous_period?.measurements.recent_entries).toHaveLength(1)
+    expect(result.previous_period?.measurements.control_points).toHaveLength(1)
     expect(JSON.stringify(result)).toContain('Упражнение 20')
+    expect(JSON.stringify(result).length).toBeLessThan(35_000)
   })
 
   it('does not drop or reorder exercises to prioritize a goal keyword', () => {
@@ -101,8 +105,8 @@ describe('summary model measurements', () => {
       exercises: [], goal: null, measurements,
     })
 
-    expect(input.measurements.recent_entries[0]).not.toHaveProperty('id')
-    expect(input.measurements.recent_entries[1]?.custom_metrics).toEqual([
+    expect(input.measurements.control_points[0]).not.toHaveProperty('id')
+    expect(input.measurements.control_points[1]?.custom_metrics).toEqual([
       { metric_id: 'shoulders', name: 'Плечи', unit: 'см', value: 118 },
     ])
   })
