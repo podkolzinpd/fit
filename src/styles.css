@@ -1173,6 +1173,21 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-technique-trigger > span { color:var(--muted); font-size:var(--text-xs); font-weight:var(--weight-semibold); line-height:1.2 }
 .live-previous-result { margin:2px 0 0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .live-exercise-head .exercise-head-actions { flex: 0 0 auto }
+.live-technique { display:grid; gap:8px; margin:8px 0 10px; padding:8px; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-sunken) }
+.live-technique-head { min-height:44px; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 2px }
+.live-technique-head strong { font-size:var(--type-caption-size); line-height:var(--leading-snug) }
+.live-technique-head > span { display:flex; align-items:center; gap:12px }
+.live-technique-head .link { min-height:44px; padding:2px 0; font-size:var(--text-sm) }
+.live-technique .exercise-image-technique { width:100%; max-height:176px; aspect-ratio:16 / 9; border:0; border-radius:var(--radius-md); background:var(--surface-raised) }
+.live-technique-hint { margin:0; padding:8px 4px 10px; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.live-technique-collapsed { min-height:44px; display:flex; align-items:center; gap:8px; margin:6px 0 8px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken); color:var(--muted); font-size:var(--text-sm); font-weight:var(--weight-semibold); box-shadow:none }
+.live-technique-collapsed > span { font-size:11px }
+@media (max-width:640px) {
+  .live-technique.has-media { position:relative; gap:0 }
+  .live-technique.has-media .live-technique-head { position:absolute; z-index:2; top:8px; right:8px; left:8px; padding:0 6px; border-radius:var(--radius-sm); background:linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 94%, transparent), color-mix(in srgb, var(--surface-elevated) 72%, transparent)) }
+  .live-technique.has-media .live-technique-head .link { padding-inline:6px; color:var(--fg) }
+  .live-technique .exercise-image-technique { max-height:120px }
+}
 .block-badge { align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: var(--surface-raised); border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 700 }
 .block-rounds { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 600 }
 /* Live «по кругам»: шапка со счётчиком и точками прогресса. */

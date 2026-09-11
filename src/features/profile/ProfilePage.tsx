@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useOptionalYandexAppSession } from '../../app/yandex-app-session-context'
 import { setExercisePlanRestDisplay, useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
+import { setLiveExerciseAnimation, useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { setRpeDisplay, useRpeDisplay } from '../../app/rpe-display'
 import { setAppTheme, useAppTheme } from '../../app/theme'
 import { SettingsIcon } from '../../shared/icons'
@@ -35,6 +36,7 @@ export function TrainerProfileSettingsPage() {
   const theme = useAppTheme()
   const showRpe = useRpeDisplay(actor?.userId)
   const showExerciseRest = useExercisePlanRestDisplay(actor?.userId)
+  const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
   const [showArchived, setShowArchived] = useState(() => localStorage.getItem('fit.showArchivedClients') === 'true')
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [installOpen, setInstallOpen] = useState(false)
@@ -67,6 +69,10 @@ export function TrainerProfileSettingsPage() {
     </form>
     <section className="profile-settings" aria-label="Настройки">
       <Switch label="Тёмная тема" checked={theme === 'dark'} onChange={toggleTheme} />
+      {actor && <>
+        <div className="profile-settings-group-head"><strong>Live-тренировка</strong><span>Быстрая подсказка по движению у текущего упражнения.</span></div>
+        <Switch label="Показывать анимацию текущего упражнения" checked={showLiveExerciseAnimation} onChange={(checked) => setLiveExerciseAnimation(actor.userId, checked)} />
+      </>}
       {actor?.role === 'trainer' && <>
         <div className="profile-settings-group-head"><strong>Поля плана упражнений</strong><span>Выберите данные, которые всегда видны при составлении тренировки.</span></div>
         <Switch label="Всегда показывать отдых между подходами" checked={showExerciseRest} onChange={(checked) => setExercisePlanRestDisplay(actor.userId, checked)} />

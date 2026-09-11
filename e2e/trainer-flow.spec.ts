@@ -547,6 +547,12 @@ test('live: порядок упражнений меняется в отдель
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.locator('.live-timer')).toBeVisible()
+  const currentTechnique = page.getByRole('region', { name: /Техника текущего упражнения: Присед/ })
+  await expect(currentTechnique).toBeVisible()
+  await expect(currentTechnique.locator('video')).toHaveCount(1)
+  await expect(page.locator('.live-exercise-upcoming .live-technique')).toHaveCount(0)
+  await currentTechnique.getByRole('button', { name: /Свернуть анимацию/ }).click()
+  await expect(page.getByRole('button', { name: /Показать анимацию: Присед/ })).toBeVisible()
   // В live рабочей остаётся только текущая карточка. Будущее упражнение —
   // компактный ориентир: название, ближайший план, число подходов и меню,
   // без таблицы подходов и RPE.
@@ -571,6 +577,7 @@ test('live: порядок упражнений меняется в отдель
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.locator('.live-exercise-collapsed')).toHaveCount(1)
   await expect(page.locator('.live-exercise.current .workout-set-table')).toHaveCount(1)
+  await expect(page.getByRole('region', { name: /Техника текущего упражнения: Жим/ })).toBeVisible()
   await page.locator('.live-exercise.current').getByRole('button', { name: 'Вверх' }).click()
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим штанги лёжа')
 })

@@ -38,6 +38,13 @@ test('trainer profile keeps the questionnaire compact and settings usable on a s
   await expect(page.getByRole('heading', { name: 'Настройки' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Настройки' })).toBeVisible()
 
+  await expect(page.getByText('Live-тренировка', { exact: true })).toBeVisible()
+  const liveAnimation = page.getByRole('switch', { name: 'Показывать анимацию текущего упражнения', exact: true })
+  await expect(liveAnimation).toBeChecked()
+  await liveAnimation.uncheck()
+  await expect(liveAnimation).not.toBeChecked()
+  await liveAnimation.check()
+
   await expect(page.getByText('Поля плана упражнений', { exact: true })).toBeVisible()
   const rest = page.getByRole('switch', { name: 'Всегда показывать отдых между подходами', exact: true })
   const restBefore = await rest.isChecked()
