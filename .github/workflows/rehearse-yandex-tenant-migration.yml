@@ -21,6 +21,7 @@ on:
           - configured
           - smallest-eligible
           - smallest-eligible-standalone-client
+          - most-complete-standalone-client
       apply_confirmation:
         description: 'For apply only: APPLY_TENANT_TO_YANDEX_STAGE'
         required: false
@@ -110,7 +111,7 @@ jobs:
           case "$TENANT_SELECTION" in
             configured)
               ;;
-            smallest-eligible|smallest-eligible-standalone-client)
+            smallest-eligible|smallest-eligible-standalone-client|most-complete-standalone-client)
               [[ "$TENANT_FINGERPRINT_CONFIRMATION" =~ ^[0-9a-f]{16}$ ]]
               ;;
             *)

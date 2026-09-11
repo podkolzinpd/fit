@@ -23,6 +23,7 @@ export type RemoteTenantSelection =
   | { kind: 'configured'; trainerId: string }
   | { kind: 'smallest-eligible' }
   | { kind: 'smallest-eligible-standalone-client' }
+  | { kind: 'most-complete-standalone-client' }
 
 type CandidateAcceptance = (
   bundle: TenantMigrationBundle,
@@ -104,6 +105,15 @@ left join public.clients client on client.auth_user_id = profile.id
 where profile.account_role = 'client'
 group by profile.id
 order by count(client.id) asc, profile.id asc
+limit ${AUTO_CANDIDATE_LIMIT}`
+const AUTO_COMPLETE_STANDALONE_CLIENT_CANDIDATES_SQL = `
+select profile.id::text as profile_id
+from public.profiles profile
+join public.clients client on client.auth_user_id = profile.id
+join public.workouts workout on workout.client_id = client.id
+where profile.account_role = 'client'
+group by profile.id
+order by count(workout.id) desc, profile.id asc
 limit ${AUTO_CANDIDATE_LIMIT}`
 
 export class RemoteTenantRehearsalError extends Error {
@@ -246,6 +256,7 @@ export function readRemoteTenantRehearsalSettings(
   if (
     selectionMode === 'smallest-eligible'
     || selectionMode === 'smallest-eligible-standalone-client'
+    || selectionMode === 'most-complete-standalone-client'
   ) {
     if (mode === 'apply' && expectedTenantFingerprint === undefined) {
       throw new RemoteTenantRehearsalError('tenant_fingerprint_required')
@@ -317,7 +328,9 @@ export async function exportSelectedTenant(
       candidateProfileIds = candidates.map((candidate) => candidate.trainer_id)
     } else {
       const candidates = await source.query<CandidateStandaloneClientRow>(
-        AUTO_STANDALONE_CLIENT_CANDIDATES_SQL,
+        selection.kind === 'most-complete-standalone-client'
+          ? AUTO_COMPLETE_STANDALONE_CLIENT_CANDIDATES_SQL
+          : AUTO_STANDALONE_CLIENT_CANDIDATES_SQL,
       )
       candidateProfileIds = candidates.map((candidate) => candidate.profile_id)
     }
