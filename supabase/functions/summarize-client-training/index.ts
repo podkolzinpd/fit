@@ -9,7 +9,7 @@ import {
   SUMMARY_JSON_SCHEMA,
   SUMMARY_SYSTEM_PROMPT,
 } from "./summary-contract.ts"
-import { summaryQualityIssues } from "./summary-quality.ts"
+import { assessSummaryQuality, type SummaryQualityAssessment } from "./summary-quality.ts"
 import { buildTrainingGoalContext } from "./summary-goal.ts"
 import {
   authorizeSummaryActor,
@@ -730,7 +730,7 @@ type StructuredYandexConfig<T> = {
   schema: unknown
   maxTokens: string
   parse: (text: string) => T
-  qualityIssues?: (value: T) => string[]
+  qualityAssessment?: (value: T) => SummaryQualityAssessment
 }
 
 function yandexResponseError(status: number): HttpError {
@@ -794,6 +794,7 @@ async function requestStructuredYandex<T>(
   ]
   const usage: Record<string, string> = {}
   let modelVersion: string | null = null
+  let advisoryRepairAttempted = false
 
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     const controller = new AbortController()
@@ -910,9 +911,32 @@ async function requestStructuredYandex<T>(
       }
       throw error instanceof HttpError ? error : new HttpError(502, code)
     }
-    const issues = config.qualityIssues?.(value) ?? []
-    if (issues.length === 0) {
+    const quality = config.qualityAssessment?.(value) ?? { blockingIssues: [], advisories: [] }
+    const issues = quality.blockingIssues
+    if (issues.length === 0 && (quality.advisories.length === 0 || advisoryRepairAttempted || attempt === 3)) {
       return { value, modelUri, modelVersion, usage }
+    }
+    if (issues.length === 0) {
+      advisoryRepairAttempted = true
+      console.warn("summary style check requested one repair", {
+        request_id: options.requestId ?? null,
+        stage: options.stage ?? 'direct',
+        chunk_index: options.chunkIndex ?? null,
+        chunk_total: options.chunkTotal ?? null,
+        attempt,
+        issue_count: quality.advisories.length,
+        issues: quality.advisories,
+      })
+      messages.push(
+        { role: "assistant", text },
+        {
+          role: "user",
+          text:
+            "Содержание допустимо, но текст звучит шаблонно. Верни полный JSON ещё раз, сохранив факты и исправив стиль:\n- " +
+            quality.advisories.join("\n- "),
+        },
+      )
+      continue
     }
     console.warn("summary quality check rejected response", {
       request_id: options.requestId ?? null,
@@ -968,7 +992,7 @@ async function requestFinalYandexSummary(
     schema: SUMMARY_JSON_SCHEMA,
     maxTokens: "2000",
     parse: parseGeneratedSummary,
-    qualityIssues: (summary) => summaryQualityIssues(summary, options.qualityData ?? trainingData),
+    qualityAssessment: (summary) => assessSummaryQuality(summary, options.qualityData ?? trainingData),
   }, options)
   return {
     summary: result.value,
