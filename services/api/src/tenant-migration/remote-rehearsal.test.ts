@@ -10,6 +10,7 @@ import {
   readStageTenantConflictCode,
   readSourceDatabaseFailureCode,
   readRemoteTenantRehearsalSettings,
+  requireExpectedTenantFingerprint,
   readStageTenantMigrationRejectionCode,
   readStageTenantMigrationResponse,
   RemoteTenantRehearsalError,
@@ -117,7 +118,7 @@ describe('remote tenant rehearsal configuration', () => {
     )).toThrowError(new RemoteTenantRehearsalError('apply_not_confirmed'))
   })
 
-  it('allows automatic selection only for audit and dry-run', () => {
+  it('requires a rehearsed fingerprint for automatic apply selection', () => {
     const audit = readRemoteTenantRehearsalSettings(
       {
         ...SOURCE_ENVIRONMENT,
@@ -138,9 +139,50 @@ describe('remote tenant rehearsal configuration', () => {
         FIT_TENANT_TRAINER_ID: undefined,
       },
       () => 'trusted-ca',
-    )).toThrowError(
-      new RemoteTenantRehearsalError('automatic_apply_forbidden'),
+    )).toThrowError(new RemoteTenantRehearsalError(
+      'tenant_fingerprint_required',
+    ))
+
+    const apply = readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_REHEARSAL_MODE: 'apply',
+        FIT_TENANT_REMOTE_APPLY_CONFIRMATION:
+          'APPLY_TENANT_TO_YANDEX_STAGE',
+        FIT_TENANT_SELECTION_MODE: 'smallest-eligible',
+        FIT_TENANT_EXPECTED_FINGERPRINT: 'a'.repeat(16),
+        FIT_TENANT_STAGE_CONTAINER_URL:
+          'https://bba123stage.containers.yandexcloud.net',
+        FIT_TENANT_TRAINER_ID: undefined,
+        YC_TOKEN: 'ephemeral-iam-token',
+      },
+      () => 'trusted-ca',
     )
+    expect(apply.tenantSelection).toEqual({ kind: 'smallest-eligible' })
+    expect(apply.expectedTenantFingerprint).toBe('a'.repeat(16))
+  })
+
+  it('rejects a malformed or changed tenant fingerprint', () => {
+    expect(() => readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_EXPECTED_FINGERPRINT: 'not-a-fingerprint',
+      },
+      () => 'trusted-ca',
+    )).toThrowError(new RemoteTenantRehearsalError(
+      'tenant_fingerprint_invalid',
+    ))
+
+    expect(() => requireExpectedTenantFingerprint(
+      BUNDLE,
+      'c'.repeat(16),
+    )).toThrowError(new RemoteTenantRehearsalError(
+      'tenant_fingerprint_mismatch',
+    ))
+    expect(() => requireExpectedTenantFingerprint(
+      BUNDLE,
+      BUNDLE.tenantFingerprint,
+    )).not.toThrow()
   })
 })
 

@@ -87,7 +87,14 @@ test('requires independent apply confirmation and a private stage route', () => 
     workflow,
     /test "\$APPLY_CONFIRMATION" = APPLY_TENANT_TO_YANDEX_STAGE/,
   )
-  assert.match(workflow, /test "\$TENANT_SELECTION" = configured/)
+  assert.match(
+    workflow,
+    /smallest-eligible\)[\s\S]*?TENANT_FINGERPRINT_CONFIRMATION[\s\S]*?\^\[0-9a-f\]\{16\}\$/,
+  )
+  assert.match(
+    workflow,
+    /FIT_TENANT_EXPECTED_FINGERPRINT: \$\{\{ inputs\.tenant_fingerprint_confirmation \}\}/,
+  )
   assert.match(
     container,
     /STAGE_TENANT_MIGRATION_ENABLED\s+= var\.environment == "stage" \? "true" : "false"/,
