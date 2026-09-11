@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const queries = vi.hoisted(() => ({
-  listThreads: vi.fn(), open: vi.fn(), listMessages: vi.fn(), send: vi.fn(), markRead: vi.fn(), subscribe: vi.fn(),
+  listThreads: vi.fn(), open: vi.fn(), listMessages: vi.fn(), send: vi.fn(), edit: vi.fn(), remove: vi.fn(), unreadState: vi.fn(), markRead: vi.fn(), search: vi.fn(), window: vi.fn(), subscribe: vi.fn(),
 }))
-const media = vi.hoisted(() => ({ upload: vi.fn(), createSignedUrl: vi.fn() }))
+const media = vi.hoisted(() => ({ upload: vi.fn(), createSignedUrl: vi.fn(), remove: vi.fn() }))
 vi.mock('../queries/chat.queries', () => ({ chatQueries: queries, chatMedia: media }))
 
 import { chatRepository } from './chat.repository'
@@ -11,6 +11,7 @@ import { chatRepository } from './chat.repository'
 const imageRow = {
   id: 'message-1', conversation_id: 'conversation-1', sender_id: 'sender-1', body: '', created_at: '2026-09-11T10:00:00.000Z',
   image_path: 'conversation-1/message-1.jpg', image_mime_type: 'image/jpeg', image_width: 1200, image_height: 900, image_size_bytes: 3,
+  edited_at: null, reply_to_message_id: null, reply_to_sender_id: null, reply_to_body: null, reply_to_has_image: false, reply_to_deleted: false,
 }
 const image = { dataUrl: 'data:image/jpeg;base64,AQID', mimeType: 'image/jpeg' as const, width: 1200, height: 900, sizeBytes: 3 }
 
@@ -28,7 +29,7 @@ describe('chatRepository photo messages', () => {
       id: 'message-1', body: '', image: { url: 'https://media.example.test/photo', width: 1200, height: 900 },
     })
     expect(media.upload).toHaveBeenCalledWith(imageRow.image_path, expect.objectContaining({ type: 'image/jpeg', size: 3 }), { contentType: 'image/jpeg', upsert: false })
-    expect(queries.send).toHaveBeenCalledWith('conversation-1', 'message-1', '', expect.objectContaining({ path: imageRow.image_path }))
+    expect(queries.send).toHaveBeenCalledWith('conversation-1', 'message-1', '', expect.objectContaining({ path: imageRow.image_path }), undefined)
   })
 
   it('keeps an idempotent retry when the photo already exists', async () => {
@@ -50,5 +51,17 @@ describe('chatRepository photo messages', () => {
     await expect(chatRepository.listMessages('conversation-1')).resolves.toMatchObject({
       messages: [{ id: 'message-0', image: null }, { id: 'message-1', image: { url: null } }], nextCursor: null,
     })
+  })
+
+  it('maps edit, reply, unread and server search contracts', async () => {
+    const replied = { ...imageRow, body: 'Исправлено', edited_at: '2026-09-11T10:05:00.000Z',
+      reply_to_message_id: 'message-original', reply_to_sender_id: 'sender-2', reply_to_body: 'Исходный текст', reply_to_has_image: false }
+    queries.edit.mockResolvedValue({ data: [replied], error: null })
+    queries.unreadState.mockResolvedValue({ data: [{ first_message_id: 'message-original', first_created_at: imageRow.created_at, unread_count: 3 }], error: null })
+    queries.search.mockResolvedValue({ data: [replied], error: null })
+
+    await expect(chatRepository.edit('conversation-1', imageRow.id, 'Исправлено')).resolves.toMatchObject({ editedAt: replied.edited_at, replyTo: { messageId: 'message-original', body: 'Исходный текст' } })
+    await expect(chatRepository.unreadState('conversation-1')).resolves.toEqual({ firstMessageId: 'message-original', firstCreatedAt: imageRow.created_at, unreadCount: 3 })
+    await expect(chatRepository.search('conversation-1', 'исходный')).resolves.toHaveLength(1)
   })
 })
