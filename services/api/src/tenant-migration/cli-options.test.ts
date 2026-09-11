@@ -14,9 +14,18 @@ describe('tenant migration CLI options', () => {
       'tenant.fit',
     ])).toEqual({
       command: 'export',
-      trainerId: TRAINER_ID,
+      root: { kind: 'trainer', profileId: TRAINER_ID },
       artifactPath: 'tenant.fit',
       allowRemote: false,
+    })
+    expect(parseTenantMigrationCliOptions([
+      'export',
+      '--client-profile-id',
+      TRAINER_ID,
+      '--out',
+      'client.fit',
+    ])).toMatchObject({
+      root: { kind: 'standalone-client', profileId: TRAINER_ID },
     })
     expect(parseTenantMigrationCliOptions(['import', '--in', 'tenant.fit']))
       .toEqual({
@@ -36,6 +45,12 @@ describe('tenant migration CLI options', () => {
     { argumentsList: [] },
     { argumentsList: ['export', '--trainer-id', 'not-a-uuid', '--out', 'tenant.fit'] },
     { argumentsList: ['export', '--trainer-id', TRAINER_ID] },
+    {
+      argumentsList: [
+        'export', '--trainer-id', TRAINER_ID,
+        '--client-profile-id', TRAINER_ID, '--out', 'tenant.fit',
+      ],
+    },
     { argumentsList: ['validate', '--in', 'tenant.fit', '--apply'] },
     { argumentsList: ['import', '--in', 'tenant.fit', '--unknown'] },
     { argumentsList: ['import', '--in', 'one.fit', '--in', 'two.fit'] },

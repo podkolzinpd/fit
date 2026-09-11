@@ -13,13 +13,14 @@ on:
           - dry-run
           - apply
       tenant_selection:
-        description: 'Use the configured tenant or auto-select the smallest eligible cohort (audit/dry-run only)'
+        description: 'Configured trainer, smallest trainer cohort, or standalone client account'
         required: true
         type: choice
         default: configured
         options:
           - configured
           - smallest-eligible
+          - smallest-eligible-standalone-client
       apply_confirmation:
         description: 'For apply only: APPLY_TENANT_TO_YANDEX_STAGE'
         required: false
@@ -109,7 +110,7 @@ jobs:
           case "$TENANT_SELECTION" in
             configured)
               ;;
-            smallest-eligible)
+            smallest-eligible|smallest-eligible-standalone-client)
               [[ "$TENANT_FINGERPRINT_CONFIRMATION" =~ ^[0-9a-f]{16}$ ]]
               ;;
             *)

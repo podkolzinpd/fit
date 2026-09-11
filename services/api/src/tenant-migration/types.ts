@@ -15,12 +15,31 @@ export interface TenantMigrationTable {
   rows: JsonObject[]
 }
 
-export interface TenantMigrationBundle {
+export interface TrainerTenantMigrationBundle {
   format: 'fit-tenant-bundle-v1'
   createdAt: string
   tenantFingerprint: string
   trainerId: string
   tables: TenantMigrationTable[]
+}
+
+export interface StandaloneClientMigrationBundle {
+  format: 'fit-standalone-client-bundle-v1'
+  createdAt: string
+  tenantFingerprint: string
+  clientProfileId: string
+  tables: TenantMigrationTable[]
+}
+
+export type TenantMigrationBundle =
+  | TrainerTenantMigrationBundle
+  | StandaloneClientMigrationBundle
+
+export type TenantMigrationRootKind = 'trainer' | 'standalone-client'
+
+export interface TenantMigrationRoot {
+  kind: TenantMigrationRootKind
+  profileId: string
 }
 
 export interface TenantMigrationEnvelope {
