@@ -3337,7 +3337,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-identity .live-set-check.done { border-color:var(--border); background:var(--surface-sunken); color:var(--success-fg) }
 .live-identity .live-set.confirmed > .live-set-grid {
   gap:0;
-  min-height:48px;
+  min-height:44px;
   padding:0;
   overflow:hidden;
   border-radius:12px;
@@ -3346,12 +3346,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 }
 .live-identity .live-set.confirmed > .live-set-grid > :not(:first-child) { border-left:1px solid color-mix(in srgb, var(--success) 30%, var(--border)) }
 .live-identity .live-set.confirmed .live-set-number,
-.live-identity .live-set.confirmed .live-set-confirm { min-height:48px }
+.live-identity .live-set.confirmed .live-set-confirm { min-height:44px }
 .live-identity .live-set.confirmed .live-set-number { color:var(--success-fg) }
 .live-identity .live-set.confirmed .live-set-input,
 .live-identity .live-set.confirmed .live-set-rpe,
 .live-identity .live-set.confirmed .live-set-check.done {
-  min-height:48px;
+  min-height:44px;
   border:0;
   border-radius:0;
   background:transparent;
