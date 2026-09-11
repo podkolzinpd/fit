@@ -287,6 +287,33 @@ describe('summarizeClientTraining cloud handler', () => {
     expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
+  it('repairs the actual rejected answer and logs only fixed quality rules', async () => {
+    vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
+    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const rejected = { ...validSummary, client: { ...validSummary.client, headline: 'Вес вырос на 25%.' } }
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(completionResponse(200, rejected))
+      .mockResolvedValueOnce(completionResponse())
+
+    await expect(requestYandexSummary({ change_percent: 25 }, '2026-08-01', '2026-08-25', {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      requestId: 'quality-repair',
+      sleep: () => Promise.resolve(),
+    })).resolves.toMatchObject({ modelVersion: 'test' })
+
+    const init = fetchImpl.mock.calls[1]?.[1] as RequestInit
+    if (typeof init.body !== 'string') throw new Error('Expected a JSON request body')
+    const request = JSON.parse(init.body) as { messages: { role: string; text: string }[] }
+    expect(request.messages.at(-2)).toEqual({ role: 'assistant', text: JSON.stringify(rejected) })
+    expect(request.messages.at(-1)?.text).toContain('client.headline должен интерпретировать')
+    expect(warn).toHaveBeenCalledWith('summary quality check rejected response', expect.objectContaining({
+      request_id: 'quality-repair', attempt: 1,
+      issues: [expect.stringContaining('client.headline должен интерпретировать')],
+    }))
+    expect(JSON.stringify(warn.mock.calls)).not.toContain(rejected.client.headline)
+  })
+
   it('does not publish a schema-valid answer that fails the coaching quality gate three times', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
