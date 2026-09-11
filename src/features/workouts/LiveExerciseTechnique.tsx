@@ -19,15 +19,12 @@ export function LiveExerciseTechnique({ exercise, collapsed, onCollapsedChange, 
   const hasMedia = hasExerciseMedia(exercise)
   const instruction = exercise.instructions?.[0]
   return <section className={`live-technique${hasMedia ? ' has-media' : ''}`} aria-label={`Техника текущего упражнения: ${exercise.name}`}>
-    <header className="live-technique-head">
-      <strong>Анимация</strong>
-      <span>
-        <button type="button" className="link" onClick={onOpenTechnique}>Подробнее</button>
-        <button type="button" className="link" aria-label={`Свернуть анимацию: ${exercise.name}`} onClick={() => onCollapsedChange(true)}>Свернуть</button>
-      </span>
-    </header>
     {hasMedia
       ? <ExerciseImage src={exercise.imageUrl} fallbackSrc={exercise.fallbackImageUrl} motionSrc={exercise.motionImageUrl} videoSrc={exercise.techniqueVideoUrl} alt={exercise.name} variant="technique" />
       : <p className="live-technique-hint">{instruction}</p>}
+    <div className="live-technique-actions">
+      <button type="button" className="link" onClick={onOpenTechnique}>Подробнее</button>
+      <button type="button" className="link" aria-label={`Свернуть анимацию: ${exercise.name}`} onClick={() => onCollapsedChange(true)}>Свернуть</button>
+    </div>
   </section>
 }

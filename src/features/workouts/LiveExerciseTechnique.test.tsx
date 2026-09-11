@@ -24,7 +24,10 @@ describe('LiveExerciseTechnique', () => {
 
     const video = container.querySelector('video')
     expect(video).toBeInTheDocument()
+    if (!video) throw new Error('Expected the exercise video to be rendered')
     expect(video).toHaveProperty('muted', true)
+    expect(screen.queryByText('Анимация')).not.toBeInTheDocument()
+    expect(video.compareDocumentPosition(screen.getByRole('button', { name: 'Подробнее' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Подробнее' }))
     expect(onOpenTechnique).toHaveBeenCalledOnce()
     await user.click(screen.getByRole('button', { name: 'Свернуть анимацию: Присед со штангой' }))
