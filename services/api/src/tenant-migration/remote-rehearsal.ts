@@ -26,6 +26,7 @@ type CandidateAcceptance = (
 interface RemoteTenantRehearsalSettings {
   mode: RemoteTenantRehearsalMode
   sourceConfig: PoolConfig
+  expectedTenantFingerprint?: string
   stageContainerUrl?: string
   tenantSelection: RemoteTenantSelection
   yandexIamToken?: string
@@ -43,6 +44,7 @@ interface StageTenantMigrationResponse {
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const TENANT_FINGERPRINT_PATTERN = /^[0-9a-f]{16}$/
 const SUPABASE_PROJECT_PATTERN = /^[a-z]{20}$/
 const SUPABASE_POOLER_HOST_PATTERN =
   /^aws-[0-9]+-[a-z0-9-]+\.pooler\.supabase\.com$/
@@ -207,10 +209,21 @@ export function readRemoteTenantRehearsalSettings(
 ): RemoteTenantRehearsalSettings {
   const mode = readMode(environment)
   const selectionMode = environment.FIT_TENANT_SELECTION_MODE ?? 'configured'
+  const fingerprintValue = environment.FIT_TENANT_EXPECTED_FINGERPRINT
+  const expectedTenantFingerprint = fingerprintValue === undefined
+    || fingerprintValue.length === 0
+    ? undefined
+    : fingerprintValue
+  if (
+    expectedTenantFingerprint !== undefined
+    && !TENANT_FINGERPRINT_PATTERN.test(expectedTenantFingerprint)
+  ) {
+    throw new RemoteTenantRehearsalError('tenant_fingerprint_invalid')
+  }
   let tenantSelection: RemoteTenantSelection
   if (selectionMode === 'smallest-eligible') {
-    if (mode === 'apply') {
-      throw new RemoteTenantRehearsalError('automatic_apply_forbidden')
+    if (mode === 'apply' && expectedTenantFingerprint === undefined) {
+      throw new RemoteTenantRehearsalError('tenant_fingerprint_required')
     }
     tenantSelection = { kind: 'smallest-eligible' }
   } else if (selectionMode === 'configured') {
@@ -223,7 +236,16 @@ export function readRemoteTenantRehearsalSettings(
     throw new RemoteTenantRehearsalError('selection_mode_invalid')
   }
   const sourceConfig = buildSupabaseSourceConfig(environment, readCertificate)
-  if (mode === 'audit') return { mode, sourceConfig, tenantSelection }
+  if (mode === 'audit') {
+    return {
+      mode,
+      sourceConfig,
+      ...(expectedTenantFingerprint === undefined
+        ? {}
+        : { expectedTenantFingerprint }),
+      tenantSelection,
+    }
+  }
 
   const yandexIamToken = requireEnvironment(environment, 'YC_TOKEN')
   if (yandexIamToken.length > 8_192) {
@@ -232,10 +254,23 @@ export function readRemoteTenantRehearsalSettings(
   return {
     mode,
     sourceConfig,
+    ...(expectedTenantFingerprint === undefined
+      ? {}
+      : { expectedTenantFingerprint }),
     stageContainerUrl: readStageContainerUrl(environment),
     tenantSelection,
     yandexIamToken,
   }
+}
+
+export function requireExpectedTenantFingerprint(
+  bundle: TenantMigrationBundle,
+  expectedTenantFingerprint: string | undefined,
+): void {
+  if (
+    expectedTenantFingerprint !== undefined
+    && bundle.tenantFingerprint !== expectedTenantFingerprint
+  ) throw new RemoteTenantRehearsalError('tenant_fingerprint_mismatch')
 }
 
 export async function exportSelectedTenant(
@@ -548,6 +583,11 @@ export async function runRemoteTenantRehearsal(
     sourceConnection?.release()
     await sourcePool.end()
   }
+
+  requireExpectedTenantFingerprint(
+    bundle,
+    settings.expectedTenantFingerprint,
+  )
 
   if (automaticDryRun !== undefined) {
     printBundleSummary(bundle, automaticDryRun.encryptedBytes)

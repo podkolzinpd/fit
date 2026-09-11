@@ -24,6 +24,10 @@ on:
         description: 'For apply only: APPLY_TENANT_TO_YANDEX_STAGE'
         required: false
         type: string
+      tenant_fingerprint_confirmation:
+        description: 'For smallest-eligible apply: fingerprint from its successful dry-run'
+        required: false
+        type: string
 
 concurrency:
   group: yandex-tenant-migration
@@ -98,10 +102,20 @@ jobs:
         if: inputs.mode == 'apply'
         env:
           APPLY_CONFIRMATION: ${{ inputs.apply_confirmation }}
+          TENANT_FINGERPRINT_CONFIRMATION: ${{ inputs.tenant_fingerprint_confirmation }}
           TENANT_SELECTION: ${{ inputs.tenant_selection }}
         run: |
           test "$APPLY_CONFIRMATION" = APPLY_TENANT_TO_YANDEX_STAGE
-          test "$TENANT_SELECTION" = configured
+          case "$TENANT_SELECTION" in
+            configured)
+              ;;
+            smallest-eligible)
+              [[ "$TENANT_FINGERPRINT_CONFIRMATION" =~ ^[0-9a-f]{16}$ ]]
+              ;;
+            *)
+              exit 1
+              ;;
+          esac
       - name: Resolve the reviewed Supabase session pooler
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -131,6 +145,7 @@ jobs:
         env:
           FIT_TENANT_REHEARSAL_MODE: ${{ inputs.mode }}
           FIT_TENANT_SELECTION_MODE: ${{ inputs.tenant_selection }}
+          FIT_TENANT_EXPECTED_FINGERPRINT: ${{ inputs.tenant_fingerprint_confirmation }}
           FIT_TENANT_REMOTE_APPLY_CONFIRMATION: ${{ inputs.apply_confirmation }}
           FIT_TENANT_SOURCE_SSL_ROOT_CERT: certs/supabase-prod-ca-2021.crt
           FIT_TENANT_TRAINER_ID: ${{ secrets.FIT_TENANT_TRAINER_ID }}
