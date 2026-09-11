@@ -475,7 +475,7 @@ test('manages curated database readers only through an explicit private run', ()
   assert.doesNotMatch(databaseAccessWorkflow, /fit_api|mdb_read_all_data/)
 })
 
-test('manages the configured tenant rollout only through an explicit private run', () => {
+test('manages the migrated tenant rollout only through an explicit private run', () => {
   assert.match(rolloutWorkflow, /^  workflow_dispatch:$/m)
   assert.doesNotMatch(rolloutWorkflow, /^  (?:push|pull_request):$/m)
   assert.match(rolloutWorkflow, /^  id-token: write$/m)
@@ -484,7 +484,7 @@ test('manages the configured tenant rollout only through an explicit private run
   assert.match(rolloutWorkflow, /GITHUB_REF.*refs\/heads\/main/)
   assert.match(
     rolloutWorkflow,
-    /PROFILE_ID: \$\{\{ secrets\.FIT_TENANT_TRAINER_ID \}\}/g,
+    /TENANT_FINGERPRINT: \$\{\{ vars\.FIT_YANDEX_ROLLOUT_TENANT_FINGERPRINT \}\}/g,
   )
   assert.match(rolloutWorkflow, /ENABLE_YANDEX_READ_WRITE/)
   assert.match(rolloutWorkflow, /DISABLE_YANDEX_READ_WRITE/)
@@ -492,10 +492,11 @@ test('manages the configured tenant rollout only through an explicit private run
   assert.match(rolloutWorkflow, /\/stage\/rollout-assignments\/yandex/)
   assert.doesNotMatch(rolloutWorkflow, /terraform apply/)
   assert.doesNotMatch(rolloutWorkflow, /^    environment:/m)
-  assert.match(rolloutWorkflow, /echo "::add-mask::\$PROFILE_ID"/)
+  assert.match(rolloutWorkflow, /\[\[ "\$TENANT_FINGERPRINT" =~ \^\[0-9a-f\]\{16\}\$ \]\]/)
+  assert.match(rolloutWorkflow, /tenantFingerprint: \$tenantFingerprint/)
   assert.doesNotMatch(
     rolloutWorkflow,
-    /echo (?!"::add-mask::)[^\n]*\$PROFILE_ID/,
+    /FIT_TENANT_TRAINER_ID|profileId/,
   )
 })
 

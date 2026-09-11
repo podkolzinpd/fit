@@ -320,8 +320,23 @@ describe('stage rollout assignment', () => {
       identityLinked: true,
       rolloutEnabled: action !== 'disable',
     })
-    expect(rollout).toHaveBeenCalledWith(action, STAGE_CLIENT_ID)
+    expect(rollout).toHaveBeenCalledWith(action, { profileId: STAGE_CLIENT_ID })
     expect(response.body).not.toContain(STAGE_CLIENT_ID)
+  })
+
+  it('accepts the non-reversible fingerprint recorded by tenant migration', async () => {
+    const { app, rollout } = buildRolloutAssignment()
+    const tenantFingerprint = 'a'.repeat(16)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/rollout-assignments/yandex',
+      payload: { action: 'inspect', tenantFingerprint },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(rollout).toHaveBeenCalledWith('inspect', { tenantFingerprint })
+    expect(response.body).not.toContain(tenantFingerprint)
   })
 
   it('rejects malformed profile identifiers before touching the database', async () => {
@@ -331,6 +346,24 @@ describe('stage rollout assignment', () => {
       method: 'POST',
       url: '/stage/rollout-assignments/yandex',
       payload: { action: 'enable', profileId: 'not-a-profile' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(rollout).not.toHaveBeenCalled()
+  })
+
+  it('rejects ambiguous rollout targets before touching the database', async () => {
+    const { app, rollout } = buildRolloutAssignment()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/rollout-assignments/yandex',
+      payload: {
+        action: 'enable',
+        profileId: STAGE_CLIENT_ID,
+        tenantFingerprint: 'a'.repeat(16),
+      },
     })
 
     expect(response.statusCode).toBe(400)
