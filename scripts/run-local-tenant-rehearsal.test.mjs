@@ -5,6 +5,7 @@ import {
   assertIdempotentApply,
   assertLocalDatabaseUrl,
   assertProductionLikeManifest,
+  assertStandaloneClientManifest,
   assertRehearsalDatabaseName,
   EXPECTED_EMPTY_TABLES,
   parseExportSummary,
@@ -104,6 +105,19 @@ describe('local tenant rehearsal safety', () => {
     assert.throws(
       () => assertProductionLikeManifest(nonEmptyOutbox),
       /target_only_table_not_empty:app_private\.push_notifications_outbox/u,
+    )
+  })
+
+  test('requires standalone history without recreating a membership', () => {
+    const standalone = parseExportSummary(
+      exportOutput(new Map([['public.client_trainers', 0]])),
+    )
+    assert.doesNotThrow(() => assertStandaloneClientManifest(standalone))
+
+    const linked = parseExportSummary(exportOutput())
+    assert.throws(
+      () => assertStandaloneClientManifest(linked),
+      /standalone_client_membership_restored/u,
     )
   })
 

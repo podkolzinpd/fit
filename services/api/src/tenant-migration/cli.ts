@@ -16,6 +16,7 @@ import {
 } from './cli-options.js'
 import {
   exportTenant,
+  exportStandaloneClient,
   importTenant,
   TenantMigrationError,
   validateTenant,
@@ -179,7 +180,9 @@ async function run(options: TenantMigrationCliOptions): Promise<void> {
       environment,
     )
     const bundle = await withDatabase(database.config, (connection) =>
-      exportTenant(connection, options.trainerId),
+      options.root.kind === 'trainer'
+        ? exportTenant(connection, options.root.profileId)
+        : exportStandaloneClient(connection, options.root.profileId),
     )
     const envelope = await encryptMigrationBundle(bundle, passphrase)
     await writeEnvelope(options.artifactPath, envelope)
@@ -214,6 +217,7 @@ async function run(options: TenantMigrationCliOptions): Promise<void> {
 
 const USAGE = `Usage:
   npm run tenant:migrate -- export --trainer-id <uuid> --out <artifact>
+  npm run tenant:migrate -- export --client-profile-id <uuid> --out <artifact>
   npm run tenant:migrate -- import --in <artifact> [--apply]
   npm run tenant:migrate -- validate --in <artifact>
 Remote access additionally requires --allow-remote and explicit environment confirmations.\n`
