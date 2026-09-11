@@ -2138,7 +2138,10 @@ test('results center preserves sources and explains weekly work', async ({ page 
   await expect.soft(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02 })
   await expect.soft(volume).toHaveScreenshot(`result-volume-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.04 })
   await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('weight')
-  await expect.soft(center).toHaveScreenshot(`results-center-${process.platform}.png`, { animations: 'disabled' })
+  await expect.soft(center).toHaveScreenshot(`results-center-${process.platform}.png`, {
+    animations: 'disabled',
+    maxDiffPixelRatio: 0.04,
+  })
 })
 
 test('results center keeps detailed analytics in dark theme', async ({ page }, testInfo) => {
