@@ -15,6 +15,7 @@ const indecisiveAction = /(?:возможност[ьи]|\bили\b|при тек
 const interpretation = /(?:пока|разов|устойчив|закреп|сопостав|ценой|однако|но\b|не\s+(?:означает|доказывает|подтверждает)|вероятн)/iu
 const machineCopy = /(?:наблюдается|отмечается)\s+(?:увеличение|улучшение|снижение)|данные подтверждают (?:прогресс|рост)|в некоторых упражнениях/iu
 const topicPrefix = /^[А-ЯЁ][^:]{1,28}:\s+\S/u
+const gapConcern = /(?:избег(?:ать|ай)|сократ|не\s+допуска|больш(?:ой|их|ие)|длительн).{0,48}(?:перерыв|пауз|без тренировок)|(?:перерыв|пауз|без тренировок).{0,48}(?:избег|сократ|больш|длительн)/iu
 const CURRENT_ANALYSIS_VERSION = "trainer-summary-v2"
 
 function numericRestatement(value: string): boolean {
@@ -44,6 +45,14 @@ function hasRepeatedDecline(trainingData: unknown): boolean {
       .filter(isRecord)
       .some((observation) => observation.kind === "repeated_load_decline" && Number(observation.evidence_sessions) >= 3)
   )
+}
+
+function hasRichInput(trainingData: unknown): boolean {
+  if (!isRecord(trainingData) || !isRecord(trainingData.input_coverage)) return false
+  const current = isRecord(trainingData.input_coverage.current)
+    ? trainingData.input_coverage.current
+    : {}
+  return Number(current.exercises) >= 5 || Number(current.sessions) >= 6
 }
 
 export type SummaryQualityAssessment = {
@@ -106,7 +115,7 @@ export function assessSummaryQuality(
   }
 
   if (
-    /(?:риск|проверить|уточнить|продолжай|поддерживай)|так держать|отличная работа/i
+    /(?:риск|проверить|уточнить|продолжай|поддерживай|следи|сосредоточься|планируй|избегай)|так держать|отличная работа/iu
       .test(clientText)
   ) {
     advisories.push(
@@ -114,7 +123,7 @@ export function assessSummaryQuality(
     )
   }
   if (
-    /ты\s+(?:увеличил(?:а)?|показал(?:а)?|пров[её]л(?:а)?|выполнил(?:а)?|сделал(?:а)?)(?:\s|[,.!?]|$)/i
+    /ты\s+(?:увеличил(?:а)?|показал(?:а)?|пров[её]л(?:а)?|выполнил(?:а)?|сделал(?:а)?|поддерживал(?:а)?|сохранял(?:а)?|тренировал(?:ся|ась)|добил(?:ся|ась)|смог(?:ла)?|был(?:а)?)(?:\s|[,.!?]|$)/iu
       .test(clientText)
   ) {
     advisories.push(
@@ -129,6 +138,10 @@ export function assessSummaryQuality(
   }
   if (machineCopy.test(clientText)) {
     advisories.push("Клиентский анализ должен называть конкретные движения и выводы человеческим языком.")
+  }
+  const clientWordCount = clientText.trim().split(/\s+/u).filter(Boolean).length
+  if (hasRichInput(trainingData) && clientWordCount < 120) {
+    advisories.push("При полном насыщенном периоде клиентский разбор должен содержать не меньше 120 слов конкретного анализа.")
   }
   if (
     typeof client.encouragement === "string" &&
@@ -238,8 +251,12 @@ export function assessSummaryQuality(
     blockingIssues.push("Нельзя делать выводы о боли или травме без сигнала во входных данных.")
   }
 
-  if (/(?:улучш|ухудш|исправ|стабил).{0,30}техник|техник.{0,30}(?:улучш|ухудш|исправ|стабил)/iu.test(allText)) {
+  if (/техник/iu.test(clientText) || /(?:улучш|ухудш|исправ|стабил).{0,30}техник|техник.{0,30}(?:улучш|ухудш|исправ|стабил)/iu.test(allText)) {
     blockingIssues.push("Нельзя оценивать изменение техники: во входных данных нет наблюдений за выполнением движения.")
+  }
+
+  if (Number.isFinite(longestGapDays) && longestGapDays < 7 && gapConcern.test(clientText)) {
+    blockingIssues.push("Нельзя делать короткий обычный перерыв проблемой или следующим ориентиром.")
   }
 
   if (

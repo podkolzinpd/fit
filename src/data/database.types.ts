@@ -1,4 +1,4 @@
-// schema-sha256: 74a732ab65e1fb96a9e551ab76ced85ef9039764d880bec5ee42fc4361083e0e
+// schema-sha256: 8b2e84be7fd43b70e8cec64d55737d45f0288d00bc383968abe69e0fefb37d93
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -351,6 +351,7 @@ export type Database = {
           body: string
           conversation_id: string
           created_at: string
+          deleted_at: string | null
           id: string
           image_height: number | null
           image_mime_type: string | null
@@ -363,6 +364,7 @@ export type Database = {
           body?: string
           conversation_id: string
           created_at?: string
+          deleted_at?: string | null
           id: string
           image_height?: number | null
           image_mime_type?: string | null
@@ -375,6 +377,7 @@ export type Database = {
           body?: string
           conversation_id?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           image_height?: number | null
           image_mime_type?: string | null
@@ -1981,6 +1984,10 @@ export type Database = {
       create_quick_client: { Args: { p_full_name: string }; Returns: string }
       create_quick_own_client: {
         Args: { p_full_name: string }
+        Returns: string
+      }
+      delete_chat_message: {
+        Args: { p_conversation_id: string; p_message_id: string }
         Returns: string
       }
       delete_goal_stage: { Args: { p_stage_id: string }; Returns: undefined }

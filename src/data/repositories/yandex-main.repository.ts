@@ -990,6 +990,9 @@ export function createYandexMainRepository(
       async send(conversationId, messageId, body, image): Promise<ChatMessage> {
         return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/messages`, 'POST', { id: messageId, body, image }, z.object({ message: chatMessageSchema }))).message
       },
+      async remove(conversationId, messageId): Promise<void> {
+        await writeEmpty(queries, `/v1/chat/conversations/${conversationId}/messages/${messageId}`, 'DELETE')
+      },
       async markRead(conversationId): Promise<void> {
         await writeEmpty(queries, `/v1/chat/conversations/${conversationId}/read`, 'PUT')
       },

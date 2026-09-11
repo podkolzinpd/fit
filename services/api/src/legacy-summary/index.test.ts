@@ -388,7 +388,7 @@ describe('summarizeClientTraining cloud handler', () => {
       requestId: 'request-large',
     })
 
-    expect(fetchImpl).toHaveBeenCalledTimes(4)
+    expect(fetchImpl).toHaveBeenCalledTimes(5)
     const sentInputs = requestBodies.map((requestBody) => {
       const body = JSON.parse(requestBody) as { messages: Array<{ text: string }> }
       return JSON.parse(body.messages[1]!.text) as { completed_workouts: Record<string, unknown> }
@@ -403,10 +403,10 @@ describe('summarizeClientTraining cloud handler', () => {
       completionOptions: { maxTokens: string }
     })
     expect(modelRequests.slice(0, 3).map((request) => request.completionOptions.maxTokens)).toEqual(['900', '900', '900'])
-    expect(modelRequests[3]?.completionOptions.maxTokens).toBe('2000')
+    expect(modelRequests.slice(3).map((request) => request.completionOptions.maxTokens)).toEqual(['2000', '2000'])
   })
 
-  it('handles an anonymized 45-workout and 710-set history with one final synthesis', async () => {
+  it('handles an anonymized 45-workout and 710-set history with one final style repair', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     const sentInputs: Array<{ completed_workouts: Record<string, unknown> }> = []
@@ -468,17 +468,17 @@ describe('summarizeClientTraining cloud handler', () => {
     })
 
     const chunkInputs = sentInputs
-      .slice(0, -1)
+      .filter((item) => item.completed_workouts.chunk_scope !== undefined)
       .map((item) => item.completed_workouts as { exercises: typeof exercises })
     expect(chunkInputs.length).toBeGreaterThan(1)
-    expect(finalRequests).toBe(1)
+    expect(finalRequests).toBe(2)
     expect(chunkInputs.flatMap((item) => item.exercises)).toHaveLength(45)
     expect(chunkInputs.flatMap((item) => item.exercises)
       .reduce((total, exercise) => total + exercise.sessions[0]!.sets.length, 0)).toBe(710)
     expect(sentInputs.at(-1)?.completed_workouts.chunk_analyses).toHaveLength(chunkInputs.length)
   })
 
-  it('keeps a production-sized monthly history complete and uses one bounded model request', async () => {
+  it('keeps a production-sized monthly history complete and uses one bounded style repair', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     const buildExercises = (count: number, setCount: number) => Array.from({ length: count }, (_, exerciseIndex) => ({
@@ -533,6 +533,6 @@ describe('summarizeClientTraining cloud handler', () => {
     expect(input.previous_period?.exercises).toHaveLength(14)
     expect(input.exercises[0]?.sessions[0]).not.toHaveProperty('sets')
     expect(JSON.stringify(input).length).toBeLessThan(80_000)
-    expect(fetchImpl).toHaveBeenCalledOnce()
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
   })
 })

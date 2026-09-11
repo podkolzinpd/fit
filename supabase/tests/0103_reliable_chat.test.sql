@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(28);
+select plan(34);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('a0300000-0000-4000-8000-000000000001','00000000-0000-0000-0000-000000000000','authenticated','authenticated','chat-trainer@example.test',''),
@@ -23,6 +23,7 @@ select has_function('public','open_chat',array['uuid','uuid']::text[],'open func
 select has_function('public','send_chat_message',array['uuid','uuid','text']::text[],'send function exists');
 select has_function('public','list_chat_messages_v2',array['uuid','timestamp with time zone','uuid','integer']::text[],'photo-aware list exists');
 select has_function('public','send_chat_message_v2',array['uuid','uuid','text','text','text','integer','integer','integer']::text[],'photo-aware send exists');
+select has_function('public','delete_chat_message',array['uuid','uuid']::text[],'delete function exists');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a0300000-0000-4000-8000-000000000001',true);
@@ -52,6 +53,7 @@ select is((select unread_count from public.list_chat_threads()),2::bigint,'recip
 select lives_ok($$select public.mark_chat_read((select id from opened))$$,'recipient marks thread read');
 select is((select unread_count from public.list_chat_threads()),0::bigint,'read count clears');
 select is((select count(*) from public.list_chat_messages_v2((select id from opened),null,null,50)),2::bigint,'recipient reads history');
+select throws_ok($$select public.delete_chat_message((select id from opened),'a0300000-0000-4000-8000-000000000020')$$,'PT403','chat_forbidden','recipient cannot delete trainer message');
 reset role;
 
 delete from public.client_trainers where client_id='a0300000-0000-4000-8000-000000000010';
@@ -59,6 +61,10 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub','a0300000-0000-4000-8000-000000000001',true);
 select is((select active_connection from public.list_chat_threads()),false,'thread records disconnected state');
 select lives_ok($$select * from public.send_chat_message((select id from opened),'a0300000-0000-4000-8000-000000000021','Остаёмся на связи')$$,'disconnected trainer can still write');
+select lives_ok($$select public.delete_chat_message((select id from opened),'a0300000-0000-4000-8000-000000000020')$$,'sender deletes own message');
+select lives_ok($$select public.delete_chat_message((select id from opened),'a0300000-0000-4000-8000-000000000020')$$,'delete retry is idempotent');
+select is((select body from public.chat_messages where id='a0300000-0000-4000-8000-000000000020'),'','deleted text is scrubbed');
+select is((select count(*) from public.list_chat_messages_v2((select id from opened),null,null,50)),2::bigint,'deleted message disappears from history');
 select is(public.can_access_client('a0300000-0000-4000-8000-000000000010'),false,'chat does not restore athlete data access');
 reset role;
 

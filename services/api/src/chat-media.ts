@@ -15,6 +15,7 @@ export type ChatImageUpload = {
 export interface ChatMediaStore {
   upload(path: string, image: ChatImageUpload): Promise<void>
   sign(path: string): Promise<string>
+  remove(path: string): Promise<void>
 }
 
 export function readChatImageUpload(value: unknown): ChatImageUpload | undefined {
@@ -52,5 +53,10 @@ export class SupabaseChatMediaStore implements ChatMediaStore {
     const { data, error } = await this.storage.createSignedUrl(path, 60 * 60)
     if (error || !data?.signedUrl) throw new Error('chat_media_signing_failed')
     return data.signedUrl
+  }
+
+  async remove(path: string): Promise<void> {
+    const { error } = await this.storage.remove([path])
+    if (error && !/not found/i.test(error.message)) throw new Error('chat_media_delete_failed')
   }
 }

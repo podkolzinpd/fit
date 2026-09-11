@@ -122,6 +122,44 @@ values (
 )
 on conflict do nothing;
 
+insert into public.chat_conversations (
+  id,
+  client_id,
+  client_user_id,
+  trainer_id,
+  client_last_read_at,
+  trainer_last_read_at,
+  created_at,
+  updated_at
+)
+values (
+  '96000000-0000-4000-8000-000000000070',
+  '11111111-1111-4111-8111-111111111111',
+  '92000000-0000-4000-8000-000000000029',
+  '90000000-0000-4000-8000-000000000009',
+  timestamptz '2026-08-01 10:00:00+00',
+  timestamptz '2026-08-01 10:00:00+00',
+  timestamptz '2026-08-01 10:00:00+00',
+  timestamptz '2026-08-01 10:01:00+00'
+)
+on conflict do nothing;
+
+insert into public.chat_messages (
+  id,
+  conversation_id,
+  sender_id,
+  body,
+  created_at
+)
+values (
+  '96000000-0000-4000-8000-000000000071',
+  '96000000-0000-4000-8000-000000000070',
+  '90000000-0000-4000-8000-000000000009',
+  'Тестовое сообщение для переноса',
+  timestamptz '2026-08-01 10:01:00+00'
+)
+on conflict do nothing;
+
 insert into public.custom_exercises (
   id,
   trainer_id,
@@ -933,33 +971,6 @@ values (
   'a1000000-0000-4000-8000-000000000020',
   'a1000000-0000-4000-8000-000000000008',
   timestamptz '2026-08-08 08:00:00+00'
-)
-on conflict do nothing;
-
--- The trainer cohort also includes a chat row so every current manifest table
--- is exercised by the local rehearsal.
-insert into public.chat_conversations (
-  id, client_id, client_user_id, trainer_id, created_at, updated_at
-)
-values (
-  'a2000000-0000-4000-8000-000000000001',
-  '11111111-1111-4111-8111-111111111111',
-  '92000000-0000-4000-8000-000000000029',
-  '90000000-0000-4000-8000-000000000009',
-  timestamptz '2026-08-08 10:00:00+00',
-  timestamptz '2026-08-08 10:00:00+00'
-)
-on conflict do nothing;
-
-insert into public.chat_messages (
-  id, conversation_id, sender_id, body, created_at
-)
-values (
-  'a2000000-0000-4000-8000-000000000002',
-  'a2000000-0000-4000-8000-000000000001',
-  '92000000-0000-4000-8000-000000000029',
-  'Синтетическое сообщение для полной репетиции.',
-  timestamptz '2026-08-08 10:00:00+00'
 )
 on conflict do nothing;
 
