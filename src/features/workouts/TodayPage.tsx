@@ -700,7 +700,6 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </WorkoutComposer></div>}
       {voiceRefinement?.state === 'error' && !textComposerOpen && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
       {voicePhase === 'idle' && !restoredDraftScreen && <>{contextCard}{attentionSurface}</>}
-      {voicePhase === 'idle' && !textComposerOpen && actor && (clients.data?.length ?? 0) > 0 && <AppInstallPrompt userId={actor.userId} />}
       </>}
     </section> : <section className={`today-review workout-focused-page ${screen === 'save' ? 'today-save-step' : ''}`}>
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { setReordering(false); if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'} state={screen === 'save' && recordMode === 'completed' ? 'completed' : 'planned'} meta={screen === 'review' ? (items.length > 0 ? `Распознано: ${items.length}` : undefined) : 'Выберите вариант и дату'} /></div>
