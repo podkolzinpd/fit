@@ -10,6 +10,7 @@ on:
       - 'services/api/package.json'
       - 'services/api/package-lock.json'
       - 'services/api/src/legacy-summary/**'
+      - 'services/api/src/ai-studio-usage-metrics.ts'
       - 'services/api/src/yandex-summary-function.ts'
   workflow_dispatch:
 
@@ -100,6 +101,8 @@ jobs:
           fi
           yc resource-manager folder add-access-binding "$YC_FOLDER_ID" \
             --role ai.languageModels.user --service-account-id "$runtime_sa_id"
+          yc resource-manager folder add-access-binding "$YC_FOLDER_ID" \
+            --role monitoring.editor --service-account-id "$runtime_sa_id"
           yc lockbox secret add-access-binding "$SUMMARY_LOCKBOX_ID" \
             --role lockbox.payloadViewer --service-account-id "$runtime_sa_id"
           echo "SUMMARY_RUNTIME_SA_ID=$runtime_sa_id" >> "$GITHUB_ENV"
