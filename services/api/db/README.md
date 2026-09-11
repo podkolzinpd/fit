@@ -107,11 +107,13 @@ do not create rollout assignments or change frontend routing.
 
 The private runner also exposes a bounded rollout-assignment route only when
 `APP_ENV=stage` and `STAGE_ROLLOUT_ASSIGNMENTS_ENABLED=true`. The manual
-`Manage Yandex stage rollout` workflow takes the profile UUID exclusively from
-the existing masked `FIT_TENANT_TRAINER_ID` secret and supports idempotent
-inspect, enable and disable operations. Enable first verifies that the migrated
-profile and its role-specific domain root exist, then writes only the
-`yandex`/`read_write` assignment. Disable invalidates matching app sessions
+`Manage Yandex stage rollout` workflow takes the non-reversible fingerprint
+recorded by the successful tenant apply from the
+`FIT_YANDEX_ROLLOUT_TENANT_FINGERPRINT` repository variable and supports
+idempotent inspect, enable and disable operations. The private runner resolves
+exactly one matching profile without exposing its UUID. Enable first verifies
+that the migrated profile and its role-specific domain root exist, then writes
+only the `yandex`/`read_write` assignment. Disable invalidates matching app sessions
 through the existing resolver contract without deleting tenant data. The route
 does not run migrations, update Vercel flags or create cloud resources.
 

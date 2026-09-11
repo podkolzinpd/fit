@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       rollout_action:
-        description: Inspect, enable, or disable the configured tenant rollout
+        description: Inspect, enable, or disable the migrated tenant rollout
         required: true
         type: choice
         options:
@@ -45,13 +45,12 @@ jobs:
       - name: Require main and validate the requested operation
         env:
           CONFIRMATION: ${{ inputs.confirmation }}
-          PROFILE_ID: ${{ secrets.FIT_TENANT_TRAINER_ID }}
           ROLLOUT_ACTION: ${{ inputs.rollout_action }}
+          TENANT_FINGERPRINT: ${{ vars.FIT_YANDEX_ROLLOUT_TENANT_FINGERPRINT }}
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
-          echo "::add-mask::$PROFILE_ID"
-          [[ "$PROFILE_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$ ]]
+          [[ "$TENANT_FINGERPRINT" =~ ^[0-9a-f]{16}$ ]]
           case "$ROLLOUT_ACTION" in
             inspect)
               test -z "$CONFIRMATION"
@@ -85,20 +84,19 @@ jobs:
           -backend-config=backend.hcl.example
           -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
           -backend-config=key=fit/stage/terraform.tfstate
-      - name: Apply the configured tenant rollout operation
+      - name: Apply the migrated tenant rollout operation
         working-directory: infra/yandex
         env:
-          PROFILE_ID: ${{ secrets.FIT_TENANT_TRAINER_ID }}
           ROLLOUT_ACTION: ${{ inputs.rollout_action }}
+          TENANT_FINGERPRINT: ${{ vars.FIT_YANDEX_ROLLOUT_TENANT_FINGERPRINT }}
         run: |
           set -euo pipefail
           umask 077
-          echo "::add-mask::$PROFILE_ID"
           migration_url=$(terraform output -raw migration_container_url)
           jq -n \
             --arg action "$ROLLOUT_ACTION" \
-            --arg profileId "$PROFILE_ID" \
-            '{action: $action, profileId: $profileId}' \
+            --arg tenantFingerprint "$TENANT_FINGERPRINT" \
+            '{action: $action, tenantFingerprint: $tenantFingerprint}' \
             > rollout-request.json
           status=$(curl --silent --show-error \
             --output rollout-response.json --write-out '%{http_code}' \
@@ -108,7 +106,7 @@ jobs:
             --data-binary @rollout-request.json \
             "${migration_url%/}/stage/rollout-assignments/yandex")
           if test "$status" = 409; then
-            echo 'The configured profile or its role-specific domain root is absent from Yandex stage.' >&2
+            echo 'The migrated tenant fingerprint or its role-specific domain root is absent from Yandex stage.' >&2
             exit 1
           fi
           if test "$status" != 200; then

@@ -21,6 +21,7 @@ import {
   StageRolloutProfileNotReadyError,
   type StageRolloutAssignmentAction,
   type StageRolloutAssignmentManager,
+  type StageRolloutAssignmentTarget,
 } from './db/stage-rollout-assignment.js'
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
@@ -48,6 +49,7 @@ interface BuildMigrationAppOptions {
 const DATABASE_USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._@-]{0,62}$/
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const TENANT_FINGERPRINT_PATTERN = /^[0-9a-f]{16}$/
 const STAGE_TENANT_APPLY_CONFIRMATION = 'APPLY_TENANT_TO_YANDEX_STAGE'
 const STAGE_TENANT_ARTIFACT_LIMIT_BYTES = 3 * 1024 * 1024
 const SAFE_TENANT_MIGRATION_ERROR_PATTERN = /^[a-z0-9_.:-]{1,96}$/
@@ -113,18 +115,33 @@ function readEnrollmentRequest(body: unknown): {
 
 function readRolloutAssignmentRequest(body: unknown): {
   action: StageRolloutAssignmentAction
-  profileId: string
+  target: StageRolloutAssignmentTarget
 } | undefined {
   if (typeof body !== 'object' || body === null) return undefined
-  if (!('action' in body) || !('profileId' in body)) return undefined
+  if (!('action' in body)) return undefined
   const action = body.action
-  const profileId = body.profileId
   if (
-    (action !== 'inspect' && action !== 'enable' && action !== 'disable')
-    || typeof profileId !== 'string'
-    || !UUID_PATTERN.test(profileId)
+    action !== 'inspect'
+    && action !== 'enable'
+    && action !== 'disable'
   ) return undefined
-  return { action, profileId }
+  const hasProfileId = 'profileId' in body
+  const hasTenantFingerprint = 'tenantFingerprint' in body
+  if (hasProfileId === hasTenantFingerprint) return undefined
+  if (hasProfileId) {
+    const profileId = body.profileId
+    if (typeof profileId !== 'string' || !UUID_PATTERN.test(profileId)) {
+      return undefined
+    }
+    return { action, target: { profileId } }
+  }
+  if (!('tenantFingerprint' in body)) return undefined
+  const tenantFingerprint = body.tenantFingerprint
+  if (
+    typeof tenantFingerprint !== 'string'
+    || !TENANT_FINGERPRINT_PATTERN.test(tenantFingerprint)
+  ) return undefined
+  return { action, target: { tenantFingerprint } }
 }
 
 export function buildMigrationApp(
@@ -211,7 +228,7 @@ export function buildMigrationApp(
       try {
         const result = await rolloutAssignment.apply(
           rolloutRequest.action,
-          rolloutRequest.profileId,
+          rolloutRequest.target,
         )
         return {
           status: rolloutRequest.action === 'inspect'

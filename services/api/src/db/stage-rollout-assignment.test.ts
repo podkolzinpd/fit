@@ -5,6 +5,7 @@ import {
   DatabaseStageRolloutAssignmentManager,
   StageRolloutProfileNotReadyError,
 } from './stage-rollout-assignment.js'
+import { fingerprintTenant } from '../tenant-migration/bundle.js'
 import type { DatabaseConnection, DatabasePool } from './types.js'
 
 class RecordingConnection implements DatabaseConnection {
@@ -59,7 +60,7 @@ describe('DatabaseStageRolloutAssignmentManager', () => {
     pool.connection.results.push([{ rollout_enabled: true }], [])
     const manager = new DatabaseStageRolloutAssignmentManager(pool)
 
-    await expect(manager.apply('inspect', PROFILE_ID)).resolves.toEqual({
+    await expect(manager.apply('inspect', { profileId: PROFILE_ID })).resolves.toEqual({
       accountRole: 'trainer',
       domainReady: true,
       identityLinked: true,
@@ -82,7 +83,7 @@ describe('DatabaseStageRolloutAssignmentManager', () => {
     pool.connection.results.push([], [])
     const manager = new DatabaseStageRolloutAssignmentManager(pool)
 
-    await expect(manager.apply(action, PROFILE_ID)).resolves.toEqual({
+    await expect(manager.apply(action, { profileId: PROFILE_ID })).resolves.toEqual({
       accountRole: 'trainer',
       domainReady: true,
       identityLinked: false,
@@ -111,12 +112,62 @@ describe('DatabaseStageRolloutAssignmentManager', () => {
     ]
     const manager = new DatabaseStageRolloutAssignmentManager(pool)
 
-    await expect(manager.apply('enable', PROFILE_ID))
+    await expect(manager.apply('enable', { profileId: PROFILE_ID }))
       .rejects.toBeInstanceOf(StageRolloutProfileNotReadyError)
 
     expect(pool.connection.calls[3]?.text).toBe('rollback')
     expect(pool.connection.calls.every(({ text }) => !text.includes('insert into')))
       .toBe(true)
+    expect(pool.connection.released).toBe(true)
+  })
+
+  it('resolves a migrated profile from its non-reversible tenant fingerprint', async () => {
+    const pool = new RecordingPool()
+    pool.connection.results = [
+      [],
+      [
+        { id: PROFILE_ID, account_role: 'trainer' },
+        {
+          id: '20000000-0000-4000-8000-000000000002',
+          account_role: 'client',
+        },
+      ],
+      [],
+      [{
+        account_role: 'trainer',
+        domain_ready: true,
+        identity_linked: false,
+      }],
+      [{ rollout_enabled: false }],
+      [],
+    ]
+    const manager = new DatabaseStageRolloutAssignmentManager(pool)
+
+    await expect(manager.apply('inspect', {
+      tenantFingerprint: fingerprintTenant(PROFILE_ID),
+    })).resolves.toEqual({
+      accountRole: 'trainer',
+      domainReady: true,
+      identityLinked: false,
+      rolloutEnabled: false,
+    })
+
+    expect(pool.connection.calls[1]?.text).toContain('from public.profiles')
+    expect(pool.connection.calls[2]?.values).toEqual([PROFILE_ID])
+    expect(pool.connection.calls[4]?.values).toEqual([PROFILE_ID])
+    expect(pool.connection.released).toBe(true)
+  })
+
+  it('rejects a fingerprint that has no matching migrated profile', async () => {
+    const pool = new RecordingPool()
+    pool.connection.results = [[], [], []]
+    const manager = new DatabaseStageRolloutAssignmentManager(pool)
+
+    await expect(manager.apply('inspect', {
+      tenantFingerprint: 'f'.repeat(16),
+    })).rejects.toBeInstanceOf(StageRolloutProfileNotReadyError)
+
+    expect(pool.connection.calls[2]?.text).toBe('rollback')
     expect(pool.connection.released).toBe(true)
   })
 })

@@ -1,8 +1,16 @@
 import type { QueryResultRow } from 'pg'
 
-import type { DatabasePool } from './types.js'
+import {
+  fingerprintStandaloneClient,
+  fingerprintTenant,
+} from '../tenant-migration/bundle.js'
+import type { DatabaseConnection, DatabasePool } from './types.js'
 
 export type StageRolloutAssignmentAction = 'inspect' | 'enable' | 'disable'
+
+export type StageRolloutAssignmentTarget =
+  | { profileId: string }
+  | { tenantFingerprint: string }
 
 export interface StageRolloutAssignmentResult {
   accountRole: 'trainer' | 'client'
@@ -14,8 +22,13 @@ export interface StageRolloutAssignmentResult {
 export interface StageRolloutAssignmentManager {
   apply(
     action: StageRolloutAssignmentAction,
-    profileId: string,
+    target: StageRolloutAssignmentTarget,
   ): Promise<StageRolloutAssignmentResult>
+}
+
+interface ProfileCandidateRow extends QueryResultRow {
+  account_role: 'trainer' | 'client'
+  id: string
 }
 
 interface ProfileReadinessRow extends QueryResultRow {
@@ -41,7 +54,7 @@ implements StageRolloutAssignmentManager {
 
   async apply(
     action: StageRolloutAssignmentAction,
-    profileId: string,
+    target: StageRolloutAssignmentTarget,
   ): Promise<StageRolloutAssignmentResult> {
     const connection = await this.pool.connect()
     let transactionStarted = false
@@ -49,6 +62,12 @@ implements StageRolloutAssignmentManager {
     try {
       await connection.query('begin')
       transactionStarted = true
+      const profileId = 'profileId' in target
+        ? target.profileId
+        : await this.resolveProfileId(
+            connection,
+            target.tenantFingerprint,
+          )
       await connection.query(
         'select pg_advisory_xact_lock(hashtextextended($1, 0))',
         [profileId],
@@ -138,5 +157,28 @@ implements StageRolloutAssignmentManager {
     } finally {
       connection.release()
     }
+  }
+
+  private async resolveProfileId(
+    connection: DatabaseConnection,
+    tenantFingerprint: string,
+  ): Promise<string> {
+    const candidates = await connection.query<ProfileCandidateRow>(
+      `
+        select profile.id::text, profile.account_role
+        from public.profiles profile
+        where profile.account_role in ('trainer', 'client')
+      `,
+    )
+    const matches = candidates.filter((candidate) => (
+      candidate.account_role === 'trainer'
+        ? fingerprintTenant(candidate.id)
+        : fingerprintStandaloneClient(candidate.id)
+    ) === tenantFingerprint)
+    const match = matches[0]
+    if (match === undefined || matches.length !== 1) {
+      throw new StageRolloutProfileNotReadyError()
+    }
+    return match.id
   }
 }

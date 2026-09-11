@@ -83,9 +83,11 @@ trainer-связей и pending push, freeze writes, target, backup и rollback 
 ### Удалённая репетиция на Yandex stage
 
 Workflow `Rehearse Yandex tenant migration` запускается только вручную из
-`main` и использует выбранный profile UUID из masked repository secret
-`FIT_TENANT_TRAINER_ID`. UUID не является workflow input и не выводится в
-команды или отчёт. Существующие `SUPABASE_PROJECT_ID` и
+`main`. Для `configured` он использует выбранный profile UUID из masked
+repository secret `FIT_TENANT_TRAINER_ID`; автоматические режимы выбирают
+cohort по данным source и требуют fingerprint успешного dry-run перед apply.
+UUID не является workflow input и не выводится в команды или отчёт.
+Существующие `SUPABASE_PROJECT_ID` и
 `SUPABASE_DB_PASSWORD` дают source-доступ через связанный session pooler;
 TLS проверяется с `verify-full`-эквивалентной настройкой и публичным корневым
 сертификатом `services/api/certs/supabase-prod-ca-2021.crt`, опубликованным
@@ -97,9 +99,10 @@ GitHub OIDC → Yandex IAM token.
 
 Поле `tenant_selection` управляет только выбором cohort-а:
 
-- `configured` использует `FIT_TENANT_TRAINER_ID` и остаётся единственным
-  допустимым вариантом для `apply`;
-- `smallest-eligible` доступен только для `audit` и `dry-run`. Он читает
+- `configured` использует `FIT_TENANT_TRAINER_ID`;
+- автоматические режимы доступны для `audit`, `dry-run` и `apply`. Для записи
+  оператор указывает fingerprint из успешного dry-run, поэтому изменившийся
+  выбор не может быть применён незаметно. `smallest-eligible` читает
   trainer UUID с клиентами, начиная с самого маленького cohort-а, пропускает
   кандидатов, не прошедших обычный tenant preflight, и не выводит найденный
   UUID. Если подходящего изолированного cohort-а нет, workflow завершается с
@@ -393,8 +396,11 @@ Vercel deployment. До завершения export/import и rehearsal вклю
 
 Серверное назначение для первого перенесённого tenant управляется отдельно от
 Vercel через ручной GitHub Actions workflow `Manage Yandex stage rollout`.
-Workflow всегда берёт UUID из существующего masked secret
-`FIT_TENANT_TRAINER_ID`, не принимает UUID открытым input и не печатает его.
+Workflow использует repository variable
+`FIT_YANDEX_ROLLOUT_TENANT_FINGERPRINT`, сохранённую из успешного apply, а
+private runner однозначно сопоставляет fingerprint с уже перенесённым
+role-specific profile root. UUID не передаётся как workflow input и не
+печатается.
 Запускать его можно только из `main`:
 
 - `inspect` без confirmation только проверяет наличие role-specific domain root,
