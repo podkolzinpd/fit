@@ -21,6 +21,7 @@ import { buildSummaryConsistency } from "./summary-consistency.js"
 import { buildSummaryProgressFacts } from "./summary-progress-facts.js"
 import { buildSummaryModelInput } from "./summary-model-input.js"
 import { resolveSupabasePublicKey } from "./supabase-public-key.js"
+import { diagnosticAllowed, PrivateSummaryDiagnostic } from './private-diagnostic.js'
 
 const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
@@ -33,6 +34,8 @@ type SummarizeRequest = {
   period_start: string
   period_end: string
   force: boolean
+  diagnostic?: 'preflight' | 'run_once' | undefined
+  diagnostic_fingerprint?: string | undefined
 }
 
 export type WorkoutRow = {
@@ -268,6 +271,12 @@ function parseRequest(value: unknown): SummarizeRequest {
   const periodStart = body.period_start
   const periodEnd = body.period_end
   const force = body.force
+  if (body.diagnostic !== undefined && body.diagnostic !== 'preflight' && body.diagnostic !== 'run_once') {
+    throw new HttpError(400, 'invalid_diagnostic')
+  }
+  if (body.diagnostic === 'run_once' && typeof body.diagnostic_fingerprint !== 'string') {
+    throw new HttpError(400, 'diagnostic_preflight_required')
+  }
   const uuidPattern =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   const datePattern = /^\d{4}-\d{2}-\d{2}$/
@@ -299,6 +308,8 @@ function parseRequest(value: unknown): SummarizeRequest {
     period_start: periodStart,
     period_end: periodEnd,
     force: force === true,
+    diagnostic: body.diagnostic,
+    diagnostic_fingerprint: typeof body.diagnostic_fingerprint === 'string' ? body.diagnostic_fingerprint : undefined,
   }
 }
 
@@ -664,6 +675,7 @@ export function buildProgressData(
 }
 
 type YandexRequestOptions = {
+  diagnostic?: boolean
   authorization?: YandexAiAuthorization
   fetchImpl?: typeof fetch
   requestId?: string
@@ -812,7 +824,8 @@ async function requestStructuredYandex<T>(
   const sleep = options.sleep ?? ((delayMs: number) =>
     new Promise<void>((resolve) => setTimeout(resolve, delayMs)))
 
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  const maxAttempts = options.diagnostic ? 1 : 3
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 30_000)
     let response: Response
@@ -842,7 +855,7 @@ async function requestStructuredYandex<T>(
       const failure = error instanceof Error && error.name === "AbortError"
         ? new HttpError(504, "yandex_cloud_timeout")
         : new HttpError(502, "yandex_cloud_unavailable")
-      if (attempt < 3) {
+      if (attempt < maxAttempts) {
         structuredRetryLog(options, attempt, failure.message, null, 0, null)
         await sleep(yandexRetryDelay(attempt))
         continue
@@ -854,7 +867,7 @@ async function requestStructuredYandex<T>(
 
     if (!response.ok) {
       const failure = yandexResponseError(response.status)
-      if (attempt < 3 && isRetryableYandexStatus(response.status)) {
+      if (attempt < maxAttempts && isRetryableYandexStatus(response.status)) {
         structuredRetryLog(options, attempt, failure.message, null, 0, null)
         await sleep(yandexRetryDelay(attempt))
         continue
@@ -868,7 +881,7 @@ async function requestStructuredYandex<T>(
       payload = parseYandexJson<YandexCompletionResponse>(payloadText)
     } catch {
       const code = "yandex_cloud_invalid_upstream_json"
-      if (attempt < 3) {
+      if (attempt < maxAttempts) {
         structuredRetryLog(options, attempt, code, null, 0, null)
         await sleep(yandexRetryDelay(attempt))
         continue
@@ -887,12 +900,21 @@ async function requestStructuredYandex<T>(
       }
     }
     const completionTokens = payload.result?.usage?.completionTokens ?? null
+    if (options.diagnostic) {
+      let issues: string[]
+      try {
+        issues = config.qualityIssues?.(config.parse(text)) ?? []
+      } catch {
+        issues = ['diagnostic_response_parse_failed']
+      }
+      throw new PrivateSummaryDiagnostic({ answer: text, issues, alternativeStatus, modelVersion, usage })
+    }
     if (
       alternativeStatus === "ALTERNATIVE_STATUS_TRUNCATED_FINAL" ||
       alternativeStatus === "ALTERNATIVE_STATUS_PARTIAL"
     ) {
       const code = "yandex_cloud_truncated_response"
-      if (attempt < 3) {
+      if (attempt < maxAttempts) {
         structuredRetryLog(options, attempt, code, alternativeStatus, text.length, completionTokens)
         messages.push({
           role: "user",
@@ -907,7 +929,7 @@ async function requestStructuredYandex<T>(
     }
     if (!text) {
       const code = "yandex_cloud_empty_response"
-      if (attempt < 3) {
+      if (attempt < maxAttempts) {
         structuredRetryLog(options, attempt, code, alternativeStatus, 0, completionTokens)
         continue
       }
@@ -921,7 +943,7 @@ async function requestStructuredYandex<T>(
       const code = error instanceof HttpError
         ? error.message
         : "yandex_cloud_invalid_summary"
-      if (attempt < 3) {
+      if (attempt < maxAttempts) {
         structuredRetryLog(options, attempt, code, alternativeStatus, text.length, completionTokens)
         messages.push({
           role: "user",
@@ -944,7 +966,7 @@ async function requestStructuredYandex<T>(
       issue_count: issues.length,
       issues,
     })
-    if (attempt === 3) {
+    if (attempt === maxAttempts) {
       throw new HttpError(502, "yandex_cloud_quality_check_failed")
     }
 
@@ -1005,6 +1027,9 @@ export async function requestYandexSummary(
   periodEnd: string,
   options: YandexRequestOptions = {},
 ): Promise<YandexSummaryResult> {
+  if (options.diagnostic && JSON.stringify(trainingData).length > MAX_DIRECT_MODEL_INPUT_CHARS) {
+    throw new HttpError(422, 'diagnostic_direct_only')
+  }
   if (!options.skipChunking && JSON.stringify(trainingData).length > MAX_DIRECT_MODEL_INPUT_CHARS) {
     const chunks = modelInputChunks(trainingData)
     const partials: YandexChunkResult[] = []
@@ -1104,6 +1129,9 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         throw new HttpError(404, "client_not_found")
       }
       const { isTrainer, isClient, isConnectedTrainer, trainerId } = actor
+      if (input.diagnostic && (!user || !diagnosticAllowed(user, isClient))) {
+        throw new HttpError(403, 'diagnostic_not_allowed')
+      }
 
       const { data: structuredGoal, error: goalError } = await userClient
         .rpc("get_client_goal", { p_client_id: input.client_id })
@@ -1303,6 +1331,27 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
       }
       const inputFingerprint = await fingerprint(trainingData)
       const modelInput = buildSummaryModelInput(trainingData)
+
+      if (input.diagnostic) {
+        const stats = { workouts: completedWorkouts.length, exercises: exercises.length, sets: sets.length, model_input_chars: JSON.stringify(modelInput).length }
+        const headers = { 'Cache-Control': 'no-store' }
+        if (input.diagnostic === 'preflight') {
+          return Response.json({ diagnostic: true, calls: 0, stats, fingerprint: inputFingerprint }, { headers })
+        }
+        if (input.diagnostic_fingerprint !== inputFingerprint) {
+          throw new HttpError(409, 'diagnostic_input_changed')
+        }
+        try {
+          await requestYandexSummary(modelInput, trainingData.period.start, trainingData.period.end, { requestId, diagnostic: true })
+        } catch (error) {
+          if (error instanceof PrivateSummaryDiagnostic) {
+            return Response.json({ diagnostic: true, calls: 1, stats, fingerprint: inputFingerprint, ...error.result }, { headers })
+          }
+          throw error
+        }
+        // Fail closed even if a future model adapter accidentally returns normally.
+        throw new HttpError(500, 'diagnostic_result_missing')
+      }
 
       if (isClient && !input.force) {
         const { data: cached, error: cacheError } = await userClient
