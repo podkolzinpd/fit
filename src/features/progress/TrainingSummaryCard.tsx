@@ -145,6 +145,11 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
       return { generation, summaries }
     },
     enabled: ready && firstWorkout.data !== null,
+    retry: false,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   })
   useEffect(() => {
     if (automaticGeneration.data) {
@@ -730,6 +735,11 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
       return generation
     },
     enabled: ready && firstWorkout.data !== null,
+    retry: false,
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   })
   const refresh = useMutation({
     mutationFn: async (requested: { clientId: string; start: LocalDate; end: LocalDate }) => {
