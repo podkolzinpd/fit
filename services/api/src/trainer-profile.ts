@@ -140,6 +140,7 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
         || row.draft_data.trainingModes.length === 0) throw new TrainerProfileError('invalid')
       const rows = await client.query<TrainerProfileRow>(`
         update public.trainer_professional_profiles set published_data = draft_data,
+          listed_in_catalog = case when published_data is null then true else listed_in_catalog end,
           published_at = now(), version = version + 1
         where trainer_id = auth.uid() returning *
       `)
