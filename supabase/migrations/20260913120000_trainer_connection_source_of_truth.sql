@@ -82,7 +82,8 @@ begin
   join public.clients client on client.id = candidate.client_id
   join public.profiles profile on profile.id = candidate.trainer_id
   where public.is_active_client_trainer_connection(candidate.client_id, candidate.trainer_id)
-  order by candidate.joined_at, candidate.trainer_id;
+  order by (candidate.trainer_id = client.trainer_id) desc,
+    candidate.joined_at, candidate.trainer_id;
 end;
 $$;
 

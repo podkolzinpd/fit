@@ -86,7 +86,10 @@ begin
   where public.is_active_client_trainer_connection(candidate.client_id, candidate.trainer_id)
     and client.archived_at is null
     and public.can_access_client(candidate.client_id)
-  order by candidate.client_id, candidate.joined_at, candidate.trainer_id;
+  order by candidate.client_id,
+    (candidate.trainer_id = client.trainer_id) desc,
+    candidate.joined_at,
+    candidate.trainer_id;
 end;
 $$;
 
