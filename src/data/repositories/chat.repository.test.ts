@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const queries = vi.hoisted(() => ({
-  listThreads: vi.fn(), open: vi.fn(), listMessages: vi.fn(), send: vi.fn(), edit: vi.fn(), remove: vi.fn(), unreadState: vi.fn(), markRead: vi.fn(), search: vi.fn(), window: vi.fn(), subscribe: vi.fn(),
+  listThreads: vi.fn(), open: vi.fn(), openPublicTrainer: vi.fn(), authorizeSend: vi.fn(), setBlocked: vi.fn(), listMessages: vi.fn(), send: vi.fn(), edit: vi.fn(), remove: vi.fn(), unreadState: vi.fn(), markRead: vi.fn(), search: vi.fn(), window: vi.fn(), subscribe: vi.fn(),
 }))
 const media = vi.hoisted(() => ({ upload: vi.fn(), createSignedUrl: vi.fn(), remove: vi.fn() }))
 vi.mock('../queries/chat.queries', () => ({ chatQueries: queries, chatMedia: media }))
@@ -18,6 +18,7 @@ const image = { dataUrl: 'data:image/jpeg;base64,AQID', mimeType: 'image/jpeg' a
 describe('chatRepository photo messages', () => {
   beforeEach(() => {
     for (const mock of Object.values(queries)) mock.mockReset()
+    queries.authorizeSend.mockResolvedValue({ data: null, error: null })
     media.upload.mockReset().mockResolvedValue({ data: { path: imageRow.image_path }, error: null })
     media.createSignedUrl.mockReset().mockResolvedValue({ data: { signedUrl: 'https://media.example.test/photo' }, error: null })
   })
@@ -29,7 +30,22 @@ describe('chatRepository photo messages', () => {
       id: 'message-1', body: '', image: { url: 'https://media.example.test/photo', width: 1200, height: 900 },
     })
     expect(media.upload).toHaveBeenCalledWith(imageRow.image_path, expect.objectContaining({ type: 'image/jpeg', size: 3 }), { contentType: 'image/jpeg', upsert: false })
+    expect(queries.authorizeSend).toHaveBeenCalledWith('conversation-1')
     expect(queries.send).toHaveBeenCalledWith('conversation-1', 'message-1', '', expect.objectContaining({ path: imageRow.image_path }), undefined)
+  })
+
+  it('does not upload a photo when the conversation is blocked', async () => {
+    queries.authorizeSend.mockResolvedValue({ data: null, error: { code: 'PT403', message: 'chat_blocked' } })
+    await expect(chatRepository.send('conversation-1', 'message-1', '', image)).rejects.toThrow()
+    expect(media.upload).not.toHaveBeenCalled()
+    expect(queries.send).not.toHaveBeenCalled()
+  })
+
+  it('opens a listed trainer and maps blocking state', async () => {
+    queries.openPublicTrainer.mockResolvedValue({ data: 'conversation-1', error: null })
+    queries.setBlocked.mockResolvedValue({ data: [{ can_message: false, blocked_by_me: true, blocked_by_partner: false }], error: null })
+    await expect(chatRepository.openPublicTrainer('public-profile-1')).resolves.toBe('conversation-1')
+    await expect(chatRepository.setBlocked('conversation-1', true)).resolves.toEqual({ canMessage: false, blockedByMe: true, blockedByPartner: false })
   })
 
   it('keeps an idempotent retry when the photo already exists', async () => {

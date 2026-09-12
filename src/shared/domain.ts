@@ -25,6 +25,15 @@ export interface ChatThread {
   lastMessageAt: string | null
   lastMessageSenderId: UUID | null
   unreadCount: number
+  canMessage: boolean
+  blockedByMe: boolean
+  blockedByPartner: boolean
+}
+
+export interface ChatBlockState {
+  canMessage: boolean
+  blockedByMe: boolean
+  blockedByPartner: boolean
 }
 
 export interface ChatMessage {

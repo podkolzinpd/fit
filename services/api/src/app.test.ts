@@ -68,7 +68,7 @@ import type { PilotTrainingSummaries } from './training-summary.js'
 import type { VitalMediaSigner } from './vital-media.js'
 import type { ChatMediaStore } from './chat-media.js'
 import type { PilotTrainerProfiles, TrainerProfileDraft } from './trainer-profile.js'
-import type { PilotChat } from './pilot-chat.js'
+import { ChatCommandError, type PilotChat } from './pilot-chat.js'
 import { TrainerDiscoveryError, type PilotTrainerDiscovery } from './trainer-discovery.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
@@ -83,10 +83,13 @@ describe('reliable chat API', () => {
   const clientId = '10000000-0000-4000-8000-000000000002'
   const trainerId = '10000000-0000-4000-8000-000000000003'
   const messageId = '10000000-0000-4000-8000-000000000004'
+  const publicProfileId = '10000000-0000-4000-8000-000000000005'
   function chat() {
     const baseMessage = { id: messageId, conversationId, senderId: trainerId, body: 'Привет', image: null, createdAt: '2026-09-10T12:00:00.000Z', editedAt: null, replyTo: null }
     const send = vi.fn<PilotChat['send']>().mockResolvedValue(baseMessage)
     const open = vi.fn<PilotChat['open']>().mockResolvedValue(conversationId)
+    const openPublicTrainer = vi.fn<PilotChat['openPublicTrainer']>().mockResolvedValue(conversationId)
+    const setBlocked = vi.fn<PilotChat['setBlocked']>().mockResolvedValue({ canMessage: false, blockedByMe: true, blockedByPartner: false })
     const authorize = vi.fn<PilotChat['authorize']>().mockResolvedValue(undefined)
     const remove = vi.fn<PilotChat['remove']>().mockResolvedValue(null)
     const edit = vi.fn<PilotChat['edit']>().mockResolvedValue({ ...baseMessage, editedAt: '2026-09-10T12:10:00.000Z' })
@@ -95,8 +98,10 @@ describe('reliable chat API', () => {
     const search = vi.fn<PilotChat['search']>().mockResolvedValue([baseMessage])
     const window = vi.fn<PilotChat['window']>().mockResolvedValue([baseMessage])
     const pilotChat: PilotChat = {
-      listThreads: vi.fn<PilotChat['listThreads']>().mockResolvedValue([{ conversationId, clientId, trainerId, partnerUserId: trainerId, partnerName: 'Анна', activeConnection: true, lastMessageBody: null, lastMessageAt: null, lastMessageSenderId: null, unreadCount: 0 }]),
+      listThreads: vi.fn<PilotChat['listThreads']>().mockResolvedValue([{ conversationId, clientId, trainerId, partnerUserId: trainerId, partnerName: 'Анна', activeConnection: true, lastMessageBody: null, lastMessageAt: null, lastMessageSenderId: null, unreadCount: 0, canMessage: true, blockedByMe: false, blockedByPartner: false }]),
       open,
+      openPublicTrainer,
+      setBlocked,
       listMessages: vi.fn<PilotChat['listMessages']>().mockResolvedValue({ messages: [], nextCursor: null }),
       authorize,
       send,
@@ -104,7 +109,7 @@ describe('reliable chat API', () => {
       remove,
       unreadState, markRead, search, window,
     }
-    return { pilotChat, open, send, edit, remove, authorize, unreadState, markRead, search, window }
+    return { pilotChat, open, openPublicTrainer, setBlocked, send, edit, remove, authorize, unreadState, markRead, search, window }
   }
 
   it('lists actor conversations without caching', async () => {
@@ -113,6 +118,31 @@ describe('reliable chat API', () => {
     expect(response.statusCode).toBe(200)
     expect(response.headers['cache-control']).toBe('no-store')
     expect(response.json()).toMatchObject({ threads: [{ partnerName: 'Анна' }] })
+  })
+
+  it('opens a listed trainer chat and updates the actor block state', async () => {
+    const { pilotChat, openPublicTrainer, setBlocked } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
+    const opened = await app.inject({ method: 'POST', url: `/v1/trainers/${publicProfileId}/chat`, headers: { 'x-fit-session': sessionToken } })
+    const blocked = await app.inject({ method: 'PUT', url: `/v1/chat/conversations/${conversationId}/block`, headers: { 'x-fit-session': sessionToken }, payload: { blocked: true } })
+    expect(opened.statusCode).toBe(200)
+    expect(openPublicTrainer).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, publicProfileId)
+    expect(blocked.statusCode).toBe(200)
+    expect(blocked.json()).toEqual({ state: { canMessage: false, blockedByMe: true, blockedByPartner: false } })
+    expect(setBlocked).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, true)
+  })
+
+  it('returns stable errors for discovery rate limits and blocked chats', async () => {
+    const first = chat(); first.openPublicTrainer.mockRejectedValueOnce(new ChatCommandError('rate_limited'))
+    const rateApp = buildApp({ pilotChat: first.pilotChat, logger: false }); apps.push(rateApp)
+    const limited = await rateApp.inject({ method: 'POST', url: `/v1/trainers/${publicProfileId}/chat`, headers: { 'x-fit-session': sessionToken } })
+    expect(limited.statusCode).toBe(429)
+    expect(limited.json()).toEqual({ error: 'too_many_requests' })
+
+    const second = chat(); second.send.mockRejectedValueOnce(new ChatCommandError('blocked'))
+    const blockApp = buildApp({ pilotChat: second.pilotChat, logger: false }); apps.push(blockApp)
+    const blocked = await blockApp.inject({ method: 'POST', url: `/v1/chat/conversations/${conversationId}/messages`, headers: { 'x-fit-session': sessionToken }, payload: { id: messageId, body: 'Привет' } })
+    expect(blocked.statusCode).toBe(403)
+    expect(blocked.json()).toEqual({ error: 'chat_blocked' })
   })
 
   it('passes the client generated message id to idempotent send', async () => {
