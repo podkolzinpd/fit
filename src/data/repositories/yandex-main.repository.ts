@@ -51,6 +51,7 @@ const chatThreadSchema = z.object({
   conversationId: uuid.nullable(), clientId: uuid, trainerId: uuid, partnerUserId: uuid,
   partnerName: z.string(), activeConnection: z.boolean(), lastMessageBody: z.string().nullable(),
   lastMessageAt: z.iso.datetime().nullable(), lastMessageSenderId: uuid.nullable(), unreadCount: z.number().int().nonnegative(),
+  canMessage: z.boolean(), blockedByMe: z.boolean(), blockedByPartner: z.boolean(),
 })
 const chatMessageSchema = z.object({
   id: uuid, conversationId: uuid, senderId: uuid, body: z.string(), createdAt: z.iso.datetime(),
@@ -995,6 +996,12 @@ export function createYandexMainRepository(
       },
       async open(clientId, trainerId): Promise<string> {
         return (await writeJson(queries, '/v1/chat/conversations', 'POST', { clientId, trainerId }, z.object({ conversationId: uuid }))).conversationId
+      },
+      async openPublicTrainer(publicProfileId): Promise<string> {
+        return (await writeJson(queries, `/v1/trainers/${publicProfileId}/chat`, 'POST', {}, z.object({ conversationId: uuid }))).conversationId
+      },
+      async setBlocked(conversationId, blocked) {
+        return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/block`, 'PUT', { blocked }, z.object({ state: z.object({ canMessage: z.boolean(), blockedByMe: z.boolean(), blockedByPartner: z.boolean() }) }))).state
       },
       async listMessages(conversationId, cursor): Promise<ChatMessagePage> {
         const params = new URLSearchParams({ limit: '50' })

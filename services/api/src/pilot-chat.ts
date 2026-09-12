@@ -2,23 +2,26 @@ import type { QueryResultRow } from 'pg'
 import type { DatabaseClient, DatabasePool } from './db/types.js'
 import { withYandexActorSession, type YandexActorSessionInput } from './yandex-actor-session.js'
 
-export type ChatThread = { conversationId: string | null; clientId: string; trainerId: string; partnerUserId: string; partnerName: string; activeConnection: boolean; lastMessageBody: string | null; lastMessageAt: string | null; lastMessageSenderId: string | null; unreadCount: number }
+export type ChatThread = { conversationId: string | null; clientId: string; trainerId: string; partnerUserId: string; partnerName: string; activeConnection: boolean; lastMessageBody: string | null; lastMessageAt: string | null; lastMessageSenderId: string | null; unreadCount: number; canMessage: boolean; blockedByMe: boolean; blockedByPartner: boolean }
+export type ChatBlockState = { canMessage: boolean; blockedByMe: boolean; blockedByPartner: boolean }
 export type ChatStoredImage = { path: string; mimeType: 'image/jpeg'; width: number; height: number; sizeBytes: number }
 export type ChatReplyPreview = { messageId: string; senderId: string | null; body: string | null; hasImage: boolean; deleted: boolean }
 export type ChatMessage = { id: string; conversationId: string; senderId: string; body: string; image: ChatStoredImage | null; createdAt: string; editedAt: string | null; replyTo: ChatReplyPreview | null }
 export type ChatUnreadState = { firstMessageId: string | null; firstCreatedAt: string | null; unreadCount: number }
 export type ChatCursor = { createdAt: string; id: string }
-type ThreadRow = QueryResultRow & { conversation_id: string | null; client_id: string; trainer_id: string; partner_user_id: string; partner_name: string; active_connection: boolean; last_message_body: string | null; last_message_at: string | null; last_message_sender_id: string | null; unread_count: string | number }
+type ThreadRow = QueryResultRow & { conversation_id: string | null; client_id: string; trainer_id: string; partner_user_id: string; partner_name: string; active_connection: boolean; last_message_body: string | null; last_message_at: string | null; last_message_sender_id: string | null; unread_count: string | number; can_message: boolean; blocked_by_me: boolean; blocked_by_partner: boolean }
 type MessageRow = QueryResultRow & { id: string; conversation_id: string; sender_id: string; body: string; image_path: string | null; image_mime_type: string | null; image_width: number | null; image_height: number | null; image_size_bytes: number | null; created_at: string; edited_at?: string | null; reply_to_message_id?: string | null; reply_to_sender_id?: string | null; reply_to_body?: string | null; reply_to_has_image?: boolean | null; reply_to_deleted?: boolean | null }
 
 export class ChatCommandError extends Error {
-  constructor(readonly failure: 'forbidden' | 'invalid' | 'conflict') { super(`Chat command failed: ${failure}`) }
+  constructor(readonly failure: 'forbidden' | 'invalid' | 'conflict' | 'blocked' | 'rate_limited') { super(`Chat command failed: ${failure}`) }
 }
 function chatError(error: unknown) {
   if (!(error instanceof Error)) return undefined
   if (error.message === 'chat_forbidden') return new ChatCommandError('forbidden')
   if (error.message === 'chat_message_invalid') return new ChatCommandError('invalid')
   if (error.message === 'chat_message_conflict') return new ChatCommandError('conflict')
+  if (error.message === 'chat_blocked') return new ChatCommandError('blocked')
+  if (error.message === 'chat_rate_limited') return new ChatCommandError('rate_limited')
   return undefined
 }
 function message(row: MessageRow): ChatMessage {
@@ -34,6 +37,8 @@ function message(row: MessageRow): ChatMessage {
 export interface PilotChat {
   listThreads(session: YandexActorSessionInput): Promise<ChatThread[]>
   open(session: YandexActorSessionInput, clientId: string, trainerId: string): Promise<string>
+  openPublicTrainer(session: YandexActorSessionInput, publicProfileId: string): Promise<string>
+  setBlocked(session: YandexActorSessionInput, conversationId: string, blocked: boolean): Promise<ChatBlockState>
   listMessages(session: YandexActorSessionInput, conversationId: string, cursor: ChatCursor | null, limit: number): Promise<{ messages: ChatMessage[]; nextCursor: ChatCursor | null }>
   authorize(session: YandexActorSessionInput, conversationId: string): Promise<void>
   send(session: YandexActorSessionInput, conversationId: string, messageId: string, body: string, image: ChatStoredImage | null, replyToMessageId?: string | null): Promise<ChatMessage>
@@ -55,7 +60,23 @@ export class DatabasePilotChat implements PilotChat {
       conversationId: row.conversation_id, clientId: row.client_id, trainerId: row.trainer_id, partnerUserId: row.partner_user_id,
       partnerName: row.partner_name, activeConnection: row.active_connection, lastMessageBody: row.last_message_body,
       lastMessageAt: row.last_message_at, lastMessageSenderId: row.last_message_sender_id, unreadCount: Number(row.unread_count),
+      canMessage: row.can_message, blockedByMe: row.blocked_by_me, blockedByPartner: row.blocked_by_partner,
     })))
+  }
+  openPublicTrainer(session: YandexActorSessionInput, publicProfileId: string) {
+    return this.run(session, async (client) => {
+      const rows = await client.query<QueryResultRow & { id: string }>('select public.open_public_trainer_chat($1) as id',[publicProfileId])
+      if (!rows[0]?.id) throw new Error('Public trainer chat open returned an unsupported format')
+      return rows[0].id
+    })
+  }
+  setBlocked(session: YandexActorSessionInput, conversationId: string, blocked: boolean) {
+    return this.run(session, async (client) => {
+      const rows = await client.query<QueryResultRow & { can_message: boolean; blocked_by_me: boolean; blocked_by_partner: boolean }>('select * from public.set_chat_block($1,$2)',[conversationId,blocked])
+      const row = rows[0]
+      if (!row) throw new Error('Chat block returned an unsupported format')
+      return { canMessage: row.can_message, blockedByMe: row.blocked_by_me, blockedByPartner: row.blocked_by_partner }
+    })
   }
   open(session: YandexActorSessionInput, clientId: string, trainerId: string) {
     return this.run(session, async (client) => {
@@ -73,8 +94,7 @@ export class DatabasePilotChat implements PilotChat {
   }
   authorize(session: YandexActorSessionInput, conversationId: string) {
     return this.run(session, async (client) => {
-      const rows = await client.query<QueryResultRow & { allowed: boolean }>('select exists(select 1 from public.chat_conversations where id=$1 and auth.uid() in(client_user_id,trainer_id)) as allowed',[conversationId])
-      if (rows[0]?.allowed !== true) throw new ChatCommandError('forbidden')
+      await client.query('select public.authorize_chat_send($1)',[conversationId])
     })
   }
   send(session: YandexActorSessionInput, conversationId: string, messageId: string, body: string, image: ChatStoredImage | null, replyToMessageId?: string | null) {

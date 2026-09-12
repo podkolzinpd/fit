@@ -30,7 +30,7 @@ import { ChatConversationPage, ChatListPage } from './ChatPages'
 import { ChatHeaderAction, ChatStartButton } from './ChatEntry'
 
 const actor: MockActor = { kind: 'client', role: 'client', userId: 'client-user', email: 'client@example.test', firstName: 'Иван', lastName: null, timezone: 'Europe/Moscow', clientId: 'client-1', trainerId: 'trainer-1', fullName: 'Иван' }
-const thread: ChatThread = { conversationId: 'conversation-1', clientId: 'client-1', trainerId: 'trainer-1', partnerUserId: 'trainer-1', partnerName: 'Анна', activeConnection: true, lastMessageBody: 'До встречи', lastMessageAt: '2026-09-10T12:00:00.000Z', lastMessageSenderId: 'trainer-1', unreadCount: 2 }
+const thread: ChatThread = { conversationId: 'conversation-1', clientId: 'client-1', trainerId: 'trainer-1', partnerUserId: 'trainer-1', partnerName: 'Анна', activeConnection: true, lastMessageBody: 'До встречи', lastMessageAt: '2026-09-10T12:00:00.000Z', lastMessageSenderId: 'trainer-1', unreadCount: 2, canMessage: true, blockedByMe: false, blockedByPartner: false }
 const incoming: ChatMessage = { id: 'message-1', conversationId: 'conversation-1', senderId: 'trainer-1', body: 'До встречи', image: null, createdAt: '2026-09-10T12:00:00.000Z', editedAt: null, replyTo: null }
 
 function chatBackend(): MockChat {

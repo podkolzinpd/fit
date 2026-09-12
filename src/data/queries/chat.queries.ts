@@ -6,6 +6,9 @@ export const chatMedia = supabase.storage.from('chat-media')
 export const chatQueries = {
   listThreads: () => supabase.rpc('list_chat_threads'),
   open: (clientId: string, trainerId: string) => supabase.rpc('open_chat', { p_client_id: clientId, p_trainer_id: trainerId }),
+  openPublicTrainer: (publicProfileId: string) => supabase.rpc('open_public_trainer_chat', { p_public_id: publicProfileId }),
+  authorizeSend: (conversationId: string) => supabase.rpc('authorize_chat_send', { p_conversation_id: conversationId }),
+  setBlocked: (conversationId: string, blocked: boolean) => supabase.rpc('set_chat_block', { p_conversation_id: conversationId, p_blocked: blocked }),
   listMessages: (conversationId: string, cursor?: { createdAt: string; id: string } | null) => supabase.rpc('list_chat_messages_v3', {
     p_conversation_id: conversationId,
     p_before_created_at: cursor?.createdAt ?? undefined,
