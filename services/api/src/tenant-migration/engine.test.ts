@@ -52,7 +52,7 @@ describe('standalone client tenant migration', () => {
       clientProfileId: CLIENT_PROFILE_ID,
       createdAt: '2026-09-11T12:00:00.000Z',
     })
-    expect(bundle.tables).toHaveLength(30)
+    expect(bundle.tables).toHaveLength(31)
     expect(source.query).toHaveBeenCalledWith('commit')
   })
 
@@ -80,7 +80,7 @@ describe('standalone client tenant migration', () => {
     const report = await importTenant(target, bundle, false)
 
     expect(report.mode).toBe('dry-run')
-    expect(report.tables).toHaveLength(30)
+    expect(report.tables).toHaveLength(31)
     expect(query).toHaveBeenCalledWith(
       expect.stringContaining("'fit-tenant:' || $1 || ':' || $2"),
       ['standalone-client', CLIENT_PROFILE_ID],

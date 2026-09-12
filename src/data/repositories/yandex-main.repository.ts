@@ -18,6 +18,7 @@ import type {
   TrainerAttentionWorkout,
   TrainerMembership,
   TrainerCatalogFilters,
+  TrainerDiscoveryPromptAction,
   TrainerProfileDraft,
   Workout,
   WorkoutDraft,
@@ -25,6 +26,7 @@ import type {
   WorkoutSetDraft,
   WorkoutSummary,
 } from '../../shared/domain'
+import { parseTrainerDiscoveryPrompt } from './trainer-discovery.repository'
 import { localDate } from '../../shared/local-date'
 import { validateGoalCriteriaSuggestion } from '../../shared/goal-criteria-suggestions'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
@@ -609,6 +611,16 @@ export function createYandexMainRepository(
         if (filters.acceptingClients !== null) params.set('accepting', String(filters.acceptingClients))
         const suffix = params.size > 0 ? `?${params.toString()}` : ''
         return readJson(queries, `/v1/trainers/catalog${suffix}`, z.array(trainerProfessionalProfileSchema))
+      },
+    },
+    trainerDiscovery: {
+      async getPromptPreference() {
+        return readJson(queries, '/v1/trainer-discovery/prompt', z.unknown())
+          .then(parseTrainerDiscoveryPrompt)
+      },
+      async setPromptPreference(action: TrainerDiscoveryPromptAction) {
+        return writeJson(queries, '/v1/trainer-discovery/prompt', 'PUT', { action }, z.unknown())
+          .then(parseTrainerDiscoveryPrompt)
       },
     },
     clients: {

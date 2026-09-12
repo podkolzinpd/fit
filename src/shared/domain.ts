@@ -684,3 +684,13 @@ export interface TrainerCatalogFilters {
   mode: TrainerTrainingMode | ''
   acceptingClients: boolean | null
 }
+
+export type TrainerDiscoveryPromptState = 'visible' | 'snoozed' | 'dismissed'
+
+export interface TrainerDiscoveryPromptPreference {
+  state: TrainerDiscoveryPromptState
+  remindAt: string | null
+  updatedAt: string | null
+}
+
+export type TrainerDiscoveryPromptAction = 'snooze' | 'dismiss'

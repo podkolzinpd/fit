@@ -22,7 +22,7 @@ const TARGET_DATABASE_PREFIX = 'fit_tenant_rehearsal_'
 const DATABASE_NAME_PATTERN = /^fit_tenant_rehearsal_[1-9][0-9]*_[12]$/u
 const SYNTHETIC_TRAINER_ID = '90000000-0000-4000-8000-000000000009'
 const STANDALONE_CLIENT_PROFILE_ID = 'a1000000-0000-4000-8000-000000000001'
-const EXPECTED_TABLE_COUNT = 30
+const EXPECTED_TABLE_COUNT = 31
 const FIXTURE_PATH = join(
   ROOT_DIRECTORY,
   'services/api/src/tenant-migration/rehearsal-source-fixture.sql',
@@ -61,6 +61,7 @@ export const PRODUCTION_LIKE_TABLES = Object.freeze([
   'public.app_feedback',
   'public.push_subscriptions',
   'public.notification_preferences',
+  'public.trainer_discovery_prompt_preferences',
   'app_private.workout_create_requests',
 ])
 
@@ -90,6 +91,7 @@ export const STANDALONE_CLIENT_DATA_TABLES = Object.freeze([
   'public.app_feedback',
   'public.push_subscriptions',
   'public.notification_preferences',
+  'public.trainer_discovery_prompt_preferences',
   'app_private.workout_create_requests',
 ])
 
