@@ -56,6 +56,8 @@ const criterionId = '0bed7147-4e6c-49d2-bba9-d88f2579e9f0'
 const invitationId = '8fc45130-9bcf-4b77-9ff7-f0872a354034'
 const summaryId = '00b88f4f-e17a-47ae-9d2e-c68079217ac5'
 const publishedSummaryId = 'e7335649-0713-44a7-9640-5453a3849dca'
+const conversationId = '3a6cc527-7bbd-4217-8a76-77de34a2c0fe'
+const publicProfileId = '0ee2e109-13e0-48ba-8664-7cc767128f0c'
 
 function jsonResponse(body: object, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -455,6 +457,17 @@ describe('Yandex main repository', () => {
     expect(onChange).toHaveBeenCalledOnce()
     unsubscribe()
   })
+
+  it('uses the Yandex API for public trainer chat and its connection invitation', async () => {
+    vi.stubGlobal('fetch', installContractFetch())
+    installTrainingData()
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.chat.openPublicTrainer(publicProfileId)).resolves.toBe(conversationId)
+    await expect(repository.chat.connectionState(conversationId)).resolves.toMatchObject({ canInvite: true })
+    await expect(repository.chat.inviteToConnect(conversationId)).resolves.toMatchObject({ invitationPending: true })
+    await expect(repository.chat.acceptConnection(conversationId)).resolves.toMatchObject({ activeConnection: true })
+  })
 })
 
 let summaryMode: 'internal' | 'published' = 'internal'
@@ -595,6 +608,10 @@ function installContractFetch() {
         : jsonResponse({ summaries: [{ id: summaryId, client_id: clientId, period_start: '2026-08-01', period_end: '2026-08-31', trainer_summary: { headline: 'Итог', progress: ['Рост'], consistency: 'Стабильно', attention: [] }, client_summary: clientSummary, display_metrics: metrics, generated_at: '2026-09-01T00:00:00.000Z', version: 1, published: false }] })
     }
     if (method === 'GET' && path === '/v1/push-notifications/status') return jsonResponse({ status: { subscribed: true, preferences: { workout_reminder: true, workout_scheduled: false, chat_message: true } } })
+    if (method === 'POST' && path === `/v1/trainers/${publicProfileId}/chat`) return jsonResponse({ conversationId })
+    if (method === 'GET' && path === `/v1/chat/conversations/${conversationId}/connection`) return jsonResponse({ state: { activeConnection: false, invitationPending: false, invitedAt: null, canInvite: true, canAccept: false, trainerSwitchRequired: false } })
+    if (method === 'POST' && path === `/v1/chat/conversations/${conversationId}/connection/invite`) return jsonResponse({ state: { activeConnection: false, invitationPending: true, invitedAt: '2026-09-12T10:00:00.000Z', canInvite: true, canAccept: false, trainerSwitchRequired: false } })
+    if (method === 'POST' && path === `/v1/chat/conversations/${conversationId}/connection/accept`) return jsonResponse({ state: { activeConnection: true, invitationPending: false, invitedAt: '2026-09-12T10:00:00.000Z', canInvite: false, canAccept: false, trainerSwitchRequired: false } })
     if (method === 'POST' && path === '/v1/push-notifications/subscription/status') return jsonResponse({ subscribed: true })
     if (path === '/v1/assistant/yandex/suggest-goal-criteria') return jsonResponse({ criteria: [], needsInput: [], unsupportedReason: null })
     if (path.endsWith('/training-summaries/generate')) return jsonResponse({ data: { generated_at: '2026-09-01T00:00:00.000Z' }, cached: false })

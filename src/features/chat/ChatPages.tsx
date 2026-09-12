@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type TouchEvent as ReactTouchEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -7,7 +7,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { copyText } from '../../shared/clipboard'
 import type { ChatImageDraft, ChatMessage } from '../../shared/domain'
 import { CloseIcon, MessageIcon, PhotoIcon, SearchIcon } from '../../shared/icons'
-import { AsyncView, Page, StatePanel, useConfirm } from '../../shared/ui'
+import { AsyncView, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { prepareChatImage } from './chat-image'
 
 function timeLabel(value: string) {
@@ -41,7 +41,7 @@ export function ChatListPage() {
       <div className="chat-thread-list">{query.data?.map((item) => <button type="button" className="chat-thread" key={`${item.clientId}:${item.trainerId}`}
         disabled={opening} onClick={() => void openChat(item)}>
         <span className="chat-avatar" aria-hidden="true">{item.partnerName.slice(0, 1).toUpperCase()}</span>
-        <span className="chat-thread-copy"><strong>{item.partnerName}</strong><small>{item.lastMessageBody === '' ? 'Фото' : item.lastMessageBody ?? 'Начать диалог'}</small>{!item.activeConnection && <em>Связь отключена</em>}</span>
+        <span className="chat-thread-copy"><strong>{item.partnerName}</strong><small>{item.lastMessageBody === '' ? 'Фото' : item.lastMessageBody ?? 'Начать диалог'}</small>{!item.activeConnection && <em>Не подключён</em>}</span>
         <span className="chat-thread-meta">{item.lastMessageAt && <time>{timeLabel(item.lastMessageAt)}</time>}{item.unreadCount > 0 && <b>{item.unreadCount > 99 ? '99+' : item.unreadCount}</b>}</span>
       </button>)}</div>
       {openError && <p className="error" role="alert">Не удалось открыть диалог. Попробуйте ещё раз.</p>}
@@ -182,6 +182,7 @@ export function ChatConversationPage() {
   const threads = useQuery({ queryKey: ['chat-threads'], queryFn: () => chat.listThreads() })
   const messages = useQuery({ queryKey: ['chat-messages', conversationId], queryFn: () => chat.listMessages(conversationId), enabled: Boolean(conversationId) })
   const unread = useQuery({ queryKey: ['chat-unread', conversationId], queryFn: () => chat.unreadState(conversationId), enabled: Boolean(conversationId), staleTime: Infinity })
+  const connection = useQuery({ queryKey: ['chat-connection', conversationId], queryFn: () => chat.connectionState(conversationId), enabled: Boolean(conversationId) })
   const [older, setOlder] = useState<ChatMessage[]>([])
   const [contextMessages, setContextMessages] = useState<ChatMessage[]>([])
   const pendingKey = `fit:chat-pending:${actor?.userId}:${conversationId}`
@@ -217,6 +218,17 @@ export function ChatConversationPage() {
   const endRef = useRef<HTMLDivElement>(null)
   const initialScrollDone = useRef(false)
   useChatLayer(searchOpen, () => setSearchOpen(false))
+
+  const refreshConversationState = async () => {
+    await Promise.all([
+      connection.refetch(),
+      queryClient.invalidateQueries({ queryKey: ['chat-threads'] }),
+      queryClient.invalidateQueries({ queryKey: ['client-trainers'] }),
+    ])
+  }
+  const invite = useMutation({ mutationFn: () => chat.inviteToConnect(conversationId), onSuccess: refreshConversationState })
+  const accept = useMutation({ mutationFn: () => chat.acceptConnection(conversationId), onSuccess: refreshConversationState })
+  const block = useMutation({ mutationFn: (blocked: boolean) => chat.setBlocked(conversationId, blocked), onSuccess: refreshConversationState })
 
   useEffect(() => { if (!editing) localStorage.setItem(draftKey, draft) }, [draft, draftKey, editing])
   useEffect(() => {
@@ -345,17 +357,39 @@ export function ChatConversationPage() {
     window.setTimeout(() => void revealMessage(item.id), 0)
   }
 
-  const leaveConversation = () => location.state && (location.state as { chatBack?: string }).chatBack === 'history' ? navigate(-1) : navigate('/chat', { replace: true })
+  const leaveConversation = () => location.state && (location.state as { chatBack?: string }).chatBack ? navigate(-1) : navigate('/chat', { replace: true })
   const searchAction = <button type="button" className="chat-page-search" aria-label={searchOpen ? 'Закрыть поиск' : 'Поиск по переписке'} onClick={() => searchOpen ? window.history.back() : setSearchOpen(true)}>{searchOpen ? <CloseIcon /> : <SearchIcon />}</button>
+  const blockedByMe = thread?.blockedByMe === true
+  const chatAction = <div className="chat-page-actions">{searchAction}<OverflowMenu label="Действия с диалогом" items={[{
+    label: blockedByMe ? 'Разблокировать' : 'Заблокировать', danger: !blockedByMe, disabled: block.isPending,
+    onClick: () => void (async () => {
+      if (!blockedByMe && !await confirm({ message: 'Заблокировать этот диалог?', confirmLabel: 'Заблокировать', danger: true })) return
+      block.mutate(!blockedByMe)
+    })(),
+  }]} /></div>
+  const connected = connection.data?.activeConnection ?? thread?.activeConnection ?? false
+  const connectionError = invite.error || accept.error
 
-  return <><Page title={thread?.partnerName ?? 'Диалог'} subtitle={!thread?.activeConnection && thread ? 'Связь отключена' : undefined}
-    back="/chat" onBack={leaveConversation} swipeBack className="chat-conversation-page" action={searchAction}>
-    <AsyncView loading={messages.isLoading || threads.isLoading || unread.isLoading} error={messages.error ?? threads.error ?? unread.error} onRetry={() => { void messages.refetch(); void threads.refetch(); void unread.refetch() }}>
+  return <><Page title={thread?.partnerName ?? 'Диалог'} subtitle={!connected && thread ? 'Не подключён' : undefined}
+    back="/chat" onBack={leaveConversation} swipeBack className="chat-conversation-page" action={chatAction}>
+    <AsyncView loading={messages.isLoading || threads.isLoading || unread.isLoading || connection.isLoading} error={messages.error ?? threads.error ?? unread.error ?? connection.error} onRetry={() => { void messages.refetch(); void threads.refetch(); void unread.refetch(); void connection.refetch() }}>
       {searchOpen && <section className="chat-search" aria-label="Поиск по переписке">
         <form onSubmit={(event) => { event.preventDefault(); setSearchTerm(searchInput.trim()) }}><SearchIcon /><input autoFocus type="search" value={searchInput} maxLength={100} placeholder="Найти сообщение" aria-label="Текст для поиска" onChange={(event) => setSearchInput(event.target.value)} /><button type="submit" disabled={searchInput.trim().length < 2}>Найти</button></form>
         {searchTerm && <div className="chat-search-results">{search.isFetching && <p>Ищем…</p>}{search.error && <div className="chat-search-error" role="alert"><span>Не удалось выполнить поиск</span><button type="button" onClick={() => void search.refetch()}>Повторить</button></div>}{search.data?.length === 0 && <p>Ничего не найдено</p>}{search.data?.map((item) => <button type="button" key={item.id} onClick={() => void openSearchResult(item)}><strong>{item.senderId === actor?.userId ? 'Вы' : thread?.partnerName ?? 'Собеседник'}</strong><span><HighlightedText text={item.body} query={searchTerm} /></span><time>{dateLabel(item.createdAt)}</time></button>)}</div>}
       </section>}
       <section ref={surfaceRef} className="chat-surface" aria-label="Переписка">
+        {!connected && connection.data && <section className="chat-connection-card" aria-label="Связь с тренером">
+          {connection.data.trainerSwitchRequired
+            ? <><strong>У вас уже есть тренер</strong><span>Сначала отключите его в профиле.</span></>
+            : actor?.role === 'trainer'
+              ? connection.data.invitationPending
+                ? <><strong>Приглашение отправлено</strong><span>Спортсмен увидит его здесь.</span></>
+                : <><strong>Начать совместные тренировки?</strong><button type="button" className="secondary" disabled={!connection.data.canInvite || invite.isPending} onClick={() => invite.mutate()}>{invite.isPending ? 'Отправляем…' : 'Предложить тренировки'}</button></>
+              : connection.data.invitationPending
+                ? <><strong>Тренер предлагает заниматься вместе</strong><button type="button" className="primary" disabled={!connection.data.canAccept || accept.isPending} onClick={() => accept.mutate()}>{accept.isPending ? 'Подключаем…' : 'Подключиться'}</button></>
+                : <><strong>Можно общаться без подключения</strong><span>Тренировки пока недоступны тренеру.</span></>}
+          {connectionError && <span className="error" role="alert">Не удалось выполнить действие</span>}
+        </section>}
         {nextCursor && <button type="button" className="link chat-load-older" disabled={loadingOlder} onClick={() => void loadOlder()}>{loadingOlder ? 'Загружаем…' : 'Ранее'}</button>}
         {visible.length === 0 && <StatePanel compact tone="info" title="Начните диалог" description="Напишите первое сообщение." />}
         <div className="chat-messages">{visible.map((item) => {
@@ -375,7 +409,7 @@ export function ChatConversationPage() {
         })}<div ref={endRef} /></div>
         {unread.data && unread.data.unreadCount > 0 && <button type="button" className="chat-new-button" onClick={() => unread.data?.firstMessageId && void revealMessage(unread.data.firstMessageId)}>К новым <b>{unread.data.unreadCount}</b></button>}
       </section>
-      <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); void submit() }}>
+      {thread?.canMessage === false ? <div className="chat-blocked-state" role="status"><strong>{thread.blockedByMe ? 'Диалог заблокирован' : 'Сообщения недоступны'}</strong>{thread.blockedByMe && <button type="button" className="secondary" disabled={block.isPending} onClick={() => block.mutate(false)}>Разблокировать</button>}</div> : <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); void submit() }}>
         {editing && <div className="chat-composer-context"><div><strong>Изменить сообщение</strong><span>{editing.body}</span></div><button type="button" aria-label="Отменить изменение" onClick={cancelEdit}><CloseIcon /></button></div>}
         {replyingTo && !editing && <div className="chat-composer-context"><div><strong>Ответ</strong><span>{replyingTo.body || (replyingTo.image ? 'Фото' : 'Сообщение')}</span></div><button type="button" aria-label="Отменить ответ" onClick={() => setReplyingTo(null)}><CloseIcon /></button></div>}
         {photo && <div className="chat-photo-preview"><img src={photo.dataUrl} alt="Фото для отправки" /><button type="button" aria-label="Убрать фото" onClick={() => setPhoto(null)}><CloseIcon /></button></div>}
@@ -387,7 +421,7 @@ export function ChatConversationPage() {
           <textarea ref={messageInputRef} id="chat-message" value={draft} maxLength={4000} rows={1} placeholder={photo ? 'Добавить подпись' : 'Сообщение'} onChange={(event) => setDraft(event.target.value)} />
           <button type="submit" className="chat-send" disabled={(!draft.trim() && !photo) || photoBusy || composerBusy} aria-label={editing ? 'Сохранить изменения' : 'Отправить'}><MessageIcon /></button>
         </div>
-      </form>
+      </form>}
     </AsyncView>
   </Page>
   {actionMessage && <ChatActionSheet message={actionMessage} own={actionMessage.senderId === actor?.userId} local={pending.some((item) => item.id === actionMessage.id)} busy={deletingMessageId === actionMessage.id} error={deleteErrorMessageId === actionMessage.id}

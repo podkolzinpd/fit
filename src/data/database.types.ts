@@ -1,4 +1,4 @@
-// schema-sha256: 6c218e3562c1bb4b596f90b570f29ee48861b5f4a4e8f195a6149fbff816d8fb
+// schema-sha256: c08f6b25e4642c51df5e4f5c242482b63381d8c57ea3e573a2e0796a436ea965
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -298,6 +298,8 @@ export type Database = {
           client_last_read_at: string | null
           client_last_read_message_id: string | null
           client_user_id: string
+          connection_accepted_at: string | null
+          connection_invited_at: string | null
           created_at: string
           id: string
           origin: string
@@ -313,6 +315,8 @@ export type Database = {
           client_last_read_at?: string | null
           client_last_read_message_id?: string | null
           client_user_id: string
+          connection_accepted_at?: string | null
+          connection_invited_at?: string | null
           created_at?: string
           id?: string
           origin?: string
@@ -328,6 +332,8 @@ export type Database = {
           client_last_read_at?: string | null
           client_last_read_message_id?: string | null
           client_user_id?: string
+          connection_accepted_at?: string | null
+          connection_invited_at?: string | null
           created_at?: string
           id?: string
           origin?: string
@@ -1946,6 +1952,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_chat_connection_invitation: {
+        Args: { p_conversation_id: string }
+        Returns: {
+          active_connection: boolean
+          invitation_pending: boolean
+          invited_at: string | null
+          can_invite: boolean
+          can_accept: boolean
+          trainer_switch_required: boolean
+        }[]
+      }
       answer_workout_question: {
         Args: {
           p_expected_version: number
@@ -2105,6 +2122,17 @@ export type Database = {
           body: string; conversation_id: string; created_at: string; edited_at: string | null; id: string
           image_height: number | null; image_mime_type: string | null; image_path: string | null; image_size_bytes: number | null; image_width: number | null
           reply_to_body: string | null; reply_to_deleted: boolean; reply_to_has_image: boolean; reply_to_message_id: string | null; reply_to_sender_id: string | null; sender_id: string
+        }[]
+      }
+      get_chat_connection_state: {
+        Args: { p_conversation_id: string }
+        Returns: {
+          active_connection: boolean
+          invitation_pending: boolean
+          invited_at: string | null
+          can_invite: boolean
+          can_accept: boolean
+          trainer_switch_required: boolean
         }[]
       }
       get_chat_unread_state: {
@@ -2550,6 +2578,17 @@ export type Database = {
           created_at: string
           id: string
           sender_id: string
+        }[]
+      }
+      send_chat_connection_invitation: {
+        Args: { p_conversation_id: string }
+        Returns: {
+          active_connection: boolean
+          invitation_pending: boolean
+          invited_at: string | null
+          can_invite: boolean
+          can_accept: boolean
+          trainer_switch_required: boolean
         }[]
       }
       send_chat_message_v2: {
