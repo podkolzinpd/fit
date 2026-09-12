@@ -1,4 +1,4 @@
-// schema-sha256: 146fd46731907d2215c961a0442e94d6219d0387f1a922e0c7d355ddb72ccc2b
+// schema-sha256: 5893b9b20857ce63a3cd37961ab30f2c481b87f0ba7e79ad9974078d86c670d8
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1466,6 +1466,38 @@ export type Database = {
           },
         ]
       }
+      trainer_discovery_prompt_preferences: {
+        Row: {
+          created_at: string
+          dismissed_at: string | null
+          remind_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dismissed_at?: string | null
+          remind_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dismissed_at?: string | null
+          remind_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainer_discovery_prompt_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trainer_professional_profiles: {
         Row: {
           created_at: string
@@ -2055,6 +2087,7 @@ export type Database = {
         Args: { p_public_id: string }
         Returns: Json
       }
+      get_trainer_discovery_prompt: { Args: never; Returns: Json }
       get_workout_regularity: {
         Args: { p_client_id: string; p_reference_time?: string }
         Returns: {
@@ -2552,6 +2585,10 @@ export type Database = {
       }
       set_trainer_profile_catalog_listing: {
         Args: { p_listed: boolean }
+        Returns: Json
+      }
+      set_trainer_discovery_prompt: {
+        Args: { p_action: string }
         Returns: Json
       }
       set_workout_review: {

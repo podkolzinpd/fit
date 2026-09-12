@@ -432,6 +432,19 @@ where feedback.user_id in (select id from scope_users)`,
     keyColumns: ['user_id', 'kind'],
   },
   {
+    name: 'public.trainer_discovery_prompt_preferences',
+    sourceSql: publicRows(
+      'trainer_discovery_prompt_preferences',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetSql: publicRows(
+      'trainer_discovery_prompt_preferences',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetRecord: 'public.trainer_discovery_prompt_preferences',
+    keyColumns: ['user_id'],
+  },
+  {
     name: 'app_private.push_notifications_outbox',
     sourceSql: `select null::jsonb as row where $1::uuid is null`,
     targetSql: `${scopeCte}
@@ -777,6 +790,19 @@ where feedback.user_id = $1`,
     targetSql: standalonePublicRows('notification_preferences', 'row.user_id = $1'),
     targetRecord: 'public.notification_preferences',
     keyColumns: ['user_id', 'kind'],
+  },
+  {
+    name: 'public.trainer_discovery_prompt_preferences',
+    sourceSql: standalonePublicRows(
+      'trainer_discovery_prompt_preferences',
+      'row.user_id = $1',
+    ),
+    targetSql: standalonePublicRows(
+      'trainer_discovery_prompt_preferences',
+      'row.user_id = $1',
+    ),
+    targetRecord: 'public.trainer_discovery_prompt_preferences',
+    keyColumns: ['user_id'],
   },
   {
     name: 'app_private.push_notifications_outbox',

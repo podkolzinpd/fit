@@ -9,7 +9,7 @@ import {
 function expectSafeManifest(
   manifest: typeof TENANT_MIGRATION_TABLES,
 ): void {
-  expect(manifest).toHaveLength(30)
+  expect(manifest).toHaveLength(31)
   const names = manifest.map((spec) => spec.name)
   expect(new Set(names).size).toBe(names.length)
   for (const spec of manifest) {
