@@ -470,8 +470,16 @@ async function expectVisualBaseline(
   })
 }
 
-async function expectBodyMapBaseline(map: import('@playwright/test').Locator, name: string) {
+async function expectBodyMapBaseline(map: import('@playwright/test').Locator, name: string, stableHeight?: number) {
   const previousScrollTop = await map.evaluate(() => document.querySelector<HTMLElement>('.content')?.scrollTop ?? 0)
+  const previousHeight = stableHeight === undefined
+    ? null
+    : await map.evaluate((element, height) => {
+      const htmlElement = element as HTMLElement
+      const previous = htmlElement.style.height
+      htmlElement.style.height = `${height}px`
+      return previous
+    }, stableHeight)
   await map.scrollIntoViewIfNeeded()
   await expect(map.locator('.body-progress-visual')).not.toHaveClass(/discovering/, { timeout: 3_000 })
   try {
@@ -482,6 +490,12 @@ async function expectBodyMapBaseline(map: import('@playwright/test').Locator, na
       stylePath: 'e2e/visual-body-map.css',
     })
   } finally {
+    if (previousHeight !== null) {
+      await map.evaluate((element, height) => {
+        const htmlElement = element as HTMLElement
+        htmlElement.style.height = height
+      }, previousHeight)
+    }
     await map.evaluate((_element, scrollTop) => {
       const content = document.querySelector<HTMLElement>('.content')
       if (content) content.scrollTop = scrollTop
@@ -2099,7 +2113,7 @@ test('personal workout result stays on Home and remains available in Progress hi
   await expect(disclosure.getByRole('button', { name: 'Грудь: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
   const mapViewport = page.viewportSize()!
   await page.setViewportSize({ ...mapViewport, height: 1400 })
-  await expectBodyMapBaseline(disclosure, `home-map-detail-${process.platform}.png`)
+  await expectBodyMapBaseline(disclosure, `home-map-detail-${process.platform}.png`, 864)
   await page.setViewportSize(mapViewport)
   await gotoStable(page, '/me/progress')
   await expect(page.locator('.period-exercise-results')).toContainText('За этот период новых достижений нет.')
