@@ -70,8 +70,5 @@ export function parseTrainerProfileDraft(value: unknown): TrainerProfileDraft {
 
 export function validatePublishableTrainerProfile(draft: TrainerProfileDraft): string | null {
   if (draft.displayName.trim().length < 2) return 'Укажите имя тренера.'
-  if (draft.bio.trim().length < 40) return 'Расскажите о себе чуть подробнее — от 40 символов.'
-  if (draft.specialties.length === 0) return 'Добавьте хотя бы одно направление.'
-  if (draft.trainingModes.length === 0) return 'Выберите формат занятий.'
   return null
 }

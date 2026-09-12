@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(13);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('a2000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'trainer-profile@example.test', ''),
@@ -23,14 +23,15 @@ select is(has_table_privilege('anon', 'public.trainer_professional_profiles', 'S
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'a2000000-0000-4000-8000-000000000001', true);
 create temp table saved_profile as select public.save_trainer_profile_draft(jsonb_build_object(
-  'displayName', 'Анна Иванова', 'bio', repeat('Описание ', 8),
-  'specialties', jsonb_build_array('Силовые'), 'city', 'Москва',
-  'trainingModes', jsonb_build_array('online'), 'experienceStartYear', 2020,
-  'education', '', 'formats', '', 'price', '', 'acceptingClients', true,
+  'displayName', 'Анна Иванова', 'bio', '',
+  'specialties', '[]'::jsonb, 'city', '',
+  'trainingModes', '[]'::jsonb, 'experienceStartYear', null,
+  'education', '', 'formats', '', 'price', '', 'acceptingClients', false,
   'avatarDataUrl', null, 'certificates', '[]'::jsonb
 )) as value;
 select is((select value->'draft'->>'displayName' from saved_profile), 'Анна Иванова', 'trainer saves own draft');
 select is(public.publish_trainer_profile()->'published'->>'displayName', 'Анна Иванова', 'trainer publishes a snapshot');
+select is(public.get_own_trainer_profile()->'published'->>'bio', '', 'minimal published profile keeps optional biography empty');
 select public.save_trainer_profile_draft(jsonb_build_object(
   'displayName', 'Новое имя', 'bio', repeat('Новое описание ', 5),
   'specialties', jsonb_build_array('Бег'), 'city', '',
