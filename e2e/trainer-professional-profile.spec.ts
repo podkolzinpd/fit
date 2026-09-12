@@ -24,6 +24,17 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
     expect((await unpublishRequest).status()).toBe(200)
     await expect(existingUnpublishButton).toHaveCount(0)
   }
+  if (await profile.getByText('Анкета пока не заполнена').isVisible()) {
+    const minimalPublishButton = profile.getByRole('button', { name: 'Опубликовать', exact: true })
+    await expect(minimalPublishButton).toBeVisible()
+    await expect(profile.getByRole('button', { name: 'Заполнить анкету' })).toBeVisible()
+    await minimalPublishButton.click()
+    await expect(profile.getByText('Видна в каталоге')).toBeVisible()
+    await profile.locator('.trainer-publication-disclosure summary').click()
+    const minimalUnpublish = profile.getByRole('button', { name: 'Снять с публикации' })
+    await minimalUnpublish.click()
+    await expect(minimalUnpublish).toHaveCount(0)
+  }
   await editAction.click()
   const editor = profile.getByRole('form', { name: 'Редактирование анкеты тренера' })
   await expect(editor).toHaveClass(/trainer-profile-edit-card/)

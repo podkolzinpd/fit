@@ -5834,7 +5834,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-profile-identity .trainer-catalog-visibility .switch-row { min-height:56px; }
 .trainer-profile-identity .trainer-profile-empty { gap:14px; }
 .trainer-profile-identity .trainer-profile-empty-copy { margin:0; color:var(--secondary-label-fg); font-size:14px; line-height:1.45; }
-.trainer-profile-identity .trainer-profile-empty > .primary { min-height:48px; border-radius:14px; font-size:14px; font-weight:500; }
+.trainer-profile-identity .trainer-profile-empty > button { width:100%; min-height:44px; border-radius:14px; font-size:14px; font-weight:500; }
 .trainer-profile-identity .trainer-profile-edit-card { gap:16px; padding:18px; border-radius:18px; box-shadow:none; }
 .trainer-profile-identity .trainer-profile-edit-head h2 { margin:3px 0 0; color:var(--fg); font-size:18px; font-weight:600; }
 .trainer-profile-identity .trainer-profile-form-section { display:grid; gap:12px; padding-top:16px; border-top:1px solid var(--border); }
