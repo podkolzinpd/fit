@@ -1,4 +1,4 @@
-// schema-sha256: b3dfa0bd46d8487510271bc93eb6afe3badb011abcfe84aae734eb272a8a687e
+// schema-sha256: 6c218e3562c1bb4b596f90b570f29ee48861b5f4a4e8f195a6149fbff816d8fb
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -2007,9 +2007,32 @@ export type Database = {
         Returns: number
       }
       claim_client_invitation: { Args: { p_code: string }; Returns: string }
+      claim_training_summary_generation: {
+        Args: {
+          p_client_id: string
+          p_input_fingerprint: string
+          p_model_input_chars: number
+          p_period_end: string
+          p_period_start: string
+          p_request_id: string
+          p_source_input_chars: number
+        }
+        Returns: Json
+      }
       complete_assistant_summary: {
         Args: { p_action_id: string; p_expected_version?: number }
         Returns: Json
+      }
+      complete_training_summary_generation: {
+        Args: {
+          p_client_id: string
+          p_input_fingerprint: string
+          p_period_end: string
+          p_period_start: string
+          p_request_id: string
+          p_token_usage: Json
+        }
+        Returns: boolean
       }
       confirm_live_set: {
         Args: { p_expected_version: number; p_set_id: string }
@@ -2058,6 +2081,18 @@ export type Database = {
       disconnect_client_trainer: {
         Args: { p_client_id: string }
         Returns: Json
+      }
+      fail_training_summary_generation: {
+        Args: {
+          p_client_id: string
+          p_failure_code: string
+          p_input_fingerprint: string
+          p_period_end: string
+          p_period_start: string
+          p_request_id: string
+          p_token_usage: Json
+        }
+        Returns: boolean
       }
       finish_workout: {
         Args: { p_expected_version: number; p_workout_id: string }

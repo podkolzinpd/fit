@@ -4,6 +4,8 @@ import type { QueryResultRow } from 'pg'
 import type { DatabaseClient, DatabasePool } from './db/types.js'
 import {
   buildProgressData,
+  configuredModelId,
+  HttpError,
   requestYandexSummary,
   trainerSummaryAsText,
   type ExerciseRow,
@@ -11,9 +13,13 @@ import {
   type WorkoutRow,
 } from './legacy-summary/index.js'
 import { buildTrainingGoalContext } from './legacy-summary/summary-goal.js'
-import { buildSummaryModelInput } from './legacy-summary/summary-model-input.js'
+import {
+  buildSummaryModelInput,
+  MAX_SUMMARY_MODEL_INPUT_CHARS,
+  SUMMARY_AGGREGATOR_VERSION,
+} from './legacy-summary/summary-model-input.js'
 import { buildSummaryProgressFacts } from './legacy-summary/summary-progress-facts.js'
-import { PROMPT_VERSION } from './legacy-summary/summary-contract.js'
+import { PROMPT_VERSION, SUMMARY_ANALYSIS_VERSION } from './legacy-summary/summary-contract.js'
 import type { YandexAiAuthorization } from './yandex-ai-authorization.js'
 import {
   withYandexActorSession,
@@ -44,6 +50,19 @@ interface SummaryRow extends QueryResultRow {
   result: unknown
 }
 interface JsonRow extends QueryResultRow { result: unknown }
+interface GuardRow extends QueryResultRow { result: unknown }
+
+type GenerationDecision = 'claimed' | 'cached' | 'in_progress' | 'cooldown' | 'period_limit' | 'daily_limit'
+
+function generationDecision(value: unknown): GenerationDecision {
+  if (typeof value !== 'object' || value === null || !('decision' in value)) {
+    throw new PilotTrainingSummaryError(503, 'summary_generation_guard_failed')
+  }
+  const decision = (value as { decision?: unknown }).decision
+  if (decision === 'claimed' || decision === 'cached' || decision === 'in_progress'
+    || decision === 'cooldown' || decision === 'period_limit' || decision === 'daily_limit') return decision
+  throw new PilotTrainingSummaryError(503, 'summary_generation_guard_failed')
+}
 
 export class PilotTrainingSummaryError extends Error {
   constructor(readonly status: number, readonly code: string) {
@@ -155,23 +174,98 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
       session,
       (client) => this.readSource(client, request),
     )
-    const inputFingerprint = fingerprint(source.trainingData)
-    if (!request.force) {
-      const cached = await withYandexActorSession(
+    const modelInput = buildSummaryModelInput(source.trainingData)
+    const sourceInputChars = JSON.stringify(source.trainingData).length
+    const modelInputChars = JSON.stringify(modelInput).length
+    if (modelInputChars > MAX_SUMMARY_MODEL_INPUT_CHARS) {
+      throw new HttpError(422, 'summary_model_input_too_large')
+    }
+    const inputFingerprint = fingerprint({
+      prompt_version: PROMPT_VERSION,
+      analysis_version: SUMMARY_ANALYSIS_VERSION,
+      aggregation_version: SUMMARY_AGGREGATOR_VERSION,
+      model_id: configuredModelId(),
+      source: source.trainingData,
+    })
+    const cached = await withYandexActorSession(
+      this.pool,
+      session,
+      (client) => this.readCache(client, request, source.actor, inputFingerprint),
+    )
+    if (cached !== undefined) {
+      console.info('summary cache hit', {
+        fingerprint_prefix: inputFingerprint.slice(0, 12),
+        force_requested: request.force,
+      })
+      return { data: cached, cached: true }
+    }
+    if (process.env.FIT_AI_SUMMARY_GENERATION_DISABLED === 'true') {
+      throw new HttpError(503, 'summary_generation_disabled')
+    }
+
+    const requestId = randomUUID()
+    const decision = await withYandexActorSession(this.pool, session, async (client) => {
+      const rows = await client.query<GuardRow>(`
+        select public.claim_training_summary_generation($1, $2, $3, $4, $5, $6, $7) result
+      `, [request.clientId, request.periodStart, request.periodEnd, inputFingerprint,
+        requestId, sourceInputChars, modelInputChars])
+      return generationDecision(rows[0]?.result)
+    })
+    console.info('summary generation guard decision', {
+      request_id: requestId,
+      decision,
+      fingerprint_prefix: inputFingerprint.slice(0, 12),
+      force_requested: request.force,
+      source_input_chars: sourceInputChars,
+      model_input_chars: modelInputChars,
+    })
+    if (decision === 'cached') {
+      const racedCache = await withYandexActorSession(
         this.pool,
         session,
         (client) => this.readCache(client, request, source.actor, inputFingerprint),
       )
-      if (cached !== undefined) return { data: cached, cached: true }
+      if (racedCache !== undefined) return { data: racedCache, cached: true }
+      throw new PilotTrainingSummaryError(409, 'summary_generation_in_progress')
+    }
+    if (decision === 'in_progress') {
+      throw new PilotTrainingSummaryError(409, 'summary_generation_in_progress')
+    }
+    if (decision === 'cooldown') {
+      throw new PilotTrainingSummaryError(429, 'summary_generation_cooldown')
+    }
+    if (decision === 'period_limit') {
+      throw new PilotTrainingSummaryError(429, 'summary_generation_period_limit')
+    }
+    if (decision === 'daily_limit') {
+      throw new PilotTrainingSummaryError(429, 'summary_generation_daily_limit')
     }
 
-    const requestId = randomUUID()
-    const generated = await requestYandexSummary(
-      buildSummaryModelInput(source.trainingData),
-      source.trainingData.period.start,
-      source.trainingData.period.end,
-      { requestId, ...(this.authorization === undefined ? {} : { authorization: this.authorization }) },
-    )
+    let generated
+    try {
+      console.info('summary model request started', {
+        request_id: requestId,
+        fingerprint_prefix: inputFingerprint.slice(0, 12),
+        model_input_chars: modelInputChars,
+        model_calls: 1,
+      })
+      generated = await requestYandexSummary(
+        modelInput,
+        source.trainingData.period.start,
+        source.trainingData.period.end,
+        { requestId, ...(this.authorization === undefined ? {} : { authorization: this.authorization }) },
+      )
+      console.info('summary model request completed', {
+        request_id: requestId,
+        fingerprint_prefix: inputFingerprint.slice(0, 12),
+        total_tokens: generated.usage.totalTokens ?? null,
+        input_tokens: generated.usage.inputTextTokens ?? null,
+        output_tokens: generated.usage.completionTokens ?? null,
+      })
+    } catch (error) {
+      await this.failGeneration(session, request, inputFingerprint, requestId, error)
+      throw error
+    }
     const generatedAt = new Date().toISOString()
     const displayMetrics = {
       ...source.trainingData.consistency,
@@ -181,25 +275,72 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
       workouts: source.workouts,
       exercises: source.exercises,
       sets: source.sets,
+      source_input_chars: sourceInputChars,
+      model_input_chars: modelInputChars,
+      aggregation_version: SUMMARY_AGGREGATOR_VERSION,
       model_version: generated.modelVersion,
     }
-    const saved = await withYandexActorSession(this.pool, session, async (client) => {
-      const rows = await client.query<JsonRow>(`
-        select public.save_generated_training_summary(
-          $1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb,
-          $8, $9, $10, $11::jsonb, $12::jsonb, $13
-        ) result
-      `, [
-        request.clientId, request.periodStart, request.periodEnd,
-        trainerSummaryAsText(generated.summary.trainer),
-        JSON.stringify(generated.summary.trainer), JSON.stringify(generated.summary.client),
-        JSON.stringify(displayMetrics), generated.modelUri, PROMPT_VERSION,
-        inputFingerprint, JSON.stringify(inputStats), JSON.stringify(generated.usage), generatedAt,
+    let saved: unknown
+    try {
+      saved = await withYandexActorSession(this.pool, session, async (client) => {
+        const rows = await client.query<JsonRow>(`
+          select public.save_generated_training_summary(
+            $1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb,
+            $8, $9, $10, $11::jsonb, $12::jsonb, $13
+          ) result
+        `, [
+          request.clientId, request.periodStart, request.periodEnd,
+          trainerSummaryAsText(generated.summary.trainer),
+          JSON.stringify(generated.summary.trainer), JSON.stringify(generated.summary.client),
+          JSON.stringify(displayMetrics), generated.modelUri, PROMPT_VERSION,
+          inputFingerprint, JSON.stringify(inputStats), JSON.stringify(generated.usage), generatedAt,
+        ])
+        if (rows[0] === undefined) throw new Error('Training summary save returned no result')
+        return rows[0].result
+      })
+    } catch (error) {
+      await this.failGeneration(session, request, inputFingerprint, requestId, error, generated.usage)
+      throw error
+    }
+    await withYandexActorSession(this.pool, session, async (client) => {
+      await client.query(`select public.complete_training_summary_generation($1, $2, $3, $4, $5, $6::jsonb)`, [
+        request.clientId, request.periodStart, request.periodEnd, inputFingerprint,
+        requestId, JSON.stringify(generated.usage),
       ])
-      if (rows[0] === undefined) throw new Error('Training summary save returned no result')
-      return rows[0].result
     })
     return { data: saved, cached: false }
+  }
+
+  private async failGeneration(
+    session: YandexActorSessionInput,
+    request: TrainingSummaryRequest,
+    inputFingerprint: string,
+    requestId: string,
+    error: unknown,
+    fallbackUsage: Record<string, string> = {},
+  ): Promise<void> {
+    const code = error instanceof Error ? error.message : 'summary_generation_failed'
+    const usage = error instanceof HttpError ? error.tokenUsage : fallbackUsage
+    try {
+      console.warn('summary model request failed', {
+        request_id: requestId,
+        fingerprint_prefix: inputFingerprint.slice(0, 12),
+        code,
+        total_tokens: usage.totalTokens ?? null,
+      })
+      await withYandexActorSession(this.pool, session, async (client) => {
+        await client.query(`select public.fail_training_summary_generation($1, $2, $3, $4, $5, $6, $7::jsonb)`, [
+          request.clientId, request.periodStart, request.periodEnd, inputFingerprint,
+          requestId, code, JSON.stringify(usage),
+        ])
+      })
+    } catch (guardError) {
+      console.error('Training summary generation failure could not be recorded', {
+        request_id: requestId,
+        code,
+        guard_error: guardError instanceof Error ? guardError.message : 'unknown',
+      })
+    }
   }
 
   async publish(

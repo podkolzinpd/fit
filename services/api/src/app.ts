@@ -486,6 +486,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       'yandex_cloud_request_rejected', 'yandex_cloud_invalid_json',
       'yandex_cloud_invalid_summary', 'yandex_cloud_empty_response',
       'yandex_cloud_quality_check_failed',
+      'summary_generation_disabled', 'summary_model_input_too_large',
     ])
     if (modelCodes.has(code)) {
       return reply.header('x-fit-error-code', code).code(502).send({ error: code })
