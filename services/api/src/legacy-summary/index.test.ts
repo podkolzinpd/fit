@@ -22,13 +22,6 @@ const validSummary = {
   },
 }
 
-const validChunkAnalysis = {
-  observations: ['Плечи: рабочий вес вырос с 12 до 16 кг при сопоставимых повторениях.'],
-  goal_evidence: [],
-  recovery_signals: [],
-  data_gaps: [],
-}
-
 function completionResponse(
   status = 200,
   value: unknown = validSummary,
@@ -131,7 +124,7 @@ describe('summarizeClientTraining cloud handler', () => {
     expect(response.headers.get('allow')).toBe('POST')
   })
 
-  it('retries a temporary rate limit and returns the next valid analysis', async () => {
+  it('never turns one browser action into a second paid call after a rate limit', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -140,15 +133,14 @@ describe('summarizeClientTraining cloud handler', () => {
       .mockResolvedValueOnce(completionResponse())
     const sleep = vi.fn(() => Promise.resolve())
 
-    const result = await requestYandexSummary({}, '2026-08-01', '2026-08-25', {
+    await expect(requestYandexSummary({}, '2026-08-01', '2026-08-25', {
       fetchImpl: fetchImpl as unknown as typeof fetch,
       requestId: 'request-1',
       sleep,
-    })
+    })).rejects.toThrow('yandex_cloud_rate_limited')
 
-    expect(result.summary.client.headline).toBe(validSummary.client.headline)
-    expect(fetchImpl).toHaveBeenCalledTimes(2)
-    expect(sleep).toHaveBeenCalledOnce()
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    expect(sleep).not.toHaveBeenCalled()
   })
 
   it('uses an injected runtime IAM token without requiring a static API key', async () => {
@@ -170,7 +162,7 @@ describe('summarizeClientTraining cloud handler', () => {
     expect(new Headers(requestInit?.headers).get('Authorization')).toBe('Bearer metadata-token')
   })
 
-  it('stops after three temporary service failures', async () => {
+  it('stops after one temporary service failure', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -182,10 +174,10 @@ describe('summarizeClientTraining cloud handler', () => {
       requestId: 'request-2',
       sleep: () => Promise.resolve(),
     })).rejects.toThrow('yandex_cloud_unavailable')
-    expect(fetchImpl).toHaveBeenCalledTimes(3)
+    expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
-  it('recovers from a temporary network failure', async () => {
+  it('does not repeat a temporary network failure', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -197,11 +189,11 @@ describe('summarizeClientTraining cloud handler', () => {
       fetchImpl: fetchImpl as unknown as typeof fetch,
       requestId: 'request-network',
       sleep: () => Promise.resolve(),
-    })).resolves.toMatchObject({ modelVersion: 'test' })
-    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    })).rejects.toThrow('yandex_cloud_unavailable')
+    expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
-  it('retries a truncated model answer before parsing it', async () => {
+  it('rejects a truncated model answer without a paid repair call', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -213,21 +205,16 @@ describe('summarizeClientTraining cloud handler', () => {
       fetchImpl: fetchImpl as unknown as typeof fetch,
       requestId: 'request-truncated',
       sleep: () => Promise.resolve(),
-    })).resolves.toMatchObject({ modelVersion: 'test' })
+    })).rejects.toMatchObject({
+      message: 'yandex_cloud_truncated_response',
+      tokenUsage: { completionTokens: '80', totalTokens: '100' },
+    })
 
-    expect(fetchImpl).toHaveBeenCalledTimes(2)
-    expect(warn).toHaveBeenCalledWith('summary structured response retry', expect.objectContaining({
-      request_id: 'request-truncated',
-      stage: 'direct',
-      attempt: 1,
-      code: 'yandex_cloud_truncated_response',
-      alternative_status: 'ALTERNATIVE_STATUS_TRUNCATED_FINAL',
-      output_chars: 11,
-      completion_tokens: '80',
-    }))
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    expect(warn).not.toHaveBeenCalled()
   })
 
-  it('retries a partial model answer before parsing it', async () => {
+  it('rejects a partial model answer without a paid repair call', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -239,11 +226,11 @@ describe('summarizeClientTraining cloud handler', () => {
       fetchImpl: fetchImpl as unknown as typeof fetch,
       requestId: 'request-partial',
       sleep: () => Promise.resolve(),
-    })).resolves.toMatchObject({ modelVersion: 'test' })
-    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    })).rejects.toThrow('yandex_cloud_truncated_response')
+    expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
-  it('retries malformed model JSON without logging its contents', async () => {
+  it('rejects malformed model JSON without retrying or logging its contents', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -251,22 +238,17 @@ describe('summarizeClientTraining cloud handler', () => {
       .mockResolvedValueOnce(completionResponse(200, 'private malformed response'))
       .mockResolvedValueOnce(completionResponse())
 
-    await requestYandexSummary({}, '2026-08-01', '2026-08-25', {
+    await expect(requestYandexSummary({}, '2026-08-01', '2026-08-25', {
       fetchImpl: fetchImpl as unknown as typeof fetch,
       requestId: 'request-invalid-json',
       sleep: () => Promise.resolve(),
-    })
+    })).rejects.toThrow('yandex_cloud_invalid_model_json')
 
-    expect(fetchImpl).toHaveBeenCalledTimes(2)
-    const metadata = warn.mock.calls[0]?.[1] as unknown
-    expect(metadata).toEqual(expect.objectContaining({
-      code: 'yandex_cloud_invalid_model_json',
-      output_chars: 26,
-    }))
-    expect(JSON.stringify(metadata)).not.toContain('private malformed response')
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('private malformed response')
   })
 
-  it('retries an invalid upstream response envelope', async () => {
+  it('rejects an invalid upstream response envelope without retrying', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -278,11 +260,11 @@ describe('summarizeClientTraining cloud handler', () => {
       fetchImpl: fetchImpl as unknown as typeof fetch,
       requestId: 'request-invalid-envelope',
       sleep: () => Promise.resolve(),
-    })).resolves.toMatchObject({ modelVersion: 'test' })
-    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    })).rejects.toThrow('yandex_cloud_invalid_upstream_json')
+    expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
-  it('retries a schema-invalid model answer', async () => {
+  it('rejects a schema-invalid model answer without retrying', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -294,8 +276,8 @@ describe('summarizeClientTraining cloud handler', () => {
       fetchImpl: fetchImpl as unknown as typeof fetch,
       requestId: 'request-invalid-structure',
       sleep: () => Promise.resolve(),
-    })).resolves.toMatchObject({ modelVersion: 'test' })
-    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    })).rejects.toThrow('yandex_cloud_invalid_summary')
+    expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
   it('does not repeat a rejected request that cannot recover by retrying', async () => {
@@ -311,7 +293,7 @@ describe('summarizeClientTraining cloud handler', () => {
     expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
-  it('requests one repair for a stylistic issue and logs only the rule', async () => {
+  it('accepts a safe stylistic advisory without a paid repair call', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -326,18 +308,7 @@ describe('summarizeClientTraining cloud handler', () => {
       sleep: () => Promise.resolve(),
     })).resolves.toMatchObject({ modelVersion: 'test' })
 
-    const init = fetchImpl.mock.calls[1]?.[1] as RequestInit
-    if (typeof init.body !== 'string') throw new Error('Expected a JSON request body')
-    const request = JSON.parse(init.body) as { messages: { role: string; text: string }[] }
-    expect(request.messages).toHaveLength(2)
-    expect(request.messages[0]?.text).toContain('Исправь уже подготовленный анализ')
-    const repair = JSON.parse(request.messages[1]!.text) as { previous_answer: string; violations: string[] }
-    expect(repair.previous_answer).toBe(JSON.stringify(rejected))
-    expect(repair.violations).toEqual([expect.stringContaining('client.headline должен интерпретировать')])
-    expect(warn).toHaveBeenCalledWith('summary style check requested one repair', expect.objectContaining({
-      request_id: 'quality-repair', attempt: 1,
-      issues: [expect.stringContaining('client.headline должен интерпретировать')],
-    }))
+    expect(fetchImpl).toHaveBeenCalledOnce()
     expect(JSON.stringify(warn.mock.calls)).not.toContain(rejected.client.headline)
   })
 
@@ -357,10 +328,10 @@ describe('summarizeClientTraining cloud handler', () => {
       sleep: () => Promise.resolve(),
     })).resolves.toMatchObject({ summary: safeButGeneric })
 
-    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
-  it('does not publish an unsafe answer after one targeted repair', async () => {
+  it('does not publish an unsafe answer and does not spend on a repair', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -384,22 +355,13 @@ describe('summarizeClientTraining cloud handler', () => {
       requestId: 'request-quality',
       sleep: () => Promise.resolve(),
     })).rejects.toThrow('yandex_cloud_quality_check_failed')
-    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
-  it('analyzes a large complete input in non-overlapping chunks before final synthesis', async () => {
+  it('rejects oversized model input before any paid call', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
-    const requestBodies: string[] = []
-    const fetchImpl = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
-      if (typeof init?.body !== 'string') throw new Error('Expected a JSON request body')
-      requestBodies.push(init.body)
-      const request = JSON.parse(init.body) as {
-        jsonSchema: { schema: { properties?: Record<string, unknown> } }
-      }
-      const isChunk = request.jsonSchema.schema.properties?.observations !== undefined
-      return Promise.resolve(completionResponse(200, isChunk ? validChunkAnalysis : validSummary))
-    })
+    const fetchImpl = vi.fn(() => Promise.resolve(completionResponse()))
     const largeInput = {
       input_coverage: { current: { exercises: 5 }, previous: { exercises: 0 }, complete: true },
       goal: null,
@@ -410,104 +372,14 @@ describe('summarizeClientTraining cloud handler', () => {
       previous_period: null,
     }
 
-    await requestYandexSummary(largeInput, '2026-08-01', '2026-08-31', {
+    await expect(requestYandexSummary(largeInput, '2026-08-01', '2026-08-31', {
       fetchImpl: fetchImpl as unknown as typeof fetch,
       requestId: 'request-large',
-    })
-
-    expect(fetchImpl).toHaveBeenCalledTimes(5)
-    const sentInputs = requestBodies.map((requestBody) => {
-      const body = JSON.parse(requestBody) as { messages: Array<{ text: string }> }
-      return JSON.parse(body.messages[1]!.text) as { completed_workouts: Record<string, unknown> }
-    })
-    expect(sentInputs.slice(0, 3).every((item) =>
-      (item.completed_workouts.input_coverage as { complete: boolean }).complete === false)).toBe(true)
-    const chunkAnalyses = sentInputs[3]!.completed_workouts.chunk_analyses as Array<Record<string, unknown>>
-    expect(chunkAnalyses).toHaveLength(3)
-    expect(chunkAnalyses[0]).toEqual(validChunkAnalysis)
-    expect(chunkAnalyses[0]).not.toHaveProperty('client')
-    const modelRequests = requestBodies.map((requestBody) => JSON.parse(requestBody) as {
-      completionOptions: { maxTokens: string }
-    })
-    expect(modelRequests.slice(0, 3).map((request) => request.completionOptions.maxTokens)).toEqual(['900', '900', '900'])
-    expect(modelRequests.slice(3).map((request) => request.completionOptions.maxTokens)).toEqual(['2000', '2000'])
+    })).rejects.toThrow('summary_model_input_too_large')
+    expect(fetchImpl).not.toHaveBeenCalled()
   })
 
-  it('handles an anonymized 45-workout and 710-set history with one final style repair', async () => {
-    vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
-    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
-    const sentInputs: Array<{ completed_workouts?: Record<string, unknown>; previous_answer?: string }> = []
-    let finalRequests = 0
-    const volumeSummary = {
-      trainer: {
-        headline: 'Рабочие показатели дают достаточно материала для следующего решения.',
-        progress: ['Основные движения повторялись достаточно регулярно для сопоставления.'],
-        consistency: 'Ритм тренировок позволяет сравнивать результаты.',
-        attention: [],
-      },
-      client: {
-        headline: 'Основные движения дают достаточно материала для следующего решения.',
-        achievements: ['Нагрузка: рабочие подходы повторялись достаточно регулярно для сопоставления.'],
-        consistency: 'Ритм тренировок позволяет сравнивать результаты.',
-        encouragement: 'Сейчас важнее сохранить сопоставимость основных упражнений.',
-        goalAlignment: '',
-        nextSteps: ['Сохранить основные движения для следующей контрольной точки.'],
-        missingContext: [],
-        analysisVersion: 'trainer-summary-v3',
-      },
-    }
-    const fetchImpl = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
-      if (typeof init?.body !== 'string') throw new Error('Expected a JSON request body')
-      const request = JSON.parse(init.body) as {
-        jsonSchema: { schema: { properties?: Record<string, unknown> } }
-        messages: Array<{ text: string }>
-      }
-      sentInputs.push(JSON.parse(request.messages[1]!.text) as { completed_workouts?: Record<string, unknown>; previous_answer?: string })
-      const isChunk = request.jsonSchema.schema.properties?.observations !== undefined
-      if (!isChunk) finalRequests += 1
-      return Promise.resolve(completionResponse(200, isChunk ? validChunkAnalysis : volumeSummary))
-    })
-    const exercises = Array.from({ length: 45 }, (_, exerciseIndex) => {
-      const setCount = exerciseIndex < 35 ? 16 : 15
-      return {
-        name: `Упражнение ${exerciseIndex + 1}`,
-        sessions: [{
-          workout_id: `workout-${exerciseIndex + 1}`,
-          evidence: 'обезличенная проверка объёма '.repeat(45),
-          sets: Array.from({ length: setCount }, (_, setIndex) => ({
-            set_position: setIndex,
-            planned: { weight_kg: 40, reps: 10 },
-            performed: { weight_kg: 40, reps: 10 },
-          })),
-        }],
-      }
-    })
-    const largeInput = {
-      input_coverage: { current: { workouts: 45, exercises: 45, sets: 710 }, complete: true },
-      goal: null,
-      exercises,
-      previous_period: null,
-    }
-
-    await requestYandexSummary(largeInput, '2026-08-01', '2026-08-31', {
-      fetchImpl: fetchImpl as unknown as typeof fetch,
-      requestId: 'request-production-volume',
-    })
-
-    const chunkInputs = sentInputs
-      .filter((item) => item.completed_workouts?.chunk_scope !== undefined)
-      .map((item) => item.completed_workouts as { exercises: typeof exercises })
-    expect(chunkInputs.length).toBeGreaterThan(1)
-    expect(finalRequests).toBe(2)
-    expect(chunkInputs.flatMap((item) => item.exercises)).toHaveLength(45)
-    expect(chunkInputs.flatMap((item) => item.exercises)
-      .reduce((total, exercise) => total + exercise.sessions[0]!.sets.length, 0)).toBe(710)
-    const synthesis = sentInputs.find((item) => item.completed_workouts?.chunk_analyses !== undefined)
-    expect(synthesis?.completed_workouts?.chunk_analyses).toHaveLength(chunkInputs.length)
-    expect(sentInputs.at(-1)?.previous_answer).toBe(JSON.stringify(volumeSummary))
-  })
-
-  it('keeps a production-sized monthly history complete and uses one bounded style repair', async () => {
+  it('keeps a production-sized monthly history complete within one-call budget', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     const buildExercises = (count: number, setCount: number) => Array.from({ length: count }, (_, exerciseIndex) => ({
@@ -549,7 +421,11 @@ describe('summarizeClientTraining cloud handler', () => {
         exercises: previousExercises,
       },
     })
-    const fetchImpl = vi.fn(() => Promise.resolve(completionResponse()))
+    let requestBody = ''
+    const fetchImpl: typeof fetch = vi.fn((_input: URL | RequestInfo, init?: RequestInit) => {
+      requestBody = typeof init?.body === 'string' ? init.body : ''
+      return Promise.resolve(completionResponse())
+    })
 
     await requestYandexSummary(input, '2026-08-11', '2026-09-10', { fetchImpl })
 
@@ -559,11 +435,15 @@ describe('summarizeClientTraining cloud handler', () => {
       complete: true,
     })
     expect(input.exercises).toHaveLength(28)
-    expect(input.exercises).toHaveLength(28)
-    expect(input.exercises[0]?.current?.control_points[0]?.sets).toBe(10)
-    expect(input.exercises[0]?.current?.control_points[0]?.sets).not.toBeInstanceOf(Array)
+    expect(input.evidence_exercise_count).toBeGreaterThan(0)
+    expect(input.exercises.some((exercise) => exercise.current?.control_points?.[0]?.sets === 10)).toBe(true)
+    expect(input.exercises.flatMap((exercise) => exercise.current?.control_points ?? [])
+      .every((point) => !Array.isArray(point?.sets))).toBe(true)
     expect(input.exercises[0]?.previous).not.toBeNull()
-    expect(JSON.stringify(input).length).toBeLessThan(30_000)
-    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    expect(JSON.stringify(input).length).toBeLessThanOrEqual(20_000)
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    if (!requestBody) throw new Error('Expected a JSON request body')
+    const modelRequest = JSON.parse(requestBody) as { completionOptions: { maxTokens: string } }
+    expect(modelRequest.completionOptions.maxTokens).toBe('1000')
   })
 })

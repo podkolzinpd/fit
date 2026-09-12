@@ -1,4 +1,11 @@
 export function generationErrorMessage(code: string): string {
+  if (code === 'summary_generation_in_progress') return 'Анализ уже формируется. Повторный запрос не отправлен.'
+  if (code === 'summary_generation_cooldown') return 'Повтор временно остановлен, чтобы не расходовать токены на те же данные.'
+  if (code === 'summary_generation_period_limit') return 'Новый анализ для этого периода уже запускался сегодня.'
+  if (code === 'summary_generation_daily_limit') return 'Лимит новых ИИ-анализов на сегодня исчерпан.'
+  if (code === 'summary_generation_disabled') return 'Обновление ИИ-анализа временно отключено.'
+  if (code === 'summary_model_input_too_large') return 'Данные анализа не удалось безопасно сократить. Выберите меньший период.'
+  if (code === 'summary_generation_guard_failed') return 'Не удалось безопасно запустить анализ. Попробуйте позже.'
   if (code === 'no_completed_workouts') return 'За выбранный период нет завершённых тренировок.'
   if (code === 'source_row_limit_reached') return 'Для этого периода слишком много данных. Выберите меньший период.'
   if (code === 'yandex_cloud_invalid_summary') return 'Не получилось подготовить полный анализ. Попробуйте ещё раз.'

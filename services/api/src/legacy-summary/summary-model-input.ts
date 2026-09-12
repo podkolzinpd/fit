@@ -16,9 +16,12 @@ type SummarySession = {
   sets?: SummarySet[]
 }
 
-export const SUMMARY_AGGREGATOR_VERSION = "summary-aggregate-v1"
+export const SUMMARY_AGGREGATOR_VERSION = "summary-aggregate-v2"
 
-const MAX_EXERCISE_CONTROL_POINTS = 8
+export const MAX_SUMMARY_MODEL_INPUT_CHARS = 20_000
+const TARGET_SUMMARY_MODEL_INPUT_CHARS = 19_000
+const MAX_EVIDENCE_EXERCISES = 18
+const MAX_EXERCISE_CONTROL_POINTS = 4
 const MAX_MEASUREMENT_CONTROL_POINTS = 8
 
 type SummarySet = {
@@ -346,8 +349,11 @@ function sessionSnapshot(session: SummarySession | undefined) {
   }
 }
 
-function exerciseControlPoints(sessions: SummarySession[]): Array<ReturnType<typeof sessionSnapshot>> {
-  if (sessions.length <= MAX_EXERCISE_CONTROL_POINTS) return sessions.map(sessionSnapshot)
+function exerciseControlPoints(
+  sessions: SummarySession[],
+  limit = MAX_EXERCISE_CONTROL_POINTS,
+): Array<ReturnType<typeof sessionSnapshot>> {
+  if (sessions.length <= limit) return sessions.map(sessionSnapshot)
 
   const preferred = new Set([0, sessions.length - 1])
   const metrics: Array<keyof SummarySession> = [
@@ -363,7 +369,7 @@ function exerciseControlPoints(sessions: SummarySession[]): Array<ReturnType<typ
         bestIndex = index
       }
     })
-    if (bestIndex !== null && preferred.size < MAX_EXERCISE_CONTROL_POINTS) preferred.add(bestIndex)
+    if (bestIndex !== null && preferred.size < limit) preferred.add(bestIndex)
   }
   let bestPaceIndex: number | null = null
   let bestPace = Number.POSITIVE_INFINITY
@@ -374,9 +380,9 @@ function exerciseControlPoints(sessions: SummarySession[]): Array<ReturnType<typ
       bestPaceIndex = index
     }
   })
-  if (bestPaceIndex !== null && preferred.size < MAX_EXERCISE_CONTROL_POINTS) preferred.add(bestPaceIndex)
-  for (const index of evenlySpacedIndices(sessions.length, MAX_EXERCISE_CONTROL_POINTS)) {
-    if (preferred.size >= MAX_EXERCISE_CONTROL_POINTS) break
+  if (bestPaceIndex !== null && preferred.size < limit) preferred.add(bestPaceIndex)
+  for (const index of evenlySpacedIndices(sessions.length, limit)) {
+    if (preferred.size >= limit) break
     preferred.add(index)
   }
 
@@ -385,7 +391,10 @@ function exerciseControlPoints(sessions: SummarySession[]): Array<ReturnType<typ
     .map((index) => sessionSnapshot(sessions[index]))
 }
 
-function compactExercisePeriod(exercise: SummaryExercise | undefined) {
+function compactExercisePeriod(
+  exercise: SummaryExercise | undefined,
+  controlPointLimit = 0,
+) {
   if (!exercise) return null
   const sessions = exercise.sessions ?? []
   return {
@@ -396,11 +405,25 @@ function compactExercisePeriod(exercise: SummaryExercise | undefined) {
     best: exercise.best,
     change_percent: exercise.change_percent,
     derived_observations: deriveExerciseObservations(exercise),
-    control_points: exerciseControlPoints(sessions),
+    ...(controlPointLimit > 0
+      ? { control_points: exerciseControlPoints(sessions, controlPointLimit) }
+      : {}),
   }
 }
 
-function combinedExercises(current: SummaryExercise[], previous: SummaryExercise[]) {
+function exerciseEvidenceScore(exercise: SummaryExercise | undefined): number {
+  if (!exercise) return 0
+  const observations = deriveExerciseObservations(exercise).length
+  const changes = Object.keys(exercise.change_percent ?? {}).length
+  return exercise.session_count * 10 + observations * 20 + changes * 12
+}
+
+function combinedExercises(
+  current: SummaryExercise[],
+  previous: SummaryExercise[],
+  detailedRefs: Set<string>,
+  controlPointLimit: number,
+) {
   const currentByRef = new Map(current.map((exercise) => [exercise.ref ?? exercise.name, exercise]))
   const previousByRef = new Map(previous.map((exercise) => [exercise.ref ?? exercise.name, exercise]))
   const orderedRefs = [
@@ -420,10 +443,23 @@ function combinedExercises(current: SummaryExercise[], previous: SummaryExercise
       presence: currentExercise && previousExercise
         ? "both_periods"
         : currentExercise ? "current_only" : "previous_only",
-      current: compactExercisePeriod(currentExercise),
-      previous: compactExercisePeriod(previousExercise),
+      current: compactExercisePeriod(currentExercise, detailedRefs.has(ref) ? controlPointLimit : 0),
+      previous: compactExercisePeriod(previousExercise, detailedRefs.has(ref) ? controlPointLimit : 0),
     }
   })
+}
+
+function rankedEvidenceRefs(current: SummaryExercise[], previous: SummaryExercise[]): string[] {
+  const currentByRef = new Map(current.map((exercise) => [exercise.ref ?? exercise.name, exercise]))
+  const previousByRef = new Map(previous.map((exercise) => [exercise.ref ?? exercise.name, exercise]))
+  return [...new Set([...currentByRef.keys(), ...previousByRef.keys()])]
+    .map((ref, index) => ({
+      ref,
+      index,
+      score: exerciseEvidenceScore(currentByRef.get(ref)) + exerciseEvidenceScore(previousByRef.get(ref)),
+    }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .map((item) => item.ref)
 }
 
 function compactFeedback(signals: unknown) {
@@ -466,18 +502,17 @@ function coverage(exercises: SummaryExercise[]) {
   }
 }
 
-/**
- * Sends every unique exercise from both periods while replacing repetitive
- * session rows with first/latest/best/trend and at most eight representative
- * control points. Raw sets never leave the backend aggregator. input_coverage
- * records the exact source counts, so compaction is explicit rather than a
- * silent omission.
+/** Sends every unique exercise, but reserves detailed control points for the
+ * strongest signals. Raw sets never leave the backend and the deterministic
+ * size loop keeps the paid request below the hard budget.
  */
 export function buildSummaryModelInput(
   trainingData: SummaryTrainingData,
 ) {
   const previous = trainingData.previous_period
-  return {
+  const previousExercises = previous?.exercises ?? []
+  const rankedRefs = rankedEvidenceRefs(trainingData.exercises, previousExercises)
+  const shared = {
     aggregation_version: SUMMARY_AGGREGATOR_VERSION,
     input_coverage: {
       current: coverage(trainingData.exercises),
@@ -493,7 +528,6 @@ export function buildSummaryModelInput(
       ...measurementContext(trainingData.measurements),
       compared_to_previous_period: measurementComparison(trainingData.measurements, previous?.measurements),
     },
-    exercises: combinedExercises(trainingData.exercises, previous?.exercises ?? []),
     previous_period: previous ? {
       period: previous.period,
       consistency: previous.consistency,
@@ -501,4 +535,23 @@ export function buildSummaryModelInput(
       measurements: measurementContext(previous.measurements),
     } : null,
   }
+
+  for (let evidenceCount = Math.min(MAX_EVIDENCE_EXERCISES, rankedRefs.length); evidenceCount >= 0; evidenceCount -= 1) {
+    const detailedRefs = new Set(rankedRefs.slice(0, evidenceCount))
+    const result = {
+      ...shared,
+      evidence_exercise_count: evidenceCount,
+      exercises: combinedExercises(
+        trainingData.exercises,
+        previousExercises,
+        detailedRefs,
+        MAX_EXERCISE_CONTROL_POINTS,
+      ),
+    }
+    if (JSON.stringify(result).length <= TARGET_SUMMARY_MODEL_INPUT_CHARS || evidenceCount === 0) {
+      return result
+    }
+  }
+
+  throw new Error('summary_aggregation_failed')
 }

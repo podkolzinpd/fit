@@ -19,7 +19,11 @@ import {
 import { completedWorkoutsInPeriod } from "./workout-source.js"
 import { buildSummaryConsistency } from "./summary-consistency.js"
 import { buildSummaryProgressFacts } from "./summary-progress-facts.js"
-import { buildSummaryModelInput, SUMMARY_AGGREGATOR_VERSION } from "./summary-model-input.js"
+import {
+  buildSummaryModelInput,
+  MAX_SUMMARY_MODEL_INPUT_CHARS,
+  SUMMARY_AGGREGATOR_VERSION,
+} from "./summary-model-input.js"
 import { resolveSupabasePublicKey } from "./supabase-public-key.js"
 import { diagnosticAllowed, PrivateSummaryDiagnostic } from './private-diagnostic.js'
 
@@ -156,6 +160,7 @@ export class HttpError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly tokenUsage: Record<string, string> = {},
   ) {
     super(message)
   }
@@ -322,7 +327,7 @@ function requiredSecret(name: string): string {
   return value
 }
 
-function configuredModelId(): string {
+export function configuredModelId(): string {
   return process.env.YANDEX_CLOUD_MODEL_ID ?? "yandexgpt"
 }
 
@@ -334,6 +339,16 @@ function serviceClient() {
       auth: { persistSession: false, autoRefreshToken: false },
     },
   )
+}
+
+type GenerationDecision = 'claimed' | 'cached' | 'in_progress' | 'cooldown' | 'period_limit' | 'daily_limit'
+
+function parseGenerationDecision(value: unknown): GenerationDecision {
+  if (!isRecord(value)) throw new HttpError(503, 'summary_generation_guard_failed')
+  const decision = value.decision
+  if (decision === 'claimed' || decision === 'cached' || decision === 'in_progress'
+    || decision === 'cooldown' || decision === 'period_limit' || decision === 'daily_limit') return decision
+  throw new HttpError(503, 'summary_generation_guard_failed')
 }
 
 function requestClient(req: Request) {
@@ -834,7 +849,10 @@ async function requestStructuredYandex<T>(
   const sleep = options.sleep ?? ((delayMs: number) =>
     new Promise<void>((resolve) => setTimeout(resolve, delayMs)))
 
-  const maxAttempts = options.diagnostic ? 1 : 3
+  // A summary fingerprint is allowed to spend tokens once. Content/schema
+  // repair is deterministic outside the model; a second paid call is never
+  // hidden inside one browser action.
+  const maxAttempts = 1
   let repairMessages: typeof messages | null = null
   let contentRepairAttempted = false
   const setTargetedRepair = (text: string, issues: string[]) => {
@@ -911,7 +929,7 @@ async function requestStructuredYandex<T>(
         await sleep(yandexRetryDelay(attempt))
         continue
       }
-      throw new HttpError(502, code)
+      throw new HttpError(502, code, usage)
     }
     const alternative = payload.result?.alternatives?.[0]
     const alternativeStatus = alternative?.status ?? null
@@ -949,10 +967,10 @@ async function requestStructuredYandex<T>(
         ]
         continue
       }
-      throw new HttpError(502, code)
+      throw new HttpError(502, code, usage)
     }
     if (alternativeStatus === "ALTERNATIVE_STATUS_CONTENT_FILTER") {
-      throw new HttpError(502, "yandex_cloud_request_rejected")
+      throw new HttpError(502, "yandex_cloud_request_rejected", usage)
     }
     if (!text) {
       const code = "yandex_cloud_empty_response"
@@ -962,7 +980,7 @@ async function requestStructuredYandex<T>(
         repairMessages = messages
         continue
       }
-      throw new HttpError(502, code)
+      throw new HttpError(502, code, usage)
     }
 
     let value: T
@@ -977,7 +995,7 @@ async function requestStructuredYandex<T>(
         setTargetedRepair(text, ["Ответ нельзя разобрать как полный JSON по схеме."])
         continue
       }
-      throw error instanceof HttpError ? error : new HttpError(502, code)
+      throw new HttpError(502, code, usage)
     }
     const quality = config.qualityAssessment?.(value) ?? { blockingIssues: [], advisories: [] }
     const issues = quality.blockingIssues
@@ -1007,7 +1025,7 @@ async function requestStructuredYandex<T>(
       issues,
     })
     if (attempt === maxAttempts || contentRepairAttempted) {
-      throw new HttpError(502, "yandex_cloud_quality_check_failed")
+      throw new HttpError(502, "yandex_cloud_quality_check_failed", usage)
     }
     setTargetedRepair(text, issues)
   }
@@ -1039,7 +1057,7 @@ async function requestFinalYandexSummary(
   const result = await requestStructuredYandex(trainingData, periodStart, periodEnd, {
     systemPrompt: SUMMARY_SYSTEM_PROMPT,
     schema: SUMMARY_JSON_SCHEMA,
-    maxTokens: "2000",
+    maxTokens: "1000",
     parse: parseGeneratedSummary,
     qualityAssessment: (summary) => assessSummaryQuality(summary, options.qualityData ?? trainingData),
   }, options)
@@ -1057,8 +1075,15 @@ export async function requestYandexSummary(
   periodEnd: string,
   options: YandexRequestOptions = {},
 ): Promise<YandexSummaryResult> {
+  if (process.env.FIT_AI_SUMMARY_GENERATION_DISABLED === "true") {
+    throw new HttpError(503, "summary_generation_disabled")
+  }
+  const serializedInputChars = JSON.stringify(trainingData).length
   if (options.diagnostic && JSON.stringify(trainingData).length > MAX_DIRECT_MODEL_INPUT_CHARS) {
     throw new HttpError(422, 'diagnostic_direct_only')
+  }
+  if (!options.diagnostic && serializedInputChars > MAX_SUMMARY_MODEL_INPUT_CHARS) {
+    throw new HttpError(422, 'summary_model_input_too_large')
   }
   if (!options.skipChunking && JSON.stringify(trainingData).length > MAX_DIRECT_MODEL_INPUT_CHARS) {
     const chunks = modelInputChunks(trainingData)
@@ -1449,6 +1474,68 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         }
       }
 
+      if (modelInputChars > MAX_SUMMARY_MODEL_INPUT_CHARS) {
+        throw new HttpError(422, 'summary_model_input_too_large')
+      }
+      if (process.env.FIT_AI_SUMMARY_GENERATION_DISABLED === 'true') {
+        throw new HttpError(503, 'summary_generation_disabled')
+      }
+
+      const summaryStore = isClient || isConnectedTrainer ? serviceClient() : userClient
+      const generationGuardStore = serviceClient()
+      const { data: claimData, error: claimError } = await generationGuardStore.rpc(
+        'claim_training_summary_generation',
+        {
+          p_client_id: input.client_id,
+          p_period_start: input.period_start,
+          p_period_end: input.period_end,
+          p_input_fingerprint: inputFingerprint,
+          p_request_id: requestId,
+          p_source_input_chars: sourceInputChars,
+          p_model_input_chars: modelInputChars,
+        },
+      )
+      if (claimError) throw new HttpError(503, 'summary_generation_guard_failed')
+      const generationDecision = parseGenerationDecision(claimData)
+      console.info('summary generation guard decision', {
+        request_id: requestId,
+        decision: generationDecision,
+        fingerprint_prefix: inputFingerprint.slice(0, 12),
+        force_requested: input.force,
+        source_input_chars: sourceInputChars,
+        model_input_chars: modelInputChars,
+      })
+      if (generationDecision === 'cached' || generationDecision === 'in_progress') {
+        throw new HttpError(409, 'summary_generation_in_progress')
+      }
+      if (generationDecision === 'cooldown') {
+        throw new HttpError(429, 'summary_generation_cooldown')
+      }
+      if (generationDecision === 'period_limit') {
+        throw new HttpError(429, 'summary_generation_period_limit')
+      }
+      if (generationDecision === 'daily_limit') {
+        throw new HttpError(429, 'summary_generation_daily_limit')
+      }
+
+      const recordGenerationFailure = async (error: unknown, fallbackUsage: Record<string, string> = {}) => {
+        const code = error instanceof Error ? error.message : 'summary_generation_failed'
+        const usage = error instanceof HttpError ? error.tokenUsage : fallbackUsage
+        const { error: guardError } = await generationGuardStore.rpc(
+          'fail_training_summary_generation',
+          {
+            p_client_id: input.client_id,
+            p_period_start: input.period_start,
+            p_period_end: input.period_end,
+            p_input_fingerprint: inputFingerprint,
+            p_request_id: requestId,
+            p_failure_code: code,
+            p_token_usage: usage,
+          },
+        )
+        if (guardError) console.error('summary generation failure record failed', { request_id: requestId })
+      }
+
       console.info("summary model request started", {
         request_id: requestId,
         input_stats: {
@@ -1460,19 +1547,24 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
           aggregation_version: SUMMARY_AGGREGATOR_VERSION,
           fingerprint_prefix: inputFingerprint.slice(0, 12),
           force_requested: input.force,
-          request_strategy: modelInputChars > MAX_DIRECT_MODEL_INPUT_CHARS
-            ? 'chunked'
-            : 'direct',
+          request_strategy: 'direct',
+          model_calls: 1,
         },
       })
       const generationKey = `${input.client_id}:${input.period_start}:${input.period_end}:${inputFingerprint}`
-      const generation = await requestYandexSummaryDeduplicated(
-        generationKey,
-        modelInput,
-        trainingData.period.start,
-        trainingData.period.end,
-        { requestId },
-      )
+      let generation: Awaited<ReturnType<typeof requestYandexSummaryDeduplicated>>
+      try {
+        generation = await requestYandexSummaryDeduplicated(
+          generationKey,
+          modelInput,
+          trainingData.period.start,
+          trainingData.period.end,
+          { requestId },
+        )
+      } catch (error) {
+        await recordGenerationFailure(error)
+        throw error
+      }
       const generated = generation.result
       console.info("summary model request completed", {
         request_id: requestId,
@@ -1480,14 +1572,19 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         fingerprint_prefix: inputFingerprint.slice(0, 12),
         model_input_chars: modelInputChars,
         total_tokens: generated.usage.totalTokens ?? null,
+        input_tokens: generated.usage.inputTextTokens ?? null,
+        output_tokens: generated.usage.completionTokens ?? null,
       })
-      const generatedClientSummary = { ...generated.summary.client, inputFingerprint }
+      const generatedClientSummary = {
+        ...generated.summary.client,
+        analysisVersion: SUMMARY_ANALYSIS_VERSION,
+        inputFingerprint,
+      }
       const displayMetrics = {
         ...trainingData.consistency,
         progress_facts: buildSummaryProgressFacts(trainingData.exercises),
       }
 
-      const summaryStore = isClient || isConnectedTrainer ? serviceClient() : userClient
       const { data: saved, error: saveError } = await summaryStore
         .from("client_training_summaries")
         .upsert({
@@ -1518,6 +1615,7 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         )
         .single()
       if (saveError || !saved) {
+        await recordGenerationFailure(new HttpError(500, 'summary_save_failed'), generated.usage)
         throw new HttpError(500, "summary_save_failed")
       }
 
@@ -1541,11 +1639,36 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
           )
           .single()
         if (visibleError || !visible) {
+          await recordGenerationFailure(new HttpError(500, 'summary_visibility_save_failed'), generated.usage)
           throw new HttpError(500, "summary_visibility_save_failed")
         }
+        const { error: completeError } = await generationGuardStore.rpc(
+          'complete_training_summary_generation',
+          {
+            p_client_id: input.client_id,
+            p_period_start: input.period_start,
+            p_period_end: input.period_end,
+            p_input_fingerprint: inputFingerprint,
+            p_request_id: requestId,
+            p_token_usage: generated.usage,
+          },
+        )
+        if (completeError) console.error('summary generation completion record failed', { request_id: requestId })
         return Response.json({ data: visible, cached: false })
       }
 
+      const { error: completeError } = await generationGuardStore.rpc(
+        'complete_training_summary_generation',
+        {
+          p_client_id: input.client_id,
+          p_period_start: input.period_start,
+          p_period_end: input.period_end,
+          p_input_fingerprint: inputFingerprint,
+          p_request_id: requestId,
+          p_token_usage: generated.usage,
+        },
+      )
+      if (completeError) console.error('summary generation completion record failed', { request_id: requestId })
       return Response.json({ data: saved, cached: false })
     } catch (error) {
       if (error instanceof HttpError) {
