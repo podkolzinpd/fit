@@ -198,10 +198,11 @@ interface ClientHomeOverviewProps {
   onRetry: () => void
   selfTraining: ReactNode
   wearable?: ReactNode
+  trainerDiscovery?: ReactNode
   showFirstRunConnection?: boolean
 }
 
-export function ClientHomeOverview({ today, gender = null, workouts, regularity, goal, personalRecords = [], workoutsLoading, regularityLoading, error, onRetry, selfTraining, wearable, showFirstRunConnection = true }: ClientHomeOverviewProps) {
+export function ClientHomeOverview({ today, gender = null, workouts, regularity, goal, personalRecords = [], workoutsLoading, regularityLoading, error, onRetry, selfTraining, wearable, trainerDiscovery, showFirstRunConnection = true }: ClientHomeOverviewProps) {
   const lastCompleted = useMemo(() => workouts?.filter((item) => item.status === 'done').sort(completedWorkoutOrder).at(-1), [workouts])
   const next = workouts ? clientHomeNextWorkout(workouts, today) : null
   const pastPlans = workouts ? clientHomePastPlans(workouts, today) : []
@@ -220,5 +221,6 @@ export function ClientHomeOverview({ today, gender = null, workouts, regularity,
     <WeekCard week={week} loading={regularityLoading} />
     {highlight && highlight.kind !== 'record' && <HighlightCard highlight={highlight} today={today} />}
     {wearable}
+    {trainerDiscovery}
   </div>
 }

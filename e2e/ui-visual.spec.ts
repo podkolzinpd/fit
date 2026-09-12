@@ -679,6 +679,30 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
   }
 })
 
+test('standalone client sees a compact trainer discovery card and can snooze it', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Trainer discovery card belongs to Client Home')
+  await createStandaloneClient(page, `trainer-discovery-${testInfo.project.name}`, 'Самостоятельный клиент', 'trainer-discovery')
+  await page.clock.install({ time: new Date('2026-09-12T15:00:00+03:00') })
+  await gotoStable(page, '/me')
+
+  const card = page.getByRole('region', { name: 'Нужен тренер?' })
+  await expect(card).toBeVisible()
+  await expect(card.getByRole('link', { name: 'Найти тренера' })).toHaveAttribute('href', '/me/trainers')
+  await expect(card).toHaveScreenshot('trainer-discovery-home-card.png', { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015 })
+
+  await gotoStable(page, '/me/settings')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, '/me')
+  await expect(card).toBeVisible()
+  await expect(card).toHaveScreenshot('trainer-discovery-home-card-dark.png', { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015 })
+
+  await card.getByRole('button', { name: 'Напомнить позже' }).click()
+  await expect(card).toHaveCount(0)
+  await gotoStable(page, '/me/profile')
+  await gotoStable(page, '/me')
+  await expect(page.getByRole('region', { name: 'Нужен тренер?' })).toHaveCount(0)
+})
+
 test('trainer Today keeps its mobile visual baselines', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Trainer desktop is covered by the role-home baseline')
   await mockRoleHomeWorkoutState(page)
@@ -724,6 +748,7 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
   await expect(page.getByText('Завтра · без времени')).toBeVisible()
   await expect(page.getByRole('link', { name: /Следующая тренировка/ })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Открыть план' })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Нужен тренер?' })).toBeVisible()
   await expectVisualBaseline(page, 'client-home-future-plan.png', [], true)
 })
 
