@@ -157,6 +157,11 @@ const app = buildMigrationApp({
   runMigrations: async () => {
     const migrations = await runner({
       advisoryLockMode: 'fail',
+      // Independent PRs can merge in a different order than their numeric
+      // migration names. Pending files are still applied in filename order;
+      // disabling only the history-prefix check lets a late, already-reviewed
+      // migration run without rewriting the shared migration history.
+      checkOrder: false,
       createMigrationsSchema: true,
       databaseUrl: databaseConfig,
       dir: migrationsDirectory,
