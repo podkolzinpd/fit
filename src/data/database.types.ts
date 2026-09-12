@@ -1,4 +1,4 @@
-// schema-sha256: 5893b9b20857ce63a3cd37961ab30f2c481b87f0ba7e79ad9974078d86c670d8
+// schema-sha256: b3dfa0bd46d8487510271bc93eb6afe3badb011abcfe84aae734eb272a8a687e
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -293,36 +293,45 @@ export type Database = {
       }
       chat_conversations: {
         Row: {
+          client_blocked_at: string | null
           client_id: string
           client_last_read_at: string | null
           client_last_read_message_id: string | null
           client_user_id: string
           created_at: string
           id: string
+          origin: string
+          trainer_blocked_at: string | null
           trainer_id: string
           trainer_last_read_at: string | null
           trainer_last_read_message_id: string | null
           updated_at: string
         }
         Insert: {
+          client_blocked_at?: string | null
           client_id: string
           client_last_read_at?: string | null
           client_last_read_message_id?: string | null
           client_user_id: string
           created_at?: string
           id?: string
+          origin?: string
+          trainer_blocked_at?: string | null
           trainer_id: string
           trainer_last_read_at?: string | null
           trainer_last_read_message_id?: string | null
           updated_at?: string
         }
         Update: {
+          client_blocked_at?: string | null
           client_id?: string
           client_last_read_at?: string | null
           client_last_read_message_id?: string | null
           client_user_id?: string
           created_at?: string
           id?: string
+          origin?: string
+          trainer_blocked_at?: string | null
           trainer_id?: string
           trainer_last_read_at?: string | null
           trainer_last_read_message_id?: string | null
@@ -2195,6 +2204,9 @@ export type Database = {
         Args: never
         Returns: {
           active_connection: boolean
+          blocked_by_me: boolean
+          blocked_by_partner: boolean
+          can_message: boolean
           client_id: string
           conversation_id: string
           last_message_at: string
@@ -2381,6 +2393,12 @@ export type Database = {
       open_chat: {
         Args: { p_client_id: string; p_trainer_id: string }
         Returns: string
+      }
+      open_public_trainer_chat: { Args: { p_public_id: string }; Returns: string }
+      authorize_chat_send: { Args: { p_conversation_id: string }; Returns: undefined }
+      set_chat_block: {
+        Args: { p_blocked: boolean; p_conversation_id: string }
+        Returns: { blocked_by_me: boolean; blocked_by_partner: boolean; can_message: boolean }[]
       }
       persist_assistant_response: {
         Args: {
