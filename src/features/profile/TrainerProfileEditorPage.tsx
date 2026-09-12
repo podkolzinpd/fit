@@ -127,6 +127,7 @@ export function TrainerProfessionalProfileSection() {
   )
   const publishValidation = useMemo(() => draft ? validatePublishableTrainerProfile(draft) : null, [draft])
   const pending = save.isPending || publish.isPending || unpublish.isPending || catalogListing.isPending
+  const showPublishAction = !profile.data?.published || !publishedMatchesDraft
 
   function set<K extends keyof TrainerProfileDraft>(field: K, value: TrainerProfileDraft[K]) {
     setDraft((current) => current === null ? current : { ...current, [field]: value })
@@ -248,16 +249,19 @@ export function TrainerProfessionalProfileSection() {
         action={<button type="button" className="primary trainer-profile-edit-action" onClick={() => setEditing(true)}>Редактировать</button>}
         footer={<>
           <SaveStatus status={pending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message} />
+          {showPublishAction && <div className="trainer-profile-publish-cta">
+            {localError && <p className="error" role="alert">{localError}</p>}
+            <button type="button" className="primary wide" onClick={publishNow} disabled={pending} aria-busy={publish.isPending}>
+              {publish.isPending ? 'Публикуем…' : profile.data?.published ? 'Обновить анкету' : 'Опубликовать'}
+            </button>
+          </div>}
           <details className="trainer-card-disclosure trainer-publication-disclosure">
             <summary><span><strong>Публикация</strong><small>{profile.data?.published ? publishedMatchesDraft ? profile.data.listedInCatalog ? 'Видна в каталоге' : 'Доступна по ссылке' : 'Есть сохранённые изменения' : publishValidation ? 'Пока не опубликована' : 'Готова к публикации'}</small></span><ChevronDownIcon /></summary>
             <div className="trainer-publication-controls">
-              {localError && <p className="error" role="alert">{localError}</p>}
+              {!showPublishAction && localError && <p className="error" role="alert">{localError}</p>}
               {!profile.data?.published && publishValidation && <p>{publishValidation}</p>}
               {profile.data?.published && <div className="trainer-catalog-visibility"><Switch label="Показывать в каталоге" checked={profile.data.listedInCatalog} disabled={pending} onChange={(listed) => catalogListing.mutate(listed)} /></div>}
-              <div className="trainer-publication-actions">
-                {profile.data?.published && <Link className="button secondary" to={`/trainers/${profile.data.publicId}`}>Открыть анкету</Link>}
-                {(!profile.data?.published || !publishedMatchesDraft) && !publishValidation && <button type="button" className="secondary" onClick={publishNow} disabled={pending} aria-busy={publish.isPending}>{publish.isPending ? 'Публикуем…' : profile.data?.published ? 'Обновить публикацию' : 'Опубликовать'}</button>}
-              </div>
+              {profile.data?.published && <div className="trainer-publication-actions"><Link className="button secondary" to={`/trainers/${profile.data.publicId}`}>Открыть анкету</Link></div>}
               {profile.data?.published && <div className="trainer-publication-links"><button type="button" className="link" onClick={() => void copyLink()}>{copied ? 'Скопировано' : 'Скопировать ссылку'}</button><button type="button" className="link danger" onClick={() => unpublish.mutate()} disabled={pending}>Снять с публикации</button></div>}
             </div>
           </details>

@@ -5820,6 +5820,9 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-profile-identity .trainer-card-disclosure .trainer-certificates { margin-bottom:10px; }
 .trainer-profile-identity .trainer-publication-disclosure > summary > span { display:grid; gap:2px; }
 .trainer-profile-identity .trainer-publication-disclosure > summary small { color:var(--secondary-label-fg); font-size:12px; font-weight:500; }
+.trainer-profile-identity .trainer-profile-publish-cta { display:grid; gap:8px; }
+.trainer-profile-identity .trainer-profile-publish-cta > .primary { min-height:48px; border-radius:14px; font-size:14px; font-weight:600; }
+.trainer-profile-identity .trainer-profile-publish-cta > .error { margin:0; }
 .trainer-profile-identity .trainer-publication-controls { display:grid; gap:12px; padding:0 0 4px; }
 .trainer-profile-identity .trainer-publication-controls > p { margin:0; color:var(--secondary-label-fg); font-size:12px; line-height:1.4; }
 .trainer-profile-identity .trainer-publication-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
