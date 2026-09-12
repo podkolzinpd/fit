@@ -607,6 +607,34 @@ values (
 )
 on conflict do nothing;
 
+insert into public.trainer_discovery_prompt_preferences (
+  user_id,
+  remind_at,
+  created_at,
+  updated_at
+)
+values (
+  '92000000-0000-4000-8000-000000000029',
+  timestamptz '2026-09-04 09:20:00+00',
+  timestamptz '2026-08-05 09:20:00+00',
+  timestamptz '2026-08-05 09:20:00+00'
+)
+on conflict do nothing;
+
+insert into public.trainer_discovery_prompt_preferences (
+  user_id,
+  dismissed_at,
+  created_at,
+  updated_at
+)
+values (
+  'a1000000-0000-4000-8000-000000000001',
+  timestamptz '2026-08-06 09:20:00+00',
+  timestamptz '2026-08-06 09:20:00+00',
+  timestamptz '2026-08-06 09:20:00+00'
+)
+on conflict do nothing;
+
 insert into private.workout_create_requests (
   owner_id,
   request_id,

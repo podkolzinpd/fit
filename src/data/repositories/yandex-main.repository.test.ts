@@ -75,6 +75,28 @@ describe('Yandex main repository', () => {
     push.unsubscribe.mockReset()
   })
 
+  it('reads and updates the trainer discovery prompt', async () => {
+    const visible = { state: 'visible', remindAt: null, updatedAt: null }
+    const snoozed = {
+      state: 'snoozed',
+      remindAt: '2026-10-12T09:00:00.000Z',
+      updatedAt: '2026-09-12T09:00:00.000Z',
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(visible))
+      .mockResolvedValueOnce(jsonResponse(snoozed))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.trainerDiscovery.getPromptPreference()).resolves.toEqual(visible)
+    await expect(repository.trainerDiscovery.setPromptPreference('snooze')).resolves.toEqual(snoozed)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${apiBaseUrl}/v1/trainer-discovery/prompt`)
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      method: 'PUT',
+      body: JSON.stringify({ action: 'snooze' }),
+    })
+  })
+
   it('creates a quick client without fabricating profile measurements', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
       client: { id: '1a0c5295-0a0f-4ccb-a39a-e58090967245' },

@@ -23,13 +23,13 @@ function exportOutput(overrides = new Map()) {
   ].map(([name, defaultRows]) => (
     `${name}: rows=${overrides.get(name) ?? defaultRows}`
   ))
-  return `exported: tenant da877b834123f5a0; 30 tables\n${rows.join('\n')}\n`
+  return `exported: tenant da877b834123f5a0; 31 tables\n${rows.join('\n')}\n`
 }
 
 function reportOutput(mode, inserted = 0) {
   const rows = [...PRODUCTION_LIKE_TABLES, ...EXPECTED_EMPTY_TABLES]
     .map((name) => `${name}: rows=1, inserted=${inserted}`)
-  return `${mode}: tenant da877b834123f5a0; 30 tables\n${rows.join('\n')}\n`
+  return `${mode}: tenant da877b834123f5a0; 31 tables\n${rows.join('\n')}\n`
 }
 
 describe('local tenant rehearsal safety', () => {
@@ -123,7 +123,7 @@ describe('local tenant rehearsal safety', () => {
 
   test('parses all report modes and rejects a non-idempotent repeat', () => {
     for (const mode of ['dry-run', 'applied', 'validated']) {
-      assert.equal(parseMigrationReport(reportOutput(mode), mode).tables.size, 30)
+      assert.equal(parseMigrationReport(reportOutput(mode), mode).tables.size, 31)
     }
     assert.doesNotThrow(() => {
       assertIdempotentApply(parseMigrationReport(reportOutput('applied'), 'applied'))
@@ -139,7 +139,7 @@ describe('local tenant rehearsal safety', () => {
   test('rejects incomplete, duplicated and mismatched reports', () => {
     assert.throws(
       () => parseExportSummary(
-        exportOutput().replace('30 tables', '29 tables'),
+        exportOutput().replace('31 tables', '30 tables'),
       ),
       /migration_manifest_count_invalid/u,
     )

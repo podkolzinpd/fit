@@ -69,6 +69,7 @@ import type { VitalMediaSigner } from './vital-media.js'
 import type { ChatMediaStore } from './chat-media.js'
 import type { PilotTrainerProfiles, TrainerProfileDraft } from './trainer-profile.js'
 import type { PilotChat } from './pilot-chat.js'
+import { TrainerDiscoveryError, type PilotTrainerDiscovery } from './trainer-discovery.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -290,6 +291,69 @@ describe('trainer professional profile', () => {
     expect(setCatalogListing).toHaveBeenCalledWith(
       { accessMode: 'read_write', token: 'a'.repeat(43) }, true,
     )
+  })
+})
+
+describe('trainer discovery prompt', () => {
+  const prompt = { state: 'visible' as const, remindAt: null, updatedAt: null }
+  const session = { accessMode: 'read_write' as const, token: 'd'.repeat(43) }
+
+  function discovery() {
+    const getPrompt = vi.fn<PilotTrainerDiscovery['getPrompt']>().mockResolvedValue(prompt)
+    const setPrompt = vi.fn<PilotTrainerDiscovery['setPrompt']>().mockResolvedValue({
+        state: 'snoozed',
+        remindAt: '2026-10-12T09:00:00.000Z',
+        updatedAt: '2026-09-12T09:00:00.000Z',
+      })
+    return {
+      service: { getPrompt, setPrompt } satisfies PilotTrainerDiscovery,
+      getPrompt,
+      setPrompt,
+    }
+  }
+
+  it('reads and updates a client prompt through a read-write session', async () => {
+    const { service: pilotTrainerDiscovery, setPrompt } = discovery()
+    const app = buildApp({ pilotTrainerDiscovery, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': session.token }
+    const read = await app.inject({ method: 'GET', url: '/v1/trainer-discovery/prompt', headers })
+    const update = await app.inject({
+      method: 'PUT', url: '/v1/trainer-discovery/prompt', headers, payload: { action: 'snooze' },
+    })
+
+    expect(read.statusCode).toBe(200)
+    expect(read.json()).toEqual(prompt)
+    expect(update.statusCode).toBe(200)
+    expect(setPrompt).toHaveBeenCalledWith(session, 'snooze')
+  })
+
+  it('rejects invalid actions and read-only sessions', async () => {
+    const { service: pilotTrainerDiscovery, setPrompt } = discovery()
+    const app = buildApp({ pilotTrainerDiscovery, logger: false }); apps.push(app)
+    const invalid = await app.inject({
+      method: 'PUT', url: '/v1/trainer-discovery/prompt',
+      headers: { 'x-fit-session': session.token }, payload: { action: 'later' },
+    })
+    const readOnly = await app.inject({
+      method: 'PUT', url: '/v1/trainer-discovery/prompt',
+      headers: { 'x-fit-pilot-session': session.token }, payload: { action: 'dismiss' },
+    })
+
+    expect(invalid.statusCode).toBe(400)
+    expect(readOnly.statusCode).toBe(403)
+    expect(setPrompt).not.toHaveBeenCalled()
+  })
+
+  it('returns a safe forbidden response for non-client actors', async () => {
+    const { service: pilotTrainerDiscovery, getPrompt } = discovery()
+    getPrompt.mockRejectedValue(new TrainerDiscoveryError('forbidden'))
+    const app = buildApp({ pilotTrainerDiscovery, logger: false }); apps.push(app)
+    const response = await app.inject({
+      method: 'GET', url: '/v1/trainer-discovery/prompt', headers: { 'x-fit-session': session.token },
+    })
+
+    expect(response.statusCode).toBe(403)
+    expect(response.json()).toEqual({ error: 'action_not_allowed' })
   })
 })
 
