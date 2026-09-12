@@ -136,8 +136,7 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
       const current = await client.query<TrainerProfileRow>('select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update')
       const row = current[0]
       if (row === undefined) throw new TrainerProfileError('not_found')
-      if (row.draft_data.bio.trim().length < 40 || row.draft_data.specialties.length === 0
-        || row.draft_data.trainingModes.length === 0) throw new TrainerProfileError('invalid')
+      if (row.draft_data.displayName.trim().length < 2) throw new TrainerProfileError('invalid')
       const rows = await client.query<TrainerProfileRow>(`
         update public.trainer_professional_profiles set published_data = draft_data,
           listed_in_catalog = case when published_data is null then true else listed_in_catalog end,
