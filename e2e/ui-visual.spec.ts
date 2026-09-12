@@ -2061,12 +2061,17 @@ test('Home body map keeps its front and back switch aligned', async ({ page }, t
 test('personal workout result stays on Home and remains available in Progress history without AI', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client result')
   await mockClientWorkoutHistory(page)
+  let summaryRequestCount = 0
+  const rejectUnexpectedSummary = (route: import('@playwright/test').Route) => {
+    summaryRequestCount += 1
+    return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporarily unavailable' }) })
+  }
   await page.route('**/rest/v1/workouts?*', (route) => new URL(route.request().url()).searchParams.get('select') === 'workout_date'
     ? route.fulfill({ contentType: 'application/json', body: JSON.stringify({ workout_date: '2026-08-03' }) }) : route.fallback())
   await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
-  await page.route('https://functions.yandexcloud.net/**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporarily unavailable' }) }))
-  await page.route('**/v1/legacy/summarize-client-training', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporarily unavailable' }) }))
-  await page.route('**/functions/v1/summarize-client-training', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporarily unavailable' }) }))
+  await page.route('https://functions.yandexcloud.net/**', rejectUnexpectedSummary)
+  await page.route('**/v1/legacy/summarize-client-training', rejectUnexpectedSummary)
+  await page.route('**/functions/v1/summarize-client-training', rejectUnexpectedSummary)
   await signIn(page, 'client@fit.local', /\/me$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   const result = page.getByRole('region', { name: 'Последняя тренировка' })
@@ -2092,14 +2097,14 @@ test('personal workout result stays on Home and remains available in Progress hi
   await page.getByRole('button', { name: 'Назад', exact: true }).click()
   await expect(disclosure).toHaveAttribute('open')
   await expect(disclosure.getByRole('button', { name: 'Грудь: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
-  const mapViewport = page.viewportSize()!
-  await page.setViewportSize({ ...mapViewport, height: 1400 })
-  await expectBodyMapBaseline(disclosure, `home-map-detail-${process.platform}.png`)
-  await page.setViewportSize(mapViewport)
+  await expect(disclosure.locator('.body-progress-visual')).not.toHaveClass(/discovering/)
+  expect(await disclosure.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   await gotoStable(page, '/me/progress')
   await expect(page.locator('.period-exercise-results')).toContainText('За этот период новых достижений нет.')
   await expect(page.locator('.personal-workout-result')).toHaveCount(0)
-  await expect(page.locator('.ai-progress-auto-error')).toBeVisible()
+  await expect(page.locator('.ai-progress-auto-error')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Создать анализ' })).toBeVisible()
+  expect(summaryRequestCount).toBe(0)
   await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
   await page.getByRole('heading', { name: 'Мой прогресс' }).scrollIntoViewIfNeeded()
   await expectVisualBaseline(page, `personal-result-progress-${process.platform}.png`)

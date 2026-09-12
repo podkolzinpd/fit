@@ -1,6 +1,6 @@
 export function generationErrorMessage(code: string): string {
   if (code === 'summary_generation_in_progress') return 'Анализ уже формируется. Повторный запрос не отправлен.'
-  if (code === 'summary_generation_cooldown') return 'Повтор временно остановлен, чтобы не расходовать токены на те же данные.'
+  if (code === 'summary_generation_cooldown') return 'Повторный платный запрос не отправлен, чтобы не расходовать токены. Попробуйте обновить анализ завтра.'
   if (code === 'summary_generation_period_limit') return 'Новый анализ для этого периода уже запускался сегодня.'
   if (code === 'summary_generation_daily_limit') return 'Лимит новых ИИ-анализов на сегодня исчерпан.'
   if (code === 'summary_generation_disabled') return 'Обновление ИИ-анализа временно отключено.'

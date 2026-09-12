@@ -36,5 +36,6 @@ test('summary smoke follows the actual API request parser', async () => {
   const payload = JSON.parse(request.replace(/\$client_id/g, JSON.stringify(clientId)).replace(/([a-z_]+):/g, '\"$1\":'))
   assert.deepEqual(readAssistantProgressRequest(payload), {
     clientId, periodStart: '2026-08-01', periodEnd: '2026-08-31', force: true,
+    triggerReason: 'manual_refresh',
   })
 })

@@ -579,6 +579,28 @@ describe('legacy Supabase function bridge', () => {
     expect(response.json()).toEqual({ error: 'invalid_progress_request' })
     expect(handler).not.toHaveBeenCalled()
   })
+
+  it('rejects an automatic progress trigger before it can reach the model', async () => {
+    const handler = vi.fn()
+    const app = buildApp({ legacySummaryHandler: handler, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/assistant/progress-summary',
+      headers: { 'x-supabase-authorization': 'Bearer supabase-access-token' },
+      payload: {
+        client_id: PROFILE_ID,
+        period_start: '2026-08-01',
+        period_end: '2026-08-20',
+        trigger_reason: 'page_open',
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_progress_request' })
+    expect(handler).not.toHaveBeenCalled()
+  })
 })
 
 describe('native Yandex function contracts', () => {
@@ -664,6 +686,7 @@ describe('native Yandex function contracts', () => {
       periodStart: '2026-08-01',
       periodEnd: '2026-08-26',
       force: false,
+      triggerReason: 'manual_refresh',
     })
     expect(listed.statusCode).toBe(200)
     expect(listed.json()).toEqual({ summaries: [{ id: 'summary-id' }] })
