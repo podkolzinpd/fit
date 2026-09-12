@@ -15,6 +15,8 @@ insert into public.clients(id,trainer_id,auth_user_id,full_name) values
 ('b0400000-0000-4000-8000-000000000010','b0400000-0000-4000-8000-000000000002','b0400000-0000-4000-8000-000000000002','Иван Спортсмен');
 insert into public.client_trainers(client_id,trainer_id) values
 ('b0400000-0000-4000-8000-000000000010','b0400000-0000-4000-8000-000000000001');
+insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values
+('b0400000-0000-4000-8000-000000000010','b0400000-0000-4000-8000-000000000001','b0400000-0000-4000-8000-000000000002');
 insert into public.push_subscriptions(user_id,endpoint,p256dh,auth_key) values
 ('b0400000-0000-4000-8000-000000000002','https://push.example/chat-actions-client','key','auth');
 

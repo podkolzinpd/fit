@@ -1,4 +1,4 @@
-// schema-sha256: 444948f173d29297da623f220935122944413811e373a8e595cb6e537c8cd113
+// schema-sha256: 0a581d04cfb78318c799f7ee010b2784310e0c1c22d0881831fd53a3950a88a3
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -2262,6 +2262,10 @@ export type Database = {
           image_height: number | null; image_mime_type: string | null; image_path: string | null; image_size_bytes: number | null; image_width: number | null
           reply_to_body: string | null; reply_to_deleted: boolean; reply_to_has_image: boolean; reply_to_message_id: string | null; reply_to_sender_id: string | null; sender_id: string
         }[]
+      }
+      is_active_client_trainer_connection: {
+        Args: { p_client_id: string; p_trainer_id: string }
+        Returns: boolean
       }
       list_chat_threads: {
         Args: never
