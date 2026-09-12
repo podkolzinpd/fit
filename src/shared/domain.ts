@@ -662,6 +662,8 @@ export interface PublishedTrainingSummary {
   publishedAt: string
 }
 
+export type TrainingSummaryTriggerReason = 'create' | 'new_workout' | 'period_change' | 'manual_refresh'
+
 export type TrainerTrainingMode = 'online' | 'in_person'
 
 export interface TrainerCertificate {

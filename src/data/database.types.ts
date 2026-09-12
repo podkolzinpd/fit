@@ -1,4 +1,4 @@
-// schema-sha256: ff9149e3256b8836101dd15b6078541fc4482ba21a0d54de5e941ec05897fc65
+// schema-sha256: 67992fce9621da4ae1a8f6b1c8f760639eb5dbdf55489881b63890905a8a1e7c
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -2469,6 +2469,16 @@ export type Database = {
           p_content: string
           p_conversation_id: string
           p_turn_id: string
+        }
+        Returns: Json
+      }
+      publish_cached_training_summary_for_client: {
+        Args: {
+          p_client_id: string
+          p_input_fingerprint: string
+          p_period_end: string
+          p_period_start: string
+          p_prompt_version: string
         }
         Returns: Json
       }

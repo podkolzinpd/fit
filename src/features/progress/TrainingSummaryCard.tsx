@@ -36,6 +36,7 @@ import { formatSummaryText } from './summary-format'
 import { availableSummaryPeriods, SUMMARY_PERIODS, summaryPeriodMatch, summaryPeriodRange, type SummaryPeriod } from './summary-period'
 import { buildTrainerProgressSignals } from './trainer-progress-signals'
 import { buildWorkoutRegularityProgress } from './workout-regularity-progress'
+import type { TrainingSummaryTriggerReason } from '../../shared/domain'
 
 function PeriodTabs({ value, available, onChange }: {
   value: SummaryPeriod
@@ -67,7 +68,7 @@ function SummaryHeader({ published }: { published?: boolean }) {
   </header>
 }
 
-function AutomaticSummaryError({ error, onRetry }: { error: Error; onRetry: () => void }) {
+function SummaryGenerationError({ error, onRetry }: { error: Error; onRetry: () => void }) {
   return <p className="ai-progress-auto-error" role="alert">
     <span>{error.message}</span>
     <button type="button" className="link" onClick={onRetry}>Повторить</button>
@@ -132,33 +133,25 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
     queryKey: ['client-goal', clientId],
     queryFn: () => goalsRepository.get(clientId),
   })
-  const automaticGeneration = useQuery({
-    queryKey: ['training-summary-generation', 'trainer', clientId, range.start, range.end],
-    queryFn: async () => {
-      const generation = await trainingSummariesRepository.generate(
-        clientId,
-        range.start,
-        range.end,
-        false,
+  const refresh = useMutation({
+    mutationFn: async (requested: { clientId: string; start: LocalDate; end: LocalDate; reason: TrainingSummaryTriggerReason }) => {
+      await trainingSummariesRepository.generate(
+        requested.clientId,
+        requested.start,
+        requested.end,
+        true,
+        requested.reason,
       )
-      const summaries = await trainingSummariesRepository.listForTrainer(clientId)
-      return { generation, summaries }
+      return trainingSummariesRepository.listForTrainer(requested.clientId)
     },
-    enabled: ready && firstWorkout.data !== null,
-    retry: false,
-    staleTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    onSuccess: (summaries, requested) => queryClient.setQueryData(
+      ['training-summaries', 'trainer', requested.clientId],
+      summaries,
+    ),
   })
-  useEffect(() => {
-    if (automaticGeneration.data) {
-      queryClient.setQueryData(
-        ['training-summaries', 'trainer', clientId],
-        automaticGeneration.data.summaries,
-      )
-    }
-  }, [automaticGeneration.data, clientId, queryClient])
+  const refreshIsCurrent = refresh.variables?.clientId === clientId
+    && refresh.variables.start === range.start && refresh.variables.end === range.end
+  const refreshBusy = refresh.isPending && refreshIsCurrent
   const changePeriod = (nextPeriod: SummaryPeriod) => {
     setPeriod(nextPeriod)
   }
@@ -169,7 +162,11 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
   const upcomingWorkouts = workouts.data?.filter((workout) =>
     workout.workoutDate >= today && workout.workoutDate <= storyRange.end)
 
-  return <section className="ai-progress-card client-progress-card progress-story-card trainer-progress-story-card" aria-label="ИИ-анализ тренировок" aria-busy={loading || (!summary && automaticGeneration.isFetching)}>
+  const exactAnalysis = Boolean(summary && summary.periodStart === range.start && summary.periodEnd === range.end)
+  const refreshReason: TrainingSummaryTriggerReason = !summary ? 'create' : exactAnalysis ? 'manual_refresh' : 'period_change'
+  const requestRefresh = () => refresh.mutate({ clientId, start: range.start, end: range.end, reason: refreshReason })
+
+  return <section className="ai-progress-card client-progress-card progress-story-card trainer-progress-story-card" aria-label="ИИ-анализ тренировок" aria-busy={loading || refreshBusy}>
     <section className="progress-story-period" aria-labelledby="trainer-progress-period-title">
       <SummaryHeader published={summary?.published} />
       <span className="sr-only" id="trainer-progress-period-title">Период анализа прогресса</span>
@@ -181,7 +178,7 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
       onRetry={() => void Promise.all([query.refetch(), firstWorkout.refetch()])}
     >
       {summary
-        ? <TrainerSummaryContent
+        ? <><TrainerSummaryContent
             key={summary.id}
             summary={summary}
             clientId={clientId}
@@ -207,15 +204,17 @@ export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = nul
               queryKey: ['training-summaries', 'trainer', clientId],
             })}
           />
-        : automaticGeneration.isFetching
-          ? <div className="ai-progress-empty" role="status"><strong>Обновляем прогресс…</strong></div>
-          : !automaticGeneration.error && <div className="ai-progress-empty"><strong>Пока нет анализа за этот период</strong></div>}
+          <div className="progress-analysis-actions"><button type="button" className="secondary" disabled={refreshBusy} onClick={requestRefresh}>{refreshBusy ? 'Формируем ИИ-анализ…' : 'Обновить анализ'}</button></div></>
+        : <div className="ai-progress-empty">
+          <strong>Пока нет анализа за этот период</strong>
+          {firstWorkout.data && <button type="button" className="secondary" disabled={refreshBusy} onClick={requestRefresh}>{refreshBusy ? 'Формируем ИИ-анализ…' : 'Создать анализ'}</button>}
+        </div>}
     </AsyncView>
-    {automaticGeneration.error && <AutomaticSummaryError
-      error={automaticGeneration.error}
+    {refreshIsCurrent && refresh.error && <SummaryGenerationError
+      error={refresh.error}
       onRetry={() => {
         trackGoal(summary ? 'refresh_training_summary_retry' : 'create_training_summary_retry')
-        void automaticGeneration.refetch()
+        requestRefresh()
       }}
     />}
   </section>
@@ -726,31 +725,16 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
   const range = summaryPeriodRange(period, today)
   // An exact current result takes precedence over an older window with a closer month length.
   const summary = query.data?.find((item) => item.periodStart === range.start && item.periodEnd === range.end) ?? summaryPeriodMatch(query.data ?? [], period, today)
-  const ready = !query.isLoading && !firstWorkout.isLoading && !query.error && !firstWorkout.error
-  const automaticGeneration = useQuery({
-    queryKey: ['training-summary-generation', 'client', clientId, range.start, range.end],
-    queryFn: async () => {
-      const generation = await trainingSummariesRepository.generate(clientId, range.start, range.end, false)
-      await queryClient.invalidateQueries({ queryKey: ['training-summaries', 'client', clientId] })
-      return generation
-    },
-    enabled: ready && firstWorkout.data !== null,
-    retry: false,
-    staleTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  })
   const refresh = useMutation({
-    mutationFn: async (requested: { clientId: string; start: LocalDate; end: LocalDate }) => {
-      await trainingSummariesRepository.generate(requested.clientId, requested.start, requested.end, true)
+    mutationFn: async (requested: { clientId: string; start: LocalDate; end: LocalDate; reason: TrainingSummaryTriggerReason }) => {
+      await trainingSummariesRepository.generate(requested.clientId, requested.start, requested.end, true, requested.reason)
       return trainingSummariesRepository.listForClient(requested.clientId)
     },
     onSuccess: (summaries, requested) => queryClient.setQueryData(['training-summaries', 'client', requested.clientId], summaries),
   })
   const refreshIsCurrent = refresh.variables?.clientId === clientId && refresh.variables.start === range.start && refresh.variables.end === range.end
   const refreshBusy = refresh.isPending && refreshIsCurrent
-  const generationError = refreshIsCurrent && refresh.error ? refresh.error : refreshIsCurrent && refresh.isSuccess ? null : automaticGeneration.error
+  const generationError = refreshIsCurrent && refresh.error ? refresh.error : null
   const currentWorkouts = allWorkouts.data?.filter((workout) => workout.workoutDate >= range.start && workout.workoutDate <= range.end)
   const previousStart = addDays(range.start, -(daysBetween(range.start, range.end) + 1))
   const previousEnd = addDays(range.start, -1)
@@ -766,6 +750,14 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
   const newWorkouts = summary && currentWorkouts?.some((workout) => workout.status === 'done' && workout.completedAt && Date.parse(workout.completedAt) > Date.parse(summary.generatedAt))
   const analysisDate = summary ? `Обновлён ${new Date(summary.generatedAt).toLocaleDateString('ru-RU', { timeZone: actor?.timezone })}` : null
   const exactAnalysis = Boolean(summary && summary.periodStart === range.start && summary.periodEnd === range.end)
+  const refreshReason: TrainingSummaryTriggerReason = !summary
+    ? 'create'
+    : newWorkouts
+      ? 'new_workout'
+      : !exactAnalysis
+        ? 'period_change'
+        : 'manual_refresh'
+  const requestRefresh = () => refresh.mutate({ clientId, start: range.start, end: range.end, reason: refreshReason })
   const analysisPreview = analysis.flatMap((section) => section.items)[0]
   const periodMonths = period === '1m' ? 1 : period === '3m' ? 3 : 6
   const closeDetails = () => {
@@ -780,12 +772,14 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
       <div className="progress-analysis-preview" aria-label="ИИ-анализ за период">
         <div className="progress-analysis-preview-head"><h3>{exactAnalysis ? 'ИИ-анализ' : summary ? 'Предыдущий ИИ-анализ' : 'ИИ-анализ'}</h3>{analysisDate && <span>{analysisDate}</span>}</div>
         {summary && !exactAnalysis && <p className="muted">{savedAnalysisLabel}</p>}
-        {analysisPreview ? <p>{analysisPreview}</p> : summary ? <p>Новых выводов сверх показанных результатов пока нет.</p> : firstDate ? <p>Анализ за выбранный период ещё формируется.</p> : <p>Анализ появится после первой тренировки.</p>}
+        {analysisPreview ? <p>{analysisPreview}</p> : summary ? <p>Новых выводов сверх показанных результатов пока нет.</p> : firstDate ? <p>Анализ за выбранный период ещё не создан.</p> : <p>Анализ появится после первой тренировки.</p>}
         {newWorkouts && <p className="progress-analysis-update">Есть новые тренировки — анализ можно обновить.</p>}
         {query.error && <p role="alert">Не удалось загрузить сохранённый анализ. <button type="button" className="link" onClick={() => void query.refetch()}>Повторить</button></p>}
-        {(automaticGeneration.isFetching || refreshBusy) && <p role="status">Формируем ИИ-анализ…</p>}
-        {generationError && <AutomaticSummaryError error={generationError} onRetry={() => refresh.mutate({ clientId, start: range.start, end: range.end })} />}
-        {summary && <div className="progress-analysis-actions"><button ref={analysisTriggerRef} type="button" className="secondary" aria-haspopup="dialog" onClick={() => setDetailsOpen(true)}>Открыть анализ</button>{(newWorkouts || !exactAnalysis) && <button type="button" className="link" disabled={refreshBusy || automaticGeneration.isFetching} onClick={() => refresh.mutate({ clientId, start: range.start, end: range.end })}>Обновить анализ</button>}</div>}
+        {refreshBusy && <p role="status">Формируем ИИ-анализ…</p>}
+        {generationError && <SummaryGenerationError error={generationError} onRetry={requestRefresh} />}
+        {summary
+          ? <div className="progress-analysis-actions"><button ref={analysisTriggerRef} type="button" className="secondary" aria-haspopup="dialog" onClick={() => setDetailsOpen(true)}>Открыть анализ</button>{(newWorkouts || !exactAnalysis) && <button type="button" className="link" disabled={refreshBusy} onClick={requestRefresh}>Обновить анализ</button>}</div>
+          : firstDate && <div className="progress-analysis-actions"><button type="button" className="secondary" disabled={refreshBusy} onClick={requestRefresh}>{refreshBusy ? 'Формируем ИИ-анализ…' : 'Создать анализ'}</button></div>}
       </div>
     </section>
     <ClientCurrentWeek workouts={allWorkouts.data} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
@@ -815,7 +809,7 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
       <AsyncView loading={query.isLoading || firstWorkout.isLoading} error={summary ? null : query.error ?? firstWorkout.error} onRetry={() => void Promise.all([query.refetch(), firstWorkout.refetch()])}>
         {summary ? <><p>{savedAnalysisLabel}</p><p className="muted">{analysisDate}</p>{newWorkouts && <p>Есть новые тренировки</p>}<ProgressDetailedAnalysis sections={analysis} compact /></>
           : <p>{firstDate ? 'За этот период анализа пока нет.' : 'Анализ появится после первой тренировки.'}</p>}
-        {firstDate && <><button type="button" className="secondary" disabled={refresh.isPending || automaticGeneration.isFetching} onClick={() => refresh.mutate({ clientId, start: range.start, end: range.end })}>{refreshBusy ? 'Формируем ИИ-анализ…' : 'Обновить анализ'}</button></>}
+        {firstDate && <><button type="button" className="secondary" disabled={refreshBusy} onClick={requestRefresh}>{refreshBusy ? 'Формируем ИИ-анализ…' : summary ? 'Обновить анализ' : 'Создать анализ'}</button></>}
         {generationError && <p role="alert">{generationError.message}</p>}
       </AsyncView>
     </SummarySheet>}

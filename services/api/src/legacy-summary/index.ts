@@ -39,6 +39,7 @@ type SummarizeRequest = {
   period_start: string
   period_end: string
   force: boolean
+  trigger_reason: "create" | "new_workout" | "period_change" | "manual_refresh"
   diagnostic?: 'preflight' | 'run_once' | undefined
   diagnostic_fingerprint?: string | undefined
 }
@@ -277,6 +278,7 @@ function parseRequest(value: unknown): SummarizeRequest {
   const periodStart = body.period_start
   const periodEnd = body.period_end
   const force = body.force
+  const triggerReason = body.trigger_reason
   if (body.diagnostic !== undefined && body.diagnostic !== 'preflight' && body.diagnostic !== 'run_once') {
     throw new HttpError(400, 'invalid_diagnostic')
   }
@@ -299,6 +301,10 @@ function parseRequest(value: unknown): SummarizeRequest {
   if (force !== undefined && typeof force !== "boolean") {
     throw new HttpError(400, "invalid_force")
   }
+  if (triggerReason !== undefined && triggerReason !== "create" && triggerReason !== "new_workout" &&
+    triggerReason !== "period_change" && triggerReason !== "manual_refresh") {
+    throw new HttpError(400, "invalid_trigger_reason")
+  }
 
   const startMs = Date.parse(`${periodStart}T00:00:00Z`)
   const endMs = Date.parse(`${periodEnd}T00:00:00Z`)
@@ -314,6 +320,7 @@ function parseRequest(value: unknown): SummarizeRequest {
     period_start: periodStart,
     period_end: periodEnd,
     force: force === true,
+    trigger_reason: triggerReason ?? "manual_refresh",
     diagnostic: body.diagnostic,
     diagnostic_fingerprint: typeof body.diagnostic_fingerprint === 'string' ? body.diagnostic_fingerprint : undefined,
   }
@@ -1448,8 +1455,23 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
           ? cached.summary as Record<string, unknown>
           : null
         if (cached && cachedSummary?.analysisVersion === SUMMARY_ANALYSIS_VERSION && cachedSummary.inputFingerprint === inputFingerprint) {
-          console.info("summary cache hit", { request_id: requestId, actor: "client", force_requested: input.force })
+          console.info("summary cache hit", { request_id: requestId, actor: "client", force_requested: input.force, trigger_reason: input.trigger_reason })
           return Response.json({ data: cached, cached: true })
+        }
+        const { data: sharedCache, error: sharedCacheError } = await serviceClient().rpc(
+          "publish_cached_training_summary_for_client",
+          {
+            p_client_id: input.client_id,
+            p_period_start: input.period_start,
+            p_period_end: input.period_end,
+            p_prompt_version: PROMPT_VERSION,
+            p_input_fingerprint: inputFingerprint,
+          },
+        )
+        if (sharedCacheError) throw new HttpError(500, "summary_cache_lookup_failed")
+        if (sharedCache) {
+          console.info("summary shared cache published", { request_id: requestId, trigger_reason: input.trigger_reason })
+          return Response.json({ data: sharedCache, cached: true })
         }
       }
 
@@ -1468,7 +1490,7 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
           throw new HttpError(500, "summary_cache_lookup_failed")
         }
         if (cached?.input_fingerprint === inputFingerprint) {
-          console.info("summary cache hit", { request_id: requestId, actor: "trainer", force_requested: input.force })
+          console.info("summary cache hit", { request_id: requestId, actor: "trainer", force_requested: input.force, trigger_reason: input.trigger_reason })
           const { input_fingerprint: _fingerprint, ...data } = cached
           return Response.json({ data, cached: true })
         }
@@ -1502,10 +1524,43 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         decision: generationDecision,
         fingerprint_prefix: inputFingerprint.slice(0, 12),
         force_requested: input.force,
+        trigger_reason: input.trigger_reason,
         source_input_chars: sourceInputChars,
         model_input_chars: modelInputChars,
       })
-      if (generationDecision === 'cached' || generationDecision === 'in_progress') {
+      if (generationDecision === 'cached') {
+        if (isClient) {
+          const { data: sharedCache, error: sharedCacheError } = await generationGuardStore.rpc(
+            'publish_cached_training_summary_for_client',
+            {
+              p_client_id: input.client_id,
+              p_period_start: input.period_start,
+              p_period_end: input.period_end,
+              p_prompt_version: PROMPT_VERSION,
+              p_input_fingerprint: inputFingerprint,
+            },
+          )
+          if (sharedCacheError) throw new HttpError(500, 'summary_cache_lookup_failed')
+          if (sharedCache) return Response.json({ data: sharedCache, cached: true })
+        }
+        if (isTrainer) {
+          const { data: cached, error: cacheError } = await userClient
+            .from('client_training_summaries')
+            .select('id,client_id,period_start,period_end,trainer_summary,client_summary,display_metrics,generated_at,version,input_fingerprint')
+            .eq('client_id', input.client_id)
+            .eq('period_start', input.period_start)
+            .eq('period_end', input.period_end)
+            .eq('prompt_version', PROMPT_VERSION)
+            .maybeSingle()
+          if (cacheError) throw new HttpError(500, 'summary_cache_lookup_failed')
+          if (cached?.input_fingerprint === inputFingerprint) {
+            const { input_fingerprint: _fingerprint, ...data } = cached
+            return Response.json({ data, cached: true })
+          }
+        }
+        throw new HttpError(409, 'summary_generation_in_progress')
+      }
+      if (generationDecision === 'in_progress') {
         throw new HttpError(409, 'summary_generation_in_progress')
       }
       if (generationDecision === 'cooldown') {
@@ -1547,6 +1602,7 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
           aggregation_version: SUMMARY_AGGREGATOR_VERSION,
           fingerprint_prefix: inputFingerprint.slice(0, 12),
           force_requested: input.force,
+          trigger_reason: input.trigger_reason,
           request_strategy: 'direct',
           model_calls: 1,
         },

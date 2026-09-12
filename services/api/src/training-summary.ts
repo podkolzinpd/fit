@@ -75,6 +75,7 @@ export interface TrainingSummaryRequest {
   periodStart: string
   periodEnd: string
   force: boolean
+  triggerReason: 'create' | 'new_workout' | 'period_change' | 'manual_refresh'
 }
 
 export interface PilotTrainingSummaryReader {
@@ -196,8 +197,23 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
       console.info('summary cache hit', {
         fingerprint_prefix: inputFingerprint.slice(0, 12),
         force_requested: request.force,
+        trigger_reason: request.triggerReason,
       })
       return { data: cached, cached: true }
+    }
+    if (source.actor === 'client') {
+      const sharedCache = await withYandexActorSession(
+        this.pool,
+        session,
+        (client) => this.publishClientCache(client, request, inputFingerprint),
+      )
+      if (sharedCache !== undefined) {
+        console.info('summary shared cache published', {
+          fingerprint_prefix: inputFingerprint.slice(0, 12),
+          trigger_reason: request.triggerReason,
+        })
+        return { data: sharedCache, cached: true }
+      }
     }
     if (process.env.FIT_AI_SUMMARY_GENERATION_DISABLED === 'true') {
       throw new HttpError(503, 'summary_generation_disabled')
@@ -216,6 +232,7 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
       decision,
       fingerprint_prefix: inputFingerprint.slice(0, 12),
       force_requested: request.force,
+      trigger_reason: request.triggerReason,
       source_input_chars: sourceInputChars,
       model_input_chars: modelInputChars,
     })
@@ -226,6 +243,14 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
         (client) => this.readCache(client, request, source.actor, inputFingerprint),
       )
       if (racedCache !== undefined) return { data: racedCache, cached: true }
+      if (source.actor === 'client') {
+        const sharedRacedCache = await withYandexActorSession(
+          this.pool,
+          session,
+          (client) => this.publishClientCache(client, request, inputFingerprint),
+        )
+        if (sharedRacedCache !== undefined) return { data: sharedRacedCache, cached: true }
+      }
       throw new PilotTrainingSummaryError(409, 'summary_generation_in_progress')
     }
     if (decision === 'in_progress') {
@@ -248,6 +273,7 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
         fingerprint_prefix: inputFingerprint.slice(0, 12),
         model_input_chars: modelInputChars,
         model_calls: 1,
+        trigger_reason: request.triggerReason,
       })
       generated = await requestYandexSummary(
         modelInput,
@@ -596,5 +622,16 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
             and summary.period_end = $3 and summary.prompt_version = $4
         `, [request.clientId, request.periodStart, request.periodEnd, PROMPT_VERSION])
     return rows[0]?.input_fingerprint === inputFingerprint ? rows[0].result : undefined
+  }
+
+  private async publishClientCache(
+    client: DatabaseClient,
+    request: TrainingSummaryRequest,
+    inputFingerprint: string,
+  ): Promise<unknown> {
+    const rows = await client.query<JsonRow>(`
+      select public.publish_cached_training_summary_for_client($1, $2, $3, $4, $5) result
+    `, [request.clientId, request.periodStart, request.periodEnd, PROMPT_VERSION, inputFingerprint])
+    return rows[0]?.result ?? undefined
   }
 }
