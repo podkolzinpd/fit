@@ -1,4 +1,4 @@
-import type { ChatBlockState, ChatImageDraft, ChatMessage, ChatMessagePage, ChatThread, ChatUnreadState } from '../../shared/domain'
+import type { ChatBlockState, ChatConnectionState, ChatImageDraft, ChatMessage, ChatMessagePage, ChatThread, ChatUnreadState } from '../../shared/domain'
 import { chatMedia, chatQueries } from '../queries/chat.queries'
 import { repositoryError } from './error'
 
@@ -9,6 +9,7 @@ type ThreadRow = {
   can_message: boolean; blocked_by_me: boolean; blocked_by_partner: boolean
 }
 type MessageRow = { id: string; conversation_id: string; sender_id: string; body: string; created_at: string; image_path: string | null; image_mime_type: string | null; image_width: number | null; image_height: number | null; image_size_bytes: number | null; edited_at: string | null; reply_to_message_id: string | null; reply_to_sender_id?: string | null; reply_to_body?: string | null; reply_to_has_image?: boolean | null; reply_to_deleted?: boolean | null }
+type ConnectionRow = { active_connection: boolean; invitation_pending: boolean; invited_at: string | null; can_invite: boolean; can_accept: boolean; trainer_switch_required: boolean }
 
 function thread(row: ThreadRow): ChatThread {
   return { conversationId: row.conversation_id, clientId: row.client_id, trainerId: row.trainer_id,
@@ -16,6 +17,10 @@ function thread(row: ThreadRow): ChatThread {
     lastMessageBody: row.last_message_body, lastMessageAt: row.last_message_at,
     lastMessageSenderId: row.last_message_sender_id, unreadCount: Number(row.unread_count),
     canMessage: row.can_message, blockedByMe: row.blocked_by_me, blockedByPartner: row.blocked_by_partner }
+}
+function connection(row: ConnectionRow): ChatConnectionState {
+  return { activeConnection: row.active_connection, invitationPending: row.invitation_pending, invitedAt: row.invited_at,
+    canInvite: row.can_invite, canAccept: row.can_accept, trainerSwitchRequired: row.trainer_switch_required }
 }
 async function message(row: MessageRow): Promise<ChatMessage> {
   let url: string | null = null
@@ -62,6 +67,27 @@ export const chatRepository = {
     const row = result.data?.[0]
     if (!row) throw new Error('Настройка чата не сохранилась')
     return { canMessage: row.can_message, blockedByMe: row.blocked_by_me, blockedByPartner: row.blocked_by_partner }
+  },
+  async connectionState(conversationId: string): Promise<ChatConnectionState> {
+    const result = await chatQueries.connectionState(conversationId)
+    if (result.error) throw repositoryError(result.error)
+    const row = result.data?.[0]
+    if (!row) throw new Error('Приглашение недоступно')
+    return connection(row as ConnectionRow)
+  },
+  async inviteToConnect(conversationId: string): Promise<ChatConnectionState> {
+    const result = await chatQueries.inviteToConnect(conversationId)
+    if (result.error) throw repositoryError(result.error)
+    const row = result.data?.[0]
+    if (!row) throw new Error('Приглашение не отправлено')
+    return connection(row as ConnectionRow)
+  },
+  async acceptConnection(conversationId: string): Promise<ChatConnectionState> {
+    const result = await chatQueries.acceptConnection(conversationId)
+    if (result.error) throw repositoryError(result.error)
+    const row = result.data?.[0]
+    if (!row) throw new Error('Тренер не подключён')
+    return connection(row as ConnectionRow)
   },
   async listMessages(conversationId: string, cursor?: { createdAt: string; id: string } | null): Promise<ChatMessagePage> {
     const result = await chatQueries.listMessages(conversationId, cursor)

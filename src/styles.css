@@ -5878,12 +5878,21 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .chat-thread-meta { align-self:stretch; display:flex; flex-direction:column; align-items:flex-end; justify-content:space-between; gap:6px; color:var(--muted); font-size:11px; }
 .chat-thread-meta b { min-width:22px; height:22px; display:grid; place-items:center; padding:0 6px; border-radius:var(--radius-pill); background:var(--accent); color:var(--on-accent); font-size:11px; }
 .chat-conversation-page { height:100%; display:flex; flex-direction:column; padding-bottom:0; }
-.chat-conversation-page > .page-header { flex:0 0 auto; display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; margin-bottom:12px; }
+.chat-conversation-page > .page-header { flex:0 0 auto; display:grid; grid-template-columns:44px minmax(0,1fr) auto; align-items:center; margin-bottom:12px; }
 .chat-conversation-page > .page-header .page-back { grid-column:1; }
 .chat-conversation-page > .page-header h1,
 .chat-conversation-page > .page-header .page-title-group { grid-column:2; min-width:0; text-align:center; }
 .chat-conversation-page > .page-header .page-title-group h1 { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.chat-conversation-page > .page-header .chat-page-search { grid-column:3; }
+.chat-conversation-page > .page-header .chat-page-actions { grid-column:3; }
+.chat-page-actions { display:flex; align-items:center; gap:4px; }
+.chat-page-actions .overflow-trigger, .chat-page-search { border-color:transparent; background:transparent; }
+.chat-connection-card { display:grid; gap:8px; margin-bottom:10px; padding:12px; border:1px solid var(--border); border-radius:16px; background:var(--surface-raised); }
+.chat-connection-card strong { font-size:14px; line-height:1.3; }
+.chat-connection-card span { color:var(--muted); font-size:13px; line-height:1.35; }
+.chat-connection-card button { min-height:44px; }
+.chat-blocked-state { position:sticky; bottom:0; display:grid; gap:8px; padding:12px 0 max(12px,env(safe-area-inset-bottom)); background:var(--frame-bg); text-align:center; }
+.chat-blocked-state strong { font-size:14px; }
+.chat-blocked-state button { min-height:46px; }
 .chat-page-search { width:44px; height:44px; display:grid; place-items:center; padding:0; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); }
 .chat-page-search svg { width:21px; height:21px; }
 .chat-search { position:relative; z-index:3; display:grid; gap:8px; margin-bottom:8px; }

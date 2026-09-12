@@ -3,11 +3,16 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import type { ChatMessage, ChatMessagePage, ChatThread } from '../../shared/domain'
+import type { ChatConnectionState, ChatMessage, ChatMessagePage, ChatThread } from '../../shared/domain'
 
 type MockChat = {
   listThreads: ReturnType<typeof vi.fn<() => Promise<ChatThread[]>>>
   open: ReturnType<typeof vi.fn<(clientId: string, trainerId: string) => Promise<string>>>
+  openPublicTrainer: ReturnType<typeof vi.fn<(publicProfileId: string) => Promise<string>>>
+  setBlocked: ReturnType<typeof vi.fn<(conversationId: string, blocked: boolean) => Promise<import('../../shared/domain').ChatBlockState>>>
+  connectionState: ReturnType<typeof vi.fn<(conversationId: string) => Promise<ChatConnectionState>>>
+  inviteToConnect: ReturnType<typeof vi.fn<(conversationId: string) => Promise<ChatConnectionState>>>
+  acceptConnection: ReturnType<typeof vi.fn<(conversationId: string) => Promise<ChatConnectionState>>>
   listMessages: ReturnType<typeof vi.fn<(conversationId: string, cursor?: { createdAt: string; id: string } | null) => Promise<ChatMessagePage>>>
   send: ReturnType<typeof vi.fn<(conversationId: string, messageId: string, body: string, image?: import('../../shared/domain').ChatImageDraft | null, replyToMessageId?: string | null) => Promise<ChatMessage>>>
   edit: ReturnType<typeof vi.fn<(conversationId: string, messageId: string, body: string) => Promise<ChatMessage>>>
@@ -27,16 +32,22 @@ vi.mock('../../app/auth-context', () => ({ useAuth: () => auth() }))
 vi.mock('./chat-image', () => ({ prepareChatImage }))
 
 import { ChatConversationPage, ChatListPage } from './ChatPages'
-import { ChatHeaderAction, ChatStartButton } from './ChatEntry'
+import { ChatHeaderAction, ChatStartButton, PublicTrainerChatButton } from './ChatEntry'
 
 const actor: MockActor = { kind: 'client', role: 'client', userId: 'client-user', email: 'client@example.test', firstName: 'Иван', lastName: null, timezone: 'Europe/Moscow', clientId: 'client-1', trainerId: 'trainer-1', fullName: 'Иван' }
 const thread: ChatThread = { conversationId: 'conversation-1', clientId: 'client-1', trainerId: 'trainer-1', partnerUserId: 'trainer-1', partnerName: 'Анна', activeConnection: true, lastMessageBody: 'До встречи', lastMessageAt: '2026-09-10T12:00:00.000Z', lastMessageSenderId: 'trainer-1', unreadCount: 2, canMessage: true, blockedByMe: false, blockedByPartner: false }
 const incoming: ChatMessage = { id: 'message-1', conversationId: 'conversation-1', senderId: 'trainer-1', body: 'До встречи', image: null, createdAt: '2026-09-10T12:00:00.000Z', editedAt: null, replyTo: null }
+const connectedState: ChatConnectionState = { activeConnection: true, invitationPending: false, invitedAt: null, canInvite: false, canAccept: false, trainerSwitchRequired: false }
 
 function chatBackend(): MockChat {
   return {
     listThreads: vi.fn<() => Promise<ChatThread[]>>().mockResolvedValue([thread]),
     open: vi.fn<(clientId: string, trainerId: string) => Promise<string>>().mockResolvedValue('conversation-1'),
+    openPublicTrainer: vi.fn<(publicProfileId: string) => Promise<string>>().mockResolvedValue('conversation-1'),
+    setBlocked: vi.fn<(conversationId: string, blocked: boolean) => Promise<import('../../shared/domain').ChatBlockState>>().mockResolvedValue({ canMessage: false, blockedByMe: true, blockedByPartner: false }),
+    connectionState: vi.fn<(conversationId: string) => Promise<ChatConnectionState>>().mockResolvedValue(connectedState),
+    inviteToConnect: vi.fn<(conversationId: string) => Promise<ChatConnectionState>>().mockResolvedValue({ ...connectedState, activeConnection: false, invitationPending: true }),
+    acceptConnection: vi.fn<(conversationId: string) => Promise<ChatConnectionState>>().mockResolvedValue(connectedState),
     listMessages: vi.fn<(conversationId: string, cursor?: { createdAt: string; id: string } | null) => Promise<ChatMessagePage>>().mockResolvedValue({ messages: [incoming], nextCursor: null }),
     send: vi.fn<(conversationId: string, messageId: string, body: string, image?: import('../../shared/domain').ChatImageDraft | null, replyToMessageId?: string | null) => Promise<ChatMessage>>().mockImplementation((_conversationId, messageId, body, image) => Promise.resolve({ ...incoming, id: messageId, senderId: actor.userId, body, image: image ? { url: image.dataUrl, mimeType: image.mimeType, width: image.width, height: image.height, sizeBytes: image.sizeBytes } : null })),
     edit: vi.fn<(conversationId: string, messageId: string, body: string) => Promise<ChatMessage>>().mockImplementation((_conversationId, messageId, body) => Promise.resolve({ ...incoming, id: messageId, senderId: actor.userId, body, editedAt: '2026-09-11T10:00:00.000Z' })),
@@ -87,10 +98,11 @@ describe('reliable chat screens', () => {
     const user = userEvent.setup()
     const chat = chatBackend()
     chat.listThreads.mockResolvedValue([{ ...thread, activeConnection: false }])
+    chat.connectionState.mockResolvedValue({ ...connectedState, activeConnection: false })
     renderAt('/chat', chat)
 
     expect(await screen.findByText('Анна')).toBeVisible()
-    expect(screen.getByText('Связь отключена')).toBeVisible()
+    expect(screen.getByText('Не подключён')).toBeVisible()
     expect(screen.getByText('2')).toBeVisible()
     await user.click(screen.getByRole('button', { name: /Анна/ }))
     expect(screen.getByLabelText('route')).toHaveTextContent('/chat/conversation-1')
@@ -140,6 +152,40 @@ describe('reliable chat screens', () => {
 
     expect(await screen.findByText('Диалогов пока нет')).toBeVisible()
     expect(screen.getByText('Подключите тренера или спортсмена, чтобы начать переписку.')).toBeVisible()
+  })
+
+  it('lets a trainer invite the athlete inside an unconnected dialog', async () => {
+    const user = userEvent.setup()
+    auth.mockReturnValue({ actor: { ...actor, kind: 'trainer', role: 'trainer', userId: 'trainer-1' } })
+    const chat = chatBackend()
+    chat.listThreads.mockResolvedValue([{ ...thread, activeConnection: false }])
+    const available = { ...connectedState, activeConnection: false, canInvite: true }
+    const pending = { ...available, invitationPending: true, canInvite: true, invitedAt: '2026-09-12T10:00:00.000Z' }
+    chat.connectionState.mockResolvedValue(available)
+    chat.inviteToConnect.mockImplementation(() => { chat.connectionState.mockResolvedValue(pending); return Promise.resolve(pending) })
+    renderAt('/chat/conversation-1', chat)
+
+    await user.click(await screen.findByRole('button', { name: 'Предложить тренировки' }))
+    await waitFor(() => expect(chat.inviteToConnect).toHaveBeenCalledWith('conversation-1'))
+    expect(await screen.findByText('Приглашение отправлено')).toBeVisible()
+  })
+
+  it('lets the athlete accept an invitation and block or unblock the dialog', async () => {
+    const user = userEvent.setup()
+    const chat = chatBackend()
+    chat.listThreads.mockResolvedValue([{ ...thread, activeConnection: false }])
+    const pending = { ...connectedState, activeConnection: false, invitationPending: true, canAccept: true, invitedAt: '2026-09-12T10:00:00.000Z' }
+    chat.connectionState.mockResolvedValue(pending)
+    chat.acceptConnection.mockImplementation(() => { chat.connectionState.mockResolvedValue(connectedState); return Promise.resolve(connectedState) })
+    renderAt('/chat/conversation-1', chat)
+
+    await user.click(await screen.findByRole('button', { name: 'Подключиться' }))
+    await waitFor(() => expect(chat.acceptConnection).toHaveBeenCalledWith('conversation-1'))
+
+    await user.click(screen.getByRole('button', { name: 'Действия с диалогом' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Заблокировать' }))
+    await user.click(screen.getByRole('button', { name: 'Заблокировать' }))
+    await waitFor(() => expect(chat.setBlocked).toHaveBeenCalledWith('conversation-1', true))
   })
 
   it('keeps a failed message, retries with the same id and clears the draft', async () => {
@@ -269,11 +315,12 @@ describe('reliable chat screens', () => {
     const chat = chatBackend()
     chat.listThreads.mockResolvedValue([{ ...thread, activeConnection: false }])
     chat.listMessages.mockResolvedValue({ messages: [own], nextCursor: null })
+    chat.connectionState.mockResolvedValue({ ...connectedState, activeConnection: false })
     renderAt('/chat/conversation-1', chat)
 
     expect(await screen.findByText('Отправлено')).toBeVisible()
     expect(screen.getAllByText('Уже доставлено')).toHaveLength(1)
-    expect(screen.getByText('Связь отключена')).toBeVisible()
+    expect(screen.getByText('Не подключён')).toBeVisible()
     const input = screen.getByRole('textbox', { name: 'Сообщение' })
     await user.type(input, 'Строка{enter}дальше')
     expect(chat.send).not.toHaveBeenCalled()
@@ -442,5 +489,19 @@ describe('reliable chat screens', () => {
     render(<QueryClientProvider client={failedClient}><MemoryRouter><ChatStartButton clientId="client-1" trainerId="trainer-1" /></MemoryRouter></QueryClientProvider>)
     await user.click(screen.getByRole('button', { name: 'Написать' }))
     expect(await screen.findByText('Не удалось открыть чат')).toBeVisible()
+  })
+
+  it('opens an ordinary dialog from a public trainer profile', async () => {
+    const user = userEvent.setup()
+    const chat = chatBackend()
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    backend.mockReturnValue({ chat })
+    render(<QueryClientProvider client={queryClient}><MemoryRouter><PublicTrainerChatButton publicProfileId="public-profile-1" /><Routes>
+      <Route path="/chat/:conversationId" element={<Location />} />
+    </Routes></MemoryRouter></QueryClientProvider>)
+
+    await user.click(screen.getByRole('button', { name: 'Написать тренеру' }))
+    expect(chat.openPublicTrainer).toHaveBeenCalledWith('public-profile-1')
+    expect(await screen.findByLabelText('route')).toHaveTextContent('/chat/conversation-1')
   })
 })

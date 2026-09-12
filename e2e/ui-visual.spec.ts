@@ -2184,6 +2184,7 @@ test('reliable chat stays compact on client phones and trainer desktop', async (
     { id: 'b9000000-0000-4000-8000-000000000011', conversation_id: conversationId, sender_id: trainer ? '92000000-0000-4000-8000-000000000029' : '90000000-0000-4000-8000-000000000009', body: 'Как самочувствие после тренировки?', created_at: '2026-09-10T16:42:00.000Z', edited_at: null, reply_to_message_id: null },
   ]) }))
   await page.route('**/rest/v1/rpc/get_chat_unread_state', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await page.route('**/rest/v1/rpc/get_chat_connection_state', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ active_connection: true, invitation_pending: false, invited_at: null, can_invite: false, can_accept: false, trainer_switch_required: false }]) }))
   await page.route('**/rest/v1/rpc/mark_chat_read_v2', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
   await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
   await gotoStable(page, `/chat/${conversationId}`)

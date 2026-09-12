@@ -4,6 +4,7 @@ import { getPublicTrainerProfile } from '../../data/repositories/trainer-profile
 import type { TrainerProfessionalProfile } from '../../shared/domain'
 import { AsyncView, Page } from '../../shared/ui'
 import { TrainerProfileCard } from './TrainerProfileCard'
+import { PublicTrainerChatButton } from '../chat/ChatEntry'
 
 export function PublicTrainerProfilePage() {
   const { publicId = '' } = useParams()
@@ -26,7 +27,9 @@ export function PublicTrainerProfilePage() {
     <AsyncView loading={loading} error={error} empty={!profile?.published}
       emptyTitle="Анкета недоступна" emptyDescription="Тренер снял её с публикации или ссылка устарела."
       emptyAction={<Link className="button secondary" to="/auth">Открыть Fit</Link>} onRetry={() => { setLoading(true); setError(null); void getPublicTrainerProfile(publicId).then((value) => { setProfile(value); setLoading(false) }, (caught: unknown) => { setError(caught instanceof Error ? caught : new Error('Не удалось открыть анкету.')); setLoading(false) }) }}>
-      {profile?.published && <TrainerProfileCard profile={profile.published} publicView />}
+      {profile?.published && <TrainerProfileCard profile={profile.published} publicView footer={profile.published.acceptingClients
+        ? <PublicTrainerChatButton publicProfileId={publicId} />
+        : undefined} />}
     </AsyncView>
   </Page>
 }

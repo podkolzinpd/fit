@@ -90,6 +90,9 @@ describe('reliable chat API', () => {
     const open = vi.fn<PilotChat['open']>().mockResolvedValue(conversationId)
     const openPublicTrainer = vi.fn<PilotChat['openPublicTrainer']>().mockResolvedValue(conversationId)
     const setBlocked = vi.fn<PilotChat['setBlocked']>().mockResolvedValue({ canMessage: false, blockedByMe: true, blockedByPartner: false })
+    const connectionState = vi.fn<PilotChat['connectionState']>().mockResolvedValue({ activeConnection: false, invitationPending: false, invitedAt: null, canInvite: true, canAccept: false, trainerSwitchRequired: false })
+    const inviteToConnect = vi.fn<PilotChat['inviteToConnect']>().mockResolvedValue({ activeConnection: false, invitationPending: true, invitedAt: '2026-09-12T10:00:00.000Z', canInvite: true, canAccept: false, trainerSwitchRequired: false })
+    const acceptConnection = vi.fn<PilotChat['acceptConnection']>().mockResolvedValue({ activeConnection: true, invitationPending: false, invitedAt: '2026-09-12T10:00:00.000Z', canInvite: false, canAccept: false, trainerSwitchRequired: false })
     const authorize = vi.fn<PilotChat['authorize']>().mockResolvedValue(undefined)
     const remove = vi.fn<PilotChat['remove']>().mockResolvedValue(null)
     const edit = vi.fn<PilotChat['edit']>().mockResolvedValue({ ...baseMessage, editedAt: '2026-09-10T12:10:00.000Z' })
@@ -102,6 +105,9 @@ describe('reliable chat API', () => {
       open,
       openPublicTrainer,
       setBlocked,
+      connectionState,
+      inviteToConnect,
+      acceptConnection,
       listMessages: vi.fn<PilotChat['listMessages']>().mockResolvedValue({ messages: [], nextCursor: null }),
       authorize,
       send,
@@ -109,7 +115,7 @@ describe('reliable chat API', () => {
       remove,
       unreadState, markRead, search, window,
     }
-    return { pilotChat, open, openPublicTrainer, setBlocked, send, edit, remove, authorize, unreadState, markRead, search, window }
+    return { pilotChat, open, openPublicTrainer, setBlocked, connectionState, inviteToConnect, acceptConnection, send, edit, remove, authorize, unreadState, markRead, search, window }
   }
 
   it('lists actor conversations without caching', async () => {
@@ -129,6 +135,19 @@ describe('reliable chat API', () => {
     expect(blocked.statusCode).toBe(200)
     expect(blocked.json()).toEqual({ state: { canMessage: false, blockedByMe: true, blockedByPartner: false } })
     expect(setBlocked).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, true)
+  })
+
+  it('reads, sends and accepts a trainer invitation in the dialog', async () => {
+    const { pilotChat, connectionState, inviteToConnect, acceptConnection } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
+    const state = await app.inject({ method: 'GET', url: `/v1/chat/conversations/${conversationId}/connection`, headers: { 'x-fit-session': sessionToken } })
+    const invited = await app.inject({ method: 'POST', url: `/v1/chat/conversations/${conversationId}/connection/invite`, headers: { 'x-fit-session': sessionToken } })
+    const accepted = await app.inject({ method: 'POST', url: `/v1/chat/conversations/${conversationId}/connection/accept`, headers: { 'x-fit-session': sessionToken } })
+    expect(state.statusCode).toBe(200)
+    expect(invited.json()).toMatchObject({ state: { invitationPending: true } })
+    expect(accepted.json()).toMatchObject({ state: { activeConnection: true } })
+    expect(connectionState).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId)
+    expect(inviteToConnect).toHaveBeenCalledOnce()
+    expect(acceptConnection).toHaveBeenCalledOnce()
   })
 
   it('returns stable errors for discovery rate limits and blocked chats', async () => {

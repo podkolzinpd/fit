@@ -36,6 +36,15 @@ export interface ChatBlockState {
   blockedByPartner: boolean
 }
 
+export interface ChatConnectionState {
+  activeConnection: boolean
+  invitationPending: boolean
+  invitedAt: string | null
+  canInvite: boolean
+  canAccept: boolean
+  trainerSwitchRequired: boolean
+}
+
 export interface ChatMessage {
   id: UUID
   conversationId: UUID

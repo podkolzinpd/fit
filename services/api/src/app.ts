@@ -1234,6 +1234,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         if (error.failure === 'blocked') return reply.code(403).send({ error: 'chat_blocked' })
         if (error.failure === 'forbidden') return reply.code(403).send({ error: 'action_not_allowed' })
         if (error.failure === 'conflict') return reply.code(409).send({ error: 'message_conflict' })
+        if (error.failure === 'trainer_switch_required') return reply.code(409).send({ error: 'trainer_switch_required' })
+        if (error.failure === 'invitation_required') return reply.code(409).send({ error: 'chat_invitation_required' })
         return reply.code(422).send({ error: 'invalid_message' })
       }
       if (error instanceof PilotConnectionCommandError) {
@@ -1509,6 +1511,38 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId) || typeof body?.blocked !== 'boolean') return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(reply, () => options.pilotChat!.setBlocked(session, conversationId, body.blocked as boolean),
+      (state) => reply.header('cache-control','no-store').send({ state }))
+  })
+
+  app.get('/v1/chat/conversations/:conversationId/connection', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    const { conversationId } = request.params as { conversationId?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotChat!.connectionState(session, conversationId),
+      (state) => reply.header('cache-control','no-store').send({ state }))
+  })
+
+  app.post('/v1/chat/conversations/:conversationId/connection/invite', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { conversationId } = request.params as { conversationId?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotChat!.inviteToConnect(session, conversationId),
+      (state) => reply.header('cache-control','no-store').send({ state }))
+  })
+
+  app.post('/v1/chat/conversations/:conversationId/connection/accept', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { conversationId } = request.params as { conversationId?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof conversationId !== 'string' || !uuidPattern.test(conversationId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotChat!.acceptConnection(session, conversationId),
       (state) => reply.header('cache-control','no-store').send({ state }))
   })
 
