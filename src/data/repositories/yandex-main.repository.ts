@@ -53,6 +53,10 @@ const chatThreadSchema = z.object({
   lastMessageAt: z.iso.datetime().nullable(), lastMessageSenderId: uuid.nullable(), unreadCount: z.number().int().nonnegative(),
   canMessage: z.boolean(), blockedByMe: z.boolean(), blockedByPartner: z.boolean(),
 })
+const chatConnectionSchema = z.object({
+  activeConnection: z.boolean(), invitationPending: z.boolean(), invitedAt: z.iso.datetime().nullable(),
+  canInvite: z.boolean(), canAccept: z.boolean(), trainerSwitchRequired: z.boolean(),
+})
 const chatMessageSchema = z.object({
   id: uuid, conversationId: uuid, senderId: uuid, body: z.string(), createdAt: z.iso.datetime(),
   editedAt: z.iso.datetime().nullable(),
@@ -1002,6 +1006,15 @@ export function createYandexMainRepository(
       },
       async setBlocked(conversationId, blocked) {
         return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/block`, 'PUT', { blocked }, z.object({ state: z.object({ canMessage: z.boolean(), blockedByMe: z.boolean(), blockedByPartner: z.boolean() }) }))).state
+      },
+      async connectionState(conversationId) {
+        return (await readJson(queries, `/v1/chat/conversations/${conversationId}/connection`, z.object({ state: chatConnectionSchema }))).state
+      },
+      async inviteToConnect(conversationId) {
+        return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/connection/invite`, 'POST', {}, z.object({ state: chatConnectionSchema }))).state
+      },
+      async acceptConnection(conversationId) {
+        return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/connection/accept`, 'POST', {}, z.object({ state: chatConnectionSchema }))).state
       },
       async listMessages(conversationId, cursor): Promise<ChatMessagePage> {
         const params = new URLSearchParams({ limit: '50' })

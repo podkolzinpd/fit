@@ -58,6 +58,7 @@ test('trainer chat stays at the bottom and exits with swipe and back', async ({ 
     reply_to_message_id: null,
   }]) }))
   await page.route('**/rest/v1/rpc/get_chat_unread_state', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ first_message_id: 'b9000000-0000-4000-8000-000000000012', first_created_at: '2026-09-10T16:45:00.000Z', unread_count: 1 }]) }))
+  await page.route('**/rest/v1/rpc/get_chat_connection_state', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ active_connection: true, invitation_pending: false, invited_at: null, can_invite: false, can_accept: false, trainer_switch_required: false }]) }))
   await page.route('**/rest/v1/rpc/mark_chat_read_v2', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
 
   await loginAsTrainer(page)

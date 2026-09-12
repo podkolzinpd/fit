@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const queries = vi.hoisted(() => ({
-  listThreads: vi.fn(), open: vi.fn(), openPublicTrainer: vi.fn(), authorizeSend: vi.fn(), setBlocked: vi.fn(), listMessages: vi.fn(), send: vi.fn(), edit: vi.fn(), remove: vi.fn(), unreadState: vi.fn(), markRead: vi.fn(), search: vi.fn(), window: vi.fn(), subscribe: vi.fn(),
+  listThreads: vi.fn(), open: vi.fn(), openPublicTrainer: vi.fn(), authorizeSend: vi.fn(), setBlocked: vi.fn(), connectionState: vi.fn(), inviteToConnect: vi.fn(), acceptConnection: vi.fn(), listMessages: vi.fn(), send: vi.fn(), edit: vi.fn(), remove: vi.fn(), unreadState: vi.fn(), markRead: vi.fn(), search: vi.fn(), window: vi.fn(), subscribe: vi.fn(),
 }))
 const media = vi.hoisted(() => ({ upload: vi.fn(), createSignedUrl: vi.fn(), remove: vi.fn() }))
 vi.mock('../queries/chat.queries', () => ({ chatQueries: queries, chatMedia: media }))
@@ -46,6 +46,17 @@ describe('chatRepository photo messages', () => {
     queries.setBlocked.mockResolvedValue({ data: [{ can_message: false, blocked_by_me: true, blocked_by_partner: false }], error: null })
     await expect(chatRepository.openPublicTrainer('public-profile-1')).resolves.toBe('conversation-1')
     await expect(chatRepository.setBlocked('conversation-1', true)).resolves.toEqual({ canMessage: false, blockedByMe: true, blockedByPartner: false })
+  })
+
+  it('maps connection invitation state for read, send and accept', async () => {
+    const row = { active_connection: false, invitation_pending: true, invited_at: '2026-09-12T10:00:00.000Z', can_invite: false, can_accept: true, trainer_switch_required: false }
+    queries.connectionState.mockResolvedValue({ data: [row], error: null })
+    queries.inviteToConnect.mockResolvedValue({ data: [{ ...row, can_invite: true, can_accept: false }], error: null })
+    queries.acceptConnection.mockResolvedValue({ data: [{ ...row, active_connection: true, invitation_pending: false, can_accept: false }], error: null })
+
+    await expect(chatRepository.connectionState('conversation-1')).resolves.toMatchObject({ invitationPending: true, canAccept: true })
+    await expect(chatRepository.inviteToConnect('conversation-1')).resolves.toMatchObject({ invitationPending: true })
+    await expect(chatRepository.acceptConnection('conversation-1')).resolves.toMatchObject({ activeConnection: true })
   })
 
   it('keeps an idempotent retry when the photo already exists', async () => {

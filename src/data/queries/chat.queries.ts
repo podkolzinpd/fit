@@ -9,6 +9,9 @@ export const chatQueries = {
   openPublicTrainer: (publicProfileId: string) => supabase.rpc('open_public_trainer_chat', { p_public_id: publicProfileId }),
   authorizeSend: (conversationId: string) => supabase.rpc('authorize_chat_send', { p_conversation_id: conversationId }),
   setBlocked: (conversationId: string, blocked: boolean) => supabase.rpc('set_chat_block', { p_conversation_id: conversationId, p_blocked: blocked }),
+  connectionState: (conversationId: string) => supabase.rpc('get_chat_connection_state', { p_conversation_id: conversationId }),
+  inviteToConnect: (conversationId: string) => supabase.rpc('send_chat_connection_invitation', { p_conversation_id: conversationId }),
+  acceptConnection: (conversationId: string) => supabase.rpc('accept_chat_connection_invitation', { p_conversation_id: conversationId }),
   listMessages: (conversationId: string, cursor?: { createdAt: string; id: string } | null) => supabase.rpc('list_chat_messages_v3', {
     p_conversation_id: conversationId,
     p_before_created_at: cursor?.createdAt ?? undefined,
