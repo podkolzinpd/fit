@@ -53,6 +53,27 @@ const TENANT_FINGERPRINT_PATTERN = /^[0-9a-f]{16}$/
 const STAGE_TENANT_APPLY_CONFIRMATION = 'APPLY_TENANT_TO_YANDEX_STAGE'
 const STAGE_TENANT_ARTIFACT_LIMIT_BYTES = 3 * 1024 * 1024
 const SAFE_TENANT_MIGRATION_ERROR_PATTERN = /^[a-z0-9_.:-]{1,96}$/
+const SAFE_DATABASE_ERROR_CODE_PATTERN = /^[A-Z0-9]{5}$/i
+const SAFE_MIGRATION_ERROR_MESSAGE_PATTERN = /^[\p{L}\p{N}\s._:(),'"-]{1,500}$/u
+
+function migrationFailureDetails(error: unknown): {
+  code: string
+  message?: string
+} {
+  const code = typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && typeof error.code === 'string'
+    && SAFE_DATABASE_ERROR_CODE_PATTERN.test(error.code)
+    ? error.code
+    : 'unknown'
+  const message = error instanceof Error
+    && SAFE_MIGRATION_ERROR_MESSAGE_PATTERN.test(error.message)
+    ? error.message
+    : undefined
+
+  return { code, ...(message === undefined ? {} : { message }) }
+}
 
 function readTenantMigrationPassphrase(
   header: string | string[] | undefined,
@@ -151,12 +172,20 @@ export function buildMigrationApp(
 
   app.get('/health', () => ({ status: 'ok' }))
 
-  app.post('/migrate', async (_request, reply) => {
+  app.post('/migrate', async (request, reply) => {
     try {
       const migrations = await options.runMigrations()
       return { status: 'migrated', migrations }
-    } catch {
-      return reply.code(500).send({ status: 'migration_failed' })
+    } catch (error) {
+      const details = migrationFailureDetails(error)
+      request.log.error(
+        { migrationErrorCode: details.code },
+        'Database migration failed',
+      )
+      return reply.code(500).send({
+        status: 'migration_failed',
+        error: details,
+      })
     }
   })
 

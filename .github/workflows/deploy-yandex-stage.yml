@@ -363,6 +363,7 @@ jobs:
             --request POST --header "Authorization: Bearer $YC_TOKEN" "${migration_url%/}/migrate")
           if test "$status" != 200; then
             echo "Migration runner returned HTTP $status; the API was not changed." >&2
+            jq -r '"Migration error: code=" + (.error.code // "unknown") + (if .error.message then " message=" + .error.message else "" end)' migration-response.json >&2
             exit 1
           fi
           jq -e '.status == "migrated" and (.migrations | type == "array")' migration-response.json >/dev/null

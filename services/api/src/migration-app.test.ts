@@ -54,8 +54,34 @@ describe('migration endpoint', () => {
     const response = await app.inject({ method: 'POST', url: '/migrate' })
 
     expect(response.statusCode).toBe(500)
-    expect(response.json()).toEqual({ status: 'migration_failed' })
+    expect(response.json()).toEqual({
+      status: 'migration_failed',
+      error: { code: 'unknown' },
+    })
     expect(response.body).not.toContain('secret')
+  })
+
+  it('returns only allowlisted diagnostics for a database migration error', async () => {
+    const error = Object.assign(
+      new Error('relation public.training_summary_generation_guard does not exist'),
+      { code: '42P01' },
+    )
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: vi.fn().mockRejectedValue(error),
+    })
+    apps.push(app)
+
+    const response = await app.inject({ method: 'POST', url: '/migrate' })
+
+    expect(response.statusCode).toBe(500)
+    expect(response.json()).toEqual({
+      status: 'migration_failed',
+      error: {
+        code: '42P01',
+        message: 'relation public.training_summary_generation_guard does not exist',
+      },
+    })
   })
 })
 
