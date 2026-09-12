@@ -1168,6 +1168,50 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(visibleMemberships).toHaveLength(2)
     })
 
+    it('uses the active relationship for trainer and chat lists', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      await ownerPool.query(
+        `insert into public.client_trainer_relationships (
+           client_id, trainer_id, connected_by
+         ) values ($1, $2, $3)`,
+        [CLIENT_ID, ACTOR_ID, OTHER_ACTOR_ID],
+      )
+
+      try {
+        const connections = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          readAccessibleConnections,
+        )
+        expect(connections.memberships).toEqual([
+          expect.objectContaining({ clientId: CLIENT_ID, trainerId: ACTOR_ID }),
+        ])
+
+        const threads = await withActorTransaction(
+          runtimePool,
+          OTHER_ACTOR_ID,
+          (client) => client.query<{
+            trainer_id: string
+            active_connection: boolean
+            conversation_id: string | null
+          }>('select trainer_id, active_connection, conversation_id from public.list_chat_threads()'),
+        )
+        expect(threads).toEqual([{
+          trainer_id: ACTOR_ID,
+          active_connection: true,
+          conversation_id: null,
+        }])
+      } finally {
+        await ownerPool.query(
+          'delete from public.client_trainer_relationships where client_id = $1',
+          [CLIENT_ID],
+        )
+      }
+    })
+
     it('keeps exercise catalogs and workout aggregates inside author-scoped access', async () => {
       if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
 

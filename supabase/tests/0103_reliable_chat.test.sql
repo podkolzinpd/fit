@@ -16,6 +16,8 @@ insert into public.clients (id, trainer_id, auth_user_id, full_name) values
   ('a0300000-0000-4000-8000-000000000010','a0300000-0000-4000-8000-000000000002','a0300000-0000-4000-8000-000000000002','Иван Спортсмен');
 insert into public.client_trainers (client_id, trainer_id) values
   ('a0300000-0000-4000-8000-000000000010','a0300000-0000-4000-8000-000000000001');
+insert into public.client_trainer_relationships (client_id, trainer_id, connected_by) values
+  ('a0300000-0000-4000-8000-000000000010','a0300000-0000-4000-8000-000000000001','a0300000-0000-4000-8000-000000000002');
 insert into public.push_subscriptions (user_id, endpoint, p256dh, auth_key) values
   ('a0300000-0000-4000-8000-000000000002','https://push.example/chat-client','key','auth');
 
@@ -57,6 +59,9 @@ select throws_ok($$select public.delete_chat_message((select id from opened),'a0
 reset role;
 
 delete from public.client_trainers where client_id='a0300000-0000-4000-8000-000000000010';
+update public.client_trainer_relationships
+set status='disconnected', disconnected_at=now(), disconnected_by='a0300000-0000-4000-8000-000000000002'
+where client_id='a0300000-0000-4000-8000-000000000010' and status='active';
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a0300000-0000-4000-8000-000000000001',true);
 select is((select active_connection from public.list_chat_threads()),false,'thread records disconnected state');
