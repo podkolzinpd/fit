@@ -5874,8 +5874,16 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-catalog-visibility { overflow:hidden; border:1px solid var(--border); border-radius:14px; }
 .trainer-catalog-visibility .switch-row { border-top:0; }
 .trainer-catalog-visibility > p { padding:0 14px 12px; }
-.public-trainer-page { min-height:100dvh; padding-top:max(20px,env(safe-area-inset-top)); }
-.public-trainer-page .page-header { margin-bottom:0; }
+.public-trainer-page { box-sizing:border-box; height:100%; min-height:0; overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:contain; padding-top:max(20px,env(safe-area-inset-top)); padding-bottom:max(24px,calc(env(safe-area-inset-bottom) + 16px)); scroll-padding-bottom:max(88px,calc(env(safe-area-inset-bottom) + 76px)); -webkit-overflow-scrolling:touch; }
+.public-trainer-page .page-header { position:relative; display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; width:100%; margin-bottom:0; }
+.public-trainer-page .page-header .page-back { grid-column:1; }
+.public-trainer-page .page-header h1 { grid-column:2; text-align:center; }
+.public-trainer-page .trainer-card-primary-action { position:sticky; z-index:3; bottom:max(8px,env(safe-area-inset-bottom)); display:grid; margin:0 -4px; padding:4px; border-radius:18px; background:color-mix(in srgb,var(--surface-raised) 92%,transparent); backdrop-filter:blur(14px); }
+.public-trainer-page .trainer-card-primary-action:empty { display:none; }
+.public-trainer-page .trainer-card-primary-action .chat-start-wrap { width:100%; }
+.public-trainer-page .trainer-card-primary-action .button,
+.public-trainer-page .trainer-card-primary-action button { min-height:52px; border-radius:16px; }
+.trainer-contact-unavailable { padding:13px 14px; border:1px solid var(--border); border-radius:16px; color:var(--secondary-label-fg); background:var(--surface-sunken); font-size:14px; line-height:1.4; text-align:center; }
 
 /* YAFIT-490: личные диалоги */
 .today-header-actions { display:flex; align-items:center; gap:8px; flex:0 0 auto; }

@@ -21,7 +21,7 @@ const completeProfile: TrainerProfileDraft = {
 
 describe('TrainerProfileCard', () => {
   it('shows every useful section in a full public profile', () => {
-    render(<TrainerProfileCard profile={completeProfile} publicView action={<button>Написать</button>} footer={<p>Подвал</p>} />)
+    render(<TrainerProfileCard profile={completeProfile} publicView primaryAction={<button>Написать</button>} footer={<p>Подвал</p>} />)
 
     expect(screen.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
     expect(screen.getByText('Берёт новых клиентов')).toBeVisible()
@@ -29,6 +29,7 @@ describe('TrainerProfileCard', () => {
     expect(screen.getByText('Онлайн · Лично')).toBeVisible()
     expect(screen.getByText('3 года')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Написать' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Написать' }).closest('.trainer-card-primary-action')).not.toBeNull()
     expect(screen.getByText('Персональный тренер')).toBeVisible()
     expect(screen.getByText('Подвал')).toBeVisible()
   })
