@@ -40,6 +40,7 @@ import { AppInstallPrompt } from '../install'
 import { NotificationOnboarding } from '../notifications'
 import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, KeyboardIcon } from '../../shared/icons'
 import { ChatHeaderAction } from '../chat'
+import { TrainerDiscoveryHomeCard } from '../clients/TrainerDiscoveryHomeCard'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -667,6 +668,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         </section>}
         showFirstRunConnection={actor?.kind === 'client' && actor.trainerId === actor.userId}
         wearable={actor && isWearablesPilotEnabled(actor.userId) ? <WearableHealthCard /> : undefined}
+        trainerDiscovery={mine.data ? <TrainerDiscoveryHomeCard clientId={mine.data.id} /> : undefined}
       /></> : <>
       {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}
       {!clientMode && firstPlanClient && !textComposerOpen && <TrainerFirstPlanPrompt clientName={firstPlanClient.fullName} />}

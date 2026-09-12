@@ -3245,6 +3245,15 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-home-identity .client-home-error p { color:var(--danger); font-size:14px }
 .client-home-identity .client-home-error button { min-height:44px }
 
+.trainer-discovery-home-card { display:grid; gap:14px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
+.trainer-discovery-home-card > div:first-child { display:grid; gap:5px }
+.trainer-discovery-home-card h2 { margin:0; color:var(--fg); font-size:18px; font-weight:600; line-height:1.2; letter-spacing:-.01em }
+.trainer-discovery-home-card p { margin:0; color:var(--secondary-label-fg); font-size:14px; line-height:1.4 }
+.trainer-discovery-home-card .button { min-height:48px; border-radius:14px }
+.trainer-discovery-home-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px }
+.client-home-identity .trainer-discovery-home-actions .link { min-height:44px; padding:0 8px; font-size:13px }
+.trainer-discovery-home-card > .error { color:var(--danger); font-size:13px }
+
 .client-home-identity .today-text-fallback { gap:12px; padding-top:2px }
 .client-home-identity .today-text-fallback-head strong { font-size:18px; font-weight:600 }
 .client-home-identity .today-text-fallback-head small { color:var(--muted); font-size:12px; font-weight:500 }
