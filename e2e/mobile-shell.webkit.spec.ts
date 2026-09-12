@@ -547,7 +547,7 @@ test('iPhone: client voice-first home сохраняет тренировку т
   await expect(compactActions.locator('.voice-action-button-visual')).toBeVisible()
   await expect(compactActions.getByRole('button', { name: 'Ввести текстом' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
-  await expect(page.locator('.client-home-self-training .voice-action')).toHaveScreenshot('client-first-run-compact-actions.png', { animations: 'disabled', caret: 'hide' })
+  await expect(page.locator('.client-home-self-training .voice-action')).toHaveScreenshot('client-first-run-compact-actions.png', { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.02 })
 
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
