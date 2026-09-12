@@ -10,6 +10,7 @@ on:
       - 'services/api/package.json'
       - 'services/api/package-lock.json'
       - 'services/api/src/legacy-workout-parser/**'
+      - 'services/api/src/ai-studio-usage-metrics.ts'
       - 'services/api/src/yandex-workout-parser-function.ts'
   workflow_dispatch:
 
@@ -59,6 +60,7 @@ jobs:
           lockbox_version_id=$(yc lockbox secret get --id "$lockbox_id" --format json | jq -er '.current_version.id')
           runtime_sa_id=$(yc iam service-account get --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id' 2>/dev/null || yc iam service-account create --name "$RUNTIME_SA_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
           yc resource-manager folder add-access-binding "$YC_FOLDER_ID" --role ai.languageModels.user --service-account-id "$runtime_sa_id"
+          yc resource-manager folder add-access-binding "$YC_FOLDER_ID" --role monitoring.editor --service-account-id "$runtime_sa_id"
           yc lockbox secret add-access-binding "$lockbox_id" --role lockbox.payloadViewer --service-account-id "$runtime_sa_id"
           if ! yc serverless function get --name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
             yc serverless function create "$FUNCTION_NAME" \

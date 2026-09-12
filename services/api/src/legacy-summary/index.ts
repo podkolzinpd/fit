@@ -22,6 +22,7 @@ import { buildSummaryProgressFacts } from "./summary-progress-facts.js"
 import { buildSummaryModelInput, SUMMARY_AGGREGATOR_VERSION } from "./summary-model-input.js"
 import { resolveSupabasePublicKey } from "./supabase-public-key.js"
 import { diagnosticAllowed, PrivateSummaryDiagnostic } from './private-diagnostic.js'
+import { aiStudioUsage, reportAiStudioMetric } from "../ai-studio-usage-metrics.js"
 
 const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
@@ -684,6 +685,8 @@ type YandexRequestOptions = {
   authorization?: YandexAiAuthorization
   fetchImpl?: typeof fetch
   requestId?: string
+  invocationId?: string
+  iamToken?: string
   sleep?: (delayMs: number) => Promise<void>
   skipChunking?: boolean
   qualityData?: unknown
@@ -891,6 +894,14 @@ async function requestStructuredYandex<T>(
     }
 
     if (!response.ok) {
+      await reportAiStudioMetric({
+        functionName: "fit-summarize-client-training",
+        modelUri,
+        invocationId: options.invocationId ?? null,
+        iamToken: options.iamToken ?? null,
+        upstreamRequestId: response.headers.get("x-request-id"),
+        usage: null,
+      })
       const failure = yandexResponseError(response.status)
       if (attempt < maxAttempts && isRetryableYandexStatus(response.status)) {
         structuredRetryLog(options, attempt, failure.message, null, 0, null)
@@ -905,6 +916,14 @@ async function requestStructuredYandex<T>(
     try {
       payload = parseYandexJson<YandexCompletionResponse>(payloadText)
     } catch {
+      await reportAiStudioMetric({
+        functionName: "fit-summarize-client-training",
+        modelUri,
+        invocationId: options.invocationId ?? null,
+        iamToken: options.iamToken ?? null,
+        upstreamRequestId: response.headers.get("x-request-id"),
+        usage: null,
+      })
       const code = "yandex_cloud_invalid_upstream_json"
       if (attempt < maxAttempts) {
         structuredRetryLog(options, attempt, code, null, 0, null)
@@ -916,6 +935,14 @@ async function requestStructuredYandex<T>(
     const alternative = payload.result?.alternatives?.[0]
     const alternativeStatus = alternative?.status ?? null
     const text = alternative?.message?.text?.trim() ?? ""
+    await reportAiStudioMetric({
+      functionName: "fit-summarize-client-training",
+      modelUri,
+      invocationId: options.invocationId ?? null,
+      iamToken: options.iamToken ?? null,
+      upstreamRequestId: response.headers.get("x-request-id"),
+      usage: aiStudioUsage(payload.result?.usage),
+    })
 
     modelVersion = payload.result?.modelVersion ?? modelVersion
     for (const [key, value] of Object.entries(payload.result?.usage ?? {})) {
@@ -1124,6 +1151,8 @@ export async function requestYandexSummaryDeduplicated(
 
 export const summarizeClientTraining = async (req: Request): Promise<Response> => {
     const requestId = crypto.randomUUID()
+    const invocationId = req.headers.get("x-yc-request-id")
+    const iamToken = req.headers.get("x-yc-iam-token")
     try {
       if (req.method !== "POST") {
         return Response.json(
@@ -1471,7 +1500,11 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         modelInput,
         trainingData.period.start,
         trainingData.period.end,
-        { requestId },
+        {
+          requestId,
+          ...(invocationId === null ? {} : { invocationId }),
+          ...(iamToken === null ? {} : { iamToken }),
+        },
       )
       const generated = generation.result
       console.info("summary model request completed", {
