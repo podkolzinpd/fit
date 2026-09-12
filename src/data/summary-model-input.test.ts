@@ -38,9 +38,9 @@ describe('buildSummaryModelInput', () => {
       name: 'Упражнение 1',
     })
     expect(result.exercises[0]?.current?.derived_observations.map((item) => item.kind)).toContain('load_up_reps_held')
-    expect(result.exercises[0]?.current?.control_points.length).toBeLessThanOrEqual(8)
-    expect(result.exercises[0]?.previous?.control_points.length).toBeLessThanOrEqual(8)
-    expect(result.exercises[0]?.current?.control_points.length).toBeLessThan(10)
+    expect(result.exercises[0]?.current?.control_points?.length ?? 0).toBeLessThanOrEqual(4)
+    expect(result.exercises[0]?.previous?.control_points?.length ?? 0).toBeLessThanOrEqual(4)
+    expect(result.exercises[0]?.current?.control_points?.length ?? 0).toBeLessThan(10)
     expect(result.exercises).toHaveLength(20)
     expect(result.input_coverage).toEqual({
       current: { exercises: 20, sessions: 200, sets: 0 },
@@ -53,7 +53,7 @@ describe('buildSummaryModelInput', () => {
     expect(result.measurements.compared_to_previous_period).toContainEqual(expect.objectContaining({ metric: 'weight_kg', from: 82.5, to: 80, change: -2.5 }))
     expect(result.previous_period?.measurements.control_points).toHaveLength(1)
     expect(JSON.stringify(result)).toContain('Упражнение 20')
-    expect(JSON.stringify(result).length).toBeLessThan(35_000)
+    expect(JSON.stringify(result).length).toBeLessThanOrEqual(20_000)
   })
 
   it('does not drop or reorder exercises to prioritize a goal keyword', () => {

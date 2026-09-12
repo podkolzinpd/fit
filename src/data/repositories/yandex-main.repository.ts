@@ -981,8 +981,8 @@ export function createYandexMainRepository(
         const payload = await readJson(queries, `/v1/clients/${clientId}/training-summaries`, z.object({ summaries: z.array(publishedSummarySchema) }))
         return payload.summaries.map((item) => publishedTrainingSummaryFromRow({ id: item.id, source_summary_id: item.source_summary_id, client_id: item.client_id, period_start: item.period_start, period_end: item.period_end, summary: toJson(item.summary), display_metrics: toJson(item.display_metrics), generated_at: item.generated_at, published_at: item.published_at }))
       },
-      async generate(clientId, periodStart, periodEnd, force = false) {
-        const payload = await writeJson(queries, `/v1/clients/${clientId}/training-summaries/generate`, 'POST', { client_id: clientId, period_start: periodStart, period_end: periodEnd, force }, z.object({ data: z.object({ generated_at: z.iso.datetime() }), cached: z.boolean() }))
+      async generate(clientId, periodStart, periodEnd, force = false, triggerReason = 'manual_refresh') {
+        const payload = await writeJson(queries, `/v1/clients/${clientId}/training-summaries/generate`, 'POST', { client_id: clientId, period_start: periodStart, period_end: periodEnd, force, trigger_reason: triggerReason }, z.object({ data: z.object({ generated_at: z.iso.datetime() }), cached: z.boolean() }))
         return { generatedAt: payload.data.generated_at, cached: payload.cached }
       },
       async publish(summary, clientCopy) { await writeEmpty(queries, `/v1/training-summaries/${summary.id}/publish`, 'POST', { clientSummary: feedbackPayload(clientCopy), expectedVersion: summary.version }) },
