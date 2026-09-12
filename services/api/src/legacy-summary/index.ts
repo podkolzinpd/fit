@@ -1575,7 +1575,11 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
         input_tokens: generated.usage.inputTextTokens ?? null,
         output_tokens: generated.usage.completionTokens ?? null,
       })
-      const generatedClientSummary = { ...generated.summary.client, inputFingerprint }
+      const generatedClientSummary = {
+        ...generated.summary.client,
+        analysisVersion: SUMMARY_ANALYSIS_VERSION,
+        inputFingerprint,
+      }
       const displayMetrics = {
         ...trainingData.consistency,
         progress_facts: buildSummaryProgressFacts(trainingData.exercises),

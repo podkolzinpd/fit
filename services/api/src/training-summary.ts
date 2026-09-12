@@ -267,6 +267,11 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
       throw error
     }
     const generatedAt = new Date().toISOString()
+    const generatedClientSummary = {
+      ...generated.summary.client,
+      analysisVersion: SUMMARY_ANALYSIS_VERSION,
+      inputFingerprint,
+    }
     const displayMetrics = {
       ...source.trainingData.consistency,
       progress_facts: buildSummaryProgressFacts(source.trainingData.exercises),
@@ -291,7 +296,7 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
         `, [
           request.clientId, request.periodStart, request.periodEnd,
           trainerSummaryAsText(generated.summary.trainer),
-          JSON.stringify(generated.summary.trainer), JSON.stringify(generated.summary.client),
+          JSON.stringify(generated.summary.trainer), JSON.stringify(generatedClientSummary),
           JSON.stringify(displayMetrics), generated.modelUri, PROMPT_VERSION,
           inputFingerprint, JSON.stringify(inputStats), JSON.stringify(generated.usage), generatedAt,
         ])
