@@ -1,7 +1,6 @@
--- client_trainer_relationships is the source of truth for connection state.
--- Legacy memberships are intentionally left untouched: targeted disconnect
--- operations own access revocation, while these read models avoid guessing at
--- historical production data.
+-- Explicit relationship history is authoritative. A legacy membership remains
+-- compatible only when it is newer than the currently active relationship;
+-- this preserves later multi-trainer invitations without reviving older rows.
 
 create or replace function public.is_active_client_trainer_connection(
   p_client_id uuid,
@@ -20,6 +19,25 @@ as $$
         and relationship.trainer_id = p_trainer_id
         and relationship.status = 'active'
     )
+    or exists (
+      select 1
+      from public.client_trainers membership
+      where membership.client_id = p_client_id
+        and membership.trainer_id = p_trainer_id
+        and not exists (
+          select 1 from public.client_trainer_relationships relationship
+          where relationship.client_id = p_client_id
+            and relationship.trainer_id = p_trainer_id
+            and relationship.status = 'disconnected'
+            and relationship.disconnected_at >= membership.joined_at
+        )
+        and membership.joined_at >= coalesce((
+          select max(relationship.connected_at)
+          from public.client_trainer_relationships relationship
+          where relationship.client_id = p_client_id
+            and relationship.status = 'active'
+        ), '-infinity'::timestamptz)
+    )
     or (
       not exists (
         select 1 from public.client_trainer_relationships relationship
@@ -27,9 +45,10 @@ as $$
           and relationship.status = 'active'
       )
       and exists (
-        select 1 from public.client_trainers membership
-        where membership.client_id = p_client_id
-          and membership.trainer_id = p_trainer_id
+        select 1 from public.clients client
+        join public.trainers trainer on trainer.profile_id = client.trainer_id
+        where client.id = p_client_id
+          and client.trainer_id = p_trainer_id
       )
       and not exists (
         select 1 from public.client_trainer_relationships relationship
@@ -72,6 +91,11 @@ begin
         relationship.connected_at as joined_at
       from public.client_trainer_relationships relationship
       where relationship.client_id = p_client_id
+      union all
+      select client.id, client.trainer_id, client.created_at
+      from public.clients client
+      join public.trainers trainer on trainer.profile_id = client.trainer_id
+      where client.id = p_client_id
       union all
       select membership.client_id, membership.trainer_id, membership.joined_at
       from public.client_trainers membership
@@ -150,6 +174,14 @@ language sql stable security definer set search_path = '' as $$
     where relationship.status = 'active'
       and client.auth_user_id is not null
       and actor.id in (client.auth_user_id, relationship.trainer_id)
+    union
+    select client.id, client.trainer_id
+    from public.clients client
+    join public.trainers trainer on trainer.profile_id = client.trainer_id
+    cross join actor
+    where client.auth_user_id is not null
+      and actor.id in (client.auth_user_id, client.trainer_id)
+      and public.is_active_client_trainer_connection(client.id, client.trainer_id)
     union
     select membership.client_id, membership.trainer_id
     from public.client_trainers membership
