@@ -6755,6 +6755,152 @@ h3 {
   line-height: 1.2;
 }
 
+/* Prefinal 08 v3 · Retention answer — Fit removes the repeated decision and compounds context. */
+.retention-answer-v3 h2 {
+  left: 92px;
+  top: 132px;
+  width: 650px;
+  font-size: 67px;
+  line-height: .98;
+}
+
+.retention-answer-v3 .retention-pilot-lead {
+  left: 96px;
+  top: 354px;
+  width: 590px;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.retention-answer-v3 .retention-answer-reasons,
+.retention-answer-v3 .retention-answer-loop {
+  display: none;
+}
+
+.retention-answer-v3 .retention-today {
+  position: absolute;
+  left: 92px;
+  top: 478px;
+  width: 610px;
+  height: 242px;
+  box-sizing: border-box;
+  padding: 30px 34px;
+  color: #f7f3ec;
+  background: var(--dark);
+}
+
+.retention-answer-v3 .retention-today > span,
+.retention-answer-v3 .retention-today-result > span,
+.retention-answer-v3 .retention-step > span,
+.retention-answer-v3 .retention-support > span,
+.retention-answer-v3 .retention-conclusion > span {
+  display: block;
+  color: #939397;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .11em;
+}
+
+.retention-answer-v3 .retention-today blockquote {
+  margin: 17px 0 0;
+  max-width: 510px;
+  font-size: 34px;
+  font-weight: 650;
+  line-height: 1.08;
+}
+
+.retention-answer-v3 .retention-today-result {
+  position: absolute;
+  left: 34px;
+  right: 34px;
+  bottom: 26px;
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 20px;
+  align-items: baseline;
+  padding-top: 16px;
+  border-top: 1px solid rgba(247,243,236,.22);
+}
+
+.retention-answer-v3 .retention-today-result strong {
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.retention-answer-v3 .retention-return-flow {
+  position: absolute;
+  left: 790px;
+  top: 150px;
+  width: 720px;
+}
+
+.retention-answer-v3 .retention-step {
+  display: grid;
+  grid-template-columns: 62px 190px 1fr;
+  gap: 20px;
+  align-items: start;
+  min-height: 112px;
+  box-sizing: border-box;
+  padding: 26px 0 24px;
+  border-top: 1px solid var(--line);
+}
+
+.retention-answer-v3 .retention-step:nth-child(3) {
+  border-bottom: 1px solid var(--line);
+}
+
+.retention-answer-v3 .retention-step strong {
+  font-size: 29px;
+  font-weight: 650;
+  line-height: 1.05;
+}
+
+.retention-answer-v3 .retention-step p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1.28;
+}
+
+.retention-answer-v3 .retention-support {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 22px;
+  align-items: baseline;
+  padding-top: 23px;
+}
+
+.retention-answer-v3 .retention-support strong {
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.retention-answer-v3 .retention-conclusion {
+  position: absolute;
+  left: 96px;
+  right: 92px;
+  bottom: 72px;
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 26px;
+  align-items: baseline;
+  padding-top: 20px;
+  border-top: 1px solid var(--ink);
+}
+
+.retention-answer-v3 .retention-conclusion > span {
+  color: var(--muted);
+}
+
+.retention-answer-v3 .retention-conclusion strong {
+  font-size: 29px;
+  font-weight: 650;
+  line-height: 1.16;
+}
+
 /* 07.2 · Demand — make evidence types explicit and keep the research metric intact. */
 .review-demand-v2 h2 {
   width: 660px;
@@ -8662,10 +8808,46 @@ Fit появляется не случайно, а в момент уже выр
 UrbanAds: https://yandex.ru/support/urbanads/ru/</aside>
     </section>
 
-    <section class="slide redesign-v2 retention-pilot-slide retention-answer-v2 prefinal-keep" data-section="Удержание" data-slide-type="product-story" data-golden="linear/03-linear-product-flow.png">
+    <section class="slide redesign-v2 retention-pilot-slide retention-answer-v2 retention-answer-v3 prefinal-keep" data-section="Удержание" data-slide-type="product-story" data-golden="linear/03-linear-product-flow.png">
       <div class="eyebrow">07 · УДЕРЖАНИЕ</div>
-      <h2>Каждая тренировка создаёт причину вернуться</h2>
-      <p class="retention-pilot-lead">Fit не просит каждый раз начинать заново: результат одной тренировки становится контекстом для следующей.</p>
+      <h2>Fit каждый раз отвечает: что мне делать сегодня</h2>
+      <p class="retention-pilot-lead">Без поиска программы, необходимости разбираться и нового старта после пропуска.</p>
+
+      <div class="retention-today" aria-label="Пример простого входа в Fit">
+        <span>УСЛОВИЯ СЕГОДНЯ</span>
+        <blockquote>«У меня 15 минут.<br>Я дома. Без оборудования»</blockquote>
+        <div class="retention-today-result">
+          <span>FIT ПРЕДЛАГАЕТ</span>
+          <strong>Готовую тренировку под сегодняшний день</strong>
+        </div>
+      </div>
+
+      <div class="retention-return-flow" aria-label="Почему человек возвращается в Fit">
+        <div class="retention-step">
+          <span>01</span>
+          <strong>Сделал</strong>
+          <p>Fit сохраняет тренировку и показывает результат.</p>
+        </div>
+        <div class="retention-step">
+          <span>02</span>
+          <strong>Вернулся</strong>
+          <p>Не нужно заново искать программу и объяснять контекст.</p>
+        </div>
+        <div class="retention-step">
+          <span>03</span>
+          <strong>Продолжил</strong>
+          <p>Следующая тренировка уже учитывает историю человека.</p>
+        </div>
+        <div class="retention-support">
+          <span>ПОДДЕРЖКА ПО ВЫБОРУ</span>
+          <strong>Тренер, друзья, группа или челлендж усиливают этот цикл</strong>
+        </div>
+      </div>
+
+      <div class="retention-conclusion">
+        <span>ПОЧЕМУ ВЕРНЁТСЯ</span>
+        <strong>Чем больше Fit знает о человеке, тем легче ему продолжать.</strong>
+      </div>
 
       <div class="retention-answer-reasons" aria-label="Три причины возвращаться в Fit">
         <div class="retention-answer-reason">
@@ -8721,20 +8903,21 @@ UrbanAds: https://yandex.ru/support/urbanads/ru/</aside>
 Прямо ответить на вопрос, почему человек будет возвращаться в Fit после первой тренировки.
 
 ЧТО ГОВОРИМ
-Fit не заставляет человека каждый раз заново решать, что делать. После тренировки остаётся история: выполненные упражнения, нагрузка, самочувствие и динамика. На её основе формируется следующий посильный шаг.
+Для массового пользователя главный барьер — не отсутствие информации о спорте, а необходимость каждый раз самому решать, что именно делать. Fit снимает эту работу: человеку достаточно назвать сегодняшние условия, а продукт предлагает готовую тренировку.
 
-Вторая причина вернуться — видимый эффект. Пользователь видит не только запись занятия, но и изменение результатов, нагрузки и регулярности. Даже небольшое действие становится частью понятного движения вперёд.
+После занятия Fit сохраняет тренировку и показывает результат. При следующем входе пользователю не нужно снова искать программу или объяснять контекст: продолжение уже учитывает его историю. После пропуска путь не обнуляется — Fit помогает продолжить с актуального состояния.
 
-Третья причина — спортивная связь. Тренер, друзья, группы и челленджи создают внешний повод не выпадать между занятиями. Социальность здесь не отдельная лента ради контента, а механизм продолжения действия.
+Так ценность продукта накапливается. Чем больше Fit знает о человеке, тем точнее и проще становится следующий сценарий. Тренер, друзья, группы и челленджи подключаются как дополнительная поддержка для тех, кому она помогает, но не заменяют основную персональную пользу.
 
-Вместе это замыкает понятный цикл: сделал, увидел эффект, получил следующий шаг и вернулся. Чем больше контекста накапливает Fit, тем меньше усилий требуется для следующего входа.
+Исследования цифровых интервенций физической активности чаще всего связывают продолжение поведения с конкретными целями, самоконтролем и обратной связью. Исследования продолжения использования mHealth также выделяют воспринимаемую полезность, удовлетворённость и ощущение контроля над здоровьем. Слайд переводит эти механики в продуктовую гипотезу Fit, а не заявляет уже доказанное удержание самого продукта.
 
 ПЕРЕХОД
 Следующий вопрос — почему такую систему не закрывают существующие спортивные приложения.
 
 [Sources]
-ABC Trainerize, сообщения, AI Workout Builder и видеотренировки: https://www.trainerize.com/features/
-Fitness Online, лента, сообщения, планы и обратная связь: https://www.fitnessonline.app/en/</aside>
+Smartphone-Based Interventions for Physical Activity Promotion, scoping review, 148 публикаций: https://mhealth.jmir.org/2021/7/e24308
+Goal Setting Interventions for Insufficiently Active Adults, systematic review and meta-analysis, 13 исследований и 1 208 участников: https://pubmed.ncbi.nlm.nih.gov/38560998/
+mHealth Continuance Intention, systematic review and meta-analysis, 58 исследований: https://www.nature.com/articles/s41746-022-00692-9</aside>
     </section>
 
     <section class="slide value-slide redesign-v2 rd-value" data-section="Ценность Яндексу" data-slide-type="final-vision" data-golden="apple/09-apple-final-vision.png">
