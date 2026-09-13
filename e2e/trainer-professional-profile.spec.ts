@@ -140,3 +140,38 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   await expect(page).toHaveURL(new RegExp(`${publicLink}$`))
   await expect(page.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
 })
+
+test('athlete loads every page of the trainer catalog', async ({ page }) => {
+  const draft = (displayName: string) => ({
+    displayName, bio: '', specialties: [], city: '', trainingModes: [], experienceStartYear: null,
+    education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: null, certificates: [],
+  })
+  const profile = (index: number) => {
+    const published = draft(`Тренер ${String(index).padStart(2, '0')}`)
+    return {
+      publicId: `92000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      draft: published, published, listedInCatalog: true,
+      publishedAt: '2026-09-13T01:00:00Z', updatedAt: '2026-09-13T01:00:00Z', version: 1,
+    }
+  }
+  await page.route('**/rest/v1/rpc/list_public_trainer_profiles_page', (route) => {
+    const request = route.request().postDataJSON() as { p_offset?: number }
+    const offset = request.p_offset ?? 0
+    const items = offset === 0 ? Array.from({ length: 20 }, (_, index) => profile(index + 1)) : [profile(21)]
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items, totalCount: 21, nextOffset: offset === 0 ? 20 : null }) })
+  })
+
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('client@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+  await page.goto('/me/trainers')
+
+  await expect(page.getByText('Найдено: 21')).toBeVisible()
+  await expect(page.locator('.trainer-catalog-card')).toHaveCount(20)
+  await page.getByRole('button', { name: 'Показать ещё' }).click()
+  await expect(page.locator('.trainer-catalog-card')).toHaveCount(21)
+  await expect(page.getByRole('heading', { name: 'Тренер 21' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Показать ещё' })).toHaveCount(0)
+})

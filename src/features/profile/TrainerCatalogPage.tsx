@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type Dispatch, type FormEvent, type RefObject, type SetStateAction } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
@@ -16,6 +16,7 @@ const emptyFilters: TrainerCatalogFilters = {
 }
 
 const catalogViewKey = 'fit.trainer-catalog.view.v1'
+const catalogPageSize = 20
 
 interface CatalogViewState {
   draft: TrainerCatalogFilters
@@ -147,10 +148,14 @@ export function TrainerCatalogPage() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const filterButton = useRef<HTMLButtonElement>(null)
   const pendingScroll = useRef(savedView?.scrollTop ?? null)
-  const catalog = useQuery({
+  const catalog = useInfiniteQuery({
     queryKey: ['trainer-catalog', filters],
-    queryFn: () => trainerProfiles.listCatalog(filters),
+    queryFn: ({ pageParam }) => trainerProfiles.listCatalog(filters, { offset: pageParam, limit: catalogPageSize }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
   })
+  const profiles = catalog.data?.pages.flatMap((page) => page.items) ?? []
+  const totalCount = catalog.data?.pages[0]?.totalCount ?? 0
 
   useEffect(() => {
     if (!catalog.isSuccess || pendingScroll.current === null) return
@@ -166,7 +171,7 @@ export function TrainerCatalogPage() {
       window.cancelAnimationFrame(firstFrame)
       window.cancelAnimationFrame(secondFrame)
     }
-  }, [catalog.isSuccess])
+  }, [catalog.isSuccess, profiles.length])
 
   function apply(next: TrainerCatalogFilters) {
     const value = normalized(next)
@@ -215,13 +220,19 @@ export function TrainerCatalogPage() {
     </form>
     {filtersOpen && <CatalogFiltersSheet draft={draft} setDraft={setDraft} returnFocus={filterButton}
       onClose={() => setFiltersOpen(false)} onReset={reset} onApply={() => { apply(draft); setFiltersOpen(false) }} />}
-    <AsyncView loading={catalog.isLoading} error={catalog.error}
-      empty={catalog.data?.length === 0} emptyTitle="Тренеры не найдены" emptyDescription="Измените поиск или сбросьте фильтры."
+    <AsyncView loading={catalog.isLoading} error={catalog.data ? null : catalog.error}
+      empty={catalog.isSuccess && profiles.length === 0} emptyTitle="Тренеры не найдены" emptyDescription="Измените поиск или сбросьте фильтры."
       emptyAction={<button type="button" className="secondary" onClick={reset}>Сбросить фильтры</button>}
       onRetry={() => void catalog.refetch()}>
-      {catalog.data && catalog.data.length > 0 && <section className="trainer-catalog-results" aria-label="Найденные тренеры">
-        <p className="muted">Найдено: {catalog.data.length}</p>
-        {catalog.data.map((profile) => <CatalogCard key={profile.publicId} profile={profile} onOpen={rememberView} />)}
+      {profiles.length > 0 && <section className="trainer-catalog-results" aria-label="Найденные тренеры">
+        <p className="muted">Найдено: {totalCount}</p>
+        {profiles.map((profile) => <CatalogCard key={profile.publicId} profile={profile} onOpen={rememberView} />)}
+        {catalog.hasNextPage && !catalog.isFetchNextPageError && <button type="button" className="secondary trainer-catalog-more" disabled={catalog.isFetchingNextPage}
+          onClick={() => void catalog.fetchNextPage()}>{catalog.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}</button>}
+        {catalog.isFetchNextPageError && <div className="trainer-catalog-more-error" role="alert">
+          <p>Не удалось загрузить ещё анкеты.</p>
+          <button type="button" className="link" onClick={() => void catalog.fetchNextPage()}>Повторить</button>
+        </div>}
       </section>}
     </AsyncView>
   </Page>
