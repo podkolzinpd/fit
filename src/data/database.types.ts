@@ -1,4 +1,4 @@
-// schema-sha256: 84545eb08e86cc5c3cde729ffffe619b21225eaffd14d5aac530129ffac4dffb
+// schema-sha256: a4c2ccfa6db130f594cc31296adbf92ff41b35232fb7bbe3917ee3398833ec7d
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -2364,6 +2364,18 @@ export type Database = {
           p_specialty?: string
         }
         Returns: Json[]
+      }
+      list_public_trainer_profiles_page: {
+        Args: {
+          p_accepting_clients?: boolean
+          p_city?: string
+          p_limit?: number
+          p_mode?: string
+          p_offset?: number
+          p_query?: string
+          p_specialty?: string
+        }
+        Returns: Json
       }
       list_running_progress: {
         Args: {

@@ -288,7 +288,7 @@ describe('trainer professional profile', () => {
       unpublish: vi.fn().mockResolvedValue({ ...value, published: null, publishedAt: null }),
       setCatalogListing: vi.fn().mockResolvedValue({ ...value, listedInCatalog: true }),
       getPublic: vi.fn().mockResolvedValue(value),
-      listPublic: vi.fn().mockResolvedValue([{ ...value, listedInCatalog: true }]),
+      listPublic: vi.fn().mockResolvedValue({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null }),
     }
   }
 
@@ -314,18 +314,25 @@ describe('trainer professional profile', () => {
 
   it('lists published catalog profiles with validated filters', async () => {
     const pilotTrainerProfiles = profiles()
-    const listPublic = vi.fn().mockResolvedValue([{ ...value, listedInCatalog: true }])
+    const listPublic = vi.fn().mockResolvedValue({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null })
     pilotTrainerProfiles.listPublic = listPublic
     const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
     const response = await app.inject({
       method: 'GET',
-      url: '/v1/trainers/catalog?query=%D0%90%D0%BD%D0%BD%D0%B0&specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&mode=online&accepting=true',
+      url: '/v1/trainers/catalog?query=%D0%90%D0%BD%D0%BD%D0%B0&specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&mode=online&accepting=true&offset=20&limit=10',
     })
 
     expect(response.statusCode).toBe(200)
     expect(listPublic).toHaveBeenCalledWith({
       query: 'Анна', specialty: 'Силовые', city: 'Москва', mode: 'online', acceptingClients: true,
-    })
+    }, { offset: 20, limit: 10 })
+    expect(response.json()).toEqual({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null })
+  })
+
+  it('rejects invalid catalog pagination', async () => {
+    const app = buildApp({ pilotTrainerProfiles: profiles(), logger: false }); apps.push(app)
+    expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?offset=-1' })).statusCode).toBe(400)
+    expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?limit=51' })).statusCode).toBe(400)
   })
 
   it('lets a trainer opt into the catalog only from a read-write session', async () => {

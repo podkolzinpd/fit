@@ -62,13 +62,27 @@ describe('TrainerDiscoveryHomeCard', () => {
     expect(screen.queryByText('Нужен тренер?')).not.toBeInTheDocument()
   })
 
-  it('hides immediately when the client asks to be reminded later', async () => {
+  it('confirms that the card will return in one month', async () => {
     const user = userEvent.setup()
     renderCard()
-    await user.click(await screen.findByRole('button', { name: 'Напомнить позже' }))
+    await user.click(await screen.findByRole('button', { name: 'Напомнить через месяц' }))
 
-    expect(screen.queryByText('Нужен тренер?')).not.toBeInTheDocument()
+    expect(await screen.findByRole('status')).toHaveTextContent('Напомним через месяц.')
     expect(repository.setPromptPreference).toHaveBeenCalledWith('snooze')
+  })
+
+  it('asks before permanently hiding the card', async () => {
+    const user = userEvent.setup()
+    repository.setPromptPreference.mockResolvedValue({ state: 'dismissed', remindAt: null, updatedAt: '2026-09-12T10:00:00.000Z' })
+    renderCard()
+    await user.click(await screen.findByRole('button', { name: 'Неинтересно' }))
+
+    expect(repository.setPromptPreference).not.toHaveBeenCalled()
+    expect(screen.getByRole('alertdialog', { name: 'Больше не показывать эту карточку?' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Больше не показывать' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Карточка больше не появится.')
+    expect(repository.setPromptPreference).toHaveBeenCalledWith('dismiss')
   })
 
   it('restores the card with a short retryable error when saving fails', async () => {
@@ -76,6 +90,7 @@ describe('TrainerDiscoveryHomeCard', () => {
     repository.setPromptPreference.mockRejectedValue(new Error('network'))
     renderCard()
     await user.click(await screen.findByRole('button', { name: 'Неинтересно' }))
+    await user.click(screen.getByRole('button', { name: 'Больше не показывать' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось сохранить. Попробуйте ещё раз.')
     expect(screen.getByRole('heading', { name: 'Нужен тренер?' })).toBeVisible()

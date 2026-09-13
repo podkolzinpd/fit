@@ -41,7 +41,7 @@ test('trainer chat stays at the bottom and exits with swipe and back', async ({ 
     client_id: demoClientId,
     trainer_id: '90000000-0000-4000-8000-000000000009',
     partner_user_id: '92000000-0000-4000-8000-000000000029',
-    partner_name: 'Тест Клиент',
+    partner_name: 'Александра Константинопольская-Романова',
     active_connection: true,
     last_message_body: 'До встречи',
     last_message_at: '2026-09-10T16:45:00.000Z',
@@ -63,8 +63,9 @@ test('trainer chat stays at the bottom and exits with swipe and back', async ({ 
 
   await loginAsTrainer(page)
   await page.getByRole('link', { name: /Сообщения/ }).click()
-  await page.getByRole('button', { name: /Тест Клиент/ }).click()
-  await expect(page.getByRole('heading', { name: 'Тест Клиент' })).toBeVisible()
+  await page.getByRole('button', { name: /Александра Константинопольская-Романова/ }).click()
+  await expect(page.getByRole('heading', { name: 'Александра Константинопольская-Романова' })).toBeVisible()
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
   const bottomGap = await page.evaluate(() => {
     const frame = document.querySelector('.phone-frame')!.getBoundingClientRect()
     const composer = document.querySelector('.chat-composer')!.getBoundingClientRect()

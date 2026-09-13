@@ -3257,6 +3257,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-discovery-home-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px }
 .client-home-identity .trainer-discovery-home-actions .link { min-height:44px; padding:0 8px; font-size:13px }
 .trainer-discovery-home-card > .error { color:var(--danger); font-size:13px }
+.trainer-discovery-home-feedback { min-height:76px; align-content:center; text-align:center; }
 
 .client-home-identity .today-text-fallback { gap:12px; padding-top:2px }
 .client-home-identity .today-text-fallback-head strong { font-size:18px; font-weight:600 }
@@ -5778,6 +5779,9 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-catalog-facts { overflow-wrap:anywhere; }
 .trainer-catalog-bio { display:-webkit-box; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3; }
 .trainer-catalog-card > .button { width:100%; min-height:48px; }
+.trainer-catalog-more { width:100%; min-height:48px; }
+.trainer-catalog-more-error { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:4px 2px; }
+.trainer-catalog-more-error p { margin:0; color:var(--danger); font-size:13px; }
 .trainer-profile-state { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px 18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); }
 .trainer-profile-state > .button { min-height:44px; }
 .trainer-profile-state p, .trainer-profile-publish-tools p { margin:4px 0 0; color:var(--muted); font-size:var(--type-caption-size); }
@@ -5912,7 +5916,8 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .chat-thread { width:100%; min-height:76px; display:grid; grid-template-columns:48px minmax(0,1fr) auto; align-items:center; gap:12px; padding:12px; border-radius:18px; background:var(--surface-raised); color:var(--fg); text-align:left; }
 .chat-avatar { width:48px; height:48px; display:grid; place-items:center; border-radius:16px; background:var(--surface-sunken); font-size:18px; font-weight:var(--weight-bold); }
 .chat-thread-copy { min-width:0; display:grid; gap:3px; }
-.chat-thread-copy strong, .chat-thread-copy small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chat-thread-copy strong { display:-webkit-box; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow-wrap:anywhere; line-height:1.25; }
+.chat-thread-copy small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .chat-thread-copy small { color:var(--muted); font-weight:var(--weight-regular); }
 .chat-thread-copy em { color:var(--muted); font-size:11px; font-style:normal; font-weight:var(--weight-medium); }
 .chat-thread-meta { align-self:stretch; display:flex; flex-direction:column; align-items:flex-end; justify-content:space-between; gap:6px; color:var(--muted); font-size:11px; }
@@ -5922,7 +5927,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .chat-conversation-page > .page-header .page-back { grid-column:1; }
 .chat-conversation-page > .page-header h1,
 .chat-conversation-page > .page-header .page-title-group { grid-column:2; min-width:0; text-align:center; }
-.chat-conversation-page > .page-header .page-title-group h1 { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chat-conversation-page > .page-header .page-title-group h1 { display:-webkit-box; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow-wrap:anywhere; line-height:1.15; }
 .chat-conversation-page > .page-header .chat-page-actions { grid-column:3; }
 .chat-page-actions { display:flex; align-items:center; gap:4px; }
 .chat-page-actions .overflow-trigger, .chat-page-search { border-color:transparent; background:transparent; }
