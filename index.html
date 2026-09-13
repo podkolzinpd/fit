@@ -7647,25 +7647,17 @@ h3 {
   letter-spacing: -.02em;
 }
 
-/* Prefinal 03: mutually exclusive audience sizing. */
+/* Prefinal 03: audience boundary and supported first contour. */
 .prefinal-audience-scale {
   color: #f7f3ec;
   background: var(--dark);
-}
-
-.prefinal-audience-scale .eyebrow,
-.prefinal-audience-scale .audience-scale-fit,
-.prefinal-audience-scale .audience-scale-label,
-.prefinal-audience-scale .audience-segment b,
-.prefinal-audience-scale .audience-scope span,
-.prefinal-audience-scale .audience-supply span {
-  color: #96979b;
 }
 
 .prefinal-audience-scale .audience-scale-fit {
   position: absolute;
   top: 72px;
   right: 92px;
+  color: #96979b;
   font-size: 18px;
   font-weight: 700;
 }
@@ -7673,72 +7665,64 @@ h3 {
 .prefinal-audience-scale h2 {
   top: 132px;
   left: 92px;
-  width: 820px;
+  width: 960px;
   color: #f7f3ec;
-  font-size: 64px;
+  font-size: 61px;
+  line-height: 1.02;
 }
 
-.prefinal-audience-scale .audience-58 {
+.prefinal-audience-scale .audience-base {
   position: absolute;
-  top: 126px;
+  top: 145px;
   right: 92px;
-  width: 430px;
+  width: 310px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.25);
 }
 
-.prefinal-audience-scale .audience-58 span {
+.prefinal-audience-scale .audience-base span,
+.prefinal-audience-scale .audience-scale-label,
+.prefinal-audience-scale .audience-contour-label,
+.prefinal-audience-scale .audience-cohort span {
   display: block;
   color: #96979b;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-
-.prefinal-audience-scale .audience-58 strong {
-  display: block;
-  margin-top: 8px;
-  color: #f7f3ec;
-  font-size: 88px;
-  line-height: .95;
-  letter-spacing: -.055em;
-}
-
-.prefinal-audience-scale .audience-58 p {
-  margin-top: 12px;
-  color: #b5b5b7;
-  font-size: 20px;
-  line-height: 1.3;
-}
-
-.prefinal-audience-scale .audience-scale-note {
-  position: absolute;
-  top: 288px;
-  left: 92px;
-  color: #b5b5b7;
-  font-size: 22px;
-  line-height: 1.35;
-}
-
-.prefinal-audience-scale .audience-partition {
-  position: absolute;
-  top: 372px;
-  left: 92px;
-  right: 92px;
-}
-
-.prefinal-audience-scale .audience-scale-label {
-  display: block;
-  margin-bottom: 15px;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: .12em;
   text-transform: uppercase;
 }
 
+.prefinal-audience-scale .audience-base strong {
+  display: block;
+  margin-top: 10px;
+  color: #f7f3ec;
+  font-size: 42px;
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+
+.prefinal-audience-scale .audience-base p {
+  margin-top: 7px;
+  color: #a9a9ac;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.prefinal-audience-scale .audience-partition {
+  position: absolute;
+  top: 330px;
+  left: 92px;
+  right: 92px;
+}
+
+.prefinal-audience-scale .audience-scale-label {
+  margin-bottom: 14px;
+}
+
 .prefinal-audience-scale .audience-bar {
   display: grid;
-  grid-template-columns: 29fr 49fr 21fr 1fr;
-  height: 104px;
+  grid-template-columns: 29fr 49fr 22fr;
+  height: 96px;
   border: 1px solid rgba(255,255,255,.28);
 }
 
@@ -7748,23 +7732,22 @@ h3 {
   justify-content: center;
   min-width: 0;
   padding: 0 20px;
-  border-right: 1px solid rgba(17,18,20,.25);
+  border-right: 1px solid rgba(17,18,20,.28);
 }
 
 .prefinal-audience-scale .audience-bar > div:last-child {
-  padding: 0;
   border-right: 0;
 }
 
 .prefinal-audience-scale .audience-bar strong {
-  font-size: 32px;
+  font-size: 30px;
   line-height: 1;
   letter-spacing: -.035em;
 }
 
 .prefinal-audience-scale .audience-bar span {
-  margin-top: 8px;
-  font-size: 16px;
+  margin-top: 7px;
+  font-size: 15px;
   line-height: 1.2;
 }
 
@@ -7783,87 +7766,66 @@ h3 {
   background: #242528;
 }
 
-.prefinal-audience-scale .audience-unknown {
-  background: #77787d;
+.prefinal-audience-scale .audience-first-contour {
+  position: absolute;
+  top: 500px;
+  left: 92px;
+  right: 92px;
 }
 
-.prefinal-audience-scale .audience-segments {
+.prefinal-audience-scale .audience-contour-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,.24);
+}
+
+.prefinal-audience-scale .audience-contour-head strong {
+  color: #d9d7d2;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.prefinal-audience-scale .audience-cohorts {
   display: grid;
-  grid-template-columns: 29fr 49fr 22fr;
-  gap: 0;
-  margin-top: 18px;
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
-.prefinal-audience-scale .audience-segment {
+.prefinal-audience-scale .audience-cohort {
   min-width: 0;
-  padding-right: 32px;
+  padding: 24px 32px 0 0;
 }
 
-.prefinal-audience-scale .audience-segment + .audience-segment {
+.prefinal-audience-scale .audience-cohort + .audience-cohort {
   padding-left: 32px;
   border-left: 1px solid rgba(255,255,255,.16);
 }
 
-.prefinal-audience-scale .audience-segment b {
+.prefinal-audience-scale .audience-cohort strong {
   display: block;
-  font-size: 12px;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-
-.prefinal-audience-scale .audience-segment strong {
-  display: block;
-  margin-top: 10px;
+  margin-top: 11px;
   color: #f7f3ec;
-  font-size: 22px;
-  line-height: 1.18;
+  font-size: 47px;
+  line-height: 1;
+  letter-spacing: -.045em;
 }
 
-.prefinal-audience-scale .audience-segment p {
-  margin-top: 8px;
-  color: #a9a9ac;
-  font-size: 20px;
-  line-height: 1.28;
+.prefinal-audience-scale .audience-cohort p {
+  margin-top: 12px;
+  color: #d7d5d0;
+  font-size: 21px;
+  line-height: 1.25;
 }
 
-.prefinal-audience-scale .audience-scope {
+.prefinal-audience-scale .audience-caveat {
   position: absolute;
   left: 92px;
-  right: 500px;
-  bottom: 78px;
-  padding-top: 17px;
-  border-top: 1px solid rgba(255,255,255,.24);
-}
-
-.prefinal-audience-scale .audience-scope span,
-.prefinal-audience-scale .audience-supply span {
-  display: block;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-
-.prefinal-audience-scale .audience-scope strong {
-  display: block;
-  margin-top: 10px;
-  font-size: 21px;
-  line-height: 1.28;
-}
-
-.prefinal-audience-scale .audience-supply {
-  position: absolute;
   right: 92px;
-  bottom: 78px;
-  width: 354px;
-  padding-top: 17px;
+  bottom: 76px;
+  padding-top: 16px;
   border-top: 1px solid rgba(255,255,255,.24);
-}
-
-.prefinal-audience-scale .audience-supply strong {
-  display: block;
-  margin-top: 10px;
-  color: #b5b5b7;
+  color: #999a9f;
   font-size: 20px;
   line-height: 1.3;
 }
@@ -7955,74 +7917,68 @@ Fit остаётся отдельным приложением, потому ч�
     <section class="slide redesign-v2 prefinal-keep prefinal-audience-scale" data-section="Аудитория" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
       <div class="eyebrow">02 · МАСШТАБ АУДИТОРИИ</div>
       <div class="audience-scale-fit">Fit</div>
-      <h2>74 млн — одна база,<br>а не сумма сегментов</h2>
+      <h2>21,5 млн — верхняя граница.<br>Первый контур Fit уже</h2>
 
-      <div class="audience-58">
-        <span>ЗАНИМАЮТСЯ ХОТЯ БЫ ИНОГДА</span>
-        <strong>≈58 млн</strong>
-        <p>Это 21,5 млн регулярно занимающихся плюс 36,3 млн эпизодически активных.</p>
+      <div class="audience-base">
+        <span>БАЗА ОЦЕНКИ</span>
+        <strong>≈74 млн</strong>
+        <p>россиян 18–55 лет</p>
       </div>
-
-      <p class="audience-scale-note">29% уже входят в 78% — эти показатели нельзя складывать.</p>
 
       <div class="audience-partition" aria-label="Взаимоисключающее распределение россиян 18–55 лет по регулярности спортивной активности">
         <span class="audience-scale-label">РОССИЯНЕ 18–55 ЛЕТ · ВЗАИМОИСКЛЮЧАЮЩИЙ РАЗРЕЗ</span>
         <div class="audience-bar">
           <div class="audience-regular"><strong>21,5 млн · 29%</strong><span>занимаются регулярно</span></div>
           <div class="audience-occasional"><strong>36,3 млн · 49%</strong><span>время от времени или редко</span></div>
-          <div class="audience-inactive"><strong>15,5 млн · 21%</strong><span>не занимаются</span></div>
-          <div class="audience-unknown" title="0,7 млн · 1% затруднились ответить"></div>
-        </div>
-
-        <div class="audience-segments">
-          <div class="audience-segment">
-            <b>ЯДРО ПИЛОТА</b>
-            <strong>Самостоятельно или с тренером</strong>
-            <p>Форматы пересекаются, поэтому внутри 21,5 млн их не суммируем.</p>
-          </div>
-          <div class="audience-segment">
-            <b>ПОТЕНЦИАЛ РОСТА</b>
-            <strong>Возвращение и переход к регулярности</strong>
-            <p>36,3 млн — широкий резерв; реальное намерение и удержание проверяет пилот.</p>
-          </div>
-          <div class="audience-segment">
-            <b>НЕ ЦЕЛЬ ПО УМОЛЧАНИЮ</b>
-            <strong>Только при явном намерении начать</strong>
-            <p>15,5 млн неактивных; ещё 0,7 млн затруднились ответить.</p>
-          </div>
+          <div class="audience-inactive"><strong>16,2 млн · 22%</strong><span>не занимаются или не определились</span></div>
         </div>
       </div>
 
-      <div class="audience-scope">
-        <span>ГЛУБИНА ПЕРВОЙ ВЕРСИИ</span>
-        <strong>Силовые и фитнес · бег · велосипед · плавание · программы с тренером</strong>
+      <div class="audience-first-contour">
+        <div class="audience-contour-head">
+          <span class="audience-contour-label">ОЦЕНОЧНЫЙ МАСШТАБ ПЕРВОГО КОНТУРА</span>
+          <strong>внутри регулярно занимающихся</strong>
+        </div>
+        <div class="audience-cohorts">
+          <div class="audience-cohort">
+            <span>СИЛОВЫЕ И ФИТНЕС</span>
+            <strong>2,6–6,4 млн</strong>
+            <p>регулярно занимаются</p>
+          </div>
+          <div class="audience-cohort">
+            <span>БЕГ · ВЕЛОСИПЕД · ПЛАВАНИЕ</span>
+            <strong>2,6–6,9 млн</strong>
+            <p>занимаются с цифровой фиксацией</p>
+          </div>
+          <div class="audience-cohort">
+            <span>ТРЕНИРОВКИ С ТРЕНЕРОМ</span>
+            <strong>1,1–3,9 млн</strong>
+            <p>персональное сопровождение</p>
+          </div>
+        </div>
       </div>
 
-      <div class="audience-supply">
-        <span>ТРЕНЕРЫ</span>
-        <strong>Считаются отдельно как сторона предложения, а не как ещё одна часть 74 млн.</strong>
-      </div>
+      <p class="audience-caveat">Диапазоны пересекаются и не суммируются. 36,3 млн эпизодически активных — отдельный резерв; его распределение по поддерживаемым дисциплинам ещё не рассчитано.</p>
 
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Показать размер аудитории без двойного счёта и отделить взаимоисключающие уровни активности от пересекающихся форматов занятий.
+Показать, что 21,5 миллиона регулярно занимающихся — это верхняя граница категории, а не готовое ядро Fit.
 
 ЧТО ГОВОРИМ
-В возрастном контуре 18–55 лет около 74 миллионов россиян. Эта база раскладывается на взаимоисключающие части: около 21,5 миллиона занимаются регулярно, 36,3 миллиона — время от времени или редко, 15,5 миллиона не занимаются и около 0,7 миллиона затруднились ответить. Части дают около 74 миллионов с учётом округления.
+В возрастном контуре 18–55 лет около 74 миллионов россиян. Взаимоисключающий разрез даёт 21,5 миллиона регулярно занимающихся, 36,3 миллиона эпизодически активных и 16,2 миллиона неактивных либо не определившихся.
 
-Показатель 78%, или около 58 миллионов занимающихся хотя бы иногда, уже включает 29%, или около 21,5 миллиона регулярно занимающихся. Их нельзя складывать. Самостоятельные занятия и занятия с тренером, напротив, могут пересекаться и поэтому не образуют ещё один взаимоисключающий разрез.
+Но Fit не обслуживает все виды спорта одинаково глубоко. В первом контуре мы оцениваем силовые и фитнес в диапазоне 2,6–6,4 миллиона регулярно занимающихся; бег, велосипед и плавание с цифровой фиксацией — в диапазоне 2,6–6,9 миллиона; персональное сопровождение тренером — 1,1–3,9 миллиона.
 
-Для пилота ядром являются регулярно занимающиеся — самостоятельно или с тренером. Главный потенциал роста находится среди 36,3 миллиона эпизодически активных, но это только широкий резерв: намерение вернуться и способность Fit удержать человека ещё нужно проверить. Неактивных нельзя автоматически считать аудиторией Fit без явного намерения начать.
+Это сценарные диапазоны. Они пересекаются: один человек может заниматься силовыми, бегать и работать с тренером. Поэтому их нельзя складывать и выдавать за уникальную аудиторию Fit. Для единой оценки требуется устранить пересечения на данных исследования или опроса.
 
-Первая версия глубоко поддерживает силовые и фитнес, бег, велосипед, плавание и тренировки по программе или с тренером. Футбол, бокс, падел, теннис и другие игровые либо специализированные дисциплины не входят в глубокий первый контур и не используются для завышения стартовой аудитории.
-
-Тренеры считаются отдельно как сторона предложения. Рабочие оценки их числа и клиентских подкогорт остаются в аналитической модели, а не выдаются на основном слайде за подтверждённый рынок.
+36,3 миллиона эпизодически активных остаются потенциалом роста, но распределение этой группы по поддерживаемым дисциплинам пока не рассчитано.
 
 ПЕРЕХОД
 Масштаб есть, но сегодня спортивный путь этой аудитории разорван между разными сервисами, устройствами и людьми.
 
 [Sources]
 Возрастная база: Росстат, «Социальное положение и уровень жизни населения России. 2025» — оценочно около 74 млн россиян 18–55 лет.
-Распределение активности: ВЦИОМ, «ЗОЖ-2026». Для презентации используются взаимоисключающие категории: 29% регулярно; 49% время от времени или редко; 21% не занимаются; 1% затруднились ответить. Абсолютные значения рассчитаны от возрастной базы и округлены.</aside>
+Распределение активности: ВЦИОМ, «ЗОЖ-2026». Для презентации используются взаимоисключающие категории: 29% регулярно; 49% время от времени или редко; 21% не занимаются; 1% затруднились ответить. Абсолютные значения рассчитаны от возрастной базы и округлены.
+Диапазоны первого контура: внутренняя сценарная модель когорт Fit. Это оценочные, пересекающиеся диапазоны, а не подтверждённые уникальные аудитории.</aside>
     </section>
 
     <section class="slide redesign-v2 review-problem-v2" data-section="Проблема" data-slide-type="problem" data-golden="linear/03-linear-product-flow.png">
