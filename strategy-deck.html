@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fit — стратегия</title>
+<style>
+  :root {
+    --violet: #6b4eff;
+    --violet-deep: #4a2fd9;
+    --violet-pale: #f1eeff;
+    --ink: #14121f;
+    --ink-soft: #55506b;
+    --paper: #ffffff;
+    --line: #e6e2f7;
+    --accent-warm: #ff8a4c;
+    --rung-dim: #cfc7f2;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden;
+  }
+  .deck { position: relative; width: 100vw; height: 100vh; }
+  .slide {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    background: var(--paper);
+    padding: 6vh 8vw;
+    opacity: 0;
+    transition: opacity .25s ease;
+  }
+  .slide.active { display: flex; opacity: 1; }
+  .eyebrow {
+    font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--violet); margin-bottom: 18px;
+  }
+  h1 {
+    font-size: clamp(32px, 4.2vw, 58px); line-height: 1.12; margin: 0 0 20px;
+    color: var(--ink); font-weight: 800; letter-spacing: -0.01em;
+    max-width: 20ch;
+  }
+  h2 {
+    font-size: clamp(20px, 2vw, 26px); font-weight: 500; color: var(--ink-soft);
+    margin: 0 0 8px; max-width: 46ch; line-height: 1.45;
+  }
+  .body-text { font-size: 18px; color: var(--ink-soft); line-height: 1.6; max-width: 52ch; }
+  .cover { justify-content: center; align-items: flex-start; background: var(--ink); }
+  .cover h1 { color: var(--paper); font-size: clamp(40px, 5.6vw, 74px); max-width: 16ch; }
+  .cover .mission { color: var(--violet-pale); font-size: clamp(18px, 1.6vw, 24px); font-weight: 500; margin-top: 4px; }
+  .cover .sub { color: #9d95c9; font-size: 15px; margin-top: 28px; letter-spacing: .04em; }
+
+  .thesis-grid { display: flex; gap: 40px; margin-top: 8px; flex-wrap: wrap; }
+  .thesis-card {
+    flex: 1 1 320px; background: var(--violet-pale); border-radius: 18px; padding: 28px 26px;
+  }
+  .thesis-card .tag { font-size: 12px; font-weight: 700; color: var(--violet-deep); text-transform: uppercase; letter-spacing: .08em; }
+  .thesis-card p { color: var(--ink); font-size: 17px; line-height: 1.55; margin: 10px 0 0; }
+
+  .ladder { display: flex; flex-direction: column-reverse; gap: 14px; margin-top: 18px; max-width: 900px; }
+  .rung {
+    display: flex; align-items: center; gap: 20px; border-radius: 16px; padding: 18px 24px;
+    background: var(--violet-pale); border: 2px solid transparent;
+  }
+  .rung .num {
+    font-size: 22px; font-weight: 800; color: var(--violet-deep);
+    width: 34px; flex-shrink: 0;
+  }
+  .rung .txt strong { display: block; font-size: 17px; color: var(--ink); }
+  .rung .txt span { display: block; font-size: 14px; color: var(--ink-soft); margin-top: 2px; }
+  .rung.current { background: var(--violet); border-color: var(--violet-deep); }
+  .rung.current .num, .rung.current .txt strong { color: #fff; }
+  .rung.current .txt span { color: var(--violet-pale); }
+  .rung.dim { background: #f4f3fa; }
+  .rung.dim .num { color: var(--rung-dim); }
+  .rung.dim .txt strong { color: var(--ink-soft); }
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .04em;
+    background: var(--accent-warm); color: #fff; padding: 4px 10px; border-radius: 999px;
+    margin-left: 12px; vertical-align: middle;
+  }
+
+  .mech-list { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; max-width: 640px; }
+  .mech-item { display: flex; gap: 14px; align-items: flex-start; }
+  .mech-item .dot {
+    width: 26px; height: 26px; border-radius: 50%; background: var(--violet); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .mech-item p { margin: 0; font-size: 16.5px; color: var(--ink); line-height: 1.5; }
+  .mech-item p b { color: var(--ink); }
+  .rejected {
+    margin-top: 22px; padding: 14px 18px; border-radius: 12px; background: #fdeeee;
+    color: #9c3a3a; font-size: 14.5px; max-width: 640px;
+  }
+  .metric-row { display: flex; gap: 28px; margin-top: 26px; flex-wrap: wrap; }
+  .metric-box { background: var(--ink); color: #fff; border-radius: 14px; padding: 16px 20px; min-width: 220px; }
+  .metric-box .label { font-size: 12px; color: #b9b2e0; text-transform: uppercase; letter-spacing: .06em; }
+  .metric-box .val { font-size: 16px; font-weight: 700; margin-top: 4px; }
+
+  .two-col { display: flex; gap: 48px; margin-top: 10px; flex-wrap: wrap; }
+  .col { flex: 1 1 360px; }
+  .col .phase-tag { font-size: 13px; font-weight: 800; color: var(--violet-deep); letter-spacing: .06em; text-transform: uppercase; }
+  .col h3 { font-size: 22px; margin: 8px 0 10px; color: var(--ink); }
+  .col ul { margin: 0; padding-left: 18px; color: var(--ink-soft); font-size: 15.5px; line-height: 1.6; }
+  .col ul li { margin-bottom: 6px; }
+
+  .summary-ladder { display: flex; gap: 12px; margin-top: 24px; }
+  .summary-step {
+    flex: 1; background: var(--violet-pale); border-radius: 14px; padding: 16px 14px; text-align: center;
+  }
+  .summary-step.active { background: var(--violet); }
+  .summary-step .n { font-size: 20px; font-weight: 800; color: var(--violet-deep); }
+  .summary-step.active .n { color: #fff; }
+  .summary-step .t { font-size: 12.5px; color: var(--ink-soft); margin-top: 4px; line-height: 1.4; }
+  .summary-step.active .t { color: var(--violet-pale); }
+
+  .footer-nav {
+    position: fixed; bottom: 24px; left: 8vw; right: 8vw;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; color: #b9b2e0; z-index: 10;
+  }
+  .footer-nav.dark-off { color: var(--ink-soft); }
+  .counter { font-variant-numeric: tabular-nums; }
+  .nav-btns button {
+    background: none; border: 1px solid var(--line); color: var(--ink-soft);
+    width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 16px;
+    margin-left: 8px;
+  }
+  .nav-btns button:hover { background: var(--violet-pale); }
+  .slide.cover ~ .footer-nav .nav-btns button { border-color: #3a3560; color: #cfc7f2; }
+  .click-zone { position: fixed; top: 0; bottom: 80px; width: 15%; z-index: 5; cursor: pointer; }
+  .click-zone.left { left: 0; } .click-zone.right { right: 0; }
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <section class="slide cover active">
+    <div class="eyebrow" style="color:#a99cff">Fit · стратегия</div>
+    <h1>В спорте проще не одному</h1>
+    <div class="mission">От большой идеи к первому шагу</div>
+    <div class="sub">2026 · рабочая версия</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Тезис</div>
+    <h1>AI даёт внимание. Человек — глаза на теле</h1>
+    <h2>Fit не выбирает между ними — подводит нужную поддержку к текущей точке человека на пути.</h2>
+    <div class="thesis-grid">
+      <div class="thesis-card">
+        <div class="tag">AI</div>
+        <p>Бесконечное терпеливое внимание, память о человеке — что делал, где болело, что мотивирует. Дёшево масштабируется.</p>
+      </div>
+      <div class="thesis-card">
+        <div class="tag">Человек</div>
+        <p>Незаменим там, где нужны глаза на теле в моменте: поставить технику, увидеть ошибку, дать профессиональную оценку. Дорогой ресурс.</p>
+      </div>
+      <div class="thesis-card">
+        <div class="tag">Fit</div>
+        <p>Не сервис для одной аудитории — экосистема, ведущая вверх по лестнице: от первого движения до серьёзной работы с тренером.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Большая идея</div>
+    <h1>Лестница экспертизы</h1>
+    <h2>Человеческая помощь — не бинарный выбор «есть тренер или нет», а покупаемый по потребности градиент.</h2>
+    <div class="ladder">
+      <div class="rung dim">
+        <div class="num">0</div>
+        <div class="txt"><strong>«Хочу, но не начинаю» / бросал и возвращаюсь</strong><span>AI-компаньон, низкий порог входа, привычка — самая массовая и самая рискованная ступень</span></div>
+      </div>
+      <div class="rung current">
+        <div class="num">1</div>
+        <div class="txt"><strong>Самостоятельный спортсмен<span class="badge">МЫ ЗДЕСЬ</span></strong><span>Тренируется один, хочет прогресса — мотивация уже доказана, сигнал чистый</span></div>
+      </div>
+      <div class="rung dim">
+        <div class="num">2</div>
+        <div class="txt"><strong>Экспертиза по требованию</strong><span>Квиз → анкета тренера → разовая консультация, разбор видео, постановка техники</span></div>
+      </div>
+      <div class="rung dim">
+        <div class="num">3</div>
+        <div class="txt"><strong>Серьёзная работа с тренером</strong><span>Постоянная практика, серьёзный прогресс</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Фаза 1 · кто и почему</div>
+    <h1>Начинаем с самостоятельного спортсмена</h1>
+    <div class="body-text">
+      Не новичок — самый капризный сегмент по мотивации, отваливается быстрее всех.<br>
+      Не связка тренер-клиент — двойной холодный старт, тренер выгорает, ища отдачу.<br>
+      Самостоятельный спортсмен даёт чистый сигнал (мотивация уже есть) и не требует строить обе стороны рынка сразу.
+    </div>
+    <div class="metric-row">
+      <div class="metric-box"><div class="label">Проверено</div><div class="val">3 премортема: связка / клиент / AI-компаньон</div></div>
+      <div class="metric-box"><div class="label">Риск</div><div class="val">Ниже, чем у альтернатив — дешёвая проверка гипотезы</div></div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Фаза 1 · механизм</div>
+    <h1>Тонкий мостик к тренеру</h1>
+    <div class="mech-list">
+      <div class="mech-item"><div class="dot">1</div><p><b>Квиз для клиента</b> — короткий опросник вместо ручного листания анкет, сразу 2–3 подходящих тренера</p></div>
+      <div class="mech-item"><div class="dot">2</div><p><b>Структурированная анкета тренера</b> — теги (аудитория, цель, формат, цена), разовое заполнение</p></div>
+      <div class="mech-item"><div class="dot">3</div><p><b>Фото/видео в карточке</b> — разовое интро или примеры «до/после», не серия постов</p></div>
+      <div class="mech-item"><div class="dot">4</div><p><b>Отзывы клиентов</b> — копятся автоматически по факту обращения, тренер их не производит</p></div>
+    </div>
+    <div class="rejected">✕ Отклонено: лента с постами для самопродвижения тренера — требует постоянного усилия ради спекулятивной отдачи, реинкарнация модели «тренер приводит клиента»</div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Что дальше</div>
+    <h1>Фаза 2 и фаза 3</h1>
+    <div class="two-col">
+      <div class="col">
+        <div class="phase-tag">Фаза 2 — по сигналу</div>
+        <h3>Тренерский градиент</h3>
+        <ul>
+          <li>Полноценный маркетплейс экспертизы: постановка техники, контрольная тренировка, разбор видео, консультация</li>
+          <li>Запускается только когда есть измеримый органический поток «клиент упёрся»</li>
+          <li>Первые эксперименты с более активным AI (голосовое сопровождение, ретро без осуждения)</li>
+        </ul>
+      </div>
+      <div class="col">
+        <div class="phase-tag">Фаза 3 — вся лестница</div>
+        <h3>AI-компаньон для ступени 0</h3>
+        <ul>
+          <li>Онбординг-диалог, низкий порог входа, механики привычки — для тех, кто пока не начал или бросал</li>
+          <li>Строится последним: AI-инфраструктура и доверие к концепции уже обкатаны на менее рискованной аудитории</li>
+          <li>Самая высокая амбиция — и самая дорогая ошибка, поэтому не первая ставка</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow">Итого</div>
+    <h1>Одна лестница, три фазы</h1>
+    <h2>Большая идея не меняется — меняется только то, с какой ступени мы начинаем считать её доказанной.</h2>
+    <div class="summary-ladder">
+      <div class="summary-step"><div class="n">0</div><div class="t">AI-компаньон<br>фаза 3</div></div>
+      <div class="summary-step active"><div class="n">1</div><div class="t">Самостоятельный<br>фаза 1 — старт</div></div>
+      <div class="summary-step"><div class="n">2</div><div class="t">Экспертиза<br>фаза 1→2</div></div>
+      <div class="summary-step"><div class="n">3</div><div class="t">Тренер<br>фаза 3</div></div>
+    </div>
+  </section>
+
+</div>
+
+<div class="footer-nav">
+  <div class="counter"><span id="cur">1</span> / <span id="tot"></span></div>
+  <div class="nav-btns">
+    <button onclick="go(-1)" aria-label="Назад">←</button>
+    <button onclick="go(1)" aria-label="Вперёд">→</button>
+  </div>
+</div>
+<div class="click-zone left" onclick="go(-1)"></div>
+<div class="click-zone right" onclick="go(1)"></div>
+
+<script>
+  var slides = document.querySelectorAll('.slide');
+  var idx = 0;
+  document.getElementById('tot').textContent = slides.length;
+  function render() {
+    slides.forEach(function(s, i){ s.classList.toggle('active', i === idx); });
+    document.getElementById('cur').textContent = idx + 1;
+    document.querySelector('.footer-nav').classList.toggle('dark-off', idx !== 0);
+  }
+  function go(dir) {
+    idx = Math.min(Math.max(idx + dir, 0), slides.length - 1);
+    render();
+  }
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight' || e.key === ' ') go(1);
+    if (e.key === 'ArrowLeft') go(-1);
+  });
+  render();
+</script>
+</body>
+</html>
