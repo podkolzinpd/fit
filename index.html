@@ -7440,6 +7440,213 @@ h3 {
   line-height: 1.32;
 }
 
+/* Prefinal 02: three athlete states + trainer as the platform's supply side. */
+.prefinal-path-map {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.prefinal-path-map .path-fit-label {
+  position: absolute;
+  top: 72px;
+  right: 92px;
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.prefinal-path-map h2 {
+  top: 132px;
+  left: 92px;
+  max-width: 1040px;
+  font-size: 64px;
+  line-height: .98;
+  letter-spacing: -.05em;
+}
+
+.prefinal-path-map .path-lead {
+  position: absolute;
+  top: 282px;
+  left: 92px;
+  max-width: 980px;
+  color: var(--muted);
+  font-size: 24px;
+  line-height: 1.35;
+}
+
+.prefinal-path-map .path-system {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 372px;
+  height: 350px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 292px;
+  gap: 58px;
+}
+
+.prefinal-path-map .path-states {
+  position: relative;
+  display: grid;
+  grid-template-columns: .92fr 1.04fr 1.18fr;
+  gap: 34px;
+  padding-top: 42px;
+}
+
+.prefinal-path-map .path-states::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--ink);
+}
+
+.prefinal-path-map .path-stage {
+  position: relative;
+  min-width: 0;
+  padding: 24px 24px 0 0;
+  border-right: 1px solid var(--line);
+}
+
+.prefinal-path-map .path-stage:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
+.prefinal-path-map .path-stage::before {
+  content: "";
+  position: absolute;
+  top: -30px;
+  left: 0;
+  width: 13px;
+  height: 13px;
+  border: 3px solid var(--paper);
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.prefinal-path-map .path-stage-number {
+  display: block;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.prefinal-path-map .path-stage h3 {
+  max-width: 280px;
+  margin-top: 14px;
+  font-size: 30px;
+  line-height: 1.04;
+  letter-spacing: -.035em;
+}
+
+.prefinal-path-map .path-stage p {
+  max-width: 285px;
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1.35;
+}
+
+.prefinal-path-map .path-stage-fit {
+  display: block;
+  margin-top: 28px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.28;
+}
+
+.prefinal-path-map .path-stage-fit small {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.prefinal-path-map .path-trainer {
+  display: flex;
+  flex-direction: column;
+  padding: 30px 30px 28px;
+  color: var(--white);
+  background: var(--dark);
+}
+
+.prefinal-path-map .path-trainer-label {
+  color: #999a9f;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.prefinal-path-map .path-trainer h3 {
+  margin-top: 24px;
+  font-size: 46px;
+  line-height: .98;
+  letter-spacing: -.045em;
+}
+
+.prefinal-path-map .path-trainer > p {
+  margin-top: 22px;
+  color: #b3b3b5;
+  font-size: 20px;
+  line-height: 1.38;
+}
+
+.prefinal-path-map .path-trainer-fit {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,.2);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.34;
+}
+
+.prefinal-path-map .path-trainer-fit small {
+  display: block;
+  margin-bottom: 7px;
+  color: #999a9f;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.prefinal-path-map .path-takeaway {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  bottom: 82px;
+  display: grid;
+  grid-template-columns: 176px 1fr;
+  gap: 30px;
+  align-items: baseline;
+  padding-top: 20px;
+  border-top: 1px solid var(--ink);
+}
+
+.prefinal-path-map .path-takeaway span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.prefinal-path-map .path-takeaway strong {
+  max-width: 1050px;
+  font-size: 25px;
+  line-height: 1.25;
+  letter-spacing: -.02em;
+}
+
 </style>
 </head>
 <body>
@@ -7467,6 +7674,61 @@ Fit остаётся отдельным приложением, потому ч�
 
 [Sources]
 Логотип: вариант 1, предоставленный пользователем.</aside>
+    </section>
+
+    <section class="slide redesign-v2 prefinal-keep prefinal-path-map" data-section="Аудитория" data-slide-type="product-story" data-golden="linear/03-linear-product-flow.png">
+      <div class="eyebrow">01 · КАРТА УЧАСТНИКОВ</div>
+      <div class="path-fit-label">Fit</div>
+      <h2>У спортивного пути<br>три состояния</h2>
+      <p class="path-lead">Человек может переходить между ними. Тренер — отдельная сторона платформы.</p>
+
+      <div class="path-system" aria-label="Три состояния человека на спортивном пути и тренер как отдельная сторона платформы">
+        <div class="path-states">
+          <article class="path-stage">
+            <span class="path-stage-number">01</span>
+            <h3>Начинает или возвращается</h3>
+            <p>Нужен посильный первый шаг и способ вернуться после перерыва.</p>
+            <strong class="path-stage-fit"><small>FIT</small>Лёгкий вход и адаптивный план</strong>
+          </article>
+
+          <article class="path-stage">
+            <span class="path-stage-number">02</span>
+            <h3>Тренируется самостоятельно</h3>
+            <p>Нужно понимать, что делать дальше, и видеть собственную динамику.</p>
+            <strong class="path-stage-fit"><small>FIT</small>AI-план · факт · прогресс</strong>
+          </article>
+
+          <article class="path-stage">
+            <span class="path-stage-number">03</span>
+            <h3>Занимается с тренером</h3>
+            <p>Важно не терять общий контекст между тренировками.</p>
+            <strong class="path-stage-fit"><small>FIT</small>Общий план · связь · прогресс</strong>
+          </article>
+        </div>
+
+        <aside class="path-trainer">
+          <span class="path-trainer-label">СТОРОНА ПЛАТФОРМЫ</span>
+          <h3>Тренер</h3>
+          <p>Ведёт действующих клиентов и получает доступ к новой аудитории.</p>
+          <strong class="path-trainer-fit"><small>FIT</small>Кабинет · программы · клиенты</strong>
+        </aside>
+      </div>
+
+      <div class="path-takeaway">
+        <span>ОДИН ПУТЬ</span>
+        <strong>Fit сохраняет контекст человека при переходе между состояниями — сам или с тренером.</strong>
+      </div>
+
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Показать не четыре взаимоисключающие аудитории, а спортивный путь человека и отдельную сторону предложения.
+
+ЧТО ГОВОРИМ
+У человека есть три состояния. Он может только начинать или возвращаться после перерыва, тренироваться регулярно самостоятельно либо подключать тренера. Это не навсегда закреплённые типы: один и тот же человек способен переходить между ними. Поэтому дальше мы не будем складывать эти группы как независимые аудитории.
+
+Тренер находится рядом с этим путём, но не является его четвёртым этапом. Это отдельная сторона платформы: он сопровождает клиентов, ведёт программы и получает доступ к аудитории Fit.
+
+ПЕРЕХОД
+Следующий слайд покажет масштаб этих состояний и отделит взаимоисключающие группы от пересекающихся форматов занятий.</aside>
     </section>
 
     <section class="slide redesign-v2 review-problem-v2" data-section="Проблема" data-slide-type="problem" data-golden="linear/03-linear-product-flow.png">
