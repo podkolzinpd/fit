@@ -7446,7 +7446,7 @@ h3 {
   <div class="progress" aria-hidden="true"><span id="progressFill"></span></div>
 
   <main class="deck" id="deck" aria-live="polite">
-    <section class="slide slide-cover pilot-cover redesign-v2 rd-hero active" data-section="Решение" data-slide-type="hero" data-golden="apple/05-apple-keynote-hero.png">
+    <section class="slide slide-cover pilot-cover redesign-v2 rd-hero prefinal-keep active" data-section="Решение" data-slide-type="hero" data-golden="apple/05-apple-keynote-hero.png">
       <div class="pilot-cover-copy">
         <h1>Яндекс упрощает<br>путь в спорт</h1>
         <p class="lead">От первого шага до устойчивой привычки: отдельное приложение Fit и спортивный слой экосистемы.</p>
@@ -9250,6 +9250,8 @@ Strava, поддерживаемые виды спорта: https://support.stra
   <div class="notes-panel" id="notesPanel" aria-hidden="true"><button id="closeNotes" aria-label="Закрыть заметки">×</button><div id="notesContent"></div></div>
   <script>
 const deck = document.getElementById('deck')
+// Предфинальная сборка: в DOM попадают только явно утверждённые слайды.
+deck.querySelectorAll('.slide:not(.prefinal-keep)').forEach(slide => slide.remove())
 const monetizationSlide = document.querySelector('.monetization-proof-slide')
 const valueSlide = document.querySelector('.value-slide')
 if (monetizationSlide && valueSlide) valueSlide.after(monetizationSlide)
@@ -9272,6 +9274,7 @@ if (productFlowSource && colleagueProductFlow) {
   colleagueProductFlow.replaceWith(syncedProductFlow)
 }
 const slides = [...document.querySelectorAll('.slide:not(.legacy-competitor-slide):not(.legacy-behavior-slide)')]
+if (slides.length <= 1) document.querySelectorAll('.nav').forEach(button => { button.style.display = 'none' })
 let logicalSlide = 0
 slides.forEach(slide => {
   const explicitFamily = Number(slide.dataset.slideFamily)
