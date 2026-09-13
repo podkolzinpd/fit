@@ -105,7 +105,8 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
 
   await page.getByRole('button', { name: 'Фильтры' }).click()
   await page.getByLabel('Направление').fill('снижение веса')
-  await page.getByRole('button', { name: 'Найти' }).click()
+  await page.getByRole('button', { name: 'Показать тренеров' }).click()
+  await expect(page.getByRole('button', { name: 'Фильтры · 1' })).toBeVisible()
   await expect(results.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
   await results.getByRole('link', { name: 'Посмотреть анкету' }).click()
   await expect(page).toHaveURL(/\/trainers\/[0-9a-f-]+$/)
@@ -121,6 +122,10 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   expect(contactBounds!.y + contactBounds!.height).toBeLessThanOrEqual(await page.evaluate(() => window.innerHeight))
   await page.getByRole('button', { name: 'Назад' }).click()
   await expect(page).toHaveURL(/\/me\/trainers$/)
+  await expect(page.getByRole('button', { name: 'Фильтры · 1' })).toBeVisible()
+  await page.getByRole('button', { name: 'Фильтры · 1' }).click()
+  await expect(page.getByLabel('Направление')).toHaveValue('снижение веса')
+  await page.getByRole('button', { name: 'Закрыть фильтры' }).click()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 
   await page.goto('/me/settings')

@@ -5747,21 +5747,37 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 /* Trainer professional profile: a quiet form for the trainer and the same
    readable card in preview and on the public link. */
 .trainer-professional-editor, .public-trainer-page, .trainer-catalog-page { display:grid; gap:16px; width:min(100%, 720px); margin:0 auto; padding-bottom:calc(32px + env(safe-area-inset-bottom)); }
-.trainer-catalog-intro { margin:-8px 0 0; color:var(--muted); }
-.trainer-catalog-search { display:grid; gap:12px; }
+.trainer-catalog-page > .page-header { min-height:44px; grid-template-columns:44px minmax(0,1fr) 44px; margin-bottom:0; }
+.trainer-catalog-page > .page-header h1 { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:24px; font-weight:600; line-height:1.12; }
+.trainer-catalog-intro { margin:-4px 0 0; color:var(--muted); text-align:center; }
+.trainer-catalog-search { display:grid; align-items:stretch; justify-content:stretch; gap:12px; padding:16px; box-shadow:none; }
+.trainer-catalog-query { position:relative; display:block; width:100%; }
+.trainer-catalog-query > input { width:100%; padding-right:48px; }
+.trainer-catalog-query-clear { position:absolute; top:50%; right:2px; width:44px; height:44px; display:grid; place-items:center; padding:0; transform:translateY(-50%); border:0; border-radius:13px; background:transparent; color:var(--muted); box-shadow:none; }
+.trainer-catalog-query-clear svg { width:20px; height:20px; }
 .trainer-catalog-search-actions { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; }
-.trainer-catalog-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding-top:12px; border-top:1px solid var(--border); }
-.trainer-catalog-filters > .link { grid-column:1 / -1; justify-self:start; }
+.trainer-catalog-search-actions button { width:100%; min-height:48px; }
+.trainer-catalog-filter-overlay { z-index:50; padding-inline:max(0px,env(safe-area-inset-left)); }
+.trainer-catalog-filter-sheet { width:min(100%,560px); max-height:min(88%,680px); overflow-y:auto; display:grid; gap:16px; padding:18px 18px max(18px,calc(env(safe-area-inset-bottom) + 12px)); border:1px solid var(--border); border-bottom:0; border-radius:26px 26px 0 0; background:var(--surface-elevated); box-shadow:none; overscroll-behavior:contain; }
+.trainer-catalog-filter-sheet .picker-header h2 { margin:0; font-size:22px; }
+.trainer-catalog-filter-sheet .picker-close { width:44px; height:44px; }
+.trainer-catalog-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.trainer-catalog-filters input, .trainer-catalog-filters select { min-height:48px; }
+.trainer-catalog-filter-actions { display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); gap:8px; }
+.trainer-catalog-filter-actions button { min-height:48px; }
 .trainer-catalog-results { display:grid; gap:12px; }
 .trainer-catalog-results > .muted { margin:0; }
-.trainer-catalog-card { display:grid; gap:14px; box-shadow:none; }
-.trainer-catalog-card-head { display:flex; align-items:center; gap:12px; }
+.trainer-catalog-card { min-width:0; display:grid; align-items:stretch; justify-content:stretch; gap:12px; padding:16px; box-shadow:none; }
+.trainer-catalog-card-head { min-width:0; display:flex; align-items:flex-start; gap:12px; }
 .trainer-catalog-card-head > div { min-width:0; }
-.trainer-catalog-card-head h2 { margin:0; font-size:19px; line-height:1.2; }
+.trainer-catalog-card-head .trainer-card-avatar { width:64px; height:64px; flex-basis:64px; border-radius:18px; }
+.trainer-catalog-card-head .trainer-card-avatar-placeholder { font-size:24px; }
+.trainer-catalog-card-head h2 { margin:0; overflow-wrap:anywhere; font-size:19px; line-height:1.2; }
 .trainer-catalog-card-head p, .trainer-catalog-facts, .trainer-catalog-bio { margin:3px 0 0; color:var(--muted); }
-.trainer-catalog-facts { font-size:13px; }
+.trainer-catalog-card-head p, .trainer-catalog-facts { font-size:13px; }
+.trainer-catalog-facts { overflow-wrap:anywhere; }
 .trainer-catalog-bio { display:-webkit-box; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3; }
-.trainer-catalog-card > .button { width:100%; }
+.trainer-catalog-card > .button { width:100%; min-height:48px; }
 .trainer-profile-state { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px 18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); }
 .trainer-profile-state > .button { min-height:44px; }
 .trainer-profile-state p, .trainer-profile-publish-tools p { margin:4px 0 0; color:var(--muted); font-size:var(--type-caption-size); }
@@ -6004,6 +6020,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 @media (max-width:560px) {
   .trainer-professional-editor, .public-trainer-page, .trainer-catalog-page { padding-inline:16px; }
   .trainer-catalog-filters { grid-template-columns:1fr; }
+  .trainer-catalog-filter-sheet { max-height:92%; }
   .trainer-certificate-fields { grid-template-columns:minmax(0,1fr) 88px; }
   .trainer-certificate-fields input:nth-child(2) { grid-column:1 / -1; grid-row:2; }
   .trainer-certificate-fields .link { grid-column:2; grid-row:2; justify-self:end; }
