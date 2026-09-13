@@ -110,6 +110,18 @@ insert into public.custom_exercises (id, trainer_id, created_by, name, muscle_gr
   ('74000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', 'Trainer Exercise In Client B Partition', 'legs', 'reps', '2026-08-06 08:00:00+00'),
   ('74000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000002', 'Client B Own Exercise', 'legs', 'reps', '2026-08-07 09:00:00+00');
 
+-- YAFIT-514: тренировка, которую фактически закрыл клиент, но в приложении
+-- отметил тренер (например, задним числом после очной встречи), обязана
+-- засчитаться клиенту как активность — тренировка состоялась по факту.
+-- 0010 — status='done', updated_by = тренер, дата позже уже проверенного
+-- максимума клиента B (2026-08-08 12:00) — должна стать новым
+-- last_client_activity_at. 0011 — тренер трогает НЕ-done тренировку клиента
+-- B ещё позже (08-15) — не должна засчитаться: фикс только про 'done',
+-- не про полное снятие фильтра по актору.
+insert into public.workouts (id, trainer_id, client_id, created_by, updated_by, workout_date, status, started_at, completed_at, updated_at) values
+  ('72000000-0000-4000-8000-000000000010', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '2026-08-09', 'done', '2026-08-09 07:00:00+00', '2026-08-09 08:00:00+00', '2026-08-09 08:00:00+00'),
+  ('72000000-0000-4000-8000-000000000011', '70000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '2026-08-15', 'in_progress', '2026-08-15 08:00:00+00', null, '2026-08-15 08:00:00+00');
+
 refresh materialized view analytics.client_overview;
 
 select is(
@@ -156,8 +168,8 @@ select is(
 );
 select is(
   (select last_client_activity_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000002'),
-  '2026-08-08 12:00:00+00'::timestamptz,
-  'last_client_activity_at follows updated_by: the trainer-created workout the client last edited counts, the client-created one the trainer edited later does not'
+  '2026-08-09 08:00:00+00'::timestamptz,
+  'last_client_activity_at: the trainer-closed done workout (YAFIT-514) wins over the client-edited planned one, but the later trainer-touched non-done workout (2026-08-15) does not count — the actor filter still applies outside of status=done'
 );
 select is(
   (select last_client_activity_at from analytics.client_overview where client_id = '71000000-0000-4000-8000-000000000003'),
