@@ -6,6 +6,7 @@ import {
   isAssistantNavPilotEnabled,
   isTodayGreetingPilotEnabled,
   isTodayStartRedesignEnabled,
+  isTrainerDiscoveryHomeEnabled,
   isWearablesPilotEnabled,
   isYandexAssistantRoutingPilotEnabled,
   isYandexAppSessionPilotEnabled,
@@ -27,6 +28,15 @@ describe('today start redesign flag', () => {
     vi.stubEnv('VITE_TODAY_START_REDESIGN', 'false')
     expect(isTodayStartRedesignEnabled()).toBe(false)
     expect(trainerHomePath()).toBe('/clients')
+  })
+})
+
+describe('trainer discovery home flag', () => {
+  it('is enabled for everyone by default and supports an explicit kill switch', () => {
+    vi.stubEnv('VITE_TRAINER_DISCOVERY_HOME_ENABLED', '')
+    expect(isTrainerDiscoveryHomeEnabled()).toBe(true)
+    vi.stubEnv('VITE_TRAINER_DISCOVERY_HOME_ENABLED', 'false')
+    expect(isTrainerDiscoveryHomeEnabled()).toBe(false)
   })
 })
 

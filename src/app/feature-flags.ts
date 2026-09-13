@@ -9,6 +9,12 @@ export function trainerHomePath() {
   return isTodayStartRedesignEnabled() ? '/today' : '/clients'
 }
 
+// Карточка поиска тренера открыта всем спортсменам. Явное значение "false"
+// скрывает только карточку на главной; каталог в профиле остаётся доступен.
+export function isTrainerDiscoveryHomeEnabled() {
+  return import.meta.env.VITE_TRAINER_DISCOVERY_HOME_ENABLED !== 'false'
+}
+
 // Ассистент доступен всем тренерам в production; TrainerOnly и RLS/ownership
 // остаются границами роли и данных. VITE_ASSISTANT_NAV_ENABLED=false —
 // мгновенный production kill switch. В development allowlist сохраняет

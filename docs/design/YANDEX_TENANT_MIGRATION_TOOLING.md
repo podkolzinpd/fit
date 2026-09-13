@@ -6,6 +6,11 @@ Prepare a repeatable, auditable data copy for one isolated trainer cohort before
 any production rollout. The tool must not change routing, deploy resources or
 write to a remote database by default.
 
+The same runner must also copy an unlinked client account as an independent
+root. It must preserve the client's personal domain history and disconnected
+relationship/chat history without creating a trainer role or an active
+`client_trainers` membership.
+
 ## Safety contract
 
 1. A trainer, all root client cards and their linked FIT profiles form one
@@ -33,6 +38,19 @@ write to a remote database by default.
    independent confirmation.
 10. This tooling does not implement dual-write, reverse migration, routing or
     production cutover. Those remain separate reviewed gates.
+11. A standalone client root is accepted only for a client-role profile whose
+    canonical card is self-owned (`clients.trainer_id = profiles.id`) and has
+    neither a current membership nor an active relationship. Profile-only
+    client accounts are valid migration roots.
+12. Historical actor references are copied as FK dependencies, including the
+    minimal referenced trainer profile/row. They do not grant that trainer
+    access: disconnected relationships stay disconnected and the membership
+    table must remain empty for the standalone root.
+13. Standalone export includes the reverse merge closure of the canonical card
+    and rejects a merge that crosses that boundary. It also rejects pending
+    push delivery. A chat containing image metadata is rejected until the
+    corresponding private object-storage copy is implemented, so the target
+    cannot contain a broken attachment link.
 
 ## Remote stage orchestration
 
@@ -56,10 +74,28 @@ up to 100 conflicts. This bound covers the current small source population
 without turning a stale stage into an unbounded sequence of remote requests.
 Import, schema, network and authorization errors are not treated as collisions
 and still fail the rehearsal. Candidate UUIDs and rejected candidates are not
-logged. If every candidate conflicts, CI prints the complete aggregate of safe
+logged. A `smallest-eligible` apply is allowed only with the independent apply
+phrase and the exact 16-character fingerprint printed by its successful
+dry-run. The same deterministic selection runs again and aborts before any
+target request if the selected cohort no longer has that fingerprint. If every
+candidate conflicts, CI prints the complete aggregate of safe
 rejection codes (for example, the exact validation table) and counts, without
-UUIDs or row contents. Automatic selection is rejected for `apply`, because a
-real write must always refer to a stable, explicitly configured cohort.
+UUIDs or row contents. This pins a real write to the reviewed cohort without
+exposing its UUID.
+
+`smallest-eligible-standalone-client` performs the equivalent masked selection
+for client-role profiles. It may choose a profile that has not created a card
+yet, or a self-owned card with personal history, and skips profiles that still
+have an active trainer, a legacy trainer-owned partition, a cross-boundary
+merge, pending push or chat media. Dry-run/apply use the same fingerprint pin
+and conflict-skipping behavior as trainer cohorts, so repeated manual runs can
+advance through the small population without adding one secret per client.
+
+`most-complete-standalone-client` is used for a representative real-data
+rehearsal. It considers only standalone client accounts that own a client card
+and at least one workout, tries candidates with the most workouts first, and
+still runs the complete standalone safety preflight. Output remains limited to
+the masked fingerprint and aggregate table counts.
 
 For `dry-run` and `apply`, GitHub OIDC obtains the existing bounded deploy
 identity and invokes the private `fit-stage-migration` container. The encrypted
@@ -105,6 +141,15 @@ preserves `custom_exercises.created_by`: client-authored exercises keep their
 author and root data partition instead of being silently converted into
 trainer-owned rows.
 
+Standalone artifacts use the distinct
+`fit-standalone-client-bundle-v1` format and fingerprint namespace while
+retaining the same ordered 30-table manifest. Client-scoped tables follow the
+canonical card and its reverse merge closure. Custom exercises include both
+client-authored rows and exact custom rows referenced by those workouts.
+Account-scoped Assistant, feedback, push preferences/subscriptions and workout
+request receipts are limited to the client root; referenced trainer accounts
+never pull their unrelated account data into the bundle.
+
 ## Acceptance checklist
 
 - [x] Encrypted artifact does not contain plaintext tenant UUIDs.
@@ -122,10 +167,21 @@ trainer-owned rows.
   dry-run left the target empty and the repeated apply inserted zero rows. The
   target fixture deliberately uses `Europe/Moscow` while migration transactions
   normalize to UTC, covering cross-cluster timestamp checksums.
-- [ ] Review a production export window, remote credentials and the exact
+- [x] Review a production export window, remote credentials and the exact
   target before the first remote command.
-- [ ] Run the selected cohort through remote `audit` and target `dry-run` using
-  the private stage workflow; keep `apply` blocked until both reports match.
+- [x] Run a selected real cohort through target `dry-run` and fingerprint-pinned
+  `apply` using the private stage workflow. Run `34589510827` (2026-09-11)
+  validated all 30 current manifest tables, inserted 5 rows and proved
+  idempotency with a second apply inserting zero rows.
+- [x] Add a standalone-client artifact, CLI selector and masked remote selector.
+  Two local PostgreSQL 17 rehearsals (2026-09-11) each imported and validated
+  a 22-row self-owned client bundle across all 30 tables, preserved a
+  disconnected relationship/chat and foreign historical actor references,
+  left `client_trainers` empty, rolled dry-run back and inserted zero rows on
+  repeated apply. The same runs revalidated the trainer bundle at 38 rows and
+  added chat rows to the production-like manifest fixture.
+- [ ] Run one real unlinked client through remote stage dry-run and pinned apply
+  before enabling that profile's Yandex ID session or sticky routing.
 - [ ] Freeze writes, validate the selected real cohort and change its sticky
   routing only in the separately approved cutover step.
 

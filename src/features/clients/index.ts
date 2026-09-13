@@ -1,6 +1,6 @@
 export { ClientsPage } from './ClientsListPage'
 export { ClientFormPage, ClientDetailPage, MyClientEditPage, MyClientPage } from './ClientsPages'
-export { ClientProfilePage } from './ClientProfilePage'
+export { ClientProfilePage, ClientProfileSettingsPage } from './ClientProfilePage'
 export { clientWorkoutAuthorLabel } from './workout-author'
 export { ClientPicker, type ClientPickerSelection } from './ClientPicker'
 export { MyWorkoutsPage, MyProgressPage } from './ClientPortalPages'

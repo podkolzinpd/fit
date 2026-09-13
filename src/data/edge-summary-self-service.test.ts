@@ -61,9 +61,9 @@ describe("summarize-client-training self-service contract", () => {
     expect(visible).not.toHaveProperty("trainer_summary")
   })
 
-  it("uses cache by default and bypasses it with force", () => {
+  it("uses an unchanged cached analysis even when refresh was requested", () => {
     expect(shouldUseClientCache(false, { id: "cached" })).toBe(true)
-    expect(shouldUseClientCache(true, { id: "cached" })).toBe(false)
+    expect(shouldUseClientCache(true, { id: "cached" })).toBe(true)
     expect(shouldUseClientCache(false, null)).toBe(false)
   })
 

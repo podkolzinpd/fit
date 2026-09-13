@@ -147,7 +147,7 @@ function trainerBreakdownItems(client: PublishedTrainingSummary['summary']): str
 
 export function buildProgressDetailedAnalysis({ summary, role, goalTitle, visibleTexts }: BuildProgressDetailedAnalysisOptions): ProgressDetailedAnalysisSection[] {
   const client = 'summary' in summary ? summary.summary : summary.client
-  if (client.analysisVersion === 'trainer-summary-v2') {
+  if (client.analysisVersion === 'trainer-summary-v2' || client.analysisVersion === 'trainer-summary-v3') {
     return [
       {
         id: 'breakdown',

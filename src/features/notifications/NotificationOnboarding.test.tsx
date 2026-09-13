@@ -194,7 +194,7 @@ describe('NotificationOnboarding', () => {
     repository.setCategoryEnabled.mockResolvedValue(undefined)
 
     render(<NotificationOnboarding userId={USER_ID} />, { wrapper: wrapper() })
-    expect(await screen.findByText('Напомним, если активная тренировка останется незавершённой.')).toBeVisible()
+    expect(await screen.findByText('Напомним о незавершённой тренировке.')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Включить уведомления' }))
 
     expect(nativeReminder.requestPermission).toHaveBeenCalledOnce()

@@ -17,6 +17,13 @@ describe('WorkoutExerciseHeader', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Планка' })).toBeInTheDocument()
   })
 
+  it('can hide the redundant technique label while keeping the title actionable', () => {
+    render(<WorkoutExerciseHeader className="live-exercise-head" name="Планка" onTitleClick={() => undefined} showTechniqueLabel={false} />)
+
+    expect(screen.queryByText('Техника')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Посмотреть технику: Планка' })).toBeInTheDocument()
+  })
+
   it('opens technique from the exercise title without affecting actions', async () => {
     const user = userEvent.setup()
     const onTitleClick = vi.fn()

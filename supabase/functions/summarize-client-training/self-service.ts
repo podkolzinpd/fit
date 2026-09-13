@@ -26,10 +26,10 @@ export function authorizeSummaryActor(
 }
 
 export function shouldUseClientCache(
-  force: boolean,
+  _force: boolean,
   cached: unknown,
 ): boolean {
-  return !force && cached !== null && cached !== undefined
+  return cached !== null && cached !== undefined
 }
 
 export function hasCompletedWorkouts(

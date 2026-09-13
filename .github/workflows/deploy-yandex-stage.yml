@@ -45,7 +45,7 @@ env:
   TF_VAR_deployer_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   TF_VAR_migration_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   TF_VAR_yandex_oauth_client_id: ${{ vars.YC_YANDEX_OAUTH_CLIENT_ID }}
-  TF_VAR_api_cors_allowed_origins: '["http://localhost:5173","https://fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects.vercel.app"]'
+  TF_VAR_api_cors_allowed_origins: '["http://localhost:5173","https://fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects.vercel.app","https://fit-drab.vercel.app"]'
   TF_VAR_api_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
   YC_PUSH_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
@@ -363,6 +363,7 @@ jobs:
             --request POST --header "Authorization: Bearer $YC_TOKEN" "${migration_url%/}/migrate")
           if test "$status" != 200; then
             echo "Migration runner returned HTTP $status; the API was not changed." >&2
+            jq -r '"Migration error: code=" + (.error.code // "unknown") + (if .error.message then " message=" + .error.message else "" end)' migration-response.json >&2
             exit 1
           fi
           jq -e '.status == "migrated" and (.migrations | type == "array")' migration-response.json >/dev/null

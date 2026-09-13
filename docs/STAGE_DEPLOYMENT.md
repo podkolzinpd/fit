@@ -219,6 +219,11 @@ allowlist and its Yandex OAuth callback is:
 https://fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects.vercel.app/auth/yandex/callback
 ```
 
+The stable production origin `https://fit-drab.vercel.app` is also included in
+the stage API CORS allowlist, and the matching Yandex OAuth callback is
+registered. This only makes a controlled production pilot technically
+possible; it does not enable Yandex ID or switch any tenant by itself.
+
 Only that preview branch receives the three pilot build variables:
 `VITE_YANDEX_ID_PILOT_ENABLED=true`, the public
 `VITE_YANDEX_OAUTH_CLIENT_ID`, and `VITE_YANDEX_API_BASE_URL` pointing to the

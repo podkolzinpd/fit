@@ -34,6 +34,59 @@ test('chat entry and conversation list fit the iPhone shell', async ({ page }) =
   await expect(page.locator('.tab-bar')).toHaveCount(0)
 })
 
+test('trainer chat stays at the bottom and exits with swipe and back', async ({ page }) => {
+  const conversationId = 'b9000000-0000-4000-8000-000000000001'
+  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+    conversation_id: conversationId,
+    client_id: demoClientId,
+    trainer_id: '90000000-0000-4000-8000-000000000009',
+    partner_user_id: '92000000-0000-4000-8000-000000000029',
+    partner_name: 'Александра Константинопольская-Романова',
+    active_connection: true,
+    last_message_body: 'До встречи',
+    last_message_at: '2026-09-10T16:45:00.000Z',
+    last_message_sender_id: '92000000-0000-4000-8000-000000000029',
+    unread_count: 1,
+  }]) }))
+  await page.route('**/rest/v1/rpc/list_chat_messages_v3', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+    id: 'b9000000-0000-4000-8000-000000000012',
+    conversation_id: conversationId,
+    sender_id: '92000000-0000-4000-8000-000000000029',
+    body: 'До встречи',
+    created_at: '2026-09-10T16:45:00.000Z',
+    edited_at: null,
+    reply_to_message_id: null,
+  }]) }))
+  await page.route('**/rest/v1/rpc/get_chat_unread_state', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ first_message_id: 'b9000000-0000-4000-8000-000000000012', first_created_at: '2026-09-10T16:45:00.000Z', unread_count: 1 }]) }))
+  await page.route('**/rest/v1/rpc/get_chat_connection_state', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{ active_connection: true, invitation_pending: false, invited_at: null, can_invite: false, can_accept: false, trainer_switch_required: false }]) }))
+  await page.route('**/rest/v1/rpc/mark_chat_read_v2', (route) => route.fulfill({ contentType: 'application/json', body: 'null' }))
+
+  await loginAsTrainer(page)
+  await page.getByRole('link', { name: /Сообщения/ }).click()
+  await page.getByRole('button', { name: /Александра Константинопольская-Романова/ }).click()
+  await expect(page.getByRole('heading', { name: 'Александра Константинопольская-Романова' })).toBeVisible()
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  const bottomGap = await page.evaluate(() => {
+    const frame = document.querySelector('.phone-frame')!.getBoundingClientRect()
+    const composer = document.querySelector('.chat-composer')!.getBoundingClientRect()
+    return Math.abs(frame.bottom - composer.bottom)
+  })
+  expect(bottomGap).toBeLessThanOrEqual(1)
+
+  await page.locator('.chat-conversation-page').evaluate((element) => {
+    const swipe = (type: 'touchstart' | 'touchend', clientX: number) => {
+      const event = new Event(type, { bubbles: true })
+      Object.defineProperty(event, 'changedTouches', { value: [{ clientX, clientY: 120 }] })
+      element.dispatchEvent(event)
+    }
+    swipe('touchstart', 12)
+    swipe('touchend', 100)
+  })
+  await expect(page.getByRole('heading', { name: 'Сообщения' })).toBeVisible()
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(/\/today$/)
+})
+
 async function mockAutomaticSummaryGeneration(page: Page) {
   const response = {
     contentType: 'application/json',
@@ -429,11 +482,13 @@ test('iPhone: новое имя профиля сохраняется после
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
   await page.goto('/profile/settings')
+  await page.getByRole('button', { name: 'Изменить данные' }).click()
   await page.getByLabel('Имя', { exact: true }).fill('Новое имя')
   await page.getByLabel('Часовой пояс').fill('Europe/Berlin')
   await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Сохранено' })).toBeVisible()
   await page.reload()
+  await page.getByRole('button', { name: 'Изменить данные' }).click()
   await expect(page.getByLabel('Имя', { exact: true })).toHaveValue('Новое имя')
   await expect(page.getByLabel('Часовой пояс')).toHaveValue('Europe/Berlin')
   await expectNoHorizontalOverflow(page)
@@ -487,6 +542,13 @@ test('iPhone: client voice-first home сохраняет тренировку т
   await page.getByLabel('Email').fill(`client-profile-${testInfo.workerIndex}-${Date.now()}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+
+  const compactActions = page.locator('.client-home-self-training .voice-action-buttons')
+  await expect(compactActions).toBeVisible()
+  await expect(compactActions.locator('.voice-action-button-visual')).toBeVisible()
+  await expect(compactActions.getByRole('button', { name: 'Ввести текстом' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  await expect(page.locator('.client-home-self-training .voice-action')).toHaveScreenshot('client-first-run-compact-actions.png', { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.02 })
 
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
@@ -1146,7 +1208,7 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     await expect(darkSummary.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
     await expectCompactBodyMap(darkSummary.locator('.body-progress-map'))
     await expectNoHorizontalOverflow(page)
-    await page.goto('/me/profile')
+    await page.goto('/me/settings')
     await page.getByRole('radio', { name: 'Схема' }).click()
     await page.goto('/me/progress')
     const schemeSummary = page.locator('.client-progress-card')
@@ -1212,7 +1274,7 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
       })
     })
 
-    await page.goto('/me/profile')
+    await page.goto('/me/settings')
     await page.getByRole('radio', { name: 'Схема' }).click()
     await page.goto('/me/progress')
     const summary = page.locator('.client-progress-card')
@@ -1291,7 +1353,7 @@ test('iPhone: ручной выбор начинает с недавних, а �
   // фотографию не подставляем, оставляем нейтральное состояние загрузки.
   await expect(recentExercise.locator('.exercise-image-empty')).toHaveCount(1)
   await expect(recentExercise.locator('img')).toHaveCount(0)
-  const catalogImage = page.locator('.picker-item').nth(1).locator('.exercise-image')
+  const catalogImage = page.locator('.picker-item').filter({ has: page.locator('.exercise-image img') }).first().locator('.exercise-image')
   await expect(catalogImage.locator('img').first()).toHaveCSS('object-fit', 'contain')
   const catalogImageBox = await catalogImage.boundingBox()
   expect(catalogImageBox?.width).toBe(catalogImageBox?.height)

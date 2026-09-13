@@ -6,7 +6,11 @@ import type { PoolConfig, QueryResultRow } from 'pg'
 import { PgDatabasePool } from '../db/pg-pool.js'
 import type { DatabaseClient } from '../db/types.js'
 import { encryptMigrationBundle } from './bundle.js'
-import { exportTenant, TenantMigrationError } from './engine.js'
+import {
+  exportStandaloneClient,
+  exportTenant,
+  TenantMigrationError,
+} from './engine.js'
 import type {
   TenantMigrationBundle,
   TenantMigrationEnvelope,
@@ -18,6 +22,8 @@ export type RemoteTenantRehearsalMode = 'audit' | 'dry-run' | 'apply'
 export type RemoteTenantSelection =
   | { kind: 'configured'; trainerId: string }
   | { kind: 'smallest-eligible' }
+  | { kind: 'smallest-eligible-standalone-client' }
+  | { kind: 'most-complete-standalone-client' }
 
 type CandidateAcceptance = (
   bundle: TenantMigrationBundle,
@@ -26,6 +32,7 @@ type CandidateAcceptance = (
 interface RemoteTenantRehearsalSettings {
   mode: RemoteTenantRehearsalMode
   sourceConfig: PoolConfig
+  expectedTenantFingerprint?: string
   stageContainerUrl?: string
   tenantSelection: RemoteTenantSelection
   yandexIamToken?: string
@@ -33,6 +40,10 @@ interface RemoteTenantRehearsalSettings {
 
 interface CandidateTrainerRow extends QueryResultRow {
   trainer_id: string
+}
+
+interface CandidateStandaloneClientRow extends QueryResultRow {
+  profile_id: string
 }
 
 interface StageTenantMigrationResponse {
@@ -43,6 +54,7 @@ interface StageTenantMigrationResponse {
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const TENANT_FINGERPRINT_PATTERN = /^[0-9a-f]{16}$/
 const SUPABASE_PROJECT_PATTERN = /^[a-z]{20}$/
 const SUPABASE_POOLER_HOST_PATTERN =
   /^aws-[0-9]+-[a-z0-9-]+\.pooler\.supabase\.com$/
@@ -67,6 +79,11 @@ const SOURCE_TRANSPORT_ERROR_CODES = new Set([
   'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
 ])
 const SKIPPABLE_CANDIDATE_ERROR_CODES = new Set([
+  'standalone_client_contract_mismatch',
+  'standalone_client_has_active_trainer',
+  'standalone_client_has_chat_media',
+  'standalone_client_not_found',
+  'standalone_client_partition_not_owned',
   'tenant_empty',
   'tenant_has_foreign_actor',
   'tenant_has_pending_push',
@@ -80,6 +97,23 @@ from public.trainers trainer
 join public.clients client on client.trainer_id = trainer.profile_id
 group by trainer.profile_id
 order by count(*) asc, trainer.profile_id asc
+limit ${AUTO_CANDIDATE_LIMIT}`
+const AUTO_STANDALONE_CLIENT_CANDIDATES_SQL = `
+select profile.id::text as profile_id
+from public.profiles profile
+left join public.clients client on client.auth_user_id = profile.id
+where profile.account_role = 'client'
+group by profile.id
+order by count(client.id) asc, profile.id asc
+limit ${AUTO_CANDIDATE_LIMIT}`
+const AUTO_COMPLETE_STANDALONE_CLIENT_CANDIDATES_SQL = `
+select profile.id::text as profile_id
+from public.profiles profile
+join public.clients client on client.auth_user_id = profile.id
+join public.workouts workout on workout.client_id = client.id
+where profile.account_role = 'client'
+group by profile.id
+order by count(workout.id) desc, profile.id asc
 limit ${AUTO_CANDIDATE_LIMIT}`
 
 export class RemoteTenantRehearsalError extends Error {
@@ -207,12 +241,27 @@ export function readRemoteTenantRehearsalSettings(
 ): RemoteTenantRehearsalSettings {
   const mode = readMode(environment)
   const selectionMode = environment.FIT_TENANT_SELECTION_MODE ?? 'configured'
+  const fingerprintValue = environment.FIT_TENANT_EXPECTED_FINGERPRINT
+  const expectedTenantFingerprint = fingerprintValue === undefined
+    || fingerprintValue.length === 0
+    ? undefined
+    : fingerprintValue
+  if (
+    expectedTenantFingerprint !== undefined
+    && !TENANT_FINGERPRINT_PATTERN.test(expectedTenantFingerprint)
+  ) {
+    throw new RemoteTenantRehearsalError('tenant_fingerprint_invalid')
+  }
   let tenantSelection: RemoteTenantSelection
-  if (selectionMode === 'smallest-eligible') {
-    if (mode === 'apply') {
-      throw new RemoteTenantRehearsalError('automatic_apply_forbidden')
+  if (
+    selectionMode === 'smallest-eligible'
+    || selectionMode === 'smallest-eligible-standalone-client'
+    || selectionMode === 'most-complete-standalone-client'
+  ) {
+    if (mode === 'apply' && expectedTenantFingerprint === undefined) {
+      throw new RemoteTenantRehearsalError('tenant_fingerprint_required')
     }
-    tenantSelection = { kind: 'smallest-eligible' }
+    tenantSelection = { kind: selectionMode }
   } else if (selectionMode === 'configured') {
     const trainerId = requireEnvironment(environment, 'FIT_TENANT_TRAINER_ID')
     if (!UUID_PATTERN.test(trainerId)) {
@@ -223,7 +272,16 @@ export function readRemoteTenantRehearsalSettings(
     throw new RemoteTenantRehearsalError('selection_mode_invalid')
   }
   const sourceConfig = buildSupabaseSourceConfig(environment, readCertificate)
-  if (mode === 'audit') return { mode, sourceConfig, tenantSelection }
+  if (mode === 'audit') {
+    return {
+      mode,
+      sourceConfig,
+      ...(expectedTenantFingerprint === undefined
+        ? {}
+        : { expectedTenantFingerprint }),
+      tenantSelection,
+    }
+  }
 
   const yandexIamToken = requireEnvironment(environment, 'YC_TOKEN')
   if (yandexIamToken.length > 8_192) {
@@ -232,10 +290,23 @@ export function readRemoteTenantRehearsalSettings(
   return {
     mode,
     sourceConfig,
+    ...(expectedTenantFingerprint === undefined
+      ? {}
+      : { expectedTenantFingerprint }),
     stageContainerUrl: readStageContainerUrl(environment),
     tenantSelection,
     yandexIamToken,
   }
+}
+
+export function requireExpectedTenantFingerprint(
+  bundle: TenantMigrationBundle,
+  expectedTenantFingerprint: string | undefined,
+): void {
+  if (
+    expectedTenantFingerprint !== undefined
+    && bundle.tenantFingerprint !== expectedTenantFingerprint
+  ) throw new RemoteTenantRehearsalError('tenant_fingerprint_mismatch')
 }
 
 export async function exportSelectedTenant(
@@ -248,20 +319,34 @@ export async function exportSelectedTenant(
     return exportTenant(source, selection.trainerId, now)
   }
 
-  let candidates: readonly CandidateTrainerRow[]
+  let candidateProfileIds: readonly string[]
   try {
-    candidates = await source.query<CandidateTrainerRow>(AUTO_CANDIDATES_SQL)
+    if (selection.kind === 'smallest-eligible') {
+      const candidates = await source.query<CandidateTrainerRow>(
+        AUTO_CANDIDATES_SQL,
+      )
+      candidateProfileIds = candidates.map((candidate) => candidate.trainer_id)
+    } else {
+      const candidates = await source.query<CandidateStandaloneClientRow>(
+        selection.kind === 'most-complete-standalone-client'
+          ? AUTO_COMPLETE_STANDALONE_CLIENT_CANDIDATES_SQL
+          : AUTO_STANDALONE_CLIENT_CANDIDATES_SQL,
+      )
+      candidateProfileIds = candidates.map((candidate) => candidate.profile_id)
+    }
   } catch {
     throw new RemoteTenantRehearsalError('candidate_discovery_failed')
   }
 
   let stageRejectedCandidate = false
-  for (const candidate of candidates) {
-    if (!UUID_PATTERN.test(candidate.trainer_id)) {
+  for (const profileId of candidateProfileIds) {
+    if (!UUID_PATTERN.test(profileId)) {
       throw new RemoteTenantRehearsalError('candidate_contract_mismatch')
     }
     try {
-      const bundle = await exportTenant(source, candidate.trainer_id, now)
+      const bundle = selection.kind === 'smallest-eligible'
+        ? await exportTenant(source, profileId, now)
+        : await exportStandaloneClient(source, profileId, now)
       if (acceptCandidate !== undefined && !await acceptCandidate(bundle)) {
         stageRejectedCandidate = true
         continue
@@ -279,6 +364,10 @@ export async function exportSelectedTenant(
     throw new RemoteTenantRehearsalError('stage_candidate_not_found')
   }
   throw new RemoteTenantRehearsalError('candidate_not_found')
+}
+
+function isAutomaticSelection(selection: RemoteTenantSelection): boolean {
+  return selection.kind !== 'configured'
 }
 
 function readNonNegativeInteger(
@@ -497,7 +586,7 @@ export async function runRemoteTenantRehearsal(
       settings.tenantSelection,
       new Date(),
       settings.mode === 'dry-run'
-        && settings.tenantSelection.kind === 'smallest-eligible'
+        && isAutomaticSelection(settings.tenantSelection)
         ? async (candidate) => {
             const passphrase = randomBytes(48).toString('base64url')
             const envelope = await encryptMigrationBundle(candidate, passphrase)
@@ -548,6 +637,11 @@ export async function runRemoteTenantRehearsal(
     sourceConnection?.release()
     await sourcePool.end()
   }
+
+  requireExpectedTenantFingerprint(
+    bundle,
+    settings.expectedTenantFingerprint,
+  )
 
   if (automaticDryRun !== undefined) {
     printBundleSummary(bundle, automaticDryRun.encryptedBytes)

@@ -9,6 +9,7 @@ import type {
   TrainingProgressFactChange,
   TrainingProgressMetric,
   InputKind,
+  TrainingSummaryTriggerReason,
 } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { trainingSummaryQueries } from '../queries/training-summaries.queries'
@@ -204,8 +205,9 @@ export const trainingSummariesRepository = {
     periodStart: string,
     periodEnd: string,
     force = false,
+    triggerReason: TrainingSummaryTriggerReason = 'manual_refresh',
   ): Promise<{ generatedAt: string; cached: boolean }> {
-    const result = await trainingSummaryQueries.generate(clientId, periodStart, periodEnd, force)
+    const result = await trainingSummaryQueries.generate(clientId, periodStart, periodEnd, force, triggerReason)
     if (result.error) throw await summaryGenerationError(result.error)
     const payload = result.data as {
       error?: string

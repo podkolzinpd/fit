@@ -40,6 +40,7 @@ import { AppInstallPrompt } from '../install'
 import { NotificationOnboarding } from '../notifications'
 import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, KeyboardIcon } from '../../shared/icons'
 import { ChatHeaderAction } from '../chat'
+import { TrainerDiscoveryHomeCard } from '../clients/TrainerDiscoveryHomeCard'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -639,6 +640,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const header = todayHeaderProps(clientMode, actor)
   const pageTitle = greetingHeaderPilotEnabled ? greeting : header.title
   return <Page title={pageTitle} hideTitle={header.hideTitle} className="today-page today-start-page" action={<div className="today-header-actions"><ChatHeaderAction />{header.showProfileAvatar && <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}</div>}>
+    {actor && screen === 'compose' && !textComposerOpen && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} role={clientMode ? 'client' : 'trainer'} /></>}
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
       {!greetingHeaderPilotEnabled && <p className="today-greeting">{greeting} 👋</p>}
       {clientMode && !textComposerOpen ? <><ClientHomeOverview
@@ -659,14 +661,24 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           }
         }}
         selfTraining={<section className="client-home-self-training primary">
-          <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }} onPhaseChange={setVoicePhase} onTranscript={handleHeroTranscript} />
-          {voicePhase === 'idle' && <button type="button" className="link today-text-toggle" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button>}
+          <div className="today-voice-hero-compact">
+            <VoiceInputButton
+              variant="hero"
+              source="today_workout"
+              idleLabel="Надиктовать тренировку"
+              onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }}
+              onPhaseChange={setVoicePhase}
+              onTranscript={handleHeroTranscript}
+              secondaryAction={voicePhase === 'idle' ? <button type="button" className="today-voice-text-inline" aria-label="Ввести текстом" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}><KeyboardIcon /></button> : undefined}
+            />
+          </div>
           {restoredDraftScreen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
           {voiceRefinement?.state === 'error' && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
         </section>}
         showFirstRunConnection={actor?.kind === 'client' && actor.trainerId === actor.userId}
         wearable={actor && isWearablesPilotEnabled(actor.userId) ? <WearableHealthCard /> : undefined}
-      />{actor && (workouts.data?.length ?? 0) > 0 && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} /></>}</> : <>
+        trainerDiscovery={mine.data ? <TrainerDiscoveryHomeCard clientId={mine.data.id} /> : undefined}
+      /></> : <>
       {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}
       {!clientMode && firstPlanClient && !textComposerOpen && <TrainerFirstPlanPrompt clientName={firstPlanClient.fullName} />}
       {!textComposerOpen && <div className={greetingHeaderPilotEnabled ? 'today-voice-hero-compact' : undefined}>
@@ -699,7 +711,6 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </WorkoutComposer></div>}
       {voiceRefinement?.state === 'error' && !textComposerOpen && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
       {voicePhase === 'idle' && !restoredDraftScreen && <>{contextCard}{attentionSurface}</>}
-      {voicePhase === 'idle' && !textComposerOpen && actor && (clients.data?.length ?? 0) > 0 && <AppInstallPrompt userId={actor.userId} />}
       </>}
     </section> : <section className={`today-review workout-focused-page ${screen === 'save' ? 'today-save-step' : ''}`}>
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { setReordering(false); if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'} state={screen === 'save' && recordMode === 'completed' ? 'completed' : 'planned'} meta={screen === 'review' ? (items.length > 0 ? `Распознано: ${items.length}` : undefined) : 'Выберите вариант и дату'} /></div>

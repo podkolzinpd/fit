@@ -153,6 +153,9 @@ describe('training summaries repository', () => {
     expect(await trainingSummariesRepository.generate(clientId, '2026-08-01', '2026-08-31')).toEqual({
       generatedAt: '2026-09-03T00:00:00.000Z', cached: true,
     })
+    expect(queries.generate).toHaveBeenLastCalledWith(
+      clientId, '2026-08-01', '2026-08-31', false, 'manual_refresh',
+    )
     await trainingSummariesRepository.publish(summaries[0]!, clientSummary)
     await trainingSummariesRepository.unpublish(summaries[0]!)
   })

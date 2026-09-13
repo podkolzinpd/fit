@@ -17,6 +17,12 @@ import {
   type StageDatabaseReaderAccessAction,
   type StageDatabaseReaderAccessManager,
 } from './db/stage-database-reader-access.js'
+import {
+  StageRolloutProfileNotReadyError,
+  type StageRolloutAssignmentAction,
+  type StageRolloutAssignmentManager,
+  type StageRolloutAssignmentTarget,
+} from './db/stage-rollout-assignment.js'
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
 import type { StageTenantMigrationRunner } from './tenant-migration/stage-runner.js'
@@ -30,6 +36,7 @@ interface BuildMigrationAppOptions {
   databaseReaderAccess?: StageDatabaseReaderAccessManager
   logger?: boolean
   pilotEnrollment?: PilotEnrollmentOptions
+  rolloutAssignment?: StageRolloutAssignmentManager
   runMigrations: () => Promise<readonly string[]>
   runtimeDatabaseReadiness?: (
     sessionToken: string,
@@ -42,9 +49,31 @@ interface BuildMigrationAppOptions {
 const DATABASE_USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._@-]{0,62}$/
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const TENANT_FINGERPRINT_PATTERN = /^[0-9a-f]{16}$/
 const STAGE_TENANT_APPLY_CONFIRMATION = 'APPLY_TENANT_TO_YANDEX_STAGE'
 const STAGE_TENANT_ARTIFACT_LIMIT_BYTES = 3 * 1024 * 1024
 const SAFE_TENANT_MIGRATION_ERROR_PATTERN = /^[a-z0-9_.:-]{1,96}$/
+const SAFE_DATABASE_ERROR_CODE_PATTERN = /^[A-Z0-9]{5}$/i
+const SAFE_MIGRATION_ERROR_MESSAGE_PATTERN = /^[\p{L}\p{N}\s._:(),'"-]{1,500}$/u
+
+function migrationFailureDetails(error: unknown): {
+  code: string
+  message?: string
+} {
+  const code = typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && typeof error.code === 'string'
+    && SAFE_DATABASE_ERROR_CODE_PATTERN.test(error.code)
+    ? error.code
+    : 'unknown'
+  const message = error instanceof Error
+    && SAFE_MIGRATION_ERROR_MESSAGE_PATTERN.test(error.message)
+    ? error.message
+    : undefined
+
+  return { code, ...(message === undefined ? {} : { message }) }
+}
 
 function readTenantMigrationPassphrase(
   header: string | string[] | undefined,
@@ -105,6 +134,37 @@ function readEnrollmentRequest(body: unknown): {
   return { accessToken, accountRole }
 }
 
+function readRolloutAssignmentRequest(body: unknown): {
+  action: StageRolloutAssignmentAction
+  target: StageRolloutAssignmentTarget
+} | undefined {
+  if (typeof body !== 'object' || body === null) return undefined
+  if (!('action' in body)) return undefined
+  const action = body.action
+  if (
+    action !== 'inspect'
+    && action !== 'enable'
+    && action !== 'disable'
+  ) return undefined
+  const hasProfileId = 'profileId' in body
+  const hasTenantFingerprint = 'tenantFingerprint' in body
+  if (hasProfileId === hasTenantFingerprint) return undefined
+  if (hasProfileId) {
+    const profileId = body.profileId
+    if (typeof profileId !== 'string' || !UUID_PATTERN.test(profileId)) {
+      return undefined
+    }
+    return { action, target: { profileId } }
+  }
+  if (!('tenantFingerprint' in body)) return undefined
+  const tenantFingerprint = body.tenantFingerprint
+  if (
+    typeof tenantFingerprint !== 'string'
+    || !TENANT_FINGERPRINT_PATTERN.test(tenantFingerprint)
+  ) return undefined
+  return { action, target: { tenantFingerprint } }
+}
+
 export function buildMigrationApp(
   options: BuildMigrationAppOptions,
 ): FastifyInstance {
@@ -112,12 +172,20 @@ export function buildMigrationApp(
 
   app.get('/health', () => ({ status: 'ok' }))
 
-  app.post('/migrate', async (_request, reply) => {
+  app.post('/migrate', async (request, reply) => {
     try {
       const migrations = await options.runMigrations()
       return { status: 'migrated', migrations }
-    } catch {
-      return reply.code(500).send({ status: 'migration_failed' })
+    } catch (error) {
+      const details = migrationFailureDetails(error)
+      request.log.error(
+        { migrationErrorCode: details.code },
+        'Database migration failed',
+      )
+      return reply.code(500).send({
+        status: 'migration_failed',
+        error: details,
+      })
     }
   })
 
@@ -174,6 +242,39 @@ export function buildMigrationApp(
           return reply.code(409).send({ status: 'database_user_not_ready' })
         }
         return reply.code(500).send({ status: 'database_access_failed' })
+      }
+    })
+  }
+
+  if (options.rolloutAssignment !== undefined) {
+    const rolloutAssignment = options.rolloutAssignment
+    app.post('/stage/rollout-assignments/yandex', async (request, reply) => {
+      const rolloutRequest = readRolloutAssignmentRequest(request.body)
+      if (rolloutRequest === undefined) {
+        return reply.code(400).send({ status: 'invalid_request' })
+      }
+
+      try {
+        const result = await rolloutAssignment.apply(
+          rolloutRequest.action,
+          rolloutRequest.target,
+        )
+        return {
+          status: rolloutRequest.action === 'inspect'
+            ? 'rollout_inspected'
+            : rolloutRequest.action === 'enable'
+              ? 'rollout_enabled'
+              : 'rollout_disabled',
+          accountRole: result.accountRole,
+          domainReady: result.domainReady,
+          identityLinked: result.identityLinked,
+          rolloutEnabled: result.rolloutEnabled,
+        }
+      } catch (error) {
+        if (error instanceof StageRolloutProfileNotReadyError) {
+          return reply.code(409).send({ status: 'profile_not_ready' })
+        }
+        return reply.code(500).send({ status: 'rollout_assignment_failed' })
       }
     })
   }

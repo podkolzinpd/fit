@@ -11,6 +11,7 @@ import type {
   JsonValue,
   TenantMigrationBundle,
   TenantMigrationEnvelope,
+  TenantMigrationRoot,
   TenantMigrationTable,
 } from './types.js'
 
@@ -82,6 +83,21 @@ export function fingerprintTenant(trainerId: string): string {
     .slice(0, 16)
 }
 
+export function fingerprintStandaloneClient(clientProfileId: string): string {
+  return createHash('sha256')
+    .update(`fit-standalone-client-v1:${clientProfileId}`)
+    .digest('hex')
+    .slice(0, 16)
+}
+
+export function getTenantMigrationRoot(
+  bundle: TenantMigrationBundle,
+): TenantMigrationRoot {
+  return bundle.format === 'fit-tenant-bundle-v1'
+    ? { kind: 'trainer', profileId: bundle.trainerId }
+    : { kind: 'standalone-client', profileId: bundle.clientProfileId }
+}
+
 export function buildMigrationTable(
   name: string,
   rows: readonly JsonObject[],
@@ -118,30 +134,50 @@ function readMigrationTable(value: unknown): TenantMigrationTable {
 }
 
 export function readMigrationBundle(value: unknown): TenantMigrationBundle {
-  if (!isRecord(value) || value.format !== 'fit-tenant-bundle-v1') {
+  if (
+    !isRecord(value)
+    || (
+      value.format !== 'fit-tenant-bundle-v1'
+      && value.format !== 'fit-standalone-client-bundle-v1'
+    )
+  ) {
     throw new TenantMigrationArtifactError('artifact_invalid')
   }
   const createdAt = readString(value, 'createdAt')
   const tenantFingerprint = readString(value, 'tenantFingerprint')
-  const trainerId = readString(value, 'trainerId')
+  const rootProfileId = readString(
+    value,
+    value.format === 'fit-tenant-bundle-v1' ? 'trainerId' : 'clientProfileId',
+  )
+  const expectedFingerprint = value.format === 'fit-tenant-bundle-v1'
+    ? fingerprintTenant(rootProfileId)
+    : fingerprintStandaloneClient(rootProfileId)
   if (
     Number.isNaN(Date.parse(createdAt))
     || !/^[0-9a-f]{16}$/.test(tenantFingerprint)
-    || !UUID_PATTERN.test(trainerId)
-    || fingerprintTenant(trainerId) !== tenantFingerprint
+    || !UUID_PATTERN.test(rootProfileId)
+    || expectedFingerprint !== tenantFingerprint
     || !Array.isArray(value.tables)
   ) throw new TenantMigrationArtifactError('artifact_invalid')
   const tables = value.tables.map(readMigrationTable)
   if (new Set(tables.map((table) => table.name)).size !== tables.length) {
     throw new TenantMigrationArtifactError('artifact_invalid')
   }
-  return {
-    format: 'fit-tenant-bundle-v1',
-    createdAt,
-    tenantFingerprint,
-    trainerId,
-    tables,
-  }
+  return value.format === 'fit-tenant-bundle-v1'
+    ? {
+        format: 'fit-tenant-bundle-v1',
+        createdAt,
+        tenantFingerprint,
+        trainerId: rootProfileId,
+        tables,
+      }
+    : {
+        format: 'fit-standalone-client-bundle-v1',
+        createdAt,
+        tenantFingerprint,
+        clientProfileId: rootProfileId,
+        tables,
+      }
 }
 
 function deriveKey(passphrase: string, salt: Buffer): Promise<Buffer> {

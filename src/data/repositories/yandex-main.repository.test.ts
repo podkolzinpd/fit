@@ -56,6 +56,8 @@ const criterionId = '0bed7147-4e6c-49d2-bba9-d88f2579e9f0'
 const invitationId = '8fc45130-9bcf-4b77-9ff7-f0872a354034'
 const summaryId = '00b88f4f-e17a-47ae-9d2e-c68079217ac5'
 const publishedSummaryId = 'e7335649-0713-44a7-9640-5453a3849dca'
+const conversationId = '3a6cc527-7bbd-4217-8a76-77de34a2c0fe'
+const publicProfileId = '0ee2e109-13e0-48ba-8664-7cc767128f0c'
 
 function jsonResponse(body: object, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -73,6 +75,50 @@ describe('Yandex main repository', () => {
     pilot.parseWorkout.mockReset()
     push.subscribe.mockReset()
     push.unsubscribe.mockReset()
+  })
+
+  it('reads and updates the trainer discovery prompt', async () => {
+    const visible = { state: 'visible', remindAt: null, updatedAt: null }
+    const snoozed = {
+      state: 'snoozed',
+      remindAt: '2026-10-12T09:00:00.000Z',
+      updatedAt: '2026-09-12T09:00:00.000Z',
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(visible))
+      .mockResolvedValueOnce(jsonResponse(snoozed))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.trainerDiscovery.getPromptPreference()).resolves.toEqual(visible)
+    await expect(repository.trainerDiscovery.setPromptPreference('snooze')).resolves.toEqual(snoozed)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${apiBaseUrl}/v1/trainer-discovery/prompt`)
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      method: 'PUT',
+      body: JSON.stringify({ action: 'snooze' }),
+    })
+  })
+
+  it('requests and validates a page of public trainers', async () => {
+    const draft = {
+      displayName: 'Анна', bio: '', specialties: [], city: '', trainingModes: [],
+      experienceStartYear: null, education: '', formats: '', price: '', acceptingClients: true,
+      avatarDataUrl: null, certificates: [],
+    }
+    const profile = {
+      publicId: publicProfileId, draft, published: draft, listedInCatalog: true,
+      publishedAt: '2026-09-13T01:00:00.000Z', updatedAt: '2026-09-13T01:00:00.000Z', version: 1,
+    }
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [profile], totalCount: 21, nextOffset: 20 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.trainerProfiles.listCatalog({
+      query: 'Анна', specialty: '', city: '', mode: 'online', acceptingClients: true,
+    }, { offset: 0, limit: 20 })).resolves.toEqual({ items: [profile], totalCount: 21, nextOffset: 20 })
+    const requested = new URL(String(fetchMock.mock.calls[0]?.[0]))
+    expect(requested.pathname).toBe('/v1/trainers/catalog')
+    expect(Object.fromEntries(requested.searchParams)).toEqual({ query: 'Анна', mode: 'online', accepting: 'true', offset: '0', limit: '20' })
   })
 
   it('creates a quick client without fabricating profile measurements', async () => {
@@ -433,6 +479,17 @@ describe('Yandex main repository', () => {
     expect(onChange).toHaveBeenCalledOnce()
     unsubscribe()
   })
+
+  it('uses the Yandex API for public trainer chat and its connection invitation', async () => {
+    vi.stubGlobal('fetch', installContractFetch())
+    installTrainingData()
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.chat.openPublicTrainer(publicProfileId)).resolves.toBe(conversationId)
+    await expect(repository.chat.connectionState(conversationId)).resolves.toMatchObject({ canInvite: true })
+    await expect(repository.chat.inviteToConnect(conversationId)).resolves.toMatchObject({ invitationPending: true })
+    await expect(repository.chat.acceptConnection(conversationId)).resolves.toMatchObject({ activeConnection: true })
+  })
 })
 
 let summaryMode: 'internal' | 'published' = 'internal'
@@ -573,6 +630,10 @@ function installContractFetch() {
         : jsonResponse({ summaries: [{ id: summaryId, client_id: clientId, period_start: '2026-08-01', period_end: '2026-08-31', trainer_summary: { headline: 'Итог', progress: ['Рост'], consistency: 'Стабильно', attention: [] }, client_summary: clientSummary, display_metrics: metrics, generated_at: '2026-09-01T00:00:00.000Z', version: 1, published: false }] })
     }
     if (method === 'GET' && path === '/v1/push-notifications/status') return jsonResponse({ status: { subscribed: true, preferences: { workout_reminder: true, workout_scheduled: false, chat_message: true } } })
+    if (method === 'POST' && path === `/v1/trainers/${publicProfileId}/chat`) return jsonResponse({ conversationId })
+    if (method === 'GET' && path === `/v1/chat/conversations/${conversationId}/connection`) return jsonResponse({ state: { activeConnection: false, invitationPending: false, invitedAt: null, canInvite: true, canAccept: false, trainerSwitchRequired: false } })
+    if (method === 'POST' && path === `/v1/chat/conversations/${conversationId}/connection/invite`) return jsonResponse({ state: { activeConnection: false, invitationPending: true, invitedAt: '2026-09-12T10:00:00.000Z', canInvite: true, canAccept: false, trainerSwitchRequired: false } })
+    if (method === 'POST' && path === `/v1/chat/conversations/${conversationId}/connection/accept`) return jsonResponse({ state: { activeConnection: true, invitationPending: false, invitedAt: '2026-09-12T10:00:00.000Z', canInvite: false, canAccept: false, trainerSwitchRequired: false } })
     if (method === 'POST' && path === '/v1/push-notifications/subscription/status') return jsonResponse({ subscribed: true })
     if (path === '/v1/assistant/yandex/suggest-goal-criteria') return jsonResponse({ criteria: [], needsInput: [], unsupportedReason: null })
     if (path.endsWith('/training-summaries/generate')) return jsonResponse({ data: { generated_at: '2026-09-01T00:00:00.000Z' }, cached: false })

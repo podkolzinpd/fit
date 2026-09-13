@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { emptyTrainerProfileDraft, parseTrainerProfile, validatePublishableTrainerProfile } from './trainer-profile'
 
 describe('trainer profile', () => {
-  it('keeps incomplete drafts editable but blocks their publication', () => {
+  it('allows a trainer to publish a profile with only the account name', () => {
     const draft = emptyTrainerProfileDraft('Анна Иванова')
-    expect(validatePublishableTrainerProfile(draft)).toBe('Расскажите о себе чуть подробнее — от 40 символов.')
+    expect(validatePublishableTrainerProfile(draft)).toBeNull()
+  })
+
+  it('still requires a readable trainer name', () => {
+    expect(validatePublishableTrainerProfile(emptyTrainerProfileDraft('А'))).toBe('Укажите имя тренера.')
   })
 
   it('accepts a complete profile and its published snapshot', () => {

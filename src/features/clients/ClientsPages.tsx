@@ -15,7 +15,7 @@ import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
-import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, ScheduleIcon } from '../../shared/icons'
+import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, KeyboardIcon, ScheduleIcon } from '../../shared/icons'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { ChatStartButton } from '../chat'
 
@@ -42,8 +42,16 @@ export function MyClientPage() {
   return <Page title="Кабинет" className="client-home-page">
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       <ClientFirstRunIntro actions={<section className="client-home-self-training primary">
-        <VoiceInputButton variant="hero" source="today_workout" idleLabel="Надиктовать тренировку" onPhaseChange={setVoicePhase} onTranscript={(transcript) => quickStart.mutateAsync({ mode: 'voice', transcript })} />
-        {voicePhase === 'idle' && <button type="button" className="link today-text-toggle" disabled={quickStart.isPending} onClick={() => quickStart.mutate({ mode: 'text' })}>Ввести текстом</button>}
+        <div className="today-voice-hero-compact">
+          <VoiceInputButton
+            variant="hero"
+            source="today_workout"
+            idleLabel="Надиктовать тренировку"
+            onPhaseChange={setVoicePhase}
+            onTranscript={(transcript) => quickStart.mutateAsync({ mode: 'voice', transcript })}
+            secondaryAction={voicePhase === 'idle' ? <button type="button" className="today-voice-text-inline" aria-label="Ввести текстом" disabled={quickStart.isPending} onClick={() => quickStart.mutate({ mode: 'text' })}><KeyboardIcon /></button> : undefined}
+          />
+        </div>
         {quickStart.error && <p className="error" role="alert">{quickStart.error.message}</p>}
       </section>} />
     </AsyncView>

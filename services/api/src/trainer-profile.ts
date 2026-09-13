@@ -25,6 +25,13 @@ export type TrainerCatalogFilters = {
   acceptingClients: boolean | null
 }
 
+export type TrainerCatalogPageOptions = { offset: number; limit: number }
+export type TrainerCatalogPage = {
+  items: Array<ReturnType<typeof response>>
+  totalCount: number
+  nextOffset: number | null
+}
+
 interface TrainerProfileRow extends QueryResultRow {
   public_id: string
   draft_data: TrainerProfileDraft
@@ -99,7 +106,7 @@ export interface PilotTrainerProfiles {
   unpublish(session: YandexActorSessionInput): Promise<ReturnType<typeof response>>
   setCatalogListing(session: YandexActorSessionInput, listed: boolean): Promise<ReturnType<typeof response>>
   getPublic(publicId: string): Promise<ReturnType<typeof response> | null>
-  listPublic(filters: TrainerCatalogFilters): Promise<Array<ReturnType<typeof response>>>
+  listPublic(filters: TrainerCatalogFilters, page: TrainerCatalogPageOptions): Promise<TrainerCatalogPage>
 }
 
 export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
@@ -136,10 +143,10 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
       const current = await client.query<TrainerProfileRow>('select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update')
       const row = current[0]
       if (row === undefined) throw new TrainerProfileError('not_found')
-      if (row.draft_data.bio.trim().length < 40 || row.draft_data.specialties.length === 0
-        || row.draft_data.trainingModes.length === 0) throw new TrainerProfileError('invalid')
+      if (row.draft_data.displayName.trim().length < 2) throw new TrainerProfileError('invalid')
       const rows = await client.query<TrainerProfileRow>(`
         update public.trainer_professional_profiles set published_data = draft_data,
+          listed_in_catalog = case when published_data is null then true else listed_in_catalog end,
           published_at = now(), version = version + 1
         where trainer_id = auth.uid() returning *
       `)
@@ -186,7 +193,7 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
     }
   }
 
-  async listPublic(filters: TrainerCatalogFilters) {
+  async listPublic(filters: TrainerCatalogFilters, page: TrainerCatalogPageOptions) {
     const connection = await this.pool.connect()
     const clauses = ['published_data is not null', 'listed_in_catalog = true']
     const values: unknown[] = []
@@ -205,14 +212,22 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
       clauses.push(`(published_data->>'acceptingClients')::boolean = ${add(filters.acceptingClients)}`)
     }
     try {
+      const countRows = await connection.query<{ total: string }>(`
+        select count(*)::text as total from public.trainer_professional_profiles
+        where ${clauses.join(' and ')}
+      `, values)
+      const offsetParam = add(page.offset)
+      const limitParam = add(page.limit)
       const rows = await connection.query<TrainerProfileRow>(`
         select * from public.trainer_professional_profiles
         where ${clauses.join(' and ')}
         order by ((published_data->>'acceptingClients')::boolean) desc,
-          published_at desc, published_data->>'displayName'
-        limit 100
+          published_at desc, lower(published_data->>'displayName'), public_id
+        offset ${offsetParam} limit ${limitParam}
       `, values)
-      return rows.map(response)
+      const totalCount = Number(countRows[0]?.total ?? 0)
+      const next = page.offset + rows.length
+      return { items: rows.map(response), totalCount, nextOffset: next < totalCount ? next : null }
     } finally {
       connection.release()
     }

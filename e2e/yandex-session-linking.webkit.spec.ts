@@ -53,7 +53,7 @@ test('Yandex session linking entry is visible for an allowlisted client', async 
   )
   await signIn(page, 'client@fit.local', /\/me$/)
 
-  await page.goto('/me/profile')
+  await page.goto('/me/settings')
 
   await expect(page.getByRole('heading', { name: 'Привязать Yandex ID' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Привязать Yandex ID' })).toBeVisible()

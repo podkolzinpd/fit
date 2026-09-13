@@ -15,7 +15,7 @@ import {
 
 const TEST_PUSH_TIMEOUT_MS = 12_000
 
-export function NotificationOnboarding({ userId }: { userId: string }) {
+export function NotificationOnboarding({ userId, role = 'client' }: { userId: string; role?: 'trainer' | 'client' }) {
   const { pushNotifications: pushNotificationsRepository, source } = useDataBackend()
   const queryClient = useQueryClient()
   const webSupported = isPushSupported()
@@ -72,7 +72,7 @@ export function NotificationOnboarding({ userId }: { userId: string }) {
         return
       }
       await pushNotificationsRepository.enable(userId)
-      await pushNotificationsRepository.setCategoryEnabled(userId, WORKOUT_SCHEDULED_KIND, true)
+      if (role === 'client') await pushNotificationsRepository.setCategoryEnabled(userId, WORKOUT_SCHEDULED_KIND, true)
       await pushNotificationsRepository.setCategoryEnabled(userId, CHAT_MESSAGE_KIND, true)
 
       if (source === 'supabase') {
@@ -110,7 +110,9 @@ export function NotificationOnboarding({ userId }: { userId: string }) {
     <div>
       <p className="eyebrow">УВЕДОМЛЕНИЯ</p>
       <h2 id="push-onboarding-title">Включите уведомления</h2>
-      <p>{nativeSupported ? 'Напомним, если активная тренировка останется незавершённой.' : 'Получайте напоминания о тренировках и новые записи от тренера.'}</p>
+      <p>{nativeSupported
+        ? 'Напомним о незавершённой тренировке.'
+        : role === 'trainer' ? 'Сообщим о новых сообщениях.' : 'Сообщим о тренировках и новых сообщениях.'}</p>
     </div>
     {phase === 'success' && <p className="app-install-success" role="status">{message}</p>}
     {phase === 'error' && <small className="error">{message}</small>}

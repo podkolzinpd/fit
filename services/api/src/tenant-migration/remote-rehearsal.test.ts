@@ -10,6 +10,7 @@ import {
   readStageTenantConflictCode,
   readSourceDatabaseFailureCode,
   readRemoteTenantRehearsalSettings,
+  requireExpectedTenantFingerprint,
   readStageTenantMigrationRejectionCode,
   readStageTenantMigrationResponse,
   RemoteTenantRehearsalError,
@@ -18,6 +19,7 @@ import type { TenantMigrationBundle } from './types.js'
 
 const TRAINER_ID = '10000000-0000-4000-8000-000000000001'
 const SECOND_TRAINER_ID = '20000000-0000-4000-8000-000000000002'
+const CLIENT_PROFILE_ID = '30000000-0000-4000-8000-000000000003'
 const PROJECT_ID = 'abcdefghijklmnopqrst'
 const SOURCE_ENVIRONMENT = {
   FIT_TENANT_REHEARSAL_MODE: 'audit',
@@ -41,6 +43,13 @@ const BUNDLE: TenantMigrationBundle = {
       rows: [],
     },
   ],
+}
+
+function trainerIdOf(bundle: TenantMigrationBundle): string {
+  if (bundle.format !== 'fit-tenant-bundle-v1') {
+    throw new Error('trainer bundle expected')
+  }
+  return bundle.trainerId
 }
 
 describe('remote tenant rehearsal configuration', () => {
@@ -117,7 +126,7 @@ describe('remote tenant rehearsal configuration', () => {
     )).toThrowError(new RemoteTenantRehearsalError('apply_not_confirmed'))
   })
 
-  it('allows automatic selection only for audit and dry-run', () => {
+  it('requires a rehearsed fingerprint for automatic apply selection', () => {
     const audit = readRemoteTenantRehearsalSettings(
       {
         ...SOURCE_ENVIRONMENT,
@@ -138,9 +147,74 @@ describe('remote tenant rehearsal configuration', () => {
         FIT_TENANT_TRAINER_ID: undefined,
       },
       () => 'trusted-ca',
-    )).toThrowError(
-      new RemoteTenantRehearsalError('automatic_apply_forbidden'),
+    )).toThrowError(new RemoteTenantRehearsalError(
+      'tenant_fingerprint_required',
+    ))
+
+    const apply = readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_REHEARSAL_MODE: 'apply',
+        FIT_TENANT_REMOTE_APPLY_CONFIRMATION:
+          'APPLY_TENANT_TO_YANDEX_STAGE',
+        FIT_TENANT_SELECTION_MODE: 'smallest-eligible',
+        FIT_TENANT_EXPECTED_FINGERPRINT: 'a'.repeat(16),
+        FIT_TENANT_STAGE_CONTAINER_URL:
+          'https://bba123stage.containers.yandexcloud.net',
+        FIT_TENANT_TRAINER_ID: undefined,
+        YC_TOKEN: 'ephemeral-iam-token',
+      },
+      () => 'trusted-ca',
     )
+    expect(apply.tenantSelection).toEqual({ kind: 'smallest-eligible' })
+    expect(apply.expectedTenantFingerprint).toBe('a'.repeat(16))
+
+    const standalone = readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_SELECTION_MODE: 'smallest-eligible-standalone-client',
+        FIT_TENANT_TRAINER_ID: undefined,
+      },
+      () => 'trusted-ca',
+    )
+    expect(standalone.tenantSelection).toEqual({
+      kind: 'smallest-eligible-standalone-client',
+    })
+
+    const completeStandalone = readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_SELECTION_MODE: 'most-complete-standalone-client',
+        FIT_TENANT_TRAINER_ID: undefined,
+      },
+      () => 'trusted-ca',
+    )
+    expect(completeStandalone.tenantSelection).toEqual({
+      kind: 'most-complete-standalone-client',
+    })
+  })
+
+  it('rejects a malformed or changed tenant fingerprint', () => {
+    expect(() => readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_EXPECTED_FINGERPRINT: 'not-a-fingerprint',
+      },
+      () => 'trusted-ca',
+    )).toThrowError(new RemoteTenantRehearsalError(
+      'tenant_fingerprint_invalid',
+    ))
+
+    expect(() => requireExpectedTenantFingerprint(
+      BUNDLE,
+      'c'.repeat(16),
+    )).toThrowError(new RemoteTenantRehearsalError(
+      'tenant_fingerprint_mismatch',
+    ))
+    expect(() => requireExpectedTenantFingerprint(
+      BUNDLE,
+      BUNDLE.tenantFingerprint,
+    )).not.toThrow()
   })
 })
 
@@ -176,7 +250,7 @@ describe('automatic source tenant selection', () => {
       new Date('2026-09-07T12:00:00.000Z'),
     )
 
-    expect(bundle.trainerId).toBe(SECOND_TRAINER_ID)
+    expect(trainerIdOf(bundle)).toBe(SECOND_TRAINER_ID)
     expect(bundle.createdAt).toBe('2026-09-07T12:00:00.000Z')
     expect(preflight).toBe(2)
   })
@@ -235,7 +309,7 @@ describe('automatic source tenant selection', () => {
       return Promise.resolve([])
     }) as unknown as DatabaseClient['query']
     const acceptCandidate = vi.fn((bundle: TenantMigrationBundle) =>
-      Promise.resolve(bundle.trainerId === SECOND_TRAINER_ID))
+      Promise.resolve(trainerIdOf(bundle) === SECOND_TRAINER_ID))
 
     const bundle = await exportSelectedTenant(
       { query },
@@ -244,8 +318,8 @@ describe('automatic source tenant selection', () => {
       acceptCandidate,
     )
 
-    expect(bundle.trainerId).toBe(SECOND_TRAINER_ID)
-    expect(acceptCandidate.mock.calls.map(([candidate]) => candidate.trainerId))
+    expect(trainerIdOf(bundle)).toBe(SECOND_TRAINER_ID)
+    expect(acceptCandidate.mock.calls.map(([candidate]) => trainerIdOf(candidate)))
       .toEqual([TRAINER_ID, SECOND_TRAINER_ID])
   })
 
@@ -277,6 +351,71 @@ describe('automatic source tenant selection', () => {
     )).rejects.toEqual(
       new RemoteTenantRehearsalError('stage_candidate_not_found'),
     )
+  })
+
+  it('selects an unlinked standalone client without requiring a trainer secret', async () => {
+    const query = vi.fn((sql: string) => {
+      if (sql.includes('as client_profile_exists')) {
+        return Promise.resolve([{
+          client_profile_exists: true,
+          owned_client_count: 1,
+          has_non_standalone_root: false,
+          has_membership: false,
+          has_active_relationship: false,
+          has_cross_boundary_merge: false,
+          has_pending_push: false,
+          has_chat_media: false,
+        }])
+      }
+      if (sql.includes("profile.account_role = 'client'")) {
+        return Promise.resolve([{ profile_id: CLIENT_PROFILE_ID }])
+      }
+      return Promise.resolve([])
+    }) as unknown as DatabaseClient['query']
+
+    const bundle = await exportSelectedTenant(
+      { query },
+      { kind: 'smallest-eligible-standalone-client' },
+      new Date('2026-09-11T12:00:00.000Z'),
+    )
+
+    expect(bundle).toMatchObject({
+      format: 'fit-standalone-client-bundle-v1',
+      clientProfileId: CLIENT_PROFILE_ID,
+      createdAt: '2026-09-11T12:00:00.000Z',
+    })
+  })
+
+  it('selects the standalone client with the most workouts for a full rehearsal', async () => {
+    const query = vi.fn((sql: string) => {
+      if (sql.includes('order by count(workout.id) desc')) {
+        return Promise.resolve([{ profile_id: CLIENT_PROFILE_ID }])
+      }
+      if (sql.includes('as client_profile_exists')) {
+        return Promise.resolve([{
+          client_profile_exists: true,
+          owned_client_count: 1,
+          has_non_standalone_root: false,
+          has_membership: false,
+          has_active_relationship: false,
+          has_cross_boundary_merge: false,
+          has_pending_push: false,
+          has_chat_media: false,
+        }])
+      }
+      return Promise.resolve([])
+    }) as unknown as DatabaseClient['query']
+
+    const bundle = await exportSelectedTenant(
+      { query },
+      { kind: 'most-complete-standalone-client' },
+      new Date('2026-09-11T12:00:00.000Z'),
+    )
+
+    expect(bundle).toMatchObject({
+      format: 'fit-standalone-client-bundle-v1',
+      clientProfileId: CLIENT_PROFILE_ID,
+    })
   })
 })
 

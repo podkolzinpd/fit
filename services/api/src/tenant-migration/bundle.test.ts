@@ -5,13 +5,16 @@ import {
   canonicalJson,
   decryptMigrationBundle,
   encryptMigrationBundle,
+  fingerprintStandaloneClient,
   fingerprintTenant,
+  getTenantMigrationRoot,
   readMigrationBundle,
   TenantMigrationArtifactError,
 } from './bundle.js'
 import type { TenantMigrationBundle } from './types.js'
 
 const TRAINER_ID = '11111111-1111-4111-8111-111111111111'
+const CLIENT_PROFILE_ID = '22222222-2222-4222-8222-222222222222'
 const PASSPHRASE = 'local-test-passphrase-with-32-characters'
 
 function buildBundle(): TenantMigrationBundle {
@@ -23,6 +26,20 @@ function buildBundle(): TenantMigrationBundle {
     tables: [
       buildMigrationTable('public.profiles', [
         { id: TRAINER_ID, timezone: 'Europe/Moscow' },
+      ]),
+    ],
+  }
+}
+
+function buildStandaloneBundle(): TenantMigrationBundle {
+  return {
+    format: 'fit-standalone-client-bundle-v1',
+    createdAt: '2026-09-01T10:00:00.000Z',
+    tenantFingerprint: fingerprintStandaloneClient(CLIENT_PROFILE_ID),
+    clientProfileId: CLIENT_PROFILE_ID,
+    tables: [
+      buildMigrationTable('public.profiles', [
+        { id: CLIENT_PROFILE_ID, timezone: 'Europe/Moscow' },
       ]),
     ],
   }
@@ -52,6 +69,19 @@ describe('tenant migration bundle', () => {
     await expect(decryptMigrationBundle(envelope, PASSPHRASE)).resolves.toEqual(bundle)
   })
 
+  it('keeps standalone client artifacts distinct from trainer tenants', async () => {
+    const bundle = buildStandaloneBundle()
+    expect(bundle.tenantFingerprint).not.toBe(fingerprintTenant(CLIENT_PROFILE_ID))
+    expect(getTenantMigrationRoot(bundle)).toEqual({
+      kind: 'standalone-client',
+      profileId: CLIENT_PROFILE_ID,
+    })
+
+    const envelope = await encryptMigrationBundle(bundle, PASSPHRASE)
+    expect(JSON.stringify(envelope)).not.toContain(CLIENT_PROFILE_ID)
+    await expect(decryptMigrationBundle(envelope, PASSPHRASE)).resolves.toEqual(bundle)
+  })
+
   it('rejects a wrong passphrase and tampered table checksum', async () => {
     const bundle = buildBundle()
     const envelope = await encryptMigrationBundle(bundle, PASSPHRASE)
@@ -72,6 +102,12 @@ describe('tenant migration bundle', () => {
     const bundle = buildBundle()
     bundle.tenantFingerprint = '0000000000000000'
     expect(() => readMigrationBundle(bundle)).toThrowError(
+      TenantMigrationArtifactError,
+    )
+
+    const standalone = buildStandaloneBundle()
+    standalone.tenantFingerprint = fingerprintTenant(CLIENT_PROFILE_ID)
+    expect(() => readMigrationBundle(standalone)).toThrowError(
       TenantMigrationArtifactError,
     )
   })

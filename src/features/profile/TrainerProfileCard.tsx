@@ -20,11 +20,12 @@ function Certificates({ profile }: { profile: TrainerProfileDraft }) {
   </ul>
 }
 
-export function TrainerProfileCard({ profile, publicView = false, compact = false, action, footer }: {
+export function TrainerProfileCard({ profile, publicView = false, compact = false, action, primaryAction, footer }: {
   profile: TrainerProfileDraft
   publicView?: boolean
   compact?: boolean
   action?: ReactNode
+  primaryAction?: ReactNode
   footer?: ReactNode
 }) {
   const experience = experienceLabel(profile.experienceStartYear)
@@ -41,6 +42,7 @@ export function TrainerProfileCard({ profile, publicView = false, compact = fals
     {profile.specialties.length > 0 && <ul className="trainer-specialties" aria-label="Направления">
       {profile.specialties.map((item) => <li key={item}>{item}</li>)}
     </ul>}
+    {primaryAction && <div className="trainer-card-primary-action">{primaryAction}</div>}
     {compact
       ? profile.bio && <details className="trainer-card-disclosure"><summary><span>Подробнее о тренере</span><ChevronDownIcon /></summary><p className="trainer-card-bio">{profile.bio}</p></details>
       : profile.bio && <p className="trainer-card-bio">{profile.bio}</p>}

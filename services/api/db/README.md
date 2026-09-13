@@ -105,6 +105,18 @@ import and rolls it back. Apply requires an independent exact confirmation and
 the calling workflow immediately repeats it to prove `inserted=0`. These routes
 do not create rollout assignments or change frontend routing.
 
+The private runner also exposes a bounded rollout-assignment route only when
+`APP_ENV=stage` and `STAGE_ROLLOUT_ASSIGNMENTS_ENABLED=true`. The manual
+`Manage Yandex stage rollout` workflow takes the non-reversible fingerprint
+recorded by the successful tenant apply from the
+`FIT_YANDEX_ROLLOUT_TENANT_FINGERPRINT` repository variable and supports
+idempotent inspect, enable and disable operations. The private runner resolves
+exactly one matching profile without exposing its UUID. Enable first verifies
+that the migrated profile and its role-specific domain root exist, then writes
+only the `yandex`/`read_write` assignment. Disable invalidates matching app sessions
+through the existing resolver contract without deleting tenant data. The route
+does not run migrations, update Vercel flags or create cloud resources.
+
 ## Roles
 
 - `fit_owner` owns the `fit` database and runs migrations only;

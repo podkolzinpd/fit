@@ -18,6 +18,7 @@ import type {
   TrainerAttentionWorkout,
   TrainerMembership,
   TrainerCatalogFilters,
+  TrainerDiscoveryPromptAction,
   TrainerProfileDraft,
   Workout,
   WorkoutDraft,
@@ -25,6 +26,7 @@ import type {
   WorkoutSetDraft,
   WorkoutSummary,
 } from '../../shared/domain'
+import { parseTrainerDiscoveryPrompt } from './trainer-discovery.repository'
 import { localDate } from '../../shared/local-date'
 import { validateGoalCriteriaSuggestion } from '../../shared/goal-criteria-suggestions'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
@@ -49,8 +51,18 @@ const chatThreadSchema = z.object({
   conversationId: uuid.nullable(), clientId: uuid, trainerId: uuid, partnerUserId: uuid,
   partnerName: z.string(), activeConnection: z.boolean(), lastMessageBody: z.string().nullable(),
   lastMessageAt: z.iso.datetime().nullable(), lastMessageSenderId: uuid.nullable(), unreadCount: z.number().int().nonnegative(),
+  canMessage: z.boolean(), blockedByMe: z.boolean(), blockedByPartner: z.boolean(),
 })
-const chatMessageSchema = z.object({ id: uuid, conversationId: uuid, senderId: uuid, body: z.string(), createdAt: z.iso.datetime() })
+const chatConnectionSchema = z.object({
+  activeConnection: z.boolean(), invitationPending: z.boolean(), invitedAt: z.iso.datetime().nullable(),
+  canInvite: z.boolean(), canAccept: z.boolean(), trainerSwitchRequired: z.boolean(),
+})
+const chatMessageSchema = z.object({
+  id: uuid, conversationId: uuid, senderId: uuid, body: z.string(), createdAt: z.iso.datetime(),
+  editedAt: z.iso.datetime().nullable(),
+  replyTo: z.object({ messageId: uuid, senderId: uuid.nullable(), body: z.string().nullable(), hasImage: z.boolean(), deleted: z.boolean() }).nullable(),
+  image: z.object({ url: z.url().nullable(), mimeType: z.literal('image/jpeg'), width: z.number().int().positive(), height: z.number().int().positive(), sizeBytes: z.number().int().positive() }).nullable(),
+})
 const clientSchema = z.object({
   id: uuid,
   hasAccount: z.boolean(),
@@ -268,7 +280,7 @@ async function readJson<Schema extends z.ZodType>(
 async function writeJson<Schema extends z.ZodType>(
   queries: YandexMainQueries,
   path: string,
-  method: 'DELETE' | 'POST' | 'PUT',
+  method: 'DELETE' | 'PATCH' | 'POST' | 'PUT',
   body: object | undefined,
   schema: Schema,
 ): Promise<z.output<Schema>> {
@@ -595,15 +607,31 @@ export function createYandexMainRepository(
       async setCatalogListing(listed: boolean) {
         return writeJson(queries, '/v1/trainer-profile/catalog', 'POST', { listed }, trainerProfessionalProfileSchema)
       },
-      async listCatalog(filters: TrainerCatalogFilters) {
+      async listCatalog(filters: TrainerCatalogFilters, page) {
         const params = new URLSearchParams()
         if (filters.query) params.set('query', filters.query)
         if (filters.specialty) params.set('specialty', filters.specialty)
         if (filters.city) params.set('city', filters.city)
         if (filters.mode) params.set('mode', filters.mode)
         if (filters.acceptingClients !== null) params.set('accepting', String(filters.acceptingClients))
+        params.set('offset', String(page.offset))
+        params.set('limit', String(page.limit))
         const suffix = params.size > 0 ? `?${params.toString()}` : ''
-        return readJson(queries, `/v1/trainers/catalog${suffix}`, z.array(trainerProfessionalProfileSchema))
+        return readJson(queries, `/v1/trainers/catalog${suffix}`, z.object({
+          items: z.array(trainerProfessionalProfileSchema),
+          totalCount: z.number().int().nonnegative(),
+          nextOffset: z.number().int().nonnegative().nullable(),
+        }))
+      },
+    },
+    trainerDiscovery: {
+      async getPromptPreference() {
+        return readJson(queries, '/v1/trainer-discovery/prompt', z.unknown())
+          .then(parseTrainerDiscoveryPrompt)
+      },
+      async setPromptPreference(action: TrainerDiscoveryPromptAction) {
+        return writeJson(queries, '/v1/trainer-discovery/prompt', 'PUT', { action }, z.unknown())
+          .then(parseTrainerDiscoveryPrompt)
       },
     },
     clients: {
@@ -959,8 +987,8 @@ export function createYandexMainRepository(
         const payload = await readJson(queries, `/v1/clients/${clientId}/training-summaries`, z.object({ summaries: z.array(publishedSummarySchema) }))
         return payload.summaries.map((item) => publishedTrainingSummaryFromRow({ id: item.id, source_summary_id: item.source_summary_id, client_id: item.client_id, period_start: item.period_start, period_end: item.period_end, summary: toJson(item.summary), display_metrics: toJson(item.display_metrics), generated_at: item.generated_at, published_at: item.published_at }))
       },
-      async generate(clientId, periodStart, periodEnd, force = false) {
-        const payload = await writeJson(queries, `/v1/clients/${clientId}/training-summaries/generate`, 'POST', { client_id: clientId, period_start: periodStart, period_end: periodEnd, force }, z.object({ data: z.object({ generated_at: z.iso.datetime() }), cached: z.boolean() }))
+      async generate(clientId, periodStart, periodEnd, force = false, triggerReason = 'manual_refresh') {
+        const payload = await writeJson(queries, `/v1/clients/${clientId}/training-summaries/generate`, 'POST', { client_id: clientId, period_start: periodStart, period_end: periodEnd, force, trigger_reason: triggerReason }, z.object({ data: z.object({ generated_at: z.iso.datetime() }), cached: z.boolean() }))
         return { generatedAt: payload.data.generated_at, cached: payload.cached }
       },
       async publish(summary, clientCopy) { await writeEmpty(queries, `/v1/training-summaries/${summary.id}/publish`, 'POST', { clientSummary: feedbackPayload(clientCopy), expectedVersion: summary.version }) },
@@ -979,16 +1007,47 @@ export function createYandexMainRepository(
       async open(clientId, trainerId): Promise<string> {
         return (await writeJson(queries, '/v1/chat/conversations', 'POST', { clientId, trainerId }, z.object({ conversationId: uuid }))).conversationId
       },
+      async openPublicTrainer(publicProfileId): Promise<string> {
+        return (await writeJson(queries, `/v1/trainers/${publicProfileId}/chat`, 'POST', {}, z.object({ conversationId: uuid }))).conversationId
+      },
+      async setBlocked(conversationId, blocked) {
+        return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/block`, 'PUT', { blocked }, z.object({ state: z.object({ canMessage: z.boolean(), blockedByMe: z.boolean(), blockedByPartner: z.boolean() }) }))).state
+      },
+      async connectionState(conversationId) {
+        return (await readJson(queries, `/v1/chat/conversations/${conversationId}/connection`, z.object({ state: chatConnectionSchema }))).state
+      },
+      async inviteToConnect(conversationId) {
+        return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/connection/invite`, 'POST', {}, z.object({ state: chatConnectionSchema }))).state
+      },
+      async acceptConnection(conversationId) {
+        return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/connection/accept`, 'POST', {}, z.object({ state: chatConnectionSchema }))).state
+      },
       async listMessages(conversationId, cursor): Promise<ChatMessagePage> {
         const params = new URLSearchParams({ limit: '50' })
         if (cursor) { params.set('beforeCreatedAt', cursor.createdAt); params.set('beforeId', cursor.id) }
         return readJson(queries, `/v1/chat/conversations/${conversationId}/messages?${params}`, z.object({ messages: z.array(chatMessageSchema), nextCursor: z.object({ createdAt: z.iso.datetime(), id: uuid }).nullable() }))
       },
-      async send(conversationId, messageId, body): Promise<ChatMessage> {
-        return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/messages`, 'POST', { id: messageId, body }, z.object({ message: chatMessageSchema }))).message
+      async send(conversationId, messageId, body, image, replyToMessageId): Promise<ChatMessage> {
+        return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/messages`, 'POST', { id: messageId, body, image, replyToMessageId }, z.object({ message: chatMessageSchema }))).message
       },
-      async markRead(conversationId): Promise<void> {
-        await writeEmpty(queries, `/v1/chat/conversations/${conversationId}/read`, 'PUT')
+      async edit(conversationId, messageId, body): Promise<ChatMessage> {
+        return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/messages/${messageId}`, 'PATCH', { body }, z.object({ message: chatMessageSchema }))).message
+      },
+      async remove(conversationId, messageId): Promise<void> {
+        await writeEmpty(queries, `/v1/chat/conversations/${conversationId}/messages/${messageId}`, 'DELETE')
+      },
+      async unreadState(conversationId) {
+        return (await readJson(queries, `/v1/chat/conversations/${conversationId}/unread`, z.object({ unread: z.object({ firstMessageId: uuid.nullable(), firstCreatedAt: z.iso.datetime().nullable(), unreadCount: z.number().int().nonnegative() }) }))).unread
+      },
+      async markRead(conversationId, throughMessageId): Promise<void> {
+        await writeEmpty(queries, `/v1/chat/conversations/${conversationId}/read`, 'PUT', { throughMessageId })
+      },
+      async search(conversationId, query): Promise<ChatMessage[]> {
+        const params = new URLSearchParams({ q: query })
+        return (await readJson(queries, `/v1/chat/conversations/${conversationId}/search?${params}`, z.object({ messages: z.array(chatMessageSchema) }))).messages
+      },
+      async window(conversationId, messageId): Promise<ChatMessage[]> {
+        return (await readJson(queries, `/v1/chat/conversations/${conversationId}/messages/${messageId}/window`, z.object({ messages: z.array(chatMessageSchema) }))).messages
       },
       subscribe(_conversationId, onChange) {
         const interval = window.setInterval(onChange, 15_000)

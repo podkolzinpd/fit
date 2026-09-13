@@ -2,6 +2,7 @@ import type { ClientTrainingSummary } from '../../shared/domain'
 import { supabase } from './client'
 import { toJson } from './json'
 import { invokeLegacyCloudFunction } from './legacy-cloud-functions'
+import type { TrainingSummaryTriggerReason } from '../../shared/domain'
 
 const summaryFunctionUrl = 'https://functions.yandexcloud.net/d4eq75uad5lps1chbidk'
 
@@ -27,7 +28,13 @@ export const trainingSummaryQueries = {
     .select(publishedColumns)
     .eq('client_id', clientId)
     .order('period_end', { ascending: false }),
-  generate: async (clientId: string, periodStart: string, periodEnd: string, force: boolean) => {
+  generate: async (
+    clientId: string,
+    periodStart: string,
+    periodEnd: string,
+    force: boolean,
+    triggerReason: TrainingSummaryTriggerReason,
+  ) => {
     const bridged = await invokeLegacyCloudFunction<{
       error?: string
       cached?: boolean
@@ -37,6 +44,7 @@ export const trainingSummaryQueries = {
       period_start: periodStart,
       period_end: periodEnd,
       force,
+      trigger_reason: triggerReason,
     })
     if (bridged !== undefined) return bridged
     const { data: { session } } = await supabase.auth.getSession()
@@ -55,6 +63,7 @@ export const trainingSummaryQueries = {
           period_start: periodStart,
           period_end: periodEnd,
           force,
+          trigger_reason: triggerReason,
         }),
       })
     } catch (error) {

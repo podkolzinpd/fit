@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { summaryQualityIssues } from '../../supabase/functions/summarize-client-training/summary-quality'
+import {
+  assessSummaryQuality,
+  summaryQualityIssues,
+} from '../../supabase/functions/summarize-client-training/summary-quality'
 
 const trainingData = {
   consistency: {
@@ -23,7 +26,7 @@ const trainingData = {
 
 describe('summaryQualityIssues', () => {
   it('accepts a safe dual-audience summary with Russian word forms', () => {
-    const issues = summaryQualityIssues({
+    const quality = assessSummaryQuality({
       trainer: {
         headline: 'В жиме лёжа вес вырос на 25%, в беге темп улучшился на 10%.',
         progress: [
@@ -44,11 +47,11 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Сравнить результат после следующих 4 тренировок.'],
         missingContext: [],
-        analysisVersion: 'trainer-summary-v2',
+        analysisVersion: 'trainer-summary-v3',
       },
     }, trainingData)
 
-    expect(issues).toEqual([])
+    expect(quality).toEqual({ blockingIssues: [], advisories: [] })
   })
 
   it('allows a grounded trainer question without forcing a numeric restatement', () => {
@@ -69,7 +72,7 @@ describe('summaryQualityIssues', () => {
   })
 
   it('rejects technical keys and a vague headline', () => {
-    const issues = summaryQualityIssues({
+    const quality = assessSummaryQuality({
       trainer: {
         headline: 'Наблюдается улучшение силовых показателей в некоторых упражнениях.',
         progress: ['В жиме лёжа рабочий вес вырос на 25%.', 'В беге темп улучшился на 10%.'],
@@ -84,18 +87,18 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Сравнить ещё 4 тренировки.'],
         missingContext: [],
-        analysisVersion: 'trainer-summary-v2',
+        analysisVersion: 'trainer-summary-v3',
       },
     }, trainingData)
 
-    expect(issues).toEqual(expect.arrayContaining([
+    expect([...quality.blockingIssues, ...quality.advisories]).toEqual(expect.arrayContaining([
       expect.stringContaining('технические идентификаторы'),
       expect.stringContaining('Headline'),
     ]))
   })
 
   it('requires a numeric current rhythm even in the first two weeks', () => {
-    const issues = summaryQualityIssues({
+    const quality = assessSummaryQuality({
       trainer: {
         headline: 'В жиме лёжа рабочий вес вырос на 25%.',
         progress: ['В жиме лёжа рабочий вес вырос на 25%.', 'В беге темп улучшился на 10%.'],
@@ -110,7 +113,7 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Сравнить ещё 4 тренировки.'],
         missingContext: [],
-        analysisVersion: 'trainer-summary-v2',
+        analysisVersion: 'trainer-summary-v3',
       },
     }, {
       ...trainingData,
@@ -121,14 +124,14 @@ describe('summaryQualityIssues', () => {
       },
     })
 
-    expect(issues).toEqual(expect.arrayContaining([
+    expect(quality.advisories).toEqual(expect.arrayContaining([
       expect.stringContaining('Короткий период'),
       expect.stringContaining('короче 7 дней'),
     ]))
   })
 
   it('rejects unsafe client language and unsupported trainer assumptions', () => {
-    const issues = summaryQualityIssues({
+    const quality = assessSummaryQuality({
       trainer: {
         headline: 'Есть динамика.',
         progress: ['В жиме лёжа вес вырос.', 'Бег изменился.'],
@@ -143,11 +146,11 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Увеличить вес.'],
         missingContext: [],
-        analysisVersion: 'trainer-summary-v2',
+        analysisVersion: 'trainer-summary-v3',
       },
     }, trainingData)
 
-    expect(issues).toEqual(expect.arrayContaining([
+    expect([...quality.blockingIssues, ...quality.advisories]).toEqual(expect.arrayContaining([
       expect.stringContaining('императив'),
       expect.stringContaining('зависящая от рода'),
       expect.stringContaining('восклицательный'),
@@ -157,7 +160,7 @@ describe('summaryQualityIssues', () => {
   })
 
   it('requires goal-aware copy and readable rounding', () => {
-    const issues = summaryQualityIssues({
+    const quality = assessSummaryQuality({
       trainer: {
         headline: 'Вес вырос на 16,67%.',
         progress: ['В жиме лёжа вес вырос на 16,67%.', 'В беге темп улучшился на 10%.'],
@@ -172,11 +175,11 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Сравнить ещё 4 тренировки.'],
         missingContext: [],
-        analysisVersion: 'trainer-summary-v2',
+        analysisVersion: 'trainer-summary-v3',
       },
     }, { ...trainingData, goal: { title: 'Рост силы' } })
 
-    expect(issues).toEqual(expect.arrayContaining([
+    expect([...quality.blockingIssues, ...quality.advisories]).toEqual(expect.arrayContaining([
       expect.stringContaining('целых процентов'),
       expect.stringContaining('один знак'),
       expect.stringContaining('goalAlignment'),
@@ -198,9 +201,9 @@ describe('summaryQualityIssues', () => {
     summary.client.achievements = ['Плечи: наблюдается увеличение силы в некоторых упражнениях.']
     summary.client.encouragement = 'Главный ограничитель — сон. Итог месяца: 9/10.'
 
-    const issues = summaryQualityIssues(summary, trainingData)
+    const quality = assessSummaryQuality(summary, trainingData)
 
-    expect(issues).toEqual(expect.arrayContaining([
+    expect([...quality.blockingIssues, ...quality.advisories]).toEqual(expect.arrayContaining([
       expect.stringContaining('человеческим языком'),
       expect.stringContaining('десятибалльной'),
       expect.stringContaining('выводы о сне'),
@@ -226,6 +229,116 @@ describe('summaryQualityIssues', () => {
     expect(issues).toEqual([])
   })
 
+  it('does not confuse stable exercise results with a short training break', () => {
+    const base = validCoachingSummary('Сравнить результат ещё через 3 тренировки.')
+    const summary = {
+      ...base,
+      trainer: {
+        ...base.trainer,
+        attention: ['Проверить: стабильность результатов в жиме гантелей лёжа.'],
+      },
+      client: {
+        ...base.client,
+        encouragement: 'Продолжай в том же духе, сохраняя текущий ритм.',
+      },
+    }
+
+    const quality = assessSummaryQuality(summary, {
+      ...trainingData,
+      consistency: { completed_workouts: 14, workouts_per_week: 3, longest_gap_days: 3 },
+      exercises: [{ name: 'Жим лёжа', sessions: [{ max_weight_kg: 70 }, { max_weight_kg: 63 }] }],
+    })
+
+    expect(quality.blockingIssues).toEqual([])
+    expect(quality.advisories).toEqual([
+      expect.stringContaining('шаблонная мотивационная'),
+    ])
+  })
+
+  it('rejects the exact unsafe production advice while keeping gender as a repairable issue', () => {
+    const base = validCoachingSummary('Планировать тренировки так, чтобы избегать больших перерывов между ними.')
+    const summary = {
+      ...base,
+      client: {
+        ...base.client,
+        consistency: 'Ты поддерживал хороший ритм тренировок, несмотря на небольшие перерывы.',
+        encouragement: 'Продолжай следить за интенсивностью и техникой выполнения упражнений.',
+        nextSteps: [
+          'Планировать тренировки так, чтобы избегать больших перерывов между ними.',
+        ],
+      },
+    }
+
+    const quality = assessSummaryQuality(summary, {
+      ...trainingData,
+      consistency: { completed_workouts: 14, workouts_per_week: 3, longest_gap_days: 3 },
+    })
+
+    expect(quality.blockingIssues).toEqual(expect.arrayContaining([
+      expect.stringContaining('нет наблюдений за выполнением'),
+      expect.stringContaining('короткий обычный перерыв'),
+    ]))
+    expect(quality.advisories).toEqual(expect.arrayContaining([
+      expect.stringContaining('зависящая от рода'),
+      expect.stringContaining('императив'),
+    ]))
+  })
+
+  it('requests one style repair when a rich period produces a terse client analysis', () => {
+    const quality = assessSummaryQuality(
+      validCoachingSummary('Сравнить результат ещё через 3 тренировки.'),
+      {
+        ...trainingData,
+        input_coverage: {
+          complete: true,
+          current: { exercises: 149, sessions: 14, sets: 376 },
+        },
+      },
+    )
+
+    expect(quality.advisories).toEqual(expect.arrayContaining([
+      expect.stringContaining('не меньше 120 слов'),
+    ]))
+  })
+
+  it('blocks invented conclusions about exercise technique', () => {
+    const base = validCoachingSummary('Сравнить результат ещё через 3 тренировки.')
+    const summary = {
+      ...base,
+      trainer: {
+        ...base.trainer,
+        headline: 'В жиме лёжа улучшилась техника выполнения движения.',
+      },
+    }
+
+    expect(summaryQualityIssues(summary, {
+      ...trainingData,
+      consistency: { completed_workouts: 3, workouts_per_week: 2, longest_gap_days: 4 },
+      exercises: [{ name: 'Жим лёжа', sessions: [{ max_weight_kg: 70 }, { max_weight_kg: 63 }] }],
+    })).toEqual([
+      expect.stringContaining('нет наблюдений за выполнением'),
+    ])
+  })
+
+  it('blocks an unsupported claim that training rhythm caused progress', () => {
+    const base = validCoachingSummary('Сравнить результат ещё через 3 тренировки.')
+    const summary = {
+      ...base,
+      client: {
+        ...base.client,
+        consistency: 'Стабильный ритм положительно сказывается на прогрессе.',
+      },
+    }
+
+    expect(summaryQualityIssues(summary, {
+      ...trainingData,
+      consistency: { completed_workouts: 3, workouts_per_week: 2, longest_gap_days: 4 },
+      exercises: [{ name: 'Жим лёжа', sessions: [{ max_weight_kg: 70 }, { max_weight_kg: 63 }] }],
+    })).toEqual([
+      expect.stringContaining('корреляцию за доказанную причину'),
+    ])
+  })
+
   it('allows a grounded measurement to be the main conclusion even when exercise facts also changed', () => {
     const issues = summaryQualityIssues({
       trainer: {
@@ -242,7 +355,7 @@ describe('summaryQualityIssues', () => {
         goalAlignment: '',
         nextSteps: ['Добавить следующий замер талии через 7 дней.'],
         missingContext: [],
-        analysisVersion: 'trainer-summary-v2',
+        analysisVersion: 'trainer-summary-v3',
       },
     }, {
       ...trainingData,
@@ -272,7 +385,7 @@ function validCoachingSummary(nextStep: string) {
       goalAlignment: '',
       nextSteps: [nextStep],
       missingContext: [],
-      analysisVersion: 'trainer-summary-v2',
+      analysisVersion: 'trainer-summary-v3',
     },
   }
 }

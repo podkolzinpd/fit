@@ -312,7 +312,7 @@ test('today: quick review наследует настройку RPE тренер
   await expect(page).toHaveURL(/\/(today|clients)$/)
 
   await page.goto('/profile/settings')
-  await page.getByRole('switch', { name: 'Всегда показывать RPE в подходах', exact: true }).check()
+  await page.getByRole('switch', { name: 'Показывать RPE', exact: true }).check()
   await page.goto('/today')
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await mockWorkoutParser(page, [{

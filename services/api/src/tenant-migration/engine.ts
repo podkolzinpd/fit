@@ -4,12 +4,16 @@ import type { DatabaseClient } from '../db/types.js'
 import {
   buildMigrationTable,
   checksumRows,
+  fingerprintStandaloneClient,
   fingerprintTenant,
+  getTenantMigrationRoot,
   readJsonObject,
   TenantMigrationArtifactError,
 } from './bundle.js'
 import {
   SOURCE_PREFLIGHT_SQL,
+  STANDALONE_CLIENT_MIGRATION_TABLES,
+  STANDALONE_CLIENT_SOURCE_PREFLIGHT_SQL,
   TENANT_MIGRATION_TABLES,
   type TenantMigrationTableSpec,
 } from './catalog.js'
@@ -38,6 +42,17 @@ interface SourcePreflightRow extends QueryResultRow {
   has_cross_boundary_merge: boolean
   has_pending_push: boolean
   has_foreign_actor: boolean
+}
+
+interface StandaloneClientSourcePreflightRow extends QueryResultRow {
+  client_profile_exists: boolean
+  owned_client_count: number
+  has_non_standalone_root: boolean
+  has_membership: boolean
+  has_active_relationship: boolean
+  has_cross_boundary_merge: boolean
+  has_pending_push: boolean
+  has_chat_media: boolean
 }
 
 export class TenantMigrationError extends Error {
@@ -69,14 +84,23 @@ function readJsonRows(rows: readonly JsonDatabaseRow[]): JsonObject[] {
 }
 
 function requireExactManifest(bundle: TenantMigrationBundle): void {
-  if (bundle.tables.length !== TENANT_MIGRATION_TABLES.length) {
+  const manifest = getMigrationManifest(bundle)
+  if (bundle.tables.length !== manifest.length) {
     throw new TenantMigrationError('manifest_mismatch')
   }
-  TENANT_MIGRATION_TABLES.forEach((spec, index) => {
+  manifest.forEach((spec, index) => {
     if (bundle.tables[index]?.name !== spec.name) {
       throw new TenantMigrationError('manifest_mismatch')
     }
   })
+}
+
+function getMigrationManifest(
+  bundle: TenantMigrationBundle,
+): readonly TenantMigrationTableSpec[] {
+  return bundle.format === 'fit-tenant-bundle-v1'
+    ? TENANT_MIGRATION_TABLES
+    : STANDALONE_CLIENT_MIGRATION_TABLES
 }
 
 async function inspectSource(
@@ -103,6 +127,39 @@ async function inspectSource(
   }
   if (result.has_foreign_actor) {
     throw new TenantMigrationError('tenant_has_foreign_actor')
+  }
+}
+
+async function inspectStandaloneClientSource(
+  client: DatabaseClient,
+  clientProfileId: string,
+): Promise<void> {
+  const result = requireSingleRow(
+    await client.query<StandaloneClientSourcePreflightRow>(
+      STANDALONE_CLIENT_SOURCE_PREFLIGHT_SQL,
+      [clientProfileId],
+    ),
+  )
+  if (!result.client_profile_exists) {
+    throw new TenantMigrationError('standalone_client_not_found')
+  }
+  if (result.owned_client_count > 1) {
+    throw new TenantMigrationError('standalone_client_contract_mismatch')
+  }
+  if (result.has_non_standalone_root) {
+    throw new TenantMigrationError('standalone_client_partition_not_owned')
+  }
+  if (result.has_membership || result.has_active_relationship) {
+    throw new TenantMigrationError('standalone_client_has_active_trainer')
+  }
+  if (result.has_cross_boundary_merge) {
+    throw new TenantMigrationError('tenant_merge_crosses_boundary')
+  }
+  if (result.has_pending_push) {
+    throw new TenantMigrationError('tenant_has_pending_push')
+  }
+  if (result.has_chat_media) {
+    throw new TenantMigrationError('standalone_client_has_chat_media')
   }
 }
 
@@ -171,6 +228,33 @@ export async function exportTenant(
   }
 }
 
+export async function exportStandaloneClient(
+  source: DatabaseClient,
+  clientProfileId: string,
+  now: Date = new Date(),
+): Promise<TenantMigrationBundle> {
+  await source.query('begin isolation level repeatable read read only')
+  try {
+    await configureMigrationTransaction(source)
+    await inspectStandaloneClientSource(source, clientProfileId)
+    const tables: TenantMigrationTable[] = []
+    for (const spec of STANDALONE_CLIENT_MIGRATION_TABLES) {
+      tables.push(await readTable(source, spec, clientProfileId, true))
+    }
+    await source.query('commit')
+    return {
+      format: 'fit-standalone-client-bundle-v1',
+      createdAt: now.toISOString(),
+      tenantFingerprint: fingerprintStandaloneClient(clientProfileId),
+      clientProfileId,
+      tables,
+    }
+  } catch (error) {
+    await rollbackQuietly(source)
+    throw error
+  }
+}
+
 function getBundleTable(
   bundle: TenantMigrationBundle,
   name: string,
@@ -185,10 +269,11 @@ async function validateTargetInTransaction(
   bundle: TenantMigrationBundle,
   insertedRows: ReadonlyMap<string, number>,
 ): Promise<TenantMigrationTableReport[]> {
+  const root = getTenantMigrationRoot(bundle)
   const reports: TenantMigrationTableReport[] = []
-  for (const spec of TENANT_MIGRATION_TABLES) {
+  for (const spec of getMigrationManifest(bundle)) {
     const expected = getBundleTable(bundle, spec.name)
-    const actual = await readTable(target, spec, bundle.trainerId, false)
+    const actual = await readTable(target, spec, root.profileId, false)
     if (
       actual.rowCount !== expected.rowCount
       || checksumRows(actual.rows) !== expected.checksum
@@ -209,11 +294,14 @@ async function beginTargetTransaction(target: DatabaseClient): Promise<void> {
 
 async function lockTenant(
   target: DatabaseClient,
-  trainerId: string,
+  rootKind: string,
+  rootProfileId: string,
 ): Promise<void> {
   await target.query(
-    `select pg_advisory_xact_lock(hashtextextended('fit-tenant:' || $1, 0))`,
-    [trainerId],
+    `select pg_advisory_xact_lock(
+       hashtextextended('fit-tenant:' || $1 || ':' || $2, 0)
+     )`,
+    [rootKind, rootProfileId],
   )
 }
 
@@ -223,11 +311,13 @@ export async function importTenant(
   apply: boolean,
 ): Promise<TenantMigrationReport> {
   requireExactManifest(bundle)
+  const root = getTenantMigrationRoot(bundle)
+  const manifest = getMigrationManifest(bundle)
   await beginTargetTransaction(target)
   try {
-    await lockTenant(target, bundle.trainerId)
+    await lockTenant(target, root.kind, root.profileId)
     const insertedRows = new Map<string, number>()
-    for (const spec of TENANT_MIGRATION_TABLES) {
+    for (const spec of manifest) {
       const table = getBundleTable(bundle, spec.name)
       const keyColumns = spec.keyColumns ?? ['id']
       const keyPredicate = keyColumns

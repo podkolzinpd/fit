@@ -66,8 +66,10 @@ import type { PilotProgressData } from './progress-data.js'
 import type { PilotWorkoutParser } from './pilot-workout-parser.js'
 import type { PilotTrainingSummaries } from './training-summary.js'
 import type { VitalMediaSigner } from './vital-media.js'
+import type { ChatMediaStore } from './chat-media.js'
 import type { PilotTrainerProfiles, TrainerProfileDraft } from './trainer-profile.js'
-import type { PilotChat } from './pilot-chat.js'
+import { ChatCommandError, type PilotChat } from './pilot-chat.js'
+import { TrainerDiscoveryError, type PilotTrainerDiscovery } from './trainer-discovery.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -81,17 +83,39 @@ describe('reliable chat API', () => {
   const clientId = '10000000-0000-4000-8000-000000000002'
   const trainerId = '10000000-0000-4000-8000-000000000003'
   const messageId = '10000000-0000-4000-8000-000000000004'
+  const publicProfileId = '10000000-0000-4000-8000-000000000005'
   function chat() {
-    const send = vi.fn<PilotChat['send']>().mockResolvedValue({ id: messageId, conversationId, senderId: trainerId, body: 'Привет', createdAt: '2026-09-10T12:00:00.000Z' })
+    const baseMessage = { id: messageId, conversationId, senderId: trainerId, body: 'Привет', image: null, createdAt: '2026-09-10T12:00:00.000Z', editedAt: null, replyTo: null }
+    const send = vi.fn<PilotChat['send']>().mockResolvedValue(baseMessage)
     const open = vi.fn<PilotChat['open']>().mockResolvedValue(conversationId)
+    const openPublicTrainer = vi.fn<PilotChat['openPublicTrainer']>().mockResolvedValue(conversationId)
+    const setBlocked = vi.fn<PilotChat['setBlocked']>().mockResolvedValue({ canMessage: false, blockedByMe: true, blockedByPartner: false })
+    const connectionState = vi.fn<PilotChat['connectionState']>().mockResolvedValue({ activeConnection: false, invitationPending: false, invitedAt: null, canInvite: true, canAccept: false, trainerSwitchRequired: false })
+    const inviteToConnect = vi.fn<PilotChat['inviteToConnect']>().mockResolvedValue({ activeConnection: false, invitationPending: true, invitedAt: '2026-09-12T10:00:00.000Z', canInvite: true, canAccept: false, trainerSwitchRequired: false })
+    const acceptConnection = vi.fn<PilotChat['acceptConnection']>().mockResolvedValue({ activeConnection: true, invitationPending: false, invitedAt: '2026-09-12T10:00:00.000Z', canInvite: false, canAccept: false, trainerSwitchRequired: false })
+    const authorize = vi.fn<PilotChat['authorize']>().mockResolvedValue(undefined)
+    const remove = vi.fn<PilotChat['remove']>().mockResolvedValue(null)
+    const edit = vi.fn<PilotChat['edit']>().mockResolvedValue({ ...baseMessage, editedAt: '2026-09-10T12:10:00.000Z' })
+    const unreadState = vi.fn<PilotChat['unreadState']>().mockResolvedValue({ firstMessageId: messageId, firstCreatedAt: baseMessage.createdAt, unreadCount: 1 })
+    const markRead = vi.fn<PilotChat['markRead']>().mockResolvedValue(undefined)
+    const search = vi.fn<PilotChat['search']>().mockResolvedValue([baseMessage])
+    const window = vi.fn<PilotChat['window']>().mockResolvedValue([baseMessage])
     const pilotChat: PilotChat = {
-      listThreads: vi.fn<PilotChat['listThreads']>().mockResolvedValue([{ conversationId, clientId, trainerId, partnerUserId: trainerId, partnerName: 'Анна', activeConnection: true, lastMessageBody: null, lastMessageAt: null, lastMessageSenderId: null, unreadCount: 0 }]),
+      listThreads: vi.fn<PilotChat['listThreads']>().mockResolvedValue([{ conversationId, clientId, trainerId, partnerUserId: trainerId, partnerName: 'Анна', activeConnection: true, lastMessageBody: null, lastMessageAt: null, lastMessageSenderId: null, unreadCount: 0, canMessage: true, blockedByMe: false, blockedByPartner: false }]),
       open,
+      openPublicTrainer,
+      setBlocked,
+      connectionState,
+      inviteToConnect,
+      acceptConnection,
       listMessages: vi.fn<PilotChat['listMessages']>().mockResolvedValue({ messages: [], nextCursor: null }),
+      authorize,
       send,
-      markRead: vi.fn<PilotChat['markRead']>().mockResolvedValue(undefined),
+      edit,
+      remove,
+      unreadState, markRead, search, window,
     }
-    return { pilotChat, open, send }
+    return { pilotChat, open, openPublicTrainer, setBlocked, connectionState, inviteToConnect, acceptConnection, send, edit, remove, authorize, unreadState, markRead, search, window }
   }
 
   it('lists actor conversations without caching', async () => {
@@ -102,12 +126,110 @@ describe('reliable chat API', () => {
     expect(response.json()).toMatchObject({ threads: [{ partnerName: 'Анна' }] })
   })
 
+  it('opens a listed trainer chat and updates the actor block state', async () => {
+    const { pilotChat, openPublicTrainer, setBlocked } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
+    const opened = await app.inject({ method: 'POST', url: `/v1/trainers/${publicProfileId}/chat`, headers: { 'x-fit-session': sessionToken } })
+    const blocked = await app.inject({ method: 'PUT', url: `/v1/chat/conversations/${conversationId}/block`, headers: { 'x-fit-session': sessionToken }, payload: { blocked: true } })
+    expect(opened.statusCode).toBe(200)
+    expect(openPublicTrainer).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, publicProfileId)
+    expect(blocked.statusCode).toBe(200)
+    expect(blocked.json()).toEqual({ state: { canMessage: false, blockedByMe: true, blockedByPartner: false } })
+    expect(setBlocked).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, true)
+  })
+
+  it('reads, sends and accepts a trainer invitation in the dialog', async () => {
+    const { pilotChat, connectionState, inviteToConnect, acceptConnection } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
+    const state = await app.inject({ method: 'GET', url: `/v1/chat/conversations/${conversationId}/connection`, headers: { 'x-fit-session': sessionToken } })
+    const invited = await app.inject({ method: 'POST', url: `/v1/chat/conversations/${conversationId}/connection/invite`, headers: { 'x-fit-session': sessionToken } })
+    const accepted = await app.inject({ method: 'POST', url: `/v1/chat/conversations/${conversationId}/connection/accept`, headers: { 'x-fit-session': sessionToken } })
+    expect(state.statusCode).toBe(200)
+    expect(invited.json()).toMatchObject({ state: { invitationPending: true } })
+    expect(accepted.json()).toMatchObject({ state: { activeConnection: true } })
+    expect(connectionState).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId)
+    expect(inviteToConnect).toHaveBeenCalledOnce()
+    expect(acceptConnection).toHaveBeenCalledOnce()
+  })
+
+  it('returns stable errors for discovery rate limits and blocked chats', async () => {
+    const first = chat(); first.openPublicTrainer.mockRejectedValueOnce(new ChatCommandError('rate_limited'))
+    const rateApp = buildApp({ pilotChat: first.pilotChat, logger: false }); apps.push(rateApp)
+    const limited = await rateApp.inject({ method: 'POST', url: `/v1/trainers/${publicProfileId}/chat`, headers: { 'x-fit-session': sessionToken } })
+    expect(limited.statusCode).toBe(429)
+    expect(limited.json()).toEqual({ error: 'too_many_requests' })
+
+    const second = chat(); second.send.mockRejectedValueOnce(new ChatCommandError('blocked'))
+    const blockApp = buildApp({ pilotChat: second.pilotChat, logger: false }); apps.push(blockApp)
+    const blocked = await blockApp.inject({ method: 'POST', url: `/v1/chat/conversations/${conversationId}/messages`, headers: { 'x-fit-session': sessionToken }, payload: { id: messageId, body: 'Привет' } })
+    expect(blocked.statusCode).toBe(403)
+    expect(blocked.json()).toEqual({ error: 'chat_blocked' })
+  })
+
   it('passes the client generated message id to idempotent send', async () => {
     const { pilotChat, send } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
     const response = await app.inject({ method: 'POST', url: `/v1/chat/conversations/${conversationId}/messages`, headers: { 'x-fit-session': sessionToken }, payload: { id: messageId, body: 'Привет' } })
     expect(response.statusCode).toBe(200)
-    expect(send).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId, 'Привет')
+    expect(send).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId, 'Привет', null, undefined)
     expect(response.json()).toMatchObject({ message: { id: messageId } })
+  })
+
+  it('uploads a private JPEG before sending a photo message', async () => {
+    const { pilotChat, send, authorize } = chat()
+    send.mockResolvedValueOnce({ id: messageId, conversationId, senderId: trainerId, body: '', image: { path: `${conversationId}/${messageId}.jpg`, mimeType: 'image/jpeg', width: 100, height: 80, sizeBytes: 3 }, createdAt: '2026-09-10T12:00:00.000Z', editedAt: null, replyTo: null })
+    const upload = vi.fn<ChatMediaStore['upload']>().mockResolvedValue(undefined)
+    const sign = vi.fn<ChatMediaStore['sign']>().mockResolvedValue('https://media.example/photo.jpg')
+    const removeMedia = vi.fn<ChatMediaStore['remove']>().mockResolvedValue(undefined)
+    const app = buildApp({ pilotChat, chatMediaStore: { upload, sign, remove: removeMedia }, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'POST', url: `/v1/chat/conversations/${conversationId}/messages`, headers: { 'x-fit-session': sessionToken }, payload: { id: messageId, body: '', image: { dataUrl: 'data:image/jpeg;base64,AQID', mimeType: 'image/jpeg', width: 100, height: 80, sizeBytes: 3 } } })
+
+    expect(response.statusCode).toBe(200)
+    expect(authorize).toHaveBeenCalled()
+    expect(upload).toHaveBeenCalledWith(`${conversationId}/${messageId}.jpg`, expect.objectContaining({ sizeBytes: 3 }))
+    expect(send).toHaveBeenCalledWith(expect.anything(), conversationId, messageId, '', expect.objectContaining({ path: `${conversationId}/${messageId}.jpg` }), undefined)
+    expect(response.json()).toMatchObject({ message: { image: { url: 'https://media.example/photo.jpg' } } })
+  })
+
+  it('deletes an own message and its private photo', async () => {
+    const { pilotChat, remove } = chat()
+    const path = `${conversationId}/${messageId}.jpg`
+    remove.mockResolvedValueOnce(path)
+    const removeMedia = vi.fn<ChatMediaStore['remove']>().mockResolvedValue(undefined)
+    const app = buildApp({ pilotChat, chatMediaStore: {
+      upload: vi.fn<ChatMediaStore['upload']>().mockResolvedValue(undefined),
+      sign: vi.fn<ChatMediaStore['sign']>().mockResolvedValue('https://media.example/photo.jpg'),
+      remove: removeMedia,
+    }, logger: false }); apps.push(app)
+
+    const response = await app.inject({ method: 'DELETE', url: `/v1/chat/conversations/${conversationId}/messages/${messageId}`, headers: { 'x-fit-session': sessionToken } })
+
+    expect(response.statusCode).toBe(204)
+    expect(remove).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId)
+    expect(removeMedia).toHaveBeenCalledWith(path)
+  })
+
+  it('edits a message without changing its identity', async () => {
+    const { pilotChat, edit } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'PATCH', url: `/v1/chat/conversations/${conversationId}/messages/${messageId}`, headers: { 'x-fit-session': sessionToken }, payload: { body: 'Исправленный текст' } })
+    expect(response.statusCode).toBe(200)
+    expect(edit).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId, 'Исправленный текст')
+    expect(response.json()).toMatchObject({ message: { id: messageId, editedAt: '2026-09-10T12:10:00.000Z' } })
+  })
+
+  it('searches history and loads a message window', async () => {
+    const { pilotChat, search, window } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
+    const found = await app.inject({ method: 'GET', url: `/v1/chat/conversations/${conversationId}/search?q=Привет`, headers: { 'x-fit-session': sessionToken } })
+    const context = await app.inject({ method: 'GET', url: `/v1/chat/conversations/${conversationId}/messages/${messageId}/window`, headers: { 'x-fit-session': sessionToken } })
+    expect(found.statusCode).toBe(200); expect(context.statusCode).toBe(200)
+    expect(search).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, 'Привет')
+    expect(window).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId)
+  })
+
+  it('reads unread state and marks only the visible message', async () => {
+    const { pilotChat, unreadState, markRead } = chat(); const app = buildApp({ pilotChat, logger: false }); apps.push(app)
+    const state = await app.inject({ method: 'GET', url: `/v1/chat/conversations/${conversationId}/unread`, headers: { 'x-fit-session': sessionToken } })
+    const marked = await app.inject({ method: 'PUT', url: `/v1/chat/conversations/${conversationId}/read`, headers: { 'x-fit-session': sessionToken }, payload: { throughMessageId: messageId } })
+    expect(state.statusCode).toBe(200); expect(marked.statusCode).toBe(204)
+    expect(unreadState).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId)
+    expect(markRead).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken }, conversationId, messageId)
   })
 
   it('does not allow a read-only pilot session to write', async () => {
@@ -166,7 +288,7 @@ describe('trainer professional profile', () => {
       unpublish: vi.fn().mockResolvedValue({ ...value, published: null, publishedAt: null }),
       setCatalogListing: vi.fn().mockResolvedValue({ ...value, listedInCatalog: true }),
       getPublic: vi.fn().mockResolvedValue(value),
-      listPublic: vi.fn().mockResolvedValue([{ ...value, listedInCatalog: true }]),
+      listPublic: vi.fn().mockResolvedValue({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null }),
     }
   }
 
@@ -192,18 +314,25 @@ describe('trainer professional profile', () => {
 
   it('lists published catalog profiles with validated filters', async () => {
     const pilotTrainerProfiles = profiles()
-    const listPublic = vi.fn().mockResolvedValue([{ ...value, listedInCatalog: true }])
+    const listPublic = vi.fn().mockResolvedValue({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null })
     pilotTrainerProfiles.listPublic = listPublic
     const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
     const response = await app.inject({
       method: 'GET',
-      url: '/v1/trainers/catalog?query=%D0%90%D0%BD%D0%BD%D0%B0&specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&mode=online&accepting=true',
+      url: '/v1/trainers/catalog?query=%D0%90%D0%BD%D0%BD%D0%B0&specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&mode=online&accepting=true&offset=20&limit=10',
     })
 
     expect(response.statusCode).toBe(200)
     expect(listPublic).toHaveBeenCalledWith({
       query: 'Анна', specialty: 'Силовые', city: 'Москва', mode: 'online', acceptingClients: true,
-    })
+    }, { offset: 20, limit: 10 })
+    expect(response.json()).toEqual({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null })
+  })
+
+  it('rejects invalid catalog pagination', async () => {
+    const app = buildApp({ pilotTrainerProfiles: profiles(), logger: false }); apps.push(app)
+    expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?offset=-1' })).statusCode).toBe(400)
+    expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?limit=51' })).statusCode).toBe(400)
   })
 
   it('lets a trainer opt into the catalog only from a read-write session', async () => {
@@ -218,6 +347,69 @@ describe('trainer professional profile', () => {
     expect(setCatalogListing).toHaveBeenCalledWith(
       { accessMode: 'read_write', token: 'a'.repeat(43) }, true,
     )
+  })
+})
+
+describe('trainer discovery prompt', () => {
+  const prompt = { state: 'visible' as const, remindAt: null, updatedAt: null }
+  const session = { accessMode: 'read_write' as const, token: 'd'.repeat(43) }
+
+  function discovery() {
+    const getPrompt = vi.fn<PilotTrainerDiscovery['getPrompt']>().mockResolvedValue(prompt)
+    const setPrompt = vi.fn<PilotTrainerDiscovery['setPrompt']>().mockResolvedValue({
+        state: 'snoozed',
+        remindAt: '2026-10-12T09:00:00.000Z',
+        updatedAt: '2026-09-12T09:00:00.000Z',
+      })
+    return {
+      service: { getPrompt, setPrompt } satisfies PilotTrainerDiscovery,
+      getPrompt,
+      setPrompt,
+    }
+  }
+
+  it('reads and updates a client prompt through a read-write session', async () => {
+    const { service: pilotTrainerDiscovery, setPrompt } = discovery()
+    const app = buildApp({ pilotTrainerDiscovery, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': session.token }
+    const read = await app.inject({ method: 'GET', url: '/v1/trainer-discovery/prompt', headers })
+    const update = await app.inject({
+      method: 'PUT', url: '/v1/trainer-discovery/prompt', headers, payload: { action: 'snooze' },
+    })
+
+    expect(read.statusCode).toBe(200)
+    expect(read.json()).toEqual(prompt)
+    expect(update.statusCode).toBe(200)
+    expect(setPrompt).toHaveBeenCalledWith(session, 'snooze')
+  })
+
+  it('rejects invalid actions and read-only sessions', async () => {
+    const { service: pilotTrainerDiscovery, setPrompt } = discovery()
+    const app = buildApp({ pilotTrainerDiscovery, logger: false }); apps.push(app)
+    const invalid = await app.inject({
+      method: 'PUT', url: '/v1/trainer-discovery/prompt',
+      headers: { 'x-fit-session': session.token }, payload: { action: 'later' },
+    })
+    const readOnly = await app.inject({
+      method: 'PUT', url: '/v1/trainer-discovery/prompt',
+      headers: { 'x-fit-pilot-session': session.token }, payload: { action: 'dismiss' },
+    })
+
+    expect(invalid.statusCode).toBe(400)
+    expect(readOnly.statusCode).toBe(403)
+    expect(setPrompt).not.toHaveBeenCalled()
+  })
+
+  it('returns a safe forbidden response for non-client actors', async () => {
+    const { service: pilotTrainerDiscovery, getPrompt } = discovery()
+    getPrompt.mockRejectedValue(new TrainerDiscoveryError('forbidden'))
+    const app = buildApp({ pilotTrainerDiscovery, logger: false }); apps.push(app)
+    const response = await app.inject({
+      method: 'GET', url: '/v1/trainer-discovery/prompt', headers: { 'x-fit-session': session.token },
+    })
+
+    expect(response.statusCode).toBe(403)
+    expect(response.json()).toEqual({ error: 'action_not_allowed' })
   })
 })
 
@@ -394,6 +586,28 @@ describe('legacy Supabase function bridge', () => {
     expect(response.json()).toEqual({ error: 'invalid_progress_request' })
     expect(handler).not.toHaveBeenCalled()
   })
+
+  it('rejects an automatic progress trigger before it can reach the model', async () => {
+    const handler = vi.fn()
+    const app = buildApp({ legacySummaryHandler: handler, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/assistant/progress-summary',
+      headers: { 'x-supabase-authorization': 'Bearer supabase-access-token' },
+      payload: {
+        client_id: PROFILE_ID,
+        period_start: '2026-08-01',
+        period_end: '2026-08-20',
+        trigger_reason: 'page_open',
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_progress_request' })
+    expect(handler).not.toHaveBeenCalled()
+  })
 })
 
 describe('native Yandex function contracts', () => {
@@ -479,6 +693,7 @@ describe('native Yandex function contracts', () => {
       periodStart: '2026-08-01',
       periodEnd: '2026-08-26',
       force: false,
+      triggerReason: 'manual_refresh',
     })
     expect(listed.statusCode).toBe(200)
     expect(listed.json()).toEqual({ summaries: [{ id: 'summary-id' }] })

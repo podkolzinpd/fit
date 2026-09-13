@@ -32,6 +32,16 @@ const databaseAccessWorkflow = readFileSync(
   ),
   'utf8',
 )
+const rolloutWorkflow = readFileSync(
+  join(
+    import.meta.dirname,
+    '..',
+    '.github',
+    'workflows',
+    'manage-yandex-stage-rollout.yml',
+  ),
+  'utf8',
+)
 const containerTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'container.tf'),
   'utf8',
@@ -72,6 +82,13 @@ test('publishes the final yandex-stage result without restoring an approval gate
 
 test('keeps enough time for the bounded three-attempt summary contract', () => {
   assert.match(workflow, /^  TF_VAR_api_execution_timeout: '120s'$/m)
+})
+
+test('allows the reviewed local, preview, and production frontend origins', () => {
+  assert.match(
+    workflow,
+    /^  TF_VAR_api_cors_allowed_origins: '\["http:\/\/localhost:5173","https:\/\/fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects\.vercel\.app","https:\/\/fit-drab\.vercel\.app"\]'$/m,
+  )
 })
 
 test('bootstraps the private push timer only after explicit cost approval and health', () => {
@@ -456,6 +473,31 @@ test('manages curated database readers only through an explicit private run', ()
   assert.doesNotMatch(databaseAccessWorkflow, /terraform apply/)
   assert.doesNotMatch(databaseAccessWorkflow, /^    environment:/m)
   assert.doesNotMatch(databaseAccessWorkflow, /fit_api|mdb_read_all_data/)
+})
+
+test('manages the migrated tenant rollout only through an explicit private run', () => {
+  assert.match(rolloutWorkflow, /^  workflow_dispatch:$/m)
+  assert.doesNotMatch(rolloutWorkflow, /^  (?:push|pull_request):$/m)
+  assert.match(rolloutWorkflow, /^  id-token: write$/m)
+  assert.match(rolloutWorkflow, /^  group: yandex-stage$/m)
+  assert.match(rolloutWorkflow, /scripts\/yandex-github-oidc\.sh/)
+  assert.match(rolloutWorkflow, /GITHUB_REF.*refs\/heads\/main/)
+  assert.match(
+    rolloutWorkflow,
+    /TENANT_FINGERPRINT: \$\{\{ vars\.FIT_YANDEX_ROLLOUT_TENANT_FINGERPRINT \}\}/g,
+  )
+  assert.match(rolloutWorkflow, /ENABLE_YANDEX_READ_WRITE/)
+  assert.match(rolloutWorkflow, /DISABLE_YANDEX_READ_WRITE/)
+  assert.match(rolloutWorkflow, /Authorization: Bearer \$YC_TOKEN/)
+  assert.match(rolloutWorkflow, /\/stage\/rollout-assignments\/yandex/)
+  assert.doesNotMatch(rolloutWorkflow, /terraform apply/)
+  assert.doesNotMatch(rolloutWorkflow, /^    environment:/m)
+  assert.match(rolloutWorkflow, /\[\[ "\$TENANT_FINGERPRINT" =~ \^\[0-9a-f\]\{16\}\$ \]\]/)
+  assert.match(rolloutWorkflow, /tenantFingerprint: \$tenantFingerprint/)
+  assert.doesNotMatch(
+    rolloutWorkflow,
+    /FIT_TENANT_TRAINER_ID|profileId/,
+  )
 })
 
 test('supports a plan-only stage diagnostic that cannot deploy resources', () => {

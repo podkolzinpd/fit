@@ -169,6 +169,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
     const trainerCodeText = await page.getByText(/Код для тренера:/).textContent()
     const trainerCode = trainerCodeText?.match(/[A-F0-9]{12}/)?.[0]
     expect(trainerCode).toBeTruthy()
+    await page.goto('/me/settings')
     await page.getByRole('button', { name: 'Выйти' }).click()
     await login(page, 'trainer@fit.local')
     await page.goto('/join')
@@ -285,7 +286,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await expect.poll(() => page.locator('.phone-frame').evaluate((element) => Math.round(element.getBoundingClientRect().height))).toBe(844)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 
-  await page.goto('/me/profile')
+  await page.goto('/me/settings')
   await page.getByRole('button', { name: 'Выйти' }).click()
   await login(page, 'trainer@fit.local')
   await page.goto('/today')

@@ -220,6 +220,21 @@ describe('Training summary card states', () => {
     expect(repositories.generate).not.toHaveBeenCalled()
   })
 
+  it('creates the first client analysis only after an explicit click', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-08-10'))
+    repositories.listForClient.mockResolvedValue([])
+    const user = userEvent.setup()
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+
+    const create = await screen.findByRole('button', { name: 'Создать анализ' })
+    expect(repositories.generate).not.toHaveBeenCalled()
+    await user.click(create)
+    await waitFor(() => expect(repositories.generate).toHaveBeenCalledWith(
+      'client-1', '2026-07-21', '2026-08-20', true, 'create',
+    ))
+  })
+
   it('accepts a short history, a long exercise name and no client goal without leaking technical text', async () => {
     const user = userEvent.setup()
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-08-10'))
@@ -400,7 +415,8 @@ describe('Training summary card states', () => {
     expect(document.body).not.toHaveTextContent('custom_metric_key')
   })
 
-  it('automatically replaces the trainer card with a freshly loaded analysis', async () => {
+  it('keeps the trainer analysis read-only on mount and refreshes only after an explicit click', async () => {
+    const user = userEvent.setup()
     const updated = {
       ...trainerSummary,
       id: 'summary-2',
@@ -421,11 +437,14 @@ describe('Training summary card states', () => {
 
     render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
+    expect((await screen.findAllByText('+36%'))[0]).toBeVisible()
+    expect(repositories.generate).not.toHaveBeenCalled()
+    expect(repositories.listForTrainer).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole('button', { name: 'Обновить анализ' }))
     expect((await screen.findAllByText('+44%'))[0]).toBeVisible()
-    expect(screen.queryByRole('button', { name: 'Обновить' })).toBeNull()
-    expect(screen.queryByText('Анализ обновлён')).toBeNull()
     expect(repositories.generate).toHaveBeenCalledWith(
-      'client-1', expect.any(String), expect.any(String), false,
+      'client-1', expect.any(String), expect.any(String), true, 'manual_refresh',
     )
     expect(repositories.listForTrainer).toHaveBeenCalledTimes(2)
   })
@@ -469,7 +488,7 @@ describe('Training summary card states', () => {
     expect(screen.queryByText('Для тренера')).toBeNull()
   })
 
-  it('keeps the trainer card after an automatic refresh error and retries on demand', async () => {
+  it('keeps the trainer card after an explicit refresh error and retries only on demand', async () => {
     const user = userEvent.setup()
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
     repositories.listForTrainer.mockResolvedValue([trainerSummary])
@@ -480,6 +499,8 @@ describe('Training summary card states', () => {
     render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
     expect((await screen.findAllByText('+36%'))[0]).toBeVisible()
+    expect(repositories.generate).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Обновить анализ' }))
     const refreshError = await screen.findByRole('alert')
     expect(refreshError).toHaveTextContent('Не получилось обновить анализ')
     await user.click(within(refreshError).getByRole('button', { name: 'Повторить' }))
@@ -549,7 +570,7 @@ describe('Training summary card states', () => {
     expect(screen.getByText('Карта тела')).toBeVisible()
   })
 
-  it('keeps the current client analysis and exposes a readable automatic refresh error', async () => {
+  it('keeps the current client analysis and exposes an explicit refresh error', async () => {
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
     repositories.listForClient.mockResolvedValue([publishedSummary])
     repositories.generate.mockRejectedValue(new Error('Не получилось создать анализ. Попробуйте ещё раз через минуту.'))
@@ -558,17 +579,19 @@ describe('Training summary card states', () => {
     await userEvent.setup().click(await screen.findByText('Карта тела'))
 
     expect(await screen.findByLabelText('Верх спины. Результат зоны: +36%')).toBeVisible()
-    const refreshError = await screen.findByRole('alert')
+    expect(repositories.generate).not.toHaveBeenCalled()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Открыть анализ' }))
+    const dialog = screen.getByRole('dialog', { name: 'Подробный анализ' })
+    await userEvent.setup().click(within(dialog).getByRole('button', { name: 'Обновить анализ' }))
+    const refreshError = await within(document.querySelector('.progress-analysis-preview') as HTMLElement).findByRole('alert')
     expect(refreshError).toHaveTextContent('Попробуйте ещё раз через минуту')
     expect(within(refreshError).getByRole('button', { name: 'Повторить' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Обновить' })).toBeNull()
     expect(repositories.generate).toHaveBeenCalledWith(
-      'client-1', expect.any(String), expect.any(String), false,
+      'client-1', expect.any(String), expect.any(String), true, 'manual_refresh',
     )
     expect(screen.getByLabelText('Верх спины. Результат зоны: +36%')).toBeVisible()
 
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Открыть анализ' }))
-    const dialog = screen.getByRole('dialog', { name: 'Подробный анализ' })
     expect(within(dialog).getByRole('heading', { name: 'Почему' })).toBeVisible()
     expect(screen.getByRole('region', { name: 'Текущая неделя' })).toBeVisible()
     expect(screen.getByRole('region', { name: 'Лучшие результаты за период' })).toBeVisible()
@@ -716,7 +739,24 @@ describe('Training summary card states', () => {
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Сервис занят')
     expect(within(dialog).getByText(/Период анализа: 21 июля 2026 г. — 20 августа 2026 г./)).toBeVisible()
     expect(within(dialog).getByRole('heading', { name: 'Почему' })).toBeVisible()
-    expect(repositories.generate).toHaveBeenLastCalledWith('client-1', '2026-07-21', '2026-08-20', true)
+    expect(repositories.generate).toHaveBeenLastCalledWith('client-1', '2026-07-21', '2026-08-20', true, 'manual_refresh')
+  })
+
+  it('does not generate on period switch or remount', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-01-01'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+    const cache = queryClient()
+    const user = userEvent.setup()
+    const view = render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(cache) })
+
+    await screen.findByRole('button', { name: '3 месяца' })
+    await user.click(screen.getByRole('button', { name: '3 месяца' }))
+    expect(repositories.generate).not.toHaveBeenCalled()
+
+    view.unmount()
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+    await screen.findByRole('button', { name: '1 месяц' })
+    expect(repositories.generate).not.toHaveBeenCalled()
   })
 
   it('keeps an in-flight forced month analysis scoped when the user switches to three months', async () => {
@@ -767,9 +807,15 @@ describe('Training summary card states', () => {
     }])
     render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
     expect(await screen.findByText(/Есть новые тренировки/)).toBeVisible()
+    expect(repositories.generate).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Открыть анализ' })).toHaveAttribute('aria-haspopup', 'dialog')
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Обновить анализ' }))
+    await waitFor(() => expect(repositories.generate).toHaveBeenLastCalledWith(
+      'client-1', '2026-07-21', '2026-08-20', true, 'new_workout',
+    ))
     await userEvent.setup().click(screen.getByRole('button', { name: '3 месяца' }))
     expect(screen.queryByText(/Есть новые тренировки/)).toBeNull()
+    expect(repositories.generate).toHaveBeenCalledTimes(1)
   })
 
 })

@@ -275,6 +275,8 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // Подтверждённый подход становится компактной строкой с зафиксированным фактом.
   await expect(page.locator('.live-set.confirmed').getByLabel('Фактический вес')).toHaveValue('42.5')
   expect(await page.locator('.live-set.confirmed > .live-set-grid').evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
+  expect(await page.locator('.live-set.confirmed').getByLabel('Фактический вес').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
+  expect(await page.locator('.live-set.confirmed').getByLabel('Фактический вес').evaluate((element) => getComputedStyle(element).borderTopWidth)).toBe('0px')
   await expect(page.locator('.live-rest-trigger')).toContainText(/Отдых 1:(30|29)/)
   await expect(page.locator('.live-timer')).not.toHaveClass(/resting/)
   expect(await page.locator('.live-timer').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(neutralTimerBackground)
@@ -547,6 +549,17 @@ test('live: порядок упражнений меняется в отдель
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.locator('.live-timer')).toBeVisible()
+  const currentTechnique = page.getByRole('region', { name: /Техника текущего упражнения: Присед/ })
+  await expect(currentTechnique).toBeVisible()
+  await expect(currentTechnique.locator('video')).toHaveCount(1)
+  await expect(currentTechnique.getByText('Анимация')).toHaveCount(0)
+  await expect(page.getByText('Техника', { exact: true })).toHaveCount(0)
+  const mediaBottom = await currentTechnique.locator('video').evaluate((element) => element.getBoundingClientRect().bottom)
+  const actionsTop = await currentTechnique.getByRole('button', { name: 'Подробнее' }).evaluate((element) => element.getBoundingClientRect().top)
+  expect(actionsTop).toBeGreaterThanOrEqual(mediaBottom)
+  await expect(page.locator('.live-exercise-upcoming .live-technique')).toHaveCount(0)
+  await currentTechnique.getByRole('button', { name: /Свернуть анимацию/ }).click()
+  await expect(page.getByRole('button', { name: /Показать анимацию: Присед/ })).toBeVisible()
   // В live рабочей остаётся только текущая карточка. Будущее упражнение —
   // компактный ориентир: название, ближайший план, число подходов и меню,
   // без таблицы подходов и RPE.
@@ -571,6 +584,7 @@ test('live: порядок упражнений меняется в отдель
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.locator('.live-exercise-collapsed')).toHaveCount(1)
   await expect(page.locator('.live-exercise.current .workout-set-table')).toHaveCount(1)
+  await expect(page.getByRole('region', { name: /Техника текущего упражнения: Жим/ })).toBeVisible()
   await page.locator('.live-exercise.current').getByRole('button', { name: 'Вверх' }).click()
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим штанги лёжа')
 })
@@ -818,11 +832,14 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   // Настройки профиля открываются отдельным экраном из шестерёнки анкеты.
   await page.goto('/profile/settings')
   await expect(page.getByRole('heading', { name: 'Настройки' })).toBeVisible()
+  await page.getByRole('button', { name: 'Изменить данные' }).click()
   const firstName = page.getByLabel('Имя', { exact: true })
   const original = await firstName.inputValue()
   await firstName.fill('Черновик Который Отменим')
   await page.getByRole('button', { name: 'Отмена' }).click()
-  await expect(firstName).toHaveValue(original)
+  await page.getByRole('button', { name: 'Изменить данные' }).click()
+  await expect(page.getByLabel('Имя', { exact: true })).toHaveValue(original)
+  await page.getByRole('button', { name: 'Отмена' }).click()
 
   const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
   await expect(darkTheme).not.toBeChecked()

@@ -7,6 +7,7 @@ import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import { inspectRuntimeDomainReadiness } from './db/runtime-domain-readiness.js'
 import { DatabaseStageDatabaseReaderAccessManager } from './db/stage-database-reader-access.js'
+import { DatabaseStageRolloutAssignmentManager } from './db/stage-rollout-assignment.js'
 import { DatabaseStageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
 import { DatabasePilotEnroller } from './db/yandex-pilot-enrollment.js'
 import { buildMigrationApp } from './migration-app.js'
@@ -63,10 +64,16 @@ const stageTenantMigrationEnabled =
 if (stageTenantMigrationEnabled && process.env.APP_ENV !== 'stage') {
   throw new Error('Tenant migration can be enabled only in stage')
 }
+const stageRolloutAssignmentsEnabled =
+  process.env.STAGE_ROLLOUT_ASSIGNMENTS_ENABLED === 'true'
+if (stageRolloutAssignmentsEnabled && process.env.APP_ENV !== 'stage') {
+  throw new Error('Stage rollout assignments can be enabled only in stage')
+}
 const privateFeaturePool = pilotEnrollmentEnabled
   || stageWorkoutFixtureEnabled
   || stageDatabaseAccessEnabled
   || stageTenantMigrationEnabled
+  || stageRolloutAssignmentsEnabled
   ? new PgDatabasePool(databaseConfig)
   : undefined
 const runtimeDatabaseConfig = stageRuntimeDatabasePreflightEnabled
@@ -108,6 +115,12 @@ const app = buildMigrationApp({
         databaseReaderAccess:
           new DatabaseStageDatabaseReaderAccessManager(privateFeaturePool),
       }),
+  ...(privateFeaturePool === undefined || !stageRolloutAssignmentsEnabled
+    ? {}
+    : {
+        rolloutAssignment:
+          new DatabaseStageRolloutAssignmentManager(privateFeaturePool),
+      }),
   ...(privateFeaturePool === undefined || yandexClientId === undefined
     ? {}
     : {
@@ -144,6 +157,11 @@ const app = buildMigrationApp({
   runMigrations: async () => {
     const migrations = await runner({
       advisoryLockMode: 'fail',
+      // Independent PRs can merge in a different order than their numeric
+      // migration names. Pending files are still applied in filename order;
+      // disabling only the history-prefix check lets a late, already-reviewed
+      // migration run without rewriting the shared migration history.
+      checkOrder: false,
       createMigrationsSchema: true,
       databaseUrl: databaseConfig,
       dir: migrationsDirectory,

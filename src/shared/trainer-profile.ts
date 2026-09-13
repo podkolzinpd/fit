@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { TrainerProfileDraft, TrainerProfessionalProfile } from './domain'
+import type { TrainerCatalogPage, TrainerProfileDraft, TrainerProfessionalProfile } from './domain'
 
 const certificateSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -43,6 +43,12 @@ export const trainerProfessionalProfileSchema = z.object({
   version: z.number().int().positive(),
 })
 
+export const trainerCatalogPageSchema = z.object({
+  items: z.array(trainerProfessionalProfileSchema),
+  totalCount: z.number().int().nonnegative(),
+  nextOffset: z.number().int().nonnegative().nullable(),
+})
+
 export function emptyTrainerProfileDraft(displayName = ''): TrainerProfileDraft {
   return {
     displayName,
@@ -64,14 +70,15 @@ export function parseTrainerProfile(value: unknown): TrainerProfessionalProfile 
   return trainerProfessionalProfileSchema.parse(value)
 }
 
+export function parseTrainerCatalogPage(value: unknown): TrainerCatalogPage {
+  return trainerCatalogPageSchema.parse(value)
+}
+
 export function parseTrainerProfileDraft(value: unknown): TrainerProfileDraft {
   return trainerProfileDraftSchema.parse(value)
 }
 
 export function validatePublishableTrainerProfile(draft: TrainerProfileDraft): string | null {
   if (draft.displayName.trim().length < 2) return 'Укажите имя тренера.'
-  if (draft.bio.trim().length < 40) return 'Расскажите о себе чуть подробнее — от 40 символов.'
-  if (draft.specialties.length === 0) return 'Добавьте хотя бы одно направление.'
-  if (draft.trainingModes.length === 0) return 'Выберите формат занятий.'
   return null
 }

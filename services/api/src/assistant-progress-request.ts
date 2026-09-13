@@ -3,6 +3,7 @@ export type AssistantProgressRequest = {
   periodStart: string
   periodEnd: string
   force: boolean
+  triggerReason: 'create' | 'new_workout' | 'period_change' | 'manual_refresh'
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -15,15 +16,24 @@ export function readAssistantProgressRequest(value: unknown): AssistantProgressR
   const periodStart = body.period_start
   const periodEnd = body.period_end
   const force = body.force
+  const triggerReason = body.trigger_reason
   if (
     typeof clientId !== 'string' || !UUID_PATTERN.test(clientId) ||
     typeof periodStart !== 'string' || !DATE_PATTERN.test(periodStart) ||
     typeof periodEnd !== 'string' || !DATE_PATTERN.test(periodEnd) ||
-    (force !== undefined && typeof force !== 'boolean')
+    (force !== undefined && typeof force !== 'boolean') ||
+    (triggerReason !== undefined && triggerReason !== 'create' && triggerReason !== 'new_workout'
+      && triggerReason !== 'period_change' && triggerReason !== 'manual_refresh')
   ) return undefined
 
   const start = Date.parse(`${periodStart}T00:00:00Z`)
   const end = Date.parse(`${periodEnd}T00:00:00Z`)
   if (Number.isNaN(start) || Number.isNaN(end) || end < start || end - start > 366 * 24 * 60 * 60 * 1000) return undefined
-  return { clientId, periodStart, periodEnd, force: force === true }
+  return {
+    clientId,
+    periodStart,
+    periodEnd,
+    force: force === true,
+    triggerReason: triggerReason ?? 'manual_refresh',
+  }
 }

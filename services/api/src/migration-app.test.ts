@@ -13,6 +13,10 @@ import {
   StageDatabaseReaderNotReadyError,
   type StageDatabaseReaderAccessManager,
 } from './db/stage-database-reader-access.js'
+import {
+  StageRolloutProfileNotReadyError,
+  type StageRolloutAssignmentManager,
+} from './db/stage-rollout-assignment.js'
 import { buildMigrationApp } from './migration-app.js'
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
@@ -50,8 +54,34 @@ describe('migration endpoint', () => {
     const response = await app.inject({ method: 'POST', url: '/migrate' })
 
     expect(response.statusCode).toBe(500)
-    expect(response.json()).toEqual({ status: 'migration_failed' })
+    expect(response.json()).toEqual({
+      status: 'migration_failed',
+      error: { code: 'unknown' },
+    })
     expect(response.body).not.toContain('secret')
+  })
+
+  it('returns only allowlisted diagnostics for a database migration error', async () => {
+    const error = Object.assign(
+      new Error('relation public.training_summary_generation_guard does not exist'),
+      { code: '42P01' },
+    )
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: vi.fn().mockRejectedValue(error),
+    })
+    apps.push(app)
+
+    const response = await app.inject({ method: 'POST', url: '/migrate' })
+
+    expect(response.statusCode).toBe(500)
+    expect(response.json()).toEqual({
+      status: 'migration_failed',
+      error: {
+        code: '42P01',
+        message: 'relation public.training_summary_generation_guard does not exist',
+      },
+    })
   })
 })
 
@@ -252,6 +282,142 @@ describe('stage database reader access', () => {
     expect(response.statusCode).toBe(500)
     expect(response.json()).toEqual({ status: 'database_access_failed' })
     expect(response.body).not.toContain('secret')
+  })
+})
+
+describe('stage rollout assignment', () => {
+  function buildRolloutAssignment(
+    apply: StageRolloutAssignmentManager['apply'] = () => Promise.resolve({
+      accountRole: 'trainer',
+      domainReady: true,
+      identityLinked: false,
+      rolloutEnabled: true,
+    }),
+  ) {
+    const rollout = vi.fn(apply)
+    const app = buildMigrationApp({
+      logger: false,
+      rolloutAssignment: { apply: rollout },
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    return { app, rollout }
+  }
+
+  it('does not expose the route unless explicitly enabled', async () => {
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/rollout-assignments/yandex',
+      payload: { action: 'inspect', profileId: STAGE_CLIENT_ID },
+    })
+
+    expect(response.statusCode).toBe(404)
+  })
+
+  it.each([
+    ['inspect', 'rollout_inspected'],
+    ['enable', 'rollout_enabled'],
+    ['disable', 'rollout_disabled'],
+  ] as const)('applies a validated %s request', async (action, status) => {
+    const { app, rollout } = buildRolloutAssignment(() => Promise.resolve({
+      accountRole: 'trainer',
+      domainReady: true,
+      identityLinked: true,
+      rolloutEnabled: action !== 'disable',
+    }))
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/rollout-assignments/yandex',
+      payload: { action, profileId: STAGE_CLIENT_ID },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      status,
+      accountRole: 'trainer',
+      domainReady: true,
+      identityLinked: true,
+      rolloutEnabled: action !== 'disable',
+    })
+    expect(rollout).toHaveBeenCalledWith(action, { profileId: STAGE_CLIENT_ID })
+    expect(response.body).not.toContain(STAGE_CLIENT_ID)
+  })
+
+  it('accepts the non-reversible fingerprint recorded by tenant migration', async () => {
+    const { app, rollout } = buildRolloutAssignment()
+    const tenantFingerprint = 'a'.repeat(16)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/rollout-assignments/yandex',
+      payload: { action: 'inspect', tenantFingerprint },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(rollout).toHaveBeenCalledWith('inspect', { tenantFingerprint })
+    expect(response.body).not.toContain(tenantFingerprint)
+  })
+
+  it('rejects malformed profile identifiers before touching the database', async () => {
+    const { app, rollout } = buildRolloutAssignment()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/rollout-assignments/yandex',
+      payload: { action: 'enable', profileId: 'not-a-profile' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(rollout).not.toHaveBeenCalled()
+  })
+
+  it('rejects ambiguous rollout targets before touching the database', async () => {
+    const { app, rollout } = buildRolloutAssignment()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/rollout-assignments/yandex',
+      payload: {
+        action: 'enable',
+        profileId: STAGE_CLIENT_ID,
+        tenantFingerprint: 'a'.repeat(16),
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(rollout).not.toHaveBeenCalled()
+  })
+
+  it('keeps profile readiness and unexpected failures generic', async () => {
+    const notReady = buildRolloutAssignment(() => Promise.reject(
+      new StageRolloutProfileNotReadyError(),
+    )).app
+    const failed = buildRolloutAssignment(() => Promise.reject(
+      new Error('postgresql://owner:secret@database'),
+    )).app
+
+    const request = {
+      method: 'POST' as const,
+      url: '/stage/rollout-assignments/yandex',
+      payload: { action: 'enable', profileId: STAGE_CLIENT_ID },
+    }
+    const notReadyResponse = await notReady.inject(request)
+    const failedResponse = await failed.inject(request)
+
+    expect(notReadyResponse.statusCode).toBe(409)
+    expect(notReadyResponse.json()).toEqual({ status: 'profile_not_ready' })
+    expect(failedResponse.statusCode).toBe(500)
+    expect(failedResponse.json()).toEqual({ status: 'rollout_assignment_failed' })
+    expect(failedResponse.body).not.toContain('secret')
   })
 })
 

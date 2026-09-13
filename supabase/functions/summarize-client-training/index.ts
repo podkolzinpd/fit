@@ -9,7 +9,7 @@ import {
   SUMMARY_JSON_SCHEMA,
   SUMMARY_SYSTEM_PROMPT,
 } from "./summary-contract.ts"
-import { summaryQualityIssues } from "./summary-quality.ts"
+import { assessSummaryQuality, type SummaryQualityAssessment } from "./summary-quality.ts"
 import { buildTrainingGoalContext } from "./summary-goal.ts"
 import {
   authorizeSummaryActor,
@@ -18,7 +18,11 @@ import {
 import { completedWorkoutsInPeriod } from "./workout-source.ts"
 import { buildSummaryConsistency } from "./summary-consistency.ts"
 import { buildSummaryProgressFacts } from "./summary-progress-facts.ts"
-import { buildSummaryModelInput } from "./summary-model-input.ts"
+import {
+  buildSummaryModelInput,
+  MAX_SUMMARY_MODEL_INPUT_CHARS,
+  SUMMARY_AGGREGATOR_VERSION,
+} from "./summary-model-input.ts"
 import { resolveSupabasePublicKey } from "./supabase-public-key.ts"
 
 const YANDEX_COMPLETION_URL =
@@ -26,12 +30,14 @@ const YANDEX_COMPLETION_URL =
 const MAX_PERIOD_DAYS = 366
 const MAX_SOURCE_ROWS = 10_000
 const MAX_DIRECT_MODEL_INPUT_CHARS = 80_000
+const inFlightSummaryRequests = new Map<string, Promise<YandexSummaryResult>>()
 
 type SummarizeRequest = {
   client_id: string
   period_start: string
   period_end: string
   force: boolean
+  trigger_reason: "create" | "new_workout" | "period_change" | "manual_refresh"
 }
 
 type WorkoutRow = {
@@ -151,6 +157,7 @@ class HttpError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly tokenUsage: Record<string, string> = {},
   ) {
     super(message)
   }
@@ -267,6 +274,7 @@ function parseRequest(value: unknown): SummarizeRequest {
   const periodStart = body.period_start
   const periodEnd = body.period_end
   const force = body.force
+  const triggerReason = body.trigger_reason
   const uuidPattern =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   const datePattern = /^\d{4}-\d{2}-\d{2}$/
@@ -283,6 +291,10 @@ function parseRequest(value: unknown): SummarizeRequest {
   if (force !== undefined && typeof force !== "boolean") {
     throw new HttpError(400, "invalid_force")
   }
+  if (triggerReason !== undefined && triggerReason !== "create" && triggerReason !== "new_workout" &&
+    triggerReason !== "period_change" && triggerReason !== "manual_refresh") {
+    throw new HttpError(400, "invalid_trigger_reason")
+  }
 
   const startMs = Date.parse(`${periodStart}T00:00:00Z`)
   const endMs = Date.parse(`${periodEnd}T00:00:00Z`)
@@ -298,6 +310,7 @@ function parseRequest(value: unknown): SummarizeRequest {
     period_start: periodStart,
     period_end: periodEnd,
     force: force === true,
+    trigger_reason: triggerReason ?? "manual_refresh",
   }
 }
 
@@ -309,6 +322,10 @@ function requiredSecret(name: string): string {
   return value
 }
 
+function configuredModelId(): string {
+  return Deno.env.get("YANDEX_CLOUD_MODEL_ID") ?? "yandexgpt"
+}
+
 function serviceClient() {
   return createClient(
     requiredSecret("SUPABASE_URL"),
@@ -317,6 +334,16 @@ function serviceClient() {
       auth: { persistSession: false, autoRefreshToken: false },
     },
   )
+}
+
+type GenerationDecision = "claimed" | "cached" | "in_progress" | "cooldown" | "period_limit" | "daily_limit"
+
+function parseGenerationDecision(value: unknown): GenerationDecision {
+  if (!isRecord(value)) throw new HttpError(503, "summary_generation_guard_failed")
+  const decision = value.decision
+  if (decision === "claimed" || decision === "cached" || decision === "in_progress" ||
+    decision === "cooldown" || decision === "period_limit" || decision === "daily_limit") return decision
+  throw new HttpError(503, "summary_generation_guard_failed")
 }
 
 function requestClient(req: Request) {
@@ -730,7 +757,7 @@ type StructuredYandexConfig<T> = {
   schema: unknown
   maxTokens: string
   parse: (text: string) => T
-  qualityIssues?: (value: T) => string[]
+  qualityAssessment?: (value: T) => SummaryQualityAssessment
 }
 
 function yandexResponseError(status: number): HttpError {
@@ -779,7 +806,7 @@ async function requestStructuredYandex<T>(
 ): Promise<{ value: T; modelUri: string; modelVersion: string | null; usage: Record<string, string> }> {
   const apiKey = requiredSecret("YANDEX_CLOUD_API_KEY")
   const folderId = requiredSecret("YANDEX_CLOUD_FOLDER_ID")
-  const modelId = Deno.env.get("YANDEX_CLOUD_MODEL_ID") ?? "yandexgpt"
+  const modelId = configuredModelId()
   const modelUri = `gpt://${folderId}/${modelId}/latest`
 
   const messages = [
@@ -794,8 +821,24 @@ async function requestStructuredYandex<T>(
   ]
   const usage: Record<string, string> = {}
   let modelVersion: string | null = null
+  let repairMessages: typeof messages | null = null
+  let contentRepairAttempted = false
+  const maxAttempts = 1
+  const setTargetedRepair = (text: string, issues: string[]) => {
+    contentRepairAttempted = true
+    repairMessages = [
+      {
+        role: "system",
+        text: "Исправь уже подготовленный анализ ФИТ. Сохрани подтверждённые факты и смысл, не добавляй новые данные. Верни только полный JSON по исходной схеме.",
+      },
+      {
+        role: "user",
+        text: JSON.stringify({ previous_answer: text, violations: issues }),
+      },
+    ]
+  }
 
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 30_000)
     let response: Response
@@ -814,7 +857,7 @@ async function requestStructuredYandex<T>(
             maxTokens: config.maxTokens,
           },
           jsonSchema: { schema: config.schema },
-          messages,
+          messages: repairMessages ?? messages,
         }),
         signal: controller.signal,
       })
@@ -822,7 +865,7 @@ async function requestStructuredYandex<T>(
       const failure = error instanceof DOMException && error.name === "AbortError"
         ? new HttpError(504, "yandex_cloud_timeout")
         : new HttpError(502, "yandex_cloud_unavailable")
-      if (attempt < 3) {
+      if (attempt < maxAttempts) {
         structuredRetryLog(options, attempt, failure.message, null, 0, null)
         await new Promise((resolve) => setTimeout(resolve, yandexRetryDelay(attempt)))
         continue
@@ -834,7 +877,7 @@ async function requestStructuredYandex<T>(
 
     if (!response.ok) {
       const failure = yandexResponseError(response.status)
-      if (attempt < 3 && isRetryableYandexStatus(response.status)) {
+      if (attempt < maxAttempts && isRetryableYandexStatus(response.status)) {
         structuredRetryLog(options, attempt, failure.message, null, 0, null)
         await new Promise((resolve) => setTimeout(resolve, yandexRetryDelay(attempt)))
         continue
@@ -848,11 +891,11 @@ async function requestStructuredYandex<T>(
       payload = parseYandexJson<YandexCompletionResponse>(payloadText)
     } catch {
       const code = "yandex_cloud_invalid_upstream_json"
-      if (attempt < 3) {
+      if (attempt < maxAttempts) {
         structuredRetryLog(options, attempt, code, null, 0, null)
         continue
       }
-      throw new HttpError(502, code)
+      throw new HttpError(502, code, usage)
     }
     const alternative = payload.result?.alternatives?.[0]
     const alternativeStatus = alternative?.status ?? null
@@ -871,26 +914,29 @@ async function requestStructuredYandex<T>(
       alternativeStatus === "ALTERNATIVE_STATUS_PARTIAL"
     ) {
       const code = "yandex_cloud_truncated_response"
-      if (attempt < 3) {
+      if (attempt < maxAttempts && !contentRepairAttempted) {
         structuredRetryLog(options, attempt, code, alternativeStatus, text.length, completionTokens)
-        messages.push({
-          role: "user",
-          text: "Предыдущий ответ оборвался по лимиту. Верни более короткий полный JSON без Markdown и пояснений.",
-        })
+        contentRepairAttempted = true
+        repairMessages = [
+          ...messages,
+          { role: "user", text: "Ответ оборвался. Верни более короткий полный JSON без Markdown и пояснений." },
+        ]
         continue
       }
-      throw new HttpError(502, code)
+      throw new HttpError(502, code, usage)
     }
     if (alternativeStatus === "ALTERNATIVE_STATUS_CONTENT_FILTER") {
-      throw new HttpError(502, "yandex_cloud_request_rejected")
+      throw new HttpError(502, "yandex_cloud_request_rejected", usage)
     }
     if (!text) {
       const code = "yandex_cloud_empty_response"
-      if (attempt < 3) {
+      if (attempt < maxAttempts && !contentRepairAttempted) {
         structuredRetryLog(options, attempt, code, alternativeStatus, 0, completionTokens)
+        contentRepairAttempted = true
+        repairMessages = messages
         continue
       }
-      throw new HttpError(502, code)
+      throw new HttpError(502, code, usage)
     }
 
     let value: T
@@ -900,44 +946,47 @@ async function requestStructuredYandex<T>(
       const code = error instanceof HttpError
         ? error.message
         : "yandex_cloud_invalid_summary"
-      if (attempt < 3) {
+      if (attempt < maxAttempts && !contentRepairAttempted) {
         structuredRetryLog(options, attempt, code, alternativeStatus, text.length, completionTokens)
-        messages.push({
-          role: "user",
-          text: "Предыдущий ответ нельзя разобрать. Верни заново только полный корректный JSON по схеме, без Markdown и пояснений.",
-        })
+        setTargetedRepair(text, ["Ответ нельзя разобрать как полный JSON по схеме."])
         continue
       }
-      throw error instanceof HttpError ? error : new HttpError(502, code)
+      throw new HttpError(502, code, usage)
     }
-    const issues = config.qualityIssues?.(value) ?? []
-    if (issues.length === 0) {
+    const quality = config.qualityAssessment?.(value) ?? { blockingIssues: [], advisories: [] }
+    const issues = quality.blockingIssues
+    if (issues.length === 0 && (quality.advisories.length === 0 || contentRepairAttempted || attempt === maxAttempts)) {
       return { value, modelUri, modelVersion, usage }
     }
-    if (attempt === 3) {
-      console.warn("summary quality check rejected response", {
+    if (issues.length === 0) {
+      console.warn("summary style check requested one repair", {
         request_id: options.requestId ?? null,
         stage: options.stage ?? 'direct',
         chunk_index: options.chunkIndex ?? null,
         chunk_total: options.chunkTotal ?? null,
         attempt,
-        issue_count: issues.length,
+        issue_count: quality.advisories.length,
+        issues: quality.advisories,
       })
-      throw new HttpError(502, "yandex_cloud_quality_check_failed")
+      setTargetedRepair(text, quality.advisories)
+      continue
     }
-
-    messages.push(
-      {
-        role: "user",
-        text:
-          "Предыдущий JSON не прошёл автоматическую проверку. Верни полный исправленный JSON. " +
-          "Не меняй подтверждённые числа. Нарушения:\n- " +
-          issues.join("\n- "),
-      },
-    )
+    console.warn("summary quality check rejected response", {
+      request_id: options.requestId ?? null,
+      stage: options.stage ?? 'direct',
+      chunk_index: options.chunkIndex ?? null,
+      chunk_total: options.chunkTotal ?? null,
+      attempt,
+      issue_count: issues.length,
+      issues,
+    })
+    if (attempt === maxAttempts || contentRepairAttempted) {
+      throw new HttpError(502, "yandex_cloud_quality_check_failed", usage)
+    }
+    setTargetedRepair(text, issues)
   }
 
-  throw new HttpError(502, "yandex_cloud_quality_check_failed")
+  throw new HttpError(502, "yandex_cloud_quality_check_failed", usage)
 }
 
 async function requestYandexChunkAnalysis(
@@ -964,9 +1013,9 @@ async function requestFinalYandexSummary(
   const result = await requestStructuredYandex(trainingData, periodStart, periodEnd, {
     systemPrompt: SUMMARY_SYSTEM_PROMPT,
     schema: SUMMARY_JSON_SCHEMA,
-    maxTokens: "2000",
+    maxTokens: "1000",
     parse: parseGeneratedSummary,
-    qualityIssues: (summary) => summaryQualityIssues(summary, options.qualityData ?? trainingData),
+    qualityAssessment: (summary) => assessSummaryQuality(summary, options.qualityData ?? trainingData),
   }, options)
   return {
     summary: result.value,
@@ -1023,6 +1072,25 @@ async function requestYandexSummary(
     ...options,
     stage: options.stage ?? 'direct',
   })
+}
+
+async function requestYandexSummaryDeduplicated(
+  key: string,
+  trainingData: unknown,
+  periodStart: string,
+  periodEnd: string,
+  options: YandexRequestOptions,
+): Promise<{ result: YandexSummaryResult; shared: boolean }> {
+  const existing = inFlightSummaryRequests.get(key)
+  if (existing) return { result: await existing, shared: true }
+
+  const pending = requestYandexSummary(trainingData, periodStart, periodEnd, options)
+  inFlightSummaryRequests.set(key, pending)
+  try {
+    return { result: await pending, shared: false }
+  } finally {
+    if (inFlightSummaryRequests.get(key) === pending) inFlightSummaryRequests.delete(key)
+  }
 }
 
 const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
@@ -1276,10 +1344,18 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
           measurements: previousMeasurements,
         } : null,
       }
-      const inputFingerprint = await fingerprint(trainingData)
       const modelInput = buildSummaryModelInput(trainingData)
+      const sourceInputChars = JSON.stringify(trainingData).length
+      const modelInputChars = JSON.stringify(modelInput).length
+      const inputFingerprint = await fingerprint({
+        prompt_version: PROMPT_VERSION,
+        analysis_version: SUMMARY_ANALYSIS_VERSION,
+        aggregation_version: SUMMARY_AGGREGATOR_VERSION,
+        model_id: configuredModelId(),
+        source: trainingData,
+      })
 
-      if (isClient && !input.force) {
+      if (isClient) {
         const { data: cached, error: cacheError } = await userClient
           .from("client_published_training_summaries")
           .select("id,source_summary_id,client_id,period_start,period_end,summary,display_metrics,generated_at,published_at")
@@ -1292,11 +1368,27 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
           ? cached.summary as Record<string, unknown>
           : null
         if (cached && cachedSummary?.analysisVersion === SUMMARY_ANALYSIS_VERSION && cachedSummary.inputFingerprint === inputFingerprint) {
+          console.info("summary cache hit", { request_id: requestId, actor: "client", force_requested: input.force, trigger_reason: input.trigger_reason })
           return Response.json({ data: cached, cached: true })
+        }
+        const { data: sharedCache, error: sharedCacheError } = await serviceClient().rpc(
+          "publish_cached_training_summary_for_client",
+          {
+            p_client_id: input.client_id,
+            p_period_start: input.period_start,
+            p_period_end: input.period_end,
+            p_prompt_version: PROMPT_VERSION,
+            p_input_fingerprint: inputFingerprint,
+          },
+        )
+        if (sharedCacheError) throw new HttpError(500, "summary_cache_lookup_failed")
+        if (sharedCache) {
+          console.info("summary shared cache published", { request_id: requestId, trigger_reason: input.trigger_reason })
+          return Response.json({ data: sharedCache, cached: true })
         }
       }
 
-      if (isTrainer && !input.force) {
+      if (isTrainer) {
         const { data: cached, error: cacheError } = await userClient
           .from("client_training_summaries")
           .select(
@@ -1311,9 +1403,105 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
           throw new HttpError(500, "summary_cache_lookup_failed")
         }
         if (cached?.input_fingerprint === inputFingerprint) {
+          console.info("summary cache hit", { request_id: requestId, actor: "trainer", force_requested: input.force, trigger_reason: input.trigger_reason })
           const { input_fingerprint: _fingerprint, ...data } = cached
           return Response.json({ data, cached: true })
         }
+      }
+
+      if (modelInputChars > MAX_SUMMARY_MODEL_INPUT_CHARS) {
+        throw new HttpError(422, "summary_model_input_too_large")
+      }
+      if (Deno.env.get("FIT_AI_SUMMARY_GENERATION_DISABLED") === "true") {
+        throw new HttpError(503, "summary_generation_disabled")
+      }
+
+      const summaryStore = isClient || isConnectedTrainer ? serviceClient() : userClient
+      const generationGuardStore = serviceClient()
+      const { data: claimData, error: claimError } = await generationGuardStore.rpc(
+        "claim_training_summary_generation",
+        {
+          p_client_id: input.client_id,
+          p_period_start: input.period_start,
+          p_period_end: input.period_end,
+          p_input_fingerprint: inputFingerprint,
+          p_request_id: requestId,
+          p_source_input_chars: sourceInputChars,
+          p_model_input_chars: modelInputChars,
+        },
+      )
+      if (claimError) throw new HttpError(503, "summary_generation_guard_failed")
+      const generationDecision = parseGenerationDecision(claimData)
+      console.info("summary generation guard decision", {
+        request_id: requestId,
+        decision: generationDecision,
+        fingerprint_prefix: inputFingerprint.slice(0, 12),
+        force_requested: input.force,
+        trigger_reason: input.trigger_reason,
+        source_input_chars: sourceInputChars,
+        model_input_chars: modelInputChars,
+      })
+      if (generationDecision === "cached") {
+        if (isClient) {
+          const { data: sharedCache, error: sharedCacheError } = await generationGuardStore.rpc(
+            "publish_cached_training_summary_for_client",
+            {
+              p_client_id: input.client_id,
+              p_period_start: input.period_start,
+              p_period_end: input.period_end,
+              p_prompt_version: PROMPT_VERSION,
+              p_input_fingerprint: inputFingerprint,
+            },
+          )
+          if (sharedCacheError) throw new HttpError(500, "summary_cache_lookup_failed")
+          if (sharedCache) return Response.json({ data: sharedCache, cached: true })
+        }
+        if (isTrainer) {
+          const { data: cached, error: cacheError } = await userClient
+            .from("client_training_summaries")
+            .select("id,client_id,period_start,period_end,trainer_summary,client_summary,display_metrics,generated_at,version,input_fingerprint")
+            .eq("client_id", input.client_id)
+            .eq("period_start", input.period_start)
+            .eq("period_end", input.period_end)
+            .eq("prompt_version", PROMPT_VERSION)
+            .maybeSingle()
+          if (cacheError) throw new HttpError(500, "summary_cache_lookup_failed")
+          if (cached?.input_fingerprint === inputFingerprint) {
+            const { input_fingerprint: _fingerprint, ...data } = cached
+            return Response.json({ data, cached: true })
+          }
+        }
+        throw new HttpError(409, "summary_generation_in_progress")
+      }
+      if (generationDecision === "in_progress") {
+        throw new HttpError(409, "summary_generation_in_progress")
+      }
+      if (generationDecision === "cooldown") {
+        throw new HttpError(429, "summary_generation_cooldown")
+      }
+      if (generationDecision === "period_limit") {
+        throw new HttpError(429, "summary_generation_period_limit")
+      }
+      if (generationDecision === "daily_limit") {
+        throw new HttpError(429, "summary_generation_daily_limit")
+      }
+
+      const recordGenerationFailure = async (error: unknown, fallbackUsage: Record<string, string> = {}) => {
+        const code = error instanceof Error ? error.message : "summary_generation_failed"
+        const usage = error instanceof HttpError ? error.tokenUsage : fallbackUsage
+        const { error: guardError } = await generationGuardStore.rpc(
+          "fail_training_summary_generation",
+          {
+            p_client_id: input.client_id,
+            p_period_start: input.period_start,
+            p_period_end: input.period_end,
+            p_input_fingerprint: inputFingerprint,
+            p_request_id: requestId,
+            p_failure_code: code,
+            p_token_usage: usage,
+          },
+        )
+        if (guardError) console.error("summary generation failure record failed", { request_id: requestId })
       }
 
       console.info("summary model request started", {
@@ -1322,25 +1510,44 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
           workouts: completedWorkouts.length,
           exercises: exercises.length,
           sets: sets.length,
-          model_input_chars: JSON.stringify(modelInput).length,
-          request_strategy: JSON.stringify(modelInput).length > MAX_DIRECT_MODEL_INPUT_CHARS
-            ? 'chunked'
-            : 'direct',
+          source_input_chars: sourceInputChars,
+          model_input_chars: modelInputChars,
+          aggregation_version: SUMMARY_AGGREGATOR_VERSION,
+          fingerprint_prefix: inputFingerprint.slice(0, 12),
+          force_requested: input.force,
+          trigger_reason: input.trigger_reason,
+          request_strategy: "direct",
+          model_calls: 1,
         },
       })
-      const generated = await requestYandexSummary(
-        modelInput,
-        trainingData.period.start,
-        trainingData.period.end,
-        { requestId },
-      )
+      const generationKey = `${input.client_id}:${input.period_start}:${input.period_end}:${inputFingerprint}`
+      let generation: Awaited<ReturnType<typeof requestYandexSummaryDeduplicated>>
+      try {
+        generation = await requestYandexSummaryDeduplicated(
+          generationKey,
+          modelInput,
+          trainingData.period.start,
+          trainingData.period.end,
+          { requestId, skipChunking: true },
+        )
+      } catch (error) {
+        await recordGenerationFailure(error)
+        throw error
+      }
+      const generated = generation.result
+      console.info("summary model request completed", {
+        request_id: requestId,
+        shared_in_flight: generation.shared,
+        fingerprint_prefix: inputFingerprint.slice(0, 12),
+        model_input_chars: modelInputChars,
+        total_tokens: generated.usage.totalTokens ?? null,
+      })
       const generatedClientSummary = { ...generated.summary.client, inputFingerprint }
       const displayMetrics = {
         ...trainingData.consistency,
         progress_facts: buildSummaryProgressFacts(trainingData.exercises),
       }
 
-      const summaryStore = isClient || isConnectedTrainer ? serviceClient() : userClient
       const { data: saved, error: saveError } = await summaryStore
         .from("client_training_summaries")
         .upsert({
@@ -1371,6 +1578,7 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
         )
         .single()
       if (saveError || !saved) {
+        await recordGenerationFailure(new HttpError(500, "summary_save_failed"), generated.usage)
         throw new HttpError(500, "summary_save_failed")
       }
 
@@ -1394,11 +1602,36 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
           )
           .single()
         if (visibleError || !visible) {
+          await recordGenerationFailure(new HttpError(500, "summary_visibility_save_failed"), generated.usage)
           throw new HttpError(500, "summary_visibility_save_failed")
         }
+        const { error: completeError } = await generationGuardStore.rpc(
+          "complete_training_summary_generation",
+          {
+            p_client_id: input.client_id,
+            p_period_start: input.period_start,
+            p_period_end: input.period_end,
+            p_input_fingerprint: inputFingerprint,
+            p_request_id: requestId,
+            p_token_usage: generated.usage,
+          },
+        )
+        if (completeError) console.error("summary generation completion record failed", { request_id: requestId })
         return Response.json({ data: visible, cached: false })
       }
 
+      const { error: completeError } = await generationGuardStore.rpc(
+        "complete_training_summary_generation",
+        {
+          p_client_id: input.client_id,
+          p_period_start: input.period_start,
+          p_period_end: input.period_end,
+          p_input_fingerprint: inputFingerprint,
+          p_request_id: requestId,
+          p_token_usage: generated.usage,
+        },
+      )
+      if (completeError) console.error("summary generation completion record failed", { request_id: requestId })
       return Response.json({ data: saved, cached: false })
     } catch (error) {
       if (error instanceof HttpError) {

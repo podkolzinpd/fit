@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
 
 async function logoutFromProfile(page: import('@playwright/test').Page) {
-  if (new URL(page.url()).pathname === '/profile') {
-    await page.goto('/profile/settings')
-  }
+  const pathname = new URL(page.url()).pathname
+  if (pathname === '/profile') await page.goto('/profile/settings')
+  if (pathname === '/me/profile') await page.goto('/me/settings')
   const logout = page.getByRole('button', { name: 'Выйти' })
   await expect(logout).toBeVisible()
   await logout.scrollIntoViewIfNeeded()
@@ -49,11 +49,13 @@ test('trainer registers without surname or email confirmation', async ({ page },
   await page.goto('/me/profile')
   await expect(page).toHaveURL(/\/today$/)
   await page.goto('/profile/settings')
+  await page.getByRole('button', { name: 'Изменить данные' }).click()
   await expect(page.getByLabel('Имя', { exact: true })).toHaveValue('Тест')
   await page.getByLabel('Имя', { exact: true }).fill('Тест Обновлённый')
   await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Сохранено' })).toBeVisible()
   await page.reload()
+  await page.getByRole('button', { name: 'Изменить данные' }).click()
   await expect(page.getByLabel('Имя', { exact: true })).toHaveValue('Тест Обновлённый')
   const introduction = page.getByRole('button', { name: 'Понятно', exact: true })
   if (await introduction.isVisible()) await introduction.click()
@@ -368,8 +370,9 @@ test('client safely switches trainers after an explicit disconnect', async ({ pa
   await page.getByRole('button', { name: 'Открыть кабинет' }).click()
 
   await page.setViewportSize({ width: 430, height: 932 })
-  await page.goto('/me/profile')
+  await page.goto('/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto('/me/profile')
   await expect(page.getByText('Второй тренер', { exact: true })).toBeVisible()
   await expect(page.getByText('Первый тренер', { exact: true })).toHaveCount(0)
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
@@ -745,7 +748,9 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await disconnectDialog.getByRole('button', { name: 'Отмена' }).click()
 
   await page.setViewportSize({ width: 430, height: 932 })
+  await page.goto('/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto('/me/profile')
   await page.getByRole('button', { name: 'Отключить' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отключить' }).click()
   await expect(page.getByRole('status')).toContainText('Ваш аккаунт, тренировки, замеры и цели сохранены.')

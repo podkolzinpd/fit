@@ -25,6 +25,24 @@ export interface ChatThread {
   lastMessageAt: string | null
   lastMessageSenderId: UUID | null
   unreadCount: number
+  canMessage: boolean
+  blockedByMe: boolean
+  blockedByPartner: boolean
+}
+
+export interface ChatBlockState {
+  canMessage: boolean
+  blockedByMe: boolean
+  blockedByPartner: boolean
+}
+
+export interface ChatConnectionState {
+  activeConnection: boolean
+  invitationPending: boolean
+  invitedAt: string | null
+  canInvite: boolean
+  canAccept: boolean
+  trainerSwitchRequired: boolean
 }
 
 export interface ChatMessage {
@@ -32,12 +50,41 @@ export interface ChatMessage {
   conversationId: UUID
   senderId: UUID
   body: string
+  image: ChatImageAttachment | null
   createdAt: string
+  editedAt: string | null
+  replyTo: ChatReplyPreview | null
+}
+
+export interface ChatReplyPreview {
+  messageId: UUID
+  senderId: UUID | null
+  body: string | null
+  hasImage: boolean
+  deleted: boolean
+}
+
+export interface ChatImageAttachment {
+  url: string | null
+  mimeType: 'image/jpeg'
+  width: number
+  height: number
+  sizeBytes: number
+}
+
+export interface ChatImageDraft extends Omit<ChatImageAttachment, 'url'> {
+  dataUrl: string
 }
 
 export interface ChatMessagePage {
   messages: ChatMessage[]
   nextCursor: { createdAt: string; id: UUID } | null
+}
+
+export interface ChatUnreadState {
+  firstMessageId: UUID | null
+  firstCreatedAt: string | null
+  unreadCount: number
 }
 
 interface SessionActorBase {
@@ -615,6 +662,8 @@ export interface PublishedTrainingSummary {
   publishedAt: string
 }
 
+export type TrainingSummaryTriggerReason = 'create' | 'new_workout' | 'period_change' | 'manual_refresh'
+
 export type TrainerTrainingMode = 'online' | 'in_person'
 
 export interface TrainerCertificate {
@@ -655,3 +704,24 @@ export interface TrainerCatalogFilters {
   mode: TrainerTrainingMode | ''
   acceptingClients: boolean | null
 }
+
+export interface TrainerCatalogPage {
+  items: TrainerProfessionalProfile[]
+  totalCount: number
+  nextOffset: number | null
+}
+
+export interface TrainerCatalogPageOptions {
+  offset: number
+  limit: number
+}
+
+export type TrainerDiscoveryPromptState = 'visible' | 'snoozed' | 'dismissed'
+
+export interface TrainerDiscoveryPromptPreference {
+  state: TrainerDiscoveryPromptState
+  remindAt: string | null
+  updatedAt: string | null
+}
+
+export type TrainerDiscoveryPromptAction = 'snooze' | 'dismiss'

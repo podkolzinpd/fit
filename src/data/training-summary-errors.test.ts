@@ -15,6 +15,13 @@ describe('generationErrorMessage', () => {
     expect(generationErrorMessage('yandex_cloud_invalid_upstream_json')).toContain('через минуту')
   })
 
+  it('explains token guards without inviting an immediate duplicate retry', () => {
+    expect(generationErrorMessage('summary_generation_in_progress')).toContain('уже формируется')
+    expect(generationErrorMessage('summary_generation_cooldown')).toContain('не расходовать токены')
+    expect(generationErrorMessage('summary_generation_period_limit')).toContain('уже запускался сегодня')
+    expect(generationErrorMessage('summary_generation_daily_limit')).toContain('Лимит')
+  })
+
   it('does not expose infrastructure names in user-facing failures', () => {
     const messages = [
       generationErrorMessage('yandex_cloud_unavailable'),

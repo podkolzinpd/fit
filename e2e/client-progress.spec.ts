@@ -84,7 +84,7 @@ test('linked client sees only the published client progress view', async ({ page
   await page.getByRole('button', { name: 'Войти' }).click()
 
   await expect(page).toHaveURL(/\/me$/)
-  await page.goto('/me/profile')
+  await page.goto('/me/settings')
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible()
   await expect(page.getByRole('radio', { name: 'Реальная фигура' })).toBeChecked()
   await page.getByRole('radio', { name: 'Схема' }).click()
@@ -115,7 +115,7 @@ test('linked client sees only the published client progress view', async ({ page
   await page.getByRole('button', { name: 'Прогресс', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
-  await page.goto('/me/profile')
+  await page.goto('/me/settings')
   await page.getByRole('radio', { name: 'Реальная фигура' }).click()
   await page.goto('/me/progress')
   await page.locator('.client-body-map-disclosure > summary').click()
