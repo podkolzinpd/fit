@@ -688,6 +688,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         : query.accepting === 'false' ? false : undefined
     const mode = query.mode === undefined || query.mode === '' ? ''
       : query.mode === 'online' || query.mode === 'in_person' ? query.mode : undefined
+    const readInteger = (value: unknown, fallback: number, min: number, max: number) => {
+      if (value === undefined) return fallback
+      if (typeof value !== 'string' || !/^\d+$/.test(value)) return undefined
+      const parsed = Number(value)
+      return Number.isSafeInteger(parsed) && parsed >= min && parsed <= max ? parsed : undefined
+    }
+    const offset = readInteger(query.offset, 0, 0, 2_147_483_647)
+    const limit = readInteger(query.limit, 20, 1, 50)
     const filters: TrainerCatalogFilters = {
       query: textFilter(query.query, 100) ?? '',
       specialty: textFilter(query.specialty, 60) ?? '',
@@ -698,12 +706,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if ((query.query !== undefined && textFilter(query.query, 100) === undefined)
       || (query.specialty !== undefined && textFilter(query.specialty, 60) === undefined)
       || (query.city !== undefined && textFilter(query.city, 100) === undefined)
-      || mode === undefined || accepting === undefined) {
+      || mode === undefined || accepting === undefined || offset === undefined || limit === undefined) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     try {
-      return reply.send(await options.pilotTrainerProfiles.listPublic(filters))
+      return reply.send(await options.pilotTrainerProfiles.listPublic(filters, { offset, limit }))
     } catch (error) {
       return sendSafeDatabaseFailure(reply, error, 'Trainer catalog query failed')
     }

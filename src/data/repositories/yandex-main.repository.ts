@@ -607,15 +607,21 @@ export function createYandexMainRepository(
       async setCatalogListing(listed: boolean) {
         return writeJson(queries, '/v1/trainer-profile/catalog', 'POST', { listed }, trainerProfessionalProfileSchema)
       },
-      async listCatalog(filters: TrainerCatalogFilters) {
+      async listCatalog(filters: TrainerCatalogFilters, page) {
         const params = new URLSearchParams()
         if (filters.query) params.set('query', filters.query)
         if (filters.specialty) params.set('specialty', filters.specialty)
         if (filters.city) params.set('city', filters.city)
         if (filters.mode) params.set('mode', filters.mode)
         if (filters.acceptingClients !== null) params.set('accepting', String(filters.acceptingClients))
+        params.set('offset', String(page.offset))
+        params.set('limit', String(page.limit))
         const suffix = params.size > 0 ? `?${params.toString()}` : ''
-        return readJson(queries, `/v1/trainers/catalog${suffix}`, z.array(trainerProfessionalProfileSchema))
+        return readJson(queries, `/v1/trainers/catalog${suffix}`, z.object({
+          items: z.array(trainerProfessionalProfileSchema),
+          totalCount: z.number().int().nonnegative(),
+          nextOffset: z.number().int().nonnegative().nullable(),
+        }))
       },
     },
     trainerDiscovery: {

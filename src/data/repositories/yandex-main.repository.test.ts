@@ -99,6 +99,28 @@ describe('Yandex main repository', () => {
     })
   })
 
+  it('requests and validates a page of public trainers', async () => {
+    const draft = {
+      displayName: 'Анна', bio: '', specialties: [], city: '', trainingModes: [],
+      experienceStartYear: null, education: '', formats: '', price: '', acceptingClients: true,
+      avatarDataUrl: null, certificates: [],
+    }
+    const profile = {
+      publicId: publicProfileId, draft, published: draft, listedInCatalog: true,
+      publishedAt: '2026-09-13T01:00:00.000Z', updatedAt: '2026-09-13T01:00:00.000Z', version: 1,
+    }
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [profile], totalCount: 21, nextOffset: 20 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.trainerProfiles.listCatalog({
+      query: 'Анна', specialty: '', city: '', mode: 'online', acceptingClients: true,
+    }, { offset: 0, limit: 20 })).resolves.toEqual({ items: [profile], totalCount: 21, nextOffset: 20 })
+    const requested = new URL(String(fetchMock.mock.calls[0]?.[0]))
+    expect(requested.pathname).toBe('/v1/trainers/catalog')
+    expect(Object.fromEntries(requested.searchParams)).toEqual({ query: 'Анна', mode: 'online', accepting: 'true', offset: '0', limit: '20' })
+  })
+
   it('creates a quick client without fabricating profile measurements', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
       client: { id: '1a0c5295-0a0f-4ccb-a39a-e58090967245' },

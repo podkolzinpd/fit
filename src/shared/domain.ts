@@ -705,6 +705,17 @@ export interface TrainerCatalogFilters {
   acceptingClients: boolean | null
 }
 
+export interface TrainerCatalogPage {
+  items: TrainerProfessionalProfile[]
+  totalCount: number
+  nextOffset: number | null
+}
+
+export interface TrainerCatalogPageOptions {
+  offset: number
+  limit: number
+}
+
 export type TrainerDiscoveryPromptState = 'visible' | 'snoozed' | 'dismissed'
 
 export interface TrainerDiscoveryPromptPreference {
