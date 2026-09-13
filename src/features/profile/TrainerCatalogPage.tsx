@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type Dispatch, type FormEvent, type RefObject, type SetStateAction } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { TrainerCatalogFilters, TrainerProfessionalProfile } from '../../shared/domain'
+import { CloseIcon } from '../../shared/icons'
 import { AsyncView, Field, Page } from '../../shared/ui'
 
 const emptyFilters: TrainerCatalogFilters = {
@@ -11,6 +13,34 @@ const emptyFilters: TrainerCatalogFilters = {
   city: '',
   mode: '',
   acceptingClients: null,
+}
+
+const catalogViewKey = 'fit.trainer-catalog.view.v1'
+
+interface CatalogViewState {
+  draft: TrainerCatalogFilters
+  filters: TrainerCatalogFilters
+  scrollTop: number
+}
+
+function readCatalogView(): CatalogViewState | null {
+  try {
+    const raw = window.sessionStorage.getItem(catalogViewKey)
+    if (!raw) return null
+    const value = JSON.parse(raw) as Partial<CatalogViewState>
+    if (!value.draft || !value.filters || typeof value.scrollTop !== 'number') return null
+    return value as CatalogViewState
+  } catch {
+    return null
+  }
+}
+
+function writeCatalogView(state: CatalogViewState) {
+  try {
+    window.sessionStorage.setItem(catalogViewKey, JSON.stringify(state))
+  } catch {
+    // Catalog navigation still works when browser storage is unavailable.
+  }
 }
 
 function normalized(filters: TrainerCatalogFilters): TrainerCatalogFilters {
@@ -29,7 +59,7 @@ function yearsLabel(value: number): string {
   return `${value} ${word}`
 }
 
-function CatalogCard({ profile }: { profile: TrainerProfessionalProfile }) {
+function CatalogCard({ profile, onOpen }: { profile: TrainerProfessionalProfile; onOpen: () => void }) {
   const published = profile.published
   if (!published) return null
   const currentYear = new Date().getFullYear()
@@ -51,44 +81,47 @@ function CatalogCard({ profile }: { profile: TrainerProfessionalProfile }) {
         experience === null ? '' : `Опыт ${yearsLabel(experience)}`].filter(Boolean).join(' · ')}
     </p>}
     {published.bio && <p className="trainer-catalog-bio">{published.bio}</p>}
-    <Link className="button secondary" to={`/trainers/${profile.publicId}`} state={{ from: '/me/trainers' }}>Посмотреть анкету</Link>
+    <Link className="button secondary" to={`/trainers/${profile.publicId}`} state={{ from: '/me/trainers' }} onClick={onOpen}>Посмотреть анкету</Link>
   </article>
 }
 
-export function TrainerCatalogPage() {
-  const { trainerProfiles } = useDataBackend()
-  const [draft, setDraft] = useState<TrainerCatalogFilters>(emptyFilters)
-  const [filters, setFilters] = useState<TrainerCatalogFilters>(emptyFilters)
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const catalog = useQuery({
-    queryKey: ['trainer-catalog', filters],
-    queryFn: () => trainerProfiles.listCatalog(filters),
-  })
+function CatalogFiltersSheet({ draft, setDraft, onApply, onReset, onClose, returnFocus }: {
+  draft: TrainerCatalogFilters
+  setDraft: Dispatch<SetStateAction<TrainerCatalogFilters>>
+  onApply: () => void
+  onReset: () => void
+  onClose: () => void
+  returnFocus: RefObject<HTMLButtonElement | null>
+}) {
+  const dialog = useRef<HTMLElement>(null)
+  const closeRef = useRef(onClose)
+  useEffect(() => { closeRef.current = onClose }, [onClose])
+  useEffect(() => {
+    const section = dialog.current
+    section?.querySelector<HTMLElement>('input, select, button')?.focus()
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeRef.current()
+      if (event.key !== 'Tab' || !section) return
+      const controls = Array.from(section.querySelectorAll<HTMLElement>('input:not(:disabled), select:not(:disabled), button:not(:disabled)'))
+      const first = controls[0]
+      const last = controls.at(-1)
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+    }
+    document.addEventListener('keydown', keydown)
+    return () => {
+      document.removeEventListener('keydown', keydown)
+      returnFocus.current?.focus({ preventScroll: true })
+    }
+  }, [returnFocus])
 
-  function submit(event: FormEvent) {
-    event.preventDefault()
-    setFilters(normalized(draft))
-  }
-
-  function reset() {
-    setDraft(emptyFilters)
-    setFilters(emptyFilters)
-  }
-
-  const appliedExtraFilters = [filters.specialty, filters.city, filters.mode,
-    filters.acceptingClients === null ? '' : String(filters.acceptingClients)].filter(Boolean).length
-
-  return <Page title="Тренеры" back="/me/profile" className="trainer-catalog-page ui-identity">
-    <p className="trainer-catalog-intro">Анкеты, опыт и формат занятий.</p>
-    <form className="trainer-catalog-search card" onSubmit={submit}>
-      <Field label="Имя тренера"><input value={draft.query} maxLength={100} placeholder="Например, Анна" onChange={(event) => setDraft((value) => ({ ...value, query: event.target.value }))} /></Field>
-      <div className="trainer-catalog-search-actions">
-        <button type="submit" className="primary">Найти</button>
-        <button type="button" className="secondary" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((value) => !value)}>
-          {appliedExtraFilters > 0 ? `Фильтры · ${appliedExtraFilters}` : 'Фильтры'}
-        </button>
-      </div>
-      {filtersOpen && <div className="trainer-catalog-filters">
+  const host = document.querySelector('.phone-frame') ?? document.body
+  return createPortal(<div className="sheet-overlay trainer-catalog-filter-overlay" onPointerDown={(event) => {
+    if (event.target === event.currentTarget) onClose()
+  }}>
+    <section ref={dialog} className="trainer-catalog-filter-sheet" role="dialog" aria-modal="true" aria-label="Фильтры тренеров">
+      <header className="picker-header"><h2>Фильтры</h2><button type="button" className="picker-close" aria-label="Закрыть фильтры" onClick={onClose}><CloseIcon /></button></header>
+      <div className="trainer-catalog-filters">
         <Field label="Направление"><input value={draft.specialty} maxLength={60} placeholder="Силовые, бег" onChange={(event) => setDraft((value) => ({ ...value, specialty: event.target.value }))} /></Field>
         <Field label="Город"><input value={draft.city} maxLength={100} onChange={(event) => setDraft((value) => ({ ...value, city: event.target.value }))} /></Field>
         <Field label="Формат"><select value={draft.mode} onChange={(event) => setDraft((value) => ({ ...value, mode: event.target.value as TrainerCatalogFilters['mode'] }))}>
@@ -97,15 +130,98 @@ export function TrainerCatalogPage() {
         <Field label="Новые клиенты"><select value={draft.acceptingClients === null ? '' : String(draft.acceptingClients)} onChange={(event) => setDraft((value) => ({ ...value, acceptingClients: event.target.value === '' ? null : event.target.value === 'true' }))}>
           <option value="">Неважно</option><option value="true">Берёт клиентов</option><option value="false">Сейчас не берёт</option>
         </select></Field>
-        <button type="button" className="link" onClick={reset}>Сбросить фильтры</button>
-      </div>}
+      </div>
+      <div className="trainer-catalog-filter-actions">
+        <button type="button" className="secondary" onClick={onReset}>Сбросить</button>
+        <button type="button" className="primary" onClick={onApply}>Показать тренеров</button>
+      </div>
+    </section>
+  </div>, host)
+}
+
+export function TrainerCatalogPage() {
+  const { trainerProfiles } = useDataBackend()
+  const [savedView] = useState(readCatalogView)
+  const [draft, setDraft] = useState<TrainerCatalogFilters>(() => savedView?.draft ?? emptyFilters)
+  const [filters, setFilters] = useState<TrainerCatalogFilters>(() => savedView?.filters ?? emptyFilters)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const filterButton = useRef<HTMLButtonElement>(null)
+  const pendingScroll = useRef(savedView?.scrollTop ?? null)
+  const catalog = useQuery({
+    queryKey: ['trainer-catalog', filters],
+    queryFn: () => trainerProfiles.listCatalog(filters),
+  })
+
+  useEffect(() => {
+    if (!catalog.isSuccess || pendingScroll.current === null) return
+    const scrollTop = pendingScroll.current
+    pendingScroll.current = null
+    let secondFrame = 0
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        document.querySelector<HTMLElement>('.content')?.scrollTo({ top: scrollTop })
+      })
+    })
+    return () => {
+      window.cancelAnimationFrame(firstFrame)
+      window.cancelAnimationFrame(secondFrame)
+    }
+  }, [catalog.isSuccess])
+
+  function apply(next: TrainerCatalogFilters) {
+    const value = normalized(next)
+    setDraft(value)
+    setFilters(value)
+    document.querySelector<HTMLElement>('.content')?.scrollTo({ top: 0 })
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    apply(draft)
+  }
+
+  function reset() {
+    apply(emptyFilters)
+    setFiltersOpen(false)
+    writeCatalogView({ draft: emptyFilters, filters: emptyFilters, scrollTop: 0 })
+  }
+
+  function clearQuery() {
+    apply({ ...draft, query: '' })
+  }
+
+  function rememberView() {
+    writeCatalogView({
+      draft,
+      filters,
+      scrollTop: document.querySelector<HTMLElement>('.content')?.scrollTop ?? 0,
+    })
+  }
+
+  const appliedExtraFilters = [filters.specialty, filters.city, filters.mode,
+    filters.acceptingClients === null ? '' : String(filters.acceptingClients)].filter(Boolean).length
+
+  return <Page title="Тренеры" back="/me/profile" center className="trainer-catalog-page ui-identity">
+    <p className="trainer-catalog-intro">Найдите своего тренера.</p>
+    <form className="trainer-catalog-search card" role="search" onSubmit={submit}>
+      <Field label="Имя тренера"><span className="trainer-catalog-query"><input value={draft.query} maxLength={100} placeholder="Например, Анна" onChange={(event) => setDraft((value) => ({ ...value, query: event.target.value }))} />
+        {draft.query && <button type="button" className="trainer-catalog-query-clear" aria-label="Очистить имя тренера" onClick={clearQuery}><CloseIcon /></button>}</span></Field>
+      <div className="trainer-catalog-search-actions">
+        <button type="submit" className="primary">Найти</button>
+        <button ref={filterButton} type="button" className="secondary" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(true)}>
+          {appliedExtraFilters > 0 ? `Фильтры · ${appliedExtraFilters}` : 'Фильтры'}
+        </button>
+      </div>
     </form>
+    {filtersOpen && <CatalogFiltersSheet draft={draft} setDraft={setDraft} returnFocus={filterButton}
+      onClose={() => setFiltersOpen(false)} onReset={reset} onApply={() => { apply(draft); setFiltersOpen(false) }} />}
     <AsyncView loading={catalog.isLoading} error={catalog.error}
-      empty={catalog.data?.length === 0} emptyTitle="Тренеры не найдены" emptyDescription="Попробуйте изменить поиск или фильтры."
+      empty={catalog.data?.length === 0} emptyTitle="Тренеры не найдены" emptyDescription="Измените поиск или сбросьте фильтры."
+      emptyAction={<button type="button" className="secondary" onClick={reset}>Сбросить фильтры</button>}
       onRetry={() => void catalog.refetch()}>
       {catalog.data && catalog.data.length > 0 && <section className="trainer-catalog-results" aria-label="Найденные тренеры">
         <p className="muted">Найдено: {catalog.data.length}</p>
-        {catalog.data.map((profile) => <CatalogCard key={profile.publicId} profile={profile} />)}
+        {catalog.data.map((profile) => <CatalogCard key={profile.publicId} profile={profile} onOpen={rememberView} />)}
       </section>}
     </AsyncView>
   </Page>

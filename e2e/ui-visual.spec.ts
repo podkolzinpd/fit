@@ -707,6 +707,65 @@ test('standalone client sees a compact trainer discovery card and can snooze it'
   await expect(page.getByRole('region', { name: 'Нужен тренер?' })).toHaveCount(0)
 })
 
+test('trainer catalog stays compact and aligned across supported widths', async ({ page }, testInfo) => {
+  const draft = {
+    displayName: 'Александра Константинопольская-Романова',
+    bio: 'Помогаю последовательно возвращаться к тренировкам и выстраивать программу под реальный график без перегрузки и резких изменений.',
+    specialties: ['Силовые тренировки', 'Восстановление после длительного перерыва', 'Мобильность'],
+    city: 'Санкт-Петербург', trainingModes: ['online'], experienceStartYear: 2018,
+    education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: null, certificates: [],
+  }
+  const minimal = {
+    displayName: 'Ирина', bio: '', specialties: [], city: '', trainingModes: [], experienceStartYear: null,
+    education: '', formats: '', price: '', acceptingClients: false, avatarDataUrl: null, certificates: [],
+  }
+  await page.route('**/rest/v1/rpc/list_public_trainer_profiles', (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify([
+      { publicId: '91000000-0000-4000-8000-000000000001', draft, published: draft, listedInCatalog: true, publishedAt: '2026-09-12T10:00:00Z', updatedAt: '2026-09-12T10:00:00Z', version: 2 },
+      { publicId: '91000000-0000-4000-8000-000000000002', draft: minimal, published: minimal, listedInCatalog: true, publishedAt: '2026-09-11T10:00:00Z', updatedAt: '2026-09-11T10:00:00Z', version: 1 },
+    ]),
+  }))
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.evaluate(() => sessionStorage.removeItem('fit.trainer-catalog.view.v1'))
+  await gotoStable(page, '/me/trainers')
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Тренеры' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: draft.displayName })).toBeVisible()
+  await expect(page.getByRole('heading', { name: minimal.displayName })).toBeVisible()
+  const geometry = await page.evaluate(() => {
+    const pageBox = document.querySelector('.trainer-catalog-page')!.getBoundingClientRect()
+    const title = document.querySelector('.trainer-catalog-page > .page-header h1')!.getBoundingClientRect()
+    const search = document.querySelector('.trainer-catalog-search')!.getBoundingClientRect()
+    const query = document.querySelector('.trainer-catalog-query')!.getBoundingClientRect()
+    const actionRow = document.querySelector('.trainer-catalog-search-actions')!.getBoundingClientRect()
+    const buttons = Array.from(document.querySelectorAll<HTMLElement>('.trainer-catalog-search-actions button')).map((button) => button.getBoundingClientRect())
+    return {
+      pageCenter: pageBox.left + pageBox.width / 2,
+      titleCenter: title.left + title.width / 2,
+      searchWidth: search.width,
+      queryWidth: query.width,
+      actionWidth: actionRow.width,
+      pageWidth: pageBox.width,
+      buttonHeights: buttons.map((button) => button.height),
+      overflow: document.documentElement.scrollWidth - window.innerWidth,
+    }
+  })
+  expect(Math.abs(geometry.pageCenter - geometry.titleCenter)).toBeLessThanOrEqual(2)
+  expect(geometry.searchWidth).toBeGreaterThan(geometry.pageWidth * 0.9)
+  expect(geometry.queryWidth).toBeGreaterThan(geometry.searchWidth - 40)
+  expect(geometry.actionWidth).toBeGreaterThan(geometry.searchWidth - 40)
+  expect(geometry.buttonHeights.every((height) => height >= 44)).toBe(true)
+  expect(geometry.overflow).toBeLessThanOrEqual(0)
+
+  await page.getByRole('button', { name: 'Фильтры' }).click()
+  const sheet = page.getByRole('dialog', { name: 'Фильтры тренеров' })
+  await expect(sheet).toBeVisible()
+  const sheetBox = await sheet.boundingBox()
+  expect(sheetBox).not.toBeNull()
+  expect(sheetBox!.y + sheetBox!.height).toBeLessThanOrEqual(await page.evaluate(() => window.innerHeight))
+  await page.screenshot({ path: testInfo.outputPath(`trainer-catalog-${testInfo.project.name}.png`), fullPage: true })
+})
+
 test('trainer Today keeps its mobile visual baselines', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Trainer desktop is covered by the role-home baseline')
   await mockRoleHomeWorkoutState(page)
