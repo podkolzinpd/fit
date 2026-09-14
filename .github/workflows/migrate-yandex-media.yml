@@ -99,7 +99,7 @@ jobs:
           export YANDEX_MEDIA_ACCESS_KEY_ID="$access_key"
           export YANDEX_MEDIA_SECRET_ACCESS_KEY="$secret_key"
           export YANDEX_MEDIA_BUCKET="fit-stage-media-${YC_FOLDER_ID:0:8}"
-          npm --prefix services/api run media:migrate \
+          npm --silent --prefix services/api run media:migrate \
             > "$temporary_directory/report.json"
           chmod 600 "$temporary_directory/report.json"
           jq -e '

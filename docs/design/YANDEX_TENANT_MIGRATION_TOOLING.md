@@ -148,8 +148,12 @@ strict and still reject unsent notifications inside their boundary.
 For `dry-run` and `apply`, GitHub OIDC obtains the existing bounded deploy
 identity and invokes the private `fit-stage-migration` container. The encrypted
 envelope and a random one-run passphrase exist only in memory; the workflow
-does not upload an artifact. The runner accepts at most 3 MiB, exposes neither
-row contents nor identifiers, and is registered only when
+does not upload an artifact. Envelope v2 gzip-compresses the canonical JSON
+before AES-256-GCM encryption and keeps v1 decryption support for existing local
+artifacts. This preserves the single-request, single-transaction import for the
+complete cohort instead of creating partially staged batches. The runner still
+accepts at most 3 MiB on the wire, caps decompressed data at 64 MiB, exposes
+neither row contents nor identifiers, and is registered only when
 `APP_ENV=stage`. Dry-run rolls back after full import validation. Apply requires
 the independent `APPLY_TENANT_TO_YANDEX_STAGE` confirmation and immediately
 repeats the import, requiring zero inserted rows.
@@ -243,8 +247,12 @@ profiles, not Supabase `auth.users`, passwords or provider credentials.
   checksums. The same runs revalidated isolated trainer and standalone-client
   modes; trainer professional profiles are now included in every applicable
   manifest.
-- [ ] Run the real full cohort through remote source `audit`, then stage
-  `dry-run`, and use its exact fingerprint for a separately reviewed `apply`.
+- [x] Run the real full-cohort source `audit`. The 2026-09-14 run exported all
+  32 tables and 12 876 rows with a content-derived fingerprint; no source
+  contract or table-parity mismatch remained.
+- [ ] Repeat the real full-cohort stage `dry-run` with compressed envelope v2,
+  then use its exact fingerprint for pinned `apply` and repeated zero-insert
+  validation.
 - [ ] Run one real unlinked client through remote stage dry-run and pinned apply
   before enabling that profile's Yandex ID session or sticky routing.
 - [ ] Freeze writes, validate the selected real cohort and change its sticky

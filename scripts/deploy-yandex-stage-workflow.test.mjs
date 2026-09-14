@@ -200,7 +200,7 @@ test('bootstraps private media only after cost approval and keeps migration aggr
   assert.doesNotMatch(mediaMigrationWorkflow, /^  (push|pull_request):$/m)
   assert.match(mediaMigrationWorkflow, /supabase projects api-keys/)
   assert.match(mediaMigrationWorkflow, /echo "::add-mask::\$source_key"/)
-  assert.match(mediaMigrationWorkflow, /npm --prefix services\/api run media:migrate/)
+  assert.match(mediaMigrationWorkflow, /npm --silent --prefix services\/api run media:migrate/)
   assert.match(
     mediaMigrationWorkflow,
     /\.mode != "apply" or \.objects == \.verified/,
