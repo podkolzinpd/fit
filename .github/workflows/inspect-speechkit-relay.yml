@@ -48,10 +48,9 @@ jobs:
       - name: Inspect exact relay VM and address
         run: |
           set -euo pipefail
-          instance=$(yc compute instance get \
-            --name "$RELAY_VM_NAME" \
-            --folder-id "$YC_FOLDER_ID" \
-            --format json)
+          instances=$(yc compute instance list --folder-id "$YC_FOLDER_ID" --format json)
+          instance=$(jq -cer --arg relay_name "$RELAY_VM_NAME" \
+            '.[] | select(.name == $relay_name)' <<<"$instances")
           relay_id=$(jq -er '.id' <<<"$instance")
           relay_status=$(jq -er '.status' <<<"$instance")
           relay_ip=$(jq -er '.network_interfaces[0].primary_v4_address.one_to_one_nat.address' <<<"$instance")
