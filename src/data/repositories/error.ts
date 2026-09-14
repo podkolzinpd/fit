@@ -80,6 +80,12 @@ export function repositoryError(error: unknown): RepositoryError {
   if (code === 'PT409' || code === '40001') {
     return new RepositoryError(code, 'Данные уже изменились. Обновите страницу и повторите.')
   }
+  if (code === 'PT404' && normalizedMessage.includes('exercise_not_found')) {
+    return new RepositoryError(
+      'exercise_not_found',
+      'Упражнение больше недоступно. Выберите другое или создайте его заново.',
+    )
+  }
   if (code === 'PT404') {
     return new RepositoryError(code, 'Запись не найдена или больше недоступна.')
   }
