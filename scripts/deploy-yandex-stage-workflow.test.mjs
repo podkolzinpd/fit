@@ -227,6 +227,10 @@ test('mirrors the Supabase bridge payload into a private stage Lockbox', () => {
   assert.match(workflow, /mirror-yandex-legacy-supabase-bridge\.mjs[\s\S]*?--payload-file "\$payload_file"/)
   assert.match(workflow, /-target=yandex_lockbox_secret_iam_member\.legacy_supabase_bridge_reader/)
   assert.doesNotMatch(workflow, /SUPABASE_SERVICE_ROLE_KEY=.*>> "\$GITHUB_ENV"/)
+  assert.doesNotMatch(
+    containerTerraform,
+    /SUPABASE_SERVICE_ROLE_KEY\s+= "SUPABASE_SERVICE_ROLE_KEY"\s+YANDEX_CLOUD_API_KEY/,
+  )
   assert.match(
     readFileSync(join(import.meta.dirname, 'mirror-yandex-legacy-supabase-bridge.mjs'), 'utf8'),
     /--deletion-protection[\s\S]*?--version-description[\s\S]*?--payload', '-'/,
