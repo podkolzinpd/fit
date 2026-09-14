@@ -1,0 +1,38 @@
+name: Inspect SpeechKit relay
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    env:
+      YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
+      YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
+      YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh \
+            --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - name: Exchange GitHub OIDC token
+        run: scripts/yandex-github-oidc.sh
+      - name: Inspect relay VM state
+        run: |
+          instances=$(yc compute instance list --folder-id "$YC_FOLDER_ID" --format json)
+          jq -c '[.[] | {
+            id,
+            name,
+            status,
+            zone_id,
+            created_at,
+            public_ips: [.network_interfaces[]?.primary_v4_address.one_to_one_nat.address // empty]
+          }]' <<<"$instances"
