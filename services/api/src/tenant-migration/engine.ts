@@ -4,6 +4,7 @@ import type { DatabaseClient } from '../db/types.js'
 import {
   buildMigrationTable,
   checksumRows,
+  fingerprintFullCohort,
   fingerprintStandaloneClient,
   fingerprintTenant,
   getTenantMigrationRoot,
@@ -11,6 +12,8 @@ import {
   TenantMigrationArtifactError,
 } from './bundle.js'
 import {
+  FULL_COHORT_MIGRATION_TABLES,
+  FULL_COHORT_SOURCE_PREFLIGHT_SQL,
   SOURCE_PREFLIGHT_SQL,
   STANDALONE_CLIENT_MIGRATION_TABLES,
   STANDALONE_CLIENT_SOURCE_PREFLIGHT_SQL,
@@ -51,6 +54,12 @@ interface StandaloneClientSourcePreflightRow extends QueryResultRow {
   has_membership: boolean
   has_active_relationship: boolean
   has_cross_boundary_merge: boolean
+  has_pending_push: boolean
+  has_chat_media: boolean
+}
+
+interface FullCohortSourcePreflightRow extends QueryResultRow {
+  cohort_exists: boolean
   has_pending_push: boolean
   has_chat_media: boolean
 }
@@ -98,9 +107,13 @@ function requireExactManifest(bundle: TenantMigrationBundle): void {
 function getMigrationManifest(
   bundle: TenantMigrationBundle,
 ): readonly TenantMigrationTableSpec[] {
-  return bundle.format === 'fit-tenant-bundle-v1'
-    ? TENANT_MIGRATION_TABLES
-    : STANDALONE_CLIENT_MIGRATION_TABLES
+  if (bundle.format === 'fit-tenant-bundle-v1') {
+    return TENANT_MIGRATION_TABLES
+  }
+  if (bundle.format === 'fit-standalone-client-bundle-v1') {
+    return STANDALONE_CLIENT_MIGRATION_TABLES
+  }
+  return FULL_COHORT_MIGRATION_TABLES
 }
 
 async function inspectSource(
@@ -160,6 +173,24 @@ async function inspectStandaloneClientSource(
   }
   if (result.has_chat_media) {
     throw new TenantMigrationError('standalone_client_has_chat_media')
+  }
+}
+
+async function inspectFullCohortSource(client: DatabaseClient): Promise<void> {
+  const result = requireSingleRow(
+    await client.query<FullCohortSourcePreflightRow>(
+      FULL_COHORT_SOURCE_PREFLIGHT_SQL,
+      ['application-v1'],
+    ),
+  )
+  if (!result.cohort_exists) {
+    throw new TenantMigrationError('full_cohort_empty')
+  }
+  if (result.has_pending_push) {
+    throw new TenantMigrationError('tenant_has_pending_push')
+  }
+  if (result.has_chat_media) {
+    throw new TenantMigrationError('full_cohort_has_chat_media')
   }
 }
 
@@ -255,6 +286,31 @@ export async function exportStandaloneClient(
   }
 }
 
+export async function exportFullCohort(
+  source: DatabaseClient,
+  now: Date = new Date(),
+): Promise<TenantMigrationBundle> {
+  await source.query('begin isolation level repeatable read read only')
+  try {
+    await configureMigrationTransaction(source)
+    await inspectFullCohortSource(source)
+    const tables: TenantMigrationTable[] = []
+    for (const spec of FULL_COHORT_MIGRATION_TABLES) {
+      tables.push(await readTable(source, spec, 'application-v1', true))
+    }
+    await source.query('commit')
+    return {
+      format: 'fit-full-cohort-bundle-v1',
+      createdAt: now.toISOString(),
+      tenantFingerprint: fingerprintFullCohort(tables),
+      tables,
+    }
+  } catch (error) {
+    await rollbackQuietly(source)
+    throw error
+  }
+}
+
 function getBundleTable(
   bundle: TenantMigrationBundle,
   name: string,
@@ -273,7 +329,9 @@ async function validateTargetInTransaction(
   const reports: TenantMigrationTableReport[] = []
   for (const spec of getMigrationManifest(bundle)) {
     const expected = getBundleTable(bundle, spec.name)
-    const actual = await readTable(target, spec, root.profileId, false)
+    const actual = bundle.format === 'fit-full-cohort-bundle-v1'
+      ? await readFullCohortTargetTable(target, spec, expected)
+      : await readTable(target, spec, root.profileId, false)
     if (
       actual.rowCount !== expected.rowCount
       || checksumRows(actual.rows) !== expected.checksum
@@ -287,6 +345,66 @@ async function validateTargetInTransaction(
   return reports
 }
 
+function migrationRowKey(
+  row: JsonObject,
+  keyColumns: readonly string[],
+): string {
+  const key = keyColumns.map((column) => {
+    if (!(column in row)) {
+      throw new TenantMigrationError('database_contract_mismatch')
+    }
+    return row[column]
+  })
+  return JSON.stringify(key)
+}
+
+async function readFullCohortTargetTable(
+  target: DatabaseClient,
+  spec: TenantMigrationTableSpec,
+  expected: TenantMigrationTable,
+): Promise<TenantMigrationTable> {
+  if (expected.rows.length === 0) {
+    return buildMigrationTable(spec.name, [])
+  }
+  const keyColumns = spec.keyColumns ?? ['id']
+  const keyPredicate = keyColumns
+    .map((column) => `existing.${column} = expected.${column}`)
+    .join(' and ')
+  let rows: readonly JsonDatabaseRow[]
+  try {
+    rows = await target.query<JsonDatabaseRow>(
+      `select to_jsonb(existing) as row
+       from ${spec.targetRecord} existing
+       join jsonb_populate_recordset(
+         null::${spec.targetRecord},
+         $1::jsonb
+       ) expected on ${keyPredicate}`,
+      [JSON.stringify(expected.rows)],
+    )
+  } catch {
+    throw new TenantMigrationError(`target_read_failed:${spec.name}`)
+  }
+
+  const expectedByKey = new Map(
+    expected.rows.map((row) => [migrationRowKey(row, keyColumns), row]),
+  )
+  const projectedRows = readJsonRows(rows).map((row) => {
+    const expectedRow = expectedByKey.get(migrationRowKey(row, keyColumns))
+    if (expectedRow === undefined) {
+      throw new TenantMigrationError('database_contract_mismatch')
+    }
+    const projected: JsonObject = {}
+    for (const column of Object.keys(expectedRow)) {
+      if (!(column in row)) {
+        throw new TenantMigrationError('database_contract_mismatch')
+      }
+      projected[column] = row[column]!
+    }
+    return projected
+  })
+  return buildMigrationTable(spec.name, projectedRows)
+}
+
 async function beginTargetTransaction(target: DatabaseClient): Promise<void> {
   await target.query('begin isolation level serializable')
   await configureMigrationTransaction(target)
@@ -297,6 +415,11 @@ async function lockTenant(
   rootKind: string,
   rootProfileId: string,
 ): Promise<void> {
+  await target.query(
+    `select pg_advisory_xact_lock(
+       hashtextextended('fit-tenant:migration', 0)
+     )`,
+  )
   await target.query(
     `select pg_advisory_xact_lock(
        hashtextextended('fit-tenant:' || $1 || ':' || $2, 0)
