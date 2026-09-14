@@ -60,7 +60,6 @@ interface StandaloneClientSourcePreflightRow extends QueryResultRow {
 
 interface FullCohortSourcePreflightRow extends QueryResultRow {
   cohort_exists: boolean
-  has_chat_media: boolean
 }
 
 export class TenantMigrationError extends Error {
@@ -184,9 +183,6 @@ async function inspectFullCohortSource(client: DatabaseClient): Promise<void> {
   )
   if (!result.cohort_exists) {
     throw new TenantMigrationError('full_cohort_empty')
-  }
-  if (result.has_chat_media) {
-    throw new TenantMigrationError('full_cohort_has_chat_media')
   }
 }
 

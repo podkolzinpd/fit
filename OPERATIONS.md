@@ -83,6 +83,35 @@ rollback plan. Полный snapshot не копирует transient source push
 Точные границы manifest и ограничения описаны в
 `docs/design/YANDEX_TENANT_MIGRATION_TOOLING.md`.
 
+### Перенос приватных media в Yandex
+
+До первого `full-cohort` dry-run с фото один раз создайте private media contour
+ручным запуском `Deploy Yandex stage`: `plan_only=false`,
+`approve_media_storage=true`. Terraform создаёт versioned Standard Object
+Storage bucket и статический S3-ключ API service account, но записывает обе
+части ключа сразу в deletion-protected `fit-stage-media-s3` Lockbox. Значения не
+попадают в Terraform state, GitHub variables, repository или вывод workflow.
+
+Затем вручную запустите `Migrate Yandex media` из `main`:
+
+- `audit` читает source objects и сравнивает target без записи;
+- `apply` идемпотентно копирует отсутствующие или отличающиеся objects и
+  повторно проверяет их SHA-256 и размер.
+
+Workflow использует существующие `SUPABASE_ACCESS_TOKEN` и
+`SUPABASE_PROJECT_ID`, получает source service-role key только во временный файл
+с правами `0600`, а target key читает из Lockbox через short-lived GitHub OIDC.
+В summary выводятся только режим, количество objects, суммарный размер,
+количество скопированных/проверенных и content fingerprint. Пути, содержимое и
+ключи не логируются и не сохраняются как artifact. Успешный apply обязан иметь
+`objects == verified`; его можно безопасно повторять после новых source uploads.
+
+После этого запускайте full-cohort `audit` → `dry-run` → pinned `apply`.
+Private migration runner до подключения к PostgreSQL проверит наличие и точный
+размер каждого chat object, указанного в snapshot. Это исключает commit строк с
+неработающими вложениями. Перед финальным cutover после freeze writes повторите
+media `apply`, чтобы захватить файлы, появившиеся после первой репетиции.
+
 ### Удалённая репетиция на Yandex stage
 
 Workflow `Rehearse Yandex tenant migration` запускается только вручную из
@@ -115,7 +144,9 @@ GitHub OIDC → Yandex IAM token.
   или membership пересекает границу trainer tenant. Перед `apply` обязательны
   успешный `dry-run`, точный content-derived fingerprint из его отчёта и общая
   apply-фраза. Режим не переносит `auth.users`, OAuth credentials, Yandex
-  sessions/rollout assignments, весь source push outbox и Live receipts.
+  sessions/rollout assignments, весь source push outbox и Live receipts. Chat
+  photo objects переносятся отдельным workflow выше и проверяются target runner
+  до DB-транзакции.
 
 Автовыбор нужен только для безопасной репетиции на реальных объёмах и не
 фиксирует tenant для cutover. `full-cohort` не является автовыбором: его

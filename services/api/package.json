@@ -14,11 +14,14 @@
     "db:migrate:dry-run": "node-pg-migrate up --migrations-dir db/migrations --migrations-table fit_migrations --migrations-schema app_private --create-migrations-schema --no-check-order --verbose=false --dry-run",
     "tenant:migrate": "npm run build && node dist/tenant-migration/cli.js",
     "tenant:rehearse:remote": "npm run build && node dist/tenant-migration/remote-rehearsal-cli.js",
+    "media:migrate": "npm run build && node dist/media-migration-cli.js",
     "start": "node dist/server.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1131.0",
+    "@aws-sdk/s3-request-presigner": "^3.1131.0",
     "@supabase/supabase-js": "2.110.8",
-    "fastify": "^5.6.2",
+    "fastify": "^5.12.4",
     "node-pg-migrate": "^9.0.0",
     "pg": "^8.23.0",
     "web-push": "^3.6.7"
