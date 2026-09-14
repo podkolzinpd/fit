@@ -24,6 +24,7 @@ env:
   YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
   YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
   YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  YANDEX_MEDIA_BUCKET_OVERRIDE: ${{ vars.YC_STAGE_MEDIA_BUCKET }}
   YANDEX_MEDIA_LOCKBOX_NAME: fit-stage-media-s3
 
 jobs:
@@ -98,7 +99,9 @@ jobs:
           export SUPABASE_SERVICE_ROLE_KEY="$source_key"
           export YANDEX_MEDIA_ACCESS_KEY_ID="$access_key"
           export YANDEX_MEDIA_SECRET_ACCESS_KEY="$secret_key"
-          export YANDEX_MEDIA_BUCKET="fit-stage-media-${YC_FOLDER_ID:0:8}"
+          target_bucket="${YANDEX_MEDIA_BUCKET_OVERRIDE:-fit-stage-media-${YC_FOLDER_ID:0:8}}"
+          [[ "$target_bucket" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]
+          export YANDEX_MEDIA_BUCKET="$target_bucket"
           npm --silent --prefix services/api run media:migrate \
             > "$temporary_directory/report.json"
           chmod 600 "$temporary_directory/report.json"
