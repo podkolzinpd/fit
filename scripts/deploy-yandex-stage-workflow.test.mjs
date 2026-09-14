@@ -200,6 +200,18 @@ test('bootstraps private media only after cost approval and keeps migration aggr
   assert.doesNotMatch(mediaMigrationWorkflow, /^  (push|pull_request):$/m)
   assert.match(mediaMigrationWorkflow, /supabase projects api-keys/)
   assert.match(mediaMigrationWorkflow, /echo "::add-mask::\$source_key"/)
+  assert.match(
+    mediaMigrationWorkflow,
+    /^  YANDEX_MEDIA_BUCKET_OVERRIDE: \$\{\{ vars\.YC_STAGE_MEDIA_BUCKET \}\}$/m,
+  )
+  assert.match(
+    mediaMigrationWorkflow,
+    /target_bucket="\$\{YANDEX_MEDIA_BUCKET_OVERRIDE:-fit-stage-media-\$\{YC_FOLDER_ID:0:8\}\}"/,
+  )
+  assert.match(
+    mediaMigrationWorkflow,
+    /export YANDEX_MEDIA_BUCKET="\$target_bucket"/,
+  )
   assert.match(mediaMigrationWorkflow, /npm --silent --prefix services\/api run media:migrate/)
   assert.match(
     mediaMigrationWorkflow,
