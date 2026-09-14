@@ -2028,7 +2028,7 @@ export function LiveWorkoutPage() {
     // Однократный recovery-key нужен только после reload, чтобы применить
     // восстановленные defaultValue.
     const recoveryKey = recoveredFormIds.has(set.id) ? 'recovered' : 'stable'
-    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={`${set.id}:${recoveryKey}`} onFocus={() => { if (!set.confirmedAt) openLiveSet(set.id) }} onInput={(event) => captureLiveDraft(set, event.currentTarget)} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
+    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''}`} key={`${set.id}:${recoveryKey}`} onFocus={() => { if (!set.confirmedAt) openLiveSet(set.id) }} onInput={(event) => captureLiveDraft(set, event.currentTarget)} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
       if (set.confirmedAt && !isEditing) return
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
@@ -2046,9 +2046,9 @@ export function LiveWorkoutPage() {
             : <button type="button" className="live-set-check" aria-label={confirmLabel} disabled={confirm.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
                 onClick={(event) => { liveSetAutosave.clear(set.id); const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>}
-          <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} /></div>
         </div>
       </WorkoutSetRow>
+      <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} /></div>
       {showPlan && <small className="live-set-plan-caption">{planLine(exercise.inputKind, set, exercise.ref) ? `План · ${planLine(exercise.inputKind, set, exercise.ref)}` : 'Без плановых значений'}</small>}
     </form>
   }
@@ -2135,7 +2135,7 @@ export function LiveWorkoutPage() {
               <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
               {liveTechniqueFor(exercise, blockStatus === 'current')}
               {clientMode && exercise.trainerComment && <p className="live-trainer-cue">Тренер: {exercise.trainerComment}</p>}
-              {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return <p className="live-previous-result">{line ? `В прошлый раз: ${line}` : 'Нет предыдущего результата'}</p> })()}
+              {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
               {block.blockType === 'single' && <div className="live-exercise-rest-row"><LiveExerciseRest seconds={restOverrides[exercise.id] ?? exercise.restBetweenSetsSec} onChange={(seconds) => setExerciseRest(exercise.id, seconds)} /></div>}
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
@@ -2201,7 +2201,7 @@ export function LiveWorkoutPage() {
                 <WorkoutCta pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>Завершить</WorkoutCta>
               </div>
             </div>
-          : <WorkoutCta variant="secondary" className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>}
+          : <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>}
       </div>
     </>}</AsyncView>
     {canManageLiveStructure && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onClose={closePicker} />}

@@ -44,8 +44,13 @@ describe('LiveExerciseTechnique', () => {
     expect(onCollapsedChange).toHaveBeenCalledWith(false)
   })
 
-  it('falls back to the first instruction when there is no media', () => {
-    render(<LiveExerciseTechnique exercise={{ ...exercise, imageUrl: undefined, techniqueVideoUrl: undefined }} collapsed={false} onCollapsedChange={() => undefined} onOpenTechnique={() => undefined} />)
-    expect(screen.getByText('Стопы устойчиво.')).toBeInTheDocument()
+  it('keeps instruction-only technique compact and opens the detail sheet', async () => {
+    const user = userEvent.setup()
+    const onOpenTechnique = vi.fn()
+    render(<LiveExerciseTechnique exercise={{ ...exercise, imageUrl: undefined, techniqueVideoUrl: undefined }} collapsed={false} onCollapsedChange={() => undefined} onOpenTechnique={onOpenTechnique} />)
+
+    expect(screen.queryByText('Стопы устойчиво.')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Открыть технику: Присед со штангой' }))
+    expect(onOpenTechnique).toHaveBeenCalledOnce()
   })
 })
