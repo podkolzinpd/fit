@@ -29,6 +29,21 @@ variable "environment" {
   }
 }
 
+variable "media_bucket_override" {
+  description = "Optional existing private Object Storage bucket used by the API for media. Empty uses the stage-managed bucket."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = var.media_bucket_override == null || trimspace(var.media_bucket_override) == "" || (
+      length(trimspace(var.media_bucket_override)) > 0
+      && can(regex("^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$", trimspace(var.media_bucket_override)))
+    )
+    error_message = "media_bucket_override must be a valid non-empty bucket name or null."
+  }
+}
+
 variable "zone" {
   description = "Availability zone for the MVP PostgreSQL host and subnet."
   type        = string

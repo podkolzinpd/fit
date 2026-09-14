@@ -14,8 +14,8 @@ output "api_service_account_id" {
 }
 
 output "media_bucket_name" {
-  description = "Private versioned bucket used for chat and exercise media."
-  value       = yandex_storage_bucket.media.bucket
+  description = "Effective private bucket used for chat and exercise media."
+  value       = local.media_bucket_name
 }
 
 output "media_credentials_secret_id" {

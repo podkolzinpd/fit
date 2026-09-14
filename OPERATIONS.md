@@ -92,6 +92,13 @@ Storage bucket и статический S3-ключ API service account, но �
 части ключа сразу в deletion-protected `fit-stage-media-s3` Lockbox. Значения не
 попадают в Terraform state, GitHub variables, repository или вывод workflow.
 
+Чтобы stage API писал в уже созданный private bucket из другого Yandex Cloud,
+задайте GitHub repository variable `YC_STAGE_MEDIA_BUCKET` его именем и выдайте
+текущему stage API service account роль `storage.editor` на уровне этого bucket.
+Ключ остаётся в существующем stage Lockbox; не создавайте и не добавляйте новый
+статический ключ в GitHub variables. Пустая переменная возвращает штатный
+stage-managed bucket.
+
 Затем вручную запустите `Migrate Yandex media` из `main`:
 
 - `audit` читает source objects и сравнивает target без записи;
