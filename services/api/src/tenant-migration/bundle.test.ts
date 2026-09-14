@@ -5,6 +5,7 @@ import {
   canonicalJson,
   decryptMigrationBundle,
   encryptMigrationBundle,
+  fingerprintFullCohort,
   fingerprintStandaloneClient,
   fingerprintTenant,
   getTenantMigrationRoot,
@@ -45,6 +46,20 @@ function buildStandaloneBundle(): TenantMigrationBundle {
   }
 }
 
+function buildFullCohortBundle(): TenantMigrationBundle {
+  const tables = [
+    buildMigrationTable('public.profiles', [
+      { id: TRAINER_ID, timezone: 'Europe/Moscow' },
+    ]),
+  ]
+  return {
+    format: 'fit-full-cohort-bundle-v1',
+    createdAt: '2026-09-01T10:00:00.000Z',
+    tenantFingerprint: fingerprintFullCohort(tables),
+    tables,
+  }
+}
+
 describe('tenant migration bundle', () => {
   it('canonicalizes object keys and table row order', () => {
     expect(canonicalJson({ z: 1, a: { y: true, x: null } })).toBe(
@@ -80,6 +95,26 @@ describe('tenant migration bundle', () => {
     const envelope = await encryptMigrationBundle(bundle, PASSPHRASE)
     expect(JSON.stringify(envelope)).not.toContain(CLIENT_PROFILE_ID)
     await expect(decryptMigrationBundle(envelope, PASSPHRASE)).resolves.toEqual(bundle)
+  })
+
+  it('binds a full-cohort fingerprint to the complete table snapshot', async () => {
+    const bundle = buildFullCohortBundle()
+    expect(getTenantMigrationRoot(bundle)).toEqual({
+      kind: 'full-cohort',
+      profileId: 'application-v1',
+    })
+    await expect(
+      decryptMigrationBundle(
+        await encryptMigrationBundle(bundle, PASSPHRASE),
+        PASSPHRASE,
+      ),
+    ).resolves.toEqual(bundle)
+
+    const changed = structuredClone(bundle)
+    changed.tables[0] = buildMigrationTable('public.profiles', [])
+    expect(() => readMigrationBundle(changed)).toThrowError(
+      TenantMigrationArtifactError,
+    )
   })
 
   it('rejects a wrong passphrase and tampered table checksum', async () => {

@@ -22,7 +22,7 @@ const TARGET_DATABASE_PREFIX = 'fit_tenant_rehearsal_'
 const DATABASE_NAME_PATTERN = /^fit_tenant_rehearsal_[1-9][0-9]*_[12]$/u
 const SYNTHETIC_TRAINER_ID = '90000000-0000-4000-8000-000000000009'
 const STANDALONE_CLIENT_PROFILE_ID = 'a1000000-0000-4000-8000-000000000001'
-const EXPECTED_TABLE_COUNT = 31
+const EXPECTED_TABLE_COUNT = 32
 const FIXTURE_PATH = join(
   ROOT_DIRECTORY,
   'services/api/src/tenant-migration/rehearsal-source-fixture.sql',
@@ -36,6 +36,7 @@ const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 export const PRODUCTION_LIKE_TABLES = Object.freeze([
   'public.profiles',
   'public.trainers',
+  'public.trainer_professional_profiles',
   'public.clients',
   'public.client_trainers',
   'public.client_invitations',
@@ -188,8 +189,9 @@ export function assertProductionLikeManifest(summary) {
       throw new Error(`target_only_table_not_empty:${tableName}`)
     }
   }
-  if (summary.tables.get('public.push_subscriptions')?.rows !== 2) {
-    throw new Error('multi_device_push_contract_missing')
+  const subscriptionRows = summary.tables.get('public.push_subscriptions')?.rows
+  if (subscriptionRows !== 2) {
+    throw new Error(`multi_device_push_contract_missing:${subscriptionRows ?? 'absent'}`)
   }
 }
 
@@ -206,6 +208,28 @@ export function assertStandaloneClientManifest(summary) {
     if (summary.tables.get(tableName)?.rows !== 0) {
       throw new Error(`target_only_table_not_empty:${tableName}`)
     }
+  }
+}
+
+export function assertFullCohortManifest(summary) {
+  for (const tableName of PRODUCTION_LIKE_TABLES) {
+    if ((summary.tables.get(tableName)?.rows ?? 0) < 1) {
+      throw new Error(`full_cohort_table_empty:${tableName}`)
+    }
+  }
+  for (const tableName of EXPECTED_EMPTY_TABLES) {
+    if (summary.tables.get(tableName)?.rows !== 0) {
+      throw new Error(`target_only_table_not_empty:${tableName}`)
+    }
+  }
+  if ((summary.tables.get('public.push_subscriptions')?.rows ?? 0) < 3) {
+    throw new Error('full_cohort_push_rows_missing')
+  }
+  if ((summary.tables.get('public.profiles')?.rows ?? 0) < 3) {
+    throw new Error('full_cohort_profiles_missing')
+  }
+  if ((summary.tables.get('public.clients')?.rows ?? 0) < 3) {
+    throw new Error('full_cohort_clients_missing')
   }
 }
 
@@ -354,7 +378,7 @@ function runMigrationCli(args, databaseUrl, passphrase, label) {
   })
 }
 
-function assertDryRunRolledBack(databaseName, profileId) {
+function readProfileCount(databaseName) {
   assertRehearsalDatabaseName(databaseName)
   const count = run(
     'podman',
@@ -371,11 +395,14 @@ function assertDryRunRolledBack(databaseName, profileId) {
       '--set',
       'ON_ERROR_STOP=1',
       '--command',
-      `select count(*) from public.profiles where id = '${profileId}'::uuid`,
+      'select count(*) from public.profiles',
     ],
     { capture: true, label: 'dry_run_rollback_check' },
   ).trim()
-  if (count !== '0') throw new Error('dry_run_changed_target')
+  if (!/^(0|[1-9][0-9]*)$/u.test(count)) {
+    throw new Error('profile_count_invalid')
+  }
+  return Number(count)
 }
 
 function assertEncryptedArtifact(artifactPath, rootProfileId) {
@@ -435,6 +462,7 @@ function rehearseMigrationRoot({
   )
   assertManifest(exported)
   assertEncryptedArtifact(artifactPath, rootProfileId)
+  const profilesBeforeDryRun = readProfileCount(databaseName)
 
   const dryRun = parseMigrationReport(
     runMigrationCli(
@@ -448,7 +476,9 @@ function rehearseMigrationRoot({
   if (dryRun.fingerprint !== exported.fingerprint) {
     throw new Error('dry_run_tenant_fingerprint_mismatch')
   }
-  assertDryRunRolledBack(databaseName, rootProfileId)
+  if (readProfileCount(databaseName) !== profilesBeforeDryRun) {
+    throw new Error('dry_run_changed_target')
+  }
 
   const applied = parseMigrationReport(
     runMigrationCli(
@@ -503,6 +533,7 @@ async function rehearse(runNumber) {
   )
   const trainerArtifactPath = join(temporaryDirectory, 'trainer.fit')
   const standaloneArtifactPath = join(temporaryDirectory, 'standalone-client.fit')
+  const fullCohortArtifactPath = join(temporaryDirectory, 'full-cohort.fit')
   const passphrase = randomBytes(32).toString('base64url')
   let databaseCreated = false
   try {
@@ -534,16 +565,27 @@ async function rehearse(runNumber) {
       passphrase,
       rootProfileId: STANDALONE_CLIENT_PROFILE_ID,
     })
+    const fullCohort = rehearseMigrationRoot({
+      artifactPath: fullCohortArtifactPath,
+      assertManifest: assertFullCohortManifest,
+      databaseName,
+      databaseUrl,
+      exportArguments: ['export', '--full-cohort'],
+      label: 'full_cohort',
+      passphrase,
+      rootProfileId: 'application-v1',
+    })
     console.log(
       `[tenant-rehearsal] ${runNumber}/2 пройдена: trainer ${trainer.fingerprint} `
         + `(${trainer.rows} строк), standalone client ${standaloneClient.fingerprint} `
-        + `(${standaloneClient.rows} строк); ${EXPECTED_TABLE_COUNT} таблиц.`,
+        + `(${standaloneClient.rows} строк), full cohort ${fullCohort.fingerprint} `
+        + `(${fullCohort.rows} строк); ${EXPECTED_TABLE_COUNT} таблиц.`,
     )
   } finally {
     if (databaseCreated) dropTargetDatabase(databaseName)
     cleanupArtifacts(
       temporaryDirectory,
-      [trainerArtifactPath, standaloneArtifactPath],
+      [trainerArtifactPath, standaloneArtifactPath, fullCohortArtifactPath],
     )
   }
 }

@@ -11,6 +11,12 @@ root. It must preserve the client's personal domain history and disconnected
 relationship/chat history without creating a trainer role or an active
 `client_trainers` membership.
 
+When real data cannot be partitioned safely because memberships or completed
+client merges cross trainer boundaries, the same runner can export the complete
+application cohort as one snapshot. This mode is intentionally broader: it
+copies every row covered by the application manifest instead of weakening the
+isolated-tenant checks or silently dropping a merge target.
+
 ## Safety contract
 
 1. A trainer, all root client cards and their linked FIT profiles form one
@@ -51,6 +57,17 @@ relationship/chat history without creating a trainer role or an active
     push delivery. A chat containing image metadata is rejected until the
     corresponding private object-storage copy is implemented, so the target
     cannot contain a broken attachment link.
+14. `full-cohort` keeps the strict isolated modes unchanged, but does not apply
+    trainer-boundary checks because every manifest row is copied together. It
+    still rejects unsent push and chat photo metadata until the corresponding
+    delivery/object-storage state has a safe migration path.
+15. The full-cohort fingerprint is derived from every table name, row count and
+    checksum. An apply therefore requires the exact snapshot fingerprint from
+    a successful dry-run and fails before target access if source data changed.
+16. Target validation for a full cohort reads only the primary/composite keys
+    present in the encrypted bundle. Existing unrelated stage fixture rows do
+    not create false conflicts; an existing row with the same key and different
+    application fields still aborts the complete transaction.
 
 ## Remote stage orchestration
 
@@ -97,6 +114,13 @@ and at least one workout, tries candidates with the most workouts first, and
 still runs the complete standalone safety preflight. Output remains limited to
 the masked fingerprint and aggregate table counts.
 
+`full-cohort` performs one complete application snapshot without requiring
+`FIT_TENANT_TRAINER_ID`. It is the safe fallback for the current small source
+population when a client merge or membership crosses an isolated trainer
+boundary. It never skips candidates: audit and dry-run must cover the same full
+manifest, and apply requires both the normal apply phrase and the exact
+content-derived fingerprint from that dry-run.
+
 For `dry-run` and `apply`, GitHub OIDC obtains the existing bounded deploy
 identity and invokes the private `fit-stage-migration` container. The encrypted
 envelope and a random one-run passphrase exist only in memory; the workflow
@@ -115,7 +139,8 @@ the existing cold migration container is billable.
 The manifest covers profiles/trainers/clients and memberships, invitations and
 relationship history, merge receipts, exercises, the complete workout
 aggregate, progress/custom metrics, goals/stages/criteria, generated and
-published summaries, Assistant conversations/messages/actions, application
+published summaries, trainer professional profiles, Assistant
+conversations/messages/actions, application
 feedback, push subscription/preferences and workout idempotency receipts.
 Target-only push outbox and Live operation receipts must be empty for the
 cohort; they are validated as explicit zero-row manifest entries.
@@ -143,12 +168,17 @@ trainer-owned rows.
 
 Standalone artifacts use the distinct
 `fit-standalone-client-bundle-v1` format and fingerprint namespace while
-retaining the same ordered 30-table manifest. Client-scoped tables follow the
+retaining the same ordered 32-table manifest. Client-scoped tables follow the
 canonical card and its reverse merge closure. Custom exercises include both
 client-authored rows and exact custom rows referenced by those workouts.
 Account-scoped Assistant, feedback, push preferences/subscriptions and workout
 request receipts are limited to the client root; referenced trainer accounts
 never pull their unrelated account data into the bundle.
+
+Full application snapshots use `fit-full-cohort-bundle-v1`. Identity mappings,
+hashed app sessions, rollout assignments, sent push outbox history and Live
+operation receipts remain outside this format. The format copies application
+profiles, not Supabase `auth.users`, passwords or provider credentials.
 
 ## Acceptance checklist
 
@@ -180,6 +210,15 @@ never pull their unrelated account data into the bundle.
   left `client_trainers` empty, rolled dry-run back and inserted zero rows on
   repeated apply. The same runs revalidated the trainer bundle at 38 rows and
   added chat rows to the production-like manifest fixture.
+- [x] Add a content-pinned full-cohort artifact and manual workflow selector.
+  Two local PostgreSQL 17 rehearsals (2026-09-14) each exported 61 synthetic
+  rows across all 32 manifest tables, rolled dry-run back, applied the complete
+  snapshot, proved a repeated apply inserted zero rows and validated the final
+  checksums. The same runs revalidated isolated trainer and standalone-client
+  modes; trainer professional profiles are now included in every applicable
+  manifest.
+- [ ] Run the real full cohort through remote source `audit`, then stage
+  `dry-run`, and use its exact fingerprint for a separately reviewed `apply`.
 - [ ] Run one real unlinked client through remote stage dry-run and pinned apply
   before enabling that profile's Yandex ID session or sticky routing.
 - [ ] Freeze writes, validate the selected real cohort and change its sticky

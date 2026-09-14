@@ -31,11 +31,22 @@ export interface StandaloneClientMigrationBundle {
   tables: TenantMigrationTable[]
 }
 
+export interface FullCohortMigrationBundle {
+  format: 'fit-full-cohort-bundle-v1'
+  createdAt: string
+  tenantFingerprint: string
+  tables: TenantMigrationTable[]
+}
+
 export type TenantMigrationBundle =
   | TrainerTenantMigrationBundle
   | StandaloneClientMigrationBundle
+  | FullCohortMigrationBundle
 
-export type TenantMigrationRootKind = 'trainer' | 'standalone-client'
+export type TenantMigrationRootKind =
+  | 'trainer'
+  | 'standalone-client'
+  | 'full-cohort'
 
 export interface TenantMigrationRoot {
   kind: TenantMigrationRootKind
