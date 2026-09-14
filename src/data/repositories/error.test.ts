@@ -46,6 +46,13 @@ describe('repositoryError', () => {
     expect(error.message).toBe('Упражнение больше недоступно. Выберите другое или создайте его заново.')
   })
 
+  it('explains an incomplete trainer profile without exposing database details', () => {
+    const error = repositoryError({ code: 'PT422', message: 'trainer_not_initialized' })
+
+    expect(error.code).toBe('trainer_not_initialized')
+    expect(error.message).toBe('Профиль тренера не удалось подготовить. Обновите страницу и повторите.')
+  })
+
   it('explains an invalid invitation without exposing database details', () => {
     const error = repositoryError({ code: 'PT404', message: 'invitation_invalid' })
 
