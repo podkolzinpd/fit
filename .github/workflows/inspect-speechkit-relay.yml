@@ -45,6 +45,11 @@ jobs:
           echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
       - name: Exchange GitHub OIDC token
         run: scripts/yandex-github-oidc.sh
+      - name: Configure ephemeral Yandex Cloud CLI profile
+        run: |
+          yc config profile create github-actions
+          yc config set token "$YC_IAM_TOKEN"
+          yc config set folder-id "$YC_FOLDER_ID"
       - name: Inspect exact relay VM and address
         run: |
           set -euo pipefail
