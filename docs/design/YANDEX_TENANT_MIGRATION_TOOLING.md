@@ -121,6 +121,14 @@ boundary. It never skips candidates: audit and dry-run must cover the same full
 manifest, and apply requires both the normal apply phrase and the exact
 content-derived fingerprint from that dry-run.
 
+The full snapshot deliberately ignores the source push outbox in every delivery
+state. It is transient transport state, not application-domain data; Supabase
+continues to dispatch it while production routing remains on Supabase. Before
+the eventual final cutover, writes are frozen, the source dispatcher gets a
+bounded drain window and is then disabled so old notifications cannot be sent
+after Yandex becomes authoritative. Isolated trainer/client exports remain
+strict and still reject unsent notifications inside their boundary.
+
 For `dry-run` and `apply`, GitHub OIDC obtains the existing bounded deploy
 identity and invokes the private `fit-stage-migration` container. The encrypted
 envelope and a random one-run passphrase exist only in memory; the workflow
@@ -147,10 +155,12 @@ cohort; they are validated as explicit zero-row manifest entries.
 
 `client_private_details.note` is normalized into the Yandex
 `client_trainers.note` field. Source-only Tracker/Telegram delivery metadata is
-not application-domain data and is not copied. Sent push outbox history is not
-copied; any unsent cohort notification blocks export so a message cannot be
-delivered twice. Identity mappings, app sessions and rollout assignments are
-provisioned separately and are deliberately absent from the artifact.
+not application-domain data and is not copied. Push outbox history is never
+copied. Unsent notifications block isolated trainer/client exports; a complete
+application snapshot excludes the whole source outbox because it stays active
+only on Supabase until the final drain-and-disable cutover step. Identity
+mappings, app sessions and rollout assignments are provisioned separately and
+are deliberately absent from the artifact.
 
 Push subscriptions use their subscription `id` as the import key on both
 backends. The production-like fixture contains two endpoints for one user, so

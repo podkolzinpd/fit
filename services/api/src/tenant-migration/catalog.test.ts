@@ -49,7 +49,7 @@ describe('tenant migration catalog', () => {
     expect(byName.get('app_private.push_notifications_outbox')?.sourceSql)
       .toContain('never-export-outbox')
     expect(FULL_COHORT_SOURCE_PREFLIGHT_SQL)
-      .toContain('notification.sent_at is null')
+      .not.toContain('push_notifications_outbox')
     expect(FULL_COHORT_SOURCE_PREFLIGHT_SQL)
       .toContain('message.image_path is not null')
   })
