@@ -1,8 +1,9 @@
 import type { WhisperContext } from '@fugood/node-whisper-wasm'
 import { normalizeTranscript, type SpeechRecognizer } from './speech-recognizer'
-import { getWhisperModelUrl, WHISPER_MODEL_BYTES, WHISPER_MODEL_CACHE_KEY } from './whisper-model'
 
-const MAX_MODEL_BYTES = Math.max(WHISPER_MODEL_BYTES, 64 * 1024 * 1024)
+const MODEL_REVISION = '5359861c739e955e79d9a303bcbc70fb988958b1'
+const MODEL_URL = `https://huggingface.co/ggerganov/whisper.cpp/resolve/${MODEL_REVISION}/ggml-base-q5_1.bin`
+const MAX_MODEL_BYTES = 128 * 1024 * 1024
 const TRANSCRIPTION_PROMPT = 'Русская заметка о тренировке. Упражнения: присед, жим, тяга, планка, выпады, подтягивания. Единицы: килограмм, кг, повторений, раз, секунд, минут, километров.'
 
 export class WhisperCppRecognizer implements SpeechRecognizer {
@@ -47,8 +48,7 @@ export class WhisperCppRecognizer implements SpeechRecognizer {
     if (this.context) return this.context
     this.contextPromise ??= import('@fugood/node-whisper-wasm')
       .then(({ initWhisper }) => initWhisper({
-        filePath: getWhisperModelUrl(),
-        modelCacheKey: WHISPER_MODEL_CACHE_KEY,
+        filePath: MODEL_URL,
         maxModelBytes: MAX_MODEL_BYTES,
         useGpu: false,
       }))
