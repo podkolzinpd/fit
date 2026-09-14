@@ -42,6 +42,11 @@ describe('VoiceInputButton', () => {
       recorderFactory={() => audioRecorder}
       recognizerFactory={() => speechRecognizer}
       decodeAudio={vi.fn().mockResolvedValue(new ArrayBuffer(4))}
+      streamingFactory={() => ({
+        start: vi.fn().mockRejectedValue(new Error('relay unavailable')),
+        stop: vi.fn().mockResolvedValue(undefined),
+        rotate: vi.fn(),
+      })}
     />)
 
     await user.click(screen.getByRole('button', { name: 'Надиктовать заметку' }))
