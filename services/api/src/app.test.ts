@@ -465,6 +465,68 @@ describe('Vital exercise media', () => {
 })
 
 describe('legacy Supabase function bridge', () => {
+  const legacyConversationId = '10000000-0000-4000-8000-000000000001'
+  const legacyMessageId = '10000000-0000-4000-8000-000000000004'
+
+  it('writes browser-authenticated chat images to the legacy media bridge, never to Supabase Storage directly', async () => {
+    const upload = vi.fn().mockResolvedValue(undefined)
+    const app = buildApp({
+      legacyChatMediaBridge: { upload, sign: vi.fn(), remove: vi.fn() } as never,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/legacy/chat-media/upload`,
+      headers: { 'x-supabase-authorization': 'Bearer supabase-access-token' },
+      payload: {
+        conversationId: legacyConversationId,
+        messageId: legacyMessageId,
+        image: { dataUrl: 'data:image/jpeg;base64,AQID', mimeType: 'image/jpeg', width: 2, height: 2, sizeBytes: 3 },
+      },
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(upload).toHaveBeenCalledWith('supabase-access-token', legacyConversationId, legacyMessageId, expect.objectContaining({ sizeBytes: 3 }))
+  })
+
+  it('signs and removes chat objects only through the authenticated bridge', async () => {
+    const sign = vi.fn().mockResolvedValue('https://signed.example/chat.jpg')
+    const remove = vi.fn().mockResolvedValue(undefined)
+    const app = buildApp({
+      legacyChatMediaBridge: { upload: vi.fn(), sign, remove } as never,
+      logger: false,
+    })
+    apps.push(app)
+
+    const headers = { 'x-supabase-authorization': 'Bearer supabase-access-token' }
+    const signResponse = await app.inject({ method: 'POST', url: '/v1/legacy/chat-media/sign', headers,
+      payload: { conversationId: legacyConversationId, messageId: legacyMessageId } })
+    const removeResponse = await app.inject({ method: 'POST', url: '/v1/legacy/chat-media/remove', headers,
+      payload: { conversationId: legacyConversationId, messageId: legacyMessageId } })
+
+    expect(signResponse.statusCode).toBe(200)
+    expect(signResponse.json()).toEqual({ signedUrl: 'https://signed.example/chat.jpg' })
+    expect(removeResponse.statusCode).toBe(204)
+    expect(sign).toHaveBeenCalledWith('supabase-access-token', legacyConversationId, legacyMessageId)
+    expect(remove).toHaveBeenCalledWith('supabase-access-token', legacyConversationId, legacyMessageId)
+  })
+
+  it('does not expose the chat media bridge without both reviewed storage and Supabase bridge configuration', async () => {
+    const app = buildApp({ logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST', url: '/v1/legacy/chat-media/sign',
+      headers: { 'x-supabase-authorization': 'Bearer token' },
+      payload: { conversationId: legacyConversationId, messageId: legacyMessageId },
+    })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({ error: 'service_unavailable' })
+  })
+
   it('keeps the Supabase token out of the IAM Authorization header and returns the parser contract', async () => {
     const parse = vi.fn().mockResolvedValue({ items: [], unmatched: [] })
     const parser: LegacyWorkoutParser = { parse }

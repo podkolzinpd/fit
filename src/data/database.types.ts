@@ -1,4 +1,4 @@
-// schema-sha256: a03d929b238bc8f18e9e09d20647687b99c18175f506f0c35b4328d1b1714e0c
+// schema-sha256: 04b99b60608f27fa8b5928c74aee5b353821ae38ffc1044b6d1fc99f7b5bb788
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -2474,6 +2474,14 @@ export type Database = {
         Returns: string
       }
       open_public_trainer_chat: { Args: { p_public_id: string }; Returns: string }
+      authorize_chat_media_read: {
+        Args: { p_conversation_id: string; p_message_id: string }
+        Returns: undefined
+      }
+      authorize_chat_media_remove: {
+        Args: { p_conversation_id: string; p_message_id: string }
+        Returns: undefined
+      }
       authorize_chat_send: { Args: { p_conversation_id: string }; Returns: undefined }
       set_chat_block: {
         Args: { p_blocked: boolean; p_conversation_id: string }

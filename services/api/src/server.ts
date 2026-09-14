@@ -11,6 +11,10 @@ import { DatabasePilotPushNotifications } from './pilot-push-notifications.js'
 import { DatabasePilotChat } from './pilot-chat.js'
 import { SupabaseChatMediaStore } from './chat-media.js'
 import {
+  LegacyChatMediaBridge,
+  SupabaseLegacyChatMediaAuthorizer,
+} from './legacy-chat-media.js'
+import {
   readYandexMediaStorageConfig,
   YandexChatMediaStore,
   YandexMediaObjectStorage,
@@ -189,6 +193,13 @@ const chatMediaStore = yandexMediaStorage !== undefined
   : supabaseBridgeConfig === undefined
     ? undefined
     : new SupabaseChatMediaStore(supabaseBridgeConfig)
+const legacyChatMediaBridge = yandexMediaStorage === undefined || supabaseBridgeConfig === undefined
+  ? undefined
+  : new LegacyChatMediaBridge(
+    new SupabaseLegacyChatMediaAuthorizer(new SupabaseBridge(supabaseBridgeConfig)),
+    yandexMediaStorage,
+    new SupabaseChatMediaStore(supabaseBridgeConfig),
+  )
 const pilotChat = databasePool === undefined ? undefined : new DatabasePilotChat(databasePool)
 const vitalMediaSigner = yandexMediaStorage !== undefined
   ? new YandexVitalMediaSigner(yandexMediaStorage)
@@ -231,6 +242,7 @@ const app = buildApp(
     ...(pilotPushNotifications === undefined ? {} : { pilotPushNotifications }),
     ...(pilotChat === undefined ? {} : { pilotChat }),
     ...(chatMediaStore === undefined ? {} : { chatMediaStore }),
+    ...(legacyChatMediaBridge === undefined ? {} : { legacyChatMediaBridge }),
     ...(pilotClientsReader === undefined ? {} : { pilotClientsReader }),
     ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),
     ...(pilotConnectionsWriter === undefined ? {} : { pilotConnectionsWriter }),
