@@ -8425,7 +8425,7 @@ Fit остаётся отдельным приложением, потому ч�
     </section>
 
     <section class="slide redesign-v2 review-problem-v2 prefinal-keep" data-section="Проблема" data-slide-type="problem" data-golden="linear/03-linear-product-flow.png">
-      <div class="eyebrow">03 · ПРОБЛЕМА</div>
+      <div class="eyebrow">04 · ПРОБЛЕМА</div>
       <div class="review-fit-label">Fit</div>
       <h2>Начать трудно. Удержаться ещё труднее</h2>
       <p class="subhead">Без общего контекста человек теряет следующий понятный шаг — особенно после паузы или пропуска.</p>
@@ -8486,7 +8486,7 @@ Fit остаётся отдельным приложением, потому ч�
     </section>
 
     <section class="slide redesign-v2 prefinal-keep prefinal-digital-market" data-section="Доказанный спрос" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
-      <div class="eyebrow">04 · ЦИФРОВОЙ РЫНОК</div>
+      <div class="eyebrow">03 · ЦИФРОВОЙ РЫНОК</div>
       <div class="digital-market-fit">Fit</div>
       <h2>≈15 млн уже используют цифровые инструменты для спорта</h2>
       <p class="digital-market-lead">Ещё ≈10 млн готовы попробовать. Рынок уже существует — аудитория распределена между разными сценариями и приложениями.</p>
@@ -8567,7 +8567,7 @@ Sensor Tower, Top Health and Fitness Apps in Russia, IV квартал 2025: htt
     </section>
 
     <section class="slide redesign-v2 review-story-v2 prefinal-keep" data-section="Идея" data-slide-type="product-story" data-golden="linear/03-linear-product-flow.png">
-      <div class="eyebrow">05 · РЕШЕНИЕ</div>
+      <div class="eyebrow">06 · РЕШЕНИЕ</div>
       <div class="review-fit-label">Fit</div>
       <h2>Fit связывает весь спортивный путь</h2>
 
@@ -8617,7 +8617,7 @@ Sensor Tower, Top Health and Fitness Apps in Russia, IV квартал 2025: htt
     </section>
 
     <section class="slide product-proof pilot-product-flow redesign-v2 rd-product-flow review-product-flow-v3 review-product-flow-v4 prefinal-keep" data-section="Продукт" data-slide-type="product-flow" data-golden="linear/03-linear-product-flow.png">
-      <div class="eyebrow">06 · ПРОДУКТ + ИИ</div>
+      <div class="eyebrow">07 · ПРОДУКТ + ИИ</div>
       <h2>Fit уже закрывает цикл тренировки</h2>
       <p class="subhead">ИИ превращает факт и прогресс в следующий персональный план</p>
       <div class="loop-proof-now"><span>УЖЕ РАБОТАЕТ</span><strong>Голос или текст → структурированная тренировка</strong></div>
@@ -8658,8 +8658,8 @@ Sensor Tower, Top Health and Fitness Apps in Russia, IV квартал 2025: htt
 Продуктовые экраны: origin/main, commit 5996f3f; visual baselines client-home-future-plan, workout-detail-completion и client-body-map-female.</aside>
     </section>
 
-    <section class="slide demand-proof-slide combined-demand-slide redesign-v2 rd-demand review-demand-v2" data-section="Доказанный спрос" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
-      <div class="eyebrow">04 · ДОКАЗАННЫЙ СПРОС</div>
+    <section class="slide demand-proof-slide combined-demand-slide redesign-v2 rd-demand review-demand-v2 prefinal-keep" data-section="Доказанный спрос" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
+      <div class="eyebrow">05 · ДОКАЗАННЫЙ СПРОС</div>
       <h2>Цифровое спортивное сопровождение уже стало массовым</h2>
       <div class="demand-category-kicker">РАЗНЫЕ МОДЕЛИ · ОДИН ПОДТВЕРЖДЁННЫЙ СПРОС</div>
       <div class="demand-product-grid">
@@ -9091,7 +9091,7 @@ UrbanAds: https://yandex.ru/support/urbanads/ru/</aside>
     </section>
 
     <section class="slide redesign-v2 retention-pilot-slide retention-answer-v2 retention-answer-v3 prefinal-keep" data-section="Удержание" data-slide-type="product-story" data-golden="linear/03-linear-product-flow.png">
-      <div class="eyebrow">07 · УДЕРЖАНИЕ</div>
+      <div class="eyebrow">08 · УДЕРЖАНИЕ</div>
       <h2>Fit каждый раз отвечает: что мне делать сегодня</h2>
       <p class="retention-pilot-lead">Без поиска программы, необходимости разбираться и нового старта после пропуска.</p>
 
@@ -10337,6 +10337,9 @@ Strava, поддерживаемые виды спорта: https://support.stra
 const deck = document.getElementById('deck')
 // Предфинальная сборка: в DOM попадают только явно утверждённые слайды.
 deck.querySelectorAll('.slide:not(.prefinal-keep)').forEach(slide => slide.remove())
+const prefinalMarket = document.querySelector('.prefinal-digital-market')
+const prefinalProblem = document.querySelector('.review-problem-v2.prefinal-keep')
+if (prefinalMarket && prefinalProblem) prefinalProblem.before(prefinalMarket)
 const prefinalDemand = document.querySelector('.review-demand-v2:not(.colleague-order-slide)')
 const prefinalStory = document.querySelector('.review-story-v2')
 if (prefinalDemand && prefinalStory) prefinalStory.before(prefinalDemand)
