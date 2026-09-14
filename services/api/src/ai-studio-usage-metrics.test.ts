@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aiStudioUsage } from './ai-studio-usage-metrics.js'
+import { aiStudioMetrics, aiStudioUsage } from './ai-studio-usage-metrics.js'
 
 describe('aiStudioUsage', () => {
   it('normalizes the completion API token payload', () => {
@@ -22,5 +22,11 @@ describe('aiStudioUsage', () => {
 
   it('does not invent usage for an absent response payload', () => {
     expect(aiStudioUsage(undefined)).toBeNull()
+  })
+
+  it('counts only a response with reconcilable token usage as a model request', () => {
+    expect(aiStudioMetrics(null)).toEqual([])
+    expect(aiStudioMetrics({ inputTokens: 12, cachedTokens: 4, outputTokens: 3, totalTokens: 19 }))
+      .toContainEqual({ name: 'ai_studio_model_calls', type: 'IGAUGE', value: 1 })
   })
 })

@@ -66,9 +66,11 @@ function costRub(totalTokens: number): number {
   return totalTokens * rate / 1_000
 }
 
-function metrics(event: AiStudioMetricEvent): Metric[] {
-  const usage = event.usage
-  if (usage === null) return [{ name: 'ai_studio_model_calls', type: 'IGAUGE', value: 1 }]
+export function aiStudioMetrics(usage: AiStudioUsage | null): Metric[] {
+  // An error, malformed response, or retry without token usage is an HTTP
+  // attempt, not a model call that can be reconciled with cost. Counting it
+  // here inflated the dashboard's request total.
+  if (usage === null) return []
   return [
     { name: 'ai_studio_model_calls', type: 'IGAUGE', value: 1 },
     { name: 'ai_studio_input_tokens', type: 'IGAUGE', value: usage.inputTokens },
@@ -86,13 +88,15 @@ function metrics(event: AiStudioMetricEvent): Metric[] {
 export async function reportAiStudioMetric(event: AiStudioMetricEvent): Promise<void> {
   const folderId = process.env.YANDEX_CLOUD_FOLDER_ID
   if (!folderId || !event.iamToken) return
+  const eventMetrics = aiStudioMetrics(event.usage)
+  if (eventMetrics.length === 0) return
   try {
     const response = await fetch(`${METRICS_ENDPOINT}?folderId=${encodeURIComponent(folderId)}&service=custom`, {
       method: 'POST',
       headers: { authorization: `Bearer ${event.iamToken}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         labels: { function_name: event.functionName, model_id: modelLabel(event.modelUri) },
-        metrics: metrics(event),
+        metrics: eventMetrics,
       }),
     })
     if (!response.ok) throw new Error(`monitoring_write_${response.status}`)
