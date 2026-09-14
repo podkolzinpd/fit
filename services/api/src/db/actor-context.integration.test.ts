@@ -912,10 +912,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         throw new Error('Database pools are not ready')
       }
 
-      const issuer = new DatabaseYandexAppSessionIssuer(
-        runtimePool,
-        () => new Date('2026-08-31T10:00:00.000Z'),
-      )
+      const issuer = new DatabaseYandexAppSessionIssuer(runtimePool)
       const revoker = new DatabaseYandexAppSessionRevoker(runtimePool)
       const session = await issuer.issue(APP_SUBJECT_HASH)
 
