@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(16);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('a6000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'guard-trainer@example.test', '');
@@ -16,6 +16,12 @@ select ok(not has_table_privilege('authenticated', 'app_private.training_summary
   'raw generation state is not exposed');
 select ok(not has_function_privilege('authenticated', 'public.claim_training_summary_generation(uuid,date,date,text,uuid,integer,integer)', 'EXECUTE'),
   'browser actors cannot call the generation guard directly');
+select ok(has_function_privilege('service_role', 'public.claim_training_summary_generation(uuid,date,date,text,uuid,integer,integer)', 'EXECUTE'),
+  'service role can claim generation');
+select ok(has_function_privilege('service_role', 'public.complete_training_summary_generation(uuid,date,date,text,uuid,jsonb)', 'EXECUTE'),
+  'service role can complete generation');
+select ok(has_function_privilege('service_role', 'public.fail_training_summary_generation(uuid,date,date,text,uuid,text,jsonb)', 'EXECUTE'),
+  'service role can record generation failure');
 
 set local role service_role;
 select set_config('request.jwt.claim.role', 'service_role', true);
