@@ -75,8 +75,11 @@ FIT_TENANT_REMOTE_APPLY_CONFIRMATION=APPLY_TENANT_TO_YANDEX_POSTGRES
 ```
 
 Эти значения — предохранители, не секреты и не замена явному подтверждению
-оператора. Перед production export отдельно сверяются cohort, отсутствие общих
-trainer-связей и pending push, freeze writes, target, backup и rollback plan.
+оператора. Перед isolated production export отдельно сверяются cohort,
+отсутствие общих trainer-связей и pending push, freeze writes, target, backup и
+rollback plan. Полный snapshot не копирует transient source push outbox; перед
+финальным cutover обязательны freeze writes, ограниченное окно drain и
+отключение Supabase dispatcher после него.
 Точные границы manifest и ограничения описаны в
 `docs/design/YANDEX_TENANT_MIGRATION_TOOLING.md`.
 
@@ -112,7 +115,7 @@ GitHub OIDC → Yandex IAM token.
   или membership пересекает границу trainer tenant. Перед `apply` обязательны
   успешный `dry-run`, точный content-derived fingerprint из его отчёта и общая
   apply-фраза. Режим не переносит `auth.users`, OAuth credentials, Yandex
-  sessions/rollout assignments, sent push outbox и Live receipts.
+  sessions/rollout assignments, весь source push outbox и Live receipts.
 
 Автовыбор нужен только для безопасной репетиции на реальных объёмах и не
 фиксирует tenant для cutover. `full-cohort` не является автовыбором: его
