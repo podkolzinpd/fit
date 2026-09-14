@@ -51,6 +51,19 @@
   тренера и первом плане имеют единый compact copy-action, подтверждение
   «Скопировано» и fallback для iOS/WebView.
 ## Инфраструктура и Yandex Cloud
+- Chat media repair (2026-09-15): Supabase bridge принимает `204 No Content`
+  от `authorize_chat_* RETURNS void`, не пытаясь разобрать пустое тело как JSON.
+  Регрессия воспроизведена до исправления (upload/sign/remove возвращали 503);
+  API adapter/route tests после исправления проходят. Live S3 smoke ключами
+  активной stage-ревизии выявил отдельный `PutObject 403 AccessDenied`:
+  prefix-scoped policy не заменяет базовые IAM/ACL grants, а cross-cloud
+  аккаунт Yandex не принимает ни в IAM, ни в ACL. После подтверждения владельца
+  создан bucket-owned `fit-chat-media` account с READ/WRITE ACL и теми же media
+  prefix restrictions; отдельный stage Lockbox доступен только API/migration.
+  Его immutable IDs выбираются через `YC_STAGE_MEDIA_S3_CREDENTIALS`; старый
+  stage secret/key сохраняется. Новый ключ прошёл реальную запись, повтор и
+  signed GET 200 с совпадением байтов. Подключение к API ожидает merge/deploy;
+  E2E отправка фото пока НЕ подтверждена.
 - ИИ-анализ Progress использует контракт `training-progress-v14` и агрегатор
   `summary-aggregate-v3`: статистика считается по всем упражнениям, сильнейшие
   сигналы передаются подробно, остальные — компактным индексом и полным
