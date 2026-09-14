@@ -86,8 +86,10 @@ jobs:
 
       - name: Require explicit production confirmation
         if: inputs.mode == 'apply'
+        env:
+          RESTORE_CONFIRMATION: ${{ inputs.confirmation }}
         run: |
-          [[ "${{ inputs.confirmation }}" == "RESTORE_SPEECHKIT_RELAY" ]] || {
+          [[ "$RESTORE_CONFIRMATION" == "RESTORE_SPEECHKIT_RELAY" ]] || {
             echo 'Apply mode requires the exact confirmation RESTORE_SPEECHKIT_RELAY.' >&2
             exit 1
           }
@@ -97,12 +99,77 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$RELAY_ADDRESS_RESERVED" != "true" ]]; then
-            yc vpc address update --reserved=true "$RELAY_ADDRESS_ID"
+            if ! reserve_output=$(yc vpc address update --reserved=true "$RELAY_ADDRESS_ID" 2>&1); then
+              if [[ "$reserve_output" == *"vpc.externalStaticAddresses.count exceeded"* ]]; then
+                echo '::warning::Static IP quota is full; continuing without stopping the VM. A normal restart retains its dynamic IP.'
+              else
+                printf '%s\n' "$reserve_output" >&2
+                exit 1
+              fi
+            fi
           fi
+
+          full_instance=$(yc compute instance get --id "$RELAY_VM_ID" --full --format json)
+          jq -r '.metadata["ssh-keys"] // empty' <<<"$full_instance" >/tmp/speechkit-original-ssh-keys
+          ssh-keygen -q -t ed25519 -N '' -C speechkit-recovery -f /tmp/speechkit-recovery-key
+          cp /tmp/speechkit-original-ssh-keys /tmp/speechkit-active-ssh-keys
+          if [[ -s /tmp/speechkit-active-ssh-keys ]]; then
+            printf '\n' >>/tmp/speechkit-active-ssh-keys
+          fi
+          printf 'yc-user:%s\n' "$(cat /tmp/speechkit-recovery-key.pub)" >>/tmp/speechkit-active-ssh-keys
+
+          cleanup_ssh_key() {
+            set +e
+            if [[ -s /tmp/speechkit-original-ssh-keys ]]; then
+              yc compute instance add-metadata \
+                --id "$RELAY_VM_ID" \
+                --metadata-from-file ssh-keys=/tmp/speechkit-original-ssh-keys >/dev/null
+            else
+              yc compute instance remove-metadata --id "$RELAY_VM_ID" --keys ssh-keys >/dev/null
+            fi
+            rm -f /tmp/speechkit-recovery-key /tmp/speechkit-recovery-key.pub \
+              /tmp/speechkit-active-ssh-keys /tmp/speechkit-original-ssh-keys \
+              /tmp/speechkit-known-hosts
+          }
+          trap cleanup_ssh_key EXIT
+
           yc compute instance add-metadata \
             --id "$RELAY_VM_ID" \
-            --metadata-from-file startup-script=services/speechkit-relay/recover-startup.sh
-          yc compute instance restart --id "$RELAY_VM_ID"
+            --metadata-from-file ssh-keys=/tmp/speechkit-active-ssh-keys >/dev/null
+
+          ssh_options=(
+            -i /tmp/speechkit-recovery-key
+            -o BatchMode=yes
+            -o ConnectTimeout=5
+            -o StrictHostKeyChecking=accept-new
+            -o UserKnownHostsFile=/tmp/speechkit-known-hosts
+          )
+          find_ssh_user() {
+            local candidate
+            for candidate in yc-user ubuntu; do
+              if ssh "${ssh_options[@]}" "$candidate@$RELAY_EXPECTED_IP" true 2>/dev/null; then
+                printf '%s' "$candidate"
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          ssh_user=''
+          for attempt in $(seq 1 5); do
+            if ssh_user=$(find_ssh_user); then break; fi
+            sleep 3
+          done
+          if [[ -z "$ssh_user" ]]; then
+            yc compute instance restart --id "$RELAY_VM_ID"
+            for attempt in $(seq 1 40); do
+              if ssh_user=$(find_ssh_user); then break; fi
+              sleep 3
+            done
+          fi
+          [[ -n "$ssh_user" ]]
+          ssh "${ssh_options[@]}" "$ssh_user@$RELAY_EXPECTED_IP" \
+            'sudo bash -s' <services/speechkit-relay/recover-startup.sh
 
       - name: Verify HTTPS and SpeechKit WebSocket
         if: inputs.mode == 'apply'
