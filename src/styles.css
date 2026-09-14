@@ -5583,19 +5583,6 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-today-identity .voice-action:has(.voice-action-error):not(.voice-action-recording) {
   grid-template-areas:"copy button" "label button" "error error";
 }
-.client-home-identity .voice-action-error,
-.trainer-today-identity .voice-action-error {
-  grid-area:error;
-  margin-top:10px;
-  border-color:var(--mono-on-primary);
-  background:transparent;
-  color:var(--mono-on-primary);
-  font-size:12px;
-}
-.client-home-identity .voice-action-error strong,
-.trainer-today-identity .voice-action-error strong {
-  color:inherit;
-}
 
 /* One factual result shared by Home, Progress and completion. */
 .personal-workout-result { display:grid; gap:8px; min-width:0; }

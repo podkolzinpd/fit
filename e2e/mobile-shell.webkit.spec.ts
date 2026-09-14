@@ -1124,26 +1124,6 @@ test('iPhone: voice-first и AI-поверхности сохраняют кон
   await expectNoHorizontalOverflow(page)
 })
 
-for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
-  test(`iPhone: ошибка голосового ввода читаема на ${viewport.width} px`, async ({ page }) => {
-    await page.setViewportSize(viewport)
-    await loginAsTrainer(page)
-
-    await page.locator('.voice-action').evaluate((element) => {
-      const error = document.createElement('div')
-      error.className = 'voice-action-error'
-      error.setAttribute('role', 'alert')
-      error.innerHTML = '<strong>Не удалось загрузить модель распознавания.</strong>'
-      element.append(error)
-    })
-
-    const expectedColor = await page.locator('.voice-action-copy h2').evaluate((element) => getComputedStyle(element).color)
-    await expect(page.locator('.voice-action-error strong')).toHaveCSS('color', expectedColor)
-    await expect(page.locator('.voice-action-error')).toBeInViewport()
-    await expectNoHorizontalOverflow(page)
-  })
-}
-
 for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
   test(`iPhone: Progress тренера остаётся компактным на ${viewport.width} px`, async ({ page }) => {
     await page.setViewportSize(viewport)
