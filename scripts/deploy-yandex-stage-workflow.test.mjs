@@ -221,6 +221,18 @@ test('bootstraps private media only after cost approval and keeps migration aggr
   assert.doesNotMatch(mediaMigrationWorkflow, /\.path|object\.path|image_path/)
 })
 
+test('mirrors the Supabase bridge payload into a private stage Lockbox', () => {
+  assert.match(workflow, /^  YC_STAGE_LEGACY_SUPABASE_BRIDGE_LOCKBOX_NAME: fit-stage-legacy-supabase-bridge$/m)
+  assert.match(workflow, /Mirror Supabase credentials for the legacy chat media bridge[\s\S]*?supabase projects api-keys/)
+  assert.match(workflow, /mirror-yandex-legacy-supabase-bridge\.mjs[\s\S]*?--payload-file "\$payload_file"/)
+  assert.match(workflow, /-target=yandex_lockbox_secret_iam_member\.legacy_supabase_bridge_reader/)
+  assert.doesNotMatch(workflow, /SUPABASE_SERVICE_ROLE_KEY=.*>> "\$GITHUB_ENV"/)
+  assert.match(
+    readFileSync(join(import.meta.dirname, 'mirror-yandex-legacy-supabase-bridge.mjs'), 'utf8'),
+    /--deletion-protection[\s\S]*?--version-description[\s\S]*?--payload', '-'/,
+  )
+})
+
 test('reuses the private dispatcher and preserves the existing DataLens access path', () => {
   assert.match(
     workflow,
