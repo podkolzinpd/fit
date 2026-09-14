@@ -157,12 +157,20 @@ export const authRepository = {
         ? metadataRole
         : pendingRole === 'client' ? 'client' : 'trainer'
     let profileData = existing.data
-    if (!profileData) {
-      const initialized = await authQueries.initializeAccount(role, firstName, lastName, systemTimeZone())
+    const missingTrainerRecord = role === 'trainer' && !trainer.data
+    if (!profileData || missingTrainerRecord) {
+      const initialized = await authQueries.initializeAccount(
+        role,
+        profileData ? undefined : firstName,
+        profileData ? undefined : lastName,
+        profileData?.timezone ?? systemTimeZone(),
+      )
       if (initialized.error) throw repositoryError(initialized.error)
-      const profile = await authQueries.getProfile(user.id)
-      if (profile.error) throw repositoryError(profile.error)
-      profileData = profile.data
+      if (!profileData) {
+        const profile = await authQueries.getProfile(user.id)
+        if (profile.error) throw repositoryError(profile.error)
+        profileData = profile.data
+      }
     }
     sessionStorage.removeItem('fit.pendingAccountRole')
     if (!profileData) throw new Error('Профиль пользователя не найден')
