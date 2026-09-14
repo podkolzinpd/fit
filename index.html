@@ -8090,19 +8090,19 @@ h3 {
 .prefinal-digital-market h2 {
   top: 124px;
   left: 92px;
-  width: 980px;
+  width: 1120px;
   color: var(--ink);
-  font-size: 60px;
+  font-size: 56px;
   line-height: 1;
 }
 
 .prefinal-digital-market .digital-market-lead {
   position: absolute;
-  top: 266px;
+  top: 244px;
   left: 96px;
-  width: 900px;
+  width: 1000px;
   color: var(--muted);
-  font-size: 23px;
+  font-size: 21px;
   line-height: 1.32;
 }
 
@@ -8117,8 +8117,9 @@ h3 {
 
 .prefinal-digital-market .digital-market-base span,
 .prefinal-digital-market .digital-market-label,
-.prefinal-digital-market .digital-market-map-label,
-.prefinal-digital-market .digital-market-cell > span,
+.prefinal-digital-market .digital-market-audience-label,
+.prefinal-digital-market .digital-market-segment span,
+.prefinal-digital-market .digital-market-stat span,
 .prefinal-digital-market .digital-market-takeaway > span {
   display: block;
   color: var(--muted);
@@ -8143,9 +8144,9 @@ h3 {
   line-height: 1.25;
 }
 
-.prefinal-digital-market .digital-market-adoption {
+.prefinal-digital-market .digital-market-distribution {
   position: absolute;
-  top: 342px;
+  top: 318px;
   left: 92px;
   right: 92px;
 }
@@ -8154,107 +8155,121 @@ h3 {
   margin-bottom: 13px;
 }
 
-.prefinal-digital-market .digital-market-bar {
+.prefinal-digital-market .digital-market-strip {
   display: grid;
-  grid-template-columns: 20fr 13fr 67fr;
-  height: 108px;
+  grid-template-columns: 52fr 21fr 16fr 11fr;
+  height: 208px;
   border: 1px solid var(--ink);
 }
 
-.prefinal-digital-market .digital-market-used {
-  display: grid;
-  grid-template-columns: 8fr 12fr;
+.prefinal-digital-market .digital-market-segment {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 20px 18px;
+}
+
+.prefinal-digital-market .digital-market-segment + .digital-market-segment {
+  border-left: 1px solid var(--ink);
+}
+
+.prefinal-digital-market .digital-market-segment--data {
   color: var(--paper);
   background: var(--dark);
 }
 
-.prefinal-digital-market .digital-market-used > div,
-.prefinal-digital-market .digital-market-interested,
-.prefinal-digital-market .digital-market-rest {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-  padding: 0 16px;
+.prefinal-digital-market .digital-market-segment--training {
+  color: var(--paper);
+  background: #4b4b4d;
 }
 
-.prefinal-digital-market .digital-market-used > div + div {
-  border-left: 1px solid rgba(255,255,255,.34);
-}
-
-.prefinal-digital-market .digital-market-interested {
+.prefinal-digital-market .digital-market-segment--food {
   color: var(--ink);
-  background: #d8d5cf;
-  border-left: 1px solid var(--ink);
+  background: #cbc8c2;
 }
 
-.prefinal-digital-market .digital-market-rest {
+.prefinal-digital-market .digital-market-segment--coach {
   color: var(--ink);
-  background: transparent;
-  border-left: 1px solid var(--ink);
+  background: var(--paper);
 }
 
-.prefinal-digital-market .digital-market-bar strong {
-  font-size: 28px;
+.prefinal-digital-market .digital-market-segment--data span,
+.prefinal-digital-market .digital-market-segment--training span {
+  color: rgba(247,244,238,.66);
+}
+
+.prefinal-digital-market .digital-market-segment strong {
+  display: block;
+  font-size: 42px;
   line-height: 1;
-  letter-spacing: -.04em;
+  letter-spacing: -.055em;
 }
 
-.prefinal-digital-market .digital-market-bar span {
-  margin-top: 8px;
-  font-size: 14px;
-  line-height: 1.18;
+.prefinal-digital-market .digital-market-segment h3 {
+  margin: 12px 0 0;
+  font-size: 20px;
+  line-height: 1.1;
+  letter-spacing: -.02em;
 }
 
-.prefinal-digital-market .digital-market-map {
+.prefinal-digital-market .digital-market-segment p {
+  margin: 0;
+  color: inherit;
+  font-size: 15px;
+  line-height: 1.3;
+  opacity: .78;
+}
+
+.prefinal-digital-market .digital-market-audience {
   position: absolute;
-  top: 530px;
+  top: 594px;
   left: 92px;
   right: 92px;
 }
 
-.prefinal-digital-market .digital-market-map-label {
-  padding-bottom: 16px;
+.prefinal-digital-market .digital-market-audience-label {
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--ink);
 }
 
-.prefinal-digital-market .digital-market-grid {
+.prefinal-digital-market .digital-market-stats {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
 }
 
-.prefinal-digital-market .digital-market-cell {
+.prefinal-digital-market .digital-market-stat {
   min-width: 0;
-  padding: 21px 22px 18px 0;
+  padding: 18px 22px 16px 0;
 }
 
-.prefinal-digital-market .digital-market-cell + .digital-market-cell {
+.prefinal-digital-market .digital-market-stat + .digital-market-stat {
   padding-left: 22px;
   border-left: 1px solid var(--line);
 }
 
-.prefinal-digital-market .digital-market-cell strong {
+.prefinal-digital-market .digital-market-stat strong {
   display: block;
-  margin-top: 10px;
-  font-size: 21px;
-  line-height: 1.15;
-  letter-spacing: -.02em;
+  margin-top: 8px;
+  font-size: 42px;
+  line-height: 1;
+  letter-spacing: -.045em;
 }
 
-.prefinal-digital-market .digital-market-cell p {
-  margin-top: 9px;
+.prefinal-digital-market .digital-market-stat p {
+  margin-top: 7px;
   color: var(--muted);
   font-size: 20px;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .prefinal-digital-market .digital-market-takeaway {
   position: absolute;
   left: 92px;
   right: 92px;
-  bottom: 64px;
+  bottom: 54px;
   display: grid;
-  grid-template-columns: 180px 1fr 360px;
+  grid-template-columns: 180px 1fr 390px;
   gap: 26px;
   align-items: start;
   padding-top: 18px;
@@ -8262,14 +8277,14 @@ h3 {
 }
 
 .prefinal-digital-market .digital-market-takeaway strong {
-  font-size: 23px;
+  font-size: 21px;
   line-height: 1.28;
   letter-spacing: -.02em;
 }
 
 .prefinal-digital-market .digital-market-source {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.35;
 }
 
@@ -8488,8 +8503,8 @@ Fit остаётся отдельным приложением, потому ч�
     <section class="slide redesign-v2 prefinal-keep prefinal-digital-market" data-section="Рынок" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
       <div class="eyebrow">03 · ЦИФРОВОЙ РЫНОК</div>
       <div class="digital-market-fit">Fit</div>
-      <h2>≈15 млн уже используют цифровые инструменты для спорта</h2>
-      <p class="digital-market-lead">Ещё ≈10 млн готовы попробовать. Рынок уже существует — аудитория распределена между разными сценариями и приложениями.</p>
+      <h2>Цифровой спортивный рынок уже сложился</h2>
+      <p class="digital-market-lead">Основная активность — в данных и трекерах. Тренировки, питание и работа с тренером остаются отдельными сценариями.</p>
 
       <div class="digital-market-base">
         <span>БАЗА ЭКСТРАПОЛЯЦИИ</span>
@@ -8497,53 +8512,53 @@ Fit остаётся отдельным приложением, потому ч�
         <p>россиян 18–55 лет</p>
       </div>
 
-      <div class="digital-market-adoption" aria-label="Оценка использования фитнес-приложений и гаджетов в России">
-        <span class="digital-market-label">ФИТНЕС-ПРИЛОЖЕНИЯ И ГАДЖЕТЫ · ЭКСТРАПОЛЯЦИЯ ОПРОСА РОМИР</span>
-        <div class="digital-market-bar">
-          <div class="digital-market-used">
-            <div><strong>5,9 млн</strong><span>8% регулярно</span></div>
-            <div><strong>8,9 млн</strong><span>12% иногда</span></div>
+      <div class="digital-market-distribution" aria-label="Оценочная структура использования цифровых спортивных инструментов в России">
+        <span class="digital-market-label">ОЦЕНОЧНАЯ СТРУКТУРА ИСПОЛЬЗОВАНИЯ · ОСНОВНОЙ СЦЕНАРИЙ ПОЛЬЗОВАТЕЛЯ</span>
+        <div class="digital-market-strip">
+          <div class="digital-market-segment digital-market-segment--data">
+            <div><strong>≈52%</strong><h3>Данные и активность</h3></div>
+            <p>Mi Fitness · Huawei Health<br>Garmin · Strava · шагомеры</p>
           </div>
-          <div class="digital-market-interested"><strong>9,6 млн</strong><span>13% хотят попробовать</span></div>
-          <div class="digital-market-rest"><strong>67%</strong><span>прочие / не используют</span></div>
+          <div class="digital-market-segment digital-market-segment--training">
+            <div><strong>≈21%</strong><h3>Тренировки</h3></div>
+            <p>FitStars · Home Workout<br>Fitness Online · Hevy</p>
+          </div>
+          <div class="digital-market-segment digital-market-segment--food">
+            <div><strong>≈16%</strong><h3>Питание</h3></div>
+            <p>FatSecret · YAZIO<br>MyFitnessPal</p>
+          </div>
+          <div class="digital-market-segment digital-market-segment--coach">
+            <div><strong>≈11%</strong><h3>Клуб и тренер</h3></div>
+            <p>DDX · клубы<br>Trainerize</p>
+          </div>
         </div>
       </div>
 
-      <div class="digital-market-map" aria-label="Основные сценарии и приложения российского цифрового спортивного рынка">
-        <span class="digital-market-map-label">ЧЕМ УЖЕ ПОЛЬЗУЮТСЯ В РОССИИ</span>
-        <div class="digital-market-grid">
-          <div class="digital-market-cell">
-            <span>ДАННЫЕ И ЧАСЫ</span>
-            <strong>Mi Fitness · Huawei Health</strong>
-            <p>Apple Fitness · Samsung Health · Zepp</p>
+      <div class="digital-market-audience" aria-label="Оценка аудитории цифровых спортивных инструментов в России">
+        <span class="digital-market-audience-label">СКОЛЬКО ЛЮДЕЙ УЖЕ ПОЛЬЗУЮТСЯ — И ГОТОВЫ ПРИСОЕДИНИТЬСЯ</span>
+        <div class="digital-market-stats">
+          <div class="digital-market-stat">
+            <span>РЕГУЛЯРНО</span>
+            <strong>≈5,9 млн</strong>
+            <p>8% используют приложения или гаджеты регулярно</p>
           </div>
-          <div class="digital-market-cell">
-            <span>МАРШРУТЫ И КАРДИО</span>
-            <strong>Garmin Connect · Strava</strong>
-            <p>COROS · adidas Running · шагомеры</p>
+          <div class="digital-market-stat">
+            <span>ВРЕМЯ ОТ ВРЕМЕНИ</span>
+            <strong>≈8,9 млн</strong>
+            <p>12% возвращаются к цифровым инструментам периодически</p>
           </div>
-          <div class="digital-market-cell">
-            <span>ТРЕНИРОВКИ</span>
-            <strong>FitStars · Home Workout</strong>
-            <p>Fitness Online · Hevy · Strong</p>
-          </div>
-          <div class="digital-market-cell">
-            <span>ПИТАНИЕ</span>
-            <strong>FatSecret · YAZIO</strong>
-            <p>MyFitnessPal · дневники КБЖУ</p>
-          </div>
-          <div class="digital-market-cell">
-            <span>КЛУБ И ТРЕНЕР</span>
-            <strong>DDX · приложения клубов</strong>
-            <p>Trainerize · онлайн-сопровождение</p>
+          <div class="digital-market-stat">
+            <span>ГОТОВЫ ПОПРОБОВАТЬ</span>
+            <strong>≈9,6 млн</strong>
+            <p>13% пока не используют, но уже проявляют интерес</p>
           </div>
         </div>
       </div>
 
       <div class="digital-market-takeaway">
         <span>ВЫВОД</span>
-        <strong>Цифровое поведение уже сформировано. Возможность Fit — собрать разрозненные сценарии в одном спортивном контексте.</strong>
-        <p class="digital-market-source">Оценка использования: РОМИР, июль 2026. Примеры приложений: Sensor Tower, IV кв. 2025, и публичные данные рынка.</p>
+        <strong>Fit может объединить разрозненные цифровые привычки в одном спортивном контексте.</strong>
+        <p class="digital-market-source">Аудитория: РОМИР, июль 2026. Структура сценариев — рабочая экстраполяция по данным Sensor Tower и МТС Геоэффект; требует валидации.</p>
       </div>
 
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
@@ -8552,10 +8567,12 @@ Fit остаётся отдельным приложением, потому ч�
 ЧТО ГОВОРИМ
 По опросу РОМИР среди взрослых жителей российских городов 8% регулярно используют фитнес-приложения и гаджеты, ещё 12% делают это время от времени. Если сценарно перенести эти доли на принятую в презентации базу 74 млн россиян 18–55 лет, получаем около 14,8 млн существующих пользователей цифровых спортивных инструментов. Ещё 13%, или около 9,6 млн, хотели бы попробовать.
 
-Эти люди пользуются не одним типом продукта. Повседневную активность и показатели собирают приложения часов; маршруты и кардио — беговые и велосипедные трекеры; готовые занятия дают тренировочные сервисы; питание ведётся отдельно; клубы и тренеры используют собственные кабинеты и приложения. Один человек может одновременно находиться в нескольких категориях.
+Эти люди пользуются не одним типом продукта. Повседневную активность и показатели собирают приложения часов и трекеров; готовые занятия дают тренировочные сервисы; питание ведётся отдельно; клубы и тренеры используют собственные кабинеты и приложения.
+
+Полоса показывает рабочую оценку распределения по основному цифровому сценарию пользователя: около 52% активности приходится на данные, часы, шагомеры и маршруты; 21% — на тренировочные программы; 16% — на питание; 11% — на клубы и сопровождение тренера. Это не точная доля брендов и не сумма MAU отдельных приложений. Оценка нужна, чтобы показать относительный масштаб сценариев и будет уточняться на данных рынка.
 
 ОГОВОРКА
-Это сценарная оценка, а не измеренный MAU российского рынка. РОМИР объединяет приложения и гаджеты, исследует взрослых жителей городов с населением более 10 тыс. человек и публикует 88% распределения ответов: 8% регулярно, 12% иногда, 13% хотят попробовать и 55% не используют и не планируют. Поэтому оставшиеся 12% на полосе объединены с прочими ответами. Аудитории отдельных приложений пересекаются и не суммируются.
+Это сценарная оценка, а не измеренный MAU российского рынка. РОМИР объединяет приложения и гаджеты и исследует взрослых жителей городов с населением более 10 тыс. человек. Аудитории отдельных приложений пересекаются; поэтому полоса построена по ведущему сценарию и не должна читаться как точная доля уникальных пользователей брендов.
 
 ПЕРЕХОД
 Рынок уже существует, но спортивный контекст человека распределён между разными инструментами. Дальше показываем, что отдельные модели цифрового сопровождения уже подтвердили массовый спрос и измеримый эффект.
