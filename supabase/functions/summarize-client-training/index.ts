@@ -19,6 +19,7 @@ import { completedWorkoutsInPeriod } from "./workout-source.ts"
 import { buildSummaryConsistency } from "./summary-consistency.ts"
 import { buildSummaryProgressFacts } from "./summary-progress-facts.ts"
 import {
+  buildSummaryFingerprintPayload,
   buildSummaryModelInput,
   MAX_SUMMARY_MODEL_INPUT_CHARS,
   SUMMARY_AGGREGATOR_VERSION,
@@ -334,6 +335,23 @@ function serviceClient() {
       auth: { persistSession: false, autoRefreshToken: false },
     },
   )
+}
+
+function throwSupabaseOperationError(
+  requestId: string,
+  operation: string,
+  error: unknown,
+  status: number,
+  publicCode: string,
+): never {
+  const details = isRecord(error) ? error : {}
+  console.warn("summary supabase operation failed", {
+    request_id: requestId,
+    operation,
+    upstream_code: typeof details.code === "string" ? details.code.slice(0, 80) : null,
+    upstream_message: typeof details.message === "string" ? details.message.slice(0, 240) : null,
+  })
+  throw new HttpError(status, publicCode)
 }
 
 type GenerationDecision = "claimed" | "cached" | "in_progress" | "cooldown" | "period_limit" | "daily_limit"
@@ -1347,13 +1365,12 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
       const modelInput = buildSummaryModelInput(trainingData)
       const sourceInputChars = JSON.stringify(trainingData).length
       const modelInputChars = JSON.stringify(modelInput).length
-      const inputFingerprint = await fingerprint({
-        prompt_version: PROMPT_VERSION,
-        analysis_version: SUMMARY_ANALYSIS_VERSION,
-        aggregation_version: SUMMARY_AGGREGATOR_VERSION,
-        model_id: configuredModelId(),
-        source: trainingData,
-      })
+      const inputFingerprint = await fingerprint(buildSummaryFingerprintPayload({
+        promptVersion: PROMPT_VERSION,
+        analysisVersion: SUMMARY_ANALYSIS_VERSION,
+        modelId: configuredModelId(),
+        modelInput,
+      }))
 
       if (isClient) {
         const { data: cached, error: cacheError } = await userClient
@@ -1363,7 +1380,9 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
           .eq("period_start", input.period_start)
           .eq("period_end", input.period_end)
           .maybeSingle()
-        if (cacheError) throw new HttpError(500, "summary_cache_lookup_failed")
+        if (cacheError) throwSupabaseOperationError(
+          requestId, "read_client_published_cache", cacheError, 500, "summary_cache_lookup_failed",
+        )
         const cachedSummary = cached?.summary && typeof cached.summary === "object" && !Array.isArray(cached.summary)
           ? cached.summary as Record<string, unknown>
           : null
@@ -1381,7 +1400,9 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
             p_input_fingerprint: inputFingerprint,
           },
         )
-        if (sharedCacheError) throw new HttpError(500, "summary_cache_lookup_failed")
+        if (sharedCacheError) throwSupabaseOperationError(
+          requestId, "publish_client_shared_cache", sharedCacheError, 500, "summary_cache_lookup_failed",
+        )
         if (sharedCache) {
           console.info("summary shared cache published", { request_id: requestId, trigger_reason: input.trigger_reason })
           return Response.json({ data: sharedCache, cached: true })
@@ -1400,7 +1421,9 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
           .eq("prompt_version", PROMPT_VERSION)
           .maybeSingle()
         if (cacheError) {
-          throw new HttpError(500, "summary_cache_lookup_failed")
+          throwSupabaseOperationError(
+            requestId, "read_trainer_cache", cacheError, 500, "summary_cache_lookup_failed",
+          )
         }
         if (cached?.input_fingerprint === inputFingerprint) {
           console.info("summary cache hit", { request_id: requestId, actor: "trainer", force_requested: input.force, trigger_reason: input.trigger_reason })
@@ -1430,7 +1453,9 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
           p_model_input_chars: modelInputChars,
         },
       )
-      if (claimError) throw new HttpError(503, "summary_generation_guard_failed")
+      if (claimError) throwSupabaseOperationError(
+        requestId, "claim_generation_guard", claimError, 503, "summary_generation_guard_failed",
+      )
       const generationDecision = parseGenerationDecision(claimData)
       console.info("summary generation guard decision", {
         request_id: requestId,
@@ -1453,7 +1478,9 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
               p_input_fingerprint: inputFingerprint,
             },
           )
-          if (sharedCacheError) throw new HttpError(500, "summary_cache_lookup_failed")
+          if (sharedCacheError) throwSupabaseOperationError(
+            requestId, "publish_guarded_client_cache", sharedCacheError, 500, "summary_cache_lookup_failed",
+          )
           if (sharedCache) return Response.json({ data: sharedCache, cached: true })
         }
         if (isTrainer) {
@@ -1465,7 +1492,9 @@ const handler = withSupabase({ auth: "none" }, async (req, _ctx) => {
             .eq("period_end", input.period_end)
             .eq("prompt_version", PROMPT_VERSION)
             .maybeSingle()
-          if (cacheError) throw new HttpError(500, "summary_cache_lookup_failed")
+          if (cacheError) throwSupabaseOperationError(
+            requestId, "read_guarded_trainer_cache", cacheError, 500, "summary_cache_lookup_failed",
+          )
           if (cached?.input_fingerprint === inputFingerprint) {
             const { input_fingerprint: _fingerprint, ...data } = cached
             return Response.json({ data, cached: true })

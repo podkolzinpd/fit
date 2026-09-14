@@ -16,13 +16,31 @@ type SummarySession = {
   sets?: SummarySet[]
 }
 
-export const SUMMARY_AGGREGATOR_VERSION = "summary-aggregate-v2"
+export const SUMMARY_AGGREGATOR_VERSION = "summary-aggregate-v3"
 
 export const MAX_SUMMARY_MODEL_INPUT_CHARS = 20_000
-const TARGET_SUMMARY_MODEL_INPUT_CHARS = 19_000
+export const TARGET_SUMMARY_MODEL_INPUT_CHARS = 19_000
 const MAX_EVIDENCE_EXERCISES = 18
 const MAX_EXERCISE_CONTROL_POINTS = 4
 const MAX_MEASUREMENT_CONTROL_POINTS = 8
+const MAX_CUSTOM_METRICS_PER_POINT = 8
+const MAX_MEASUREMENT_CHANGES = 16
+const MAX_FEEDBACK_SIGNALS = 12
+
+export function buildSummaryFingerprintPayload(input: {
+  promptVersion: string
+  analysisVersion: string
+  modelId: string
+  modelInput: unknown
+}) {
+  return {
+    prompt_version: input.promptVersion,
+    analysis_version: input.analysisVersion,
+    aggregation_version: SUMMARY_AGGREGATOR_VERSION,
+    model_id: input.modelId,
+    model_input: input.modelInput,
+  }
+}
 
 type SummarySet = {
   exercise_position: number
@@ -103,6 +121,32 @@ function rounded(value: number): number {
   return Math.round(value * 10) / 10
 }
 
+function boundedString(value: unknown, limit: number): string | undefined {
+  if (typeof value !== "string") return undefined
+  const trimmed = value.trim()
+  return trimmed ? trimmed.slice(0, limit) : undefined
+}
+
+function compactRecord(
+  value: unknown,
+  keys: readonly string[],
+  stringLimit = 80,
+): Record<string, string | number | boolean | null> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
+  const source = value as Record<string, unknown>
+  const result: Record<string, string | number | boolean | null> = {}
+  for (const key of keys) {
+    const item = source[key]
+    if (typeof item === "number" && Number.isFinite(item)) result[key] = rounded(item)
+    else if (typeof item === "boolean" || item === null) result[key] = item
+    else {
+      const text = boundedString(item, stringLimit)
+      if (text !== undefined) result[key] = text
+    }
+  }
+  return result
+}
+
 function sameLoad(left: number, right: number): boolean {
   return Math.abs(left - right) / Math.max(left, right, 1) <= 0.02
 }
@@ -173,8 +217,30 @@ function measurementPoint(measurement: SummaryMeasurement) {
     chest_cm: measurement.chest_cm,
     waist_cm: measurement.waist_cm,
     hip_cm: measurement.hip_cm,
-    custom_metrics: measurement.custom_metrics ?? [],
+    custom_metrics: (measurement.custom_metrics ?? [])
+      .slice(0, MAX_CUSTOM_METRICS_PER_POINT)
+      .flatMap((metric) => {
+        const metricId = boundedString(metric.metric_id, 80)
+        const name = boundedString(metric.name, 80)
+        const value = finite(metric.value)
+        if (!metricId || !name || value === undefined) return []
+        return [{
+          metric_id: metricId,
+          name,
+          unit: boundedString(metric.unit, 24) ?? null,
+          value: rounded(value),
+        }]
+      }),
   }
+}
+
+function compactMeasurementChanges(changes: MeasurementChange[]): MeasurementChange[] {
+  return changes.slice(0, MAX_MEASUREMENT_CHANGES).map((change) => ({
+    ...change,
+    ...(change.metric_id ? { metric_id: change.metric_id.slice(0, 80) } : {}),
+    ...(change.name ? { name: change.name.slice(0, 80) } : {}),
+    ...(change.unit ? { unit: change.unit.slice(0, 24) } : {}),
+  }))
 }
 
 function measurementContext(measurements: SummaryMeasurement[] | undefined) {
@@ -183,7 +249,7 @@ function measurementContext(measurements: SummaryMeasurement[] | undefined) {
   return {
     entry_count: recent.length,
     control_points: indices.map((index) => measurementPoint(recent[index]!)),
-    changes: deriveMeasurementChanges(recent),
+    changes: compactMeasurementChanges(deriveMeasurementChanges(recent)),
   }
 }
 
@@ -402,8 +468,12 @@ function compactExercisePeriod(
     comparison_confidence: exercise.session_count >= 4 ? "high" : exercise.session_count >= 2 ? "medium" : "low",
     first_date: (exercise.first_session ?? sessions[0])?.date,
     latest_date: (exercise.last_session ?? sessions.at(-1))?.date,
-    best: exercise.best,
-    change_percent: exercise.change_percent,
+    best: compactRecord(exercise.best, [
+      "max_weight_kg", "volume_kg", "total_reps", "distance_km", "pace_min_per_km",
+    ]),
+    change_percent: compactRecord(exercise.change_percent, [
+      "max_weight", "volume", "total_reps", "distance", "duration", "pace",
+    ]),
     derived_observations: deriveExerciseObservations(exercise),
     ...(controlPointLimit > 0
       ? { control_points: exerciseControlPoints(sessions, controlPointLimit) }
@@ -418,35 +488,110 @@ function exerciseEvidenceScore(exercise: SummaryExercise | undefined): number {
   return exercise.session_count * 10 + observations * 20 + changes * 12
 }
 
-function combinedExercises(
+function detailedExercises(
   current: SummaryExercise[],
   previous: SummaryExercise[],
-  detailedRefs: Set<string>,
+  refs: string[],
   controlPointLimit: number,
 ) {
   const currentByRef = new Map(current.map((exercise) => [exercise.ref ?? exercise.name, exercise]))
   const previousByRef = new Map(previous.map((exercise) => [exercise.ref ?? exercise.name, exercise]))
-  const orderedRefs = [
-    ...currentByRef.keys(),
-    ...[...previousByRef.keys()].filter((ref) => !currentByRef.has(ref)),
-  ]
-  return orderedRefs.map((ref) => {
+  return refs.map((ref) => {
     const currentExercise = currentByRef.get(ref)
     const previousExercise = previousByRef.get(ref)
     const identity = currentExercise ?? previousExercise!
     return {
-      ref: identity.ref,
-      name: identity.name,
-      kind: identity.kind,
-      muscle_group: identity.muscle_group,
-      source: identity.source,
+      ref: boundedString(identity.ref, 120),
+      name: boundedString(identity.name, 120) ?? "Упражнение",
+      kind: boundedString(identity.kind, 32) ?? "unknown",
+      muscle_group: boundedString(identity.muscle_group, 48),
+      source: boundedString(identity.source, 32),
       presence: currentExercise && previousExercise
         ? "both_periods"
         : currentExercise ? "current_only" : "previous_only",
-      current: compactExercisePeriod(currentExercise, detailedRefs.has(ref) ? controlPointLimit : 0),
-      previous: compactExercisePeriod(previousExercise, detailedRefs.has(ref) ? controlPointLimit : 0),
+      current: compactExercisePeriod(currentExercise, controlPointLimit),
+      previous: compactExercisePeriod(previousExercise, controlPointLimit),
     }
   })
+}
+
+type ExerciseIndexEntry = [
+  name: string,
+  kind: string,
+  muscleGroup: string,
+  presence: "both_periods" | "current_only" | "previous_only",
+  currentSessions: number,
+  previousSessions: number,
+  observations: string,
+]
+
+function exerciseIndex(
+  current: SummaryExercise[],
+  previous: SummaryExercise[],
+  refs: string[],
+): ExerciseIndexEntry[] {
+  const currentByRef = new Map(current.map((exercise) => [exercise.ref ?? exercise.name, exercise]))
+  const previousByRef = new Map(previous.map((exercise) => [exercise.ref ?? exercise.name, exercise]))
+  return refs.map((ref) => {
+    const currentExercise = currentByRef.get(ref)
+    const previousExercise = previousByRef.get(ref)
+    const identity = currentExercise ?? previousExercise!
+    const observations = [...new Set([
+      ...deriveExerciseObservations(currentExercise ?? { name: "", kind: "", session_count: 0 }),
+      ...deriveExerciseObservations(previousExercise ?? { name: "", kind: "", session_count: 0 }),
+    ].map((item) => item.kind))].slice(0, 4).join("|")
+    return [
+      boundedString(identity.name, 120) ?? "Упражнение",
+      boundedString(identity.kind, 32) ?? "unknown",
+      boundedString(identity.muscle_group, 48) ?? "other",
+      currentExercise && previousExercise
+        ? "both_periods"
+        : currentExercise ? "current_only" : "previous_only",
+      currentExercise?.session_count ?? 0,
+      previousExercise?.session_count ?? 0,
+      observations,
+    ]
+  })
+}
+
+function incrementCount(counts: Map<string, number>, rawKey: unknown, fallback: string) {
+  const key = boundedString(rawKey, 48) ?? fallback
+  counts.set(key, (counts.get(key) ?? 0) + 1)
+}
+
+function sortedCounts(counts: Map<string, number>): Array<[string, number]> {
+  return [...counts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+}
+
+function exerciseRollup(current: SummaryExercise[], previous: SummaryExercise[]) {
+  const currentByRef = new Map(current.map((exercise) => [exercise.ref ?? exercise.name, exercise]))
+  const previousByRef = new Map(previous.map((exercise) => [exercise.ref ?? exercise.name, exercise]))
+  const refs = [...new Set([...currentByRef.keys(), ...previousByRef.keys()])]
+  const byKind = new Map<string, number>()
+  const byMuscleGroup = new Map<string, number>()
+  const byPresence = new Map<string, number>()
+  const observations = new Map<string, number>()
+  for (const ref of refs) {
+    const currentExercise = currentByRef.get(ref)
+    const previousExercise = previousByRef.get(ref)
+    const identity = currentExercise ?? previousExercise!
+    incrementCount(byKind, identity.kind, "unknown")
+    incrementCount(byMuscleGroup, identity.muscle_group, "other")
+    incrementCount(byPresence, currentExercise && previousExercise
+      ? "both_periods"
+      : currentExercise ? "current_only" : "previous_only", "unknown")
+    for (const observation of [
+      ...deriveExerciseObservations(currentExercise ?? { name: "", kind: "", session_count: 0 }),
+      ...deriveExerciseObservations(previousExercise ?? { name: "", kind: "", session_count: 0 }),
+    ]) incrementCount(observations, observation.kind, "unknown")
+  }
+  return {
+    unique_exercises: refs.length,
+    by_kind: sortedCounts(byKind),
+    by_muscle_group: sortedCounts(byMuscleGroup),
+    by_presence: sortedCounts(byPresence),
+    derived_observations: sortedCounts(observations),
+  }
 }
 
 function rankedEvidenceRefs(current: SummaryExercise[], previous: SummaryExercise[]): string[] {
@@ -473,7 +618,7 @@ function compactFeedback(signals: unknown) {
       wellbeing: signal.wellbeing,
       discomfort: signal.discomfort,
       client_comment: typeof signal.client_comment === "string"
-        ? signal.client_comment.trim().slice(0, 160)
+        ? signal.client_comment.trim().slice(0, 120)
         : signal.client_comment,
     }
     const key = JSON.stringify(compact)
@@ -490,7 +635,37 @@ function compactFeedback(signals: unknown) {
       })
     }
   }
-  return [...grouped.values()]
+  return [...grouped.values()].slice(-MAX_FEEDBACK_SIGNALS)
+}
+
+function compactPeriod(value: unknown) {
+  return compactRecord(value, ["start", "end", "days", "requested_start"], 24)
+}
+
+function compactConsistency(value: unknown) {
+  return compactRecord(value, [
+    "completed_workouts", "workouts_per_week", "active_weeks", "first_workout_date",
+    "last_workout_date", "longest_gap_days", "observation_start", "observation_days",
+  ], 24)
+}
+
+function compactGoal(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null
+  const goal = value as Record<string, unknown>
+  const title = boundedString(goal.title, 320)
+  if (!title) return null
+  const stage = goal.current_stage && typeof goal.current_stage === "object" && !Array.isArray(goal.current_stage)
+    ? goal.current_stage as Record<string, unknown>
+    : null
+  return {
+    title,
+    target_date: boundedString(goal.target_date, 24) ?? null,
+    current_stage: stage ? {
+      title: boundedString(stage.title, 240) ?? "Этап",
+      starts_on: boundedString(stage.starts_on, 24) ?? null,
+      ends_on: boundedString(stage.ends_on, 24) ?? null,
+    } : null,
+  }
 }
 
 function coverage(exercises: SummaryExercise[]) {
@@ -502,9 +677,9 @@ function coverage(exercises: SummaryExercise[]) {
   }
 }
 
-/** Sends every unique exercise, but reserves detailed control points for the
- * strongest signals. Raw sets never leave the backend and the deterministic
- * size loop keeps the paid request below the hard budget.
+/** Computes coverage across every exercise, keeps named compact evidence while
+ * it fits, and always falls back to a complete rollup before a paid request.
+ * Raw sets never leave the backend.
  */
 export function buildSummaryModelInput(
   trainingData: SummaryTrainingData,
@@ -518,40 +693,64 @@ export function buildSummaryModelInput(
       current: coverage(trainingData.exercises),
       previous: coverage(previous?.exercises ?? []),
       complete: true,
-      representation: "all_unique_exercises_with_compact_session_evidence",
+      representation: "ranked_exercise_evidence_with_complete_rollup",
     },
-    period: trainingData.period,
-    consistency: trainingData.consistency,
-    goal: trainingData.goal,
+    period: compactPeriod(trainingData.period),
+    consistency: compactConsistency(trainingData.consistency),
+    goal: compactGoal(trainingData.goal),
     feedback_signals: compactFeedback(trainingData.feedback_signals),
     measurements: {
       ...measurementContext(trainingData.measurements),
-      compared_to_previous_period: measurementComparison(trainingData.measurements, previous?.measurements),
+      compared_to_previous_period: compactMeasurementChanges(
+        measurementComparison(trainingData.measurements, previous?.measurements),
+      ),
     },
     previous_period: previous ? {
-      period: previous.period,
-      consistency: previous.consistency,
+      period: compactPeriod(previous.period),
+      consistency: compactConsistency(previous.consistency),
       feedback_signals: compactFeedback(previous.feedback_signals),
       measurements: measurementContext(previous.measurements),
     } : null,
+    exercise_index_schema: [
+      "name", "kind", "muscle_group", "presence", "current_sessions",
+      "previous_sessions", "derived_observation_kinds",
+    ],
+    exercise_rollup: exerciseRollup(trainingData.exercises, previousExercises),
   }
 
   for (let evidenceCount = Math.min(MAX_EVIDENCE_EXERCISES, rankedRefs.length); evidenceCount >= 0; evidenceCount -= 1) {
-    const detailedRefs = new Set(rankedRefs.slice(0, evidenceCount))
+    const detailedRefs = rankedRefs.slice(0, evidenceCount)
+    const indexedRefs = rankedRefs.slice(evidenceCount)
     const result = {
       ...shared,
       evidence_exercise_count: evidenceCount,
-      exercises: combinedExercises(
+      exercise_index_count: indexedRefs.length,
+      exercise_index_omitted_count: 0,
+      exercises: detailedExercises(
         trainingData.exercises,
         previousExercises,
         detailedRefs,
         MAX_EXERCISE_CONTROL_POINTS,
       ),
+      exercise_index: exerciseIndex(trainingData.exercises, previousExercises, indexedRefs),
     }
-    if (JSON.stringify(result).length <= TARGET_SUMMARY_MODEL_INPUT_CHARS || evidenceCount === 0) {
-      return result
-    }
+    if (JSON.stringify(result).length <= TARGET_SUMMARY_MODEL_INPUT_CHARS) return result
   }
 
-  throw new Error('summary_aggregation_failed')
+  for (let indexCount = rankedRefs.length; indexCount >= 0;) {
+    const indexedRefs = rankedRefs.slice(0, indexCount)
+    const result = {
+      ...shared,
+      evidence_exercise_count: 0,
+      exercise_index_count: indexedRefs.length,
+      exercise_index_omitted_count: rankedRefs.length - indexedRefs.length,
+      exercises: detailedExercises(trainingData.exercises, previousExercises, [], 0),
+      exercise_index: exerciseIndex(trainingData.exercises, previousExercises, indexedRefs),
+    }
+    if (JSON.stringify(result).length <= TARGET_SUMMARY_MODEL_INPUT_CHARS) return result
+    if (indexCount === 0) break
+    indexCount = Math.max(0, indexCount - Math.max(1, Math.ceil(indexCount / 10)))
+  }
+
+  throw new Error("summary_aggregation_failed")
 }

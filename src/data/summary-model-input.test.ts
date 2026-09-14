@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { buildSummaryModelInput, deriveExerciseObservations, deriveMeasurementChanges } from '../../supabase/functions/summarize-client-training/summary-model-input'
+import {
+  buildSummaryModelInput,
+  buildSummaryFingerprintPayload,
+  deriveExerciseObservations,
+  deriveMeasurementChanges,
+  TARGET_SUMMARY_MODEL_INPUT_CHARS,
+} from '../../supabase/functions/summarize-client-training/summary-model-input'
 
 describe('buildSummaryModelInput', () => {
   it('keeps every unique exercise while compacting repetitive sessions', () => {
@@ -33,7 +39,7 @@ describe('buildSummaryModelInput', () => {
       },
     })
 
-    expect(result.exercises).toHaveLength(20)
+    expect(result.exercises.length + result.exercise_index_count + result.exercise_index_omitted_count).toBe(20)
     expect(result.exercises[0]).toMatchObject({
       name: 'Упражнение 1',
     })
@@ -41,22 +47,22 @@ describe('buildSummaryModelInput', () => {
     expect(result.exercises[0]?.current?.control_points?.length ?? 0).toBeLessThanOrEqual(4)
     expect(result.exercises[0]?.previous?.control_points?.length ?? 0).toBeLessThanOrEqual(4)
     expect(result.exercises[0]?.current?.control_points?.length ?? 0).toBeLessThan(10)
-    expect(result.exercises).toHaveLength(20)
     expect(result.input_coverage).toEqual({
       current: { exercises: 20, sessions: 200, sets: 0 },
       previous: { exercises: 10, sessions: 100, sets: 0 },
       complete: true,
-      representation: 'all_unique_exercises_with_compact_session_evidence',
+      representation: 'ranked_exercise_evidence_with_complete_rollup',
     })
     expect(result.previous_period?.period).toEqual({ start: '2026-07-01', end: '2026-07-31' })
     expect(result.measurements.changes).toContainEqual(expect.objectContaining({ metric: 'waist_cm', from: 91, to: 88, change: -3 }))
     expect(result.measurements.compared_to_previous_period).toContainEqual(expect.objectContaining({ metric: 'weight_kg', from: 82.5, to: 80, change: -2.5 }))
     expect(result.previous_period?.measurements.control_points).toHaveLength(1)
+    expect(result.exercise_rollup.unique_exercises).toBe(20)
     expect(JSON.stringify(result)).toContain('Упражнение 20')
-    expect(JSON.stringify(result).length).toBeLessThanOrEqual(20_000)
+    expect(JSON.stringify(result).length).toBeLessThanOrEqual(TARGET_SUMMARY_MODEL_INPUT_CHARS)
   })
 
-  it('does not drop or reorder exercises to prioritize a goal keyword', () => {
+  it('ranks evidence by observed data instead of a goal keyword', () => {
     const result = buildSummaryModelInput({
       period: {}, consistency: {}, goal: { title: 'Увеличить результат в приседаниях' },
       exercises: [
@@ -72,10 +78,83 @@ describe('buildSummaryModelInput', () => {
         },
       ],
     })
-    expect(result.exercises.map((exercise) => exercise.name)).toEqual([
-      'Жим лёжа',
-      'Приседания со штангой',
-    ])
+    expect(result.exercises.map((exercise) => exercise.name)).toEqual(['Жим лёжа', 'Приседания со штангой'])
+  })
+
+  it('keeps a very large period under budget with complete rollup coverage', () => {
+    const exercises = Array.from({ length: 500 }, (_, index) => ({
+      ref: `exercise-${index + 1}`,
+      name: `Очень длинное название упражнения ${index + 1} ${'я'.repeat(180)}`,
+      kind: 'strength',
+      muscle_group: index % 2 === 0 ? 'shoulders' : 'back',
+      source: 'system',
+      session_count: 6,
+      change_percent: { max_weight: index % 5, volume: index % 7 },
+      best: { max_weight_kg: 100 + index, volume_kg: 3_000 + index },
+      sessions: Array.from({ length: 6 }, (_, sessionIndex) => ({
+        date: `2026-0${sessionIndex + 1}-01`,
+        set_count: 4,
+        max_weight_kg: 80 + index + sessionIndex,
+        total_reps: 40,
+        sets: Array.from({ length: 20 }, (_, setIndex) => ({
+          exercise_position: index,
+          set_position: setIndex,
+          planned: { private_raw_value: 'x'.repeat(1_000) },
+          performed: { private_raw_value: 'y'.repeat(1_000) },
+        })),
+      })),
+    }))
+
+    const result = buildSummaryModelInput({
+      period: { start: '2026-03-01', end: '2026-09-01', days: 185 },
+      consistency: { completed_workouts: 80, workouts_per_week: 3 },
+      goal: { title: `Набрать мышечную массу ${'ц'.repeat(1_000)}` },
+      feedback_signals: Array.from({ length: 40 }, (_, index) => ({
+        date: `2026-08-${String(index + 1).padStart(2, '0')}`,
+        session_rpe: index,
+        client_comment: `Комментарий ${index} ${'к'.repeat(1_000)}`,
+      })),
+      measurements: [],
+      exercises,
+      previous_period: {
+        period: { start: '2025-09-01', end: '2026-02-28' },
+        consistency: { completed_workouts: 70 },
+        exercises: exercises.slice(0, 300),
+      },
+    })
+
+    expect(JSON.stringify(result).length).toBeLessThanOrEqual(TARGET_SUMMARY_MODEL_INPUT_CHARS)
+    expect(result.input_coverage.current).toMatchObject({ exercises: 500, sessions: 3_000, sets: 60_000 })
+    expect(result.exercise_rollup.unique_exercises).toBe(500)
+    expect(result.exercises.length + result.exercise_index_count + result.exercise_index_omitted_count).toBe(500)
+    expect(result.exercise_index_omitted_count).toBeGreaterThan(0)
+    expect(JSON.stringify(result)).not.toContain('private_raw_value')
+    expect(JSON.stringify(result)).toContain('Очень длинное название упражнения 1')
+  })
+
+  it('builds deduplication input from the final aggregate instead of raw set rows', () => {
+    const source = (rawValue: string, weight: number) => ({
+      period: { start: '2026-08-01', end: '2026-08-31' },
+      consistency: { completed_workouts: 2 },
+      goal: null,
+      exercises: [{
+        ref: 'squat', name: 'Присед со штангой', kind: 'strength', session_count: 2,
+        sessions: [
+          { date: '2026-08-01', max_weight_kg: 80, total_reps: 30, sets: [{ exercise_position: 0, set_position: 0, planned: null, performed: { rawValue } }] },
+          { date: '2026-08-31', max_weight_kg: weight, total_reps: 30, sets: [{ exercise_position: 0, set_position: 0, planned: null, performed: { rawValue } }] },
+        ],
+      }],
+    })
+    const payload = (rawValue: string, weight: number) => buildSummaryFingerprintPayload({
+      promptVersion: 'training-progress-v14',
+      analysisVersion: 'trainer-summary-v3',
+      modelId: 'yandexgpt',
+      modelInput: buildSummaryModelInput(source(rawValue, weight)),
+    })
+
+    expect(payload('raw-a', 90)).toEqual(payload('raw-b', 90))
+    expect(payload('raw-a', 90)).not.toEqual(payload('raw-a', 95))
+    expect(payload('raw-a', 90)).not.toHaveProperty('source')
   })
 })
 

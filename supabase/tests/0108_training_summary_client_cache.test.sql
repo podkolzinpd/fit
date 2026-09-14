@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(5);
+select plan(8);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('a8000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'cache-trainer@example.test', ''),
@@ -27,6 +27,18 @@ insert into public.client_training_summaries (
 select ok(
   not has_function_privilege('authenticated', 'public.publish_cached_training_summary_for_client(uuid,date,date,text,text)', 'EXECUTE'),
   'browser actors cannot publish an internal cache directly'
+);
+select ok(
+  has_function_privilege('service_role', 'public.publish_cached_training_summary_for_client(uuid,date,date,text,text)', 'EXECUTE'),
+  'service role can publish the shared client cache'
+);
+select ok(
+  has_table_privilege('service_role', 'public.client_training_summaries', 'SELECT, INSERT, UPDATE'),
+  'service role can read and persist generated summaries'
+);
+select ok(
+  has_table_privilege('service_role', 'public.client_published_training_summaries', 'SELECT, INSERT, UPDATE'),
+  'service role can read and persist client-visible summaries'
 );
 
 set local role service_role;
