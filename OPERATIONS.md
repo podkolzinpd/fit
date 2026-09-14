@@ -107,9 +107,16 @@ GitHub OIDC → Yandex IAM token.
   кандидатов, не прошедших обычный tenant preflight, и не выводит найденный
   UUID. Если подходящего изолированного cohort-а нет, workflow завершается с
   `candidate_not_found`.
+- `full-cohort` не использует UUID secret и переносит весь поддерживаемый
+  application manifest одним согласованным snapshot. Его выбирают, когда merge
+  или membership пересекает границу trainer tenant. Перед `apply` обязательны
+  успешный `dry-run`, точный content-derived fingerprint из его отчёта и общая
+  apply-фраза. Режим не переносит `auth.users`, OAuth credentials, Yandex
+  sessions/rollout assignments, sent push outbox и Live receipts.
 
-Автовыбор нужен только для безопасной репетиции на реальных объёмах. Он не
-фиксирует tenant для cutover и намеренно запрещён для записи в stage.
+Автовыбор нужен только для безопасной репетиции на реальных объёмах и не
+фиксирует tenant для cutover. `full-cohort` не является автовыбором: его
+fingerprint фиксирует точное содержимое всего поддерживаемого snapshot.
 
 Режимы выполняются последовательно:
 

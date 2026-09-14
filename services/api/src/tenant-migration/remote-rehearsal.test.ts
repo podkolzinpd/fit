@@ -192,6 +192,30 @@ describe('remote tenant rehearsal configuration', () => {
     expect(completeStandalone.tenantSelection).toEqual({
       kind: 'most-complete-standalone-client',
     })
+
+    const fullCohortAudit = readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_SELECTION_MODE: 'full-cohort',
+        FIT_TENANT_TRAINER_ID: undefined,
+      },
+      () => 'trusted-ca',
+    )
+    expect(fullCohortAudit.tenantSelection).toEqual({ kind: 'full-cohort' })
+
+    expect(() => readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_REHEARSAL_MODE: 'apply',
+        FIT_TENANT_REMOTE_APPLY_CONFIRMATION:
+          'APPLY_TENANT_TO_YANDEX_STAGE',
+        FIT_TENANT_SELECTION_MODE: 'full-cohort',
+        FIT_TENANT_TRAINER_ID: undefined,
+      },
+      () => 'trusted-ca',
+    )).toThrowError(new RemoteTenantRehearsalError(
+      'tenant_fingerprint_required',
+    ))
   })
 
   it('rejects a malformed or changed tenant fingerprint', () => {
@@ -219,6 +243,33 @@ describe('remote tenant rehearsal configuration', () => {
 })
 
 describe('automatic source tenant selection', () => {
+  it('exports the complete cohort without trainer candidate discovery', async () => {
+    const query = vi.fn((sql: string) => {
+      if (sql.includes('as cohort_exists')) {
+        return Promise.resolve([{
+          cohort_exists: true,
+          has_chat_media: false,
+          has_pending_push: false,
+        }])
+      }
+      return Promise.resolve([])
+    }) as unknown as DatabaseClient['query']
+
+    const bundle = await exportSelectedTenant(
+      { query },
+      { kind: 'full-cohort' },
+      new Date('2026-09-14T12:00:00.000Z'),
+    )
+
+    expect(bundle).toMatchObject({
+      format: 'fit-full-cohort-bundle-v1',
+      createdAt: '2026-09-14T12:00:00.000Z',
+    })
+    expect(query).not.toHaveBeenCalledWith(
+      expect.stringContaining('order by count(*) asc'),
+    )
+  })
+
   it('skips unsafe cohorts and exports the smallest eligible tenant', async () => {
     let preflight = 0
     const query = vi.fn((sql: string) => {

@@ -123,6 +123,19 @@ export const TENANT_MIGRATION_TABLES: readonly TenantMigrationTableSpec[] = [
     keyColumns: ['profile_id'],
   },
   {
+    name: 'public.trainer_professional_profiles',
+    sourceSql: publicRows(
+      'trainer_professional_profiles',
+      'row.trainer_id = $1',
+    ),
+    targetSql: publicRows(
+      'trainer_professional_profiles',
+      'row.trainer_id = $1',
+    ),
+    targetRecord: 'public.trainer_professional_profiles',
+    keyColumns: ['trainer_id'],
+  },
+  {
     name: 'public.clients',
     sourceSql: publicRows('clients', 'row.id in (select id from scope_clients)'),
     targetSql: publicRows('clients', 'row.id in (select id from scope_clients)'),
@@ -493,6 +506,19 @@ readonly TenantMigrationTableSpec[] = [
     targetSql: standalonePublicRows('trainers', 'row.profile_id in (select id from scope_users)'),
     targetRecord: 'public.trainers',
     keyColumns: ['profile_id'],
+  },
+  {
+    name: 'public.trainer_professional_profiles',
+    sourceSql: standalonePublicRows(
+      'trainer_professional_profiles',
+      'row.trainer_id in (select id from scope_users)',
+    ),
+    targetSql: standalonePublicRows(
+      'trainer_professional_profiles',
+      'row.trainer_id in (select id from scope_users)',
+    ),
+    targetRecord: 'public.trainer_professional_profiles',
+    keyColumns: ['trainer_id'],
   },
   {
     name: 'public.clients',
@@ -999,3 +1025,103 @@ select
     where reference.id is not null
       and reference.id not in (select id from scope_users)
   ) as has_foreign_actor`
+
+function fullCohortRows(record: string): string {
+  return `select to_jsonb(row) as row
+from ${record} row
+where $1::text = 'application-v1'`
+}
+
+const FULL_COHORT_SOURCE_OVERRIDES = new Map<string, string>([
+  [
+    'public.client_trainers',
+    `select to_jsonb(membership) || jsonb_build_object(
+      'note', coalesce(details.note, membership.note)
+    ) as row
+    from public.client_trainers membership
+    left join public.client_private_details details
+      on details.client_id = membership.client_id
+      and details.trainer_id = membership.trainer_id
+    where $1::text = 'application-v1'`,
+  ],
+  [
+    'public.client_progress',
+    `select to_jsonb(progress) || jsonb_build_object(
+      'created_by', coalesce(progress.created_by, progress.trainer_id)
+    ) as row
+    from public.client_progress progress
+    where $1::text = 'application-v1'`,
+  ],
+  [
+    'public.client_custom_metrics',
+    `select to_jsonb(metric) || jsonb_build_object(
+      'created_by', metric.trainer_id
+    ) as row
+    from public.client_custom_metrics metric
+    where $1::text = 'application-v1'`,
+  ],
+  [
+    'public.goal_stages',
+    `select to_jsonb(stage) || jsonb_build_object(
+      'created_by', goal.created_by
+    ) as row
+    from public.goal_stages stage
+    join public.client_goals goal on goal.id = stage.goal_id
+    where $1::text = 'application-v1'`,
+  ],
+  [
+    'public.client_published_training_summaries',
+    `select to_jsonb(published) || jsonb_build_object(
+      'input_fingerprint', summary.input_fingerprint
+    ) as row
+    from public.client_published_training_summaries published
+    join public.client_training_summaries summary
+      on summary.id = published.source_summary_id
+    where $1::text = 'application-v1'`,
+  ],
+  [
+    'public.app_feedback',
+    `select to_jsonb(feedback)
+      - 'tracker_request_id'
+      - 'telegram_request_id'
+      - 'operations_dispatch_token'
+      - 'operations_dispatch_started_at' as row
+    from public.app_feedback feedback
+    where $1::text = 'application-v1'`,
+  ],
+  [
+    'app_private.push_notifications_outbox',
+    `select null::jsonb as row where $1::text = 'never-export-outbox'`,
+  ],
+  [
+    'app_private.live_workout_operations',
+    `select null::jsonb as row where $1::text = 'never-export-receipts'`,
+  ],
+  [
+    'app_private.workout_create_requests',
+    `select (to_jsonb(request) - 'owner_id')
+      || jsonb_build_object('actor_id', request.owner_id) as row
+    from private.workout_create_requests request
+    where $1::text = 'application-v1'`,
+  ],
+])
+
+export const FULL_COHORT_MIGRATION_TABLES:
+readonly TenantMigrationTableSpec[] = TENANT_MIGRATION_TABLES.map((spec) => ({
+  ...spec,
+  sourceSql: FULL_COHORT_SOURCE_OVERRIDES.get(spec.name)
+    ?? fullCohortRows(spec.name),
+  targetSql: fullCohortRows(spec.targetRecord),
+}))
+
+export const FULL_COHORT_SOURCE_PREFLIGHT_SQL = `select
+  exists (select 1 from public.profiles) as cohort_exists,
+  exists (
+    select 1 from private.push_notifications_outbox notification
+    where notification.sent_at is null
+  ) as has_pending_push,
+  exists (
+    select 1 from public.chat_messages message
+    where message.image_path is not null
+  ) as has_chat_media
+where $1::text = 'application-v1'`

@@ -78,15 +78,15 @@ The following remain unchanged during the foundation phase:
    represented by `000024`, with operator reads limited to `ops_readonly`.
    Production routing, the Telegram delivery transport and the tenant data copy
    remain pending.
-8. [Local tooling and two clean data rehearsals complete; remote gate pending]
-   Export/import/validation covers one isolated trainer cohort with an
-   encrypted manifest, mandatory dry-run, transactional idempotent apply and
-   per-table count/checksum validation. `npm run tenant:rehearse:local` passed
-   twice on clean PostgreSQL 17 targets with 35 production-like synthetic rows
-   across all 28 manifest tables. This does not validate VPC/IAM/TLS or real
-   production volume. Cut over one isolated tenant cohort only after reviewing
-   the exact remote source/target and credentials, migrating all mutable data
-   and freezing writes for the cutover window.
+8. [Local tooling complete; full-cohort remote gate pending]
+   Export/import/validation supports strict isolated trainer/standalone roots
+   and a content-pinned full application cohort for source data whose merges or
+   memberships cross tenant boundaries. The encrypted 32-table manifest has a
+   mandatory dry-run, transactional idempotent apply and per-table
+   count/checksum validation. Two clean PostgreSQL 17 rehearsals passed for all
+   three modes. This does not validate VPC/IAM/TLS or real production volume.
+   Run a real full-cohort audit and stage dry-run before the separately reviewed
+   apply; freeze writes before the eventual production cutover.
 9. Expand sticky tenant cohorts gradually after monitoring data integrity,
    authorization failures, latency and error rates.
 10. Remove Supabase only after all cohorts are migrated and the rollback window
