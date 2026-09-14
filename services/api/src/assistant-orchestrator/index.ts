@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { aiStudioUsage, reportAiStudioMetric } from '../ai-studio-usage-metrics.js'
 
 import {
   readAssistantTurnRequest,
@@ -717,7 +718,12 @@ async function persistAssistantResponse(
   return response
 }
 
-export async function runAssistantTurn(authorization: string, command: AssistantTurnRequest): Promise<AssistantTurnResponse> {
+export async function runAssistantTurn(
+  authorization: string,
+  command: AssistantTurnRequest,
+  invocationId: string | null = null,
+  monitoringToken: string | null = null,
+): Promise<AssistantTurnResponse> {
   const actorClient = createClient(required('SUPABASE_URL'), required('SUPABASE_PUBLISHABLE_KEY'), { global: { headers: { Authorization: authorization } } })
   const { data: { user } } = await actorClient.auth.getUser()
   if (!user) throw new HttpError(401, 'authentication_required')
@@ -782,18 +788,50 @@ export async function runAssistantTurn(authorization: string, command: Assistant
   let result: AssistantTurnResponse = { reply: assistantSmallTalkFallback(command.message), action: null }
   try {
     const iamToken = await yandexIamToken()
+    const modelUri = `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`
     const response = await fetch(completionUrl, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${iamToken}` },
       body: JSON.stringify({
-        modelUri: `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`,
+        modelUri,
         completionOptions: { stream: false, temperature: 0.3, maxTokens: '100' },
         jsonSchema: { schema: smallTalkSchema },
         messages: assistantModelMessages(assistantSmallTalkPrompt(history, usesInformalAddress(command.message))),
       }),
     })
-    if (!response.ok) throw new Error(`small_talk_http_${response.status}`)
-    const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
+    if (!response.ok) {
+      await reportAiStudioMetric({
+        functionName: 'fit-assistant-orchestrator',
+        modelUri,
+        invocationId,
+        iamToken: monitoringToken,
+        upstreamRequestId: response.headers.get('x-request-id'),
+        usage: null,
+      })
+      throw new Error(`small_talk_http_${response.status}`)
+    }
+    let payload: { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
+    try {
+      payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
+    } catch {
+      await reportAiStudioMetric({
+        functionName: 'fit-assistant-orchestrator',
+        modelUri,
+        invocationId,
+        iamToken: monitoringToken,
+        upstreamRequestId: response.headers.get('x-request-id'),
+        usage: null,
+      })
+      throw new Error('small_talk_invalid_json')
+    }
+    await reportAiStudioMetric({
+      functionName: 'fit-assistant-orchestrator',
+      modelUri,
+      invocationId,
+      iamToken: monitoringToken,
+      upstreamRequestId: response.headers.get('x-request-id'),
+      usage: aiStudioUsage(payload.result?.usage),
+    })
     const raw = JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? '') as unknown
     const modelResult = validateEnabledAssistantTurnResponse(raw)
     if (!modelResult || modelResult.action !== null) throw new Error('small_talk_invalid_response')
@@ -813,7 +851,12 @@ export async function assistantOrchestrator(request: Request): Promise<Response>
     const command = readAssistantTurnRequest(await request.json())
     if (!command) throw new HttpError(400, 'invalid_assistant_request')
     operationId = command.turnId ?? 'generated'
-    const result = await runAssistantTurn(authorization, command)
+    const result = await runAssistantTurn(
+      authorization,
+      command,
+      request.headers.get('x-yc-request-id'),
+      request.headers.get('x-yc-iam-token'),
+    )
     console.info('assistant_orchestrator_succeeded', { operationId: command.turnId ?? 'generated', releaseSha, hasAction: result.action !== null })
     return Response.json(result)
   } catch (error) {

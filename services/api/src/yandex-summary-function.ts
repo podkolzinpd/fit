@@ -12,6 +12,7 @@ type FunctionResponse = {
   headers: Record<string, string>
   body: string
 }
+type InvocationContext = { requestId?: string; token?: { access_token?: string } }
 
 function corsHeaders(event: FunctionEvent): Record<string, string> {
   const origin = event.headers?.origin ?? event.headers?.Origin
@@ -42,7 +43,7 @@ function readBody(event: FunctionEvent): string {
  * same authorization, aggregation, YandexGPT request and writes as the legacy
  * Edge Function.
  */
-export async function handler(event: FunctionEvent): Promise<FunctionResponse> {
+export async function handler(event: FunctionEvent, context?: InvocationContext): Promise<FunctionResponse> {
   const cors = corsHeaders(event)
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors, body: '' }
   if (event.httpMethod !== 'POST') {
@@ -55,7 +56,12 @@ export async function handler(event: FunctionEvent): Promise<FunctionResponse> {
 
   const upstream = await summarizeClientTraining(new Request('https://yandex-function.internal/summarize-client-training', {
     method: 'POST',
-    headers: { authorization, 'content-type': 'application/json' },
+    headers: {
+      authorization,
+      'content-type': 'application/json',
+      ...(context?.requestId === undefined ? {} : { 'x-yc-request-id': context.requestId }),
+      ...(context?.token?.access_token === undefined ? {} : { 'x-yc-iam-token': context.token.access_token }),
+    },
     body: readBody(event),
   }))
   const errorCode = upstream.headers.get('x-fit-error-code')
