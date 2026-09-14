@@ -80,7 +80,29 @@ describe('tenant migration bundle', () => {
   it('encrypts and decrypts without exposing plaintext in the envelope', async () => {
     const bundle = buildBundle()
     const envelope = await encryptMigrationBundle(bundle, PASSPHRASE)
+    expect(envelope).toMatchObject({
+      format: 'fit-tenant-envelope-v2',
+      compression: { name: 'gzip' },
+    })
     expect(JSON.stringify(envelope)).not.toContain(TRAINER_ID)
+    await expect(decryptMigrationBundle(envelope, PASSPHRASE)).resolves.toEqual(bundle)
+  })
+
+  it('compresses repetitive cohort data before encryption', async () => {
+    const bundle = buildBundle()
+    bundle.tables[0] = buildMigrationTable(
+      'public.profiles',
+      Array.from({ length: 10_000 }, (_, index) => ({
+        id: `profile-${index}`,
+        repeatedValue: 'same value repeated in every exported row',
+      })),
+    )
+
+    const plaintextBytes = Buffer.byteLength(JSON.stringify(bundle))
+    const envelope = await encryptMigrationBundle(bundle, PASSPHRASE)
+    const encryptedBytes = Buffer.byteLength(JSON.stringify(envelope))
+
+    expect(encryptedBytes).toBeLessThan(plaintextBytes / 4)
     await expect(decryptMigrationBundle(envelope, PASSPHRASE)).resolves.toEqual(bundle)
   })
 
@@ -129,6 +151,17 @@ describe('tenant migration bundle', () => {
     expect(() => readMigrationBundle(tampered)).toThrowError(
       TenantMigrationArtifactError,
     )
+  })
+
+  it('rejects an unsupported compression contract', async () => {
+    const envelope = await encryptMigrationBundle(buildBundle(), PASSPHRASE)
+    const malformed = {
+      ...envelope,
+      compression: { name: 'unknown' },
+    }
+
+    await expect(decryptMigrationBundle(malformed, PASSPHRASE)).rejects
+      .toMatchObject({ code: 'artifact_invalid' })
   })
 
   it('rejects a short passphrase and mismatched tenant fingerprint', async () => {
