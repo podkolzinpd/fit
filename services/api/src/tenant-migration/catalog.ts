@@ -1117,10 +1117,6 @@ readonly TenantMigrationTableSpec[] = TENANT_MIGRATION_TABLES.map((spec) => ({
 export const FULL_COHORT_SOURCE_PREFLIGHT_SQL = `select
   exists (select 1 from public.profiles) as cohort_exists,
   exists (
-    select 1 from private.push_notifications_outbox notification
-    where notification.sent_at is null
-  ) as has_pending_push,
-  exists (
     select 1 from public.chat_messages message
     where message.image_path is not null
   ) as has_chat_media

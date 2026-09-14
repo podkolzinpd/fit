@@ -100,7 +100,6 @@ describe('full application cohort migration', () => {
     const preflight: FullCohortPreflight = {
       cohort_exists: true,
       has_chat_media: false,
-      has_pending_push: false,
       ...overrides,
     }
     const query = vi.fn((sql: string) => {
@@ -113,7 +112,6 @@ describe('full application cohort migration', () => {
   interface FullCohortPreflight {
     cohort_exists: boolean
     has_chat_media: boolean
-    has_pending_push: boolean
   }
 
   it('exports all manifest tables without evaluating tenant boundaries', async () => {
@@ -132,12 +130,15 @@ describe('full application cohort migration', () => {
       expect.stringContaining('has_cross_boundary_merge'),
       expect.anything(),
     )
+    expect(source.query).not.toHaveBeenCalledWith(
+      expect.stringContaining('has_pending_push'),
+      expect.anything(),
+    )
     expect(source.query).toHaveBeenCalledWith('commit')
   })
 
   it.each([
     ['full_cohort_empty', { cohort_exists: false }],
-    ['tenant_has_pending_push', { has_pending_push: true }],
     ['full_cohort_has_chat_media', { has_chat_media: true }],
   ])('rejects an unsafe complete snapshot: %s', async (code, overrides) => {
     const source = buildFullSource(overrides)
@@ -153,7 +154,6 @@ describe('full application cohort migration', () => {
         return Promise.resolve([{
           cohort_exists: true,
           has_chat_media: false,
-          has_pending_push: false,
         }])
       }
       if (sql.includes('from public.profiles row')) {
