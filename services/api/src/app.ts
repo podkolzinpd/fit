@@ -290,7 +290,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return forwardLegacySummary(authorization, request.body, reply)
   })
 
-  const legacyChatMediaToken = (headers: { ['x-supabase-authorization']?: unknown }): string | undefined => {
+  const legacyChatMediaToken = (headers: { readonly [header: string]: unknown }): string | undefined => {
     const authorization = headers['x-supabase-authorization']
     return typeof authorization === 'string' && authorization.startsWith('Bearer ')
       ? authorization.slice('Bearer '.length)
