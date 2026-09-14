@@ -9,6 +9,7 @@ on:
       - 'services/api/**'
       - 'scripts/check-yandex-terraform-plan.mjs'
       - 'scripts/deploy-yandex-serverless-revision.mjs'
+      - 'scripts/mirror-yandex-legacy-supabase-bridge.mjs'
       - 'scripts/verify-yandex-stage-access.mjs'
       - 'scripts/yandex-github-oidc.sh'
   workflow_dispatch:
