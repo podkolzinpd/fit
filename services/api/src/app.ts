@@ -58,6 +58,10 @@ import type { PilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import type { PilotPushNotifications } from './pilot-push-notifications.js'
 import { ChatCommandError, type ChatMessage, type PilotChat } from './pilot-chat.js'
 import { readChatImageUpload, type ChatMediaStore } from './chat-media.js'
+import {
+  LegacyChatMediaAuthorizationError,
+  type LegacyChatMediaBridge,
+} from './legacy-chat-media.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
@@ -144,6 +148,7 @@ interface BuildAppOptions {
   pilotPushNotifications?: PilotPushNotifications
   pilotChat?: PilotChat
   chatMediaStore?: ChatMediaStore
+  legacyChatMediaBridge?: LegacyChatMediaBridge
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
   pilotConnectionsWriter?: PilotConnectionsWriter
@@ -283,6 +288,65 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.code(503).send({ error: 'service_unavailable' })
     }
     return forwardLegacySummary(authorization, request.body, reply)
+  })
+
+  const legacyChatMediaToken = (headers: { ['x-supabase-authorization']?: unknown }): string | undefined => {
+    const authorization = headers['x-supabase-authorization']
+    return typeof authorization === 'string' && authorization.startsWith('Bearer ')
+      ? authorization.slice('Bearer '.length)
+      : undefined
+  }
+  const legacyChatMediaFailure = (error: unknown, reply: FastifyReply) => {
+    if (error instanceof LegacyChatMediaAuthorizationError) {
+      return reply.code(error.status).send({ error: error.status === 503 ? 'service_unavailable' : 'unauthorized' })
+    }
+    return reply.code(503).send({ error: 'service_unavailable' })
+  }
+
+  app.post('/v1/legacy/chat-media/upload', { bodyLimit: 3 * 1024 * 1024 }, async (request, reply) => {
+    const token = legacyChatMediaToken(request.headers)
+    const body = request.body as { conversationId?: unknown; messageId?: unknown; image?: unknown } | null
+    const image = readChatImageUpload(body?.image)
+    if (token === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof body?.conversationId !== 'string' || !uuidPattern.test(body.conversationId)
+      || typeof body?.messageId !== 'string' || !uuidPattern.test(body.messageId) || image === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.legacyChatMediaBridge === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    try {
+      await options.legacyChatMediaBridge.upload(token, body.conversationId, body.messageId, image)
+      return reply.header('cache-control', 'no-store').code(204).send()
+    } catch (error) { return legacyChatMediaFailure(error, reply) }
+  })
+
+  app.post('/v1/legacy/chat-media/sign', async (request, reply) => {
+    const token = legacyChatMediaToken(request.headers)
+    const body = request.body as { conversationId?: unknown; messageId?: unknown } | null
+    if (token === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof body?.conversationId !== 'string' || !uuidPattern.test(body.conversationId)
+      || typeof body?.messageId !== 'string' || !uuidPattern.test(body.messageId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.legacyChatMediaBridge === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    try {
+      const signedUrl = await options.legacyChatMediaBridge.sign(token, body.conversationId, body.messageId)
+      return reply.header('cache-control', 'no-store').send({ signedUrl })
+    } catch (error) { return legacyChatMediaFailure(error, reply) }
+  })
+
+  app.post('/v1/legacy/chat-media/remove', async (request, reply) => {
+    const token = legacyChatMediaToken(request.headers)
+    const body = request.body as { conversationId?: unknown; messageId?: unknown } | null
+    if (token === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof body?.conversationId !== 'string' || !uuidPattern.test(body.conversationId)
+      || typeof body?.messageId !== 'string' || !uuidPattern.test(body.messageId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.legacyChatMediaBridge === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    try {
+      await options.legacyChatMediaBridge.remove(token, body.conversationId, body.messageId)
+      return reply.header('cache-control', 'no-store').code(204).send()
+    } catch (error) { return legacyChatMediaFailure(error, reply) }
   })
 
   // Первый assistant endpoint намеренно не является универсальным tool runner.
