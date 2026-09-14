@@ -12,6 +12,10 @@ resource "yandex_serverless_container" "api" {
 
   lifecycle {
     precondition {
+      condition     = var.media_s3_credentials_override == null ? true : try(trimspace(var.media_bucket_override) != "", false)
+      error_message = "External media credentials require an explicit media bucket override."
+    }
+    precondition {
       condition = (
         (var.legacy_supabase_bridge_lockbox_secret_id == null && var.legacy_supabase_bridge_lockbox_secret_version_id == null)
         || (var.legacy_supabase_bridge_lockbox_secret_id != null && var.legacy_supabase_bridge_lockbox_secret_version_id != null)
@@ -61,15 +65,15 @@ resource "yandex_serverless_container" "api" {
   }
 
   secrets {
-    id                   = yandex_lockbox_secret.media_s3_credentials.id
-    version_id           = yandex_iam_service_account_static_access_key.api_media.output_to_lockbox_version_id
+    id                   = local.media_s3_secret_id
+    version_id           = local.media_s3_secret_version_id
     key                  = "YANDEX_MEDIA_ACCESS_KEY_ID"
     environment_variable = "YANDEX_MEDIA_ACCESS_KEY_ID"
   }
 
   secrets {
-    id                   = yandex_lockbox_secret.media_s3_credentials.id
-    version_id           = yandex_iam_service_account_static_access_key.api_media.output_to_lockbox_version_id
+    id                   = local.media_s3_secret_id
+    version_id           = local.media_s3_secret_version_id
     key                  = "YANDEX_MEDIA_SECRET_ACCESS_KEY"
     environment_variable = "YANDEX_MEDIA_SECRET_ACCESS_KEY"
   }
@@ -176,15 +180,15 @@ resource "yandex_serverless_container" "migration" {
   }
 
   secrets {
-    id                   = yandex_lockbox_secret.media_s3_credentials.id
-    version_id           = yandex_iam_service_account_static_access_key.api_media.output_to_lockbox_version_id
+    id                   = local.media_s3_secret_id
+    version_id           = local.media_s3_secret_version_id
     key                  = "YANDEX_MEDIA_ACCESS_KEY_ID"
     environment_variable = "YANDEX_MEDIA_ACCESS_KEY_ID"
   }
 
   secrets {
-    id                   = yandex_lockbox_secret.media_s3_credentials.id
-    version_id           = yandex_iam_service_account_static_access_key.api_media.output_to_lockbox_version_id
+    id                   = local.media_s3_secret_id
+    version_id           = local.media_s3_secret_version_id
     key                  = "YANDEX_MEDIA_SECRET_ACCESS_KEY"
     environment_variable = "YANDEX_MEDIA_SECRET_ACCESS_KEY"
   }

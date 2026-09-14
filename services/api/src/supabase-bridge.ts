@@ -62,6 +62,8 @@ export class SupabaseBridge {
   private async json<T>(path: string, options: RequestOptions): Promise<T> {
     const response = await this.call(path, options)
     if (!response.ok) throw new SupabaseBridgeError(response.status, 'supabase_request_failed')
+    // PostgREST's RETURNS void RPCs succeed with 204 and no JSON body.
+    if (response.status === 204) return undefined as T
     return await response.json() as T
   }
 

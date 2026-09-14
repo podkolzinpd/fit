@@ -88,6 +88,21 @@ free tier while total storage is at most 1 GB, writes/list requests at most
 10,000 and reads at most 100,000. Traffic and usage above those limits use the
 current Yandex Cloud tariff.
 
+For a media bucket in a different cloud, use a service account belonging to
+the bucket's cloud. An Allow bucket policy alone does not provide the base
+IAM/ACL permission, and Yandex rejects foreign-cloud principals in bucket
+IAM/ACL grants. Provision bucket READ/WRITE ACL and a prefix-scoped policy for
+the bucket-owned account, then store its static key in a separate protected
+stage Lockbox with `YANDEX_MEDIA_ACCESS_KEY_ID` and
+`YANDEX_MEDIA_SECRET_ACCESS_KEY`. Grant only the API and migration runtime
+accounts `lockbox.payloadViewer` on that secret. Keep the original stage media
+secret/key intact. Set `YC_STAGE_MEDIA_BUCKET` and the non-secret GitHub variable
+`YC_STAGE_MEDIA_S3_CREDENTIALS` to JSON containing `secret_id` and `version_id`.
+Terraform pins both API and migration media mounts to that version; an unset
+override retains the original stage credentials. Changing these variables
+requires a stage deployment. Validate actual PUT, idempotent retry and signed
+GET before treating health or invalid-token checks as evidence of media readiness.
+
 The only long-lived CI credentials are repository secrets containing the
 dedicated S3 access key and secret for the private Terraform state bucket.
 Yandex API access uses short-lived OIDC tokens; an authorized-key JSON is not
