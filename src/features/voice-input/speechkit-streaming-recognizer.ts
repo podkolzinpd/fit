@@ -1,4 +1,4 @@
-const DEFAULT_RELAY_URL = 'wss://93-77-184-41.sslip.io/stt'
+const DEFAULT_RELAY_URL = 'wss://84-201-157-124.sslip.io/stt'
 const SOCKET_CONNECT_TIMEOUT_MS = 5_000
 
 export interface StreamingSpeechSession {
