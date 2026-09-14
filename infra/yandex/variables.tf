@@ -44,6 +44,24 @@ variable "media_bucket_override" {
   }
 }
 
+variable "media_s3_credentials_override" {
+  description = "Optional bucket-owned S3 credentials in a pre-provisioned stage Lockbox. Required readers: API and migration service accounts. Does not replace the original stage media key."
+  type = object({
+    secret_id  = string
+    version_id = string
+  })
+  default  = null
+  nullable = true
+
+  validation {
+    condition = var.media_s3_credentials_override == null ? true : (
+      can(regex("^[a-z0-9]{20}$", var.media_s3_credentials_override.secret_id))
+      && can(regex("^[a-z0-9]{20}$", var.media_s3_credentials_override.version_id))
+    )
+    error_message = "Media credentials override must contain an immutable Lockbox secret ID and version ID."
+  }
+}
+
 variable "zone" {
   description = "Availability zone for the MVP PostgreSQL host and subnet."
   type        = string

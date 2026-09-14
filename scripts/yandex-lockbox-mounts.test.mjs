@@ -5,6 +5,24 @@ import test from 'node:test'
 
 const workflowsDirectory = join(import.meta.dirname, '..', '.github', 'workflows')
 
+test('keeps external media bucket credentials version-pinned and consistent for API and migration', () => {
+  const infra = join(import.meta.dirname, '..', 'infra', 'yandex')
+  const container = readFileSync(join(infra, 'container.tf'), 'utf8')
+  const locals = readFileSync(join(infra, 'locals.tf'), 'utf8')
+  const variables = readFileSync(join(infra, 'variables.tf'), 'utf8')
+  const media = readFileSync(join(infra, 'media.tf'), 'utf8')
+  const workflow = readFileSync(join(workflowsDirectory, 'deploy-yandex-stage.yml'), 'utf8')
+  assert.match(workflow, /TF_VAR_media_s3_credentials_override: \$\{\{ vars\.YC_STAGE_MEDIA_S3_CREDENTIALS \|\| 'null' \}\}/)
+  assert.match(variables, /variable "media_s3_credentials_override"[\s\S]*?secret_id\s+= string[\s\S]*?version_id = string/)
+  assert.match(locals, /media_s3_secret_id = \([\s\S]*?var\.media_s3_credentials_override == null[\s\S]*?yandex_lockbox_secret\.media_s3_credentials\.id[\s\S]*?: var\.media_s3_credentials_override\.secret_id/)
+  assert.match(locals, /media_s3_secret_version_id = \([\s\S]*?output_to_lockbox_version_id[\s\S]*?: var\.media_s3_credentials_override\.version_id/)
+  assert.match(container, /External media credentials require an explicit media bucket override/)
+  const mounts = [...container.matchAll(/secrets \{\s+id\s+= local\.media_s3_secret_id\s+version_id\s+= local\.media_s3_secret_version_id\s+key\s+= "(YANDEX_MEDIA_[A-Z_]+)"\s+environment_variable\s+= "\1"/g)]
+  assert.equal(mounts.length, 4, 'both credentials must use the same override in API and migration')
+  assert.match(media, /resource "yandex_iam_service_account_static_access_key" "api_media"/)
+  assert.doesNotMatch(media, /media_s3_credentials_override/, 'override must not rotate or replace the original stage key')
+})
+
 test('pins every Yandex Cloud Lockbox mount to an immutable version', () => {
   const workflows = readdirSync(workflowsDirectory)
     .filter((name) => name.endsWith('.yml') || name.endsWith('.yaml'))
