@@ -62,6 +62,14 @@ const pushTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'push.tf'),
   'utf8',
 )
+const mediaTerraform = readFileSync(
+  join(import.meta.dirname, '..', 'infra', 'yandex', 'media.tf'),
+  'utf8',
+)
+const mediaMigrationWorkflow = readFileSync(
+  join(import.meta.dirname, '..', '.github', 'workflows', 'migrate-yandex-media.yml'),
+  'utf8',
+)
 
 test('publishes the final yandex-stage result without restoring an approval gate', () => {
   assert.match(workflow, /^  publish_deployment:$/m)
@@ -165,6 +173,40 @@ test('bootstraps the private push timer only after explicit cost approval and he
     workflow,
     /deploy-yandex-serverless-revision\.mjs rollback[\s\S]*?push_previous\.outputs\.revision_id/,
   )
+})
+
+test('bootstraps private media only after cost approval and keeps migration aggregate-only', () => {
+  assert.match(workflow, /^      approve_media_storage:$/m)
+  assert.ok(workflow.includes(
+    'MEDIA_STORAGE_PLAN_REVIEWED: ${{ (inputs.plan_only == true || inputs.approve_media_storage == true)',
+  ))
+  assert.equal(
+    [...workflow.matchAll(/policy_args\+=\(--allow-media-storage-bootstrap\)/g)].length,
+    3,
+  )
+  assert.match(workflow, /-target=yandex_storage_bucket\.media/)
+  assert.match(
+    workflow,
+    /-target=yandex_iam_service_account_static_access_key\.api_media/,
+  )
+  assert.match(mediaTerraform, /anonymous_access_flags \{[\s\S]*?read\s+= false[\s\S]*?list\s+= false/)
+  assert.match(mediaTerraform, /versioning \{\s+enabled = true/)
+  assert.match(mediaTerraform, /force_destroy\s+= false/)
+  assert.match(
+    mediaTerraform,
+    /output_to_lockbox \{[\s\S]*?entry_for_access_key = "YANDEX_MEDIA_ACCESS_KEY_ID"[\s\S]*?entry_for_secret_key = "YANDEX_MEDIA_SECRET_ACCESS_KEY"/,
+  )
+  assert.match(mediaMigrationWorkflow, /^  workflow_dispatch:$/m)
+  assert.doesNotMatch(mediaMigrationWorkflow, /^  (push|pull_request):$/m)
+  assert.match(mediaMigrationWorkflow, /supabase projects api-keys/)
+  assert.match(mediaMigrationWorkflow, /echo "::add-mask::\$source_key"/)
+  assert.match(mediaMigrationWorkflow, /npm --prefix services\/api run media:migrate/)
+  assert.match(
+    mediaMigrationWorkflow,
+    /\.mode != "apply" or \.objects == \.verified/,
+  )
+  assert.doesNotMatch(mediaMigrationWorkflow, /actions\/upload-artifact/)
+  assert.doesNotMatch(mediaMigrationWorkflow, /\.path|object\.path|image_path/)
 })
 
 test('reuses the private dispatcher and preserves the existing DataLens access path', () => {

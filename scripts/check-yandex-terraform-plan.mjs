@@ -7,10 +7,11 @@ const allowDestroy = process.argv.includes('--allow-destroy')
 const allowPublicApi = process.argv.includes('--allow-public-api')
 const automaticStageUpdate = process.argv.includes('--automatic-stage-update')
 const allowPushPipelineBootstrap = process.argv.includes('--allow-push-pipeline-bootstrap')
+const allowMediaStorageBootstrap = process.argv.includes('--allow-media-storage-bootstrap')
 
 if (planPath === undefined) {
   throw new Error(
-    'Usage: check-yandex-terraform-plan.mjs <plan.json> [--allow-destroy] [--allow-public-api] [--automatic-stage-update] [--allow-push-pipeline-bootstrap]',
+    'Usage: check-yandex-terraform-plan.mjs <plan.json> [--allow-destroy] [--allow-public-api] [--automatic-stage-update] [--allow-push-pipeline-bootstrap] [--allow-media-storage-bootstrap]',
   )
 }
 
@@ -74,6 +75,15 @@ const pushPipelineBootstrapAddresses = new Set([
   'yandex_serverless_container.push_dispatcher',
   'yandex_serverless_container_iam_binding.push_dispatcher_invocation',
   'yandex_function_trigger.push_dispatcher_timer',
+])
+const mediaStorageBootstrapAddresses = new Set([
+  'yandex_storage_bucket.media',
+  'yandex_storage_bucket_iam_binding.media_api_editor',
+  'yandex_lockbox_secret.media_s3_credentials',
+  'yandex_iam_service_account_static_access_key.api_media',
+  'yandex_lockbox_secret_iam_member.api_media_credentials_reader',
+  'yandex_lockbox_secret_iam_member.migration_media_credentials_reader',
+  'yandex_lockbox_secret_iam_member.deployer_media_credentials_reader[0]',
 ])
 const costSensitiveContainerFields = [
   'memory',
@@ -316,6 +326,52 @@ const isReviewedPushPipelineBootstrap = (resource) => {
   return false
 }
 
+const isReviewedMediaStorageBootstrap = (resource) => {
+  if (
+    !allowMediaStorageBootstrap
+    || !mediaStorageBootstrapAddresses.has(resource.address)
+    || resource.change.actions.join(',') !== 'create'
+  ) return false
+  const after = resource.change.after ?? {}
+  if (resource.address === 'yandex_storage_bucket.media') {
+    const anonymous = after.anonymous_access_flags?.[0]
+    const versioning = after.versioning?.[0]
+    const lifecycle = after.lifecycle_rule?.[0]
+    return /^fit-(stage|prod)-media-[a-z0-9]{8}$/u.test(after.bucket ?? '')
+      && after.default_storage_class === 'STANDARD'
+      && after.force_destroy === false
+      && anonymous?.read === false
+      && anonymous?.list === false
+      && anonymous?.config_read === false
+      && versioning?.enabled === true
+      && lifecycle?.enabled === true
+      && Number(lifecycle?.abort_incomplete_multipart_upload_days) === 7
+  }
+  if (resource.address === 'yandex_storage_bucket_iam_binding.media_api_editor') {
+    return after.role === 'storage.editor'
+      && Array.isArray(after.members)
+      && after.members.length === 1
+      && (
+        isServiceAccountMember(after.members[0])
+        || resource.change.after_unknown?.members === true
+        || resource.change.after_unknown?.members?.[0] === true
+      )
+  }
+  if (resource.address === 'yandex_lockbox_secret.media_s3_credentials') {
+    return /^fit-(stage|prod)-media-s3$/u.test(after.name ?? '')
+      && after.deletion_protection === true
+  }
+  if (resource.address === 'yandex_iam_service_account_static_access_key.api_media') {
+    const output = after.output_to_lockbox?.[0]
+    return typeof after.service_account_id === 'string'
+      && after.service_account_id.length > 0
+      && output?.entry_for_access_key === 'YANDEX_MEDIA_ACCESS_KEY_ID'
+      && output?.entry_for_secret_key === 'YANDEX_MEDIA_SECRET_ACCESS_KEY'
+  }
+  return after.role === 'lockbox.payloadViewer'
+    && isKnownOrComputedServiceAccountMember(resource)
+}
+
 const changesContainerCostOrIdentity = (resource) =>
   costSensitiveContainerFields.some(
     (field) =>
@@ -328,6 +384,7 @@ const changesContainerCostOrIdentity = (resource) =>
 const isAutomaticStageChange = (resource) => {
   const actions = resource.change.actions.join(',')
   if (isReviewedPushPipelineBootstrap(resource)) return true
+  if (isReviewedMediaStorageBootstrap(resource)) return true
   if (actions === 'create') {
     return isExactPublicApiBinding(resource)
       || (
@@ -373,6 +430,10 @@ const includesPushPipelineBootstrap = changes.some(
   (resource) => pushPipelineBootstrapAddresses.has(resource.address)
     && resource.change.actions.includes('create'),
 )
+const includesMediaStorageBootstrap = changes.some(
+  (resource) => mediaStorageBootstrapAddresses.has(resource.address)
+    && resource.change.actions.includes('create'),
+)
 const pushPipelineCostSummary = includesPushPipelineBootstrap
   ? [
       '### Push pipeline bootstrap cost estimate',
@@ -382,6 +443,17 @@ const pushPipelineCostSummary = includesPushPipelineBootstrap
       '- Estimated dispatcher cost: about 0–389 RUB/month when an average call takes 0.1–5 seconds.',
       '- Existing shared free tier, sender-function calls and internet egress can change the invoice.',
       '- Apply remains blocked until `approve_push_pipeline=true` is supplied manually.',
+      '',
+    ]
+  : []
+const mediaStorageCostSummary = includesMediaStorageBootstrap
+  ? [
+      '### Private media storage bootstrap cost estimate',
+      '',
+      '- One protected Lockbox version: about 19.73 RUB/month plus payload reads.',
+      '- Standard Object Storage: first 1 GB, 10,000 writes/list calls and 100,000 reads per month are free.',
+      '- Usage above the free tier and outgoing traffic are billed at current Yandex Cloud rates.',
+      '- Apply remains blocked until `approve_media_storage=true` is supplied manually.',
       '',
     ]
   : []
@@ -400,6 +472,7 @@ const summary = [
   ),
   '',
   ...pushPipelineCostSummary,
+  ...mediaStorageCostSummary,
 ].join('\n')
 
 process.stdout.write(`${summary}\n`)

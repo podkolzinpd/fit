@@ -2,6 +2,28 @@ begin;
 
 -- This fixture enriches only the committed local Supabase demo cohort. All
 -- identifiers and values are synthetic, deterministic and safe to reapply.
+insert into public.trainer_professional_profiles (
+  trainer_id,
+  public_id,
+  draft_data,
+  published_data,
+  published_at,
+  listed_in_catalog,
+  created_at,
+  updated_at
+)
+values (
+  '90000000-0000-4000-8000-000000000009',
+  '91000000-0000-4000-8000-000000000019',
+  '{"displayName":"Тестовый тренер"}'::jsonb,
+  '{"displayName":"Тестовый тренер"}'::jsonb,
+  timestamptz '2026-08-01 08:00:00+00',
+  true,
+  timestamptz '2026-08-01 08:00:00+00',
+  timestamptz '2026-08-01 08:00:00+00'
+)
+on conflict do nothing;
+
 insert into public.client_trainers (client_id, trainer_id)
 values (
   '11111111-1111-4111-8111-111111111111',

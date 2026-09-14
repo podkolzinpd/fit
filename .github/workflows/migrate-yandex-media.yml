@@ -1,0 +1,121 @@
+name: Migrate Yandex media
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Read-only parity audit or idempotent copy and validation'
+        required: true
+        type: choice
+        default: audit
+        options:
+          - audit
+          - apply
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: yandex-media-migration
+  cancel-in-progress: false
+
+env:
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  YANDEX_MEDIA_LOCKBOX_NAME: fit-stage-media-s3
+
+jobs:
+  migrate:
+    name: ${{ inputs.mode == 'apply' && 'Copy and validate media' || 'Audit media parity' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.0
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+      - run: npm ci --prefix services/api
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh \
+            --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - name: Exchange GitHub OIDC for the bounded deploy identity
+        run: scripts/yandex-github-oidc.sh
+      - name: Migrate and validate media without exposing object paths
+        env:
+          FIT_MEDIA_MIGRATION_MODE: ${{ inputs.mode }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          temporary_directory=$(mktemp -d)
+          chmod 700 "$temporary_directory"
+          cleanup() {
+            rm -f \
+              "$temporary_directory/supabase-keys.json" \
+              "$temporary_directory/report.json"
+            rmdir "$temporary_directory"
+          }
+          trap cleanup EXIT
+
+          supabase projects api-keys \
+            --project-ref "$SUPABASE_PROJECT_ID" \
+            --output json > "$temporary_directory/supabase-keys.json"
+          chmod 600 "$temporary_directory/supabase-keys.json"
+          source_key=$(jq -er '
+            [ .[] | select(.name == "service_role") | .api_key ][0]
+          ' "$temporary_directory/supabase-keys.json")
+          echo "::add-mask::$source_key"
+
+          media_secret=$(yc lockbox secret get \
+            --name "$YANDEX_MEDIA_LOCKBOX_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --format json)
+          media_secret_id=$(jq -er '.id' <<<"$media_secret")
+          media_secret_version_id=$(jq -er '.current_version.id' <<<"$media_secret")
+          access_key=$(yc lockbox payload get \
+            --id "$media_secret_id" \
+            --version-id "$media_secret_version_id" \
+            --key YANDEX_MEDIA_ACCESS_KEY_ID)
+          secret_key=$(yc lockbox payload get \
+            --id "$media_secret_id" \
+            --version-id "$media_secret_version_id" \
+            --key YANDEX_MEDIA_SECRET_ACCESS_KEY)
+          echo "::add-mask::$access_key"
+          echo "::add-mask::$secret_key"
+
+          export SUPABASE_URL="https://${SUPABASE_PROJECT_ID}.supabase.co"
+          export SUPABASE_SERVICE_ROLE_KEY="$source_key"
+          export YANDEX_MEDIA_ACCESS_KEY_ID="$access_key"
+          export YANDEX_MEDIA_SECRET_ACCESS_KEY="$secret_key"
+          export YANDEX_MEDIA_BUCKET="fit-stage-media-${YC_FOLDER_ID:0:8}"
+          npm --prefix services/api run media:migrate \
+            > "$temporary_directory/report.json"
+          chmod 600 "$temporary_directory/report.json"
+          jq -e '
+            (.mode == "audit" or .mode == "apply")
+            and (.objects | type == "number")
+            and (.bytes | type == "number")
+            and (.copied | type == "number")
+            and (.verified | type == "number")
+            and (.fingerprint | test("^[0-9a-f]{16}$"))
+            and (.mode != "apply" or .objects == .verified)
+          ' "$temporary_directory/report.json" >/dev/null
+          jq -r '
+            "Media mode: " + .mode,
+            "Objects: " + (.objects | tostring),
+            "Bytes: " + (.bytes | tostring),
+            "Copied: " + (.copied | tostring),
+            "Verified in Yandex: " + (.verified | tostring),
+            "Fingerprint: " + .fingerprint
+          ' "$temporary_directory/report.json" | tee -a "$GITHUB_STEP_SUMMARY"

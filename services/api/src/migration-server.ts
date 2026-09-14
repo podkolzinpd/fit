@@ -11,11 +11,16 @@ import { DatabaseStageRolloutAssignmentManager } from './db/stage-rollout-assign
 import { DatabaseStageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
 import { DatabasePilotEnroller } from './db/yandex-pilot-enrollment.js'
 import { buildMigrationApp } from './migration-app.js'
+import {
+  readYandexMediaStorageConfig,
+  YandexMediaObjectStorage,
+} from './object-storage-media.js'
 import { DatabasePilotClientsReader } from './pilot-clients-reader.js'
 import { DatabasePilotConnectionsReader } from './pilot-connections-reader.js'
 import { DatabasePilotTrainingDataReader } from './pilot-training-data-reader.js'
 import { DatabasePilotProgressData } from './progress-data.js'
 import { DatabaseStageTenantMigrationRunner } from './tenant-migration/stage-runner.js'
+import { ObjectStorageTenantMigrationMediaVerifier } from './tenant-migration/media-verifier.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -101,13 +106,23 @@ const yandexClientId = process.env.YANDEX_OAUTH_CLIENT_ID
 if (pilotEnrollmentEnabled && yandexClientId === undefined) {
   throw new Error('YANDEX_OAUTH_CLIENT_ID is required for pilot enrollment')
 }
+const mediaStorageConfig = readYandexMediaStorageConfig()
+const mediaStorage = mediaStorageConfig === undefined
+  ? undefined
+  : new YandexMediaObjectStorage(mediaStorageConfig)
+const tenantMediaVerifier = mediaStorage === undefined
+  ? undefined
+  : new ObjectStorageTenantMigrationMediaVerifier(mediaStorage)
 
 const app = buildMigrationApp({
   ...(privateFeaturePool === undefined || !stageTenantMigrationEnabled
     ? {}
     : {
         stageTenantMigration:
-          new DatabaseStageTenantMigrationRunner(privateFeaturePool),
+          new DatabaseStageTenantMigrationRunner(
+            privateFeaturePool,
+            tenantMediaVerifier,
+          ),
       }),
   ...(privateFeaturePool === undefined || !stageDatabaseAccessEnabled
     ? {}

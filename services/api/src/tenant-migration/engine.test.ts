@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import type { DatabaseClient } from '../db/types.js'
 import {
+  exportFullCohort,
   exportStandaloneClient,
   importTenant,
   TenantMigrationError,
@@ -52,7 +53,7 @@ describe('standalone client tenant migration', () => {
       clientProfileId: CLIENT_PROFILE_ID,
       createdAt: '2026-09-11T12:00:00.000Z',
     })
-    expect(bundle.tables).toHaveLength(31)
+    expect(bundle.tables).toHaveLength(32)
     expect(source.query).toHaveBeenCalledWith('commit')
   })
 
@@ -71,7 +72,7 @@ describe('standalone client tenant migration', () => {
     expect(source.query).toHaveBeenCalledWith('rollback')
   })
 
-  it('uses an independent advisory lock and rolls a validated dry-run back', async () => {
+  it('serializes imports, locks the root and rolls a validated dry-run back', async () => {
     const source = buildSource(standalonePreflight())
     const bundle = await exportStandaloneClient(source.client, CLIENT_PROFILE_ID)
     const query = vi.fn(() => Promise.resolve([]))
@@ -80,11 +81,112 @@ describe('standalone client tenant migration', () => {
     const report = await importTenant(target, bundle, false)
 
     expect(report.mode).toBe('dry-run')
-    expect(report.tables).toHaveLength(31)
+    expect(report.tables).toHaveLength(32)
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("hashtextextended('fit-tenant:migration', 0)"),
+    )
     expect(query).toHaveBeenCalledWith(
       expect.stringContaining("'fit-tenant:' || $1 || ':' || $2"),
       ['standalone-client', CLIENT_PROFILE_ID],
     )
     expect(query).toHaveBeenCalledWith('rollback')
+  })
+})
+
+describe('full application cohort migration', () => {
+  function buildFullSource(
+    overrides: Partial<FullCohortPreflight> = {},
+  ): { client: DatabaseClient; query: ReturnType<typeof vi.fn> } {
+    const preflight: FullCohortPreflight = {
+      cohort_exists: true,
+      ...overrides,
+    }
+    const query = vi.fn((sql: string) => {
+      if (sql.includes('as cohort_exists')) return Promise.resolve([preflight])
+      return Promise.resolve([])
+    })
+    return { client: { query: query as DatabaseClient['query'] }, query }
+  }
+
+  interface FullCohortPreflight {
+    cohort_exists: boolean
+  }
+
+  it('exports all manifest tables without evaluating tenant boundaries', async () => {
+    const source = buildFullSource()
+    const bundle = await exportFullCohort(
+      source.client,
+      new Date('2026-09-14T10:00:00.000Z'),
+    )
+
+    expect(bundle).toMatchObject({
+      format: 'fit-full-cohort-bundle-v1',
+      createdAt: '2026-09-14T10:00:00.000Z',
+    })
+    expect(bundle.tables).toHaveLength(32)
+    expect(source.query).not.toHaveBeenCalledWith(
+      expect.stringContaining('has_cross_boundary_merge'),
+      expect.anything(),
+    )
+    expect(source.query).not.toHaveBeenCalledWith(
+      expect.stringContaining('has_pending_push'),
+      expect.anything(),
+    )
+    expect(source.query).toHaveBeenCalledWith('commit')
+  })
+
+  it.each([
+    ['full_cohort_empty', { cohort_exists: false }],
+  ])('rejects an unsafe complete snapshot: %s', async (code, overrides) => {
+    const source = buildFullSource(overrides)
+    await expect(exportFullCohort(source.client)).rejects.toEqual(
+      new TenantMigrationError(code),
+    )
+    expect(source.query).toHaveBeenCalledWith('rollback')
+  })
+
+  it('validates only imported keys and rejects a changed existing row', async () => {
+    const sourceQuery = vi.fn((sql: string) => {
+      if (sql.includes('as cohort_exists')) {
+        return Promise.resolve([{
+          cohort_exists: true,
+        }])
+      }
+      if (sql.includes('from public.profiles row')) {
+        return Promise.resolve([{
+          row: { id: CLIENT_PROFILE_ID, timezone: 'Europe/Moscow' },
+        }])
+      }
+      return Promise.resolve([])
+    }) as unknown as DatabaseClient['query']
+    const bundle = await exportFullCohort({ query: sourceQuery })
+
+    const matchingTargetQuery = vi.fn((sql: string) => {
+      if (sql.includes('select to_jsonb(existing)')) {
+        return Promise.resolve([{
+          row: {
+            id: CLIENT_PROFILE_ID,
+            timezone: 'Europe/Moscow',
+            target_only_default: true,
+          },
+        }])
+      }
+      return Promise.resolve([])
+    }) as unknown as DatabaseClient['query']
+    await expect(importTenant({ query: matchingTargetQuery }, bundle, false))
+      .resolves.toMatchObject({ mode: 'dry-run' })
+
+    const conflictingTargetQuery = vi.fn((sql: string) => {
+      if (sql.includes('select to_jsonb(existing)')) {
+        return Promise.resolve([{
+          row: { id: CLIENT_PROFILE_ID, timezone: 'UTC' },
+        }])
+      }
+      return Promise.resolve([])
+    }) as unknown as DatabaseClient['query']
+    await expect(importTenant({ query: conflictingTargetQuery }, bundle, false))
+      .rejects.toEqual(
+        new TenantMigrationError('target_validation_failed:public.profiles'),
+      )
   })
 })
