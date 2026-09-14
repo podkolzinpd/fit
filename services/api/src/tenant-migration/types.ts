@@ -53,7 +53,7 @@ export interface TenantMigrationRoot {
   profileId: string
 }
 
-export interface TenantMigrationEnvelope {
+export interface LegacyTenantMigrationEnvelope {
   format: 'fit-tenant-envelope-v1'
   kdf: {
     name: 'scrypt'
@@ -66,6 +66,27 @@ export interface TenantMigrationEnvelope {
   }
   ciphertext: string
 }
+
+export interface CompressedTenantMigrationEnvelope {
+  format: 'fit-tenant-envelope-v2'
+  compression: {
+    name: 'gzip'
+  }
+  kdf: {
+    name: 'scrypt'
+    salt: string
+  }
+  cipher: {
+    name: 'aes-256-gcm'
+    iv: string
+    authTag: string
+  }
+  ciphertext: string
+}
+
+export type TenantMigrationEnvelope =
+  | LegacyTenantMigrationEnvelope
+  | CompressedTenantMigrationEnvelope
 
 export interface TenantMigrationTableReport {
   name: string

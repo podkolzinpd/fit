@@ -5,6 +5,7 @@ import {
   randomBytes,
   scrypt,
 } from 'node:crypto'
+import { gzipSync, gunzipSync } from 'node:zlib'
 
 import type {
   JsonObject,
@@ -20,6 +21,7 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const KEY_BYTES = 32
 const SCRYPT_COST = 32_768
+const MAX_DECOMPRESSED_ARTIFACT_BYTES = 64 * 1024 * 1024
 
 export class TenantMigrationArtifactError extends Error {
   constructor(readonly code: string) {
@@ -242,12 +244,17 @@ export async function encryptMigrationBundle(
   const iv = randomBytes(12)
   const key = await deriveKey(passphrase, salt)
   const cipher = createCipheriv('aes-256-gcm', key, iv)
+  const compressed = gzipSync(
+    canonicalJson(readJsonObject(bundle)),
+    { level: 9 },
+  )
   const ciphertext = Buffer.concat([
-    cipher.update(canonicalJson(readJsonObject(bundle))),
+    cipher.update(compressed),
     cipher.final(),
   ])
   return {
-    format: 'fit-tenant-envelope-v1',
+    format: 'fit-tenant-envelope-v2',
+    compression: { name: 'gzip' },
     kdf: { name: 'scrypt', salt: salt.toString('base64') },
     cipher: {
       name: 'aes-256-gcm',
@@ -264,7 +271,17 @@ export async function decryptMigrationBundle(
 ): Promise<TenantMigrationBundle> {
   if (
     !isRecord(value)
-    || value.format !== 'fit-tenant-envelope-v1'
+    || (
+      value.format !== 'fit-tenant-envelope-v1'
+      && value.format !== 'fit-tenant-envelope-v2'
+    )
+    || (
+      value.format === 'fit-tenant-envelope-v2'
+      && (
+        !isRecord(value.compression)
+        || value.compression.name !== 'gzip'
+      )
+    )
     || !isRecord(value.kdf)
     || value.kdf.name !== 'scrypt'
     || !isRecord(value.cipher)
@@ -281,10 +298,17 @@ export async function decryptMigrationBundle(
     const key = await deriveKey(passphrase, salt)
     const decipher = createDecipheriv('aes-256-gcm', key, iv)
     decipher.setAuthTag(authTag)
-    const plaintext = Buffer.concat([
+    const decrypted = Buffer.concat([
       decipher.update(ciphertext),
       decipher.final(),
-    ]).toString('utf8')
+    ])
+    const plaintext = (
+      value.format === 'fit-tenant-envelope-v2'
+        ? gunzipSync(decrypted, {
+            maxOutputLength: MAX_DECOMPRESSED_ARTIFACT_BYTES,
+          })
+        : decrypted
+    ).toString('utf8')
     return readMigrationBundle(JSON.parse(plaintext))
   } catch (error) {
     if (error instanceof TenantMigrationArtifactError) throw error
