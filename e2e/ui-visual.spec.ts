@@ -1595,6 +1595,51 @@ test('client Live keeps row geometry, notes and timer independent', async ({ pag
   const firstBefore = await rows.first().boundingBox()
   const secondBefore = await rows.nth(1).boundingBox()
   const secondInput = rows.nth(1).getByLabel('Фактический вес')
+  const contentScrollBeforeKeyboard = await page.locator('.content').evaluate((element) => element.scrollTop)
+  // Имитируем уменьшение WKWebView после появления цифровой клавиатуры.
+  // Событие фокуса отправляем без нативной прокрутки, чтобы тест проверял
+  // позиционирование самого Fit, а не встроенную эвристику браузера.
+  await page.evaluate(() => {
+    const root = document.documentElement
+    root.classList.add('app-keyboard-open')
+    root.style.setProperty('--app-viewport-height', '844px')
+    root.style.setProperty('--app-visible-height', '220px')
+    root.style.setProperty('--app-viewport-offset-top', '0px')
+    document.querySelector('.phone-frame')?.classList.add('keyboard-open')
+    const content = document.querySelector('.content')
+    content?.scrollTo(0, 0)
+    if (content instanceof HTMLElement) {
+      const originalScrollTo = content.scrollTo.bind(content)
+      const state = window as Window & { __liveKeyboardScrolls?: number }
+      state.__liveKeyboardScrolls = 0
+      content.scrollTo = ((first?: number | ScrollToOptions, second?: number) => {
+        state.__liveKeyboardScrolls = (state.__liveKeyboardScrolls ?? 0) + 1
+        if (typeof first === 'number') originalScrollTo(first, second ?? 0)
+        else originalScrollTo(first)
+      }) as typeof content.scrollTo
+    }
+  })
+  const rowBeforeKeyboardScroll = await rows.nth(1).locator('.live-set-grid').boundingBox()
+  const contentBeforeKeyboardScroll = await page.locator('.content').boundingBox()
+  if (!rowBeforeKeyboardScroll || !contentBeforeKeyboardScroll) throw new Error('Expected initially clipped Live row geometry')
+  expect(rowBeforeKeyboardScroll.y + rowBeforeKeyboardScroll.height).toBeGreaterThan(contentBeforeKeyboardScroll.y + contentBeforeKeyboardScroll.height - 15)
+  await secondInput.evaluate((element) => element.dispatchEvent(new FocusEvent('focusin', { bubbles: true })))
+  await page.waitForTimeout(250)
+  expect(await page.evaluate(() => (window as Window & { __liveKeyboardScrolls?: number }).__liveKeyboardScrolls ?? 0)).toBeGreaterThan(0)
+  const focusedRowBox = await rows.nth(1).locator('.live-set-grid').boundingBox()
+  const keyboardContentBox = await page.locator('.content').boundingBox()
+  if (!focusedRowBox || !keyboardContentBox) throw new Error('Expected focused Live row and keyboard viewport geometry')
+  expect(focusedRowBox.y).toBeGreaterThanOrEqual(keyboardContentBox.y + 15)
+  expect(focusedRowBox.y + focusedRowBox.height).toBeLessThanOrEqual(keyboardContentBox.y + keyboardContentBox.height - 15)
+  await page.evaluate((restoreScrollTop) => {
+    const root = document.documentElement
+    root.classList.remove('app-keyboard-open')
+    root.style.removeProperty('--app-viewport-height')
+    root.style.removeProperty('--app-visible-height')
+    root.style.removeProperty('--app-viewport-offset-top')
+    document.querySelector('.phone-frame')?.classList.remove('keyboard-open')
+    document.querySelector('.content')?.scrollTo(0, restoreScrollTop)
+  }, contentScrollBeforeKeyboard)
   await secondInput.fill('43')
   await expect(secondInput).toBeFocused()
   await page.clock.runFor(1500)
