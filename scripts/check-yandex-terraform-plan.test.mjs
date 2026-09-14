@@ -126,6 +126,26 @@ describe('Yandex Terraform plan policy', () => {
     )
   })
 
+  test('accepts the stage API read grant for the legacy Supabase bridge Lockbox', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader[0]',
+          change: {
+            actions: ['create'],
+            after: {
+              role: 'lockbox.payloadViewer',
+              member: 'serviceAccount:ajed7vfl6dnd1k2h6gt8',
+            },
+          },
+        },
+      ],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(result.status, 0)
+  })
+
   test('accepts only the explicitly approved bounded push pipeline bootstrap', () => {
     const result = runPolicy(
       [

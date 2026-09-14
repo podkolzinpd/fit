@@ -51,6 +51,8 @@ const runtimePreflightSecretAccessAddress =
   'yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader[0]'
 const appFeedbackSecretAccessAddress =
   'yandex_lockbox_secret_iam_member.push_dispatcher_app_feedback_integrations_reader[0]'
+const legacySupabaseBridgeSecretAccessAddress =
+  'yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader[0]'
 const postgresSecurityGroupAddress = 'yandex_vpc_security_group.postgres'
 const legacyDataLensPublicCidrs = [
   '130.193.60.0/28',
@@ -394,6 +396,11 @@ const isAutomaticStageChange = (resource) => {
       )
       || (
         resource.address === appFeedbackSecretAccessAddress
+        && resource.change.after?.role === 'lockbox.payloadViewer'
+        && isKnownOrComputedServiceAccountMember(resource)
+      )
+      || (
+        resource.address === legacySupabaseBridgeSecretAccessAddress
         && resource.change.after?.role === 'lockbox.payloadViewer'
         && isKnownOrComputedServiceAccountMember(resource)
       )
