@@ -79,7 +79,6 @@ resource "yandex_serverless_container" "api" {
       SUPABASE_URL              = "SUPABASE_URL"
       SUPABASE_PUBLISHABLE_KEY  = "SUPABASE_PUBLISHABLE_KEY"
       SUPABASE_SERVICE_ROLE_KEY = "SUPABASE_SERVICE_ROLE_KEY"
-      YANDEX_CLOUD_API_KEY      = "YANDEX_CLOUD_API_KEY"
     }
 
     content {
