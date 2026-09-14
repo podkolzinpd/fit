@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const whisper = vi.hoisted(() => ({ init: vi.fn() }))
 vi.mock('@fugood/node-whisper-wasm', () => ({ initWhisper: whisper.init }))
@@ -13,11 +13,7 @@ function context(result = '  Тестовая   заметка ') {
 }
 
 describe('WhisperCppRecognizer', () => {
-  beforeEach(() => {
-    whisper.init.mockReset()
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://fit-test.supabase.co')
-  })
-  afterEach(() => vi.unstubAllEnvs())
+  beforeEach(() => whisper.init.mockReset())
 
   it('loads the pinned Russian model once and normalizes the transcript', async () => {
     const runtime = context()
@@ -29,8 +25,7 @@ describe('WhisperCppRecognizer', () => {
     expect(await recognizer.transcribe(new ArrayBuffer(4), progress)).toBe('Тестовая заметка')
     expect(whisper.init).toHaveBeenCalledOnce()
     expect(whisper.init.mock.calls[0]?.[0]).toMatchObject({
-      filePath: 'https://fit-test.supabase.co/storage/v1/object/public/fit-public-models/whisper/ggml-base-q5_1-5359861c739e955e79d9a303bcbc70fb988958b1.bin',
-      modelCacheKey: 'fit-whisper-422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898',
+      filePath: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base-q5_1.bin',
       useGpu: false,
     })
     expect(runtime.transcribeData).toHaveBeenCalledWith(expect.any(ArrayBuffer), expect.objectContaining({ language: 'ru', onProgress: progress }))
