@@ -8,6 +8,11 @@
       "**": false
     }
   },
+  "build": {
+    "env": {
+      "VITE_YANDEX_LEGACY_FUNCTIONS_API_BASE_URL": "https://bbat47es6kspjb3dvfn2.containers.yandexcloud.net"
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",
