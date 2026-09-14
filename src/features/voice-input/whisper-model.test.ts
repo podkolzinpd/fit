@@ -8,9 +8,9 @@ describe('Whisper model location', () => {
     vi.stubEnv('VITE_SUPABASE_URL', ' https://fit-test.supabase.co/ ')
 
     expect(getWhisperModelUrl()).toBe(
-      'https://fit-test.supabase.co/storage/v1/object/public/fit-public-models/whisper/ggml-base-q5_1-5359861c739e955e79d9a303bcbc70fb988958b1.bin',
+      'https://fit-test.supabase.co/storage/v1/object/public/fit-public-models/whisper/ggml-tiny-q5_1-5359861c739e955e79d9a303bcbc70fb988958b1.bin',
     )
-    expect(WHISPER_MODEL_BYTES).toBe(59_707_625)
+    expect(WHISPER_MODEL_BYTES).toBe(32_152_673)
   })
 
   it('fails closed when the project URL is absent', () => {

@@ -15,8 +15,8 @@ Voice input is intentionally limited to workout notes and trainer notes on clien
 ## Implementation
 
 - Runtime: `@fugood/node-whisper-wasm`, an MIT-licensed browser wrapper around `whisper.cpp`.
-- Model: multilingual `ggml-base-q5_1.bin` from `ggerganov/whisper.cpp`, pinned to revision `5359861c739e955e79d9a303bcbc70fb988958b1` and verified by SHA-256.
-- Model download: approximately 57 MB on the first fallback use, from the Fit public model bucket, then cached by the browser under a content-addressed key.
+- Model: multilingual `ggml-tiny-q5_1.bin` from `ggerganov/whisper.cpp`, pinned to revision `5359861c739e955e79d9a303bcbc70fb988958b1` and verified by SHA-256.
+- Model download: approximately 31 MB on the first fallback use, from the Fit public model bucket, then cached by the browser under a content-addressed key.
 - Audio: recorded with `MediaRecorder`, decoded and resampled to mono 16 kHz PCM in the browser.
 - Recognition: Russian language, up to 60 seconds per fragment. The worker uses multiple threads when the browser is cross-origin isolated and falls back to one thread otherwise.
 

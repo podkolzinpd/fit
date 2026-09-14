@@ -37,7 +37,7 @@ if (listError) throw new Error(`Could not inspect the speech model bucket: ${lis
 const bucketOptions = {
   public: true,
   allowedMimeTypes: ['application/octet-stream'],
-  fileSizeLimit: 64 * 1024 * 1024,
+  fileSizeLimit: 40 * 1024 * 1024,
 }
 if (buckets.some(({ id }) => id === manifest.bucket)) {
   const { error } = await supabase.storage.updateBucket(manifest.bucket, bucketOptions)

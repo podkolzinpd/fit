@@ -29,8 +29,8 @@ describe('WhisperCppRecognizer', () => {
     expect(await recognizer.transcribe(new ArrayBuffer(4), progress)).toBe('Тестовая заметка')
     expect(whisper.init).toHaveBeenCalledOnce()
     expect(whisper.init.mock.calls[0]?.[0]).toMatchObject({
-      filePath: 'https://fit-test.supabase.co/storage/v1/object/public/fit-public-models/whisper/ggml-base-q5_1-5359861c739e955e79d9a303bcbc70fb988958b1.bin',
-      modelCacheKey: 'fit-whisper-422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898',
+      filePath: 'https://fit-test.supabase.co/storage/v1/object/public/fit-public-models/whisper/ggml-tiny-q5_1-5359861c739e955e79d9a303bcbc70fb988958b1.bin',
+      modelCacheKey: 'fit-whisper-818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7',
       useGpu: false,
     })
     expect(runtime.transcribeData).toHaveBeenCalledWith(expect.any(ArrayBuffer), expect.objectContaining({ language: 'ru', onProgress: progress }))
