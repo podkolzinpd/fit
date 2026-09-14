@@ -8425,7 +8425,7 @@ Fit остаётся отдельным приложением, потому ч�
     </section>
 
     <section class="slide redesign-v2 review-problem-v2 prefinal-keep" data-section="Проблема" data-slide-type="problem" data-golden="linear/03-linear-product-flow.png">
-      <div class="eyebrow">04 · ПРОБЛЕМА</div>
+      <div class="eyebrow">05 · ПРОБЛЕМА</div>
       <div class="review-fit-label">Fit</div>
       <h2>Начать трудно. Удержаться ещё труднее</h2>
       <p class="subhead">Без общего контекста человек теряет следующий понятный шаг — особенно после паузы или пропуска.</p>
@@ -8485,7 +8485,7 @@ Fit остаётся отдельным приложением, потому ч�
 Значит, продукт должен не просто записывать тренировки, а удерживать весь спортивный маршрут и всегда давать следующий шаг.</aside>
     </section>
 
-    <section class="slide redesign-v2 prefinal-keep prefinal-digital-market" data-section="Доказанный спрос" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
+    <section class="slide redesign-v2 prefinal-keep prefinal-digital-market" data-section="Рынок" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
       <div class="eyebrow">03 · ЦИФРОВОЙ РЫНОК</div>
       <div class="digital-market-fit">Fit</div>
       <h2>≈15 млн уже используют цифровые инструменты для спорта</h2>
@@ -8659,7 +8659,7 @@ Sensor Tower, Top Health and Fitness Apps in Russia, IV квартал 2025: htt
     </section>
 
     <section class="slide demand-proof-slide combined-demand-slide redesign-v2 rd-demand review-demand-v2 prefinal-keep" data-section="Доказанный спрос" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
-      <div class="eyebrow">05 · ДОКАЗАННЫЙ СПРОС</div>
+      <div class="eyebrow">04 · ДОКАЗАННЫЙ СПРОС</div>
       <h2>Цифровое спортивное сопровождение уже стало массовым</h2>
       <div class="demand-category-kicker">РАЗНЫЕ МОДЕЛИ · ОДИН ПОДТВЕРЖДЁННЫЙ СПРОС</div>
       <div class="demand-product-grid">
@@ -10342,7 +10342,7 @@ const prefinalProblem = document.querySelector('.review-problem-v2.prefinal-keep
 if (prefinalMarket && prefinalProblem) prefinalProblem.before(prefinalMarket)
 const prefinalDemand = document.querySelector('.review-demand-v2:not(.colleague-order-slide)')
 const prefinalStory = document.querySelector('.review-story-v2')
-if (prefinalDemand && prefinalStory) prefinalStory.before(prefinalDemand)
+if (prefinalDemand && prefinalProblem) prefinalProblem.before(prefinalDemand)
 const monetizationSlide = document.querySelector('.monetization-proof-slide')
 const valueSlide = document.querySelector('.value-slide')
 if (monetizationSlide && valueSlide) valueSlide.after(monetizationSlide)
