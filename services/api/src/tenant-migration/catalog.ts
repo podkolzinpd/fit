@@ -1115,9 +1115,5 @@ readonly TenantMigrationTableSpec[] = TENANT_MIGRATION_TABLES.map((spec) => ({
 }))
 
 export const FULL_COHORT_SOURCE_PREFLIGHT_SQL = `select
-  exists (select 1 from public.profiles) as cohort_exists,
-  exists (
-    select 1 from public.chat_messages message
-    where message.image_path is not null
-  ) as has_chat_media
+  exists (select 1 from public.profiles) as cohort_exists
 where $1::text = 'application-v1'`

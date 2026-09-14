@@ -10,6 +10,12 @@ import { DatabasePilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import { DatabasePilotPushNotifications } from './pilot-push-notifications.js'
 import { DatabasePilotChat } from './pilot-chat.js'
 import { SupabaseChatMediaStore } from './chat-media.js'
+import {
+  readYandexMediaStorageConfig,
+  YandexChatMediaStore,
+  YandexMediaObjectStorage,
+  YandexVitalMediaSigner,
+} from './object-storage-media.js'
 import { DatabasePilotConnectionsReader } from './pilot-connections-reader.js'
 import { DatabasePilotConnectionsWriter } from './pilot-connections-writer.js'
 import { DatabasePilotDomainWriter } from './pilot-domain-writer.js'
@@ -174,13 +180,21 @@ const pilotTrainingSummaryGenerator =
     ? undefined
     : pilotTrainingSummaryReader
 const supabaseBridgeConfig = readSupabaseBridgeConfig()
-const chatMediaStore = supabaseBridgeConfig === undefined
+const yandexMediaStorageConfig = readYandexMediaStorageConfig()
+const yandexMediaStorage = yandexMediaStorageConfig === undefined
   ? undefined
-  : new SupabaseChatMediaStore(supabaseBridgeConfig)
+  : new YandexMediaObjectStorage(yandexMediaStorageConfig)
+const chatMediaStore = yandexMediaStorage !== undefined
+  ? new YandexChatMediaStore(yandexMediaStorage)
+  : supabaseBridgeConfig === undefined
+    ? undefined
+    : new SupabaseChatMediaStore(supabaseBridgeConfig)
 const pilotChat = databasePool === undefined ? undefined : new DatabasePilotChat(databasePool)
-const vitalMediaSigner = supabaseBridgeConfig === undefined
-  ? undefined
-  : new SupabaseVitalMediaSigner(supabaseBridgeConfig)
+const vitalMediaSigner = yandexMediaStorage !== undefined
+  ? new YandexVitalMediaSigner(yandexMediaStorage)
+  : supabaseBridgeConfig === undefined
+    ? undefined
+    : new SupabaseVitalMediaSigner(supabaseBridgeConfig)
 const existingActorProvider =
   supabaseBridgeConfig === undefined
     ? undefined

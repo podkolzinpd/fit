@@ -78,15 +78,18 @@ The following remain unchanged during the foundation phase:
    represented by `000024`, with operator reads limited to `ops_readonly`.
    Production routing, the Telegram delivery transport and the tenant data copy
    remain pending.
-8. [Local tooling complete; full-cohort remote gate pending]
+8. [Local tooling and private media gate complete; remote run pending]
    Export/import/validation supports strict isolated trainer/standalone roots
    and a content-pinned full application cohort for source data whose merges or
    memberships cross tenant boundaries. The encrypted 32-table manifest has a
    mandatory dry-run, transactional idempotent apply and per-table
    count/checksum validation. Two clean PostgreSQL 17 rehearsals passed for all
-   three modes. This does not validate VPC/IAM/TLS or real production volume.
-   Run a real full-cohort audit and stage dry-run before the separately reviewed
-   apply; freeze writes before the eventual production cutover.
+   three modes. A private versioned Yandex Object Storage bucket, Lockbox-backed
+   static key, aggregate-only media copy and pre-DB attachment verification
+   close the chat-photo gap without exposing object paths. This does not
+   validate VPC/IAM/TLS or real production volume. Apply and validate media,
+   then run a real full-cohort audit and stage dry-run before the pinned apply;
+   freeze writes before the eventual production cutover.
 9. Expand sticky tenant cohorts gradually after monitoring data integrity,
    authorization failures, latency and error rates.
 10. Remove Supabase only after all cohorts are migrated and the rollback window

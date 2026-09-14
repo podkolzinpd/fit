@@ -99,7 +99,6 @@ describe('full application cohort migration', () => {
   ): { client: DatabaseClient; query: ReturnType<typeof vi.fn> } {
     const preflight: FullCohortPreflight = {
       cohort_exists: true,
-      has_chat_media: false,
       ...overrides,
     }
     const query = vi.fn((sql: string) => {
@@ -111,7 +110,6 @@ describe('full application cohort migration', () => {
 
   interface FullCohortPreflight {
     cohort_exists: boolean
-    has_chat_media: boolean
   }
 
   it('exports all manifest tables without evaluating tenant boundaries', async () => {
@@ -139,7 +137,6 @@ describe('full application cohort migration', () => {
 
   it.each([
     ['full_cohort_empty', { cohort_exists: false }],
-    ['full_cohort_has_chat_media', { has_chat_media: true }],
   ])('rejects an unsafe complete snapshot: %s', async (code, overrides) => {
     const source = buildFullSource(overrides)
     await expect(exportFullCohort(source.client)).rejects.toEqual(
@@ -153,7 +150,6 @@ describe('full application cohort migration', () => {
       if (sql.includes('as cohort_exists')) {
         return Promise.resolve([{
           cohort_exists: true,
-          has_chat_media: false,
         }])
       }
       if (sql.includes('from public.profiles row')) {
