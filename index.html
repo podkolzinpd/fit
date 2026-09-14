@@ -7440,6 +7440,245 @@ h3 {
   line-height: 1.32;
 }
 
+/* Meeting-reference drafts: intentionally isolated from the core deck. */
+.meeting-reference-slide {
+  --meeting-edge: 92px;
+}
+
+.meeting-placeholder-slide {
+  background: var(--dark);
+  color: var(--paper);
+}
+
+.meeting-placeholder-slide h2 {
+  position: absolute;
+  left: var(--meeting-edge);
+  top: 172px;
+  width: 980px;
+  margin: 0;
+  color: var(--paper);
+  font-size: 86px;
+  line-height: .98;
+  letter-spacing: -.055em;
+}
+
+.meeting-placeholder-note {
+  position: absolute;
+  left: var(--meeting-edge);
+  bottom: 76px;
+  color: #77787d;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.meeting-trainer-slide {
+  background: var(--dark);
+  color: var(--paper);
+  overflow: hidden;
+}
+
+.meeting-trainer-copy {
+  position: absolute;
+  left: var(--meeting-edge);
+  top: 146px;
+  width: 560px;
+}
+
+.meeting-trainer-copy h2 {
+  margin: 0;
+  color: var(--paper);
+  font-size: 74px;
+  line-height: .98;
+  letter-spacing: -.055em;
+}
+
+.meeting-trainer-copy p {
+  width: 470px;
+  margin: 34px 0 0;
+  color: #aaa8a4;
+  font-size: 27px;
+  line-height: 1.3;
+}
+
+.meeting-trainer-proof {
+  position: absolute;
+  left: var(--meeting-edge);
+  bottom: 80px;
+  width: 500px;
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  gap: 22px;
+  padding-top: 21px;
+  border-top: 1px solid rgba(246,242,234,.22);
+}
+
+.meeting-trainer-proof span,
+.meeting-status-kicker,
+.meeting-build-item span {
+  color: #77787d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.meeting-trainer-proof strong {
+  color: var(--paper);
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.meeting-phone-stage {
+  position: absolute;
+  left: 690px;
+  right: 72px;
+  top: 80px;
+  bottom: 24px;
+}
+
+.meeting-phone {
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(246,242,234,.18);
+  border-radius: 42px 42px 0 0;
+  background: #f8f6f2;
+  box-shadow: 0 28px 80px rgba(0,0,0,.34);
+}
+
+.meeting-phone img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+.meeting-phone-catalog {
+  left: 6px;
+  top: 128px;
+  width: 344px;
+  height: 690px;
+  z-index: 2;
+}
+
+.meeting-phone-profile {
+  right: -6px;
+  top: 54px;
+  width: 404px;
+  height: 730px;
+  z-index: 1;
+}
+
+.meeting-phone-caption {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  gap: 4px;
+}
+
+.meeting-phone-caption b {
+  color: #77787d;
+  font-size: 12px;
+  letter-spacing: .1em;
+}
+
+.meeting-phone-caption strong {
+  color: var(--paper);
+  font-size: 22px;
+}
+
+.meeting-phone-caption-catalog { left: 14px; top: 82px; }
+.meeting-phone-caption-profile { right: 100px; top: 4px; }
+
+.meeting-status-slide {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.meeting-status-slide h2 {
+  margin: 25px 0 0;
+  width: 1120px;
+  font-size: 68px;
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+
+.meeting-pilot-evidence {
+  margin-top: 58px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
+.meeting-pilot-item {
+  min-height: 272px;
+  padding: 28px 38px 30px 0;
+}
+
+.meeting-pilot-item + .meeting-pilot-item {
+  padding-left: 38px;
+  border-left: 1px solid var(--line);
+}
+
+.meeting-pilot-item > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.meeting-pilot-item strong {
+  display: block;
+  margin-top: 14px;
+  font-size: 60px;
+  line-height: .95;
+  letter-spacing: -.045em;
+}
+
+.meeting-pilot-item p {
+  margin: 20px 0 0;
+  max-width: 620px;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1.32;
+}
+
+.meeting-build-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--ink);
+}
+
+.meeting-build-item {
+  min-height: 172px;
+  padding: 26px 34px 24px 0;
+}
+
+.meeting-build-item + .meeting-build-item {
+  padding-left: 34px;
+  border-left: 1px solid var(--line);
+}
+
+.meeting-build-item strong {
+  display: block;
+  margin-top: 13px;
+  font-size: 25px;
+  line-height: 1.18;
+}
+
+.meeting-build-item p {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.28;
+}
+
 </style>
 </head>
 <body>
@@ -9242,6 +9481,65 @@ Apple Watch, Training Load: https://support.apple.com/en-ie/guide/watch/apde4c07
 Strava, поддерживаемые виды спорта: https://support.strava.com/en-us/articles/15402005-supported-sport-types-on-strava</aside>
     </section>
 
+    <section class="slide meeting-reference-slide meeting-placeholder-slide" data-section="Материалы встречи" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
+      <div class="eyebrow">МАТЕРИАЛЫ · СТАТИСТИКА ИСПОЛЬЗОВАНИЯ</div>
+      <h2>Статистика<br>использования</h2>
+      <div class="meeting-placeholder-note">Данные добавим после выгрузки</div>
+      <aside class="speaker-notes">ЧЕРНОВИК
+Пустой слайд-заготовка для фактической статистики использования. Числа намеренно не добавлены до получения подтверждённой выгрузки.</aside>
+    </section>
+
+    <section class="slide meeting-reference-slide meeting-trainer-slide" data-section="Материалы встречи" data-slide-type="trainer-client" data-golden="linear/03-linear-product-flow.png">
+      <div class="eyebrow">МАТЕРИАЛЫ · ПОИСК ТРЕНЕРА</div>
+      <div class="meeting-trainer-copy">
+        <h2>Платформа поиска тренера уже работает</h2>
+        <p>Пользователь находит специалиста и начинает общение; тренер получает новый входящий контакт.</p>
+      </div>
+      <div class="meeting-trainer-proof"><span>ЗАПУЩЕНО</span><strong>Каталог → анкета → связь с тренером</strong></div>
+      <div class="meeting-phone-stage" aria-label="Актуальные экраны Fit">
+        <div class="meeting-phone-caption meeting-phone-caption-catalog"><b>01</b><strong>Найти</strong></div>
+        <figure class="meeting-phone meeting-phone-catalog"><img src="assets/fit-trainer-catalog.png" alt="Актуальный каталог тренеров в Fit"></figure>
+        <figure class="meeting-phone meeting-phone-profile"><img src="assets/fit-trainer-profile.png" alt="Актуальная публичная анкета тренера в Fit"></figure>
+        <div class="meeting-phone-caption meeting-phone-caption-profile"><b>02</b><strong>Выбрать и написать</strong></div>
+      </div>
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Показать не обещание, а уже работающий продуктовый контур поиска тренера.
+
+ЧТО ГОВОРИМ
+В актуальной версии Fit пользователь открывает каталог, ищет и фильтрует специалистов, изучает публичную анкету и может написать тренеру. На слайде используются реальные экраны текущей сборки приложения, снятые из клиентского сценария.</aside>
+    </section>
+
+    <section class="slide meeting-reference-slide meeting-status-slide" data-section="Материалы встречи" data-slide-type="roadmap" data-golden="linear/04-linear-roadmap-timeline.png">
+      <div class="eyebrow">МАТЕРИАЛЫ · СТАТУС ПИЛОТА</div>
+      <h2>Контур пилота уже собирается</h2>
+
+      <div class="meeting-pilot-evidence">
+        <div class="meeting-pilot-item">
+          <span>ТЕСТ НА ПЛОЩАДКАХ</span>
+          <strong>2 зала</strong>
+          <p>Добавляем в платформу всех тренеров и рассказываем сотрудникам Яндекса, что в Fit появился поиск тренера.</p>
+        </div>
+        <div class="meeting-pilot-item">
+          <span>ВНЕШНЯЯ ГРУППА</span>
+          <strong>≈30 тренеров</strong>
+          <p>Управляющий тренер сети Spirit уже создал чат. Подключаем внешнюю группу, собираем обратную связь и смотрим реальное использование.</p>
+        </div>
+      </div>
+
+      <div class="meeting-build-strip">
+        <div class="meeting-build-item"><span>ДИЗАЙН И БРЕНД</span><strong>В работе</strong><p>Дорабатываем интерфейс и ожидаем финальные дизайн- и бренд-материалы.</p></div>
+        <div class="meeting-build-item"><span>AI-ПРОГРАММА</span><strong>Почти готова</strong><p>Механика создания программы тренировки с помощью AI практически готова.</p></div>
+        <div class="meeting-build-item"><span>ПЕРСОНАЛЬНЫЕ ДАННЫЕ</span><strong>Контур подготовлен</strong><p>С юристами подготовили материалы и правила получения и передачи данных.</p></div>
+      </div>
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Кратко зафиксировать, что уже сделано и что прямо сейчас доводится до пилота.
+
+ЧТО ГОВОРИМ
+Первый полевой тест строим на двух залах: все тренеры должны появиться в платформе, а сотрудникам Яндекса открываем понятный сценарий поиска специалиста. Параллельно подключаем около тридцати внешних тренеров. Управляющий тренер сети Spirit уже создал чат; от группы собираем обратную связь и проверяем фактическое использование.
+
+Продуктовый контур также движется параллельно: дорабатываем дизайн и бренд, практически завершили создание тренировочной программы с помощью AI. С юристами подготовили материалы и правила, необходимые для получения и передачи персональных данных. Это рабочий статус, а не финальный отчёт о завершении всех направлений.</aside>
+    </section>
+
   </main>
 
   <button class="nav nav-prev" id="prev" aria-label="Предыдущий слайд">←</button>
@@ -9257,6 +9555,7 @@ document.querySelectorAll('.competitor-material-slide').forEach(slide => deck.ap
 document.querySelectorAll('.late-material-slide').forEach(slide => deck.appendChild(slide))
 document.querySelectorAll('.colleague-order-slide').forEach(slide => deck.appendChild(slide))
 document.querySelectorAll('.recovered-material-slide').forEach(slide => deck.appendChild(slide))
+document.querySelectorAll('.meeting-reference-slide').forEach(slide => deck.appendChild(slide))
 const productFlowSource = document.querySelector('.review-product-flow-v4:not(.colleague-order-slide)')
 if (productFlowSource) {
   productFlowSource.classList.add('review-product-flow-v5')
