@@ -142,7 +142,7 @@ variable "api_execution_timeout" {
 }
 
 variable "legacy_supabase_bridge_lockbox_secret_id" {
-  description = "Optional existing Lockbox secret ID with SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SERVICE_ROLE_KEY and YANDEX_CLOUD_API_KEY for the temporary legacy-function bridge."
+  description = "Optional existing Lockbox secret ID with SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY and SUPABASE_SERVICE_ROLE_KEY for the temporary chat-media bridge."
   type        = string
   default     = null
   nullable    = true
