@@ -7473,6 +7473,154 @@ h3 {
   text-transform: uppercase;
 }
 
+.meeting-usage-slide {
+  background: var(--dark);
+  color: var(--paper);
+  overflow: hidden;
+}
+
+.meeting-usage-slide .eyebrow {
+  color: #8f9094;
+}
+
+.meeting-usage-title {
+  position: absolute;
+  left: var(--meeting-edge);
+  top: 112px;
+  width: 1190px;
+  margin: 0;
+  color: var(--paper);
+  font-size: 68px;
+  line-height: .98;
+  letter-spacing: -.05em;
+}
+
+.meeting-usage-date {
+  position: absolute;
+  right: var(--meeting-edge);
+  top: 124px;
+  color: #77787d;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.meeting-usage-grid {
+  position: absolute;
+  left: var(--meeting-edge);
+  right: var(--meeting-edge);
+  top: 300px;
+  bottom: 170px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #393a3d;
+  border-bottom: 1px solid #393a3d;
+}
+
+.meeting-usage-group {
+  padding: 34px 54px 30px 0;
+}
+
+.meeting-usage-group + .meeting-usage-group {
+  padding-left: 54px;
+  padding-right: 0;
+  border-left: 1px solid #393a3d;
+}
+
+.meeting-usage-kicker {
+  color: #8f9094;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.meeting-usage-primary {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.meeting-usage-primary strong {
+  color: var(--paper);
+  font-size: 122px;
+  line-height: .85;
+  letter-spacing: -.07em;
+}
+
+.meeting-usage-primary span {
+  max-width: 230px;
+  color: #b7b8bb;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.meeting-usage-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin-top: 48px;
+  border-top: 1px solid #393a3d;
+}
+
+.meeting-usage-fact {
+  padding-top: 24px;
+}
+
+.meeting-usage-fact + .meeting-usage-fact {
+  padding-left: 32px;
+  border-left: 1px solid #393a3d;
+}
+
+.meeting-usage-fact b {
+  display: block;
+  color: var(--paper);
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -.035em;
+}
+
+.meeting-usage-fact span {
+  display: block;
+  margin-top: 10px;
+  max-width: 270px;
+  color: #85868a;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.meeting-usage-bridge {
+  position: absolute;
+  left: var(--meeting-edge);
+  right: var(--meeting-edge);
+  bottom: 76px;
+  display: grid;
+  grid-template-columns: 180px 1fr auto;
+  gap: 26px;
+  align-items: center;
+}
+
+.meeting-usage-bridge span {
+  color: #77787d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.meeting-usage-bridge strong {
+  color: var(--paper);
+  font-size: 23px;
+  line-height: 1.25;
+}
+
+.meeting-usage-bridge small {
+  color: #68696d;
+  font-size: 12px;
+}
+
 .meeting-trainer-slide {
   background: var(--dark);
   color: var(--paper);
@@ -9485,12 +9633,41 @@ Apple Watch, Training Load: https://support.apple.com/en-ie/guide/watch/apde4c07
 Strava, поддерживаемые виды спорта: https://support.strava.com/en-us/articles/15402005-supported-sport-types-on-strava</aside>
     </section>
 
-    <section class="slide meeting-reference-slide meeting-placeholder-slide" data-section="Материалы встречи" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
-      <div class="eyebrow">МАТЕРИАЛЫ · СТАТИСТИКА ИСПОЛЬЗОВАНИЯ</div>
-      <h2>Статистика<br>использования</h2>
-      <div class="meeting-placeholder-note">Данные добавим после выгрузки</div>
-      <aside class="speaker-notes">ЧЕРНОВИК
-Пустой слайд-заготовка для фактической статистики использования. Числа намеренно не добавлены до получения подтверждённой выгрузки.</aside>
+    <section class="slide meeting-reference-slide meeting-usage-slide" data-section="Материалы встречи" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
+      <div class="eyebrow">МАТЕРИАЛЫ · ФАКТИЧЕСКОЕ ИСПОЛЬЗОВАНИЕ</div>
+      <h2 class="meeting-usage-title">Fit уже используют<br>с обеих сторон тренировки</h2>
+      <div class="meeting-usage-date">Данные на 14 сентября 2026</div>
+
+      <div class="meeting-usage-grid">
+        <section class="meeting-usage-group">
+          <div class="meeting-usage-kicker">Тренеры · ведут работу</div>
+          <div class="meeting-usage-primary"><strong>45</strong><span>тренеров зарегистрированы</span></div>
+          <div class="meeting-usage-facts">
+            <div class="meeting-usage-fact"><b>14</b><span>активны сейчас</span></div>
+            <div class="meeting-usage-fact"><b>19</b><span>новых клиентов добавлено за 7 дней</span></div>
+          </div>
+        </section>
+
+        <section class="meeting-usage-group">
+          <div class="meeting-usage-kicker">Клиенты · тренируются</div>
+          <div class="meeting-usage-primary"><strong>127</strong><span>клиентов зарегистрированы</span></div>
+          <div class="meeting-usage-facts">
+            <div class="meeting-usage-fact"><b>477</b><span>тренировок создано в Fit</span></div>
+            <div class="meeting-usage-fact"><b>12</b><span>профилей уже связаны с приложением</span></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="meeting-usage-bridge">
+        <span>Рабочая связка</span>
+        <strong>Тренер ведёт клиента в кабинете — клиент сохраняет тренировочную историю в Fit</strong>
+        <small>Источник: продуктовый дашборд Fit</small>
+      </div>
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Показать фактическое использование Fit двумя сторонами продукта: тренерами и клиентами.
+
+ЧТО ГОВОРИМ
+В сервисе зарегистрированы 45 тренеров, 14 из них имеют активный статус. За последние семь дней тренеры добавили 19 новых клиентов. В клиентском контуре зарегистрированы 127 человек и создано 477 тренировок. 12 клиентских профилей уже связаны с приложением. Это не прогноз рынка, а срез текущего продуктового борда на 14 сентября 2026 года.</aside>
     </section>
 
     <section class="slide meeting-reference-slide meeting-trainer-slide" data-section="Материалы встречи" data-slide-type="trainer-client" data-golden="linear/03-linear-product-flow.png">
