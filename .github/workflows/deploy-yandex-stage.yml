@@ -58,6 +58,7 @@ env:
   YC_PUSH_FUNCTION_NAME: fit-send-push-notifications
   YC_PUSH_LOCKBOX_NAME: fit-send-push-notifications-secrets
   YC_STAGE_PUSH_LOCKBOX_NAME: fit-stage-push-transport
+  YC_STAGE_LEGACY_SUPABASE_BRIDGE_LOCKBOX_NAME: fit-stage-legacy-supabase-bridge
   YC_APP_FEEDBACK_LOCKBOX_NAME: fit-stage-app-feedback-integrations
   YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
   PUSH_PIPELINE_PLAN_REVIEWED: ${{ (inputs.plan_only == true || inputs.approve_push_pipeline == true) && 'true' || 'false' }}
@@ -109,6 +110,9 @@ jobs:
         with:
           terraform_version: 1.8.5
           terraform_wrapper: false
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.116.0
       - uses: actions/cache@v4
         with:
           path: .terraform-provider-cache
@@ -177,6 +181,35 @@ jobs:
             cat "$error_file" >&2
             exit 1
           fi
+      - name: Mirror Supabase credentials for the legacy chat media bridge
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          temporary_directory=$(mktemp -d)
+          payload_file="$temporary_directory/supabase-bridge.json"
+          trap 'rm -f "$payload_file" "$temporary_directory/api-keys.json"; rmdir "$temporary_directory" 2>/dev/null || true' EXIT
+          supabase projects api-keys --project-ref "$SUPABASE_PROJECT_ID" --output json > "$temporary_directory/api-keys.json"
+          chmod 600 "$temporary_directory/api-keys.json"
+          publishable_key=$(jq -er '[.[] | select(.name == "publishable" or .name == "anon") | .api_key][0]' "$temporary_directory/api-keys.json")
+          service_role_key=$(jq -er '[.[] | select(.name == "service_role" or .name == "secret") | .api_key][0]' "$temporary_directory/api-keys.json")
+          echo "::add-mask::$publishable_key"
+          echo "::add-mask::$service_role_key"
+          jq -cn \
+            --arg url "https://${SUPABASE_PROJECT_ID}.supabase.co" \
+            --arg publishable_key "$publishable_key" \
+            --arg service_role_key "$service_role_key" \
+            '[
+              {key: "SUPABASE_URL", text_value: $url},
+              {key: "SUPABASE_PUBLISHABLE_KEY", text_value: $publishable_key},
+              {key: "SUPABASE_SERVICE_ROLE_KEY", text_value: $service_role_key}
+            ]' > "$payload_file"
+          chmod 600 "$payload_file"
+          node scripts/mirror-yandex-legacy-supabase-bridge.mjs \
+            --folder-id "$TF_VAR_folder_id" \
+            --secret-name "$YC_STAGE_LEGACY_SUPABASE_BRIDGE_LOCKBOX_NAME" \
+            --payload-file "$payload_file"
       - name: Initialize Terraform remote state
         working-directory: infra/yandex
         run: >-
@@ -235,6 +268,9 @@ jobs:
         with:
           terraform_version: 1.8.5
           terraform_wrapper: false
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.116.0
       - uses: actions/cache@v4
         with:
           path: .terraform-provider-cache
@@ -303,6 +339,35 @@ jobs:
             cat "$error_file" >&2
             exit 1
           fi
+      - name: Mirror Supabase credentials for the legacy chat media bridge
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          temporary_directory=$(mktemp -d)
+          payload_file="$temporary_directory/supabase-bridge.json"
+          trap 'rm -f "$payload_file" "$temporary_directory/api-keys.json"; rmdir "$temporary_directory" 2>/dev/null || true' EXIT
+          supabase projects api-keys --project-ref "$SUPABASE_PROJECT_ID" --output json > "$temporary_directory/api-keys.json"
+          chmod 600 "$temporary_directory/api-keys.json"
+          publishable_key=$(jq -er '[.[] | select(.name == "publishable" or .name == "anon") | .api_key][0]' "$temporary_directory/api-keys.json")
+          service_role_key=$(jq -er '[.[] | select(.name == "service_role" or .name == "secret") | .api_key][0]' "$temporary_directory/api-keys.json")
+          echo "::add-mask::$publishable_key"
+          echo "::add-mask::$service_role_key"
+          jq -cn \
+            --arg url "https://${SUPABASE_PROJECT_ID}.supabase.co" \
+            --arg publishable_key "$publishable_key" \
+            --arg service_role_key "$service_role_key" \
+            '[
+              {key: "SUPABASE_URL", text_value: $url},
+              {key: "SUPABASE_PUBLISHABLE_KEY", text_value: $publishable_key},
+              {key: "SUPABASE_SERVICE_ROLE_KEY", text_value: $service_role_key}
+            ]' > "$payload_file"
+          chmod 600 "$payload_file"
+          node scripts/mirror-yandex-legacy-supabase-bridge.mjs \
+            --folder-id "$TF_VAR_folder_id" \
+            --secret-name "$YC_STAGE_LEGACY_SUPABASE_BRIDGE_LOCKBOX_NAME" \
+            --payload-file "$payload_file"
       - name: Initialize Terraform remote state
         working-directory: infra/yandex
         run: >-
@@ -331,6 +396,7 @@ jobs:
           -target=yandex_lockbox_secret.media_s3_credentials
           -target=yandex_iam_service_account_static_access_key.api_media
           -target=yandex_lockbox_secret_iam_member.api_media_credentials_reader
+          -target=yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader
           -target=yandex_lockbox_secret_iam_member.migration_media_credentials_reader
           -target=yandex_lockbox_secret_iam_member.deployer_media_credentials_reader
       - name: Pin new push runtime identities for subsequent Terraform plans
