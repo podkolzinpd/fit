@@ -1,5 +1,6 @@
 import type { ChatBlockState, ChatConnectionState, ChatImageDraft, ChatMessage, ChatMessagePage, ChatThread, ChatUnreadState } from '../../shared/domain'
 import { chatMedia, chatQueries } from '../queries/chat.queries'
+import { chatMediaBridgeQueries } from '../queries/chat-media-bridge.queries'
 import { repositoryError } from './error'
 
 type ThreadRow = {
@@ -25,8 +26,11 @@ function connection(row: ConnectionRow): ChatConnectionState {
 async function message(row: MessageRow): Promise<ChatMessage> {
   let url: string | null = null
   if (row.image_path) {
-    const signed = await chatMedia.createSignedUrl(row.image_path, 60 * 60)
-    url = signed.error ? null : signed.data.signedUrl
+    const signed = await chatMediaBridgeQueries.sign(row.conversation_id, row.id)
+    if (signed === undefined) {
+      const legacy = await chatMedia.createSignedUrl(row.image_path, 60 * 60)
+      url = legacy.error ? null : legacy.data.signedUrl
+    } else url = signed.error ? null : signed.data?.signedUrl ?? null
   }
   return { id: row.id, conversationId: row.conversation_id, senderId: row.sender_id, body: row.body,
     image: row.image_path && row.image_mime_type === 'image/jpeg' && row.image_width && row.image_height && row.image_size_bytes
@@ -102,8 +106,11 @@ export const chatRepository = {
     if (image && stored) {
       const authorized = await chatQueries.authorizeSend(conversationId)
       if (authorized.error) throw repositoryError(authorized.error)
-      const uploaded = await chatMedia.upload(stored.path, blobFromDataUrl(image.dataUrl), { contentType: image.mimeType, upsert: false })
-      if (uploaded.error && !/already exists|duplicate/i.test(uploaded.error.message)) throw repositoryError(uploaded.error)
+      const uploaded = await chatMediaBridgeQueries.upload(conversationId, messageId, image)
+      if (uploaded === undefined) {
+        const legacy = await chatMedia.upload(stored.path, blobFromDataUrl(image.dataUrl), { contentType: image.mimeType, upsert: false })
+        if (legacy.error && !/already exists|duplicate/i.test(legacy.error.message)) throw repositoryError(legacy.error)
+      } else if (uploaded.error) throw repositoryError(uploaded.error)
     }
     const result = await chatQueries.send(conversationId, messageId, body, stored, replyToMessageId)
     if (result.error) throw repositoryError(result.error)
@@ -122,8 +129,11 @@ export const chatRepository = {
     const result = await chatQueries.remove(conversationId, messageId)
     if (result.error) throw repositoryError(result.error)
     if (result.data) {
-      const removed = await chatMedia.remove([result.data])
-      if (removed.error && !/not found/i.test(removed.error.message)) throw repositoryError(removed.error)
+      const removed = await chatMediaBridgeQueries.remove(conversationId, messageId)
+      if (removed === undefined) {
+        const legacy = await chatMedia.remove([result.data])
+        if (legacy.error && !/not found/i.test(legacy.error.message)) throw repositoryError(legacy.error)
+      } else if (removed.error) throw repositoryError(removed.error)
     }
   },
   async unreadState(conversationId: string): Promise<ChatUnreadState> {
