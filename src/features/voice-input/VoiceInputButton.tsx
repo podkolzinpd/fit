@@ -322,7 +322,7 @@ export function VoiceInputButton({
       {voiceButtonLabel(phase, elapsedSeconds, progress, idleLabel)}
       {beta && phase === 'idle' && <span className="voice-beta">beta</span>}
     </button>
-    {phase === 'loading' && <small className="muted">При первом запуске загружается локальная модель (~31 МБ).</small>}
+    {phase === 'loading' && <small className="muted">При первом запуске загружается локальная модель (~57 МБ).</small>}
     {message && <VoiceInputStatus message={message} undo={undo} onUndo={() => { undo?.(); setUndo(null); setMessage(null) }} onDismiss={() => setMessage(null)} />}
   </div>
 }
