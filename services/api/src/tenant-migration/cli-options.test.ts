@@ -27,6 +27,9 @@ describe('tenant migration CLI options', () => {
     ])).toMatchObject({
       root: { kind: 'standalone-client', profileId: TRAINER_ID },
     })
+    expect(parseTenantMigrationCliOptions([
+      'export', '--full-cohort', '--out', 'full.fit',
+    ])).toMatchObject({ root: { kind: 'full-cohort' } })
     expect(parseTenantMigrationCliOptions(['import', '--in', 'tenant.fit']))
       .toEqual({
         command: 'import',
@@ -45,6 +48,12 @@ describe('tenant migration CLI options', () => {
     { argumentsList: [] },
     { argumentsList: ['export', '--trainer-id', 'not-a-uuid', '--out', 'tenant.fit'] },
     { argumentsList: ['export', '--trainer-id', TRAINER_ID] },
+    {
+      argumentsList: [
+        'export', '--trainer-id', TRAINER_ID, '--full-cohort', '--out', 'tenant.fit',
+      ],
+    },
+    { argumentsList: ['import', '--full-cohort', '--in', 'tenant.fit'] },
     {
       argumentsList: [
         'export', '--trainer-id', TRAINER_ID,

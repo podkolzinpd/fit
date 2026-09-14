@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { aiStudioUsage, reportAiStudioMetric } from '../ai-studio-usage-metrics.js'
 
 const completionUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion'
 
@@ -77,6 +78,8 @@ export async function parseWorkout(request: Request): Promise<Response> {
     ].join('\n')
     const apiKey = required('YANDEX_CLOUD_API_KEY')
     const modelUri = `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`
+    const invocationId = request.headers.get('x-yc-request-id')
+    const iamToken = request.headers.get('x-yc-iam-token')
     for (let attempt = 1; attempt <= 2; attempt++) {
       let response: Response
       try {
@@ -87,12 +90,43 @@ export async function parseWorkout(request: Request): Promise<Response> {
         continue
       }
       if (!response.ok) {
+        await reportAiStudioMetric({
+          functionName: 'fit-parse-workout',
+          modelUri,
+          invocationId,
+          iamToken,
+          upstreamRequestId: response.headers.get('x-request-id'),
+          usage: null,
+        })
         console.error(JSON.stringify({ event: 'workout_parse_llm_error', attempt, status: response.status }))
         if (response.status >= 500 && attempt < 2) continue
         throw new HttpError(502, 'llm_unavailable')
       }
+      let payload: { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
       try {
-        const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
+        payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
+      } catch (error) {
+        await reportAiStudioMetric({
+          functionName: 'fit-parse-workout',
+          modelUri,
+          invocationId,
+          iamToken,
+          upstreamRequestId: response.headers.get('x-request-id'),
+          usage: null,
+        })
+        console.error(JSON.stringify({ event: 'workout_parse_invalid_response', attempt, message: error instanceof Error ? error.message : 'unknown' }))
+        if (attempt === 2) throw error
+        continue
+      }
+      await reportAiStudioMetric({
+        functionName: 'fit-parse-workout',
+        modelUri,
+        invocationId,
+        iamToken,
+        upstreamRequestId: response.headers.get('x-request-id'),
+        usage: aiStudioUsage(payload.result?.usage),
+      })
+      try {
         const result = validate(JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? ''), catalog)
         console.log(JSON.stringify({ event: 'workout_parse_completed', attempt, items: result.items.map(({ exerciseRef, sets }) => ({ exerciseRef, sets })), unmatched: result.unmatched.map(({ reason, suggestedExerciseRefs }) => ({ reason, suggestedExerciseRefs })) }))
         return Response.json(result)

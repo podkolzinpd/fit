@@ -20,12 +20,14 @@ import { completedWorkoutsInPeriod } from "./workout-source.js"
 import { buildSummaryConsistency } from "./summary-consistency.js"
 import { buildSummaryProgressFacts } from "./summary-progress-facts.js"
 import {
+  buildSummaryFingerprintPayload,
   buildSummaryModelInput,
   MAX_SUMMARY_MODEL_INPUT_CHARS,
   SUMMARY_AGGREGATOR_VERSION,
 } from "./summary-model-input.js"
 import { resolveSupabasePublicKey } from "./supabase-public-key.js"
 import { diagnosticAllowed, PrivateSummaryDiagnostic } from './private-diagnostic.js'
+import { aiStudioUsage, reportAiStudioMetric } from "../ai-studio-usage-metrics.js"
 
 const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
@@ -346,6 +348,23 @@ function serviceClient() {
       auth: { persistSession: false, autoRefreshToken: false },
     },
   )
+}
+
+function throwSupabaseOperationError(
+  requestId: string,
+  operation: string,
+  error: unknown,
+  status: number,
+  publicCode: string,
+): never {
+  const details = isRecord(error) ? error : {}
+  console.warn('summary supabase operation failed', {
+    request_id: requestId,
+    operation,
+    upstream_code: typeof details.code === 'string' ? details.code.slice(0, 80) : null,
+    upstream_message: typeof details.message === 'string' ? details.message.slice(0, 240) : null,
+  })
+  throw new HttpError(status, publicCode)
 }
 
 type GenerationDecision = 'claimed' | 'cached' | 'in_progress' | 'cooldown' | 'period_limit' | 'daily_limit'
@@ -706,6 +725,8 @@ type YandexRequestOptions = {
   authorization?: YandexAiAuthorization
   fetchImpl?: typeof fetch
   requestId?: string
+  invocationId?: string
+  iamToken?: string
   sleep?: (delayMs: number) => Promise<void>
   skipChunking?: boolean
   qualityData?: unknown
@@ -916,6 +937,14 @@ async function requestStructuredYandex<T>(
     }
 
     if (!response.ok) {
+      await reportAiStudioMetric({
+        functionName: "fit-summarize-client-training",
+        modelUri,
+        invocationId: options.invocationId ?? null,
+        iamToken: options.iamToken ?? null,
+        upstreamRequestId: response.headers.get("x-request-id"),
+        usage: null,
+      })
       const failure = yandexResponseError(response.status)
       if (attempt < maxAttempts && isRetryableYandexStatus(response.status)) {
         structuredRetryLog(options, attempt, failure.message, null, 0, null)
@@ -930,6 +959,14 @@ async function requestStructuredYandex<T>(
     try {
       payload = parseYandexJson<YandexCompletionResponse>(payloadText)
     } catch {
+      await reportAiStudioMetric({
+        functionName: "fit-summarize-client-training",
+        modelUri,
+        invocationId: options.invocationId ?? null,
+        iamToken: options.iamToken ?? null,
+        upstreamRequestId: response.headers.get("x-request-id"),
+        usage: null,
+      })
       const code = "yandex_cloud_invalid_upstream_json"
       if (attempt < maxAttempts) {
         structuredRetryLog(options, attempt, code, null, 0, null)
@@ -941,6 +978,14 @@ async function requestStructuredYandex<T>(
     const alternative = payload.result?.alternatives?.[0]
     const alternativeStatus = alternative?.status ?? null
     const text = alternative?.message?.text?.trim() ?? ""
+    await reportAiStudioMetric({
+      functionName: "fit-summarize-client-training",
+      modelUri,
+      invocationId: options.invocationId ?? null,
+      iamToken: options.iamToken ?? null,
+      upstreamRequestId: response.headers.get("x-request-id"),
+      usage: aiStudioUsage(payload.result?.usage),
+    })
 
     modelVersion = payload.result?.modelVersion ?? modelVersion
     for (const [key, value] of Object.entries(payload.result?.usage ?? {})) {
@@ -1156,6 +1201,8 @@ export async function requestYandexSummaryDeduplicated(
 
 export const summarizeClientTraining = async (req: Request): Promise<Response> => {
     const requestId = crypto.randomUUID()
+    const invocationId = req.headers.get("x-yc-request-id")
+    const iamToken = req.headers.get("x-yc-iam-token")
     try {
       if (req.method !== "POST") {
         return Response.json(
@@ -1413,13 +1460,12 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
       const modelInput = buildSummaryModelInput(trainingData)
       const sourceInputChars = JSON.stringify(trainingData).length
       const modelInputChars = JSON.stringify(modelInput).length
-      const inputFingerprint = await fingerprint({
-        prompt_version: PROMPT_VERSION,
-        analysis_version: SUMMARY_ANALYSIS_VERSION,
-        aggregation_version: SUMMARY_AGGREGATOR_VERSION,
-        model_id: configuredModelId(),
-        source: trainingData,
-      })
+      const inputFingerprint = await fingerprint(buildSummaryFingerprintPayload({
+        promptVersion: PROMPT_VERSION,
+        analysisVersion: SUMMARY_ANALYSIS_VERSION,
+        modelId: configuredModelId(),
+        modelInput,
+      }))
 
       if (input.diagnostic) {
         const stats = { workouts: completedWorkouts.length, exercises: exercises.length, sets: sets.length, source_input_chars: sourceInputChars, model_input_chars: modelInputChars }
@@ -1450,7 +1496,9 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
           .eq("period_start", input.period_start)
           .eq("period_end", input.period_end)
           .maybeSingle()
-        if (cacheError) throw new HttpError(500, "summary_cache_lookup_failed")
+        if (cacheError) throwSupabaseOperationError(
+          requestId, 'read_client_published_cache', cacheError, 500, 'summary_cache_lookup_failed',
+        )
         const cachedSummary = cached?.summary && typeof cached.summary === 'object' && !Array.isArray(cached.summary)
           ? cached.summary as Record<string, unknown>
           : null
@@ -1468,7 +1516,9 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
             p_input_fingerprint: inputFingerprint,
           },
         )
-        if (sharedCacheError) throw new HttpError(500, "summary_cache_lookup_failed")
+        if (sharedCacheError) throwSupabaseOperationError(
+          requestId, 'publish_client_shared_cache', sharedCacheError, 500, 'summary_cache_lookup_failed',
+        )
         if (sharedCache) {
           console.info("summary shared cache published", { request_id: requestId, trigger_reason: input.trigger_reason })
           return Response.json({ data: sharedCache, cached: true })
@@ -1487,7 +1537,9 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
           .eq("prompt_version", PROMPT_VERSION)
           .maybeSingle()
         if (cacheError) {
-          throw new HttpError(500, "summary_cache_lookup_failed")
+          throwSupabaseOperationError(
+            requestId, 'read_trainer_cache', cacheError, 500, 'summary_cache_lookup_failed',
+          )
         }
         if (cached?.input_fingerprint === inputFingerprint) {
           console.info("summary cache hit", { request_id: requestId, actor: "trainer", force_requested: input.force, trigger_reason: input.trigger_reason })
@@ -1517,7 +1569,9 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
           p_model_input_chars: modelInputChars,
         },
       )
-      if (claimError) throw new HttpError(503, 'summary_generation_guard_failed')
+      if (claimError) throwSupabaseOperationError(
+        requestId, 'claim_generation_guard', claimError, 503, 'summary_generation_guard_failed',
+      )
       const generationDecision = parseGenerationDecision(claimData)
       console.info('summary generation guard decision', {
         request_id: requestId,
@@ -1540,7 +1594,9 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
               p_input_fingerprint: inputFingerprint,
             },
           )
-          if (sharedCacheError) throw new HttpError(500, 'summary_cache_lookup_failed')
+          if (sharedCacheError) throwSupabaseOperationError(
+            requestId, 'publish_guarded_client_cache', sharedCacheError, 500, 'summary_cache_lookup_failed',
+          )
           if (sharedCache) return Response.json({ data: sharedCache, cached: true })
         }
         if (isTrainer) {
@@ -1552,7 +1608,9 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
             .eq('period_end', input.period_end)
             .eq('prompt_version', PROMPT_VERSION)
             .maybeSingle()
-          if (cacheError) throw new HttpError(500, 'summary_cache_lookup_failed')
+          if (cacheError) throwSupabaseOperationError(
+            requestId, 'read_guarded_trainer_cache', cacheError, 500, 'summary_cache_lookup_failed',
+          )
           if (cached?.input_fingerprint === inputFingerprint) {
             const { input_fingerprint: _fingerprint, ...data } = cached
             return Response.json({ data, cached: true })
@@ -1615,7 +1673,11 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
           modelInput,
           trainingData.period.start,
           trainingData.period.end,
-          { requestId },
+          {
+            requestId,
+            ...(invocationId === null ? {} : { invocationId }),
+            ...(iamToken === null ? {} : { iamToken }),
+          },
         )
       } catch (error) {
         await recordGenerationFailure(error)

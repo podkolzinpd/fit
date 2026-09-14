@@ -90,12 +90,30 @@ export function fingerprintStandaloneClient(clientProfileId: string): string {
     .slice(0, 16)
 }
 
+export function fingerprintFullCohort(
+  tables: readonly TenantMigrationTable[],
+): string {
+  const manifest = tables.map((table) => ({
+    checksum: table.checksum,
+    name: table.name,
+    rowCount: table.rowCount,
+  }))
+  return createHash('sha256')
+    .update(`fit-full-cohort-v1:${canonicalJson(manifest)}`)
+    .digest('hex')
+    .slice(0, 16)
+}
+
 export function getTenantMigrationRoot(
   bundle: TenantMigrationBundle,
 ): TenantMigrationRoot {
-  return bundle.format === 'fit-tenant-bundle-v1'
-    ? { kind: 'trainer', profileId: bundle.trainerId }
-    : { kind: 'standalone-client', profileId: bundle.clientProfileId }
+  if (bundle.format === 'fit-tenant-bundle-v1') {
+    return { kind: 'trainer', profileId: bundle.trainerId }
+  }
+  if (bundle.format === 'fit-standalone-client-bundle-v1') {
+    return { kind: 'standalone-client', profileId: bundle.clientProfileId }
+  }
+  return { kind: 'full-cohort', profileId: 'application-v1' }
 }
 
 export function buildMigrationTable(
@@ -139,45 +157,63 @@ export function readMigrationBundle(value: unknown): TenantMigrationBundle {
     || (
       value.format !== 'fit-tenant-bundle-v1'
       && value.format !== 'fit-standalone-client-bundle-v1'
+      && value.format !== 'fit-full-cohort-bundle-v1'
     )
   ) {
     throw new TenantMigrationArtifactError('artifact_invalid')
   }
   const createdAt = readString(value, 'createdAt')
   const tenantFingerprint = readString(value, 'tenantFingerprint')
-  const rootProfileId = readString(
-    value,
-    value.format === 'fit-tenant-bundle-v1' ? 'trainerId' : 'clientProfileId',
-  )
+  const rootProfileId = value.format === 'fit-full-cohort-bundle-v1'
+    ? undefined
+    : readString(
+        value,
+        value.format === 'fit-tenant-bundle-v1'
+          ? 'trainerId'
+          : 'clientProfileId',
+      )
+  const tables = Array.isArray(value.tables)
+    ? value.tables.map(readMigrationTable)
+    : undefined
   const expectedFingerprint = value.format === 'fit-tenant-bundle-v1'
-    ? fingerprintTenant(rootProfileId)
-    : fingerprintStandaloneClient(rootProfileId)
+    ? fingerprintTenant(rootProfileId ?? '')
+    : value.format === 'fit-standalone-client-bundle-v1'
+      ? fingerprintStandaloneClient(rootProfileId ?? '')
+      : fingerprintFullCohort(tables ?? [])
   if (
     Number.isNaN(Date.parse(createdAt))
     || !/^[0-9a-f]{16}$/.test(tenantFingerprint)
-    || !UUID_PATTERN.test(rootProfileId)
+    || (rootProfileId !== undefined && !UUID_PATTERN.test(rootProfileId))
     || expectedFingerprint !== tenantFingerprint
-    || !Array.isArray(value.tables)
+    || tables === undefined
   ) throw new TenantMigrationArtifactError('artifact_invalid')
-  const tables = value.tables.map(readMigrationTable)
   if (new Set(tables.map((table) => table.name)).size !== tables.length) {
     throw new TenantMigrationArtifactError('artifact_invalid')
   }
-  return value.format === 'fit-tenant-bundle-v1'
-    ? {
-        format: 'fit-tenant-bundle-v1',
-        createdAt,
-        tenantFingerprint,
-        trainerId: rootProfileId,
-        tables,
-      }
-    : {
-        format: 'fit-standalone-client-bundle-v1',
-        createdAt,
-        tenantFingerprint,
-        clientProfileId: rootProfileId,
-        tables,
-      }
+  if (value.format === 'fit-tenant-bundle-v1') {
+    return {
+      format: 'fit-tenant-bundle-v1',
+      createdAt,
+      tenantFingerprint,
+      trainerId: rootProfileId ?? '',
+      tables,
+    }
+  }
+  if (value.format === 'fit-standalone-client-bundle-v1') {
+    return {
+      format: 'fit-standalone-client-bundle-v1',
+      createdAt,
+      tenantFingerprint,
+      clientProfileId: rootProfileId ?? '',
+      tables,
+    }
+  }
+  return {
+    format: 'fit-full-cohort-bundle-v1',
+    createdAt,
+    tenantFingerprint,
+    tables,
+  }
 }
 
 function deriveKey(passphrase: string, salt: Buffer): Promise<Buffer> {

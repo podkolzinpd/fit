@@ -38,6 +38,20 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
   ownership/RLS. Одновременная передача read-only и read-write credentials
   отклоняется.
 
+## Приватные media
+
+- Supabase и Yandex adapters сохраняют один доменный контракт путей, но не
+  обращаются к storage друг друга после cutover.
+- Yandex API хранит новые chat images и подписывает exercise media в одном
+  private versioned Object Storage bucket с разными `chat-media/` и
+  `fit-exercise-media/` prefixes. Публичный read/list/config запрещён.
+- Static S3 key принадлежит API service account, ограничен bucket-level
+  `storage.editor` и создаётся напрямую в Lockbox без попадания в Terraform
+  state. Runtime получает только immutable secret version.
+- Full-cohort DB import не начинает target-транзакцию, пока все chat objects из
+  snapshot не существуют в Yandex и не совпадают по размеру. Отдельная
+  idempotent media copy дополнительно фиксирует source SHA-256 metadata.
+
 ## Решения
 
 - UUIDv4 для PK/FK бизнес-сущностей.

@@ -434,7 +434,8 @@ describe('summarizeClientTraining cloud handler', () => {
       previous: { exercises: 14, sessions: 14, sets: 70 },
       complete: true,
     })
-    expect(input.exercises).toHaveLength(28)
+    expect(input.exercises.length + input.exercise_index_count + input.exercise_index_omitted_count).toBe(28)
+    expect(input.exercise_rollup.unique_exercises).toBe(28)
     expect(input.evidence_exercise_count).toBeGreaterThan(0)
     expect(input.exercises.some((exercise) => exercise.current?.control_points?.[0]?.sets === 10)).toBe(true)
     expect(input.exercises.flatMap((exercise) => exercise.current?.control_points ?? [])

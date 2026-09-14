@@ -1694,7 +1694,7 @@ test('iPhone: фактический вес переносится в следу
   await page.screenshot({ path: testInfo.outputPath('live-weight-carry-430.png'), fullPage: true })
 })
 
-test('iPhone: подходы Live стоят вплотную при крупных touch-зонах на 360 px', async ({ page }, testInfo) => {
+test('iPhone: подходы Live разделены при полноширинных touch-зонах на 360 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 360, height: 780 })
   const clientName = await createIsolatedClient(page, testInfo)
   await page.goto('/workouts/new')
@@ -1702,6 +1702,9 @@ test('iPhone: подходы Live стоят вплотную при крупн�
   await addExercise(page, 'Присед со штангой', true)
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: '＋ Подход' }).click()
+  await page.getByLabel('Вес, подход 2').fill('40')
+  await page.getByLabel('Повторы, подход 2').fill('10')
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
@@ -1715,9 +1718,12 @@ test('iPhone: подходы Live стоят вплотную при крупн�
   expect(box!.height).toBeLessThanOrEqual(48)
   const setRow = confirm.locator('xpath=ancestor::form')
   const setRowBox = await setRow.boundingBox()
+  const nextSetRowBox = await page.locator('.live-set-table > .live-set').nth(1).boundingBox()
   expect(setRowBox).not.toBeNull()
-  expect(setRowBox!.height).toBeGreaterThanOrEqual(44)
-  expect(setRowBox!.height).toBeLessThanOrEqual(46)
+  expect(nextSetRowBox).not.toBeNull()
+  expect(setRowBox!.height).toBeGreaterThanOrEqual(48)
+  expect(setRowBox!.height).toBeLessThanOrEqual(50)
+  expect(nextSetRowBox!.y - (setRowBox!.y + setRowBox!.height)).toBeGreaterThanOrEqual(7)
   const activeExerciseStyle = await page.locator('.live-exercise.current').evaluate((element) => {
     const style = getComputedStyle(element)
     return { borderRadius: style.borderRadius, background: style.backgroundColor }

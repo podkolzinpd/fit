@@ -4,6 +4,7 @@ export type TenantMigrationCliOptions =
       root:
         | { kind: 'trainer'; profileId: string }
         | { kind: 'standalone-client'; profileId: string }
+        | { kind: 'full-cohort' }
       artifactPath: string
       allowRemote: boolean
     }
@@ -51,7 +52,11 @@ export function parseTenantMigrationCliOptions(
   const flags = new Set<string>()
   for (let index = 1; index < argv.length; index += 1) {
     const argument = argv[index]
-    if (argument === '--apply' || argument === '--allow-remote') {
+    if (
+      argument === '--apply'
+      || argument === '--allow-remote'
+      || argument === '--full-cohort'
+    ) {
       if (flags.has(argument)) {
         throw new TenantMigrationCliOptionsError('invalid_arguments')
       }
@@ -78,26 +83,36 @@ export function parseTenantMigrationCliOptions(
   if (command === 'export') {
     const trainerId = values.get('--trainer-id')
     const clientProfileId = values.get('--client-profile-id')
+    const fullCohort = flags.has('--full-cohort')
     const rootProfileId = trainerId ?? clientProfileId
     if (
-      rootProfileId === undefined
-      || !UUID_PATTERN.test(rootProfileId)
-      || (trainerId !== undefined) === (clientProfileId !== undefined)
-      || values.size !== 2
+      (fullCohort && rootProfileId !== undefined)
+      || (!fullCohort && (
+        rootProfileId === undefined
+        || !UUID_PATTERN.test(rootProfileId)
+        || (trainerId !== undefined) === (clientProfileId !== undefined)
+      ))
+      || values.size !== (fullCohort ? 1 : 2)
       || !values.has('--out')
       || flags.has('--apply')
     ) throw new TenantMigrationCliOptionsError('invalid_arguments')
     return {
       command,
-      root: trainerId === undefined
-        ? { kind: 'standalone-client', profileId: rootProfileId }
-        : { kind: 'trainer', profileId: rootProfileId },
+      root: fullCohort
+        ? { kind: 'full-cohort' }
+        : trainerId === undefined
+          ? { kind: 'standalone-client', profileId: rootProfileId ?? '' }
+          : { kind: 'trainer', profileId: rootProfileId ?? '' },
       artifactPath: readValue(values, '--out'),
       allowRemote,
     }
   }
 
-  if (values.size !== 1 || !values.has('--in')) {
+  if (
+    values.size !== 1
+    || !values.has('--in')
+    || flags.has('--full-cohort')
+  ) {
     throw new TenantMigrationCliOptionsError('invalid_arguments')
   }
   if (command === 'validate' && flags.has('--apply')) {

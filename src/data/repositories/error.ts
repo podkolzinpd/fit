@@ -80,11 +80,23 @@ export function repositoryError(error: unknown): RepositoryError {
   if (code === 'PT409' || code === '40001') {
     return new RepositoryError(code, 'Данные уже изменились. Обновите страницу и повторите.')
   }
+  if (code === 'PT404' && normalizedMessage.includes('exercise_not_found')) {
+    return new RepositoryError(
+      'exercise_not_found',
+      'Упражнение больше недоступно. Выберите другое или создайте его заново.',
+    )
+  }
   if (code === 'PT404') {
     return new RepositoryError(code, 'Запись не найдена или больше недоступна.')
   }
   if (code === 'PT403') {
     return new RepositoryError(code, 'Ответить может тренер, назначенный на эту тренировку.')
+  }
+  if (code === 'PT422' && normalizedMessage.includes('trainer_not_initialized')) {
+    return new RepositoryError(
+      'trainer_not_initialized',
+      'Профиль тренера не удалось подготовить. Обновите страницу и повторите.',
+    )
   }
   if (code === 'PT422' && /(?:^|\W)invalid_stage(?:$|\W)/.test(normalizedMessage)) {
     return new RepositoryError(

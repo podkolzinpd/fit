@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  FULL_COHORT_MIGRATION_TABLES,
+  FULL_COHORT_SOURCE_PREFLIGHT_SQL,
   STANDALONE_CLIENT_MIGRATION_TABLES,
   STANDALONE_CLIENT_SOURCE_PREFLIGHT_SQL,
   TENANT_MIGRATION_TABLES,
@@ -9,7 +11,7 @@ import {
 function expectSafeManifest(
   manifest: typeof TENANT_MIGRATION_TABLES,
 ): void {
-  expect(manifest).toHaveLength(31)
+  expect(manifest).toHaveLength(32)
   const names = manifest.map((spec) => spec.name)
   expect(new Set(names).size).toBe(names.length)
   for (const spec of manifest) {
@@ -27,8 +29,29 @@ describe('tenant migration catalog', () => {
   it('keeps a unique, parameterized and identifier-safe manifest', () => {
     expectSafeManifest(TENANT_MIGRATION_TABLES)
     expectSafeManifest(STANDALONE_CLIENT_MIGRATION_TABLES)
+    expectSafeManifest(FULL_COHORT_MIGRATION_TABLES)
     expect(STANDALONE_CLIENT_MIGRATION_TABLES.map((spec) => spec.name))
       .toEqual(TENANT_MIGRATION_TABLES.map((spec) => spec.name))
+    expect(FULL_COHORT_MIGRATION_TABLES.map((spec) => spec.name))
+      .toEqual(TENANT_MIGRATION_TABLES.map((spec) => spec.name))
+  })
+
+  it('exports a complete application snapshot without target-only receipts', () => {
+    const byName = new Map(
+      FULL_COHORT_MIGRATION_TABLES.map((spec) => [spec.name, spec]),
+    )
+    expect(byName.get('public.clients')?.sourceSql)
+      .toContain("$1::text = 'application-v1'")
+    expect(byName.get('public.trainer_professional_profiles')?.sourceSql)
+      .toContain('trainer_professional_profiles')
+    expect(byName.get('public.client_trainers')?.sourceSql)
+      .toContain('client_private_details')
+    expect(byName.get('app_private.push_notifications_outbox')?.sourceSql)
+      .toContain('never-export-outbox')
+    expect(FULL_COHORT_SOURCE_PREFLIGHT_SQL)
+      .not.toContain('push_notifications_outbox')
+    expect(FULL_COHORT_SOURCE_PREFLIGHT_SQL)
+      .not.toContain('message.image_path is not null')
   })
 
   it('maps source-only fields and requires target-only receipts to be empty', () => {

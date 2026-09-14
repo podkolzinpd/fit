@@ -213,6 +213,54 @@ describe('authRepository.initialize', () => {
     expect(queries.initializeAccount).toHaveBeenCalledWith('trainer', 'Ирина', undefined, expect.any(String))
   })
 
+  it('восстанавливает отсутствующую запись тренера для существующего профиля', async () => {
+    queries.getLinkedClient.mockResolvedValue({ data: null, error: null })
+    queries.getTrainer.mockResolvedValue({ data: null, error: null })
+    queries.getProfile.mockResolvedValue({
+      data: {
+        account_role: 'trainer',
+        first_name: 'Игорь',
+        last_name: null,
+        timezone: 'Europe/Samara',
+      },
+      error: null,
+    })
+    queries.initializeAccount.mockResolvedValue({ data: null, error: null })
+
+    const actor = await authRepository.initialize({
+      id: 'trainer-without-row',
+      email: 'trainer@example.test',
+      user_metadata: { first_name: 'Устаревшее имя' },
+    })
+
+    expect(actor).toMatchObject({ kind: 'trainer', role: 'trainer', firstName: 'Игорь' })
+    expect(queries.initializeAccount).toHaveBeenCalledWith('trainer', undefined, undefined, 'Europe/Samara')
+    expect(queries.getProfile).toHaveBeenCalledTimes(1)
+  })
+
+  it('не создаёт запись тренера для неподключённого клиентского аккаунта', async () => {
+    queries.getLinkedClient.mockResolvedValue({ data: null, error: null })
+    queries.getTrainer.mockResolvedValue({ data: null, error: null })
+    queries.getProfile.mockResolvedValue({
+      data: {
+        account_role: 'client',
+        first_name: 'Клиент',
+        last_name: null,
+        timezone: 'Europe/Moscow',
+      },
+      error: null,
+    })
+
+    const actor = await authRepository.initialize({
+      id: 'client-without-card',
+      email: 'client@example.test',
+      user_metadata: { account_role: 'client' },
+    })
+
+    expect(actor.role).toBe('client')
+    expect(queries.initializeAccount).not.toHaveBeenCalled()
+  })
+
   it('не перезаписывает сохранённое имя регистрационными metadata', async () => {
     queries.getLinkedClient.mockResolvedValue({ data: null, error: null })
     queries.getTrainer.mockResolvedValue({ data: { profile_id: 'trainer-1' }, error: null })

@@ -1,0 +1,120 @@
+name: Inspect or restore SpeechKit relay
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Inspect only or restore the exact production relay VM
+        required: true
+        default: inspect
+        type: choice
+        options:
+          - inspect
+          - apply
+      confirmation:
+        description: Type RESTORE_SPEECHKIT_RELAY for apply mode
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production-speechkit-relay
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    runs-on: ubuntu-24.04
+    env:
+      YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
+      YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
+      YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+      RELAY_VM_NAME: fit-speechkit-relay-vm
+      RELAY_EXPECTED_IP: 84.201.157.124
+      RELAY_HOST: 84-201-157-124.sslip.io
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh \
+            --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - name: Exchange GitHub OIDC token
+        run: scripts/yandex-github-oidc.sh
+      - name: Inspect exact relay VM and address
+        run: |
+          set -euo pipefail
+          instance=$(yc compute instance get \
+            --name "$RELAY_VM_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --format json)
+          relay_id=$(jq -er '.id' <<<"$instance")
+          relay_status=$(jq -er '.status' <<<"$instance")
+          relay_ip=$(jq -er '.network_interfaces[0].primary_v4_address.one_to_one_nat.address' <<<"$instance")
+          relay_zone=$(jq -er '.zone_id' <<<"$instance")
+
+          [[ "$relay_status" == "RUNNING" ]]
+          [[ "$relay_ip" == "$RELAY_EXPECTED_IP" ]]
+
+          addresses=$(yc vpc address list --folder-id "$YC_FOLDER_ID" --format json)
+          address=$(jq -cer --arg relay_ip "$relay_ip" \
+            '.[] | select(.external_ipv4_address.address == $relay_ip)' <<<"$addresses")
+          address_id=$(jq -er '.id' <<<"$address")
+          address_reserved=$(jq -r '.reserved // false' <<<"$address")
+
+          curl --fail --silent --show-error \
+            --connect-timeout 5 \
+            --max-time 10 \
+            "http://$relay_ip:8080/" >/dev/null
+
+          printf 'Relay VM: %s (%s)\n' "$relay_id" "$relay_status"
+          printf 'Zone: %s\n' "$relay_zone"
+          printf 'Public IP: %s\n' "$relay_ip"
+          printf 'Address: %s (reserved=%s)\n' "$address_id" "$address_reserved"
+          printf 'Metadata keys: %s\n' "$(jq -cr '(.metadata // {}) | keys' <<<"$instance")"
+          printf 'RELAY_VM_ID=%s\n' "$relay_id" >>"$GITHUB_ENV"
+          printf 'RELAY_ADDRESS_ID=%s\n' "$address_id" >>"$GITHUB_ENV"
+          printf 'RELAY_ADDRESS_RESERVED=%s\n' "$address_reserved" >>"$GITHUB_ENV"
+
+      - name: Require explicit production confirmation
+        if: inputs.mode == 'apply'
+        run: |
+          [[ "${{ inputs.confirmation }}" == "RESTORE_SPEECHKIT_RELAY" ]] || {
+            echo 'Apply mode requires the exact confirmation RESTORE_SPEECHKIT_RELAY.' >&2
+            exit 1
+          }
+
+      - name: Reserve current IP and restore HTTPS/WSS proxy
+        if: inputs.mode == 'apply'
+        run: |
+          set -euo pipefail
+          if [[ "$RELAY_ADDRESS_RESERVED" != "true" ]]; then
+            yc vpc address update --reserved=true "$RELAY_ADDRESS_ID"
+          fi
+          yc compute instance add-metadata \
+            --id "$RELAY_VM_ID" \
+            --metadata-from-file startup-script=services/speechkit-relay/recover-startup.sh
+          yc compute instance restart --id "$RELAY_VM_ID"
+
+      - name: Verify HTTPS and SpeechKit WebSocket
+        if: inputs.mode == 'apply'
+        run: |
+          set -euo pipefail
+          healthy=false
+          for attempt in $(seq 1 48); do
+            if curl --fail --silent --show-error \
+              --connect-timeout 5 \
+              --max-time 10 \
+              "https://$RELAY_HOST/" >/dev/null; then
+              healthy=true
+              break
+            fi
+            sleep 5
+          done
+          [[ "$healthy" == "true" ]]
+          npm ci --prefix services/speechkit-relay
+          node services/speechkit-relay/smoke.mjs "wss://$RELAY_HOST/stt"

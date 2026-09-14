@@ -1585,10 +1585,61 @@ test('client Live keeps row geometry, notes and timer independent', async ({ pag
   await saved
   await page.reload()
   await expect(page.locator('.live-note-preview')).toHaveText('Скамья 3, удобная высота')
+  await expect(page.getByRole('combobox', { name: 'Отдых' })).toHaveValue('90')
+  await expect(page.getByText('Отдых в этой тренировке')).toHaveCount(0)
+  await page.setViewportSize({ width: 375, height: 812 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('live-set-layout-375.png'), fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
   const rows = page.locator('.live-set-table > .live-set')
   const firstBefore = await rows.first().boundingBox()
   const secondBefore = await rows.nth(1).boundingBox()
   const secondInput = rows.nth(1).getByLabel('Фактический вес')
+  const contentScrollBeforeKeyboard = await page.locator('.content').evaluate((element) => element.scrollTop)
+  // Имитируем уменьшение WKWebView после появления цифровой клавиатуры.
+  // Событие фокуса отправляем без нативной прокрутки, чтобы тест проверял
+  // позиционирование самого Fit, а не встроенную эвристику браузера.
+  await page.evaluate(() => {
+    const root = document.documentElement
+    root.classList.add('app-keyboard-open')
+    root.style.setProperty('--app-viewport-height', '844px')
+    root.style.setProperty('--app-visible-height', '220px')
+    root.style.setProperty('--app-viewport-offset-top', '0px')
+    document.querySelector('.phone-frame')?.classList.add('keyboard-open')
+    const content = document.querySelector('.content')
+    content?.scrollTo(0, 0)
+    if (content instanceof HTMLElement) {
+      const originalScrollTo = content.scrollTo.bind(content)
+      const state = window as Window & { __liveKeyboardScrolls?: number }
+      state.__liveKeyboardScrolls = 0
+      content.scrollTo = ((first?: number | ScrollToOptions, second?: number) => {
+        state.__liveKeyboardScrolls = (state.__liveKeyboardScrolls ?? 0) + 1
+        if (typeof first === 'number') originalScrollTo(first, second ?? 0)
+        else originalScrollTo(first)
+      }) as typeof content.scrollTo
+    }
+  })
+  const rowBeforeKeyboardScroll = await rows.nth(1).locator('.live-set-grid').boundingBox()
+  const contentBeforeKeyboardScroll = await page.locator('.content').boundingBox()
+  if (!rowBeforeKeyboardScroll || !contentBeforeKeyboardScroll) throw new Error('Expected initially clipped Live row geometry')
+  expect(rowBeforeKeyboardScroll.y + rowBeforeKeyboardScroll.height).toBeGreaterThan(contentBeforeKeyboardScroll.y + contentBeforeKeyboardScroll.height - 15)
+  await secondInput.evaluate((element) => element.dispatchEvent(new FocusEvent('focusin', { bubbles: true })))
+  await page.waitForTimeout(250)
+  expect(await page.evaluate(() => (window as Window & { __liveKeyboardScrolls?: number }).__liveKeyboardScrolls ?? 0)).toBeGreaterThan(0)
+  const focusedRowBox = await rows.nth(1).locator('.live-set-grid').boundingBox()
+  const keyboardContentBox = await page.locator('.content').boundingBox()
+  if (!focusedRowBox || !keyboardContentBox) throw new Error('Expected focused Live row and keyboard viewport geometry')
+  expect(focusedRowBox.y).toBeGreaterThanOrEqual(keyboardContentBox.y + 15)
+  expect(focusedRowBox.y + focusedRowBox.height).toBeLessThanOrEqual(keyboardContentBox.y + keyboardContentBox.height - 15)
+  await page.evaluate((restoreScrollTop) => {
+    const root = document.documentElement
+    root.classList.remove('app-keyboard-open')
+    root.style.removeProperty('--app-viewport-height')
+    root.style.removeProperty('--app-visible-height')
+    root.style.removeProperty('--app-viewport-offset-top')
+    document.querySelector('.phone-frame')?.classList.remove('keyboard-open')
+    document.querySelector('.content')?.scrollTo(0, restoreScrollTop)
+  }, contentScrollBeforeKeyboard)
   await secondInput.fill('43')
   await expect(secondInput).toBeFocused()
   await page.clock.runFor(1500)
@@ -1605,11 +1656,36 @@ test('client Live keeps row geometry, notes and timer independent', async ({ pag
   await page.screenshot({ path: testInfo.outputPath('live-timer-sheet-390.png') })
   await page.getByRole('button', { name: 'Пропустить', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Таймер отдыха', exact: true })).toBeVisible()
+  const firstAction = rows.first().getByRole('button', { name: 'Редактировать подход' })
+  const secondAction = rows.nth(1).getByRole('button', { name: 'Готово, отдых' })
+  const firstActionBox = await firstAction.boundingBox()
+  const secondActionBox = await secondAction.boundingBox()
+  if (!firstActionBox || !secondActionBox) throw new Error('Expected both Live set actions to have geometry')
+  expect(secondActionBox.y - (firstActionBox.y + firstActionBox.height)).toBeGreaterThanOrEqual(7)
+
+  // Регрессия с реального iPhone: сохранение верхней строки рисовало status
+  // поверх нижней галочки, а соприкасающиеся touch targets выбирали верхнюю.
+  await firstAction.click()
+  await rows.first().getByLabel('Фактический вес').fill('41')
+  await rows.first().getByRole('button', { name: 'Сохранить' }).click()
+  const saveFeedback = page.getByRole('status').filter({ hasText: /Сохранено|Сохраняем/ })
+  await expect(saveFeedback).toBeVisible()
+  const feedbackBox = await saveFeedback.boundingBox()
+  const lowerBox = await secondAction.boundingBox()
+  if (!feedbackBox || !lowerBox) throw new Error('Expected save status and lower action geometry')
+  const overlapsLowerAction = feedbackBox.x < lowerBox.x + lowerBox.width
+    && feedbackBox.x + feedbackBox.width > lowerBox.x
+    && feedbackBox.y < lowerBox.y + lowerBox.height
+    && feedbackBox.y + feedbackBox.height > lowerBox.y
+  expect(overlapsLowerAction).toBe(false)
+  const lowerCenter = { x: lowerBox.x + lowerBox.width / 2, y: lowerBox.y + lowerBox.height / 2 }
+  expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.getAttribute('aria-label'), lowerCenter)).toBe('Готово, отдых')
+  await page.touchscreen.tap(lowerCenter.x, lowerCenter.y)
+  await expect(page.locator('.live-exercise-collapsed')).toContainText('Жим')
+  await expect(page.getByRole('button', { name: 'Завершить тренировку' })).toHaveAttribute('data-variant', 'primary')
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Бег')
   await page.locator('[data-exercise-ref="running"]').click()
-  await expect(page.locator('.live-exercise-upcoming')).toContainText('Бег')
-  await rows.nth(1).getByRole('button', { name: 'Готово, отдых' }).click()
   await expect(page.locator('.live-exercise-collapsed')).toContainText('Жим')
   const nextCard = page.locator('.live-exercise.current')
   await expect(nextCard).toContainText('Бег')

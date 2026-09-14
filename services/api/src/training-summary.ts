@@ -14,6 +14,7 @@ import {
 } from './legacy-summary/index.js'
 import { buildTrainingGoalContext } from './legacy-summary/summary-goal.js'
 import {
+  buildSummaryFingerprintPayload,
   buildSummaryModelInput,
   MAX_SUMMARY_MODEL_INPUT_CHARS,
   SUMMARY_AGGREGATOR_VERSION,
@@ -181,13 +182,12 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
     if (modelInputChars > MAX_SUMMARY_MODEL_INPUT_CHARS) {
       throw new HttpError(422, 'summary_model_input_too_large')
     }
-    const inputFingerprint = fingerprint({
-      prompt_version: PROMPT_VERSION,
-      analysis_version: SUMMARY_ANALYSIS_VERSION,
-      aggregation_version: SUMMARY_AGGREGATOR_VERSION,
-      model_id: configuredModelId(),
-      source: source.trainingData,
-    })
+    const inputFingerprint = fingerprint(buildSummaryFingerprintPayload({
+      promptVersion: PROMPT_VERSION,
+      analysisVersion: SUMMARY_ANALYSIS_VERSION,
+      modelId: configuredModelId(),
+      modelInput,
+    }))
     const cached = await withYandexActorSession(
       this.pool,
       session,
