@@ -51,7 +51,7 @@ describe('tenant migration catalog', () => {
     expect(FULL_COHORT_SOURCE_PREFLIGHT_SQL)
       .not.toContain('push_notifications_outbox')
     expect(FULL_COHORT_SOURCE_PREFLIGHT_SQL)
-      .toContain('message.image_path is not null')
+      .not.toContain('message.image_path is not null')
   })
 
   it('maps source-only fields and requires target-only receipts to be empty', () => {

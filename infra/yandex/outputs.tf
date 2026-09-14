@@ -13,6 +13,21 @@ output "api_service_account_id" {
   value       = yandex_iam_service_account.api.id
 }
 
+output "media_bucket_name" {
+  description = "Private versioned bucket used for chat and exercise media."
+  value       = yandex_storage_bucket.media.bucket
+}
+
+output "media_credentials_secret_id" {
+  description = "Lockbox secret containing the API service account S3 key."
+  value       = yandex_lockbox_secret.media_s3_credentials.id
+}
+
+output "media_credentials_secret_version_id" {
+  description = "Immutable Lockbox version generated directly from the S3 key."
+  value       = yandex_iam_service_account_static_access_key.api_media.output_to_lockbox_version_id
+}
+
 output "migration_service_account_id" {
   description = "Runtime service account attached to migration revisions."
   value       = yandex_iam_service_account.migration.id

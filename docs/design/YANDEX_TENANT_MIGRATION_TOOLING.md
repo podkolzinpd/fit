@@ -58,9 +58,10 @@ isolated-tenant checks or silently dropping a merge target.
     corresponding private object-storage copy is implemented, so the target
     cannot contain a broken attachment link.
 14. `full-cohort` keeps the strict isolated modes unchanged, but does not apply
-    trainer-boundary checks because every manifest row is copied together. It
-    still rejects unsent push and chat photo metadata until the corresponding
-    delivery/object-storage state has a safe migration path.
+    trainer-boundary checks because every manifest row is copied together. Its
+    transient push outbox is not application data and is excluded. Chat photo
+    rows are accepted only because the target runner verifies the corresponding
+    private Yandex Object Storage object before opening a database connection.
 15. The full-cohort fingerprint is derived from every table name, row count and
     checksum. An apply therefore requires the exact snapshot fingerprint from
     a successful dry-run and fails before target access if source data changed.
@@ -68,6 +69,11 @@ isolated-tenant checks or silently dropping a merge target.
     present in the encrypted bundle. Existing unrelated stage fixture rows do
     not create false conflicts; an existing row with the same key and different
     application fields still aborts the complete transaction.
+17. Media migration is a separate idempotent gate. It copies the two private
+    source buckets to namespace-isolated keys in one private, versioned Yandex
+    bucket and verifies source SHA-256 metadata plus byte length. Reports expose
+    only aggregate counts, bytes and a content fingerprint. Neither object paths
+    nor payloads are logged or uploaded as workflow artifacts.
 
 ## Remote stage orchestration
 
@@ -120,6 +126,16 @@ population when a client merge or membership crosses an isolated trainer
 boundary. It never skips candidates: audit and dry-run must cover the same full
 manifest, and apply requires both the normal apply phrase and the exact
 content-derived fingerprint from that dry-run.
+
+Before a full-cohort dry-run or apply containing chat photos, the manual
+`Migrate Yandex media` workflow must finish in `apply` mode with
+`objects == verified`. It recursively reads `chat-media` and
+`fit-exercise-media`, preserves their paths under separate target prefixes and
+is safe to repeat. The migration runner then HEAD-checks every chat object and
+its exact recorded byte length before it obtains a PostgreSQL connection. A
+missing, inaccessible or mismatched object rejects the complete database run.
+The API uses the same private bucket for new chat uploads and exercise-media
+signed links after the storage-backed revision is deployed.
 
 The full snapshot deliberately ignores the source push outbox in every delivery
 state. It is transient transport state, not application-domain data; Supabase

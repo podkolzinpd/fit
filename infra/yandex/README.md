@@ -16,6 +16,9 @@ database password, OAuth secret or Terraform state.
   it handles Web Push and optional app-feedback delivery to Telegram/Tracker;
 - one Container Registry repository with image retention;
 - one least-privilege runtime service account;
+- one private, versioned Standard Object Storage bucket for chat and exercise
+  media; its API service-account static key is written directly to a protected
+  Lockbox version and never appears in Terraform state;
 - direct references to the generated Connection Manager Lockbox secrets;
 - a private cold migration runner invoked only by the OIDC-backed deployment
   identity before an API revision is changed. The runner uses the owner identity
@@ -72,6 +75,18 @@ Russia-region rates imply roughly 0–389 RUB/month for average 0.1–5 second
 calls, before shared free-tier consumption. Sender-function calls and outgoing
 Web Push traffic remain usage-dependent; the workflow repeats this estimate
 before the one-time approval.
+
+The first media-storage bootstrap is also manual. A read-only plan may be
+reviewed with `plan_only=true`; apply requires `plan_only=false` and
+`approve_media_storage=true`. The policy permits only the named private bucket,
+versioning, incomplete-upload cleanup, one protected Lockbox secret, the API
+service account's bucket-scoped `storage.editor` binding and exact
+`lockbox.payloadViewer` readers. `force_destroy` and every anonymous access flag
+remain false. The current baseline cost is about 19.73 RUB/month for the active
+Lockbox version plus reads; Standard Object Storage remains inside the monthly
+free tier while total storage is at most 1 GB, writes/list requests at most
+10,000 and reads at most 100,000. Traffic and usage above those limits use the
+current Yandex Cloud tariff.
 
 The only long-lived CI credentials are repository secrets containing the
 dedicated S3 access key and secret for the private Terraform state bucket.
@@ -163,7 +178,8 @@ automatically deploys only when policy confirms an existing API/migration image
 update with no new paid resource, resize, identity change, delete or replacement.
 The only additional automatic bootstrap allowed here is the narrow Lockbox
 payload viewer grant for the existing dispatcher; it does not add compute
-resources. The existing DataLens access flag is preserved, while DataLens
+resources. Media creation is never automatic and requires its dedicated manual
+approval. The existing DataLens access flag is preserved, while DataLens
 connection and database-user creation are not part of the automatic stage
 plan.
 Every other infrastructure plan stops before image push, migration or apply.

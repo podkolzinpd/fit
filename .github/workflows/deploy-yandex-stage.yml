@@ -23,6 +23,11 @@ on:
         required: true
         type: boolean
         default: false
+      approve_media_storage:
+        description: 'Approve the private versioned media bucket and one Lockbox key version'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -55,6 +60,7 @@ env:
   YC_APP_FEEDBACK_LOCKBOX_NAME: fit-stage-app-feedback-integrations
   YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
   PUSH_PIPELINE_PLAN_REVIEWED: ${{ (inputs.plan_only == true || inputs.approve_push_pipeline == true) && 'true' || 'false' }}
+  MEDIA_STORAGE_PLAN_REVIEWED: ${{ (inputs.plan_only == true || inputs.approve_media_storage == true) && 'true' || 'false' }}
 
 jobs:
   validate:
@@ -203,6 +209,9 @@ jobs:
           if test "$PUSH_PIPELINE_PLAN_REVIEWED" = true; then
             policy_args+=(--allow-push-pipeline-bootstrap)
           fi
+          if test "$MEDIA_STORAGE_PLAN_REVIEWED" = true; then
+            policy_args+=(--allow-media-storage-bootstrap)
+          fi
           node scripts/check-yandex-terraform-plan.mjs "${policy_args[@]}"
 
   deploy:
@@ -316,6 +325,13 @@ jobs:
           -target=yandex_lockbox_secret_iam_member.push_dispatcher_connection_secret_reader
           -target=yandex_lockbox_secret_iam_member.push_dispatcher_app_feedback_integrations_reader
           -target=yandex_lockbox_secret_iam_member.push_dispatcher_transport_secret_reader
+          -target=yandex_storage_bucket.media
+          -target=yandex_storage_bucket_iam_binding.media_api_editor
+          -target=yandex_lockbox_secret.media_s3_credentials
+          -target=yandex_iam_service_account_static_access_key.api_media
+          -target=yandex_lockbox_secret_iam_member.api_media_credentials_reader
+          -target=yandex_lockbox_secret_iam_member.migration_media_credentials_reader
+          -target=yandex_lockbox_secret_iam_member.deployer_media_credentials_reader
       - name: Pin new push runtime identities for subsequent Terraform plans
         working-directory: infra/yandex
         run: |
@@ -439,6 +455,9 @@ jobs:
           if test "$PUSH_PIPELINE_PLAN_REVIEWED" = true; then
             policy_args+=(--allow-push-pipeline-bootstrap)
           fi
+          if test "$MEDIA_STORAGE_PLAN_REVIEWED" = true; then
+            policy_args+=(--allow-media-storage-bootstrap)
+          fi
           node ../../scripts/check-yandex-terraform-plan.mjs "${policy_args[@]}"
       - name: Record the current push dispatcher revision for automatic rollback
         id: push_previous
@@ -521,6 +540,9 @@ jobs:
           )
           if test "$PUSH_PIPELINE_PLAN_REVIEWED" = true; then
             policy_args+=(--allow-push-pipeline-bootstrap)
+          fi
+          if test "$MEDIA_STORAGE_PLAN_REVIEWED" = true; then
+            policy_args+=(--allow-media-storage-bootstrap)
           fi
           node ../../scripts/check-yandex-terraform-plan.mjs "${policy_args[@]}"
           if jq -e '
