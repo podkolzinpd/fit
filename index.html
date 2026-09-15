@@ -7602,6 +7602,26 @@ h3 {
   border-left: 1px solid #393a3d;
 }
 
+.meeting-usage-group.is-client-summary .meeting-usage-facts {
+  grid-template-columns: 1fr;
+}
+
+.meeting-usage-group.is-client-summary .meeting-usage-fact {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 20px;
+  align-items: baseline;
+}
+
+.meeting-usage-group.is-client-summary .meeting-usage-fact b {
+  font-size: 54px;
+}
+
+.meeting-usage-group.is-client-summary .meeting-usage-fact span {
+  max-width: 330px;
+  font-size: 20px;
+}
+
 .meeting-usage-fact b {
   display: block;
   color: var(--paper);
@@ -9673,7 +9693,7 @@ Strava, поддерживаемые виды спорта: https://support.stra
       <div class="meeting-usage-grid">
         <section class="meeting-usage-group">
           <div class="meeting-usage-kicker">Тренеры · из 45 зарегистрированных</div>
-          <div class="meeting-usage-primary"><strong>4</strong><span>составляют устойчивое ядро</span></div>
+          <div class="meeting-usage-primary"><strong>4</strong><span>8,9% зарегистрированных составляют устойчивое ядро</span></div>
           <div class="meeting-usage-facts">
             <div class="meeting-usage-fact"><b>71</b><span>из 78 завершённых тренировок</span></div>
             <div class="meeting-usage-fact"><b>82/100</b><span>всех тренировок созданы этим ядром</span></div>
@@ -9681,19 +9701,17 @@ Strava, поддерживаемые виды спорта: https://support.stra
           </div>
         </section>
 
-        <section class="meeting-usage-group">
-          <div class="meeting-usage-kicker">Клиенты · из 127 зарегистрированных</div>
-          <div class="meeting-usage-primary"><strong>4</strong><span>подтверждают устойчивое использование</span></div>
+        <section class="meeting-usage-group is-client-summary">
+          <div class="meeting-usage-kicker">Клиенты</div>
+          <div class="meeting-usage-primary"><strong>17</strong><span>завершили минимум 3 тренировки</span></div>
           <div class="meeting-usage-facts">
-            <div class="meeting-usage-fact"><b>17</b><span>завершили минимум 3 тренировки</span></div>
             <div class="meeting-usage-fact"><b>8</b><span>из них пользуются приложением сами</span></div>
-            <div class="meeting-usage-fact"><b>117/153</b><span>завершённых тренировок у повторной когорты</span></div>
           </div>
         </section>
       </div>
 
       <div class="meeting-usage-bridge">
-        <span>Критерий ядра</span>
+        <span>Критерий ядра тренеров</span>
         <strong>3+ завершённых тренировки · 14+ дней в продукте · активность за последние 14 дней</strong>
         <small>Источник: продуктовый дашборд Fit</small>
       </div>
@@ -9701,9 +9719,9 @@ Strava, поддерживаемые виды спорта: https://support.stra
 Показать не только регистрации, но и фактическое повторное использование Fit тренерами и клиентами.
 
 ЧТО ГОВОРИМ
-Из 45 зарегистрированных тренеров четыре составляют устойчивое ядро: работают с продуктом не менее двух недель, недавно возвращались, ведут минимум трёх клиентов и провели минимум три завершённые тренировки. На них приходится 71 из 78 завершённых и 82 из 100 созданных тренировок; они ведут 42 клиентских профиля.
+Из 45 зарегистрированных тренеров четыре, или 8,9%, составляют устойчивое ядро: работают с продуктом не менее двух недель, недавно возвращались, ведут минимум трёх клиентов и провели минимум три завершённые тренировки. На них приходится 71 из 78 завершённых и 82 из 100 созданных тренировок; они ведут 42 клиентских профиля.
 
-Из 127 зарегистрированных клиентов 17 завершили не менее трёх тренировок. Восемь из них самостоятельно пользуются приложением, а четыре уже подтверждают устойчивое использование более двух недель и недавнее возвращение. Повторная когорта обеспечила 117 из 153 завершённых тренировок.
+Среди клиентов 17 завершили не менее трёх тренировок. Восемь из них самостоятельно пользуются приложением. На слайде не выделяем отдельное клиентское ядро: показываем только эти два наблюдаемых факта повторного использования.
 
 Цифра 477 не используется: отдельный агрегат дашборда расходится с суммой строк по уникальным клиентам и требует сверки формулы.</aside>
     </section>
