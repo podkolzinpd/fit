@@ -23,7 +23,7 @@ export interface ProgramBrief {
   adult?: boolean
 }
 
-const briefProperties = {
+export const briefProperties = {
   continuationPlan: { type: 'string', maxLength: 500 },
   preserveRefs: { type: 'array', items: { type: 'string', enum: PROGRAM_CATALOG.map((row) => row.ref) } },
   goalText: { type: 'string', maxLength: 500 },
