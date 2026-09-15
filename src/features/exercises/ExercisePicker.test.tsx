@@ -56,7 +56,7 @@ describe('ExercisePicker', () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
     expect(screen.queryByLabelText('Раздел каталога')).not.toBeInTheDocument()
-    expect(screen.getByText('312 упражнений')).toBeInTheDocument()
+    expect(screen.getByText('402 упражнения')).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="fedb-incline-dumbbell-press"]')).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="fedb-incline-dumbbell-press-palms-in"]')).not.toBeInTheDocument()
     await user.type(screen.getByLabelText('Поиск упражнения'), 'тяга гантели одной рукой')
@@ -222,6 +222,35 @@ describe('ExercisePicker', () => {
     expect(equipmentForSelection(ENRICHED, 'legs', 'Квадрицепс')).toEqual(['Тренажёр', 'Штанга'])
     expect(equipmentForSelection(ENRICHED, 'legs', 'Бицепс бедра')).toEqual(['Тренажёр'])
     expect(filterExercises(ENRICHED, 'legs', '', 'Квадрицепс', 'Штанга').map((exercise) => exercise.ref)).toEqual(['a'])
+  })
+
+  it('показывает оборудование глобально и объединяет варианты собственного веса', () => {
+    const exercises: ExerciseSnapshot[] = [
+      { source: 'system', ref: 'body-a', name: 'Движение A', muscleGroup: 'legs', inputKind: 'reps', equipment: 'Своё тело' },
+      { source: 'system', ref: 'body-b', name: 'Движение B', muscleGroup: 'core', inputKind: 'reps', equipment: 'Без оборудования' },
+      { source: 'system', ref: 'barbell-a', name: 'Движение C', muscleGroup: 'chest', inputKind: 'strength', equipment: 'Штанга' },
+    ]
+    expect(equipmentForSelection(exercises, 'all', null)).toEqual(['Без оборудования', 'Штанга'])
+    expect(filterExercises(exercises, 'all', '', null, 'Без оборудования').map((exercise) => exercise.ref)).toEqual(['body-a', 'body-b'])
+  })
+
+  it('фильтрует каталог по назначению независимо от группы мышц', () => {
+    const warmup = filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', '', null, null, 'warmup')
+    const mobility = filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', '', null, null, 'mobility')
+    const recovery = filterExercises(SYSTEM_EXERCISE_CATALOG, 'all', '', null, null, 'recovery')
+    expect(warmup.map((exercise) => exercise.ref)).toContain('joint-warmup')
+    expect(mobility.map((exercise) => exercise.ref)).toContain('cat-cow')
+    expect(recovery.map((exercise) => exercise.ref)).toContain('vital-gym-pro-1198')
+  })
+
+  it('даёт выбрать назначение и оборудование без предварительного выбора группы', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
+    expect(screen.getByLabelText('Оборудование')).toBeVisible()
+    await user.selectOptions(screen.getByLabelText('Назначение'), 'recovery')
+    expect(screen.getByRole('button', { name: 'Фильтры 1' })).toBeInTheDocument()
+    expect(document.querySelector('[data-exercise-ref="vital-gym-pro-1198"]')).toBeInTheDocument()
   })
 
   it('filters from one compact panel: group → muscle → equipment', async () => {
