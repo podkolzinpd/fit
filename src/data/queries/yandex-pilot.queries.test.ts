@@ -61,12 +61,14 @@ describe('yandexPilotQueries', () => {
         method: 'POST',
         cache: 'no-store',
         headers: {
-          authorization: 'Bearer supabase-session',
           'content-type': 'application/json',
+          'x-supabase-authorization': 'Bearer supabase-session',
         },
         body: JSON.stringify({ code, codeVerifier }),
       },
     )
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
+      .not.toHaveProperty('authorization')
   })
 
   it('sends the Fit pilot session outside the Yandex IAM Authorization header', async () => {
