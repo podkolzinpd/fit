@@ -1,6 +1,7 @@
 import { AssistantProgramOverview, programDoseText } from './AssistantProgramOverview'
 import { useState } from 'react'
 import { z } from 'zod'
+import { ChevronRightIcon } from '../../shared/icons'
 
 const workoutSchema = z.object({ requestId: z.string().uuid(), clientId: z.string().uuid(), workoutDate: z.string(),
   exercises: z.array(z.object({ name: z.string(), restBetweenSetsSec: z.number(), sets: z.array(z.object({ reps: z.number().optional(), durationSec: z.number().optional(), rpe: z.number() }).passthrough()) }).passthrough()),
@@ -41,8 +42,12 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
       <button type="button" disabled={busy} aria-busy={running} onClick={() => onSuggestion('Это все тренировки')}>Это все тренировки</button>
       <button type="button" disabled={busy} aria-busy={running} onClick={() => onSuggestion('Часть тренировок не записана')}>Часть тренировок не записана</button>
     </div>}
-    {typeof payload.sourceSummary === 'string' && <p className="assistant-card-hint">{payload.sourceSummary}</p>}
-    {!confirm && typeof payload.briefSummary === 'string' && <div className="assistant-message-copy">{payload.briefSummary.split('\n').filter(Boolean).map((line) => <p key={line}>{line}</p>)}</div>}
+    {!confirm && (typeof payload.sourceSummary === 'string' || typeof payload.briefSummary === 'string') && <details className="assistant-program-context-details" key={`${String(payload.clientId ?? payload.clientName ?? '')}-${payload.readyToGenerate === true}`} open={payload.readyToGenerate === true}>
+      <summary><ChevronRightIcon />Данные и условия</summary>
+      {typeof payload.sourceSummary === 'string' && <p className="assistant-card-hint">{payload.sourceSummary}</p>}
+      {typeof payload.briefSummary === 'string' && <div className="assistant-message-copy">{payload.briefSummary.split('\n').filter(Boolean).map((line) => <p key={line}>{line}</p>)}</div>}
+    </details>}
+    {confirm && typeof payload.sourceSummary === 'string' && <p className="assistant-card-hint">{payload.sourceSummary}</p>}
     {confirm && <>
       {typeof payload.editGuidance === 'string' && <p role="status">{payload.editGuidance}</p>}
       {typeof payload.goal === 'string' && <div className="assistant-flow-fact"><small>Цель</small><strong>{payload.goal}</strong></div>}

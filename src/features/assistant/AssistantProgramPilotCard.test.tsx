@@ -42,10 +42,17 @@ describe('program pilot card', () => {
     view.rerender(<AssistantProgramPilotCard {...handlers} payload={payload} />)
     expect(screen.getByRole('button', { name: 'Это все тренировки' })).toBeEnabled()
   })
-  it('keeps the conditions summary without duplicating a question shown in chat', () => {
+  it('keeps supporting conditions collapsed while the question is shown in chat', async () => {
     render(<AssistantProgramPilotCard {...props()} showGuidance={false} payload={{ step: 'brief', guidance: 'Какова цель программы?', briefSummary: '2 занятия в неделю' }} />)
     expect(screen.queryByText('Какова цель программы?')).not.toBeInTheDocument()
+    expect(screen.getByText('2 занятия в неделю')).not.toBeVisible()
+    await userEvent.click(screen.getByText('Данные и условия'))
     expect(screen.getByText('2 занятия в неделю')).toBeVisible()
+  })
+  it('expands collected conditions for explicit confirmation before generation', () => {
+    render(<AssistantProgramPilotCard {...props()} showGuidance={false} payload={{ step: 'brief', readyToGenerate: true, briefSummary: '2 занятия в неделю' }} />)
+    expect(screen.getByText('2 занятия в неделю')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Подтвердить и составить' })).toBeVisible()
   })
   it('shows the source of prescribed load in the generated result', () => {
     render(<AssistantProgramPilotCard {...props()} payload={{ step: 'confirm', canonicalWorkouts, rationale: 'История записана не полностью. Стартовый объём — два подхода.' }} />)

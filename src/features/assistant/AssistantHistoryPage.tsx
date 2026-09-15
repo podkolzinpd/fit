@@ -155,6 +155,8 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
   const historyConversations = conversations.filter((conversation) => conversation.id !== todayConversationId)
   const conversationGroups = groupAssistantConversations(historyConversations, actor?.timezone, today)
   const lastMessageId = messages[messages.length - 1]?.id
+  const latestActiveAction = readOnly ? undefined : latestActiveAssistantAction(messages, conversationId)
+  const programCollecting = latestActiveAction?.action.tool === 'create_program_draft' && latestActiveAction.action.status === 'needs_input'
 
   useLayoutEffect(() => {
     if (!conversationId || loadingMessages) return
@@ -164,7 +166,7 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
 
     let frame = 0
     const mobileLayout = window.matchMedia('(max-width: 480px)').matches
-    const anchor = () => anchorAssistantViewport(thread, scrollContainer, mobileLayout)
+    const anchor = () => anchorAssistantViewport(thread, scrollContainer, mobileLayout || programCollecting)
     const scheduleAnchor = () => {
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(anchor)
@@ -180,7 +182,7 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
       window.visualViewport?.removeEventListener('resize', scheduleAnchor)
       window.visualViewport?.removeEventListener('scroll', scheduleAnchor)
     }
-  }, [conversationId, keyboardOpen, lastMessageId, loadingMessages])
+  }, [conversationId, keyboardOpen, lastMessageId, loadingMessages, programCollecting])
 
   function selectConversation(id: string) {
     if (sending || voiceActive || id === conversationId) return
@@ -318,7 +320,6 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
     }
   }
 
-  const latestActiveAction = readOnly ? undefined : latestActiveAssistantAction(messages, conversationId)
   const workoutDraftStorageKey = latestActiveAction?.action.tool === 'record_workout' && actor && conversationId
     ? assistantWorkoutDraftKey(actor.userId, conversationId, String((latestActiveAction.action.payload as WorkoutDraftPayload).clientId ?? 'unknown'))
     : undefined
@@ -363,7 +364,7 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
     return () => { cancelled = true }
   }, [backend, messages])
 
-  return <main className="assistant-page">
+  return <main className={`assistant-page${programCollecting ? ' assistant-program-collecting' : ''}`}>
     <h1 className="sr-only">Ассистент</h1>
     <section className="assistant-session-switcher" aria-label="Сессия ассистента">
       <div className="assistant-session-bar">
