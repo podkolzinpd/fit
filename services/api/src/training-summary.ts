@@ -52,6 +52,17 @@ interface SummaryRow extends QueryResultRow {
 }
 interface JsonRow extends QueryResultRow { result: unknown }
 interface GuardRow extends QueryResultRow { result: unknown }
+interface GuardDiagnosticRow extends QueryResultRow {
+  status: string
+  period_start: string
+  period_end: string
+  input_fingerprint: string
+  lease_until: string | null
+  retry_after: string | null
+  model_calls_day: string | null
+  model_calls_today: number | string
+  failure_code: string | null
+}
 
 type GenerationDecision = 'claimed' | 'cached' | 'in_progress' | 'cooldown' | 'period_limit' | 'daily_limit'
 
@@ -85,6 +96,10 @@ export interface PilotTrainingSummaryReader {
 
 export interface PilotTrainingSummaryGenerator {
   generate(session: YandexActorSessionInput, request: TrainingSummaryRequest): Promise<unknown>
+}
+
+export interface PilotTrainingSummaryDiagnostic {
+  diagnose(session: YandexActorSessionInput, request: TrainingSummaryRequest): Promise<unknown>
 }
 
 export interface PilotTrainingSummaryPublisher {
@@ -340,6 +355,91 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
       ])
     })
     return { data: saved, cached: false }
+  }
+
+  async diagnose(session: YandexActorSessionInput, request: TrainingSummaryRequest): Promise<unknown> {
+    const source = await withYandexActorSession(
+      this.pool,
+      session,
+      (client) => this.readSource(client, request),
+    )
+    const modelInput = buildSummaryModelInput(source.trainingData)
+    const sourceInputChars = JSON.stringify(source.trainingData).length
+    const modelInputChars = JSON.stringify(modelInput).length
+    const inputFingerprint = fingerprint(buildSummaryFingerprintPayload({
+      promptVersion: PROMPT_VERSION,
+      analysisVersion: SUMMARY_ANALYSIS_VERSION,
+      modelId: configuredModelId(),
+      modelInput,
+    }))
+    const cached = await withYandexActorSession(
+      this.pool,
+      session,
+      (client) => this.readCache(client, request, source.actor, inputFingerprint),
+    )
+    const guardRows = await withYandexActorSession(this.pool, session, (client) => client.query<GuardDiagnosticRow>(`
+      select status, period_start, period_end, input_fingerprint, lease_until,
+        retry_after, model_calls_day, model_calls_today, failure_code
+      from app_private.training_summary_generation_guards
+      where client_id = $1
+      order by updated_at desc
+      limit 20
+    `, [request.clientId]))
+    const now = Date.now()
+    const utcDay = new Date().toISOString().slice(0, 10)
+    const samePeriod = guardRows.filter((row) => row.period_start === request.periodStart && row.period_end === request.periodEnd)
+    const exactGuard = samePeriod.find((row) => row.input_fingerprint === inputFingerprint)
+    const callsToday = guardRows
+      .filter((row) => row.model_calls_day === utcDay)
+      .reduce((sum, row) => sum + Number(row.model_calls_today || 0), 0)
+    const activePeriodFailure = samePeriod.find((row) => row.status === 'failed'
+      && row.retry_after !== null && Date.parse(row.retry_after) > now)
+    const activePeriodAttempt = samePeriod.find((row) => row.status === 'pending'
+      && row.lease_until !== null && Date.parse(row.lease_until) > now)
+    const periodCallsToday = samePeriod.filter((row) => row.model_calls_day === utcDay && (
+      row.status === 'succeeded'
+      || (row.status === 'pending' && row.lease_until !== null && Date.parse(row.lease_until) > now)
+    )).length
+    let guardDecision = 'available'
+    if (exactGuard?.status === 'succeeded') guardDecision = cached === undefined ? 'stale_succeeded_guard' : 'cached'
+    else if (activePeriodAttempt !== undefined) guardDecision = 'in_progress'
+    else if (activePeriodFailure !== undefined) guardDecision = 'cooldown'
+    else if (callsToday >= 3) guardDecision = 'daily_limit'
+    else if (periodCallsToday >= 1) guardDecision = 'period_limit'
+    const generationEnabled = process.env.FIT_AI_SUMMARY_GENERATION_DISABLED !== 'true'
+    const inputWithinLimit = modelInputChars <= MAX_SUMMARY_MODEL_INPUT_CHARS
+    const ready = cached !== undefined || (generationEnabled && inputWithinLimit && guardDecision === 'available')
+    const code = cached !== undefined
+      ? 'cache_hit'
+      : !generationEnabled
+        ? 'summary_generation_disabled'
+        : !inputWithinLimit
+          ? 'summary_model_input_too_large'
+          : guardDecision
+    return {
+      diagnostic: true,
+      route: 'yandex-main',
+      calls: 0,
+      ready,
+      code,
+      fingerprint: inputFingerprint,
+      stats: {
+        workouts: source.workouts,
+        exercises: source.exercises,
+        sets: source.sets,
+        source_input_chars: sourceInputChars,
+        model_input_chars: modelInputChars,
+      },
+      checks: {
+        actor: source.actor,
+        cache: cached === undefined ? 'miss' : 'hit',
+        generation_enabled: generationEnabled,
+        input_within_limit: inputWithinLimit,
+        guard_decision: guardDecision,
+        calls_today: callsToday,
+        last_failure_code: exactGuard?.failure_code ?? activePeriodFailure?.failure_code ?? null,
+      },
+    }
   }
 
   private async failGeneration(

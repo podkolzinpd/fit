@@ -264,6 +264,9 @@ const app = buildApp(
     ...(pilotTrainingSummaryGenerator === undefined
       ? {}
       : { pilotTrainingSummaryGenerator }),
+    ...(pilotTrainingSummaryReader === undefined
+      ? {}
+      : { pilotTrainingSummaryDiagnostic: pilotTrainingSummaryReader }),
     ...(pilotTrainingSummaryReader === undefined ? {} : { pilotTrainingSummaryReader }),
     ...(pilotTrainingSummaryReader === undefined
       ? {}

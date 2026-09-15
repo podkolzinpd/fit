@@ -84,6 +84,7 @@ import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
 import type { PilotWorkoutParser } from './pilot-workout-parser.js'
 import {
   PilotTrainingSummaryError,
+  type PilotTrainingSummaryDiagnostic,
   type PilotTrainingSummaryGenerator,
   type PilotTrainingSummaryPublisher,
   type PilotTrainingSummaryReader,
@@ -160,6 +161,7 @@ interface BuildAppOptions {
   pilotWorkoutsWriter?: PilotWorkoutsWriter
   pilotWorkoutParser?: PilotWorkoutParser
   pilotTrainingSummaryGenerator?: PilotTrainingSummaryGenerator
+  pilotTrainingSummaryDiagnostic?: PilotTrainingSummaryDiagnostic
   pilotTrainingSummaryPublisher?: PilotTrainingSummaryPublisher
   pilotTrainingSummaryReader?: PilotTrainingSummaryReader
   legacyWorkoutParser?: LegacyWorkoutParser
@@ -203,11 +205,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .header('access-control-allow-methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
         .header(
           'access-control-allow-headers',
-          'authorization, content-type, x-fit-pilot-session, x-fit-session, x-supabase-authorization',
+          'authorization, content-type, x-fit-pilot-session, x-fit-session, x-fit-request-id, x-supabase-authorization',
         )
         .header(
           'access-control-expose-headers',
-          'x-fit-release-id, x-fit-error-category, x-fit-error-code',
+          'x-fit-release-id, x-fit-error-category, x-fit-error-code, x-fit-request-id',
         )
         .header('vary', 'Origin')
     }
@@ -280,14 +282,21 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.post('/v1/legacy/summarize-client-training', async (request, reply) => {
+    const externalRequestId = typeof request.headers['x-fit-request-id'] === 'string' && uuidPattern.test(request.headers['x-fit-request-id'])
+      ? request.headers['x-fit-request-id']
+      : crypto.randomUUID()
+    reply.header('x-fit-request-id', externalRequestId)
     const authorization = request.headers['x-supabase-authorization']
     if (typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) {
+      request.log.warn({ externalRequestId, stage: 'authorization', errorCode: 'authentication_required' }, 'summary pre-model request rejected')
       return reply.code(401).send({ error: 'authentication_required' })
     }
     if (options.legacySummaryHandler === undefined) {
+      request.log.error({ externalRequestId, stage: 'configuration', errorCode: 'service_unavailable' }, 'summary pre-model request rejected')
       return reply.code(503).send({ error: 'service_unavailable' })
     }
-    return forwardLegacySummary(authorization, request.body, reply)
+    request.log.info({ externalRequestId, stage: 'api_received' }, 'summary request received')
+    return forwardLegacySummary(authorization, request.body, reply, externalRequestId)
   })
 
   const legacyChatMediaToken = (headers: { readonly [header: string]: unknown }): string | undefined => {
@@ -460,6 +469,47 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   })
 
+  app.post('/v1/clients/:clientId/training-summaries/diagnostic', async (request, reply) => {
+    const requestId = crypto.randomUUID()
+    reply.header('x-fit-request-id', requestId).header('cache-control', 'no-store')
+    const session = readYandexActorSession(request.headers)
+    const { clientId } = request.params as { clientId?: unknown }
+    const command = readAssistantProgressRequest(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId)
+      || command === undefined || command.clientId !== clientId) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainingSummaryDiagnostic === undefined) {
+      return reply.send({
+        diagnostic: true, route: 'yandex-main', calls: 0, ready: false,
+        code: 'training_summary_database_not_configured', request_id: requestId,
+      })
+    }
+    if (options.pilotTrainingSummaryGenerator === undefined) {
+      return reply.send({
+        diagnostic: true, route: 'yandex-main', calls: 0, ready: false,
+        code: 'training_summary_generation_not_configured', request_id: requestId,
+      })
+    }
+    try {
+      const result = await options.pilotTrainingSummaryDiagnostic.diagnose(session, command)
+      return reply.send({ ...(result as object), request_id: requestId })
+    } catch (error) {
+      if (error instanceof PilotTrainingSummaryError) {
+        return reply.header('x-fit-error-code', error.code)
+          .code(error.status).send({ error: error.code, request_id: requestId })
+      }
+      if (error instanceof SummaryModelError) {
+        return reply.header('x-fit-error-code', error.message)
+          .code(error.status).send({ error: error.message, request_id: requestId })
+      }
+      request.log.error({ requestId, error }, 'training summary diagnostic failed')
+      return reply.header('x-fit-error-code', 'diagnostic_internal_error')
+        .code(500).send({ error: 'diagnostic_internal_error', request_id: requestId })
+    }
+  })
+
   app.post('/v1/training-summaries/:summaryId/publish', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     const { summaryId } = request.params as { summaryId?: unknown }
@@ -558,7 +608,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return reply.code(503).send({ error: 'service_unavailable' })
   }
 
-  async function forwardLegacySummary(authorization: string, body: unknown, reply: FastifyReply) {
+  async function forwardLegacySummary(authorization: string, body: unknown, reply: FastifyReply, externalRequestId?: string) {
     if (options.legacySummaryHandler === undefined) {
       return reply.code(503).send({ error: 'service_unavailable' })
     }
@@ -566,12 +616,17 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       'http://legacy.internal/summarize-client-training',
       {
         method: 'POST',
-        headers: { authorization, 'content-type': 'application/json' },
+        headers: {
+          authorization,
+          'content-type': 'application/json',
+          ...(externalRequestId === undefined ? {} : { 'x-fit-request-id': externalRequestId }),
+        },
         body: JSON.stringify(body),
       },
     ))
     const errorCode = response.headers.get('x-fit-error-code')
     if (errorCode !== null) reply.header('x-fit-error-code', errorCode)
+    reply.log.info({ externalRequestId, stage: 'api_completed', status: response.status, errorCode }, 'summary request completed')
     return reply.code(response.status).type('application/json').send(await response.text())
   }
 
