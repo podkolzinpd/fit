@@ -991,8 +991,8 @@ async function createGroupedWorkout(page: Page, clientName: string, preset: 'set
   await addExercise(page, 'Присед со штангой', true)
   await addExercise(page, 'Жим лёжа')
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
-  await page.getByRole('menuitem', { name: 'Объединить со следующим в блок' }).click()
-  if (preset === 'circuit') await page.getByLabel('Тип блока').selectOption('circuit')
+  await page.getByRole('menuitem', { name: 'Объединить со следующим в круговую' }).click()
+  await page.getByLabel('Тип блока').selectOption(preset)
   await page.getByLabel('Кругов').fill('2')
   for (let round = 1; round <= 2; round += 1) {
     for (let index = 0; index < 2; index += 1) {

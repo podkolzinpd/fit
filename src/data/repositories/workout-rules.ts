@@ -274,7 +274,7 @@ export function syncBlockRounds(exercises: WorkoutExerciseDraft[], blockId: stri
 }
 
 // Объединяет блок упражнения по индексу со следующим в одну группу. Если один
-// из блоков уже группа — сохраняем его пресет/отдых, иначе новый пресет «Сет»
+// из блоков уже группа — сохраняем его пресет/отдых, иначе новая группа — «Круговая»
 // с дефолтами отдыха.
 export function mergeBlockWithNext(exercises: WorkoutExerciseDraft[], index: number): WorkoutExerciseDraft[] {
   const list = ensureBlockIds(exercises)
@@ -284,7 +284,7 @@ export function mergeBlockWithNext(exercises: WorkoutExerciseDraft[], index: num
   const currentSize = list.filter((e) => e.blockId === current.blockId).length
   const nextSize = list.filter((e) => e.blockId === next.blockId).length
   const seed = currentSize > 1 ? current : nextSize > 1 ? next : null
-  const preset: BlockPreset = seed?.blockPreset ?? 'set'
+  const preset: BlockPreset = seed?.blockPreset ?? 'circuit'
   const defaults = PRESET_REST_DEFAULTS[preset]
   const targetId = current.blockId!
   const fromId = next.blockId!

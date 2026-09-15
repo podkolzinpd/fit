@@ -575,12 +575,12 @@ describe('draft blocks', () => {
     expect(out[1]?.blockType).toBe('group')
   })
 
-  it('mergeBlockWithNext объединяет два одиночных в группу «Сет» с общим id и дефолтами отдыха', () => {
+  it('mergeBlockWithNext объединяет два одиночных в круговую с общим id и дефолтами отдыха', () => {
     const out = mergeBlockWithNext([draft('a', 'b1', 'single'), draft('b', 'b2', 'single')], 0)
     expect(out[0]?.blockId).toBe(out[1]?.blockId)
-    expect(out.every((e) => e.blockType === 'group' && e.blockPreset === 'set')).toBe(true)
-    // Сет: отдых между упражнениями 0, между кругами 90.
-    expect(out.every((e) => e.restBetweenExercisesSec === 0 && e.restBetweenRoundsSec === 90)).toBe(true)
+    expect(out.every((e) => e.blockType === 'group' && e.blockPreset === 'circuit')).toBe(true)
+    // Круговая: отдых между упражнениями 15 с, между кругами 60 с.
+    expect(out.every((e) => e.restBetweenExercisesSec === 15 && e.restBetweenRoundsSec === 60)).toBe(true)
   })
 
   it('mergeBlockWithNext присоединяет к существующему многоэлементному блоку с его типом', () => {
