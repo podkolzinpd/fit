@@ -52,6 +52,7 @@ test('форма: быстрый ввод разбирает текст в уп�
   await selectClient(page, 'Анна Смирнова')
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await page.getByLabel('Запись тренировки').fill('Присед 80 на 8, 85 на 6, 90 на 5 RPE 8 затем Планка 3 по 45 сек')
+  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByText('Уточните упражнение')).toBeVisible()
   await expect(page.getByText('Выберите вариант ниже или допишите деталь: положение, тренажёр или оборудование.')).toBeVisible()
   await expect(page.getByText(/«Присед 80 на 8, 85 на 6, 90 на 5 RPE 8» — выберите вариант/)).toBeVisible()
@@ -85,6 +86,7 @@ test('форма: заголовки «Сет» и «Круговая» авто
 
   await page.goto('/workouts/new')
   await page.getByLabel('Запись тренировки').fill('1. Сет:\n- Жим лёжа 3×10 60 кг\n- Планка 2×45 сек')
+  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByText('Круговая · 2 упр.')).toBeVisible()
   await page.getByRole('button', { name: 'Добавить в план (2)' }).click()
 
@@ -109,6 +111,7 @@ test('форма: короткая беговая фраза создаёт ре
 
   await page.goto('/workouts/new')
   await page.getByLabel('Запись тренировки').fill('6 по 400 метров')
+  await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByText('Распознано: 1')).toBeVisible()
   await expect(page.getByText('Бег — интервалы · 6 подходов')).toBeVisible()
   await page.getByRole('button', { name: 'Добавить в план (1)' }).click()
