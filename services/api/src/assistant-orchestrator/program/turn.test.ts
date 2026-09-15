@@ -19,6 +19,14 @@ describe('program chat state', () => {
     expect(await programPilotTurn('Привет', [client], null, deps)).toBeUndefined()
     expect(deps.extract).not.toHaveBeenCalled()
   })
+  it('lets the model router distinguish a negated edit from cancellation', async () => {
+    const { deps, latest } = setup()
+    deps.extract.mockResolvedValue({ patch: {}, clear: [], evidence: {}, clarification: null })
+    const result = await programPilotTurn('Не надо менять упражнения', [client], latest, deps, true)
+    expect(result?.action?.tool).toBe('create_program_draft')
+    expect(result?.action?.payload.briefState).toEqual(latest.payload.briefState)
+    expect(result?.reply).not.toContain('отменено')
+  })
   it('generates only on explicit confirmation with a fresh context', async () => {
     const { deps, latest } = setup()
     const result = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], latest, deps)

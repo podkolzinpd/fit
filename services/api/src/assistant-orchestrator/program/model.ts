@@ -11,7 +11,7 @@ export async function programIamToken(): Promise<string> {
 }
 
 export async function programModelJson(input: {
-  instruction: string; data: unknown; schema: object; maxTokens: number; functionName: string; operationId: string; onUsage?: (usage: unknown, modelUri: string, requestId: string | null) => void
+  instruction: string; data: unknown; schema: object; maxTokens: number; functionName: string; operationId: string; timeoutMs?: number; onUsage?: (usage: unknown, modelUri: string, requestId: string | null) => void
 }): Promise<unknown> {
   const folder = process.env.YANDEX_CLOUD_FOLDER_ID?.trim()
   if (!folder) throw new Error('program_model_unconfigured')
@@ -19,7 +19,7 @@ export async function programModelJson(input: {
   const modelUri = `gpt://${folder}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`
   const response = await fetch('https://llm.api.cloud.yandex.net/foundationModels/v1/completion', {
     method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    signal: AbortSignal.timeout(90_000),
+    signal: AbortSignal.timeout(input.timeoutMs ?? 90_000),
     body: JSON.stringify({ modelUri, completionOptions: { stream: false, temperature: 0.1, maxTokens: String(input.maxTokens) },
       jsonSchema: { schema: input.schema }, messages: [
         { role: 'system', text: input.instruction },
