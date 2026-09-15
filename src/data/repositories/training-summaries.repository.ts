@@ -236,6 +236,9 @@ export const trainingSummariesRepository = {
 }
 
 async function summaryGenerationError(error: unknown): Promise<Error> {
+  if (error instanceof Error && error.message === 'authentication_required') {
+    return trainingSummaryGenerationError('authentication_required')
+  }
   const context = error && typeof error === 'object' && 'context' in error
     ? (error as { context?: unknown }).context
     : undefined
