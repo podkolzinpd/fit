@@ -593,6 +593,7 @@ describe('legacy Supabase function bridge', () => {
   it('forwards the legacy summary body and Supabase JWT without using Authorization at the cloud boundary', async () => {
     const handler = vi.fn(async (request: Request) => {
       expect(request.headers.get('authorization')).toBe('Bearer supabase-access-token')
+      expect(request.headers.get('x-fit-request-id')).toBe('18940d82-9075-48d2-a847-8feee301b4d7')
       await expect(request.json()).resolves.toEqual({ client_id: PROFILE_ID, period_start: '2026-08-01', period_end: '2026-08-20', force: false })
       return new Response(JSON.stringify({ data: { id: 'summary-id' }, cached: false }), { headers: { 'content-type': 'application/json' } })
     })
@@ -602,11 +603,15 @@ describe('legacy Supabase function bridge', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/legacy/summarize-client-training',
-      headers: { 'x-supabase-authorization': 'Bearer supabase-access-token' },
+      headers: {
+        'x-fit-request-id': '18940d82-9075-48d2-a847-8feee301b4d7',
+        'x-supabase-authorization': 'Bearer supabase-access-token',
+      },
       payload: { client_id: PROFILE_ID, period_start: '2026-08-01', period_end: '2026-08-20', force: false },
     })
 
     expect(response.statusCode).toBe(200)
+    expect(response.headers['x-fit-request-id']).toBe('18940d82-9075-48d2-a847-8feee301b4d7')
     expect(response.json()).toEqual({ data: { id: 'summary-id' }, cached: false })
     expect(handler).toHaveBeenCalledOnce()
   })
@@ -995,6 +1000,79 @@ describe('native Yandex function contracts', () => {
     expect(generated.headers['x-fit-error-code'])
       .toBe('training_summary_generation_not_configured')
   })
+
+  it('diagnoses missing summary generation configuration without calling the model', async () => {
+    const diagnose = vi.fn()
+    const app = buildApp({
+      pilotTrainingSummaryDiagnostic: { diagnose },
+      releaseId: 'diagnostic-release',
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/clients/${PROFILE_ID}/training-summaries/diagnostic`,
+      headers: { 'x-fit-session': 's'.repeat(43) },
+      payload: {
+        client_id: PROFILE_ID,
+        period_start: '2026-08-01',
+        period_end: '2026-08-26',
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toMatchObject({
+      diagnostic: true,
+      calls: 0,
+      ready: false,
+      code: 'training_summary_generation_not_configured',
+      route: 'yandex-main',
+    })
+    expect(response.headers['x-fit-release-id']).toBe('diagnostic-release')
+    expect(response.headers['x-fit-request-id']).toMatch(/^[0-9a-f-]{36}$/)
+    expect(diagnose).not.toHaveBeenCalled()
+  })
+
+  it('runs the read-only summary preflight through the normal Yandex session', async () => {
+    const diagnose = vi.fn().mockResolvedValue({
+      diagnostic: true, route: 'yandex-main', calls: 0, ready: true,
+      code: 'available', stats: { workouts: 2, exercises: 8, sets: 24, model_input_chars: 3200 },
+    })
+    const generate = vi.fn()
+    const app = buildApp({
+      pilotTrainingSummaryDiagnostic: { diagnose },
+      pilotTrainingSummaryGenerator: { generate },
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/clients/${PROFILE_ID}/training-summaries/diagnostic`,
+      headers: { 'x-fit-session': 's'.repeat(43) },
+      payload: {
+        client_id: PROFILE_ID,
+        period_start: '2026-08-01',
+        period_end: '2026-08-26',
+        force: true,
+        trigger_reason: 'manual_refresh',
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toMatchObject({ diagnostic: true, calls: 0, ready: true, code: 'available' })
+    expect(diagnose).toHaveBeenCalledWith({
+      accessMode: 'read_write', token: 's'.repeat(43),
+    }, {
+      clientId: PROFILE_ID,
+      periodStart: '2026-08-01',
+      periodEnd: '2026-08-26',
+      force: true,
+      triggerReason: 'manual_refresh',
+    })
+    expect(generate).not.toHaveBeenCalled()
+  })
 })
 
 describe('browser pilot CORS', () => {
@@ -1014,8 +1092,10 @@ describe('browser pilot CORS', () => {
     expect(preflight.headers['access-control-allow-headers']).toContain('authorization')
     expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-pilot-session')
     expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-session')
+    expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-request-id')
     expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-release-id')
     expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-error-code')
+    expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-request-id')
 
     const rejected = await app.inject({
       method: 'OPTIONS',

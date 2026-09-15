@@ -6,32 +6,33 @@ import { SummaryDiagnosticPanel } from './SummaryDiagnosticPanel'
 import { getSummaryDiagnostic } from '../../data/repositories/summary-diagnostic.repository'
 
 vi.mock('../../data/repositories/summary-diagnostic.repository', () => ({ getSummaryDiagnostic: vi.fn() }))
-const preflight = { fingerprint: 'test', stats: { workouts: 14, exercises: 149, sets: 376, model_input_chars: 44511 } }
+const preflight = {
+  fingerprint: 'test',
+  ready: true,
+  code: 'available',
+  requestId: 'request-id',
+  releaseId: 'release-id',
+  stats: { workouts: 14, exercises: 149, sets: 376, model_input_chars: 44511 },
+}
 beforeEach(() => { vi.mocked(getSummaryDiagnostic).mockReset(); sessionStorage.clear() })
-const mount = () => render(<MemoryRouter><SummaryDiagnosticPanel clientId="client-1" /></MemoryRouter>)
+const mount = () => render(<MemoryRouter><SummaryDiagnosticPanel apiBaseUrl="https://api.example.test" sessionToken="session-token" clientId="client-1" periodStart="2026-08-16" periodEnd="2026-09-15" /></MemoryRouter>)
 
-it('requires preflight and a separate click; escapes the raw answer without writing an analysis', async () => {
-  vi.mocked(getSummaryDiagnostic).mockResolvedValueOnce(preflight).mockResolvedValueOnce({ ...preflight, answer: '<script>private</script>', issues: ['Правило'] })
+it('runs only the zero-token production preflight and shows its trace', async () => {
+  vi.mocked(getSummaryDiagnostic).mockResolvedValueOnce(preflight)
   mount()
   expect(getSummaryDiagnostic).not.toHaveBeenCalled()
-  await userEvent.click(screen.getByRole('button', { name: 'Сверить данные без ИИ' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Запустить preflight без ИИ' }))
   expect(getSummaryDiagnostic).toHaveBeenCalledTimes(1)
-  await userEvent.click(await screen.findByRole('button', { name: 'Один запрос к ИИ' }))
-  expect(await screen.findByText('<script>private</script>')).toBeVisible()
-  expect(getSummaryDiagnostic).toHaveBeenLastCalledWith('client-1', 'run_once', 'test')
-  expect(document.querySelector('script')).toBeNull()
+  expect(getSummaryDiagnostic).toHaveBeenCalledWith('https://api.example.test', 'session-token', 'client-1', '2026-08-16', '2026-09-15')
+  expect(await screen.findByText(/Preflight пройден/)).toBeVisible()
+  expect(screen.getByText(/ID: request-id/)).toBeVisible()
+  expect(screen.queryByText(/запрос к ИИ/i)).not.toBeInTheDocument()
 })
 
-it('blocks mismatched input and blocks retry after an uncertain paid call', async () => {
-  vi.mocked(getSummaryDiagnostic).mockResolvedValueOnce({ ...preflight, stats: { ...preflight.stats, sets: 377 } })
-  const view = mount()
-  await userEvent.click(screen.getByRole('button', { name: 'Сверить данные без ИИ' }))
-  expect(await screen.findByRole('button', { name: 'Один запрос к ИИ' })).toBeDisabled()
-  view.unmount()
-  vi.mocked(getSummaryDiagnostic).mockResolvedValueOnce(preflight).mockRejectedValueOnce(new Error('Сеть'))
+it('shows the exact failed stage and permits only another free preflight', async () => {
+  vi.mocked(getSummaryDiagnostic).mockRejectedValueOnce(new Error('Этап API · HTTP 503 · service_unavailable · ID request-id'))
   mount()
-  await userEvent.click(screen.getByRole('button', { name: 'Сверить данные без ИИ' }))
-  await userEvent.click(await screen.findByRole('button', { name: 'Один запрос к ИИ' }))
-  expect(await screen.findByRole('alert')).toHaveTextContent('Сеть')
-  expect(screen.getByRole('button', { name: 'Один запрос к ИИ' })).toBeDisabled()
+  await userEvent.click(screen.getByRole('button', { name: 'Запустить preflight без ИИ' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Этап API · HTTP 503')
+  expect(screen.getByRole('button', { name: 'Запустить preflight без ИИ' })).toBeEnabled()
 })
