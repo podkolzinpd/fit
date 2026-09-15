@@ -6,7 +6,7 @@ import { programLoadIssues, type ProgramLoad } from './load.js'
 
 export const PROGRAM_METHOD_VERSION = 'four-week-foundation-v2'
 export interface Prescription { sets: number; reps: number | null; durationSec: number | null; rpe: number; restSec: number }
-export interface ProgramTemplate { rationale: string; progression: string; sessions: { weekday: number; title: string; exercises: { exerciseRef: string; weeks: Prescription[] }[] }[] }
+export interface ProgramTemplate { rationale: string; progression: string; sessions: { weekday: number; title: string; exercises: { exerciseRef: string; progressionNote?: string; weeks: Prescription[] }[] }[] }
 
 const REQUIRED_MOVEMENTS = ['squat', 'hinge', 'horizontal_push', 'horizontal_pull', 'core'] as const
 
@@ -152,8 +152,9 @@ export function validateProgramTemplate(raw: unknown, brief: ProgramBrief, today
       || !Array.isArray(session.exercises) || session.exercises.length < 3 || session.exercises.length > 8) throw new ProgramValidationError(['invalid_session_schema'])
     const exercises: ProgramTemplate['sessions'][number]['exercises'] = []
     for (const item of session.exercises) {
-      if (!object(item) || !exact(item, ['exerciseRef', 'weeks']) || typeof item.exerciseRef !== 'string' || !byRef.has(item.exerciseRef)
+      if (!object(item) || !exact(item, ['exerciseRef', 'weeks', ...('progressionNote' in item ? ['progressionNote'] : [])]) || typeof item.exerciseRef !== 'string' || !byRef.has(item.exerciseRef)
         || !Array.isArray(item.weeks) || item.weeks.length !== 4) throw new ProgramValidationError(['invalid_exercise_reference_or_weeks'])
+      if ('progressionNote' in item && (typeof item.progressionNote !== 'string' || !item.progressionNote.trim() || item.progressionNote.length > 240)) throw new ProgramValidationError(['invalid_progression_note'])
       const exercise = byRef.get(item.exerciseRef)!
       const weeks: Prescription[] = []
       for (const week of item.weeks) {
@@ -164,7 +165,7 @@ export function validateProgramTemplate(raw: unknown, brief: ProgramBrief, today
             : week.durationSec !== null || !bounded(week.reps, 4, 20))) throw new ProgramValidationError(['invalid_prescription'])
         weeks.push({ sets: week.sets, reps: week.reps as number | null, durationSec: week.durationSec as number | null, rpe: week.rpe, restSec: week.restSec })
       }
-      exercises.push({ exerciseRef: item.exerciseRef, weeks })
+      exercises.push({ exerciseRef: item.exerciseRef, weeks, ...(typeof item.progressionNote === 'string' ? { progressionNote: item.progressionNote.trim() } : {}) })
     }
     if (new Set(exercises.map((row) => row.exerciseRef)).size !== exercises.length) throw new ProgramValidationError(['duplicate_session_exercise'])
     sessions.push({ weekday: session.weekday, title: session.title.trim(), exercises })
@@ -246,12 +247,12 @@ export function materializeProgram(template: ProgramTemplate, brief: ProgramBrie
   const byRef = new Map(eligibleProgramExercises(brief.equipment!, brief.excludedRefs ?? []).map((row) => [row.ref, row]))
   const sessions = scheduleSessions(brief, template.sessions).map(({ date, week, session }) => ({
     day: date, week: week + 1, title: `Неделя ${week + 1}: ${session.title}`,
-    exercises: session.exercises.map((item) => ({ ...byRef.get(item.exerciseRef)!, exerciseRef: item.exerciseRef, ...item.weeks[week]! })),
+    exercises: session.exercises.map((item) => ({ ...byRef.get(item.exerciseRef)!, exerciseRef: item.exerciseRef, ...item.weeks[week]!, ...(item.progressionNote ? { progressionNote: item.progressionNote } : {}) })),
   }))
   if (sessions.length !== programSessionCount(brief.frequency!)) throw new Error('invalid_program_session_count')
   const workouts = sessions.map((session) => ({
     requestId: stableId(`${generationId}:${session.day}`), clientId, workoutDate: session.day,
-    notes: `${session.title}\n${template.progression}`,
+    notes: [session.title, template.progression, ...session.exercises.flatMap((exercise) => exercise.progressionNote ? [`${exercise.name}: ${exercise.progressionNote}`] : [])].join('\n'),
     exercises: session.exercises.map((exercise, position) => ({
       source: 'system', ref: exercise.ref, name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind,
       position, blockId: stableId(`${generationId}:${session.day}:${position}`), blockType: 'single', blockRounds: 1,

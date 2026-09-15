@@ -15,4 +15,12 @@ describe('assistant first entry', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Записать тренировку' }))
     expect(onChoose).toHaveBeenCalledWith('Запиши тренировку: жим лёжа 3 по 10 по 60 кг')
   })
+  it('offers program creation as a chat request alongside workout recording for the pilot', async () => {
+    const onChoose = vi.fn()
+    render(<AssistantFirstEntry programEnabled onChoose={onChoose} />)
+    expect(screen.getByRole('heading', { name: 'Чем помочь с тренировками?' })).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Составить программу' }))
+    expect(onChoose).toHaveBeenCalledExactlyOnceWith('Составь программу тренировок')
+    expect(screen.getByRole('button', { name: 'Записать тренировку' })).toBeVisible()
+  })
 })

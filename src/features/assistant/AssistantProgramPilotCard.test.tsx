@@ -11,7 +11,7 @@ describe('program pilot card', () => {
     const handlers = props()
     render(<AssistantProgramPilotCard {...handlers} payload={{ step: 'brief', clientName: 'Тестик', briefSummary: 'Цель: сила\nДни: пн', readyToGenerate: true }} />)
     await userEvent.click(screen.getByRole('button', { name: 'Подтвердить и составить' }))
-    expect(handlers.onSuggestion).toHaveBeenCalledWith('Подтверждаю анкету, составь программу')
+    expect(handlers.onSuggestion).toHaveBeenCalledWith('Условия верны, составь программу')
   })
   it('saves the original canonical payload once and retains identifiers', async () => {
     const handlers = props()
@@ -41,6 +41,11 @@ describe('program pilot card', () => {
     expect(screen.getByRole('button', { name: 'Это все тренировки' })).toBeDisabled()
     view.rerender(<AssistantProgramPilotCard {...handlers} payload={payload} />)
     expect(screen.getByRole('button', { name: 'Это все тренировки' })).toBeEnabled()
+  })
+  it('keeps the conditions summary without duplicating a question shown in chat', () => {
+    render(<AssistantProgramPilotCard {...props()} showGuidance={false} payload={{ step: 'brief', guidance: 'Какова цель программы?', briefSummary: '2 занятия в неделю' }} />)
+    expect(screen.queryByText('Какова цель программы?')).not.toBeInTheDocument()
+    expect(screen.getByText('2 занятия в неделю')).toBeVisible()
   })
   it('shows the source of prescribed load in the generated result', () => {
     render(<AssistantProgramPilotCard {...props()} payload={{ step: 'confirm', canonicalWorkouts, rationale: 'История записана не полностью. Стартовый объём — два подхода.' }} />)

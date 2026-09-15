@@ -231,4 +231,4 @@ export function briefSummary(brief: ProgramBrief): string {
   ].filter(Boolean).join('\n')
 }
 
-export const CONFIRM_PROGRAM_BRIEF = 'Подтверждаю анкету, составь программу'
+export const CONFIRM_PROGRAM_BRIEF = 'Условия верны, составь программу'

@@ -15,8 +15,8 @@ export function AssistantFirstEntry({ onChoose, programEnabled = false }: Assist
   return <section className="assistant-first-entry" aria-labelledby="assistant-first-entry-title">
     <span className="assistant-first-entry-icon" aria-hidden="true"><AssistantIcon /></span>
     <div className="assistant-first-entry-copy">
-      <h2 id="assistant-first-entry-title">Запиши тренировку за минуту</h2>
-      <p>Напиши или надиктуй упражнения и результаты. Ассистент уточнит клиента и покажет черновик перед сохранением.</p>
+      <h2 id="assistant-first-entry-title">{programEnabled ? 'Чем помочь с тренировками?' : 'Запиши тренировку за минуту'}</h2>
+      <p>{programEnabled ? 'Напиши или надиктуй запрос: внести выполненную тренировку или составить программу. Ассистент уточнит детали и покажет результат перед сохранением.' : 'Напиши или надиктуй упражнения и результаты. Ассистент уточнит клиента и покажет черновик перед сохранением.'}</p>
     </div>
     <div className="assistant-first-entry-actions" aria-label="Примеры запросов">
       {programEnabled && <button type="button" onClick={() => onChoose('Составь программу тренировок')}>Составить программу</button>}

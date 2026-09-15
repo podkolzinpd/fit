@@ -29,6 +29,16 @@ describe('private generator load contract', () => {
     expect(result.statusCode).not.toBe(200)
     expect(programModelJson).not.toHaveBeenCalled()
   })
+  it('rejects a new model plan without an exercise progression note', async () => {
+    const body = request()
+    const load = deriveProgramLoad(body.brief, body.context.context, body.today)
+    const plan = programPlanFromTemplate(prescribeProgram(selection, body.brief, body.today, load))
+    Reflect.deleteProperty(plan.exercises[0]!, 'progressionNote')
+    vi.mocked(programModelJson).mockResolvedValue(plan)
+    const result = await handler({ httpMethod: 'POST', body })
+    expect(result.statusCode).toBe(422)
+    expect(JSON.parse(result.body)).toMatchObject({ error: 'program_validation_failed', issues: ['invalid_progression_note'] })
+  })
   it('keeps other trainers outside the pilot', async () => {
     vi.mocked(isProgramPilotEnabled).mockReturnValue(false)
     const result = await handler({ httpMethod: 'POST', body: request() })

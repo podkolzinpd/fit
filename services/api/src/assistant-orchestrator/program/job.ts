@@ -4,7 +4,7 @@ import type { ProgramBrief } from './brief.js'
 
 export function programGenerationKey(actorId: string, clientId: string, brief: ProgramBrief, fingerprint: string): string {
   const entries = Object.entries(brief).sort(([a], [b]) => a.localeCompare(b))
-  const hex = createHash('sha256').update(JSON.stringify(['model-plan-v2', actorId, clientId, entries, fingerprint])).digest('hex')
+  const hex = createHash('sha256').update(JSON.stringify(['model-plan-v3', actorId, clientId, entries, fingerprint])).digest('hex')
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`
 }
 export async function generateProgramOnce(service: SupabaseClient, key: string, actorId: string, clientId: string, generate: () => Promise<unknown>): Promise<unknown> {
