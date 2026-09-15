@@ -9,6 +9,8 @@ const routedTools = ['record_workout', 'create_program_draft'] as const
 const cancellationReplies = ['Создание программы отменено.', 'Хорошо, запись тренировки отменена.']
 export const assistantToolStateFilter = `action.not.is.null,content.in.(${cancellationReplies.map((reply) => JSON.stringify(reply)).join(',')})`
 const changeConditionsControls = ['Изменить условия программы', 'Изменить условия']
+const changeClientControls = ['Сменить клиента', 'Другой клиент']
+const isChangeClientControl = (message: string) => changeClientControls.some((control) => control.toLocaleLowerCase('ru') === message.trim().toLocaleLowerCase('ru'))
 function record(value: unknown): value is Record<string, unknown> { return !!value && typeof value === 'object' && !Array.isArray(value) }
 
 export function activeAssistantTool(value: unknown): AssistantAction | null {
@@ -56,7 +58,7 @@ function controlRoute(message: string, active: AssistantAction | null): Assistan
       return { tool: active.tool as RoutedTool, mode: 'continue', reply: '' }
     }
   }
-  if (active.tool === 'create_program_draft' && ([CONFIRM_PROGRAM_BRIEF, CONFIRM_ACTIVITY_OVERLAP, HISTORY_COMPLETE, HISTORY_INCOMPLETE, ...changeConditionsControls].includes(text)
+  if (active.tool === 'create_program_draft' && ([CONFIRM_PROGRAM_BRIEF, CONFIRM_ACTIVITY_OVERLAP, HISTORY_COMPLETE, HISTORY_INCOMPLETE, ...changeConditionsControls].includes(text) || isChangeClientControl(text)
     || /^Измени упражнение \d+ в занятии \d{4}-\d{2}-\d{2}; область: /u.test(text))) return { tool: active.tool, mode: 'continue', reply: '' }
   if (active.tool === 'record_workout' && text === 'Готово, разобрать тренировку') return { tool: active.tool, mode: 'continue', reply: '' }
   return undefined
@@ -108,7 +110,7 @@ export async function routedAssistantTurn(input: { message: string; history: Rou
     await deps.cancel(active)
     return { reply: cancellationReplies[active.tool === 'create_program_draft' ? 0 : 1]!, action: null }
   }
-  if (active?.tool === 'create_program_draft' && changeConditionsControls.includes(input.message.trim())) await deps.cancel(active)
+  if (active?.tool === 'create_program_draft' && (changeConditionsControls.includes(input.message.trim()) || isChangeClientControl(input.message))) await deps.cancel(active)
   const previous = route.mode === 'continue' ? active : null
   const result = route.tool === 'create_program_draft' ? await deps.program(previous) : deps.record(previous)
   return result ?? { reply: 'Не смогла обработать это сообщение выбранной функцией. Уточните запрос; текущий черновик сохранён.', action: null }

@@ -173,6 +173,38 @@ describe('assistant orchestrator contract', () => {
     expect(program?.action).toMatchObject({ tool: 'create_program_draft', status: 'needs_input', payload: { step: 'brief', clientId: 'client-1' } })
   })
 
+  it.each(['Составь программу', 'Подготовь план тренировок на месяц', 'Создай программу на четыре недели'])('asks for a client when a program command contains only shared alias words: %s', (message) => {
+    const clients = ['Пилот программы', 'Программа', 'Тренировка'].map((fullName, index) => ({ id: `client-${index}`, fullName, goal: null, ageYears: null, heightCm: null, gender: null }))
+    const result = createProgramTurn(message, clients, null)
+    expect(result?.action).toMatchObject({ tool: 'create_program_draft', payload: { step: 'client' } })
+    expect(result?.action?.payload).not.toHaveProperty('clientId')
+  })
+
+  it.each(['Запиши тренировку', 'Создай запись тренировки: жим 3 по 10', 'Подготовь запись занятия'])('does not infer a client from recording command words: %s', (message) => {
+    const clients = ['Тренировка', 'Запись тренировки', 'Тест занятия', 'Жим'].map((fullName, index) => ({ id: `client-${index}`, fullName, goal: null, ageYears: null, heightCm: null, gender: null }))
+    const result = recordWorkoutTurn(message, clients, null)
+    expect(result?.action).toMatchObject({ tool: 'record_workout', payload: { step: 'client' } })
+    expect(result?.action?.payload).not.toHaveProperty('clientId')
+  })
+
+  it.each(['Составь программу для Пилот программы', 'Подготовить программу для Пилот программы', 'Пилот программы'])('keeps an explicit full alias selectable: %s', (message) => {
+    const clients = [{ id: 'pilot', fullName: 'Пилот программы', goal: null, ageYears: null, heightCm: null, gender: null }]
+    const pending = { tool: 'create_program_draft', payload: { step: 'client', candidates: clients } }
+    expect(createProgramTurn(message, clients, pending)?.action?.payload).toMatchObject({ step: 'brief', clientId: 'pilot' })
+  })
+
+  it.each(['Запиши тренировку для клиента Тренировка', 'Записать тренировку для Тренировка', 'Тренировка'])('allows a command-word alias only as an explicit client choice: %s', (message) => {
+    const clients = [{ id: 'literal-alias', fullName: 'Тренировка', goal: null, ageYears: null, heightCm: null, gender: null }]
+    const pending = { tool: 'record_workout', payload: { step: 'client', candidates: clients } }
+    expect(recordWorkoutTurn(message, clients, pending)?.action?.payload).toMatchObject({ step: 'workout', clientId: 'literal-alias' })
+  })
+
+  it('prefers a complete inflected name while retaining ambiguity for the first name alone', () => {
+    const clients = ['Анна Смирнова', 'Анна Петрова'].map((fullName, index) => ({ id: `client-${index}`, fullName, goal: null, ageYears: null, heightCm: null, gender: null }))
+    expect(recordWorkoutTurn('Запиши Анне Смирновой тренировку: жим 3 по 10', clients, null)?.action?.payload).toMatchObject({ step: 'workout', clientId: 'client-0' })
+    expect(recordWorkoutTurn('Запиши Анне тренировку: жим 3 по 10', clients, null)?.action?.payload).toMatchObject({ step: 'client', candidates: [{ id: 'client-0' }, { id: 'client-1' }] })
+  })
+
   it('keeps inflected-name matches explicit when more than one client fits', () => {
     const clients = [
       { id: 'client-1', fullName: 'Анна Смирнова', goal: null, ageYears: null, heightCm: null, gender: null },
