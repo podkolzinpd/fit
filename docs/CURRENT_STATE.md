@@ -177,6 +177,9 @@
 - Стабильный Vercel Preview синхронизируется с verified `main`; полноценная app-session использует прежний UI и read-write stage API. Вне allowlist production остаётся на Supabase.
 - Реальный invite → join → leave/remove smoke — внешняя проверка.
 ## Проверки текущей ветки
+- Локальная side-ветка `codex/program-context-load-fix` от `3f4e178f` исправляет
+  сохранение первого ответа, уточнения и расчёт нагрузки по истории. План и
+  ограничения проверки: `docs/design/ASSISTANT_PROGRAM_CONTEXT_FIX.md`.
 - YAFIT-518: 34 целевых component tests; WebKit-переход из прокрученного поиска
   и возврат с восстановлением состояния; визуальные эталоны светлой/тёмной тем
   на 390/430/1440 px и длинное имя обновлены. Полный check: 1 510 frontend,

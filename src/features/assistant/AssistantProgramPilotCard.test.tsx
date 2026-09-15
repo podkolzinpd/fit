@@ -24,4 +24,26 @@ describe('program pilot card', () => {
     render(<AssistantProgramPilotCard {...props()} enabled={false} payload={{ step: 'confirm', canonicalWorkouts }} />)
     expect(screen.getByRole('button', { name: 'Добавить в расписание' })).toBeDisabled()
   })
+  it('shows the question inside the card and offers direct answers without generating', async () => {
+    const handlers = props()
+    render(<AssistantProgramPilotCard {...handlers} payload={{ step: 'brief', briefStatus: 'needs_clarification', historyQuestion: true,
+      guidance: 'Это вся история или часть тренировок не записана?', readyToGenerate: false }} />)
+    expect(screen.getByRole('status')).toHaveTextContent('Это вся история')
+    expect(screen.queryByRole('button', { name: 'Подтвердить и составить' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Часть тренировок не записана' }))
+    expect(handlers.onSuggestion).toHaveBeenCalledExactlyOnceWith('Часть тренировок не записана')
+    expect(handlers.onApply).not.toHaveBeenCalled()
+  })
+  it('disables history answers while sending and restores them for retry', () => {
+    const handlers = props()
+    const payload = { step: 'brief', historyQuestion: true }
+    const view = render(<AssistantProgramPilotCard {...handlers} running payload={payload} />)
+    expect(screen.getByRole('button', { name: 'Это все тренировки' })).toBeDisabled()
+    view.rerender(<AssistantProgramPilotCard {...handlers} payload={payload} />)
+    expect(screen.getByRole('button', { name: 'Это все тренировки' })).toBeEnabled()
+  })
+  it('shows the source of prescribed load in the generated result', () => {
+    render(<AssistantProgramPilotCard {...props()} payload={{ step: 'confirm', canonicalWorkouts, rationale: 'История записана не полностью. Стартовый объём — два подхода.' }} />)
+    expect(screen.getByText('История записана не полностью. Стартовый объём — два подхода.')).toBeVisible()
+  })
 })

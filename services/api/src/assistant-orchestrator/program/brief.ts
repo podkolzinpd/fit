@@ -15,6 +15,9 @@ export interface ProgramBrief {
   preferences?: string
   excludedRefs?: string[]
   otherActivity?: string
+  otherActivities?: { kind: string; frequency: number; weekdays: number[] }[]
+  activityOverlapConfirmed?: boolean
+  historyComplete?: boolean
   adult?: boolean
 }
 
@@ -32,6 +35,13 @@ const briefProperties = {
   preferences: { type: 'string', maxLength: 800 },
   excludedRefs: { type: 'array', items: { type: 'string', enum: PROGRAM_CATALOG.map((row) => row.ref) } },
   otherActivity: { type: 'string', maxLength: 500 },
+  otherActivities: { type: 'array', maxItems: 5, items: { type: 'object', additionalProperties: false,
+    required: ['kind', 'frequency', 'weekdays'], properties: {
+      kind: { type: 'string', maxLength: 100 }, frequency: { type: 'integer', minimum: 1, maximum: 7 },
+      weekdays: { type: 'array', minItems: 1, maxItems: 7, items: { type: 'integer', minimum: 1, maximum: 7 } },
+    } } },
+  activityOverlapConfirmed: { type: 'boolean' },
+  historyComplete: { type: 'boolean' },
   adult: { type: 'boolean' },
 } as const
 
@@ -39,7 +49,7 @@ export const briefKeys = Object.keys(briefProperties) as (keyof ProgramBrief)[]
 export const briefExtractionSchema = {
   type: 'object', additionalProperties: false, required: ['changes', 'clarification'],
   properties: {
-    changes: { type: 'array', maxItems: 17, items: {
+    changes: { type: 'array', maxItems: briefKeys.length, items: {
       type: 'object', additionalProperties: false, required: ['field', 'operation', 'value', 'quote'], properties: {
         field: { type: 'string', enum: briefKeys }, operation: { type: 'string', enum: ['set', 'clear'] },
         value: { type: 'string' }, quote: { type: 'string' },
@@ -63,7 +73,8 @@ export function decodeQuotedBriefPatch(value: unknown): unknown {
     if (change.operation === 'clear') { clear.push(field); continue }
     if (change.operation !== 'set') throw new Error('invalid_brief_extraction')
     patch[field] = field === 'frequency' || field === 'durationMin' ? Number(text)
-      : field === 'adult' ? text === 'true' ? true : text === 'false' ? false : undefined
+      : field === 'adult' || field === 'historyComplete' || field === 'activityOverlapConfirmed' ? text === 'true' ? true : text === 'false' ? false : undefined
+        : field === 'otherActivities' ? JSON.parse(text) as unknown
         : field === 'weekdays' ? text.split(',').map((day) => Number(day.trim()))
           : field === 'equipment' || field === 'excludedRefs' ? text ? text.split(',').map((entry) => entry.trim()) : [] : text
   }
@@ -83,7 +94,14 @@ export function isCalendarDate(value: unknown): value is string {
 export function readProgramBrief(value: unknown): ProgramBrief | undefined {
   if (!object(value) || Object.keys(value).some((key) => !briefKeys.includes(key as keyof ProgramBrief))) return undefined
   for (const [key, item] of Object.entries(value)) {
-    if (key === 'adult') { if (typeof item !== 'boolean') return undefined }
+    if (key === 'adult' || key === 'activityOverlapConfirmed' || key === 'historyComplete') { if (typeof item !== 'boolean') return undefined }
+    else if (key === 'otherActivities') {
+      if (!Array.isArray(item) || item.length > 5 || !item.every((activity: unknown) => object(activity)
+        && Object.keys(activity).length === 3 && typeof activity.kind === 'string' && activity.kind.trim().length > 0 && activity.kind.length <= 100
+        && typeof activity.frequency === 'number' && Number.isInteger(activity.frequency) && activity.frequency >= 1 && activity.frequency <= 7
+        && Array.isArray(activity.weekdays) && activity.weekdays.length === activity.frequency && new Set(activity.weekdays).size === activity.frequency
+        && activity.weekdays.every((day: unknown) => typeof day === 'number' && Number.isInteger(day) && day >= 1 && day <= 7))) return undefined
+    }
     else if (key === 'frequency') { if (item !== 1 && item !== 2 && item !== 3) return undefined }
     else if (key === 'durationMin') { if (typeof item !== 'number' || !Number.isInteger(item) || item < 30 || item > 120) return undefined }
     else if (key === 'weekdays') {
@@ -104,6 +122,34 @@ export function readProgramBrief(value: unknown): ProgramBrief | undefined {
 
 function normalize(text: string): string { return text.toLocaleLowerCase('ru').replace(/ё/g, 'е').replace(/\s+/g, ' ').trim() }
 
+/** Narrow deterministic guard; ambiguous language must be clarified, not guessed. */
+function explicitFrequency(text: string): number | undefined {
+  const numbers: Record<string, number> = { один: 1, одно: 1, одну: 1, два: 2, две: 2, три: 3, четыре: 4, пять: 5, шесть: 6, семь: 7 }
+  const token = '(?:[0-9]+|один|одно|одну|два|две|три|четыре|пять|шесть|семь)'
+  let normalized = normalize(text)
+  // A clear correction keeps the new value, including an omitted unit on the old value.
+  normalized = normalized.replace(new RegExp(`не\\s+${token}(?:\\s+(?:раза?|занятия?|тренировки?))?\\s*,?\\s*а\\s+(${token})`, 'gu'), '$1')
+  if (new RegExp(`(?:не\\s+${token}|${token}\\s*(?:или|[-–—])\\s*${token})`, 'u').test(normalized)) return undefined
+  const matches = [...normalized.matchAll(new RegExp(`(?<![\\p{L}0-9])(${token})\\s*(?:раз(?:а)?|заняти[еяй]|трениров(?:ка|ки|ок))(?!\\p{L})`, 'gu'))]
+  const values = matches.map((match) => numbers[match[1]!] ?? Number(match[1]))
+  if (!values.length && new RegExp(`^${token}[.!]?$`, 'u').test(normalized)) values.push(numbers[normalized.replace(/[.!]$/, '')] ?? Number(normalized.replace(/[.!]$/, '')))
+  return new Set(values).size === 1 ? values[0] : undefined
+}
+
+export const CONFIRM_ACTIVITY_OVERLAP = 'Совмещение нагрузок в эти дни согласовано'
+export const HISTORY_COMPLETE = 'Это все тренировки'
+export const HISTORY_INCOMPLETE = 'Часть тренировок не записана'
+export function noOtherActivity(brief: ProgramBrief): boolean {
+  return /^(?:нет|нет другой (?:нагрузки|активности)|другой (?:нагрузки|активности) нет|отсутствует)[.!]?$/u.test(normalize(brief.otherActivity ?? ''))
+}
+
+export function activityNeedsDetails(brief: ProgramBrief): boolean {
+  return brief.otherActivity !== undefined && !noOtherActivity(brief) && !brief.otherActivities?.length
+}
+export function activityOverlap(brief: ProgramBrief): boolean {
+  return !noOtherActivity(brief) && !!brief.otherActivities?.some((activity) => activity.weekdays.some((day) => brief.weekdays?.includes(day)))
+}
+
 export function mergeExtractedBrief(previous: ProgramBrief, message: string, value: unknown): { brief: ProgramBrief; clarification: string | null } {
   if (!object(value) || Object.keys(value).some((key) => !['patch', 'clear', 'evidence', 'clarification'].includes(key))) throw new Error('invalid_brief_extraction')
   const patch = readProgramBrief(value.patch)
@@ -120,9 +166,16 @@ export function mergeExtractedBrief(previous: ProgramBrief, message: string, val
     const quote = evidence[key]
     if (typeof quote !== 'string' || !normalize(quote) || !normalize(message).includes(normalize(quote))) throw new Error('brief_evidence_missing')
   }
+  if (patch.frequency !== undefined && patch.frequency !== previous.frequency && explicitFrequency(message) !== patch.frequency) throw new Error('brief_frequency_ambiguous')
+  if (patch.activityOverlapConfirmed === true && normalize(message) !== normalize(CONFIRM_ACTIVITY_OVERLAP)) throw new Error('brief_activity_confirmation_missing')
   const next: Record<string, unknown> = { ...previous }
   for (const key of clearedKeys) delete next[key]
   Object.assign(next, patch)
+  // Changes to either schedule invalidate the trainer's previous acknowledgement.
+  if (patch.otherActivity !== undefined || patch.otherActivities !== undefined || patch.weekdays !== undefined || patch.frequency !== undefined
+    || clearedKeys.some((key) => ['otherActivity', 'otherActivities', 'weekdays', 'frequency'].includes(key))) delete next.activityOverlapConfirmed
+  if (patch.otherActivity !== undefined && patch.otherActivities === undefined && previous.otherActivity !== patch.otherActivity) delete next.otherActivities
+  if (typeof next.otherActivity === 'string' && noOtherActivity({ otherActivity: next.otherActivity })) delete next.otherActivities
   // Frequency changes cannot silently reuse an incompatible old schedule.
   if (patch.frequency !== undefined && patch.weekdays === undefined && previous.frequency !== patch.frequency) delete next.weekdays
   if (patch.goalText !== undefined && patch.goal === undefined) delete next.goal
@@ -142,13 +195,15 @@ export const briefQuestions: Partial<Record<keyof ProgramBrief, string>> = {
   equipment: 'Какое оборудование доступно? Можно перечислить его или указать полностью оборудованный тренажёрный зал.',
   limitations: 'Есть ли сейчас боль, травмы или ограничения для упражнений? Если нет — так и напишите.',
   preferences: 'Есть ли любимые или нежелательные упражнения? Можно ответить «предпочтений нет».',
-  otherActivity: 'Есть ли другая регулярная нагрузка — бег, спорт или физическая работа?',
+  otherActivity: 'Есть ли другая регулярная нагрузка — бег, спорт или физическая работа? Если есть, укажите вид, частоту и дни; если нет — напишите «нет».',
+  otherActivities: 'Уточните другую нагрузку: какой вид, сколько раз в неделю и в какие дни? Например: бег, дважды в неделю, вторник и суббота.',
   adult: 'Клиенту уже исполнилось 18 лет?',
 }
 
 export function missingBriefFields(brief: ProgramBrief): (keyof ProgramBrief)[] {
-  const missing = Object.keys(briefQuestions).filter((key) => brief[key as keyof ProgramBrief] === undefined) as (keyof ProgramBrief)[]
+  const missing = Object.keys(briefQuestions).filter((key) => key !== 'otherActivities' && brief[key as keyof ProgramBrief] === undefined) as (keyof ProgramBrief)[]
   if (brief.weekdays && brief.frequency && brief.weekdays.length !== brief.frequency && !missing.includes('weekdays')) missing.push('weekdays')
+  if (activityNeedsDetails(brief)) missing.push('otherActivities')
   return missing
 }
 
@@ -165,6 +220,9 @@ export function briefSummary(brief: ProgramBrief): string {
     brief.experience && `Опыт: ${experience[brief.experience]}`,
     brief.limitations && `Ограничения: ${brief.limitations === 'none' ? 'не заявлены' : brief.limitationsText ?? 'нужно уточнить'}`,
     brief.preferences && `Пожелания: ${brief.preferences}`, brief.otherActivity && `Другая нагрузка: ${brief.otherActivity}`,
+    brief.otherActivities?.map((activity) => `${activity.kind}: ${activity.frequency} в неделю, ${activity.weekdays.map((day) => days[day - 1]).join(', ')}`).join('\n'),
+    brief.activityOverlapConfirmed && 'Совмещение нагрузок в одни дни согласовано.',
+    brief.historyComplete === false && 'История записана не полностью; используем стартовый объём.',
   ].filter(Boolean).join('\n')
 }
 

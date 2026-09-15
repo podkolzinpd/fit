@@ -8,7 +8,7 @@ export function fixture(frequency: 1 | 2 | 3 = 3): { brief: ProgramBrief; templa
     startDate: '2026-09-16', experience: 'beginner', equipment: [...PROGRAM_EQUIPMENT], limitations: 'none', preferences: 'нет', otherActivity: 'нет', adult: true }
   const template: ProgramTemplate = { rationale: 'Равномерная нагрузка после перерыва.', progression: 'Сохраняйте запас повторений.',
     sessions: weekdays.map((weekday) => ({ weekday, title: 'Всё тело', exercises: ['leg-press', 'fedb-butt-lift-bridge', 'push-ups', 'seated-cable-row', 'plank'].map((exerciseRef) => ({ exerciseRef,
-      weeks: Array.from({ length: 4 }, (_, week) => ({ sets: 2, reps: exerciseRef === 'plank' ? null : 8 + week, durationSec: exerciseRef === 'plank' ? 30 : null, rpe: 6.5, restSec: 90 })),
+      weeks: [0, 0, 1, 1].map((increment) => ({ sets: 2, reps: exerciseRef === 'plank' ? null : 8 + increment, durationSec: exerciseRef === 'plank' ? 30 + increment * 5 : null, rpe: 6.5, restSec: 90 })),
     })) })) }
   return { brief, template }
 }

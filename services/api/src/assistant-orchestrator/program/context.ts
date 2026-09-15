@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
+import { PROGRAM_CATALOG } from './catalog.js'
 
-export const PROGRAM_CONTEXT_VERSION = 'program-context-v1'
+export const PROGRAM_CONTEXT_VERSION = 'program-context-v2'
 export const PROGRAM_WEEKS = 4
 export type ProgramFrequency = 1 | 2 | 3
 
@@ -65,6 +66,8 @@ export interface ProgramHistoryContext {
   completedWorkouts: number
   lastCompletedDate: string | null
   weeklyActivity: { weekStart: string; completedWorkouts: number; confirmedSets: number }[]
+  /** All completed sessions, before the per-exercise recent-execution limit. */
+  loadEvidence: { date: string; catalogSets: number; unmappedSets: number }[]
   feedback: {
     reportedWorkouts: number
     missingWorkouts: number
@@ -146,6 +149,8 @@ export function buildProgramHistoryContext(source: ProgramContextSource): {
     && row.date >= source.periodStart && row.date <= source.periodEnd)
     .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
   const workoutsById = new Map(workouts.map((row) => [row.id, row]))
+  const catalog = new Map(PROGRAM_CATALOG.map((row) => [row.ref, row]))
+  const loadByWorkout = new Map(workouts.map((row) => [row.id, { date: row.date, catalogSets: 0, unmappedSets: 0 }]))
   const weeks = new Map<string, ProgramHistoryContext['weeklyActivity'][number]>()
   for (let day = dateMs(monday(source.periodStart)); day <= end; day += 7 * dayMs) {
     const weekStart = new Date(day).toISOString().slice(0, 10)
@@ -176,6 +181,12 @@ export function buildProgramHistoryContext(source: ProgramContextSource): {
       .map(confirmedSet)
     if (!sets.length) continue
     if (!exercise.ref) throw new Error('invalid_program_source_exercise')
+    const metadata = exercise.source === 'system' ? catalog.get(exercise.ref) : undefined
+    const evidence = loadByWorkout.get(workout.id)!
+    if (!metadata) evidence.unmappedSets += sets.length
+    else evidence.catalogSets += sets.filter((set) => metadata.inputKind === 'duration'
+      ? set.durationSec !== null && set.durationSec > 0
+      : set.reps !== null && set.reps > 0).length
     if (sets.some((set) => set.reps === null && set.durationSec === null && set.distanceKm === null)) confirmedWithoutValues = true
     const key = `${exercise.source}:${exercise.ref}`
     const aggregate = byRef.get(key) ?? {
@@ -204,6 +215,7 @@ export function buildProgramHistoryContext(source: ProgramContextSource): {
     completedWorkouts: workouts.length,
     lastCompletedDate: workouts.at(-1)?.date ?? null,
     weeklyActivity: [...weeks.values()],
+    loadEvidence: [...loadByWorkout.values()],
     feedback: {
       reportedWorkouts: feedback.length, missingWorkouts: workouts.length - feedback.length,
       discomfortDates: [...new Set(workouts.filter((row) => row.discomfort === true).map((row) => row.date))],

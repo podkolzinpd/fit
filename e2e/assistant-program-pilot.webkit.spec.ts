@@ -17,6 +17,22 @@ test.beforeAll(async () => {
 const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8')
 for (const width of [390, 430, 1440]) {
   for (const theme of ['light', 'dark']) {
+    test(`history question at ${width} ${theme}`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 932 })
+      const content = renderToString(createElement(ProgramCard, { enabled: true, running: false,
+        payload: { step: 'brief', briefStatus: 'needs_clarification', clientName: 'Тестовый клиент с длинным именем', historyQuestion: true, readyToGenerate: false,
+          guidance: 'За последние четыре недели в Fit записано в среднем 8 сопоставимых подходов в неделю. Для 3 занятий в неделю это небольшой объём. Это вся история или часть тренировок не записана?',
+          briefSummary: 'Цель: вернуться к регулярным занятиям\n3 занятия в неделю · 4 недели\nДни: пн, ср, пт\nДо 60 минут' },
+        onApply: async () => {}, onSaved: () => {}, onSuggestion: () => {}, onCancel: () => {},
+      }))
+      await page.setContent(`<html class="theme-${theme} ui-identity"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${styles}</style></head><body><div class="phone-frame theme-${theme} assistant-shell ui-identity assistant-identity"><div class="content"><main class="assistant-page"><section class="assistant-context-panel">${content}</section></main></div></div></body></html>`)
+      await expect(page.getByRole('status')).toContainText('Это вся история')
+      await expect(page.getByRole('button', { name: 'Это все тренировки' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Часть тренировок не записана' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Подтвердить и составить' })).toHaveCount(0)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`history-${width}-${theme}.png`), fullPage: true })
+    })
     test(`program card at ${width} ${theme}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 932 })
       const workouts = Array.from({ length: 12 }, (_, index) => ({

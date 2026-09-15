@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto'
 import { eligibleProgramExercises, PROGRAM_CATALOG_VERSION, type ProgramExercise } from './catalog.js'
-import { isCalendarDate, missingBriefFields, type ProgramBrief } from './brief.js'
+import { activityOverlap, isCalendarDate, missingBriefFields, type ProgramBrief } from './brief.js'
 import { programSessionCount } from './context.js'
+import { programLoadIssues, type ProgramLoad } from './load.js'
 
-export const PROGRAM_METHOD_VERSION = 'four-week-foundation-v1'
+export const PROGRAM_METHOD_VERSION = 'four-week-foundation-v2'
 export interface Prescription { sets: number; reps: number | null; durationSec: number | null; rpe: number; restSec: number }
 export interface ProgramTemplate { rationale: string; progression: string; sessions: { weekday: number; title: string; exercises: { exerciseRef: string; weeks: Prescription[] }[] }[] }
 
@@ -40,7 +41,9 @@ export function programTemplateSchema(_catalog: readonly ProgramExercise[], brie
   } }
 }
 
-export function prescribeProgram(raw: unknown, brief: ProgramBrief, today: string): ProgramTemplate {
+export function prescribeProgram(raw: unknown, brief: ProgramBrief, today: string, load: ProgramLoad): ProgramTemplate {
+  const loadIssues = programLoadIssues(brief, load)
+  if (loadIssues.length) throw new ProgramValidationError(loadIssues)
   if (!object(raw) || !exact(raw, ['days']) || !object(raw.days)) throw new ProgramValidationError(['invalid_model_schema'])
   const days = raw.days
   const slots = programSelectionSlots(brief)
@@ -56,7 +59,7 @@ export function prescribeProgram(raw: unknown, brief: ProgramBrief, today: strin
     })
     if (selection.accessory !== null) {
       if (typeof selection.accessory !== 'string' || !slot.accessories.includes(selection.accessory)) throw new ProgramValidationError(['invalid_model_accessory'])
-      refs.push(selection.accessory)
+      if (load.weeklySetCeiling === null || load.weeklySetCeiling >= slots.length * 6) refs.push(selection.accessory)
     }
     const session = { weekday: slot.weekday, title: `Всё тело ${index + 1}`, exercises: refs }
     const selected = session.exercises.map((ref: unknown) => {
@@ -65,14 +68,15 @@ export function prescribeProgram(raw: unknown, brief: ProgramBrief, today: strin
     })
     if (selected.filter((exercise) => exercise.unsupportedTrunk).length > 1) throw new ProgramValidationError(['repeated_loaded_trunk'])
     const restSec = brief.goal === 'strength' ? ((brief.durationMin ?? 60) < 40 ? 90 : 120) : ((brief.durationMin ?? 60) < 40 ? 60 : 90)
-    const rpe = brief.experience === 'experienced' ? 7 : 6.5
+    const rpe = load.rpe
     const prescriptions = (sets: number) => selected.map((exercise) => ({ exerciseRef: exercise.ref,
-      weeks: [0, 1, 2, 2].map((increment) => ({ sets, restSec, rpe,
+      weeks: load.increments.map((increment) => ({ sets, restSec, rpe,
         reps: exercise.inputKind === 'duration' ? null : (exercise.movement === 'accessory' || exercise.movement === 'core' || brief.goal === 'hypertrophy' ? 10 : brief.goal === 'strength' ? 6 : 8) + increment,
         durationSec: exercise.inputKind === 'duration' ? 30 + increment * 5 : null,
       })),
     }))
-    let sets = brief.experience === 'experienced' ? 3 : 2
+    let sets = Math.min(load.maxSetsPerExercise, load.weeklySetCeiling === null ? load.maxSetsPerExercise
+      : Math.floor(load.weeklySetCeiling / (slots.length * selected.length)))
     let exercises = prescriptions(sets)
     const duration = () => 10 + exercises.reduce((sum, exercise) => {
       const week = exercise.weeks[3]!
@@ -81,9 +85,28 @@ export function prescribeProgram(raw: unknown, brief: ProgramBrief, today: strin
     while (duration() > (brief.durationMin ?? 0) && sets > 1) exercises = prescriptions(--sets)
     return { weekday: session.weekday, title: session.title, exercises }
   })
-  return validateProgramTemplate({ rationale: `Цель программы: ${brief.goalText ?? ''}. Четыре недели, ${brief.frequency ?? 0} занятий в неделю. В каждом занятии есть приседание, движение в тазобедренном суставе, жим, тяга и упражнение для корпуса. Упражнения повторяются по неделям, чтобы отслеживать выполнение; рабочий вес подбирает тренер под целевое усилие.`, sessions,
-    progression: 'Подходы и целевое усилие сохраняются. Во вторую и третью недели добавляйте по одному повторению (в удержаниях — по 5 секунд), только если сохраняются техника и запас сил. На четвёртой неделе закрепите нагрузку. При дискомфорте остановитесь и обсудите корректировку с тренером.',
+  const template = validateProgramTemplate({ rationale: `Цель: ${(brief.goalText ?? '').slice(0, 160)}. Четыре недели, ${brief.frequency ?? 0} занятий в неделю. ${load.summary} В каждом занятии пять основных движений; рабочий вес подбирает тренер.`, sessions,
+    progression: (load.mode === 'recent' ? 'Во вторую и третью недели добавляйте по одному повторению (в удержаниях — по 5 секунд).' : 'Первые две недели закрепляйте нагрузку; в третью добавьте одно повторение (в удержаниях — 5 секунд).')
+      + ' Повышайте нагрузку только при сохранении техники и запаса сил. Подходы и целевое усилие сохраняются; четвёртая неделя — закрепление. При дискомфорте остановитесь и обсудите корректировку с тренером.',
   }, brief, today)
+  validateProgramLoad(template, load)
+  return template
+}
+
+export function validateProgramLoad(template: ProgramTemplate, load: ProgramLoad): void {
+  for (let week = 0; week < 4; week++) {
+    let sets = 0
+    for (const session of template.sessions) for (const exercise of session.exercises) {
+      const prescription = exercise.weeks[week]!
+      if (prescription.sets > load.maxSetsPerExercise || prescription.rpe > load.rpe) throw new ProgramValidationError(['history_load_limit'])
+      const initial = exercise.weeks[0]!
+      const delta = prescription.reps === null ? prescription.durationSec! - initial.durationSec! : prescription.reps - initial.reps!
+      if (prescription.sets !== initial.sets || prescription.rpe !== initial.rpe
+        || delta !== load.increments[week]! * (prescription.reps === null ? 5 : 1)) throw new ProgramValidationError(['history_progression_mismatch'])
+      sets += prescription.sets
+    }
+    if (load.weeklySetCeiling !== null && sets > load.weeklySetCeiling) throw new ProgramValidationError(['history_volume_limit'])
+  }
 }
 
 function object(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
@@ -101,6 +124,7 @@ export function programBriefIssues(brief: ProgramBrief, today: string): string[]
   if (missingBriefFields(brief).length) issues.push('incomplete_brief')
   if (brief.adult !== true) issues.push('adult_confirmation_required')
   if (brief.limitations !== 'none') issues.push('limitations_require_review')
+  if (activityOverlap(brief) && brief.activityOverlapConfirmed !== true) issues.push('other_activity_overlap_requires_review')
   if (!isCalendarDate(brief.startDate) || brief.startDate < today || brief.startDate > addDays(today, 90)) issues.push('invalid_start_date')
   const catalog = eligibleProgramExercises(brief.equipment ?? [], brief.excludedRefs ?? [])
   for (const family of ['squat', 'hinge', 'horizontal_push', 'horizontal_pull', 'core']) {

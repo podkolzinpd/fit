@@ -27,11 +27,17 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
     finally { setSaving(false) }
   }
   return <div className="assistant-flow-card assistant-program-card" aria-label="Программа на четыре недели">
-    <header><span><small>{confirm ? 'Программа на четыре недели' : 'Анкета программы'}</small><strong>{String(payload.clientName ?? '')}</strong></span><span className="assistant-flow-status">{confirm ? `${parsed.data.canonicalWorkouts.length} трен.` : 'Сбор данных'}</span></header>
+    <header><span><small>{confirm ? 'Программа на четыре недели' : 'Анкета программы'}</small><strong>{String(payload.clientName ?? '')}</strong></span><span className="assistant-flow-status">{confirm ? `${parsed.data.canonicalWorkouts.length} трен.` : payload.briefStatus === 'needs_clarification' ? 'Уточнение' : payload.readyToGenerate === true ? 'Проверка условий' : 'Сбор данных'}</span></header>
     {!enabled && <p className="assistant-card-hint">Составление программ сейчас недоступно для этого аккаунта.</p>}
+    {!confirm && typeof payload.guidance === 'string' && <div className="assistant-message-copy" role="status">{payload.guidance.split('\n').filter(Boolean).map((line, index) => <p key={index}>{line}</p>)}</div>}
+    {!confirm && payload.historyQuestion === true && <div className="assistant-flow-actions">
+      <button type="button" disabled={busy} aria-busy={running} onClick={() => onSuggestion('Это все тренировки')}>Это все тренировки</button>
+      <button type="button" disabled={busy} aria-busy={running} onClick={() => onSuggestion('Часть тренировок не записана')}>Часть тренировок не записана</button>
+    </div>}
     {!confirm && typeof payload.briefSummary === 'string' && <div className="assistant-message-copy">{payload.briefSummary.split('\n').filter(Boolean).map((line) => <p key={line}>{line}</p>)}</div>}
     {confirm && <>
       {typeof payload.goal === 'string' && <div className="assistant-flow-fact"><small>Цель</small><strong>{payload.goal}</strong></div>}
+      {typeof payload.rationale === 'string' && <p>{payload.rationale}</p>}
       {typeof payload.progression === 'string' && <p>{payload.progression}</p>}
       <p className="assistant-flow-guidance">Вес подбирайте под указанное усилие RPE: 6–8 из 10, с запасом повторений. На подготовку и разминку предусмотрено 10 минут.</p>
       <div className="assistant-program-sessions">{parsed.data.canonicalWorkouts.map((workout, index) => <details key={workout.requestId}>

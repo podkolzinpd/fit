@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { prescribeProgram, materializeProgram, validateProgramTemplate, programBriefIssues, type ProgramTemplate } from './generate.js'
 import { fixture } from './fixtures.js'
+import { buildProgramHistoryContext } from './context.js'
+import { deriveProgramLoad } from './load.js'
 
 
 describe('four-week program contract', () => {
@@ -21,7 +23,7 @@ describe('four-week program contract', () => {
     ['duplicate exercise', (t: ProgramTemplate) => { t.sessions[0]!.exercises[1] = t.sessions[0]!.exercises[0]! }],
     ['duplicate weekday', (t: ProgramTemplate) => { t.sessions[1]!.weekday = 1 }],
     ['excessive effort', (t: ProgramTemplate) => { t.sessions[0]!.exercises[0]!.weeks[0]!.rpe = 9 }],
-    ['progression on two axes', (t: ProgramTemplate) => { t.sessions[0]!.exercises[0]!.weeks[1]!.rpe = 7 }],
+    ['progression on two axes', (t: ProgramTemplate) => { const week = t.sessions[0]!.exercises[0]!.weeks[1]!; week.reps = 9; week.rpe = 7 }],
     ['missing weekly movement', (t: ProgramTemplate) => { for (const s of t.sessions) s.exercises = s.exercises.filter((e) => e.exerciseRef !== 'plank') }],
   ] as const)('rejects %s', (_, mutate) => {
     const { brief, template } = fixture(); mutate(template)
@@ -44,9 +46,11 @@ describe('four-week program contract', () => {
 it.each([1, 2, 3] as const)('calculates consistent prescriptions for %s sessions instead of trusting model numbers', (frequency) => {
   const { brief, template } = fixture(frequency)
   const wire = { days: Object.fromEntries(template.sessions.map((_session, index) => [`day${index + 1}`, { squat: 'leg-press', hinge: 'fedb-butt-lift-bridge', horizontal_push: 'push-ups', horizontal_pull: 'seated-cable-row', core: 'plank', accessory: null }])) }
-  const prescribed = prescribeProgram(wire, brief, '2026-09-15')
+  const history = buildProgramHistoryContext({ clientId: 'client', periodStart: '2026-07-22', periodEnd: '2026-09-15', workouts: [], exercises: [], sets: [] }).context
+  const load = deriveProgramLoad(brief, history, '2026-09-15')
+  const prescribed = prescribeProgram(wire, brief, '2026-09-15', load)
   expect(prescribed.sessions).toHaveLength(frequency)
-  expect(prescribed.sessions[0]!.exercises[0]!.weeks.map((week) => week.reps)).toEqual([8, 9, 10, 10])
+  expect(prescribed.sessions[0]!.exercises[0]!.weeks.map((week) => week.reps)).toEqual([8, 8, 9, 9])
   expect(prescribed.sessions[0]!.exercises[0]!.weeks.map((week) => week.sets)).toEqual([2, 2, 2, 2])
-  expect(() => prescribeProgram({ ...wire, invented: true }, brief, '2026-09-15')).toThrow()
+  expect(() => prescribeProgram({ ...wire, invented: true }, brief, '2026-09-15', load)).toThrow()
 })
