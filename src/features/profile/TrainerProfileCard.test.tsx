@@ -9,8 +9,8 @@ const completeProfile: TrainerProfileDraft = {
   bio: 'Помогаю тренироваться регулярно и безопасно.',
   specialties: ['Силовые', 'Бег'],
   city: 'Москва',
-  metroStationIds: [],
-  customLocations: [],
+  metroStationIds: ['msk-dinamo', 'msk-tsska'],
+  customLocations: ['World Class Динамо'],
   trainingModes: ['online', 'in_person'],
   experienceStartYear: new Date().getFullYear() - 3,
   education: 'Высшее физкультурное образование.',
@@ -30,6 +30,9 @@ describe('TrainerProfileCard', () => {
     expect(screen.getByRole('list', { name: 'Направления' })).toHaveTextContent('СиловыеБег')
     expect(screen.getByText('Онлайн · Лично')).toBeVisible()
     expect(screen.getByText('3 года')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Где тренирует' })).toBeVisible()
+    expect(screen.getByRole('list', { name: 'Станции метро' })).toHaveTextContent('ДинамоЦСКА')
+    expect(screen.getByRole('list', { name: 'Места тренировок' })).toHaveTextContent('World Class Динамо')
     expect(screen.getByRole('button', { name: 'Написать' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Написать' }).closest('.trainer-card-primary-action')).not.toBeNull()
     expect(screen.getByText('Персональный тренер')).toBeVisible()
@@ -43,6 +46,8 @@ describe('TrainerProfileCard', () => {
       bio: '',
       specialties: [],
       city: '',
+      metroStationIds: [],
+      customLocations: [],
       trainingModes: [],
       experienceStartYear: null,
       education: '',
