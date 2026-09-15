@@ -163,12 +163,33 @@ function clientNameWordMatches(actual: string, expected: string): boolean {
   return [...actualKeys].some((key) => expectedKeys.has(key))
 }
 
+// These words describe the requested operation or a workout, not a client's
+// identity. They can still occur in an explicitly supplied full name/alias.
+const clientLookupCommandWord = /^(?:сводк|прогресс|динамик|сдела|покаж|показ|состав|созда|подготов|запис|запиш|добав|внес|занес|зафикс|оформ|разбер|разбор|заполн|собер|продикт|программ|план|трениров|заняти|упражнен|подход|повтор|нагруз|расписан|клиент|тренер|недел|месяц|сегодня|завтра|цель|вес|отдых|жим|тяга|присед|бег)/u
+
 function matchingSummaryClients(message: string, clients: readonly ClientContextRow[]): ClientContextRow[] {
-  const ignored = new Set(['сводка', 'прогресс', 'динамика', 'сделай', 'сделать', 'покажи', 'показать', 'за', 'для', 'клиента'])
-  const words = normalizeAssistantMessage(message).split(' ').filter((word) => word.length >= 3 && !ignored.has(word))
+  const normalized = normalizeAssistantMessage(message)
+  const messageWords = normalized.split(' ').filter(Boolean)
+  const fullMatches = clients.filter((client) => {
+    const name = normalizeAssistantMessage(client.fullName)
+    if (!name) return false
+    if (normalized === name) return true
+    const nameWords = name.split(' ')
+    const hasIdentityWord = nameWords.some((word) => word.length >= 3 && !clientLookupCommandWord.test(word))
+    return messageWords.some((_word, index) => {
+      const explicitContext = ['для', 'клиента', 'клиенту'].includes(messageWords[index - 1] ?? '')
+      if (!explicitContext && !(nameWords.length > 1 && hasIdentityWord)) return false
+      return nameWords.every((word, offset) => {
+        const actual = messageWords[index + offset]
+        return actual !== undefined && (word.length < 3 ? actual === word : clientNameWordMatches(actual, word))
+      })
+    })
+  })
+  if (fullMatches.length) return fullMatches
+  const words = messageWords.filter((word) => word.length >= 3 && word !== 'для' && !clientLookupCommandWord.test(word))
   if (words.length === 0) return []
   return clients.filter((client) => {
-    const clientWords = normalizeAssistantMessage(client.fullName).split(' ').filter((word) => word.length >= 3)
+    const clientWords = normalizeAssistantMessage(client.fullName).split(' ').filter((word) => word.length >= 3 && !clientLookupCommandWord.test(word))
     return clientWords.some((clientWord) => words.some((word) => clientNameWordMatches(word, clientWord)))
   })
 }
