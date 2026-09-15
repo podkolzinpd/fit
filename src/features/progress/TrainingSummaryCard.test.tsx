@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PublishedTrainingSummary, TrainingSummary, Workout } from '../../shared/domain'
 import { addDays, localDate, todayInTimeZone } from '../../shared/local-date'
+import { trainingSummaryGenerationError } from '../../data/repositories/training-summary-errors'
 import { ClientProgressGoalSection } from './ClientProgressGoalSection'
 import { ClientTrainingSummaryCard, TrainerTrainingSummaryCard } from './TrainingSummaryCard'
 
@@ -595,6 +596,22 @@ describe('Training summary card states', () => {
     expect(within(dialog).getByRole('heading', { name: 'Почему' })).toBeVisible()
     expect(screen.getByRole('region', { name: 'Текущая неделя' })).toBeVisible()
     expect(screen.getByRole('region', { name: 'Лучшие результаты за период' })).toBeVisible()
+  })
+
+  it('does not offer an immediate retry after a quality failure spent the period limit', async () => {
+    repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
+    repositories.listForClient.mockResolvedValue([publishedSummary])
+    repositories.generate.mockRejectedValue(trainingSummaryGenerationError('yandex_cloud_quality_check_failed'))
+
+    render(<ClientTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Открыть анализ' }))
+    const dialog = screen.getByRole('dialog', { name: 'Подробный анализ' })
+    await userEvent.setup().click(within(dialog).getByRole('button', { name: 'Обновить анализ' }))
+
+    const refreshError = await within(document.querySelector('.progress-analysis-preview') as HTMLElement).findByRole('alert')
+    expect(refreshError).toHaveTextContent('можно создать завтра')
+    expect(within(refreshError).queryByRole('button', { name: 'Повторить' })).toBeNull()
+    expect(repositories.generate).toHaveBeenCalledOnce()
   })
 
   it('does not turn a legacy hasPr flag into an unsupported record', async () => {

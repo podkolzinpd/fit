@@ -255,7 +255,7 @@ describe('summaryQualityIssues', () => {
     ])
   })
 
-  it('rejects the exact unsafe production advice while keeping gender as a repairable issue', () => {
+  it('keeps generic technique advice non-blocking while rejecting the real period issue', () => {
     const base = validCoachingSummary('Планировать тренировки так, чтобы избегать больших перерывов между ними.')
     const summary = {
       ...base,
@@ -275,8 +275,10 @@ describe('summaryQualityIssues', () => {
     })
 
     expect(quality.blockingIssues).toEqual(expect.arrayContaining([
-      expect.stringContaining('нет наблюдений за выполнением'),
       expect.stringContaining('короткий обычный перерыв'),
+    ]))
+    expect(quality.blockingIssues).not.toEqual(expect.arrayContaining([
+      expect.stringContaining('нет наблюдений за выполнением'),
     ]))
     expect(quality.advisories).toEqual(expect.arrayContaining([
       expect.stringContaining('зависящая от рода'),
@@ -318,6 +320,33 @@ describe('summaryQualityIssues', () => {
     })).toEqual([
       expect.stringContaining('нет наблюдений за выполнением'),
     ])
+  })
+
+  it('allows a neutral technique data gap without treating it as an observed change', () => {
+    const base = validCoachingSummary('Сравнить результат ещё через 3 тренировки.')
+    const summary = {
+      ...base,
+      client: {
+        ...base.client,
+        missingContext: ['Нет данных о технике выполнения упражнений.'],
+      },
+    }
+
+    expect(summaryQualityIssues(summary, {
+      ...trainingData,
+      consistency: { completed_workouts: 3, workouts_per_week: 2, longest_gap_days: 4 },
+      exercises: [{ name: 'Жим лёжа', sessions: [{ max_weight_kg: 70 }, { max_weight_kg: 63 }] }],
+    })).toEqual([])
+  })
+
+  it('allows a general technique reminder without treating it as an observed result', () => {
+    const summary = validCoachingSummary('На следующий блок — сохранять аккуратную и правильную технику выполнения.')
+
+    expect(summaryQualityIssues(summary, {
+      ...trainingData,
+      consistency: { completed_workouts: 3, workouts_per_week: 2, longest_gap_days: 4 },
+      exercises: [{ name: 'Жим лёжа', sessions: [{ max_weight_kg: 70 }, { max_weight_kg: 63 }] }],
+    })).toEqual([])
   })
 
   it('blocks an unsupported claim that training rhythm caused progress', () => {
