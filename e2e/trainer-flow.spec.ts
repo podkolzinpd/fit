@@ -113,7 +113,8 @@ test('форма: короткая беговая фраза создаёт ре
   await page.getByLabel('Запись тренировки').fill('6 по 400 метров')
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByText('Распознано: 1')).toBeVisible()
-  await expect(page.getByText('Бег — интервалы · 6 подходов')).toBeVisible()
+  await expect(page.getByText('Бег — интервалы', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('6 × 400 м', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Добавить в план (1)' }).click()
 
   await expect(page.getByText('Бег — интервалы', { exact: true }).last()).toBeVisible()
