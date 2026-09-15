@@ -20,7 +20,7 @@ afterEach(() => vi.unstubAllEnvs())
 
 function setup(tool: 'record_workout' | 'create_program_draft', status: string, hideActiveFromHistory = false) {
   const action: AssistantAction = { id: actionId, tool, status: 'proposed', title: 'Черновик', description: 'Проверьте', payload: { step: 'confirm', transcript: 'жим 3 по 10', clientId: 'client-1', ...(tool === 'create_program_draft' ? { programPilot: true } : {}) } }
-  const actor = { auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: actorId } } }) }, rpc: vi.fn().mockImplementation((name: string) => Promise.resolve({ error: null, data: name === 'list_clients' ? [{ id: 'client-1', full_name: 'Антон Ковалёв', age_years: 30 }] : {} })) }
+  const actor = { auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: actorId } } }) }, from: vi.fn(), rpc: vi.fn().mockImplementation((name: string) => Promise.resolve({ error: null, data: name === 'list_clients' ? [{ id: 'client-1', full_name: 'Антон Ковалёв', age_years: 30 }] : {} })) }
   const service = { rpc: vi.fn().mockResolvedValue({ error: null, data: {} }), from: vi.fn((table: string) => {
     let stateQuery = false
     const history = hideActiveFromHistory ? Array.from({ length: 20 }, () => ({ author: 'assistant', content: 'Обычная реплика', action: null }))
@@ -42,6 +42,25 @@ function setup(tool: 'record_workout' | 'create_program_draft', status: string, 
 }
 
 describe('pilot routing in the authenticated orchestrator', () => {
+  it('asks for a client before reading history when a new program request shares a word with a client alias', async () => {
+    const { actor } = setup('record_workout', 'applied')
+    actor.rpc.mockResolvedValue({ error: null, data: [{ id: 'pilot', full_name: 'Пилот программы', age_years: 30 }] })
+    vi.mocked(programModelJson).mockResolvedValueOnce({ tool: 'create_program_draft', mode: 'start', reply: '' }).mockResolvedValueOnce({ changes: [], clarification: null })
+    const result = await runAssistantTurn('Bearer actor-token', { conversationId, turnId: crypto.randomUUID(), message: 'Составь программу на четыре недели' })
+    expect(result.reply).toContain('Для кого составить программу')
+    expect(result.action?.payload).toMatchObject({ step: 'client', candidates: [{ id: 'pilot', fullName: 'Пилот программы' }] })
+    expect(result.action?.payload).not.toHaveProperty('clientId')
+    expect(actor.from).not.toHaveBeenCalled()
+    expect(actor.rpc).toHaveBeenCalledOnce()
+  })
+  it('resolves an explicitly named program client despite generic words inside the full alias', async () => {
+    const { actor } = setup('record_workout', 'applied')
+    actor.rpc.mockResolvedValue({ error: null, data: [{ id: 'pilot', full_name: 'Пилот программы', age_years: 30 }] })
+    vi.mocked(programModelJson).mockResolvedValueOnce({ tool: 'create_program_draft', mode: 'start', reply: '' }).mockResolvedValueOnce({ changes: [], clarification: null })
+    const result = await runAssistantTurn('Bearer actor-token', { conversationId, turnId: crypto.randomUUID(), message: 'Подготовить программу для Пилот программы' })
+    expect(result.action?.payload).toMatchObject({ step: 'brief', clientId: 'pilot', clientName: 'Пилот программы' })
+    expect(actor.from).toHaveBeenCalledWith('workouts')
+  })
   it.each([
     ['record_workout', 'applied'], ['record_workout', 'cancelled'], ['create_program_draft', 'applied'], ['create_program_draft', 'cancelled'],
   ] as const)('clears %s lifecycle=%s before selecting a new function', async (tool, status) => {

@@ -62,6 +62,57 @@ describe('model assistant router', () => {
     expect(handlers.program).toHaveBeenCalledWith(active)
     expect(handlers.cancel.mock.invocationCallOrder[0]).toBeLessThan(handlers.program.mock.invocationCallOrder[0]!)
   })
+  it.each(['Сменить клиента', 'Другой клиент', 'сменить клиента', 'другой клиент'])('changes the program client without model routing and withdraws the old saveable proposal: %s', async (message) => {
+    const active = { ...draft('create_program_draft'), id: 'old-program-action', status: 'proposed' as const }
+    const cancel = vi.fn().mockResolvedValue(undefined)
+    const program = vi.fn().mockImplementation((previous) => {
+      expect(cancel).toHaveBeenCalledWith(active)
+      expect(previous).toBe(active)
+      return Promise.resolve({ reply: 'Выберите клиента', action: { ...draft('create_program_draft'), payload: { step: 'client', candidates: [{ id: client.id, fullName: client.fullName }] } } })
+    })
+    const record = vi.fn()
+    const result = await routedAssistantTurn({ message, history: [], active, operationId: 'turn' }, { program, record, cancel })
+    expect(programModelJson).not.toHaveBeenCalled()
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(program).toHaveBeenCalledOnce()
+    expect(cancel.mock.invocationCallOrder[0]).toBeLessThan(program.mock.invocationCallOrder[0]!)
+    expect(result.action).toMatchObject({ tool: 'create_program_draft', status: 'needs_input', payload: { step: 'client' } })
+    expect(result.action?.id).toBeUndefined()
+    expect(record).not.toHaveBeenCalled()
+  })
+  it('does not select a new client if withdrawing the old program action fails', async () => {
+    const active = { ...draft('create_program_draft'), id: 'old-program-action', status: 'proposed' as const }
+    const before = structuredClone(active)
+    const handlers = { cancel: vi.fn().mockRejectedValue(new Error('assistant_action_conflict')), program: vi.fn(), record: vi.fn() }
+    await expect(routedAssistantTurn({ message: 'Сменить клиента', history: [], active, operationId: 'turn' }, handlers)).rejects.toThrow('assistant_action_conflict')
+    expect(handlers.cancel).toHaveBeenCalledWith(active)
+    expect(handlers.program).not.toHaveBeenCalled()
+    expect(handlers.record).not.toHaveBeenCalled()
+    expect(active).toEqual(before)
+    expect(programModelJson).not.toHaveBeenCalled()
+  })
+  it('allows changing an unfinished program client before a durable action exists', async () => {
+    const active = draft('create_program_draft')
+    const handlers = { cancel: vi.fn().mockResolvedValue(undefined), program: vi.fn().mockResolvedValue({ reply: 'Выберите клиента', action: null }), record: vi.fn() }
+    await routedAssistantTurn({ message: 'Другой клиент', history: [], active, operationId: 'turn' }, handlers)
+    expect(active.id).toBeUndefined()
+    expect(handlers.cancel).toHaveBeenCalledWith(active)
+    expect(handlers.program).toHaveBeenCalledWith(active)
+    expect(programModelJson).not.toHaveBeenCalled()
+  })
+  it.each(['Сменить клиента', 'Другой клиент'])('does not apply the program client-change control to an existing workout: %s', async (message) => {
+    const active = { ...draft('record_workout'), id: 'workout-action', status: 'proposed' as const }
+    const before = structuredClone(active)
+    vi.mocked(programModelJson).mockResolvedValue({ tool: 'create_program_draft', mode: 'start', reply: '' })
+    const handlers = { cancel: vi.fn(), program: vi.fn(), record: vi.fn() }
+    const result = await routedAssistantTurn({ message, history: [], active, operationId: 'turn' }, handlers)
+    expect(programModelJson).toHaveBeenCalledOnce()
+    expect(result.reply).toContain('Сначала завершите или отмените текущую запись тренировки')
+    expect(handlers.cancel).not.toHaveBeenCalled()
+    expect(handlers.program).not.toHaveBeenCalled()
+    expect(handlers.record).not.toHaveBeenCalled()
+    expect(active).toEqual(before)
+  })
   it.each([
     { tool: 'delete_client', mode: 'start', reply: '' },
     { tool: null, mode: 'cancel', reply: '' },

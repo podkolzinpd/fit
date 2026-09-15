@@ -61,13 +61,19 @@ export async function programPilotTurn(message: string, clients: readonly Progra
   const choice = message.trim().match(/^(?:выбрать\s+)?(\d{1,2})$/iu)
   const candidates = Array.isArray(previous?.candidates) ? previous.candidates : []
   const numbered = choice && previous?.step === 'client' ? record(candidates[Number(choice[1]) - 1]) : undefined
+  const namedCandidates = previous?.step === 'client' ? candidates.flatMap((value) => {
+    const candidate = record(value)
+    return candidate && typeof candidate.fullName === 'string' && message.trim() === `Подготовить программу для ${candidate.fullName}` ? [candidate] : []
+  }) : []
+  const chosenCandidates = numbered ? [numbered] : namedCandidates
   const changingClient = /^(?:сменить клиента|другой клиент)/iu.test(message.trim())
-  const selected = numbered ? clients.filter((client) => client.id === numbered.id) : (!previous?.clientId || previous.step === 'client' || changingClient ? deps.matchClients(message) : [])
-  const client = selected.length === 1 ? selected[0] : !changingClient && selected.length === 0 ? clients.find((row) => row.id === previous?.clientId) : undefined
+  const clientChangeOnly = /^(?:сменить клиента|другой клиент)$/iu.test(message.trim())
+  const selected = chosenCandidates.length ? clients.filter((client) => chosenCandidates.some((candidate) => candidate.id === client.id)) : (!clientChangeOnly && (!previous?.clientId || previous.step === 'client' || changingClient) ? deps.matchClients(message) : [])
+  const client = selected.length === 1 ? selected[0] : !changingClient && !chosenCandidates.length && selected.length === 0 ? clients.find((row) => row.id === previous?.clientId) : undefined
   if (!client) {
     let pendingBrief = previous?.step === 'client' ? readProgramBrief(previous.pendingBrief) ?? {} : {}
     let clarification = previous?.step === 'client' && typeof previous.pendingClarification === 'string' ? previous.pendingClarification : null
-    if (!choice) {
+    if (!choice && !clientChangeOnly && !chosenCandidates.length) {
       try {
         const result = mergeExtractedBrief(pendingBrief, message, await deps.extract(pendingBrief, message))
         pendingBrief = result.brief; clarification = result.clarification
@@ -76,14 +82,15 @@ export async function programPilotTurn(message: string, clients: readonly Progra
     return action(selected.length > 1 ? 'Нашла несколько клиентов. Условия сохранены; выберите нужного.' : 'Для кого составить программу? Условия сохранены; выберите клиента или напишите имя.',
       { step: 'client', candidates: (selected.length > 1 ? selected : clients).map(({ id, fullName }) => ({ id, fullName })), pendingBrief, pendingClarification: clarification })
   }
-  const sameClient = client.id === previous?.clientId && previous?.programPilot === true
+  const sameClient = previous?.step !== 'client' && client.id === previous?.clientId && previous?.programPilot === true
+  if (!sameClient) basis = undefined
   let brief: ProgramBrief = sameClient ? readProgramBrief(previous.briefState) ?? {} : previous?.step === 'client' ? readProgramBrief(previous.pendingBrief) ?? {} : {}
   // The database age overrides a model/user attempt to bypass minority checks.
   if (client.ageYears !== null) brief = { ...brief, adult: client.ageYears >= 18 }
   if (brief.adult === false) return collect(client, brief, 'Этот пилот предназначен для взрослых клиентов. Автоматически составить программу для несовершеннолетнего не могу.')
   if (!sameClient) {
     let clarification = previous?.step === 'client' && typeof previous.pendingClarification === 'string' ? previous.pendingClarification : null
-    if (!numbered) {
+    if (!chosenCandidates.length) {
       try {
         const result = mergeExtractedBrief(brief, message, await deps.extract(brief, message))
         brief = result.brief; clarification = result.clarification
@@ -202,6 +209,8 @@ goalText — цель именно программы; goal — strength, hypert
 equipment: только предложенные коды. «Полностью оборудованный зал» означает полный список; не считай любое упоминание зала подтверждением всего оборудования. Для «дома с гантелями» только dumbbells, без bench если не названа.
 limitations none только при явном отрицании актуальной боли/травм/ограничений. Старое сообщение о боли не доказывает текущую травму. Не решай медицинские вопросы. adult только из явного возраста/ответа.
 Для otherActivities value — строка с JSON-массивом объектов, например [{"kind":"бег","frequency":2,"weekdays":[2,6]}]; это единственное исключение из формата простых массивов через запятую.
+Явное отрицание другой нагрузки записывай ТОЛЬКО в текстовое поле otherActivity со значением "нет". Не создавай изменение otherActivities при отрицании: туда нельзя помещать "нет", пустую строку или текст отрицания; этот массив заполняется только при явно перечисленных видах нагрузки, частоте и днях.
+Пример message «Другой регулярной нагрузки нет.» → changes: [{"field":"otherActivity","operation":"set","value":"нет","quote":"Другой регулярной нагрузки нет"}]. В этом примере otherActivities отсутствует в changes.
 preferences и otherActivity — слова пользователя, допустимо «нет». При другой нагрузке otherActivities содержит каждый вид kind, frequency (1–7) и weekdays. Не заполняй otherActivities без явно указанных вида, частоты и дней. activityOverlapConfirmed не устанавливай: согласование обрабатывает код. excludedRefs — только явные исключения из каталога. Если пожелание требует неразмеченного упражнения, clarification сообщает об этом; не подменяй другим упражнением.
 continuationPlan — что продолжить или изменить по словам тренера. preserveRefs — только явно названные упражнения, которые важно сохранить. Не додумывай их; этот вопрос нужен только при наличии истории.
 historyComplete — только явное подтверждение полноты записей или сообщение, что тренировки записаны не полностью/проходили вне Fit. Не делай вывод о полноте по отсутствию записей.
