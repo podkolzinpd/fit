@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(24);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('a3000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'catalog-one@example.test', ''),
@@ -18,13 +18,15 @@ insert into public.trainers (profile_id) values
 select has_column('public', 'trainer_professional_profiles', 'listed_in_catalog', 'catalog choice is stored');
 select has_function('public', 'set_trainer_profile_catalog_listing', array['boolean'], 'catalog choice RPC exists');
 select has_function('public', 'list_public_trainer_profiles', array['text', 'text', 'text', 'text', 'boolean'], 'catalog list RPC exists');
-select has_function('public', 'list_public_trainer_profiles_page', array['text', 'text', 'text', 'text', 'boolean', 'integer', 'integer'], 'paged catalog RPC exists');
+select has_function('public', 'list_public_trainer_profiles_page', array['text', 'text', 'text', 'text', 'boolean', 'integer', 'integer', 'text[]'], 'paged catalog RPC exists');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'a3000000-0000-4000-8000-000000000001', true);
 select public.save_trainer_profile_draft(jsonb_build_object(
   'displayName', 'Анна Каталогова', 'bio', repeat('Описание ', 8),
   'specialties', jsonb_build_array('Тестовые силовые'), 'city', 'Тестоград',
+  'metroStationIds', jsonb_build_array('msk-dinamo'),
+  'customLocations', jsonb_build_array('Тестовый клуб'),
   'trainingModes', jsonb_build_array('online'), 'experienceStartYear', 2020,
   'education', '', 'formats', '', 'price', '', 'acceptingClients', true,
   'avatarDataUrl', null, 'certificates', '[]'::jsonb
@@ -74,6 +76,8 @@ select isnt(
   public.list_public_trainer_profiles_page(null, null, null, null, null, 1, 1)->'items'->0->>'publicId',
   'adjacent pages do not repeat a profile'
 );
+select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 20, array['msk-dinamo'])->>'totalCount')::integer, 1, 'catalog matches any selected metro station');
+select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 20, array['msk-never'])->>'totalCount')::integer, 0, 'catalog excludes profiles without a selected metro station');
 
 reset role;
 set local role authenticated;

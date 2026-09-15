@@ -49,6 +49,7 @@ export const trainerProfilesRepository: TrainerProfilesRepository = {
       p_query: filters.query || undefined,
       p_specialty: filters.specialty || undefined,
       p_city: filters.city || undefined,
+      p_metro_station_ids: filters.metroStationIds.length ? filters.metroStationIds : undefined,
       p_mode: filters.mode || undefined,
       p_accepting_clients: filters.acceptingClients ?? undefined,
       p_offset: page.offset,

@@ -24,6 +24,8 @@ function hasProfileContent(draft: TrainerProfileDraft): boolean {
     || draft.bio.trim()
     || draft.specialties.length
     || draft.city.trim()
+    || draft.metroStationIds.length
+    || draft.customLocations.length
     || draft.trainingModes.length
     || draft.experienceStartYear
     || draft.education.trim()
@@ -39,6 +41,10 @@ function profilesMatch(first: TrainerProfileDraft | null | undefined, second: Tr
   return first.displayName === second.displayName
     && first.bio === second.bio
     && first.city === second.city
+    && first.metroStationIds.length === second.metroStationIds.length
+    && first.metroStationIds.every((value, index) => value === second.metroStationIds[index])
+    && first.customLocations.length === second.customLocations.length
+    && first.customLocations.every((value, index) => value === second.customLocations[index])
     && first.experienceStartYear === second.experienceStartYear
     && first.education === second.education
     && first.formats === second.formats
