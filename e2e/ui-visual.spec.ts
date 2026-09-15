@@ -244,7 +244,7 @@ async function mockRoleHomeWorkoutState(page: VisualPage) {
 }
 
 async function mockTrainerClients(page: VisualPage) {
-  const names = ['Анна Смирнова', 'Борис Иванов', 'Вера Кузнецова', 'Глеб Орлов', 'Дарья Ершова', 'Егор Панов']
+  const names = ['Александра Константинопольская-Романова', 'Борис Иванов', 'Вера Кузнецова', 'Глеб Орлов', 'Дарья Ершова', 'Егор Панов']
   await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify(names.map((fullName, index) => ({
@@ -264,6 +264,16 @@ async function mockTrainerClients(page: VisualPage) {
       version: 1,
       membership_version: 1,
     }))),
+  }))
+  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([{
+      conversation_id: '72000000-0000-4000-8000-000000000001', client_id: demoClientId,
+      trainer_id: '22222222-2222-4222-8222-222222222222', partner_user_id: '92000000-0000-4000-8000-000000000029',
+      partner_name: names[0], active_connection: true, last_message_body: 'До встречи',
+      last_message_at: '2026-08-16T12:00:00Z', last_message_sender_id: '92000000-0000-4000-8000-000000000029',
+      unread_count: 3, can_message: true, blocked_by_me: false, blocked_by_partner: false,
+    }]),
   }))
 }
 
@@ -1856,11 +1866,12 @@ test('trainer Progress and measurements form keep their visual baselines in both
 
 test('trainer Clients list keeps its desktop visual baselines', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'visual-trainer-1440', 'Trainer desktop uses the desktop visual profile')
+  await mockTrainerClients(page)
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await gotoStable(page, '/clients')
   await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
-  await expect(page.getByRole('link', { name: /Анна Смирнова/ }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: /Александра Константинопольская-Романова/ }).first()).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
   await expectVisualBaseline(page, `trainer-clients-${process.platform}.png`, [], true)
 
@@ -1878,7 +1889,7 @@ test('trainer Clients list keeps its mobile visual baselines', async ({ page }, 
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await gotoStable(page, '/clients')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
-  await expect(page.getByRole('link', { name: /Анна Смирнова/ }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: /Александра Константинопольская-Романова/ }).first()).toBeVisible()
   await expectVisualBaseline(page, `trainer-clients-mobile-${process.platform}.png`, [], true)
   const search = page.getByRole('searchbox', { name: 'Поиск клиента' })
   await page.mouse.move(0, 0)
