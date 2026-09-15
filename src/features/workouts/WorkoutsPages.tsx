@@ -379,7 +379,7 @@ export function ClientWorkoutsPage() {
 }
 
 export function WorkoutFormPage() {
-  const { clients: clientsRepository, goals: goalsRepository, workouts: workoutsRepository } = useDataBackend()
+  const { clients: clientsRepository, exercises: exercisesRepository, goals: goalsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId } = useParams()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
@@ -660,7 +660,7 @@ export function WorkoutFormPage() {
       </section>
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head workout-form-exercise-heading"><h2>{completedMode ? 'Что выполнено' : 'Упражнения'}</h2></div>
-        <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} />
+        <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={(parsed) => void addQuickEntry(parsed)} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} />
         {exercises.length === 0 && <p className="workout-empty-hint" role="status">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
         <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }}
           canOpenTechnique={(exercise) => hasExerciseTechnique(catalogExerciseFor(catalog.exercises, exercise))}

@@ -10,17 +10,19 @@ const catalog: ExerciseSnapshot[] = [
   { source: 'system', ref: 'bench', name: 'Жим лёжа', muscleGroup: 'chest', inputKind: 'strength' },
   { source: 'system', ref: 'plank', name: 'Планка', muscleGroup: 'core', inputKind: 'duration' },
 ]
+const parseWorkout = vi.fn().mockResolvedValue({ items: [], unmatched: [] })
 
 describe('QuickWorkoutEntry circuit input', () => {
-  it('добавляет явный сет как существующую круговую, не меняя подходы', () => {
+  it('добавляет явный сет как существующую круговую, не меняя подходы', async () => {
     const onAdd = vi.fn<(exercises: ParsedWorkoutExercise[]) => void>()
-    render(<QuickWorkoutEntry catalog={catalog} onAdd={onAdd} />)
+    render(<QuickWorkoutEntry catalog={catalog} parseWorkout={parseWorkout} onAdd={onAdd} />)
 
     fireEvent.change(screen.getByLabelText('Запись тренировки'), {
       target: { value: 'Сет\n- Жим лёжа 3×10 60 кг\n- Планка 2×45 сек' },
     })
 
-    expect(screen.getByText('Круговая · 2 упр.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Разобрать тренировку' }))
+    expect(await screen.findByText('Круговая · 2 упр.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Добавить в план (2)' }))
 
     expect(onAdd).toHaveBeenCalledOnce()
@@ -38,15 +40,16 @@ describe('QuickWorkoutEntry circuit input', () => {
     })
   })
 
-  it('не позволяет частично добавить круговую и сохраняет порядок после уточнения', () => {
+  it('не позволяет частично добавить круговую и сохраняет порядок после уточнения', async () => {
     const onAdd = vi.fn<(exercises: ParsedWorkoutExercise[]) => void>()
-    render(<QuickWorkoutEntry catalog={catalog} onAdd={onAdd} />)
+    render(<QuickWorkoutEntry catalog={catalog} parseWorkout={parseWorkout} onAdd={onAdd} />)
 
     fireEvent.change(screen.getByLabelText('Запись тренировки'), {
       target: { value: 'Круговая\n- Присед 3×8 80 кг\n- Планка 2×45 сек' },
     })
 
-    const addButton = screen.getByRole('button', { name: 'Добавить в план (1)' })
+    fireEvent.click(screen.getByRole('button', { name: 'Разобрать тренировку' }))
+    const addButton = await screen.findByRole('button', { name: 'Добавить в план (1)' })
     expect(addButton).toBeDisabled()
     fireEvent.click(addButton)
     expect(onAdd).not.toHaveBeenCalled()
@@ -60,17 +63,34 @@ describe('QuickWorkoutEntry circuit input', () => {
     expect(added[0]!.structure!.blockId).toBe(added[1]!.structure!.blockId)
   })
 
-  it('оставляет прежнее частичное добавление для обычного текста без маркеров', () => {
+  it('оставляет прежнее частичное добавление для обычного текста без маркеров', async () => {
     const onAdd = vi.fn<(exercises: ParsedWorkoutExercise[]) => void>()
-    render(<QuickWorkoutEntry catalog={catalog} onAdd={onAdd} />)
+    render(<QuickWorkoutEntry catalog={catalog} parseWorkout={parseWorkout} onAdd={onAdd} />)
 
     fireEvent.change(screen.getByLabelText('Запись тренировки'), {
       target: { value: 'Жим лёжа 3×10 60 кг\nНеизвестное 3×10' },
     })
 
-    const addButton = screen.getByRole('button', { name: 'Добавить в план (1)' })
+    fireEvent.click(screen.getByRole('button', { name: 'Разобрать тренировку' }))
+    const addButton = await screen.findByRole('button', { name: 'Добавить в план (1)' })
     expect(addButton).toBeEnabled()
     fireEvent.click(addButton)
     expect(onAdd.mock.calls[0]?.[0]).toHaveLength(1)
+  })
+
+  it('использует серверный разбор для оговорок так же, как главная', async () => {
+    const onAdd = vi.fn<(exercises: ParsedWorkoutExercise[]) => void>()
+    const remote = vi.fn().mockResolvedValue({
+      items: [{ sourceText: 'Джим лежа 3 по 10 100 килограмм', exerciseRef: 'bench', confidence: 0.99, sets: Array.from({ length: 3 }, () => ({ weightKg: 100, reps: 10 })) }],
+      unmatched: [],
+    })
+    render(<QuickWorkoutEntry catalog={catalog} parseWorkout={remote} onAdd={onAdd} />)
+
+    fireEvent.change(screen.getByLabelText('Запись тренировки'), { target: { value: 'Джим лежа 3 по 10 100 килограмм' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Разобрать тренировку' }))
+    expect(await screen.findByText('3 × 100 кг × 10 повт.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить в план (1)' }))
+    expect(onAdd.mock.calls[0]?.[0][0]).toMatchObject({ exercise: { ref: 'bench' }, sets: Array.from({ length: 3 }, () => ({ weightKg: 100, reps: 10 })) })
   })
 })
