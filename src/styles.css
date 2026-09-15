@@ -2381,19 +2381,26 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .picker-filter-toggle { padding: 0 13px; border: 1px solid var(--border); background: var(--surface-sunken); color: var(--muted); box-shadow:none}.picker-filter-toggle.active { border-color: var(--accent-surface-border); color: var(--accent-strong); background: var(--accent-surface) }
 .picker-filter-layer { position:absolute; z-index:5; inset:0; display:flex; align-items:flex-end }
 .picker-filter-scrim { position:absolute; inset:0; width:100%; height:100%; padding:0; border:0; border-radius:inherit; background:color-mix(in srgb, var(--overlay) 58%, transparent); box-shadow:none }
-.picker-filter-panel { position:relative; z-index:1; width:100%; max-height:min(72%, 480px); overflow-y:auto; display:grid; grid-template-columns:1fr; gap:12px; padding:16px 20px calc(18px + env(safe-area-inset-bottom)); border:1px solid var(--border); border-bottom:0; border-radius:22px 22px 0 0; background:var(--surface-elevated); box-shadow:none }
-.picker-filter-panel > header { display:flex; align-items:center; justify-content:space-between; gap:12px }
+.picker-filter-panel { position:relative; z-index:1; width:100%; max-height:calc(100% - max(12px, env(safe-area-inset-top))); overflow:hidden; display:grid; grid-template-rows:auto minmax(0,1fr) auto; border:1px solid var(--border); border-bottom:0; border-radius:22px 22px 0 0; background:var(--surface-elevated); box-shadow:none }
+.picker-filter-panel > header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px 8px }
 .picker-filter-panel > header h2 { margin:0; font-size:20px }
 .picker-filter-close { width:44px; height:44px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:var(--surface-sunken); color:var(--muted); box-shadow:none }
 .picker-filter-close svg { width:19px; height:19px }
-.picker-filter-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px }
+.picker-filter-body { min-height:0; overflow-y:auto; overscroll-behavior:contain; display:grid; gap:12px; padding:4px 20px 12px }
+.picker-purpose-filter { min-width:0; margin:0; padding:0; border:0 }
+.picker-purpose-filter legend { margin:0 0 6px; padding:0; color:var(--muted); font-size:var(--text-xs); font-weight:var(--weight-medium) }
+.picker-purpose-filter > div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px }
+.picker-purpose-filter button { min-width:0; min-height:48px; padding:7px 10px; border:1px solid var(--border); border-radius:13px; background:var(--surface-sunken); color:var(--fg); box-shadow:none; font-size:13px; font-weight:600; line-height:1.2; overflow-wrap:anywhere }
+.picker-purpose-filter button.active { border-color:var(--accent-surface-border); background:var(--accent-surface); color:var(--accent-strong) }
+.picker-purpose-filter button:disabled { color:var(--muted); background:var(--surface-sunken); cursor:not-allowed }
+.picker-filter-fields { display:grid; grid-template-columns:minmax(0,1fr); gap:8px }
 .picker-filter-panel label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-size: var(--text-xs); font-weight: var(--weight-medium) }
-.picker-filter-panel select { min-width:0; height:44px; min-height:44px; padding:7px 9px; font-size:14px }
-.picker-filter-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:40px }
+.picker-filter-panel select { width:100%; min-width:0; height:48px; min-height:48px; padding:7px 12px; font-size:16px; text-overflow:ellipsis }
+.picker-filter-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:64px; padding:8px 20px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); background:var(--surface-elevated) }
 .picker-filter-panel .picker-custom-filter { flex-direction: row; align-items: center; gap: 8px; min-height: 44px; color: var(--fg) }
 .picker-filter-panel .picker-custom-filter input { width: 20px; height: 20px; margin: 0 }
 .picker-filter-actions .link { flex:0 0 auto; min-height:40px; padding:6px 2px }
-.picker-filter-actions .primary { min-height:44px; padding:10px 16px }
+.picker-filter-actions .primary { min-width:0; min-height:48px; padding:10px 16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .picker-filter-chips { flex:0 0 auto; min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:6px }
 .picker-filter-chips > div { min-width:0; display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none }
 .picker-filter-chips > div::-webkit-scrollbar { display:none }

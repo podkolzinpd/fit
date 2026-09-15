@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ExercisePicker, equipmentForSelection, filterExercises, musclesForGroup } from './ExercisePicker'
+import { ExercisePicker, equipmentForSelection, filterExercises, groupsForSelection, musclesForGroup, purposesForSelection } from './ExercisePicker'
 import { recentExercisesForClient } from './client-recent-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
 import { SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISES } from '../../shared/system-exercises'
@@ -56,7 +56,7 @@ describe('ExercisePicker', () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
     expect(screen.queryByLabelText('Раздел каталога')).not.toBeInTheDocument()
-    expect(screen.getByText('402 упражнения')).toBeInTheDocument()
+    expect(screen.getByText('663 упражнения')).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="fedb-incline-dumbbell-press"]')).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="fedb-incline-dumbbell-press-palms-in"]')).not.toBeInTheDocument()
     await user.type(screen.getByLabelText('Поиск упражнения'), 'тяга гантели одной рукой')
@@ -248,7 +248,7 @@ describe('ExercisePicker', () => {
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
     await user.click(screen.getByRole('button', { name: 'Фильтры' }))
     expect(screen.getByLabelText('Оборудование')).toBeVisible()
-    await user.selectOptions(screen.getByLabelText('Назначение'), 'recovery')
+    await user.click(screen.getByRole('button', { name: 'Восстановление' }))
     expect(screen.getByRole('button', { name: 'Фильтры 1' })).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="vital-gym-pro-1198"]')).toBeInTheDocument()
   })
@@ -263,6 +263,8 @@ describe('ExercisePicker', () => {
     await user.selectOptions(screen.getByLabelText('Оборудование'), 'Штанга')
     expect(screen.getByRole('button', { name: /технику: Присед/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Посмотреть технику: Разгибание ног/ })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Мышца')).not.toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('Оборудование'), '')
     await user.selectOptions(screen.getByLabelText('Мышца'), 'Бицепс бедра')
     expect(screen.getByRole('button', { name: /Посмотреть технику: Сгибание ног/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Посмотреть технику: Разгибание ног/ })).not.toBeInTheDocument()
@@ -271,6 +273,24 @@ describe('ExercisePicker', () => {
     expect(screen.getByLabelText('Группа мышц')).toHaveValue('all')
     await user.click(screen.getByRole('button', { name: /Показать 4 упражнения/ }))
     expect(screen.queryByLabelText('Настройки фильтров')).not.toBeInTheDocument()
+  })
+
+  it('сохраняет совместимое оборудование и блокирует группы без результата', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
+    await user.selectOptions(screen.getByLabelText('Оборудование'), 'Тренажёр')
+    expect(screen.getByRole('option', { name: 'Грудь' })).toBeDisabled()
+    await user.selectOptions(screen.getByLabelText('Группа мышц'), 'legs')
+    expect(screen.getByLabelText('Оборудование')).toHaveValue('Тренажёр')
+    expect(screen.getByRole('button', { name: 'Фильтры 2' })).toBeInTheDocument()
+  })
+
+  it('пересчитывает фасеты по назначению, группе и оборудованию', () => {
+    const recoveryEquipment = equipmentForSelection(SYSTEM_EXERCISE_CATALOG, 'all', null, 'recovery')
+    expect(recoveryEquipment).toContain('Без оборудования')
+    expect(groupsForSelection(SYSTEM_EXERCISE_CATALOG, 'Без оборудования', 'recovery')).not.toHaveLength(0)
+    expect(purposesForSelection(SYSTEM_EXERCISE_CATALOG, 'all', null, 'Без оборудования')).toContain('recovery')
   })
 
   it('hides filters on search focus and keeps the selected values', async () => {

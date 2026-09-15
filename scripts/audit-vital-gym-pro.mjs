@@ -3,7 +3,8 @@
 import { createHash } from 'node:crypto'
 import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
-import batchOne from './data/vital-gym-pro-catalog-batch-1.mjs'
+import review from './data/vital-gym-pro-remaining-decisions.json' with { type: 'json' }
+import { reviewedVitalGymProExercises } from './data/vital-gym-pro-catalog-reviewed.mjs'
 
 const projectRoot = resolve(import.meta.dirname, '..')
 const catalogPath = join(projectRoot, 'scripts/data/vital-gym-pro-catalog.json')
@@ -86,8 +87,9 @@ const sourceRoot = await stat(sourceDir).catch(() => null)
 if (!sourceRoot?.isDirectory()) throw new Error(`Source directory does not exist: ${sourceDir}`)
 
 const baseCatalog = JSON.parse(await readFile(catalogPath, 'utf8'))
-const catalog = { ...baseCatalog, exercises: [...baseCatalog.exercises, ...batchOne.exercises] }
+const catalog = { ...baseCatalog, exercises: [...baseCatalog.exercises, ...reviewedVitalGymProExercises()] }
 const selectedSourceFiles = new Set(catalog.exercises.map(({ sourceFile }) => sourceFile))
+const reviewedSourceFiles = new Set(review.decisions.map(({ sourceFile }) => sourceFile))
 const mediaFiles = (await listFiles(sourceDir))
   .filter((path) => /\.(?:mov|mp4)$/iu.test(path))
   .map((path) => relative(sourceDir, path))
@@ -118,7 +120,7 @@ const metadataBySource = new Map(metadataRows.map((row) => [row.sourceFile, row]
 const missingMedia = metadataRows.filter((row) => !mediaSet.has(row.sourceFile))
 const unindexedMedia = mediaFiles.filter((path) => !metadataBySource.has(path))
 const connectedMedia = mediaFiles.filter((path) => selectedSourceFiles.has(path))
-const remainingMedia = mediaFiles.filter((path) => !selectedSourceFiles.has(path))
+const remainingMedia = mediaFiles.filter((path) => !selectedSourceFiles.has(path) && !reviewedSourceFiles.has(path))
 const remaining = remainingMedia.map((sourceFile) => metadataBySource.get(sourceFile) ?? ({
   collection: 'unknown',
   id: sourceFile.split('/').at(-1)?.replace(/\.mp4$/u, '') ?? '',
@@ -155,6 +157,8 @@ const report = {
     reviewedCatalogEntries: catalog.exercises.length,
     uniqueConnectedMedia: connectedMedia.length,
     sharedCatalogBindings: catalog.exercises.length - selectedSourceFiles.size,
+    reviewedDuplicateMedia: review.duplicates,
+    quarantinedMedia: review.quarantine,
     remainingMedia: remainingMedia.length,
     metadataWithoutMedia: missingMedia.length,
     mediaWithoutMetadata: unindexedMedia.length,

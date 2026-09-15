@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { cpus } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import batchOne from './data/vital-gym-pro-catalog-batch-1.mjs'
+import { REVIEWED_VITAL_GYM_PRO_BATCHES, reviewedVitalGymProExercises } from './data/vital-gym-pro-catalog-reviewed.mjs'
 import purposeOverrides from './data/vital-gym-pro-purpose-overrides.mjs'
 
 const projectRoot = resolve(import.meta.dirname, '..')
@@ -22,6 +22,7 @@ function argument(name, fallback) {
 const sourceDir = resolve(argument('--source', ''))
 const workers = Math.max(1, Number(argument('--workers', Math.min(4, cpus().length))) || 1)
 const skipMedia = process.argv.includes('--skip-media')
+const incremental = process.argv.includes('--incremental')
 if (!argument('--source')) {
   console.error('Usage: node scripts/import-vital-gym-pro.mjs --source /path/to/extracted/archive [--workers 4]')
   process.exit(2)
@@ -83,12 +84,15 @@ const baseCatalog = JSON.parse(await readFile(catalogPath, 'utf8'))
 if (baseCatalog.version !== 1 || baseCatalog.exercises.length !== 317) {
   throw new Error(`Unexpected base reviewed catalog: version=${baseCatalog.version}, exercises=${baseCatalog.exercises.length}`)
 }
-if (batchOne.version !== 1 || batchOne.batch !== 1 || batchOne.exercises.length !== batchOne.expectedExerciseCount) {
-  throw new Error(`Unexpected reviewed batch 1: version=${batchOne.version}, exercises=${batchOne.exercises.length}`)
+for (const batch of REVIEWED_VITAL_GYM_PRO_BATCHES) {
+  if (batch.version !== 1 || batch.exercises.length !== batch.expectedExerciseCount) {
+    throw new Error(`Unexpected reviewed batch ${batch.batch}: version=${batch.version}, exercises=${batch.exercises.length}`)
+  }
 }
+const reviewedExercises = reviewedVitalGymProExercises()
 const catalog = {
   ...baseCatalog,
-  exercises: [...baseCatalog.exercises, ...batchOne.exercises],
+  exercises: [...baseCatalog.exercises, ...reviewedExercises],
 }
 if (new Set(catalog.exercises.map(({ ref }) => ref)).size !== catalog.exercises.length) throw new Error('Duplicate FIT refs')
 // Several distinct FIT exercise identities may intentionally share one safe
@@ -107,7 +111,7 @@ for (const exercise of catalog.exercises) {
   if (!sourceStat?.isFile()) throw new Error(`Missing purchased source: ${exercise.purchasedId} ${exercise.sourceFile}`)
 }
 
-if (!skipMedia) await rm(outputDir, { recursive: true, force: true })
+if (!skipMedia && !incremental) await rm(outputDir, { recursive: true, force: true })
 await mkdir(outputDir, { recursive: true })
 // Vital Gym Pro is assembled from multiple visual series. Monochrome removes
 // the red/yellow/beige cast and shirt colour differences without destructive
@@ -123,6 +127,14 @@ async function encodeWorker() {
     const videoPath = join(outputDir, `${exercise.ref}.mp4`)
     const posterPath = join(outputDir, `${exercise.ref}.jpg`)
     const endPath = join(outputDir, `${exercise.ref}-end.jpg`)
+    if (incremental) {
+      const existing = await Promise.all([videoPath, posterPath, endPath].map((path) => stat(path).catch(() => null)))
+      if (existing.every((file) => file?.isFile() && file.size > 0)) {
+        complete += 1
+        process.stdout.write(`\rEncoded ${complete}/${catalog.exercises.length}`)
+        continue
+      }
+    }
     const duration = await probeDuration(sourcePath)
     await run('ffmpeg', [
       '-hide_banner', '-loglevel', 'error', '-y', '-i', sourcePath,
