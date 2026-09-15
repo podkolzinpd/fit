@@ -5778,6 +5778,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-catalog-filter-sheet .picker-close { width:44px; height:44px; }
 .trainer-catalog-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .trainer-catalog-filters input, .trainer-catalog-filters select { min-height:48px; }
+.trainer-catalog-metro-filter { grid-column:1 / -1; min-width:0; }
 .trainer-catalog-filter-actions { display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); gap:8px; }
 .trainer-catalog-filter-actions button { min-height:48px; }
 .trainer-catalog-results { display:grid; gap:12px; }
@@ -5791,6 +5792,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-catalog-card-head p, .trainer-catalog-facts, .trainer-catalog-bio { margin:3px 0 0; color:var(--muted); }
 .trainer-catalog-card-head p, .trainer-catalog-facts { font-size:13px; }
 .trainer-catalog-facts { overflow-wrap:anywhere; }
+.trainer-catalog-locations { margin:0; color:var(--fg); font-size:13px; font-weight:500; overflow-wrap:anywhere; }
 .trainer-catalog-bio { display:-webkit-box; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3; }
 .trainer-catalog-card > .button { width:100%; min-height:48px; }
 .trainer-catalog-more { width:100%; min-height:48px; }
@@ -5882,6 +5884,29 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-profile-identity .trainer-profile-edit-card .trainer-mode-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
 .trainer-profile-identity .trainer-profile-edit-card .trainer-mode-fields .switch-row { min-height:52px; border-top:0; }
 .trainer-profile-identity .trainer-profile-edit-card .trainer-mode-fields .switch-row + .switch-row { border-left:1px solid var(--border); }
+.trainer-locations-editor { display:grid; gap:12px; padding:14px; border:1px solid var(--border); border-radius:16px; background:var(--surface-elevated); }
+.trainer-locations-editor h3, .trainer-locations-editor p { margin:0; }
+.trainer-locations-editor h3 { font-size:15px; }
+.trainer-locations-editor p { margin-top:3px; color:var(--secondary-label-fg); font-size:12px; }
+.metro-picker { position:relative; display:grid; gap:8px; min-width:0; }
+.metro-picker-results { position:absolute; z-index:12; top:calc(100% - 2px); left:0; right:0; max-height:284px; overflow:auto; margin:0; padding:6px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); box-shadow:0 12px 28px color-mix(in srgb,var(--fg) 14%,transparent); list-style:none; }
+.metro-picker-results li { margin:0; }
+.metro-picker-results button { width:100%; min-height:44px; display:flex; align-items:center; gap:9px; padding:8px 10px; border:0; border-radius:10px; background:transparent; color:var(--fg); text-align:left; box-shadow:none; }
+.metro-picker-results button:hover, .metro-picker-results button:focus-visible { background:var(--surface-sunken); }
+.metro-picker-empty { margin:0; color:var(--secondary-label-fg); font-size:12px; }
+.metro-picker-selected { display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:0; list-style:none; }
+.metro-picker-selected li { min-height:36px; display:flex; align-items:center; gap:7px; max-width:100%; padding:5px 5px 5px 10px; border:1px solid var(--border); border-radius:var(--radius-pill); background:var(--surface-sunken); font-size:13px; }
+.metro-picker-selected li > span:nth-child(2) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.metro-picker-selected button { width:28px; height:28px; flex:0 0 28px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:transparent; color:var(--muted); box-shadow:none; }
+.metro-picker-selected button svg { width:16px; height:16px; }
+.metro-line-dots { display:flex; align-items:center; gap:3px; flex:0 0 auto; }
+.metro-line-dots > span { width:9px; height:9px; border-radius:50%; border:1px solid color-mix(in srgb,#000 14%,transparent); }
+.trainer-custom-location-input { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+.trainer-custom-location-input button { min-height:48px; padding-inline:14px; }
+.trainer-custom-locations, .trainer-location-list { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+.trainer-custom-locations li { min-height:40px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 10px; border:1px solid var(--border); border-radius:12px; background:var(--surface-sunken); font-size:13px; }
+.trainer-custom-locations li > span { min-width:0; overflow-wrap:anywhere; }
+.trainer-custom-locations .link { min-height:32px; flex:0 0 auto; padding:0; }
 .trainer-profile-identity .trainer-profile-education-fields { display:grid; gap:12px; padding:4px 0 0; }
 .trainer-profile-identity .trainer-profile-actions { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .trainer-profile-identity .trainer-profile-actions .primary { grid-column:auto; }
@@ -5901,6 +5926,11 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-card-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:0; }
 .trainer-card-facts > div { display:grid; gap:3px; padding:12px; border:1px solid var(--border); border-radius:14px; }
 .trainer-card-facts dd { margin:0; overflow-wrap:anywhere; }
+.trainer-locations { display:grid; gap:8px; }
+.trainer-location-list li { display:flex; align-items:center; gap:9px; min-width:0; color:var(--fg); font-size:14px; line-height:1.4; }
+.trainer-location-list li > span:last-child { min-width:0; overflow-wrap:anywhere; }
+.trainer-location-manual li::before { content:''; width:9px; height:9px; flex:0 0 9px; border-radius:50%; background:var(--secondary-label-fg); }
+.trainer-card-disclosure .trainer-locations { margin-bottom:12px; }
 .trainer-certificates { display:grid; gap:10px; margin:0; padding:0; list-style:none; }
 .trainer-certificates li { display:grid; gap:2px; padding:12px 0; border-top:1px solid var(--border); }
 .trainer-profile-publish-tools { padding:18px; }
