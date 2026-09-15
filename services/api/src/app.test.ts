@@ -2223,7 +2223,7 @@ describe('Yandex ID app session and account linking endpoints', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/auth/yandex/link',
-      headers: { authorization: 'Bearer supabase-session-token' },
+      headers: { 'x-supabase-authorization': 'Bearer supabase-session-token' },
       payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
     })
 
@@ -2257,7 +2257,7 @@ describe('Yandex ID app session and account linking endpoints', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/auth/yandex/link',
-      headers: { authorization: 'Bearer supabase-session-token' },
+      headers: { 'x-supabase-authorization': 'Bearer supabase-session-token' },
       payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
     })
 
@@ -2286,12 +2286,19 @@ describe('Yandex ID app session and account linking endpoints', () => {
     const invalidAuth = await app.inject({
       method: 'POST',
       url: '/v1/auth/yandex/link',
-      headers: { authorization: 'Bearer invalid-supabase-session' },
+      headers: { 'x-supabase-authorization': 'Bearer invalid-supabase-session' },
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+    const reservedAuthorization = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      headers: { authorization: 'Bearer supabase-session-token' },
       payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
     })
 
     expect(missingAuth.statusCode).toBe(401)
     expect(invalidAuth.statusCode).toBe(401)
+    expect(reservedAuthorization.statusCode).toBe(401)
     expect(actor.resolveActor).toHaveBeenCalledOnce()
     expect(oauth.exchangeCode).not.toHaveBeenCalled()
     expect(linker.linkActor).not.toHaveBeenCalled()
@@ -2312,7 +2319,7 @@ describe('Yandex ID app session and account linking endpoints', () => {
     const unavailable = await unavailableApp.inject({
       method: 'POST',
       url: '/v1/auth/yandex/link',
-      headers: { authorization: 'Bearer supabase-session-token' },
+      headers: { 'x-supabase-authorization': 'Bearer supabase-session-token' },
       payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
     })
     expect(unavailable.statusCode).toBe(503)
@@ -2332,7 +2339,7 @@ describe('Yandex ID app session and account linking endpoints', () => {
     const conflict = await conflictApp.inject({
       method: 'POST',
       url: '/v1/auth/yandex/link',
-      headers: { authorization: 'Bearer supabase-session-token' },
+      headers: { 'x-supabase-authorization': 'Bearer supabase-session-token' },
       payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
     })
     expect(conflict.statusCode).toBe(409)
