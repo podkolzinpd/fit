@@ -308,6 +308,22 @@ describe('reliable chat screens', () => {
     expect(screen.queryByText('99+')).not.toBeInTheDocument()
   })
 
+  it('refreshes the home unread badge after returning to the app', async () => {
+    const chat = chatBackend()
+    chat.listThreads.mockResolvedValueOnce([{ ...thread, unreadCount: 0 }])
+      .mockResolvedValue([{ ...thread, unreadCount: 3 }])
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    backend.mockReturnValue({ chat })
+    render(<QueryClientProvider client={queryClient}><MemoryRouter><ChatHeaderAction /></MemoryRouter></QueryClientProvider>)
+
+    expect(await screen.findByRole('link', { name: 'Сообщения' })).toBeVisible()
+    fireEvent(window, new Event('pageshow'))
+
+    expect(await screen.findByRole('link', { name: 'Сообщения, непрочитанных: 3' })).toBeVisible()
+    expect(screen.getByText('3')).toBeVisible()
+    expect(chat.listThreads).toHaveBeenCalledTimes(2)
+  })
+
   it('shows delivered state, keeps a line break and removes a recovered duplicate', async () => {
     const user = userEvent.setup()
     const own: ChatMessage = { ...incoming, id: 'recovered', senderId: actor.userId, body: 'Уже доставлено' }

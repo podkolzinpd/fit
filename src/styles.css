@@ -5915,7 +5915,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .today-header-actions { display:flex; align-items:center; gap:8px; flex:0 0 auto; }
 .chat-header-action { position:relative; width:44px; height:44px; display:grid; place-items:center; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); text-decoration:none; }
 .chat-header-action svg { width:22px; height:22px; }
-.chat-unread-badge { position:absolute; top:-5px; right:-5px; min-width:19px; height:19px; display:grid; place-items:center; padding:0 5px; border:2px solid var(--frame-bg); border-radius:var(--radius-pill); background:var(--danger); color:var(--surface); font-size:10px; font-weight:var(--weight-bold); line-height:1; }
+.chat-unread-badge { position:absolute; top:-5px; right:-5px; min-width:19px; height:19px; display:grid; place-items:center; padding:0 5px; border:2px solid var(--frame-bg); border-radius:var(--radius-pill); background:var(--mono-primary); color:var(--mono-on-primary); font-size:10px; font-weight:var(--weight-bold); line-height:1; }
 .chat-identity .content-immersive { padding-bottom:0; overflow:hidden; }
 .chat-list-page, .chat-conversation-page { min-height:100%; padding-bottom:max(18px,env(safe-area-inset-bottom)); }
 .chat-thread-list { display:grid; gap:8px; }
