@@ -204,6 +204,11 @@ describe('training summaries repository', () => {
     await expect(generate({ data: null, error: { context: { json: () => Promise.resolve({ error: 'source_row_limit_reached' }) } } })).rejects.toThrow('меньший период')
     await expect(generate({ data: null, error: { context: { json: () => Promise.resolve({ message: 'Ответ сервера' }) } } })).rejects.toThrow('Ответ сервера')
     await expect(generate({ data: null, error: { context: { json: () => Promise.reject(new Error('invalid json')) } } })).rejects.toMatchObject({ code: 'database_error' })
+    await expect(generate({ data: null, error: new Error('authentication_required') })).rejects.toMatchObject({
+      code: 'authentication_required',
+      immediateRetryAllowed: false,
+      message: 'Сессия входа истекла. Войдите в ФИТ заново и затем обновите анализ.',
+    })
     await expect(generate({ data: null, error: { code: 'PT404', message: 'missing' } })).rejects.toMatchObject({ code: 'PT404' })
   })
 })
