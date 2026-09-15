@@ -21,6 +21,8 @@ import { AssistantInlineSummaryCard } from './AssistantInlineSummary'
 import { parseAssistantInlineSummary } from './assistant-inline-summary'
 import { assistantActionView } from './assistant-action-view'
 import { AssistantWorkoutDraftSurface } from './AssistantWorkoutDraftSurface'
+import { isAssistantProgramPilotEnabled } from '../../app/feature-flags'
+import { AssistantProgramPilotCard } from './AssistantProgramPilotCard'
 import { AssistantFirstEntry } from './AssistantFirstEntry'
 import { anchorAssistantViewport } from './assistant-viewport'
 
@@ -381,7 +383,7 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
     </section>
     <section ref={threadRef} className="assistant-thread" aria-label="Диалог с ассистентом">
       {loadingMessages && <p className="assistant-thread-status">Загружаю сессию…</p>}
-      {!loadingMessages && conversationId && visibleMessages.length === 0 && !latestActiveAction && !readOnly && <AssistantFirstEntry onChoose={chooseStarterPrompt} />}
+      {!loadingMessages && conversationId && visibleMessages.length === 0 && !latestActiveAction && !readOnly && <AssistantFirstEntry programEnabled={backend.cacheKey === 'supabase' && !!actor && isAssistantProgramPilotEnabled(actor.userId)} onChoose={chooseStarterPrompt} />}
       {visibleMessages.map((message) => {
         if (message.author === 'user') {
           if (groupedDictationMessageIds.has(message.id)) return null
@@ -406,7 +408,7 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
           : null}</div>}
     </section>
     {latestActiveAction && <section className="assistant-context-panel" data-message-kind="action-result" aria-label="Текущий контекст ассистента">
-      <AssistantAction action={latestActiveAction.action} timezone={actor?.timezone} catalog={catalog} parseWorkout={(text, systemCatalog) => backend.parseWorkout(text, systemCatalog)} workoutDraftStorageKey={workoutDraftStorageKey} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(latestActiveAction.message.id, latestActiveAction.action, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(latestActiveAction.message.id, latestActiveAction.action); if (!cancelled) return; if (workoutDraftStorageKey) clearAssistantWorkoutDraft(workoutDraftStorageKey); if (!latestActiveAction.action.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(latestActiveAction.message.id, latestActiveAction.action)} onConfirmClient={(draft) => void confirmClient(latestActiveAction.message.id, latestActiveAction.action, draft)} running={runningSummaryIds.includes(latestActiveAction.message.id) || runningClientIds.includes(latestActiveAction.message.id)} completed={completedSummaryIds.includes(latestActiveAction.message.id) || completedClientIds.includes(latestActiveAction.message.id) || latestActiveAction.action.lifecycleStatus === 'applied'} />
+      <AssistantAction programEnabled={backend.cacheKey === 'supabase' && !!actor && isAssistantProgramPilotEnabled(actor.userId)} action={latestActiveAction.action} timezone={actor?.timezone} catalog={catalog} parseWorkout={(text, systemCatalog) => backend.parseWorkout(text, systemCatalog)} workoutDraftStorageKey={workoutDraftStorageKey} onWorkoutSaved={() => void queryClient.invalidateQueries({ queryKey: ['workouts'] })} onApplyAction={(input) => applyAction(latestActiveAction.message.id, latestActiveAction.action, input)} onSuggestion={(value) => void send(value)} onCancel={() => { void (async () => { const cancelled = await cancelAction(latestActiveAction.message.id, latestActiveAction.action); if (!cancelled) return; if (workoutDraftStorageKey) clearAssistantWorkoutDraft(workoutDraftStorageKey); if (!latestActiveAction.action.id) await send('Отменить') })() }} onConfirm={() => void confirmSummary(latestActiveAction.message.id, latestActiveAction.action)} onConfirmClient={(draft) => void confirmClient(latestActiveAction.message.id, latestActiveAction.action, draft)} running={sending || runningSummaryIds.includes(latestActiveAction.message.id) || runningClientIds.includes(latestActiveAction.message.id)} completed={completedSummaryIds.includes(latestActiveAction.message.id) || completedClientIds.includes(latestActiveAction.message.id) || latestActiveAction.action.lifecycleStatus === 'applied'} />
     </section>}
     <form className="assistant-composer" autoComplete="off" onSubmit={(event) => { event.preventDefault(); void send() }}>
       <label className="sr-only" htmlFor="assistant-history-message">Сообщение ассистенту</label>
@@ -465,9 +467,10 @@ function summaryPayload(action: AssistantOrchestratorAction): { clientId: string
     : undefined
 }
 
-function AssistantAction({ action, timezone, catalog, parseWorkout, workoutDraftStorageKey, onWorkoutSaved, onApplyAction, onSuggestion, onCancel, onConfirm, onConfirmClient, running, completed }: { action: AssistantOrchestratorAction; timezone?: string; catalog: AssistantCatalog; parseWorkout: AssistantWorkoutParser; workoutDraftStorageKey?: string; onWorkoutSaved: () => void; onApplyAction: (input: object) => Promise<void>; onSuggestion: (value: string) => void; onCancel: () => void; onConfirm: () => void; onConfirmClient: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
+function AssistantAction({ programEnabled, action, timezone, catalog, parseWorkout, workoutDraftStorageKey, onWorkoutSaved, onApplyAction, onSuggestion, onCancel, onConfirm, onConfirmClient, running, completed }: { programEnabled: boolean; action: AssistantOrchestratorAction; timezone?: string; catalog: AssistantCatalog; parseWorkout: AssistantWorkoutParser; workoutDraftStorageKey?: string; onWorkoutSaved: () => void; onApplyAction: (input: object) => Promise<void>; onSuggestion: (value: string) => void; onCancel: () => void; onConfirm: () => void; onConfirmClient: (draft: ClientDraftPayload) => void; running: boolean; completed: boolean }) {
   const payload = action.payload as SummaryPayload
   const view = assistantActionView({ tool: action.tool, payload: action.payload })
+  if (action.payload.programPilot === true && (view === 'program-brief' || view === 'program-confirm')) return <AssistantProgramPilotCard key={action.id ?? 'program-brief'} payload={action.payload} enabled={programEnabled} running={running} onApply={onApplyAction} onSaved={onWorkoutSaved} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (view === 'client-collection') return <ClientCollectionCard payload={payload as ClientDraftPayload} onSuggestion={onSuggestion} onCancel={onCancel} />
   if (view === 'client-confirm') return <ClientDraftCard payload={payload as ClientDraftPayload} onCancel={onCancel} onConfirm={onConfirmClient} running={running} completed={completed} />
   if (view === 'client-choices') return <AssistantClientChoices tool={action.tool} candidates={payload.candidates ?? []} onSuggestion={onSuggestion} onCancel={onCancel} />

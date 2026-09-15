@@ -539,3 +539,43 @@ Frontend redirect для разработки: `http://localhost:5173/auth/callb
 - Закрытые пункты `FEATURE_PARITY.md` и visual comparison с baseline V1.
 - Реальный Google OAuth smoke на production-like URL.
 - Только после этого команда переходит в V2; архивирование V1 выполняется отдельным подтверждённым действием.
+
+### Assistant four-week program pilot
+
+The production Supabase Assistant orchestrator calls the private Yandex Cloud
+Function `fit-generate-program`. Its input is an actor-scoped training aggregate
+and the explicitly confirmed quiz. The generator has no database credentials.
+
+Independent default-off controls:
+
+- The deployment workflow sets `ASSISTANT_PROGRAM_ENABLED=true` and the single
+  approved test trainer UUID on both functions; same-named repository variables
+  can override the release configuration. Runtime defaults remain disabled.
+- `vercel.json` build.env sets `VITE_ASSISTANT_PROGRAM_ENABLED=true` and
+  `VITE_ASSISTANT_PROGRAM_PILOT_USER_IDS=<same UUID>` via the reviewed PR,
+  exposing chat controls only for the test trainer.
+- More than one UUID, an empty list, or a missing flag disables the pilot.
+- Changing either set requires deployment. Disable the server flag and redeploy
+  to stop new quiz/generator calls; existing planned workouts remain ordinary
+  workouts. Existing server-created actions retain their normal apply lifecycle.
+
+One-time bootstrap before the first release: create a private function and runtime
+service account named `fit-generate-program` in the existing summary folder.
+Grant that runtime only `ai.languageModels.user` on the folder. Usage is
+returned to the orchestrator, which records it using its existing Monitoring role. On the function, grant `serverless.functions.invoker` only to the existing
+`fit-assistant-orchestrator` runtime SA. Do not grant `allUsers` or Lockbox access.
+The normal deployment workflow resolves these resources and publishes versions;
+it does not create or expand their IAM bindings. Keep the previous function
+versions for rollback and do not include quiz/client text in logs.
+
+The pilot supports 4 weeks × 1–3 sessions, the bounded system-exercise catalog,
+and adult clients without reported current limitations. Confirming an updated
+quiz explicitly creates a new full draft. The original canonical workout JSON
+is the only accepted apply payload; it expires after 24 hours and is rejected
+when client/history updates are newer than the captured source. All workouts
+save atomically with stable request IDs. Five explicit generation attempts per
+rolling 24 hours per trainer; transport retries reuse the turn ID.
+
+Native Yandex Assistant generation is not enabled in this first pilot. Its
+program-save RPC has the same 4/8/12 canonical-payload checks, but the native
+chat does not run the new quiz/loader. There is no cross-backend fallback.
