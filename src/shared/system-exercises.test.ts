@@ -6,6 +6,7 @@ import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
 import { VITAL_FREE_PACK_ASSETS, VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
 import { VITAL_GYM_PRO_ASSETS, VITAL_GYM_PRO_MAIN_REFS, VITAL_GYM_PRO_NEW_EXERCISES } from './vital-gym-pro.generated'
 import vitalGymProMediaManifest from '../../scripts/data/vital-gym-pro-media-manifest.json'
+import vitalGymProRemainingReview from '../../scripts/data/vital-gym-pro-remaining-decisions.json'
 
 const PACKAGED_GYM_PRO_MEDIA_PATHS = vitalGymProMediaManifest.files.map(({ path }) => `/exercises/vital-pro/${path}`)
 
@@ -26,7 +27,7 @@ const EXERCISE_VIDEO_PATHS = new Set(
 
 describe('system exercise catalog', () => {
   it('matches the current catalog contract', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(12)
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(13)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
@@ -75,7 +76,7 @@ describe('system exercise catalog', () => {
 
   it('добавляет импортированный каталог поверх базового без дублей', () => {
     // Полный каталог = 49 базовых + импортированные + точечные дополнения, ref уникальны.
-    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(904)
+    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(1165)
     expect(IMPORTED_EXERCISES).toHaveLength(451)
     expect(CATALOG_EXPANSION).toHaveLength(120)
     expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length + CATALOG_EXPANSION.length + VITAL_GYM_PRO_NEW_EXERCISES.length + 43)
@@ -196,14 +197,9 @@ describe('system exercise catalog', () => {
 
     expect(closeGrip).toMatchObject({
       name: 'Тяга верхнего блока узким хватом',
-      imageUrl: '/exercises/reference/close-grip-lat-pulldown.jpg',
-      motionImageUrl: '/exercises/reference/close-grip-lat-pulldown-end.jpg',
-      techniqueVideoUrl: undefined,
-      instructions: [
-        'Сядьте в тренажёр и возьмитесь за прямой гриф хватом уже плеч, ладони направлены вперёд.',
-        'На выдохе притяните гриф к верху груди, сводя лопатки.',
-        'На вдохе плавно верните гриф вверх.',
-      ],
+      imageUrl: '/exercises/vital-pro/vital-gym-pro-r407-1713.jpg',
+      motionImageUrl: '/exercises/vital-pro/vital-gym-pro-r407-1713-end.jpg',
+      techniqueVideoUrl: '/exercises/vital-pro/vital-gym-pro-r407-1713.mp4',
     })
     for (const exercise of [wideGrip, genericPulldown]) {
       expect(exercise).toMatchObject({
@@ -213,6 +209,40 @@ describe('system exercise catalog', () => {
       })
     }
     expect(closeGrip?.imageUrl).not.toBe(wideGrip?.imageUrl)
+  })
+
+  it('не подменяет узкий жим лёжа широким хватом', () => {
+    const closeGrip = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-close-grip-barbell-bench-press')
+    const wideGrip = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'fedb-wide-grip-barbell-bench-press')
+    expect(closeGrip).toMatchObject({
+      name: 'Жим лёжа узким хватом',
+      imageUrl: '/exercises/vital-pro/vital-gym-pro-r005-0013.jpg',
+      motionImageUrl: '/exercises/vital-pro/vital-gym-pro-r005-0013-end.jpg',
+      techniqueVideoUrl: '/exercises/vital-pro/vital-gym-pro-r005-0013.mp4',
+    })
+    expect(wideGrip).toMatchObject({
+      imageUrl: '/exercises/vital-pro/vital-barbell-bench-wide-grip-press-ex405.jpg',
+      motionImageUrl: '/exercises/vital-pro/vital-barbell-bench-wide-grip-press-ex405-end.jpg',
+      techniqueVideoUrl: '/exercises/vital-pro/vital-barbell-bench-wide-grip-press-ex405.mp4',
+    })
+    expect(closeGrip?.imageUrl).not.toBe(wideGrip?.imageUrl)
+  })
+
+  it('фиксирует решение по каждому ролику остатка Gym Pro', () => {
+    expect(vitalGymProRemainingReview).toMatchObject({
+      version: 1,
+      reviewedMediaCount: 431,
+      additions: 263,
+      duplicates: 167,
+      quarantine: 1,
+    })
+    expect(vitalGymProRemainingReview.decisions).toHaveLength(431)
+    expect(new Set(vitalGymProRemainingReview.decisions.map(({ sourceFile }) => sourceFile)).size).toBe(431)
+    const additions = vitalGymProRemainingReview.decisions.filter((decision) => decision.status === 'add')
+    expect(additions).toHaveLength(263)
+    expect(new Set(additions.map((decision) => decision.ref)).size).toBe(263)
+    expect(new Set(additions.map((decision) => decision.name)).size).toBe(263)
+    for (const decision of additions) expect(decision.name).not.toMatch(/[A-Za-z]/)
   })
 
   it('подключает все 50 видео бесплатного пака и разрешённые исторические дубли', () => {
@@ -234,15 +264,15 @@ describe('system exercise catalog', () => {
     }
   })
 
-  it('подключает 407 проверенных видео Gym Pro без подмены отсутствующих движений', () => {
-    expect(vitalGymProMediaManifest).toMatchObject({ version: 1, exerciseCount: 407 })
-    expect(vitalGymProMediaManifest.files).toHaveLength(1221)
-    expect(new Set(vitalGymProMediaManifest.files.map(({ path }) => path)).size).toBe(1221)
+  it('подключает 670 проверенных видео Gym Pro без подмены отсутствующих движений', () => {
+    expect(vitalGymProMediaManifest).toMatchObject({ version: 1, exerciseCount: 670 })
+    expect(vitalGymProMediaManifest.files).toHaveLength(2010)
+    expect(new Set(vitalGymProMediaManifest.files.map(({ path }) => path)).size).toBe(2010)
     expect(vitalGymProMediaManifest.files.every(({ bytes, sha256 }) => bytes > 0 && /^[a-f0-9]{64}$/.test(sha256))).toBe(true)
-    expect(VITAL_GYM_PRO_MAIN_REFS).toHaveLength(407)
-    expect(VITAL_GYM_PRO_NEW_EXERCISES).toHaveLength(241)
-    expect(Object.keys(VITAL_GYM_PRO_ASSETS)).toHaveLength(407)
-    expect(new Set(VITAL_GYM_PRO_MAIN_REFS).size).toBe(407)
+    expect(VITAL_GYM_PRO_MAIN_REFS).toHaveLength(670)
+    expect(VITAL_GYM_PRO_NEW_EXERCISES).toHaveLength(502)
+    expect(Object.keys(VITAL_GYM_PRO_ASSETS)).toHaveLength(670)
+    expect(new Set(VITAL_GYM_PRO_MAIN_REFS).size).toBe(670)
     const finalCatalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
     expect(VITAL_GYM_PRO_MAIN_REFS.filter((ref) => !finalCatalogByRef.get(ref)?.techniqueVideoUrl)).toEqual([])
     for (const exercise of VITAL_GYM_PRO_NEW_EXERCISES) {

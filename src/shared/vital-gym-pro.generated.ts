@@ -4098,6 +4098,4443 @@ export const VITAL_GYM_PRO_NEW_EXERCISES = [
       "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
       "Вернитесь в исходное положение без рывка."
     ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r001-0001",
+    "name": "Выкат штанги для пресса",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r001-0001.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r001-0001-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r001-0001.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r002-0005",
+    "name": "Подъём корпуса с гирей и жимом",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Гиря",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r002-0005.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r002-0005-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r002-0005.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r003-0006",
+    "name": "Планка с диском на спине",
+    "muscleGroup": "core",
+    "inputKind": "duration",
+    "equipment": "Диск",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r003-0006.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r003-0006-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r003-0006.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r004-0007",
+    "name": "Русский твист с диском",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Диск",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r004-0007.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r004-0007-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r004-0007.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r007-0017",
+    "name": "Жим гантелей над головой",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r007-0017.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r007-0017-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r007-0017.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r008-0023",
+    "name": "Тяга прямой рукой в блоке одной рукой",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r008-0023.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r008-0023-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r008-0023.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r009-0025",
+    "name": "Разгибание рук на трицепс с прямой рукоятью",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Трицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r009-0025.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r009-0025-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r009-0025.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r010-0027",
+    "name": "Широкие отжимания с опорой на гантели",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Трицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r010-0027.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r010-0027-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r010-0027.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r012-0044",
+    "name": "Кроссовер сверху вниз",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Низ груди",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r012-0044.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r012-0044-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r012-0044.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r013-0058",
+    "name": "Марш на месте со штангой",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r013-0058.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r013-0058-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r013-0058.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r014-0071",
+    "name": "Подъём гири от пола",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гиря",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r014-0071.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r014-0071-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r014-0071.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r016-0095",
+    "name": "Перекрёстное отведение рук в стороны в блоке",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r016-0095.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r016-0095-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r016-0095.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r017-1112",
+    "name": "Ягодичный мост для подготовки к гимнастическому мосту",
+    "muscleGroup": "glutes",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r017-1112.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r017-1112-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r017-1112.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r019-1116",
+    "name": "Растяжка спины в позе кошки",
+    "muscleGroup": "back",
+    "inputKind": "duration",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r019-1116.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r019-1116-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r019-1116.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r020-1120",
+    "name": "Отжимания узким хватом",
+    "muscleGroup": "chest",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Грудные мышцы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r020-1120.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r020-1120-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r020-1120.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r021-1121",
+    "name": "Растяжка задней поверхности бедра лёжа с резиной",
+    "muscleGroup": "legs",
+    "inputKind": "duration",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r021-1121.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r021-1121-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r021-1121.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r022-1123",
+    "name": "Растяжка спины в позе коровы",
+    "muscleGroup": "back",
+    "inputKind": "duration",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r022-1123.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r022-1123-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r022-1123.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r023-1124",
+    "name": "Растяжка плеча поперёк груди",
+    "muscleGroup": "shoulders",
+    "inputKind": "duration",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r023-1124.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r023-1124-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r023-1124.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r024-1132",
+    "name": "Динамическая растяжка рук",
+    "muscleGroup": "shoulders",
+    "inputKind": "duration",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r024-1132.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r024-1132-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r024-1132.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r025-1138",
+    "name": "Мягкий наклон вперёд сидя",
+    "muscleGroup": "legs",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r025-1138.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r025-1138-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r025-1138.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r026-1140",
+    "name": "Вход в гоблет-присед без отягощения",
+    "muscleGroup": "legs",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r026-1140.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r026-1140-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r026-1140.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r027-1142",
+    "name": "Подъём ног в висе",
+    "muscleGroup": "core",
+    "inputKind": "reps",
+    "equipment": "Турник",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r027-1142.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r027-1142-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r027-1142.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r028-1147",
+    "name": "Растяжка ягодичных мышц",
+    "muscleGroup": "glutes",
+    "inputKind": "duration",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r028-1147.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r028-1147-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r028-1147.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r029-1150",
+    "name": "Выход руками в высокую планку",
+    "muscleGroup": "core",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r029-1150.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r029-1150-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r029-1150.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r030-1165",
+    "name": "Махи ногой вперёд и назад",
+    "muscleGroup": "legs",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r030-1165.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r030-1165-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r030-1165.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r031-1170",
+    "name": "Отжимания на одной руке",
+    "muscleGroup": "chest",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Грудные мышцы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r031-1170.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r031-1170-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r031-1170.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r032-1174",
+    "name": "Присед «пистолет» с опорой",
+    "muscleGroup": "legs",
+    "inputKind": "reps",
+    "equipment": "Опора",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r032-1174.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r032-1174-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r032-1174.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r033-1177",
+    "name": "Планка с прыжками ногами врозь",
+    "muscleGroup": "core",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r033-1177.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r033-1177-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r033-1177.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r036-1184",
+    "name": "Разминка плеч",
+    "muscleGroup": "shoulders",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r036-1184.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r036-1184-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r036-1184.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r037-1187",
+    "name": "Динамические махи ногой в сторону",
+    "muscleGroup": "glutes",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r037-1187.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r037-1187-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r037-1187.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r038-1190",
+    "name": "Быстрый бег на месте",
+    "muscleGroup": "cardio",
+    "inputKind": "distance",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r038-1190.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r038-1190-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r038-1190.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r039-1191",
+    "name": "Спринтерский бег на месте",
+    "muscleGroup": "cardio",
+    "inputKind": "distance",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r039-1191.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r039-1191-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r039-1191.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r040-1193",
+    "name": "Мах ногой вперёд и назад стоя",
+    "muscleGroup": "glutes",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r040-1193.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r040-1193-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r040-1193.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r041-1195",
+    "name": "Растяжка сгибателей бедра стоя",
+    "muscleGroup": "glutes",
+    "inputKind": "duration",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r041-1195.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r041-1195-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r041-1195.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r042-1208",
+    "name": "Отжимания широким хватом",
+    "muscleGroup": "chest",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Грудные мышцы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r042-1208.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r042-1208-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r042-1208.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r043-0101",
+    "name": "Выкат ролика с колен",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Ролик для пресса",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r043-0101.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r043-0101-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r043-0101.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r051-0121",
+    "name": "Русский твист с гантелью",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r051-0121.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r051-0121-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r051-0121.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r053-0131",
+    "name": "Динамические махи руками над головой",
+    "muscleGroup": "shoulders",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r053-0131.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r053-0131-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r053-0131.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r054-0132",
+    "name": "Подъём штанги на бицепс узким хватом",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Бицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r054-0132.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r054-0132-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r054-0132.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r057-0138",
+    "name": "Тяга прямыми руками в блоке",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r057-0138.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r057-0138-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r057-0138.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r058-0139",
+    "name": "Разгибание рук на трицепс с треугольной рукоятью",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Трицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r058-0139.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r058-0139-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r058-0139.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r062-0147",
+    "name": "Сгибание рук с гантелями",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Бицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r062-0147.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r062-0147-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r062-0147.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r064-0151",
+    "name": "Сгибание рук «официант» с гантелью",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Бицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r064-0151.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r064-0151-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r064-0151.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r065-0152",
+    "name": "Круги руками с гантелями",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r065-0152.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r065-0152-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r065-0152.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r066-0153",
+    "name": "Динамическая растяжка плеч",
+    "muscleGroup": "shoulders",
+    "inputKind": "duration",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r066-0153.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r066-0153-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r066-0153.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r067-0154",
+    "name": "Подъём ЕЗ-грифа на бицепс",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Бицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r067-0154.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r067-0154-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r067-0154.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r069-0171",
+    "name": "Разгибание рук со штангой над головой стоя",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Трицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r069-0171.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r069-0171-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r069-0171.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r070-0174",
+    "name": "Сгибание рук со штангой обратным хватом",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Бицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r070-0174.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r070-0174-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r070-0174.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r071-0175",
+    "name": "Подъём прямого грифа на бицепс",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Бицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r071-0175.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r071-0175-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r071-0175.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r072-0177",
+    "name": "Разгибание рук на трицепс с канатом",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Канаты",
+    "primaryMuscleDetail": "Трицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r072-0177.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r072-0177-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r072-0177.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r073-0178",
+    "name": "Разгибание рук на трицепс с прямой рукоятью — вариант 2",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Трицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r073-0178.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r073-0178-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r073-0178.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r074-0180",
+    "name": "Подъём штанги на бицепс широким хватом",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Бицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r074-0180.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r074-0180-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r074-0180.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r075-0181",
+    "name": "Тяга нижнего блока широким хватом сидя",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r075-0181.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r075-0181-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r075-0181.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r076-0182",
+    "name": "Тяга Йейтса",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r076-0182.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r076-0182-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r076-0182.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r078-0191",
+    "name": "Классическая становая тяга",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Разгибатели спины",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r078-0191.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r078-0191-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r078-0191.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r083-0208",
+    "name": "Подтягивания широким хватом",
+    "muscleGroup": "back",
+    "inputKind": "reps",
+    "equipment": "Турник",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r083-0208.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r083-0208-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r083-0208.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r086-0212",
+    "name": "Бег с захлёстом голени",
+    "muscleGroup": "legs",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r086-0212.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r086-0212-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r086-0212.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r087-0213",
+    "name": "Бег с высоким подниманием бедра",
+    "muscleGroup": "cardio",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r087-0213.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r087-0213-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r087-0213.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r088-0218",
+    "name": "Бег на месте",
+    "muscleGroup": "cardio",
+    "inputKind": "distance",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r088-0218.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r088-0218-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r088-0218.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r089-0219",
+    "name": "Планка с поочерёдным отведением ног",
+    "muscleGroup": "cardio",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r089-0219.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r089-0219-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r089-0219.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r091-0223",
+    "name": "Алмазные отжимания",
+    "muscleGroup": "chest",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Грудные мышцы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r091-0223.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r091-0223-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r091-0223.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r093-0225",
+    "name": "Ягодичный мост с жимом гантелей лёжа",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Гантели и скамья",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r093-0225.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r093-0225-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r093-0225.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r106-0246",
+    "name": "Марш стоя со штангой",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r106-0246.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r106-0246-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r106-0246.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r109-0255",
+    "name": "Марш стоя с гантелями",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r109-0255.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r109-0255-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r109-0255.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r112-0262",
+    "name": "Подъём гантелей вперёд нейтральным хватом",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r112-0262.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r112-0262-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r112-0262.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r114-0266",
+    "name": "Прыжки ноги врозь с резиной",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r114-0266.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r114-0266-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r114-0266.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r120-0272",
+    "name": "Подъём ног лёжа",
+    "muscleGroup": "core",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r120-0272.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r120-0272-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r120-0272.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r121-0276",
+    "name": "Присед с резиной и отведением рук в стороны",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r121-0276.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r121-0276-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r121-0276.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r124-0286",
+    "name": "Разведение резины на заднюю дельту",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Ромбовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r124-0286.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r124-0286-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r124-0286.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r125-0288",
+    "name": "Наружное вращение плеч с гантелями",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r125-0288.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r125-0288-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r125-0288.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r128-0296",
+    "name": "Тяга штанги к подбородку обратным хватом",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r128-0296.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r128-0296-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r128-0296.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r129-0297",
+    "name": "Жим штанги из-за головы сидя",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r129-0297.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r129-0297-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r129-0297.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r132-1244",
+    "name": "Поочерёдное сгибание ног лёжа в тренажёре",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r132-1244.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r132-1244-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r132-1244.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r133-1245",
+    "name": "Тяга штанги в наклоне в Смите",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Тренажёр Смита",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r133-1245.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r133-1245-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r133-1245.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r134-1247",
+    "name": "Тяга резины в наклоне",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r134-1247.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r134-1247-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r134-1247.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r135-1248",
+    "name": "Отведение ноги назад с резиной и опорой на скамью",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r135-1248.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r135-1248-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r135-1248.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r137-1250",
+    "name": "Сгибание рук с резиной с переходом в подъём перед собой",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r137-1250.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r137-1250-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r137-1250.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r138-1251",
+    "name": "Сгибание рук с резиной с переходом в высокую тягу",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r138-1251.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r138-1251-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r138-1251.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r139-1254",
+    "name": "Гакк-присед с резиной",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r139-1254.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r139-1254-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r139-1254.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r140-1255",
+    "name": "Тяга резины сверху",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r140-1255.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r140-1255-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r140-1255.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r141-1257",
+    "name": "Присед с резиной",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r141-1257.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r141-1257-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r141-1257.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r142-1258",
+    "name": "Отведение прямой ноги назад с резиной",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r142-1258.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r142-1258-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r142-1258.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r145-1262",
+    "name": "Отведение ноги назад со штангой",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r145-1262.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r145-1262-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r145-1262.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r146-1263",
+    "name": "Выпад со штангой с переходом в жим",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r146-1263.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r146-1263-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r146-1263.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r147-1268",
+    "name": "Присед со штангой до скамьи",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга и скамья",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r147-1268.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r147-1268-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r147-1268.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r148-1270",
+    "name": "Изолированное сгибание руки на бицепс",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Бицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r148-1270.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r148-1270-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r148-1270.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r149-1271",
+    "name": "Велосипедные скручивания",
+    "muscleGroup": "core",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r149-1271.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r149-1271-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r149-1271.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r150-1273",
+    "name": "Отведение ноги назад в блоке",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r150-1273.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r150-1273-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r150-1273.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r151-1276",
+    "name": "Подтягивания обратным хватом",
+    "muscleGroup": "back",
+    "inputKind": "reps",
+    "equipment": "Турник",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r151-1276.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r151-1276-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r151-1276.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r152-1277",
+    "name": "Перекрёстная тяга верхних блоков",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r152-1277.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r152-1277-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r152-1277.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r155-1282",
+    "name": "Сгибание рук с переходом из нейтрального хвата в супинированный",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Бицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r155-1282.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r155-1282-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r155-1282.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r156-1284",
+    "name": "Французский жим с гантелями лёжа",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Трицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r156-1284.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r156-1284-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r156-1284.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r157-1286",
+    "name": "Боковые прыжки на платформу с резиной",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Резина и платформа",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r157-1286.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r157-1286-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r157-1286.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r158-1287",
+    "name": "Попеременные махи ногами лёжа",
+    "muscleGroup": "core",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r158-1287.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r158-1287-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r158-1287.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r160-1291",
+    "name": "Разгибание бедра в тренажёре",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r160-1291.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r160-1291-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r160-1291.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r161-1292",
+    "name": "Боковая ходьба с резиной",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r161-1292.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r161-1292-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r161-1292.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r163-1295",
+    "name": "Ягодичный мост в тренажёре для жима ногами",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r163-1295.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r163-1295-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r163-1295.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r166-1300",
+    "name": "Разгибание рук на трицепс над головой с резиной на коленях",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Трицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r166-1300.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r166-1300-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r166-1300.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r167-1302",
+    "name": "Присед в лэндмайне с угловой постановкой",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r167-1302.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r167-1302-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r167-1302.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r169-1304",
+    "name": "Отведение бедра в тренажёре с наклоном вперёд",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r169-1304.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r169-1304-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r169-1304.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r170-1305",
+    "name": "Жим ногами в широкой стойке «лягушка»",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r170-1305.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r170-1305-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r170-1305.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r172-1307",
+    "name": "Выпады с переходом в гакк-присед",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гакк-тренажёр",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r172-1307.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r172-1307-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r172-1307.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r174-1310",
+    "name": "Скручивания локоть к колену с медболом",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r174-1310.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r174-1310-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r174-1310.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r175-1311",
+    "name": "Скалолаз с опорой на медбол",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r175-1311.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r175-1311-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r175-1311.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r176-1312",
+    "name": "Планка с опорой на медбол",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r176-1312.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r176-1312-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r176-1312.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r177-1313",
+    "name": "Прямые скручивания с медболом",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r177-1313.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r177-1313-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r177-1313.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r178-1314",
+    "name": "Касание стопой медбола лёжа",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r178-1314.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r178-1314-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r178-1314.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r179-1315",
+    "name": "Планка с касанием медбола стопой",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r179-1315.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r179-1315-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r179-1315.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r180-1316",
+    "name": "Гакк-присед с узкой постановкой ног",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r180-1316.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r180-1316-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r180-1316.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r182-1318",
+    "name": "Становая тяга на одной ноге в Смите",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр Смита",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r182-1318.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r182-1318-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r182-1318.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r183-1319",
+    "name": "Ягодичный мост на одной ноге в тренажёре для жима ногами",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r183-1319.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r183-1319-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r183-1319.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r185-1323",
+    "name": "Разведение гантелей в наклоне",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Ромбовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r185-1323.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r185-1323-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r185-1323.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r188-1330",
+    "name": "Отведение ноги назад в Смите",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Тренажёр Смита",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r188-1330.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r188-1330-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r188-1330.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r189-1331",
+    "name": "Лёгкий бег на лестничном тренажёре",
+    "muscleGroup": "cardio",
+    "inputKind": "distance",
+    "equipment": "Лестничный тренажёр",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r189-1331.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r189-1331-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r189-1331.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r190-1332",
+    "name": "Отведение ноги назад на лестничном тренажёре",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Лестничный тренажёр",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r190-1332.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r190-1332-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r190-1332.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r191-1333",
+    "name": "Ходьба на лестничном тренажёре",
+    "muscleGroup": "cardio",
+    "inputKind": "distance",
+    "equipment": "Лестничный тренажёр",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r191-1333.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r191-1333-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r191-1333.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r192-1335",
+    "name": "Разгибание одной руки на трицепс обратным хватом в блоке",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Трицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r192-1335.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r192-1335-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r192-1335.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r193-1336",
+    "name": "Ягодичный мост с разведением ног с резиной",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r193-1336.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r193-1336-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r193-1336.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r194-1338",
+    "name": "Лёгкий бег на беговой дорожке",
+    "muscleGroup": "cardio",
+    "inputKind": "distance",
+    "equipment": "Беговая дорожка",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r194-1338.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r194-1338-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r194-1338.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r197-1341",
+    "name": "Скручивания с проведением рук под коленями",
+    "muscleGroup": "core",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r197-1341.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r197-1341-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r197-1341.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r198-1342",
+    "name": "Гакк-присед с широкой постановкой ног",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гакк-тренажёр",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r198-1342.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r198-1342-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r198-1342.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r199-1518",
+    "name": "Присед с броском медбола в стену",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r199-1518.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r199-1518-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r199-1518.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r200-1519",
+    "name": "Тяга резины с переходом в разгибание рук на трицепс",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r200-1519.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r200-1519-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r200-1519.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r201-1520",
+    "name": "Присед «пистолет» с резиной",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r201-1520.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r201-1520-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r201-1520.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r203-1523",
+    "name": "Становая тяга со штангой с переходом в жим",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r203-1523.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r203-1523-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r203-1523.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r204-1524",
+    "name": "Присед со штангой на приподнятых пятках",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга и подпятник",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r204-1524.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r204-1524-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r204-1524.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r205-1525",
+    "name": "Фронтальный присед со штангой на приподнятых пятках",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга и подпятник",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r205-1525.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r205-1525-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r205-1525.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r206-1526",
+    "name": "Гудмонинг со штангой с переходом в жим из-за головы",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r206-1526.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r206-1526-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r206-1526.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r207-1527",
+    "name": "Обратный выпад со штангой с переходом в жим",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r207-1527.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r207-1527-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r207-1527.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r208-1528",
+    "name": "Становая тяга со штангой с переходом в сгибание рук",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r208-1528.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r208-1528-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r208-1528.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r209-1529",
+    "name": "Попеременные волны канатами с шагами врозь-вместе",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Канаты",
+    "primaryMuscleDetail": "Бицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r209-1529.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r209-1529-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r209-1529.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r210-1530",
+    "name": "Русский твист с канатом",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Канаты",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r210-1530.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r210-1530-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r210-1530.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r211-1531",
+    "name": "Ягодичный мост «лягушка» со штангой",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Штанга и скамья",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r211-1531.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r211-1531-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r211-1531.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r212-1532",
+    "name": "Махи ногами «лягушка» с резиной на скамье",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Резина и скамья",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r212-1532.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r212-1532-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r212-1532.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r213-1533",
+    "name": "Имитация гребли сидя",
+    "muscleGroup": "cardio",
+    "inputKind": "distance",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r213-1533.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r213-1533-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r213-1533.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r214-1534",
+    "name": "Становая тяга на БОСУ со сгибанием рук и жимом гантелей",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "БОСУ и гантели",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r214-1534.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r214-1534-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r214-1534.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r215-1535",
+    "name": "Становая тяга на БОСУ с разведением гантелей в стороны",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "БОСУ и гантели",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r215-1535.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r215-1535-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r215-1535.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r216-1536",
+    "name": "Бросок медбола вниз с колен на БОСУ",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "БОСУ и медбол",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r216-1536.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r216-1536-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r216-1536.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r217-1537",
+    "name": "Боковые шаги на БОСУ с волнами канатами",
+    "muscleGroup": "cardio",
+    "inputKind": "strength",
+    "equipment": "БОСУ и канаты",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r217-1537.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r217-1537-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r217-1537.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r218-1538",
+    "name": "Планка на БОСУ с касанием носком пола",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "БОСУ",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r218-1538.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r218-1538-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r218-1538.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r219-1539",
+    "name": "Боковые быстрые шаги через тумбу",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тумба",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r219-1539.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r219-1539-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r219-1539.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r220-1544",
+    "name": "Флаг дракона",
+    "muscleGroup": "core",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r220-1544.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r220-1544-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r220-1544.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r221-1545",
+    "name": "Жим гантелей узким хватом лёжа",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Грудные мышцы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r221-1545.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r221-1545-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r221-1545.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r222-1546",
+    "name": "Становая тяга с гантелями с переходом в сгибание рук",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r222-1546.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r222-1546-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r222-1546.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r223-1547",
+    "name": "Диагональный шаг назад с гантелями",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r223-1547.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r223-1547-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r223-1547.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r224-1548",
+    "name": "Гоблет-присед с гантелью на приподнятых пятках",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели и подпятник",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r224-1548.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r224-1548-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r224-1548.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r225-1549",
+    "name": "Присед с гантелью на приподнятых пятках с переходом в выпад",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели и подпятник",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r225-1549.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r225-1549-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r225-1549.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r226-1550",
+    "name": "Гоблет-присед с гантелью с переходом в обратный выпад",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r226-1550.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r226-1550-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r226-1550.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r227-1551",
+    "name": "Жим гантелей нейтральным хватом лёжа",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Грудные мышцы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r227-1551.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r227-1551-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r227-1551.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r228-1552",
+    "name": "Жим гантелей узким хватом на наклонной скамье",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Грудные мышцы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r228-1552.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r228-1552-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r228-1552.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r229-1553",
+    "name": "Сгибание рук нейтральным хватом с переходом в жим на коленях",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Бицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r229-1553.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r229-1553-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r229-1553.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r230-1554",
+    "name": "Отведение гантелей в стороны с переходом в подъём вперёд",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r230-1554.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r230-1554-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r230-1554.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r231-1555",
+    "name": "Обратный шаг с гантелями",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r231-1555.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r231-1555-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r231-1555.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r232-1556",
+    "name": "Присед на одной ноге с жимом гантели одной рукой",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r232-1556.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r232-1556-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r232-1556.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r233-1557",
+    "name": "Становая тяга на одной ноге с переходом в тягу гантелей к подбородку",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r233-1557.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r233-1557-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r233-1557.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r235-1559",
+    "name": "Диагональные выпады с гантелями",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r235-1559.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r235-1559-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r235-1559.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r236-1561",
+    "name": "Становая тяга на одной ноге с гантелью с переходом в тягу к подбородку",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r236-1561.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r236-1561-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r236-1561.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r237-1562",
+    "name": "Становая тяга с гирей с возвышения",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гиря и подпятник",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r237-1562.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r237-1562-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r237-1562.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r238-1563",
+    "name": "Становая тяга сумо с гирей с возвышения",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Гиря и подпятник",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r238-1563.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r238-1563-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r238-1563.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r239-1564",
+    "name": "Жим гантелей лёжа на фитболе",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Фитбол и гантели",
+    "primaryMuscleDetail": "Грудные мышцы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r239-1564.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r239-1564-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r239-1564.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r240-1565",
+    "name": "Ягодичный мост на фитболе с жимом гантелей",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Фитбол и гантели",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r240-1565.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r240-1565-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r240-1565.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r241-1566",
+    "name": "Жим гантелей на наклонном фитболе",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Фитбол и гантели",
+    "primaryMuscleDetail": "Грудные мышцы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r241-1566.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r241-1566-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r241-1566.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r242-1567",
+    "name": "Обратная гиперэкстензия на фитболе",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Фитбол",
+    "primaryMuscleDetail": "Разгибатели спины",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r242-1567.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r242-1567-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r242-1567.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r243-1568",
+    "name": "«Мельница» на фитболе",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Фитбол",
+    "primaryMuscleDetail": "Косые мышцы живота",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r243-1568.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r243-1568-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r243-1568.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r244-1569",
+    "name": "Повороты корпуса на фитболе с гирей",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Фитбол и гиря",
+    "primaryMuscleDetail": "Косые мышцы живота",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r244-1569.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r244-1569-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r244-1569.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r245-1570",
+    "name": "Становая тяга с трэп-грифом с переходом в шраги",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Трэп-гриф",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r245-1570.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r245-1570-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r245-1570.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r247-1573",
+    "name": "Поочерёдный жим штанги на наклонной скамье",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Штанга и скамья",
+    "primaryMuscleDetail": "Грудные мышцы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r247-1573.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r247-1573-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r247-1573.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r248-1574",
+    "name": "Жим гантелей нейтральным хватом с переходом в сгибание рук",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Грудные мышцы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r248-1574.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r248-1574-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r248-1574.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r249-1575",
+    "name": "Присед с гирей на возвышении с переходом в выпад",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гиря и подпятник",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r249-1575.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r249-1575-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r249-1575.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r250-1576",
+    "name": "Присед с гирей на возвышении",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гиря и подпятник",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r250-1576.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r250-1576-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r250-1576.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r251-1577",
+    "name": "Гоблет-присед с гирей с переходом в выпад",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гиря",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r251-1577.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r251-1577-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r251-1577.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r252-1578",
+    "name": "Ягодичный мост с гирей и резиной",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Гиря и резина",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r252-1578.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r252-1578-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r252-1578.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r253-1579",
+    "name": "Становая тяга с гирей с переходом в запрыгивание на тумбу",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гиря и тумба",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r253-1579.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r253-1579-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r253-1579.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r254-1580",
+    "name": "Пуловер с гирей с переходом в ягодичный мост",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Гиря",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r254-1580.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r254-1580-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r254-1580.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r255-1581",
+    "name": "Становая тяга с гирей в разножке",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гиря",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r255-1581.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r255-1581-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r255-1581.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r256-1582",
+    "name": "Боковые приседы в движении с гирей",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гиря",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r256-1582.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r256-1582-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r256-1582.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r257-1583",
+    "name": "Попеременные обратные выпады с гирей",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гиря",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r257-1583.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r257-1583-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r257-1583.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r258-1584",
+    "name": "Бросок медбола вниз с колен",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r258-1584.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r258-1584-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r258-1584.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r260-1586",
+    "name": "Круговое движение гирей вокруг головы на коленях",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гиря",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r260-1586.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r260-1586-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r260-1586.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r261-1589",
+    "name": "Жим Арнольда одной рукой на коленях",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r261-1589.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r261-1589-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r261-1589.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r262-1590",
+    "name": "Сисси-присед в лэндмайне",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r262-1590.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r262-1590-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r262-1590.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r263-1591",
+    "name": "Ягодичный мост с колен в лэндмайне",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r263-1591.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r263-1591-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r263-1591.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r264-1592",
+    "name": "Обратные выпады с поворотом корпуса в лэндмайне",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r264-1592.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r264-1592-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r264-1592.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r265-1593",
+    "name": "Подъём корпуса с лэндмайном",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r265-1593.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r265-1593-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r265-1593.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r266-1594",
+    "name": "Присед с жимом в лэндмайне",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r266-1594.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r266-1594-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r266-1594.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r267-1595",
+    "name": "Становая тяга на прямых ногах в лэндмайне",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r267-1595.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r267-1595-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r267-1595.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r268-1597",
+    "name": "Боковые шаги с волнами канатами",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Канаты",
+    "primaryMuscleDetail": "Бицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r268-1597.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r268-1597-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r268-1597.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r269-1599",
+    "name": "Выпады с попеременным сгибанием рук с гантелями",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Бицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r269-1599.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r269-1599-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r269-1599.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r270-1600",
+    "name": "Берпи с броском медбола",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r270-1600.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r270-1600-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r270-1600.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r271-1601",
+    "name": "Выпады с броском медбола в пол",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r271-1601.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r271-1601-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r271-1601.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r272-1602",
+    "name": "Бросок медбола через плечо",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r272-1602.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r272-1602-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r272-1602.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r273-1603",
+    "name": "Присед с броском медбола вверх",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r273-1603.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r273-1603-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r273-1603.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r274-1604",
+    "name": "Выпады в движении с медболом и поворотом корпуса",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r274-1604.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r274-1604-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r274-1604.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r275-1605",
+    "name": "Касания медбола рукой в планке",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r275-1605.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r275-1605-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r275-1605.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r276-1606",
+    "name": "Перетаскивание гантели в планке",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r276-1606.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r276-1606-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r276-1606.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r277-1608",
+    "name": "Перемещение гири вокруг корпуса в планке",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Гиря",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r277-1608.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r277-1608-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r277-1608.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r278-1609",
+    "name": "Разгибание руки с гантелью на трицепс в планке",
+    "muscleGroup": "arms",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Трицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r278-1609.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r278-1609-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r278-1609.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r279-1613",
+    "name": "Подъём рук с резиной",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r279-1613.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r279-1613-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r279-1613.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r280-1614",
+    "name": "Мах гирей с дополнительным сопротивлением резины",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r280-1614.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r280-1614-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r280-1614.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r282-1617",
+    "name": "Прыжки на степ-платформу врозь-вместе с резиной",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r282-1617.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r282-1617-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r282-1617.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r283-1618",
+    "name": "Отведение ноги назад с резиной стоя на одной ноге",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Резина",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r283-1618.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r283-1618-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r283-1618.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r284-1619",
+    "name": "Обратный выпад на слайдере с отведением гантелей в стороны",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Слайдеры и гантели",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r284-1619.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r284-1619-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r284-1619.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r287-1622",
+    "name": "Жим гантели одной рукой стоя на одной ноге",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r287-1622.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r287-1622-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r287-1622.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r288-1624",
+    "name": "Жим гантелей стоя на одной ноге",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r288-1624.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r288-1624-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r288-1624.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r289-1625",
+    "name": "Ягодичный мост на одной ноге с удержанием гантели",
+    "muscleGroup": "glutes",
+    "inputKind": "duration",
+    "equipment": "Гантель и скамья",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r289-1625.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r289-1625-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r289-1625.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r290-1626",
+    "name": "Ягодичный мост на одной ноге с жимом гантели",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Гантели и скамья",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r290-1626.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r290-1626-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r290-1626.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r291-1628",
+    "name": "Бросок медбола вниз стоя на одной ноге",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Медбол",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r291-1628.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r291-1628-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r291-1628.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r292-1629",
+    "name": "Присед с медболом и переходом через барьер",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Медбол и барьер",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r292-1629.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r292-1629-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r292-1629.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r293-1632",
+    "name": "Тяга штанги к подбородку со слайдером",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Штанга и слайдер",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r293-1632.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r293-1632-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r293-1632.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r294-1635",
+    "name": "Жим гантелей над головой стоя",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r294-1635.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r294-1635-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r294-1635.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r295-1636",
+    "name": "Круговое движение гирей вокруг головы стоя",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гиря",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r295-1636.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r295-1636-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r295-1636.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r296-1638",
+    "name": "Тяга гири к подбородку одной рукой из приседа сумо",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гиря",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r296-1638.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r296-1638-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r296-1638.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r297-1639",
+    "name": "Становая тяга Т-грифа с переходом в тягу",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r297-1639.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r297-1639-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r297-1639.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r298-1640",
+    "name": "Присед «пистолет» в петлях",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Петли",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r298-1640.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r298-1640-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r298-1640.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r299-1641",
+    "name": "Сведение коленей к груди сидя в петлях",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Петли",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r299-1641.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r299-1641-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r299-1641.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r300-1642",
+    "name": "Сгибание ног в петлях с ягодичным мостом",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Петли",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r300-1642.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r300-1642-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r300-1642.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r301-1643",
+    "name": "Становая тяга с гирей в петлях с переходом в сгибание рук",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Петли и гиря",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r301-1643.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r301-1643-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r301-1643.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r302-1644",
+    "name": "Жим «Викинг» с поворотом корпуса",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Косые мышцы живота",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r302-1644.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r302-1644-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r302-1644.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r303-1645",
+    "name": "Боковые быстрые шаги со снарядом ВиПР",
+    "muscleGroup": "cardio",
+    "inputKind": "strength",
+    "equipment": "Снаряд ВиПР",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r303-1645.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r303-1645-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r303-1645.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r310-1350",
+    "name": "Волны канатами",
+    "muscleGroup": "cardio",
+    "inputKind": "strength",
+    "equipment": "Канаты",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r310-1350.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r310-1350-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r310-1350.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r315-1357",
+    "name": "Тяга каната к лицу снизу вверх",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r315-1357.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r315-1357-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r315-1357.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r317-1359",
+    "name": "Диагональная тяга блока сверху вниз",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Косые мышцы живота",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r317-1359.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r317-1359-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r317-1359.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r320-1362",
+    "name": "Отведение гантелей в стороны",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r320-1362.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r320-1362-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r320-1362.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r321-1363",
+    "name": "Обратные выпады с гантелями",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r321-1363.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r321-1363-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r321-1363.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r322-1365",
+    "name": "Эллиптический тренажёр",
+    "muscleGroup": "cardio",
+    "inputKind": "distance",
+    "equipment": "Эллиптический тренажёр",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r322-1365.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r322-1365-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r322-1365.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r323-1366",
+    "name": "Тяга нижнего блока одной рукой с колен",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r323-1366.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r323-1366-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r323-1366.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r325-1370",
+    "name": "Ягодичный мост с попеременным подъёмом ног",
+    "muscleGroup": "glutes",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r325-1370.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r325-1370-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r325-1370.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r328-1374",
+    "name": "Подъём коленей в висе",
+    "muscleGroup": "core",
+    "inputKind": "reps",
+    "equipment": "Турник",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r328-1374.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r328-1374-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r328-1374.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r343-1403",
+    "name": "Обратная гиперэкстензия на скамье",
+    "muscleGroup": "glutes",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r343-1403.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r343-1403-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r343-1403.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r351-1422",
+    "name": "Тяга Т-грифа с упором грудью",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Штанга",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r351-1422.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r351-1422-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r351-1422.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r353-1425",
+    "name": "Скручивания с касанием носков",
+    "muscleGroup": "core",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r353-1425.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r353-1425-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r353-1425.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r354-1426",
+    "name": "Бег на беговой дорожке",
+    "muscleGroup": "cardio",
+    "inputKind": "distance",
+    "equipment": "Беговая дорожка",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r354-1426.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r354-1426-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r354-1426.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r355-1427",
+    "name": "Ходьба на беговой дорожке",
+    "muscleGroup": "cardio",
+    "inputKind": "distance",
+    "equipment": "Беговая дорожка",
+    "primaryMuscleDetail": "Кардио",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r355-1427.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r355-1427-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r355-1427.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r365-1443",
+    "name": "Подъём гантелей вперёд с упором грудью",
+    "muscleGroup": "shoulders",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Дельтовидные",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r365-1443.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r365-1443-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r365-1443.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r368-1448",
+    "name": "Жим ногами с широкой постановкой",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r368-1448.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r368-1448-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r368-1448.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r370-1450",
+    "name": "Отжимания узким хватом на трицепс",
+    "muscleGroup": "chest",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Грудные мышцы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r370-1450.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r370-1450-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r370-1450.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r374-1460",
+    "name": "Подъём согнутых ног лёжа",
+    "muscleGroup": "core",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r374-1460.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r374-1460-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r374-1460.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r379-1467",
+    "name": "Становая тяга с гантелями на прямых ногах",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r379-1467.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r379-1467-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r379-1467.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r381-1469",
+    "name": "Ягодичный мост Каса со штангой",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Штанга и скамья",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r381-1469.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r381-1469-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r381-1469.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r385-1473",
+    "name": "Болгарский присед с наклоном корпуса вперёд",
+    "muscleGroup": "glutes",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r385-1473.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r385-1473-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r385-1473.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r387-1476",
+    "name": "Присед с гантелями в руках",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r387-1476.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r387-1476-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r387-1476.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r389-1480",
+    "name": "Гакк-присед в разножке",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Тренажёр",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r389-1480.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r389-1480-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r389-1480.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r390-1481",
+    "name": "Гоблет-присед с гирей на приподнятых пятках",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гиря",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r390-1481.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r390-1481-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r390-1481.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r391-1482",
+    "name": "Удержание положения «лодочка»",
+    "muscleGroup": "core",
+    "inputKind": "duration",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r391-1482.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r391-1482-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r391-1482.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r393-1497",
+    "name": "Гиперэкстензия с акцентом на ягодицы",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Скамья для гиперэкстензии",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r393-1497.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r393-1497-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r393-1497.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r395-1502",
+    "name": "Прыжки «конькобежец»",
+    "muscleGroup": "glutes",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r395-1502.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r395-1502-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r395-1502.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r396-1511",
+    "name": "Выпады в прыжке со сменой ног",
+    "muscleGroup": "legs",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r396-1511.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r396-1511-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r396-1511.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r397-1516",
+    "name": "Подъём корпуса с опорой поясницей на фитбол",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Фитбол",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r397-1516.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r397-1516-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r397-1516.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r400-1704",
+    "name": "Присед со штангой до тумбы",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Штанга и тумба",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r400-1704.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r400-1704-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r400-1704.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r405-1710",
+    "name": "Диагональная тяга блока снизу вверх",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Косые мышцы живота",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r405-1710.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r405-1710-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r405-1710.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r409-1717",
+    "name": "Становая тяга с гантелями в разножке",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Задняя поверхность бедра",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r409-1717.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r409-1717-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r409-1717.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r410-1718",
+    "name": "Ягодичный мост с гантелью в разножке",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r410-1718.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r410-1718-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r410-1718.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r415-1725",
+    "name": "Поочерёдный жим гантелей на наклонной скамье",
+    "muscleGroup": "chest",
+    "inputKind": "strength",
+    "equipment": "Гантели",
+    "primaryMuscleDetail": "Грудные мышцы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r415-1725.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r415-1725-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r415-1725.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r418-1730",
+    "name": "Присед с лэндмайном",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Лэндмайн",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r418-1730.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r418-1730-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r418-1730.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r420-1733",
+    "name": "Выпады при ходьбе над головой",
+    "muscleGroup": "legs",
+    "inputKind": "strength",
+    "equipment": "Гантель",
+    "primaryMuscleDetail": "Квадрицепс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r420-1733.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r420-1733-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r420-1733.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r424-1737",
+    "name": "Активация поперечной мышцы живота сидя",
+    "muscleGroup": "core",
+    "inputKind": "reps",
+    "equipment": "Без оборудования",
+    "primaryMuscleDetail": "Пресс",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r424-1737.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r424-1737-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r424-1737.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r425-1739",
+    "name": "Тяга верхнего блока одной рукой с колен",
+    "muscleGroup": "back",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Широчайшие",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r425-1739.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r425-1739-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r425-1739.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r426-1741",
+    "name": "Боковые скручивания в блоке одной рукой",
+    "muscleGroup": "core",
+    "inputKind": "strength",
+    "equipment": "Блок",
+    "primaryMuscleDetail": "Косые мышцы живота",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r426-1741.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r426-1741-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r426-1741.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r427-1742",
+    "name": "Присед в разножке в Смите",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Тренажёр Смита",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r427-1742.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r427-1742-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r427-1742.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r429-1744",
+    "name": "Обратная гиперэкстензия в Смите",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Тренажёр Смита",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r429-1744.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r429-1744-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r429-1744.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
+  },
+  {
+    "source": "system",
+    "ref": "vital-gym-pro-r431-1748",
+    "name": "Обратный выпад со степ-платформы с гантелями",
+    "muscleGroup": "glutes",
+    "inputKind": "strength",
+    "equipment": "Гантели и степ-платформа",
+    "primaryMuscleDetail": "Ягодицы",
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r431-1748.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r431-1748-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r431-1748.mp4",
+    "instructions": [
+      "Примите устойчивое исходное положение, показанное на анимации.",
+      "Выполняйте движение плавно и подконтрольно, сохраняя нейтральное положение корпуса.",
+      "Вернитесь в исходное положение без рывка."
+    ]
   }
 ] as const satisfies readonly ExerciseSnapshot[]
 
@@ -6046,6 +10483,1058 @@ export const VITAL_GYM_PRO_ASSETS = {
   "vital-gym-pro-1724": {
     "purchasedId": "1724",
     "purchasedName": "heel elevated cyclist squat"
+  },
+  "vital-gym-pro-r001-0001": {
+    "purchasedId": "0001",
+    "purchasedName": "ab roll workout"
+  },
+  "vital-gym-pro-r002-0005": {
+    "purchasedId": "0005",
+    "purchasedName": "kettlebell sit-ups to press"
+  },
+  "vital-gym-pro-r003-0006": {
+    "purchasedId": "0006",
+    "purchasedName": "plank hold weighted"
+  },
+  "vital-gym-pro-r004-0007": {
+    "purchasedId": "0007",
+    "purchasedName": "russian twist weighted"
+  },
+  "vital-gym-pro-r005-0013": {
+    "purchasedId": "0013",
+    "purchasedName": "close-grip bench press barbell"
+  },
+  "vital-gym-pro-r007-0017": {
+    "purchasedId": "0017",
+    "purchasedName": "dumbbell overhead press version 1"
+  },
+  "vital-gym-pro-r008-0023": {
+    "purchasedId": "0023",
+    "purchasedName": "single arm straight arm cable pulldown"
+  },
+  "vital-gym-pro-r009-0025": {
+    "purchasedId": "0025",
+    "purchasedName": "triceps pushdown (cable - straight bar)"
+  },
+  "vital-gym-pro-r010-0027": {
+    "purchasedId": "0027",
+    "purchasedName": "wide dumbbell push up"
+  },
+  "vital-gym-pro-r012-0044": {
+    "purchasedId": "0044",
+    "purchasedName": "high to low cable crossover"
+  },
+  "vital-gym-pro-r013-0058": {
+    "purchasedId": "0058",
+    "purchasedName": "barbell march"
+  },
+  "vital-gym-pro-r014-0071": {
+    "purchasedId": "0071",
+    "purchasedName": "kettlebell lift up"
+  },
+  "vital-gym-pro-r016-0095": {
+    "purchasedId": "0095",
+    "purchasedName": "cable cross lateral raise"
+  },
+  "vital-gym-pro-r017-1112": {
+    "purchasedId": "1112",
+    "purchasedName": "bridge pose - wheel prep bridge"
+  },
+  "vital-gym-pro-r019-1116": {
+    "purchasedId": "1116",
+    "purchasedName": "cat pose stretching"
+  },
+  "vital-gym-pro-r020-1120": {
+    "purchasedId": "1120",
+    "purchasedName": "close grip push ups"
+  },
+  "vital-gym-pro-r021-1121": {
+    "purchasedId": "1121",
+    "purchasedName": "resistance band supine hamstring stretch"
+  },
+  "vital-gym-pro-r022-1123": {
+    "purchasedId": "1123",
+    "purchasedName": "cow pose stretch"
+  },
+  "vital-gym-pro-r023-1124": {
+    "purchasedId": "1124",
+    "purchasedName": "cross-body shoulder stretch"
+  },
+  "vital-gym-pro-r024-1132": {
+    "purchasedId": "1132",
+    "purchasedName": "dynamic arms stretch"
+  },
+  "vital-gym-pro-r025-1138": {
+    "purchasedId": "1138",
+    "purchasedName": "gentle fold seated forward fold"
+  },
+  "vital-gym-pro-r026-1140": {
+    "purchasedId": "1140",
+    "purchasedName": "goblet squat entry"
+  },
+  "vital-gym-pro-r027-1142": {
+    "purchasedId": "1142",
+    "purchasedName": "hanging leg raises"
+  },
+  "vital-gym-pro-r028-1147": {
+    "purchasedId": "1147",
+    "purchasedName": "hip stretch"
+  },
+  "vital-gym-pro-r029-1150": {
+    "purchasedId": "1150",
+    "purchasedName": "inchworm walkout"
+  },
+  "vital-gym-pro-r030-1165": {
+    "purchasedId": "1165",
+    "purchasedName": "leg swing"
+  },
+  "vital-gym-pro-r031-1170": {
+    "purchasedId": "1170",
+    "purchasedName": "one arm push ups"
+  },
+  "vital-gym-pro-r032-1174": {
+    "purchasedId": "1174",
+    "purchasedName": "pistol squats with poll support"
+  },
+  "vital-gym-pro-r033-1177": {
+    "purchasedId": "1177",
+    "purchasedName": "plank jack"
+  },
+  "vital-gym-pro-r036-1184": {
+    "purchasedId": "1184",
+    "purchasedName": "shoulder stretch warm up"
+  },
+  "vital-gym-pro-r037-1187": {
+    "purchasedId": "1187",
+    "purchasedName": "side to side dynamic leg swings"
+  },
+  "vital-gym-pro-r038-1190": {
+    "purchasedId": "1190",
+    "purchasedName": "sprint interval fast running"
+  },
+  "vital-gym-pro-r039-1191": {
+    "purchasedId": "1191",
+    "purchasedName": "sprint intervals fast running"
+  },
+  "vital-gym-pro-r040-1193": {
+    "purchasedId": "1193",
+    "purchasedName": "standing front to back kick"
+  },
+  "vital-gym-pro-r041-1195": {
+    "purchasedId": "1195",
+    "purchasedName": "standing hips stretch"
+  },
+  "vital-gym-pro-r042-1208": {
+    "purchasedId": "1208",
+    "purchasedName": "wide grip push up"
+  },
+  "vital-gym-pro-r043-0101": {
+    "purchasedId": "0101",
+    "purchasedName": "ab wheel rollout (kneeling)"
+  },
+  "vital-gym-pro-r051-0121": {
+    "purchasedId": "0121",
+    "purchasedName": "russian twist dumbbell"
+  },
+  "vital-gym-pro-r053-0131": {
+    "purchasedId": "0131",
+    "purchasedName": "dynamic overhead arm sweep"
+  },
+  "vital-gym-pro-r054-0132": {
+    "purchasedId": "0132",
+    "purchasedName": "barbell curl narrow grip"
+  },
+  "vital-gym-pro-r057-0138": {
+    "purchasedId": "0138",
+    "purchasedName": "cable pull"
+  },
+  "vital-gym-pro-r058-0139": {
+    "purchasedId": "0139",
+    "purchasedName": "cable triceps pushdown (v-bar attachment)"
+  },
+  "vital-gym-pro-r062-0147": {
+    "purchasedId": "0147",
+    "purchasedName": "dumbbell biceps curl up"
+  },
+  "vital-gym-pro-r064-0151": {
+    "purchasedId": "0151",
+    "purchasedName": "dumbbell waiter curl"
+  },
+  "vital-gym-pro-r065-0152": {
+    "purchasedId": "0152",
+    "purchasedName": "dumbbell weighted arm circle"
+  },
+  "vital-gym-pro-r066-0153": {
+    "purchasedId": "0153",
+    "purchasedName": "dynamic stretch"
+  },
+  "vital-gym-pro-r067-0154": {
+    "purchasedId": "0154",
+    "purchasedName": "ez bar biceps curl"
+  },
+  "vital-gym-pro-r069-0171": {
+    "purchasedId": "0171",
+    "purchasedName": "standing barbell overhead extension"
+  },
+  "vital-gym-pro-r070-0174": {
+    "purchasedId": "0174",
+    "purchasedName": "standing supinated bicep curl"
+  },
+  "vital-gym-pro-r071-0175": {
+    "purchasedId": "0175",
+    "purchasedName": "straight barbell curl"
+  },
+  "vital-gym-pro-r072-0177": {
+    "purchasedId": "0177",
+    "purchasedName": "triceps cable pushdown (rope attachment)"
+  },
+  "vital-gym-pro-r073-0178": {
+    "purchasedId": "0178",
+    "purchasedName": "triceps cable pushdown (straight bar attachment)"
+  },
+  "vital-gym-pro-r074-0180": {
+    "purchasedId": "0180",
+    "purchasedName": "wide grip barbell curl"
+  },
+  "vital-gym-pro-r075-0181": {
+    "purchasedId": "0181",
+    "purchasedName": "wide grip seated cable row"
+  },
+  "vital-gym-pro-r076-0182": {
+    "purchasedId": "0182",
+    "purchasedName": "yates row"
+  },
+  "vital-gym-pro-r078-0191": {
+    "purchasedId": "0191",
+    "purchasedName": "conventional deadlift"
+  },
+  "vital-gym-pro-r083-0208": {
+    "purchasedId": "0208",
+    "purchasedName": "wide grip pull-up"
+  },
+  "vital-gym-pro-r086-0212": {
+    "purchasedId": "0212",
+    "purchasedName": "butt kick"
+  },
+  "vital-gym-pro-r087-0213": {
+    "purchasedId": "0213",
+    "purchasedName": "high knee"
+  },
+  "vital-gym-pro-r088-0218": {
+    "purchasedId": "0218",
+    "purchasedName": "place jog"
+  },
+  "vital-gym-pro-r089-0219": {
+    "purchasedId": "0219",
+    "purchasedName": "plank jack modification"
+  },
+  "vital-gym-pro-r091-0223": {
+    "purchasedId": "0223",
+    "purchasedName": "close grip (diamond) push-up"
+  },
+  "vital-gym-pro-r093-0225": {
+    "purchasedId": "0225",
+    "purchasedName": "dumbbell glute bridge chest press"
+  },
+  "vital-gym-pro-r106-0246": {
+    "purchasedId": "0246",
+    "purchasedName": "barbell march standing"
+  },
+  "vital-gym-pro-r109-0255": {
+    "purchasedId": "0255",
+    "purchasedName": "dumbbell march"
+  },
+  "vital-gym-pro-r112-0262": {
+    "purchasedId": "0262",
+    "purchasedName": "hammer raise front"
+  },
+  "vital-gym-pro-r114-0266": {
+    "purchasedId": "0266",
+    "purchasedName": "jumping jack with resistance band"
+  },
+  "vital-gym-pro-r120-0272": {
+    "purchasedId": "0272",
+    "purchasedName": "lying leg lift up"
+  },
+  "vital-gym-pro-r121-0276": {
+    "purchasedId": "0276",
+    "purchasedName": "resistance band squat with lateral raise"
+  },
+  "vital-gym-pro-r124-0286": {
+    "purchasedId": "0286",
+    "purchasedName": "banded pull-apart (rear delt focus)"
+  },
+  "vital-gym-pro-r125-0288": {
+    "purchasedId": "0288",
+    "purchasedName": "dumb waiter dumbbell"
+  },
+  "vital-gym-pro-r128-0296": {
+    "purchasedId": "0296",
+    "purchasedName": "reverse grip barbell upright row"
+  },
+  "vital-gym-pro-r129-0297": {
+    "purchasedId": "0297",
+    "purchasedName": "seated behind-the-neck press"
+  },
+  "vital-gym-pro-r132-1244": {
+    "purchasedId": "1244",
+    "purchasedName": "alternate leg curl"
+  },
+  "vital-gym-pro-r133-1245": {
+    "purchasedId": "1245",
+    "purchasedName": "back row smith machine"
+  },
+  "vital-gym-pro-r134-1247": {
+    "purchasedId": "1247",
+    "purchasedName": "banded back row"
+  },
+  "vital-gym-pro-r135-1248": {
+    "purchasedId": "1248",
+    "purchasedName": "banded bench kickback"
+  },
+  "vital-gym-pro-r137-1250": {
+    "purchasedId": "1250",
+    "purchasedName": "banded biceps to shoulder raise"
+  },
+  "vital-gym-pro-r138-1251": {
+    "purchasedId": "1251",
+    "purchasedName": "banded curls to high rows"
+  },
+  "vital-gym-pro-r139-1254": {
+    "purchasedId": "1254",
+    "purchasedName": "banded hack squat"
+  },
+  "vital-gym-pro-r140-1255": {
+    "purchasedId": "1255",
+    "purchasedName": "banded lat pulldown"
+  },
+  "vital-gym-pro-r141-1257": {
+    "purchasedId": "1257",
+    "purchasedName": "banded squat"
+  },
+  "vital-gym-pro-r142-1258": {
+    "purchasedId": "1258",
+    "purchasedName": "banded straight leg kickback"
+  },
+  "vital-gym-pro-r145-1262": {
+    "purchasedId": "1262",
+    "purchasedName": "barbell kickback"
+  },
+  "vital-gym-pro-r146-1263": {
+    "purchasedId": "1263",
+    "purchasedName": "barbell lunge to press"
+  },
+  "vital-gym-pro-r147-1268": {
+    "purchasedId": "1268",
+    "purchasedName": "bench barbell squat"
+  },
+  "vital-gym-pro-r148-1270": {
+    "purchasedId": "1270",
+    "purchasedName": "biceps isolation curl"
+  },
+  "vital-gym-pro-r149-1271": {
+    "purchasedId": "1271",
+    "purchasedName": "bicycle"
+  },
+  "vital-gym-pro-r150-1273": {
+    "purchasedId": "1273",
+    "purchasedName": "cable glute kickback"
+  },
+  "vital-gym-pro-r151-1276": {
+    "purchasedId": "1276",
+    "purchasedName": "chin up"
+  },
+  "vital-gym-pro-r152-1277": {
+    "purchasedId": "1277",
+    "purchasedName": "cross lat pulldown"
+  },
+  "vital-gym-pro-r155-1282": {
+    "purchasedId": "1282",
+    "purchasedName": "dumbbell hammer to biceps curl"
+  },
+  "vital-gym-pro-r156-1284": {
+    "purchasedId": "1284",
+    "purchasedName": "dumbbell skullcrusher"
+  },
+  "vital-gym-pro-r157-1286": {
+    "purchasedId": "1286",
+    "purchasedName": "elevated skii jumps with booty bands"
+  },
+  "vital-gym-pro-r158-1287": {
+    "purchasedId": "1287",
+    "purchasedName": "flutter"
+  },
+  "vital-gym-pro-r160-1291": {
+    "purchasedId": "1291",
+    "purchasedName": "glute lift (leg curl)"
+  },
+  "vital-gym-pro-r161-1292": {
+    "purchasedId": "1292",
+    "purchasedName": "glute walk"
+  },
+  "vital-gym-pro-r163-1295": {
+    "purchasedId": "1295",
+    "purchasedName": "hip thrust on leg press"
+  },
+  "vital-gym-pro-r166-1300": {
+    "purchasedId": "1300",
+    "purchasedName": "kneeling overhead tricep extension"
+  },
+  "vital-gym-pro-r167-1302": {
+    "purchasedId": "1302",
+    "purchasedName": "landmine v squat"
+  },
+  "vital-gym-pro-r169-1304": {
+    "purchasedId": "1304",
+    "purchasedName": "lean forward hip abduction"
+  },
+  "vital-gym-pro-r170-1305": {
+    "purchasedId": "1305",
+    "purchasedName": "leg press frog stance"
+  },
+  "vital-gym-pro-r172-1307": {
+    "purchasedId": "1307",
+    "purchasedName": "lunges to hacksquat"
+  },
+  "vital-gym-pro-r174-1310": {
+    "purchasedId": "1310",
+    "purchasedName": "medicine ball elbow to knee"
+  },
+  "vital-gym-pro-r175-1311": {
+    "purchasedId": "1311",
+    "purchasedName": "medicine ball mountain climber"
+  },
+  "vital-gym-pro-r176-1312": {
+    "purchasedId": "1312",
+    "purchasedName": "medicine ball plank"
+  },
+  "vital-gym-pro-r177-1313": {
+    "purchasedId": "1313",
+    "purchasedName": "medicine ball straight crunch"
+  },
+  "vital-gym-pro-r178-1314": {
+    "purchasedId": "1314",
+    "purchasedName": "medicine ball toe tap"
+  },
+  "vital-gym-pro-r179-1315": {
+    "purchasedId": "1315",
+    "purchasedName": "medicine plank to toe tap"
+  },
+  "vital-gym-pro-r180-1316": {
+    "purchasedId": "1316",
+    "purchasedName": "narrow grip hack squat"
+  },
+  "vital-gym-pro-r182-1318": {
+    "purchasedId": "1318",
+    "purchasedName": "one leg deadlift smith machine"
+  },
+  "vital-gym-pro-r183-1319": {
+    "purchasedId": "1319",
+    "purchasedName": "one leg hip thrust (leg press)"
+  },
+  "vital-gym-pro-r185-1323": {
+    "purchasedId": "1323",
+    "purchasedName": "rear flyes"
+  },
+  "vital-gym-pro-r188-1330": {
+    "purchasedId": "1330",
+    "purchasedName": "smith machine donkey kick"
+  },
+  "vital-gym-pro-r189-1331": {
+    "purchasedId": "1331",
+    "purchasedName": "stairmaster jog"
+  },
+  "vital-gym-pro-r190-1332": {
+    "purchasedId": "1332",
+    "purchasedName": "stairmaster kickback"
+  },
+  "vital-gym-pro-r191-1333": {
+    "purchasedId": "1333",
+    "purchasedName": "stairmaster walk"
+  },
+  "vital-gym-pro-r192-1335": {
+    "purchasedId": "1335",
+    "purchasedName": "supinated triceps extension (one arm)"
+  },
+  "vital-gym-pro-r193-1336": {
+    "purchasedId": "1336",
+    "purchasedName": "thrust to abduction"
+  },
+  "vital-gym-pro-r194-1338": {
+    "purchasedId": "1338",
+    "purchasedName": "treadmill jog"
+  },
+  "vital-gym-pro-r197-1341": {
+    "purchasedId": "1341",
+    "purchasedName": "under knee ab crunch"
+  },
+  "vital-gym-pro-r198-1342": {
+    "purchasedId": "1342",
+    "purchasedName": "wide hack squat"
+  },
+  "vital-gym-pro-r199-1518": {
+    "purchasedId": "1518",
+    "purchasedName": "balls slam on wall squat"
+  },
+  "vital-gym-pro-r200-1519": {
+    "purchasedId": "1519",
+    "purchasedName": "band row to triceps"
+  },
+  "vital-gym-pro-r201-1520": {
+    "purchasedId": "1520",
+    "purchasedName": "band single leg pistol squat"
+  },
+  "vital-gym-pro-r203-1523": {
+    "purchasedId": "1523",
+    "purchasedName": "barbell deadlift to press"
+  },
+  "vital-gym-pro-r204-1524": {
+    "purchasedId": "1524",
+    "purchasedName": "barbell elevated back squat"
+  },
+  "vital-gym-pro-r205-1525": {
+    "purchasedId": "1525",
+    "purchasedName": "barbell elevated front squats"
+  },
+  "vital-gym-pro-r206-1526": {
+    "purchasedId": "1526",
+    "purchasedName": "barbell good morning to behind neck shoulder press"
+  },
+  "vital-gym-pro-r207-1527": {
+    "purchasedId": "1527",
+    "purchasedName": "barbell reverse lunge press"
+  },
+  "vital-gym-pro-r208-1528": {
+    "purchasedId": "1528",
+    "purchasedName": "barbell deadlift to curl"
+  },
+  "vital-gym-pro-r209-1529": {
+    "purchasedId": "1529",
+    "purchasedName": "battle rope alternate slam in out"
+  },
+  "vital-gym-pro-r210-1530": {
+    "purchasedId": "1530",
+    "purchasedName": "battle rope russian twist"
+  },
+  "vital-gym-pro-r211-1531": {
+    "purchasedId": "1531",
+    "purchasedName": "bench frog barbell glute"
+  },
+  "vital-gym-pro-r212-1532": {
+    "purchasedId": "1532",
+    "purchasedName": "bench frog kick band"
+  },
+  "vital-gym-pro-r213-1533": {
+    "purchasedId": "1533",
+    "purchasedName": "boating"
+  },
+  "vital-gym-pro-r214-1534": {
+    "purchasedId": "1534",
+    "purchasedName": "bosu ball dumbbell deadlift to curl press"
+  },
+  "vital-gym-pro-r215-1535": {
+    "purchasedId": "1535",
+    "purchasedName": "bosu ball dumbbell deadlift to lateral raises"
+  },
+  "vital-gym-pro-r216-1536": {
+    "purchasedId": "1536",
+    "purchasedName": "bosu ball kneeling ball slam"
+  },
+  "vital-gym-pro-r217-1537": {
+    "purchasedId": "1537",
+    "purchasedName": "bosu ball lateral battle rope shuffle"
+  },
+  "vital-gym-pro-r218-1538": {
+    "purchasedId": "1538",
+    "purchasedName": "bosu ball plank toe tap"
+  },
+  "vital-gym-pro-r219-1539": {
+    "purchasedId": "1539",
+    "purchasedName": "box lateral shuffle"
+  },
+  "vital-gym-pro-r220-1544": {
+    "purchasedId": "1544",
+    "purchasedName": "dragon flag"
+  },
+  "vital-gym-pro-r221-1545": {
+    "purchasedId": "1545",
+    "purchasedName": "dumbbell close chest press"
+  },
+  "vital-gym-pro-r222-1546": {
+    "purchasedId": "1546",
+    "purchasedName": "dumbbell deadlift to biceps curl"
+  },
+  "vital-gym-pro-r223-1547": {
+    "purchasedId": "1547",
+    "purchasedName": "dumbbell drop step"
+  },
+  "vital-gym-pro-r224-1548": {
+    "purchasedId": "1548",
+    "purchasedName": "dumbbell elevated goblet squats"
+  },
+  "vital-gym-pro-r225-1549": {
+    "purchasedId": "1549",
+    "purchasedName": "dumbbell elevated squat front lunge"
+  },
+  "vital-gym-pro-r226-1550": {
+    "purchasedId": "1550",
+    "purchasedName": "dumbbell goblet squat to reverse lunge"
+  },
+  "vital-gym-pro-r227-1551": {
+    "purchasedId": "1551",
+    "purchasedName": "dumbbell hammer press"
+  },
+  "vital-gym-pro-r228-1552": {
+    "purchasedId": "1552",
+    "purchasedName": "dumbbell incline close chest press"
+  },
+  "vital-gym-pro-r229-1553": {
+    "purchasedId": "1553",
+    "purchasedName": "dumbbell kneeling hammer curl to hammer press"
+  },
+  "vital-gym-pro-r230-1554": {
+    "purchasedId": "1554",
+    "purchasedName": "dumbbell lateral raise to front raise"
+  },
+  "vital-gym-pro-r231-1555": {
+    "purchasedId": "1555",
+    "purchasedName": "dumbbell reverse step"
+  },
+  "vital-gym-pro-r232-1556": {
+    "purchasedId": "1556",
+    "purchasedName": "dumbbell single leg & arm squat press"
+  },
+  "vital-gym-pro-r233-1557": {
+    "purchasedId": "1557",
+    "purchasedName": "dumbbell single leg deadlift to upright row"
+  },
+  "vital-gym-pro-r235-1559": {
+    "purchasedId": "1559",
+    "purchasedName": "dumbbell transverse lunges"
+  },
+  "vital-gym-pro-r236-1561": {
+    "purchasedId": "1561",
+    "purchasedName": "dumbbell single leg & arm deadlift to upright row"
+  },
+  "vital-gym-pro-r237-1562": {
+    "purchasedId": "1562",
+    "purchasedName": "elevated kettlebell deadlift"
+  },
+  "vital-gym-pro-r238-1563": {
+    "purchasedId": "1563",
+    "purchasedName": "elevated kettlebell sumo deadlift"
+  },
+  "vital-gym-pro-r239-1564": {
+    "purchasedId": "1564",
+    "purchasedName": "exercise ball chest press"
+  },
+  "vital-gym-pro-r240-1565": {
+    "purchasedId": "1565",
+    "purchasedName": "exercise ball dumbbell press glute bridge"
+  },
+  "vital-gym-pro-r241-1566": {
+    "purchasedId": "1566",
+    "purchasedName": "exercise ball incline chest press"
+  },
+  "vital-gym-pro-r242-1567": {
+    "purchasedId": "1567",
+    "purchasedName": "exercise ball reverse superman"
+  },
+  "vital-gym-pro-r243-1568": {
+    "purchasedId": "1568",
+    "purchasedName": "exercise ball windmill"
+  },
+  "vital-gym-pro-r244-1569": {
+    "purchasedId": "1569",
+    "purchasedName": "exercise oblique rotation exercise ball kettlebell"
+  },
+  "vital-gym-pro-r245-1570": {
+    "purchasedId": "1570",
+    "purchasedName": "hex bar deadlift to shrug"
+  },
+  "vital-gym-pro-r247-1573": {
+    "purchasedId": "1573",
+    "purchasedName": "incline bench press alternate arm"
+  },
+  "vital-gym-pro-r248-1574": {
+    "purchasedId": "1574",
+    "purchasedName": "incline hammer press to hammer curl"
+  },
+  "vital-gym-pro-r249-1575": {
+    "purchasedId": "1575",
+    "purchasedName": "kettlebell elevated squat to front lunges"
+  },
+  "vital-gym-pro-r250-1576": {
+    "purchasedId": "1576",
+    "purchasedName": "kettlebell elevated squat"
+  },
+  "vital-gym-pro-r251-1577": {
+    "purchasedId": "1577",
+    "purchasedName": "kettlebell goblet squat to front lunges"
+  },
+  "vital-gym-pro-r252-1578": {
+    "purchasedId": "1578",
+    "purchasedName": "kettlebell hold glute bridge with resistance band"
+  },
+  "vital-gym-pro-r253-1579": {
+    "purchasedId": "1579",
+    "purchasedName": "kettlebell plyo deadlift to box jump"
+  },
+  "vital-gym-pro-r254-1580": {
+    "purchasedId": "1580",
+    "purchasedName": "kettlebell pullover to glute raise"
+  },
+  "vital-gym-pro-r255-1581": {
+    "purchasedId": "1581",
+    "purchasedName": "kettlebell staggered stance stiff deadlift"
+  },
+  "vital-gym-pro-r256-1582": {
+    "purchasedId": "1582",
+    "purchasedName": "kettlebell walking lateral squat"
+  },
+  "vital-gym-pro-r257-1583": {
+    "purchasedId": "1583",
+    "purchasedName": "kettlebell reverse lunge alternating between leg"
+  },
+  "vital-gym-pro-r258-1584": {
+    "purchasedId": "1584",
+    "purchasedName": "kneeling ball slam"
+  },
+  "vital-gym-pro-r260-1586": {
+    "purchasedId": "1586",
+    "purchasedName": "kneeling kettlebell around the world"
+  },
+  "vital-gym-pro-r261-1589": {
+    "purchasedId": "1589",
+    "purchasedName": "kneeling single arm arnold shoulder press"
+  },
+  "vital-gym-pro-r262-1590": {
+    "purchasedId": "1590",
+    "purchasedName": "landmine sissy squat"
+  },
+  "vital-gym-pro-r263-1591": {
+    "purchasedId": "1591",
+    "purchasedName": "landmine kneeling hip thrust"
+  },
+  "vital-gym-pro-r264-1592": {
+    "purchasedId": "1592",
+    "purchasedName": "landmine reverse lunges twist"
+  },
+  "vital-gym-pro-r265-1593": {
+    "purchasedId": "1593",
+    "purchasedName": "landmine sit ups"
+  },
+  "vital-gym-pro-r266-1594": {
+    "purchasedId": "1594",
+    "purchasedName": "landmine squat to press"
+  },
+  "vital-gym-pro-r267-1595": {
+    "purchasedId": "1595",
+    "purchasedName": "landmine stiff stance deadlift"
+  },
+  "vital-gym-pro-r268-1597": {
+    "purchasedId": "1597",
+    "purchasedName": "lateral shuffle battle rope"
+  },
+  "vital-gym-pro-r269-1599": {
+    "purchasedId": "1599",
+    "purchasedName": "lunges alternate biceps curl"
+  },
+  "vital-gym-pro-r270-1600": {
+    "purchasedId": "1600",
+    "purchasedName": "med ball slam burpee"
+  },
+  "vital-gym-pro-r271-1601": {
+    "purchasedId": "1601",
+    "purchasedName": "med ball slam on floor in lunges"
+  },
+  "vital-gym-pro-r272-1602": {
+    "purchasedId": "1602",
+    "purchasedName": "med ball throw behind shoulder"
+  },
+  "vital-gym-pro-r273-1603": {
+    "purchasedId": "1603",
+    "purchasedName": "medicine ball squat throw"
+  },
+  "vital-gym-pro-r274-1604": {
+    "purchasedId": "1604",
+    "purchasedName": "medicine ball walking lunge twist"
+  },
+  "vital-gym-pro-r275-1605": {
+    "purchasedId": "1605",
+    "purchasedName": "plank ball slap"
+  },
+  "vital-gym-pro-r276-1606": {
+    "purchasedId": "1606",
+    "purchasedName": "plank dumbbell drag"
+  },
+  "vital-gym-pro-r277-1608": {
+    "purchasedId": "1608",
+    "purchasedName": "plank pose sliding around the kettlebell"
+  },
+  "vital-gym-pro-r278-1609": {
+    "purchasedId": "1609",
+    "purchasedName": "plank single arm dumbbell triceps"
+  },
+  "vital-gym-pro-r279-1613": {
+    "purchasedId": "1613",
+    "purchasedName": "resistance band arms raise"
+  },
+  "vital-gym-pro-r280-1614": {
+    "purchasedId": "1614",
+    "purchasedName": "resistance band kettlebell swing"
+  },
+  "vital-gym-pro-r282-1617": {
+    "purchasedId": "1617",
+    "purchasedName": "resistance band stepper in out jump"
+  },
+  "vital-gym-pro-r283-1618": {
+    "purchasedId": "1618",
+    "purchasedName": "resistance band single leg glute"
+  },
+  "vital-gym-pro-r284-1619": {
+    "purchasedId": "1619",
+    "purchasedName": "reverse lunges slider lateral raise"
+  },
+  "vital-gym-pro-r287-1622": {
+    "purchasedId": "1622",
+    "purchasedName": "single leg & arm dumbbell shoulder press"
+  },
+  "vital-gym-pro-r288-1624": {
+    "purchasedId": "1624",
+    "purchasedName": "single leg dumbbell shoulder press"
+  },
+  "vital-gym-pro-r289-1625": {
+    "purchasedId": "1625",
+    "purchasedName": "single leg glute raise holds & single arm dumbbell"
+  },
+  "vital-gym-pro-r290-1626": {
+    "purchasedId": "1626",
+    "purchasedName": "single leg glute raise holds with dumbbell chest press"
+  },
+  "vital-gym-pro-r291-1628": {
+    "purchasedId": "1628",
+    "purchasedName": "single leg ball slam"
+  },
+  "vital-gym-pro-r292-1629": {
+    "purchasedId": "1629",
+    "purchasedName": "slam ball hurdle squat"
+  },
+  "vital-gym-pro-r293-1632": {
+    "purchasedId": "1632",
+    "purchasedName": "slider upright row"
+  },
+  "vital-gym-pro-r294-1635": {
+    "purchasedId": "1635",
+    "purchasedName": "standing dumbbell shoulder press"
+  },
+  "vital-gym-pro-r295-1636": {
+    "purchasedId": "1636",
+    "purchasedName": "standing kettlebell around the world"
+  },
+  "vital-gym-pro-r296-1638": {
+    "purchasedId": "1638",
+    "purchasedName": "sumo kettlebell single arm upright row"
+  },
+  "vital-gym-pro-r297-1639": {
+    "purchasedId": "1639",
+    "purchasedName": "t-bar deadlift to row"
+  },
+  "vital-gym-pro-r298-1640": {
+    "purchasedId": "1640",
+    "purchasedName": "trx band pistol squat"
+  },
+  "vital-gym-pro-r299-1641": {
+    "purchasedId": "1641",
+    "purchasedName": "trx band seated in & out"
+  },
+  "vital-gym-pro-r300-1642": {
+    "purchasedId": "1642",
+    "purchasedName": "trx band with glute raise curl"
+  },
+  "vital-gym-pro-r301-1643": {
+    "purchasedId": "1643",
+    "purchasedName": "trx kettlebell deadlift to curl"
+  },
+  "vital-gym-pro-r302-1644": {
+    "purchasedId": "1644",
+    "purchasedName": "viking press trunk rotation"
+  },
+  "vital-gym-pro-r303-1645": {
+    "purchasedId": "1645",
+    "purchasedName": "vipr lateral shuffle"
+  },
+  "vital-gym-pro-r310-1350": {
+    "purchasedId": "1350",
+    "purchasedName": "battle ropes"
+  },
+  "vital-gym-pro-r315-1357": {
+    "purchasedId": "1357",
+    "purchasedName": "cable face pull up"
+  },
+  "vital-gym-pro-r317-1359": {
+    "purchasedId": "1359",
+    "purchasedName": "cable woodchopper"
+  },
+  "vital-gym-pro-r320-1362": {
+    "purchasedId": "1362",
+    "purchasedName": "dumbbell lateral raise"
+  },
+  "vital-gym-pro-r321-1363": {
+    "purchasedId": "1363",
+    "purchasedName": "dumbbell reverse lunges"
+  },
+  "vital-gym-pro-r322-1365": {
+    "purchasedId": "1365",
+    "purchasedName": "elliptical trainer"
+  },
+  "vital-gym-pro-r323-1366": {
+    "purchasedId": "1366",
+    "purchasedName": "cable kneeling row (meadow alternate)"
+  },
+  "vital-gym-pro-r325-1370": {
+    "purchasedId": "1370",
+    "purchasedName": "glute bridge marching"
+  },
+  "vital-gym-pro-r328-1374": {
+    "purchasedId": "1374",
+    "purchasedName": "hanging raise up"
+  },
+  "vital-gym-pro-r343-1403": {
+    "purchasedId": "1403",
+    "purchasedName": "reverse hyperextension"
+  },
+  "vital-gym-pro-r351-1422": {
+    "purchasedId": "1422",
+    "purchasedName": "t-bar row"
+  },
+  "vital-gym-pro-r353-1425": {
+    "purchasedId": "1425",
+    "purchasedName": "toe touch"
+  },
+  "vital-gym-pro-r354-1426": {
+    "purchasedId": "1426",
+    "purchasedName": "treadmill run"
+  },
+  "vital-gym-pro-r355-1427": {
+    "purchasedId": "1427",
+    "purchasedName": "treadmill walk"
+  },
+  "vital-gym-pro-r365-1443": {
+    "purchasedId": "1443",
+    "purchasedName": "dumbbell chest support front raise"
+  },
+  "vital-gym-pro-r368-1448": {
+    "purchasedId": "1448",
+    "purchasedName": "wide stance leg press"
+  },
+  "vital-gym-pro-r370-1450": {
+    "purchasedId": "1450",
+    "purchasedName": "close grip triceps push-up"
+  },
+  "vital-gym-pro-r374-1460": {
+    "purchasedId": "1460",
+    "purchasedName": "lying leg raises (bent knee)"
+  },
+  "vital-gym-pro-r379-1467": {
+    "purchasedId": "1467",
+    "purchasedName": "dumbbell stiff deadlifts"
+  },
+  "vital-gym-pro-r381-1469": {
+    "purchasedId": "1469",
+    "purchasedName": "kas hip thrust"
+  },
+  "vital-gym-pro-r385-1473": {
+    "purchasedId": "1473",
+    "purchasedName": "bulgarian split squat (forward lean glute focus)"
+  },
+  "vital-gym-pro-r387-1476": {
+    "purchasedId": "1476",
+    "purchasedName": "dumbbell farmer carry squat"
+  },
+  "vital-gym-pro-r389-1480": {
+    "purchasedId": "1480",
+    "purchasedName": "b-stance squat hack squat machine"
+  },
+  "vital-gym-pro-r390-1481": {
+    "purchasedId": "1481",
+    "purchasedName": "goblet cyclist squat"
+  },
+  "vital-gym-pro-r391-1482": {
+    "purchasedId": "1482",
+    "purchasedName": "hollow body hold"
+  },
+  "vital-gym-pro-r393-1497": {
+    "purchasedId": "1497",
+    "purchasedName": "back extension (glute focus)"
+  },
+  "vital-gym-pro-r395-1502": {
+    "purchasedId": "1502",
+    "purchasedName": "skater jump"
+  },
+  "vital-gym-pro-r396-1511": {
+    "purchasedId": "1511",
+    "purchasedName": "split squat jump"
+  },
+  "vital-gym-pro-r397-1516": {
+    "purchasedId": "1516",
+    "purchasedName": "pilates ball sit up"
+  },
+  "vital-gym-pro-r400-1704": {
+    "purchasedId": "1704",
+    "purchasedName": "barbell box sit"
+  },
+  "vital-gym-pro-r405-1710": {
+    "purchasedId": "1710",
+    "purchasedName": "cable lift up"
+  },
+  "vital-gym-pro-r407-1713": {
+    "purchasedId": "1713",
+    "purchasedName": "close grip lat pull down"
+  },
+  "vital-gym-pro-r409-1717": {
+    "purchasedId": "1717",
+    "purchasedName": "dumbbell b-stance deadlift"
+  },
+  "vital-gym-pro-r410-1718": {
+    "purchasedId": "1718",
+    "purchasedName": "dumbbell b-stance hip thrust"
+  },
+  "vital-gym-pro-r415-1725": {
+    "purchasedId": "1725",
+    "purchasedName": "incline dumbbell alternate press"
+  },
+  "vital-gym-pro-r418-1730": {
+    "purchasedId": "1730",
+    "purchasedName": "landmine squat"
+  },
+  "vital-gym-pro-r420-1733": {
+    "purchasedId": "1733",
+    "purchasedName": "overhead walking lunges"
+  },
+  "vital-gym-pro-r424-1737": {
+    "purchasedId": "1737",
+    "purchasedName": "seated tva activation"
+  },
+  "vital-gym-pro-r425-1739": {
+    "purchasedId": "1739",
+    "purchasedName": "single arm cable pull down"
+  },
+  "vital-gym-pro-r426-1741": {
+    "purchasedId": "1741",
+    "purchasedName": "single-arm side cable crunch"
+  },
+  "vital-gym-pro-r427-1742": {
+    "purchasedId": "1742",
+    "purchasedName": "smith machine b-stance"
+  },
+  "vital-gym-pro-r429-1744": {
+    "purchasedId": "1744",
+    "purchasedName": "smith machine reverse hyper"
+  },
+  "vital-gym-pro-r431-1748": {
+    "purchasedId": "1748",
+    "purchasedName": "stepper dumbbell reverse"
   }
 } as const
 
@@ -6775,6 +12264,789 @@ export const VITAL_GYM_PRO_ALIASES_BY_REF: Readonly<Record<string, readonly stri
   ],
   "vital-gym-pro-1724": [
     "heel elevated cyclist squat"
+  ],
+  "vital-gym-pro-r001-0001": [
+    "ab roll workout"
+  ],
+  "vital-gym-pro-r002-0005": [
+    "kettlebell sit-ups to press"
+  ],
+  "vital-gym-pro-r003-0006": [
+    "plank hold weighted"
+  ],
+  "vital-gym-pro-r004-0007": [
+    "russian twist weighted"
+  ],
+  "vital-gym-pro-r007-0017": [
+    "dumbbell overhead press version 1"
+  ],
+  "vital-gym-pro-r008-0023": [
+    "single arm straight arm cable pulldown"
+  ],
+  "vital-gym-pro-r009-0025": [
+    "triceps pushdown (cable - straight bar)"
+  ],
+  "vital-gym-pro-r010-0027": [
+    "wide dumbbell push up"
+  ],
+  "vital-gym-pro-r012-0044": [
+    "high to low cable crossover"
+  ],
+  "vital-gym-pro-r013-0058": [
+    "barbell march"
+  ],
+  "vital-gym-pro-r014-0071": [
+    "kettlebell lift up"
+  ],
+  "vital-gym-pro-r016-0095": [
+    "cable cross lateral raise"
+  ],
+  "vital-gym-pro-r017-1112": [
+    "bridge pose - wheel prep bridge"
+  ],
+  "vital-gym-pro-r019-1116": [
+    "cat pose stretching"
+  ],
+  "vital-gym-pro-r020-1120": [
+    "close grip push ups"
+  ],
+  "vital-gym-pro-r021-1121": [
+    "resistance band supine hamstring stretch"
+  ],
+  "vital-gym-pro-r022-1123": [
+    "cow pose stretch"
+  ],
+  "vital-gym-pro-r023-1124": [
+    "cross-body shoulder stretch"
+  ],
+  "vital-gym-pro-r024-1132": [
+    "dynamic arms stretch"
+  ],
+  "vital-gym-pro-r025-1138": [
+    "gentle fold seated forward fold"
+  ],
+  "vital-gym-pro-r026-1140": [
+    "goblet squat entry"
+  ],
+  "vital-gym-pro-r027-1142": [
+    "hanging leg raises"
+  ],
+  "vital-gym-pro-r028-1147": [
+    "hip stretch"
+  ],
+  "vital-gym-pro-r029-1150": [
+    "inchworm walkout"
+  ],
+  "vital-gym-pro-r030-1165": [
+    "leg swing"
+  ],
+  "vital-gym-pro-r031-1170": [
+    "one arm push ups"
+  ],
+  "vital-gym-pro-r032-1174": [
+    "pistol squats with poll support"
+  ],
+  "vital-gym-pro-r033-1177": [
+    "plank jack"
+  ],
+  "vital-gym-pro-r036-1184": [
+    "shoulder stretch warm up"
+  ],
+  "vital-gym-pro-r037-1187": [
+    "side to side dynamic leg swings"
+  ],
+  "vital-gym-pro-r038-1190": [
+    "sprint interval fast running"
+  ],
+  "vital-gym-pro-r039-1191": [
+    "sprint intervals fast running"
+  ],
+  "vital-gym-pro-r040-1193": [
+    "standing front to back kick"
+  ],
+  "vital-gym-pro-r041-1195": [
+    "standing hips stretch"
+  ],
+  "vital-gym-pro-r042-1208": [
+    "wide grip push up"
+  ],
+  "vital-gym-pro-r043-0101": [
+    "ab wheel rollout (kneeling)"
+  ],
+  "vital-gym-pro-r051-0121": [
+    "russian twist dumbbell"
+  ],
+  "vital-gym-pro-r053-0131": [
+    "dynamic overhead arm sweep"
+  ],
+  "vital-gym-pro-r054-0132": [
+    "barbell curl narrow grip"
+  ],
+  "vital-gym-pro-r057-0138": [
+    "cable pull"
+  ],
+  "vital-gym-pro-r058-0139": [
+    "cable triceps pushdown (v-bar attachment)"
+  ],
+  "vital-gym-pro-r062-0147": [
+    "dumbbell biceps curl up"
+  ],
+  "vital-gym-pro-r064-0151": [
+    "dumbbell waiter curl"
+  ],
+  "vital-gym-pro-r065-0152": [
+    "dumbbell weighted arm circle"
+  ],
+  "vital-gym-pro-r066-0153": [
+    "dynamic stretch"
+  ],
+  "vital-gym-pro-r067-0154": [
+    "ez bar biceps curl"
+  ],
+  "vital-gym-pro-r069-0171": [
+    "standing barbell overhead extension"
+  ],
+  "vital-gym-pro-r070-0174": [
+    "standing supinated bicep curl"
+  ],
+  "vital-gym-pro-r071-0175": [
+    "straight barbell curl"
+  ],
+  "vital-gym-pro-r072-0177": [
+    "triceps cable pushdown (rope attachment)"
+  ],
+  "vital-gym-pro-r073-0178": [
+    "triceps cable pushdown (straight bar attachment)"
+  ],
+  "vital-gym-pro-r074-0180": [
+    "wide grip barbell curl"
+  ],
+  "vital-gym-pro-r075-0181": [
+    "wide grip seated cable row"
+  ],
+  "vital-gym-pro-r076-0182": [
+    "yates row"
+  ],
+  "vital-gym-pro-r078-0191": [
+    "conventional deadlift"
+  ],
+  "vital-gym-pro-r083-0208": [
+    "wide grip pull-up"
+  ],
+  "vital-gym-pro-r086-0212": [
+    "butt kick"
+  ],
+  "vital-gym-pro-r087-0213": [
+    "high knee"
+  ],
+  "vital-gym-pro-r088-0218": [
+    "place jog"
+  ],
+  "vital-gym-pro-r089-0219": [
+    "plank jack modification"
+  ],
+  "vital-gym-pro-r091-0223": [
+    "close grip (diamond) push-up"
+  ],
+  "vital-gym-pro-r093-0225": [
+    "dumbbell glute bridge chest press"
+  ],
+  "vital-gym-pro-r106-0246": [
+    "barbell march standing"
+  ],
+  "vital-gym-pro-r109-0255": [
+    "dumbbell march"
+  ],
+  "vital-gym-pro-r112-0262": [
+    "hammer raise front"
+  ],
+  "vital-gym-pro-r114-0266": [
+    "jumping jack with resistance band"
+  ],
+  "vital-gym-pro-r120-0272": [
+    "lying leg lift up"
+  ],
+  "vital-gym-pro-r121-0276": [
+    "resistance band squat with lateral raise"
+  ],
+  "vital-gym-pro-r124-0286": [
+    "banded pull-apart (rear delt focus)"
+  ],
+  "vital-gym-pro-r125-0288": [
+    "dumb waiter dumbbell"
+  ],
+  "vital-gym-pro-r128-0296": [
+    "reverse grip barbell upright row"
+  ],
+  "vital-gym-pro-r129-0297": [
+    "seated behind-the-neck press"
+  ],
+  "vital-gym-pro-r132-1244": [
+    "alternate leg curl"
+  ],
+  "vital-gym-pro-r133-1245": [
+    "back row smith machine"
+  ],
+  "vital-gym-pro-r134-1247": [
+    "banded back row"
+  ],
+  "vital-gym-pro-r135-1248": [
+    "banded bench kickback"
+  ],
+  "vital-gym-pro-r137-1250": [
+    "banded biceps to shoulder raise"
+  ],
+  "vital-gym-pro-r138-1251": [
+    "banded curls to high rows"
+  ],
+  "vital-gym-pro-r139-1254": [
+    "banded hack squat"
+  ],
+  "vital-gym-pro-r140-1255": [
+    "banded lat pulldown"
+  ],
+  "vital-gym-pro-r141-1257": [
+    "banded squat"
+  ],
+  "vital-gym-pro-r142-1258": [
+    "banded straight leg kickback"
+  ],
+  "vital-gym-pro-r145-1262": [
+    "barbell kickback"
+  ],
+  "vital-gym-pro-r146-1263": [
+    "barbell lunge to press"
+  ],
+  "vital-gym-pro-r147-1268": [
+    "bench barbell squat"
+  ],
+  "vital-gym-pro-r148-1270": [
+    "biceps isolation curl"
+  ],
+  "vital-gym-pro-r149-1271": [
+    "bicycle"
+  ],
+  "vital-gym-pro-r150-1273": [
+    "cable glute kickback"
+  ],
+  "vital-gym-pro-r151-1276": [
+    "chin up"
+  ],
+  "vital-gym-pro-r152-1277": [
+    "cross lat pulldown"
+  ],
+  "vital-gym-pro-r155-1282": [
+    "dumbbell hammer to biceps curl"
+  ],
+  "vital-gym-pro-r156-1284": [
+    "dumbbell skullcrusher"
+  ],
+  "vital-gym-pro-r157-1286": [
+    "elevated skii jumps with booty bands"
+  ],
+  "vital-gym-pro-r158-1287": [
+    "flutter"
+  ],
+  "vital-gym-pro-r160-1291": [
+    "glute lift (leg curl)"
+  ],
+  "vital-gym-pro-r161-1292": [
+    "glute walk"
+  ],
+  "vital-gym-pro-r163-1295": [
+    "hip thrust on leg press"
+  ],
+  "vital-gym-pro-r166-1300": [
+    "kneeling overhead tricep extension"
+  ],
+  "vital-gym-pro-r167-1302": [
+    "landmine v squat"
+  ],
+  "vital-gym-pro-r169-1304": [
+    "lean forward hip abduction"
+  ],
+  "vital-gym-pro-r170-1305": [
+    "leg press frog stance"
+  ],
+  "vital-gym-pro-r172-1307": [
+    "lunges to hacksquat"
+  ],
+  "vital-gym-pro-r174-1310": [
+    "medicine ball elbow to knee"
+  ],
+  "vital-gym-pro-r175-1311": [
+    "medicine ball mountain climber"
+  ],
+  "vital-gym-pro-r176-1312": [
+    "medicine ball plank"
+  ],
+  "vital-gym-pro-r177-1313": [
+    "medicine ball straight crunch"
+  ],
+  "vital-gym-pro-r178-1314": [
+    "medicine ball toe tap"
+  ],
+  "vital-gym-pro-r179-1315": [
+    "medicine plank to toe tap"
+  ],
+  "vital-gym-pro-r180-1316": [
+    "narrow grip hack squat"
+  ],
+  "vital-gym-pro-r182-1318": [
+    "one leg deadlift smith machine"
+  ],
+  "vital-gym-pro-r183-1319": [
+    "one leg hip thrust (leg press)"
+  ],
+  "vital-gym-pro-r185-1323": [
+    "rear flyes"
+  ],
+  "vital-gym-pro-r188-1330": [
+    "smith machine donkey kick"
+  ],
+  "vital-gym-pro-r189-1331": [
+    "stairmaster jog"
+  ],
+  "vital-gym-pro-r190-1332": [
+    "stairmaster kickback"
+  ],
+  "vital-gym-pro-r191-1333": [
+    "stairmaster walk"
+  ],
+  "vital-gym-pro-r192-1335": [
+    "supinated triceps extension (one arm)"
+  ],
+  "vital-gym-pro-r193-1336": [
+    "thrust to abduction"
+  ],
+  "vital-gym-pro-r194-1338": [
+    "treadmill jog"
+  ],
+  "vital-gym-pro-r197-1341": [
+    "under knee ab crunch"
+  ],
+  "vital-gym-pro-r198-1342": [
+    "wide hack squat"
+  ],
+  "vital-gym-pro-r199-1518": [
+    "balls slam on wall squat"
+  ],
+  "vital-gym-pro-r200-1519": [
+    "band row to triceps"
+  ],
+  "vital-gym-pro-r201-1520": [
+    "band single leg pistol squat"
+  ],
+  "vital-gym-pro-r203-1523": [
+    "barbell deadlift to press"
+  ],
+  "vital-gym-pro-r204-1524": [
+    "barbell elevated back squat"
+  ],
+  "vital-gym-pro-r205-1525": [
+    "barbell elevated front squats"
+  ],
+  "vital-gym-pro-r206-1526": [
+    "barbell good morning to behind neck shoulder press"
+  ],
+  "vital-gym-pro-r207-1527": [
+    "barbell reverse lunge press"
+  ],
+  "vital-gym-pro-r208-1528": [
+    "barbell deadlift to curl"
+  ],
+  "vital-gym-pro-r209-1529": [
+    "battle rope alternate slam in out"
+  ],
+  "vital-gym-pro-r210-1530": [
+    "battle rope russian twist"
+  ],
+  "vital-gym-pro-r211-1531": [
+    "bench frog barbell glute"
+  ],
+  "vital-gym-pro-r212-1532": [
+    "bench frog kick band"
+  ],
+  "vital-gym-pro-r213-1533": [
+    "boating"
+  ],
+  "vital-gym-pro-r214-1534": [
+    "bosu ball dumbbell deadlift to curl press"
+  ],
+  "vital-gym-pro-r215-1535": [
+    "bosu ball dumbbell deadlift to lateral raises"
+  ],
+  "vital-gym-pro-r216-1536": [
+    "bosu ball kneeling ball slam"
+  ],
+  "vital-gym-pro-r217-1537": [
+    "bosu ball lateral battle rope shuffle"
+  ],
+  "vital-gym-pro-r218-1538": [
+    "bosu ball plank toe tap"
+  ],
+  "vital-gym-pro-r219-1539": [
+    "box lateral shuffle"
+  ],
+  "vital-gym-pro-r220-1544": [
+    "dragon flag"
+  ],
+  "vital-gym-pro-r221-1545": [
+    "dumbbell close chest press"
+  ],
+  "vital-gym-pro-r222-1546": [
+    "dumbbell deadlift to biceps curl"
+  ],
+  "vital-gym-pro-r223-1547": [
+    "dumbbell drop step"
+  ],
+  "vital-gym-pro-r224-1548": [
+    "dumbbell elevated goblet squats"
+  ],
+  "vital-gym-pro-r225-1549": [
+    "dumbbell elevated squat front lunge"
+  ],
+  "vital-gym-pro-r226-1550": [
+    "dumbbell goblet squat to reverse lunge"
+  ],
+  "vital-gym-pro-r227-1551": [
+    "dumbbell hammer press"
+  ],
+  "vital-gym-pro-r228-1552": [
+    "dumbbell incline close chest press"
+  ],
+  "vital-gym-pro-r229-1553": [
+    "dumbbell kneeling hammer curl to hammer press"
+  ],
+  "vital-gym-pro-r230-1554": [
+    "dumbbell lateral raise to front raise"
+  ],
+  "vital-gym-pro-r231-1555": [
+    "dumbbell reverse step"
+  ],
+  "vital-gym-pro-r232-1556": [
+    "dumbbell single leg & arm squat press"
+  ],
+  "vital-gym-pro-r233-1557": [
+    "dumbbell single leg deadlift to upright row"
+  ],
+  "vital-gym-pro-r235-1559": [
+    "dumbbell transverse lunges"
+  ],
+  "vital-gym-pro-r236-1561": [
+    "dumbbell single leg & arm deadlift to upright row"
+  ],
+  "vital-gym-pro-r237-1562": [
+    "elevated kettlebell deadlift"
+  ],
+  "vital-gym-pro-r238-1563": [
+    "elevated kettlebell sumo deadlift"
+  ],
+  "vital-gym-pro-r239-1564": [
+    "exercise ball chest press"
+  ],
+  "vital-gym-pro-r240-1565": [
+    "exercise ball dumbbell press glute bridge"
+  ],
+  "vital-gym-pro-r241-1566": [
+    "exercise ball incline chest press"
+  ],
+  "vital-gym-pro-r242-1567": [
+    "exercise ball reverse superman"
+  ],
+  "vital-gym-pro-r243-1568": [
+    "exercise ball windmill"
+  ],
+  "vital-gym-pro-r244-1569": [
+    "exercise oblique rotation exercise ball kettlebell"
+  ],
+  "vital-gym-pro-r245-1570": [
+    "hex bar deadlift to shrug"
+  ],
+  "vital-gym-pro-r247-1573": [
+    "incline bench press alternate arm"
+  ],
+  "vital-gym-pro-r248-1574": [
+    "incline hammer press to hammer curl"
+  ],
+  "vital-gym-pro-r249-1575": [
+    "kettlebell elevated squat to front lunges"
+  ],
+  "vital-gym-pro-r250-1576": [
+    "kettlebell elevated squat"
+  ],
+  "vital-gym-pro-r251-1577": [
+    "kettlebell goblet squat to front lunges"
+  ],
+  "vital-gym-pro-r252-1578": [
+    "kettlebell hold glute bridge with resistance band"
+  ],
+  "vital-gym-pro-r253-1579": [
+    "kettlebell plyo deadlift to box jump"
+  ],
+  "vital-gym-pro-r254-1580": [
+    "kettlebell pullover to glute raise"
+  ],
+  "vital-gym-pro-r255-1581": [
+    "kettlebell staggered stance stiff deadlift"
+  ],
+  "vital-gym-pro-r256-1582": [
+    "kettlebell walking lateral squat"
+  ],
+  "vital-gym-pro-r257-1583": [
+    "kettlebell reverse lunge alternating between leg"
+  ],
+  "vital-gym-pro-r258-1584": [
+    "kneeling ball slam"
+  ],
+  "vital-gym-pro-r260-1586": [
+    "kneeling kettlebell around the world"
+  ],
+  "vital-gym-pro-r261-1589": [
+    "kneeling single arm arnold shoulder press"
+  ],
+  "vital-gym-pro-r262-1590": [
+    "landmine sissy squat"
+  ],
+  "vital-gym-pro-r263-1591": [
+    "landmine kneeling hip thrust"
+  ],
+  "vital-gym-pro-r264-1592": [
+    "landmine reverse lunges twist"
+  ],
+  "vital-gym-pro-r265-1593": [
+    "landmine sit ups"
+  ],
+  "vital-gym-pro-r266-1594": [
+    "landmine squat to press"
+  ],
+  "vital-gym-pro-r267-1595": [
+    "landmine stiff stance deadlift"
+  ],
+  "vital-gym-pro-r268-1597": [
+    "lateral shuffle battle rope"
+  ],
+  "vital-gym-pro-r269-1599": [
+    "lunges alternate biceps curl"
+  ],
+  "vital-gym-pro-r270-1600": [
+    "med ball slam burpee"
+  ],
+  "vital-gym-pro-r271-1601": [
+    "med ball slam on floor in lunges"
+  ],
+  "vital-gym-pro-r272-1602": [
+    "med ball throw behind shoulder"
+  ],
+  "vital-gym-pro-r273-1603": [
+    "medicine ball squat throw"
+  ],
+  "vital-gym-pro-r274-1604": [
+    "medicine ball walking lunge twist"
+  ],
+  "vital-gym-pro-r275-1605": [
+    "plank ball slap"
+  ],
+  "vital-gym-pro-r276-1606": [
+    "plank dumbbell drag"
+  ],
+  "vital-gym-pro-r277-1608": [
+    "plank pose sliding around the kettlebell"
+  ],
+  "vital-gym-pro-r278-1609": [
+    "plank single arm dumbbell triceps"
+  ],
+  "vital-gym-pro-r279-1613": [
+    "resistance band arms raise"
+  ],
+  "vital-gym-pro-r280-1614": [
+    "resistance band kettlebell swing"
+  ],
+  "vital-gym-pro-r282-1617": [
+    "resistance band stepper in out jump"
+  ],
+  "vital-gym-pro-r283-1618": [
+    "resistance band single leg glute"
+  ],
+  "vital-gym-pro-r284-1619": [
+    "reverse lunges slider lateral raise"
+  ],
+  "vital-gym-pro-r287-1622": [
+    "single leg & arm dumbbell shoulder press"
+  ],
+  "vital-gym-pro-r288-1624": [
+    "single leg dumbbell shoulder press"
+  ],
+  "vital-gym-pro-r289-1625": [
+    "single leg glute raise holds & single arm dumbbell"
+  ],
+  "vital-gym-pro-r290-1626": [
+    "single leg glute raise holds with dumbbell chest press"
+  ],
+  "vital-gym-pro-r291-1628": [
+    "single leg ball slam"
+  ],
+  "vital-gym-pro-r292-1629": [
+    "slam ball hurdle squat"
+  ],
+  "vital-gym-pro-r293-1632": [
+    "slider upright row"
+  ],
+  "vital-gym-pro-r294-1635": [
+    "standing dumbbell shoulder press"
+  ],
+  "vital-gym-pro-r295-1636": [
+    "standing kettlebell around the world"
+  ],
+  "vital-gym-pro-r296-1638": [
+    "sumo kettlebell single arm upright row"
+  ],
+  "vital-gym-pro-r297-1639": [
+    "t-bar deadlift to row"
+  ],
+  "vital-gym-pro-r298-1640": [
+    "trx band pistol squat"
+  ],
+  "vital-gym-pro-r299-1641": [
+    "trx band seated in & out"
+  ],
+  "vital-gym-pro-r300-1642": [
+    "trx band with glute raise curl"
+  ],
+  "vital-gym-pro-r301-1643": [
+    "trx kettlebell deadlift to curl"
+  ],
+  "vital-gym-pro-r302-1644": [
+    "viking press trunk rotation"
+  ],
+  "vital-gym-pro-r303-1645": [
+    "vipr lateral shuffle"
+  ],
+  "vital-gym-pro-r310-1350": [
+    "battle ropes"
+  ],
+  "vital-gym-pro-r315-1357": [
+    "cable face pull up"
+  ],
+  "vital-gym-pro-r317-1359": [
+    "cable woodchopper"
+  ],
+  "vital-gym-pro-r320-1362": [
+    "dumbbell lateral raise"
+  ],
+  "vital-gym-pro-r321-1363": [
+    "dumbbell reverse lunges"
+  ],
+  "vital-gym-pro-r322-1365": [
+    "elliptical trainer"
+  ],
+  "vital-gym-pro-r323-1366": [
+    "cable kneeling row (meadow alternate)"
+  ],
+  "vital-gym-pro-r325-1370": [
+    "glute bridge marching"
+  ],
+  "vital-gym-pro-r328-1374": [
+    "hanging raise up"
+  ],
+  "vital-gym-pro-r343-1403": [
+    "reverse hyperextension"
+  ],
+  "vital-gym-pro-r351-1422": [
+    "chest supported t-bar row"
+  ],
+  "vital-gym-pro-r353-1425": [
+    "toe touch"
+  ],
+  "vital-gym-pro-r354-1426": [
+    "treadmill run"
+  ],
+  "vital-gym-pro-r355-1427": [
+    "treadmill walk"
+  ],
+  "vital-gym-pro-r365-1443": [
+    "dumbbell chest support front raise"
+  ],
+  "vital-gym-pro-r368-1448": [
+    "wide stance leg press"
+  ],
+  "vital-gym-pro-r370-1450": [
+    "close grip triceps push-up"
+  ],
+  "vital-gym-pro-r374-1460": [
+    "lying leg raises (bent knee)"
+  ],
+  "vital-gym-pro-r379-1467": [
+    "dumbbell stiff deadlifts"
+  ],
+  "vital-gym-pro-r381-1469": [
+    "kas hip thrust"
+  ],
+  "vital-gym-pro-r385-1473": [
+    "bulgarian split squat (forward lean glute focus)"
+  ],
+  "vital-gym-pro-r387-1476": [
+    "dumbbell farmer carry squat"
+  ],
+  "vital-gym-pro-r389-1480": [
+    "b-stance squat hack squat machine"
+  ],
+  "vital-gym-pro-r390-1481": [
+    "goblet cyclist squat"
+  ],
+  "vital-gym-pro-r391-1482": [
+    "hollow body hold"
+  ],
+  "vital-gym-pro-r393-1497": [
+    "back extension (glute focus)"
+  ],
+  "vital-gym-pro-r395-1502": [
+    "skater jump"
+  ],
+  "vital-gym-pro-r396-1511": [
+    "split squat jump"
+  ],
+  "vital-gym-pro-r397-1516": [
+    "pilates ball sit up"
+  ],
+  "vital-gym-pro-r400-1704": [
+    "barbell box sit"
+  ],
+  "vital-gym-pro-r405-1710": [
+    "cable lift up"
+  ],
+  "vital-gym-pro-r409-1717": [
+    "dumbbell b-stance deadlift"
+  ],
+  "vital-gym-pro-r410-1718": [
+    "dumbbell b-stance hip thrust"
+  ],
+  "vital-gym-pro-r415-1725": [
+    "incline dumbbell alternate press"
+  ],
+  "vital-gym-pro-r418-1730": [
+    "landmine squat"
+  ],
+  "vital-gym-pro-r420-1733": [
+    "overhead walking lunges"
+  ],
+  "vital-gym-pro-r424-1737": [
+    "seated tva activation"
+  ],
+  "vital-gym-pro-r425-1739": [
+    "single arm cable pull down"
+  ],
+  "vital-gym-pro-r426-1741": [
+    "single-arm side cable crunch"
+  ],
+  "vital-gym-pro-r427-1742": [
+    "smith machine b-stance"
+  ],
+  "vital-gym-pro-r429-1744": [
+    "smith machine reverse hyper"
+  ],
+  "vital-gym-pro-r431-1748": [
+    "stepper dumbbell reverse"
   ]
 }
 
@@ -6966,10 +13238,8 @@ export const VITAL_GYM_PRO_LEGACY_ROOT_BY_REF: Readonly<Record<string, string>> 
   "fedb-sit-up": "fedb-3-4-sit-up",
   "running-butt-kicks": "running-butt-kicks",
   "fedb-depth-jump-leap": "fedb-depth-jump-leap",
-  "fedb-close-grip-barbell-bench-press": "fedb-close-grip-barbell-bench-press",
-  "fedb-wide-grip-barbell-bench-press": "fedb-close-grip-barbell-bench-press",
+  "fedb-wide-grip-barbell-bench-press": "fedb-wide-grip-barbell-bench-press",
   "fedb-sled-drag-harness": "fedb-sled-drag-harness",
-  "fedb-close-grip-front-lat-pulldown": "lat-pulldown",
   "fedb-full-range-of-motion-lat-pulldown": "lat-pulldown",
   "fedb-underhand-cable-pulldowns": "lat-pulldown",
   "fedb-v-bar-pulldown": "lat-pulldown",
@@ -7018,7 +13288,9 @@ export const VITAL_GYM_PRO_LEGACY_ROOT_BY_REF: Readonly<Record<string, string>> 
   "fedb-bent-arm-dumbbell-pullover": "fedb-bent-arm-dumbbell-pullover",
   "fedb-straight-arm-dumbbell-pullover": "fedb-bent-arm-dumbbell-pullover",
   "fedb-goblet-squat": "fedb-goblet-squat",
-  "fedb-smith-single-leg-split-squat": "fedb-smith-single-leg-split-squat"
+  "fedb-smith-single-leg-split-squat": "fedb-smith-single-leg-split-squat",
+  "fedb-close-grip-barbell-bench-press": "fedb-close-grip-barbell-bench-press",
+  "fedb-close-grip-front-lat-pulldown": "fedb-close-grip-front-lat-pulldown"
 }
 
 export const VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF: Readonly<Record<string, { imageUrl: string; motionImageUrl: string; techniqueVideoUrl: string }>> = {
@@ -7957,11 +14229,6 @@ export const VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF: Readonly<Record<string, { imageU
     "motionImageUrl": "/exercises/vital-pro/vital-depth-jump-ex359-end.jpg",
     "techniqueVideoUrl": "/exercises/vital-pro/vital-depth-jump-ex359.mp4"
   },
-  "fedb-close-grip-barbell-bench-press": {
-    "imageUrl": "/exercises/vital-pro/vital-barbell-bench-wide-grip-press-ex405.jpg",
-    "motionImageUrl": "/exercises/vital-pro/vital-barbell-bench-wide-grip-press-ex405-end.jpg",
-    "techniqueVideoUrl": "/exercises/vital-pro/vital-barbell-bench-wide-grip-press-ex405.mp4"
-  },
   "fedb-wide-grip-barbell-bench-press": {
     "imageUrl": "/exercises/vital-pro/vital-barbell-bench-wide-grip-press-ex405.jpg",
     "motionImageUrl": "/exercises/vital-pro/vital-barbell-bench-wide-grip-press-ex405-end.jpg",
@@ -7971,11 +14238,6 @@ export const VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF: Readonly<Record<string, { imageU
     "imageUrl": "/exercises/vital-pro/vital-sled-drag-ex513.jpg",
     "motionImageUrl": "/exercises/vital-pro/vital-sled-drag-ex513-end.jpg",
     "techniqueVideoUrl": "/exercises/vital-pro/vital-sled-drag-ex513.mp4"
-  },
-  "fedb-close-grip-front-lat-pulldown": {
-    "imageUrl": "/exercises/vital-pro/vital-lat-pulldown-ex531.jpg",
-    "motionImageUrl": "/exercises/vital-pro/vital-lat-pulldown-ex531-end.jpg",
-    "techniqueVideoUrl": "/exercises/vital-pro/vital-lat-pulldown-ex531.mp4"
   },
   "fedb-full-range-of-motion-lat-pulldown": {
     "imageUrl": "/exercises/vital-pro/vital-lat-pulldown-ex531.jpg",
@@ -8221,6 +14483,16 @@ export const VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF: Readonly<Record<string, { imageU
     "imageUrl": "/exercises/vital-pro/vital-smith-machine-split-squat-ex796.jpg",
     "motionImageUrl": "/exercises/vital-pro/vital-smith-machine-split-squat-ex796-end.jpg",
     "techniqueVideoUrl": "/exercises/vital-pro/vital-smith-machine-split-squat-ex796.mp4"
+  },
+  "fedb-close-grip-barbell-bench-press": {
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r005-0013.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r005-0013-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r005-0013.mp4"
+  },
+  "fedb-close-grip-front-lat-pulldown": {
+    "imageUrl": "/exercises/vital-pro/vital-gym-pro-r407-1713.jpg",
+    "motionImageUrl": "/exercises/vital-pro/vital-gym-pro-r407-1713-end.jpg",
+    "techniqueVideoUrl": "/exercises/vital-pro/vital-gym-pro-r407-1713.mp4"
   }
 }
 
@@ -8473,6 +14745,72 @@ export const VITAL_GYM_PRO_PURPOSES_BY_REF: Readonly<Record<string, readonly str
   ],
   "vital-gym-pro-1709": [
     "warmup"
+  ],
+  "vital-gym-pro-r017-1112": [
+    "mobility"
+  ],
+  "vital-gym-pro-r019-1116": [
+    "mobility",
+    "recovery"
+  ],
+  "vital-gym-pro-r021-1121": [
+    "mobility",
+    "recovery"
+  ],
+  "vital-gym-pro-r022-1123": [
+    "mobility",
+    "recovery"
+  ],
+  "vital-gym-pro-r023-1124": [
+    "mobility",
+    "recovery"
+  ],
+  "vital-gym-pro-r024-1132": [
+    "warmup",
+    "mobility",
+    "recovery"
+  ],
+  "vital-gym-pro-r025-1138": [
+    "mobility",
+    "recovery"
+  ],
+  "vital-gym-pro-r028-1147": [
+    "mobility",
+    "recovery"
+  ],
+  "vital-gym-pro-r030-1165": [
+    "warmup"
+  ],
+  "vital-gym-pro-r036-1184": [
+    "warmup",
+    "mobility"
+  ],
+  "vital-gym-pro-r037-1187": [
+    "warmup"
+  ],
+  "vital-gym-pro-r038-1190": [
+    "warmup"
+  ],
+  "vital-gym-pro-r039-1191": [
+    "warmup"
+  ],
+  "vital-gym-pro-r041-1195": [
+    "mobility",
+    "recovery"
+  ],
+  "vital-gym-pro-r053-0131": [
+    "warmup"
+  ],
+  "vital-gym-pro-r065-0152": [
+    "warmup"
+  ],
+  "vital-gym-pro-r066-0153": [
+    "warmup",
+    "mobility",
+    "recovery"
+  ],
+  "vital-gym-pro-r088-0218": [
+    "warmup"
   ]
 }
 
@@ -8708,7 +15046,7 @@ export const VITAL_GYM_PRO_MAIN_REFS = [
   "vital-negative-pullup-ex391",
   "vital-pistol-squat-ex393",
   "vital-plank-jack-advanced-ex395",
-  "fedb-close-grip-barbell-bench-press",
+  "fedb-wide-grip-barbell-bench-press",
   "vital-dumbbell-windmill-ex443",
   "vital-kneeling-landmine-oblique-twist-ex470",
   "vital-kneeling-quad-extension-ex471",
@@ -8883,7 +15221,270 @@ export const VITAL_GYM_PRO_MAIN_REFS = [
   "vital-gym-pro-1637",
   "vital-gym-pro-1701",
   "vital-gym-pro-1709",
-  "vital-gym-pro-1724"
+  "vital-gym-pro-1724",
+  "vital-gym-pro-r001-0001",
+  "vital-gym-pro-r002-0005",
+  "vital-gym-pro-r003-0006",
+  "vital-gym-pro-r004-0007",
+  "fedb-close-grip-barbell-bench-press",
+  "vital-gym-pro-r007-0017",
+  "vital-gym-pro-r008-0023",
+  "vital-gym-pro-r009-0025",
+  "vital-gym-pro-r010-0027",
+  "vital-gym-pro-r012-0044",
+  "vital-gym-pro-r013-0058",
+  "vital-gym-pro-r014-0071",
+  "vital-gym-pro-r016-0095",
+  "vital-gym-pro-r017-1112",
+  "vital-gym-pro-r019-1116",
+  "vital-gym-pro-r020-1120",
+  "vital-gym-pro-r021-1121",
+  "vital-gym-pro-r022-1123",
+  "vital-gym-pro-r023-1124",
+  "vital-gym-pro-r024-1132",
+  "vital-gym-pro-r025-1138",
+  "vital-gym-pro-r026-1140",
+  "vital-gym-pro-r027-1142",
+  "vital-gym-pro-r028-1147",
+  "vital-gym-pro-r029-1150",
+  "vital-gym-pro-r030-1165",
+  "vital-gym-pro-r031-1170",
+  "vital-gym-pro-r032-1174",
+  "vital-gym-pro-r033-1177",
+  "vital-gym-pro-r036-1184",
+  "vital-gym-pro-r037-1187",
+  "vital-gym-pro-r038-1190",
+  "vital-gym-pro-r039-1191",
+  "vital-gym-pro-r040-1193",
+  "vital-gym-pro-r041-1195",
+  "vital-gym-pro-r042-1208",
+  "vital-gym-pro-r043-0101",
+  "vital-gym-pro-r051-0121",
+  "vital-gym-pro-r053-0131",
+  "vital-gym-pro-r054-0132",
+  "vital-gym-pro-r057-0138",
+  "vital-gym-pro-r058-0139",
+  "vital-gym-pro-r062-0147",
+  "vital-gym-pro-r064-0151",
+  "vital-gym-pro-r065-0152",
+  "vital-gym-pro-r066-0153",
+  "vital-gym-pro-r067-0154",
+  "vital-gym-pro-r069-0171",
+  "vital-gym-pro-r070-0174",
+  "vital-gym-pro-r071-0175",
+  "vital-gym-pro-r072-0177",
+  "vital-gym-pro-r073-0178",
+  "vital-gym-pro-r074-0180",
+  "vital-gym-pro-r075-0181",
+  "vital-gym-pro-r076-0182",
+  "vital-gym-pro-r078-0191",
+  "vital-gym-pro-r083-0208",
+  "vital-gym-pro-r086-0212",
+  "vital-gym-pro-r087-0213",
+  "vital-gym-pro-r088-0218",
+  "vital-gym-pro-r089-0219",
+  "vital-gym-pro-r091-0223",
+  "vital-gym-pro-r093-0225",
+  "vital-gym-pro-r106-0246",
+  "vital-gym-pro-r109-0255",
+  "vital-gym-pro-r112-0262",
+  "vital-gym-pro-r114-0266",
+  "vital-gym-pro-r120-0272",
+  "vital-gym-pro-r121-0276",
+  "vital-gym-pro-r124-0286",
+  "vital-gym-pro-r125-0288",
+  "vital-gym-pro-r128-0296",
+  "vital-gym-pro-r129-0297",
+  "vital-gym-pro-r132-1244",
+  "vital-gym-pro-r133-1245",
+  "vital-gym-pro-r134-1247",
+  "vital-gym-pro-r135-1248",
+  "vital-gym-pro-r137-1250",
+  "vital-gym-pro-r138-1251",
+  "vital-gym-pro-r139-1254",
+  "vital-gym-pro-r140-1255",
+  "vital-gym-pro-r141-1257",
+  "vital-gym-pro-r142-1258",
+  "vital-gym-pro-r145-1262",
+  "vital-gym-pro-r146-1263",
+  "vital-gym-pro-r147-1268",
+  "vital-gym-pro-r148-1270",
+  "vital-gym-pro-r149-1271",
+  "vital-gym-pro-r150-1273",
+  "vital-gym-pro-r151-1276",
+  "vital-gym-pro-r152-1277",
+  "vital-gym-pro-r155-1282",
+  "vital-gym-pro-r156-1284",
+  "vital-gym-pro-r157-1286",
+  "vital-gym-pro-r158-1287",
+  "vital-gym-pro-r160-1291",
+  "vital-gym-pro-r161-1292",
+  "vital-gym-pro-r163-1295",
+  "vital-gym-pro-r166-1300",
+  "vital-gym-pro-r167-1302",
+  "vital-gym-pro-r169-1304",
+  "vital-gym-pro-r170-1305",
+  "vital-gym-pro-r172-1307",
+  "vital-gym-pro-r174-1310",
+  "vital-gym-pro-r175-1311",
+  "vital-gym-pro-r176-1312",
+  "vital-gym-pro-r177-1313",
+  "vital-gym-pro-r178-1314",
+  "vital-gym-pro-r179-1315",
+  "vital-gym-pro-r180-1316",
+  "vital-gym-pro-r182-1318",
+  "vital-gym-pro-r183-1319",
+  "vital-gym-pro-r185-1323",
+  "vital-gym-pro-r188-1330",
+  "vital-gym-pro-r189-1331",
+  "vital-gym-pro-r190-1332",
+  "vital-gym-pro-r191-1333",
+  "vital-gym-pro-r192-1335",
+  "vital-gym-pro-r193-1336",
+  "vital-gym-pro-r194-1338",
+  "vital-gym-pro-r197-1341",
+  "vital-gym-pro-r198-1342",
+  "vital-gym-pro-r199-1518",
+  "vital-gym-pro-r200-1519",
+  "vital-gym-pro-r201-1520",
+  "vital-gym-pro-r203-1523",
+  "vital-gym-pro-r204-1524",
+  "vital-gym-pro-r205-1525",
+  "vital-gym-pro-r206-1526",
+  "vital-gym-pro-r207-1527",
+  "vital-gym-pro-r208-1528",
+  "vital-gym-pro-r209-1529",
+  "vital-gym-pro-r210-1530",
+  "vital-gym-pro-r211-1531",
+  "vital-gym-pro-r212-1532",
+  "vital-gym-pro-r213-1533",
+  "vital-gym-pro-r214-1534",
+  "vital-gym-pro-r215-1535",
+  "vital-gym-pro-r216-1536",
+  "vital-gym-pro-r217-1537",
+  "vital-gym-pro-r218-1538",
+  "vital-gym-pro-r219-1539",
+  "vital-gym-pro-r220-1544",
+  "vital-gym-pro-r221-1545",
+  "vital-gym-pro-r222-1546",
+  "vital-gym-pro-r223-1547",
+  "vital-gym-pro-r224-1548",
+  "vital-gym-pro-r225-1549",
+  "vital-gym-pro-r226-1550",
+  "vital-gym-pro-r227-1551",
+  "vital-gym-pro-r228-1552",
+  "vital-gym-pro-r229-1553",
+  "vital-gym-pro-r230-1554",
+  "vital-gym-pro-r231-1555",
+  "vital-gym-pro-r232-1556",
+  "vital-gym-pro-r233-1557",
+  "vital-gym-pro-r235-1559",
+  "vital-gym-pro-r236-1561",
+  "vital-gym-pro-r237-1562",
+  "vital-gym-pro-r238-1563",
+  "vital-gym-pro-r239-1564",
+  "vital-gym-pro-r240-1565",
+  "vital-gym-pro-r241-1566",
+  "vital-gym-pro-r242-1567",
+  "vital-gym-pro-r243-1568",
+  "vital-gym-pro-r244-1569",
+  "vital-gym-pro-r245-1570",
+  "vital-gym-pro-r247-1573",
+  "vital-gym-pro-r248-1574",
+  "vital-gym-pro-r249-1575",
+  "vital-gym-pro-r250-1576",
+  "vital-gym-pro-r251-1577",
+  "vital-gym-pro-r252-1578",
+  "vital-gym-pro-r253-1579",
+  "vital-gym-pro-r254-1580",
+  "vital-gym-pro-r255-1581",
+  "vital-gym-pro-r256-1582",
+  "vital-gym-pro-r257-1583",
+  "vital-gym-pro-r258-1584",
+  "vital-gym-pro-r260-1586",
+  "vital-gym-pro-r261-1589",
+  "vital-gym-pro-r262-1590",
+  "vital-gym-pro-r263-1591",
+  "vital-gym-pro-r264-1592",
+  "vital-gym-pro-r265-1593",
+  "vital-gym-pro-r266-1594",
+  "vital-gym-pro-r267-1595",
+  "vital-gym-pro-r268-1597",
+  "vital-gym-pro-r269-1599",
+  "vital-gym-pro-r270-1600",
+  "vital-gym-pro-r271-1601",
+  "vital-gym-pro-r272-1602",
+  "vital-gym-pro-r273-1603",
+  "vital-gym-pro-r274-1604",
+  "vital-gym-pro-r275-1605",
+  "vital-gym-pro-r276-1606",
+  "vital-gym-pro-r277-1608",
+  "vital-gym-pro-r278-1609",
+  "vital-gym-pro-r279-1613",
+  "vital-gym-pro-r280-1614",
+  "vital-gym-pro-r282-1617",
+  "vital-gym-pro-r283-1618",
+  "vital-gym-pro-r284-1619",
+  "vital-gym-pro-r287-1622",
+  "vital-gym-pro-r288-1624",
+  "vital-gym-pro-r289-1625",
+  "vital-gym-pro-r290-1626",
+  "vital-gym-pro-r291-1628",
+  "vital-gym-pro-r292-1629",
+  "vital-gym-pro-r293-1632",
+  "vital-gym-pro-r294-1635",
+  "vital-gym-pro-r295-1636",
+  "vital-gym-pro-r296-1638",
+  "vital-gym-pro-r297-1639",
+  "vital-gym-pro-r298-1640",
+  "vital-gym-pro-r299-1641",
+  "vital-gym-pro-r300-1642",
+  "vital-gym-pro-r301-1643",
+  "vital-gym-pro-r302-1644",
+  "vital-gym-pro-r303-1645",
+  "vital-gym-pro-r310-1350",
+  "vital-gym-pro-r315-1357",
+  "vital-gym-pro-r317-1359",
+  "vital-gym-pro-r320-1362",
+  "vital-gym-pro-r321-1363",
+  "vital-gym-pro-r322-1365",
+  "vital-gym-pro-r323-1366",
+  "vital-gym-pro-r325-1370",
+  "vital-gym-pro-r328-1374",
+  "vital-gym-pro-r343-1403",
+  "vital-gym-pro-r351-1422",
+  "vital-gym-pro-r353-1425",
+  "vital-gym-pro-r354-1426",
+  "vital-gym-pro-r355-1427",
+  "vital-gym-pro-r365-1443",
+  "vital-gym-pro-r368-1448",
+  "vital-gym-pro-r370-1450",
+  "vital-gym-pro-r374-1460",
+  "vital-gym-pro-r379-1467",
+  "vital-gym-pro-r381-1469",
+  "vital-gym-pro-r385-1473",
+  "vital-gym-pro-r387-1476",
+  "vital-gym-pro-r389-1480",
+  "vital-gym-pro-r390-1481",
+  "vital-gym-pro-r391-1482",
+  "vital-gym-pro-r393-1497",
+  "vital-gym-pro-r395-1502",
+  "vital-gym-pro-r396-1511",
+  "vital-gym-pro-r397-1516",
+  "vital-gym-pro-r400-1704",
+  "vital-gym-pro-r405-1710",
+  "fedb-close-grip-front-lat-pulldown",
+  "vital-gym-pro-r409-1717",
+  "vital-gym-pro-r410-1718",
+  "vital-gym-pro-r415-1725",
+  "vital-gym-pro-r418-1730",
+  "vital-gym-pro-r420-1733",
+  "vital-gym-pro-r424-1737",
+  "vital-gym-pro-r425-1739",
+  "vital-gym-pro-r426-1741",
+  "vital-gym-pro-r427-1742",
+  "vital-gym-pro-r429-1744",
+  "vital-gym-pro-r431-1748"
 ] as const
 
 export const VITAL_GYM_PRO_MAIN_REF_CANDIDATES = [
@@ -9636,7 +16237,6 @@ export const VITAL_GYM_PRO_MAIN_REF_CANDIDATES = [
     "vital-plank-jack-advanced-ex395"
   ],
   [
-    "fedb-close-grip-barbell-bench-press",
     "fedb-wide-grip-barbell-bench-press"
   ],
   [
@@ -9667,7 +16267,6 @@ export const VITAL_GYM_PRO_MAIN_REF_CANDIDATES = [
     "vital-stability-ball-deadbug-ex517"
   ],
   [
-    "fedb-close-grip-front-lat-pulldown",
     "fedb-full-range-of-motion-lat-pulldown",
     "fedb-underhand-cable-pulldowns",
     "fedb-v-bar-pulldown",
@@ -10181,6 +16780,795 @@ export const VITAL_GYM_PRO_MAIN_REF_CANDIDATES = [
   ],
   [
     "vital-gym-pro-1724"
+  ],
+  [
+    "vital-gym-pro-r001-0001"
+  ],
+  [
+    "vital-gym-pro-r002-0005"
+  ],
+  [
+    "vital-gym-pro-r003-0006"
+  ],
+  [
+    "vital-gym-pro-r004-0007"
+  ],
+  [
+    "fedb-close-grip-barbell-bench-press"
+  ],
+  [
+    "vital-gym-pro-r007-0017"
+  ],
+  [
+    "vital-gym-pro-r008-0023"
+  ],
+  [
+    "vital-gym-pro-r009-0025"
+  ],
+  [
+    "vital-gym-pro-r010-0027"
+  ],
+  [
+    "vital-gym-pro-r012-0044"
+  ],
+  [
+    "vital-gym-pro-r013-0058"
+  ],
+  [
+    "vital-gym-pro-r014-0071"
+  ],
+  [
+    "vital-gym-pro-r016-0095"
+  ],
+  [
+    "vital-gym-pro-r017-1112"
+  ],
+  [
+    "vital-gym-pro-r019-1116"
+  ],
+  [
+    "vital-gym-pro-r020-1120"
+  ],
+  [
+    "vital-gym-pro-r021-1121"
+  ],
+  [
+    "vital-gym-pro-r022-1123"
+  ],
+  [
+    "vital-gym-pro-r023-1124"
+  ],
+  [
+    "vital-gym-pro-r024-1132"
+  ],
+  [
+    "vital-gym-pro-r025-1138"
+  ],
+  [
+    "vital-gym-pro-r026-1140"
+  ],
+  [
+    "vital-gym-pro-r027-1142"
+  ],
+  [
+    "vital-gym-pro-r028-1147"
+  ],
+  [
+    "vital-gym-pro-r029-1150"
+  ],
+  [
+    "vital-gym-pro-r030-1165"
+  ],
+  [
+    "vital-gym-pro-r031-1170"
+  ],
+  [
+    "vital-gym-pro-r032-1174"
+  ],
+  [
+    "vital-gym-pro-r033-1177"
+  ],
+  [
+    "vital-gym-pro-r036-1184"
+  ],
+  [
+    "vital-gym-pro-r037-1187"
+  ],
+  [
+    "vital-gym-pro-r038-1190"
+  ],
+  [
+    "vital-gym-pro-r039-1191"
+  ],
+  [
+    "vital-gym-pro-r040-1193"
+  ],
+  [
+    "vital-gym-pro-r041-1195"
+  ],
+  [
+    "vital-gym-pro-r042-1208"
+  ],
+  [
+    "vital-gym-pro-r043-0101"
+  ],
+  [
+    "vital-gym-pro-r051-0121"
+  ],
+  [
+    "vital-gym-pro-r053-0131"
+  ],
+  [
+    "vital-gym-pro-r054-0132"
+  ],
+  [
+    "vital-gym-pro-r057-0138"
+  ],
+  [
+    "vital-gym-pro-r058-0139"
+  ],
+  [
+    "vital-gym-pro-r062-0147"
+  ],
+  [
+    "vital-gym-pro-r064-0151"
+  ],
+  [
+    "vital-gym-pro-r065-0152"
+  ],
+  [
+    "vital-gym-pro-r066-0153"
+  ],
+  [
+    "vital-gym-pro-r067-0154"
+  ],
+  [
+    "vital-gym-pro-r069-0171"
+  ],
+  [
+    "vital-gym-pro-r070-0174"
+  ],
+  [
+    "vital-gym-pro-r071-0175"
+  ],
+  [
+    "vital-gym-pro-r072-0177"
+  ],
+  [
+    "vital-gym-pro-r073-0178"
+  ],
+  [
+    "vital-gym-pro-r074-0180"
+  ],
+  [
+    "vital-gym-pro-r075-0181"
+  ],
+  [
+    "vital-gym-pro-r076-0182"
+  ],
+  [
+    "vital-gym-pro-r078-0191"
+  ],
+  [
+    "vital-gym-pro-r083-0208"
+  ],
+  [
+    "vital-gym-pro-r086-0212"
+  ],
+  [
+    "vital-gym-pro-r087-0213"
+  ],
+  [
+    "vital-gym-pro-r088-0218"
+  ],
+  [
+    "vital-gym-pro-r089-0219"
+  ],
+  [
+    "vital-gym-pro-r091-0223"
+  ],
+  [
+    "vital-gym-pro-r093-0225"
+  ],
+  [
+    "vital-gym-pro-r106-0246"
+  ],
+  [
+    "vital-gym-pro-r109-0255"
+  ],
+  [
+    "vital-gym-pro-r112-0262"
+  ],
+  [
+    "vital-gym-pro-r114-0266"
+  ],
+  [
+    "vital-gym-pro-r120-0272"
+  ],
+  [
+    "vital-gym-pro-r121-0276"
+  ],
+  [
+    "vital-gym-pro-r124-0286"
+  ],
+  [
+    "vital-gym-pro-r125-0288"
+  ],
+  [
+    "vital-gym-pro-r128-0296"
+  ],
+  [
+    "vital-gym-pro-r129-0297"
+  ],
+  [
+    "vital-gym-pro-r132-1244"
+  ],
+  [
+    "vital-gym-pro-r133-1245"
+  ],
+  [
+    "vital-gym-pro-r134-1247"
+  ],
+  [
+    "vital-gym-pro-r135-1248"
+  ],
+  [
+    "vital-gym-pro-r137-1250"
+  ],
+  [
+    "vital-gym-pro-r138-1251"
+  ],
+  [
+    "vital-gym-pro-r139-1254"
+  ],
+  [
+    "vital-gym-pro-r140-1255"
+  ],
+  [
+    "vital-gym-pro-r141-1257"
+  ],
+  [
+    "vital-gym-pro-r142-1258"
+  ],
+  [
+    "vital-gym-pro-r145-1262"
+  ],
+  [
+    "vital-gym-pro-r146-1263"
+  ],
+  [
+    "vital-gym-pro-r147-1268"
+  ],
+  [
+    "vital-gym-pro-r148-1270"
+  ],
+  [
+    "vital-gym-pro-r149-1271"
+  ],
+  [
+    "vital-gym-pro-r150-1273"
+  ],
+  [
+    "vital-gym-pro-r151-1276"
+  ],
+  [
+    "vital-gym-pro-r152-1277"
+  ],
+  [
+    "vital-gym-pro-r155-1282"
+  ],
+  [
+    "vital-gym-pro-r156-1284"
+  ],
+  [
+    "vital-gym-pro-r157-1286"
+  ],
+  [
+    "vital-gym-pro-r158-1287"
+  ],
+  [
+    "vital-gym-pro-r160-1291"
+  ],
+  [
+    "vital-gym-pro-r161-1292"
+  ],
+  [
+    "vital-gym-pro-r163-1295"
+  ],
+  [
+    "vital-gym-pro-r166-1300"
+  ],
+  [
+    "vital-gym-pro-r167-1302"
+  ],
+  [
+    "vital-gym-pro-r169-1304"
+  ],
+  [
+    "vital-gym-pro-r170-1305"
+  ],
+  [
+    "vital-gym-pro-r172-1307"
+  ],
+  [
+    "vital-gym-pro-r174-1310"
+  ],
+  [
+    "vital-gym-pro-r175-1311"
+  ],
+  [
+    "vital-gym-pro-r176-1312"
+  ],
+  [
+    "vital-gym-pro-r177-1313"
+  ],
+  [
+    "vital-gym-pro-r178-1314"
+  ],
+  [
+    "vital-gym-pro-r179-1315"
+  ],
+  [
+    "vital-gym-pro-r180-1316"
+  ],
+  [
+    "vital-gym-pro-r182-1318"
+  ],
+  [
+    "vital-gym-pro-r183-1319"
+  ],
+  [
+    "vital-gym-pro-r185-1323"
+  ],
+  [
+    "vital-gym-pro-r188-1330"
+  ],
+  [
+    "vital-gym-pro-r189-1331"
+  ],
+  [
+    "vital-gym-pro-r190-1332"
+  ],
+  [
+    "vital-gym-pro-r191-1333"
+  ],
+  [
+    "vital-gym-pro-r192-1335"
+  ],
+  [
+    "vital-gym-pro-r193-1336"
+  ],
+  [
+    "vital-gym-pro-r194-1338"
+  ],
+  [
+    "vital-gym-pro-r197-1341"
+  ],
+  [
+    "vital-gym-pro-r198-1342"
+  ],
+  [
+    "vital-gym-pro-r199-1518"
+  ],
+  [
+    "vital-gym-pro-r200-1519"
+  ],
+  [
+    "vital-gym-pro-r201-1520"
+  ],
+  [
+    "vital-gym-pro-r203-1523"
+  ],
+  [
+    "vital-gym-pro-r204-1524"
+  ],
+  [
+    "vital-gym-pro-r205-1525"
+  ],
+  [
+    "vital-gym-pro-r206-1526"
+  ],
+  [
+    "vital-gym-pro-r207-1527"
+  ],
+  [
+    "vital-gym-pro-r208-1528"
+  ],
+  [
+    "vital-gym-pro-r209-1529"
+  ],
+  [
+    "vital-gym-pro-r210-1530"
+  ],
+  [
+    "vital-gym-pro-r211-1531"
+  ],
+  [
+    "vital-gym-pro-r212-1532"
+  ],
+  [
+    "vital-gym-pro-r213-1533"
+  ],
+  [
+    "vital-gym-pro-r214-1534"
+  ],
+  [
+    "vital-gym-pro-r215-1535"
+  ],
+  [
+    "vital-gym-pro-r216-1536"
+  ],
+  [
+    "vital-gym-pro-r217-1537"
+  ],
+  [
+    "vital-gym-pro-r218-1538"
+  ],
+  [
+    "vital-gym-pro-r219-1539"
+  ],
+  [
+    "vital-gym-pro-r220-1544"
+  ],
+  [
+    "vital-gym-pro-r221-1545"
+  ],
+  [
+    "vital-gym-pro-r222-1546"
+  ],
+  [
+    "vital-gym-pro-r223-1547"
+  ],
+  [
+    "vital-gym-pro-r224-1548"
+  ],
+  [
+    "vital-gym-pro-r225-1549"
+  ],
+  [
+    "vital-gym-pro-r226-1550"
+  ],
+  [
+    "vital-gym-pro-r227-1551"
+  ],
+  [
+    "vital-gym-pro-r228-1552"
+  ],
+  [
+    "vital-gym-pro-r229-1553"
+  ],
+  [
+    "vital-gym-pro-r230-1554"
+  ],
+  [
+    "vital-gym-pro-r231-1555"
+  ],
+  [
+    "vital-gym-pro-r232-1556"
+  ],
+  [
+    "vital-gym-pro-r233-1557"
+  ],
+  [
+    "vital-gym-pro-r235-1559"
+  ],
+  [
+    "vital-gym-pro-r236-1561"
+  ],
+  [
+    "vital-gym-pro-r237-1562"
+  ],
+  [
+    "vital-gym-pro-r238-1563"
+  ],
+  [
+    "vital-gym-pro-r239-1564"
+  ],
+  [
+    "vital-gym-pro-r240-1565"
+  ],
+  [
+    "vital-gym-pro-r241-1566"
+  ],
+  [
+    "vital-gym-pro-r242-1567"
+  ],
+  [
+    "vital-gym-pro-r243-1568"
+  ],
+  [
+    "vital-gym-pro-r244-1569"
+  ],
+  [
+    "vital-gym-pro-r245-1570"
+  ],
+  [
+    "vital-gym-pro-r247-1573"
+  ],
+  [
+    "vital-gym-pro-r248-1574"
+  ],
+  [
+    "vital-gym-pro-r249-1575"
+  ],
+  [
+    "vital-gym-pro-r250-1576"
+  ],
+  [
+    "vital-gym-pro-r251-1577"
+  ],
+  [
+    "vital-gym-pro-r252-1578"
+  ],
+  [
+    "vital-gym-pro-r253-1579"
+  ],
+  [
+    "vital-gym-pro-r254-1580"
+  ],
+  [
+    "vital-gym-pro-r255-1581"
+  ],
+  [
+    "vital-gym-pro-r256-1582"
+  ],
+  [
+    "vital-gym-pro-r257-1583"
+  ],
+  [
+    "vital-gym-pro-r258-1584"
+  ],
+  [
+    "vital-gym-pro-r260-1586"
+  ],
+  [
+    "vital-gym-pro-r261-1589"
+  ],
+  [
+    "vital-gym-pro-r262-1590"
+  ],
+  [
+    "vital-gym-pro-r263-1591"
+  ],
+  [
+    "vital-gym-pro-r264-1592"
+  ],
+  [
+    "vital-gym-pro-r265-1593"
+  ],
+  [
+    "vital-gym-pro-r266-1594"
+  ],
+  [
+    "vital-gym-pro-r267-1595"
+  ],
+  [
+    "vital-gym-pro-r268-1597"
+  ],
+  [
+    "vital-gym-pro-r269-1599"
+  ],
+  [
+    "vital-gym-pro-r270-1600"
+  ],
+  [
+    "vital-gym-pro-r271-1601"
+  ],
+  [
+    "vital-gym-pro-r272-1602"
+  ],
+  [
+    "vital-gym-pro-r273-1603"
+  ],
+  [
+    "vital-gym-pro-r274-1604"
+  ],
+  [
+    "vital-gym-pro-r275-1605"
+  ],
+  [
+    "vital-gym-pro-r276-1606"
+  ],
+  [
+    "vital-gym-pro-r277-1608"
+  ],
+  [
+    "vital-gym-pro-r278-1609"
+  ],
+  [
+    "vital-gym-pro-r279-1613"
+  ],
+  [
+    "vital-gym-pro-r280-1614"
+  ],
+  [
+    "vital-gym-pro-r282-1617"
+  ],
+  [
+    "vital-gym-pro-r283-1618"
+  ],
+  [
+    "vital-gym-pro-r284-1619"
+  ],
+  [
+    "vital-gym-pro-r287-1622"
+  ],
+  [
+    "vital-gym-pro-r288-1624"
+  ],
+  [
+    "vital-gym-pro-r289-1625"
+  ],
+  [
+    "vital-gym-pro-r290-1626"
+  ],
+  [
+    "vital-gym-pro-r291-1628"
+  ],
+  [
+    "vital-gym-pro-r292-1629"
+  ],
+  [
+    "vital-gym-pro-r293-1632"
+  ],
+  [
+    "vital-gym-pro-r294-1635"
+  ],
+  [
+    "vital-gym-pro-r295-1636"
+  ],
+  [
+    "vital-gym-pro-r296-1638"
+  ],
+  [
+    "vital-gym-pro-r297-1639"
+  ],
+  [
+    "vital-gym-pro-r298-1640"
+  ],
+  [
+    "vital-gym-pro-r299-1641"
+  ],
+  [
+    "vital-gym-pro-r300-1642"
+  ],
+  [
+    "vital-gym-pro-r301-1643"
+  ],
+  [
+    "vital-gym-pro-r302-1644"
+  ],
+  [
+    "vital-gym-pro-r303-1645"
+  ],
+  [
+    "vital-gym-pro-r310-1350"
+  ],
+  [
+    "vital-gym-pro-r315-1357"
+  ],
+  [
+    "vital-gym-pro-r317-1359"
+  ],
+  [
+    "vital-gym-pro-r320-1362"
+  ],
+  [
+    "vital-gym-pro-r321-1363"
+  ],
+  [
+    "vital-gym-pro-r322-1365"
+  ],
+  [
+    "vital-gym-pro-r323-1366"
+  ],
+  [
+    "vital-gym-pro-r325-1370"
+  ],
+  [
+    "vital-gym-pro-r328-1374"
+  ],
+  [
+    "vital-gym-pro-r343-1403"
+  ],
+  [
+    "vital-gym-pro-r351-1422"
+  ],
+  [
+    "vital-gym-pro-r353-1425"
+  ],
+  [
+    "vital-gym-pro-r354-1426"
+  ],
+  [
+    "vital-gym-pro-r355-1427"
+  ],
+  [
+    "vital-gym-pro-r365-1443"
+  ],
+  [
+    "vital-gym-pro-r368-1448"
+  ],
+  [
+    "vital-gym-pro-r370-1450"
+  ],
+  [
+    "vital-gym-pro-r374-1460"
+  ],
+  [
+    "vital-gym-pro-r379-1467"
+  ],
+  [
+    "vital-gym-pro-r381-1469"
+  ],
+  [
+    "vital-gym-pro-r385-1473"
+  ],
+  [
+    "vital-gym-pro-r387-1476"
+  ],
+  [
+    "vital-gym-pro-r389-1480"
+  ],
+  [
+    "vital-gym-pro-r390-1481"
+  ],
+  [
+    "vital-gym-pro-r391-1482"
+  ],
+  [
+    "vital-gym-pro-r393-1497"
+  ],
+  [
+    "vital-gym-pro-r395-1502"
+  ],
+  [
+    "vital-gym-pro-r396-1511"
+  ],
+  [
+    "vital-gym-pro-r397-1516"
+  ],
+  [
+    "vital-gym-pro-r400-1704"
+  ],
+  [
+    "vital-gym-pro-r405-1710"
+  ],
+  [
+    "fedb-close-grip-front-lat-pulldown"
+  ],
+  [
+    "vital-gym-pro-r409-1717"
+  ],
+  [
+    "vital-gym-pro-r410-1718"
+  ],
+  [
+    "vital-gym-pro-r415-1725"
+  ],
+  [
+    "vital-gym-pro-r418-1730"
+  ],
+  [
+    "vital-gym-pro-r420-1733"
+  ],
+  [
+    "vital-gym-pro-r424-1737"
+  ],
+  [
+    "vital-gym-pro-r425-1739"
+  ],
+  [
+    "vital-gym-pro-r426-1741"
+  ],
+  [
+    "vital-gym-pro-r427-1742"
+  ],
+  [
+    "vital-gym-pro-r429-1744"
+  ],
+  [
+    "vital-gym-pro-r431-1748"
   ]
 ] as const
 

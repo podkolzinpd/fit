@@ -5,7 +5,7 @@ import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile
 import { spawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import batchOne from './data/vital-gym-pro-catalog-batch-1.mjs'
+import { reviewedVitalGymProExercises } from './data/vital-gym-pro-catalog-reviewed.mjs'
 
 const MAGIC = Buffer.from('FITVITAL1')
 const projectRoot = resolve(import.meta.dirname, '..')
@@ -58,7 +58,7 @@ async function materializeReviewedMedia(manifest, unpackedDir) {
 
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
 const baseCatalog = JSON.parse(await readFile(catalogPath, 'utf8'))
-const expectedExerciseCount = baseCatalog.exercises.length + batchOne.exercises.length
+const expectedExerciseCount = baseCatalog.exercises.length + reviewedVitalGymProExercises().length
 if (manifest.version !== 1 || manifest.exerciseCount !== expectedExerciseCount || manifest.files.length !== expectedExerciseCount * 3) {
   throw new Error('Unexpected Gym Pro media manifest')
 }
