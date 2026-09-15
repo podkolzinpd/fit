@@ -338,7 +338,7 @@ describe('system exercise catalog', () => {
       .filter((exercise) => !exercise.techniqueVideoUrl)
       .map((exercise) => exercise.ref)
 
-    expect(REVIEWED_EXERCISE_REFS_WITHOUT_SIMILAR_MEDIA.size).toBe(84)
+    expect(REVIEWED_EXERCISE_REFS_WITHOUT_SIMILAR_MEDIA.size).toBe(83)
     expect(new Set(emptyVisibleRefs)).toEqual(REVIEWED_EXERCISE_REFS_WITHOUT_SIMILAR_MEDIA)
   })
 
