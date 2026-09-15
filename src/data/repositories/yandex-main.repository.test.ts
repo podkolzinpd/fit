@@ -189,6 +189,23 @@ describe('Yandex main repository', () => {
   })
 
   it.each([
+    [429, 'summary_generation_period_limit', false],
+    [502, 'yandex_cloud_quality_check_failed', false],
+    [504, 'yandex_cloud_timeout', true],
+  ])('preserves training summary error %s from the Yandex API', async (status, code, immediateRetryAllowed) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ error: code }, status)))
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.trainingSummaries.generate(
+      clientId, '2026-08-01', '2026-08-31', true,
+    )).rejects.toMatchObject({
+      name: 'TrainingSummaryGenerationError',
+      code,
+      immediateRetryAllowed,
+    })
+  })
+
+  it.each([
     [401, 'session_expired'],
     [403, 'PT403'],
     [404, 'PT404'],
