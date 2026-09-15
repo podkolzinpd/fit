@@ -23,7 +23,7 @@ const briefProperties = {
   goal: { type: 'string', enum: ['strength', 'hypertrophy', 'general_fitness', 'weight_loss'] },
   frequency: { type: 'integer', minimum: 1, maximum: 3 },
   weekdays: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'integer', minimum: 1, maximum: 7 } },
-  durationMin: { type: 'integer', minimum: 20, maximum: 120 },
+  durationMin: { type: 'integer', minimum: 30, maximum: 120 },
   startDate: { type: 'string' },
   experience: { type: 'string', enum: ['beginner', 'returning', 'experienced'] },
   equipment: { type: 'array', items: { type: 'string', enum: PROGRAM_EQUIPMENT } },
@@ -61,7 +61,7 @@ export function readProgramBrief(value: unknown): ProgramBrief | undefined {
   for (const [key, item] of Object.entries(value)) {
     if (key === 'adult') { if (typeof item !== 'boolean') return undefined }
     else if (key === 'frequency') { if (item !== 1 && item !== 2 && item !== 3) return undefined }
-    else if (key === 'durationMin') { if (typeof item !== 'number' || !Number.isInteger(item) || item < 20 || item > 120) return undefined }
+    else if (key === 'durationMin') { if (typeof item !== 'number' || !Number.isInteger(item) || item < 30 || item > 120) return undefined }
     else if (key === 'weekdays') {
       if (!Array.isArray(item) || item.length < 1 || item.length > 3 || new Set(item).size !== item.length
         || !item.every((day) => typeof day === 'number' && Number.isInteger(day) && day >= 1 && day <= 7)) return undefined
@@ -108,7 +108,7 @@ export const briefQuestions: Partial<Record<keyof ProgramBrief, string>> = {
   goal: 'Основной приоритет — сила, набор мышц, общая форма или снижение веса?',
   frequency: 'Сколько занятий в неделю планируем: одно, два или три?',
   weekdays: 'В какие дни недели удобно тренироваться?',
-  durationMin: 'Сколько минут есть на одно занятие, включая разминку и отдых?',
+  durationMin: 'Сколько минут есть на одно занятие, включая разминку и отдых? В этом пилоте — от 30 минут.',
   startDate: 'С какой даты начинается четырёхнедельная программа?',
   experience: 'Какой опыт тренировок и был ли в последнее время перерыв?',
   equipment: 'Какое оборудование доступно? Можно перечислить его или указать полностью оборудованный тренажёрный зал.',

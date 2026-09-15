@@ -7,29 +7,83 @@ export const PROGRAM_METHOD_VERSION = 'four-week-foundation-v1'
 export interface Prescription { sets: number; reps: number | null; durationSec: number | null; rpe: number; restSec: number }
 export interface ProgramTemplate { rationale: string; progression: string; sessions: { weekday: number; title: string; exercises: { exerciseRef: string; weeks: Prescription[] }[] }[] }
 
-const prescriptionSchema = {
-  type: 'object', additionalProperties: false, required: ['sets', 'reps', 'durationSec', 'rpe', 'restSec'], properties: {
-    sets: { type: 'integer', minimum: 1, maximum: 4 }, reps: { type: ['integer', 'null'], minimum: 4, maximum: 20 },
-    durationSec: { type: ['integer', 'null'], minimum: 15, maximum: 90 }, rpe: { type: 'number', minimum: 6, maximum: 8 },
-    restSec: { type: 'integer', minimum: 60, maximum: 180 },
-  },
+const REQUIRED_MOVEMENTS = ['squat', 'hinge', 'horizontal_push', 'horizontal_pull', 'core'] as const
+
+export function programSelectionSlots(brief: ProgramBrief) {
+  const catalog = eligibleProgramExercises(brief.equipment ?? [], brief.excludedRefs ?? [])
+  const forced = REQUIRED_MOVEMENTS.filter((movement) => {
+    const choices = catalog.filter((exercise) => exercise.movement === movement)
+    return choices.length > 0 && choices.every((exercise) => exercise.unsupportedTrunk)
+  })
+  if (forced.length > 1) throw new ProgramValidationError(['catalog_no_supported_combination'])
+  return (brief.weekdays ?? []).map((weekday, index) => {
+    const loadedMovement = forced[0] ?? (index % 2 === 0 ? 'squat' : 'hinge')
+    const choices = Object.fromEntries(REQUIRED_MOVEMENTS.map((movement) => [movement,
+      catalog.filter((exercise) => exercise.movement === movement && (!exercise.unsupportedTrunk || movement === loadedMovement)).map((exercise) => exercise.ref),
+    ])) as Record<typeof REQUIRED_MOVEMENTS[number], string[]>
+    return { key: `day${index + 1}`, weekday, choices,
+      accessories: catalog.filter((exercise) => ['accessory', 'vertical_push', 'vertical_pull'].includes(exercise.movement) && !exercise.unsupportedTrunk).map((exercise) => exercise.ref),
+    }
+  })
 }
 
-export function programTemplateSchema(catalog: readonly ProgramExercise[]) {
-  return { type: 'object', additionalProperties: false, required: ['rationale', 'progression', 'sessions'], properties: {
-    rationale: { type: 'string', maxLength: 900 }, progression: { type: 'string', maxLength: 600 },
-    sessions: { type: 'array', minItems: 1, maxItems: 3, items: {
-      type: 'object', additionalProperties: false, required: ['weekday', 'title', 'exercises'], properties: {
-        weekday: { type: 'integer', minimum: 1, maximum: 7 }, title: { type: 'string', maxLength: 100 },
-        exercises: { type: 'array', minItems: 3, maxItems: 8, items: {
-          type: 'object', additionalProperties: false, required: ['exerciseRef', 'weeks'], properties: {
-            exerciseRef: { type: 'string', enum: catalog.map((row) => row.ref) },
-            weeks: { type: 'array', minItems: 4, maxItems: 4, items: prescriptionSchema },
-          },
-        } },
+/** The schema itself requires every essential movement; the model chooses refs. */
+export function programTemplateSchema(_catalog: readonly ProgramExercise[], brief: ProgramBrief) {
+  const slots = programSelectionSlots(brief)
+  return { type: 'object', additionalProperties: false, required: ['days'], properties: {
+    days: { type: 'object', additionalProperties: false, required: slots.map((slot) => slot.key), properties: Object.fromEntries(slots.map((slot) => [slot.key, {
+      type: 'object', additionalProperties: false, required: [...REQUIRED_MOVEMENTS, 'accessory'], properties: {
+        ...Object.fromEntries(REQUIRED_MOVEMENTS.map((movement) => [movement, { type: 'string', enum: slot.choices[movement] }])),
+        accessory: { type: ['string', 'null'], enum: [null, ...slot.accessories] },
       },
-    } },
+    }])) },
   } }
+}
+
+export function prescribeProgram(raw: unknown, brief: ProgramBrief, today: string): ProgramTemplate {
+  if (!object(raw) || !exact(raw, ['days']) || !object(raw.days)) throw new ProgramValidationError(['invalid_model_schema'])
+  const days = raw.days
+  const slots = programSelectionSlots(brief)
+  if (!exact(days, slots.map((slot) => slot.key))) throw new ProgramValidationError(['invalid_model_days'])
+  const byRef = new Map(eligibleProgramExercises(brief.equipment ?? [], brief.excludedRefs ?? []).map((row) => [row.ref, row]))
+  const sessions = slots.map((slot, index) => {
+    const selection = days[slot.key]
+    if (!object(selection) || !exact(selection, [...REQUIRED_MOVEMENTS, 'accessory'])) throw new ProgramValidationError(['invalid_model_session'])
+    const refs = REQUIRED_MOVEMENTS.map((movement) => {
+      const ref = selection[movement]
+      if (typeof ref !== 'string' || !slot.choices[movement].includes(ref)) throw new ProgramValidationError(['invalid_model_movement'])
+      return ref
+    })
+    if (selection.accessory !== null) {
+      if (typeof selection.accessory !== 'string' || !slot.accessories.includes(selection.accessory)) throw new ProgramValidationError(['invalid_model_accessory'])
+      refs.push(selection.accessory)
+    }
+    const session = { weekday: slot.weekday, title: `Всё тело ${index + 1}`, exercises: refs }
+    const selected = session.exercises.map((ref: unknown) => {
+      if (typeof ref !== 'string' || !byRef.has(ref)) throw new ProgramValidationError(['invalid_exercise_reference_or_weeks'])
+      return byRef.get(ref)!
+    })
+    if (selected.filter((exercise) => exercise.unsupportedTrunk).length > 1) throw new ProgramValidationError(['repeated_loaded_trunk'])
+    const restSec = brief.goal === 'strength' ? ((brief.durationMin ?? 60) < 40 ? 90 : 120) : ((brief.durationMin ?? 60) < 40 ? 60 : 90)
+    const rpe = brief.experience === 'experienced' ? 7 : 6.5
+    const prescriptions = (sets: number) => selected.map((exercise) => ({ exerciseRef: exercise.ref,
+      weeks: [0, 1, 2, 2].map((increment) => ({ sets, restSec, rpe,
+        reps: exercise.inputKind === 'duration' ? null : (exercise.movement === 'accessory' || exercise.movement === 'core' || brief.goal === 'hypertrophy' ? 10 : brief.goal === 'strength' ? 6 : 8) + increment,
+        durationSec: exercise.inputKind === 'duration' ? 30 + increment * 5 : null,
+      })),
+    }))
+    let sets = brief.experience === 'experienced' ? 3 : 2
+    let exercises = prescriptions(sets)
+    const duration = () => 10 + exercises.reduce((sum, exercise) => {
+      const week = exercise.weeks[3]!
+      return sum + 2 + week.sets * ((week.durationSec ?? week.reps! * 3) + week.restSec) / 60
+    }, 0)
+    while (duration() > (brief.durationMin ?? 0) && sets > 1) exercises = prescriptions(--sets)
+    return { weekday: session.weekday, title: session.title, exercises }
+  })
+  return validateProgramTemplate({ rationale: `Цель программы: ${brief.goalText ?? ''}. Четыре недели, ${brief.frequency ?? 0} занятий в неделю. В каждом занятии есть приседание, движение в тазобедренном суставе, жим, тяга и упражнение для корпуса. Упражнения повторяются по неделям, чтобы отслеживать выполнение; рабочий вес подбирает тренер под целевое усилие.`, sessions,
+    progression: 'Подходы и целевое усилие сохраняются. Во вторую и третью недели добавляйте по одному повторению (в удержаниях — по 5 секунд), только если сохраняются техника и запас сил. На четвёртой неделе закрепите нагрузку. При дискомфорте остановитесь и обсудите корректировку с тренером.',
+  }, brief, today)
 }
 
 function object(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
@@ -52,6 +106,9 @@ export function programBriefIssues(brief: ProgramBrief, today: string): string[]
   for (const family of ['squat', 'hinge', 'horizontal_push', 'horizontal_pull', 'core']) {
     if (!catalog.some((row) => row.movement === family)) issues.push(`catalog_missing_${family}`)
   }
+  if (brief.weekdays?.some((day) => brief.weekdays!.includes(day % 7 + 1))) issues.push('adjacent_training_days')
+  if (brief.durationMin !== undefined && brief.durationMin < 30) issues.push('insufficient_training_time')
+  try { programSelectionSlots(brief) } catch { issues.push('catalog_no_supported_combination') }
   return issues
 }
 

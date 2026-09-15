@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { materializeProgram, validateProgramTemplate, programBriefIssues, type ProgramTemplate } from './generate.js'
+import { prescribeProgram, materializeProgram, validateProgramTemplate, programBriefIssues, type ProgramTemplate } from './generate.js'
 import { fixture } from './fixtures.js'
 
 
@@ -39,4 +39,14 @@ describe('four-week program contract', () => {
     const { brief } = fixture()
     expect(programBriefIssues({ ...brief, limitations: 'unknown' }, '2026-09-15')).toContain('limitations_require_review')
   })
+})
+
+it.each([1, 2, 3] as const)('calculates consistent prescriptions for %s sessions instead of trusting model numbers', (frequency) => {
+  const { brief, template } = fixture(frequency)
+  const wire = { days: Object.fromEntries(template.sessions.map((_session, index) => [`day${index + 1}`, { squat: 'leg-press', hinge: 'fedb-butt-lift-bridge', horizontal_push: 'push-ups', horizontal_pull: 'seated-cable-row', core: 'plank', accessory: null }])) }
+  const prescribed = prescribeProgram(wire, brief, '2026-09-15')
+  expect(prescribed.sessions).toHaveLength(frequency)
+  expect(prescribed.sessions[0]!.exercises[0]!.weeks.map((week) => week.reps)).toEqual([8, 9, 10, 10])
+  expect(prescribed.sessions[0]!.exercises[0]!.weeks.map((week) => week.sets)).toEqual([2, 2, 2, 2])
+  expect(() => prescribeProgram({ ...wire, invented: true }, brief, '2026-09-15')).toThrow()
 })

@@ -545,6 +545,8 @@ Frontend redirect для разработки: `http://localhost:5173/auth/callb
 The production Supabase Assistant orchestrator calls the private Yandex Cloud
 Function `fit-generate-program`. Its input is an actor-scoped training aggregate
 and the explicitly confirmed quiz. The generator has no database credentials.
+The model selects exercises; deterministic rules prescribe sets/reps/time/RPE,
+rest and progression. A model draft that fails structural validation is rejected.
 
 Independent default-off controls:
 
@@ -568,7 +570,8 @@ The normal deployment workflow resolves these resources and publishes versions;
 it does not create or expand their IAM bindings. Keep the previous function
 versions for rollback and do not include quiz/client text in logs.
 
-The pilot supports 4 weeks × 1–3 sessions, the bounded system-exercise catalog,
+The pilot supports 4 weeks × 1–3 full-body sessions (30+ minutes, a rest day
+between sessions), the bounded system-exercise catalog,
 and adult clients without reported current limitations. Confirming an updated
 quiz explicitly creates a new full draft. The original canonical workout JSON
 is the only accepted apply payload; it expires after 24 hours and is rejected
