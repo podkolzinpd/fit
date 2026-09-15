@@ -626,6 +626,7 @@ export function createYandexMainRepository(
         if (filters.query) params.set('query', filters.query)
         if (filters.specialty) params.set('specialty', filters.specialty)
         if (filters.city) params.set('city', filters.city)
+        for (const stationId of filters.metroStationIds) params.append('metro', stationId)
         if (filters.mode) params.set('mode', filters.mode)
         if (filters.acceptingClients !== null) params.set('accepting', String(filters.acceptingClients))
         params.set('offset', String(page.offset))

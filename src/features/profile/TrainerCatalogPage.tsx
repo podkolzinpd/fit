@@ -11,6 +11,7 @@ const emptyFilters: TrainerCatalogFilters = {
   query: '',
   specialty: '',
   city: '',
+  metroStationIds: [],
   mode: '',
   acceptingClients: null,
 }
@@ -24,13 +25,30 @@ interface CatalogViewState {
   scrollTop: number
 }
 
+function readStoredFilters(value: unknown): TrainerCatalogFilters | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  const candidate = value as Partial<TrainerCatalogFilters>
+  return {
+    query: typeof candidate.query === 'string' ? candidate.query : '',
+    specialty: typeof candidate.specialty === 'string' ? candidate.specialty : '',
+    city: typeof candidate.city === 'string' ? candidate.city : '',
+    metroStationIds: Array.isArray(candidate.metroStationIds)
+      ? candidate.metroStationIds.filter((item): item is string => typeof item === 'string').slice(0, 20)
+      : [],
+    mode: candidate.mode === 'online' || candidate.mode === 'in_person' ? candidate.mode : '',
+    acceptingClients: typeof candidate.acceptingClients === 'boolean' ? candidate.acceptingClients : null,
+  }
+}
+
 function readCatalogView(): CatalogViewState | null {
   try {
     const raw = window.sessionStorage.getItem(catalogViewKey)
     if (!raw) return null
     const value = JSON.parse(raw) as Partial<CatalogViewState>
-    if (!value.draft || !value.filters || typeof value.scrollTop !== 'number') return null
-    return value as CatalogViewState
+    const draft = readStoredFilters(value.draft)
+    const filters = readStoredFilters(value.filters)
+    if (!draft || !filters || typeof value.scrollTop !== 'number') return null
+    return { draft, filters, scrollTop: value.scrollTop }
   } catch {
     return null
   }
@@ -203,7 +221,7 @@ export function TrainerCatalogPage() {
     })
   }
 
-  const appliedExtraFilters = [filters.specialty, filters.city, filters.mode,
+  const appliedExtraFilters = [filters.specialty, filters.city, filters.metroStationIds.length ? 'metro' : '', filters.mode,
     filters.acceptingClients === null ? '' : String(filters.acceptingClients)].filter(Boolean).length
 
   return <Page title="Тренеры" back="/me/profile" center className="trainer-catalog-page ui-identity">

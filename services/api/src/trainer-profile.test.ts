@@ -19,7 +19,22 @@ const minimalProfile = {
 
 describe('trainer profile draft', () => {
   it('accepts a profile with only the account name', () => {
-    expect(readTrainerProfileDraft(minimalProfile)).toEqual(minimalProfile)
+    expect(readTrainerProfileDraft(minimalProfile)).toEqual({
+      ...minimalProfile,
+      metroStationIds: [],
+      customLocations: [],
+    })
+  })
+
+  it('accepts metro stations and manually entered locations', () => {
+    expect(readTrainerProfileDraft({
+      ...minimalProfile,
+      metroStationIds: ['msk-dinamo', 'msk-aeroport'],
+      customLocations: ['Клуб на Ленинградском проспекте'],
+    })).toMatchObject({
+      metroStationIds: ['msk-dinamo', 'msk-aeroport'],
+      customLocations: ['Клуб на Ленинградском проспекте'],
+    })
   })
 
   it('still rejects a profile without a usable name', () => {

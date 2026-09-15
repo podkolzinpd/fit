@@ -9,6 +9,8 @@ const completeProfile: TrainerProfileDraft = {
   bio: 'Помогаю тренироваться регулярно и безопасно.',
   specialties: ['Силовые', 'Бег'],
   city: 'Москва',
+  metroStationIds: [],
+  customLocations: [],
   trainingModes: ['online', 'in_person'],
   experienceStartYear: new Date().getFullYear() - 3,
   education: 'Высшее физкультурное образование.',

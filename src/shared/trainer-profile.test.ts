@@ -41,6 +41,31 @@ describe('trainer profile', () => {
       publishedAt: '2026-09-10T09:37:38.59182+00:00', version: 10 }).published).toEqual(draft)
   })
 
+  it('reads a filled legacy profile without rewriting its existing fields', () => {
+    const current = {
+      ...emptyTrainerProfileDraft('Анна Иванова'),
+      bio: 'Существующее описание',
+      city: 'Москва',
+      price: 'От 3 000 ₽',
+      trainingModes: ['in_person' as const],
+    }
+    const legacy: Record<string, unknown> = { ...current }
+    delete legacy.metroStationIds
+    delete legacy.customLocations
+    const profile = parseTrainerProfile({
+      publicId: '9190a86f-a191-42d8-912e-a7e0ea0f331d',
+      draft: legacy,
+      published: legacy,
+      listedInCatalog: true,
+      updatedAt: '2026-09-15T09:37:38.59182+00:00',
+      publishedAt: '2026-09-10T09:37:38.59182+00:00',
+      version: 10,
+    })
+
+    expect(profile.published).toEqual({ ...legacy, metroStationIds: [], customLocations: [] })
+    expect(profile.listedInCatalog).toBe(true)
+  })
+
   it('recovers a legacy draft with an entirely empty certificate row', () => {
     const draft = {
       ...emptyTrainerProfileDraft('Анна Иванова'),

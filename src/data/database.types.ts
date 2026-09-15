@@ -1,4 +1,4 @@
-// schema-sha256: 791c6635ab685fd86deadc861aa4fa91d6f45a5f234827f9832fa672adcdf33b
+// schema-sha256: 71b290c183bd50607bb59ac2b98af7d0e33aa5ec2e2baade9d86e4f0aeacf872
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -2370,6 +2370,7 @@ export type Database = {
           p_accepting_clients?: boolean
           p_city?: string
           p_limit?: number
+          p_metro_station_ids?: string[]
           p_mode?: string
           p_offset?: number
           p_query?: string
