@@ -567,16 +567,25 @@ export function WorkoutFormPage() {
   async function addQuickEntry(parsed: ParsedWorkoutExercise[]) {
     const results = await previousResults(parsed.map((item) => item.exercise))
     rememberPreviousResults(results)
+    const additions = parsed.map((item, index) => {
+      const fallback = exerciseDraft(item.exercise, exercises.length + index, results.get(item.exercise.ref))
+      return {
+        ...fallback,
+        ...item.structure,
+        sets: item.hasValues ? item.sets : fallback.sets,
+      }
+    })
+    const roundsByGroup = new Map<string, number>()
+    for (const exercise of additions) {
+      if (exercise.blockType === 'group') {
+        roundsByGroup.set(exercise.blockId, Math.max(roundsByGroup.get(exercise.blockId) ?? 1, exercise.sets.length, 1))
+      }
+    }
     setDraftExercises([
       ...exercises,
-      ...parsed.map((item, index) => {
-        const fallback = exerciseDraft(item.exercise, exercises.length + index, results.get(item.exercise.ref))
-        return {
-          ...fallback,
-          ...item.structure,
-          sets: item.hasValues ? item.sets : fallback.sets,
-        }
-      }),
+      ...additions.map((exercise) => exercise.blockType === 'group'
+        ? { ...exercise, blockRounds: roundsByGroup.get(exercise.blockId) ?? exercise.blockRounds }
+        : exercise),
     ])
   }
   function closePicker() { setPickerOpen(false); setReplaceIndex(null); setPickerSearch('') }

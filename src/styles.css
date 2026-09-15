@@ -1487,6 +1487,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .quick-workout-add { color:var(--accent-strong); border-color:var(--accent-surface-border); background:var(--accent-surface) }
 .quick-workout-preview { padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
 .quick-workout-preview p { margin:0 0 6px; }.quick-workout-preview ul { margin:0; padding-left:20px; }
+.quick-workout-structure { display:grid; gap:8px; }
+.quick-workout-structure section { display:grid; gap:3px; }
+.quick-workout-structure section + section { padding-top:8px; border-top:1px solid var(--border); }
+.quick-workout-circuit-title { color:var(--accent-strong); font-size:14px; }
+.quick-workout-structure li { line-height:1.4; }
 .quick-workout-clarification { display:grid; gap:3px; margin:8px 0; }.quick-workout-clarification p { margin:0; color:var(--text-muted); font-size:14px; line-height:1.35; }
 .quick-workout-unparsed { margin-top:10px; color:var(--warning-fg); }
 .quick-workout-unparsed-line + .quick-workout-unparsed-line { margin-top:10px; }
