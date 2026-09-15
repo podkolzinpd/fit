@@ -37,13 +37,37 @@ const briefProperties = {
 
 export const briefKeys = Object.keys(briefProperties) as (keyof ProgramBrief)[]
 export const briefExtractionSchema = {
-  type: 'object', additionalProperties: false, required: ['patch', 'clear', 'evidence', 'clarification'],
+  type: 'object', additionalProperties: false, required: ['changes', 'clarification'],
   properties: {
-    patch: { type: 'object', additionalProperties: false, properties: briefProperties },
-    clear: { type: 'array', items: { type: 'string', enum: briefKeys } },
-    evidence: { type: 'object', additionalProperties: false, properties: Object.fromEntries(briefKeys.map((key) => [key, { type: 'string' }])) },
+    changes: { type: 'array', maxItems: 17, items: {
+      type: 'object', additionalProperties: false, required: ['field', 'operation', 'value', 'quote'], properties: {
+        field: { type: 'string', enum: briefKeys }, operation: { type: 'string', enum: ['set', 'clear'] },
+        value: { type: 'string' }, quote: { type: 'string' },
+      },
+    } },
     clarification: { type: ['string', 'null'] },
   },
+}
+
+export function decodeQuotedBriefPatch(value: unknown): unknown {
+  if (!object(value) || !Array.isArray(value.changes) || value.changes.length > briefKeys.length) throw new Error('invalid_brief_extraction')
+  const patch: Record<string, unknown> = {}
+  const evidence: Record<string, unknown> = {}
+  const clear: string[] = []
+  for (const change of value.changes) {
+    if (!object(change) || typeof change.field !== 'string' || !briefKeys.includes(change.field as keyof ProgramBrief)
+      || typeof change.value !== 'string' || typeof change.quote !== 'string' || Object.hasOwn(evidence, change.field)) throw new Error('invalid_brief_extraction')
+    const { field, quote } = change
+    const text = change.value.trim()
+    evidence[field] = quote
+    if (change.operation === 'clear') { clear.push(field); continue }
+    if (change.operation !== 'set') throw new Error('invalid_brief_extraction')
+    patch[field] = field === 'frequency' || field === 'durationMin' ? Number(text)
+      : field === 'adult' ? text === 'true' ? true : text === 'false' ? false : undefined
+        : field === 'weekdays' ? text.split(',').map((day) => Number(day.trim()))
+          : field === 'equipment' || field === 'excludedRefs' ? text ? text.split(',').map((entry) => entry.trim()) : [] : text
+  }
+  return { patch, clear, evidence, clarification: value.clarification }
 }
 
 function object(value: unknown): value is Record<string, unknown> {
@@ -89,6 +113,10 @@ export function mergeExtractedBrief(previous: ProgramBrief, message: string, val
   // A model cannot fill fields from assumptions or carry another client's answers.
   const clearedKeys = clear as (keyof ProgramBrief)[]
   for (const key of [...Object.keys(patch), ...clearedKeys]) {
+    // Models may echo already confirmed values. They do not introduce a change
+    // and must not force the user to repeat the original evidence.
+    const field = key as keyof ProgramBrief
+    if (!clearedKeys.includes(field) && Object.hasOwn(previous, key) && JSON.stringify(patch[field]) === JSON.stringify(previous[field])) continue
     const quote = evidence[key]
     if (typeof quote !== 'string' || !normalize(quote) || !normalize(message).includes(normalize(quote))) throw new Error('brief_evidence_missing')
   }

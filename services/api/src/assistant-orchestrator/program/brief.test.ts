@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mergeExtractedBrief, briefSummary, readProgramBrief } from './brief.js'
+import { decodeQuotedBriefPatch, mergeExtractedBrief, briefSummary, readProgramBrief } from './brief.js'
 
 describe('quiz updates', () => {
   it('preserves unrelated answers and invalidates old weekdays when frequency changes', () => {
@@ -18,4 +18,16 @@ describe('quiz updates', () => {
     expect(briefSummary({ equipment: ['dumbbells'], adult: true })).toContain('гантели')
     expect(briefSummary({ equipment: [], adult: false })).toContain('Совершеннолетний: нет')
   })
+})
+
+it('keeps quotes adjacent to normalized values in the model contract', () => {
+  const decoded = decodeQuotedBriefPatch({ changes: [{ field: 'weekdays', operation: 'set', value: '1,4', quote: 'понедельник и четверг' }], clarification: null })
+  expect(mergeExtractedBrief({}, 'понедельник и четверг', decoded).brief.weekdays).toEqual([1, 4])
+})
+
+it('accepts unchanged confirmed values without requesting old evidence again', () => {
+  const result = mergeExtractedBrief({ goal: 'strength', frequency: 2 }, 'Теперь три занятия', {
+    patch: { goal: 'strength', frequency: 3 }, clear: [], evidence: { goal: 'старая цитата', frequency: 'три занятия' }, clarification: null,
+  })
+  expect(result.brief).toEqual({ goal: 'strength', frequency: 3 })
 })
