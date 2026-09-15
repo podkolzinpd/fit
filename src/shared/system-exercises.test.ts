@@ -77,7 +77,7 @@ describe('system exercise catalog', () => {
 
   it('добавляет импортированный каталог поверх базового без дублей', () => {
     // Полный каталог = 49 базовых + импортированные + точечные дополнения, ref уникальны.
-    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(814)
+    expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(904)
     expect(IMPORTED_EXERCISES).toHaveLength(451)
     expect(CATALOG_EXPANSION).toHaveLength(120)
     expect(SYSTEM_EXERCISE_CATALOG.length).toBe(SYSTEM_EXERCISES.length + IMPORTED_EXERCISES.length + CATALOG_EXPANSION.length + VITAL_GYM_PRO_NEW_EXERCISES.length + 43)
@@ -236,15 +236,15 @@ describe('system exercise catalog', () => {
     }
   })
 
-  it('подключает 317 проверенных видео Gym Pro без подмены отсутствующих движений', () => {
-    expect(vitalGymProMediaManifest).toMatchObject({ version: 1, exerciseCount: 317 })
-    expect(vitalGymProMediaManifest.files).toHaveLength(951)
-    expect(new Set(vitalGymProMediaManifest.files.map(({ path }) => path)).size).toBe(951)
+  it('подключает 407 проверенных видео Gym Pro без подмены отсутствующих движений', () => {
+    expect(vitalGymProMediaManifest).toMatchObject({ version: 1, exerciseCount: 407 })
+    expect(vitalGymProMediaManifest.files).toHaveLength(1221)
+    expect(new Set(vitalGymProMediaManifest.files.map(({ path }) => path)).size).toBe(1221)
     expect(vitalGymProMediaManifest.files.every(({ bytes, sha256 }) => bytes > 0 && /^[a-f0-9]{64}$/.test(sha256))).toBe(true)
-    expect(VITAL_GYM_PRO_MAIN_REFS).toHaveLength(317)
-    expect(VITAL_GYM_PRO_NEW_EXERCISES).toHaveLength(151)
-    expect(Object.keys(VITAL_GYM_PRO_ASSETS)).toHaveLength(317)
-    expect(new Set(VITAL_GYM_PRO_MAIN_REFS).size).toBe(317)
+    expect(VITAL_GYM_PRO_MAIN_REFS).toHaveLength(407)
+    expect(VITAL_GYM_PRO_NEW_EXERCISES).toHaveLength(241)
+    expect(Object.keys(VITAL_GYM_PRO_ASSETS)).toHaveLength(407)
+    expect(new Set(VITAL_GYM_PRO_MAIN_REFS).size).toBe(407)
     const finalCatalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
     expect(VITAL_GYM_PRO_MAIN_REFS.filter((ref) => !finalCatalogByRef.get(ref)?.techniqueVideoUrl)).toEqual([])
     for (const exercise of VITAL_GYM_PRO_NEW_EXERCISES) {

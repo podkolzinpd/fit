@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exerciseCount": 317,
+  "exerciseCount": 407,
   "files": [
     {
       "path": "vital-captain-s-chair-leg-raise-ex003.jpg",
@@ -4756,6 +4756,1356 @@
       "path": "vital-zercher-squat-ex801.mp4",
       "bytes": 136726,
       "sha256": "364961527fd265440ed3ebc67f3c92dd963a7c5515d7be82ed2e9c29385cd767"
+    },
+    {
+      "path": "vital-gym-pro-1108.jpg",
+      "bytes": 11894,
+      "sha256": "da35a79542834dc16152a02089d3a2a6ab7c4d95df247a3976a4356a2662c538"
+    },
+    {
+      "path": "vital-gym-pro-1108-end.jpg",
+      "bytes": 11701,
+      "sha256": "81d8138fb390a8fa9bd9da2cd839297a01a09f87f0c63360996eeedefc3ca2df"
+    },
+    {
+      "path": "vital-gym-pro-1108.mp4",
+      "bytes": 22748,
+      "sha256": "a1be3385ca763455215579b3de036ef161bcfc89848d70aa84728e208b95014e"
+    },
+    {
+      "path": "vital-gym-pro-1109.jpg",
+      "bytes": 8963,
+      "sha256": "11ab6748cd0e121e50f99f9ac4deca7d2fe443906489353d273ce251ed0eb694"
+    },
+    {
+      "path": "vital-gym-pro-1109-end.jpg",
+      "bytes": 9029,
+      "sha256": "32370a1e4ffd77fc6b9ca07a5192b6848b7cf88a1917f41e6351921027c59b04"
+    },
+    {
+      "path": "vital-gym-pro-1109.mp4",
+      "bytes": 51850,
+      "sha256": "c09ca2565af04e88e46b1e58c2349ee308e50b41ce61db954095c073e866c820"
+    },
+    {
+      "path": "vital-gym-pro-1122.jpg",
+      "bytes": 6807,
+      "sha256": "19c53c196e9a1e4fc5e71a25edaf94b4c0bfdccbff8ddcd0f3205b9b81a912e0"
+    },
+    {
+      "path": "vital-gym-pro-1122-end.jpg",
+      "bytes": 6838,
+      "sha256": "dae8ca20f15f29a7f592c5f569b86468015533b4f0ea6eb29e65da9609abf849"
+    },
+    {
+      "path": "vital-gym-pro-1122.mp4",
+      "bytes": 92897,
+      "sha256": "4e6727c58be7016fae37f77fe5383fa6ec4adb9aad6add6e024b8949c32fd062"
+    },
+    {
+      "path": "vital-gym-pro-1125.jpg",
+      "bytes": 10952,
+      "sha256": "de5378693e91514e9d90a36f785f91749ee01a785ba7ccf9bd42bef1b4a745c4"
+    },
+    {
+      "path": "vital-gym-pro-1125-end.jpg",
+      "bytes": 11233,
+      "sha256": "2c04ca2425e500f2a7e80454ad94ecd485afa27eb201d5e2e1e792bdcdf45009"
+    },
+    {
+      "path": "vital-gym-pro-1125.mp4",
+      "bytes": 86244,
+      "sha256": "1c6357d324f964135222fc2bcf779f47097b0462e68695719eb5d8665db80742"
+    },
+    {
+      "path": "vital-gym-pro-1133.jpg",
+      "bytes": 10831,
+      "sha256": "6bf4708c21f8800e375e37bf8d4bb1ebc2aa34803bfdcc3e75a48d119494e484"
+    },
+    {
+      "path": "vital-gym-pro-1133-end.jpg",
+      "bytes": 10649,
+      "sha256": "fbf26ab97f5c71e6f25bdfc55201e6250fc5bfaf95f6bdbc84bd5f4994d7fee0"
+    },
+    {
+      "path": "vital-gym-pro-1133.mp4",
+      "bytes": 80499,
+      "sha256": "049702ec831bc03df89af461431883909f078f05e152c72635f1f2af906d7f7f"
+    },
+    {
+      "path": "vital-gym-pro-1135.jpg",
+      "bytes": 8973,
+      "sha256": "6e2a5b6d2f200430ebc52bdd09f6abbb7e6587651f5a563d6765073163d2670c"
+    },
+    {
+      "path": "vital-gym-pro-1135-end.jpg",
+      "bytes": 9215,
+      "sha256": "d29154f9d7b32d915556574f1535b2514eb71cea88ee41f4881859a329f6615d"
+    },
+    {
+      "path": "vital-gym-pro-1135.mp4",
+      "bytes": 162166,
+      "sha256": "6fc3a873ce19c9b89558eec2ef0c1c102ee6014e805235145e49249fc2517f2d"
+    },
+    {
+      "path": "vital-gym-pro-1137.jpg",
+      "bytes": 9794,
+      "sha256": "82b4837ae62a9ba22672b17d0b49f83c479251b220e2062ec51883b0acc7fb51"
+    },
+    {
+      "path": "vital-gym-pro-1137-end.jpg",
+      "bytes": 9849,
+      "sha256": "a130d5f9be370d080f81aca35b0b75a299223520a4e98a82ebf55fe86b0de3ef"
+    },
+    {
+      "path": "vital-gym-pro-1137.mp4",
+      "bytes": 27502,
+      "sha256": "9139e1af02ae5da8bf862dca259c815142fd3d975c6c379fd99c615000515fa7"
+    },
+    {
+      "path": "vital-gym-pro-1141.jpg",
+      "bytes": 9019,
+      "sha256": "e001944acb5b7876c0f8032ad74510426638ae43d187b972558cdfc75a94f27f"
+    },
+    {
+      "path": "vital-gym-pro-1141-end.jpg",
+      "bytes": 8847,
+      "sha256": "f7a270b861c453eed28bb67fe34d8f9ff0d0a68a819a540193c870d61ba2b5a9"
+    },
+    {
+      "path": "vital-gym-pro-1141.mp4",
+      "bytes": 23824,
+      "sha256": "a73c840824c8251253922078b665f1a97f364abbceff26e468d08b2fddd28c93"
+    },
+    {
+      "path": "vital-gym-pro-1148.jpg",
+      "bytes": 11191,
+      "sha256": "5b7007b8c695a9f427d09c369a3266edf3a6c0abf08b88bf7b24e8ecd7a3c3c8"
+    },
+    {
+      "path": "vital-gym-pro-1148-end.jpg",
+      "bytes": 11104,
+      "sha256": "3fda898fab98ff5a83cba29626b0fa4f3f60f66281e06c17ba08201af6e2f498"
+    },
+    {
+      "path": "vital-gym-pro-1148.mp4",
+      "bytes": 149590,
+      "sha256": "944c557641cb5a04d56b11ffa0be80c6641602460ecdd452e6162cec305b7953"
+    },
+    {
+      "path": "vital-gym-pro-1110.jpg",
+      "bytes": 8859,
+      "sha256": "af5e444f39545c37caab6e560ea172a96a4ba9e64f696d33d5f6fef11e6b05e2"
+    },
+    {
+      "path": "vital-gym-pro-1110-end.jpg",
+      "bytes": 9069,
+      "sha256": "1e99417762d989f098773f714beb0d8929052cf10eeda5535348850cb5300e28"
+    },
+    {
+      "path": "vital-gym-pro-1110.mp4",
+      "bytes": 90080,
+      "sha256": "c243094c26896e53b024cb11c1bedd67e6960ff73354f1189afc73081e7382da"
+    },
+    {
+      "path": "vital-gym-pro-1156.jpg",
+      "bytes": 13599,
+      "sha256": "5632f056ba6dcbeb0565e4f0efa4e683c30b9993feb5a72c98614945fb362cb2"
+    },
+    {
+      "path": "vital-gym-pro-1156-end.jpg",
+      "bytes": 13612,
+      "sha256": "fccd011ab2f7511539f6f6606ffb8bb34883997a20873a90f1612c993a3da3aa"
+    },
+    {
+      "path": "vital-gym-pro-1156.mp4",
+      "bytes": 17960,
+      "sha256": "1c5e8e43f32ca04380e0033df70b9017386fce8e5bace8d717dc64cf40d574f3"
+    },
+    {
+      "path": "vital-gym-pro-1160.jpg",
+      "bytes": 12248,
+      "sha256": "42240b4bc1a1e6308db06d6bd7d4560a67a5c6829b2b2f22817dcf78aba7a311"
+    },
+    {
+      "path": "vital-gym-pro-1160-end.jpg",
+      "bytes": 12156,
+      "sha256": "386dadccee07698f4c3de42890155487807a7c4fdc4876f2d8f1e64a33c43fbc"
+    },
+    {
+      "path": "vital-gym-pro-1160.mp4",
+      "bytes": 133163,
+      "sha256": "185388bb81a546d7a86487ce55a1b74dc3ba2c6525fcccc0781f8fc0b6299c47"
+    },
+    {
+      "path": "vital-gym-pro-1161.jpg",
+      "bytes": 9891,
+      "sha256": "6b8e8a6148f6ec54c71ddafad83010e77f31038239d6f0421a7a3963f441c6b8"
+    },
+    {
+      "path": "vital-gym-pro-1161-end.jpg",
+      "bytes": 9984,
+      "sha256": "f979989e68f65cce8c5ab639a7d5aa04fd47a7107970fcce610f50bee68fa816"
+    },
+    {
+      "path": "vital-gym-pro-1161.mp4",
+      "bytes": 144880,
+      "sha256": "5c3739a208783201d772dd4912be1822082b4e3c2eb770081a04f735a840c8e2"
+    },
+    {
+      "path": "vital-gym-pro-1163.jpg",
+      "bytes": 9209,
+      "sha256": "75d39fad35fc6ef7492087e69ffd819420edf031c8cd5c5ef3a0185ff3c9b36b"
+    },
+    {
+      "path": "vital-gym-pro-1163-end.jpg",
+      "bytes": 9390,
+      "sha256": "b4e9b3939f6bcbd1f24a51093fbda0645b7f00e9b5ee88f46745a129636f0db3"
+    },
+    {
+      "path": "vital-gym-pro-1163.mp4",
+      "bytes": 56117,
+      "sha256": "e29153963b97b3f9dd48986a05e41fb14547bafff25552126b663a657d590050"
+    },
+    {
+      "path": "vital-gym-pro-1167.jpg",
+      "bytes": 8943,
+      "sha256": "07b2b4bca9dd146af57870044af0b8c4940a2e5068b677eb8e9f50f57f07f8ae"
+    },
+    {
+      "path": "vital-gym-pro-1167-end.jpg",
+      "bytes": 7618,
+      "sha256": "579708062cb6b9da7870796c9af06ee84b5f7f4964099378b59937e143dc94c3"
+    },
+    {
+      "path": "vital-gym-pro-1167.mp4",
+      "bytes": 106774,
+      "sha256": "7946f0056d5626f62b59ef905e577ad6b92a36c46ff99468b78224d94f4b01c2"
+    },
+    {
+      "path": "vital-gym-pro-1168.jpg",
+      "bytes": 9623,
+      "sha256": "5591981c5839e00c5fe028d2be1df24fb98cd9eb670b68c244d8924e8e43cf15"
+    },
+    {
+      "path": "vital-gym-pro-1168-end.jpg",
+      "bytes": 9690,
+      "sha256": "dfb0cad9525acaf63c9c50eb8c8aa22adefcd3c42a712c7270b4a24091cf04e6"
+    },
+    {
+      "path": "vital-gym-pro-1168.mp4",
+      "bytes": 182284,
+      "sha256": "916d92eb9a611ba5d4f46feee340a84151f2775cae4de01509a81f888c0ce714"
+    },
+    {
+      "path": "vital-gym-pro-1171.jpg",
+      "bytes": 10121,
+      "sha256": "d7212961c91370c4ea6d067f3210bb1d1e5475227d8d2b5b10480b2a146b6118"
+    },
+    {
+      "path": "vital-gym-pro-1171-end.jpg",
+      "bytes": 10013,
+      "sha256": "8100ee01c6b2f99be126339ff64b739c02fcf50332699be0a82c9d520aa8d0e7"
+    },
+    {
+      "path": "vital-gym-pro-1171.mp4",
+      "bytes": 46930,
+      "sha256": "32ff802887760b7b326aad2ed20858295aff3e4b647baa2c56748d6ab499a165"
+    },
+    {
+      "path": "vital-gym-pro-1180.jpg",
+      "bytes": 10000,
+      "sha256": "a00a8a0bed90aabae14c8faca033e499be7ac7a407d37722cd358604ce1ceb80"
+    },
+    {
+      "path": "vital-gym-pro-1180-end.jpg",
+      "bytes": 9980,
+      "sha256": "047d6c5486275e729166f33fbe9ad6d3b1d2a8ed9183a3624351b01caa8e6820"
+    },
+    {
+      "path": "vital-gym-pro-1180.mp4",
+      "bytes": 161547,
+      "sha256": "6ae4935998caea355c38882d5297aa402b1ed0443b08d9c9a50881a667db530d"
+    },
+    {
+      "path": "vital-gym-pro-1181.jpg",
+      "bytes": 10386,
+      "sha256": "f9e5b2524f9dd63e986b25545896b10b95456fac756e44bcd3d92df79c862a62"
+    },
+    {
+      "path": "vital-gym-pro-1181-end.jpg",
+      "bytes": 10262,
+      "sha256": "c12f5f7d037fcdf23fb69c125e552a814ab7fd96e4ec259d0fe91b3b34ee1fe7"
+    },
+    {
+      "path": "vital-gym-pro-1181.mp4",
+      "bytes": 19588,
+      "sha256": "fc21f939f1ace6a3cd603c0a2e1cb54f32ce904df0ec1486b37d89c7c99546d3"
+    },
+    {
+      "path": "vital-gym-pro-1182.jpg",
+      "bytes": 9453,
+      "sha256": "c0b150b1399f003943a253af91c08cda3b7e45034123c21e741ca243d877f8d1"
+    },
+    {
+      "path": "vital-gym-pro-1182-end.jpg",
+      "bytes": 9516,
+      "sha256": "1ecca1a8c5acf4fb599ec49457ab3fe0924df3b17e4a9a05f0336b33383f7390"
+    },
+    {
+      "path": "vital-gym-pro-1182.mp4",
+      "bytes": 67521,
+      "sha256": "2e06621a5f9336e2846d3d66eee1cfe278698a36a682c85d8cfe952f02d29797"
+    },
+    {
+      "path": "vital-gym-pro-1183.jpg",
+      "bytes": 9528,
+      "sha256": "3e29c1cbcd7c57e62e2cdfeea1a9f8e66970fdb90c7d3015e7a95a9a41759d9c"
+    },
+    {
+      "path": "vital-gym-pro-1183-end.jpg",
+      "bytes": 9389,
+      "sha256": "8af9921374ec5421e1321c562c3b040fed531cf2a9ca9d2cc572e0d0cb113627"
+    },
+    {
+      "path": "vital-gym-pro-1183.mp4",
+      "bytes": 44114,
+      "sha256": "680ba338231e75295f9ba5e476a00821a5107bede7d25f49f28d8225b5a00fc1"
+    },
+    {
+      "path": "vital-gym-pro-1189.jpg",
+      "bytes": 9466,
+      "sha256": "7a4e1b405d7e4c8802a5c233c06424cc61224cac760d00316d5a659af21ef8ca"
+    },
+    {
+      "path": "vital-gym-pro-1189-end.jpg",
+      "bytes": 7828,
+      "sha256": "6ab5bd832f59e673fac8a54be6ab06c450f9da27935f08a193c7235b1f7ec4a5"
+    },
+    {
+      "path": "vital-gym-pro-1189.mp4",
+      "bytes": 96171,
+      "sha256": "73ef6a61298895e0bb5ff6bb907a4e1f0f9e77147fc909fe58e2a0cd8efe3a59"
+    },
+    {
+      "path": "vital-gym-pro-1194.jpg",
+      "bytes": 9687,
+      "sha256": "18621019d172b9477a9368c2c695fdd3f149a1a1b3a4d73569bff448b754141b"
+    },
+    {
+      "path": "vital-gym-pro-1194-end.jpg",
+      "bytes": 9518,
+      "sha256": "1dd9dd18e4902917b879084d4088afbd4c90ae70d1939c634f0e927b0fe28a59"
+    },
+    {
+      "path": "vital-gym-pro-1194.mp4",
+      "bytes": 116283,
+      "sha256": "b0a73be9b0b66942349346cac7af53a79205a71fe850a24d8909e80ee53199fa"
+    },
+    {
+      "path": "vital-gym-pro-1198.jpg",
+      "bytes": 9292,
+      "sha256": "484e690f000b1239e820766dd9daf74b0bbadb4b1bd6edc3ddeeaf1de7579f9c"
+    },
+    {
+      "path": "vital-gym-pro-1198-end.jpg",
+      "bytes": 9621,
+      "sha256": "1eb88e0d654addeb4e34001567e3150a91da363eb490f908f5fd14a299a64a80"
+    },
+    {
+      "path": "vital-gym-pro-1198.mp4",
+      "bytes": 61511,
+      "sha256": "131814ad27f4d080531f6b2a48656d6f56c89dbf8ba1c62386e6e247feab2d63"
+    },
+    {
+      "path": "vital-gym-pro-1199.jpg",
+      "bytes": 16238,
+      "sha256": "cfe4859e7eea547171a73536c4ccf2ba71c0c44bd7a792e7ae93bf678b7f3afe"
+    },
+    {
+      "path": "vital-gym-pro-1199-end.jpg",
+      "bytes": 16341,
+      "sha256": "5044e74eb2d65f6a0349300ccdcf087c85da8fa770bd2a754e301cc7f56c95ac"
+    },
+    {
+      "path": "vital-gym-pro-1199.mp4",
+      "bytes": 164288,
+      "sha256": "e340cc6e6006a3746e7e851e6f1f3b0c44fff065809ff44c50c6de12c5543e47"
+    },
+    {
+      "path": "vital-gym-pro-1200.jpg",
+      "bytes": 10000,
+      "sha256": "58dbc3960f4150fdefd45afd04a88dc346fe35c415958ae7b00925a6f5500723"
+    },
+    {
+      "path": "vital-gym-pro-1200-end.jpg",
+      "bytes": 10233,
+      "sha256": "24de0c274b81c865b2a2592f28e7e5a09897d3c6fe5c563645503d0ad83b1a9c"
+    },
+    {
+      "path": "vital-gym-pro-1200.mp4",
+      "bytes": 178079,
+      "sha256": "314e3da4da5efe46adfcc493fa4dccc6d006f25114229707ec83b4d9a017895b"
+    },
+    {
+      "path": "vital-gym-pro-1202.jpg",
+      "bytes": 6740,
+      "sha256": "f4399b6d16992922b8e62e8680bcb67fea412ffc0ea69d26e78f54ee36db75e2"
+    },
+    {
+      "path": "vital-gym-pro-1202-end.jpg",
+      "bytes": 6861,
+      "sha256": "60c7917e3f0e4addbc8746c5b3d49973dd98d7251e64956978d970e4494ac3d9"
+    },
+    {
+      "path": "vital-gym-pro-1202.mp4",
+      "bytes": 18399,
+      "sha256": "02061c514184152a29fb367c4a043dfeddb6ea1aed2ad6c44b1889359206c5cc"
+    },
+    {
+      "path": "vital-gym-pro-1204.jpg",
+      "bytes": 14228,
+      "sha256": "0f158d14a808c0b09948327adf5e4273ee593fb485fd5c63083965ea37f88b53"
+    },
+    {
+      "path": "vital-gym-pro-1204-end.jpg",
+      "bytes": 14114,
+      "sha256": "d632685cf9fe63c4d281ff6b6ea063c134eaa209a96ebd50f94ef321f4584121"
+    },
+    {
+      "path": "vital-gym-pro-1204.mp4",
+      "bytes": 106141,
+      "sha256": "0a4c6d82da120e003b3d391290f5e46d5f8ec6f8260e35fda62c0f7044b4bf58"
+    },
+    {
+      "path": "vital-gym-pro-1205.jpg",
+      "bytes": 9204,
+      "sha256": "e71689e167e9ca6c88d3f911c06ea9e2e2aef8dcde9fafa2744674cb92a8fe4b"
+    },
+    {
+      "path": "vital-gym-pro-1205-end.jpg",
+      "bytes": 9156,
+      "sha256": "4a55ec9e538fee67f49bd28ed7479d40543970ac404dc45959e9393bdb44266d"
+    },
+    {
+      "path": "vital-gym-pro-1205.mp4",
+      "bytes": 126867,
+      "sha256": "e8f7a12d16218b89fea5429a6e57a39cec8c1c3c62b5ccb00977a40c98c7b826"
+    },
+    {
+      "path": "vital-gym-pro-1206.jpg",
+      "bytes": 9364,
+      "sha256": "854609ec82144985d144ba64af4d7a5e45efea9aa6f6a0388edade5bab90e9e7"
+    },
+    {
+      "path": "vital-gym-pro-1206-end.jpg",
+      "bytes": 9255,
+      "sha256": "d06231b0bcc75bb26aaca8abee75d32b3fcee490f747eb99e9ab8de989c703a1"
+    },
+    {
+      "path": "vital-gym-pro-1206.mp4",
+      "bytes": 22567,
+      "sha256": "730f43cfcda3ef12e66a165918cd3ccd73025d1e13bc42db8e0120492109f2cf"
+    },
+    {
+      "path": "vital-gym-pro-1207.jpg",
+      "bytes": 9368,
+      "sha256": "9911d208dd953295f6aa200a7dac74ee63def8417dc7f2f64f6c4313d07967e0"
+    },
+    {
+      "path": "vital-gym-pro-1207-end.jpg",
+      "bytes": 9349,
+      "sha256": "9198ebefcbcb143f93832b3f73a2dff9dcf4adb936f7d02c3ad4627ea8f372ec"
+    },
+    {
+      "path": "vital-gym-pro-1207.mp4",
+      "bytes": 31793,
+      "sha256": "e9c838310d788c774752a6cf691d98ad7c539dac528401204e076c2c6afe7af7"
+    },
+    {
+      "path": "vital-gym-pro-1344.jpg",
+      "bytes": 6541,
+      "sha256": "4b5e29520002b013ca01aa020bb18491746e76def67f9a079bfe378b515a63c8"
+    },
+    {
+      "path": "vital-gym-pro-1344-end.jpg",
+      "bytes": 6477,
+      "sha256": "33eeffb3997ee4fb76d192a68710a87c3653a3f444ac160de3c03245fade3f47"
+    },
+    {
+      "path": "vital-gym-pro-1344.mp4",
+      "bytes": 195839,
+      "sha256": "0cced34e6f7147ea6234c6f9fa1738564837d1cb63e06bdb68c6e33d188e8fa9"
+    },
+    {
+      "path": "vital-gym-pro-1393.jpg",
+      "bytes": 6878,
+      "sha256": "ee9107529333bc215844f205513055ed2598c3e78675fb3e76b340cc75eafb29"
+    },
+    {
+      "path": "vital-gym-pro-1393-end.jpg",
+      "bytes": 6863,
+      "sha256": "36e7efdcf41547375f1db64f67c388d747b6f60138b0f945cb8e291560517fed"
+    },
+    {
+      "path": "vital-gym-pro-1393.mp4",
+      "bytes": 98562,
+      "sha256": "b80aeff8e37dd249a2d4a6e2afae740c2fca5c0ca2bc19e44ed46cc836355f10"
+    },
+    {
+      "path": "vital-gym-pro-1415.jpg",
+      "bytes": 5399,
+      "sha256": "bf7fc3d4ea25744dc400bbb27538efc7585c290752a042a4b0c51b25d3ad85fe"
+    },
+    {
+      "path": "vital-gym-pro-1415-end.jpg",
+      "bytes": 5562,
+      "sha256": "8485bbc790a3553f6118285db39b7dc0bddce79594d62e116756f4825d763c2b"
+    },
+    {
+      "path": "vital-gym-pro-1415.mp4",
+      "bytes": 94378,
+      "sha256": "15212cb9471095cd242cdad620dbf8489d0a8671119d01861a3db9d87c0a0d0b"
+    },
+    {
+      "path": "vital-gym-pro-1421.jpg",
+      "bytes": 8948,
+      "sha256": "7fa5a4b355c474ffb5faeb23967a6443ef44d48dadef8dde82efee7b84d00b4b"
+    },
+    {
+      "path": "vital-gym-pro-1421-end.jpg",
+      "bytes": 8907,
+      "sha256": "deb36150fac4e83c071b850fec4d34f9f4ae3bf7798fe45a5ea1d2adddc0bfb2"
+    },
+    {
+      "path": "vital-gym-pro-1421.mp4",
+      "bytes": 149419,
+      "sha256": "8f270c0a04de5a96dc568926e7de42dc6c606458857950d0e1274ef3652e9b4f"
+    },
+    {
+      "path": "vital-gym-pro-1432.jpg",
+      "bytes": 7423,
+      "sha256": "12e51d20e6059cdc7f19632026349a2205a463db1f74c2301877fcdbad70953d"
+    },
+    {
+      "path": "vital-gym-pro-1432-end.jpg",
+      "bytes": 7461,
+      "sha256": "eae966941a3d60f92013136af61656633f5932887c7b07e014874dffa2f3bd1a"
+    },
+    {
+      "path": "vital-gym-pro-1432.mp4",
+      "bytes": 116288,
+      "sha256": "c4efd75f4ad6cb20e20163fe206d61e296e081c98c1e08e59484cfa1c4c19956"
+    },
+    {
+      "path": "vital-gym-pro-1433.jpg",
+      "bytes": 6146,
+      "sha256": "46e255c6dc44bc209feded42dcf0550ce78d76956c5a5c58b211686579d929c0"
+    },
+    {
+      "path": "vital-gym-pro-1433-end.jpg",
+      "bytes": 6062,
+      "sha256": "0945e63fd6549b806f808f8e8a614232af3a03985d02ac4fca2e0972b581c201"
+    },
+    {
+      "path": "vital-gym-pro-1433.mp4",
+      "bytes": 114526,
+      "sha256": "5fc5ceca0baa8cea08bc9dff076da3f1a5c42cc51aaa569550c8a43acd8e8544"
+    },
+    {
+      "path": "vital-gym-pro-1434.jpg",
+      "bytes": 8063,
+      "sha256": "12a3d9c853fbf74fa4e727aef2b2c567190031b4ccdd11d511c218deae59674f"
+    },
+    {
+      "path": "vital-gym-pro-1434-end.jpg",
+      "bytes": 7873,
+      "sha256": "d8efaa045b988cd971514a33d87bc3bf37555e0fe62eaa03dc1a820e7d8200dd"
+    },
+    {
+      "path": "vital-gym-pro-1434.mp4",
+      "bytes": 127321,
+      "sha256": "d8f413ee47b5ebd0bb7dbc3b1ba9862bd163e4208b3742fa57e2b3763bbb0bcc"
+    },
+    {
+      "path": "vital-gym-pro-1436.jpg",
+      "bytes": 7730,
+      "sha256": "ad536f997a19fdf139a106526ad7b549a729237d45feff27b9ecf8b2ad295932"
+    },
+    {
+      "path": "vital-gym-pro-1436-end.jpg",
+      "bytes": 8049,
+      "sha256": "2db86f013528a29811126e1f458f27f84ae172b8137a0f0fa1cf4f08e6db7387"
+    },
+    {
+      "path": "vital-gym-pro-1436.mp4",
+      "bytes": 122476,
+      "sha256": "9352a94e4125ec3bddc336b2fb5e05a024721e9608d008c93cfb15ba5c27e64a"
+    },
+    {
+      "path": "vital-gym-pro-1129.jpg",
+      "bytes": 9907,
+      "sha256": "59561b23d7fde6046732f1c34c553bf7f0ee894a758a90d86f0754b7a093fa3b"
+    },
+    {
+      "path": "vital-gym-pro-1129-end.jpg",
+      "bytes": 9766,
+      "sha256": "f25c66600f06a1df0154066540386130869c76a8e22ee19f5b7602e7050f2d88"
+    },
+    {
+      "path": "vital-gym-pro-1129.mp4",
+      "bytes": 44913,
+      "sha256": "bb39cf108f66e999e33fdcfb038572126558e81e3f8395b27e1de322641400b2"
+    },
+    {
+      "path": "vital-gym-pro-1203.jpg",
+      "bytes": 11124,
+      "sha256": "513d8cde815ade34b68b4da42a0cff70f343033ec072b2f06285ee6d5c476435"
+    },
+    {
+      "path": "vital-gym-pro-1203-end.jpg",
+      "bytes": 11198,
+      "sha256": "c2a15c40894b13a34b09d62b7fb35583e9d8f20dd75e4cf22155d68bc573adaa"
+    },
+    {
+      "path": "vital-gym-pro-1203.mp4",
+      "bytes": 143200,
+      "sha256": "7eede31b86447e290aef47fb1c769bf60d241b509bbbb2689a942fcfac9c47b7"
+    },
+    {
+      "path": "vital-gym-pro-0113.jpg",
+      "bytes": 6824,
+      "sha256": "e89c993e8a5ff5fe1daf261acbda4f9b03af28f1dfb24155f1e7b22e2033c248"
+    },
+    {
+      "path": "vital-gym-pro-0113-end.jpg",
+      "bytes": 7033,
+      "sha256": "cc2df5756d800f37c0e57d16ff07470dde719a749733564d5fd8824e9a455000"
+    },
+    {
+      "path": "vital-gym-pro-0113.mp4",
+      "bytes": 43464,
+      "sha256": "e0fb29ca92048fff5317d011b96edf2d099cc36a5afa97d19b4f63597695061d"
+    },
+    {
+      "path": "vital-gym-pro-0112.jpg",
+      "bytes": 6627,
+      "sha256": "83ab1bbacb41d4cbca00ee7c7a7d08b9921b0e292a264705303ce829e5a1967f"
+    },
+    {
+      "path": "vital-gym-pro-0112-end.jpg",
+      "bytes": 6902,
+      "sha256": "a12c976871c309b1be42c58d182e40fbb10f5c5107c6914d14002826f4dc5cf1"
+    },
+    {
+      "path": "vital-gym-pro-0112.mp4",
+      "bytes": 84732,
+      "sha256": "ae84bc5cde716d000924b7e0818ed1a8928a9f43375714b56ad77b8432f56e51"
+    },
+    {
+      "path": "vital-gym-pro-0168.jpg",
+      "bytes": 6836,
+      "sha256": "0a8d95fd3eb4c7591dafc34d6fe17b7aab8031b8493dc47df2fcaba528d51add"
+    },
+    {
+      "path": "vital-gym-pro-0168-end.jpg",
+      "bytes": 6920,
+      "sha256": "6e13cf4d49fd0ab2c034d4f1a1ac1aaec0623f9ae5d22c8b9f46837ca930753a"
+    },
+    {
+      "path": "vital-gym-pro-0168.mp4",
+      "bytes": 20880,
+      "sha256": "3401ff668eeb0785469fc60edec0bc66e5565c9abb38399ab8294aae01bc550c"
+    },
+    {
+      "path": "vital-gym-pro-1243.jpg",
+      "bytes": 10710,
+      "sha256": "3be67b58932ef62ffe3213cf5c9bb0c3f76440c429041a7386faf10e6e6f69fe"
+    },
+    {
+      "path": "vital-gym-pro-1243-end.jpg",
+      "bytes": 10609,
+      "sha256": "0b5198818ff1c15587d335d28e4fc6dbbcaa6bb76ebd3111cd21c9861c7f709b"
+    },
+    {
+      "path": "vital-gym-pro-1243.mp4",
+      "bytes": 52415,
+      "sha256": "cab8952520f500c6ebe3ccfa306831b366cd3f49baee5cb428a7ac4e5b557c78"
+    },
+    {
+      "path": "vital-gym-pro-1272.jpg",
+      "bytes": 8127,
+      "sha256": "c9ec505052cb442f98cf7c147f0544b6e3d5e3bff227f231445cb135830dd26e"
+    },
+    {
+      "path": "vital-gym-pro-1272-end.jpg",
+      "bytes": 8221,
+      "sha256": "dc879f4dc623f4c12397e0c6a76127122e3cb3d20d32590ff24e4ca582f21737"
+    },
+    {
+      "path": "vital-gym-pro-1272.mp4",
+      "bytes": 29620,
+      "sha256": "7d0a2cdf800c37ca8803ca631db235667d95b27e06a21cb05e0076de494efe68"
+    },
+    {
+      "path": "vital-gym-pro-1278.jpg",
+      "bytes": 7611,
+      "sha256": "eff4f290b27515dabfc228f6601bf4b4029402a37b6208fca6ea20a76d0dee65"
+    },
+    {
+      "path": "vital-gym-pro-1278-end.jpg",
+      "bytes": 7876,
+      "sha256": "7d2aea388485078f8c54ef34e712f612913224f13ad398ffba866f58249f7c56"
+    },
+    {
+      "path": "vital-gym-pro-1278.mp4",
+      "bytes": 118777,
+      "sha256": "728a04ab44d749a479f0b6565d05460b703669d3493f0f122a6696d75d04d6aa"
+    },
+    {
+      "path": "vital-gym-pro-1288.jpg",
+      "bytes": 8441,
+      "sha256": "61edabaa3f22c244f62fb8deffb5d3ed4fe8e40c764c782e0897c1f1109b370c"
+    },
+    {
+      "path": "vital-gym-pro-1288-end.jpg",
+      "bytes": 8545,
+      "sha256": "7d663a0ff1518c3d71dfc3913f9fa69561377a80ee448bbc1b0c45a6d77be4b2"
+    },
+    {
+      "path": "vital-gym-pro-1288.mp4",
+      "bytes": 84559,
+      "sha256": "858184d57fbde9cbf85eca4537b941f14f7ffdaa2fe1e8f1a78d8f5d1d92cb91"
+    },
+    {
+      "path": "vital-gym-pro-1320.jpg",
+      "bytes": 10133,
+      "sha256": "3813fcf505482df39660c917f1c1f22c403b890acfd086f77169b2c3dca5ac2f"
+    },
+    {
+      "path": "vital-gym-pro-1320-end.jpg",
+      "bytes": 10290,
+      "sha256": "d6f97cea7049920d2fb51ac34d4eeace79955937637b24be1c485647a9f1be7e"
+    },
+    {
+      "path": "vital-gym-pro-1320.mp4",
+      "bytes": 49796,
+      "sha256": "91bfa68b79efe1979e33f521537901ae25d69186e14fca6094aa08debe8ac0bc"
+    },
+    {
+      "path": "vital-gym-pro-1321.jpg",
+      "bytes": 11244,
+      "sha256": "1261139b5d65ccb081e73e6f3125ddcc47127340f7c2fe430d7cbff26d9c3fef"
+    },
+    {
+      "path": "vital-gym-pro-1321-end.jpg",
+      "bytes": 10834,
+      "sha256": "69c1da3a0d01bb3b631711cc1ea408b6696434622648e8aaaa1effaa5a5d8188"
+    },
+    {
+      "path": "vital-gym-pro-1321.mp4",
+      "bytes": 129303,
+      "sha256": "674c7b770b8e751a23467ca1f8bc6821139680756de3c39643f4c16e8a7c0e23"
+    },
+    {
+      "path": "vital-gym-pro-1325.jpg",
+      "bytes": 9350,
+      "sha256": "7b29bc0c973f0661cacbd16f45cc55c2f3778e9f9481e5831815e68b6368aeaa"
+    },
+    {
+      "path": "vital-gym-pro-1325-end.jpg",
+      "bytes": 9398,
+      "sha256": "b0a919d93b644c9f8371a68ddf7f9278b9547ade5aa01e8c23ca99cb07685d7f"
+    },
+    {
+      "path": "vital-gym-pro-1325.mp4",
+      "bytes": 52644,
+      "sha256": "37805c67eb0858843754c50ac3a426140b550b8cc3422442f7f38b648da29ff6"
+    },
+    {
+      "path": "vital-gym-pro-1399.jpg",
+      "bytes": 10929,
+      "sha256": "eb60975bf5321fefb6c3db287ec43789a9db39bd41f2ef1477becbf366f54556"
+    },
+    {
+      "path": "vital-gym-pro-1399-end.jpg",
+      "bytes": 10953,
+      "sha256": "3bbf7bf9f767c0fdda7ecee65d36a39c9e6f1a876611fbbbd43288f5f1a4e394"
+    },
+    {
+      "path": "vital-gym-pro-1399.mp4",
+      "bytes": 63561,
+      "sha256": "f25456e017604520319564892584e4031e81d075c7b63c50ca869cf3b593eff5"
+    },
+    {
+      "path": "vital-gym-pro-1410.jpg",
+      "bytes": 8951,
+      "sha256": "70631c7c58693326ad1a8e4146c3acbecbcd480c85a9f88d8e4ee1a0c816ad2a"
+    },
+    {
+      "path": "vital-gym-pro-1410-end.jpg",
+      "bytes": 9086,
+      "sha256": "ad364c702181a95179bc2b0c6d6b4658b62e612c294795d52c11ca8d4a3c3b72"
+    },
+    {
+      "path": "vital-gym-pro-1410.mp4",
+      "bytes": 24632,
+      "sha256": "f88c14ab43f4ed9c63304972d4abec370a4b8bb6f11c4c7357e29e1285384a47"
+    },
+    {
+      "path": "vital-gym-pro-1496.jpg",
+      "bytes": 8198,
+      "sha256": "bfc794a777bab2648e41162cc2aa014583ef0551cdb9d3e386937f538738c6a1"
+    },
+    {
+      "path": "vital-gym-pro-1496-end.jpg",
+      "bytes": 8345,
+      "sha256": "d30d4d01b3f44d5d6ab48af813aa951a8810886ca796515767062fbcc427ae7a"
+    },
+    {
+      "path": "vital-gym-pro-1496.mp4",
+      "bytes": 103916,
+      "sha256": "a27bfb8d5653bfb72b705a1c29efe1cfe1c4dd9dcbb66e9b94f9a06bccf16309"
+    },
+    {
+      "path": "vital-gym-pro-1607.jpg",
+      "bytes": 4883,
+      "sha256": "f2ac288e89ef426fcdc89f405d2f00ebe0d8fdaec76da69a6faa6a3d9f531161"
+    },
+    {
+      "path": "vital-gym-pro-1607-end.jpg",
+      "bytes": 5010,
+      "sha256": "9b3ac1c6ffd7869d7675db8c377596ba67a858f3cb073b5d9a722f1ee64f4fd3"
+    },
+    {
+      "path": "vital-gym-pro-1607.mp4",
+      "bytes": 28914,
+      "sha256": "e01b1f502851da8ec4bfa1bd8b2ebb115f4bf2ec75d0209e23cffce8ed3f29e7"
+    },
+    {
+      "path": "vital-gym-pro-1715.jpg",
+      "bytes": 9057,
+      "sha256": "b54f248f8b074f7c23299a2965cc93217ce8031ca6545842e45d28018c4d3eb4"
+    },
+    {
+      "path": "vital-gym-pro-1715-end.jpg",
+      "bytes": 9036,
+      "sha256": "af2ed8e1e23d880518219f9bd45159f97f199fc65a1154786757953d72905128"
+    },
+    {
+      "path": "vital-gym-pro-1715.mp4",
+      "bytes": 87619,
+      "sha256": "6dfefa3b34b07da5002f898ae5b9a901f83a88add4f796bb93bc42f9a989c402"
+    },
+    {
+      "path": "vital-gym-pro-1738.jpg",
+      "bytes": 11770,
+      "sha256": "83b697f22d099283227111dcfb59ab77a6fd6fb1578c5091b284ee14e441b4e4"
+    },
+    {
+      "path": "vital-gym-pro-1738-end.jpg",
+      "bytes": 11943,
+      "sha256": "a51e156cd22e10ff31256b3f1aa15bc976d6989e3f7588fb08bcb75f0cb31a8d"
+    },
+    {
+      "path": "vital-gym-pro-1738.mp4",
+      "bytes": 140744,
+      "sha256": "4ab33083ef686de49a1e3e24abff48bfcdf4aacfc0175ee007f95fe3ab3e63ab"
+    },
+    {
+      "path": "vital-gym-pro-1749.jpg",
+      "bytes": 8212,
+      "sha256": "22dad92cf0f6294449a1ea7f35cc9162275112525d12c4a28ccb2a23b1be6742"
+    },
+    {
+      "path": "vital-gym-pro-1749-end.jpg",
+      "bytes": 8109,
+      "sha256": "3039408b0fe367ac509fbc48c85d948fc85727fa15581946a1155cde712c3549"
+    },
+    {
+      "path": "vital-gym-pro-1749.mp4",
+      "bytes": 42205,
+      "sha256": "e89ac587607085edf6c5b80a12022d848e756a72ee11bc3642db0b797c4bff8f"
+    },
+    {
+      "path": "vital-gym-pro-1117.jpg",
+      "bytes": 10228,
+      "sha256": "edde22c511b8b729cb7bb1f073481ba8e3b3f166c58877863924db02639769fd"
+    },
+    {
+      "path": "vital-gym-pro-1117-end.jpg",
+      "bytes": 10654,
+      "sha256": "44d023164b8283922a169dfdf0b2c0a3170ed13bf171372e003769e5de8abd61"
+    },
+    {
+      "path": "vital-gym-pro-1117.mp4",
+      "bytes": 187296,
+      "sha256": "308ee6d73aebe056195a00ef817626be0b6e9eb9cfa1b1dcac048e949a41ff07"
+    },
+    {
+      "path": "vital-gym-pro-1157.jpg",
+      "bytes": 10102,
+      "sha256": "7fe6e6ea2f127bf63a471a36ffa562a8f3211db93e770262ad2bb42432ca3abe"
+    },
+    {
+      "path": "vital-gym-pro-1157-end.jpg",
+      "bytes": 10267,
+      "sha256": "df36594c8f100239cbf32a8b5d6c72282c6e435222e41cc30d900da397a863ce"
+    },
+    {
+      "path": "vital-gym-pro-1157.mp4",
+      "bytes": 70936,
+      "sha256": "58fdfba733100cb13849c8be67edaa98ff5aa722cc96eb440524cab9fc4d9dac"
+    },
+    {
+      "path": "vital-gym-pro-1400.jpg",
+      "bytes": 6415,
+      "sha256": "b32f9631d406d90c65a825fdfbe6809b7b9f72dbcf10d3ecf53ce5a3d1f6e532"
+    },
+    {
+      "path": "vital-gym-pro-1400-end.jpg",
+      "bytes": 6330,
+      "sha256": "d74da711738ff2bfa4e1a58c12b5b4021b0246c5ec215aac7ff3a379392e6ba7"
+    },
+    {
+      "path": "vital-gym-pro-1400.mp4",
+      "bytes": 169837,
+      "sha256": "c9f844b201e34503dc2799bfd3d1645899bfd6740ecd7f6f2c9807e448593f6e"
+    },
+    {
+      "path": "vital-gym-pro-0226.jpg",
+      "bytes": 8762,
+      "sha256": "eca529ad64776571dae92935475379efac73bfc1717a8a54fb083136fc5b9e51"
+    },
+    {
+      "path": "vital-gym-pro-0226-end.jpg",
+      "bytes": 8805,
+      "sha256": "4bf163d6164bd9649fbdf80d085d402d2849054b2adb39e79003a6dc710a5dd8"
+    },
+    {
+      "path": "vital-gym-pro-0226.mp4",
+      "bytes": 45839,
+      "sha256": "ecf2ab5804502bf2171892a8018871cffc1d48cc8443561153934b21abba3bd6"
+    },
+    {
+      "path": "vital-gym-pro-0234.jpg",
+      "bytes": 9652,
+      "sha256": "c99b12bfc4b25b2945273c817819360507b142953a9e934c551df3ae8f2605b8"
+    },
+    {
+      "path": "vital-gym-pro-0234-end.jpg",
+      "bytes": 9884,
+      "sha256": "3df8e043840e8171258c7a9b263d5d179fb7ba249f0417e1dfd6347b18fa839b"
+    },
+    {
+      "path": "vital-gym-pro-0234.mp4",
+      "bytes": 56185,
+      "sha256": "049e7854fa37b7c7ca2b12e2bedd936b6435e000374ef78a4e19900dea868902"
+    },
+    {
+      "path": "vital-gym-pro-0291.jpg",
+      "bytes": 8789,
+      "sha256": "14efc295388d92d6e2dc4fd470ddcffbe617d0c12dfefe2661efd00f0322461e"
+    },
+    {
+      "path": "vital-gym-pro-0291-end.jpg",
+      "bytes": 8899,
+      "sha256": "a19d1d7962f93a62e50fb758b35d5c92789419b54ee790f8aef25460bd7b7587"
+    },
+    {
+      "path": "vital-gym-pro-0291.mp4",
+      "bytes": 51391,
+      "sha256": "96541f1b1379fc9d620e490979d81b2374ca5d16385acd97fef243cab8bfa842"
+    },
+    {
+      "path": "vital-gym-pro-1731.jpg",
+      "bytes": 6903,
+      "sha256": "f7f09cf6e18c8bf7619fa3503aa40ed864139585cc7e2366c4791b1ce4e178db"
+    },
+    {
+      "path": "vital-gym-pro-1731-end.jpg",
+      "bytes": 7210,
+      "sha256": "d48b045e261f44608c340808f1c6fc478feee9ccc8aaad8b75e08afe77472e8f"
+    },
+    {
+      "path": "vital-gym-pro-1731.mp4",
+      "bytes": 139362,
+      "sha256": "c5413b1670c5083b2b5ca9bcc6b8ce8317dcd8db542cddd7b4c6d0c7c792910d"
+    },
+    {
+      "path": "vital-gym-pro-1134.jpg",
+      "bytes": 9677,
+      "sha256": "389ff84a3b1dd135bb6b8a51d76cdc9c3a6be1c670894cc97210de8abdef313e"
+    },
+    {
+      "path": "vital-gym-pro-1134-end.jpg",
+      "bytes": 9318,
+      "sha256": "24d109a839409755042668506bdb12817adb528d697879b2ce84327d7e48fb8a"
+    },
+    {
+      "path": "vital-gym-pro-1134.mp4",
+      "bytes": 139797,
+      "sha256": "5c4ab2b85ee5b4cd277d147893a902956c3af186a09f9d498476249cdd05ed1f"
+    },
+    {
+      "path": "vital-gym-pro-1143.jpg",
+      "bytes": 8407,
+      "sha256": "815c4f25a445192ddcc3e866ae39923438fcb24a75d6686c6f4da6d2369df836"
+    },
+    {
+      "path": "vital-gym-pro-1143-end.jpg",
+      "bytes": 9677,
+      "sha256": "f19b6e05927d76fecf5f16a0984bd3d283ba03743fdf6e5237bf138a168fe137"
+    },
+    {
+      "path": "vital-gym-pro-1143.mp4",
+      "bytes": 116007,
+      "sha256": "3e6ff8722bcd20b0a7b0847b5c499e3085a2e4750922864aa631be433835487f"
+    },
+    {
+      "path": "vital-gym-pro-1154.jpg",
+      "bytes": 9397,
+      "sha256": "acae9285c7fdf961f7b3430867ca43190d3fe26a8baebd9108251e1e97de5ebb"
+    },
+    {
+      "path": "vital-gym-pro-1154-end.jpg",
+      "bytes": 8839,
+      "sha256": "d0cb17c8dc0fd26934bd0224830fd7cfdb68bf7cff9d1ebf344ab58f361d72f3"
+    },
+    {
+      "path": "vital-gym-pro-1154.mp4",
+      "bytes": 271577,
+      "sha256": "6821cb45fab0ca4c3ba108cc72725fcfc7a465cf058e9f0d84c8958f96150141"
+    },
+    {
+      "path": "vital-gym-pro-1159.jpg",
+      "bytes": 9141,
+      "sha256": "ec9e1f3bb7d8951f6c5a8dcc1e29eea34fdacf7ac1422e9bb8a17f21bb8d6e09"
+    },
+    {
+      "path": "vital-gym-pro-1159-end.jpg",
+      "bytes": 9087,
+      "sha256": "85cba79fc271418e2b13f16f9fcd3c2cf9b1add922e69ad758b79d89857f29c6"
+    },
+    {
+      "path": "vital-gym-pro-1159.mp4",
+      "bytes": 218330,
+      "sha256": "72e87e94304e7c5f9291c1738b61c89db3d9db46a8d222e212a67cbdfd641679"
+    },
+    {
+      "path": "vital-gym-pro-1631.jpg",
+      "bytes": 8470,
+      "sha256": "e0cbceca4882867be5567567916885438b23365ceccf56ff32f8b812fbf8dea6"
+    },
+    {
+      "path": "vital-gym-pro-1631-end.jpg",
+      "bytes": 8694,
+      "sha256": "14cb5ccb9e2d196cb9664eb3336e1b9ca704ee53264830d75b4ef7d80b819224"
+    },
+    {
+      "path": "vital-gym-pro-1631.mp4",
+      "bytes": 71036,
+      "sha256": "d0f9062ab12af24fad4d7a3ffee3f10cd2784934fc68ffc541f399f1f84d027f"
+    },
+    {
+      "path": "vital-gym-pro-0215.jpg",
+      "bytes": 8862,
+      "sha256": "668cfa3906ff0ebbc9816a5a77d9428aeba2fecc5b1a1153f9804c22778fb332"
+    },
+    {
+      "path": "vital-gym-pro-0215-end.jpg",
+      "bytes": 7716,
+      "sha256": "4f11183e8c172693b18d5d25977710c2f14e5b426553b430285efdf883174c77"
+    },
+    {
+      "path": "vital-gym-pro-0215.mp4",
+      "bytes": 236772,
+      "sha256": "7fc9f42b8ec053e44cf6585cac89b948b657aa02b9133a79fd687a3b4cccf29d"
+    },
+    {
+      "path": "vital-gym-pro-1269.jpg",
+      "bytes": 11393,
+      "sha256": "5cb189ea9230db6fccce43a0caeaad0410de7607597c0635a0c81ca2c0e66fa6"
+    },
+    {
+      "path": "vital-gym-pro-1269-end.jpg",
+      "bytes": 11445,
+      "sha256": "040a94a1795e3a378c067f0ba245abe7061348015ef5e699cbdea3b9e6e9a9c1"
+    },
+    {
+      "path": "vital-gym-pro-1269.mp4",
+      "bytes": 100914,
+      "sha256": "a55b47b7f637e34dcb12851214099d08badee04eff4d8e5c9304ddd90774cf63"
+    },
+    {
+      "path": "vital-gym-pro-1296.jpg",
+      "bytes": 8786,
+      "sha256": "e8fe8c152d4d56ef04fd485c37a043b358faa825f737b48f833032619db56e83"
+    },
+    {
+      "path": "vital-gym-pro-1296-end.jpg",
+      "bytes": 8602,
+      "sha256": "079d9307af3cfa4d70688979de9ab8297ad99689c3a36e3edb0dd4ca9f95c38c"
+    },
+    {
+      "path": "vital-gym-pro-1296.mp4",
+      "bytes": 35302,
+      "sha256": "e50f34718ce00b2dbe6019146caf67c96dcf0d78c0ae81e01a77b9ac5ad76ddc"
+    },
+    {
+      "path": "vital-gym-pro-1327.jpg",
+      "bytes": 15217,
+      "sha256": "37c2debc161a6ae4fed41e8c5ef1293de24d176dbeac82db303beb42f8e2c993"
+    },
+    {
+      "path": "vital-gym-pro-1327-end.jpg",
+      "bytes": 15322,
+      "sha256": "80d60e0621040d8e0e34f380253d0cccdd4accd4b86694c3162cbcaf29fc3c3c"
+    },
+    {
+      "path": "vital-gym-pro-1327.mp4",
+      "bytes": 95442,
+      "sha256": "397015dba69ffadf3fb004d8e6788ed2ef8082d34caa5d9af2c32273df8d3e77"
+    },
+    {
+      "path": "vital-gym-pro-1369.jpg",
+      "bytes": 7129,
+      "sha256": "cd9231f81c6b36e1a3d796f2386aa8374f45e362d4997fec3fd3a68a44acdbfb"
+    },
+    {
+      "path": "vital-gym-pro-1369-end.jpg",
+      "bytes": 7214,
+      "sha256": "2edd2d42c73f5b11c8d59c3c70a6e75927fa04cf3cdd0eeb775746aa5dd37d6f"
+    },
+    {
+      "path": "vital-gym-pro-1369.mp4",
+      "bytes": 75518,
+      "sha256": "676b32dba595b5568c0b0050220a6de035d3b4cf30a2c56d55b6b32463b88fc5"
+    },
+    {
+      "path": "vital-gym-pro-1517.jpg",
+      "bytes": 7896,
+      "sha256": "0a105d881f929373ed830aae1839f46f19375bb63a9107ffd93c19cea808ebe7"
+    },
+    {
+      "path": "vital-gym-pro-1517-end.jpg",
+      "bytes": 8940,
+      "sha256": "df852470805c767a7278e59cd3914a67158fb2d8674c74e2a2e4da3448f8cd57"
+    },
+    {
+      "path": "vital-gym-pro-1517.mp4",
+      "bytes": 229325,
+      "sha256": "a3c3ddb79af47f22627e30bb48ca05097e2a63507e10b13c49f4ea7d5abbbde6"
+    },
+    {
+      "path": "vital-gym-pro-1543.jpg",
+      "bytes": 7560,
+      "sha256": "c538715793a12c31c66bd0a747ddde5edf83eeadaa62c5a248912f877e9f9e64"
+    },
+    {
+      "path": "vital-gym-pro-1543-end.jpg",
+      "bytes": 7647,
+      "sha256": "47edbd4b16717225e571932bbdec6b48556f802a672e1a4f931bab3a295e77f7"
+    },
+    {
+      "path": "vital-gym-pro-1543.mp4",
+      "bytes": 47545,
+      "sha256": "35c1eb1ad4c26a445da52de8ca7e2c6d28a4a775096ed1f86d0c3effce298e2e"
+    },
+    {
+      "path": "vital-gym-pro-1540.jpg",
+      "bytes": 4309,
+      "sha256": "c4747b6ceaeb267bbb42d553307c9c1108c8e519828c947ecd55739ecabea2a2"
+    },
+    {
+      "path": "vital-gym-pro-1540-end.jpg",
+      "bytes": 4387,
+      "sha256": "82bcad4d179d9dc3021a00f2d94e8d15127199c36ca7e06192025d3095f7ea42"
+    },
+    {
+      "path": "vital-gym-pro-1540.mp4",
+      "bytes": 99636,
+      "sha256": "97a9a6438e439dedf45c2337006fdbea102d168788a47ef2b261e25aced095c9"
+    },
+    {
+      "path": "vital-gym-pro-1541.jpg",
+      "bytes": 5004,
+      "sha256": "f7101f5bb3bc1a3e1f31cea9e2cfc15091bb2670cffa5a02f2adeed25b292e5f"
+    },
+    {
+      "path": "vital-gym-pro-1541-end.jpg",
+      "bytes": 4815,
+      "sha256": "495dddc3dbb23a5b1e64200f65c7891e90663cceb27a1009d6c0e64dfee00aad"
+    },
+    {
+      "path": "vital-gym-pro-1541.mp4",
+      "bytes": 42570,
+      "sha256": "3c811369d9b1b82f835410c2b5bc8d22ddb9a981492d0d525d36add1d93fa867"
+    },
+    {
+      "path": "vital-gym-pro-1542.jpg",
+      "bytes": 6170,
+      "sha256": "d309f1ac1ba1dc7750011d48973ae9eafa8f8c5b1e8b7894bc7b89ed815bae0f"
+    },
+    {
+      "path": "vital-gym-pro-1542-end.jpg",
+      "bytes": 6224,
+      "sha256": "6228a10e6ebc514b4408631e352f33ec15ead53f401f305a9379a0a316e3fa8e"
+    },
+    {
+      "path": "vital-gym-pro-1542.mp4",
+      "bytes": 47718,
+      "sha256": "01e743e5eab982e68533ce01dc66eac82f97410aca03c3d411dfc7cfc15f07dd"
+    },
+    {
+      "path": "vital-gym-pro-1572.jpg",
+      "bytes": 7318,
+      "sha256": "40ca3534f0e621fb6772eb3e9730e64cc5d9000632edb4fb1449a2c2291bfc84"
+    },
+    {
+      "path": "vital-gym-pro-1572-end.jpg",
+      "bytes": 7296,
+      "sha256": "b2a567b5968d12a81ba7ac59cbfe9418ae66aefb1c6c80060139fa734ff75967"
+    },
+    {
+      "path": "vital-gym-pro-1572.mp4",
+      "bytes": 171168,
+      "sha256": "5e9df214098aa69e19b20af8841ab18f18cd4bffeab51a0bdd6858d54ff6ea5b"
+    },
+    {
+      "path": "vital-gym-pro-1596.jpg",
+      "bytes": 5075,
+      "sha256": "54d6e4477df65faeaffe1f994e5ec6a5b995d24cd2949a2ecde83402d5443cc9"
+    },
+    {
+      "path": "vital-gym-pro-1596-end.jpg",
+      "bytes": 5214,
+      "sha256": "e0d75a3b449fe58def68486e8d336ebd127bed49fcc0ee9a591045a66b927717"
+    },
+    {
+      "path": "vital-gym-pro-1596.mp4",
+      "bytes": 96438,
+      "sha256": "7d51fd77c9c392c5bd83cb1a3ff8148b818ce4ee4f4da575fe35907d2ba27db6"
+    },
+    {
+      "path": "vital-gym-pro-1598.jpg",
+      "bytes": 6445,
+      "sha256": "009a69842235d0fbc938910353d51a7bada2e40b8836f94b31c780145ab30726"
+    },
+    {
+      "path": "vital-gym-pro-1598-end.jpg",
+      "bytes": 6471,
+      "sha256": "8d78de04fb0147be534d022ed956cde213689114604c01920f5426b7625bee89"
+    },
+    {
+      "path": "vital-gym-pro-1598.mp4",
+      "bytes": 199993,
+      "sha256": "013cda758b6fb45f8c36f131df5cc481e7747d96169b2521f403d2616c0744da"
+    },
+    {
+      "path": "vital-gym-pro-1611.jpg",
+      "bytes": 5344,
+      "sha256": "be3c06292ccb8e146a94a3656b5934f878356889d0ded24fa54c1192957ee363"
+    },
+    {
+      "path": "vital-gym-pro-1611-end.jpg",
+      "bytes": 5646,
+      "sha256": "211b995a9733a12ec478b1181dae8190b81c28f43b25ed3e95f48b57fc1144e3"
+    },
+    {
+      "path": "vital-gym-pro-1611.mp4",
+      "bytes": 46045,
+      "sha256": "b6c04e3ba23505c1980eb1a0cc3b5ca0753228ea91b494a36c8a931487a33d54"
+    },
+    {
+      "path": "vital-gym-pro-1627.jpg",
+      "bytes": 4727,
+      "sha256": "e1a7ea6da386e4179ad36ea9407c5662f5c3e86ed3b1d8c286fc25962a841d29"
+    },
+    {
+      "path": "vital-gym-pro-1627-end.jpg",
+      "bytes": 4560,
+      "sha256": "ceb8e77007e618de1bdae7a60cf3a60bc469891056da942d68a3c51ec907a884"
+    },
+    {
+      "path": "vital-gym-pro-1627.mp4",
+      "bytes": 66857,
+      "sha256": "3618e6558dff2908dc97ae3b43a811d91e0b9fa1970074426b77585ce6e16e3b"
+    },
+    {
+      "path": "vital-gym-pro-1633.jpg",
+      "bytes": 8461,
+      "sha256": "54c9ef2bd92322b47e390e80acc4f9414b5d810972abc05c0a5c61bd108d60d3"
+    },
+    {
+      "path": "vital-gym-pro-1633-end.jpg",
+      "bytes": 8513,
+      "sha256": "a980e4afbfcf4d8dbb519d25a5338eaa1748f122cfff4cc4fa86453497b846b5"
+    },
+    {
+      "path": "vital-gym-pro-1633.mp4",
+      "bytes": 79048,
+      "sha256": "e0c239d527164ceb4c9bc2ee2a4106310787fc9476257b7cc5f3b15e4dca541a"
+    },
+    {
+      "path": "vital-gym-pro-1637.jpg",
+      "bytes": 6053,
+      "sha256": "3200b2a03ea7d85aafa8725e5ca85efa87e4780cd4010b4dd242ee32efad4cb4"
+    },
+    {
+      "path": "vital-gym-pro-1637-end.jpg",
+      "bytes": 6164,
+      "sha256": "04c269533b1e57b44fb17e1c050ad3182f8a16fbcc0c1c3d698303f9039385a1"
+    },
+    {
+      "path": "vital-gym-pro-1637.mp4",
+      "bytes": 27558,
+      "sha256": "d5e65887a4aad50489acb585b2cddcadd044d1a8d2d2bdcdd258c323ffc5c401"
+    },
+    {
+      "path": "vital-gym-pro-1701.jpg",
+      "bytes": 20931,
+      "sha256": "f4e3c695e158a9c4456ad29c8553a9711a25ec9dc266f318d1208855dc94b331"
+    },
+    {
+      "path": "vital-gym-pro-1701-end.jpg",
+      "bytes": 21142,
+      "sha256": "b4abdd1439d48a16741f17b14f71155d86e87cc56f4a0a5a160a1509a33849e6"
+    },
+    {
+      "path": "vital-gym-pro-1701.mp4",
+      "bytes": 87985,
+      "sha256": "adf6b721f41f161891d912b23a14362ced080a6cf5de33f7e1c803101d5abf9d"
+    },
+    {
+      "path": "vital-gym-pro-1709.jpg",
+      "bytes": 7241,
+      "sha256": "d743ade82187a23d0d33999681b0a459ba80062c1d649eccc9e3cad145c6d3be"
+    },
+    {
+      "path": "vital-gym-pro-1709-end.jpg",
+      "bytes": 7945,
+      "sha256": "553072743aa13a0799584b8fb30412d35f99ca596153add544e9df53057354c2"
+    },
+    {
+      "path": "vital-gym-pro-1709.mp4",
+      "bytes": 45543,
+      "sha256": "a1e64d0558032fa80c687877e1716406d01203f96b3ccd64d7d0ba851b3562d4"
+    },
+    {
+      "path": "vital-gym-pro-1724.jpg",
+      "bytes": 8552,
+      "sha256": "78e6ab0bfc3806bc2927f3f930ee464044d8a2a3303e2486a1df4ee00eb42e1e"
+    },
+    {
+      "path": "vital-gym-pro-1724-end.jpg",
+      "bytes": 9009,
+      "sha256": "201557b0dc5abc7c70f64d6830d2f30e3f299c0f6a3e783164e44716596c4216"
+    },
+    {
+      "path": "vital-gym-pro-1724.mp4",
+      "bytes": 88263,
+      "sha256": "88c349e528ed070fe66be0fe85f01a99929aa6b33e1196f03388de052b58320d"
     }
   ]
 }
