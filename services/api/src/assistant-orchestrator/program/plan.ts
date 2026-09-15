@@ -6,6 +6,7 @@ import { ProgramValidationError, validateProgramTemplate, type ProgramTemplate }
 const DOSES = ['sets', 'amount', 'rpe', 'restSec'] as const
 const ROOT_KEYS = ['rationale', 'increaseWhen', 'holdWhen', 'reduceWhen', 'sessions', 'exercises', 'durationExercises']
 const EXERCISE_KEYS = ['weekday', 'exerciseRef', 'progressionNote', ...DOSES]
+const NUMERIC_PROGRESSION_NOTE = /\p{N}|недел|(?:^|[^\p{L}])(?:перв|втор|трет|четв[её]рт)/iu
 function record(value: unknown): value is Record<string, unknown> { return !!value && typeof value === 'object' && !Array.isArray(value) }
 function exact(value: Record<string, unknown>, keys: readonly string[]) { return Object.keys(value).length === keys.length && keys.every((key) => key in value) }
 function text(value: unknown, max: number): value is string { return typeof value === 'string' && !!value.trim() && value.length <= max }
@@ -71,6 +72,9 @@ export function readProgramPlan(raw: unknown, brief: ProgramBrief, today: string
     if (!record(row) || !exact(row, EXERCISE_KEYS) || typeof row.weekday !== 'number'
       || !brief.weekdays?.includes(row.weekday)
       || !DOSES.every((key) => Array.isArray(row[key]) && row[key].length === 4)) invalid()
+    // Exact progression is rendered from the dose arrays. A second model-written
+    // timeline can contradict those numbers, so new notes stay qualitative.
+    if (typeof row.progressionNote === 'string' && NUMERIC_PROGRESSION_NOTE.test(row.progressionNote)) invalid('progression_note_must_be_qualitative')
     const catalogEntry = PROGRAM_CATALOG.find((exercise) => exercise.ref === row.exerciseRef)
     if (!catalogEntry || (catalogEntry.inputKind === 'duration') !== duration) invalid('invalid_exercise_input_kind')
     return row
@@ -99,7 +103,7 @@ export function readProgramPlan(raw: unknown, brief: ProgramBrief, today: string
 export function programPlanFromTemplate(template: ProgramTemplate) {
   const rows = template.sessions.flatMap((session) => session.exercises.map((exercise) => ({
     weekday: session.weekday, exerciseRef: exercise.exerciseRef,
-    progressionNote: exercise.progressionNote ?? `Назначение по неделям: ${exercise.weeks.map((week) => `${week.sets} × ${week.reps ?? week.durationSec}`).join(' → ')}${exercise.weeks[0]?.reps === null ? ' секунд' : ' повторений'}. Переход к следующей нагрузке — при сохранении техники и целевого усилия; рабочий вес подбирает тренер.`,
+    progressionNote: exercise.progressionNote ?? 'Закрепляем технику упражнения; повышение нагрузки — при выполнении всех подходов с целевым усилием и сохранением техники под наблюдением тренера.',
     ...Object.fromEntries(DOSES.map((key) => [key, exercise.weeks.map((week) => key === 'amount' ? week.reps ?? week.durationSec : week[key])])),
   })))
   const isDuration = (ref: string) => PROGRAM_CATALOG.some((exercise) => exercise.ref === ref && exercise.inputKind === 'duration')

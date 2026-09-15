@@ -38,6 +38,32 @@ it.each(['', '   ', 'я'.repeat(241), 42, null])('rejects malformed model progre
   expect(() => readProgramPlan(plan, brief, '2026-09-15')).toThrow(expect.objectContaining({ codes: ['invalid_progression_note'] }))
 })
 
+it('rejects the observed model timeline contradiction while leaving actual doses untouched', () => {
+  const { brief, template } = fixture(1)
+  const plan = programPlanFromTemplate(template)
+  Object.assign(plan.exercises[0]!, { amount: [8, 8, 8, 9], progressionNote: 'С третьей недели добавляем один повтор при сохранении техники.' })
+  const before = structuredClone(plan)
+  expect(() => readProgramPlan(plan, brief, '2026-09-15')).toThrow(expect.objectContaining({ codes: ['progression_note_must_be_qualitative'] }))
+  expect(plan).toEqual(before)
+})
+
+it.each(['Добавить 1 повтор.', 'Удерживать по неделям.', 'Первые занятия — освоение.', 'Вторая — закрепление.', 'Четвёртая — рост.'])('rejects numerical or weekly narration in a new model note: %s', (progressionNote) => {
+  const { brief, template } = fixture(1)
+  const plan = programPlanFromTemplate(template)
+  plan.exercises[0]!.progressionNote = progressionNote
+  expect(() => readProgramPlan(plan, brief, '2026-09-15')).toThrow(expect.objectContaining({ codes: ['progression_note_must_be_qualitative'] }))
+})
+
+it('accepts a qualitative reason and preserves the four exact model doses', () => {
+  const { brief, template } = fixture(1)
+  const plan = programPlanFromTemplate(template)
+  const progressionNote = 'Закрепляем технику после перерыва; повышение нагрузки — при целевом усилии.'
+  Object.assign(plan.exercises[0]!, { amount: [8, 8, 8, 9], progressionNote })
+  const result = readProgramPlan(plan, brief, '2026-09-15')
+  expect(result.sessions[0]!.exercises[0]!.progressionNote).toBe(progressionNote)
+  expect(result.sessions[0]!.exercises[0]!.weeks.map((week) => week.reps)).toEqual([8, 8, 8, 9])
+})
+
 it('constrains repetitions and seconds in separate schema rows before model generation', () => {
   const { brief } = fixture(1)
   const history = buildProgramHistoryContext({ clientId: 'client', periodStart: '2026-07-22', periodEnd: '2026-09-15', workouts: [], exercises: [], sets: [] }).context
