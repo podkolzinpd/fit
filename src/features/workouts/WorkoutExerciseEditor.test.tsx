@@ -218,24 +218,25 @@ describe('workout exercise editor rules', () => {
     expect(screen.queryByLabelText('Целевой RPE, подход 1')).not.toBeInTheDocument()
   })
 
-  it('uses the trainer rest preference while keeping a per-exercise override', async () => {
+  it('uses the trainer rest preference without a duplicate per-exercise menu action', async () => {
     const user = userEvent.setup()
     render(<WorkoutExerciseEditor exercises={exercises} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} showRestByDefault />)
 
     expect(screen.getByLabelText('Отдых между подходами, Присед')).toHaveValue(90)
     await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
-    await user.click(screen.getByRole('menuitem', { name: 'Скрыть отдых' }))
-    expect(screen.queryByLabelText('Отдых между подходами, Присед')).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /отдых/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Настройки упражнения' })).toBeInTheDocument()
   })
 
-  it('can reveal rest from the exercise menu without changing the global preference', async () => {
+  it('keeps rest in exercise settings instead of a duplicate show-rest action', async () => {
     const user = userEvent.setup()
     render(<EditorHarness onOpenPicker={vi.fn()} />)
 
     expect(screen.queryByLabelText('Отдых между подходами, Присед')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
-    await user.click(screen.getByRole('menuitem', { name: 'Показать отдых' }))
-    expect(screen.getByLabelText('Отдых между подходами, Присед')).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /отдых/i })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('menuitem', { name: 'Настройки упражнения' }))
+    expect(screen.getByLabelText('Отдых между подходами, с')).toHaveValue(90)
   })
 
   it('shows reorder arrows only in the explicit reorder mode', async () => {
@@ -256,10 +257,11 @@ describe('workout exercise editor rules', () => {
     const user = userEvent.setup()
     render(<ReorderEditorHarness />)
 
-    expect(screen.queryByRole('button', { name: '⛓ Объединить со следующим в блок' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '⛓ Добавить следующее в круговую' })).not.toBeInTheDocument()
     await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
-    await user.click(screen.getByRole('menuitem', { name: 'Объединить со следующим в блок' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Объединить со следующим в круговую' }))
     expect(screen.getByLabelText('Тип блока')).toBeInTheDocument()
+    expect(screen.getByLabelText('Тип блока')).toHaveValue('circuit')
     expect(screen.getByText('Настройки блока').closest('details')).not.toHaveAttribute('open')
   })
 })

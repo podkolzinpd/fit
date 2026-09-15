@@ -135,20 +135,13 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   function applyActiveRunningPreset() { applyRunningPreset(true) }
   const initialKeysCaptured = useRef(!collapseInitialExercises)
   const previousExerciseKeys = useRef<Set<string>>(new Set())
-  // Точечный выбор из меню имеет приоритет над общей настройкой тренера.
+  // Точечный выбор RPE из меню имеет приоритет над общей настройкой тренера.
   const [rpeOverrides, setRpeOverrides] = useState<Map<number, boolean>>(() => new Map())
-  const [restOverrides, setRestOverrides] = useState<Map<number, boolean>>(() => new Map())
   function isRpeVisible(exerciseIndex: number) {
     return rpeOverrides.get(exerciseIndex) ?? showRpeByDefault
   }
   function toggleRpe(exerciseIndex: number) {
     setRpeOverrides((current) => new Map(current).set(exerciseIndex, !isRpeVisible(exerciseIndex)))
-  }
-  function isRestVisible(exerciseIndex: number) {
-    return restOverrides.get(exerciseIndex) ?? showRestByDefault
-  }
-  function toggleRest(exerciseIndex: number) {
-    setRestOverrides((current) => new Map(current).set(exerciseIndex, !isRestVisible(exerciseIndex)))
   }
   useEffect(() => {
     const currentKeys = new Set(exercises.map(draftExerciseKey))
@@ -271,7 +264,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   // Одиночное упражнение (вне блока): подходы + «＋ Подход» + «Объединить».
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode, canReorder = false) {
     const showRpe = isRpeVisible(exerciseIndex)
-    const showRest = isRestVisible(exerciseIndex)
+    const showRest = showRestByDefault
     const expanded = isExerciseExpanded(exercise, exerciseIndex)
     const hasCustomRest = exercise.restBetweenSetsSec !== undefined && exercise.restBetweenSetsSec !== 90
     const hasComment = Boolean(exercise.trainerComment)
@@ -287,9 +280,8 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         <span className="exercise-head-actions">{onOpenTechnique && (canOpenTechnique?.(exercise) ?? true) && <button type="button" className="planned-technique-button" aria-label={`Посмотреть технику: ${exercise.name}`} onClick={() => onOpenTechnique(exercise)}><PlayIcon /></button>}{reorder}<OverflowMenu items={[
         ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
         { label: 'Настройки упражнения', onClick: () => setSettingsExerciseIndex(exerciseIndex) },
-        { label: showRest ? 'Скрыть отдых' : 'Показать отдых', onClick: () => toggleRest(exerciseIndex) },
         { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exerciseIndex) },
-        ...(canMergeNext ? [{ label: 'Объединить со следующим в блок', onClick: () => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex)) }] : []),
+        ...(canMergeNext ? [{ label: 'Объединить со следующим в круговую', onClick: () => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex)) }] : []),
         { label: 'Заменить', onClick: () => onReplaceExercise(exerciseIndex) },
         { label: 'Удалить', danger: true, onClick: () => removeExercise(exerciseIndex) },
       ]} /></span>
@@ -345,6 +337,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       // Многоэлементный блок: раскладка ПО КРУГАМ (круг = все упражнения по очереди).
       const rounds = draftBlockRoundsView(block)
       const blockMergeIndex = blockLastIndex < lastIndex ? blockLastIndex : -1
+      const mergeTargetLabel = block.blockPreset === 'circuit' ? 'круговую' : block.blockPreset === 'interval' ? 'интервалы' : 'сет'
       return <div className="exercise-block" key={block.blockId}>
         <div className="exercise-block-head">
           <select aria-label="Тип блока" value={block.blockPreset} onChange={(event) => commitExercises(setBlockPreset([...latestExercises.current], block.blockId, event.target.value as BlockPreset))}>
@@ -379,7 +372,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
             {setFields(exercise, exerciseIndex, setIndex)}
           </div>)}
         </div>)}
-        {blockMergeIndex >= 0 && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], blockMergeIndex))}>⛓ Объединить со следующим в блок</button>}
+        {blockMergeIndex >= 0 && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], blockMergeIndex))}>⛓ Добавить следующее в {mergeTargetLabel}</button>}
       </div>
     })}
     {(hasExercises || showEmptyAddAction) && <div className="workout-editor-footer"><button type="button" className="secondary" onClick={onOpenPicker}>＋ Упражнение</button>{hasExercises && <OverflowMenu label="Действия с планом" trigger="Изменить все" items={planActions} />}</div>}
