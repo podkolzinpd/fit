@@ -2605,10 +2605,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .voice-input-icon .assistant-icon-button.recording { border-color:var(--danger); background:var(--danger); color:var(--mono-on-primary); }
 .voice-input-icon .voice-input-status { position:absolute; right:0; bottom:calc(100% + 8px); z-index:2; width:min(286px, calc(100vw - 32px)); padding:8px 8px 8px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-raised); box-shadow:none; }
 .assistant-message-copy { display:grid; gap:10px; }.assistant-message-copy p { margin:0; }.assistant-message-copy ul { display:grid; gap:8px; margin:0; padding:0; list-style:none; }.assistant-message-copy li { padding-left:18px; position:relative; color:var(--fg); line-height:1.38; }.assistant-message-copy li::before { content:'•'; position:absolute; left:2px; color:var(--accent-strong); }
-.clients-page { padding-bottom:calc(env(safe-area-inset-bottom) + 104px) }.clients-page .page-header { margin-bottom:var(--section-gap) }.clients-search-empty { margin:var(--space-2) 0 0; padding:var(--card-padding); color:var(--muted); border:1px dashed var(--border); border-radius:var(--radius-lg); text-align:center }.clients-list { gap:var(--space-3) }.client-card { justify-content:flex-start; min-height:76px; padding:var(--card-padding); border-radius:var(--radius-lg); box-shadow:none}.client-card > div { min-width:0; flex:1 }.client-card > .badge { margin-left:auto }.client-avatar { flex:0 0 auto; width:48px; height:48px; display:grid; place-items:center; border:1px solid var(--border); border-radius:50%; color:var(--text-muted); background:var(--surface-sunken) }.client-avatar svg { width:25px; height:25px; stroke-width:1.65 }.client-card-arrow { color:var(--text-muted); font-size:27px; font-weight:400; line-height:1 }.client-card p { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.clients-page { padding-bottom:calc(env(safe-area-inset-bottom) + 104px) }.clients-page .page-header { margin-bottom:var(--section-gap) }.clients-search-empty { margin:var(--space-2) 0 0; padding:var(--card-padding); color:var(--muted); border:1px dashed var(--border); border-radius:var(--radius-lg); text-align:center }.clients-list { gap:var(--space-3) }.client-card { justify-content:flex-start; min-height:76px; padding:0; border-radius:var(--radius-lg); box-shadow:none}.client-card-main { display:flex; min-width:0; min-height:76px; flex:1; align-items:center; gap:12px; padding:var(--card-padding); color:inherit; text-decoration:none }.client-card-copy { min-width:0; flex:1 }.client-card-copy > strong,.client-card-copy > span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }.client-card-main > .badge { margin-left:auto }.client-avatar { flex:0 0 auto; width:48px; height:48px; display:grid; place-items:center; border:1px solid var(--border); border-radius:50%; color:var(--text-muted); background:var(--surface-sunken) }.client-avatar svg { width:25px; height:25px; stroke-width:1.65 }.client-card .chat-start-wrap-icon { flex:0 0 60px; align-self:stretch; display:flex; flex-direction:column; align-items:center; justify-content:center }.client-chat-action { position:relative; display:grid; width:44px; height:44px; min-height:44px; place-items:center; padding:0; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg) }.client-chat-action svg { width:21px; height:21px }.client-chat-action .chat-unread-badge { top:-5px; right:-7px }.chat-start-wrap-icon .error { font-size:10px; line-height:1.1; text-align:center }.client-card p { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .clients-search-empty { font-size:var(--type-body-size); line-height:var(--leading-body) }
-.client-card > div > strong { font-size:var(--type-body-size); line-height:var(--leading-snug) }
-.client-card p { font-size:var(--type-caption-size); line-height:var(--leading-snug) }
+.client-card-copy > strong { font-size:var(--type-body-size); line-height:var(--leading-snug) }
+.client-card-copy > span { font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 /* Production-поле поиска по клиентам: появляется по продуктовой логике списка. */
 .clients-search { display:flex; align-items:center; gap:var(--space-2); min-height:var(--control-height-primary); margin:0 0 var(--space-3); padding:0 var(--space-2) 0 var(--space-3); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--input); color:var(--fg-on-surface) }
 .clients-search:focus-within { border-color:var(--accent-focus); box-shadow:none}
@@ -4508,14 +4508,17 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-clients-identity .clients-search-clear { width:44px; height:44px; min-height:44px; color:var(--secondary-label-fg) }
 .trainer-clients-identity .clients-search-clear:focus-visible { outline:2px solid var(--fg); outline-offset:-2px }
 .trainer-clients-identity .clients-list { gap:8px }
-.trainer-clients-identity .client-card { min-height:76px; padding:14px 16px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg); box-shadow:none; transform:none }
+.trainer-clients-identity .client-card { min-height:76px; padding:0; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg); box-shadow:none; transform:none }
 .trainer-clients-identity .client-card:hover { border-color:var(--fg); transform:none }
 .trainer-clients-identity .client-avatar { width:44px; height:44px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
 .trainer-clients-identity .client-avatar svg { width:22px; height:22px; stroke-width:1.8 }
-.trainer-clients-identity .client-card > div > strong { color:var(--fg); font-size:16px; font-weight:600; line-height:1.25 }
-.trainer-clients-identity .client-card p { margin-top:3px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
-.trainer-clients-identity .client-card-arrow { display:grid; place-items:center; width:24px; color:var(--secondary-label-fg); font-size:0 }
-.trainer-clients-identity .client-card-arrow svg { width:20px; height:20px }
+.trainer-clients-identity .client-card-main { min-height:76px; padding:14px 8px 14px 16px }
+.trainer-clients-identity .client-card-copy > strong { color:var(--fg); font-size:16px; font-weight:600; line-height:1.25 }
+.trainer-clients-identity .client-card-copy > span { margin-top:3px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
+.trainer-clients-identity .client-chat-action:hover { border-color:var(--fg) }
+.trainer-clients-identity .client-chat-action:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
+.trainer-clients-identity .client-chat-action:disabled { opacity:.55 }
+.trainer-clients-identity .client-chat-action.chat-start-error { border-color:var(--danger-border); color:var(--danger) }
 .trainer-clients-identity .clients-page .badge { min-height:24px; padding:0 8px; border:1px solid var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-clients-identity .clients-search-empty { margin:0; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
 .trainer-clients-identity .state-panel { border-color:var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg); box-shadow:none}
@@ -4535,7 +4538,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 @media (max-width:480px) {
   .trainer-clients-identity .clients-page { padding:12px 16px calc(env(safe-area-inset-bottom) + 104px) }
   .trainer-clients-identity .clients-page .page-header { margin-bottom:12px }
-  .trainer-clients-identity .client-card { padding-inline:14px }
+  .trainer-clients-identity .client-card-main { padding-left:14px }
 }
 
 /* ── Gate 7 / task 18: Trainer Client Detail. */
