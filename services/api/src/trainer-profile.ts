@@ -7,6 +7,8 @@ export type TrainerProfileDraft = {
   bio: string
   specialties: string[]
   city: string
+  metroStationIds: string[]
+  customLocations: string[]
   trainingModes: Array<'online' | 'in_person'>
   experienceStartYear: number | null
   education: string
@@ -21,6 +23,7 @@ export type TrainerCatalogFilters = {
   query: string
   specialty: string
   city: string
+  metroStationIds: string[]
   mode: 'online' | 'in_person' | ''
   acceptingClients: boolean | null
 }
@@ -71,6 +74,8 @@ export function readTrainerProfileDraft(value: unknown): TrainerProfileDraft | u
   const specialties = draft.specialties
   const modes = draft.trainingModes
   const certificates = draft.certificates
+  const metroStationIds = draft.metroStationIds ?? []
+  const customLocations = draft.customLocations ?? []
   const year = draft.experienceStartYear
   if (!text(draft.displayName, 120, 2) || !text(draft.bio, 1200)
     || !text(draft.city, 100) || !text(draft.education, 800)
@@ -80,6 +85,10 @@ export function readTrainerProfileDraft(value: unknown): TrainerProfileDraft | u
     || specialties.some((item) => !text(item, 60, 1))
     || !Array.isArray(modes) || modes.length > 2
     || modes.some((item) => item !== 'online' && item !== 'in_person')
+    || !Array.isArray(metroStationIds) || metroStationIds.length > 20
+    || metroStationIds.some((item) => !text(item, 100, 1))
+    || !Array.isArray(customLocations) || customLocations.length > 20
+    || customLocations.some((item) => !text(item, 160, 1))
     || (year !== null && (!Number.isInteger(year) || Number(year) < 1950 || Number(year) > new Date().getFullYear()))
     || (draft.avatarDataUrl !== null && (typeof draft.avatarDataUrl !== 'string'
       || draft.avatarDataUrl.length > 900_000 || !/^data:image\/(?:jpeg|png|webp);base64,/.test(draft.avatarDataUrl)))
@@ -91,7 +100,11 @@ export function readTrainerProfileDraft(value: unknown): TrainerProfileDraft | u
         || (certificate.year !== null && (!Number.isInteger(certificate.year)
           || Number(certificate.year) < 1950 || Number(certificate.year) > new Date().getFullYear()))
     })) return undefined
-  return value as TrainerProfileDraft
+  return {
+    ...(value as Omit<TrainerProfileDraft, 'metroStationIds' | 'customLocations'>),
+    metroStationIds: metroStationIds.map((item) => String(item)),
+    customLocations: customLocations.map((item) => String(item)),
+  }
 }
 
 async function ensureTrainer(client: DatabaseClient) {
@@ -207,6 +220,12 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
       where item ilike '%' || ${add(filters.specialty)} || '%'
     )`)
     if (filters.city) clauses.push(`published_data->>'city' ilike '%' || ${add(filters.city)} || '%'`)
+    if (filters.metroStationIds.length > 0) clauses.push(`exists (
+      select 1 from jsonb_array_elements_text(case
+        when jsonb_typeof(published_data->'metroStationIds') = 'array' then published_data->'metroStationIds'
+        else '[]'::jsonb end) station_id
+      where station_id = any(${add(filters.metroStationIds)}::text[])
+    )`)
     if (filters.mode) clauses.push(`published_data->'trainingModes' ? ${add(filters.mode)}`)
     if (filters.acceptingClients !== null) {
       clauses.push(`(published_data->>'acceptingClients')::boolean = ${add(filters.acceptingClients)}`)

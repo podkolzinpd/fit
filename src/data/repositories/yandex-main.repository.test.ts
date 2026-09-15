@@ -101,7 +101,7 @@ describe('Yandex main repository', () => {
 
   it('requests and validates a page of public trainers', async () => {
     const draft = {
-      displayName: 'Анна', bio: '', specialties: [], city: '', trainingModes: [],
+      displayName: 'Анна', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [], trainingModes: [],
       experienceStartYear: null, education: '', formats: '', price: '', acceptingClients: true,
       avatarDataUrl: null, certificates: [],
     }
@@ -114,11 +114,12 @@ describe('Yandex main repository', () => {
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
 
     await expect(repository.trainerProfiles.listCatalog({
-      query: 'Анна', specialty: '', city: '', mode: 'online', acceptingClients: true,
+      query: 'Анна', specialty: '', city: '', metroStationIds: ['msk-dinamo', 'msk-aeroport'], mode: 'online', acceptingClients: true,
     }, { offset: 0, limit: 20 })).resolves.toEqual({ items: [profile], totalCount: 21, nextOffset: 20 })
     const requested = new URL(String(fetchMock.mock.calls[0]?.[0]))
     expect(requested.pathname).toBe('/v1/trainers/catalog')
-    expect(Object.fromEntries(requested.searchParams)).toEqual({ query: 'Анна', mode: 'online', accepting: 'true', offset: '0', limit: '20' })
+    expect(requested.searchParams.getAll('metro')).toEqual(['msk-dinamo', 'msk-aeroport'])
+    expect(Object.fromEntries(requested.searchParams)).toEqual({ query: 'Анна', metro: 'msk-aeroport', mode: 'online', accepting: 'true', offset: '0', limit: '20' })
   })
 
   it('creates a quick client without fabricating profile measurements', async () => {

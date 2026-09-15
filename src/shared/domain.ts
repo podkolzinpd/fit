@@ -677,6 +677,8 @@ export interface TrainerProfileDraft {
   bio: string
   specialties: string[]
   city: string
+  metroStationIds: string[]
+  customLocations: string[]
   trainingModes: TrainerTrainingMode[]
   experienceStartYear: number | null
   education: string
@@ -701,6 +703,7 @@ export interface TrainerCatalogFilters {
   query: string
   specialty: string
   city: string
+  metroStationIds: string[]
   mode: TrainerTrainingMode | ''
   acceptingClients: boolean | null
 }

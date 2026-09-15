@@ -807,6 +807,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         : query.accepting === 'false' ? false : undefined
     const mode = query.mode === undefined || query.mode === '' ? ''
       : query.mode === 'online' || query.mode === 'in_person' ? query.mode : undefined
+    const metroValues = query.metro === undefined ? []
+      : Array.isArray(query.metro) ? query.metro : [query.metro]
+    const metroStation = (value: unknown) => {
+      const parsed = textFilter(value, 100)
+      return parsed !== undefined && parsed.length > 0 ? parsed : undefined
+    }
+    const metroStationIds = metroValues.length <= 20 && metroValues.every((value) => metroStation(value) !== undefined)
+      ? metroValues.map((value) => metroStation(value)!) : undefined
     const readInteger = (value: unknown, fallback: number, min: number, max: number) => {
       if (value === undefined) return fallback
       if (typeof value !== 'string' || !/^\d+$/.test(value)) return undefined
@@ -819,13 +827,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       query: textFilter(query.query, 100) ?? '',
       specialty: textFilter(query.specialty, 60) ?? '',
       city: textFilter(query.city, 100) ?? '',
+      metroStationIds: metroStationIds ?? [],
       mode: mode ?? '',
       acceptingClients: accepting ?? null,
     }
     if ((query.query !== undefined && textFilter(query.query, 100) === undefined)
       || (query.specialty !== undefined && textFilter(query.specialty, 60) === undefined)
       || (query.city !== undefined && textFilter(query.city, 100) === undefined)
-      || mode === undefined || accepting === undefined || offset === undefined || limit === undefined) {
+      || metroStationIds === undefined || mode === undefined || accepting === undefined || offset === undefined || limit === undefined) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
