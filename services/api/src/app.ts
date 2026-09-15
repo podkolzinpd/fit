@@ -1029,7 +1029,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.post('/v1/auth/yandex/link', async (request, reply) => {
-    const actorToken = readBearerToken(request.headers.authorization)
+    const existingAuthorization = request.headers['x-supabase-authorization']
+    const actorToken = readBearerToken(
+      typeof existingAuthorization === 'string'
+        ? existingAuthorization
+        : undefined,
+    )
     if (actorToken === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
