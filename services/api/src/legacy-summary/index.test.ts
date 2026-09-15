@@ -331,6 +331,28 @@ describe('summarizeClientTraining cloud handler', () => {
     expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
+  it('accepts a neutral technique caveat without spending on a repair', async () => {
+    vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
+    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const safeCaveat = {
+      ...validSummary,
+      client: {
+        ...validSummary.client,
+        missingContext: ['Нет данных о технике выполнения упражнений.'],
+      },
+    }
+    const fetchImpl = vi.fn().mockResolvedValue(completionResponse(200, safeCaveat))
+
+    await expect(requestYandexSummary({}, '2026-08-01', '2026-08-25', {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      requestId: 'safe-technique-caveat',
+      sleep: () => Promise.resolve(),
+    })).resolves.toMatchObject({ summary: safeCaveat })
+
+    expect(fetchImpl).toHaveBeenCalledOnce()
+  })
+
   it('does not publish an unsafe answer and does not spend on a repair', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
