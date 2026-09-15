@@ -443,6 +443,19 @@ describe('ExercisePicker', () => {
     expect(document.querySelector('.picker-list video')).toHaveAttribute('src', exercise.techniqueVideoUrl)
   })
 
+  it('проигрывает подобранную анимацию в карточке шрагов без своего ролика', async () => {
+    const user = userEvent.setup()
+    const exercise = SYSTEM_EXERCISE_CATALOG.find(({ ref }) => ref === 'fedb-cable-shrugs')!
+    render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialSearch={exercise.name} onPick={vi.fn()} onClose={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: `Проиграть технику: ${exercise.name}` }))
+
+    expect(document.querySelector('.picker-list video')).toHaveAttribute(
+      'src',
+      '/exercises/vital-pro/vital-barbell-shrug-ex029.mp4',
+    )
+  })
+
   it('closes from the overlay and close button', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()

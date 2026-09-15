@@ -5,6 +5,8 @@ import { BASE_EXERCISES } from './system-exercises.base.generated'
 import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
 import { VITAL_FREE_PACK_ASSETS, VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
 import { VITAL_GYM_PRO_ASSETS, VITAL_GYM_PRO_MAIN_REFS, VITAL_GYM_PRO_NEW_EXERCISES } from './vital-gym-pro.generated'
+import { REVIEWED_EXERCISE_REFS_WITHOUT_SIMILAR_MEDIA, REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF } from './exercise-media-similarity'
+import { selectableExercises } from '../features/exercises/selectable-exercises'
 import vitalGymProMediaManifest from '../../scripts/data/vital-gym-pro-media-manifest.json'
 
 const PACKAGED_GYM_PRO_MEDIA_PATHS = vitalGymProMediaManifest.files.map(({ path }) => `/exercises/vital-pro/${path}`)
@@ -271,6 +273,43 @@ describe('system exercise catalog', () => {
       fallbackImageUrl: undefined,
     })
     expect(historicalDuplicate?.imageUrl).toBe('/exercises/vital/dumbbell-front-raise.jpg')
+  })
+
+  it('даёт проверенным похожим вариантам анимацию того же движения, не меняя их идентичность', () => {
+    const byRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
+    expect(Object.keys(REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF)).toHaveLength(238)
+
+    for (const [ref, targetRef] of Object.entries(REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF)) {
+      const exercise = byRef.get(ref)
+      const target = byRef.get(targetRef)
+      expect(exercise, `нет исходной карточки ${ref}`).toBeDefined()
+      expect(target, `нет целевой карточки ${targetRef}`).toBeDefined()
+      expect(target?.techniqueVideoUrl, `у ${targetRef} нет проверенной анимации`).toBeTruthy()
+      expect(exercise).toMatchObject({
+        ref,
+        imageUrl: target?.imageUrl,
+        motionImageUrl: target?.motionImageUrl,
+        techniqueVideoUrl: target?.techniqueVideoUrl,
+      })
+    }
+
+    expect(byRef.get('fedb-barbell-shrug')).toMatchObject({
+      techniqueVideoUrl: '/exercises/vital-pro/vital-barbell-shrug-ex029.mp4',
+    })
+    expect(byRef.get('fedb-dumbbell-shrug')).toMatchObject({
+      techniqueVideoUrl: '/exercises/vital-pro/vital-dumbbell-shrug-ex034.mp4',
+    })
+    expect(byRef.get('fedb-cable-shrugs')?.techniqueVideoUrl)
+      .toBe(byRef.get('fedb-barbell-shrug')?.techniqueVideoUrl)
+  })
+
+  it('каждая видимая пустая карточка явно проверена и оставлена без неподходящего видео', () => {
+    const emptyVisibleRefs = selectableExercises(SYSTEM_EXERCISE_CATALOG)
+      .filter((exercise) => !exercise.techniqueVideoUrl)
+      .map((exercise) => exercise.ref)
+
+    expect(REVIEWED_EXERCISE_REFS_WITHOUT_SIMILAR_MEDIA.size).toBe(84)
+    expect(new Set(emptyVisibleRefs)).toEqual(REVIEWED_EXERCISE_REFS_WITHOUT_SIMILAR_MEDIA)
   })
 
   it('не подменяет жим в тренажёре видео жима гантелей сидя', () => {
