@@ -791,8 +791,14 @@ export async function runAssistantTurn(
   if (isProgramPilotEnabled(user.id)) {
     const storedAction = actionRecord(latestAssistantAction)
     if (storedAction?.tool === 'create_program_draft' && typeof storedAction.id === 'string') {
-      const lifecycle = await service.from('assistant_actions').select('status').eq('id', storedAction.id).eq('owner_id', user.id).maybeSingle()
+      const lifecycle = await service.from('assistant_actions').select('status,version').eq('id', storedAction.id).eq('owner_id', user.id).maybeSingle()
       if (lifecycle.error) throw new HttpError(503, 'history_unavailable')
+      if (['proposed', 'failed'].includes(String(lifecycle.data?.status)) && /^(?:отмена|отменить|стоп|закрыть|не надо|изменить условия)(?:\s|$)/iu.test(command.message.trim())) {
+        const version: unknown = lifecycle.data?.version
+        if (typeof version !== 'number') throw new HttpError(503, 'history_unavailable')
+        const cancelled = await actorClient.rpc('cancel_assistant_action', { p_action_id: storedAction.id, p_expected_version: version })
+        if (cancelled.error) throw new HttpError(409, 'program_action_conflict')
+      }
       if (lifecycle.data?.status === 'applied' || lifecycle.data?.status === 'cancelled') latestAssistantAction = null
     }
     const today = new Date().toLocaleDateString('en-CA', { timeZone: typeof profile.timezone === 'string' ? profile.timezone : 'Europe/Moscow' })
