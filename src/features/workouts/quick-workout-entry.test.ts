@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatWorkoutText, parseQuickWorkoutEntry, splitWorkoutText, workoutCandidates } from './quick-workout-entry'
+import { formatWorkoutText, parseQuickWorkoutEntry, parseStructuredQuickWorkoutEntry, splitWorkoutText, workoutCandidates } from './quick-workout-entry'
 import { rankExerciseSearch } from '../exercises/exercise-search'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
@@ -483,5 +483,70 @@ describe('parseQuickWorkoutEntry', () => {
     const result = parseQuickWorkoutEntry('Присед со штангой 3×8 80 кг\nПланка 3×45 сек', SYSTEM_EXERCISE_CATALOG)
     expect(result.unparsed).toEqual([])
     expect(result.parsed.map((item) => item.exercise.ref)).toEqual(['barbell-squat', 'plank'])
+  })
+})
+
+describe('parseStructuredQuickWorkoutEntry', () => {
+  it('не включает новый путь для обычного ввода и оставляет старый результат без изменений', () => {
+    const text = 'Присед со штангой 3×8 80 кг\nЖим лёжа 3×10 60 кг'
+
+    expect(parseStructuredQuickWorkoutEntry(text, catalog)).toEqual({ hasStructure: false, items: [] })
+    expect(parseQuickWorkoutEntry(text, catalog).parsed.map((item) => item.exercise.ref)).toEqual(['squat', 'bench'])
+  })
+
+  it.each(['Сет', 'сеты:', '1. Круговая', '2) круговые:'])('понимает явный заголовок «%s» как круговую', (marker) => {
+    const result = parseStructuredQuickWorkoutEntry(`${marker}\n- Жим лёжа 3×10 60 кг\n- Планка 2×45 сек`, catalog)
+
+    expect(result.hasStructure).toBe(true)
+    expect(result.items.map((item) => item.parsed?.exercise.ref)).toEqual(['bench', 'plank'])
+    expect(result.items[0]?.groupId).toBeTruthy()
+    expect(result.items[1]?.groupId).toBe(result.items[0]?.groupId)
+  })
+
+  it('сохраняет порядок одиночных упражнений и нескольких круговых', () => {
+    const result = parseStructuredQuickWorkoutEntry(`Жим лёжа 3×10 60 кг
+1. Сет
+- Планка 2×45 сек
+- Бег 10 мин 2 км
+2. круговая:
+• Присед со штангой 4×8 80 кг
+• Жим лёжа 3×6 70 кг
+3. Планка 60 сек`, catalog)
+
+    expect(result.items.map((item) => item.parsed?.exercise.ref)).toEqual(['bench', 'plank', 'running', 'squat', 'bench', 'plank'])
+    expect(result.items[0]?.groupId).toBeUndefined()
+    expect(result.items[1]?.groupId).toBe(result.items[2]?.groupId)
+    expect(result.items[3]?.groupId).toBe(result.items[4]?.groupId)
+    expect(result.items[1]?.groupId).not.toBe(result.items[3]?.groupId)
+    expect(result.items[5]?.groupId).toBeUndefined()
+  })
+
+  it('не принимает метрики и части названий за структурные маркеры', () => {
+    for (const text of ['Жим лёжа 3 сета по 12', 'Дроп-сет 3×10', 'Круговые движения плечами 3×12']) {
+      expect(parseStructuredQuickWorkoutEntry(text, catalog), text).toEqual({ hasStructure: false, items: [] })
+    }
+  })
+
+  it('не создаёт круговую из одного упражнения и не меняет его подходы', () => {
+    const result = parseStructuredQuickWorkoutEntry('Сет:\n- Жим лёжа 3×10 60 кг\n2. Планка 45 сек', catalog)
+
+    expect(result.items.map((item) => item.groupId)).toEqual([undefined, undefined])
+    expect(result.items[0]?.parsed?.sets).toHaveLength(3)
+  })
+
+  it('различает одинаковые нераспознанные строки и сохраняет их позиции в группе', () => {
+    const result = parseStructuredQuickWorkoutEntry('Круговая\n- Неизвестное 3×10\n- Неизвестное 3×10', catalog)
+
+    expect(result.items).toHaveLength(2)
+    expect(result.items.every((item) => item.unparsed?.reason === 'not-found')).toBe(true)
+    expect(result.items[0]?.id).not.toBe(result.items[1]?.id)
+    expect(result.items[0]?.groupId).toBe(result.items[1]?.groupId)
+  })
+
+  it('не выравнивает и не копирует подходы упражнений в круговой', () => {
+    const result = parseStructuredQuickWorkoutEntry('Сет\n- Жим лёжа 3×10 60 кг\n- Планка 2×45 сек', catalog)
+
+    expect(result.items[0]?.parsed?.sets).toHaveLength(3)
+    expect(result.items[1]?.parsed?.sets).toHaveLength(2)
   })
 })
