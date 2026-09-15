@@ -47,7 +47,7 @@ for (const width of [390, 430, 1440]) {
       await page.setContent(`<html class="theme-${theme} ui-identity"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${styles}</style></head><body><div class="phone-frame theme-${theme} assistant-shell ui-identity assistant-identity"><main class="assistant-page"><section class="assistant-context-panel">${content}</section></main></div></body></html>`)
       await expect(page.getByRole('button', { name: 'Добавить в расписание' })).toBeVisible()
       await expect(page.getByRole('region', { name: 'Обзор четырёх недель' })).toBeVisible()
-      await expect(page.getByText('Как менять нагрузку:').first()).toBeVisible()
+      await expect(page.getByText('Пояснение:').first()).toBeVisible()
       await page.screenshot({ path: testInfo.outputPath(`program-${width}-${theme}.png`), fullPage: true })
       await page.locator('summary').first().click()
       await expect(page.getByText('Приседания с гантелью у груди').first()).toBeVisible()

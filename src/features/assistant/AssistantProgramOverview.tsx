@@ -41,7 +41,7 @@ export function AssistantProgramOverview({ payload }: { payload: Record<string, 
         const execution = history.success ? history.data.find((row) => row.source === 'system' && row.ref === ref)?.recentExecutions.find((row) => row.sets.some((set) => set.reps !== null || set.durationSec !== null)) : undefined
         const name = sessions.flatMap((session) => session.exercises).find((exercise) => exercise.exerciseRef === ref)?.name
         return <p key={ref} className="assistant-card-hint">{execution ? `${refs.length > 1 ? `${name}: ` : ''}Результат в Fit от ${execution.date}: ${execution.sets.map((set) => [set.reps !== null ? `${set.reps} повт.` : set.durationSec !== null ? `${set.durationSec} сек` : 'повторы не записаны', set.weightKg !== null ? `${set.weightKg} кг` : ''].filter(Boolean).join(' · ')).join('; ')}` : `В Fit пока нет записанного результата ${refs.length > 1 ? `«${name}»` : 'этого упражнения'} для сравнения.`}</p>
-      })}{[...new Set(groups.flatMap(({ exercise }) => exercise.progressionNote ? [exercise.progressionNote] : []))].map((note) => <p key={note}><strong>Как менять нагрузку:</strong> {note}</p>)}</div>
+      })}{[...new Set(groups.flatMap(({ exercise }) => exercise.progressionNote ? [exercise.progressionNote] : []))].map((note) => <p key={note}><strong>Пояснение:</strong> {note}</p>)}</div>
     })}</div>
   })}</section>
 }
