@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { PRESET_REST_DEFAULTS } from '../../data/repositories/workout-rules'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { MicIcon } from '../../shared/icons'
-import { parseQuickWorkoutEntry, quickWorkoutExerciseName, resolveQuickWorkoutLine, type ParsedWorkoutExercise } from './quick-workout-entry'
+import { parseQuickWorkoutEntry, parseStructuredQuickWorkoutEntry, quickWorkoutExerciseName, resolveQuickWorkoutLine, type ParsedWorkoutExercise } from './quick-workout-entry'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { WorkoutComposer } from './WorkoutComposer'
 
@@ -17,15 +18,66 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
   const [expanded, setExpanded] = useState(!compact)
-  const parsed = useMemo(() => parseQuickWorkoutEntry(text, catalog, { preferredExerciseRefs }), [text, catalog, preferredExerciseRefs])
-  const resolved = useMemo(() => [
-    ...parsed.parsed,
-    ...parsed.unparsed.flatMap((item) => choices[item.line] ? [resolveQuickWorkoutLine(item.line, choices[item.line]!)] : []),
-  ], [choices, parsed])
-  const unresolved = useMemo(() => parsed.unparsed.filter((item) => !choices[item.line]), [choices, parsed.unparsed])
+  const structured = useMemo(() => parseStructuredQuickWorkoutEntry(text, catalog, { preferredExerciseRefs }), [text, catalog, preferredExerciseRefs])
+  const parsed = useMemo(() => structured.hasStructure
+    ? { parsed: [], unparsed: [] }
+    : parseQuickWorkoutEntry(text, catalog, { preferredExerciseRefs }), [text, catalog, preferredExerciseRefs, structured.hasStructure])
+  const structuredResolved = useMemo(() => structured.items.flatMap((entry) => {
+    const item = entry.parsed ?? (entry.unparsed && choices[entry.id]
+      ? resolveQuickWorkoutLine(entry.unparsed.line, choices[entry.id]!)
+      : undefined)
+    return item ? [{ entry, item }] : []
+  }), [choices, structured.items])
+  const circuitRest = PRESET_REST_DEFAULTS.circuit
+  const resolved = useMemo(() => {
+    if (!structured.hasStructure) {
+      return [
+        ...parsed.parsed,
+        ...parsed.unparsed.flatMap((item) => choices[item.line] ? [resolveQuickWorkoutLine(item.line, choices[item.line]!)] : []),
+      ]
+    }
+    const roundsByGroup = new Map<string, number>()
+    for (const { entry, item } of structuredResolved) {
+      if (entry.groupId) roundsByGroup.set(entry.groupId, Math.max(roundsByGroup.get(entry.groupId) ?? 1, item.sets.length, 1))
+    }
+    return structuredResolved.map(({ entry, item }) => entry.groupId ? {
+      ...item,
+      structure: {
+        blockId: entry.groupId,
+        blockType: 'group' as const,
+        blockPreset: 'circuit' as const,
+        blockRounds: roundsByGroup.get(entry.groupId) ?? 1,
+        restBetweenExercisesSec: circuitRest.betweenExercises,
+        restBetweenRoundsSec: circuitRest.betweenRounds,
+      },
+    } : item)
+  }, [circuitRest.betweenExercises, circuitRest.betweenRounds, choices, parsed, structured.hasStructure, structuredResolved])
+  const unresolved = useMemo(() => structured.hasStructure
+    ? structured.items.flatMap((entry) => entry.unparsed && !choices[entry.id] ? [{ key: entry.id, item: entry.unparsed }] : [])
+    : parsed.unparsed.flatMap((item) => !choices[item.line] ? [{ key: item.line, item }] : []), [choices, parsed.unparsed, structured.hasStructure, structured.items])
+  const structuredPreviewBlocks = useMemo(() => {
+    if (!structured.hasStructure) return []
+    const blocks: Array<{ key: string; groupId?: string; rows: Array<{ key: string; label: string; sets?: number }> }> = []
+    for (const entry of structured.items) {
+      const selected = entry.parsed ?? (entry.unparsed && choices[entry.id]
+        ? resolveQuickWorkoutLine(entry.unparsed.line, choices[entry.id]!)
+        : undefined)
+      const last = blocks.at(-1)
+      const block = last && last.groupId === entry.groupId
+        ? last
+        : { key: entry.groupId ?? entry.id, groupId: entry.groupId, rows: [] }
+      if (block !== last) blocks.push(block)
+      block.rows.push({
+        key: entry.id,
+        label: selected?.exercise.name ?? `«${entry.line}» — требует уточнения`,
+        sets: selected?.sets.length,
+      })
+    }
+    return blocks
+  }, [choices, structured.hasStructure, structured.items])
   const clarification = useMemo(() => {
-    const hasAmbiguous = unresolved.some((item) => item.reason === 'ambiguous')
-    const hasNotFound = unresolved.some((item) => item.reason === 'not-found')
+    const hasAmbiguous = unresolved.some(({ item }) => item.reason === 'ambiguous')
+    const hasNotFound = unresolved.some(({ item }) => item.reason === 'not-found')
     if (hasAmbiguous && hasNotFound) return { title: 'Уточните упражнения', text: 'Выберите вариант ниже или дополните название.' }
     if (hasAmbiguous) return { title: 'Уточните упражнение', text: 'Выберите вариант ниже или допишите деталь: положение, тренажёр или оборудование.' }
     if (hasNotFound) return { title: 'Не нашли упражнение', text: 'Допишите название точнее или выберите его из каталога.' }
@@ -35,9 +87,9 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
   useEffect(() => setExpanded(!compact), [compact])
 
   function add() {
-    if (!resolved.length) return
-    if (unresolved.some((item) => item.reason === 'ambiguous')) trackGoal('workout_parse_ambiguous')
-    if (unresolved.some((item) => item.reason === 'not-found')) trackGoal('workout_parse_not_found')
+    if (!resolved.length || (structured.hasStructure && unresolved.length)) return
+    if (unresolved.some(({ item }) => item.reason === 'ambiguous')) trackGoal('workout_parse_ambiguous')
+    if (unresolved.some(({ item }) => item.reason === 'not-found')) trackGoal('workout_parse_not_found')
     onAdd(resolved)
     setText('')
     setChoices({})
@@ -47,12 +99,14 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
 
   return <div className={`quick-workout-entry${compact ? ' expanded' : ''}`}>
     {compact && <button type="button" className="link quick-workout-collapse" onClick={() => setExpanded(false)}>Свернуть ввод</button>}
-    <WorkoutComposer name="quick-workout-entry" source="workout_quick_entry" label="Запись тренировки" voiceLabel="Надиктовать тренировку" value={text} onValueChange={setText} onClear={() => { setText(''); setChoices({}) }} primaryAction={<button type="button" className="secondary wide quick-workout-add" disabled={!resolved.length} onClick={add}>Добавить в план{resolved.length ? ` (${resolved.length})` : ''}</button>} secondaryAction={onOpenCatalog ? <button type="button" className="secondary wide quick-workout-catalog" onClick={() => { trackGoal('exercise_picker_opened'); onOpenCatalog('') }}>Выбрать упражнения</button> : undefined}>
+    <WorkoutComposer name="quick-workout-entry" source="workout_quick_entry" label="Запись тренировки" voiceLabel="Надиктовать тренировку" value={text} onValueChange={setText} onClear={() => { setText(''); setChoices({}) }} primaryAction={<button type="button" className="secondary wide quick-workout-add" disabled={!resolved.length || (structured.hasStructure && unresolved.length > 0)} onClick={add}>Добавить в план{resolved.length ? ` (${resolved.length})` : ''}</button>} secondaryAction={onOpenCatalog ? <button type="button" className="secondary wide quick-workout-catalog" onClick={() => { trackGoal('exercise_picker_opened'); onOpenCatalog('') }}>Выбрать упражнения</button> : undefined}>
       <p className="workout-composer-hint">Например: присед 3×8 80 кг или бег 30 минут 5 км. Для нового упражнения скажите «затем».</p>
       {text.trim() && <div className="quick-workout-preview" aria-live="polite">
-        {resolved.length > 0 && <><p><strong>Распознано: {resolved.length}</strong></p><ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}>{item.exercise.name} · {item.sets.length} {item.sets.length === 1 ? 'подход' : item.sets.length < 5 ? 'подхода' : 'подходов'}</li>)}</ul></>}
+        {structured.hasStructure
+          ? structuredPreviewBlocks.length > 0 && <div className="quick-workout-structure"><p><strong>Упражнения: {structured.items.length}</strong></p>{structuredPreviewBlocks.map((block) => <section key={block.key} className={block.groupId ? 'quick-workout-circuit' : 'quick-workout-singles'}>{block.groupId && <p className="quick-workout-circuit-title"><strong>Круговая · {block.rows.length} упр.</strong></p>}<ul>{block.rows.map((row) => <li key={row.key}>{row.label}{row.sets !== undefined ? ` · ${row.sets} ${row.sets === 1 ? 'подход' : row.sets < 5 ? 'подхода' : 'подходов'}` : ''}</li>)}</ul></section>)}</div>
+          : resolved.length > 0 && <><p><strong>Распознано: {resolved.length}</strong></p><ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}>{item.exercise.name} · {item.sets.length} {item.sets.length === 1 ? 'подход' : item.sets.length < 5 ? 'подхода' : 'подходов'}</li>)}</ul></>}
         {clarification && <section className="quick-workout-clarification" aria-label={clarification.title}><strong>{clarification.title}</strong><p>{clarification.text}</p></section>}
-        {unresolved.length > 0 && <div className="quick-workout-unparsed">{unresolved.map((item) => <div className="quick-workout-unparsed-line" key={item.line}><p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли совпадение'}</p>{item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { trackGoal('workout_parse_candidate_selected'); setChoices((current) => ({ ...current, [item.line]: exercise })) }}>{exercise.name}</button>)}</div>}{onOpenCatalog && <button type="button" className="link quick-workout-all-options" onClick={() => { trackGoal('workout_parse_catalog_opened'); onOpenCatalog(quickWorkoutExerciseName(item.line)) }}>Все варианты</button>}</div>)}</div>}
+        {unresolved.length > 0 && <div className="quick-workout-unparsed">{unresolved.map(({ key, item }) => <div className="quick-workout-unparsed-line" key={key}><p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли совпадение'}</p>{item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[key]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { trackGoal('workout_parse_candidate_selected'); setChoices((current) => ({ ...current, [key]: exercise })) }}>{exercise.name}</button>)}</div>}{onOpenCatalog && <button type="button" className="link quick-workout-all-options" onClick={() => { trackGoal('workout_parse_catalog_opened'); onOpenCatalog(quickWorkoutExerciseName(item.line)) }}>Все варианты</button>}</div>)}</div>}
       </div>}
     </WorkoutComposer>
   </div>

@@ -76,6 +76,30 @@ test('форма: быстрый ввод разбирает текст в уп�
   await expect(page.getByLabel('Время, сек, подход 3')).toHaveValue('45')
 })
 
+test('форма: заголовки «Сет» и «Круговая» автоматически создают круговые', async ({ page }) => {
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+
+  await page.goto('/workouts/new')
+  await page.getByLabel('Запись тренировки').fill('1. Сет:\n- Жим лёжа 3×10 60 кг\n- Планка 2×45 сек')
+  await expect(page.getByText('Круговая · 2 упр.')).toBeVisible()
+  await page.getByRole('button', { name: 'Добавить в план (2)' }).click()
+
+  await expect(page.getByLabel('Тип блока')).toHaveValue('circuit')
+  await expect(page.getByLabel('Кругов')).toHaveValue('3')
+  await expect(page.locator('.planned-round')).toHaveCount(3)
+  await expect(page.locator('.planned-round').nth(2).locator('.planned-round-exercise-name')).toHaveCount(1)
+  await expect(page.getByLabel('Вес, подход 1')).toHaveValue('60')
+  await expect(page.getByLabel('Время, сек, подход 2')).toHaveValue('45')
+
+  await page.locator('.block-options summary').click()
+  await expect(page.getByLabel('Отдых между упражнениями, с')).toHaveValue('15')
+  await expect(page.getByLabel('Отдых между кругами, с')).toHaveValue('60')
+})
+
 test('форма: короткая беговая фраза создаёт редактируемые интервалы в метрах', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
