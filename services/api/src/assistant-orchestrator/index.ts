@@ -843,7 +843,7 @@ export async function runAssistantTurn(
         actorId: user.id, turnId, today, duplicateTurn: userInsert.error?.code === '23505',
         matchClients: (message) => matchingSummaryClients(message, clientRows),
         loadContext: (client) => loadProgramContext(actorClient, client, today),
-        extract: (brief, message) => extractProgramBrief(brief, message, today, turnId),
+        extract: (brief, message, answerContext) => extractProgramBrief(brief, message, today, turnId, answerContext),
         generate: (brief, context, clientId) => {
           const key = programGenerationKey(user.id, clientId, brief, context.fingerprint)
           return generateProgramOnce(service, key, user.id, clientId, () => invokeProgramGenerator(user.id, key, today, brief, context))
