@@ -89,6 +89,51 @@ test('trainer chat stays at the bottom and exits with swipe and back', async ({ 
   await expect(page).toHaveURL(/\/today$/)
 })
 
+test('trainer opens client chat from the list and returns to the same search and scroll', async ({ page }) => {
+  const conversationId = 'b9100000-0000-4000-8000-000000000001'
+  const clients = Array.from({ length: 12 }, (_, index) => ({
+    id: index === 0 ? demoClientId : `b9200000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+    has_account: true, full_name: `Спортсмен ${String(index + 1).padStart(2, '0')}`,
+    canonical_full_name: `Спортсмен ${String(index + 1).padStart(2, '0')}`,
+    gender: null, age_years: 25 + index, age_updated_at: '2026-08-01', height_cm: 175,
+    goal: null, note: null, current_weight_kg: 70, last_activity_at: `2026-08-${String(20 - index).padStart(2, '0')}T10:00:00Z`,
+    archived_at: null, version: 1, membership_version: 1,
+  }))
+  await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(clients) }))
+  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+    conversation_id: conversationId, client_id: clients[5]!.id, trainer_id: '90000000-0000-4000-8000-000000000009',
+    partner_user_id: '92000000-0000-4000-8000-000000000029', partner_name: 'Спортсмен 06', active_connection: true,
+    last_message_body: 'До встречи', last_message_at: '2026-09-10T16:45:00.000Z',
+    last_message_sender_id: '92000000-0000-4000-8000-000000000029', unread_count: 4,
+    can_message: true, blocked_by_me: false, blocked_by_partner: false,
+  }]) }))
+  await page.route('**/rest/v1/rpc/list_chat_messages_v3', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await page.route('**/rest/v1/rpc/get_chat_unread_state', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await page.route('**/rest/v1/rpc/get_chat_connection_state', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+    active_connection: true, invitation_pending: false, invited_at: null, can_invite: false, can_accept: false, trainer_switch_required: false,
+  }]) }))
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.goto('/clients')
+  const search = page.getByRole('searchbox', { name: 'Поиск клиента' })
+  await search.fill('Спортсмен')
+  const content = page.locator('.content')
+  await content.evaluate((element) => element.scrollTo(0, 240))
+  const action = page.getByRole('button', { name: 'Сообщения с Спортсмен 06, непрочитанных: 4' })
+  await action.scrollIntoViewIfNeeded()
+  const scrollBefore = await content.evaluate((element) => element.scrollTop)
+  expect(scrollBefore).toBeGreaterThan(100)
+
+  await action.click()
+  await expect(page).toHaveURL(new RegExp(`/chat/${conversationId}$`))
+  await page.getByRole('button', { name: 'Назад' }).click()
+
+  await expect(page).toHaveURL(/\/clients\?q=%D0%A1%D0%BF%D0%BE%D1%80%D1%82%D1%81%D0%BC%D0%B5%D0%BD$/)
+  await expect(page.getByRole('searchbox', { name: 'Поиск клиента' })).toHaveValue('Спортсмен')
+  await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBe(scrollBefore)
+})
+
 async function mockAutomaticSummaryGeneration(page: Page) {
   const response = {
     contentType: 'application/json',

@@ -65,6 +65,7 @@ export function AppLayout() {
     // Route content can grow again while its draft is restored. Reset on the
     // next frame so iOS scroll anchoring cannot reopen Today below its primary
     // action after a longer form or review screen.
+    if (pathname === '/clients' && window.sessionStorage?.getItem('fit.clientsListScroll')) return
     const frame = window.requestAnimationFrame(() => contentRef.current?.scrollTo(0, 0))
     return () => window.cancelAnimationFrame(frame)
   }, [pathname, routeStep])
