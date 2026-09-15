@@ -55,15 +55,19 @@ export function deriveProgramLoad(brief: ProgramBrief, history: unknown, today: 
   const fullPeriod = history.periodStart <= weeks[0]!.start
   const recent = fullPeriod && daysSinceCatalogTraining !== null && daysSinceCatalogTraining <= 14 && weeks.filter((week) => week.catalogSets > 0).length >= 3
   const incompleteCatalog = brief.historyComplete === false || evidence.some((row) => row.date >= weeks[0]!.start && row.unmappedSets > 0)
-  const continuing = recent && brief.experience === 'experienced' && !incompleteCatalog
+  const feedback = object(history.feedback) ? history.feedback : {}
+  const recentDifficultFeedback = ['hardDates', 'discomfortDates'].some((key) => Array.isArray(feedback[key])
+    && feedback[key].some((date: unknown) => isCalendarDate(date) && date >= dateAt(end - 13 * dayMs) && date <= today))
+    || typeof feedback.meanSessionRpe === 'number' && feedback.meanSessionRpe >= 9
+  const continuing = recent && brief.experience === 'experienced' && !incompleteCatalog && !recentDifficultFeedback
   const familiarRefs = history.exercises.flatMap((row: unknown) => object(row) && row.source === 'system'
     && typeof row.ref === 'string' && PROGRAM_CATALOG.some((exercise) => exercise.ref === row.ref)
     && Array.isArray(row.recentExecutions) && row.recentExecutions.some((execution: unknown) => object(execution)
       && Array.isArray(execution.sets) && execution.sets.some((set: unknown) => object(set)
         && (typeof set.reps === 'number' && set.reps > 0 || typeof set.durationSec === 'number' && set.durationSec > 0))) ? [row.ref] : [])
   // Sparse / unmapped data describes an incomplete record, not a full volume baseline.
-  const weeklySetCeiling = recent && !incompleteCatalog ? Math.floor(meanWeeklyCatalogSets) : null
-  const reason = brief.historyComplete === false ? 'Вы указали, что история записана не полностью.' : brief.experience === 'returning' ? 'В анкете указан возврат после перерыва.'
+  const weeklySetCeiling = recent ? Math.floor(meanWeeklyCatalogSets) : null
+  const reason = recentDifficultFeedback ? 'В записях есть высокая тяжесть или недавние сообщения о дискомфорте; текущие ограничения проверяются отдельно в анкете.' : brief.historyComplete === false ? 'Вы указали, что история записана не полностью.' : brief.experience === 'returning' ? 'В анкете указан возврат после перерыва.'
     : !fullPeriod ? 'Нет полного периода наблюдений.' : daysSinceCatalogTraining === null ? 'Нет сопоставимых подтверждённых подходов.'
     : daysSinceCatalogTraining > 14 ? `Последняя сопоставимая запись: ${lastCatalogDate}.` : !recent ? 'Недостаточно регулярно записанных тренировок.'
     : incompleteCatalog ? 'Часть упражнений не размечена для расчёта объёма.' : 'В анкете указан начальный опыт.'
@@ -76,5 +80,5 @@ export function deriveProgramLoad(brief: ProgramBrief, history: unknown, today: 
 }
 
 export function programLoadIssues(brief: ProgramBrief, load: ProgramLoad): string[] {
-  return brief.frequency && load.weeklySetCeiling !== null && brief.frequency * 5 > load.weeklySetCeiling ? ['history_volume_requires_review'] : []
+  return brief.frequency && load.weeklySetCeiling !== null && Math.max(5, brief.frequency * 3) > load.weeklySetCeiling ? ['history_volume_requires_review'] : []
 }

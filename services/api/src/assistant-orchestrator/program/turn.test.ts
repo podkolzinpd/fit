@@ -27,10 +27,10 @@ describe('program chat state', () => {
     expect(deps.loadContext).toHaveBeenCalledOnce()
     expect(deps.matchClients).not.toHaveBeenCalled()
   })
-  it('does not pay for a duplicate generation turn', async () => {
+  it('allows a retry to read the durable generation cache', async () => {
     const { deps, latest } = setup(); deps.duplicateTurn = true
-    await expect(programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], latest, deps)).rejects.toThrow('program_generation_in_progress_or_interrupted')
-    expect(deps.generate).not.toHaveBeenCalled()
+    expect((await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], latest, deps))?.action?.status).toBe('proposed')
+    expect(deps.generate).toHaveBeenCalledOnce()
   })
   it('rate limit prevents generation', async () => {
     const { deps, latest } = setup(); deps.canGenerate.mockResolvedValue(false)
@@ -123,13 +123,14 @@ describe('program chat state', () => {
     const { deps, latest } = setup()
     const result = await programPilotTurn(message, [client], { payload: { ...latest.payload, historyQuestion: true, readyToGenerate: false } }, deps)
     expect(result?.action?.payload.briefState).toMatchObject({ historyComplete: message === HISTORY_COMPLETE })
-    expect(result?.action?.payload.readyToGenerate).toBe(message === HISTORY_INCOMPLETE)
+    expect(result?.action?.payload.readyToGenerate).toBe(false)
     expect(result?.action?.payload.guidance).toBe(result?.reply)
     expect(deps.extract).not.toHaveBeenCalled()
     expect(deps.generate).not.toHaveBeenCalled()
   })
-  it('asks visibly about a small history, then generates only after the incomplete-history answer and a new confirmation', async () => {
+  it('asks visibly about small history and does not inflate volume after an incomplete-history answer', async () => {
     const { deps, latest, context } = setup()
+    latest.payload.briefState.continuationPlan = 'Продолжить прежний подход'
     const workouts = ['2026-09-14', '2026-09-07', '2026-08-31', '2026-08-24'].map((date) => ({ id: date, date, clientId: client.id,
       status: 'done' as const, deletedAt: null, sessionRpe: 7, wellbeing: 'normal' as const, discomfort: false }))
     const source = buildProgramHistoryContext({ clientId: client.id, periodStart: '2026-07-22', periodEnd: '2026-09-15', workouts,
@@ -143,12 +144,31 @@ describe('program chat state', () => {
     expect(question?.action?.payload.guidance).toContain('Это вся история или часть тренировок не записана?')
     expect(deps.generate).not.toHaveBeenCalled()
     const clarified = await programPilotTurn(HISTORY_INCOMPLETE, [client], question?.action, deps)
-    expect(clarified?.action?.payload.readyToGenerate).toBe(true)
+    expect(clarified?.action?.payload.readyToGenerate).toBe(false)
     expect(deps.generate).not.toHaveBeenCalled()
     const generated = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], clarified?.action, deps)
-    expect(generated?.action?.status).toBe('proposed')
-    expect(generated?.action?.payload.loadBasis).toMatchObject({ mode: 'starting', weeklySetCeiling: null })
-    expect(deps.generate).toHaveBeenCalledOnce()
+    expect(generated?.action?.status).toBe('needs_input')
+    expect(deps.generate).not.toHaveBeenCalled()
     expect(deps.extract).not.toHaveBeenCalled()
   })
+})
+
+it('retains the proposal on questions and repeated confirmation', async () => {
+  const { deps, latest } = setup()
+  const proposal = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], latest, deps)
+  for (const message of ['Почему выбраны эти упражнения?', CONFIRM_PROGRAM_BRIEF]) {
+    const result = await programPilotTurn(message, [client], proposal?.action, deps)
+    expect(result?.action?.payload.canonicalWorkouts).toEqual(proposal?.action?.payload.canonicalWorkouts)
+    expect(result?.action?.payload.step).toBe('confirm')
+  }
+  expect(deps.generate).toHaveBeenCalledOnce()
+  expect(deps.extract).not.toHaveBeenCalled()
+})
+it('rejects existing planned sessions anywhere inside the program period before a model call', async () => {
+  const { deps, latest, context } = setup()
+  deps.loadContext.mockResolvedValue({ ...context, plannedWorkouts: [{ id: 'planned', date: '2026-09-17' }] })
+  const result = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], latest, deps)
+  expect(result?.action?.payload.readyToGenerate).toBe(false)
+  expect(result?.reply).toContain('уже назначены')
+  expect(deps.generate).not.toHaveBeenCalled()
 })

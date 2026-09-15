@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronRightIcon } from '../../shared/icons'
@@ -396,6 +397,7 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
           : undefined
         if (inlineSummary) return <article key={message.id} className="assistant-message assistant-message-result" data-message-kind="action-result"><AssistantInlineSummaryCard summary={inlineSummary} onSave={() => void saveInlineSummary(message.id, inlineSummary.summaryId, inlineSummary.clientId)} saving={savingSummaryIds.includes(message.id)} saved={savedSummaryIds.includes(message.id) || inlineSummary.saved === true} /></article>
         if (message.action?.tool === 'record_workout' && message.action.lifecycleStatus === 'applied') return <article key={message.id} className="assistant-message assistant-message-result" data-message-kind="action-result"><AssistantWorkoutSavedCard action={message.action} /></article>
+        if (message.action?.payload.programPilot === true && message.action.lifecycleStatus === 'applied') return <article key={message.id} className="assistant-message assistant-message-result" data-message-kind="action-result"><p>Программа добавлена в расписание: {Array.isArray(message.action.payload.canonicalWorkouts) ? message.action.payload.canonicalWorkouts.length : ''} тренировок.</p><Link to={`/clients/${String(message.action.payload.clientId)}/workouts`}>Открыть тренировки</Link></article>
         const showContent = !message.action || message.content.trim() !== message.action.description.trim() || (message.action.tool === 'summarize_progress' && message.action.lifecycleStatus === 'applied')
         if (!showContent) return null
         return <article key={message.id} className="assistant-message assistant-message-assistant" data-message-kind="assistant"><AssistantMessageContent content={message.content} /></article>

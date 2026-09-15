@@ -1,8 +1,10 @@
+import { editableProgramCatalog, editProgram } from './edit.js'
+import { programGenerationKey } from './job.js'
 import { aiStudioUsage, reportAiStudioMetric } from '../../ai-studio-usage-metrics.js'
 import type { AssistantTurnResponse } from '../index.js'
 import { briefExtractionSchema, decodeQuotedBriefPatch, briefQuestions, briefSummary, CONFIRM_ACTIVITY_OVERLAP, CONFIRM_PROGRAM_BRIEF, HISTORY_COMPLETE, HISTORY_INCOMPLETE, mergeExtractedBrief, missingBriefFields, readProgramBrief, type ProgramBrief } from './brief.js'
 import { PROGRAM_CATALOG, PROGRAM_EQUIPMENT } from './catalog.js'
-import { materializeProgram, programBriefIssues, ProgramValidationError, validateProgramLoad, validateProgramTemplate } from './generate.js'
+import { addDays, materializeProgram, programBriefIssues, ProgramValidationError, validateProgramLoad, validateProgramTemplate } from './generate.js'
 import { deriveProgramLoad, programLoadIssues } from './load.js'
 import { programIamToken, programModelJson } from './model.js'
 import type { loadProgramContext } from './source.js'
@@ -13,7 +15,7 @@ type Dependencies = {
   actorId: string; turnId: string; today: string; duplicateTurn: boolean;
   loadContext: (client: ProgramClient) => Promise<ProgramSourceSnapshot>;
   extract: (brief: ProgramBrief, message: string) => Promise<unknown>;
-  generate: (brief: ProgramBrief, context: ProgramSourceSnapshot) => Promise<unknown>;
+  generate: (brief: ProgramBrief, context: ProgramSourceSnapshot, clientId: string) => Promise<unknown>;
   canGenerate: () => Promise<boolean>;
   matchClients: (message: string) => ProgramClient[];
 }
@@ -31,8 +33,8 @@ function action(reply: string, payload: Record<string, unknown>, proposed = fals
     payload: { programPilot: true, ...(!proposed ? { guidance: reply } : {}), ...payload },
   } }
 }
-function collectState(client: ProgramClient, brief: ProgramBrief, today: string, extra?: string, blocked = false): AssistantTurnResponse {
-  const missing = missingBriefFields(brief)
+function collectState(client: ProgramClient, brief: ProgramBrief, today: string, extra?: string, blocked = false, basis?: { summary: string; hasHistory: boolean }): AssistantTurnResponse {
+  const missing = missingBriefFields(brief, basis?.hasHistory)
   // Completeness is not eligibility. Do not offer a confirmation known to fail.
   const issues = missing.length === 0 ? programBriefIssues(brief, today) : []
   const limitation = brief.limitations === 'present' || brief.limitations === 'unknown'
@@ -43,7 +45,7 @@ function collectState(client: ProgramClient, brief: ProgramBrief, today: string,
     : missing.slice(0, 2).map((key) => briefQuestions[key]).join('\n') || (extra ? '' : 'Уточните последний ответ, чтобы продолжить.')
   const reply = [extra, guidance].filter(Boolean).join('\n\n')
   return action(reply, { step: 'brief', clientId: client.id, clientName: client.fullName, goal: client.goal,
-    briefState: brief, briefSummary: briefSummary(brief), readyToGenerate: ready,
+    sourceSummary: basis?.summary, hasHistory: basis?.hasHistory, briefState: brief, briefSummary: briefSummary(brief), readyToGenerate: ready,
     briefStatus: ready ? 'ready' : blocked || limitation || issues.length || brief.adult === false ? 'needs_clarification' : 'needs_answers',
     clarification: blocked ? extra ?? guidance : null,
     missing: missing.map((key) => briefQuestions[key]),
@@ -54,7 +56,8 @@ export async function programPilotTurn(message: string, clients: readonly Progra
   if (!isProgramPilotRequest(message, latestAction)) return undefined
   if (/^(?:отмена|отменить|стоп|закрыть|не надо)(?:\s|$)/iu.test(message.trim())) return { reply: 'Создание программы отменено.', action: null }
   const previous = record(record(latestAction)?.payload)
-  const collect = (client: ProgramClient, brief: ProgramBrief, extra?: string, blocked = false) => collectState(client, brief, deps.today, extra, blocked)
+  let basis = previous && typeof previous.sourceSummary === 'string' ? { summary: previous.sourceSummary, hasHistory: previous.hasHistory === true } : undefined
+  const collect = (client: ProgramClient, brief: ProgramBrief, extra?: string, blocked = false) => collectState(client, brief, deps.today, extra, blocked, basis)
   const choice = message.trim().match(/^(?:выбрать\s+)?(\d{1,2})$/iu)
   const candidates = Array.isArray(previous?.candidates) ? previous.candidates : []
   const numbered = choice && previous?.step === 'client' ? record(candidates[Number(choice[1]) - 1]) : undefined
@@ -90,17 +93,35 @@ export async function programPilotTurn(message: string, clients: readonly Progra
     let source: ProgramSourceSnapshot
     try { source = await deps.loadContext(client) }
     catch { return collect(client, brief, 'Не удалось загрузить историю клиента. Ответы сохранены; перед составлением программы повторно проверю историю.', clarification !== null) }
+    basis = { summary: programSourceSummary(source), hasHistory: source.context.completedWorkouts > 0 }
     const feedback = source.context.feedback
-    return collect(client, brief, `Пилот: программа на всё тело, 1–3 занятия от 30 минут, с днём отдыха между ними.\nКлиент: ${client.fullName}. За последние восемь недель вижу ${source.context.completedWorkouts} завершённых тренировок.`
+    return collect(client, brief, `Пилот: четыре недели занятий под наблюдением тренера, 1–3 раза в неделю от 30 минут, с днём отдыха между занятиями.\nКлиент: ${client.fullName}. За последние восемь недель вижу ${source.context.completedWorkouts} завершённых тренировок.`
       + (feedback.discomfortDates.length ? ` Есть сообщения о дискомфорте: ${feedback.discomfortDates.join(', ')}. В анкете уточним текущее состояние.` : '')
       + (clarification ? `\n${clarification}` : ''), clarification !== null)
   }
+  if (previous.step === 'confirm' && message.startsWith('Измени упражнение ')) {
+    try {
+      const edited = editProgram(message, previous, brief, client.id, deps.today)
+      return action(String(edited.editGuidance), edited, true)
+    } catch (error) {
+      const target = message.match(/^Измени упражнение (\d+) в занятии (\d{4}-\d{2}-\d{2})/u)
+      const reason = error instanceof ProgramValidationError ? programEditIssue(error.codes) : 'Не удалось проверить правку. Повторите попытку; если ошибка сохранится, обновите страницу.'
+      const guidance = `${target ? `${target[2]}, упражнение ${target[1]}. ` : ''}${reason} Предыдущая программа сохранена.`
+      return action(guidance, { ...previous, rejectedEdit: message, editGuidance: guidance }, true)
+    }
+  }
+  if (previous.step === 'confirm' && /^(?:изменить программу|замени|измени|поменяй)/iu.test(message) && !/^изменить условия/iu.test(message)) {
+    return action('Откройте нужное занятие и нажмите «Изменить» у упражнения: там можно выбрать область правки.', { ...previous, editGuidance: 'Откройте занятие → Изменить у упражнения. Выберите только это занятие или этот день во всех неделях.' }, true)
+  }
   if (previous.step === 'confirm' && message.trim() === CONFIRM_PROGRAM_BRIEF) {
-    return collect(client, brief, 'Программа уже подготовлена. Добавьте её в расписание или измените условия для нового черновика.')
+    return action('Программа уже подготовлена. Добавьте её в расписание или измените условия.', { ...previous, editGuidance: 'Программа уже подготовлена. Черновик сохранён.' }, true)
+  }
+  if (previous.step === 'confirm' && !/^изменить условия/iu.test(message.trim())) {
+    return action('Черновик сохранён. ' + (typeof previous.rationale === 'string' ? previous.rationale : ''), { ...previous, editGuidance: 'Основания программы: ' + (typeof previous.rationale === 'string' ? previous.rationale : '') + ' Для точечной правки откройте занятие; для новой анкеты нажмите «Изменить условия».' }, true)
   }
   if (previous.historyQuestion === true && [HISTORY_COMPLETE, HISTORY_INCOMPLETE].includes(message.trim())) {
     brief = { ...brief, historyComplete: message.trim() === HISTORY_COMPLETE }
-    if (!brief.historyComplete) return collect(client, brief, 'Учла, что часть тренировок не записана. По этим записям нельзя определить привычный объём: предложу стартовый вариант — до двух подходов на упражнение, без повышения повторов в первые две недели. Проверьте условия перед составлением.')
+    if (!brief.historyComplete) return collect(client, brief, 'Учла, что часть тренировок не записана. Это не основание автоматически увеличивать объём. Укажите меньше занятий в неделю; если уже выбрано одно, программу нужно составить вручную.', true)
     return collect(client, brief, 'Учла: это вся история. Для выбранной частоты записанный объём слишком мал в рамках этого пилота. Укажите меньше занятий в неделю; если уже выбрано одно, программу нужно составить вручную.', true)
   }
   if (message.trim() === CONFIRM_PROGRAM_BRIEF && previous.readyToGenerate === true) {
@@ -108,29 +129,34 @@ export async function programPilotTurn(message: string, clients: readonly Progra
     if (issues.length) return collect(client, brief, briefIssueText(issues), true)
     // User-turn insertion is unique. A duplicate invocation may read the saved
     // response, but must never launch a second paid generation after a timeout.
-    if (deps.duplicateTurn) throw new Error('program_generation_in_progress_or_interrupted')
+    // The durable job deduplicates both retries and different concurrent turns.
     if (!await deps.canGenerate()) return collect(client, brief, 'На сегодня достигнут лимит составления программ. Можно продолжить завтра.')
     try {
       const context = await deps.loadContext(client)
+      basis = { summary: programSourceSummary(context), hasHistory: context.context.completedWorkouts > 0 }
+      if (basis.hasHistory && !brief.continuationPlan) return collect(client, brief)
+      const conflicts = (context.plannedWorkouts ?? []).filter((workout) => workout.date >= brief.startDate! && workout.date <= addDays(brief.startDate!, 27))
+      if (conflicts.length) return collect(client, brief, `В период программы уже назначены тренировки: ${[...new Set(conflicts.map((row) => row.date))].join(', ')}. Измените начало или дни программы; существующие назначения сохраняются.`, true)
       const load = deriveProgramLoad(brief, context.context, deps.today)
       const loadIssues = programLoadIssues(brief, load)
       if (loadIssues.length) {
-        if (brief.historyComplete === true) return collect(client, brief, `${load.summary}\n${briefIssueText(loadIssues)}`, true)
+        if (brief.historyComplete !== undefined) return collect(client, brief, `${load.summary}\n${briefIssueText(loadIssues)}`, true)
         const result = collect(client, brief, `За последние четыре недели в Fit записано в среднем ${Number(load.meanWeeklyCatalogSets.toFixed(1))} сопоставимых подходов в неделю. Для ${brief.frequency} занятий в неделю это небольшой объём. Это вся история или часть тренировок не записана?`, true)
         if (result.action) result.action.payload.historyQuestion = true
         return result
       }
-      const raw = await deps.generate(brief, context)
+      const raw = await deps.generate(brief, context, client.id)
       const template = validateProgramTemplate(raw, brief, deps.today)
       validateProgramLoad(template, load)
-      const program = materializeProgram(template, brief, client.id, deps.turnId)
+      const program = materializeProgram(template, brief, client.id, programGenerationKey(deps.actorId, client.id, brief, context.fingerprint))
       return action(`Подготовила программу: ${brief.frequency} занятий в неделю, всего ${program.sessions.length}. ${template.rationale}`, {
-        ...program, step: 'confirm', clientId: client.id, clientName: client.fullName,
+        ...program, sourceSummary: programSourceSummary(context), historyFacts: context.context.exercises, programId: programGenerationKey(deps.actorId, client.id, brief, context.fingerprint), template, editableCatalog: editableProgramCatalog(brief), step: 'confirm', clientId: client.id, clientName: client.fullName,
         goal: brief.goalText, brief: briefSummary(brief), briefState: brief, sourceFingerprint: context.fingerprint,
         generatedAt: new Date().toISOString(), sourceCapturedAt: context.capturedAt, sourcePeriodEnd: context.context.periodEnd,
         loadBasis: load,
       }, true)
     } catch (error) {
+      if (error instanceof Error && error.message === 'program_generation_busy') return collect(client, brief, 'Эта программа уже составляется. Дождитесь результата; после прерванного запроса повтор доступен через три минуты.')
       const codes = error instanceof ProgramValidationError ? error.codes : []
       return collect(client, brief, codes.length
         ? 'Предложенная моделью программа не прошла проверку согласованности. Можно уточнить условия или явно повторить составление.'
@@ -177,6 +203,7 @@ equipment: только предложенные коды. «Полностью 
 limitations none только при явном отрицании актуальной боли/травм/ограничений. Старое сообщение о боли не доказывает текущую травму. Не решай медицинские вопросы. adult только из явного возраста/ответа.
 Для otherActivities value — строка с JSON-массивом объектов, например [{"kind":"бег","frequency":2,"weekdays":[2,6]}]; это единственное исключение из формата простых массивов через запятую.
 preferences и otherActivity — слова пользователя, допустимо «нет». При другой нагрузке otherActivities содержит каждый вид kind, frequency (1–7) и weekdays. Не заполняй otherActivities без явно указанных вида, частоты и дней. activityOverlapConfirmed не устанавливай: согласование обрабатывает код. excludedRefs — только явные исключения из каталога. Если пожелание требует неразмеченного упражнения, clarification сообщает об этом; не подменяй другим упражнением.
+continuationPlan — что продолжить или изменить по словам тренера. preserveRefs — только явно названные упражнения, которые важно сохранить. Не додумывай их; этот вопрос нужен только при наличии истории.
 historyComplete — только явное подтверждение полноты записей или сообщение, что тренировки записаны не полностью/проходили вне Fit. Не делай вывод о полноте по отсутствию записей.
 Если запрос выходит за пределы схемы или двусмысленен, уточни его и очисти противоречивое поле. На «изменить условия» не меняй ответы, спроси что изменить.`,
     data: { today, currentBrief: brief, message, equipment: PROGRAM_EQUIPMENT,
@@ -199,4 +226,22 @@ export async function invokeProgramGenerator(actorId: string, operationId: strin
     modelUri: metric.modelUri, upstreamRequestId: typeof metric.requestId === 'string' ? metric.requestId : null, usage: aiStudioUsage(metric.usage) })
   if (!response.ok) throw new Error('program_generator_failed')
   return record(raw)?.template
+}
+
+function programSourceSummary(source: ProgramSourceSnapshot): string {
+  const history = source.context
+  const weight = source.profile.latestWeight
+  return `Из Fit: ${history.periodStart}–${history.periodEnd}. Завершённых тренировок: ${history.completedWorkouts}. Последняя запись: ${history.lastCompletedDate ?? 'нет записей'}. `
+    + (weight?.weightKg !== null && weight?.weightKg !== undefined ? `Вес: ${weight.weightKg} кг, ${weight.date}. ` : 'Подтверждённый замер веса отсутствует. ')
+    + `Обратная связь отсутствует у ${history.feedback.missingWorkouts} записей. `
+    + (history.completedWorkouts ? 'Замысел предыдущей программы уточняем у тренера.' : 'Отсутствие записей не означает отсутствие опыта: опыт берём из ответа тренера.')
+}
+function programEditIssue(codes: string[]): string {
+  if (codes.includes('session_exceeds_time_budget')) return 'Занятие не укладывается в выбранное время. Уменьшите подходы или измените условия программы.'
+  if (codes.some((code) => code.startsWith('missing_weekly_')) || codes.includes('required_exercise_missing')) return 'После замены потерялось обязательное движение или упражнение, которое вы хотели сохранить. Выберите замену того же движения.'
+  if (codes.some((code) => /progression|volume_jump/u.test(code))) return 'Правка создаёт слишком резкий переход нагрузки между неделями. Уменьшите изменение или согласуйте значения для этого дня во всех неделях.'
+  if (codes.some((code) => /load_limit|volume_limit/u.test(code))) return 'Назначение превышает согласованный объём или усилие. Уменьшите подходы или RPE.'
+  if (codes.includes('repeated_loaded_trunk')) return 'В одном занятии оказалось несколько тяжёлых движений без опоры корпуса. Выберите упражнение с опорой или уменьшите усилие.'
+  if (codes.includes('duplicate_session_exercise')) return 'Это упражнение уже есть в занятии. Выберите другое.'
+  return 'Проверьте назначение: доступное упражнение, 1–4 подхода, 4–20 повторов или 15–90 секунд, RPE с шагом 0,5 и отдых 60–180 секунд.'
 }

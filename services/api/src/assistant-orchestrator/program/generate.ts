@@ -101,8 +101,8 @@ export function validateProgramLoad(template: ProgramTemplate, load: ProgramLoad
       if (prescription.sets > load.maxSetsPerExercise || prescription.rpe > load.rpe) throw new ProgramValidationError(['history_load_limit'])
       const initial = exercise.weeks[0]!
       const delta = prescription.reps === null ? prescription.durationSec! - initial.durationSec! : prescription.reps - initial.reps!
-      if (prescription.sets !== initial.sets || prescription.rpe !== initial.rpe
-        || delta !== load.increments[week]! * (prescription.reps === null ? 5 : 1)) throw new ProgramValidationError(['history_progression_mismatch'])
+      // Check the upper progression envelope; hold/reduction are valid model choices.
+      if (delta > load.increments[week]! * (prescription.reps === null ? 5 : 1)) throw new ProgramValidationError(['history_progression_mismatch'])
       sets += prescription.sets
     }
     if (load.weeklySetCeiling !== null && sets > load.weeklySetCeiling) throw new ProgramValidationError(['history_volume_limit'])
@@ -127,12 +127,13 @@ export function programBriefIssues(brief: ProgramBrief, today: string): string[]
   if (activityOverlap(brief) && brief.activityOverlapConfirmed !== true) issues.push('other_activity_overlap_requires_review')
   if (!isCalendarDate(brief.startDate) || brief.startDate < today || brief.startDate > addDays(today, 90)) issues.push('invalid_start_date')
   const catalog = eligibleProgramExercises(brief.equipment ?? [], brief.excludedRefs ?? [])
+  if (brief.preserveRefs?.some((ref) => !catalog.some((row) => row.ref === ref))) issues.push('catalog_preserved_exercise_unavailable')
   for (const family of ['squat', 'hinge', 'horizontal_push', 'horizontal_pull', 'core']) {
     if (!catalog.some((row) => row.movement === family)) issues.push(`catalog_missing_${family}`)
   }
   if (brief.weekdays?.some((day) => brief.weekdays!.includes(day % 7 + 1))) issues.push('adjacent_training_days')
   if (brief.durationMin !== undefined && brief.durationMin < 30) issues.push('insufficient_training_time')
-  try { programSelectionSlots(brief) } catch { issues.push('catalog_no_supported_combination') }
+
   return issues
 }
 
@@ -170,6 +171,7 @@ export function validateProgramTemplate(raw: unknown, brief: ProgramBrief, today
   }
   if (new Set(sessions.map((row) => row.weekday)).size !== sessions.length) throw new ProgramValidationError(['duplicate_weekday'])
   const issues = new Set<string>()
+  for (const ref of brief.preserveRefs ?? []) if (!sessions.some((session) => session.exercises.some((exercise) => exercise.exerciseRef === ref))) issues.add('required_exercise_missing')
   const weekTotals: number[] = []
   for (let week = 0; week < 4; week++) {
     let weeklySets = 0

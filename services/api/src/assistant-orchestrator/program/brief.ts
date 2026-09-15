@@ -2,6 +2,8 @@ import { PROGRAM_EQUIPMENT, PROGRAM_CATALOG, type Equipment } from './catalog.js
 import type { ProgramFrequency } from './context.js'
 
 export interface ProgramBrief {
+  continuationPlan?: string
+  preserveRefs?: string[]
   goalText?: string
   goal?: 'strength' | 'hypertrophy' | 'general_fitness' | 'weight_loss'
   frequency?: ProgramFrequency
@@ -22,6 +24,8 @@ export interface ProgramBrief {
 }
 
 const briefProperties = {
+  continuationPlan: { type: 'string', maxLength: 500 },
+  preserveRefs: { type: 'array', items: { type: 'string', enum: PROGRAM_CATALOG.map((row) => row.ref) } },
   goalText: { type: 'string', maxLength: 500 },
   goal: { type: 'string', enum: ['strength', 'hypertrophy', 'general_fitness', 'weight_loss'] },
   frequency: { type: 'integer', minimum: 1, maximum: 3 },
@@ -76,7 +80,7 @@ export function decodeQuotedBriefPatch(value: unknown): unknown {
       : field === 'adult' || field === 'historyComplete' || field === 'activityOverlapConfirmed' ? text === 'true' ? true : text === 'false' ? false : undefined
         : field === 'otherActivities' ? JSON.parse(text) as unknown
         : field === 'weekdays' ? text.split(',').map((day) => Number(day.trim()))
-          : field === 'equipment' || field === 'excludedRefs' ? text ? text.split(',').map((entry) => entry.trim()) : [] : text
+          : field === 'equipment' || field === 'excludedRefs' || field === 'preserveRefs' ? text ? text.split(',').map((entry) => entry.trim()) : [] : text
   }
   return { patch, clear, evidence, clarification: value.clarification }
 }
@@ -107,7 +111,7 @@ export function readProgramBrief(value: unknown): ProgramBrief | undefined {
     else if (key === 'weekdays') {
       if (!Array.isArray(item) || item.length < 1 || item.length > 3 || new Set(item).size !== item.length
         || !item.every((day) => typeof day === 'number' && Number.isInteger(day) && day >= 1 && day <= 7)) return undefined
-    } else if (key === 'equipment' || key === 'excludedRefs') {
+    } else if (key === 'equipment' || key === 'excludedRefs' || key === 'preserveRefs') {
       const allowed: readonly string[] = key === 'equipment' ? PROGRAM_EQUIPMENT : PROGRAM_CATALOG.map((row) => row.ref)
       if (!Array.isArray(item) || item.length > allowed.length || new Set(item).size !== item.length
         || !item.every((entry) => typeof entry === 'string' && allowed.includes(entry))) return undefined
@@ -185,6 +189,7 @@ export function mergeExtractedBrief(previous: ProgramBrief, message: string, val
 }
 
 export const briefQuestions: Partial<Record<keyof ProgramBrief, string>> = {
+  continuationPlan: 'Продолжаем прежний подход или меняем программу? Что важно сохранить?',
   goalText: 'Какова цель именно этой четырёхнедельной программы: что хотите улучшить?',
   goal: 'Основной приоритет — сила, набор мышц, общая форма или снижение веса?',
   frequency: 'Сколько занятий в неделю планируем: одно, два или три?',
@@ -200,8 +205,8 @@ export const briefQuestions: Partial<Record<keyof ProgramBrief, string>> = {
   adult: 'Клиенту уже исполнилось 18 лет?',
 }
 
-export function missingBriefFields(brief: ProgramBrief): (keyof ProgramBrief)[] {
-  const missing = Object.keys(briefQuestions).filter((key) => key !== 'otherActivities' && brief[key as keyof ProgramBrief] === undefined) as (keyof ProgramBrief)[]
+export function missingBriefFields(brief: ProgramBrief, hasHistory = false): (keyof ProgramBrief)[] {
+  const missing = Object.keys(briefQuestions).filter((key) => key !== 'otherActivities' && (key !== 'continuationPlan' || hasHistory) && brief[key as keyof ProgramBrief] === undefined) as (keyof ProgramBrief)[]
   if (brief.weekdays && brief.frequency && brief.weekdays.length !== brief.frequency && !missing.includes('weekdays')) missing.push('weekdays')
   if (activityNeedsDetails(brief)) missing.push('otherActivities')
   return missing
@@ -211,7 +216,7 @@ export function briefSummary(brief: ProgramBrief): string {
   const days = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
   const experience = { beginner: 'начальный', returning: 'возвращение после перерыва', experienced: 'есть опыт' }
   const equipmentNames: Record<Equipment, string> = { dumbbells: 'гантели', barbell: 'штанга', bench: 'скамья', rack: 'стойка', cable: 'блочный тренажёр', pullup_bar: 'турник', leg_press: 'жим ногами', leg_curl: 'сгибание ног', leg_extension: 'разгибание ног' }
-  return [brief.goalText && `Цель: ${brief.goalText}`, brief.frequency && `${brief.frequency} занятий в неделю · 4 недели`,
+  return [brief.continuationPlan && `Продолжение: ${brief.continuationPlan}`, brief.preserveRefs?.length && `Сохранить упражнения: ${brief.preserveRefs.map((ref) => PROGRAM_CATALOG.find((row) => row.ref === ref)?.name).join(', ')}`, brief.goalText && `Цель: ${brief.goalText}`, brief.frequency && `${brief.frequency} занятий в неделю · 4 недели`,
     brief.weekdays && `Дни: ${brief.weekdays.map((day) => days[day - 1]).join(', ')}`,
     brief.durationMin && `До ${brief.durationMin} минут`, brief.startDate && `Начало: ${brief.startDate}`,
     brief.equipment && `Оборудование: ${brief.equipment.length ? brief.equipment.map((item) => equipmentNames[item]).join(', ') : 'без оборудования'}`,

@@ -72,6 +72,10 @@ export async function loadProgramContext(actor: SupabaseClient, client: { id: st
       factDistanceKm: numberOrNull(row, 'fact_distance_km'), factRpe: numberOrNull(row, 'fact_rpe'),
     })),
   }
+  const planned = await pages((from, to) => actor.from('workouts').select('id,workout_date')
+    .eq('client_id', client.id).eq('status', 'planned').is('deleted_at', null)
+    .gte('workout_date', today).lte('workout_date', addDays(today, 118)).order('id').range(from, to))
+  const plannedWorkouts = planned.map((row) => ({ id: string(row, 'id'), date: string(row, 'workout_date') }))
   const result = buildProgramHistoryContext(source)
   const [goal, measurement] = await Promise.all([
     actor.rpc('get_client_goal', { p_client_id: client.id }),
@@ -82,6 +86,6 @@ export async function loadProgramContext(actor: SupabaseClient, client: { id: st
   const latest = rows(measurement.data)[0]
   const profile = { ageYears: client.ageYears, goal: buildTrainingGoalContext(client.goal, goal.data, today),
     latestWeight: latest ? { date: string(latest, 'recorded_on'), weightKg: numberOrNull(latest, 'weight_kg') } : null }
-  return { ...result, capturedAt, profile, fingerprint: createHash('sha256').update(JSON.stringify([result.fingerprint, profile])).digest('hex') }
+  return { ...result, capturedAt, profile, plannedWorkouts, fingerprint: createHash('sha256').update(JSON.stringify([result.fingerprint, profile, plannedWorkouts])).digest('hex') }
 }
 

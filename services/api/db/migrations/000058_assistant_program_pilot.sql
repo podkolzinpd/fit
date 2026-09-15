@@ -67,6 +67,8 @@ begin
         raise exception 'assistant_program_invalid' using errcode = 'PT422';
       end if;
       if action_row.payload->>'schemaVersion' = 'program-v1' then
+        -- Serialize program saves per client before rechecking all source changes.
+        perform 1 from public.clients where id = (action_row.payload->>'clientId')::uuid for update;
         if jsonb_array_length(p_input->'workouts') not in (4, 8, 12)
           or p_input->'workouts' is distinct from action_row.payload->'canonicalWorkouts'
           or nullif(action_row.payload->>'sourceCapturedAt', '') is null
@@ -76,7 +78,6 @@ begin
         end if;
         if exists (select 1 from public.workouts w
           where w.client_id = (action_row.payload->>'clientId')::uuid
-            and w.status = 'done'
             and w.updated_at > (action_row.payload->>'sourceCapturedAt')::timestamptz)
           or exists (select 1 from public.clients c
             where c.id = (action_row.payload->>'clientId')::uuid

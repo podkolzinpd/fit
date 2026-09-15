@@ -1,3 +1,4 @@
+import { generateProgramOnce, programGenerationKey } from './program/job.js'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { aiStudioUsage, reportAiStudioMetric } from '../ai-studio-usage-metrics.js'
 import { isProgramPilotEnabled } from './program/model.js'
@@ -800,7 +801,10 @@ export async function runAssistantTurn(
       matchClients: (message) => matchingSummaryClients(message, clientRows),
       loadContext: (client) => loadProgramContext(actorClient, client, today),
       extract: (brief, message) => extractProgramBrief(brief, message, today, turnId),
-      generate: (brief, context) => invokeProgramGenerator(user.id, turnId, today, brief, context),
+      generate: (brief, context, clientId) => {
+        const key = programGenerationKey(user.id, clientId, brief, context.fingerprint)
+        return generateProgramOnce(service, key, user.id, clientId, () => invokeProgramGenerator(user.id, key, today, brief, context))
+      },
       canGenerate: async () => {
         const count = await service.from('assistant_messages').select('id,assistant_conversations!inner(owner_id)', { count: 'exact', head: true })
           .eq('assistant_conversations.owner_id', user.id).eq('author', 'user').eq('content', CONFIRM_PROGRAM_BRIEF)

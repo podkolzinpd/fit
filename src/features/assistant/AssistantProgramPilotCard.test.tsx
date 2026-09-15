@@ -47,3 +47,17 @@ describe('program pilot card', () => {
     expect(screen.getByText('История записана не полностью. Стартовый объём — два подхода.')).toBeVisible()
   })
 })
+
+it('submits a scoped edit without applying or regenerating the rest of the draft', async () => {
+  const handlers = props()
+  render(<AssistantProgramPilotCard {...handlers} payload={{ step: 'confirm', canonicalWorkouts, editableCatalog: [{ ref: 'fedb-bodyweight-squat', name: 'Приседания', inputKind: 'reps' }] }} />)
+  await userEvent.click(screen.getAllByText('Посмотреть')[0]!)
+  await userEvent.click(screen.getAllByRole('button', { name: /^Изменить$/ })[0]!)
+  expect(screen.getByLabelText('Область изменения')).toHaveValue('только это занятие')
+  await userEvent.clear(screen.getByLabelText('Повторы'))
+  await userEvent.type(screen.getByLabelText('Повторы'), '8')
+  await userEvent.click(screen.getByRole('button', { name: 'Проверить изменение' }))
+  expect(handlers.onSuggestion).toHaveBeenCalledWith(expect.stringContaining('в занятии 2026-10-01; область: только это занятие;'))
+  expect(handlers.onSuggestion).toHaveBeenCalledWith(expect.stringContaining('повторы: 8;'))
+  expect(handlers.onApply).not.toHaveBeenCalled()
+})

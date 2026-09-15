@@ -69,14 +69,14 @@ describe('observed history drives numerical prescriptions', () => {
     expect(result.sessions.flatMap((session) => session.exercises).reduce((sum, exercise) => sum + exercise.weeks[0]!.sets, 0)).toBe(15)
     expect(result.sessions.every((session) => session.exercises.every((exercise) => exercise.weeks[0]!.sets === 1))).toBe(true)
   })
-  it('asks about an incompatible volume instead of raising the minimum silently, and can resolve incomplete records', () => {
+  it('asks about an incompatible volume instead of raising the minimum silently, and retains the ceiling for incomplete records', () => {
     const { brief } = fixture()
     const context = history({ frequency: 1, sets: 4 })
     const load = deriveProgramLoad(brief, context, '2026-09-15')
     expect(programLoadIssues(brief, load)).toContain('history_volume_requires_review')
     expect(() => prescribeProgram(selection(3), brief, '2026-09-15', load)).toThrow()
     const clarified = deriveProgramLoad({ ...brief, historyComplete: false }, context, '2026-09-15')
-    expect(clarified.weeklySetCeiling).toBeNull()
+    expect(clarified.weeklySetCeiling).toBe(4)
     expect(clarified.mode).toBe('starting')
     expect(clarified.summary).toContain('история записана не полностью')
   })
@@ -103,4 +103,23 @@ describe('observed history drives numerical prescriptions', () => {
   it.each([null, {}, { version: 'program-context-v1' }])('rejects missing or incompatible history %s', (context) => {
     expect(() => deriveProgramLoad(fixture().brief, context, '2026-09-15')).toThrow('program_history_invalid')
   })
+})
+
+it('incomplete catalog cannot inflate the same recent volume', () => {
+  const { brief } = fixture(); brief.experience = 'experienced'
+  const context = history({ frequency: 1, sets: 15 })
+  const baseline = deriveProgramLoad(brief, context, '2026-09-15')
+  context.loadEvidence[0]!.unmappedSets = 1
+  const uncertain = deriveProgramLoad(brief, context, '2026-09-15')
+  expect(uncertain.weeklySetCeiling).toBe(baseline.weeklySetCeiling)
+  const result = prescribeProgram(selection(3), brief, '2026-09-15', uncertain)
+  expect(result.sessions.flatMap((session) => session.exercises).reduce((sum, exercise) => sum + exercise.weeks[0]!.sets, 0)).toBe(15)
+})
+it('difficult feedback changes effort and progression without diagnosing current limitations', () => {
+  const { brief } = fixture(); brief.experience = 'experienced'
+  const context = history()
+  context.feedback = { reportedWorkouts: 12, missingWorkouts: 0, hardDates: ['2026-09-14'], discomfortDates: ['2026-09-14'], meanSessionRpe: 10 }
+  const load = deriveProgramLoad(brief, context, '2026-09-15')
+  expect(load).toMatchObject({ mode: 'starting', rpe: 6.5, increments: [0, 0, 1, 1], weeklySetCeiling: 45 })
+  expect(load.summary).toContain('текущие ограничения проверяются отдельно')
 })

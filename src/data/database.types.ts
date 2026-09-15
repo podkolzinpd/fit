@@ -1,4 +1,4 @@
-// schema-sha256: d937992bc80e07e23a0f7c72b065a5d128918a54db4bd723fe1189116b4f7ccd
+// schema-sha256: 74863ad9ff83a9c80a0c8d82cebcf45c348b549be836b4a73d3538c8d65e48f6
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -37,6 +37,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assistant_program_generation_job: {
+        Args: { p_id: string; p_owner_id: string; p_client_id: string; p_lease_id: string; p_result?: Json }
+        Returns: Json
+      }
+
       graphql: {
         Args: {
           extensions?: Json

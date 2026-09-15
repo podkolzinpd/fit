@@ -58,3 +58,11 @@ it('decodes activity details and history confirmation in quoted changes', () => 
   ], clarification: null })
   expect(mergeExtractedBrief({}, message, decoded).brief).toEqual({ otherActivities: [{ kind: 'бег', frequency: 2, weekdays: [2, 6] }], historyComplete: false })
 })
+
+it('asks what to continue only when history exists and preserves an explicit answer', () => {
+  expect(missingBriefFields({}, false)).not.toContain('continuationPlan')
+  expect(missingBriefFields({}, true)).toContain('continuationPlan')
+  const result = mergeExtractedBrief({}, 'Продолжаем прежний подход, оставь жим лёжа', { patch: { continuationPlan: 'Продолжаем прежний подход', preserveRefs: ['bench-press'] }, clear: [], evidence: { continuationPlan: 'Продолжаем прежний подход', preserveRefs: 'оставь жим лёжа' }, clarification: null })
+  expect(missingBriefFields(result.brief, true)).not.toContain('continuationPlan')
+  expect(result.brief.preserveRefs).toEqual(['bench-press'])
+})

@@ -1,3 +1,4 @@
+import { programPlanFromTemplate, readProgramPlan } from './assistant-orchestrator/program/plan.js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { handler } from './yandex-program-generator-function.js'
 import { isProgramPilotEnabled, programModelJson } from './assistant-orchestrator/program/model.js'
@@ -12,16 +13,16 @@ function request() {
     context: buildProgramHistoryContext({ clientId: 'client', periodStart: '2026-07-22', periodEnd: '2026-09-15', workouts: [], exercises: [], sets: [] }) }
 }
 const selection = { days: { day1: { squat: 'leg-press', hinge: 'fedb-butt-lift-bridge', horizontal_push: 'push-ups', horizontal_pull: 'seated-cable-row', core: 'plank', accessory: null } } }
-beforeEach(() => { vi.clearAllMocks(); vi.mocked(isProgramPilotEnabled).mockReturnValue(true); vi.mocked(programModelJson).mockResolvedValue(selection) })
+beforeEach(() => { vi.clearAllMocks(); vi.mocked(isProgramPilotEnabled).mockReturnValue(true); vi.mocked(programModelJson).mockResolvedValue(programPlanFromTemplate(prescribeProgram(selection, request().brief, request().today, deriveProgramLoad(request().brief, request().context.context, request().today)))) })
 describe('private generator load contract', () => {
-  it('passes the same calculated load to the model and numerical prescription', async () => {
+  it('passes history bounds to the model and preserves its individual prescriptions', async () => {
     const body = request()
     const load = deriveProgramLoad(body.brief, body.context.context, body.today)
     const result = await handler({ httpMethod: 'POST', body })
     expect(result.statusCode).toBe(200)
     expect(programModelJson).toHaveBeenCalledOnce()
     expect(vi.mocked(programModelJson).mock.calls[0]?.[0]).toHaveProperty('data.load', load)
-    expect(JSON.parse(result.body)).toMatchObject({ template: prescribeProgram(selection, body.brief, body.today, load) })
+    expect(JSON.parse(result.body)).toMatchObject({ template: readProgramPlan(programPlanFromTemplate(prescribeProgram(selection, body.brief, body.today, load)), body.brief, body.today) })
   })
   it('rejects an invalid history before a paid model call', async () => {
     const result = await handler({ httpMethod: 'POST', body: { ...request(), context: {} } })
