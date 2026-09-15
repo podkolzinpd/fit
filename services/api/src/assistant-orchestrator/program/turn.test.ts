@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { programPilotTurn } from './turn.js'
+import { extractProgramBrief, programPilotTurn } from './turn.js'
 import { CONFIRM_ACTIVITY_OVERLAP, CONFIRM_PROGRAM_BRIEF, HISTORY_COMPLETE, HISTORY_INCOMPLETE } from './brief.js'
 import { fixture } from './fixtures.js'
 import { buildProgramHistoryContext } from './context.js'
+import type { ProgramBrief } from './brief.js'
+import type { BriefAnswerContext } from './answer.js'
 
 const client = { id: 'client', fullName: 'Тестик', ageYears: 30, goal: 'Старая цель' }
 function setup() {
@@ -10,10 +12,40 @@ function setup() {
   const context = { ...buildProgramHistoryContext({ clientId: client.id, periodStart: '2026-07-22', periodEnd: '2026-09-15', workouts: [], exercises: [], sets: [] }), capturedAt: '2026-09-15T10:00:00Z', profile: { ageYears: 30, goal: null, latestWeight: null } }
   const deps = { actorId: 'trainer', turnId: 'turn', today: '2026-09-15', duplicateTurn: false,
     loadContext: vi.fn().mockResolvedValue(context), extract: vi.fn(), generate: vi.fn().mockResolvedValue(template), canGenerate: vi.fn().mockResolvedValue(true), matchClients: vi.fn().mockReturnValue([]) }
-  const latest = { payload: { programPilot: true, step: 'brief', clientId: client.id, briefState: brief, readyToGenerate: true } }
+  const latest = { payload: { programPilot: true, briefAnswerVersion: 2, step: 'brief', clientId: client.id, briefState: brief, readyToGenerate: true } }
   return { deps, latest, context }
 }
 describe('program chat state', () => {
+  it('keeps one question and passes its context to the next extraction', async () => {
+    const { deps, latest } = setup()
+    const active = { payload: { ...latest.payload, hasHistory: true, briefState: { adult: true }, guidance: 'Продолжаем прежний подход или меняем программу? Что важно сохранить?', askedFields: ['continuationPlan'] } }
+    deps.extract.mockResolvedValue({ patch: { continuationPlan: 'Меняем программу', goalText: 'выносливость', goal: 'general_fitness' }, clear: [], evidence: { continuationPlan: 'Меняем программу', goalText: 'выносливость', goal: 'выносливость' }, clarification: null })
+    const result = await programPilotTurn('Меняем программу, цель — выносливость', [client], active, deps)
+    expect(deps.extract).toHaveBeenCalledWith({ adult: true }, 'Меняем программу, цель — выносливость', { question: active.payload.guidance, fields: ['continuationPlan'] })
+    expect(result?.reply).toBe('Сколько занятий в неделю планируем: одно, два или три?')
+    expect(result?.action?.payload.askedFields).toEqual(['frequency'])
+  })
+  it.each(['нет', 'предпочтений нет'])('advances past preferences on %s using the real extractor', async (message) => {
+    const { deps, latest } = setup()
+    const brief = { ...latest.payload.briefState }
+    delete brief.preferences
+    delete brief.otherActivity
+    const active = { payload: { ...latest.payload, briefState: brief, askedFields: ['preferences'], guidance: 'Есть ли любимые или нежелательные упражнения?' } }
+    deps.extract.mockImplementation((current: ProgramBrief, text: string, context?: BriefAnswerContext) => extractProgramBrief(current, text, deps.today, deps.turnId, context))
+    const result = await programPilotTurn(message, [client], active, deps)
+    expect(result?.action?.payload.briefState).toMatchObject({ preferences: 'нет', limitations: 'none' })
+    expect(result?.action?.payload.askedFields).toEqual(['otherActivity'])
+    expect(result?.reply).not.toContain('любимые')
+  })
+  it('does not generate from an old quiz where a preference negative could erase pain', async () => {
+    const { deps, latest } = setup()
+    const old = { ...latest.payload, briefAnswerVersion: undefined }
+    const result = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], { payload: old }, deps)
+    expect(result?.action?.payload.briefState).not.toHaveProperty('limitations')
+    expect(result?.action?.payload.briefState).toMatchObject({ frequency: 3, durationMin: latest.payload.briefState.durationMin })
+    expect(result?.action?.payload).toMatchObject({ readyToGenerate: false, briefAnswerVersion: 2, askedFields: ['limitations'] })
+    expect(deps.generate).not.toHaveBeenCalled()
+  })
   it('ignores unrelated new requests', async () => {
     const { deps } = setup()
     expect(await programPilotTurn('Привет', [client], null, deps)).toBeUndefined()
