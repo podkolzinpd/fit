@@ -706,6 +706,21 @@ p { margin: 6px 0 }
   .phone-frame.keyboard-open .assistant-context-panel:has(> .assistant-workout-draft) { overflow:hidden; }
   .phone-frame.keyboard-open .assistant-composer { position:static; margin:0; padding:6px; background:color-mix(in srgb, var(--surface-raised) 96%, var(--input)); }
 }
+/* Program questions stay in the conversation. Supporting context uses its
+   natural height instead of reserving most of the mobile viewport. */
+.assistant-shell .assistant-page.assistant-program-collecting { height:100%; min-height:0; grid-template-rows:auto minmax(0, 1fr) auto auto; padding-bottom:0; overflow:hidden; }
+.assistant-program-collecting .assistant-thread { overflow-y:auto; overscroll-behavior:contain; }
+.assistant-program-collecting .assistant-context-panel { align-content:start; max-height:min(34vh, 240px); overflow-y:auto; }
+.assistant-program-collecting .assistant-flow-card { align-content:start; }
+.assistant-program-collecting .assistant-composer { position:static; margin-top:0; }
+.assistant-program-context-details > summary { min-height:44px; display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--fg); font-size:var(--type-caption-size); }
+.assistant-program-context-details > summary svg { width:16px; height:16px; flex:none; }
+.assistant-program-context-details[open] > summary svg { transform:rotate(90deg); }
+.assistant-program-context-details > summary::-webkit-details-marker { display:none; }
+@media (max-width: 480px) {
+  .phone-frame.keyboard-open .assistant-page.assistant-program-collecting { grid-template-rows:minmax(0, 1fr) auto auto; }
+  .phone-frame.keyboard-open .assistant-program-collecting .assistant-context-panel { max-height:30vh; }
+}
 /* Workout dictation card: the surface is intentionally generous enough to read
    and edit on a 390px client viewport. Keep all colors semantic so the same
    hierarchy works in both Fit themes. */
