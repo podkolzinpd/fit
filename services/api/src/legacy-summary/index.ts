@@ -1200,7 +1200,10 @@ export async function requestYandexSummaryDeduplicated(
 }
 
 export const summarizeClientTraining = async (req: Request): Promise<Response> => {
-    const requestId = crypto.randomUUID()
+    const suppliedRequestId = req.headers.get('x-fit-request-id')
+    const requestId = suppliedRequestId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(suppliedRequestId)
+      ? suppliedRequestId
+      : crypto.randomUUID()
     const invocationId = req.headers.get("x-yc-request-id")
     const iamToken = req.headers.get("x-yc-iam-token")
     try {

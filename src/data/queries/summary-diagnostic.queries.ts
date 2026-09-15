@@ -1,15 +1,57 @@
-import { supabase } from './client'
+function diagnosticFailure(stage: string, requestId: string, details: string): Error {
+  return new Error(`Этап ${stage} · ${details} · ID ${requestId}`)
+}
 
-// Incident-only transport: intentionally unavailable to migrated Yandex sessions.
-export async function summaryDiagnosticQuery(clientId: string, mode: 'preflight' | 'run_once', fingerprint?: string): Promise<unknown> {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Нужен вход тестового клиента через Supabase.')
-  const response = await fetch('https://functions.yandexcloud.net/d4eq75uad5lps1chbidk', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-supabase-authorization': `Bearer ${session.access_token}` },
-    body: JSON.stringify({ client_id: clientId, period_start: '2026-08-12', period_end: '2026-09-11', diagnostic: mode, diagnostic_fingerprint: fingerprint }),
-    signal: AbortSignal.timeout(60000),
-  })
-  if (!response.ok) throw new Error(`Диагностика не завершена (HTTP ${response.status}). Платный запрос не повторяйте.`)
-  return response.json() as Promise<unknown>
+// Incident-only, read-only preflight. It follows the same production route as
+// summary generation and stops before the model call or any database write.
+export async function summaryDiagnosticQuery(
+  apiBaseUrl: string,
+  sessionToken: string,
+  clientId: string,
+  periodStart: string,
+  periodEnd: string,
+): Promise<unknown> {
+  const requestId = crypto.randomUUID()
+  let response: Response
+  try {
+    response = await fetch(`${apiBaseUrl}/v1/clients/${clientId}/training-summaries/diagnostic`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        'content-type': 'application/json',
+        'x-fit-request-id': requestId,
+        'x-fit-session': sessionToken,
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+        period_start: periodStart,
+        period_end: periodEnd,
+        force: true,
+        trigger_reason: 'manual_refresh',
+      }),
+      signal: AbortSignal.timeout(60000),
+    })
+  } catch (error) {
+    const detail = error instanceof DOMException && error.name === 'TimeoutError'
+      ? 'таймаут 60 с'
+      : 'запрос не дошёл до Yandex API'
+    throw diagnosticFailure('NETWORK', requestId, detail)
+  }
+  const responseRequestId = response.headers.get('x-fit-request-id') ?? requestId
+  const releaseId = response.headers.get('x-fit-release-id') ?? 'нет release'
+  if (!response.ok) {
+    let bodyCode = ''
+    try {
+      const body = await response.clone().json() as { error?: unknown }
+      bodyCode = typeof body.error === 'string' ? body.error : ''
+    } catch { /* The status and headers remain sufficient diagnostics. */ }
+    const code = response.headers.get('x-fit-error-code') ?? (bodyCode || 'без кода')
+    throw diagnosticFailure('API', responseRequestId, `HTTP ${response.status} · ${code} · release ${releaseId}`)
+  }
+  try {
+    const payload = await response.json() as Record<string, unknown>
+    return { ...payload, request_id: responseRequestId, release_id: releaseId }
+  } catch {
+    throw diagnosticFailure('RESPONSE', responseRequestId, `невалидный JSON · release ${releaseId}`)
+  }
 }

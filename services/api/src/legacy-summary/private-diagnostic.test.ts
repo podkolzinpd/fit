@@ -58,11 +58,11 @@ describe('private summary diagnostic', () => {
     expect(diagnosticAllowed(approved, true, Date.parse('2026-09-11T10:00:00Z'))).toBe(true)
     expect(diagnosticAllowed(approved, false, 0)).toBe(false)
     expect(diagnosticAllowed({ email: approved.email }, true, 0)).toBe(false)
-    expect(diagnosticAllowed(approved, true, Date.parse('2026-09-13T00:00:00Z'))).toBe(false)
+    expect(diagnosticAllowed(approved, true, Date.parse('2026-09-18T00:00:00Z'))).toBe(false)
     expect(diagnosticAllowed({}, true, 0)).toBe(false)
     expect(diagnosticAllowed({ email: 'other@example.test', email_confirmed_at: '2026-01-01' }, true, 0)).toBe(false)
     expect(diagnosticAllowed({ email: 'other@example.test', email_confirmed_at: '2026-01-01' }, false, 0)).toBe(false)
-    expect(diagnosticAllowed({}, true, Date.parse('2026-09-13T00:00:00Z'))).toBe(false)
+    expect(diagnosticAllowed({}, true, Date.parse('2026-09-18T00:00:00Z'))).toBe(false)
   })
 
   it('returns rejected text privately with one call and no raw logging', async () => {
