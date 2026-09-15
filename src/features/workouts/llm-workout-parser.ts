@@ -1,6 +1,6 @@
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { exercisesRepository, type WorkoutParseResponse } from '../../data/repositories/exercises.repository'
-import { matchesExplicitWorkoutEquipment, parseQuickWorkoutEntry, resolveQuickWorkoutLine, splitWorkoutText, workoutCandidates, workoutTrainerComment, type ParsedWorkoutExercise } from './quick-workout-entry'
+import { matchesExplicitWorkoutEquipment, parseQuickWorkoutEntry, resolveQuickWorkoutLine, splitWorkoutText, workoutCandidates, type ParsedWorkoutExercise } from './quick-workout-entry'
 import { selectableExercises } from '../exercises/selectable-exercises'
 import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retirement'
 import { formatRunDuration, isRowingExerciseRef, rowingPaceLabel, runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
@@ -209,6 +209,7 @@ export function parsedWorkoutItems(response: WorkoutParseResponse, catalog: read
   return response.items.flatMap((item) => {
     const exercise = byRef.get(item.exerciseRef)
     if (!exercise) return []
+    const parsed = resolveQuickWorkoutLine(item.sourceText, exercise)
     const sets = item.sets.length ? item.sets.map((set, position) => ({
       position,
       weightKg: set.weightKg,
@@ -217,11 +218,9 @@ export function parsedWorkoutItems(response: WorkoutParseResponse, catalog: read
       ...(typeof set.distanceKm === 'number' && set.distanceKm > 0 ? { distanceKm: set.distanceKm } : {}),
     })) : [{ position: 0 }]
     return [{
-      line: item.sourceText,
-      exercise,
+      ...parsed,
       sets,
       hasValues: sets.some((set) => Object.keys(set).some((key) => key !== 'position' && set[key as keyof typeof set] !== undefined)),
-      trainerComment: workoutTrainerComment(item.sourceText),
       ...(item.position === undefined ? {} : { sourcePosition: item.position }),
     }]
   })

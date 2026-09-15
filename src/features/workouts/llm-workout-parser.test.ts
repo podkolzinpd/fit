@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
-import { formatLlmWorkoutText, mergeWorkoutParse, parseWorkoutWithLlm, requireExerciseConfirmation } from './llm-workout-parser'
+import { formatLlmWorkoutText, mergeWorkoutParse, parsedWorkoutItems, parseWorkoutWithLlm, requireExerciseConfirmation } from './llm-workout-parser'
 
 const catalog: ExerciseSnapshot[] = [
   { source: 'system', ref: 'bench', name: 'Жим лёжа', muscleGroup: 'chest', inputKind: 'strength' },
@@ -176,6 +176,25 @@ describe('formatLlmWorkoutText', () => {
     expect(result.items[0]).toMatchObject({
       exerciseRef: 'bench',
       sets: Array.from({ length: 3 }, () => ({ weightKg: 80, reps: 10 })),
+    })
+  })
+
+  it('сохраняет безопасно определённый локальный формат беговых интервалов', () => {
+    const running: ExerciseSnapshot = { source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance' }
+    const [result] = parsedWorkoutItems({
+      items: [{
+        sourceText: '6 по 400 метров',
+        exerciseRef: 'running',
+        confidence: 1,
+        sets: Array.from({ length: 6 }, () => ({ distanceKm: 0.4 })),
+      }],
+      unmatched: [],
+    }, [running])
+
+    expect(result).toMatchObject({
+      exercise: { ref: 'running', name: 'Бег — интервалы' },
+      structure: { blockPreset: 'interval', restBetweenSetsSec: 90 },
+      sets: Array.from({ length: 6 }, (_, position) => ({ position, distanceKm: 0.4 })),
     })
   })
 
