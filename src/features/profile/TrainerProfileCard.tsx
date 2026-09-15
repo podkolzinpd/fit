@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import type { TrainerProfileDraft } from '../../shared/domain'
 import { ChevronDownIcon } from '../../shared/icons'
+import { moscowMetroStationById } from '../../shared/moscow-metro'
+import { MetroStationList } from './MetroStationPicker'
 
 function experienceLabel(startYear: number | null): string | null {
   if (startYear === null) return null
@@ -20,6 +22,15 @@ function Certificates({ profile }: { profile: TrainerProfileDraft }) {
   </ul>
 }
 
+function Locations({ metroStationIds, customLocations }: { metroStationIds: string[]; customLocations: string[] }) {
+  return <div className="trainer-locations">
+    <MetroStationList stationIds={metroStationIds} />
+    {customLocations.length > 0 && <ul className="trainer-location-list trainer-location-manual" aria-label="Места тренировок">
+      {customLocations.map((location) => <li key={location}><span>{location}</span></li>)}
+    </ul>}
+  </div>
+}
+
 export function TrainerProfileCard({ profile, publicView = false, compact = false, action, primaryAction, footer }: {
   profile: TrainerProfileDraft
   publicView?: boolean
@@ -30,6 +41,8 @@ export function TrainerProfileCard({ profile, publicView = false, compact = fals
 }) {
   const experience = experienceLabel(profile.experienceStartYear)
   const certificateCount = profile.certificates.length
+  const metroStationIds = profile.metroStationIds.filter((id) => moscowMetroStationById(id) !== undefined)
+  const locationCount = profile.trainingModes.includes('in_person') ? metroStationIds.length + profile.customLocations.length : 0
   return <article className={`trainer-card${publicView ? ' trainer-card-public' : ''}${compact ? ' trainer-card-compact' : ''}`}>
     <header className="trainer-card-head">
       {profile.avatarDataUrl
@@ -52,6 +65,9 @@ export function TrainerProfileCard({ profile, publicView = false, compact = fals
       {experience !== null && <div><dt>Опыт</dt><dd>{experience}</dd></div>}
       {profile.price && <div><dt>Стоимость</dt><dd>{profile.price}</dd></div>}
     </dl>
+    {locationCount > 0 && (compact
+      ? <details className="trainer-card-disclosure"><summary><span>Где тренирует · {locationCount}</span><ChevronDownIcon /></summary><Locations metroStationIds={metroStationIds} customLocations={profile.customLocations} /></details>
+      : <section><h3>Где тренирует</h3><Locations metroStationIds={metroStationIds} customLocations={profile.customLocations} /></section>)}
     {compact
       ? profile.formats && <details className="trainer-card-disclosure"><summary><span>Как проходят занятия</span><ChevronDownIcon /></summary><p>{profile.formats}</p></details>
       : profile.formats && <section><h3>Как проходят занятия</h3><p>{profile.formats}</p></section>}

@@ -10,6 +10,7 @@ import { ChevronDownIcon } from '../../shared/icons'
 import { prepareProfileImage } from '../../shared/profile-image'
 import { emptyTrainerProfileDraft, trainerProfileDraftSchema, validatePublishableTrainerProfile } from '../../shared/trainer-profile'
 import { AsyncView, Field, SaveStatus, Switch } from '../../shared/ui'
+import { MetroStationPicker } from './MetroStationPicker'
 import { TrainerProfileCard } from './TrainerProfileCard'
 
 const key = ['trainer-professional-profile'] as const
@@ -73,6 +74,7 @@ export function TrainerProfessionalProfileSection() {
   const [draft, setDraft] = useState<TrainerProfileDraft | null>(null)
   const [editing, setEditing] = useState(false)
   const [specialtiesText, setSpecialtiesText] = useState('')
+  const [customLocationText, setCustomLocationText] = useState('')
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle')
   const [localError, setLocalError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -156,9 +158,22 @@ export function TrainerProfessionalProfileSection() {
     if (!draft) return
     set('certificates', draft.certificates.map((item, itemIndex) => itemIndex === index ? value : item))
   }
+  function addCustomLocation() {
+    if (!draft) return
+    const location = customLocationText.trim()
+    if (!location || draft.customLocations.length >= 20) return
+    if (!draft.customLocations.some((item) => item.toLocaleLowerCase('ru-RU') === location.toLocaleLowerCase('ru-RU'))) {
+      set('customLocations', [...draft.customLocations, location])
+    }
+    setCustomLocationText('')
+  }
   function prepareDraft(): TrainerProfileDraft | null {
     if (!draft) return null
-    const result = trainerProfileDraftSchema.safeParse(draft)
+    const result = trainerProfileDraftSchema.safeParse({
+      ...draft,
+      metroStationIds: [...new Set(draft.metroStationIds)],
+      customLocations: [...new Map(draft.customLocations.map((item) => [item.trim().toLocaleLowerCase('ru-RU'), item.trim()])).values()].filter(Boolean),
+    })
     if (result.success) return result.data
     const certificateError = result.error.issues.some((issue) => issue.path[0] === 'certificates')
     setLocalError(certificateError ? 'Укажите название сертификата или удалите его.' : 'Проверьте заполнение анкеты.')
@@ -174,6 +189,7 @@ export function TrainerProfessionalProfileSection() {
     const savedDraft = profile.data?.draft ?? emptyTrainerProfileDraft(name)
     setDraft(savedDraft)
     setSpecialtiesText(savedDraft.specialties.join(', '))
+    setCustomLocationText('')
     setStatus('idle')
     setLocalError(null)
     setEditing(false)
@@ -236,6 +252,19 @@ export function TrainerProfessionalProfileSection() {
             <Switch label="Онлайн" checked={draft.trainingModes.includes('online')} onChange={(checked) => toggleMode('online', checked)} />
             <Switch label="Лично" checked={draft.trainingModes.includes('in_person')} onChange={(checked) => toggleMode('in_person', checked)} />
           </div>
+          {draft.trainingModes.includes('in_person') && <section className="trainer-locations-editor" aria-labelledby="trainer-locations-title">
+            <div><h3 id="trainer-locations-title">Где вы тренируете лично</h3><p>Выберите метро или добавьте место.</p></div>
+            <MetroStationPicker selectedIds={draft.metroStationIds} onChange={(stationIds) => set('metroStationIds', stationIds)} />
+            <Field label="Клуб, район или адрес"><span className="trainer-custom-location-input">
+              <input value={customLocationText} maxLength={160} placeholder="Например, World Class Тверская" onChange={(event) => setCustomLocationText(event.target.value)} onKeyDown={(event) => {
+                if (event.key === 'Enter') { event.preventDefault(); addCustomLocation() }
+              }} />
+              <button type="button" className="secondary" disabled={!customLocationText.trim() || draft.customLocations.length >= 20} onClick={addCustomLocation}>Добавить</button>
+            </span></Field>
+            {draft.customLocations.length > 0 && <ul className="trainer-custom-locations" aria-label="Добавленные места">
+              {draft.customLocations.map((location) => <li key={location}><span>{location}</span><button type="button" className="link danger" aria-label={`Убрать место ${location}`} onClick={() => set('customLocations', draft.customLocations.filter((item) => item !== location))}>Убрать</button></li>)}
+            </ul>}
+          </section>}
           <Field label="Как проходят занятия"><textarea value={draft.formats} maxLength={800} onChange={(event) => set('formats', event.target.value)} /></Field>
           <Switch label="Беру новых клиентов" checked={draft.acceptingClients} onChange={(checked) => set('acceptingClients', checked)} />
         </div>
