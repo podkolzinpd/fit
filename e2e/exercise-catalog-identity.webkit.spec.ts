@@ -36,11 +36,12 @@ test('exercise catalog search and technique detail work in the iOS shell', async
 
   await page.getByLabel('Поиск упражнения').fill('лежачий велотренажер')
   await expect(page.getByText('Найдено: 1', { exact: true })).toBeVisible()
-  const textOnlyResult = page.locator('.catalog-media-card').first()
-  await expect(textOnlyResult.getByText('Горизонтальный велотренажёр')).toBeVisible()
-  await expect(textOnlyResult.locator('.exercise-image, img, video')).toHaveCount(0)
-  await textOnlyResult.click()
-  await expect(page.getByRole('dialog').locator('.exercise-image, img, video')).toHaveCount(0)
+  const recumbentBikeResult = page.locator('.catalog-media-card').first()
+  await expect(recumbentBikeResult.getByText('Горизонтальный велотренажёр')).toBeVisible()
+  await expect(recumbentBikeResult.locator('.exercise-image')).toBeVisible()
+  await expect(recumbentBikeResult.locator('.catalog-media-card-play')).toBeVisible()
+  await recumbentBikeResult.click()
+  await expect(page.getByRole('dialog').locator('.exercise-image-technique video')).toHaveAttribute('src', '/exercises/vital/stationary-bike.mp4')
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 

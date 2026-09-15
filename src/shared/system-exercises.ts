@@ -4,6 +4,7 @@ import { BASE_EXERCISES } from './system-exercises.base.generated'
 import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
 import { VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
 import { VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF, VITAL_GYM_PRO_NEW_EXERCISES } from './vital-gym-pro.generated'
+import { REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF } from './exercise-media-similarity'
 import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
 
 export const SYSTEM_EXERCISE_CATALOG_VERSION = 12
@@ -190,6 +191,20 @@ const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
 
 type ReviewedExerciseMedia = { imageUrl: string; motionImageUrl: string; techniqueVideoUrl?: string }
 
+const VITAL_GYM_PRO_NEW_MEDIA_BY_REF: Readonly<Record<string, ReviewedExerciseMedia>> = Object.fromEntries(
+  VITAL_GYM_PRO_NEW_EXERCISES.map((exercise) => [exercise.ref, {
+    imageUrl: exercise.imageUrl,
+    motionImageUrl: exercise.motionImageUrl,
+    techniqueVideoUrl: exercise.techniqueVideoUrl,
+  }]),
+)
+
+function vitalMediaForRef(ref: string): ReviewedExerciseMedia | undefined {
+  return VITAL_FREE_PACK_MEDIA_BY_REF[ref]
+    ?? VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF[ref]
+    ?? VITAL_GYM_PRO_NEW_MEDIA_BY_REF[ref]
+}
+
 // Exact public-domain reference frames for movements that must not inherit a
 // visually similar Vital video. Keep this keyed by the persisted exercise ref:
 // the generic and wide-grip pulldowns intentionally retain their own video.
@@ -212,8 +227,13 @@ function reviewedMediaForExercise(exercise: ExerciseSnapshot): ReviewedExerciseM
   let candidate = exercise.ref
   while (!visited.has(candidate)) {
     visited.add(candidate)
-    const media = VITAL_FREE_PACK_MEDIA_BY_REF[candidate] ?? VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF[candidate]
+    const media = vitalMediaForRef(candidate)
     if (media) return media
+    const similarTarget = REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF[candidate]
+    if (similarTarget) {
+      candidate = similarTarget
+      continue
+    }
     const decision = EXERCISE_CATALOG_DECISIONS[candidate]
     if (decision?.action !== 'duplicate' || !decision.target) return undefined
     candidate = decision.target
