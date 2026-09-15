@@ -726,7 +726,7 @@ test('карточка упражнения: шапка с оборудован�
   await expect(page.locator('.how-steps li').first()).toBeVisible()
 })
 
-test('план: два упражнения объединяются в суперсет, тип виден в просмотре', async ({ page }) => {
+test('план: два упражнения объединяются в круговую, тип виден в просмотре', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -752,11 +752,11 @@ test('план: два упражнения объединяются в супе
     await page.locator('.picker-select-mark').first().click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
-  // Объединяем первое упражнение со следующим в блок → появляется селектор типа.
+  // Объединяем первое упражнение со следующим в круговую → появляется селектор типа.
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
-  await page.getByRole('menuitem', { name: 'Объединить со следующим в блок' }).click()
+  await page.getByRole('menuitem', { name: 'Объединить со следующим в круговую' }).click()
   await expect(page.getByLabel('Тип блока')).toBeVisible()
-  await expect(page.getByLabel('Тип блока')).toHaveValue('set')
+  await expect(page.getByLabel('Тип блока')).toHaveValue('circuit')
   await expect(page.locator('.block-options')).not.toHaveAttribute('open', '')
   // Задаём 2 круга → форма раскладывается по кругам: «Круг 1» и «Круг 2»,
   // каждый содержит оба упражнения; кнопки «＋ Подход» внутри блока нет.
@@ -780,11 +780,11 @@ test('план: два упражнения объединяются в супе
   }
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
-  // В просмотре тренировки виден бейдж «Сет · 2 кр.».
-  await expect(page.locator('.block-badge').first()).toContainText('Сет · 2 кр.')
+  // В просмотре тренировки виден бейдж «Круговая · 2 кр.».
+  await expect(page.locator('.block-badge').first()).toContainText('Круговая · 2 кр.')
 
   // Live идёт по кругам: круг 1 (упр.A → упр.B), потом круг 2. Счётчик показывает
-  // текущий круг; отдых — после завершения круга (последнего упражнения круга).
+  // текущий круг; отдых учитывает дефолты круговой — между упражнениями и кругами.
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
@@ -792,10 +792,12 @@ test('план: два упражнения объединяются в супе
   // Счётчик круга закреплён с таймером (.live-pinned) и продублирован в шапке
   // блока — проверяем закреплённый (всегда виден при скролле по кругам).
   await expect(page.locator('.live-pinned .circuit-counter')).toHaveText('Круг 1 из 2')
-  // Первое упражнение круга 1 — отдых НЕ запускается (круг ещё не завершён).
+  // После первого упражнения запускается короткий отдых между упражнениями.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toHaveCount(1)
-  await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых/ })).toHaveCount(0)
+  await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых/ })).toBeVisible()
+  if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click()
+  await page.getByRole('button', { name: 'Пропустить' }).click()
   // Второе (последнее) упражнение круга 1 — круг завершён, отдых запускается,
   // счётчик переключается на «Круг 2 из 2».
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
