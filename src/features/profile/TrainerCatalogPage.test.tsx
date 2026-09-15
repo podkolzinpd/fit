@@ -15,12 +15,12 @@ const profile: TrainerProfessionalProfile = {
   publicId: '11111111-1111-4111-8111-111111111111',
   draft: {
     displayName: 'Анна Иванова', bio: 'Помогаю начать заниматься и спокойно двигаться к результату.',
-    specialties: ['Силовые'], city: 'Москва', trainingModes: ['online'], experienceStartYear: 2020,
+    specialties: ['Силовые'], city: 'Москва', metroStationIds: [], customLocations: [], trainingModes: ['online'], experienceStartYear: 2020,
     education: '', formats: '', price: 'от 3 000 ₽', acceptingClients: true, avatarDataUrl: null, certificates: [],
   },
   published: {
     displayName: 'Анна Иванова', bio: 'Помогаю начать заниматься и спокойно двигаться к результату.',
-    specialties: ['Силовые'], city: 'Москва', trainingModes: ['online'], experienceStartYear: 2020,
+    specialties: ['Силовые'], city: 'Москва', metroStationIds: [], customLocations: [], trainingModes: ['online'], experienceStartYear: 2020,
     education: '', formats: '', price: 'от 3 000 ₽', acceptingClients: true, avatarDataUrl: null, certificates: [],
   },
   listedInCatalog: true,
@@ -71,7 +71,7 @@ describe('TrainerCatalogPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Показать тренеров' }))
 
     await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith({
-      query: '', specialty: 'Бег', city: 'Казань', mode: 'online', acceptingClients: true,
+      query: '', specialty: 'Бег', city: 'Казань', metroStationIds: [], mode: 'online', acceptingClients: true,
     }, { offset: 0, limit: 20 }))
     expect(screen.getByRole('button', { name: 'Фильтры · 4' })).toBeVisible()
     expect(screen.queryByRole('dialog', { name: 'Фильтры тренеров' })).not.toBeInTheDocument()
@@ -112,6 +112,24 @@ describe('TrainerCatalogPage', () => {
     await waitFor(() => expect(document.querySelector<HTMLElement>('.content')?.scrollTop).toBe(420))
   })
 
+  it('opens a catalog view saved before metro filters existed', async () => {
+    const legacyFilters = { query: 'Анна', specialty: '', city: 'Москва', mode: '', acceptingClients: null }
+    window.sessionStorage.setItem('fit.trainer-catalog.view.v1', JSON.stringify({
+      draft: legacyFilters,
+      filters: legacyFilters,
+      scrollTop: 120,
+    }))
+
+    renderPage()
+
+    expect(await screen.findByText('Анна Иванова')).toBeVisible()
+    await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith({
+      ...legacyFilters,
+      metroStationIds: [],
+    }, { offset: 0, limit: 20 }))
+    expect(screen.getByRole('button', { name: 'Фильтры · 1' })).toBeVisible()
+  })
+
   it('shows the full result count and loads the next page without replacing the first', async () => {
     const second = { ...profile, publicId: '22222222-2222-4222-8222-222222222222',
       draft: { ...profile.draft, displayName: 'Мария Петрова' },
@@ -126,7 +144,7 @@ describe('TrainerCatalogPage', () => {
 
     expect(await screen.findByText('Мария Петрова')).toBeVisible()
     expect(screen.getByText('Анна Иванова')).toBeVisible()
-    expect(listCatalog).toHaveBeenLastCalledWith({ query: '', specialty: '', city: '', mode: '', acceptingClients: null }, { offset: 1, limit: 20 })
+    expect(listCatalog).toHaveBeenLastCalledWith({ query: '', specialty: '', city: '', metroStationIds: [], mode: '', acceptingClients: null }, { offset: 1, limit: 20 })
     expect(screen.queryByRole('button', { name: 'Показать ещё' })).not.toBeInTheDocument()
   })
 
