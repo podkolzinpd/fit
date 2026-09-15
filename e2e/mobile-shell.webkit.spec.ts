@@ -66,10 +66,12 @@ test('trainer chat stays at the bottom and exits with swipe and back', async ({ 
   await page.getByRole('button', { name: /Александра Константинопольская-Романова/ }).click()
   await expect(page.getByRole('heading', { name: 'Александра Константинопольская-Романова' })).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
-  const bottomGap = await page.evaluate(() => {
+  const composer = page.locator('.chat-composer')
+  await expect(composer).toBeVisible()
+  const bottomGap = await composer.evaluate((element) => {
     const frame = document.querySelector('.phone-frame')!.getBoundingClientRect()
-    const composer = document.querySelector('.chat-composer')!.getBoundingClientRect()
-    return Math.abs(frame.bottom - composer.bottom)
+    const composerRect = element.getBoundingClientRect()
+    return Math.abs(frame.bottom - composerRect.bottom)
   })
   expect(bottomGap).toBeLessThanOrEqual(1)
 
