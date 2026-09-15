@@ -37,6 +37,7 @@ import { availableSummaryPeriods, SUMMARY_PERIODS, summaryPeriodMatch, summaryPe
 import { buildTrainerProgressSignals } from './trainer-progress-signals'
 import { buildWorkoutRegularityProgress } from './workout-regularity-progress'
 import type { TrainingSummaryTriggerReason } from '../../shared/domain'
+import { immediateSummaryRetryAllowed } from '../../data/repositories/training-summary-errors'
 
 function PeriodTabs({ value, available, onChange }: {
   value: SummaryPeriod
@@ -71,7 +72,7 @@ function SummaryHeader({ published }: { published?: boolean }) {
 function SummaryGenerationError({ error, onRetry }: { error: Error; onRetry: () => void }) {
   return <p className="ai-progress-auto-error" role="alert">
     <span>{error.message}</span>
-    <button type="button" className="link" onClick={onRetry}>Повторить</button>
+    {immediateSummaryRetryAllowed(error) && <button type="button" className="link" onClick={onRetry}>Повторить</button>}
   </p>
 }
 

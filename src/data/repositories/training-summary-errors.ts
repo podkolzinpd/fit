@@ -20,7 +20,7 @@ export function generationErrorMessage(code: string): string {
     return 'ИИ не успел завершить анализ. Попробуйте обновить его ещё раз.'
   }
   if (code === 'yandex_cloud_quality_check_failed') {
-    return 'Не получилось проверить качество анализа. Попробуйте ещё раз.'
+    return 'Ответ не прошёл проверку и не сохранён. Новый анализ для этого периода можно создать завтра.'
   }
   if (code === 'yandex_cloud_rate_limited' || code === 'yandex_cloud_unavailable' || code === 'yandex_cloud_timeout') {
     return 'Не получилось создать анализ. Попробуйте ещё раз через минуту.'
@@ -50,4 +50,33 @@ export function generationErrorMessage(code: string): string {
     return 'Не получилось подготовить анализ. Попробуйте обновить его позже.'
   }
   return 'Не удалось обновить анализ.'
+}
+
+const noImmediateRetryCodes = new Set([
+  'summary_generation_in_progress',
+  'summary_generation_cooldown',
+  'summary_generation_period_limit',
+  'summary_generation_daily_limit',
+  'summary_generation_disabled',
+  'yandex_cloud_quality_check_failed',
+])
+
+export class TrainingSummaryGenerationError extends Error {
+  readonly code: string
+  readonly immediateRetryAllowed: boolean
+
+  constructor(code: string) {
+    super(generationErrorMessage(code))
+    this.name = 'TrainingSummaryGenerationError'
+    this.code = code
+    this.immediateRetryAllowed = !noImmediateRetryCodes.has(code)
+  }
+}
+
+export function trainingSummaryGenerationError(code: string): TrainingSummaryGenerationError {
+  return new TrainingSummaryGenerationError(code)
+}
+
+export function immediateSummaryRetryAllowed(error: Error): boolean {
+  return !(error instanceof TrainingSummaryGenerationError) || error.immediateRetryAllowed
 }

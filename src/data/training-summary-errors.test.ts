@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { generationErrorMessage } from './repositories/training-summary-errors'
+import {
+  generationErrorMessage,
+  immediateSummaryRetryAllowed,
+  trainingSummaryGenerationError,
+} from './repositories/training-summary-errors'
 
 describe('generationErrorMessage', () => {
   it('keeps source and model failures actionable instead of generic', () => {
     expect(generationErrorMessage('workouts_lookup_failed')).toContain('завершённые тренировки')
-    expect(generationErrorMessage('yandex_cloud_quality_check_failed')).toContain('проверить качество')
+    expect(generationErrorMessage('yandex_cloud_quality_check_failed')).toContain('можно создать завтра')
     expect(generationErrorMessage('yandex_cloud_rate_limited')).toContain('через минуту')
     expect(generationErrorMessage('internal_error')).toContain('подготовить анализ')
   })
@@ -20,6 +24,13 @@ describe('generationErrorMessage', () => {
     expect(generationErrorMessage('summary_generation_cooldown')).toContain('не расходовать токены')
     expect(generationErrorMessage('summary_generation_period_limit')).toContain('уже запускался сегодня')
     expect(generationErrorMessage('summary_generation_daily_limit')).toContain('Лимит')
+  })
+
+  it('does not offer an immediate retry after a spent quality failure or daily guard', () => {
+    expect(immediateSummaryRetryAllowed(trainingSummaryGenerationError('yandex_cloud_quality_check_failed'))).toBe(false)
+    expect(immediateSummaryRetryAllowed(trainingSummaryGenerationError('summary_generation_period_limit'))).toBe(false)
+    expect(immediateSummaryRetryAllowed(trainingSummaryGenerationError('yandex_cloud_timeout'))).toBe(true)
+    expect(immediateSummaryRetryAllowed(new Error('Сетевая ошибка'))).toBe(true)
   })
 
   it('does not expose infrastructure names in user-facing failures', () => {
