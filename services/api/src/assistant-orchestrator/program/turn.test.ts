@@ -78,14 +78,52 @@ describe('program chat state', () => {
     expect(selected?.action?.payload.briefState).toEqual({ frequency: 2, adult: true })
     expect(deps.extract).toHaveBeenCalledOnce()
   })
-  it('does not copy old client answers when switching through unresolved selection', async () => {
+  it.each(['Сменить клиента', 'Другой клиент'])('does not copy old answers or call the model before choosing a client: %s', async (message) => {
     const { deps, latest } = setup()
     deps.extract.mockResolvedValue({ patch: {}, clear: [], evidence: {}, clarification: null })
-    const pending = await programPilotTurn('Сменить клиента', [client], latest, deps)
+    const pending = await programPilotTurn(message, [client], latest, deps)
     expect(pending?.action?.payload.step).toBe('client')
     expect(pending?.action?.payload.pendingBrief).toEqual({})
+    expect(deps.extract).not.toHaveBeenCalled()
+    expect(deps.loadContext).not.toHaveBeenCalled()
+    expect(deps.generate).not.toHaveBeenCalled()
     const selected = await programPilotTurn('1', [client], pending?.action, deps)
     expect(selected?.action?.payload.briefState).toEqual({ adult: true })
+  })
+  it.each([undefined, 'pilot'])('selects the exact client button by candidate ID despite an ambiguous matcher and previous client %s', async (previousClientId) => {
+    const { deps } = setup()
+    const pilot = { ...client, id: 'pilot', fullName: 'Пилот программы' }
+    const san = { ...client, id: 'san', fullName: 'Сан Саныч' }
+    deps.matchClients.mockReturnValue([pilot, san])
+    const pending = { payload: { programPilot: true, step: 'client', clientId: previousClientId, candidates: [pilot, san], pendingBrief: { frequency: 2 }, briefState: { frequency: 3, goalText: 'Старая цель Пилота' } } }
+    const result = await programPilotTurn('Подготовить программу для Сан Саныч', [pilot, san], pending, deps, true)
+    expect(result?.action?.payload).toMatchObject({ step: 'brief', clientId: 'san', clientName: 'Сан Саныч', briefState: { frequency: 2, adult: true } })
+    expect(result?.action?.payload.briefState).not.toHaveProperty('goalText')
+    expect(deps.loadContext).toHaveBeenCalledExactlyOnceWith(san)
+    expect(deps.matchClients).not.toHaveBeenCalled()
+    expect(deps.extract).not.toHaveBeenCalled()
+    expect(deps.generate).not.toHaveBeenCalled()
+  })
+  it('rejects a button candidate outside actor clients instead of falling back to the old client', async () => {
+    const { deps } = setup()
+    const pending = { payload: { programPilot: true, step: 'client', clientId: client.id, candidates: [{ id: 'foreign-client', fullName: 'Сан Саныч' }], pendingBrief: { frequency: 2 } } }
+    const result = await programPilotTurn('Подготовить программу для Сан Саныч', [client], pending, deps, true)
+    expect(result?.action?.payload).toMatchObject({ step: 'client', candidates: [{ id: client.id, fullName: client.fullName }], pendingBrief: { frequency: 2 } })
+    expect(result?.action?.payload.clientId).toBeUndefined()
+    expect(deps.loadContext).not.toHaveBeenCalled()
+    expect(deps.matchClients).not.toHaveBeenCalled()
+    expect(deps.extract).not.toHaveBeenCalled()
+  })
+  it('does not show old client facts if loading the explicitly selected client fails', async () => {
+    const { deps } = setup()
+    const san = { ...client, id: 'san', fullName: 'Сан Саныч' }
+    deps.loadContext.mockRejectedValue(new Error('offline'))
+    const pending = { payload: { programPilot: true, step: 'client', clientId: client.id, candidates: [san], pendingBrief: { frequency: 2 }, sourceSummary: 'Факты прежнего клиента', hasHistory: true } }
+    const result = await programPilotTurn('Подготовить программу для Сан Саныч', [client, san], pending, deps, true)
+    expect(result?.action?.payload).toMatchObject({ clientId: 'san', clientName: 'Сан Саныч', briefState: { frequency: 2, adult: true } })
+    expect(result?.action?.payload.sourceSummary).toBeUndefined()
+    expect(result?.action?.payload.hasHistory).toBeUndefined()
+    expect(deps.extract).not.toHaveBeenCalled()
   })
   it.each(['present', 'unknown'])('explains blocked limitations %s even when all answers exist', async (limitations) => {
     const { deps, latest } = setup()
