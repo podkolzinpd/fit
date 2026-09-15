@@ -8,7 +8,7 @@ import {
 describe('generationErrorMessage', () => {
   it('keeps source and model failures actionable instead of generic', () => {
     expect(generationErrorMessage('workouts_lookup_failed')).toContain('завершённые тренировки')
-    expect(generationErrorMessage('yandex_cloud_quality_check_failed')).toContain('можно создать завтра')
+    expect(generationErrorMessage('yandex_cloud_quality_check_failed')).toContain('через 30 минут')
     expect(generationErrorMessage('yandex_cloud_rate_limited')).toContain('через минуту')
     expect(generationErrorMessage('internal_error')).toContain('подготовить анализ')
   })

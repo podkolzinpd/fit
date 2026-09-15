@@ -43,6 +43,7 @@ import {
   publishedTrainingSummaryFromRow,
   trainingSummaryFromRow,
 } from './training-summaries.repository'
+import { trainingSummaryGenerationError } from './training-summary-errors'
 import { yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pilot.repository'
 import { trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
 
@@ -237,6 +238,8 @@ const publishedSummarySchema = z.object({
   generated_at: z.iso.datetime(), published_at: z.iso.datetime(),
 })
 
+type ResponseErrorFactory = (status: number, code?: string) => Error
+
 function errorForStatus(status: number, code?: string): RepositoryError {
   if (status === 401) return new RepositoryError('session_expired', 'Сессия Yandex ID истекла. Войдите заново.')
   if (status === 403) return new RepositoryError('PT403', 'Недостаточно прав для этого действия.')
@@ -252,7 +255,17 @@ function errorForStatus(status: number, code?: string): RepositoryError {
   return new RepositoryError('invalid_request', 'Сервер не принял запрос. Проверьте данные и повторите.')
 }
 
-async function response(work: () => Promise<Response>): Promise<Response> {
+function trainingSummaryErrorForStatus(status: number, code?: string): Error {
+  if (code && status !== 401 && status !== 403 && status !== 404) {
+    return trainingSummaryGenerationError(code)
+  }
+  return errorForStatus(status, code)
+}
+
+async function response(
+  work: () => Promise<Response>,
+  errorFactory: ResponseErrorFactory = errorForStatus,
+): Promise<Response> {
   let result: Response
   try { result = await work() } catch (error) {
     throw new RepositoryError('network_unavailable', 'Не удалось подключиться к серверу. Проверьте интернет и повторите попытку.', { cause: error })
@@ -265,7 +278,7 @@ async function response(work: () => Promise<Response>): Promise<Response> {
   } catch {
     code = undefined
   }
-  throw errorForStatus(result.status, code)
+  throw errorFactory(result.status, code)
 }
 
 async function readJson<Schema extends z.ZodType>(
@@ -283,8 +296,9 @@ async function writeJson<Schema extends z.ZodType>(
   method: 'DELETE' | 'PATCH' | 'POST' | 'PUT',
   body: object | undefined,
   schema: Schema,
+  errorFactory?: ResponseErrorFactory,
 ): Promise<z.output<Schema>> {
-  const result = await response(() => queries.write(path, method, body))
+  const result = await response(() => queries.write(path, method, body), errorFactory)
   return schema.parse(await result.json())
 }
 
@@ -988,7 +1002,7 @@ export function createYandexMainRepository(
         return payload.summaries.map((item) => publishedTrainingSummaryFromRow({ id: item.id, source_summary_id: item.source_summary_id, client_id: item.client_id, period_start: item.period_start, period_end: item.period_end, summary: toJson(item.summary), display_metrics: toJson(item.display_metrics), generated_at: item.generated_at, published_at: item.published_at }))
       },
       async generate(clientId, periodStart, periodEnd, force = false, triggerReason = 'manual_refresh') {
-        const payload = await writeJson(queries, `/v1/clients/${clientId}/training-summaries/generate`, 'POST', { client_id: clientId, period_start: periodStart, period_end: periodEnd, force, trigger_reason: triggerReason }, z.object({ data: z.object({ generated_at: z.iso.datetime() }), cached: z.boolean() }))
+        const payload = await writeJson(queries, `/v1/clients/${clientId}/training-summaries/generate`, 'POST', { client_id: clientId, period_start: periodStart, period_end: periodEnd, force, trigger_reason: triggerReason }, z.object({ data: z.object({ generated_at: z.iso.datetime() }), cached: z.boolean() }), trainingSummaryErrorForStatus)
         return { generatedAt: payload.data.generated_at, cached: payload.cached }
       },
       async publish(summary, clientCopy) { await writeEmpty(queries, `/v1/training-summaries/${summary.id}/publish`, 'POST', { clientSummary: feedbackPayload(clientCopy), expectedVersion: summary.version }) },
