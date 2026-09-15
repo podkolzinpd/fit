@@ -41,6 +41,22 @@ describe('four-week program contract', () => {
     const { brief } = fixture()
     expect(programBriefIssues({ ...brief, limitations: 'unknown' }, '2026-09-15')).toContain('limitations_require_review')
   })
+  it('preserves exercise progression through validation, dated sessions and saved workout notes', () => {
+    const { brief, template } = fixture(1)
+    const progressionNote = 'Первые две недели — 8 повторений, затем 9 при выполнении всех подходов с целевым усилием и техникой. Рабочий вес подбирает тренер.'
+    template.sessions[0]!.exercises[0]!.progressionNote = ` ${progressionNote} `
+    const checked = validateProgramTemplate(template, brief, '2026-09-15')
+    expect(checked.sessions[0]!.exercises[0]!.progressionNote).toBe(progressionNote)
+    const result = materializeProgram(checked, brief, 'client', 'generation')
+    expect(result.sessions.every((session) => session.exercises[0]!.progressionNote === progressionNote)).toBe(true)
+    expect(result.canonicalWorkouts.every((workout) => workout.notes.includes(`Жим ногами в тренажёре: ${progressionNote}`))).toBe(true)
+    expect(checked.sessions[0]!.exercises[1]).not.toHaveProperty('progressionNote')
+  })
+  it.each(['', '   ', 'я'.repeat(241), 42, null])('rejects malformed optional template notes: %j', (progressionNote) => {
+    const { brief, template } = fixture(1)
+    Object.assign(template.sessions[0]!.exercises[0]!, { progressionNote })
+    expect(() => validateProgramTemplate(template, brief, '2026-09-15')).toThrow(expect.objectContaining({ codes: ['invalid_progression_note'] }))
+  })
 })
 
 it.each([1, 2, 3] as const)('calculates consistent prescriptions for %s sessions instead of trusting model numbers', (frequency) => {

@@ -545,8 +545,15 @@ Frontend redirect для разработки: `http://localhost:5173/auth/callb
 The production Supabase Assistant orchestrator calls the private Yandex Cloud
 Function `fit-generate-program`. Its input is an actor-scoped training aggregate
 and the explicitly confirmed quiz. The generator has no database credentials.
-The model selects exercises; deterministic rules prescribe sets/reps/time/RPE,
-rest and progression. A model draft that fails structural validation is rejected.
+For the pilot, a model router selects `record_workout`, `create_program_draft`,
+or a chat reply. The tools retain separate state and write paths. Switching
+away from an unfinished draft asks the trainer to finish or cancel it; the
+new request is never appended to the wrong tool. Clarifications stay in chat.
+The model proposes the full plan, individual sets/reps/time/RPE, rest and four
+weekly prescriptions. Code validates the catalog, observed load, time and
+progression constraints without replacing model doses. Every new exercise row
+requires a progression explanation, including a reason when doses stay unchanged.
+A model draft that fails validation is rejected.
 
 Independent default-off controls:
 
@@ -570,14 +577,19 @@ The normal deployment workflow resolves these resources and publishes versions;
 it does not create or expand their IAM bindings. Keep the previous function
 versions for rollback and do not include quiz/client text in logs.
 
-The pilot supports 4 weeks × 1–3 full-body sessions (30+ minutes, a rest day
-between sessions), the bounded system-exercise catalog,
+The pilot supports 4 weeks × 1–3 trainer-supervised sessions (30+ minutes, a rest
+day between sessions): full body for one day, related A/B or A/B/C for two/three
+days, with simple repeated days permitted. It uses the bounded system-exercise catalog
 and adult clients without reported current limitations. Confirming an updated
 quiz explicitly creates a new full draft. The original canonical workout JSON
 is the only accepted apply payload; it expires after 24 hours and is rejected
 when client/history updates are newer than the captured source. All workouts
 save atomically with stable request IDs. Five explicit generation attempts per
-rolling 24 hours per trainer; transport retries reuse the turn ID.
+rolling 24 hours per trainer. A service-only generation job keyed by actor,
+client, brief and source fingerprint deduplicates retries across turns with a
+three-minute lease and completed-result cache. A revised draft atomically
+withdraws older proposed/failed actions for the same program. Scoped edits
+preserve unaffected workouts and IDs and revalidate the result before save.
 
 Native Yandex Assistant generation is not enabled in this first pilot. Its
 program-save RPC has the same 4/8/12 canonical-payload checks, but the native

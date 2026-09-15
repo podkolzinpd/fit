@@ -5,6 +5,7 @@ import { isProgramPilotEnabled } from './program/model.js'
 import { extractProgramBrief, invokeProgramGenerator, programPilotTurn } from './program/turn.js'
 import { loadProgramContext } from './program/source.js'
 import { CONFIRM_PROGRAM_BRIEF } from './program/brief.js'
+import { assistantToolStateFilter, latestActiveAssistantTool, routedAssistantTurn } from './router.js'
 
 import {
   readAssistantTurnRequest,
@@ -521,14 +522,15 @@ export function recordWorkoutTurn(
   message: string,
   clients: readonly ClientContextRow[],
   latestAction: unknown,
+  invoked = false,
 ): AssistantTurnResponse | undefined {
   const previousAction = actionRecord(latestAction)
   const previousPayload = actionRecord(previousAction?.payload)
   const previousStep = previousPayload?.step
   const previousWorkout = previousAction?.tool === 'record_workout'
-  const explicitRequest = isWorkoutRecordRequest(message)
+  const explicitRequest = (invoked && !previousWorkout) || isWorkoutRecordRequest(message)
   const likelyFragment = !isNonWorkoutRequest(message) && workoutTextProvided(extractWorkoutTranscript(message))
-  if (previousWorkout && isWorkoutRecordCancellation(message)) return { reply: 'Хорошо, запись тренировки отменена.', action: null }
+  if (!invoked && previousWorkout && isWorkoutRecordCancellation(message)) return { reply: 'Хорошо, запись тренировки отменена.', action: null }
   const continuation = previousWorkout && (
     previousStep === 'client'
     || previousStep === 'workout'
@@ -787,47 +789,60 @@ export async function runAssistantTurn(
   const { data: rows, error: historyError } = await service.from('assistant_messages')
     .select('author,content,action').eq('conversation_id', command.conversationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20)
   if (historyError) throw new HttpError(503, 'history_unavailable')
-  let latestAssistantAction: unknown = (rows ?? []).find((row) => row.author === 'assistant')?.action
+  const latestAssistantAction: unknown = (rows ?? []).find((row) => row.author === 'assistant')?.action
+  const history = [...(rows ?? [])].reverse().flatMap((row): { author: string; content: string }[] =>
+    typeof row.author === 'string' && typeof row.content === 'string' ? [{ author: row.author, content: row.content.slice(0, 1_000) }] : [])
   if (isProgramPilotEnabled(user.id)) {
-    const storedAction = actionRecord(latestAssistantAction)
-    if (storedAction?.tool === 'create_program_draft' && typeof storedAction.id === 'string') {
-      const lifecycle = await service.from('assistant_actions').select('status,version').eq('id', storedAction.id).eq('owner_id', user.id).maybeSingle()
+    // Ordinary conversation must not evict an unfinished tool from the short
+    // model-history window. Read only its latest state or cancellation boundary.
+    const state = await service.from('assistant_messages').select('author,content,action')
+      .eq('conversation_id', command.conversationId).eq('author', 'assistant').or(assistantToolStateFilter)
+      .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(1).maybeSingle()
+    if (state.error) throw new HttpError(503, 'history_unavailable')
+    let active = latestActiveAssistantTool(state.data ? [state.data] : [])
+    if (active?.id) {
+      const lifecycle = await service.from('assistant_actions').select('status,version').eq('id', active.id).eq('owner_id', user.id).maybeSingle()
       if (lifecycle.error) throw new HttpError(503, 'history_unavailable')
-      if (['proposed', 'failed'].includes(String(lifecycle.data?.status)) && /^(?:отмена|отменить|стоп|закрыть|не надо|изменить условия)(?:\s|$)/iu.test(command.message.trim())) {
-        const version: unknown = lifecycle.data?.version
-        if (typeof version !== 'number') throw new HttpError(503, 'history_unavailable')
-        const cancelled = await actorClient.rpc('cancel_assistant_action', { p_action_id: storedAction.id, p_expected_version: version })
-        if (cancelled.error) throw new HttpError(409, 'program_action_conflict')
-      }
-      if (lifecycle.data?.status === 'applied' || lifecycle.data?.status === 'cancelled') latestAssistantAction = null
+      if (!lifecycle.data) throw new HttpError(503, 'history_unavailable')
+      if (lifecycle.data.status === 'applied' || lifecycle.data.status === 'cancelled') active = null
     }
     const today = new Date().toLocaleDateString('en-CA', { timeZone: typeof profile.timezone === 'string' ? profile.timezone : 'Europe/Moscow' })
-    const program = await programPilotTurn(command.message, clientRows, latestAssistantAction, {
-      actorId: user.id, turnId, today, duplicateTurn: userInsert.error?.code === '23505',
-      matchClients: (message) => matchingSummaryClients(message, clientRows),
-      loadContext: (client) => loadProgramContext(actorClient, client, today),
-      extract: (brief, message) => extractProgramBrief(brief, message, today, turnId),
-      generate: (brief, context, clientId) => {
-        const key = programGenerationKey(user.id, clientId, brief, context.fingerprint)
-        return generateProgramOnce(service, key, user.id, clientId, () => invokeProgramGenerator(user.id, key, today, brief, context))
+    const routed = await routedAssistantTurn({ message: command.message, history, active, operationId: turnId }, {
+      record: (previous) => recordWorkoutTurn(command.message, clientRows, previous, true),
+      cancel: async (action) => {
+        if (!action.id) return
+        const lifecycle = await service.from('assistant_actions').select('status,version').eq('id', action.id).eq('owner_id', user.id).maybeSingle()
+        if (lifecycle.error) throw new HttpError(503, 'history_unavailable')
+        const version: unknown = lifecycle.data?.version
+        if (typeof version !== 'number' || !['proposed', 'failed'].includes(String(lifecycle.data?.status))) throw new HttpError(409, 'assistant_action_conflict')
+        const cancelled = await actorClient.rpc('cancel_assistant_action', { p_action_id: action.id, p_expected_version: version })
+        if (cancelled.error) throw new HttpError(409, 'assistant_action_conflict')
       },
-      canGenerate: async () => {
-        const count = await service.from('assistant_messages').select('id,assistant_conversations!inner(owner_id)', { count: 'exact', head: true })
-          .eq('assistant_conversations.owner_id', user.id).eq('author', 'user').eq('content', CONFIRM_PROGRAM_BRIEF)
-          .gte('created_at', new Date(Date.now() - 86_400_000).toISOString())
-        if (count.error || count.count === null) throw new HttpError(503, 'program_limit_unavailable')
-        return count.count <= 5
-      },
+      program: (previous) => programPilotTurn(command.message, clientRows, previous, {
+        actorId: user.id, turnId, today, duplicateTurn: userInsert.error?.code === '23505',
+        matchClients: (message) => matchingSummaryClients(message, clientRows),
+        loadContext: (client) => loadProgramContext(actorClient, client, today),
+        extract: (brief, message) => extractProgramBrief(brief, message, today, turnId),
+        generate: (brief, context, clientId) => {
+          const key = programGenerationKey(user.id, clientId, brief, context.fingerprint)
+          return generateProgramOnce(service, key, user.id, clientId, () => invokeProgramGenerator(user.id, key, today, brief, context))
+        },
+        canGenerate: async () => {
+          const count = await service.from('assistant_messages').select('id,assistant_conversations!inner(owner_id)', { count: 'exact', head: true })
+            .eq('assistant_conversations.owner_id', user.id).eq('author', 'user').eq('content', CONFIRM_PROGRAM_BRIEF)
+            .gte('created_at', new Date(Date.now() - 86_400_000).toISOString())
+          if (count.error || count.count === null) throw new HttpError(503, 'program_limit_unavailable')
+          return count.count <= 5
+        },
+      }, true),
     })
-    if (program !== undefined) return persistAssistantResponse(service, command.conversationId, turnId, program)
+    return persistAssistantResponse(service, command.conversationId, turnId, routed)
   }
   const workoutDraft = recordWorkoutTurn(command.message, clientRows, latestAssistantAction)
   if (workoutDraft !== undefined) {
     console.info('assistant_workout_draft_reply_persisted', { operationId: turnId, releaseSha, status: workoutDraft.action?.status })
     return persistAssistantResponse(service, command.conversationId, turnId, workoutDraft)
   }
-  const history = [...(rows ?? [])].reverse().flatMap((row): { author: string; content: string }[] =>
-    typeof row.author === 'string' && typeof row.content === 'string' ? [{ author: row.author, content: row.content.slice(0, 1_000) }] : [])
   let result: AssistantTurnResponse = { reply: assistantSmallTalkFallback(command.message), action: null }
   try {
     const iamToken = await yandexIamToken()

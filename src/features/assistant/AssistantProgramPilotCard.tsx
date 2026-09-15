@@ -1,4 +1,4 @@
-import { AssistantProgramOverview } from './AssistantProgramOverview'
+import { AssistantProgramOverview, programDoseText } from './AssistantProgramOverview'
 import { useState } from 'react'
 import { z } from 'zod'
 
@@ -8,9 +8,9 @@ const workoutSchema = z.object({ requestId: z.string().uuid(), clientId: z.strin
 const programSchema = z.object({ canonicalWorkouts: z.array(workoutSchema).refine((value) => [4, 8, 12].includes(value.length)) })
 
 type Props = { payload: Record<string, unknown>; enabled: boolean; running: boolean; onApply: (input: object) => Promise<void>;
-  onSaved: () => void; onSuggestion: (message: string) => void; onCancel: () => void }
+  onSaved: () => void; onSuggestion: (message: string) => void; onCancel: () => void; showGuidance?: boolean }
 
-export function AssistantProgramPilotCard({ payload, enabled, running, onApply, onSaved, onSuggestion, onCancel }: Props) {
+export function AssistantProgramPilotCard({ payload, enabled, running, onApply, onSaved, onSuggestion, onCancel, showGuidance = true }: Props) {
   const [edit, setEdit] = useState<{ date: string; position: number; scope: string; name: string; sets: string; reps: string; seconds: string; rpe: string; rest: string }>()
   const catalog = z.array(z.object({ ref: z.string(), name: z.string(), inputKind: z.string() })).safeParse(payload.editableCatalog)
   function submitEdit() {
@@ -34,9 +34,9 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
     finally { setSaving(false) }
   }
   return <div className="assistant-flow-card assistant-program-card" aria-label="Программа на четыре недели">
-    <header><span><small>{confirm ? 'Программа на четыре недели' : 'Анкета программы'}</small><strong>{String(payload.clientName ?? '')}</strong></span><span className="assistant-flow-status">{confirm ? `${parsed.data.canonicalWorkouts.length} трен.` : payload.briefStatus === 'needs_clarification' ? 'Уточнение' : payload.readyToGenerate === true ? 'Проверка условий' : 'Сбор данных'}</span></header>
+    <header><span><small>{confirm ? 'Программа на четыре недели' : 'Составление программы'}</small><strong>{String(payload.clientName ?? '')}</strong></span><span className="assistant-flow-status">{confirm ? `${parsed.data.canonicalWorkouts.length} трен.` : payload.briefStatus === 'needs_clarification' ? 'Уточнение' : payload.readyToGenerate === true ? 'Проверка условий' : 'Уточняем условия'}</span></header>
     {!enabled && <p className="assistant-card-hint">Составление программ сейчас недоступно для этого аккаунта.</p>}
-    {!confirm && typeof payload.guidance === 'string' && <div className="assistant-message-copy" role="status">{payload.guidance.split('\n').filter(Boolean).map((line, index) => <p key={index}>{line}</p>)}</div>}
+    {!confirm && showGuidance && typeof payload.guidance === 'string' && <div className="assistant-message-copy" role="status">{payload.guidance.split('\n').filter(Boolean).map((line, index) => <p key={index}>{line}</p>)}</div>}
     {!confirm && payload.historyQuestion === true && <div className="assistant-flow-actions">
       <button type="button" disabled={busy} aria-busy={running} onClick={() => onSuggestion('Это все тренировки')}>Это все тренировки</button>
       <button type="button" disabled={busy} aria-busy={running} onClick={() => onSuggestion('Часть тренировок не записана')}>Часть тренировок не записана</button>
@@ -48,11 +48,11 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
       {typeof payload.goal === 'string' && <div className="assistant-flow-fact"><small>Цель</small><strong>{payload.goal}</strong></div>}
       {typeof payload.rationale === 'string' && <p>{payload.rationale}</p>}
       {typeof payload.progression === 'string' && <p>{payload.progression}</p>}
-      <p className="assistant-flow-guidance">Занятия — под наблюдением тренера. Рабочий вес и технику подбирайте с тренером под усилие RPE: 6–8 из 10, с запасом повторений. На подготовку и разминку предусмотрено 10 минут.</p>
+      <p className="assistant-flow-guidance">Занятия — под наблюдением тренера. Усилие — насколько тяжело выполнять подход, по шкале от 1 до 10. Рабочий вес и технику подбирайте с тренером. На разминку предусмотрено 10 минут.</p>
       <AssistantProgramOverview payload={payload} />
       <div className="assistant-program-sessions">{parsed.data.canonicalWorkouts.map((workout, index) => <details key={workout.requestId}>
         <summary><span><strong>Неделя {Math.floor(index / (parsed.data.canonicalWorkouts.length / 4)) + 1} · {workout.workoutDate}</strong><small>{workout.exercises.length} упражнений</small></span><b>Посмотреть</b></summary>
-        <ol>{workout.exercises.map((exercise, position) => <li key={position}><strong>{exercise.name}</strong><p>{exercise.sets.length} × {exercise.sets[0]?.reps ?? `${exercise.sets[0]?.durationSec} сек`} · RPE {exercise.sets[0]?.rpe} · отдых {exercise.restBetweenSetsSec} сек</p>
+        <ol>{workout.exercises.map((exercise, position) => <li key={position}><strong>{exercise.name}</strong><p>{programDoseText({ sets: exercise.sets.length, reps: exercise.sets[0]?.reps ?? null, durationSec: exercise.sets[0]?.durationSec ?? null })}. Отдых — {exercise.restBetweenSetsSec} секунд. Усилие — {exercise.sets[0]?.rpe.toLocaleString('ru-RU')} из 10.</p>
           {catalog.success && <button type="button" disabled={busy} onClick={() => setEdit({ date: workout.workoutDate, position, scope: 'только это занятие', name: exercise.name,
             sets: String(exercise.sets.length), reps: exercise.sets[0]?.reps === undefined ? '' : String(exercise.sets[0].reps), seconds: exercise.sets[0]?.durationSec === undefined ? '' : String(exercise.sets[0].durationSec),
             rpe: String(exercise.sets[0]?.rpe), rest: String(exercise.restBetweenSetsSec) })}>Изменить</button>}</li>)}</ol>
@@ -66,13 +66,13 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
         const duration = catalog.data.find((row) => row.name === name)?.inputKind === 'duration'
         setEdit({ ...edit, name, reps: duration ? '' : edit.reps || '8', seconds: duration ? edit.seconds || '30' : '' })
       }}>{catalog.data.map((row) => <option key={row.ref}>{row.name}</option>)}</select></label>
-      {(['sets', 'reps', 'seconds', 'rpe', 'rest'] as const).map((field) => <label key={field}>{({ sets: 'Подходы', reps: 'Повторы', seconds: 'Секунды', rpe: 'Усилие RPE', rest: 'Отдых, секунды' })[field]}<input type="number" step={field === 'rpe' ? '0.5' : '1'} value={edit[field]} disabled={(field === 'reps' && !!edit.seconds) || (field === 'seconds' && !!edit.reps)} onChange={(event) => setEdit({ ...edit, [field]: event.target.value })} /></label>)}
+      {(['sets', 'reps', 'seconds', 'rpe', 'rest'] as const).map((field) => <label key={field}>{({ sets: 'Подходы', reps: 'Повторы', seconds: 'Секунды', rpe: 'Усилие (1–10)', rest: 'Отдых, секунды' })[field]}<input type="number" step={field === 'rpe' ? '0.5' : '1'} value={edit[field]} disabled={(field === 'reps' && !!edit.seconds) || (field === 'seconds' && !!edit.reps)} onChange={(event) => setEdit({ ...edit, [field]: event.target.value })} /></label>)}
       <div className="assistant-flow-actions"><button type="button" className="primary" disabled={busy} onClick={submitEdit}>Проверить изменение</button><button type="button" disabled={busy} onClick={() => setEdit(undefined)}>Закрыть правку</button></div>
     </section>}
     {error && <p role="alert" className="assistant-card-hint">{error}</p>}
     <div className="assistant-flow-actions">
       {confirm ? <button type="button" className="primary" onClick={() => void save()} disabled={busy || !!edit}>{saved ? 'Добавлено в расписание' : saving ? 'Добавляю…' : 'Добавить в расписание'}</button>
-        : payload.readyToGenerate === true && <button type="button" className="primary" disabled={busy} onClick={() => onSuggestion('Подтверждаю анкету, составь программу')}>{running ? 'Составляю…' : 'Подтвердить и составить'}</button>}
+        : payload.readyToGenerate === true && <button type="button" className="primary" disabled={busy} onClick={() => onSuggestion('Условия верны, составь программу')}>{running ? 'Составляю…' : 'Подтвердить и составить'}</button>}
       {confirm && !saved && <button type="button" disabled={busy} onClick={() => onSuggestion('Изменить условия программы')}>Изменить условия</button>}
       {!saved && <button type="button" disabled={running || saving} onClick={onCancel}>Отменить</button>}
     </div>
