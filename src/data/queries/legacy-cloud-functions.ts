@@ -1,4 +1,5 @@
 import { supabase } from './client'
+import { verifiedSupabaseAccessToken } from './verified-supabase-session'
 
 type LegacyFunctionResult<T> = {
   data: T | null
@@ -23,15 +24,22 @@ export async function invokeLegacyCloudFunction<T>(
 ): Promise<LegacyFunctionResult<T> | undefined> {
   const baseUrl = legacyCloudApiBaseUrl()
   if (baseUrl === undefined) return undefined
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
+  let accessToken: string
+  try {
+    accessToken = name === 'summarize-client-training'
+      ? await verifiedSupabaseAccessToken()
+      : (await supabase.auth.getSession()).data.session?.access_token ?? ''
+  } catch (error) {
+    return { data: null, error: error instanceof Error ? error : new Error('authentication_required') }
+  }
+  if (!accessToken) return { data: null, error: new Error('authentication_required') }
   let response: Response
   try {
     response = await fetch(`${baseUrl}/v1/legacy/${name}`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-supabase-authorization': `Bearer ${session.access_token}`,
+        'x-supabase-authorization': `Bearer ${accessToken}`,
       },
       body: JSON.stringify(body),
     })
