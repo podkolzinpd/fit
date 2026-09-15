@@ -168,3 +168,11 @@ describe('assistant sessions', () => {
     expect(workoutDictationFragmentLabel(21)).toBe('21 фрагмент')
   })
 })
+
+it('retains failed program actions for retry and applied receipts in history', () => {
+  const action: AssistantOrchestratorAction = { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: 'Готово', payload: { programPilot: true }, lifecycleStatus: 'failed' }
+  const message = { id: 'm', turn_id: null, conversation_id: 'c', author: 'assistant' as const, content: 'Готово', created_at: '2026-09-15T10:00:00Z', action }
+  expect(latestActiveAssistantAction([message], 'c')?.action).toBe(action)
+  expect(filterTerminalAssistantMessages([{ ...message, action: { ...action, lifecycleStatus: 'applied' } }])).toHaveLength(1)
+  expect(latestActiveAssistantAction([message, { ...message, id: 'cancel', action: null, content: 'Создание программы отменено.' }], 'c')).toBeUndefined()
+})

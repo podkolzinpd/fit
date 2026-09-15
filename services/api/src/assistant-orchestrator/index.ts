@@ -1,5 +1,10 @@
+import { generateProgramOnce, programGenerationKey } from './program/job.js'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { aiStudioUsage, reportAiStudioMetric } from '../ai-studio-usage-metrics.js'
+import { isProgramPilotEnabled } from './program/model.js'
+import { extractProgramBrief, invokeProgramGenerator, programPilotTurn } from './program/turn.js'
+import { loadProgramContext } from './program/source.js'
+import { CONFIRM_PROGRAM_BRIEF } from './program/brief.js'
 
 import {
   readAssistantTurnRequest,
@@ -270,6 +275,10 @@ function validProposedPayload(tool: Tool, payload: Record<string, unknown>): boo
 
 function validProgramPayload(payload: Record<string, unknown>): boolean {
   if (payload.step !== 'confirm' || typeof payload.clientId !== 'string' || !UUID.test(payload.clientId) || typeof payload.clientName !== 'string' || typeof payload.brief !== 'string' || !Array.isArray(payload.sessions)) return false
+  if (payload.schemaVersion === 'program-v1') return [4, 8, 12].includes(payload.sessions.length)
+    && Array.isArray(payload.canonicalWorkouts) && payload.canonicalWorkouts.length === payload.sessions.length
+    && payload.canonicalWorkouts.every((workout) => record(workout) && workout.clientId === payload.clientId && typeof workout.requestId === 'string' && UUID.test(workout.requestId)
+      && Array.isArray(workout.exercises) && workout.exercises.length >= 3)
   return payload.sessions.length > 0 && payload.sessions.length <= 4 && payload.sessions.every((session) => {
     if (!record(session) || typeof session.title !== 'string' || typeof session.day !== 'string' || !Array.isArray(session.exercises)) return false
     return session.exercises.length > 0 && session.exercises.length <= 12 && session.exercises.every((exercise) => {
@@ -736,7 +745,7 @@ export async function runAssistantTurn(
   if (!conversation || conversation.owner_id !== user.id) throw new HttpError(404, 'conversation_not_found')
 
   const { data: profile, error: profileError } = await service.from('profiles')
-    .select('account_role').eq('id', user.id).maybeSingle()
+    .select('account_role,timezone').eq('id', user.id).maybeSingle()
   if (profileError) throw new HttpError(503, 'context_unavailable')
   if (profile?.account_role !== 'trainer') throw new HttpError(403, 'trainer_role_required')
 
@@ -765,7 +774,8 @@ export async function runAssistantTurn(
     if (isTurnIdReuse(existingUser?.content, command.message)) throw new HttpError(409, 'turn_id_reused')
   }
   if (isAssistantCapabilityQuestion(command.message)) {
-    const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply(), action: null }
+    const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply() + (isProgramPilotEnabled(user.id)
+      ? '\nТакже могу составить программу на четыре недели: уточню цель и условия, учту историю клиента и покажу черновик перед добавлением в расписание.' : ''), action: null }
     console.info('assistant_capabilities_reply_persisted', { operationId: turnId, releaseSha })
     return persistAssistantResponse(service, command.conversationId, turnId, result)
   }
@@ -777,7 +787,40 @@ export async function runAssistantTurn(
   const { data: rows, error: historyError } = await service.from('assistant_messages')
     .select('author,content,action').eq('conversation_id', command.conversationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20)
   if (historyError) throw new HttpError(503, 'history_unavailable')
-  const latestAssistantAction: unknown = (rows ?? []).find((row) => row.author === 'assistant')?.action
+  let latestAssistantAction: unknown = (rows ?? []).find((row) => row.author === 'assistant')?.action
+  if (isProgramPilotEnabled(user.id)) {
+    const storedAction = actionRecord(latestAssistantAction)
+    if (storedAction?.tool === 'create_program_draft' && typeof storedAction.id === 'string') {
+      const lifecycle = await service.from('assistant_actions').select('status,version').eq('id', storedAction.id).eq('owner_id', user.id).maybeSingle()
+      if (lifecycle.error) throw new HttpError(503, 'history_unavailable')
+      if (['proposed', 'failed'].includes(String(lifecycle.data?.status)) && /^(?:отмена|отменить|стоп|закрыть|не надо|изменить условия)(?:\s|$)/iu.test(command.message.trim())) {
+        const version: unknown = lifecycle.data?.version
+        if (typeof version !== 'number') throw new HttpError(503, 'history_unavailable')
+        const cancelled = await actorClient.rpc('cancel_assistant_action', { p_action_id: storedAction.id, p_expected_version: version })
+        if (cancelled.error) throw new HttpError(409, 'program_action_conflict')
+      }
+      if (lifecycle.data?.status === 'applied' || lifecycle.data?.status === 'cancelled') latestAssistantAction = null
+    }
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: typeof profile.timezone === 'string' ? profile.timezone : 'Europe/Moscow' })
+    const program = await programPilotTurn(command.message, clientRows, latestAssistantAction, {
+      actorId: user.id, turnId, today, duplicateTurn: userInsert.error?.code === '23505',
+      matchClients: (message) => matchingSummaryClients(message, clientRows),
+      loadContext: (client) => loadProgramContext(actorClient, client, today),
+      extract: (brief, message) => extractProgramBrief(brief, message, today, turnId),
+      generate: (brief, context, clientId) => {
+        const key = programGenerationKey(user.id, clientId, brief, context.fingerprint)
+        return generateProgramOnce(service, key, user.id, clientId, () => invokeProgramGenerator(user.id, key, today, brief, context))
+      },
+      canGenerate: async () => {
+        const count = await service.from('assistant_messages').select('id,assistant_conversations!inner(owner_id)', { count: 'exact', head: true })
+          .eq('assistant_conversations.owner_id', user.id).eq('author', 'user').eq('content', CONFIRM_PROGRAM_BRIEF)
+          .gte('created_at', new Date(Date.now() - 86_400_000).toISOString())
+        if (count.error || count.count === null) throw new HttpError(503, 'program_limit_unavailable')
+        return count.count <= 5
+      },
+    })
+    if (program !== undefined) return persistAssistantResponse(service, command.conversationId, turnId, program)
+  }
   const workoutDraft = recordWorkoutTurn(command.message, clientRows, latestAssistantAction)
   if (workoutDraft !== undefined) {
     console.info('assistant_workout_draft_reply_persisted', { operationId: turnId, releaseSha, status: workoutDraft.action?.status })
