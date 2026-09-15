@@ -3,6 +3,7 @@ import { supabase } from './client'
 import { toJson } from './json'
 import { invokeLegacyCloudFunction } from './legacy-cloud-functions'
 import type { TrainingSummaryTriggerReason } from '../../shared/domain'
+import { verifiedSupabaseAccessToken } from './verified-supabase-session'
 
 const summaryFunctionUrl = 'https://functions.yandexcloud.net/d4eq75uad5lps1chbidk'
 
@@ -47,8 +48,12 @@ export const trainingSummaryQueries = {
       trigger_reason: triggerReason,
     })
     if (bridged !== undefined) return bridged
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
+    let accessToken: string
+    try {
+      accessToken = await verifiedSupabaseAccessToken()
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error : new Error('authentication_required') }
+    }
 
     let response: Response
     try {
@@ -56,7 +61,7 @@ export const trainingSummaryQueries = {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'x-supabase-authorization': `Bearer ${session.access_token}`,
+          'x-supabase-authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           client_id: clientId,

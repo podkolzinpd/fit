@@ -1,4 +1,5 @@
 export function generationErrorMessage(code: string): string {
+  if (code === 'authentication_required') return 'Сессия входа истекла. Войдите в ФИТ заново и затем обновите анализ.'
   if (code === 'summary_generation_in_progress') return 'Анализ уже формируется. Повторный запрос не отправлен.'
   if (code === 'summary_generation_cooldown') return 'Повторный платный запрос не отправлен, чтобы не расходовать токены. Попробуйте через 30 минут.'
   if (code === 'summary_generation_period_limit') return 'Новый анализ для этого периода уже запускался сегодня.'
@@ -53,6 +54,7 @@ export function generationErrorMessage(code: string): string {
 }
 
 const noImmediateRetryCodes = new Set([
+  'authentication_required',
   'summary_generation_in_progress',
   'summary_generation_cooldown',
   'summary_generation_period_limit',
