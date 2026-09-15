@@ -9,6 +9,7 @@ import type { ChatImageDraft, ChatMessage } from '../../shared/domain'
 import { CloseIcon, MessageIcon, PhotoIcon, SearchIcon } from '../../shared/icons'
 import { AsyncView, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { prepareChatImage } from './chat-image'
+import { useChatThreads } from './use-chat-threads'
 
 function timeLabel(value: string) {
   return new Date(value).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
@@ -24,7 +25,7 @@ export function ChatListPage() {
   const navigate = useNavigate()
   const homePath = actor?.role === 'trainer' ? '/today' : '/me'
   const exitChat = () => navigate(homePath, { replace: true })
-  const query = useQuery({ queryKey: ['chat-threads'], queryFn: () => chat.listThreads(), refetchOnMount: 'always', refetchInterval: 5_000 })
+  const query = useChatThreads()
   const [opening, setOpening] = useState(false)
   const [openError, setOpenError] = useState(false)
   async function openChat(item: { clientId: string; trainerId: string; conversationId: string | null }) {

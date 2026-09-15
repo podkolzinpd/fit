@@ -1,12 +1,12 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useAuth } from '../../app/auth-context'
 import { MessageIcon } from '../../shared/icons'
+import { useChatThreads } from './use-chat-threads'
 
 export function ChatHeaderAction() {
-  const { chat } = useDataBackend()
-  const threads = useQuery({ queryKey: ['chat-threads'], queryFn: () => chat.listThreads(), refetchInterval: 30_000 })
+  const threads = useChatThreads()
   const unread = (threads.data ?? []).reduce((sum, item) => sum + item.unreadCount, 0)
   return <Link className="chat-header-action" to="/chat" aria-label={unread ? `Сообщения, непрочитанных: ${unread}` : 'Сообщения'}>
     <MessageIcon />
