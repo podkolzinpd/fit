@@ -221,11 +221,19 @@ const parsedWorkoutSchema = z.object({
       durationMin: z.number().positive().optional(),
       distanceKm: z.number().positive().optional(),
     })),
+    position: z.number().int().nonnegative().optional(),
   })),
   unmatched: z.array(z.object({
     sourceText: z.string(),
     reason: z.string(),
     suggestedExerciseRefs: z.array(z.string()),
+    sets: z.array(z.object({
+      weightKg: z.number().nonnegative().optional(),
+      reps: z.number().positive().optional(),
+      durationMin: z.number().positive().optional(),
+      distanceKm: z.number().positive().optional(),
+    })).optional(),
+    position: z.number().int().nonnegative().optional(),
   })),
 })
 const assistantTurnActionSchema = z.object({
