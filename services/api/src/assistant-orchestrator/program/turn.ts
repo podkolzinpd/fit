@@ -1,3 +1,4 @@
+import { deriveProgramLoad } from './load.js'
 import { editableProgramCatalog, editProgram } from './edit.js'
 import { programGenerationKey } from './job.js'
 import { aiStudioUsage, reportAiStudioMetric } from '../../ai-studio-usage-metrics.js'
@@ -5,7 +6,6 @@ import type { AssistantTurnResponse } from '../index.js'
 import { briefExtractionSchema, briefProperties, decodeQuotedBriefPatch, briefQuestions, briefSummary, CONFIRM_ACTIVITY_OVERLAP, CONFIRM_PROGRAM_BRIEF, HISTORY_COMPLETE, HISTORY_INCOMPLETE, mergeExtractedBrief, missingBriefFields, readProgramBrief, type ProgramBrief } from './brief.js'
 import { PROGRAM_CATALOG, PROGRAM_EQUIPMENT } from './catalog.js'
 import { addDays, materializeProgram, programBriefIssues, ProgramValidationError, validateProgramLoad, validateProgramTemplate } from './generate.js'
-import { deriveProgramLoad, programLoadIssues } from './load.js'
 import { programIamToken, programModelJson } from './model.js'
 import { explicitBriefAnswer, type BriefAnswerContext } from './answer.js'
 import type { loadProgramContext } from './source.js'
@@ -158,13 +158,6 @@ export async function programPilotTurn(message: string, clients: readonly Progra
       const conflicts = (context.plannedWorkouts ?? []).filter((workout) => workout.date >= brief.startDate! && workout.date <= addDays(brief.startDate!, 27))
       if (conflicts.length) return collect(client, brief, `В период программы уже назначены тренировки: ${[...new Set(conflicts.map((row) => row.date))].join(', ')}. Измените начало или дни программы; существующие назначения сохраняются.`, true)
       const load = deriveProgramLoad(brief, context.context, deps.today)
-      const loadIssues = programLoadIssues(brief, load)
-      if (loadIssues.length) {
-        if (brief.historyComplete !== undefined) return collect(client, brief, `${load.summary}\n${briefIssueText(loadIssues)}`, true)
-        const result = collect(client, brief, `За последние четыре недели в Fit записано в среднем ${Number(load.meanWeeklyCatalogSets.toFixed(1))} сопоставимых подходов в неделю. Для ${brief.frequency} занятий в неделю это небольшой объём. Это вся история или часть тренировок не записана?`, true)
-        if (result.action) result.action.payload.historyQuestion = true
-        return result
-      }
       const raw = await deps.generate(brief, context, client.id)
       const template = validateProgramTemplate(raw, brief, deps.today)
       validateProgramLoad(template, load)
@@ -203,7 +196,6 @@ export async function programPilotTurn(message: string, clients: readonly Progra
 
 function briefIssueText(issues: string[]): string {
   if (issues.includes('other_activity_overlap_requires_review')) return `Дни программы совпадают с другой нагрузкой. Уточните расписание или подтвердите после проверки тренером: «${CONFIRM_ACTIVITY_OVERLAP}». Автоматический коэффициент снижения нагрузки не применяется.`
-  if (issues.includes('history_volume_requires_review')) return 'Записанный недельный объём меньше минимального для выбранной частоты в этом пилоте. Уменьшите число занятий или уточните полноту истории; автоматически повышать объём не буду.'
   if (issues.includes('adjacent_training_days')) return 'В этом пилоте занятия на всё тело требуют дня отдыха между ними. Уточните дни недели, например понедельник, среда и пятница.'
   if (issues.includes('insufficient_training_time')) return 'Для программы этого пилота нужно хотя бы 30 минут на занятие с разминкой и отдыхом. Уточните доступное время.'
   if (issues.includes('invalid_start_date')) return 'Укажите дату начала от сегодняшнего дня до ближайших трёх месяцев.'
