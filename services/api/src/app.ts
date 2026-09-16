@@ -1036,10 +1036,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         : undefined,
     )
     if (actorToken === undefined) {
+      request.log.warn({ failure: 'missing_existing_session' }, 'Yandex account link rejected')
       return reply.code(401).send({ error: 'unauthorized' })
     }
     const command = readYandexCodeRequest(request.body)
     if (command === undefined) {
+      request.log.warn({ failure: 'invalid_request' }, 'Yandex account link rejected')
       return reply.code(400).send({ error: 'invalid_request' })
     }
     if (
@@ -1048,6 +1050,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       options.existingActorProvider === undefined ||
       options.yandexAccountLinker === undefined
     ) {
+      request.log.warn({ failure: 'service_not_configured' }, 'Yandex account link unavailable')
       return reply.code(503).send({ error: 'service_unavailable' })
     }
 
@@ -1055,11 +1058,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     try {
       const resolvedActorId = await options.existingActorProvider.resolveActor(actorToken)
       if (resolvedActorId === undefined) {
+        request.log.warn({ failure: 'existing_session_invalid' }, 'Yandex account link rejected')
         return reply.code(401).send({ error: 'unauthorized' })
       }
       actorId = resolvedActorId
     } catch (error) {
       if (error instanceof ExistingActorUnavailableError) {
+        request.log.warn({ failure: 'existing_provider_unavailable' }, 'Yandex account link unavailable')
         return reply.code(503).send({ error: 'service_unavailable' })
       }
       throw error
@@ -1074,7 +1079,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       subjectHash = resolvedSubjectHash
     } catch (error) {
       const response = sendYandexOAuthFailure(reply, error)
-      if (response !== undefined) return response
+      if (response !== undefined) {
+        request.log.warn({ failure: 'oauth_exchange_failed' }, 'Yandex account link rejected')
+        return response
+      }
       throw error
     }
 
@@ -1087,14 +1095,20 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         if (!(error instanceof YandexAppSessionDeniedError)) throw error
       }
       if (appSession !== undefined && appSession.profile.id !== link.profileId) {
+        request.log.error({ failure: 'session_profile_mismatch' }, 'Yandex account link unavailable')
         return reply.code(503).send({ error: 'service_unavailable' })
       }
+      request.log.info(
+        { appSessionIssued: appSession !== undefined },
+        'Yandex account link completed',
+      )
       return reply.header('cache-control', 'no-store').send({
         ...link,
         ...(appSession === undefined ? {} : { appSession }),
       })
     } catch (error) {
       if (error instanceof YandexAccountLinkError) {
+        request.log.warn({ failure: error.failure }, 'Yandex account link rejected')
         if (error.failure === 'conflict') {
           return reply.code(409).send({ error: 'yandex_identity_conflict' })
         }
@@ -1106,6 +1120,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         }
         return reply.code(403).send({ error: 'action_not_allowed' })
       }
+      request.log.error({ failure: 'unexpected' }, 'Yandex account link unavailable')
       return reply.code(503).send({ error: 'service_unavailable' })
     }
   })

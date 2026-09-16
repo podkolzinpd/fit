@@ -235,9 +235,9 @@ variable "api_cors_allowed_origins" {
   validation {
     condition = alltrue([
       for origin in var.api_cors_allowed_origins :
-      can(regex("^(https://[^/]+|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?)$", origin))
+      can(regex("^(https://[^/]+|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?|capacitor://localhost)$", origin))
     ])
-    error_message = "api_cors_allowed_origins must use HTTPS, except for exact localhost development origins."
+    error_message = "api_cors_allowed_origins must use HTTPS, exact localhost development origins, or capacitor://localhost for the iOS app."
   }
 }
 
