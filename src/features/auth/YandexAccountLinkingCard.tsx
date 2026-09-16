@@ -55,28 +55,7 @@ export function YandexAccountLinkingCard({
     }
   }
 
-  if (yandexSession !== null || status.data?.linked) return <section
-    className="yandex-account-linking-card yandex-account-linking-card-linked"
-    aria-labelledby="yandex-account-linking-title"
-  >
-    <div>
-      <p className="eyebrow">YANDEX ID</p>
-      <h2 id="yandex-account-linking-title">Yandex ID привязан</h2>
-      <p>Профиль готов к последующему переходу на вход через Yandex ID.</p>
-    </div>
-  </section>
-
-  if (status.isLoading) return <section
-    className="yandex-account-linking-card"
-    aria-labelledby="yandex-account-linking-title"
-    aria-busy="true"
-  >
-    <div>
-      <p className="eyebrow">YANDEX ID</p>
-      <h2 id="yandex-account-linking-title">Проверяем привязку</h2>
-      <p>Уточняем, связан ли текущий профиль с Yandex ID…</p>
-    </div>
-  </section>
+  if (yandexSession !== null || status.data?.linked || status.isLoading) return null
 
   if (status.error) return <section
     className="yandex-account-linking-card"
