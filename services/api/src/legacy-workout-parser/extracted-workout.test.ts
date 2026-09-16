@@ -60,6 +60,15 @@ describe('workout extraction without a catalog prompt', () => {
     }])
   })
 
+  it('expands a compact repeated-set response after the model call', () => {
+    const result = extracted([{
+      sourceText: 'моя тяга с паузой 3 по 10 40 кг', exerciseName: 'Моя тяга с паузой', equipment: null, muscle: null,
+      sets: [{ weightKg: 40, reps: 10 }], repeatCount: 3, position: 0,
+    }])
+
+    expect(result.items[0]?.sets).toEqual(Array.from({ length: 3 }, () => ({ weightKg: 40, reps: 10 })))
+  })
+
   it('returns ambiguous suggestions instead of silently choosing a variant', () => {
     const result = matchWorkoutExtraction(extracted([{
       sourceText: 'отведение гантелей', exerciseName: 'отведение гантелей', equipment: 'гантели', muscle: null, sets: [{ reps: 10 }], position: 0,
