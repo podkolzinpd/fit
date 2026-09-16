@@ -29,7 +29,7 @@ env:
 jobs:
   smoke:
     name: Generate a synthetic summary and parse a synthetic workout
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/fix/workout-parser-live-match'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
