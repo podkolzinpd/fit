@@ -42,7 +42,8 @@ describe('SupabaseWorkoutParser', () => {
     expect(yandexFetch).toHaveBeenCalledOnce()
     const rawBody = yandexFetch.mock.calls[0]?.[1]?.body
     expect(typeof rawBody).toBe('string')
-    const requestBody = JSON.parse(typeof rawBody === 'string' ? rawBody : '') as { messages: Array<{ text: string }> }
+    const requestBody = JSON.parse(typeof rawBody === 'string' ? rawBody : '') as { completionOptions: { maxTokens: string }; messages: Array<{ text: string }> }
+    expect(requestBody.completionOptions.maxTokens).toBe('1200')
     expect(requestBody.messages[0]?.text).not.toContain('Каталог:')
     expect(requestBody.messages[0]?.text).not.toContain('1574a433-8a2a-4cd4-8d8f-57a8ebd6aa77')
   })
@@ -128,15 +129,19 @@ describe('YandexWorkoutParser runtime authorization', () => {
   })
 
   it('distinguishes an unavailable model from an invalid model response', async () => {
-    const unavailable = new YandexWorkoutParser('key', 'folder-id', 'yandexgpt', vi.fn(() => Promise.resolve(response({}, 503))))
+    const unavailableRequest = vi.fn(() => Promise.resolve(response({}, 503)))
+    const unavailable = new YandexWorkoutParser('key', 'folder-id', 'yandexgpt', unavailableRequest)
     await expect(unavailable.parse({ text: 'присед', systemCatalog: [
       { source: 'system', ref: 'squat', name: 'Присед', inputKind: 'strength' },
     ] })).rejects.toMatchObject({ status: 502, code: 'llm_unavailable' })
+    expect(unavailableRequest).toHaveBeenCalledOnce()
 
-    const invalid = new YandexWorkoutParser('key', 'folder-id', 'yandexgpt', vi.fn(() => Promise.resolve(response({ result: { alternatives: [{ message: { text: '{}' } }] } }))))
+    const invalidRequest = vi.fn(() => Promise.resolve(response({ result: { alternatives: [{ message: { text: '{}' } }] } })))
+    const invalid = new YandexWorkoutParser('key', 'folder-id', 'yandexgpt', invalidRequest)
     await expect(invalid.parse({ text: 'присед', systemCatalog: [
       { source: 'system', ref: 'squat', name: 'Присед', inputKind: 'strength' },
     ] })).rejects.toMatchObject({ status: 502, code: 'parse_failed' })
+    expect(invalidRequest).toHaveBeenCalledOnce()
   })
 
   it('rejects an invented source returned by the model', async () => {

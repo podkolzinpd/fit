@@ -28,6 +28,7 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
   const requestVersion = useRef(0)
+  const activeReviewText = useRef<string | null>(null)
   const hasStructure = entries.some((entry) => entry.groupId)
   const parsedResolved = useMemo(() => entries.flatMap((entry) => {
     const item = entry.parsed ?? (entry.unmatched && choices[entry.id]
@@ -98,7 +99,8 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
 
   async function review(value = text) {
     const normalized = value.trim()
-    if (!normalized) return
+    if (!normalized || activeReviewText.current === normalized) return
+    activeReviewText.current = normalized
     const request = ++requestVersion.current
     setParsing(true)
     setParseError(null)
@@ -107,11 +109,22 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
       const structure = parseStructuredQuickWorkoutEntry(normalized, catalog, { preferredExerciseRefs })
       const nextEntries: ParsedEntry[] = []
       if (structure.hasStructure) {
-        for (const source of structure.items) {
-          const response = await parseWorkoutWithLlm(source.line, catalog, { remoteParser: parseWorkout })
-          parsedWorkoutItems(response, catalog).forEach((item, index) => nextEntries.push({ id: `${source.id}:item:${index}`, groupId: source.groupId, parsed: item }))
-          workoutParseUnmatched(response, catalog).forEach((item, index) => nextEntries.push({ id: `${source.id}:unmatched:${index}`, groupId: source.groupId, unmatched: item }))
-        }
+        const response = await parseWorkoutWithLlm(structure.items.map((source) => source.line).join('\n'), catalog, { remoteParser: parseWorkout })
+        const ordered: Array<ParsedEntry & { position?: number }> = [
+          ...parsedWorkoutItems(response, catalog).map((item, index) => ({
+            id: `${structure.items[item.sourcePosition ?? index]?.id ?? `item:${index}`}:item`,
+            groupId: structure.items[item.sourcePosition ?? index]?.groupId,
+            parsed: item,
+            position: item.sourcePosition,
+          })),
+          ...workoutParseUnmatched(response, catalog).map((item, index) => ({
+            id: `${structure.items[item.position ?? index]?.id ?? `unmatched:${index}`}:unmatched`,
+            groupId: structure.items[item.position ?? index]?.groupId,
+            unmatched: item,
+            position: item.position,
+          })),
+        ].sort((left, right) => (left.position ?? Number.MAX_SAFE_INTEGER) - (right.position ?? Number.MAX_SAFE_INTEGER))
+        nextEntries.push(...ordered.map(({ id, groupId, parsed, unmatched }) => ({ id, groupId, parsed, unmatched })))
       } else {
         const response = await parseWorkoutWithLlm(normalized, catalog, { remoteParser: parseWorkout })
         const ordered: Array<ParsedEntry & { position?: number }> = [
@@ -128,6 +141,7 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
       if (request !== requestVersion.current) return
       setParseError('Не удалось обработать запись. Исходный текст сохранён — попробуйте ещё раз.')
     } finally {
+      if (activeReviewText.current === normalized) activeReviewText.current = null
       if (request === requestVersion.current) setParsing(false)
     }
   }

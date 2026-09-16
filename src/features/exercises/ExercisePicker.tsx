@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { useAppViewport } from '../../app/app-viewport'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
 import type { PreparedImage } from '../../shared/image-prep'
 import { AddIcon, BackIcon, CheckIcon, ChevronRightIcon, CloseIcon, PhotoIcon, PlayIcon } from '../../shared/icons'
@@ -143,27 +144,6 @@ function pickerMuscleGroupLabel(group: MuscleGroup) {
   return group === 'core' ? 'Пресс' : MUSCLE_GROUP_LABELS[group]
 }
 
-function useVisualViewportStyle() {
-  const [style, setStyle] = useState<CSSProperties>()
-  const [keyboardOpen, setKeyboardOpen] = useState(false)
-  useEffect(() => {
-    const viewport = window.visualViewport
-    if (!viewport) return
-    const update = () => {
-      setStyle({ top: viewport.offsetTop, height: viewport.height })
-      setKeyboardOpen(viewport.height < window.innerHeight - 120)
-    }
-    update()
-    viewport.addEventListener('resize', update)
-    viewport.addEventListener('scroll', update)
-    return () => {
-      viewport.removeEventListener('resize', update)
-      viewport.removeEventListener('scroll', update)
-    }
-  }, [])
-  return { style, keyboardOpen }
-}
-
 export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', onClose }: ExercisePickerProps) {
   const [mode, setMode] = useState<Exclude<ExercisePickerMode, 'choose' | 'strength'>>(
     !initialSearch.trim() && initialMode === 'running' ? 'running' : 'all',
@@ -194,7 +174,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const [photoBusy, setPhotoBusy] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
-  const { style: viewportStyle, keyboardOpen } = useVisualViewportStyle()
+  const { keyboardOpen } = useAppViewport()
   const activeMode = mode
   const selectableCatalog = useMemo(() => selectableExercises(catalog.exercises), [catalog.exercises])
   const vitalMainRefs = useMemo(() => {
@@ -473,7 +453,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     }
   }
 
-  return <div className={`sheet-overlay${keyboardOpen ? ' keyboard-open' : ''}`} style={viewportStyle} onClick={onClose}>
+  return <div className={`sheet-overlay exercise-picker-overlay${keyboardOpen ? ' keyboard-open' : ''}`} onClick={onClose}>
     <section className={`exercise-picker${selected.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
       <header className={`picker-header${previewExercise ? ' picker-technique-header' : ''}`}>
         {previewExercise && <button type="button" className="picker-close picker-back" aria-label="Назад к выбору" onClick={closeTechnique}><BackIcon /></button>}

@@ -1905,6 +1905,13 @@ test('exercise picker keeps search, filters and technique readable', async ({ pa
   await gotoStable(page, `/workouts/new?client=${demoClientId}`)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
 
+  const pickerCoverage = await page.locator('.exercise-picker-overlay').evaluate((overlay) => {
+    const rect = overlay.getBoundingClientRect()
+    return { top: rect.top, bottom: rect.bottom, viewportHeight: window.innerHeight }
+  })
+  expect(pickerCoverage.top).toBeLessThanOrEqual(1)
+  expect(pickerCoverage.bottom).toBeGreaterThanOrEqual(pickerCoverage.viewportHeight - 1)
+
   const search = page.getByLabel('Поиск упражнения')
   await search.fill('Болгарский')
   await expect(page.getByRole('button', { name: 'Очистить поиск' })).toBeVisible()

@@ -84,6 +84,12 @@ test('client keeps an unfinished catalog selection until adding or clearing it',
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await expect(page.getByText('Выбрано: 1')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Убрать: Планка', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  const pickerCoverage = await page.locator('.sheet-overlay').evaluate((overlay) => {
+    const rect = overlay.getBoundingClientRect()
+    return { top: rect.top, bottom: rect.bottom, viewportHeight: window.innerHeight }
+  })
+  expect(pickerCoverage.top).toBeLessThanOrEqual(1)
+  expect(pickerCoverage.bottom).toBeGreaterThanOrEqual(pickerCoverage.viewportHeight - 1)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
 
   await page.setViewportSize({ width: 430, height: 932 })
