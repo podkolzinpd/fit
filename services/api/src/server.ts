@@ -47,6 +47,7 @@ import { buildYandexAiAuthorization } from './yandex-ai-authorization.js'
 import { SupabaseVitalMediaSigner } from './vital-media.js'
 import { DatabasePilotTrainerProfiles } from './trainer-profile.js'
 import { DatabasePilotTrainerDiscovery } from './trainer-discovery.js'
+import { parseAllowedOrigins } from './cors-origins.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -56,20 +57,6 @@ function parsePort(value: string | undefined): number {
     throw new Error('PORT must be an integer between 1 and 65535')
   }
   return port
-}
-
-function parseAllowedOrigins(value: string | undefined): string[] {
-  if (value === undefined || value.trim() === '') return []
-  return value.split(',').map((candidate) => {
-    const origin = candidate.trim()
-    const url = new URL(origin)
-    const localHttp = url.protocol === 'http:'
-      && (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]')
-    if (url.origin !== origin || (url.protocol !== 'https:' && !localHttp)) {
-      throw new Error('CORS_ALLOWED_ORIGINS must contain comma-separated HTTP origins')
-    }
-    return origin
-  })
 }
 
 const databaseConfig = buildDatabaseConnectionConfig('DATABASE')
