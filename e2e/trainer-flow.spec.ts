@@ -334,7 +334,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await expect(page.getByLabel('Фактические повторы').nth(1)).toHaveValue('11')
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Берпи')
-  await page.getByRole('button', { name: /^Добавить: Берпи/ }).click()
+  await page.getByRole('button', { name: 'Добавить: Берпи', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Берпи' })).toBeVisible()
   // Есть незавершённые подходы → inline-подтверждение частичного завершения.
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()

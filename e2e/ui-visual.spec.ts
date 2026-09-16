@@ -1475,7 +1475,7 @@ test('workout detail, completion and exercise history keep their visual baseline
   // покрывала partial независимо от числа подходов в исходном плане.
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Берпи')
-  await page.getByRole('button', { name: /^Добавить: Берпи/ }).click()
+  await page.getByRole('button', { name: 'Добавить: Берпи', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Берпи' })).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   const partialFinish = page.getByRole('button', { name: 'Завершить', exact: true })

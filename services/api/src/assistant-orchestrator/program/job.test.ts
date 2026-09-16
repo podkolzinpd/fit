@@ -26,3 +26,21 @@ it('binds job identity to actor, client, brief and source without property-order
   expect(programGenerationKey('other', 'c', { frequency: 2, durationMin: 60 }, 'source')).not.toBe(key)
   expect(programGenerationKey('a', 'c', { frequency: 2, durationMin: 60 }, 'changed')).not.toBe(key)
 })
+
+it('releases a failed attempt immediately and allows the next turn to generate', async () => {
+  let busy = false
+  const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
+    await Promise.resolve()
+    if (name === 'release_assistant_program_generation_job') { busy = false; return { data: true, error: null } }
+    if (args.p_result) return { data: { status: 'complete' }, error: null }
+    if (busy) return { data: { status: 'busy' }, error: null }
+    busy = true
+    return { data: { status: 'claimed' }, error: null }
+  })
+  const service = { rpc } as unknown as SupabaseClient
+  const generate = vi.fn().mockRejectedValueOnce(new Error('program_validation_failed')).mockResolvedValueOnce({ ok: true })
+  await expect(generateProgramOnce(service, 'key', 'actor', 'client', generate)).rejects.toThrow('program_validation_failed')
+  expect(rpc.mock.calls[1]?.[1]).toEqual(rpc.mock.calls[0]?.[1])
+  await expect(generateProgramOnce(service, 'key', 'actor', 'client', generate)).resolves.toEqual({ ok: true })
+  expect(generate).toHaveBeenCalledTimes(2)
+})

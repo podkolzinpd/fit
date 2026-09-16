@@ -11,7 +11,7 @@ function setup() {
   const { brief, template } = fixture()
   const context = { ...buildProgramHistoryContext({ clientId: client.id, periodStart: '2026-07-22', periodEnd: '2026-09-15', workouts: [], exercises: [], sets: [] }), capturedAt: '2026-09-15T10:00:00Z', profile: { ageYears: 30, goal: null, latestWeight: null } }
   const deps = { actorId: 'trainer', turnId: 'turn', today: '2026-09-15', duplicateTurn: false,
-    loadContext: vi.fn().mockResolvedValue(context), extract: vi.fn(), generate: vi.fn().mockResolvedValue(template), canGenerate: vi.fn().mockResolvedValue(true), matchClients: vi.fn().mockReturnValue([]) }
+    loadContext: vi.fn().mockResolvedValue(context), extract: vi.fn(), generate: vi.fn().mockResolvedValue(template), matchClients: vi.fn().mockReturnValue([]) }
   const latest = { payload: { programPilot: true, briefAnswerVersion: 2, step: 'brief', clientId: client.id, briefState: brief, readyToGenerate: true } }
   return { deps, latest, context }
 }
@@ -72,10 +72,19 @@ describe('program chat state', () => {
     expect((await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], latest, deps))?.action?.status).toBe('proposed')
     expect(deps.generate).toHaveBeenCalledOnce()
   })
-  it('rate limit prevents generation', async () => {
-    const { deps, latest } = setup(); deps.canGenerate.mockResolvedValue(false)
-    expect((await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], latest, deps))?.reply).toContain('лимит')
-    expect(deps.generate).not.toHaveBeenCalled()
+  it('allows generation after more than five failed confirmations without losing the brief', async () => {
+    const { deps, latest } = setup()
+    deps.generate.mockRejectedValue(new Error('program_model_http_502'))
+    let previous = latest
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const failed = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], previous, deps)
+      expect(failed?.action?.payload.briefState).toEqual(latest.payload.briefState)
+      expect(failed?.action?.payload.readyToGenerate).toBe(true)
+      previous = { ...latest, payload: { ...latest.payload, ...failed?.action?.payload } }
+    }
+    deps.generate.mockResolvedValue(fixture().template)
+    expect((await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], previous, deps))?.action?.status).toBe('proposed')
+    expect(deps.generate).toHaveBeenCalledTimes(7)
   })
   it('clarification disables confirmation even with a previously complete brief', async () => {
     const { deps, latest } = setup()
@@ -157,13 +166,19 @@ describe('program chat state', () => {
     expect(result?.action?.payload.hasHistory).toBeUndefined()
     expect(deps.extract).not.toHaveBeenCalled()
   })
-  it.each(['present', 'unknown'])('explains blocked limitations %s even when all answers exist', async (limitations) => {
+  it.each(['present', 'unknown'])('asks about adjustments and continues with limitations %s', async (limitations) => {
     const { deps, latest } = setup()
-    deps.extract.mockResolvedValue({ patch: { limitations }, clear: [], evidence: { limitations: 'Есть боль' }, clarification: null })
+    deps.extract.mockResolvedValue({ patch: { limitations, limitationsText: 'Есть боль' }, clear: [], evidence: { limitations: 'Есть боль', limitationsText: 'Есть боль' }, clarification: null })
     const result = await programPilotTurn('Есть боль', [client], latest, deps)
-    expect(result?.reply).toContain('Сначала нужно уточнить актуальные ограничения')
-    expect(result?.action?.payload).toMatchObject({ readyToGenerate: false, briefStatus: 'needs_clarification', missing: [] })
+    expect(result?.reply).toContain('Какие движения')
+    expect(result?.action?.payload).toMatchObject({ readyToGenerate: false, askedFields: ['limitationAdjustments'] })
     expect(deps.generate).not.toHaveBeenCalled()
+    deps.extract.mockResolvedValue({ patch: { limitationAdjustments: 'пока неизвестно' }, clear: [], evidence: { limitationAdjustments: 'пока неизвестно' }, clarification: null })
+    const ready = await programPilotTurn('пока неизвестно', [client], result?.action, deps)
+    expect(ready?.action?.payload.readyToGenerate).toBe(true)
+    const generated = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], ready?.action, deps)
+    expect(generated?.action?.status).toBe('proposed')
+    expect(generated?.action?.payload.limitationReview).toContain('пока неизвестно')
   })
   it('retains old fields and explicitly asks again after a frequency mismatch', async () => {
     const { deps, latest } = setup()
@@ -206,7 +221,7 @@ describe('program chat state', () => {
     expect(deps.extract).not.toHaveBeenCalled()
     expect(deps.generate).not.toHaveBeenCalled()
   })
-  it('asks visibly about small history and does not inflate volume after an incomplete-history answer', async () => {
+  it('generates for the requested frequency even when recorded history is small', async () => {
     const { deps, latest, context } = setup()
     latest.payload.briefState.continuationPlan = 'Продолжить прежний подход'
     const workouts = ['2026-09-14', '2026-09-07', '2026-08-31', '2026-08-24'].map((date) => ({ id: date, date, clientId: client.id,
@@ -217,16 +232,9 @@ describe('program chat state', () => {
         confirmedAt: `${row.date}T10:00:00Z`, factReps: 8, factWeightKg: 30, factDurationSec: null, factDistanceKm: null, factRpe: 7 }))),
     })
     deps.loadContext.mockResolvedValue({ ...context, ...source })
-    const question = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], latest, deps)
-    expect(question?.action?.payload).toMatchObject({ historyQuestion: true, readyToGenerate: false })
-    expect(question?.action?.payload.guidance).toContain('Это вся история или часть тренировок не записана?')
-    expect(deps.generate).not.toHaveBeenCalled()
-    const clarified = await programPilotTurn(HISTORY_INCOMPLETE, [client], question?.action, deps)
-    expect(clarified?.action?.payload.readyToGenerate).toBe(false)
-    expect(deps.generate).not.toHaveBeenCalled()
-    const generated = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], clarified?.action, deps)
-    expect(generated?.action?.status).toBe('needs_input')
-    expect(deps.generate).not.toHaveBeenCalled()
+    const generated = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], latest, deps)
+    expect(generated?.action?.status).toBe('proposed')
+    expect(deps.generate).toHaveBeenCalledOnce()
     expect(deps.extract).not.toHaveBeenCalled()
   })
 })

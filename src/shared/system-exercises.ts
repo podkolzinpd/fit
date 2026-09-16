@@ -7,7 +7,7 @@ import { VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF, VITAL_GYM_PRO_NEW_EXERCISES } from '
 import { REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF } from './exercise-media-similarity'
 import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 12
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 13
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {
@@ -205,15 +205,9 @@ function vitalMediaForRef(ref: string): ReviewedExerciseMedia | undefined {
     ?? VITAL_GYM_PRO_NEW_MEDIA_BY_REF[ref]
 }
 
-// Exact public-domain reference frames for movements that must not inherit a
-// visually similar Vital video. Keep this keyed by the persisted exercise ref:
-// the generic and wide-grip pulldowns intentionally retain their own video.
-const REVIEWED_REFERENCE_MEDIA_BY_REF: Readonly<Record<string, ReviewedExerciseMedia>> = {
-  'fedb-close-grip-front-lat-pulldown': {
-    imageUrl: '/exercises/reference/close-grip-lat-pulldown.jpg',
-    motionImageUrl: '/exercises/reference/close-grip-lat-pulldown-end.jpg',
-  },
-}
+// Reserved for exact reference pairs that cannot use a reviewed animation.
+// The close-grip pulldown now has its own verified Gym Pro video.
+const REVIEWED_REFERENCE_MEDIA_BY_REF: Readonly<Record<string, ReviewedExerciseMedia>> = {}
 
 function reviewedMediaForExercise(exercise: ExerciseSnapshot): ReviewedExerciseMedia | undefined {
   const exactReferenceMedia = REVIEWED_REFERENCE_MEDIA_BY_REF[exercise.ref]

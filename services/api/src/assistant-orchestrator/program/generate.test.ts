@@ -24,7 +24,6 @@ describe('four-week program contract', () => {
     ['duplicate weekday', (t: ProgramTemplate) => { t.sessions[1]!.weekday = 1 }],
     ['excessive effort', (t: ProgramTemplate) => { t.sessions[0]!.exercises[0]!.weeks[0]!.rpe = 9 }],
     ['progression on two axes', (t: ProgramTemplate) => { const week = t.sessions[0]!.exercises[0]!.weeks[1]!; week.reps = 9; week.rpe = 7 }],
-    ['missing weekly movement', (t: ProgramTemplate) => { for (const s of t.sessions) s.exercises = s.exercises.filter((e) => e.exerciseRef !== 'plank') }],
   ] as const)('rejects %s', (_, mutate) => {
     const { brief, template } = fixture(); mutate(template)
     expect(() => validateProgramTemplate(template, brief, '2026-09-15')).toThrow()
@@ -39,7 +38,7 @@ describe('four-week program contract', () => {
   })
   it('does not treat missing limitations as no limitations', () => {
     const { brief } = fixture()
-    expect(programBriefIssues({ ...brief, limitations: 'unknown' }, '2026-09-15')).toContain('limitations_require_review')
+    expect(programBriefIssues({ ...brief, limitations: 'unknown' }, '2026-09-15')).toContain('incomplete_brief')
   })
   it('preserves exercise progression through validation, dated sessions and saved workout notes', () => {
     const { brief, template } = fixture(1)
@@ -69,4 +68,11 @@ it.each([1, 2, 3] as const)('calculates consistent prescriptions for %s sessions
   expect(prescribed.sessions[0]!.exercises[0]!.weeks.map((week) => week.reps)).toEqual([8, 8, 9, 9])
   expect(prescribed.sessions[0]!.exercises[0]!.weeks.map((week) => week.sets)).toEqual([2, 2, 2, 2])
   expect(() => prescribeProgram({ ...wire, invented: true }, brief, '2026-09-15', load)).toThrow()
+})
+
+it('does not require a universal movement set for a valid client program', () => {
+  const { brief, template } = fixture()
+  for (const session of template.sessions) session.exercises = session.exercises.filter((row) => row.exerciseRef !== 'plank')
+  expect(() => validateProgramTemplate(template, brief, '2026-09-15')).not.toThrow()
+  expect(programBriefIssues({ ...brief, excludedRefs: ['barbell-row', 'dumbbell-row', 'seated-cable-row'] }, '2026-09-15')).toEqual([])
 })

@@ -52,6 +52,7 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
       {typeof payload.editGuidance === 'string' && <p role="status">{payload.editGuidance}</p>}
       {typeof payload.goal === 'string' && <div className="assistant-flow-fact"><small>Цель</small><strong>{payload.goal}</strong></div>}
       {typeof payload.rationale === 'string' && <p>{payload.rationale}</p>}
+      {typeof payload.limitationReview === 'string' && <p className="assistant-message-copy">{payload.limitationReview}</p>}
       {typeof payload.progression === 'string' && <p>{payload.progression}</p>}
       <p className="assistant-flow-guidance">Занятия — под наблюдением тренера. Усилие — насколько тяжело выполнять подход, по шкале от 1 до 10. Рабочий вес и технику подбирайте с тренером. На разминку предусмотрено 10 минут.</p>
       <AssistantProgramOverview payload={payload} />
