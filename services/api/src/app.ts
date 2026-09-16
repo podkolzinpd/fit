@@ -75,6 +75,7 @@ import type {
 import {
   ExistingActorUnavailableError,
   YandexAccountLinkError,
+  type ExistingActor,
   type ExistingActorProvider,
   type YandexAccountLinker,
 } from './yandex-account-linking.js'
@@ -1054,14 +1055,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.code(503).send({ error: 'service_unavailable' })
     }
 
-    let actorId: string
+    let actor: ExistingActor
     try {
-      const resolvedActorId = await options.existingActorProvider.resolveActor(actorToken)
-      if (resolvedActorId === undefined) {
+      const resolvedActor = await options.existingActorProvider.resolveActor(actorToken)
+      if (resolvedActor === undefined) {
         request.log.warn({ failure: 'existing_session_invalid' }, 'Yandex account link rejected')
         return reply.code(401).send({ error: 'unauthorized' })
       }
-      actorId = resolvedActorId
+      actor = resolvedActor
     } catch (error) {
       if (error instanceof ExistingActorUnavailableError) {
         request.log.warn({ failure: 'existing_provider_unavailable' }, 'Yandex account link unavailable')
@@ -1087,7 +1088,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
 
     try {
-      const link = await options.yandexAccountLinker.linkActor(actorId, subjectHash)
+      const link = await options.yandexAccountLinker.linkActor(actor, subjectHash)
       let appSession
       try {
         appSession = await options.yandexAppSessionIssuer?.issue(subjectHash)

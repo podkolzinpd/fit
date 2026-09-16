@@ -129,7 +129,10 @@
 - Привязка существующего FIT-профиля передаёт legacy Supabase-сессию в
   `x-supabase-authorization`, а не в зарезервированном Yandex Cloud IAM
   заголовке `Authorization`; пилотный linking остаётся default-off и не меняет
-  sticky routing остальных пользователей.
+  sticky routing остальных пользователей. Если профиль ещё не попал в Yandex
+  DB через tenant/full-cohort import, stage атомарно переносит из этой же
+  подтверждённой сессии его точную корневую запись и роль trainer/client перед
+  linking. Это не переносит доменные данные и не включает rollout.
 - `main` содержит 14-дневную read-write Yandex ID-сессию: stage валидирует/отзывает opaque token, frontend восстанавливает профиль и блокирует истёкшую/неразрешённую сессию.
 - `main` ограничивает OAuth/link/restore/revoke Yandex ID 12 секундами:
   зависший запрос больше не удерживает iOS в бесконечном loading, ошибка даёт
