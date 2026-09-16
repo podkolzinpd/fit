@@ -117,6 +117,9 @@
   заголовке `Authorization`; пилотный linking остаётся default-off и не меняет
   sticky routing остальных пользователей.
 - `main` содержит 14-дневную read-write Yandex ID-сессию: stage валидирует/отзывает opaque token, frontend восстанавливает профиль и блокирует истёкшую/неразрешённую сессию.
+- Текущая ветка ограничивает OAuth/link/restore/revoke Yandex ID 12 секундами:
+  зависший запрос больше не удерживает iOS в бесконечном loading, ошибка даёт
+  повтор и локальный сброс только Yandex-токена без очистки других настроек.
 - Серверный `yandex/read_write` rollout первого перенесённого tenant управляется
   отдельным manual-only workflow из `main`: он использует уже существующий
   fingerprint успешного apply, однозначно находит перенесённый role-specific

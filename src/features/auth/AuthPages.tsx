@@ -127,7 +127,10 @@ export function AuthPage() {
         : yandexAppSessionConfig === null ? 'Проверить Yandex ID' : 'Войти через Yandex ID'}</button>}
     {yandexAppSession.error && <div className="stack" role="alert">
       <p className="error">{yandexAppSession.error}</p>
-      <button className="secondary" type="button" onClick={() => void yandexAppSession.retry()}>Повторить проверку</button>
+      <div className="stack">
+        <button className="secondary" type="button" onClick={() => void yandexAppSession.retry()}>Повторить проверку</button>
+        <button className="link" type="button" onClick={yandexAppSession.reset}>Сбросить сессию Yandex ID</button>
+      </div>
     </div>}
     <div className="auth-links"><button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Создать аккаунт' : 'У меня есть аккаунт'}</button>{mode === 'login' && <Link to="/auth/forgot">Забыли пароль?</Link>}</div>
     <nav className="auth-legal-links" aria-label="Юридическая информация"><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Конфиденциальность</Link></nav>
@@ -219,7 +222,7 @@ function YandexAppSessionCallbackPage() {
 export function YandexAppSessionPage() {
   const navigate = useNavigate()
   const { actor, loading: authLoading } = useAuth()
-  const { session, loading, error, retry, signOut } = useYandexAppSession()
+  const { session, loading, error, retry, reset, signOut } = useYandexAppSession()
   const [signingOut, setSigningOut] = useState(false)
   const config = getYandexAppSessionEntryConfig()
 
@@ -236,8 +239,8 @@ export function YandexAppSessionPage() {
       title="Не удалось восстановить сессию"
       description={error}
       action={<div className="stack">
-        <button type="button" onClick={() => void retry()}>Повторить</button>
-        <Link to="/auth">Вернуться ко входу</Link>
+        <button className="primary" type="button" onClick={() => void retry()}>Повторить</button>
+        <button className="secondary" type="button" onClick={reset}>Сбросить сессию Yandex ID</button>
       </div>}
     />
   </AuthIdentityScreen>

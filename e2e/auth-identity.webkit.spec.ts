@@ -96,6 +96,38 @@ test('Yandex ID app session restores and logs out in mobile WebKit', async ({ pa
   await expect(page.evaluate(() => window.localStorage.getItem('fit.yandexAppSession.v1'))).resolves.toBeNull()
 })
 
+test('Yandex ID restore failure leaves loading and allows a local reset in mobile WebKit', async ({ page }) => {
+  const allowlist = (process.env.VITE_YANDEX_APP_SESSION_PILOT_USER_IDS ?? '')
+    .split(',')
+    .map((value) => value.trim())
+  test.skip(
+    process.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true'
+      || !allowlist.includes('d2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'),
+    'Run with Yandex app-session env to verify the default-off route.',
+  )
+  await page.route('https://stage.example.test/v1/auth/yandex/session', (route) => route.abort('failed'))
+  await page.addInitScript(() => {
+    window.localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({
+      token: 'a'.repeat(43),
+      expiresAt: '2099-09-01T12:00:00.000Z',
+    }))
+    window.localStorage.setItem('fit.appTheme', 'dark')
+  })
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/auth/yandex/session')
+
+  await expect(page.getByRole('alert')).toContainText('Не удалось подключиться к Yandex Cloud stage.')
+  await expect(page.getByRole('button', { name: 'Повторить' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Сбросить сессию Yandex ID' })).toBeVisible()
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+
+  await page.getByRole('button', { name: 'Сбросить сессию Yandex ID' }).click()
+  await expect(page).toHaveURL(/\/auth$/)
+  await expect(page.evaluate(() => window.localStorage.getItem('fit.yandexAppSession.v1'))).resolves.toBeNull()
+  await expect(page.evaluate(() => window.localStorage.getItem('fit.appTheme'))).resolves.toBe('dark')
+})
+
 for (const account of [
   { role: 'тренера', email: 'trainer@fit.local', home: /\/today$/, profile: '/profile/settings' },
   { role: 'клиента', email: 'client@fit.local', home: /\/me$/, profile: '/me/settings' },

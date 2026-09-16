@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { YandexAppSessionPage, YandexPilotCallbackPage } from './AuthPages'
+import { AuthPage, YandexAppSessionPage, YandexPilotCallbackPage } from './AuthPages'
 import { createYandexAuthorizationUrl } from './yandex-pilot-oauth'
 
 const PROFILE_ID = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
@@ -32,6 +32,7 @@ interface MockAppSessionState {
   error: string | null
   establish: (value: typeof session) => void
   retry: () => Promise<void>
+  reset: () => void
   signOut: () => Promise<void>
 }
 
@@ -53,6 +54,7 @@ vi.mock('../../data/repositories/yandex-pilot.repository', () => ({
 
 const establish = vi.fn()
 const retry = vi.fn()
+const reset = vi.fn()
 const signOut = vi.fn()
 
 async function appCallbackSearch(): Promise<string> {
@@ -69,6 +71,7 @@ describe('Yandex app session auth flow', () => {
   beforeEach(() => {
     establish.mockReset()
     retry.mockReset().mockResolvedValue(undefined)
+    reset.mockReset()
     signOut.mockReset().mockResolvedValue(undefined)
     repository.exchangeCodeForAppSession.mockReset().mockResolvedValue(session)
     repository.revokeAppSession.mockReset().mockResolvedValue(undefined)
@@ -79,6 +82,7 @@ describe('Yandex app session auth flow', () => {
       error: null,
       establish,
       retry,
+      reset,
       signOut,
     })
     vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
@@ -177,6 +181,7 @@ describe('Yandex app session auth flow', () => {
       error: null,
       establish,
       retry,
+      reset,
       signOut,
     })
     render(<MemoryRouter initialEntries={['/auth/yandex/session']}>
@@ -194,13 +199,14 @@ describe('Yandex app session auth flow', () => {
     expect(await screen.findByText('auth route')).toBeVisible()
   })
 
-  it('offers retry instead of opening a direct session route after restore failure', () => {
+  it('offers retry and an explicit local reset after restore failure', () => {
     appSessionState.mockReturnValue({
       session: null,
       loading: false,
       error: 'Yandex Cloud вход временно недоступен.',
       establish,
       retry,
+      reset,
       signOut,
     })
     render(<MemoryRouter><YandexAppSessionPage /></MemoryRouter>)
@@ -208,5 +214,26 @@ describe('Yandex app session auth flow', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Yandex Cloud вход временно недоступен.')
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
     expect(retry).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: 'Сбросить сессию Yandex ID' }))
+    expect(reset).toHaveBeenCalledOnce()
+  })
+
+  it('allows resetting a failed restored session from the regular sign-in page', () => {
+    appSessionState.mockReturnValue({
+      session: null,
+      loading: false,
+      error: 'Проверка сессии Yandex ID заняла слишком много времени.',
+      establish,
+      retry,
+      reset,
+      signOut,
+    })
+    render(<MemoryRouter><AuthPage /></MemoryRouter>)
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Проверка сессии Yandex ID заняла слишком много времени.',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Сбросить сессию Yandex ID' }))
+    expect(reset).toHaveBeenCalledOnce()
   })
 })

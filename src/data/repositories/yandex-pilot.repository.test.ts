@@ -22,7 +22,10 @@ const queries = vi.hoisted(() => ({
   removeTrainer: vi.fn(),
   revokeInvitation: vi.fn(),
 }))
-vi.mock('../queries/yandex-pilot.queries', () => ({ yandexPilotQueries: queries }))
+vi.mock('../queries/yandex-pilot.queries', () => ({
+  YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE: 'Проверка сессии Yandex ID заняла слишком много времени.',
+  yandexPilotQueries: queries,
+}))
 
 const session = {
   accessMode: 'read_only',
@@ -352,6 +355,17 @@ describe('yandexPilotRepository', () => {
       'https://stage.example.test',
       appSession.session.token,
     )).rejects.toThrow('Сессия Yandex ID истекла')
+  })
+
+  it('preserves the actionable timeout message while restoring an app session', async () => {
+    queries.getAppSession.mockRejectedValue(
+      new TypeError('Проверка сессии Yandex ID заняла слишком много времени.'),
+    )
+
+    await expect(yandexPilotRepository.getAppSession(
+      'https://stage.example.test',
+      appSession.session.token,
+    )).rejects.toThrow('Проверка сессии Yandex ID заняла слишком много времени.')
   })
 
   it('keeps a read-only pilot session outside the app session contract', async () => {
