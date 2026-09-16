@@ -59,8 +59,8 @@ export const yandexPilotQueries = {
     method: 'POST',
     cache: 'no-store',
     headers: {
-      authorization: `Bearer ${supabaseAccessToken}`,
       'content-type': 'application/json',
+      'x-supabase-authorization': `Bearer ${supabaseAccessToken}`,
     },
     body: JSON.stringify({ code, codeVerifier }),
   }),

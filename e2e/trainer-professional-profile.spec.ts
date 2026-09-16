@@ -43,8 +43,15 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   await editor.getByLabel('О себе').fill('Помогаю безопасно начать силовые тренировки, встроить движение в обычную жизнь и видеть понятный прогресс без перегрузки.')
   await editor.getByLabel('Направления').fill('Силовые, снижение веса')
   await editor.getByRole('switch', { name: 'Онлайн' }).check()
+  await editor.getByRole('switch', { name: 'Лично' }).check()
   await editor.getByRole('switch', { name: 'Беру новых клиентов' }).check()
   await editor.getByLabel('Город').fill('Москва')
+  if (await editor.getByRole('button', { name: 'Убрать станцию Динамо' }).count() === 0) {
+    await editor.getByRole('combobox', { name: 'Метро Москвы' }).fill('Динамо')
+    await editor.getByRole('option', { name: /Динамо/ }).click()
+  }
+  await editor.getByLabel('Клуб, район или адрес').fill('World Class Динамо')
+  await editor.getByRole('button', { name: 'Добавить' }).click()
   await editor.getByLabel('Как проходят занятия').fill('Созваниваемся раз в неделю и корректируем план.')
   await editor.locator('input[type="file"]').setInputFiles({
     name: 'avatar.png',
@@ -61,6 +68,9 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   await expect(profile.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
   await expect(profile.getByRole('button', { name: 'Редактировать' })).toBeVisible()
   await expect(profile.locator('img.trainer-card-avatar')).toBeVisible()
+  await profile.getByText('Где тренирует · 2').click()
+  await expect(profile.getByRole('list', { name: 'Станции метро' })).toContainText('Динамо')
+  await expect(profile.getByRole('list', { name: 'Места тренировок' })).toContainText('World Class Динамо')
   await profile.getByText('Образование и сертификаты · 1').click()
   await expect(profile.getByText('Высшее физкультурное образование.')).toBeVisible()
   await expect(profile.getByText('Персональный тренер')).toBeVisible()
@@ -78,6 +88,8 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   const publicResponse = await publicRequest
   expect(publicResponse.status()).toBe(200)
   await expect(page.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Где тренирует' })).toBeVisible()
+  await expect(page.getByRole('list', { name: 'Станции метро' })).toContainText('Динамо')
   await expect(page.getByText('Спортсмены видят последнюю опубликованную версию.')).toHaveCount(0)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 
@@ -105,8 +117,10 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
 
   await page.getByRole('button', { name: 'Фильтры' }).click()
   await page.getByLabel('Направление').fill('снижение веса')
+  await page.getByRole('combobox', { name: 'Метро Москвы' }).fill('Динамо')
+  await page.getByRole('option', { name: /Динамо/ }).click()
   await page.getByRole('button', { name: 'Показать тренеров' }).click()
-  await expect(page.getByRole('button', { name: 'Фильтры · 1' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Фильтры · 2' })).toBeVisible()
   await expect(results.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
   await results.getByRole('link', { name: 'Посмотреть анкету' }).click()
   await expect(page).toHaveURL(/\/trainers\/[0-9a-f-]+$/)
@@ -122,9 +136,10 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   expect(contactBounds!.y + contactBounds!.height).toBeLessThanOrEqual(await page.evaluate(() => window.innerHeight))
   await page.getByRole('button', { name: 'Назад' }).click()
   await expect(page).toHaveURL(/\/me\/trainers$/)
-  await expect(page.getByRole('button', { name: 'Фильтры · 1' })).toBeVisible()
-  await page.getByRole('button', { name: 'Фильтры · 1' }).click()
+  await expect(page.getByRole('button', { name: 'Фильтры · 2' })).toBeVisible()
+  await page.getByRole('button', { name: 'Фильтры · 2' }).click()
   await expect(page.getByLabel('Направление')).toHaveValue('снижение веса')
+  await expect(page.getByRole('list', { name: 'Выбранные станции метро' })).toContainText('Динамо')
   await page.getByRole('button', { name: 'Закрыть фильтры' }).click()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 

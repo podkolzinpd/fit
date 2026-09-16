@@ -11,6 +11,7 @@ on:
       - 'services/api/src/assistant-orchestrator/**'
       - 'services/api/src/ai-studio-usage-metrics.ts'
       - 'services/api/src/yandex-assistant-orchestrator-function.ts'
+      - 'services/api/src/yandex-program-generator-function.ts'
       - 'scripts/verify-yandex-function-release.mjs'
       - 'scripts/yandex-lockbox-mounts.test.mjs'
   workflow_dispatch:
@@ -29,6 +30,8 @@ env:
   YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
   FUNCTION_NAME: fit-assistant-orchestrator
   RUNTIME_SA_NAME: fit-assistant-orchestrator
+  ASSISTANT_PROGRAM_ENABLED: ${{ vars.ASSISTANT_PROGRAM_ENABLED || 'true' }}
+  ASSISTANT_PROGRAM_PILOT_USER_IDS: ${{ vars.ASSISTANT_PROGRAM_PILOT_USER_IDS || 'cbac997f-7641-4251-9ecb-fee777ef1ddc' }}
   LOCKBOX_NAME: fit-summarize-client-training-supabase
 
 jobs:
@@ -69,8 +72,17 @@ jobs:
           if ! yc serverless function get --name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
             yc serverless function create "$FUNCTION_NAME" --description 'Production Fit bounded assistant orchestrator' --folder-id "$YC_FOLDER_ID"
           fi
+          # The generator is private; only the existing orchestrator SA may invoke it.
+          generator_name=fit-generate-program
+          # One-time private resource/IAM bootstrap is documented in OPERATIONS.md.
+          # Release credentials do not create or widen access bindings.
+          generator_sa_id=$(yc iam service-account get --name "$generator_name" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
+          generator_id=$(yc serverless function get --name "$generator_name" --folder-id "$YC_FOLDER_ID" --format json | jq -er '.id')
+          # No Lockbox/DB access is granted to this runtime; it receives an aggregate.
+          yc serverless function version create --function-id "$generator_id" --runtime nodejs22 --entrypoint dist/yandex-program-generator-function.handler --memory 1GB --execution-timeout 110s --service-account-id "$generator_sa_id" --source-path .yandex-assistant-orchestrator-package --environment "RELEASE_SHA=$GITHUB_SHA,YANDEX_CLOUD_FOLDER_ID=$YC_FOLDER_ID,ASSISTANT_PROGRAM_ENABLED=$ASSISTANT_PROGRAM_ENABLED,ASSISTANT_PROGRAM_PILOT_USER_IDS=$ASSISTANT_PROGRAM_PILOT_USER_IDS" --format json | jq '{id, status}'
+          generator_url="https://functions.yandexcloud.net/$generator_id"
           previous_version_id=$(yc serverless function version get-by-tag --function-name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --tag '$latest' --format json 2>/dev/null | jq -r '.id // empty' || true)
-          version=$(yc serverless function version create --function-name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --runtime nodejs22 --entrypoint dist/yandex-assistant-orchestrator-function.handler --memory 1GB --execution-timeout 120s --service-account-id "$runtime_sa_id" --source-path .yandex-assistant-orchestrator-package --environment RELEASE_SHA="$GITHUB_SHA" --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_URL,environment-variable=SUPABASE_URL --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_SERVICE_ROLE_KEY,environment-variable=SUPABASE_SERVICE_ROLE_KEY --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID --format json)
+          version=$(yc serverless function version create --function-name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" --runtime nodejs22 --entrypoint dist/yandex-assistant-orchestrator-function.handler --memory 1GB --execution-timeout 120s --service-account-id "$runtime_sa_id" --source-path .yandex-assistant-orchestrator-package --environment RELEASE_SHA="$GITHUB_SHA" --environment "ASSISTANT_PROGRAM_ENABLED=$ASSISTANT_PROGRAM_ENABLED,ASSISTANT_PROGRAM_PILOT_USER_IDS=$ASSISTANT_PROGRAM_PILOT_USER_IDS,ASSISTANT_PROGRAM_GENERATOR_URL=$generator_url" --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_URL,environment-variable=SUPABASE_URL --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_SERVICE_ROLE_KEY,environment-variable=SUPABASE_SERVICE_ROLE_KEY --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID --format json)
           echo "ASSISTANT_PREVIOUS_VERSION_ID=$previous_version_id" >> "$GITHUB_ENV"
           echo "ASSISTANT_CANDIDATE_VERSION_ID=$(jq -er '.id' <<<"$version")" >> "$GITHUB_ENV"
           echo "ASSISTANT_LOCKBOX_VERSION_ID=$lockbox_version_id" >> "$GITHUB_ENV"

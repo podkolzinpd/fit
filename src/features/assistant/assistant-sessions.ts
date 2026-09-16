@@ -78,7 +78,7 @@ export function mergeAssistantMessages(
 }
 
 export function isInteractiveAssistantAction(action: AssistantOrchestratorAction | null): boolean {
-  return action !== null && action.lifecycleStatus !== 'applied' && action.lifecycleStatus !== 'cancelled' && action.lifecycleStatus !== 'failed'
+  return action !== null && action.lifecycleStatus !== 'applied' && action.lifecycleStatus !== 'cancelled' && (action.lifecycleStatus !== 'failed' || action.payload.programPilot === true)
 }
 
 export function latestActiveAssistantAction(messages: readonly AssistantMessage[], conversationId?: string): AssistantActionMessage | undefined {
@@ -107,13 +107,13 @@ export function latestActiveWorkoutAction(messages: readonly AssistantMessage[],
 function isWorkoutTerminalReply(message: AssistantMessage): boolean {
   if (message.author !== 'assistant' || message.action !== null) return false
   const content = message.content.trim().toLocaleLowerCase('ru-RU')
-  return content.includes('запись тренировки отменена') || content.includes('тренировка сохранена')
+  return content.includes('запись тренировки отменена') || content.includes('тренировка сохранена') || content.includes('создание программы отменено')
 }
 
 export function filterTerminalAssistantMessages(messages: readonly AssistantMessage[]): AssistantMessage[] {
   return messages.flatMap((message) => {
     if (!message.action || isInteractiveAssistantAction(message.action)) return [message]
-    if ((message.action.tool === 'summarize_progress' || message.action.tool === 'record_workout') && message.action.lifecycleStatus === 'applied') return [message]
+    if ((message.action.tool === 'summarize_progress' || message.action.tool === 'record_workout' || message.action.payload.programPilot === true) && message.action.lifecycleStatus === 'applied') return [message]
     return message.content.trim() === message.action.description.trim() ? [] : [{ ...message, action: null }]
   })
 }

@@ -700,11 +700,11 @@ test('trainer catalog stays compact and aligned across supported widths', async 
     displayName: 'Александра Константинопольская-Романова',
     bio: 'Помогаю последовательно возвращаться к тренировкам и выстраивать программу под реальный график без перегрузки и резких изменений.',
     specialties: ['Силовые тренировки', 'Восстановление после длительного перерыва', 'Мобильность'],
-    city: 'Санкт-Петербург', trainingModes: ['online'], experienceStartYear: 2018,
+    city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-tsska'], customLocations: ['World Class Динамо'], trainingModes: ['online', 'in_person'], experienceStartYear: 2018,
     education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: null, certificates: [],
   }
   const minimal = {
-    displayName: 'Ирина', bio: '', specialties: [], city: '', trainingModes: [], experienceStartYear: null,
+    displayName: 'Ирина', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [], trainingModes: [], experienceStartYear: null,
     education: '', formats: '', price: '', acceptingClients: false, avatarDataUrl: null, certificates: [],
   }
   await page.route('**/rest/v1/rpc/list_public_trainer_profiles_page', (route) => route.fulfill({

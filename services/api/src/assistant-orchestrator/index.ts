@@ -1,5 +1,11 @@
+import { generateProgramOnce, programGenerationKey } from './program/job.js'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { aiStudioUsage, reportAiStudioMetric } from '../ai-studio-usage-metrics.js'
+import { isProgramPilotEnabled } from './program/model.js'
+import { extractProgramBrief, invokeProgramGenerator, programPilotTurn } from './program/turn.js'
+import { loadProgramContext } from './program/source.js'
+import { CONFIRM_PROGRAM_BRIEF } from './program/brief.js'
+import { assistantToolStateFilter, latestActiveAssistantTool, routedAssistantTurn } from './router.js'
 
 import {
   readAssistantTurnRequest,
@@ -157,12 +163,33 @@ function clientNameWordMatches(actual: string, expected: string): boolean {
   return [...actualKeys].some((key) => expectedKeys.has(key))
 }
 
+// These words describe the requested operation or a workout, not a client's
+// identity. They can still occur in an explicitly supplied full name/alias.
+const clientLookupCommandWord = /^(?:сводк|прогресс|динамик|сдела|покаж|показ|состав|созда|подготов|запис|запиш|добав|внес|занес|зафикс|оформ|разбер|разбор|заполн|собер|продикт|программ|план|трениров|заняти|упражнен|подход|повтор|нагруз|расписан|клиент|тренер|недел|месяц|сегодня|завтра|цель|вес|отдых|жим|тяга|присед|бег)/u
+
 function matchingSummaryClients(message: string, clients: readonly ClientContextRow[]): ClientContextRow[] {
-  const ignored = new Set(['сводка', 'прогресс', 'динамика', 'сделай', 'сделать', 'покажи', 'показать', 'за', 'для', 'клиента'])
-  const words = normalizeAssistantMessage(message).split(' ').filter((word) => word.length >= 3 && !ignored.has(word))
+  const normalized = normalizeAssistantMessage(message)
+  const messageWords = normalized.split(' ').filter(Boolean)
+  const fullMatches = clients.filter((client) => {
+    const name = normalizeAssistantMessage(client.fullName)
+    if (!name) return false
+    if (normalized === name) return true
+    const nameWords = name.split(' ')
+    const hasIdentityWord = nameWords.some((word) => word.length >= 3 && !clientLookupCommandWord.test(word))
+    return messageWords.some((_word, index) => {
+      const explicitContext = ['для', 'клиента', 'клиенту'].includes(messageWords[index - 1] ?? '')
+      if (!explicitContext && !(nameWords.length > 1 && hasIdentityWord)) return false
+      return nameWords.every((word, offset) => {
+        const actual = messageWords[index + offset]
+        return actual !== undefined && (word.length < 3 ? actual === word : clientNameWordMatches(actual, word))
+      })
+    })
+  })
+  if (fullMatches.length) return fullMatches
+  const words = messageWords.filter((word) => word.length >= 3 && word !== 'для' && !clientLookupCommandWord.test(word))
   if (words.length === 0) return []
   return clients.filter((client) => {
-    const clientWords = normalizeAssistantMessage(client.fullName).split(' ').filter((word) => word.length >= 3)
+    const clientWords = normalizeAssistantMessage(client.fullName).split(' ').filter((word) => word.length >= 3 && !clientLookupCommandWord.test(word))
     return clientWords.some((clientWord) => words.some((word) => clientNameWordMatches(word, clientWord)))
   })
 }
@@ -270,6 +297,10 @@ function validProposedPayload(tool: Tool, payload: Record<string, unknown>): boo
 
 function validProgramPayload(payload: Record<string, unknown>): boolean {
   if (payload.step !== 'confirm' || typeof payload.clientId !== 'string' || !UUID.test(payload.clientId) || typeof payload.clientName !== 'string' || typeof payload.brief !== 'string' || !Array.isArray(payload.sessions)) return false
+  if (payload.schemaVersion === 'program-v1') return [4, 8, 12].includes(payload.sessions.length)
+    && Array.isArray(payload.canonicalWorkouts) && payload.canonicalWorkouts.length === payload.sessions.length
+    && payload.canonicalWorkouts.every((workout) => record(workout) && workout.clientId === payload.clientId && typeof workout.requestId === 'string' && UUID.test(workout.requestId)
+      && Array.isArray(workout.exercises) && workout.exercises.length >= 3)
   return payload.sessions.length > 0 && payload.sessions.length <= 4 && payload.sessions.every((session) => {
     if (!record(session) || typeof session.title !== 'string' || typeof session.day !== 'string' || !Array.isArray(session.exercises)) return false
     return session.exercises.length > 0 && session.exercises.length <= 12 && session.exercises.every((exercise) => {
@@ -512,14 +543,15 @@ export function recordWorkoutTurn(
   message: string,
   clients: readonly ClientContextRow[],
   latestAction: unknown,
+  invoked = false,
 ): AssistantTurnResponse | undefined {
   const previousAction = actionRecord(latestAction)
   const previousPayload = actionRecord(previousAction?.payload)
   const previousStep = previousPayload?.step
   const previousWorkout = previousAction?.tool === 'record_workout'
-  const explicitRequest = isWorkoutRecordRequest(message)
+  const explicitRequest = (invoked && !previousWorkout) || isWorkoutRecordRequest(message)
   const likelyFragment = !isNonWorkoutRequest(message) && workoutTextProvided(extractWorkoutTranscript(message))
-  if (previousWorkout && isWorkoutRecordCancellation(message)) return { reply: 'Хорошо, запись тренировки отменена.', action: null }
+  if (!invoked && previousWorkout && isWorkoutRecordCancellation(message)) return { reply: 'Хорошо, запись тренировки отменена.', action: null }
   const continuation = previousWorkout && (
     previousStep === 'client'
     || previousStep === 'workout'
@@ -736,7 +768,7 @@ export async function runAssistantTurn(
   if (!conversation || conversation.owner_id !== user.id) throw new HttpError(404, 'conversation_not_found')
 
   const { data: profile, error: profileError } = await service.from('profiles')
-    .select('account_role').eq('id', user.id).maybeSingle()
+    .select('account_role,timezone').eq('id', user.id).maybeSingle()
   if (profileError) throw new HttpError(503, 'context_unavailable')
   if (profile?.account_role !== 'trainer') throw new HttpError(403, 'trainer_role_required')
 
@@ -765,7 +797,8 @@ export async function runAssistantTurn(
     if (isTurnIdReuse(existingUser?.content, command.message)) throw new HttpError(409, 'turn_id_reused')
   }
   if (isAssistantCapabilityQuestion(command.message)) {
-    const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply(), action: null }
+    const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply() + (isProgramPilotEnabled(user.id)
+      ? '\nТакже могу составить программу на четыре недели: уточню цель и условия, учту историю клиента и покажу черновик перед добавлением в расписание.' : ''), action: null }
     console.info('assistant_capabilities_reply_persisted', { operationId: turnId, releaseSha })
     return persistAssistantResponse(service, command.conversationId, turnId, result)
   }
@@ -778,13 +811,59 @@ export async function runAssistantTurn(
     .select('author,content,action').eq('conversation_id', command.conversationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20)
   if (historyError) throw new HttpError(503, 'history_unavailable')
   const latestAssistantAction: unknown = (rows ?? []).find((row) => row.author === 'assistant')?.action
+  const history = [...(rows ?? [])].reverse().flatMap((row): { author: string; content: string }[] =>
+    typeof row.author === 'string' && typeof row.content === 'string' ? [{ author: row.author, content: row.content.slice(0, 1_000) }] : [])
+  if (isProgramPilotEnabled(user.id)) {
+    // Ordinary conversation must not evict an unfinished tool from the short
+    // model-history window. Read only its latest state or cancellation boundary.
+    const state = await service.from('assistant_messages').select('author,content,action')
+      .eq('conversation_id', command.conversationId).eq('author', 'assistant').or(assistantToolStateFilter)
+      .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(1).maybeSingle()
+    if (state.error) throw new HttpError(503, 'history_unavailable')
+    let active = latestActiveAssistantTool(state.data ? [state.data] : [])
+    if (active?.id) {
+      const lifecycle = await service.from('assistant_actions').select('status,version').eq('id', active.id).eq('owner_id', user.id).maybeSingle()
+      if (lifecycle.error) throw new HttpError(503, 'history_unavailable')
+      if (!lifecycle.data) throw new HttpError(503, 'history_unavailable')
+      if (lifecycle.data.status === 'applied' || lifecycle.data.status === 'cancelled') active = null
+    }
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: typeof profile.timezone === 'string' ? profile.timezone : 'Europe/Moscow' })
+    const routed = await routedAssistantTurn({ message: command.message, history, active, operationId: turnId }, {
+      record: (previous) => recordWorkoutTurn(command.message, clientRows, previous, true),
+      cancel: async (action) => {
+        if (!action.id) return
+        const lifecycle = await service.from('assistant_actions').select('status,version').eq('id', action.id).eq('owner_id', user.id).maybeSingle()
+        if (lifecycle.error) throw new HttpError(503, 'history_unavailable')
+        const version: unknown = lifecycle.data?.version
+        if (typeof version !== 'number' || !['proposed', 'failed'].includes(String(lifecycle.data?.status))) throw new HttpError(409, 'assistant_action_conflict')
+        const cancelled = await actorClient.rpc('cancel_assistant_action', { p_action_id: action.id, p_expected_version: version })
+        if (cancelled.error) throw new HttpError(409, 'assistant_action_conflict')
+      },
+      program: (previous) => programPilotTurn(command.message, clientRows, previous, {
+        actorId: user.id, turnId, today, duplicateTurn: userInsert.error?.code === '23505',
+        matchClients: (message) => matchingSummaryClients(message, clientRows),
+        loadContext: (client) => loadProgramContext(actorClient, client, today),
+        extract: (brief, message, answerContext) => extractProgramBrief(brief, message, today, turnId, answerContext),
+        generate: (brief, context, clientId) => {
+          const key = programGenerationKey(user.id, clientId, brief, context.fingerprint)
+          return generateProgramOnce(service, key, user.id, clientId, () => invokeProgramGenerator(user.id, key, today, brief, context))
+        },
+        canGenerate: async () => {
+          const count = await service.from('assistant_messages').select('id,assistant_conversations!inner(owner_id)', { count: 'exact', head: true })
+            .eq('assistant_conversations.owner_id', user.id).eq('author', 'user').eq('content', CONFIRM_PROGRAM_BRIEF)
+            .gte('created_at', new Date(Date.now() - 86_400_000).toISOString())
+          if (count.error || count.count === null) throw new HttpError(503, 'program_limit_unavailable')
+          return count.count <= 5
+        },
+      }, true),
+    })
+    return persistAssistantResponse(service, command.conversationId, turnId, routed)
+  }
   const workoutDraft = recordWorkoutTurn(command.message, clientRows, latestAssistantAction)
   if (workoutDraft !== undefined) {
     console.info('assistant_workout_draft_reply_persisted', { operationId: turnId, releaseSha, status: workoutDraft.action?.status })
     return persistAssistantResponse(service, command.conversationId, turnId, workoutDraft)
   }
-  const history = [...(rows ?? [])].reverse().flatMap((row): { author: string; content: string }[] =>
-    typeof row.author === 'string' && typeof row.content === 'string' ? [{ author: row.author, content: row.content.slice(0, 1_000) }] : [])
   let result: AssistantTurnResponse = { reply: assistantSmallTalkFallback(command.message), action: null }
   try {
     const iamToken = await yandexIamToken()

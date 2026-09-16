@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
-import { formatLlmWorkoutText, mergeWorkoutParse, parseWorkoutWithLlm, requireExerciseConfirmation } from './llm-workout-parser'
+import { formatLlmWorkoutText, mergeWorkoutParse, parsedWorkoutItems, parseWorkoutWithLlm, requireExerciseConfirmation } from './llm-workout-parser'
 
 const catalog: ExerciseSnapshot[] = [
   { source: 'system', ref: 'bench', name: 'Жим лёжа', muscleGroup: 'chest', inputKind: 'strength' },
@@ -140,6 +140,7 @@ describe('formatLlmWorkoutText', () => {
         sourceText: 'Становая с гантелями 20 кг 3 по 15',
         exerciseRef: 'dumbbell-deadlift',
         confidence: 1,
+        position: 0,
         sets: Array.from({ length: 3 }, () => ({ weightKg: 20, reps: 15 })),
       }],
       unmatched: [],
@@ -176,5 +177,49 @@ describe('formatLlmWorkoutText', () => {
       exerciseRef: 'bench',
       sets: Array.from({ length: 3 }, () => ({ weightKg: 80, reps: 10 })),
     })
+  })
+
+  it('сохраняет безопасно определённый локальный формат беговых интервалов', () => {
+    const running: ExerciseSnapshot = { source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance' }
+    const [result] = parsedWorkoutItems({
+      items: [{
+        sourceText: '6 по 400 метров',
+        exerciseRef: 'running',
+        confidence: 1,
+        sets: Array.from({ length: 6 }, () => ({ distanceKm: 0.4 })),
+      }],
+      unmatched: [],
+    }, [running])
+
+    expect(result).toMatchObject({
+      exercise: { ref: 'running', name: 'Бег — интервалы' },
+      structure: { blockPreset: 'interval', restBetweenSetsSec: 90 },
+      sets: Array.from({ length: 6 }, (_, position) => ({ position, distanceKm: 0.4 })),
+    })
+  })
+
+  it('сохраняет порядок, восстанавливает значения и убирает дубль уточнения', async () => {
+    const localCatalog: ExerciseSnapshot[] = [
+      { source: 'system', ref: 'bench', name: 'Жим лёжа', muscleGroup: 'chest', inputKind: 'strength' },
+      { source: 'system', ref: 'biceps-curl', name: 'Сгибание рук с гантелями', muscleGroup: 'arms', inputKind: 'strength' },
+      { source: 'system', ref: 'squat', name: 'Присед со штангой', muscleGroup: 'legs', inputKind: 'strength' },
+    ]
+    const remoteParser = vi.fn().mockResolvedValue({
+      items: [
+        { sourceText: 'Жим лёжа 3 по 10 100 кг', exerciseRef: 'bench', confidence: 0.99, sets: Array.from({ length: 3 }, () => ({ weightKg: 100, reps: 10 })) },
+        { sourceText: 'Присед со штангой 3 по 10 100 кг', exerciseRef: 'squat', confidence: 0.99, sets: Array.from({ length: 3 }, () => ({ weightKg: 100, reps: 10 })) },
+        { sourceText: 'Сгибание рук с гантелями', exerciseRef: 'biceps-curl', confidence: 0.99, sets: [] },
+      ],
+      unmatched: [{ sourceText: 'биц 3 по 10 30 кг', reason: 'Не найдено', suggestedExerciseRefs: ['biceps-curl'] }],
+    })
+
+    const result = await parseWorkoutWithLlm('Жим лёжа 3 по 10 100 кг\nбиц 3 по 10 30 кг\nПрисед со штангой 3 по 10 100 кг', localCatalog, { remoteParser })
+
+    expect(result.items.map((item) => item.exerciseRef)).toEqual(['bench', 'biceps-curl', 'squat'])
+    expect(result.items[1]?.sets).toEqual(Array.from({ length: 3 }, () => ({ weightKg: 30, reps: 10 })))
+    expect(result.unmatched).toEqual([])
+    expect(formatLlmWorkoutText(result, localCatalog).split('\n').map((line) => line.split(' — ')[0])).toEqual([
+      'Жим лёжа', 'Сгибание рук с гантелями', 'Присед со штангой',
+    ])
   })
 })

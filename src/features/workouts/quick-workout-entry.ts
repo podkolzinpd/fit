@@ -9,6 +9,8 @@ export interface ParsedWorkoutExercise {
   exercise: ExerciseSnapshot
   sets: WorkoutSetDraft[]
   hasValues: boolean
+  /** Исходная позиция в диктовке; нужна только до сохранения черновика. */
+  sourcePosition?: number
   trainerComment?: string
   structure?: {
     blockId?: string
