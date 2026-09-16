@@ -128,10 +128,11 @@
   rollout остаётся default-off до настройки Vercel allowlist.
 - Привязка существующего FIT-профиля передаёт legacy Supabase-сессию в
   `x-supabase-authorization`, а не в зарезервированном Yandex Cloud IAM
-  заголовке `Authorization`. В ветке `codex/yandex-id-home-status` linking
-  готовится к глобальному показу на главных страницах без персонального
-  allowlist: stage возвращает только `linked: true/false`, связанный профиль не
-  получает повторный OAuth, а loading/error имеют retry и 12-секундный timeout.
+  заголовке `Authorization`. В `main` linking глобально доступен на главных
+  страницах без персонального allowlist: stage возвращает только
+  `linked: true/false`, связанный профиль больше не видит блок на главной, а
+  непривязанный получает действие после завершения проверки. Ошибка имеет retry,
+  а запрос — 12-секундный timeout.
   Отсутствующий Yandex root атомарно создаётся из подтверждённой FIT-сессии;
   доменные данные не переносятся и sticky routing сам не включается.
 - `main` содержит 14-дневную read-write Yandex ID-сессию: stage валидирует/отзывает opaque token, frontend восстанавливает профиль и блокирует истёкшую/неразрешённую сессию.
