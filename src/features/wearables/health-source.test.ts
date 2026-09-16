@@ -1,6 +1,6 @@
 import type { HealthDataType, HealthSample } from '@capgo/capacitor-health'
 import { describe, expect, it, vi } from 'vitest'
-import { loadWearableSnapshot, type WearableHealthSource } from './health-source'
+import { loadWearableSnapshot, loadWorkoutActiveEnergy, type WearableHealthSource } from './health-source'
 
 function sample(dataType: HealthDataType, value: number, endDate: string, extra: Partial<HealthSample> = {}): HealthSample {
   return { dataType, value, unit: dataType === 'heartRateVariability' ? 'millisecond' : dataType === 'calories' ? 'kilocalorie' : dataType === 'steps' ? 'count' : dataType === 'sleep' ? 'minute' : 'bpm', startDate: endDate, endDate, sourceName: 'Apple Watch', ...extra }
@@ -24,5 +24,46 @@ describe('loadWearableSnapshot', () => {
     const source: WearableHealthSource = { availability: vi.fn(), authorize: vi.fn(), read: vi.fn(() => Promise.resolve([])) }
     const result = await loadWearableSnapshot(source, new Date('2026-08-03T12:00:00.000Z'))
     expect(result).toMatchObject({ steps: null, activeCaloriesKcal: null, sleepMinutes: null, restingHeartRateBpm: null, heartRateVariabilityMs: null, sources: [] })
+  })
+})
+
+describe('loadWorkoutActiveEnergy', () => {
+  it('reads only the confirmed workout interval and keeps the device source', async () => {
+    const read = vi.fn().mockResolvedValue([
+      sample('calories', 121.4, '2026-08-03T10:30:00.000Z'),
+      sample('calories', 79.2, '2026-08-03T11:00:00.000Z'),
+    ])
+    const authorize = vi.fn()
+    const source: WearableHealthSource = {
+      availability: vi.fn().mockResolvedValue({ available: true, platform: 'ios' }),
+      authorize,
+      read,
+    }
+
+    await expect(loadWorkoutActiveEnergy('2026-08-03T10:00:00+03:00', '2026-08-03T11:15:00+03:00', source)).resolves.toEqual({
+      activeCaloriesKcal: 201,
+      sources: ['Apple Watch'],
+    })
+    expect(read).toHaveBeenCalledWith('calories', '2026-08-03T07:00:00.000Z', '2026-08-03T08:15:00.000Z')
+    expect(authorize).not.toHaveBeenCalled()
+  })
+
+  it('does not invent calories when the interval, permission or samples are unavailable', async () => {
+    const unavailableRead = vi.fn()
+    const unavailable: WearableHealthSource = {
+      availability: vi.fn().mockResolvedValue({ available: false, platform: 'web' }),
+      authorize: vi.fn(),
+      read: unavailableRead,
+    }
+    await expect(loadWorkoutActiveEnergy('bad', '2026-08-03T11:15:00.000Z', unavailable)).resolves.toBeNull()
+    await expect(loadWorkoutActiveEnergy('2026-08-03T10:00:00.000Z', '2026-08-03T11:15:00.000Z', unavailable)).resolves.toBeNull()
+    expect(unavailableRead).not.toHaveBeenCalled()
+
+    const empty: WearableHealthSource = {
+      availability: vi.fn().mockResolvedValue({ available: true, platform: 'ios' }),
+      authorize: vi.fn(),
+      read: vi.fn().mockResolvedValue([]),
+    }
+    await expect(loadWorkoutActiveEnergy('2026-08-03T10:00:00.000Z', '2026-08-03T11:15:00.000Z', empty)).resolves.toBeNull()
   })
 })
