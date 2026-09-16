@@ -8,14 +8,17 @@ export function formatRest(seconds: number): string {
 }
 
 /** Only this small subtree ticks; workout inputs do not rerender every second. */
-export function LiveRestTimer({ deadline, onChange }: {
+export function LiveRestTimer({ deadline, completedSetCount, onChange }: {
   deadline: number | null
+  completedSetCount: number
   onChange: (deadline: number | null) => void
 }) {
   const [now, setNow] = useState(Date.now)
   const [open, setOpen] = useState(false)
   const [seconds, setSeconds] = useState('90')
+  const [finished, setFinished] = useState(false)
   const notified = useRef<number | null>(null)
+  const previousCompletedSetCount = useRef(completedSetCount)
   const trigger = useRef<HTMLButtonElement>(null)
   const dialog = useRef<HTMLElement>(null)
   const change = useRef(onChange)
@@ -28,6 +31,7 @@ export function LiveRestTimer({ deadline, onChange }: {
       setNow(time)
       if (time >= deadline && notified.current !== deadline) {
         notified.current = deadline
+        setFinished(true)
         change.current(null)
         playGong()
       }
@@ -42,6 +46,15 @@ export function LiveRestTimer({ deadline, onChange }: {
       document.removeEventListener('visibilitychange', wake)
       window.removeEventListener('pageshow', wake)
     }
+  }, [deadline])
+  useEffect(() => {
+    if (previousCompletedSetCount.current !== completedSetCount) setFinished(false)
+    previousCompletedSetCount.current = completedSetCount
+  }, [completedSetCount])
+  useEffect(() => {
+    // A deadline may already be past when the app returns from background.
+    // Do not erase the finished state produced by the catch-up tick on mount.
+    if (deadline !== null && deadline > Date.now()) setFinished(false)
   }, [deadline])
   useEffect(() => {
     if (!open) return
@@ -62,21 +75,25 @@ export function LiveRestTimer({ deadline, onChange }: {
   function shift(delta: number) {
     if (deadline !== null) onChange(Math.max(Date.now(), deadline + delta * 1000))
   }
+  const activeRemaining = remaining !== null && remaining > 0 ? remaining : null
+  const stateClass = activeRemaining !== null ? ' resting' : finished ? ' rest-finished' : ''
+  const triggerLabel = activeRemaining !== null ? `Таймер отдыха: ${formatRest(activeRemaining)}` : finished ? 'Отдых завершён' : 'Таймер отдыха'
+  const triggerText = activeRemaining !== null ? `Отдых ${formatRest(activeRemaining)}` : finished ? 'Отдых завершён' : 'Таймер'
   return <>
-    <button ref={trigger} type="button" className={`secondary live-rest-trigger${remaining !== null ? ' resting' : ''}`} aria-label={remaining === null ? 'Таймер отдыха' : `Таймер отдыха: ${formatRest(remaining)}`} onClick={() => setOpen(true)}>
-      <TimerIcon /><span>{remaining === null ? 'Таймер' : `Отдых ${formatRest(remaining)}`}</span>
+    <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel} onClick={() => setOpen(true)}>
+      <TimerIcon /><span>{triggerText}</span>
     </button>
     {open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
       <section ref={dialog} className="workout-decision-sheet live-rest-sheet" role="dialog" aria-modal="true" aria-label="Таймер отдыха" onClick={(event) => event.stopPropagation()}>
         <header className="picker-header"><h2>Таймер отдыха</h2><button type="button" className="picker-close" aria-label="Закрыть таймер" onClick={() => setOpen(false)}><CloseIcon /></button></header>
-        {remaining !== null ? <>
-          <p className="live-rest-countdown">{formatRest(remaining)}</p>
+        {activeRemaining !== null ? <>
+          <p className="live-rest-countdown">{formatRest(activeRemaining)}</p>
           <div className="rest-controls"><button type="button" className="secondary" aria-label="Минус 15 секунд" onClick={() => shift(-15)}>−15 сек</button><button type="button" className="secondary" aria-label="Плюс 15 секунд" onClick={() => shift(15)}>+15 сек</button></div>
-          <button type="button" className="secondary" aria-label="Пропустить" onClick={() => { onChange(null); setOpen(false) }}>Пропустить отдых</button>
+          <button type="button" className="secondary" aria-label="Пропустить" onClick={() => { setFinished(false); onChange(null); setOpen(false) }}>Пропустить отдых</button>
         </> : <>
           <label className="field">Время отдыха, сек<input type="number" inputMode="numeric" min="1" max="3600" value={seconds} onChange={(event) => setSeconds(event.target.value)} /></label>
           <div className="rest-controls">{[60, 90, 120, 180].map((value) => <button key={value} type="button" className="secondary" onClick={() => setSeconds(String(value))}>{formatRest(value)}</button>)}</div>
-          <button type="button" disabled={!valid} onClick={() => { onChange(Date.now() + Number(seconds) * 1000); setOpen(false) }}>Начать отдых</button>
+          <button type="button" disabled={!valid} onClick={() => { setFinished(false); onChange(Date.now() + Number(seconds) * 1000); setOpen(false) }}>Начать отдых</button>
         </>}
       </section>
     </div>, document.querySelector('.phone-frame') ?? document.body)}

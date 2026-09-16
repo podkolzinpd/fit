@@ -71,6 +71,15 @@ const fixtureSet = {
   plan_duration_sec: 60, fact_duration_sec: 60, confirmed_at: '2026-08-10T15:01:00Z', version: 1,
 }
 
+function historyListExercises(confirmed: boolean) {
+  return [
+    { ...fixtureExercise, position: 0, sets: [{ ...fixtureSet, confirmed_at: confirmed ? fixtureSet.confirmed_at : null }] },
+    { ...fixtureExercise, id: 'c2000000-0000-4000-8000-000000000002', exercise_ref: 'squat', exercise_name: 'Присед', muscle_group: 'legs', position: 1, block_id: 'c3000000-0000-4000-8000-000000000002', sets: [{ ...fixtureSet, id: 'c4000000-0000-4000-8000-000000000002', workout_exercise_id: 'c2000000-0000-4000-8000-000000000002', confirmed_at: confirmed ? fixtureSet.confirmed_at : null }] },
+    { ...fixtureExercise, id: 'c2000000-0000-4000-8000-000000000003', exercise_ref: 'bench-press', exercise_name: 'Жим лёжа', muscle_group: 'chest', position: 2, block_id: 'c3000000-0000-4000-8000-000000000003', sets: [{ ...fixtureSet, id: 'c4000000-0000-4000-8000-000000000003', workout_exercise_id: 'c2000000-0000-4000-8000-000000000003', confirmed_at: confirmed ? fixtureSet.confirmed_at : null }] },
+    { ...fixtureExercise, id: 'c2000000-0000-4000-8000-000000000004', exercise_ref: 'lat-pulldown', exercise_name: 'Тяга верхнего блока', muscle_group: 'back', position: 3, block_id: 'c3000000-0000-4000-8000-000000000004', sets: [{ ...fixtureSet, id: 'c4000000-0000-4000-8000-000000000004', workout_exercise_id: 'c2000000-0000-4000-8000-000000000004', confirmed_at: confirmed ? fixtureSet.confirmed_at : null }] },
+  ]
+}
+
 async function mockNavigationWorkouts(page: Page) {
   const state = { status: 'done', version: 1, deleted: false, createdId: historyRow.id, monthError: false, delayMonth: false, count: 1, setConfirmed: true }
   const row = () => ({ ...historyRow, id: state.createdId, trainer_id: trainerId, created_by: trainerId,
@@ -83,7 +92,7 @@ async function mockNavigationWorkouts(page: Page) {
       if (state.delayMonth) await new Promise((resolve) => setTimeout(resolve, 700))
       if (state.monthError) { await route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"test calendar unavailable"}' }); return }
     }
-    const item = row()
+    const item = { ...row(), exercises: historyListExercises(state.setConfirmed) }
     const visible = !state.deleted && (!body.p_from || item.workout_date >= body.p_from) && (!body.p_to || item.workout_date <= body.p_to)
     const rows = Array.from({ length: state.count }, (_, index) => ({ ...item, id: index === 0 ? item.id : `c1000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}` }))
     const offset = body.p_offset ?? 0
@@ -144,6 +153,69 @@ async function dismissCalendarHint(page: Page) {
   await hint.getByRole('button', { name: 'Понятно' }).click()
   await dismissVisibleHints(page)
 }
+
+for (const role of ['trainer', 'client'] as const) {
+  test(`${role}: history list shows performed muscles and opens a copy from its own action`, async ({ page }, testInfo) => {
+    await mockNavigationWorkouts(page)
+    await loginForHistory(page, role)
+    const path = role === 'trainer' ? clientHistoryPath : '/me/workouts'
+    await page.goto(path)
+    await dismissCalendarHint(page)
+
+    const card = page.locator('.workout-chronicle-card').first()
+    await expect(card.getByLabel('Основные группы мышц: Кор · Ноги · Грудь · +1')).toContainText('Мышцы: Кор · Ноги · Грудь · +1')
+    const copy = card.getByRole('link', { name: /Скопировать тренировку за/ })
+    await expect(copy).toHaveAttribute('href', `/workouts/new?copy=${historyRow.id}`)
+    await expect(copy).toHaveCSS('width', '44px')
+    await expect(copy).toHaveCSS('height', '44px')
+    for (const width of [390, 430, ...(role === 'trainer' ? [1440] : [])]) {
+      await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`${role}-history-actions-${width}.png`), fullPage: true })
+    }
+
+    await page.evaluate(() => window.localStorage.setItem('fit.appTheme', 'dark'))
+    await page.reload()
+    await expect(card.getByLabel('Основные группы мышц: Кор · Ноги · Грудь · +1')).toBeVisible()
+    for (const width of [390, 430, ...(role === 'trainer' ? [1440] : [])]) {
+      await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`${role}-history-actions-dark-${width}.png`), fullPage: true })
+    }
+
+    await copy.click()
+    await expect(page).toHaveURL(`/workouts/new?copy=${historyRow.id}`)
+    await expect(page.getByText(fixtureExercise.exercise_name, { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Сохранить план' })).toBeVisible()
+
+    await page.goto(path)
+    await page.locator('.workout-chronicle-card').first().getByRole('link', { name: /Открыть тренировку за/ }).click()
+    await expect(page).toHaveURL(detailPath)
+  })
+}
+
+test('client: finished rest stays visible in the pinned Live toolbar', async ({ page }, testInfo) => {
+  const state = await mockNavigationWorkouts(page)
+  state.status = 'in_progress'
+  state.setConfirmed = false
+  await loginForHistory(page, 'client')
+  await page.goto(`${detailPath}/live`)
+  await dismissVisibleHints(page)
+
+  await page.getByRole('button', { name: 'Таймер отдыха', exact: true }).click()
+  await page.getByLabel('Время отдыха, сек').fill('1')
+  await page.getByRole('button', { name: 'Начать отдых' }).click()
+  await page.clock.fastForward(1_500)
+
+  const finished = page.getByRole('button', { name: 'Отдых завершён', exact: true })
+  await expect(finished).toBeVisible()
+  await expect(finished).toHaveClass(/rest-finished/)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 932 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`client-rest-finished-${width}.png`), fullPage: true })
+  }
+})
 
 test('client: unfinished Live workout reminds once after twenty minutes of inactivity', async ({ page }, testInfo) => {
   const state = await mockNavigationWorkouts(page)
