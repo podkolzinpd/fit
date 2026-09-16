@@ -17,7 +17,6 @@ async function createClientAccount(page: import('@playwright/test').Page, email:
 async function createCompletedWorkout(page: import('@playwright/test').Page) {
   await page.goto('/workouts/new')
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.locator('[data-exercise-ref="bench-press"]').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -77,7 +76,6 @@ test('client creates a custom exercise and saves it in a completed workout', asy
 
   await page.goto('/workouts/new')
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByRole('button', { name: 'Создать упражнение' }).click()
   await page.getByLabel('Название').fill(exerciseName)
   await page.getByRole('button', { name: 'Ноги', exact: true }).click()
