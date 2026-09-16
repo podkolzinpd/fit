@@ -210,10 +210,10 @@ const legacyWorkoutParser =
       )
 const legacySummaryHandler =
   supabaseBridgeConfig === undefined
-  || process.env.YANDEX_CLOUD_API_KEY === undefined
+  || yandexAiAuthorization === undefined
   || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
     ? undefined
-    : summarizeClientTraining
+    : (request: Request) => summarizeClientTraining(request, { authorization: yandexAiAuthorization })
 const app = buildApp(
   {
     allowedOrigins: parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS),

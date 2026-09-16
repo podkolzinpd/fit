@@ -109,14 +109,20 @@ jobs:
             echo "Synthetic parser smoke failed: HTTP $parser_status; code=$error_code." >&2
             exit 1
           fi
-          jq -e --arg custom_ref "$custom_ref" '
+          if ! jq -e --arg custom_ref "$custom_ref" '
             (.items | any(
                 .exerciseRef == $custom_ref
                 and (.sets | any(.weightKg == 42.5 and .reps == 10))
               ))
             and (.items | any(.exerciseRef == "vital-gym-pro-r320-1362"))
             and (.items | any(.exerciseRef == "vital-cable-cross-lateral-raise"))
-          ' ai-smoke-parser-response.json >/dev/null
+          ' ai-smoke-parser-response.json >/dev/null; then
+            jq '{
+              items: [.items[] | {exerciseRef, sets}],
+              unmatched: [.unmatched[] | {sourceText, reason, suggestedExerciseRefs, sets}]
+            }' ai-smoke-parser-response.json >&2
+            exit 1
+          fi
           jq -cn --arg client_id "$client_id" '{
             client_id: $client_id,
             period_start: "2026-08-01",

@@ -78,3 +78,20 @@ it('submits a scoped edit without applying or regenerating the rest of the draft
   expect(handlers.onSuggestion).toHaveBeenCalledWith(expect.stringContaining('повторы: 8;'))
   expect(handlers.onApply).not.toHaveBeenCalled()
 })
+
+it('shows and edits aerobic effort from the program while saving it as a comment, not strength RPE', async () => {
+  const handlers = props()
+  const workouts = canonicalWorkouts.map((workout) => ({ ...workout, exercises: [{ name: 'Ходьба', ref: 'walking', restBetweenSetsSec: 0,
+    trainerComment: 'Аэробное усилие 4/10. Разговорный темп.', sets: [{ position: 0, durationSec: 600 }] }] }))
+  render(<AssistantProgramPilotCard {...handlers} payload={{ step: 'confirm', canonicalWorkouts: workouts,
+    sessions: workouts.map((workout) => ({ day: workout.workoutDate, exercises: [{ rpe: 4 }] })),
+    editableCatalog: [{ ref: 'walking', name: 'Ходьба', inputKind: 'distance' }] }} />)
+  await userEvent.click(screen.getAllByText('Посмотреть')[0]!)
+  expect(screen.getAllByText(/1 подход по 10 мин.*Усилие — 4 из 10/)[0]).toBeVisible()
+  await userEvent.click(screen.getAllByRole('button', { name: /^Изменить$/ })[0]!)
+  expect(screen.getByLabelText('Усилие (1–10)')).toHaveValue(4)
+  expect(screen.getByLabelText('Секунды')).toHaveValue(600)
+  await userEvent.click(screen.getByRole('button', { name: 'Закрыть правку' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Добавить в расписание' }))
+  expect(handlers.onApply).toHaveBeenCalledExactlyOnceWith({ workouts })
+})

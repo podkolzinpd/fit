@@ -92,6 +92,7 @@ export async function programPilotTurn(message: string, clients: readonly Progra
     delete retained.limitations
     delete retained.limitationsText
     delete retained.startDate
+    delete retained.experienceText
     delete retained.experience
     const response = collect(client, retained, 'Исправила обработку ответов. Цель, частота, дни и оборудование сохранены; заново уточним ограничения, дату начала и перерыв в тренировках. ' + briefQuestions.limitations, true)
     if (response.action) response.action.payload.askedFields = ['limitations']
@@ -215,7 +216,7 @@ export async function extractProgramBrief(brief: ProgramBrief, message: string, 
 lastQuestion — вопрос, на который отвечает пользователь; askedFields — его поля. Короткое «нет» относится только к этому вопросу, а не ко всем отсутствующим или уже заполненным полям. Если вопросов несколько и смысл ответа неоднозначен, уточни его. fieldDefinitions задаёт допустимые типы и значения каждого поля.
 Отсутствие предпочтений — заполненный ответ: «предпочтений нет» → preferences, operation=set, value="нет", quote="предпочтений нет". Никогда не clear. Не меняй limitations или otherActivity по ответу о предпочтениях.
 «Меняем программу» или «меняем подход» → continuationPlan, operation=set, value со словами пользователя и точной quote. Это полноценный ответ даже без списка сохраняемых упражнений; preserveRefs не обязателен.
-«Болит плечо» → limitations=present и limitationsText="Болит плечо", обе quote="Болит плечо". Запиши оба поля, а не только clarification. Отсутствие данных об ограничениях не означает none. Возвращение после перерыва → experience=returning даже при многолетнем опыте.
+«Болит плечо» → limitations=present и limitationsText="Болит плечо", обе quote="Болит плечо". Запиши оба поля, а не только clarification. Отсутствие данных об ограничениях не означает none. Возвращение после перерыва → experience=returning даже при многолетнем опыте. В experienceText сохрани явно сказанный стаж и длительность перерыва словами пользователя, с quote из его ответа; не теряй «пять лет, перерыв два месяца» при выборе категории returning. Не придумывай сроки.
 goalText — цель именно программы; goal — strength, hypertrophy, general_fitness либо weight_loss. Частота только 1–3. weekdays: пн=1,...вс=7. startDate YYYY-MM-DD относительно today. Опыт beginner/returning/experienced. Время 30–120 минут. Дни занятий должны иметь минимум один день отдыха между ними.
 equipment: только предложенные коды. «Полностью оборудованный зал» означает полный список; не считай любое упоминание зала подтверждением всего оборудования. Для «дома с гантелями» только dumbbells, без bench если не названа.
 limitations none только при явном отрицании актуальной боли/травм/ограничений. Старое сообщение о боли не доказывает текущую травму. Не решай медицинские вопросы. adult только из явного возраста/ответа.

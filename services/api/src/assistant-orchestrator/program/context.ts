@@ -184,7 +184,7 @@ export function buildProgramHistoryContext(source: ProgramContextSource): {
     const metadata = exercise.source === 'system' ? catalog.get(exercise.ref) : undefined
     const evidence = loadByWorkout.get(workout.id)!
     if (!metadata) evidence.unmappedSets += sets.length
-    else evidence.catalogSets += sets.filter((set) => metadata.inputKind === 'duration'
+    else if (metadata.movement !== 'aerobic') evidence.catalogSets += sets.filter((set) => metadata.inputKind === 'duration'
       ? set.durationSec !== null && set.durationSec > 0
       : set.reps !== null && set.reps > 0).length
     if (sets.some((set) => set.reps === null && set.durationSec === null && set.distanceKm === null)) confirmedWithoutValues = true

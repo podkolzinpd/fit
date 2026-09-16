@@ -70,9 +70,9 @@ export function deriveProgramLoad(brief: ProgramBrief, history: unknown, today: 
     : daysSinceCatalogTraining > 14 ? `Последняя сопоставимая запись: ${lastCatalogDate}.` : !recent ? 'Недостаточно регулярно записанных тренировок.'
     : incompleteCatalog ? 'Часть упражнений не размечена для расчёта объёма.' : 'В анкете указан начальный опыт.'
   const summary = `${weeks[0]!.start}–${today}: в среднем ${Number(meanWeeklyWorkouts.toFixed(1))} завершённых тренировок и ${Number(meanWeeklyCatalogSets.toFixed(1))} сопоставимых подходов в неделю. `
-    + (continuing ? 'Записанный объём — ориентир, а не предел новой программы.' : `${reason} Стартовый режим: до двух подходов, усилие 6,5/10; первые две недели без повышения повторов.`)
+    + (continuing ? 'Записанный объём — ориентир, а не предел новой программы.' : `${reason} Назначения выбираются по подтверждённому опыту и цели; неполная история не ограничивает прогрессию.`)
   return { version: PROGRAM_LOAD_VERSION, mode: continuing ? 'recent' : 'starting', weeks, lastCompletedDate, lastCatalogDate,
     daysSinceCatalogTraining, meanWeeklyWorkouts, meanWeeklyCatalogSets,
-    maxSetsPerExercise: continuing ? 3 : 2, rpe: continuing ? 7 : 6.5,
-    increments: continuing ? [0, 1, 2, 2] : [0, 0, 1, 1], familiarRefs, summary }
+    maxSetsPerExercise: 4, rpe: brief.experience === 'experienced' ? 8 : 7.5,
+    increments: [0, 2, 4, 6], familiarRefs, summary }
 }
