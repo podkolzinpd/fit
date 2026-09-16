@@ -12,7 +12,7 @@ interface QuickWorkoutEntryProps {
   catalog: readonly ExerciseSnapshot[]
   onAdd: (exercises: ParsedWorkoutExercise[]) => void
   preferredExerciseRefs?: readonly string[]
-  onOpenCatalog?: (search: string) => void
+  onOpenCatalog?: (search: string, onSelect?: (exercise: ExerciseSnapshot) => void) => void
   compact?: boolean
   parseWorkout: (text: string, systemCatalog: readonly ExerciseSnapshot[]) => Promise<WorkoutParseResponse>
 }
@@ -155,7 +155,7 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
           ? structuredPreviewBlocks.length > 0 && <div className="quick-workout-structure"><p><strong>Упражнения: {entries.length}</strong></p>{structuredPreviewBlocks.map((block) => <section key={block.key} className={block.groupId ? 'quick-workout-circuit' : 'quick-workout-singles'}>{block.groupId && <p className="quick-workout-circuit-title"><strong>Круговая · {block.rows.length} упр.</strong></p>}<ul>{block.rows.map((row) => <li key={row.key}>{row.label}{row.summary ? ` · ${row.summary}` : ''}</li>)}</ul></section>)}</div>
           : resolved.length > 0 && <section className="today-recognized"><p><strong>Распознано: {resolved.length}</strong></p><ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}><strong>{item.exercise.name}</strong><span>{workoutParseSetSummary(item)}</span></li>)}</ul></section>}
         {clarification && <section className="quick-workout-clarification" aria-label={clarification.title}><strong>{clarification.title}</strong><p>{clarification.text}</p></section>}
-        {unresolved.length > 0 && <div className="quick-workout-unparsed">{unresolved.map(({ key, item }) => <div className="quick-workout-unparsed-line" key={key}><p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли совпадение'}</p>{item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[key]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { trackGoal('workout_parse_candidate_selected'); setChoices((current) => ({ ...current, [key]: exercise })) }}>{exercise.name}</button>)}</div>}{onOpenCatalog && <button type="button" className="link quick-workout-all-options" onClick={() => { trackGoal('workout_parse_catalog_opened'); onOpenCatalog(quickWorkoutExerciseName(item.line)) }}>Все варианты</button>}</div>)}</div>}
+        {unresolved.length > 0 && <div className="quick-workout-unparsed">{unresolved.map(({ key, item }) => <div className="quick-workout-unparsed-line" key={key}><p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли совпадение'}</p>{item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[key]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { trackGoal('workout_parse_candidate_selected'); setChoices((current) => ({ ...current, [key]: exercise })) }}>{exercise.name}</button>)}</div>}{onOpenCatalog && <button type="button" className="link quick-workout-all-options" onClick={() => { trackGoal('workout_parse_catalog_opened'); onOpenCatalog(quickWorkoutExerciseName(item.line), (exercise) => setChoices((current) => ({ ...current, [key]: exercise }))) }}>Все варианты</button>}</div>)}</div>}
       </div>}
     </WorkoutComposer>
   </div>
