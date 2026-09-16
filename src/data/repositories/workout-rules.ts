@@ -755,6 +755,24 @@ export function muscleGroupLabels(workout: Workout): string[] {
   return labels
 }
 
+// Основные группы на карточке завершённой тренировки считаются только по
+// реально подтверждённым подходам. Более нагруженные группы идут первыми;
+// при равенстве сохраняем порядок упражнений в тренировке.
+export function performedMuscleGroupLabels(workout: Workout): string[] {
+  const groups = new Map<string, { label: string; confirmedSets: number; firstPosition: number }>()
+  for (const exercise of workout.exercises) {
+    const confirmedSets = exercise.sets.filter((set) => set.confirmedAt).length
+    if (confirmedSets === 0) continue
+    const label = MUSCLE_GROUP_LABELS[exercise.muscleGroup]
+    const current = groups.get(label)
+    if (current) current.confirmedSets += confirmedSets
+    else groups.set(label, { label, confirmedSets, firstPosition: exercise.position })
+  }
+  return [...groups.values()]
+    .sort((left, right) => right.confirmedSets - left.confirmedSets || left.firstPosition - right.firstPosition)
+    .map((group) => group.label)
+}
+
 // Сводка тренировки для карточки истории/предстоящих/расписания: список
 // упражнений (по порядку, без дублей), у каждого — свой комментарий тренера.
 // Используется одинаково в плане и в истории.
