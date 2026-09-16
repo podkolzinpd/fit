@@ -102,6 +102,7 @@ import {
 import {
   DatabaseYandexAccountLinker,
   YandexAccountLinkError,
+  type ExistingActor,
 } from '../yandex-account-linking.js'
 import {
   DatabaseYandexAppSessionIssuer,
@@ -174,6 +175,35 @@ const APP_SUBJECT_HASH = 'f'.repeat(64)
 const LINK_ACTOR_ID = 'a6145f94-3889-47b3-8e63-b0f72df8f2ee'
 const LINK_SUBJECT_HASH = '6'.repeat(64)
 const OTHER_LINK_SUBJECT_HASH = '7'.repeat(64)
+const BOOTSTRAP_LINK_ACTOR_ID = 'f3f04352-32ac-4a8c-86d1-46cc8e8a6b13'
+const BOOTSTRAP_LINK_SUBJECT_HASH = '8'.repeat(64)
+const LINK_ACTOR: ExistingActor = {
+  profile: {
+    id: LINK_ACTOR_ID,
+    firstName: 'Link actor',
+    lastName: null,
+    timezone: 'Europe/Moscow',
+    accountRole: 'client',
+    createdAt: '2026-08-01T10:00:00.000Z',
+    updatedAt: '2026-08-02T10:00:00.000Z',
+  },
+}
+const BOOTSTRAP_LINK_ACTOR: ExistingActor = {
+  profile: {
+    id: BOOTSTRAP_LINK_ACTOR_ID,
+    firstName: 'Bootstrap actor',
+    lastName: null,
+    timezone: 'Europe/Moscow',
+    accountRole: 'trainer',
+    createdAt: '2026-09-01T10:00:00.000Z',
+    updatedAt: '2026-09-02T10:00:00.000Z',
+  },
+  trainer: {
+    profileId: BOOTSTRAP_LINK_ACTOR_ID,
+    createdAt: '2026-09-01T10:00:00.000Z',
+    updatedAt: '2026-09-01T10:00:00.000Z',
+  },
+}
 const RUNTIME_PASSWORD = 'fit-api-test-only'
 const READER_ROLE = 'fit_ops_reader_test'
 const READER_PASSWORD = 'fit-ops-reader-test-only'
@@ -446,7 +476,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       )
       await ownerPool.query(
         'delete from app_private.yandex_app_sessions where profile_id = any($1::uuid[])',
-        [[APP_ACTOR_ID, LINK_ACTOR_ID]],
+        [[APP_ACTOR_ID, LINK_ACTOR_ID, BOOTSTRAP_LINK_ACTOR_ID]],
       )
       await ownerPool.query(
         `
@@ -458,17 +488,26 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             )
         `,
         [
-          [APP_SUBJECT_HASH, LINK_SUBJECT_HASH, OTHER_LINK_SUBJECT_HASH],
-          [APP_ACTOR_ID, LINK_ACTOR_ID],
+          [
+            APP_SUBJECT_HASH,
+            LINK_SUBJECT_HASH,
+            OTHER_LINK_SUBJECT_HASH,
+            BOOTSTRAP_LINK_SUBJECT_HASH,
+          ],
+          [APP_ACTOR_ID, LINK_ACTOR_ID, BOOTSTRAP_LINK_ACTOR_ID],
         ],
       )
       await ownerPool.query(
         'delete from app_private.profile_rollout_assignments where profile_id = any($1::uuid[])',
-        [[APP_ACTOR_ID, LINK_ACTOR_ID]],
+        [[APP_ACTOR_ID, LINK_ACTOR_ID, BOOTSTRAP_LINK_ACTOR_ID]],
+      )
+      await ownerPool.query(
+        'delete from public.trainers where profile_id = $1',
+        [BOOTSTRAP_LINK_ACTOR_ID],
       )
       await ownerPool.query(
         'delete from public.profiles where id = any($1::uuid[])',
-        [[APP_ACTOR_ID, LINK_ACTOR_ID]],
+        [[APP_ACTOR_ID, LINK_ACTOR_ID, BOOTSTRAP_LINK_ACTOR_ID]],
       )
 
       await ownerPool.query(
@@ -981,10 +1020,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       const linker = new DatabaseYandexAccountLinker(runtimePool)
 
       await expect(
-        linker.linkActor(LINK_ACTOR_ID, LINK_SUBJECT_HASH),
+        linker.linkActor(LINK_ACTOR, LINK_SUBJECT_HASH),
       ).resolves.toEqual({ profileId: LINK_ACTOR_ID })
       await expect(
-        linker.linkActor(LINK_ACTOR_ID, LINK_SUBJECT_HASH),
+        linker.linkActor(LINK_ACTOR, LINK_SUBJECT_HASH),
       ).resolves.toEqual({ profileId: LINK_ACTOR_ID })
 
       const linkedIdentities = await ownerPool.query<CountRow>(
@@ -1009,11 +1048,79 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(rolloutRows.rows).toEqual([{ count: 0 }])
 
       await expect(
-        linker.linkActor(OTHER_ACTOR_ID, LINK_SUBJECT_HASH),
+        linker.linkActor({
+          profile: {
+            ...LINK_ACTOR.profile,
+            id: OTHER_ACTOR_ID,
+            accountRole: 'client',
+          },
+        }, LINK_SUBJECT_HASH),
       ).rejects.toBeInstanceOf(YandexAccountLinkError)
       await expect(
-        linker.linkActor(LINK_ACTOR_ID, OTHER_LINK_SUBJECT_HASH),
+        linker.linkActor(LINK_ACTOR, OTHER_LINK_SUBJECT_HASH),
       ).rejects.toBeInstanceOf(YandexAccountLinkError)
+      expect(await readActor(runtimePool)).toBeNull()
+    })
+
+    it('bootstraps the exact current FIT profile before linking Yandex ID', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const linker = new DatabaseYandexAccountLinker(runtimePool)
+      await expect(
+        linker.linkActor(BOOTSTRAP_LINK_ACTOR, BOOTSTRAP_LINK_SUBJECT_HASH),
+      ).resolves.toEqual({ profileId: BOOTSTRAP_LINK_ACTOR_ID })
+
+      const profiles = await ownerPool.query<{
+        account_role: string
+        created_at: Date
+        first_name: string | null
+        last_name: string | null
+        timezone: string
+        updated_at: Date
+      } & QueryResultRow>(
+        `select first_name, last_name, timezone, account_role, created_at, updated_at
+         from public.profiles where id = $1`,
+        [BOOTSTRAP_LINK_ACTOR_ID],
+      )
+      expect(profiles.rows).toHaveLength(1)
+      expect(profiles.rows[0]).toMatchObject({
+        first_name: BOOTSTRAP_LINK_ACTOR.profile.firstName,
+        last_name: BOOTSTRAP_LINK_ACTOR.profile.lastName,
+        timezone: BOOTSTRAP_LINK_ACTOR.profile.timezone,
+        account_role: BOOTSTRAP_LINK_ACTOR.profile.accountRole,
+      })
+      expect(profiles.rows[0]?.created_at.toISOString())
+        .toBe(BOOTSTRAP_LINK_ACTOR.profile.createdAt)
+      expect(profiles.rows[0]?.updated_at.toISOString())
+        .toBe(BOOTSTRAP_LINK_ACTOR.profile.updatedAt)
+
+      const trainers = await ownerPool.query<{
+        created_at: Date
+        profile_id: string
+        updated_at: Date
+      } & QueryResultRow>(
+        `select profile_id, created_at, updated_at
+         from public.trainers where profile_id = $1`,
+        [BOOTSTRAP_LINK_ACTOR_ID],
+      )
+      expect(trainers.rows).toHaveLength(1)
+      expect(trainers.rows[0]?.profile_id).toBe(BOOTSTRAP_LINK_ACTOR_ID)
+      expect(trainers.rows[0]?.created_at.toISOString())
+        .toBe(BOOTSTRAP_LINK_ACTOR.trainer?.createdAt)
+      expect(trainers.rows[0]?.updated_at.toISOString())
+        .toBe(BOOTSTRAP_LINK_ACTOR.trainer?.updatedAt)
+
+      const identities = await ownerPool.query<CountRow>(
+        `select count(*)::int as count
+         from app_private.auth_identities
+         where provider = 'yandex'
+           and provider_subject_sha256 = $1
+           and profile_id = $2`,
+        [BOOTSTRAP_LINK_SUBJECT_HASH, BOOTSTRAP_LINK_ACTOR_ID],
+      )
+      expect(identities.rows).toEqual([{ count: 1 }])
       expect(await readActor(runtimePool)).toBeNull()
     })
 

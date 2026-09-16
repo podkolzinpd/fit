@@ -52,6 +52,7 @@ import type {
 import {
   ExistingActorUnavailableError,
   YandexAccountLinkError,
+  type ExistingActor,
   type ExistingActorProvider,
   type YandexAccountLinker,
 } from './yandex-account-linking.js'
@@ -1224,6 +1225,22 @@ describe('readiness endpoint', () => {
 })
 
 const PROFILE_ID = 'a8e4d5cf-f021-4bfd-bd9e-62b1c30785c4'
+const EXISTING_ACTOR: ExistingActor = {
+  profile: {
+    id: PROFILE_ID,
+    firstName: 'Pilot',
+    lastName: null,
+    timezone: 'Europe/Moscow',
+    accountRole: 'trainer',
+    createdAt: '2026-08-01T10:00:00.000Z',
+    updatedAt: '2026-08-02T10:00:00.000Z',
+  },
+  trainer: {
+    profileId: PROFILE_ID,
+    createdAt: '2026-08-01T10:00:00.000Z',
+    updatedAt: '2026-08-01T10:00:00.000Z',
+  },
+}
 const SUBJECT_HASH = 'a'.repeat(64)
 
 function buildIdentityProvider(
@@ -1470,7 +1487,7 @@ function buildYandexAppSessionRevoker(
 }
 
 function buildExistingActorProvider(
-  result: string | null | Error = PROFILE_ID,
+  result: ExistingActor | null | Error = EXISTING_ACTOR,
 ): {
   existingActorProvider: ExistingActorProvider
   resolveActor: ReturnType<typeof vi.fn>
@@ -2249,7 +2266,7 @@ describe('Yandex ID app session and account linking endpoints', () => {
     expect(actor.resolveActor).toHaveBeenCalledWith('supabase-session-token')
     expect(oauth.exchangeCode).toHaveBeenCalledWith('one-time-code', 'v'.repeat(43))
     expect(identity.verifyAccessToken).toHaveBeenCalledWith('temporary-yandex-token')
-    expect(linker.linkActor).toHaveBeenCalledWith(PROFILE_ID, SUBJECT_HASH)
+    expect(linker.linkActor).toHaveBeenCalledWith(EXISTING_ACTOR, SUBJECT_HASH)
     expect(appSession.issue).toHaveBeenCalledWith(SUBJECT_HASH)
   })
 
