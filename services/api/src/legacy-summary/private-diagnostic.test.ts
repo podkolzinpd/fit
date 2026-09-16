@@ -9,18 +9,19 @@ describe('private summary diagnostic', () => {
     vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-09-11T10:00:00Z'))
     vi.stubEnv('SUPABASE_URL', 'https://supabase.example.test')
     vi.stubEnv('SUPABASE_PUBLISHABLE_KEY', 'test-public')
-    vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     const actorId = '00000000-0000-4000-8000-000000000002'
     const clientId = '00000000-0000-4000-8000-000000000001'
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const modelCalls: string[] = []
+    const authorizationHeader = vi.fn(() => Promise.resolve('Bearer metadata-token'))
     const writes: string[] = []
     const json = (value: unknown) => Promise.resolve(Response.json(value))
     const fetchMock = vi.fn<typeof fetch>().mockImplementation((request, init) => {
       const url = new URL(typeof request === 'string' ? request : request instanceof URL ? request.href : request.url)
       if (url.hostname === 'llm.api.cloud.yandex.net') {
+        expect(new Headers(init?.headers).get('authorization')).toBe('Bearer metadata-token')
         modelCalls.push(url.pathname)
         return json({ result: { alternatives: [{ message: { text: 'private answer' }, status: 'ALTERNATIVE_STATUS_FINAL' }] } })
       }
@@ -34,10 +35,13 @@ describe('private summary diagnostic', () => {
       return json([])
     })
     vi.stubGlobal('fetch', fetchMock)
-    const invoke = (diagnostic: string, diagnostic_fingerprint?: string) => summarizeClientTraining(new Request('https://local.test', {
-      method: 'POST', headers: { authorization: 'Bearer test-token' },
-      body: JSON.stringify({ client_id: clientId, period_start: '2026-08-12', period_end: '2026-09-11', diagnostic, diagnostic_fingerprint }),
-    }))
+    const invoke = (diagnostic: string, diagnostic_fingerprint?: string) => summarizeClientTraining(
+      new Request('https://local.test', {
+        method: 'POST', headers: { authorization: 'Bearer test-token' },
+        body: JSON.stringify({ client_id: clientId, period_start: '2026-08-12', period_end: '2026-09-11', diagnostic, diagnostic_fingerprint }),
+      }),
+      { authorization: { authorizationHeader } },
+    )
     const preflight = await invoke('preflight')
     expect(preflight.status).toBe(200)
     const metadata = await preflight.json() as { fingerprint: string }
@@ -49,6 +53,7 @@ describe('private summary diagnostic', () => {
     expect(await result.json()).toMatchObject({ diagnostic: true, calls: 1, answer: 'private answer' })
     expect(result.headers.get('cache-control')).toBe('no-store')
     expect(modelCalls).toHaveLength(1)
+    expect(authorizationHeader).toHaveBeenCalledOnce()
     expect(writes).toEqual([])
     expect(JSON.stringify([...log.mock.calls, ...warn.mock.calls])).not.toContain('private answer')
   })
