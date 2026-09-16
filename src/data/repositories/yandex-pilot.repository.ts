@@ -1,5 +1,8 @@
 import { z } from 'zod'
-import { yandexPilotQueries } from '../queries/yandex-pilot.queries'
+import {
+  YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE,
+  yandexPilotQueries,
+} from '../queries/yandex-pilot.queries'
 import type { YandexApiAccessMode } from '../queries/yandex-pilot.queries'
 
 const profilePayloadSchema = z.object({
@@ -309,6 +312,13 @@ function appSessionRestoreError(status: number): Error {
   return new Error('Не удалось восстановить сессию Yandex ID.')
 }
 
+function yandexAuthConnectionError(caught: unknown): Error {
+  if (caught instanceof Error && caught.message === YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE) {
+    return caught
+  }
+  return new Error('Не удалось подключиться к Yandex Cloud stage.')
+}
+
 function linkResponseError(status: number): Error {
   if (status === 401) {
     return new Error('Не удалось подтвердить текущий FIT-аккаунт или Yandex ID. Войдите заново.')
@@ -397,8 +407,8 @@ export const yandexPilotRepository = {
     let response: Response
     try {
       response = await yandexPilotQueries.exchangeCodeForSession(apiBaseUrl, code, codeVerifier)
-    } catch {
-      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
     }
     if (!response.ok) throw responseError(response.status)
     const result = sessionSchema.safeParse(await response.json())
@@ -413,8 +423,8 @@ export const yandexPilotRepository = {
     let response: Response
     try {
       response = await yandexPilotQueries.exchangeCodeForAppSession(apiBaseUrl, code, codeVerifier)
-    } catch {
-      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
     }
     if (!response.ok) throw appSessionResponseError(response.status)
     const result = appSessionSchema.safeParse(await response.json())
@@ -428,8 +438,8 @@ export const yandexPilotRepository = {
     let response: Response
     try {
       response = await yandexPilotQueries.getAppSession(apiBaseUrl, sessionToken)
-    } catch {
-      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
     }
     if (!response.ok) throw appSessionRestoreError(response.status)
     const result = appSessionProfileSchema.safeParse(await response.json())
@@ -440,8 +450,8 @@ export const yandexPilotRepository = {
     let response: Response
     try {
       response = await yandexPilotQueries.revokeAppSession(apiBaseUrl, sessionToken)
-    } catch {
-      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
     }
     if (!response.ok) throw appSessionRestoreError(response.status)
   },
@@ -473,8 +483,8 @@ export const yandexPilotRepository = {
         code,
         codeVerifier,
       )
-    } catch {
-      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
     }
     if (!response.ok) throw linkResponseError(response.status)
     const result = linkedYandexIdentitySchema.safeParse(await response.json())
