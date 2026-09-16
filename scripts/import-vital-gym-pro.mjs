@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { cpus } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
+import { REVIEWED_VITAL_GYM_PRO_BATCHES, reviewedVitalGymProExercises } from './data/vital-gym-pro-catalog-reviewed.mjs'
+import purposeOverrides from './data/vital-gym-pro-purpose-overrides.mjs'
 
 const projectRoot = resolve(import.meta.dirname, '..')
 const catalogPath = join(projectRoot, 'scripts/data/vital-gym-pro-catalog.json')
@@ -20,6 +22,7 @@ function argument(name, fallback) {
 const sourceDir = resolve(argument('--source', ''))
 const workers = Math.max(1, Number(argument('--workers', Math.min(4, cpus().length))) || 1)
 const skipMedia = process.argv.includes('--skip-media')
+const incremental = process.argv.includes('--incremental')
 if (!argument('--source')) {
   console.error('Usage: node scripts/import-vital-gym-pro.mjs --source /path/to/extracted/archive [--workers 4]')
   process.exit(2)
@@ -77,9 +80,19 @@ async function probeOutput(path) {
   })
 }
 
-const catalog = JSON.parse(await readFile(catalogPath, 'utf8'))
-if (catalog.version !== 1 || catalog.exercises.length !== 317) {
-  throw new Error(`Unexpected reviewed catalog: version=${catalog.version}, exercises=${catalog.exercises.length}`)
+const baseCatalog = JSON.parse(await readFile(catalogPath, 'utf8'))
+if (baseCatalog.version !== 1 || baseCatalog.exercises.length !== 317) {
+  throw new Error(`Unexpected base reviewed catalog: version=${baseCatalog.version}, exercises=${baseCatalog.exercises.length}`)
+}
+for (const batch of REVIEWED_VITAL_GYM_PRO_BATCHES) {
+  if (batch.version !== 1 || batch.exercises.length !== batch.expectedExerciseCount) {
+    throw new Error(`Unexpected reviewed batch ${batch.batch}: version=${batch.version}, exercises=${batch.exercises.length}`)
+  }
+}
+const reviewedExercises = reviewedVitalGymProExercises()
+const catalog = {
+  ...baseCatalog,
+  exercises: [...baseCatalog.exercises, ...reviewedExercises],
 }
 if (new Set(catalog.exercises.map(({ ref }) => ref)).size !== catalog.exercises.length) throw new Error('Duplicate FIT refs')
 // Several distinct FIT exercise identities may intentionally share one safe
@@ -98,6 +111,7 @@ for (const exercise of catalog.exercises) {
   if (!sourceStat?.isFile()) throw new Error(`Missing purchased source: ${exercise.purchasedId} ${exercise.sourceFile}`)
 }
 
+if (!skipMedia && !incremental) await rm(outputDir, { recursive: true, force: true })
 await mkdir(outputDir, { recursive: true })
 // Vital Gym Pro is assembled from multiple visual series. Monochrome removes
 // the red/yellow/beige cast and shirt colour differences without destructive
@@ -113,6 +127,14 @@ async function encodeWorker() {
     const videoPath = join(outputDir, `${exercise.ref}.mp4`)
     const posterPath = join(outputDir, `${exercise.ref}.jpg`)
     const endPath = join(outputDir, `${exercise.ref}-end.jpg`)
+    if (incremental) {
+      const existing = await Promise.all([videoPath, posterPath, endPath].map((path) => stat(path).catch(() => null)))
+      if (existing.every((file) => file?.isFile() && file.size > 0)) {
+        complete += 1
+        process.stdout.write(`\rEncoded ${complete}/${catalog.exercises.length}`)
+        continue
+      }
+    }
     const duration = await probeDuration(sourcePath)
     await run('ffmpeg', [
       '-hide_banner', '-loglevel', 'error', '-y', '-i', sourcePath,
@@ -157,16 +179,20 @@ const exercises = catalog.exercises.filter((exercise) => exercise.legacyFitRefs.
   equipment: exercise.equipment,
   primaryMuscleDetail: exercise.primaryMuscleDetail,
   ...mediaFor(exercise),
-  instructions,
+  instructions: exercise.instructions ?? instructions,
 }))
 const assets = Object.fromEntries(catalog.exercises.map((exercise) => [exercise.ref, {
-  publicVitalId: exercise.publicVitalId,
+  ...(exercise.publicVitalId ? { publicVitalId: exercise.publicVitalId } : {}),
   purchasedId: exercise.purchasedId,
   purchasedName: exercise.purchasedName,
 }]))
 const aliases = Object.fromEntries(catalog.exercises.filter((exercise) => exercise.legacyFitRefs.length === 0).map((exercise) => [exercise.ref, [exercise.englishName, ...exercise.aliases]]))
 const legacyRoots = Object.fromEntries(catalog.exercises.flatMap((exercise) => exercise.legacyFitRefs.map((ref) => [ref, preferredLegacyRef(exercise)])))
 const mediaByLegacyRef = Object.fromEntries(catalog.exercises.flatMap((exercise) => exercise.legacyFitRefs.map((ref) => [ref, mediaFor(exercise)])))
+const purposesByRef = Object.fromEntries(catalog.exercises.flatMap((exercise) => {
+  const purposes = exercise.purposes ?? purposeOverrides[exercise.ref] ?? []
+  return purposes.length ? [exercise.ref, ...exercise.legacyFitRefs].map((ref) => [ref, purposes]) : []
+}))
 const mainRefCandidates = catalog.exercises.map((exercise) => exercise.legacyFitRefs.length ? exercise.legacyFitRefs : [exercise.ref])
 const generated = `// Generated by scripts/import-vital-gym-pro.mjs. Do not edit manually.\n` +
   `import type { ExerciseSnapshot } from './domain'\n\n` +
@@ -175,6 +201,7 @@ const generated = `// Generated by scripts/import-vital-gym-pro.mjs. Do not edit
   `export const VITAL_GYM_PRO_ALIASES_BY_REF: Readonly<Record<string, readonly string[]>> = ${JSON.stringify(aliases, null, 2)}\n\n` +
   `export const VITAL_GYM_PRO_LEGACY_ROOT_BY_REF: Readonly<Record<string, string>> = ${JSON.stringify(legacyRoots, null, 2)}\n\n` +
   `export const VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF: Readonly<Record<string, { imageUrl: string; motionImageUrl: string; techniqueVideoUrl: string }>> = ${JSON.stringify(mediaByLegacyRef, null, 2)}\n\n` +
+  `export const VITAL_GYM_PRO_PURPOSES_BY_REF: Readonly<Record<string, readonly string[]>> = ${JSON.stringify(purposesByRef, null, 2)}\n\n` +
   `export const VITAL_GYM_PRO_MAIN_REFS = ${JSON.stringify(mainRefs, null, 2)} as const\n\n` +
   `export const VITAL_GYM_PRO_MAIN_REF_CANDIDATES = ${JSON.stringify(mainRefCandidates, null, 2)} as const\n\n` +
   `export const VITAL_GYM_PRO_EXCLUDED_PUBLIC_IDS = ${JSON.stringify(catalog.excludedPublicVitalIds, null, 2)} as const\n\n` +

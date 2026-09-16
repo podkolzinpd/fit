@@ -284,8 +284,8 @@ test('iPhone: поиск и фильтры каталога не перекры�
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
 
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
+  await page.goto(`/workouts/new?client=${demoClientId}`)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: /^Силовая/ }).click()
 
   const search = page.getByLabel('Поиск упражнения')
@@ -311,6 +311,72 @@ test('iPhone: поиск и фильтры каталога не перекры�
   await page.getByRole('button', { name: 'Назад к выбору' }).click()
   await expect(search).toHaveValue('присед')
   await expectNoHorizontalOverflow(page)
+})
+
+test('iPhone: панель фильтров выдерживает узкие, низкие и увеличенные экраны', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+
+  await page.goto(`/workouts/new?client=${demoClientId}`)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await page.getByRole('button', { name: 'Фильтры' }).click()
+
+  const panel = page.getByLabel('Настройки фильтров')
+  const body = panel.locator('.picker-filter-body')
+  const primary = panel.getByRole('button', { name: /^Показать \d+ упражн/ })
+  const close = panel.getByRole('button', { name: 'Закрыть фильтры' })
+  const profiles = [
+    { width: 320, height: 568, scale: '100%' },
+    { width: 360, height: 640, scale: '125%' },
+    { width: 375, height: 667, scale: '150%' },
+    { width: 390, height: 844, scale: '100%' },
+    { width: 430, height: 932, scale: '100%' },
+    { width: 844, height: 390, scale: '125%' },
+  ]
+
+  for (const profile of profiles) {
+    await page.setViewportSize({ width: profile.width, height: profile.height })
+    await page.evaluate((scale) => { document.documentElement.style.fontSize = scale }, profile.scale)
+    await expect(panel).toBeVisible()
+    await expect(close).toBeInViewport()
+    await expect(primary).toBeInViewport()
+    const geometry = await panel.evaluate((element) => {
+      const panelBox = element.getBoundingClientRect()
+      const headerBox = element.querySelector('header')!.getBoundingClientRect()
+      const bodyElement = element.querySelector<HTMLElement>('.picker-filter-body')!
+      const bodyBox = bodyElement.getBoundingClientRect()
+      const footerBox = element.querySelector('footer')!.getBoundingClientRect()
+      const controls = Array.from(element.querySelectorAll<HTMLElement>('button, select'))
+        .filter((control) => getComputedStyle(control).display !== 'none')
+        .map((control) => control.getBoundingClientRect())
+      return {
+        panelLeft: panelBox.left,
+        panelRight: panelBox.right,
+        panelTop: panelBox.top,
+        panelBottom: panelBox.bottom,
+        headerBottom: headerBox.bottom,
+        bodyTop: bodyBox.top,
+        bodyBottom: bodyBox.bottom,
+        footerTop: footerBox.top,
+        bodyClientWidth: bodyElement.clientWidth,
+        bodyScrollWidth: bodyElement.scrollWidth,
+        controlsFit: controls.every((control) => control.left >= panelBox.left && control.right <= panelBox.right),
+      }
+    })
+    expect(geometry.panelLeft).toBeGreaterThanOrEqual(0)
+    expect(geometry.panelRight).toBeLessThanOrEqual(profile.width)
+    expect(geometry.panelTop).toBeGreaterThanOrEqual(0)
+    expect(geometry.panelBottom).toBeLessThanOrEqual(profile.height)
+    expect(geometry.headerBottom).toBeLessThanOrEqual(geometry.bodyTop)
+    expect(geometry.bodyBottom).toBeLessThanOrEqual(geometry.footerTop)
+    expect(geometry.bodyScrollWidth).toBeLessThanOrEqual(geometry.bodyClientWidth)
+    expect(geometry.controlsFit).toBe(true)
+    expect((await close.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+    expect((await primary.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+    await expect(body).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+  }
 })
 
 test('iPhone: поля бега не перекрываются в быстрой проверке тренера на 390 px', async ({ page }, testInfo) => {

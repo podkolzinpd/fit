@@ -273,7 +273,6 @@ export const REVIEWED_EXERCISE_REFS_WITHOUT_SIMILAR_MEDIA: ReadonlySet<string> =
   'fedb-kettlebell-dead-clean',
   'fedb-kneeling-squat',
   'fedb-anti-gravity-press',
-  'fedb-close-grip-front-lat-pulldown',
   'fedb-cable-internal-rotation',
   'fedb-downward-facing-balance',
   'fedb-alternating-hang-clean',
