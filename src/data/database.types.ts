@@ -1,4 +1,4 @@
-// schema-sha256: 5c80c08cafa2be8bd19b3e3e7f63e0d8cc963ca42fa272d11d1b4feeacf475d7
+// schema-sha256: b49f5361fea09093108c2a0b0af088fc569e8c0c1ad2c5802673c041e6cf6e5f
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -92,6 +92,8 @@ export type Database = {
           id: string
           kind: string
           message: string
+          model_input_json: Json | null
+          model_output_json: Json | null
           screen_path: string
           telegram_last_error: string | null
           telegram_notified_at: string | null
@@ -112,6 +114,8 @@ export type Database = {
           id?: string
           kind: string
           message: string
+          model_input_json?: Json | null
+          model_output_json?: Json | null
           screen_path: string
           telegram_last_error?: string | null
           telegram_notified_at?: string | null
@@ -132,6 +136,8 @@ export type Database = {
           id?: string
           kind?: string
           message?: string
+          model_input_json?: Json | null
+          model_output_json?: Json | null
           screen_path?: string
           telegram_last_error?: string | null
           telegram_notified_at?: string | null
@@ -2757,6 +2763,8 @@ export type Database = {
           p_display_mode: string
           p_kind: string
           p_message: string
+          p_model_input_json: Json | null
+          p_model_output_json: Json | null
           p_screen_path: string
           p_user_agent: string
         }

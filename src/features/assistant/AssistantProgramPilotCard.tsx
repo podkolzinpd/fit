@@ -2,6 +2,7 @@ import { AssistantProgramOverview, programDoseText } from './AssistantProgramOve
 import { useState } from 'react'
 import { z } from 'zod'
 import { ChevronRightIcon } from '../../shared/icons'
+import { ProgramFeedbackForm } from './ProgramFeedbackForm'
 
 const workoutSchema = z.object({ requestId: z.string().uuid(), clientId: z.string().uuid(), workoutDate: z.string(),
   exercises: z.array(z.object({ name: z.string(), restBetweenSetsSec: z.number(), trainerComment: z.string().optional(), sets: z.array(z.object({ reps: z.number().optional(), durationSec: z.number().optional(), rpe: z.number().optional() }).passthrough()) }).passthrough()),
@@ -23,6 +24,7 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string>()
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const parsed = programSchema.safeParse(payload)
   const confirm = payload.step === 'confirm' && parsed.success
   const busy = running || saving || saved || !enabled
@@ -78,9 +80,11 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
       <div className="assistant-flow-actions"><button type="button" className="primary" disabled={busy} onClick={submitEdit}>Проверить изменение</button><button type="button" disabled={busy} onClick={() => setEdit(undefined)}>Закрыть правку</button></div>
     </section>}
     {error && <p role="alert" className="assistant-card-hint">{error}</p>}
+    {confirm && feedbackOpen && typeof payload.modelInputJson === 'object' && payload.modelInputJson !== null && !Array.isArray(payload.modelInputJson) && typeof payload.modelOutputJson === 'object' && payload.modelOutputJson !== null && !Array.isArray(payload.modelOutputJson) && <ProgramFeedbackForm modelInputJson={payload.modelInputJson as Record<string, unknown>} modelOutputJson={payload.modelOutputJson as Record<string, unknown>} onClose={() => setFeedbackOpen(false)} />}
     <div className="assistant-flow-actions">
       {confirm ? <button type="button" className="primary" onClick={() => void save()} disabled={busy || !!edit}>{saved ? 'Добавлено в расписание' : saving ? 'Добавляю…' : 'Добавить в расписание'}</button>
         : payload.readyToGenerate === true && <button type="button" className="primary" disabled={busy} onClick={() => onSuggestion('Условия верны, составь программу')}>{running ? 'Составляю…' : 'Подтвердить и составить'}</button>}
+      {confirm && !feedbackOpen && typeof payload.modelInputJson === 'object' && payload.modelInputJson !== null && typeof payload.modelOutputJson === 'object' && payload.modelOutputJson !== null && <button type="button" disabled={busy} onClick={() => setFeedbackOpen(true)}>Оставить обратную связь</button>}
       {confirm && !saved && <button type="button" disabled={busy} onClick={() => onSuggestion('Изменить условия программы')}>Изменить условия</button>}
       {!saved && <button type="button" disabled={running || saving} onClick={onCancel}>Отменить</button>}
     </div>

@@ -157,15 +157,21 @@ export async function programPilotTurn(message: string, clients: readonly Progra
       const conflicts = (context.plannedWorkouts ?? []).filter((workout) => workout.date >= brief.startDate! && workout.date <= addDays(brief.startDate!, 27))
       if (conflicts.length) return collect(client, brief, `В период программы уже назначены тренировки: ${[...new Set(conflicts.map((row) => row.date))].join(', ')}. Измените начало или дни программы; существующие назначения сохраняются.`, true)
       const load = deriveProgramLoad(brief, context.context, deps.today)
-      const raw = await deps.generate(brief, context, client.id)
+      const generated = await deps.generate(brief, context, client.id)
+      const generatedRecord = record(generated)
+      const raw = generatedRecord?.template ?? generated
       const template = validateProgramTemplate(raw, brief, deps.today)
       validateProgramLoad(template, load)
       const program = materializeProgram(template, brief, client.id, programGenerationKey(deps.actorId, client.id, brief, context.fingerprint))
+      const feedback = record(generatedRecord?.feedback)
+      const modelInputJson = record(feedback?.modelInput)
+      const modelOutputJson = record(feedback?.modelOutput)
       return action(`Подготовила программу: ${brief.frequency} занятий в неделю, всего ${program.sessions.length}. ${template.rationale}`, {
         ...program, sourceSummary: programSourceSummary(context), historyFacts: context.context.exercises, programId: programGenerationKey(deps.actorId, client.id, brief, context.fingerprint), template, editableCatalog: editableProgramCatalog(brief), step: 'confirm', clientId: client.id, clientName: client.fullName,
         goal: brief.goalText, brief: briefSummary(brief), briefState: brief, sourceFingerprint: context.fingerprint,
         generatedAt: new Date().toISOString(), sourceCapturedAt: context.capturedAt, sourcePeriodEnd: context.context.periodEnd,
         loadBasis: load,
+        ...(modelInputJson && modelOutputJson ? { modelInputJson, modelOutputJson } : {}),
       }, true)
     } catch (error) {
       if (error instanceof Error && error.message === 'program_generation_busy') return collect(client, brief, 'Предыдущий запрос ещё выполняется. Дождитесь его результата, чтобы не запускать две программы одновременно.')
@@ -267,7 +273,8 @@ export async function invokeProgramGenerator(actorId: string, operationId: strin
       && failure.issues.every((issue: unknown) => typeof issue === 'string')) throw new ProgramValidationError(failure.issues)
     throw new Error('program_generator_failed')
   }
-  return record(raw)?.template
+  const result = record(raw)
+  return { template: result?.template, feedback: result?.feedback }
 }
 
 function programSourceSummary(source: ProgramSourceSnapshot): string {
