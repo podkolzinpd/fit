@@ -74,10 +74,10 @@ it('constrains repetitions and seconds in separate schema rows before model gene
   expect(reps.exerciseRef).toHaveProperty('enum', expect.arrayContaining(['crunches']))
   expect(reps.exerciseRef).not.toHaveProperty('enum', expect.arrayContaining(['plank']))
   expect(reps.amount.items).toMatchObject({ minimum: 4, maximum: 20 })
-  expect(reps.amount.enum?.flat().every((value) => value >= 4 && value <= 20)).toBe(true)
+  expect(reps.amount.enum).toContainEqual([8, 9, 10, 11])
   expect(duration.exerciseRef).toHaveProperty('enum', ['plank', 'side-plank'])
   expect(duration.amount.items).toMatchObject({ minimum: 15, maximum: 90 })
-  expect(duration.amount.enum).toContainEqual([30, 30, 35, 35])
+  expect(duration.amount.enum).toContainEqual([30, 35, 40, 40])
 })
 
 it('rejects the observed crunches duration-dose failure instead of repairing the model response', () => {
@@ -113,4 +113,33 @@ it('places timed exercises after rep-based work and preserves order within each 
   plan.exercises.reverse()
   const result = readProgramPlan(plan, brief, '2026-09-15')
   expect(result.sessions[0]!.exercises.map((exercise) => exercise.exerciseRef)).toEqual([...plan.exercises, ...plan.durationExercises].map((row) => row.exerciseRef))
+})
+
+it('accepts an aerobic effort range only when it agrees with all actual weekly doses', () => {
+  const { brief, template } = fixture(1)
+  brief.durationMin = 90
+  template.sessions[0]!.exercises.push({ exerciseRef: 'walking', progressionNote: 'Разговорный темп, усилие 3–4, без отдыха.',
+    weeks: Array.from({ length: 4 }, () => ({ sets: 1, reps: null, durationSec: 600, rpe: 3.5, restSec: 0 })),
+  })
+  const plan = programPlanFromTemplate(template)
+  expect(() => readProgramPlan(plan, brief, '2026-09-15')).not.toThrow()
+  Object.assign(plan.aerobicExercises[0]!, { rpe: [5, 5, 5, 5] })
+  expect(() => readProgramPlan(plan, brief, '2026-09-15')).toThrow(expect.objectContaining({ codes: ['progression_note_must_be_qualitative'] }))
+})
+
+it.each([{ core: false, aerobic: false }, { core: true, aerobic: false }, { core: true, aerobic: true }])('makes the complete worst-case time-repair schema fit 30 minutes: %j', (blocks) => {
+  const { brief } = fixture(1); brief.durationMin = 30
+  const history = buildProgramHistoryContext({ clientId: 'client', periodStart: '2026-07-22', periodEnd: '2026-09-15', workouts: [], exercises: [], sets: [] }).context
+  const schema = programPlanSchema(PROGRAM_CATALOG, brief, deriveProgramLoad(brief, history, '2026-09-15'), true, blocks)
+  let minutes = 10
+  for (const [key, timed] of [['exercises', false], ['durationExercises', true], ['aerobicExercises', true]] as const) {
+    const row = schema.properties[key]
+    const fields = row.items.properties
+    const sets = (fields.sets.items as { maximum: number }).maximum
+    const amount = (fields.amount.items as { maximum: number }).maximum
+    const rest = (fields.restSec.items as { maximum: number }).maximum
+    minutes += row.maxItems * (2 + (sets * amount * (timed ? 1 : 3) + (sets - 1) * rest) / 60)
+  }
+  expect(minutes).toBeLessThanOrEqual(30)
+  expect(schema.properties.exercises.minItems).toBe(3)
 })

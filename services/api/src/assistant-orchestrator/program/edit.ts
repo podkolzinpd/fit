@@ -1,3 +1,4 @@
+import { assessProgramQuality, QUALITY_REVIEW_NOTES } from './quality.js'
 import { createHash } from 'node:crypto'
 import { PROGRAM_CATALOG, eligibleProgramExercises } from './catalog.js'
 import type { ProgramBrief } from './brief.js'
@@ -46,21 +47,23 @@ export function editProgram(message: string, payload: Record<string, unknown>, b
     let total = 0
     for (const session of isolated[week]!.sessions) for (const [index, exercise] of session.exercises.entries()) {
       const dose = exercise.weeks[0]!
-      total += dose.sets
+      const aerobic = PROGRAM_CATALOG.find((row) => row.ref === exercise.exerciseRef)?.movement === 'aerobic'
+      total += aerobic ? 0 : dose.sets
       const previous = isolated[week - 1]?.sessions.find((row) => row.weekday === session.weekday)?.exercises[index]
       const first = initial.sessions.find((row) => row.weekday === session.weekday)?.exercises[index]
       if (previous?.exerciseRef === exercise.exerciseRef) {
         const before = previous.weeks[0]!
         if ([dose.sets > before.sets, (dose.reps ?? dose.durationSec!) > (before.reps ?? before.durationSec!), dose.rpe > before.rpe].filter(Boolean).length > 1
-          || dose.sets > before.sets + 1 || (dose.reps ?? 0) > (before.reps ?? 0) + 2 || (dose.durationSec ?? 0) > (before.durationSec ?? 0) + 10 || dose.rpe > before.rpe + 0.5) throw new ProgramValidationError(['progression_jump'])
+          || dose.sets > before.sets + 1 || (dose.reps ?? 0) > (before.reps ?? 0) + 2 || (dose.durationSec ?? 0) > (before.durationSec ?? 0) + (aerobic ? 300 : 10) || dose.rpe > before.rpe + 0.5) throw new ProgramValidationError(['progression_jump'])
       }
-      if (first?.exerciseRef === exercise.exerciseRef && (dose.reps ?? dose.durationSec!) - (first.weeks[0]!.reps ?? first.weeks[0]!.durationSec!) > load.increments[week]! * (dose.reps === null ? 5 : 1)) throw new ProgramValidationError(['history_progression_mismatch'])
+      if (!aerobic && first?.exerciseRef === exercise.exerciseRef && (dose.reps ?? dose.durationSec!) - (first.weeks[0]!.reps ?? first.weeks[0]!.durationSec!) > load.increments[week]! * (dose.reps === null ? 5 : 1)) throw new ProgramValidationError(['history_progression_mismatch'])
     }
     if (week > 0 && total > previousTotal * 1.2) throw new ProgramValidationError(['weekly_volume_jump'])
     previousTotal = total
   }
   const editId = createHash('sha256').update(JSON.stringify([clientId, brief, isolated])).digest('hex')
-  const materialized = isolated.map((template) => materializeProgram(template, brief, clientId, editId))
+  const reviewNotes = [...new Set(isolated.flatMap((template) => assessProgramQuality(template, brief, load.familiarRefs).signals))].map((signal) => QUALITY_REVIEW_NOTES[signal]!)
+  const materialized = isolated.map((template) => materializeProgram({ ...template, reviewNotes }, brief, clientId, editId))
   const result = { ...materialized[0]!, sessions: current.sessions.map((session, index) => materialized[session.week - 1]!.sessions[index]!),
     canonicalWorkouts: current.sessions.map((session, index) => materialized[session.week - 1]!.canonicalWorkouts[index]!) }
   const previousWorkouts = payload.canonicalWorkouts as typeof result.canonicalWorkouts

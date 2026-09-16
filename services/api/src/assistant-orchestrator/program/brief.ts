@@ -11,6 +11,7 @@ export interface ProgramBrief {
   durationMin?: number
   startDate?: string
   experience?: 'beginner' | 'returning' | 'experienced'
+  experienceText?: string
   equipment?: Equipment[]
   limitations?: 'none' | 'present' | 'unknown'
   limitationsText?: string
@@ -33,6 +34,7 @@ export const briefProperties = {
   weekdays: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'integer', minimum: 1, maximum: 7 } },
   durationMin: { type: 'integer', minimum: 30, maximum: 120 },
   startDate: { type: 'string' },
+  experienceText: { type: 'string', maxLength: 500 },
   experience: { type: 'string', enum: ['beginner', 'returning', 'experienced'] },
   equipment: { type: 'array', items: { type: 'string', enum: PROGRAM_EQUIPMENT } },
   limitations: { type: 'string', enum: ['none', 'present', 'unknown'] },
@@ -172,11 +174,13 @@ export function mergeExtractedBrief(previous: ProgramBrief, message: string, val
     const quote = evidence[key]
     if (typeof quote !== 'string' || !normalize(quote) || !normalize(message).includes(normalize(quote))) throw new Error('brief_evidence_missing')
   }
+  if (patch.experienceText && !normalize(message).includes(normalize(patch.experienceText))) throw new Error('brief_evidence_missing')
   if (patch.frequency !== undefined && patch.frequency !== previous.frequency && explicitFrequency(message) !== patch.frequency) throw new Error('brief_frequency_ambiguous')
   if (patch.activityOverlapConfirmed === true && normalize(message) !== normalize(CONFIRM_ACTIVITY_OVERLAP)) throw new Error('brief_activity_confirmation_missing')
   const next: Record<string, unknown> = { ...previous }
   for (const key of clearedKeys) delete next[key]
   Object.assign(next, patch)
+  if ((clearedKeys.includes('experience') || patch.experience !== undefined && patch.experience !== previous.experience) && patch.experienceText === undefined) delete next.experienceText
   if (((patch.limitationsText !== undefined && patch.limitationsText !== previous.limitationsText)
     || (patch.limitations !== undefined && patch.limitations !== previous.limitations)
     || clearedKeys.includes('limitationsText')) && patch.limitationAdjustments === undefined) delete next.limitationAdjustments
@@ -225,14 +229,14 @@ export function missingBriefFields(brief: ProgramBrief, hasHistory = false): (ke
 export function briefSummary(brief: ProgramBrief): string {
   const days = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
   const experience = { beginner: 'начальный', returning: 'возвращение после перерыва', experienced: 'есть опыт' }
-  const equipmentNames: Record<Equipment, string> = { dumbbells: 'гантели', barbell: 'штанга', bench: 'скамья', rack: 'стойка', cable: 'блочный тренажёр', pullup_bar: 'турник', leg_press: 'жим ногами', leg_curl: 'сгибание ног', leg_extension: 'разгибание ног' }
+  const equipmentNames: Record<Equipment, string> = { stationary_bike: 'Велотренажёр', dumbbells: 'гантели', barbell: 'штанга', bench: 'скамья', rack: 'стойка', cable: 'блочный тренажёр', pullup_bar: 'турник', leg_press: 'жим ногами', leg_curl: 'сгибание ног', leg_extension: 'разгибание ног' }
   return [brief.continuationPlan && `Продолжение: ${brief.continuationPlan}`, brief.preserveRefs?.length && `Сохранить упражнения: ${brief.preserveRefs.map((ref) => PROGRAM_CATALOG.find((row) => row.ref === ref)?.name).join(', ')}`, brief.goalText && `Цель: ${brief.goalText}`, brief.frequency && `${brief.frequency} занятий в неделю · 4 недели`,
     brief.weekdays && `Дни: ${brief.weekdays.map((day) => days[day - 1]).join(', ')}`,
     brief.durationMin && `До ${brief.durationMin} минут`, brief.startDate && `Начало: ${brief.startDate}`,
     brief.equipment && `Оборудование: ${brief.equipment.length ? brief.equipment.map((item) => equipmentNames[item]).join(', ') : 'без оборудования'}`,
     brief.adult !== undefined && `Совершеннолетний: ${brief.adult ? 'да' : 'нет'}`,
     brief.excludedRefs?.length && `Исключены: ${brief.excludedRefs.map((ref) => PROGRAM_CATALOG.find((row) => row.ref === ref)?.name).join(', ')}`,
-    brief.experience && `Опыт: ${experience[brief.experience]}`,
+    brief.experience && `Опыт: ${experience[brief.experience]}${brief.experienceText ? ` — ${brief.experienceText}` : ''}`,
     brief.limitations && `Ограничения: ${brief.limitations === 'none' ? 'не заявлены' : brief.limitationsText ?? 'нужно уточнить'}`,
     brief.limitations !== 'none' && brief.limitationAdjustments && `Учесть при подборе: ${brief.limitationAdjustments}`,
     brief.preferences && `Пожелания: ${brief.preferences}`, brief.otherActivity && `Другая нагрузка: ${brief.otherActivity}`,

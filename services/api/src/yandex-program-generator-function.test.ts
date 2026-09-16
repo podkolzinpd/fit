@@ -122,3 +122,57 @@ describe('private generator load contract', () => {
     expect(programModelJson).toHaveBeenCalledOnce()
   })
 })
+
+it('reviews a missing endurance component without blocking a valid draft if review fails', async () => {
+  const body = request()
+  body.brief.goalText = 'Улучшить выносливость'
+  const valid = programPlanFromTemplate(fixture(1).template)
+  vi.mocked(programModelJson).mockResolvedValueOnce(valid).mockRejectedValueOnce(new Error('program_model_timeout'))
+  const response = await handler({ httpMethod: 'POST', body })
+  expect(response.statusCode).toBe(200)
+  expect(programModelJson).toHaveBeenCalledTimes(2)
+  expect(vi.mocked(programModelJson).mock.calls[1]![0].data).toMatchObject({ repair: { qualityReview: { signals: ['endurance_without_aerobic_work'] } } })
+  expect((JSON.parse(response.body) as { template: { reviewNotes: string[] } }).template.reviewNotes).toEqual([expect.stringContaining('аэробный блок не запланирован')])
+})
+
+it('accepts a quality rewrite with aerobic work and preserves exact doses', async () => {
+  const body = request()
+  body.brief.goalText = 'Улучшить выносливость'; body.brief.durationMin = 90
+  const valid = programPlanFromTemplate(fixture(1).template)
+  const improved = structuredClone(valid)
+  improved.aerobicExercises.push(Object.assign({ weekday: 1, exerciseRef: 'walking', progressionNote: 'Разговорный темп; увеличивать длительность при хорошем восстановлении.' }, { sets: [1, 1, 1, 1], amount: [600, 720, 840, 900], rpe: [4, 4, 4, 4], restSec: [0, 0, 0, 0] }))
+  vi.mocked(programModelJson).mockResolvedValueOnce(valid).mockResolvedValueOnce(improved)
+  const response = await handler({ httpMethod: 'POST', body })
+  expect(response.statusCode).toBe(200)
+  expect((JSON.parse(response.body) as { template: unknown }).template).toEqual(readProgramPlan(improved, body.brief, body.today))
+})
+
+it('repairs only contradictory prose while preserving every exercise dose', async () => {
+  const body = request()
+  const plan = programPlanFromTemplate(fixture(1).template)
+  plan.exercises[0]!.progressionNote = 'На второй неделе добавь повтор.'
+  vi.mocked(programModelJson).mockResolvedValueOnce(plan).mockResolvedValueOnce({ note1: 'Сохраняй технику и целевое усилие.' })
+  const result = await handler({ httpMethod: 'POST', body })
+  expect(result.statusCode).toBe(200)
+  expect(programModelJson).toHaveBeenCalledTimes(2)
+  const expected = structuredClone(plan)
+  expected.exercises[0]!.progressionNote = 'Сохраняй технику и целевое усилие.'
+  expect(JSON.parse(result.body)).toMatchObject({ template: readProgramPlan(expected, body.brief, body.today) })
+  expect(vi.mocked(programModelJson).mock.calls[1]![0].schema).toMatchObject({ required: ['note1'] })
+})
+
+it('repairs weekly composition with substitutions while keeping the checked numbers', async () => {
+  const body = request()
+  const plan = programPlanFromTemplate(fixture(1).template)
+  plan.exercises.find((row) => row.exerciseRef === 'seated-cable-row')!.exerciseRef = 'overhead-press'
+  vi.mocked(programModelJson).mockResolvedValueOnce(plan).mockResolvedValueOnce({ rationale: 'Уравновесили верх тела тягой; оцениваем выполнение назначений с целевым усилием.', changes: [
+    { weekday: 1, exerciseRef: 'overhead-press', replacementRef: 'seated-cable-row', progressionNote: 'Работа верхней части спины с регулируемым сопротивлением.' },
+  ] })
+  const response = await handler({ httpMethod: 'POST', body })
+  expect(response.statusCode).toBe(200)
+  expect(programModelJson).toHaveBeenCalledTimes(2)
+  const template = (JSON.parse(response.body) as { template: ReturnType<typeof readProgramPlan> }).template
+  expect(template.sessions[0]!.exercises[3]!.exerciseRef).toBe('seated-cable-row')
+  expect(template.sessions[0]!.exercises.map((exercise) => exercise.weeks)).toEqual(readProgramPlan(plan, body.brief, body.today).sessions[0]!.exercises.map((exercise) => exercise.weeks))
+  expect(template.reviewNotes).toBeUndefined()
+})

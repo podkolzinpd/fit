@@ -48,7 +48,7 @@ describe('four-week program contract', () => {
     expect(checked.sessions[0]!.exercises[0]!.progressionNote).toBe(progressionNote)
     const result = materializeProgram(checked, brief, 'client', 'generation')
     expect(result.sessions.every((session) => session.exercises[0]!.progressionNote === progressionNote)).toBe(true)
-    expect(result.canonicalWorkouts.every((workout) => workout.notes.includes(`Жим ногами в тренажёре: ${progressionNote}`))).toBe(true)
+    expect(result.canonicalWorkouts.every((workout) => workout.exercises[0]!.trainerComment.includes(progressionNote))).toBe(true)
     expect(checked.sessions[0]!.exercises[1]).not.toHaveProperty('progressionNote')
   })
   it.each(['', '   ', 'я'.repeat(241), 42, null])('rejects malformed optional template notes: %j', (progressionNote) => {
