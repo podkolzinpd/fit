@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { useAppViewport } from '../../app/app-viewport'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
-import { AddIcon, BackIcon, CheckIcon, ChevronRightIcon, CloseIcon, PlayIcon } from '../../shared/icons'
+import type { PreparedImage } from '../../shared/image-prep'
+import { AddIcon, BackIcon, CheckIcon, ChevronRightIcon, CloseIcon, PhotoIcon, PlayIcon } from '../../shared/icons'
 import { ExerciseImage } from './ExerciseImage'
+import { prepareExerciseImage } from './exercise-image'
 import { CONTINUOUS_RUNNING_FORMATS, INTERVAL_RUNNING_FORMATS, type RunningFormat } from '../../shared/running-formats'
 import { MUSCLE_GROUP_LABELS, MUSCLE_GROUPS, RUNNING_EXERCISE_REFS } from '../../shared/system-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
@@ -165,6 +167,13 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const [name, setName] = useState('')
   const [group, setGroup] = useState<MuscleGroup | null>(null)
   const [inputKind, setInputKind] = useState<InputKind>('distance')
+  const [customMuscleDetail, setCustomMuscleDetail] = useState<string | null>(null)
+  const [customEquipment, setCustomEquipment] = useState<string | null>(null)
+  const [description, setDescription] = useState('')
+  const [photo, setPhoto] = useState<PreparedImage | null>(null)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const { keyboardOpen } = useAppViewport()
   const activeMode = mode
   const selectableCatalog = useMemo(() => selectableExercises(catalog.exercises), [catalog.exercises])
@@ -214,6 +223,17 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const purposeOptions = useMemo(
     () => purposesForSelection(facetCatalog, category, muscle, equipment),
     [category, equipment, facetCatalog, muscle],
+  )
+  // Те же словари, что у фильтра (мышца/оборудование зависят от группы), но
+  // для формы создания своего упражнения — без ограничения по purpose/
+  // customOnly, чтобы предлагать полный набор значений каталога.
+  const customMuscleOptions = useMemo(
+    () => (group ? musclesForGroup(selectableCatalog, group) : []),
+    [group, selectableCatalog],
+  )
+  const customEquipmentOptions = useMemo(
+    () => (group ? equipmentForSelection(selectableCatalog, group, customMuscleDetail) : []),
+    [customMuscleDetail, group, selectableCatalog],
   )
   const canEnableCustomOnly = useMemo(
     () => selectableCatalog
@@ -380,18 +400,54 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   }
   function selectMuscle(next: string | null) { setMuscle(next) }
   function stopPropagation(event: MouseEvent) { event.stopPropagation() }
+  // Мышца/оборудование в форме создания зависят от выбранной группы (как и
+  // в фильтре), поэтому смена группы или мышцы сбрасывает следующий уровень.
+  function selectCustomGroup(next: MuscleGroup) {
+    setGroup(next)
+    setCustomMuscleDetail(null)
+    setCustomEquipment(null)
+  }
+  function selectCustomMuscleDetail(next: string | null) {
+    setCustomMuscleDetail(next)
+    setCustomEquipment(null)
+  }
+  function closeCreate() {
+    setCreating(false)
+    setName('')
+    setGroup(null)
+    setCustomMuscleDetail(null)
+    setCustomEquipment(null)
+    setDescription('')
+    setPhoto(null)
+    setPhotoError(null)
+  }
+  async function choosePhoto(file: File | undefined) {
+    if (!file) return
+    setPhotoBusy(true)
+    setPhotoError(null)
+    try {
+      setPhoto(await prepareExerciseImage(file))
+    } catch (error) {
+      setPhoto(null)
+      setPhotoError(error instanceof Error ? error.message : 'Не удалось подготовить фото')
+    } finally {
+      setPhotoBusy(false)
+      if (photoInputRef.current) photoInputRef.current.value = ''
+    }
+  }
   async function createExercise() {
     if (!name.trim() || !group) return
     try {
       const exercise = await catalog.create({
-        name: name.trim(), muscleGroup: group, inputKind: group === 'cardio' ? inputKind : 'strength',
-      })
+        name: name.trim(),
+        muscleGroup: group,
+        inputKind: group === 'cardio' ? inputKind : 'strength',
+        primaryMuscleDetail: customMuscleDetail ?? undefined,
+        equipment: customEquipment ?? undefined,
+        description: description.trim() || undefined,
+      }, photo)
       pick(exercise)
-      if (multiple) {
-        setCreating(false)
-        setName('')
-        setGroup(null)
-      }
+      if (multiple) closeCreate()
     } catch {
       // Mutation state exposes the normalized repository error in the picker.
     }
@@ -402,17 +458,24 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
       <header className={`picker-header${previewExercise ? ' picker-technique-header' : ''}`}>
         {previewExercise && <button type="button" className="picker-close picker-back" aria-label="Назад к выбору" onClick={closeTechnique}><BackIcon /></button>}
         <h1>{previewExercise ? 'Техника' : creating ? 'Своё упражнение' : 'Выберите упражнения'}</h1>
-        <button type="button" className="picker-close" aria-label="Закрыть" onClick={creating ? () => setCreating(false) : onClose}><CloseIcon /></button>
+        <button type="button" className="picker-close" aria-label="Закрыть" onClick={creating ? closeCreate : onClose}><CloseIcon /></button>
       </header>
       {previewExercise ? <div className="picker-technique-view">
         <ExerciseTechniqueContent exercise={previewExercise} beforeFacts={<CatalogVariantField exercise={previewExercise} catalog={catalog.exercises} onChange={setPreviewExercise} />} />
         <button type="button" className="primary picker-technique-action" onClick={() => techniqueAction(previewExercise)}>{multiple && selected.has(exerciseKey(previewExercise)) ? 'Убрать из выбранных' : multiple ? 'Добавить к выбранным' : techniqueActionLabel}</button>
       </div> : creating ? <div className="stack">
         <label className="field">Название<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Например: Болгарский присед" /></label>
-        <div className="picker-categories" aria-label="Группа мышц">{MUSCLE_GROUPS.map((item) => <button type="button" key={item} className={group === item ? 'picker-category active' : 'picker-category'} onClick={() => setGroup(item)}>{MUSCLE_GROUP_LABELS[item]}</button>)}</div>
+        <div className="picker-categories" aria-label="Группа мышц">{MUSCLE_GROUPS.map((item) => <button type="button" key={item} className={group === item ? 'picker-category active' : 'picker-category'} onClick={() => selectCustomGroup(item)}>{MUSCLE_GROUP_LABELS[item]}</button>)}</div>
         {group === 'cardio' && <div className="picker-categories"><button type="button" className={inputKind === 'distance' ? 'picker-category active' : 'picker-category'} onClick={() => setInputKind('distance')}>Время + дистанция</button><button type="button" className={inputKind === 'reps' ? 'picker-category active' : 'picker-category'} onClick={() => setInputKind('reps')}>Время + повторы</button></div>}
+        {customMuscleOptions.length > 0 && <label className="field">Мышца<select aria-label="Мышца" value={customMuscleDetail ?? ''} onChange={(event) => selectCustomMuscleDetail(event.target.value || null)}><option value="">Не уточнено</option>{customMuscleOptions.map((item) => <option key={item}>{item}</option>)}</select></label>}
+        {customEquipmentOptions.length > 0 && <label className="field">Оборудование<select aria-label="Оборудование" value={customEquipment ?? ''} onChange={(event) => setCustomEquipment(event.target.value || null)}><option value="">Не уточнено</option>{customEquipmentOptions.map((item) => <option key={item}>{item}</option>)}</select></label>}
+        <label className="field">Описание<textarea value={description} maxLength={2000} rows={3} placeholder="Как выполнять, на что обратить внимание" onChange={(event) => setDescription(event.target.value)} /></label>
+        {photo ? <div className="picker-photo-preview"><img src={photo.dataUrl} alt="Фото упражнения" /><button type="button" aria-label="Убрать фото" onClick={() => setPhoto(null)}><CloseIcon /></button></div>
+          : <button type="button" className="secondary picker-photo-attach" disabled={photoBusy} aria-busy={photoBusy} onClick={() => photoInputRef.current?.click()}><PhotoIcon />{photoBusy ? 'Подготавливаем фото…' : 'Добавить фото на обложку'}</button>}
+        <input ref={photoInputRef} hidden type="file" accept="image/*" aria-label="Выбрать фото" onChange={(event) => void choosePhoto(event.target.files?.[0])} />
+        {photoError && <p className="error">{photoError}</p>}
         {catalog.error && <p className="error">{catalog.error.message}</p>}
-        <button type="button" className="primary" disabled={catalog.saving || !name.trim() || !group} onClick={() => void createExercise()}>{catalog.saving ? 'Сохранение…' : 'Сохранить упражнение'}</button>
+        <button type="button" className="primary" disabled={catalog.saving || photoBusy || !name.trim() || !group} onClick={() => void createExercise()}>{catalog.saving ? 'Сохранение…' : 'Сохранить упражнение'}</button>
       </div> : <>
         <div className="picker-search-control"><input ref={searchRef} className="picker-search" aria-label="Поиск упражнения" placeholder={activeMode === 'running' ? 'Бег или СБУ' : 'Название упражнения'} value={search} onKeyDown={handleSearchKeyDown} onChange={(event) => setSearch(event.target.value)} />{search && <button type="button" className="picker-search-clear" aria-label="Очистить поиск" onClick={clearSearch}><CloseIcon /></button>}</div>
         <div className="picker-filter-strip" role="group" aria-label="Группа мышц">

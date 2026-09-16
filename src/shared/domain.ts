@@ -296,6 +296,7 @@ export interface ExerciseSnapshot {
   equipmentRef?: string
   primaryMuscleDetail?: string
   secondaryMuscles?: string[]
+  description?: string
   level?: string | null
   imageUrl?: string
   /** Optional same-family poster fallback; legacy exercise photos are forbidden. */
