@@ -94,6 +94,13 @@
   repository сохраняет точный код ошибки генерации, поэтому интерфейс не
   показывает общий retry для cooldown/лимита/quality failure. План:
   `docs/design/PROGRESS_AI_FAILED_ATTEMPT_RETRY_FIX.md`.
+- Подтверждённый production `401 authentication_required` возникает до
+  collector/model gate, когда браузер отправляет устаревший Supabase access
+  token. Summary transport обновляет существующую сессию только после такого
+  ответа и повторяет запрос ровно один раз; лимиты, cooldown и остальные ошибки
+  не повторяются. Служебный бесплатный preflight использует фактический backend
+  клиента, а оставшийся `401` показывается как истёкшая сессия. План:
+  `docs/design/PROGRESS_AI_SESSION_RECOVERY.md`.
 - Backend-only RPC блокировки генерации и публикации общего кеша защищены
   узкими `EXECUTE` grants только для `service_role`; они не зависят от browser
   JWT/session GUC. Это устраняет production `PT403` до model request, сохраняя
