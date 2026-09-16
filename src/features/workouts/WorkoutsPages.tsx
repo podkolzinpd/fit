@@ -417,6 +417,7 @@ export function WorkoutFormPage() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [techniqueExercise, setTechniqueExercise] = useState<ExerciseSnapshot | null>(null)
   const [pickerSearch, setPickerSearch] = useState('')
+  const parsedExerciseSelection = useRef<((exercise: ExerciseSnapshot) => void) | null>(null)
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today, { refreshCatalogNames: true })) : undefined
@@ -525,6 +526,12 @@ export function WorkoutFormPage() {
     }
   }
   async function pickExercise(selected: ExerciseSnapshot, runningFormat?: RunningFormat) {
+    const selectParsedExercise = parsedExerciseSelection.current
+    if (selectParsedExercise) {
+      selectParsedExercise(selected)
+      closePicker()
+      return
+    }
     if (runningFormat) {
       const selectedDrafts = createRunningFormatDrafts(selected, runningFormat, replaceIndex ?? exercises.length)
       if (selectedDrafts.length) {
@@ -565,7 +572,10 @@ export function WorkoutFormPage() {
     closePicker()
   }
   async function addQuickEntry(parsed: ParsedWorkoutExercise[]) {
-    const results = await previousResults(parsed.map((item) => item.exercise))
+    const exercisesWithoutParsedValues = parsed.filter((item) => !item.hasValues).map((item) => item.exercise)
+    const results = exercisesWithoutParsedValues.length > 0
+      ? await previousResults(exercisesWithoutParsedValues)
+      : new Map<string, PreviousExerciseResult>()
     rememberPreviousResults(results)
     const additions = parsed.map((item, index) => {
       const fallback = exerciseDraft(item.exercise, exercises.length + index, results.get(item.exercise.ref))
@@ -588,7 +598,7 @@ export function WorkoutFormPage() {
         : exercise),
     ])
   }
-  function closePicker() { setPickerOpen(false); setReplaceIndex(null); setPickerSearch('') }
+  function closePicker() { parsedExerciseSelection.current = null; setPickerOpen(false); setReplaceIndex(null); setPickerSearch('') }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (exercises.length === 0) return
@@ -660,7 +670,7 @@ export function WorkoutFormPage() {
       </section>
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head workout-form-exercise-heading"><h2>{completedMode ? 'Что выполнено' : 'Упражнения'}</h2></div>
-        <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={(parsed) => void addQuickEntry(parsed)} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} />
+        <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={(parsed) => void addQuickEntry(parsed)} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search, onSelect) => { parsedExerciseSelection.current = onSelect ?? null; setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} />
         {exercises.length === 0 && <p className="workout-empty-hint" role="status">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
         <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }}
           canOpenTechnique={(exercise) => hasExerciseTechnique(catalogExerciseFor(catalog.exercises, exercise))}
@@ -671,7 +681,7 @@ export function WorkoutFormPage() {
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>
     </form>}</AsyncView>
-    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={parsedExerciseSelection.current ? 'all' : replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} techniqueActionLabel={parsedExerciseSelection.current ? 'Выбрать упражнение' : replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null && !parsedExerciseSelection.current} onClose={closePicker} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmLeaveDialog}
   </Page>
