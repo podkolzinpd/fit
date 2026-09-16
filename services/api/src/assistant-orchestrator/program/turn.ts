@@ -17,7 +17,6 @@ type Dependencies = {
   loadContext: (client: ProgramClient) => Promise<ProgramSourceSnapshot>;
   extract: (brief: ProgramBrief, message: string, answerContext?: BriefAnswerContext) => Promise<unknown>;
   generate: (brief: ProgramBrief, context: ProgramSourceSnapshot, clientId: string) => Promise<unknown>;
-  canGenerate: () => Promise<boolean>;
   matchClients: (message: string) => ProgramClient[];
 }
 
@@ -150,7 +149,6 @@ export async function programPilotTurn(message: string, clients: readonly Progra
     // User-turn insertion is unique. A duplicate invocation may read the saved
     // response, but must never launch a second paid generation after a timeout.
     // The durable job deduplicates both retries and different concurrent turns.
-    if (!await deps.canGenerate()) return collect(client, brief, 'На сегодня достигнут лимит составления программ. Можно продолжить завтра.')
     try {
       const context = await deps.loadContext(client)
       basis = { summary: programSourceSummary(context), hasHistory: context.context.completedWorkouts > 0 }

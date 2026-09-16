@@ -11,7 +11,7 @@ function setup() {
   const { brief, template } = fixture()
   const context = { ...buildProgramHistoryContext({ clientId: client.id, periodStart: '2026-07-22', periodEnd: '2026-09-15', workouts: [], exercises: [], sets: [] }), capturedAt: '2026-09-15T10:00:00Z', profile: { ageYears: 30, goal: null, latestWeight: null } }
   const deps = { actorId: 'trainer', turnId: 'turn', today: '2026-09-15', duplicateTurn: false,
-    loadContext: vi.fn().mockResolvedValue(context), extract: vi.fn(), generate: vi.fn().mockResolvedValue(template), canGenerate: vi.fn().mockResolvedValue(true), matchClients: vi.fn().mockReturnValue([]) }
+    loadContext: vi.fn().mockResolvedValue(context), extract: vi.fn(), generate: vi.fn().mockResolvedValue(template), matchClients: vi.fn().mockReturnValue([]) }
   const latest = { payload: { programPilot: true, briefAnswerVersion: 2, step: 'brief', clientId: client.id, briefState: brief, readyToGenerate: true } }
   return { deps, latest, context }
 }
@@ -72,10 +72,19 @@ describe('program chat state', () => {
     expect((await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], latest, deps))?.action?.status).toBe('proposed')
     expect(deps.generate).toHaveBeenCalledOnce()
   })
-  it('rate limit prevents generation', async () => {
-    const { deps, latest } = setup(); deps.canGenerate.mockResolvedValue(false)
-    expect((await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], latest, deps))?.reply).toContain('лимит')
-    expect(deps.generate).not.toHaveBeenCalled()
+  it('allows generation after more than five failed confirmations without losing the brief', async () => {
+    const { deps, latest } = setup()
+    deps.generate.mockRejectedValue(new Error('program_model_http_502'))
+    let previous = latest
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const failed = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], previous, deps)
+      expect(failed?.action?.payload.briefState).toEqual(latest.payload.briefState)
+      expect(failed?.action?.payload.readyToGenerate).toBe(true)
+      previous = { ...latest, payload: { ...latest.payload, ...failed?.action?.payload } }
+    }
+    deps.generate.mockResolvedValue(fixture().template)
+    expect((await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], previous, deps))?.action?.status).toBe('proposed')
+    expect(deps.generate).toHaveBeenCalledTimes(7)
   })
   it('clarification disables confirmation even with a previously complete brief', async () => {
     const { deps, latest } = setup()
