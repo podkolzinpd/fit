@@ -60,7 +60,6 @@ test('client feedback names a trainer only while the trainer connection is activ
   await page.goto('/workouts/new')
   await page.getByRole('button', { name: 'Завершённая' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
   await page.getByRole('button', { name: 'Выбрать: Планка', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
