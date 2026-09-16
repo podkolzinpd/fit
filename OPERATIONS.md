@@ -356,6 +356,13 @@ Supabase-сессию в stage API, а данные и мутации защищ
 ownership/RLS-проверками. OAuth Client Secret в Vite/Vercel frontend variables
 не добавляется.
 
+Linking не требует предварительного tenant import только для корневой identity:
+после проверки Supabase access token stage читает через его RLS точную строку
+`profiles` и, для trainer, `trainers`, атомарно создаёт отсутствующий root в
+Yandex DB и затем связывает Yandex subject. Эта операция не создаёт rollout
+assignment, не переносит клиентов/тренировки и не разрешает Yandex-сессию до
+отдельного `yandex/read_write` назначения.
+
 Stage API CORS allowlist обязан содержать как production web origin, так и
 точный `capacitor://localhost` origin нативной iOS-оболочки. Произвольные
 `capacitor://` origins не разрешаются. Изменение выполняется через
