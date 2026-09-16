@@ -356,6 +356,12 @@ Supabase-сессию в stage API, а данные и мутации защищ
 ownership/RLS-проверками. OAuth Client Secret в Vite/Vercel frontend variables
 не добавляется.
 
+Stage API CORS allowlist обязан содержать как production web origin, так и
+точный `capacitor://localhost` origin нативной iOS-оболочки. Произвольные
+`capacitor://` origins не разрешаются. Изменение выполняется через
+`TF_VAR_api_cors_allowed_origins` в deployment workflow, а не вручную в
+активной ревизии контейнера.
+
 Полноценная browser-сессия после Yandex ID использует те же публичные
 `VITE_YANDEX_OAUTH_CLIENT_ID` и `VITE_YANDEX_API_BASE_URL`, но имеет собственный
 default-off rollout:

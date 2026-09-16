@@ -119,14 +119,15 @@
   один раз выдаёт `fit-stage-api` администратор, а OIDC не меняет folder IAM.
 - Yandex OAuth использует PKCE и публичный Client ID; secret browser-контракту
   не нужен, Supabase-сессия при пилотном входе не создаётся. Production callback
-  зарегистрирован для `fit-drab.vercel.app`; stage API допускает этот origin,
-  но production rollout остаётся default-off до настройки Vercel allowlist.
+  зарегистрирован для `fit-drab.vercel.app`; stage API допускает production web
+  и точный `capacitor://localhost` origin нативной iOS-оболочки, но production
+  rollout остаётся default-off до настройки Vercel allowlist.
 - Привязка существующего FIT-профиля передаёт legacy Supabase-сессию в
   `x-supabase-authorization`, а не в зарезервированном Yandex Cloud IAM
   заголовке `Authorization`; пилотный linking остаётся default-off и не меняет
   sticky routing остальных пользователей.
 - `main` содержит 14-дневную read-write Yandex ID-сессию: stage валидирует/отзывает opaque token, frontend восстанавливает профиль и блокирует истёкшую/неразрешённую сессию.
-- Текущая ветка ограничивает OAuth/link/restore/revoke Yandex ID 12 секундами:
+- `main` ограничивает OAuth/link/restore/revoke Yandex ID 12 секундами:
   зависший запрос больше не удерживает iOS в бесконечном loading, ошибка даёт
   повтор и локальный сброс только Yandex-токена без очистки других настроек.
 - Серверный `yandex/read_write` rollout первого перенесённого tenant управляется

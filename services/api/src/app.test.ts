@@ -1082,8 +1082,11 @@ describe('native Yandex function contracts', () => {
 })
 
 describe('browser pilot CORS', () => {
-  it('allows only an explicitly configured origin', async () => {
-    const app = buildApp({ allowedOrigins: ['http://localhost:5173'], logger: false })
+  it('allows only explicitly configured web and iOS app origins', async () => {
+    const app = buildApp({
+      allowedOrigins: ['http://localhost:5173', 'capacitor://localhost'],
+      logger: false,
+    })
     apps.push(app)
 
     const preflight = await app.inject({
@@ -1102,6 +1105,14 @@ describe('browser pilot CORS', () => {
     expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-release-id')
     expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-error-code')
     expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-request-id')
+
+    const iosPreflight = await app.inject({
+      method: 'OPTIONS',
+      url: '/v1/auth/yandex/link',
+      headers: { origin: 'capacitor://localhost' },
+    })
+    expect(iosPreflight.statusCode).toBe(204)
+    expect(iosPreflight.headers['access-control-allow-origin']).toBe('capacitor://localhost')
 
     const rejected = await app.inject({
       method: 'OPTIONS',
