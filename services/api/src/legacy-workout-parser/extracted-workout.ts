@@ -142,15 +142,15 @@ export function validateWorkoutExtraction(value: unknown): ExtractedWorkout {
 }
 
 const phraseReplacements: ReadonlyArray<readonly [RegExp, string]> = [
-  [/\b(?:кроссовер\p{L}*|блочн\p{L}*)\b/giu, 'блок'],
-  [/\b(?:гантел\p{L}*)\b/giu, 'гантели'],
-  [/\b(?:штанг\p{L}*)\b/giu, 'штанга'],
-  [/\b(?:гир\p{L}*)\b/giu, 'гиря'],
-  [/\b(?:тренаж[её]р\p{L}*)\b/giu, 'тренажер'],
-  [/\b(?:разводк\p{L}*|разведени\p{L}*|отведени\p{L}*)\b/giu, 'разведение'],
-  [/\b(?:подъ[её]м\p{L}*)\b/giu, 'подъем'],
-  [/\b(?:повтор\p{L}*|повт)\b/giu, ' '],
-  [/\b(?:подход\p{L}*|сет\p{L}*)\b/giu, ' '],
+  [/(?<!\p{L})(?:кроссовер\p{L}*|блочн\p{L}*)(?!\p{L})/giu, 'блок'],
+  [/(?<!\p{L})(?:гантел\p{L}*)(?!\p{L})/giu, 'гантели'],
+  [/(?<!\p{L})(?:штанг\p{L}*)(?!\p{L})/giu, 'штанга'],
+  [/(?<!\p{L})(?:гир\p{L}*)(?!\p{L})/giu, 'гиря'],
+  [/(?<!\p{L})(?:тренаж[её]р\p{L}*)(?!\p{L})/giu, 'тренажер'],
+  [/(?<!\p{L})(?:разводк\p{L}*|разведени\p{L}*|отведени\p{L}*)(?!\p{L})/giu, 'разведение'],
+  [/(?<!\p{L})(?:подъ[её]м\p{L}*)(?!\p{L})/giu, 'подъем'],
+  [/(?<!\p{L})(?:повтор\p{L}*|повт)(?!\p{L})/giu, ' '],
+  [/(?<!\p{L})(?:подход\p{L}*|сет\p{L}*)(?!\p{L})/giu, ' '],
 ]
 
 const ignoredTokens = new Set([
@@ -220,6 +220,8 @@ type RankedMatch = {
   queryCoverage: number
   nameCoverage: number
   matchedQueryTokens: number
+  queryTokenCount: number
+  equipmentMatch: boolean
   exact: boolean
 }
 
@@ -231,7 +233,7 @@ function rankExercise(item: Pick<ExtractedWorkoutItem, 'sourceText' | 'exerciseN
   const metadataTokens = tokens([exercise.equipment, exercise.muscleGroup, exercise.primaryMuscleDetail].filter(Boolean).join(' '))
   const searchable = [...new Set([...nameTokens, ...metadataTokens])]
   const queryTokens = [...new Set(tokens([item.exerciseName, item.sourceText, item.equipment, item.muscle].filter(Boolean).join(' ')))]
-  if (!queryTokens.length) return exact ? { exercise, score: 1_000, queryCoverage: 1, nameCoverage: 1, matchedQueryTokens: 0, exact } : undefined
+  if (!queryTokens.length) return exact ? { exercise, score: 1_000, queryCoverage: 1, nameCoverage: 1, matchedQueryTokens: 0, queryTokenCount: 0, equipmentMatch: false, exact } : undefined
   const matchedQueryTokens = queryTokens.filter((queryToken) => searchable.some((candidateToken) => tokenMatches(queryToken, candidateToken))).length
   if (!exact && matchedQueryTokens === 0) return undefined
   const matchedNameTokens = nameTokens.filter((candidateToken) => queryTokens.some((queryToken) => tokenMatches(queryToken, candidateToken))).length
@@ -251,7 +253,7 @@ function rankExercise(item: Pick<ExtractedWorkoutItem, 'sourceText' | 'exerciseN
     + (equipmentMatch ? 28 : 0)
     - extraNameTokens * 4
     + (exercise.source === 'custom' ? 2 : 0)
-  return { exercise, score, queryCoverage, nameCoverage, matchedQueryTokens, exact }
+  return { exercise, score, queryCoverage, nameCoverage, matchedQueryTokens, queryTokenCount: queryTokens.length, equipmentMatch, exact }
 }
 
 function rankedMatches(item: Pick<ExtractedWorkoutItem, 'sourceText' | 'exerciseName' | 'equipment' | 'muscle'>, catalog: readonly WorkoutParserExercise[]): RankedMatch[] {
@@ -270,7 +272,7 @@ function matchExtractedItem(item: ExtractedWorkoutItem, catalog: readonly Workou
     && !first.exact
     && first.matchedQueryTokens >= 2
     && first.queryCoverage >= 0.6
-    && first.nameCoverage >= 0.7
+    && (first.nameCoverage >= 0.7 || (first.equipmentMatch && first.queryTokenCount >= 3 && first.nameCoverage >= 0.6))
     && first.score >= 85
     && (second === undefined || first.score - second.score >= 20)
   if (safelyDistinct) return { sourceText: item.sourceText, exerciseRef: first.exercise.ref, confidence: 0.99, sets: item.sets, position: item.position }
