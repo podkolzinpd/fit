@@ -216,8 +216,8 @@ describe('yandexPilotRepository', () => {
       trainer_summary: { headline: 'Внутренний вывод' },
     }
     queries.parseWorkout.mockResolvedValue(new Response(JSON.stringify({
-      items: [{ sourceText: 'присед', exerciseRef: 'squat', confidence: 1, sets: [{ reps: 10 }] }],
-      unmatched: [],
+      items: [{ sourceText: 'присед', exerciseRef: 'squat', confidence: 1, sets: [{ reps: 10 }], position: 1 }],
+      unmatched: [{ sourceText: 'движение', reason: 'Нужно уточнить', suggestedExerciseRefs: ['move'], sets: [{ reps: 8 }], position: 0 }],
     }), { status: 200 }))
     queries.listTrainingSummaries.mockResolvedValue(new Response(JSON.stringify({
       summaries: [generated],
@@ -229,7 +229,10 @@ describe('yandexPilotRepository', () => {
 
     await expect(yandexPilotRepository.parseWorkout(
       'https://stage.example.test', 's'.repeat(43), 'присед', [],
-    )).resolves.toMatchObject({ items: [{ exerciseRef: 'squat' }] })
+    )).resolves.toEqual({
+      items: [{ sourceText: 'присед', exerciseRef: 'squat', confidence: 1, sets: [{ reps: 10 }], position: 1 }],
+      unmatched: [{ sourceText: 'движение', reason: 'Нужно уточнить', suggestedExerciseRefs: ['move'], sets: [{ reps: 8 }], position: 0 }],
+    })
     await expect(yandexPilotRepository.listTrainingSummaries(
       'https://stage.example.test', 's'.repeat(43), CLIENT_ID,
     )).resolves.toEqual([generated])

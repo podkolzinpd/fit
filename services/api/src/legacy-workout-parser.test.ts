@@ -19,10 +19,14 @@ describe('SupabaseWorkoutParser', () => {
       expect(init?.headers).toMatchObject({ apikey: 'public-key', authorization: 'Bearer access-token' })
       return Promise.resolve(response([{ id: '1574a433-8a2a-4cd4-8d8f-57a8ebd6aa77', name: 'Тяга блока', input_kind: 'strength' }]))
     })
-    const yandexFetch = vi.fn(() => Promise.resolve(response({ result: { alternatives: [{ message: { text: JSON.stringify({
-      items: [{ sourceText: 'тяга блока 3 по 10', exerciseRef: '1574a433-8a2a-4cd4-8d8f-57a8ebd6aa77', confidence: 1.5, sets: [{ weightKg: 40, reps: 10, ignored: 'value' }] }],
+    const yandexFetch = vi.fn((input: URL | RequestInfo, init?: RequestInit) => {
+      void input
+      void init
+      return Promise.resolve(response({ result: { alternatives: [{ message: { text: JSON.stringify({
+      items: [{ sourceText: 'тяга блока 3 по 10', exerciseName: 'Тяга блока', equipment: 'блок', muscle: null, position: 0, sets: [{ weightKg: 40, reps: 10, ignored: 'value' }] }],
       unmatched: [],
-    }) } }] } })))
+      }) } }] } }))
+    })
     const parser = new SupabaseWorkoutParser(
       new SupabaseBridge({ url: 'https://supabase.example.test', publishableKey: 'public-key', serviceRoleKey: 'service-key' }, supabaseFetch),
       'yandex-key', 'folder-id', 'yandexgpt', yandexFetch,
@@ -32,10 +36,15 @@ describe('SupabaseWorkoutParser', () => {
       text: 'тяга блока 3 по 10',
       systemCatalog: [{ source: 'system', ref: 'squat', name: 'Присед', inputKind: 'strength' }],
     })).resolves.toEqual({
-      items: [{ sourceText: 'тяга блока 3 по 10', exerciseRef: '1574a433-8a2a-4cd4-8d8f-57a8ebd6aa77', confidence: 1, sets: [{ weightKg: 40, reps: 10 }] }],
+      items: [{ sourceText: 'тяга блока 3 по 10', exerciseRef: '1574a433-8a2a-4cd4-8d8f-57a8ebd6aa77', confidence: 1, sets: [{ weightKg: 40, reps: 10 }], position: 0 }],
       unmatched: [],
     })
     expect(yandexFetch).toHaveBeenCalledOnce()
+    const rawBody = yandexFetch.mock.calls[0]?.[1]?.body
+    expect(typeof rawBody).toBe('string')
+    const requestBody = JSON.parse(typeof rawBody === 'string' ? rawBody : '') as { messages: Array<{ text: string }> }
+    expect(requestBody.messages[0]?.text).not.toContain('Каталог:')
+    expect(requestBody.messages[0]?.text).not.toContain('1574a433-8a2a-4cd4-8d8f-57a8ebd6aa77')
   })
 
   it('does not invoke the model for an invalid Supabase access token', async () => {
@@ -96,7 +105,7 @@ describe('YandexWorkoutParser runtime authorization', () => {
       void input
       void init
       return Promise.resolve(response({ result: { alternatives: [{ message: { text: JSON.stringify({
-        items: [{ sourceText: 'присед 10 раз', exerciseRef: 'squat', confidence: 1, sets: [{ reps: 10 }] }],
+        items: [{ sourceText: 'присед 10 раз', exerciseName: 'Присед', equipment: null, muscle: null, position: 0, sets: [{ reps: 10 }] }],
         unmatched: [],
       }) } }] } }))
     })
@@ -116,6 +125,18 @@ describe('YandexWorkoutParser runtime authorization', () => {
     expect(authorizationHeader).toHaveBeenCalledOnce()
     const requestInit = request.mock.calls[0]?.[1]
     expect(new Headers(requestInit?.headers).get('authorization')).toBe('Bearer metadata-token')
+  })
+
+  it('distinguishes an unavailable model from an invalid model response', async () => {
+    const unavailable = new YandexWorkoutParser('key', 'folder-id', 'yandexgpt', vi.fn(() => Promise.resolve(response({}, 503))))
+    await expect(unavailable.parse({ text: 'присед', systemCatalog: [
+      { source: 'system', ref: 'squat', name: 'Присед', inputKind: 'strength' },
+    ] })).rejects.toMatchObject({ status: 502, code: 'llm_unavailable' })
+
+    const invalid = new YandexWorkoutParser('key', 'folder-id', 'yandexgpt', vi.fn(() => Promise.resolve(response({ result: { alternatives: [{ message: { text: '{}' } }] } }))))
+    await expect(invalid.parse({ text: 'присед', systemCatalog: [
+      { source: 'system', ref: 'squat', name: 'Присед', inputKind: 'strength' },
+    ] })).rejects.toMatchObject({ status: 502, code: 'parse_failed' })
   })
 
   it('rejects an invented source returned by the model', async () => {
