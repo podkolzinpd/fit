@@ -5,6 +5,9 @@ export type BriefAnswerContext = { question: string; fields: (keyof ProgramBrief
 /** Explicit absence is an answer, not a request to delete a field. */
 export function explicitBriefAnswer(message: string, context?: BriefAnswerContext, today?: string): unknown {
   const text = message.toLocaleLowerCase('ru').replace(/ё/g, 'е').trim().replace(/[.!]$/, '')
+  if (context?.fields.length === 1 && context.fields[0] === 'limitationAdjustments' && ['пока неизвестно', 'неизвестно', 'не знаю'].includes(text)) {
+    return { patch: { limitationAdjustments: message }, clear: [], evidence: { limitationAdjustments: message }, clarification: null }
+  }
   const nextDay = text.match(/^(?:со? )?следующего (понедельника|вторника|среды|четверга|пятницы|субботы|воскресенья)$/u)
   if (nextDay && today) {
     const weekdays = ['воскресенья', 'понедельника', 'вторника', 'среды', 'четверга', 'пятницы', 'субботы']

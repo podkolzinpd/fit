@@ -7,6 +7,11 @@ function props() { return { enabled: true, running: false, onApply: vi.fn().mock
 const canonicalWorkouts = Array.from({ length: 4 }, (_, index) => ({ requestId: `10000000-0000-4000-8000-00000000000${index}`, clientId: '20000000-0000-4000-8000-000000000001', workoutDate: `2026-10-0${index + 1}`,
   exercises: [{ name: 'Приседания', ref: 'fedb-bodyweight-squat', restBetweenSetsSec: 90, sets: [{ position: 0, reps: 10, rpe: 6.5 }] }] }))
 describe('program pilot card', () => {
+  it('shows limitations for trainer review without disabling the draft', () => {
+    render(<AssistantProgramPilotCard {...props()} payload={{ step: 'confirm', canonicalWorkouts, limitationReview: 'Учесть: исключить жимы над головой. Тренеру: проверьте назначения.' }} />)
+    expect(screen.getByText(/Учесть: исключить жимы/)).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Добавить в расписание' })).toBeEnabled()
+  })
   it('confirms the complete quiz explicitly', async () => {
     const handlers = props()
     render(<AssistantProgramPilotCard {...handlers} payload={{ step: 'brief', clientName: 'Тестик', briefSummary: 'Цель: сила\nДни: пн', readyToGenerate: true }} />)

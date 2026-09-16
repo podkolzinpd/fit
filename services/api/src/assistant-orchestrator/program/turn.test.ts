@@ -157,13 +157,19 @@ describe('program chat state', () => {
     expect(result?.action?.payload.hasHistory).toBeUndefined()
     expect(deps.extract).not.toHaveBeenCalled()
   })
-  it.each(['present', 'unknown'])('explains blocked limitations %s even when all answers exist', async (limitations) => {
+  it.each(['present', 'unknown'])('asks about adjustments and continues with limitations %s', async (limitations) => {
     const { deps, latest } = setup()
-    deps.extract.mockResolvedValue({ patch: { limitations }, clear: [], evidence: { limitations: 'Есть боль' }, clarification: null })
+    deps.extract.mockResolvedValue({ patch: { limitations, limitationsText: 'Есть боль' }, clear: [], evidence: { limitations: 'Есть боль', limitationsText: 'Есть боль' }, clarification: null })
     const result = await programPilotTurn('Есть боль', [client], latest, deps)
-    expect(result?.reply).toContain('Сначала нужно уточнить актуальные ограничения')
-    expect(result?.action?.payload).toMatchObject({ readyToGenerate: false, briefStatus: 'needs_clarification', missing: [] })
+    expect(result?.reply).toContain('Какие движения')
+    expect(result?.action?.payload).toMatchObject({ readyToGenerate: false, askedFields: ['limitationAdjustments'] })
     expect(deps.generate).not.toHaveBeenCalled()
+    deps.extract.mockResolvedValue({ patch: { limitationAdjustments: 'пока неизвестно' }, clear: [], evidence: { limitationAdjustments: 'пока неизвестно' }, clarification: null })
+    const ready = await programPilotTurn('пока неизвестно', [client], result?.action, deps)
+    expect(ready?.action?.payload.readyToGenerate).toBe(true)
+    const generated = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], ready?.action, deps)
+    expect(generated?.action?.status).toBe('proposed')
+    expect(generated?.action?.payload.limitationReview).toContain('пока неизвестно')
   })
   it('retains old fields and explicitly asks again after a frequency mismatch', async () => {
     const { deps, latest } = setup()

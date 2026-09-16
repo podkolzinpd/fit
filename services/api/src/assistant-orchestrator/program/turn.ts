@@ -38,17 +38,16 @@ function collectState(client: ProgramClient, brief: ProgramBrief, today: string,
   const missing = missingBriefFields(brief, basis?.hasHistory)
   // Completeness is not eligibility. Do not offer a confirmation known to fail.
   const issues = missing.length === 0 ? programBriefIssues(brief, today) : []
-  const limitation = brief.limitations === 'present' || brief.limitations === 'unknown'
   const ready = missing.length === 0 && !blocked && !issues.length && brief.adult === true
-  const guidance = limitation ? briefIssueText(['limitations_require_review']) : brief.adult === false
+  const guidance = brief.adult === false
     ? 'Этот пилот предназначен для взрослых клиентов. Для несовершеннолетнего нужен другой сценарий составления программы.'
     : issues.length ? briefIssueText(issues) : ready ? 'Проверьте условия перед составлением программы.'
     : blocked ? '' : missing.slice(0, 1).map((key) => briefQuestions[key]).join('\n') || (extra ? '' : 'Уточните последний ответ, чтобы продолжить.')
   const reply = [extra, guidance].filter(Boolean).join('\n\n')
   return action(reply, { step: 'brief', clientId: client.id, clientName: client.fullName, goal: client.goal,
     sourceSummary: basis?.summary, hasHistory: basis?.hasHistory, briefState: brief, briefSummary: briefSummary(brief), readyToGenerate: ready, briefAnswerVersion: 2,
-    askedFields: limitation ? ['limitations'] : ready || blocked || brief.adult === false || issues.length ? [] : missing.slice(0, 1),
-    briefStatus: ready ? 'ready' : blocked || limitation || issues.length || brief.adult === false ? 'needs_clarification' : 'needs_answers',
+    askedFields: ready || blocked || brief.adult === false || issues.length ? [] : missing.slice(0, 1),
+    briefStatus: ready ? 'ready' : blocked || issues.length || brief.adult === false ? 'needs_clarification' : 'needs_answers',
     clarification: blocked ? extra ?? guidance : null,
     missing: missing.map((key) => briefQuestions[key]),
   })
@@ -177,11 +176,11 @@ export async function programPilotTurn(message: string, clients: readonly Progra
         loadBasis: load,
       }, true)
     } catch (error) {
-      if (error instanceof Error && error.message === 'program_generation_busy') return collect(client, brief, 'Эта программа уже составляется. Дождитесь результата; после прерванного запроса повтор доступен через три минуты.')
+      if (error instanceof Error && error.message === 'program_generation_busy') return collect(client, brief, 'Предыдущий запрос ещё выполняется. Дождитесь его результата, чтобы не запускать две программы одновременно.')
       const codes = error instanceof ProgramValidationError ? error.codes : []
       return collect(client, brief, codes.length
         ? 'Предложенная моделью программа не прошла проверку согласованности. Можно уточнить условия или явно повторить составление.'
-        : 'Не удалось составить программу. Анкета сохранена; можно явно повторить составление.')
+        : 'Не удалось составить программу. Условия сохранены; можно повторить составление.')
     }
   }
   if (message.trim() === CONFIRM_PROGRAM_BRIEF) return collect(client, brief,
@@ -203,7 +202,6 @@ export async function programPilotTurn(message: string, clients: readonly Progra
 }
 
 function briefIssueText(issues: string[]): string {
-  if (issues.includes('limitations_require_review')) return 'При заявленной боли, травме или неуточнённых ограничениях этот пилот не составляет программу автоматически. Сначала нужно уточнить актуальные ограничения.'
   if (issues.includes('other_activity_overlap_requires_review')) return `Дни программы совпадают с другой нагрузкой. Уточните расписание или подтвердите после проверки тренером: «${CONFIRM_ACTIVITY_OVERLAP}». Автоматический коэффициент снижения нагрузки не применяется.`
   if (issues.includes('history_volume_requires_review')) return 'Записанный недельный объём меньше минимального для выбранной частоты в этом пилоте. Уменьшите число занятий или уточните полноту истории; автоматически повышать объём не буду.'
   if (issues.includes('adjacent_training_days')) return 'В этом пилоте занятия на всё тело требуют дня отдыха между ними. Уточните дни недели, например понедельник, среда и пятница.'
@@ -231,6 +229,8 @@ lastQuestion — вопрос, на который отвечает пользо
 goalText — цель именно программы; goal — strength, hypertrophy, general_fitness либо weight_loss. Частота только 1–3. weekdays: пн=1,...вс=7. startDate YYYY-MM-DD относительно today. Опыт beginner/returning/experienced. Время 30–120 минут. Дни занятий должны иметь минимум один день отдыха между ними.
 equipment: только предложенные коды. «Полностью оборудованный зал» означает полный список; не считай любое упоминание зала подтверждением всего оборудования. Для «дома с гантелями» только dumbbells, без bench если не названа.
 limitations none только при явном отрицании актуальной боли/травм/ограничений. Старое сообщение о боли не доказывает текущую травму. Не решай медицинские вопросы. adult только из явного возраста/ответа.
+limitationsText сохраняет описание ограничений. limitationAdjustments сохраняет ответ тренера: какие движения/нагрузки исключить или изменить, что допустимо. Ответ «пока неизвестно» тоже запиши как limitationAdjustments, если задан этот вопрос; не превращай его в limitations=none. Не придумывай рекомендации врача и не запрещай генерацию только из-за наличия ограничений. excludedRefs заполни для явно названных исключённых упражнений из каталога, с цитатой пользователя.
+Если askedFields содержит limitationAdjustments, ответ об исключениях заполняет ОБА поля: limitationAdjustments (слова пользователя) и excludedRefs (коды упражнений). Пример «Не делать тягу нижнего блока» → limitationAdjustments="Не делать тягу нижнего блока", excludedRefs="seated-cable-row", обе quote="Не делать тягу нижнего блока". Пример «пока неизвестно» → limitationAdjustments="пока неизвестно"; остальные поля не изменяй.
 Для otherActivities value — строка с JSON-массивом объектов, например [{"kind":"бег","frequency":2,"weekdays":[2,6]}]; это единственное исключение из формата простых массивов через запятую.
 Явное отрицание другой нагрузки записывай ТОЛЬКО в текстовое поле otherActivity со значением "нет". Не создавай изменение otherActivities при отрицании: туда нельзя помещать "нет", пустую строку или текст отрицания; этот массив заполняется только при явно перечисленных видах нагрузки, частоте и днях.
 Пример message «Другой регулярной нагрузки нет.» → changes: [{"field":"otherActivity","operation":"set","value":"нет","quote":"Другой регулярной нагрузки нет"}]. В этом примере otherActivities отсутствует в changes.
@@ -241,7 +241,17 @@ historyComplete — только явное подтверждение полн�
     data: { today, currentBrief: brief, message, lastQuestion: answerContext?.question ?? null, askedFields: answerContext?.fields ?? [], fieldDefinitions: briefProperties, equipment: PROGRAM_EQUIPMENT,
       catalog: PROGRAM_CATALOG.map(({ ref, name }) => ({ ref, name })) },
   })
-  return decodeQuotedBriefPatch(raw)
+  const decoded = decodeQuotedBriefPatch(raw)
+  const value = record(decoded)
+  const patch = record(value?.patch)
+  // A confirmed exercise exclusion answers the active adjustment question too.
+  // Preserve the trainer's exact words rather than asking the same question again.
+  if (answerContext?.fields.length === 1 && answerContext.fields[0] === 'limitationAdjustments'
+    && patch && Array.isArray(patch.excludedRefs) && patch.limitationAdjustments === undefined
+    && value?.clarification === null && message.trim().length > 0 && message.length <= 500) {
+    return { ...value, patch: { ...patch, limitationAdjustments: message }, evidence: { ...record(value.evidence), limitationAdjustments: message } }
+  }
+  return decoded
 }
 
 export async function invokeProgramGenerator(actorId: string, operationId: string, today: string, brief: ProgramBrief, context: ProgramSourceSnapshot): Promise<unknown> {
@@ -253,10 +263,19 @@ export async function invokeProgramGenerator(actorId: string, operationId: strin
     body: JSON.stringify({ actorId, operationId, today, brief, context }),
   })
   const raw: unknown = await response.json()
-  const metric = record(record(raw)?.metric)
-  if (metric && typeof metric.modelUri === 'string') await reportAiStudioMetric({ functionName: 'fit-generate-program', invocationId: operationId, iamToken: token,
-    modelUri: metric.modelUri, upstreamRequestId: typeof metric.requestId === 'string' ? metric.requestId : null, usage: aiStudioUsage(metric.usage) })
-  if (!response.ok) throw new Error('program_generator_failed')
+  const rawMetrics = record(raw)?.metrics
+  const metrics = Array.isArray(rawMetrics) ? rawMetrics : [record(raw)?.metric]
+  for (const value of metrics) {
+    const metric = record(value)
+    if (metric && typeof metric.modelUri === 'string') await reportAiStudioMetric({ functionName: 'fit-generate-program', invocationId: operationId, iamToken: token,
+      modelUri: metric.modelUri, upstreamRequestId: typeof metric.requestId === 'string' ? metric.requestId : null, usage: aiStudioUsage(metric.usage) })
+  }
+  if (!response.ok) {
+    const failure = record(raw)
+    if (response.status === 422 && failure?.error === 'program_validation_failed' && Array.isArray(failure.issues)
+      && failure.issues.every((issue: unknown) => typeof issue === 'string')) throw new ProgramValidationError(failure.issues)
+    throw new Error('program_generator_failed')
+  }
   return record(raw)?.template
 }
 
@@ -270,7 +289,7 @@ function programSourceSummary(source: ProgramSourceSnapshot): string {
 }
 function programEditIssue(codes: string[]): string {
   if (codes.includes('session_exceeds_time_budget')) return 'Занятие не укладывается в выбранное время. Уменьшите подходы или измените условия программы.'
-  if (codes.some((code) => code.startsWith('missing_weekly_')) || codes.includes('required_exercise_missing')) return 'После замены потерялось обязательное движение или упражнение, которое вы хотели сохранить. Выберите замену того же движения.'
+  if (codes.includes('required_exercise_missing')) return 'После замены потерялось упражнение, которое вы просили сохранить. Уточните условия программы или верните это упражнение.'
   if (codes.some((code) => /progression|volume_jump/u.test(code))) return 'Правка создаёт слишком резкий переход нагрузки между неделями. Уменьшите изменение или согласуйте значения для этого дня во всех неделях.'
   if (codes.some((code) => /load_limit|volume_limit/u.test(code))) return 'Назначение превышает согласованный объём или усилие. Уменьшите подходы или RPE.'
   if (codes.includes('repeated_loaded_trunk')) return 'В одном занятии оказалось несколько тяжёлых движений без опоры корпуса. Выберите упражнение с опорой или уменьшите усилие.'
