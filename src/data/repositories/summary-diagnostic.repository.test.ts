@@ -1,8 +1,8 @@
 import { expect, it, vi } from 'vitest'
-import { summaryDiagnosticQuery } from '../queries/summary-diagnostic.queries'
-import { getSummaryDiagnostic } from './summary-diagnostic.repository'
+import { legacySummaryDiagnosticQuery, summaryDiagnosticQuery } from '../queries/summary-diagnostic.queries'
+import { getLegacySummaryDiagnostic, getSummaryDiagnostic } from './summary-diagnostic.repository'
 
-vi.mock('../queries/summary-diagnostic.queries', () => ({ summaryDiagnosticQuery: vi.fn() }))
+vi.mock('../queries/summary-diagnostic.queries', () => ({ summaryDiagnosticQuery: vi.fn(), legacySummaryDiagnosticQuery: vi.fn() }))
 const valid = {
   diagnostic: true,
   ready: true,
@@ -37,5 +37,15 @@ it('keeps a valid no-model preflight with trace metadata', async () => {
     stats: valid.stats,
     requestId: 'request-id',
     releaseId: 'release-id',
+  })
+})
+
+it('validates the Supabase bridge preflight with the same contract', async () => {
+  vi.mocked(legacySummaryDiagnosticQuery).mockResolvedValue(valid)
+
+  await expect(getLegacySummaryDiagnostic('client', '2026-08-16', '2026-09-15')).resolves.toMatchObject({
+    ready: true,
+    code: 'available',
+    requestId: 'request-id',
   })
 })

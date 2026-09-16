@@ -18,3 +18,15 @@ export async function verifiedSupabaseAccessToken(): Promise<string> {
   if (current.error || !currentToken) throw authenticationRequired()
   return currentToken
 }
+
+/**
+ * Refreshes an existing browser session after the server has rejected its
+ * access token. This is deliberately server-driven: valid sessions keep using
+ * the fast path, while a stale token gets exactly one recovery attempt.
+ */
+export async function refreshSupabaseAccessToken(): Promise<string> {
+  const refreshed = await supabase.auth.refreshSession()
+  const refreshedToken = refreshed.data.session?.access_token
+  if (refreshed.error || !refreshedToken) throw authenticationRequired()
+  return refreshedToken
+}

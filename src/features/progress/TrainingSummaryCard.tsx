@@ -697,12 +697,13 @@ export function ClientTrainingSummaryCard(props: {
   clientId: string; profileGoal?: string | null; gender?: Gender | null; measurementManagement?: ReactNode
 }) {
   const { actor } = useAuth()
+  const dataBackend = useDataBackend()
   const yandexSession = useOptionalYandexAppSession()?.session ?? null
   const [params] = useSearchParams()
   const [diagnosticWindow] = useState(() => Date.now() < Date.parse('2026-09-18T00:00:00Z'))
   if (params.get('summaryDiagnostic') === '1' && diagnosticWindow) {
     const range = summaryPeriodRange('1m', todayInTimeZone(actor?.timezone))
-    return <SummaryDiagnosticPanel apiBaseUrl={getYandexMainRoutingConfig()?.apiBaseUrl ?? null} sessionToken={yandexSession?.session.token ?? null} clientId={props.clientId} periodStart={range.start} periodEnd={range.end} />
+    return <SummaryDiagnosticPanel backendSource={dataBackend.source} apiBaseUrl={getYandexMainRoutingConfig()?.apiBaseUrl ?? null} sessionToken={yandexSession?.session.token ?? null} clientId={props.clientId} periodStart={range.start} periodEnd={range.end} />
   }
   return <ClientTrainingSummaryContent {...props} />
 }

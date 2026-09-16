@@ -1,10 +1,43 @@
 import { afterEach, expect, it, vi } from 'vitest'
 
-import { summaryDiagnosticQuery } from './summary-diagnostic.queries'
+const invokeLegacyCloudFunction = vi.hoisted(() => vi.fn())
+vi.mock('./legacy-cloud-functions', () => ({ invokeLegacyCloudFunction }))
+
+import { legacySummaryDiagnosticQuery, summaryDiagnosticQuery } from './summary-diagnostic.queries'
 
 afterEach(() => {
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
+  invokeLegacyCloudFunction.mockReset()
+})
+
+it('runs the Supabase diagnostic through the same legacy bridge with no model call', async () => {
+  invokeLegacyCloudFunction.mockResolvedValue({
+    data: {
+      diagnostic: true,
+      calls: 0,
+      fingerprint: 'fingerprint',
+      stats: { workouts: 1, exercises: 2, sets: 3, model_input_chars: 400 },
+    },
+    error: null,
+    response: new Response('{}', { headers: { 'x-fit-request-id': 'request-id' } }),
+  })
+
+  await expect(legacySummaryDiagnosticQuery('client-id', '2026-08-16', '2026-09-15')).resolves.toMatchObject({
+    diagnostic: true,
+    calls: 0,
+    ready: true,
+    code: 'available',
+    request_id: 'request-id',
+  })
+  expect(invokeLegacyCloudFunction).toHaveBeenCalledWith('summarize-client-training', {
+    client_id: 'client-id',
+    period_start: '2026-08-16',
+    period_end: '2026-09-15',
+    force: true,
+    trigger_reason: 'manual_refresh',
+    diagnostic: 'preflight',
+  }, { includeResponse: true })
 })
 
 it('uses the production bridge and stops at the no-model preflight', async () => {
