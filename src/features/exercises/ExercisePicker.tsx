@@ -12,6 +12,7 @@ import { compareCatalogBrowseOrder, exerciseCatalogRoot, groupCatalogResults, is
 import { VITAL_GYM_PRO_MAIN_REF_CANDIDATES } from '../../shared/vital-gym-pro.generated'
 import { CatalogVariantField } from './CatalogControls'
 import { ExerciseTechniqueContent, hasExerciseAnimation, hasExerciseMedia } from './ExerciseTechnique'
+import { canonicalEquipment, EXERCISE_PURPOSE_LABELS, EXERCISE_PURPOSES, exercisePurposes, type ExercisePurpose } from '../../shared/exercise-catalog-filters'
 
 export function filterExercises(
   exercises: readonly ExerciseSnapshot[],
@@ -19,45 +20,83 @@ export function filterExercises(
   search: string,
   muscle: string | null = null,
   equipment: string | null = null,
+  purpose: ExercisePurpose | null = null,
   searchOptions: ExerciseSearchOptions = {},
 ): readonly ExerciseSnapshot[] {
   const allowed = exercises
-    .filter((exercise) => {
-      return (category === 'all' || exercise.muscleGroup === category)
-        && (!muscle || exercise.primaryMuscleDetail === muscle)
-        && (!equipment || exercise.equipment === equipment)
-    })
+    .filter((exercise) => matchesExerciseFilters(exercise, category, muscle, equipment, purpose))
   if (!search.trim()) return allowed.sort((left, right) => left.name.localeCompare(right.name, 'ru'))
   return rankExerciseSearch(allowed, search, searchOptions)
     .filter(({ exercise }) => matchesExerciseSearch(exercise, search))
     .map(({ exercise }) => exercise)
 }
 
-// Детальные мышцы выбранной группы (2-й уровень иерархии), по частоте.
-export function musclesForGroup(
-  exercises: readonly ExerciseSnapshot[],
-  group: MuscleGroup,
-): string[] {
+function matchesExerciseFilters(
+  exercise: ExerciseSnapshot,
+  category: 'all' | MuscleGroup,
+  muscle: string | null,
+  equipment: string | null,
+  purpose: ExercisePurpose | null,
+) {
+  return (category === 'all' || exercise.muscleGroup === category)
+    && (!muscle || exercise.primaryMuscleDetail === muscle)
+    && (!equipment || canonicalEquipment(exercise.equipment) === equipment)
+    && (!purpose || exercisePurposes(exercise).includes(purpose))
+}
+
+function valuesByFrequency(values: readonly (string | null | undefined)[]) {
   const counts = new Map<string, number>()
-  for (const exercise of exercises) {
-    if (exercise.muscleGroup !== group || !exercise.primaryMuscleDetail) continue
-    counts.set(exercise.primaryMuscleDetail, (counts.get(exercise.primaryMuscleDetail) ?? 0) + 1)
+  for (const value of values) {
+    if (!value) continue
+    counts.set(value, (counts.get(value) ?? 0) + 1)
   }
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ru')).map(([name]) => name)
 }
 
-// Оборудование для выбранной группы/мышцы (3-й уровень иерархии), по частоте.
-export function equipmentForSelection(
+// Детальные мышцы выбранной группы (2-й уровень иерархии), по частоте.
+export function musclesForGroup(
   exercises: readonly ExerciseSnapshot[],
   group: MuscleGroup,
-  muscle: string | null,
+  equipment: string | null = null,
+  purpose: ExercisePurpose | null = null,
 ): string[] {
-  const counts = new Map<string, number>()
-  for (const exercise of exercises) {
-    if (exercise.muscleGroup !== group || (muscle && exercise.primaryMuscleDetail !== muscle) || !exercise.equipment) continue
-    counts.set(exercise.equipment, (counts.get(exercise.equipment) ?? 0) + 1)
-  }
-  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ru')).map(([name]) => name)
+  return valuesByFrequency(exercises
+    .filter((exercise) => matchesExerciseFilters(exercise, group, null, equipment, purpose))
+    .map((exercise) => exercise.primaryMuscleDetail))
+}
+
+export function groupsForSelection(
+  exercises: readonly ExerciseSnapshot[],
+  equipment: string | null,
+  purpose: ExercisePurpose | null,
+): MuscleGroup[] {
+  const available = new Set(exercises
+    .filter((exercise) => matchesExerciseFilters(exercise, 'all', null, equipment, purpose))
+    .map((exercise) => exercise.muscleGroup))
+  return MUSCLE_GROUPS.filter((group) => available.has(group))
+}
+
+export function equipmentForSelection(
+  exercises: readonly ExerciseSnapshot[],
+  group: 'all' | MuscleGroup,
+  muscle: string | null,
+  purpose: ExercisePurpose | null = null,
+): string[] {
+  return valuesByFrequency(exercises
+    .filter((exercise) => matchesExerciseFilters(exercise, group, muscle, null, purpose))
+    .map((exercise) => canonicalEquipment(exercise.equipment)))
+}
+
+export function purposesForSelection(
+  exercises: readonly ExerciseSnapshot[],
+  group: 'all' | MuscleGroup,
+  muscle: string | null,
+  equipment: string | null,
+): ExercisePurpose[] {
+  const available = new Set(exercises
+    .filter((exercise) => matchesExerciseFilters(exercise, group, muscle, equipment, null))
+    .flatMap((exercise) => exercisePurposes(exercise)))
+  return EXERCISE_PURPOSES.filter((purpose) => available.has(purpose))
 }
 
 interface ExercisePickerProps {
@@ -127,9 +166,12 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const [category, setCategory] = useState<'all' | MuscleGroup>('all')
   const [muscle, setMuscle] = useState<string | null>(null)
   const [equipment, setEquipment] = useState<string | null>(null)
+  const [purpose, setPurpose] = useState<ExercisePurpose | null>(null)
   const [search, setSearch] = useState(initialSearch)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+  const filterToggleRef = useRef<HTMLButtonElement>(null)
+  const filterCloseRef = useRef<HTMLButtonElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const savedScrollTop = useRef(0)
   const [previewExercise, setPreviewExercise] = useState<ExerciseSnapshot | null>(null)
@@ -159,7 +201,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     [clientRecent],
   )
   const filtered = useMemo(() => {
-    const matches = filterExercises(selectableCatalog, category, search, muscle, equipment, { preferredExerciseRefs: preferredSearchRefs, customFirst: true })
+    const matches = filterExercises(selectableCatalog, category, search, muscle, equipment, purpose, { preferredExerciseRefs: preferredSearchRefs, customFirst: true })
       .filter((exercise) => matchesPickerMode(exercise, activeMode))
       .filter((exercise) => !customOnly || exercise.source === 'custom')
       .filter((exercise) => search.trim()
@@ -169,18 +211,37 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         || (!hasVitalMainCatalog && isCatalogRoot(exercise)))
     if (!search.trim()) matches.sort(compareCatalogBrowseOrder)
     return groupCatalogResults(matches)
-  }, [activeMode, selectableCatalog, category, search, muscle, equipment, customOnly, preferredSearchRefs, hasVitalMainCatalog, vitalMainRefs])
-  // Детальные мышцы выбранной группы (2-й уровень). Показываем, если их >1.
+  }, [activeMode, selectableCatalog, category, search, muscle, equipment, purpose, customOnly, preferredSearchRefs, hasVitalMainCatalog, vitalMainRefs])
+  const facetCatalog = useMemo(
+    () => selectableCatalog
+      .filter((exercise) => matchesPickerMode(exercise, activeMode))
+      .filter((exercise) => !customOnly || exercise.source === 'custom'),
+    [activeMode, customOnly, selectableCatalog],
+  )
+  const groupOptions = useMemo(
+    () => groupsForSelection(facetCatalog, equipment, purpose),
+    [equipment, facetCatalog, purpose],
+  )
   const muscles = useMemo(
-    () => (category === 'all' ? [] : musclesForGroup(selectableCatalog, category)),
-    [selectableCatalog, category],
+    () => (category === 'all' ? [] : musclesForGroup(facetCatalog, category, equipment, purpose)),
+    [category, equipment, facetCatalog, purpose],
   )
   const equipmentOptions = useMemo(
-    () => (category === 'all' ? [] : equipmentForSelection(selectableCatalog, category, muscle)),
-    [selectableCatalog, category, muscle],
+    () => equipmentForSelection(facetCatalog, category, muscle, purpose),
+    [category, facetCatalog, muscle, purpose],
   )
-  const hasFilters = category !== 'all' || muscle !== null || equipment !== null || customOnly
-  const activeFilterCount = [category !== 'all', muscle !== null, equipment !== null, customOnly].filter(Boolean).length
+  const purposeOptions = useMemo(
+    () => purposesForSelection(facetCatalog, category, muscle, equipment),
+    [category, equipment, facetCatalog, muscle],
+  )
+  const canEnableCustomOnly = useMemo(
+    () => selectableCatalog
+      .filter((exercise) => exercise.source === 'custom' && matchesPickerMode(exercise, activeMode))
+      .some((exercise) => matchesExerciseFilters(exercise, category, muscle, equipment, purpose)),
+    [activeMode, category, equipment, muscle, purpose, selectableCatalog],
+  )
+  const hasFilters = category !== 'all' || muscle !== null || equipment !== null || purpose !== null || customOnly
+  const activeFilterCount = [category !== 'all', muscle !== null, equipment !== null, purpose !== null, customOnly].filter(Boolean).length
   const runningExercise = useMemo(() => selectableCatalog.find((exercise) => exercise.ref === 'running'), [selectableCatalog])
   const runningDrills = useMemo(
     () => selectableCatalog.filter((exercise) => exercise.ref !== 'running' && RUNNING_EXERCISE_REFS.has(exercise.ref)),
@@ -214,7 +275,19 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   useEffect(() => {
     setVisibleCount(PICKER_BATCH_SIZE)
     setPlayingExerciseKey(null)
-  }, [activeMode, category, customOnly, equipment, muscle, search])
+  }, [activeMode, category, customOnly, equipment, muscle, purpose, search])
+
+  useEffect(() => {
+    if (!filtersOpen) return
+    filterCloseRef.current?.focus()
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      closeFilters()
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [filtersOpen])
 
   function openCreate() {
     setName(search.trim())
@@ -248,6 +321,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     setCategory('all')
     setMuscle(null)
     setEquipment(null)
+    setPurpose(null)
     setCustomOnly(false)
   }
   function clearSearch() {
@@ -263,12 +337,17 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     if (!filtersOpen) searchRef.current?.blur()
     setFiltersOpen((value) => !value)
   }
+  function closeFilters() {
+    setFiltersOpen(false)
+    requestAnimationFrame(() => filterToggleRef.current?.focus())
+  }
   function selectMode(next: Exclude<ExercisePickerMode, 'choose'>) {
     setMode(next)
     setRunningStep('formats')
     setCategory('all')
     setMuscle(null)
     setEquipment(null)
+    setPurpose(null)
     setCustomOnly(false)
   }
   function openTechnique(exercise: ExerciseSnapshot) {
@@ -307,9 +386,10 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
       <button type="button" className="picker-select-mark" aria-label={checked ? `Убрать: ${exercise.name}` : multiple ? `Выбрать: ${exercise.name}` : `Добавить: ${exercise.name}`} aria-pressed={multiple ? checked : undefined} data-exercise-ref={exercise.ref} data-exercise-source={exercise.source} onClick={() => pick(exercise)}>{checked ? <CheckIcon /> : <AddIcon />}</button>
     </article>
   }
-  // Выбор группы сбрасывает выбранную мышцу (иначе останется от прошлой группы).
-  function selectGroup(next: 'all' | MuscleGroup) { setCategory(next); setMuscle(null); setEquipment(null) }
-  function selectMuscle(next: string | null) { setMuscle(next); setEquipment(null) }
+  // Мышца принадлежит группе, поэтому при смене группы сбрасываем только её.
+  // Остальные фасеты уже ограничивают список доступных групп и остаются валидными.
+  function selectGroup(next: 'all' | MuscleGroup) { setCategory(next); setMuscle(null) }
+  function selectMuscle(next: string | null) { setMuscle(next) }
   function stopPropagation(event: MouseEvent) { event.stopPropagation() }
   async function createExercise() {
     if (!name.trim() || !group) return
@@ -351,24 +431,34 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         <button type="button" className="primary" disabled={catalog.saving || !name.trim() || !group} onClick={() => void createExercise()}>{catalog.saving ? 'Сохранение…' : 'Сохранить упражнение'}</button>
       </div> : <>
         <div className="workout-kind-tabs" role="group" aria-label="Направление тренировки"><button type="button" aria-pressed={activeMode === 'strength'} className={activeMode === 'strength' ? 'active' : ''} onClick={() => selectMode('strength')}>Силовая</button><button type="button" aria-pressed={activeMode === 'running'} className={activeMode === 'running' ? 'active' : ''} onClick={() => selectMode('running')}>Бег</button><button type="button" aria-pressed={activeMode === 'all'} className={activeMode === 'all' ? 'active' : ''} onClick={() => selectMode('all')}>Все</button></div>
-        <div className="picker-search-row"><div className="picker-search-control"><input ref={searchRef} className="picker-search" aria-label="Поиск упражнения" placeholder={activeMode === 'running' ? 'Бег или СБУ' : 'Название упражнения'} value={search} onFocus={() => setFiltersOpen(false)} onKeyDown={handleSearchKeyDown} onChange={(event) => setSearch(event.target.value)} />{search && <button type="button" className="picker-search-clear" aria-label="Очистить поиск" onClick={clearSearch}><CloseIcon /></button>}</div><button type="button" className={`picker-filter-toggle${hasFilters ? ' active' : ''}`} aria-expanded={filtersOpen} onClick={toggleFilters}>Фильтры{activeFilterCount ? ` ${activeFilterCount}` : ''}</button></div>
+        <div className="picker-search-row"><div className="picker-search-control"><input ref={searchRef} className="picker-search" aria-label="Поиск упражнения" placeholder={activeMode === 'running' ? 'Бег или СБУ' : 'Название упражнения'} value={search} onFocus={() => setFiltersOpen(false)} onKeyDown={handleSearchKeyDown} onChange={(event) => setSearch(event.target.value)} />{search && <button type="button" className="picker-search-clear" aria-label="Очистить поиск" onClick={clearSearch}><CloseIcon /></button>}</div><button ref={filterToggleRef} type="button" className={`picker-filter-toggle${hasFilters ? ' active' : ''}`} aria-expanded={filtersOpen} onClick={toggleFilters}>Фильтры{activeFilterCount ? ` ${activeFilterCount}` : ''}</button></div>
         {filtersOpen && <div className="picker-filter-layer">
-          <button type="button" className="picker-filter-scrim" aria-label="Закрыть фильтры" onClick={() => setFiltersOpen(false)} />
+          <button type="button" className="picker-filter-scrim" aria-label="Закрыть фильтры" onClick={closeFilters} />
           <section className="picker-filter-panel" aria-label="Настройки фильтров">
-            <header><h2>Фильтры</h2><button type="button" className="picker-filter-close" aria-label="Закрыть фильтры" onClick={() => setFiltersOpen(false)}><CloseIcon /></button></header>
-            <div className="picker-filter-fields">
-              <label>Группа<select aria-label="Группа мышц" value={category} onChange={(event) => selectGroup(event.target.value as 'all' | MuscleGroup)}><option value="all">Все группы</option>{MUSCLE_GROUPS.map((item) => <option key={item} value={item}>{MUSCLE_GROUP_LABELS[item]}</option>)}</select></label>
-              {category !== 'all' && muscles.length > 1 && <label>Мышца<select aria-label="Мышца" value={muscle ?? ''} onChange={(event) => selectMuscle(event.target.value || null)}><option value="">Все мышцы</option>{muscles.map((item) => <option key={item}>{item}</option>)}</select></label>}
-              {category !== 'all' && equipmentOptions.length > 1 && <label>Оборудование<select aria-label="Оборудование" value={equipment ?? ''} onChange={(event) => setEquipment(event.target.value || null)}><option value="">Всё оборудование</option>{equipmentOptions.map((item) => <option key={item}>{item}</option>)}</select></label>}
+            <header><h2>Фильтры</h2><button ref={filterCloseRef} type="button" className="picker-filter-close" aria-label="Закрыть фильтры" onClick={closeFilters}><CloseIcon /></button></header>
+            <div className="picker-filter-body">
+              <fieldset className="picker-purpose-filter">
+                <legend>Назначение</legend>
+                <div role="group" aria-label="Назначение">
+                  <button type="button" aria-pressed={purpose === null} className={purpose === null ? 'active' : ''} onClick={() => setPurpose(null)}>Все</button>
+                  {EXERCISE_PURPOSES.map((item) => <button type="button" key={item} aria-pressed={purpose === item} className={purpose === item ? 'active' : ''} disabled={purpose !== item && !purposeOptions.includes(item)} onClick={() => setPurpose(item)}>{EXERCISE_PURPOSE_LABELS[item]}</button>)}
+                </div>
+              </fieldset>
+              <div className="picker-filter-fields">
+                <label>Группа<select aria-label="Группа мышц" value={category} onChange={(event) => selectGroup(event.target.value as 'all' | MuscleGroup)}><option value="all">Все группы</option>{MUSCLE_GROUPS.map((item) => <option key={item} value={item} disabled={category !== item && !groupOptions.includes(item)}>{MUSCLE_GROUP_LABELS[item]}</option>)}</select></label>
+                {category !== 'all' && muscles.length > 1 && <label>Мышца<select aria-label="Мышца" value={muscle ?? ''} onChange={(event) => selectMuscle(event.target.value || null)}><option value="">Все мышцы</option>{muscles.map((item) => <option key={item}>{item}</option>)}</select></label>}
+                <label>Оборудование<select aria-label="Оборудование" value={equipment ?? ''} onChange={(event) => setEquipment(event.target.value || null)}><option value="">Всё оборудование</option>{equipmentOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
+              </div>
+              <label className="picker-custom-filter"><input type="checkbox" checked={customOnly} disabled={!customOnly && !canEnableCustomOnly} onChange={(event) => setCustomOnly(event.target.checked)} />Только мои упражнения</label>
             </div>
-            <label className="picker-custom-filter"><input type="checkbox" checked={customOnly} onChange={(event) => setCustomOnly(event.target.checked)} />Только мои упражнения</label>
-            <div className="picker-filter-actions"><button type="button" className="link" disabled={!hasFilters} onClick={resetFilters}>Сбросить</button><button type="button" className="primary" onClick={() => setFiltersOpen(false)}>Показать {exerciseCountLabel(filtered.length)}</button></div>
+            <footer className="picker-filter-actions"><button type="button" className="link" disabled={!hasFilters} onClick={resetFilters}>Сбросить</button><button type="button" className="primary" onClick={closeFilters}>Показать {exerciseCountLabel(filtered.length)}</button></footer>
           </section>
         </div>}
         {hasFilters && !filtersOpen && <div className="picker-filter-chips" aria-label="Выбранные фильтры"><div>
           {category !== 'all' && <button type="button" onClick={() => selectGroup('all')}><span>{MUSCLE_GROUP_LABELS[category]}</span><CloseIcon /></button>}
           {muscle && <button type="button" onClick={() => selectMuscle(null)}><span>{muscle}</span><CloseIcon /></button>}
           {equipment && <button type="button" onClick={() => setEquipment(null)}><span>{equipment}</span><CloseIcon /></button>}
+          {purpose && <button type="button" onClick={() => setPurpose(null)}><span>{EXERCISE_PURPOSE_LABELS[purpose]}</span><CloseIcon /></button>}
           {customOnly && <button type="button" onClick={() => setCustomOnly(false)}><span>Только мои</span><CloseIcon /></button>}
         </div>
           <button type="button" className="picker-filter-reset" onClick={resetFilters}>Сбросить</button>
