@@ -130,6 +130,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [rpeOverrides, setRpeOverrides] = useState<Map<number, boolean>>(() => new Map())
   const [restOverrides, setRestOverrides] = useState<Map<number, boolean>>(() => new Map())
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerSelectionDraft, setPickerSelectionDraft] = useState<ExerciseSnapshot[]>([])
   const [pickerFromCompose, setPickerFromCompose] = useState(false)
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const [clientId, setClientId] = useState('')
@@ -738,7 +739,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </section></section>}
     </section>}
     {(catalog.error ?? (!clientMode ? todayWorkouts.error : null)) && <p className="error">{(catalog.error ?? (!clientMode ? todayWorkouts.error : null))?.message}</p>}
-    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} selectionDraft={replaceIndex === null ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
   </Page>
 }
 
