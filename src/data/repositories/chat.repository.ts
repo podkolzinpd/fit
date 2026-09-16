@@ -1,4 +1,5 @@
 import type { ChatBlockState, ChatConnectionState, ChatImageDraft, ChatMessage, ChatMessagePage, ChatThread, ChatUnreadState } from '../../shared/domain'
+import { blobFromDataUrl } from '../../shared/image-prep'
 import { chatMedia, chatQueries } from '../queries/chat.queries'
 import { chatMediaBridgeQueries } from '../queries/chat-media-bridge.queries'
 import { repositoryError } from './error'
@@ -39,14 +40,6 @@ async function message(row: MessageRow): Promise<ChatMessage> {
     createdAt: row.created_at, editedAt: row.edited_at,
     replyTo: row.reply_to_message_id ? { messageId: row.reply_to_message_id, senderId: row.reply_to_sender_id ?? null,
       body: row.reply_to_body ?? null, hasImage: row.reply_to_has_image === true, deleted: row.reply_to_deleted === true } : null }
-}
-
-function blobFromDataUrl(dataUrl: string): Blob {
-  const encoded = dataUrl.slice('data:image/jpeg;base64,'.length)
-  const binary = atob(encoded)
-  const bytes = new Uint8Array(binary.length)
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
-  return new Blob([bytes], { type: 'image/jpeg' })
 }
 
 export const chatRepository = {
