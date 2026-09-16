@@ -40,6 +40,7 @@ import { NotificationOnboarding } from '../notifications'
 import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, KeyboardIcon } from '../../shared/icons'
 import { ChatHeaderAction } from '../chat'
 import { TrainerDiscoveryHomeCard } from '../clients/TrainerDiscoveryHomeCard'
+import { YandexAccountLinkingCard } from '../auth'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -619,6 +620,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const pageTitle = greetingHeaderPilotEnabled ? greeting : header.title
   return <Page title={pageTitle} hideTitle={header.hideTitle} className="today-page today-start-page" action={<div className="today-header-actions"><ChatHeaderAction />{header.showProfileAvatar && <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}</div>}>
     {actor && screen === 'compose' && !textComposerOpen && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} role={clientMode ? 'client' : 'trainer'} /></>}
+    {actor && screen === 'compose' && <YandexAccountLinkingCard actor={actor} />}
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
       {!greetingHeaderPilotEnabled && <p className="today-greeting">{greeting} 👋</p>}
       {clientMode && !textComposerOpen ? <><ClientHomeOverview

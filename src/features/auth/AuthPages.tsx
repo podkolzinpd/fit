@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type PropsWithChildren } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { authRepository } from '../../data/repositories/auth.repository'
 import {
@@ -479,14 +480,15 @@ function YandexReadOnlyPilotCallbackPage() {
 function YandexAccountLinkingCallbackPage() {
   const { actor, loading } = useAuth()
   const { establish } = useYandexAppSession()
-  const config = actor === null ? null : getYandexSessionLinkingConfig(actor.userId)
+  const queryClient = useQueryClient()
+  const config = actor === null ? null : getYandexSessionLinkingConfig()
   const apiBaseUrl = config?.apiBaseUrl ?? null
   const clientId = config?.clientId ?? null
   const [linked, setLinked] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [restartBusy, setRestartBusy] = useState(false)
   const linkRequest = useRef<Promise<void> | null>(null)
-  const profilePath = actor?.role === 'client' ? '/me/profile' : '/profile'
+  const homePath = actor?.role === 'client' ? '/me' : trainerHomePath()
 
   async function restartLinking(): Promise<void> {
     if (clientId === null) return
@@ -497,7 +499,7 @@ function YandexAccountLinkingCallbackPage() {
       const url = await createYandexAuthorizationUrl(clientId, redirectUri, sessionStorage, 'link')
       window.location.assign(url)
     } catch {
-      setError('Не удалось начать привязку Yandex ID. Попробуйте ещё раз из профиля.')
+      setError('Не удалось начать привязку Yandex ID. Попробуйте ещё раз с главной.')
       setRestartBusy(false)
     }
   }
@@ -512,7 +514,7 @@ function YandexAccountLinkingCallbackPage() {
       try {
         if (actor === null) {
           clearPendingYandexAuthorization()
-          throw new Error('Войдите в FIT по email и паролю, затем начните привязку Yandex ID из профиля.')
+          throw new Error('Войдите в FIT по email и паролю, затем начните привязку Yandex ID с главной.')
         }
         if (apiBaseUrl === null) {
           clearPendingYandexAuthorization()
@@ -521,7 +523,7 @@ function YandexAccountLinkingCallbackPage() {
         linkRequest.current ??= Promise.resolve().then(async () => {
           const authorization = consumeYandexAuthorizationCallback(search)
           if (authorization.intent !== 'link') {
-            throw new Error('Начните привязку Yandex ID из профиля FIT.')
+            throw new Error('Начните привязку Yandex ID с главной FIT.')
           }
           const supabaseSession = await authRepository.getSession()
           if (supabaseSession.error) throw supabaseSession.error
@@ -543,7 +545,13 @@ function YandexAccountLinkingCallbackPage() {
           }
         })
         await linkRequest.current
-        if (!cancelled) setLinked(true)
+        if (!cancelled) {
+          queryClient.setQueryData(
+            ['yandex-account-link-status', actor.userId],
+            { linked: true },
+          )
+          setLinked(true)
+        }
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : 'Не удалось привязать Yandex ID.')
       }
@@ -551,7 +559,7 @@ function YandexAccountLinkingCallbackPage() {
 
     void linkAccount()
     return () => { cancelled = true }
-  }, [actor, apiBaseUrl, establish, loading])
+  }, [actor, apiBaseUrl, establish, loading, queryClient])
 
   return <AuthIdentityScreen className="auth-yandex-link-flow">
     <header className="auth-entry-head">
@@ -572,12 +580,12 @@ function YandexAccountLinkingCallbackPage() {
       title="Привязка не завершена"
       description={error}
       action={clientId === null
-        ? <Link className="button secondary" to={actor ? profilePath : '/auth'}>{actor ? 'Вернуться в профиль' : 'Вернуться ко входу'}</Link>
+        ? <Link className="button secondary" to={actor ? homePath : '/auth'}>{actor ? 'Вернуться на главную' : 'Вернуться ко входу'}</Link>
         : <button type="button" className="secondary" aria-busy={restartBusy} disabled={restartBusy} onClick={() => void restartLinking()}>
           {restartBusy ? 'Переходим в Yandex ID…' : 'Начать заново'}
         </button>}
     />}
-    <Link className="auth-back-link" to={actor ? profilePath : '/auth'}>{actor ? 'Вернуться в профиль' : 'Вернуться ко входу'}</Link>
+    <Link className="auth-back-link" to={actor ? homePath : '/auth'}>{actor ? 'Вернуться на главную' : 'Вернуться ко входу'}</Link>
   </AuthIdentityScreen>
 }
 

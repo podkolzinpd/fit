@@ -43,8 +43,13 @@ export interface YandexIdentityLink {
   profileId: string
 }
 
+export interface YandexIdentityLinkStatus {
+  linked: boolean
+}
+
 export interface YandexAccountLinker {
   linkActor(actor: ExistingActor, subjectHash: string): Promise<YandexIdentityLink>
+  readStatus(actor: ExistingActor): Promise<YandexIdentityLinkStatus>
 }
 
 export type YandexAccountLinkFailure =
@@ -62,6 +67,10 @@ export class YandexAccountLinkError extends Error {
 
 interface LinkedIdentityRow extends QueryResultRow {
   profile_id: string
+}
+
+interface LinkedIdentityStatusRow extends QueryResultRow {
+  linked: boolean
 }
 
 function mapYandexAccountLinkError(error: unknown): YandexAccountLinkError | undefined {
@@ -230,5 +239,14 @@ export class DatabaseYandexAccountLinker implements YandexAccountLinker {
   linkActor(actor: ExistingActor, subjectHash: string): Promise<YandexIdentityLink> {
     return withActorTransaction(this.pool, actor.profile.id, (client) =>
       linkYandexIdentity(client, actor, subjectHash))
+  }
+
+  readStatus(actor: ExistingActor): Promise<YandexIdentityLinkStatus> {
+    return withActorTransaction(this.pool, actor.profile.id, async (client) => {
+      const rows = await client.query<LinkedIdentityStatusRow>(
+        'select public.has_yandex_identity() as linked',
+      )
+      return { linked: rows[0]?.linked === true }
+    })
   }
 }

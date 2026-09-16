@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { YandexPilotCallbackPage } from './AuthPages'
@@ -59,6 +60,15 @@ async function linkingCallbackSearch(): Promise<string> {
   return `?code=one-time-code&state=${authorizationUrl.searchParams.get('state')}`
 }
 
+function renderCallback() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(<QueryClientProvider client={queryClient}>
+    <MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>
+  </QueryClientProvider>)
+}
+
 describe('Yandex account linking callback', () => {
   beforeEach(() => {
     useAuth.mockReset()
@@ -77,7 +87,6 @@ describe('Yandex account linking callback', () => {
     vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
     vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS', 'trainer-1')
     vi.stubGlobal('crypto', {
       getRandomValues: (bytes: Uint8Array) => bytes.fill(7),
       subtle: { digest: vi.fn().mockResolvedValue(new Uint8Array(32).fill(9).buffer) },
@@ -94,7 +103,7 @@ describe('Yandex account linking callback', () => {
   it('links the current FIT account and clears the OAuth query', async () => {
     window.history.replaceState(null, '', `/auth/yandex/callback${await linkingCallbackSearch()}`)
 
-    render(<MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>)
+    renderCallback()
 
     expect(await screen.findByRole('heading', { name: 'Yandex ID привязан' })).toBeVisible()
     expect(screen.getByText('Теперь этот Yandex ID связан с текущим FIT-профилем. Основной вход пока остаётся прежним.')).toBeVisible()
@@ -127,20 +136,20 @@ describe('Yandex account linking callback', () => {
     vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', linkedSession.profile.id)
     window.history.replaceState(null, '', `/auth/yandex/callback${await linkingCallbackSearch()}`)
 
-    render(<MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>)
+    renderCallback()
 
     expect(await screen.findByRole('heading', { name: 'Yandex ID привязан' })).toBeVisible()
     expect(establishYandexSession).toHaveBeenCalledWith(linkedSession)
   })
 
-  it('does not link when the current user is outside the rollout allowlist', async () => {
-    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS', 'trainer-2')
+  it('does not link when the global switch is off', async () => {
+    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', '')
     window.history.replaceState(null, '', `/auth/yandex/callback${await linkingCallbackSearch()}`)
 
-    render(<MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>)
+    renderCallback()
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Привязка Yandex ID пока недоступна для этого аккаунта.')
-    expect(screen.getAllByRole('link', { name: 'Вернуться в профиль' })[0]).toHaveAttribute('href', '/profile')
+    expect(screen.getAllByRole('link', { name: 'Вернуться на главную' })[0]).toHaveAttribute('href', '/today')
     expect(authRepository.getSession).not.toHaveBeenCalled()
     expect(yandexPilotRepository.linkYandexAccount).not.toHaveBeenCalled()
     expect(peekPendingYandexAuthorizationIntent()).toBe('pilot')
@@ -150,9 +159,9 @@ describe('Yandex account linking callback', () => {
     useAuth.mockReturnValue({ actor: null, loading: false, error: null, refresh: vi.fn() })
     window.history.replaceState(null, '', `/auth/yandex/callback${await linkingCallbackSearch()}`)
 
-    render(<MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>)
+    renderCallback()
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Войдите в FIT по email и паролю, затем начните привязку Yandex ID из профиля.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Войдите в FIT по email и паролю, затем начните привязку Yandex ID с главной.')
     expect(screen.getAllByRole('link', { name: 'Вернуться ко входу' })[0]).toHaveAttribute('href', '/auth')
     expect(authRepository.getSession).not.toHaveBeenCalled()
     expect(yandexPilotRepository.linkYandexAccount).not.toHaveBeenCalled()

@@ -335,26 +335,25 @@ VITE_TODAY_GREETING_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 авторизации: данные и мутации защищаются существующими RLS/ownership-
 проверками.
 
-Закрытый пилот привязки существующего FIT-аккаунта к Yandex ID использует
-общие публичные настройки Yandex ID и две независимые build-time переменные:
+Привязка существующего FIT-аккаунта к Yandex ID использует общие публичные
+настройки Yandex ID и глобальный build-time switch:
 
 ```text
-VITE_YANDEX_ID_PILOT_ENABLED=true
 VITE_YANDEX_OAUTH_CLIENT_ID=<public Yandex OAuth client id>
 VITE_YANDEX_API_BASE_URL=<https Yandex stage API base URL>
 VITE_YANDEX_SESSION_LINKING_ENABLED=true
-VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 ```
 
-Механизм default-off: карточка привязки скрыта, пока
-`VITE_YANDEX_SESSION_LINKING_ENABLED` не равно точному `true`, allowlist пуст
-или текущий `actor.userId` отсутствует в
-`VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS`. Изменение списка требует нового
-deployment. UUID и публичный OAuth Client ID видны во frontend bundle, поэтому
-allowlist не является границей авторизации: callback передаёт текущую
-Supabase-сессию в stage API, а данные и мутации защищаются backend
-ownership/RLS-проверками. OAuth Client Secret в Vite/Vercel frontend variables
-не добавляется.
+При точном значении `true` блок показывается всем авторизованным пользователям
+на главной странице. Stage API по текущей Supabase-сессии возвращает только
+`linked: true/false`: непривязанный профиль видит действие, связанный — статус
+без повторной кнопки. При ошибке доступен явный retry, а auth-запрос ограничен
+таймаутом. Значение кроме точного `true` является глобальным аварийным
+выключателем. Его изменение требует нового deployment. Публичный OAuth Client
+ID виден во frontend bundle и не является границей авторизации: callback и
+проверка статуса передают текущую Supabase-сессию в stage API, а данные и
+мутации защищаются backend ownership/RLS-проверками. OAuth Client Secret в
+Vite/Vercel frontend variables не добавляется.
 
 Linking не требует предварительного tenant import только для корневой identity:
 после проверки Supabase access token stage читает через его RLS точную строку
