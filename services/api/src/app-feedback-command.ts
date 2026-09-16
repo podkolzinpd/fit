@@ -35,7 +35,7 @@ export async function submitAppFeedback(
 ): Promise<string> {
   try {
     const rows = await client.query<AppFeedbackRow>(
-      `select public.submit_app_feedback($1, $2, $3, $4, $5, $6)
+      `select public.submit_app_feedback($1, $2, $3, $4, $5, $6, $7, $8)
         as feedback_id`,
       [
         draft.kind,
@@ -44,6 +44,8 @@ export async function submitAppFeedback(
         draft.appVersion,
         draft.displayMode,
         draft.userAgent,
+        draft.modelInputJson ?? null,
+        draft.modelOutputJson ?? null,
       ],
     )
     const feedbackId = rows[0]?.feedback_id

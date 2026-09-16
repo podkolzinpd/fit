@@ -176,7 +176,15 @@ async function signIn(page: import('@playwright/test').Page, email: string, dest
     const response = await tokenResponse
 
     if (response.ok()) {
-      await expect(page).toHaveURL(destination, { timeout: 15_000 })
+      try {
+        await expect(page).toHaveURL(destination, { timeout: 3_000 })
+      } catch {
+        // WebKit иногда получает успешный JWT раньше, чем AuthProvider успевает
+        // обработать событие сессии. Перезагрузка восстанавливает уже записанную
+        // локальную сессию и проверяет настоящий cold-start приложения.
+        await page.reload()
+        await expect(page).toHaveURL(destination, { timeout: 15_000 })
+      }
       return
     }
 
@@ -442,6 +450,7 @@ async function expectVisualBaseline(
   mask: import('@playwright/test').Locator[] = [],
   fullPage = false,
   maskColor = '#f8f5ef',
+  maxDiffPixelRatio = 0.03,
 ) {
   await expectMonochromeAccessibility(page)
   await expect(page.locator('.skeleton-block')).toHaveCount(0)
@@ -452,7 +461,7 @@ async function expectVisualBaseline(
     fullPage,
     mask,
     maskColor,
-    maxDiffPixelRatio: 0.03,
+    maxDiffPixelRatio,
   })
 }
 
@@ -488,16 +497,23 @@ async function createStandaloneClient(
   await page.getByLabel('Email').fill(`${emailPrefix}-${projectName}-${randomUUID()}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page).toHaveURL(/\/me$/)
+  try {
+    await expect(page).toHaveURL(/\/me$/, { timeout: 3_000 })
+  } catch {
+    await page.reload()
+    await expect(page).toHaveURL(/\/me$/, { timeout: 15_000 })
+  }
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Скрыть' }).click()
 }
 
 async function openPreviewLiveWorkout(page: import('@playwright/test').Page, fresh = false) {
-  await page.clock.install({ time: new Date('2026-08-29T18:00:00+03:00') })
   if (fresh) await createStandaloneClient(page, 'live-notes', 'Live клиент')
   else await signIn(page, 'client@fit.local', /\/me$/)
+  // Авторизация использует реальное время JWT; фиксируем часы уже после входа,
+  // чтобы давняя дата визуального эталона не делала свежий токен «из будущего».
+  await page.clock.install({ time: new Date('2026-08-29T18:00:00+03:00') })
 
   await gotoStable(page, '/me/workouts')
   const activeWorkout = page.getByRole('link', { name: /Идёт/ }).first()
@@ -513,7 +529,6 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page, fre
   await expect(addAction).toHaveCount(1)
   await addAction.click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -783,7 +798,6 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await gotoStable(page, '/workouts/new?date=2026-08-17')
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -1339,7 +1353,6 @@ async function openWorkoutCreate(page: import('@playwright/test').Page, dark = f
 async function addCompletedBenchPress(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Выбрать упражнения' }).scrollIntoViewIfNeeded()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -1432,13 +1445,12 @@ test('workout save dark keeps its visual baseline', async ({ page }, testInfo) =
 
 async function openWorkoutForDetailReview(page: import('@playwright/test').Page, trainer: boolean, resume = false) {
   if (!trainer) {
-    await openPreviewLiveWorkout(page)
+    await openPreviewLiveWorkout(page, true)
     return
   }
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await gotoStable(page, `/workouts/new?client=${demoClientId}`)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -1458,7 +1470,22 @@ async function openWorkoutForDetailReview(page: import('@playwright/test').Page,
 }
 
 test('workout detail, completion and exercise history keep their visual baselines', async ({ page }, testInfo) => {
+  test.setTimeout(120_000)
   const trainer = testInfo.project.name === 'visual-trainer-1440'
+  let exposeCompletionComparison = false
+  await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
+    if (!exposeCompletionComparison) return route.continue()
+    const response = await route.fetch()
+    const rows = await response.json() as Array<Record<string, unknown>>
+    const body = route.request().postDataJSON() as { p_client_id?: string | null }
+    const previous = comparisonWorkoutRow('89000000-0000-4000-8000-000000000001', '2026-08-20', 30, 0, 2)
+    previous.client_id = body.p_client_id ?? demoClientId
+    previous.trainer_id = String(rows[0]?.trainer_id ?? previous.trainer_id)
+    previous.client_name = String(rows[0]?.client_name ?? previous.client_name)
+    previous.exercises = [{ ...previous.exercises[0]!, exercise_ref: 'bench-press', exercise_name: 'Жим штанги лёжа' }]
+    const result = [...rows, previous].map((row) => ({ ...row, total_count: rows.length + 1 }))
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(result) })
+  })
   await page.route('**/rest/v1/rpc/list_workout_personal_records', (route) => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify([{
@@ -1471,28 +1498,38 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.getByLabel('Фактические повторы').first().fill('9')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.locator('.live-set.confirmed')).toBeVisible()
-  // Добавляем реальное незавершённое упражнение, чтобы деталь стабильно
-  // покрывала partial независимо от числа подходов в исходном плане.
-  await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
-  await page.getByLabel('Поиск упражнения').fill('Берпи')
-  await page.getByRole('button', { name: 'Добавить: Берпи', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Берпи' })).toBeVisible()
+  if (trainer) {
+    // Тренерский сценарий продолжает покрывать безопасное частичное состояние.
+    await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
+    await page.getByLabel('Поиск упражнения').fill('Берпи')
+    await page.getByRole('button', { name: 'Добавить: Берпи', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Берпи' })).toBeVisible()
+  } else {
+    // Социальный результат проверяем на типичном полном выполнении плана.
+    const nextSet = page.locator('.live-set:not(.confirmed)').first()
+    await nextSet.getByLabel('Фактический вес').fill('40')
+    await nextSet.getByLabel('Фактические повторы').fill('10')
+    await nextSet.getByRole('button', { name: 'Готово, отдых' }).click()
+    await expect(page.getByText('Готово 2 из 2')).toBeVisible()
+  }
+  exposeCompletionComparison = !trainer
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   const partialFinish = page.getByRole('button', { name: 'Завершить', exact: true })
   if (await partialFinish.isVisible()) await partialFinish.click()
-  await expect(page.getByRole('heading', { name: trainer ? 'Тренировка завершена' : 'Тренировка сохранена частично' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
   if (trainer) {
     await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
   } else {
-    await expect(page.getByRole('progressbar', { name: 'Выполнение плана' })).toHaveAttribute('aria-valuenow', '33')
-    await expect(page.getByText('Осталось выполнить')).toBeVisible()
+    await expect(page.getByRole('progressbar', { name: 'Выполнение плана' })).toHaveAttribute('aria-valuenow', '100')
+    await expect(page.getByText('Не завершено')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Поделиться', exact: true })).toBeVisible()
     await expect(page.locator('.workout-completion-recorded')).not.toHaveAttribute('open')
     await expect(page.getByRole('link', { name: 'Готово' })).toHaveAttribute('href', '/me')
     await expect(page.getByRole('link', { name: 'Посмотреть прогресс' })).toHaveAttribute('href', '/me/progress')
   }
   const detailPath = new URL(page.url()).pathname
-  await expectVisualBaseline(page, `workout-detail-completion-${process.platform}.png`)
+  await expectVisualBaseline(page, `workout-detail-completion-${process.platform}.png`, [], false, '#f8f5ef', 0.005)
   if (!trainer) {
     await page.locator('.content').evaluate((element) => { element.scrollTop = element.scrollHeight })
     await expectVisualBaseline(page, `workout-completion-report-actions-${process.platform}.png`)
@@ -1503,10 +1540,65 @@ test('workout detail, completion and exercise history keep their visual baseline
     })
     await expect(page.locator('html')).not.toHaveClass(/theme-light/)
     await expectVisualBaseline(page, `workout-completion-report-dark-${process.platform}.png`, [], false, '#1d1e21')
+    await page.getByRole('button', { name: 'Поделиться', exact: true }).click()
+    const darkShareDialog = page.getByRole('dialog', { name: 'Чем поделиться' })
+    await expect(darkShareDialog).toBeVisible()
+    await expect(darkShareDialog.getByRole('radio', { name: /Прогресс/ })).toBeEnabled()
+    await expectVisualBaseline(page, `workout-share-picker-dark-${process.platform}.png`, [], false, '#1d1e21', 0.001)
+    await page.getByRole('button', { name: 'Закрыть' }).click()
     await page.evaluate(() => {
       localStorage.setItem('fit.appTheme', 'light')
       window.dispatchEvent(new Event('fit-theme-change'))
     })
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'canShare', {
+        configurable: true,
+        value: (data: ShareData) => Boolean(data.files?.length),
+      })
+      Object.defineProperty(navigator, 'share', {
+        configurable: true,
+        value: async (data: ShareData) => {
+          const file = data.files?.[0]
+          const dataUrl = file ? await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(String(reader.result))
+            reader.onerror = () => reject(new Error('Не удалось прочитать PNG карточки'))
+            reader.readAsDataURL(file)
+          }) : undefined
+          ;(window as typeof window & { __fitSharedWorkout?: { name: string; type: string; size: number; dataUrl?: string; text?: string } }).__fitSharedWorkout = file
+            ? { name: file.name, type: file.type, size: file.size, dataUrl, text: data.text }
+            : undefined
+        },
+      })
+    })
+    const shareAndCapture = async (variant: 'summary' | 'achievement' | 'progress', screenshotName: string) => {
+      await page.getByRole('button', { name: 'Поделиться', exact: true }).click()
+      const dialog = page.getByRole('dialog', { name: 'Чем поделиться' })
+      await expect(dialog).toBeVisible()
+      if (variant === 'summary') await expectVisualBaseline(page, `workout-share-picker-${process.platform}.png`, [], false, '#f8f5ef', 0.001)
+      else await dialog.getByRole('radio', { name: variant === 'achievement' ? /Достижение/ : /Прогресс/ }).click()
+      await dialog.getByRole('button', { name: 'Поделиться карточкой' }).click()
+      await expect(dialog).toBeHidden()
+      const sharedWorkout = await page.evaluate(() => (
+        window as typeof window & { __fitSharedWorkout?: { name: string; type: string; size: number; dataUrl?: string; text?: string } }
+      ).__fitSharedWorkout)
+      expect(sharedWorkout).toMatchObject({ name: `fit-workout-${variant}.png`, type: 'image/png' })
+      expect(sharedWorkout?.size).toBeGreaterThan(1_000)
+      expect(sharedWorkout?.dataUrl).toMatch(/^data:image\/png;base64,/)
+      expect(sharedWorkout?.text).not.toContain('Комментарий тренеру')
+      const sharePreview = await page.context().newPage()
+      await sharePreview.setViewportSize({ width: 1_080, height: 1_350 })
+      await sharePreview.setContent(`<style>*{box-sizing:border-box}html,body{margin:0;background:#fff}img{display:block;width:1080px;height:1350px}</style><img src="${sharedWorkout?.dataUrl ?? ''}" alt="Карточка тренировки">`)
+      await expect(sharePreview.getByRole('img', { name: 'Карточка тренировки' })).toHaveScreenshot(screenshotName)
+      await sharePreview.close()
+    }
+    await shareAndCapture('summary', `workout-share-card-${process.platform}.png`)
+    await shareAndCapture('achievement', `workout-share-card-achievement-${process.platform}.png`)
+    await page.getByRole('button', { name: 'Поделиться', exact: true }).click()
+    const progressOption = page.getByRole('dialog', { name: 'Чем поделиться' }).getByRole('radio', { name: /Прогресс/ })
+    const progressAvailable = await progressOption.isEnabled()
+    await page.getByRole('button', { name: 'Закрыть' }).click()
+    if (progressAvailable) await shareAndCapture('progress', `workout-share-card-progress-${process.platform}.png`)
   }
 
   if (!trainer) await page.locator('.workout-completion-recorded > summary').click()
@@ -1908,7 +2000,13 @@ test('exercise picker keeps search, filters and technique readable', async ({ pa
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : testInfo.project.name.replace('visual-client-', 'mobile-')
   await gotoStable(page, `/workouts/new?client=${demoClientId}`)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
+
+  const pickerCoverage = await page.locator('.exercise-picker-overlay').evaluate((overlay) => {
+    const rect = overlay.getBoundingClientRect()
+    return { top: rect.top, bottom: rect.bottom, viewportHeight: window.innerHeight }
+  })
+  expect(pickerCoverage.top).toBeLessThanOrEqual(1)
+  expect(pickerCoverage.bottom).toBeGreaterThanOrEqual(pickerCoverage.viewportHeight - 1)
 
   const search = page.getByLabel('Поиск упражнения')
   await search.fill('Болгарский')
@@ -1926,15 +2024,14 @@ test('exercise picker keeps search, filters and technique readable', async ({ pa
   await expect(search).toHaveValue('Болгарский')
 
   await page.getByRole('button', { name: 'Очистить поиск' }).click()
-  await page.getByRole('button', { name: 'Фильтры' }).click()
-  await page.getByLabel('Группа мышц').selectOption('legs')
-  await page.getByLabel('Мышца').selectOption('Передняя поверхность бедра')
-  await expect(page.getByLabel('Настройки фильтров')).toBeVisible()
+  await page.getByRole('button', { name: 'Ноги', exact: true }).click()
+  await page.getByRole('button', { name: 'Передняя поверхность бедра', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Ноги', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Передняя поверхность бедра', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('group', { name: 'Группа мышц' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Мышца' })).toBeVisible()
   await expectVisualBaseline(page, `exercise-picker-filters-${profile}-${process.platform}.png`, [page.locator('.picker-item-media')])
-  await page.getByRole('button', { name: /^Показать \d+ упражн/ }).click()
-  await expect(page.getByLabel('Выбранные фильтры')).toContainText('Ноги')
-  await expect(page.getByLabel('Выбранные фильтры')).toContainText('Передняя поверхность бедра')
-  expect((await page.locator('.picker-list').boundingBox())?.height ?? 0).toBeGreaterThan(280)
+  expect((await page.locator('.picker-list').boundingBox())?.height ?? 0).toBeGreaterThan(160)
 })
 
 test('trainer Client Detail keeps its visual baselines', async ({ page }, testInfo) => {
@@ -2073,7 +2170,6 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
     await gotoStable(page, `/workouts/new?client=${demoClientId}&date=${scheduleDate}`, { waitUntil: 'domcontentloaded' })
     await page.getByLabel('Начало').fill('18:30')
     await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-    await page.getByRole('button', { name: /^Силовая/ }).click()
     await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
     await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()

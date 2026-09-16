@@ -1,11 +1,15 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExercisePicker, equipmentForSelection, filterExercises, groupsForSelection, musclesForGroup, purposesForSelection } from './ExercisePicker'
 import { recentExercisesForClient } from './client-recent-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
 import { SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISES } from '../../shared/system-exercises'
 import type { ExerciseSnapshot, Workout } from '../../shared/domain'
+
+const prepareExerciseImage = vi.hoisted(() => vi.fn())
+vi.mock('./exercise-image', () => ({ prepareExerciseImage }))
 
 // Обогащённая выборка для проверки иерархии
 // группа→мышца→оборудование→упражнение.
@@ -17,6 +21,7 @@ const ENRICHED: ExerciseSnapshot[] = [
 ]
 
 const originalLocalStorage = Object.getOwnPropertyDescriptor(window, 'localStorage')
+const originalVisualViewport = Object.getOwnPropertyDescriptor(window, 'visualViewport')
 const recentStore = new Map<string, string>()
 const browserStorage: Storage = {
   get length() { return recentStore.size },
@@ -37,6 +42,23 @@ function catalog(overrides: Partial<ExerciseCatalogState> = {}): ExerciseCatalog
     create: vi.fn(),
     ...overrides,
   }
+}
+
+function PickerDraftHarness({ onPickMany = () => undefined }: { onPickMany?: (exercises: ExerciseSnapshot[]) => void | Promise<void> }) {
+  const [open, setOpen] = useState(true)
+  const [selectionDraft, setSelectionDraft] = useState<ExerciseSnapshot[]>([])
+  return <>
+    <button type="button" onClick={() => setOpen(true)}>Открыть каталог</button>
+    {open && <ExercisePicker
+      catalog={catalog({ exercises: ENRICHED })}
+      onPick={vi.fn()}
+      onPickMany={async (exercises) => { await onPickMany(exercises); setOpen(false) }}
+      selectionDraft={selectionDraft}
+      onSelectionDraftChange={setSelectionDraft}
+      multiple
+      onClose={() => setOpen(false)}
+    />}
+  </>
 }
 
 describe('ExercisePicker', () => {
@@ -95,10 +117,14 @@ describe('ExercisePicker', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'localStorage', { configurable: true, value: browserStorage })
     browserStorage.clear()
+    prepareExerciseImage.mockReset()
+    prepareExerciseImage.mockResolvedValue({ dataUrl: 'data:image/jpeg;base64,AQID', mimeType: 'image/jpeg', width: 800, height: 800, sizeBytes: 3 })
   })
   afterEach(() => {
     if (originalLocalStorage) Object.defineProperty(window, 'localStorage', originalLocalStorage)
     else delete (window as { localStorage?: Storage }).localStorage
+    if (originalVisualViewport) Object.defineProperty(window, 'visualViewport', originalVisualViewport)
+    else delete (window as { visualViewport?: VisualViewport }).visualViewport
   })
 
   it('filters the complete catalog by search and category', () => {
@@ -246,44 +272,39 @@ describe('ExercisePicker', () => {
   it('даёт выбрать назначение и оборудование без предварительного выбора группы', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
-    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
     expect(screen.getByLabelText('Оборудование')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Восстановление' }))
-    expect(screen.getByRole('button', { name: 'Фильтры 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Восстановление' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Сбросить' })).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="vital-gym-pro-1198"]')).toBeInTheDocument()
   })
 
-  it('filters from one compact panel: group → muscle → equipment', async () => {
+  it('filters inline: group → muscle → equipment', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
-    expect(screen.queryByLabelText('Группа мышц')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
-    await user.selectOptions(screen.getByLabelText('Группа мышц'), 'legs')
-    await user.selectOptions(screen.getByLabelText('Мышца'), 'Квадрицепс')
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    await user.click(screen.getByRole('button', { name: 'Квадрицепс' }))
     await user.selectOptions(screen.getByLabelText('Оборудование'), 'Штанга')
     expect(screen.getByRole('button', { name: /технику: Присед/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Посмотреть технику: Разгибание ног/ })).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Мышца')).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Мышца' })).not.toBeInTheDocument()
     await user.selectOptions(screen.getByLabelText('Оборудование'), '')
-    await user.selectOptions(screen.getByLabelText('Мышца'), 'Бицепс бедра')
+    await user.click(screen.getByRole('button', { name: 'Бицепс бедра' }))
     expect(screen.getByRole('button', { name: /Посмотреть технику: Сгибание ног/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Посмотреть технику: Разгибание ног/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Фильтры 2' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Сбросить' }))
-    expect(screen.getByLabelText('Группа мышц')).toHaveValue('all')
-    await user.click(screen.getByRole('button', { name: /Показать 4 упражнения/ }))
-    expect(screen.queryByLabelText('Настройки фильтров')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ноги' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByLabelText('Оборудование')).toHaveValue('')
   })
 
   it('сохраняет совместимое оборудование и блокирует группы без результата', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
-    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
     await user.selectOptions(screen.getByLabelText('Оборудование'), 'Тренажёр')
-    expect(screen.getByRole('option', { name: 'Грудь' })).toBeDisabled()
-    await user.selectOptions(screen.getByLabelText('Группа мышц'), 'legs')
+    expect(screen.getByRole('button', { name: 'Грудь' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
     expect(screen.getByLabelText('Оборудование')).toHaveValue('Тренажёр')
-    expect(screen.getByRole('button', { name: 'Фильтры 2' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ноги' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('пересчитывает фасеты по назначению, группе и оборудованию', () => {
@@ -293,51 +314,55 @@ describe('ExercisePicker', () => {
     expect(purposesForSelection(SYSTEM_EXERCISE_CATALOG, 'all', null, 'Без оборудования')).toContain('recovery')
   })
 
-  it('hides filters on search focus and keeps the selected values', async () => {
+  it('keeps inline filters visible and selected while search is focused', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
-    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
-    await user.selectOptions(screen.getByLabelText('Группа мышц'), 'legs')
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
     const searchInput = screen.getByLabelText('Поиск упражнения')
     await user.click(searchInput)
-    expect(screen.queryByLabelText('Группа мышц')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Фильтры 1' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Группа мышц' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Ноги' })).toHaveAttribute('aria-pressed', 'true')
     await user.type(searchInput, 'жим')
     expect(screen.getByText('Ничего не найдено')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Сбросить фильтры' })).toBeInTheDocument()
   })
 
-  it('blurs search before opening filters so the keyboard does not cover the panel', async () => {
+  it('keeps search focus while inline filters stay reachable', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
     const searchInput = screen.getByLabelText('Поиск упражнения')
     await user.click(searchInput)
     expect(searchInput).toHaveFocus()
-    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
-    expect(searchInput).not.toHaveFocus()
-    expect(screen.getByLabelText('Группа мышц')).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Группа мышц' })).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Тип упражнения' })).toBeVisible()
   })
 
   it('filters by category and returns the selected exercise', async () => {
     const user = userEvent.setup()
     const onPick = vi.fn()
     render(<ExercisePicker catalog={catalog()} onPick={onPick} onClose={vi.fn()} />)
-    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
-    await user.selectOptions(screen.getByLabelText('Группа мышц'), 'cardio')
+    await user.click(screen.getByRole('button', { name: 'Кардио' }))
     expect(document.querySelector('[data-exercise-ref="running"]')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Посмотреть технику: Присед со штангой/ })).not.toBeInTheDocument()
     await user.click(document.querySelector<HTMLButtonElement>('[data-exercise-ref="running"]')!)
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ ref: 'running' }))
   })
 
-  it('отделяет ручной вход в силовую и беговую тренировку', async () => {
+  it('сразу открывает общий каталог и сохраняет беговые форматы в inline-фильтре', async () => {
     const user = userEvent.setup()
     const onPick = vi.fn()
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialMode="choose" onPick={onPick} onClose={vi.fn()} />)
-    expect(screen.getByRole('heading', { name: 'Тип тренировки' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('Поиск упражнения')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /^Бег/ }))
-    expect(screen.getByRole('heading', { name: 'Беговая тренировка' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Выберите упражнения' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Поиск упражнения')).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Тип тренировки' })).not.toBeInTheDocument()
+    expect([...screen.getByRole('group', { name: 'Группа мышц' }).querySelectorAll('button')].map((button) => button.textContent)).toEqual([
+      'Грудь', 'Спина', 'Ноги', 'Ягодицы', 'Плечи', 'Руки', 'Пресс', 'Кардио',
+    ])
+    expect([...screen.getByRole('group', { name: 'Тип упражнения' }).querySelectorAll('button')].map((button) => button.textContent)).toEqual([
+      'Бег', 'Разминка', 'Растяжка', 'Восстановление', 'Только мои',
+    ])
+    await user.click(screen.getByRole('button', { name: 'Бег' }))
+    expect(screen.getByRole('button', { name: 'Бег' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: /Свободный бег/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Лёгкий бег/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Длительный бег/ })).toBeInTheDocument()
@@ -364,10 +389,10 @@ describe('ExercisePicker', () => {
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ ref: 'running' }), 'interval-active')
   })
 
-  it('переключает беговую ветку обратно на силовую', async () => {
+  it('повторным нажатием на Бег возвращает общий каталог', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialMode="running" onPick={vi.fn()} onClose={vi.fn()} />)
-    await user.click(screen.getByRole('button', { name: 'Силовая', pressed: false }))
+    await user.click(screen.getByRole('button', { name: 'Бег', pressed: true }))
     expect(screen.getByRole('heading', { name: 'Выберите упражнения' })).toBeInTheDocument()
     expect(document.querySelector('.picker-list [data-exercise-ref]')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Свободный бег/ })).not.toBeInTheDocument()
@@ -412,23 +437,19 @@ describe('ExercisePicker', () => {
     expect(searchInput).toHaveFocus()
   })
 
-  it('показывает активные фильтры чипами и снимает их по одному', async () => {
+  it('показывает активные inline-фильтры и снимает их по одному', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
-    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
-    await user.selectOptions(screen.getByLabelText('Группа мышц'), 'legs')
-    await user.selectOptions(screen.getByLabelText('Мышца'), 'Квадрицепс')
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    await user.click(screen.getByRole('button', { name: 'Квадрицепс' }))
     await user.selectOptions(screen.getByLabelText('Оборудование'), 'Штанга')
-    expect(screen.queryByLabelText('Выбранные фильтры')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Показать 1 упражнение' }))
-    const chips = screen.getByLabelText('Выбранные фильтры')
-    expect(chips).toHaveTextContent('Ноги')
-    expect(chips).toHaveTextContent('Квадрицепс')
-    expect(chips).toHaveTextContent('Штанга')
+    expect(screen.getByRole('button', { name: 'Ноги' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Оборудование')).toHaveValue('Штанга')
     expect(screen.getByText('Найдено: 1')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Штанга' }))
-    expect(chips).not.toHaveTextContent('Штанга')
-    expect(chips).toHaveTextContent('Квадрицепс')
+    await user.selectOptions(screen.getByLabelText('Оборудование'), '')
+    expect(screen.getByRole('button', { name: 'Квадрицепс' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Квадрицепс' }))
+    expect(screen.getByRole('button', { name: 'Квадрицепс' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('открывает технику без выбора и возвращает сохранённый поиск и scroll', async () => {
@@ -518,6 +539,24 @@ describe('ExercisePicker', () => {
     expect(onClose).toHaveBeenCalledTimes(2)
   })
 
+  it('does not shrink the overlay to stale visual viewport dimensions', async () => {
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: {
+        height: 420,
+        offsetTop: 180,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      } as unknown as VisualViewport,
+    })
+
+    render(<ExercisePicker catalog={catalog()} onPick={vi.fn()} onClose={vi.fn()} />)
+    const dialog = screen.getByRole('dialog')
+    if (!dialog.parentElement) throw new Error('Picker overlay is missing')
+
+    await waitFor(() => expect(dialog.parentElement).not.toHaveAttribute('style'))
+  })
+
   it('creates a custom strength exercise and picks it', async () => {
     const user = userEvent.setup()
     const created = { source: 'custom', ref: 'custom-1', customExerciseId: 'custom-1', name: 'Тестовое', muscleGroup: 'legs', inputKind: 'strength' } as const
@@ -528,7 +567,10 @@ describe('ExercisePicker', () => {
     await user.type(screen.getByPlaceholderText('Например: Болгарский присед'), 'Тестовое')
     await user.click(screen.getByRole('button', { name: 'Ноги' }))
     await user.click(screen.getByRole('button', { name: 'Сохранить упражнение' }))
-    expect(create).toHaveBeenCalledWith({ name: 'Тестовое', muscleGroup: 'legs', inputKind: 'strength' })
+    expect(create).toHaveBeenCalledWith({
+      name: 'Тестовое', muscleGroup: 'legs', inputKind: 'strength',
+      primaryMuscleDetail: undefined, equipment: undefined, description: undefined,
+    }, null)
     expect(onPick).toHaveBeenCalledWith(created)
   })
 
@@ -542,7 +584,102 @@ describe('ExercisePicker', () => {
     await user.click(screen.getByRole('button', { name: 'Кардио' }))
     await user.click(screen.getByRole('button', { name: 'Время + повторы' }))
     await user.click(screen.getByRole('button', { name: 'Сохранить упражнение' }))
-    expect(create).toHaveBeenCalledWith({ name: 'Скакалка 2', muscleGroup: 'cardio', inputKind: 'reps' })
+    expect(create).toHaveBeenCalledWith({
+      name: 'Скакалка 2', muscleGroup: 'cardio', inputKind: 'reps',
+      primaryMuscleDetail: undefined, equipment: undefined, description: undefined,
+    }, null)
+  })
+
+  it('offers muscle/equipment from the same catalog dictionary as the filter, and sends the picked classification plus description to create()', async () => {
+    const user = userEvent.setup()
+    const created = { source: 'custom', ref: 'custom-3', customExerciseId: 'custom-3', name: 'Болгарский присед', muscleGroup: 'legs', inputKind: 'strength' } as const
+    const create = vi.fn().mockResolvedValue(created)
+    render(<ExercisePicker catalog={catalog({ exercises: ENRICHED, create })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    await user.type(screen.getByPlaceholderText('Например: Болгарский присед'), 'Болгарский присед')
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+
+    expect(screen.getByLabelText('Мышца')).toBeInTheDocument()
+    expect(screen.getByLabelText('Оборудование')).toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('Мышца'), 'Квадрицепс')
+    await user.selectOptions(screen.getByLabelText('Оборудование'), 'Тренажёр')
+    await user.type(screen.getByPlaceholderText('Как выполнять, на что обратить внимание'), 'Задняя нога на скамье.')
+    await user.click(screen.getByRole('button', { name: 'Сохранить упражнение' }))
+
+    expect(create).toHaveBeenCalledWith({
+      name: 'Болгарский присед', muscleGroup: 'legs', inputKind: 'strength',
+      primaryMuscleDetail: 'Квадрицепс', equipment: 'Тренажёр', description: 'Задняя нога на скамье.',
+    }, null)
+  })
+
+  it('changing the muscle after picking equipment resets the equipment choice, matching the filter panel', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    await user.selectOptions(screen.getByLabelText('Мышца'), 'Квадрицепс')
+    await user.selectOptions(screen.getByLabelText('Оборудование'), 'Тренажёр')
+    await user.selectOptions(screen.getByLabelText('Мышца'), 'Бицепс бедра')
+    expect(screen.getByLabelText('Оборудование')).toHaveValue('')
+  })
+
+  it('attaches a cover photo, shows a preview with a remove control, and sends the prepared image to create()', async () => {
+    const user = userEvent.setup()
+    const created = { source: 'custom', ref: 'custom-4', customExerciseId: 'custom-4', name: 'С фото', muscleGroup: 'legs', inputKind: 'strength' } as const
+    const create = vi.fn().mockResolvedValue(created)
+    render(<ExercisePicker catalog={catalog({ create })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    await user.type(screen.getByPlaceholderText('Например: Болгарский присед'), 'С фото')
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+
+    await user.upload(screen.getByLabelText('Выбрать фото'), new File(['photo'], 'cover.png', { type: 'image/png' }))
+    expect(await screen.findByAltText('Фото упражнения')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Добавить фото на обложку' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Сохранить упражнение' }))
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'С фото' }),
+      { dataUrl: 'data:image/jpeg;base64,AQID', mimeType: 'image/jpeg', width: 800, height: 800, sizeBytes: 3 },
+    )
+  })
+
+  it('removing an attached photo brings back the attach button and clears it from the next save', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker catalog={catalog()} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    await user.upload(screen.getByLabelText('Выбрать фото'), new File(['photo'], 'cover.png', { type: 'image/png' }))
+    await screen.findByAltText('Фото упражнения')
+    await user.click(screen.getByRole('button', { name: 'Убрать фото' }))
+    expect(screen.queryByAltText('Фото упражнения')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Добавить фото на обложку' })).toBeInTheDocument()
+  })
+
+  it('shows a clear error and keeps the form usable when the photo cannot be prepared', async () => {
+    const user = userEvent.setup()
+    prepareExerciseImage.mockRejectedValueOnce(new Error('Фото слишком большое'))
+    render(<ExercisePicker catalog={catalog()} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    await user.upload(screen.getByLabelText('Выбрать фото'), new File(['huge'], 'huge.png', { type: 'image/png' }))
+    expect(await screen.findByText('Фото слишком большое')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Добавить фото на обложку' })).toBeInTheDocument()
+  })
+
+  it('resets classification, description and photo when the create form is closed', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    await user.type(screen.getByPlaceholderText('Например: Болгарский присед'), 'Черновик')
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    await user.type(screen.getByPlaceholderText('Как выполнять, на что обратить внимание'), 'Заметка')
+    await user.upload(screen.getByLabelText('Выбрать фото'), new File(['photo'], 'cover.png', { type: 'image/png' }))
+    await screen.findByAltText('Фото упражнения')
+    await user.click(screen.getByRole('button', { name: 'Закрыть' }))
+
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    expect(screen.getByPlaceholderText('Например: Болгарский присед')).toHaveValue('')
+    expect(screen.getByPlaceholderText('Как выполнять, на что обратить внимание')).toHaveValue('')
+    expect(screen.queryByAltText('Фото упражнения')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Мышца')).not.toBeInTheDocument()
   })
 
   it('keeps the picker open when custom creation fails', async () => {
@@ -569,5 +706,48 @@ describe('ExercisePicker', () => {
       expect.objectContaining({ ref: 'a' }),
       expect.objectContaining({ ref: 'd' }),
     ])
+  })
+
+  it('keeps the selection draft after closing and lets the user clear it explicitly', async () => {
+    const user = userEvent.setup()
+    render(<PickerDraftHarness />)
+
+    await user.click(screen.getByRole('button', { name: /Выбрать: Присед/ }))
+    await user.click(screen.getByRole('button', { name: /Выбрать: Жим лёжа/ }))
+    expect(screen.getByText('Выбрано: 2')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Закрыть' }))
+    await user.click(screen.getByRole('button', { name: 'Открыть каталог' }))
+    expect(screen.getByText('Выбрано: 2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Убрать: Присед/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Убрать: Жим лёжа/ })).toHaveAttribute('aria-pressed', 'true')
+
+    const overlay = document.querySelector<HTMLElement>('.sheet-overlay')
+    if (!overlay) throw new Error('Picker overlay is missing')
+    await user.click(overlay)
+    await user.click(screen.getByRole('button', { name: 'Открыть каталог' }))
+    expect(screen.getByText('Выбрано: 2')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    await user.click(screen.getByRole('button', { name: 'Сбросить' }))
+    expect(screen.getByText('Выбрано: 2')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Очистить' }))
+    expect(screen.queryByText('Выбрано: 2')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Выбрать: Присед/ })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('clears the draft only after the selected exercises are added', async () => {
+    const user = userEvent.setup()
+    const onPickMany = vi.fn()
+    render(<PickerDraftHarness onPickMany={onPickMany} />)
+
+    await user.click(screen.getByRole('button', { name: /Выбрать: Присед/ }))
+    await user.click(screen.getByRole('button', { name: 'Добавить 1' }))
+    expect(onPickMany).toHaveBeenCalledWith([expect.objectContaining({ ref: 'a' })])
+
+    await user.click(screen.getByRole('button', { name: 'Открыть каталог' }))
+    expect(screen.queryByText('Выбрано: 1')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Выбрать: Присед/ })).toHaveAttribute('aria-pressed', 'false')
   })
 })

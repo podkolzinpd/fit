@@ -89,7 +89,6 @@ test('trainer adds the first client, plans a workout and gets an invitation code
 
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -158,7 +157,6 @@ test('client registers, starts without a profile questionnaire and creates an ow
   await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Тренировки' }).click()
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -414,7 +412,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.locator('.workout-header-meta')).toContainText('Связанный клиент')
   await expect(page.locator('.client-picker-trigger')).toHaveCount(0)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Бег/ }).click()
+  await page.getByRole('button', { name: 'Бег', exact: true }).click()
   await page.locator('[data-running-format="free"]').click()
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
@@ -456,7 +454,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.goto('/me/workouts')
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Бег/ }).click()
+  await page.getByRole('button', { name: 'Бег', exact: true }).click()
   await page.locator('[data-running-format="free"]').click()
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
@@ -505,7 +503,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByLabel('Клиент')).toHaveCount(0)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Бег/ }).click()
+  await page.getByRole('button', { name: 'Бег', exact: true }).click()
   await page.locator('[data-running-format="free"]').click()
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),

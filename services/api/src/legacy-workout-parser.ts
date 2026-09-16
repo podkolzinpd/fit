@@ -101,37 +101,33 @@ export class YandexWorkoutParser {
     if (catalog.length === 0) throw new WorkoutParseError(400, 'empty_catalog')
     const prompt = workoutExtractionPrompt(input.text)
     const startedAt = Date.now()
-    for (let attempt = 1; attempt <= 2; attempt += 1) {
-      let response: Response
-      try {
-        response = await this.request(completionUrl, { method: 'POST', headers: { 'content-type': 'application/json', authorization: await this.authorization.authorizationHeader() }, body: JSON.stringify({ modelUri: `gpt://${this.yandexFolderId}/${this.modelId}/latest`, completionOptions: { stream: false, temperature: 0, maxTokens: '2000' }, jsonSchema: { schema: workoutExtractionSchema }, messages: [{ role: 'user', text: prompt }] }) })
-      } catch {
-        console.error(JSON.stringify({ event: 'workout_parse_llm_network_error', attempt, catalogCount: catalog.length, promptBytes: Buffer.byteLength(prompt) }))
-        if (attempt === 2) throw new WorkoutParseError(502, 'llm_unavailable')
-        continue
-      }
-      if (!response.ok) {
-        console.error(JSON.stringify({ event: 'workout_parse_llm_error', attempt, status: response.status, catalogCount: catalog.length, promptBytes: Buffer.byteLength(prompt) }))
-        if (response.status >= 500 && attempt < 2) continue
-        throw new WorkoutParseError(502, 'llm_unavailable')
-      }
-      try {
-        const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
-        const extracted = validateWorkoutExtraction(JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? ''))
-        const result = matchWorkoutExtraction(extracted, catalog)
-        console.log(JSON.stringify({
-          event: 'workout_parse_completed', attempt, durationMs: Date.now() - startedAt,
-          catalogCount: catalog.length, promptBytes: Buffer.byteLength(prompt), extractedCount: extracted.items.length,
-          matchedCount: result.items.length, unmatchedCount: result.unmatched.length,
-          ambiguousCount: result.unmatched.filter((item) => item.suggestedExerciseRefs.length > 1).length,
-        }))
-        return result
-      } catch {
-        console.error(JSON.stringify({ event: 'workout_parse_invalid_response', attempt, catalogCount: catalog.length, promptBytes: Buffer.byteLength(prompt) }))
-        if (attempt === 2) throw new WorkoutParseError(502, 'parse_failed')
-      }
+    let response: Response
+    try {
+      response = await this.request(completionUrl, { method: 'POST', headers: { 'content-type': 'application/json', authorization: await this.authorization.authorizationHeader() }, body: JSON.stringify({ modelUri: `gpt://${this.yandexFolderId}/${this.modelId}/latest`, completionOptions: { stream: false, temperature: 0, maxTokens: '1200' }, jsonSchema: { schema: workoutExtractionSchema }, messages: [{ role: 'user', text: prompt }] }) })
+    } catch {
+      console.error(JSON.stringify({ event: 'workout_parse_llm_network_error', modelCallCount: 1, catalogCount: catalog.length, promptBytes: Buffer.byteLength(prompt) }))
+      throw new WorkoutParseError(502, 'llm_unavailable')
     }
-    throw new WorkoutParseError(502, 'parse_failed')
+    if (!response.ok) {
+      console.error(JSON.stringify({ event: 'workout_parse_llm_error', modelCallCount: 1, status: response.status, catalogCount: catalog.length, promptBytes: Buffer.byteLength(prompt) }))
+      throw new WorkoutParseError(502, 'llm_unavailable')
+    }
+    try {
+      const payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
+      const extracted = validateWorkoutExtraction(JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? ''))
+      const result = matchWorkoutExtraction(extracted, catalog)
+      console.log(JSON.stringify({
+        event: 'workout_parse_completed', modelCallCount: 1, durationMs: Date.now() - startedAt,
+        inputLineCount: input.text.split('\n').filter(Boolean).length,
+        catalogCount: catalog.length, promptBytes: Buffer.byteLength(prompt), usage: payload.result?.usage ?? null,
+        extractedCount: extracted.items.length, matchedCount: result.items.length, unmatchedCount: result.unmatched.length,
+        ambiguousCount: result.unmatched.filter((item) => item.suggestedExerciseRefs.length > 1).length,
+      }))
+      return result
+    } catch {
+      console.error(JSON.stringify({ event: 'workout_parse_invalid_response', modelCallCount: 1, catalogCount: catalog.length, promptBytes: Buffer.byteLength(prompt) }))
+      throw new WorkoutParseError(502, 'parse_failed')
+    }
   }
 
   async suggest(value: unknown, customCatalog: readonly WorkoutParserExercise[] = [], customMetrics: Array<{ id: string; name: string; unit: string | null }> = []): Promise<GoalCriteriaSuggestionResponse> {

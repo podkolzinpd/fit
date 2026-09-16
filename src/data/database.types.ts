@@ -1,4 +1,4 @@
-// schema-sha256: 5c80c08cafa2be8bd19b3e3e7f63e0d8cc963ca42fa272d11d1b4feeacf475d7
+// schema-sha256: d065904d8e9b1adb681c4d438e15a8d091269378bb5cdaaba4dd26244d212cdf
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -92,6 +92,8 @@ export type Database = {
           id: string
           kind: string
           message: string
+          model_input_json: Json | null
+          model_output_json: Json | null
           screen_path: string
           telegram_last_error: string | null
           telegram_notified_at: string | null
@@ -112,6 +114,8 @@ export type Database = {
           id?: string
           kind: string
           message: string
+          model_input_json?: Json | null
+          model_output_json?: Json | null
           screen_path: string
           telegram_last_error?: string | null
           telegram_notified_at?: string | null
@@ -132,6 +136,8 @@ export type Database = {
           id?: string
           kind?: string
           message?: string
+          model_input_json?: Json | null
+          model_output_json?: Json | null
           screen_path?: string
           telegram_last_error?: string | null
           telegram_notified_at?: string | null
@@ -1154,10 +1160,18 @@ export type Database = {
           archived_at: string | null
           created_at: string
           created_by: string
+          description: string | null
+          equipment: string | null
           id: string
+          image_height: number | null
+          image_mime_type: string | null
+          image_path: string | null
+          image_size_bytes: number | null
+          image_width: number | null
           input_kind: string
           muscle_group: string
           name: string
+          primary_muscle_detail: string | null
           trainer_id: string
           updated_at: string
           version: number
@@ -1166,10 +1180,18 @@ export type Database = {
           archived_at?: string | null
           created_at?: string
           created_by?: string
+          description?: string | null
+          equipment?: string | null
           id?: string
+          image_height?: number | null
+          image_mime_type?: string | null
+          image_path?: string | null
+          image_size_bytes?: number | null
+          image_width?: number | null
           input_kind: string
           muscle_group: string
           name: string
+          primary_muscle_detail?: string | null
           trainer_id: string
           updated_at?: string
           version?: number
@@ -1178,10 +1200,18 @@ export type Database = {
           archived_at?: string | null
           created_at?: string
           created_by?: string
+          description?: string | null
+          equipment?: string | null
           id?: string
+          image_height?: number | null
+          image_mime_type?: string | null
+          image_path?: string | null
+          image_size_bytes?: number | null
+          image_width?: number | null
           input_kind?: string
           muscle_group?: string
           name?: string
+          primary_muscle_detail?: string | null
           trainer_id?: string
           updated_at?: string
           version?: number
@@ -2757,6 +2787,8 @@ export type Database = {
           p_display_mode: string
           p_kind: string
           p_message: string
+          p_model_input_json: Json | null
+          p_model_output_json: Json | null
           p_screen_path: string
           p_user_agent: string
         }

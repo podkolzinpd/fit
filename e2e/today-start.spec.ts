@@ -110,8 +110,12 @@ test('today: живая диктовка с паузами и числами с�
   await expect(page.locator('.today-exercise')).toHaveCount(2)
 })
 
-test('today: ошибка voice-разбора сохраняет transcript и раскрывает текстовый fallback', async ({ page }) => {
-  await page.route('**/functions/v1/parse-workout', async (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporary' }) }))
+test('today: недоступный AI-разбор сохраняет transcript и открывает ручное уточнение без повтора', async ({ page }) => {
+  let parserRequests = 0
+  await page.route('**/functions/v1/parse-workout', async (route) => {
+    parserRequests += 1
+    await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporary' }) })
+  })
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -122,9 +126,10 @@ test('today: ошибка voice-разбора сохраняет transcript и 
 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
   await page.getByRole('button', { name: 'Готово' }).click()
-  await expect(page.getByText('Не удалось обработать диктовку. Исходный текст сохранён.')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('Не нашли упражнение')).toBeVisible({ timeout: 10_000 })
   await expect(page.getByLabel('Тренировка')).toHaveValue('Неизвестное упражнение абракадабра')
   await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeEnabled()
+  expect(parserRequests).toBe(1)
 })
 
 test('today: быстрый старт ведёт к единому выбору плана или завершённой тренировки', async ({ page }, testInfo) => {
@@ -261,13 +266,14 @@ test('today: беговая ветка сразу добавляет интер�
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
   await expect(page.getByText('Выберите вариант и дату', { exact: true })).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Тип тренировки' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Выберите упражнения' })).toBeVisible()
+  await expect(page.getByLabel('Поиск упражнения')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Закрыть' }).click()
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
-  await page.getByRole('button', { name: /^Бег/ }).click()
+  await page.getByRole('button', { name: 'Бег', exact: true }).click()
   await expect(page.getByRole('button', { name: /Темповый бег/ })).toBeVisible()
   await page.getByRole('button', { name: /^Интервалы/ }).click()
   await page.locator('[data-running-format="interval-active"]').click()

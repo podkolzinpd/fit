@@ -19,12 +19,14 @@ export interface ClaimedAppFeedbackBatch {
   deliveries: Array<{
     id: string
     accountRole: 'trainer' | 'client'
-    kind: 'suggestion' | 'problem'
+    kind: 'suggestion' | 'problem' | 'training program'
     message: string
     screenPath: string
     appVersion: string
     displayMode: 'browser' | 'standalone'
     createdAt: string
+    modelInputJson?: Record<string, unknown>
+    modelOutputJson?: Record<string, unknown>
     sendTracker: boolean
     sendTelegram: boolean
   }>
@@ -73,10 +75,15 @@ function parseDelivery(value: unknown): ClaimedAppFeedbackBatch['deliveries'][nu
   if (
     !UUID_PATTERN.test(id)
     || (accountRole !== 'trainer' && accountRole !== 'client')
-    || (kind !== 'suggestion' && kind !== 'problem')
+    || (kind !== 'suggestion' && kind !== 'problem' && kind !== 'training program')
     || (displayMode !== 'browser' && displayMode !== 'standalone')
     || (!sendTracker && !sendTelegram)
   ) {
+    throw new Error('App feedback claim returned an unsupported delivery')
+  }
+  const modelInputJson = record.modelInputJson
+  const modelOutputJson = record.modelOutputJson
+  if (kind === 'training program' && (!readOptionalRecord(modelInputJson) || !readOptionalRecord(modelOutputJson))) {
     throw new Error('App feedback claim returned an unsupported delivery')
   }
   return {
@@ -88,9 +95,14 @@ function parseDelivery(value: unknown): ClaimedAppFeedbackBatch['deliveries'][nu
     appVersion: readText(record, 'appVersion'),
     displayMode,
     createdAt: readText(record, 'createdAt'),
+    ...(readOptionalRecord(modelInputJson) && readOptionalRecord(modelOutputJson) ? { modelInputJson: readOptionalRecord(modelInputJson)!, modelOutputJson: readOptionalRecord(modelOutputJson)! } : {}),
     sendTracker,
     sendTelegram,
   }
+}
+
+function readOptionalRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : undefined
 }
 
 function parseClaimedBatch(value: unknown): ClaimedAppFeedbackBatch | null {

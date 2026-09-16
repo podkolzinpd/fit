@@ -54,7 +54,23 @@ export const suggestGoalCriteria = (text: string, catalog: readonly ExerciseSnap
   })
 }
 
-const columns = 'id,name,muscle_group,input_kind,created_by,archived_at,version'
+const columns = 'id,name,muscle_group,input_kind,created_by,archived_at,version,primary_muscle_detail,equipment,description,image_path,image_mime_type,image_width,image_height,image_size_bytes'
+
+export type CustomExerciseWriteValue = {
+  name: string
+  muscle_group: string
+  input_kind: string
+  primary_muscle_detail?: string | null
+  equipment?: string | null
+  description?: string | null
+  image_path?: string | null
+  image_mime_type?: string | null
+  image_width?: number | null
+  image_height?: number | null
+  image_size_bytes?: number | null
+}
+
+export const customExerciseMedia = supabase.storage.from('custom-exercise-media')
 
 export const exerciseQueries = {
   async createVitalMediaUrl(path: string, expiresIn: number) {
@@ -63,9 +79,9 @@ export const exerciseQueries = {
   parseWorkout,
   suggestGoalCriteria,
   list: () => supabase.from('custom_exercises').select(columns).order('name'),
-  create: (trainerId: string, value: { name: string; muscle_group: string; input_kind: string }) =>
+  create: (trainerId: string, value: CustomExerciseWriteValue & { id?: string }) =>
     supabase.from('custom_exercises').insert({ trainer_id: trainerId, ...value }).select(columns).single(),
-  update: (id: string, version: number, value: { name: string; muscle_group: string; input_kind: string }) =>
+  update: (id: string, version: number, value: CustomExerciseWriteValue) =>
     supabase.from('custom_exercises').update({ ...value, version: version + 1 }).eq('id', id).eq('version', version).select(columns).single(),
   setArchived: (id: string, version: number, archived: boolean) => supabase.from('custom_exercises')
     .update({ archived_at: archived ? new Date().toISOString() : null, version: version + 1 })

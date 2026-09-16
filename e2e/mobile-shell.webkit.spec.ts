@@ -286,19 +286,21 @@ test('iPhone: поиск и фильтры каталога не перекры�
 
   await page.goto(`/workouts/new?client=${demoClientId}`)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
 
   const search = page.getByLabel('Поиск упражнения')
+  const groups = page.getByRole('group', { name: 'Группа мышц' })
+  const types = page.getByRole('group', { name: 'Тип упражнения' })
   await search.focus()
   await expect(search).toBeFocused()
-  await page.getByRole('button', { name: 'Фильтры' }).click()
-  await expect(search).not.toBeFocused()
-  await page.getByLabel('Группа мышц').selectOption('legs')
-  await expect(page.getByRole('button', { name: 'Фильтры 1' })).toBeVisible()
+  await expect(groups).toBeVisible()
+  await expect(types).toBeVisible()
+  await page.getByRole('button', { name: 'Ноги', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Ноги', exact: true })).toHaveAttribute('aria-pressed', 'true')
 
   await search.focus()
-  await expect(page.getByLabel('Группа мышц')).toBeHidden()
-  await expect(page.getByRole('button', { name: 'Фильтры 1' })).toBeVisible()
+  await expect(search).toBeFocused()
+  await expect(groups).toBeVisible()
+  await expect(types).toBeVisible()
   await search.fill('присед')
   await expect(page.locator('.picker-list-meta').getByText(/Найдено: \d+/)).toBeVisible()
   await expect(page.getByRole('button', { name: 'Очистить поиск' })).toBeVisible()
@@ -313,19 +315,18 @@ test('iPhone: поиск и фильтры каталога не перекры�
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: панель фильтров выдерживает узкие, низкие и увеличенные экраны', async ({ page }) => {
+test('iPhone: встроенные фильтры выдерживают узкие, низкие и увеличенные экраны', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
 
   await page.goto(`/workouts/new?client=${demoClientId}`)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
-  await page.getByRole('button', { name: 'Фильтры' }).click()
 
-  const panel = page.getByLabel('Настройки фильтров')
-  const body = panel.locator('.picker-filter-body')
-  const primary = panel.getByRole('button', { name: /^Показать \d+ упражн/ })
-  const close = panel.getByRole('button', { name: 'Закрыть фильтры' })
+  const dialog = page.getByRole('dialog', { name: 'Добавить упражнение' })
+  const groups = dialog.getByRole('group', { name: 'Группа мышц' })
+  const types = dialog.getByRole('group', { name: 'Тип упражнения' })
+  const equipment = dialog.getByLabel('Оборудование')
+  const create = dialog.getByRole('button', { name: 'Создать упражнение' })
   const profiles = [
     { width: 320, height: 568, scale: '100%' },
     { width: 360, height: 640, scale: '125%' },
@@ -338,43 +339,44 @@ test('iPhone: панель фильтров выдерживает узкие, �
   for (const profile of profiles) {
     await page.setViewportSize({ width: profile.width, height: profile.height })
     await page.evaluate((scale) => { document.documentElement.style.fontSize = scale }, profile.scale)
-    await expect(panel).toBeVisible()
-    await expect(close).toBeInViewport()
-    await expect(primary).toBeInViewport()
-    const geometry = await panel.evaluate((element) => {
-      const panelBox = element.getBoundingClientRect()
-      const headerBox = element.querySelector('header')!.getBoundingClientRect()
-      const bodyElement = element.querySelector<HTMLElement>('.picker-filter-body')!
-      const bodyBox = bodyElement.getBoundingClientRect()
-      const footerBox = element.querySelector('footer')!.getBoundingClientRect()
-      const controls = Array.from(element.querySelectorAll<HTMLElement>('button, select'))
-        .filter((control) => getComputedStyle(control).display !== 'none')
-        .map((control) => control.getBoundingClientRect())
+    await expect(dialog).toBeVisible()
+    await expect(groups).toBeVisible()
+    await expect(types).toBeVisible()
+    await expect(equipment).toBeInViewport()
+    await expect(create).toBeInViewport()
+    const geometry = await dialog.evaluate((element) => {
+      const dialogBox = element.getBoundingClientRect()
+      const strips = Array.from(element.querySelectorAll<HTMLElement>('.picker-filter-strip')).map((strip) => {
+        const box = strip.getBoundingClientRect()
+        return {
+          left: box.left,
+          right: box.right,
+          clientWidth: strip.clientWidth,
+          scrollWidth: strip.scrollWidth,
+        }
+      })
+      const actionBox = element.querySelector<HTMLElement>('.picker-inline-actions')!.getBoundingClientRect()
       return {
-        panelLeft: panelBox.left,
-        panelRight: panelBox.right,
-        panelTop: panelBox.top,
-        panelBottom: panelBox.bottom,
-        headerBottom: headerBox.bottom,
-        bodyTop: bodyBox.top,
-        bodyBottom: bodyBox.bottom,
-        footerTop: footerBox.top,
-        bodyClientWidth: bodyElement.clientWidth,
-        bodyScrollWidth: bodyElement.scrollWidth,
-        controlsFit: controls.every((control) => control.left >= panelBox.left && control.right <= panelBox.right),
+        dialogLeft: dialogBox.left,
+        dialogRight: dialogBox.right,
+        dialogTop: dialogBox.top,
+        dialogBottom: dialogBox.bottom,
+        actionLeft: actionBox.left,
+        actionRight: actionBox.right,
+        strips,
       }
     })
-    expect(geometry.panelLeft).toBeGreaterThanOrEqual(0)
-    expect(geometry.panelRight).toBeLessThanOrEqual(profile.width)
-    expect(geometry.panelTop).toBeGreaterThanOrEqual(0)
-    expect(geometry.panelBottom).toBeLessThanOrEqual(profile.height)
-    expect(geometry.headerBottom).toBeLessThanOrEqual(geometry.bodyTop)
-    expect(geometry.bodyBottom).toBeLessThanOrEqual(geometry.footerTop)
-    expect(geometry.bodyScrollWidth).toBeLessThanOrEqual(geometry.bodyClientWidth)
-    expect(geometry.controlsFit).toBe(true)
-    expect((await close.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
-    expect((await primary.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
-    await expect(body).toBeVisible()
+    expect(geometry.dialogLeft).toBeGreaterThanOrEqual(0)
+    expect(geometry.dialogRight).toBeLessThanOrEqual(profile.width)
+    expect(geometry.dialogTop).toBeGreaterThanOrEqual(0)
+    expect(geometry.dialogBottom).toBeLessThanOrEqual(profile.height)
+    expect(geometry.actionLeft).toBeGreaterThanOrEqual(geometry.dialogLeft)
+    expect(geometry.actionRight).toBeLessThanOrEqual(geometry.dialogRight)
+    expect(geometry.strips.length).toBeGreaterThanOrEqual(2)
+    expect(geometry.strips.every((strip) => strip.left >= geometry.dialogLeft && strip.right <= geometry.dialogRight)).toBe(true)
+    expect(geometry.strips.some((strip) => strip.scrollWidth > strip.clientWidth)).toBe(true)
+    expect((await equipment.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+    expect((await create.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
     await expectNoHorizontalOverflow(page)
   }
 })
@@ -505,15 +507,16 @@ test('iPhone: тренер назначает интервалы, спортсм
 
     await trainer.goto(`/workouts/new?client=${clientId}`)
     await trainer.getByRole('button', { name: 'Выбрать упражнения' }).click()
-    await expect(trainer.getByRole('heading', { name: 'Тип тренировки' })).toBeVisible()
-    await expect(trainer.getByRole('button', { name: /^Силовая/ })).toBeVisible()
+    await expect(trainer.getByRole('heading', { name: 'Выберите упражнения' })).toBeVisible()
+    await expect(trainer.getByRole('group', { name: 'Группа мышц' })).toBeVisible()
+    await expect(trainer.getByRole('group', { name: 'Тип упражнения' })).toBeVisible()
     await expectNoHorizontalOverflow(trainer)
-    await trainer.screenshot({ path: testInfo.outputPath('workout-kind-trainer-390.png'), fullPage: true })
+    await trainer.screenshot({ path: testInfo.outputPath('exercise-picker-trainer-390.png'), fullPage: true })
     await trainer.setViewportSize({ width: 430, height: 932 })
     await expectNoHorizontalOverflow(trainer)
-    await trainer.screenshot({ path: testInfo.outputPath('workout-kind-trainer-430.png'), fullPage: true })
+    await trainer.screenshot({ path: testInfo.outputPath('exercise-picker-trainer-430.png'), fullPage: true })
     await trainer.setViewportSize({ width: 390, height: 844 })
-    await trainer.getByRole('button', { name: /^Бег/ }).click()
+    await trainer.getByRole('button', { name: 'Бег', exact: true }).click()
     await expect(trainer.getByRole('button', { name: /Свободный бег/ })).toBeVisible()
     await expect(trainer.getByRole('button', { name: /Лёгкий бег/ })).toBeVisible()
     await expect(trainer.getByRole('button', { name: /Длительный бег/ })).toBeVisible()
@@ -746,11 +749,12 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.goto('/me/workouts')
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await expect(page.getByRole('heading', { name: 'Тип тренировки' })).toBeVisible()
-  await expect(page.getByRole('button', { name: /^Силовая/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Выберите упражнения' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Группа мышц' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Тип упражнения' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
-  await page.screenshot({ path: testInfo.outputPath('workout-kind-client-390.png'), fullPage: true })
-  await page.getByRole('button', { name: /^Бег/ }).click()
+  await page.screenshot({ path: testInfo.outputPath('exercise-picker-client-390.png'), fullPage: true })
+  await page.getByRole('button', { name: 'Бег', exact: true }).click()
   await page.getByLabel('Поиск упражнения').fill('Бег')
   await page.locator('[data-exercise-ref="running"]').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -799,7 +803,6 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.goto('/me/workouts')
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
   await page.getByRole('button', { name: /^Выбрать: Планка/ }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -1045,7 +1048,6 @@ async function createIsolatedClient(page: Page, testInfo: import('@playwright/te
 
 async function addExercise(page: Page, name: string, first = false) {
   await page.getByRole('button', { name: first ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
-  if (first) await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill(name)
   await page.locator('.picker-select-mark').first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -1455,7 +1457,6 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await page.goto('/workouts/new')
   await selectClient(page)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
 
   await expect(page.getByText('Недавние')).toBeVisible()
   await expect(page.getByText('Все упражнения')).toBeVisible()
@@ -1479,7 +1480,6 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await page.reload()
   await selectClient(page)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await expect(page.locator('html')).not.toHaveClass(/theme-light/)
   await expectPickerItemsToKeepTheirGeometry()
   await expectNoHorizontalOverflow(page)
@@ -1494,7 +1494,6 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await page.reload()
   await selectClient(page)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await expect(page.locator('html')).toHaveClass(/theme-light/)
   await expectPickerItemsToKeepTheirGeometry()
   await expectNoHorizontalOverflow(page)
@@ -1630,7 +1629,7 @@ test('iPhone: бег с RPE не сжимает время и дистанцию
   await loginAsTrainer(page)
   await page.goto(`/workouts/new?client=${demoClientId}`)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Бег/ }).click()
+  await page.getByRole('button', { name: 'Бег', exact: true }).click()
   await page.locator('[data-running-format="free"]').click()
   await page.getByRole('button', { name: 'Ещё действия' }).click()
   await page.getByRole('menuitem', { name: 'Указать RPE' }).click()

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { QuickWorkoutEntry } from './QuickWorkoutEntry'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
@@ -13,6 +13,8 @@ const catalog: ExerciseSnapshot[] = [
 const parseWorkout = vi.fn().mockResolvedValue({ items: [], unmatched: [] })
 
 describe('QuickWorkoutEntry circuit input', () => {
+  beforeEach(() => parseWorkout.mockClear())
+
   it('сохраняет разобранные значения при выборе упражнения из полного каталога', async () => {
     const onAdd = vi.fn<(exercises: ParsedWorkoutExercise[]) => void>()
     const onOpenCatalog = vi.fn((_search: string, onSelect?: (exercise: ExerciseSnapshot) => void) => onSelect?.(catalog[1]!))
@@ -63,6 +65,7 @@ describe('QuickWorkoutEntry circuit input', () => {
       restBetweenExercisesSec: 15,
       restBetweenRoundsSec: 60,
     })
+    expect(parseWorkout).not.toHaveBeenCalled()
   })
 
   it('не позволяет частично добавить круговую и сохраняет порядок после уточнения', async () => {
@@ -86,6 +89,8 @@ describe('QuickWorkoutEntry circuit input', () => {
     const added = onAdd.mock.calls[0]![0]
     expect(added.map((item) => item.exercise.ref)).toEqual(['squat', 'plank'])
     expect(added[0]!.structure!.blockId).toBe(added[1]!.structure!.blockId)
+    expect(parseWorkout).toHaveBeenCalledOnce()
+    expect(parseWorkout.mock.calls[0]?.[0]).toBe('Присед 3×8 80 кг')
   })
 
   it('оставляет прежнее частичное добавление для обычного текста без маркеров', async () => {
@@ -117,5 +122,19 @@ describe('QuickWorkoutEntry circuit input', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Добавить в план (1)' }))
     expect(onAdd.mock.calls[0]?.[0][0]).toMatchObject({ exercise: { ref: 'bench' }, sets: Array.from({ length: 3 }, () => ({ weightKg: 100, reps: 10 })) })
+  })
+
+  it('сохраняет введённый текст и открывает ручное уточнение при ошибке удалённого разбора', async () => {
+    const remote = vi.fn().mockRejectedValue(new Error('temporary'))
+    render(<QuickWorkoutEntry catalog={catalog} parseWorkout={remote} onAdd={vi.fn()} />)
+
+    const input = screen.getByLabelText('Запись тренировки')
+    fireEvent.change(input, { target: { value: 'Неизвестное упражнение абракадабра' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Разобрать тренировку' }))
+
+    expect(await screen.findByText('Не нашли упражнение')).toBeInTheDocument()
+    expect(input).toHaveValue('Неизвестное упражнение абракадабра')
+    expect(screen.getByRole('button', { name: 'Добавить в план' })).toBeDisabled()
+    expect(remote).toHaveBeenCalledOnce()
   })
 })

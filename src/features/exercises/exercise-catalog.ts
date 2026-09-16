@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
-import type { ExerciseSnapshot, InputKind, MuscleGroup, SessionActor } from '../../shared/domain'
+import type { CustomExerciseDraft } from '../../data/repositories/exercises.repository'
+import type { PreparedImage } from '../../shared/image-prep'
+import type { ExerciseSnapshot, SessionActor } from '../../shared/domain'
 
 export interface ExerciseCatalogState {
   userId?: string
@@ -10,7 +12,7 @@ export interface ExerciseCatalogState {
   error: Error | null
   saving: boolean
   retry: () => void
-  create: (value: { name: string; muscleGroup: MuscleGroup; inputKind: InputKind }) => Promise<ExerciseSnapshot>
+  create: (value: CustomExerciseDraft, photo?: PreparedImage | null) => Promise<ExerciseSnapshot>
 }
 
 export function customExercisePartitionOwner(actor: SessionActor): string {
@@ -23,8 +25,8 @@ export function useExerciseCatalog(): ExerciseCatalogState {
   const queryClient = useQueryClient()
   const query = useQuery({ queryKey: ['exercises'], queryFn: () => exercisesRepository.list() })
   const create = useMutation({
-    mutationFn: (value: { name: string; muscleGroup: MuscleGroup; inputKind: InputKind }) =>
-      exercisesRepository.create(customExercisePartitionOwner(actor!), value),
+    mutationFn: ({ value, photo }: { value: CustomExerciseDraft; photo?: PreparedImage | null }) =>
+      exercisesRepository.create(customExercisePartitionOwner(actor!), actor!.userId, value, photo),
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['exercises'] }),
   })
   return {
@@ -34,6 +36,6 @@ export function useExerciseCatalog(): ExerciseCatalogState {
     error: query.error ?? create.error,
     saving: create.isPending,
     retry: () => void query.refetch(),
-    create: (value) => create.mutateAsync(value),
+    create: (value, photo) => create.mutateAsync({ value, photo }),
   }
 }

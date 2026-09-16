@@ -331,6 +331,9 @@ function customExercise(value: YandexPilotTrainingData['customExercises'][number
     createdBy: value.createdBy ?? '',
     archivedAt: value.archivedAt,
     version: value.version,
+    // Мышца/оборудование/описание/обложка (YAFIT-521) — пока только на
+    // Supabase-бэкенде, см. FEATURE_PARITY.md.
+    imagePath: null,
   }
 }
 
@@ -748,7 +751,11 @@ export function createYandexMainRepository(
         return validateGoalCriteriaSuggestion(await result.json(), catalog, metrics)
       },
       async list() { return (await trainingData()).customExercises.map(customExercise) },
-      async create(_partitionOwnerId, value) {
+      async create(_partitionOwnerId, _actorId, value) {
+        // Разметка (мышца/оборудование/описание) и фото на обложку
+        // (YAFIT-521) пока не реализованы на Yandex-бэкенде — value
+        // передаётся как есть, лишние поля сервер молча игнорирует; фото
+        // не отправляется вовсе. См. FEATURE_PARITY.md.
         const payload = await writeJson(queries, '/v1/custom-exercises', 'POST', value,
           z.object({ exercise: z.object({ id: uuid, name: z.string(), muscleGroup: z.enum(['legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'other']), inputKind: z.enum(['strength', 'distance', 'reps', 'duration']), archivedAt: z.iso.datetime().nullable(), version: z.number().int().positive() }) }))
         invalidate()
@@ -1010,8 +1017,8 @@ export function createYandexMainRepository(
       async unpublish(summary) { await writeEmpty(queries, `/v1/training-summaries/${summary.id}/unpublish`, 'POST', { expectedVersion: summary.version }) },
     },
     appFeedback: {
-      async submit(kind, message) {
-        const payload = await writeJson(queries, '/v1/app-feedback', 'POST', { kind, message: message.trim(), ...currentAppFeedbackContext() }, z.object({ feedback: z.object({ id: uuid }) }))
+      async submit(kind, message, metadata) {
+        const payload = await writeJson(queries, '/v1/app-feedback', 'POST', { kind, message: message.trim(), ...currentAppFeedbackContext(), ...metadata }, z.object({ feedback: z.object({ id: uuid }) }))
         return payload.feedback.id
       },
     },

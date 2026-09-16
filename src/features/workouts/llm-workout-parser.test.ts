@@ -130,7 +130,7 @@ describe('formatLlmWorkoutText', () => {
   })
 
   it('не теряет безопасно найденное упражнение при временной ошибке LLM', async () => {
-    vi.spyOn(exercisesRepository, 'parseWorkout').mockRejectedValue(new Error('network'))
+    const parse = vi.spyOn(exercisesRepository, 'parseWorkout').mockRejectedValue(new Error('network'))
     const localCatalog: ExerciseSnapshot[] = [
       { source: 'system', ref: 'dumbbell-deadlift', name: 'Становая с гантелями', muscleGroup: 'legs', inputKind: 'strength' },
     ]
@@ -145,9 +145,10 @@ describe('formatLlmWorkoutText', () => {
       }],
       unmatched: [],
     })
+    expect(parse).not.toHaveBeenCalled()
   })
 
-  it('передаёт связку сведения и разведения в LLM как два упражнения без дублей', async () => {
+  it('не отправляет в LLM полностью распознанную связку из двух упражнений', async () => {
     const parse = vi.spyOn(exercisesRepository, 'parseWorkout').mockResolvedValue({ items: [], unmatched: [] })
     const localCatalog: ExerciseSnapshot[] = [
       { source: 'system', ref: 'fedb-thigh-adductor', name: 'Сведение ног (Тренажёр)', muscleGroup: 'legs', inputKind: 'strength' },
@@ -156,15 +157,24 @@ describe('formatLlmWorkoutText', () => {
 
     const result = await parseWorkoutWithLlm('Сведение и разведение ног 20 кг 3 по 20', localCatalog)
 
-    expect(parse).toHaveBeenCalledWith(
-      'Сведение ног 20 кг 3 по 20\nРазведение ног 20 кг 3 по 20',
-      localCatalog,
-    )
+    expect(parse).not.toHaveBeenCalled()
     expect(result.items.map((item) => item.exerciseRef)).toEqual(['fedb-thigh-adductor', 'fedb-thigh-abductor'])
     expect(result.items.every((item) => item.sets.length === 3)).toBe(true)
   })
 
-  it('передаёт модели очищенную копию диктовки и сохраняет локальные числа словами', async () => {
+  it('не вызывает модель для десяти однозначных строк', async () => {
+    const remoteParser = vi.fn()
+    const result = await parseWorkoutWithLlm(
+      Array.from({ length: 10 }, (_, index) => `Жим лёжа 3 по ${index + 1} 80 кг`).join('\n'),
+      catalog,
+      { remoteParser },
+    )
+
+    expect(result.items).toHaveLength(10)
+    expect(remoteParser).not.toHaveBeenCalled()
+  })
+
+  it('не передаёт модели однозначную очищенную диктовку и сохраняет числа словами', async () => {
     const parse = vi.spyOn(exercisesRepository, 'parseWorkout').mockResolvedValue({ items: [], unmatched: [] })
     const localCatalog: ExerciseSnapshot[] = [
       { source: 'system', ref: 'bench', name: 'Жим лёжа', muscleGroup: 'chest', inputKind: 'strength' },
@@ -172,7 +182,7 @@ describe('formatLlmWorkoutText', () => {
 
     const result = await parseWorkoutWithLlm('Ну, эээ, жим лёжа три по десять восемьдесят килограмм', localCatalog)
 
-    expect(parse).toHaveBeenCalledWith('жим лёжа три по десять восемьдесят килограмм', localCatalog)
+    expect(parse).not.toHaveBeenCalled()
     expect(result.items[0]).toMatchObject({
       exerciseRef: 'bench',
       sets: Array.from({ length: 3 }, () => ({ weightKg: 80, reps: 10 })),
@@ -206,20 +216,30 @@ describe('formatLlmWorkoutText', () => {
     ]
     const remoteParser = vi.fn().mockResolvedValue({
       items: [
-        { sourceText: 'Жим лёжа 3 по 10 100 кг', exerciseRef: 'bench', confidence: 0.99, sets: Array.from({ length: 3 }, () => ({ weightKg: 100, reps: 10 })) },
-        { sourceText: 'Присед со штангой 3 по 10 100 кг', exerciseRef: 'squat', confidence: 0.99, sets: Array.from({ length: 3 }, () => ({ weightKg: 100, reps: 10 })) },
-        { sourceText: 'Сгибание рук с гантелями', exerciseRef: 'biceps-curl', confidence: 0.99, sets: [] },
+        { sourceText: 'качаю банки 3 по 10 30 кг', exerciseRef: 'biceps-curl', confidence: 0.99, sets: [] },
       ],
-      unmatched: [{ sourceText: 'биц 3 по 10 30 кг', reason: 'Не найдено', suggestedExerciseRefs: ['biceps-curl'] }],
+      unmatched: [],
     })
 
-    const result = await parseWorkoutWithLlm('Жим лёжа 3 по 10 100 кг\nбиц 3 по 10 30 кг\nПрисед со штангой 3 по 10 100 кг', localCatalog, { remoteParser })
+    const result = await parseWorkoutWithLlm('Жим лёжа 3 по 10 100 кг\nкачаю банки 3 по 10 30 кг\nПрисед со штангой 3 по 10 100 кг', localCatalog, { remoteParser })
 
     expect(result.items.map((item) => item.exerciseRef)).toEqual(['bench', 'biceps-curl', 'squat'])
     expect(result.items[1]?.sets).toEqual(Array.from({ length: 3 }, () => ({ weightKg: 30, reps: 10 })))
     expect(result.unmatched).toEqual([])
+    expect(remoteParser).toHaveBeenCalledOnce()
+    expect(remoteParser.mock.calls[0]?.[0]).toBe('качаю банки 3 по 10 30 кг')
     expect(formatLlmWorkoutText(result, localCatalog).split('\n').map((line) => line.split(' — ')[0])).toEqual([
       'Жим лёжа', 'Сгибание рук с гантелями', 'Присед со штангой',
     ])
+  })
+
+  it('отправляет несколько спорных строк одним пакетным запросом без повтора при ошибке', async () => {
+    const remoteParser = vi.fn().mockRejectedValue(new Error('invalid response'))
+    const result = await parseWorkoutWithLlm('первое неизвестное 3 по 10\nвторое неизвестное 2 по 12', catalog, { remoteParser })
+
+    expect(remoteParser).toHaveBeenCalledOnce()
+    expect(remoteParser.mock.calls[0]?.[0]).toBe('первое неизвестное 3 по 10\nвторое неизвестное 2 по 12')
+    expect(result.items).toEqual([])
+    expect(result.unmatched).toHaveLength(2)
   })
 })
