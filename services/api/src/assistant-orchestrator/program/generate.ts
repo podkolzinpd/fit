@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { eligibleProgramExercises, PROGRAM_CATALOG_VERSION, type ProgramExercise } from './catalog.js'
 import { activityOverlap, isCalendarDate, missingBriefFields, type ProgramBrief } from './brief.js'
 import { programSessionCount } from './context.js'
-import { programLoadIssues, type ProgramLoad } from './load.js'
+import { type ProgramLoad } from './load.js'
 
 export const PROGRAM_METHOD_VERSION = 'four-week-foundation-v2'
 export interface Prescription { sets: number; reps: number | null; durationSec: number | null; rpe: number; restSec: number }
@@ -42,8 +42,6 @@ export function programTemplateSchema(_catalog: readonly ProgramExercise[], brie
 }
 
 export function prescribeProgram(raw: unknown, brief: ProgramBrief, today: string, load: ProgramLoad): ProgramTemplate {
-  const loadIssues = programLoadIssues(brief, load)
-  if (loadIssues.length) throw new ProgramValidationError(loadIssues)
   if (!object(raw) || !exact(raw, ['days']) || !object(raw.days)) throw new ProgramValidationError(['invalid_model_schema'])
   const days = raw.days
   const slots = programSelectionSlots(brief)
@@ -59,7 +57,7 @@ export function prescribeProgram(raw: unknown, brief: ProgramBrief, today: strin
     })
     if (selection.accessory !== null) {
       if (typeof selection.accessory !== 'string' || !slot.accessories.includes(selection.accessory)) throw new ProgramValidationError(['invalid_model_accessory'])
-      if (load.weeklySetCeiling === null || load.weeklySetCeiling >= slots.length * 6) refs.push(selection.accessory)
+      refs.push(selection.accessory)
     }
     const session = { weekday: slot.weekday, title: `Всё тело ${index + 1}`, exercises: refs }
     const selected = session.exercises.map((ref: unknown) => {
@@ -75,8 +73,7 @@ export function prescribeProgram(raw: unknown, brief: ProgramBrief, today: strin
         durationSec: exercise.inputKind === 'duration' ? 30 + increment * 5 : null,
       })),
     }))
-    let sets = Math.min(load.maxSetsPerExercise, load.weeklySetCeiling === null ? load.maxSetsPerExercise
-      : Math.floor(load.weeklySetCeiling / (slots.length * selected.length)))
+    let sets = load.maxSetsPerExercise
     let exercises = prescriptions(sets)
     const duration = () => 10 + exercises.reduce((sum, exercise) => {
       const week = exercise.weeks[3]!
@@ -95,7 +92,6 @@ export function prescribeProgram(raw: unknown, brief: ProgramBrief, today: strin
 
 export function validateProgramLoad(template: ProgramTemplate, load: ProgramLoad): void {
   for (let week = 0; week < 4; week++) {
-    let sets = 0
     for (const session of template.sessions) for (const exercise of session.exercises) {
       const prescription = exercise.weeks[week]!
       if (prescription.sets > load.maxSetsPerExercise || prescription.rpe > load.rpe) throw new ProgramValidationError(['history_load_limit'])
@@ -103,9 +99,7 @@ export function validateProgramLoad(template: ProgramTemplate, load: ProgramLoad
       const delta = prescription.reps === null ? prescription.durationSec! - initial.durationSec! : prescription.reps - initial.reps!
       // Check the upper progression envelope; hold/reduction are valid model choices.
       if (delta > load.increments[week]! * (prescription.reps === null ? 5 : 1)) throw new ProgramValidationError(['history_progression_mismatch'])
-      sets += prescription.sets
     }
-    if (load.weeklySetCeiling !== null && sets > load.weeklySetCeiling) throw new ProgramValidationError(['history_volume_limit'])
   }
 }
 

@@ -212,7 +212,7 @@ describe('program chat state', () => {
     expect(deps.extract).not.toHaveBeenCalled()
     expect(deps.generate).not.toHaveBeenCalled()
   })
-  it('asks visibly about small history and does not inflate volume after an incomplete-history answer', async () => {
+  it('generates for the requested frequency even when recorded history is small', async () => {
     const { deps, latest, context } = setup()
     latest.payload.briefState.continuationPlan = 'Продолжить прежний подход'
     const workouts = ['2026-09-14', '2026-09-07', '2026-08-31', '2026-08-24'].map((date) => ({ id: date, date, clientId: client.id,
@@ -223,16 +223,9 @@ describe('program chat state', () => {
         confirmedAt: `${row.date}T10:00:00Z`, factReps: 8, factWeightKg: 30, factDurationSec: null, factDistanceKm: null, factRpe: 7 }))),
     })
     deps.loadContext.mockResolvedValue({ ...context, ...source })
-    const question = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], latest, deps)
-    expect(question?.action?.payload).toMatchObject({ historyQuestion: true, readyToGenerate: false })
-    expect(question?.action?.payload.guidance).toContain('Это вся история или часть тренировок не записана?')
-    expect(deps.generate).not.toHaveBeenCalled()
-    const clarified = await programPilotTurn(HISTORY_INCOMPLETE, [client], question?.action, deps)
-    expect(clarified?.action?.payload.readyToGenerate).toBe(false)
-    expect(deps.generate).not.toHaveBeenCalled()
-    const generated = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], clarified?.action, deps)
-    expect(generated?.action?.status).toBe('needs_input')
-    expect(deps.generate).not.toHaveBeenCalled()
+    const generated = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], latest, deps)
+    expect(generated?.action?.status).toBe('proposed')
+    expect(deps.generate).toHaveBeenCalledOnce()
     expect(deps.extract).not.toHaveBeenCalled()
   })
 })

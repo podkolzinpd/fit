@@ -18,7 +18,6 @@ export interface ProgramLoad {
   daysSinceCatalogTraining: number | null
   meanWeeklyWorkouts: number
   meanWeeklyCatalogSets: number
-  weeklySetCeiling: number | null
   maxSetsPerExercise: number
   rpe: number
   increments: number[]
@@ -66,19 +65,14 @@ export function deriveProgramLoad(brief: ProgramBrief, history: unknown, today: 
       && Array.isArray(execution.sets) && execution.sets.some((set: unknown) => object(set)
         && (typeof set.reps === 'number' && set.reps > 0 || typeof set.durationSec === 'number' && set.durationSec > 0))) ? [row.ref] : [])
   // Sparse / unmapped data describes an incomplete record, not a full volume baseline.
-  const weeklySetCeiling = recent ? Math.floor(meanWeeklyCatalogSets) : null
   const reason = recentDifficultFeedback ? 'В записях есть высокая тяжесть или недавние сообщения о дискомфорте; текущие ограничения проверяются отдельно в анкете.' : brief.historyComplete === false ? 'Вы указали, что история записана не полностью.' : brief.experience === 'returning' ? 'В анкете указан возврат после перерыва.'
     : !fullPeriod ? 'Нет полного периода наблюдений.' : daysSinceCatalogTraining === null ? 'Нет сопоставимых подтверждённых подходов.'
     : daysSinceCatalogTraining > 14 ? `Последняя сопоставимая запись: ${lastCatalogDate}.` : !recent ? 'Недостаточно регулярно записанных тренировок.'
     : incompleteCatalog ? 'Часть упражнений не размечена для расчёта объёма.' : 'В анкете указан начальный опыт.'
   const summary = `${weeks[0]!.start}–${today}: в среднем ${Number(meanWeeklyWorkouts.toFixed(1))} завершённых тренировок и ${Number(meanWeeklyCatalogSets.toFixed(1))} сопоставимых подходов в неделю. `
-    + (continuing ? 'Начальный объём ограничен записанным средним.' : `${reason} Стартовый режим: до двух подходов, усилие 6,5/10; первые две недели без повышения повторов.`)
+    + (continuing ? 'Записанный объём — ориентир, а не предел новой программы.' : `${reason} Стартовый режим: до двух подходов, усилие 6,5/10; первые две недели без повышения повторов.`)
   return { version: PROGRAM_LOAD_VERSION, mode: continuing ? 'recent' : 'starting', weeks, lastCompletedDate, lastCatalogDate,
-    daysSinceCatalogTraining, meanWeeklyWorkouts, meanWeeklyCatalogSets, weeklySetCeiling,
+    daysSinceCatalogTraining, meanWeeklyWorkouts, meanWeeklyCatalogSets,
     maxSetsPerExercise: continuing ? 3 : 2, rpe: continuing ? 7 : 6.5,
     increments: continuing ? [0, 1, 2, 2] : [0, 0, 1, 1], familiarRefs, summary }
-}
-
-export function programLoadIssues(brief: ProgramBrief, load: ProgramLoad): string[] {
-  return brief.frequency && load.weeklySetCeiling !== null && Math.max(5, brief.frequency * 3) > load.weeklySetCeiling ? ['history_volume_requires_review'] : []
 }
