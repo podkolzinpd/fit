@@ -24,6 +24,8 @@ test('uses only ephemeral auth and synthetic data for one parser and summary che
   assert.match(workflow, /\/training-summaries\/generate/)
   assert.match(workflow, /force: true/)
   assert.match(workflow, /Тестовая тяга Yandex stage/)
+  assert.match(workflow, /vital-gym-pro-r320-1362/)
+  assert.match(workflow, /vital-cable-cross-lateral-raise/)
   assert.match(workflow, /chmod 600 ai-smoke-/)
   assert.doesNotMatch(workflow, /actions\/upload-artifact/)
 })
