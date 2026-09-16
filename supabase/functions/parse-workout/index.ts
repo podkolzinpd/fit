@@ -70,18 +70,23 @@ Deno.serve(async (request) => {
     if (!apiKey || !folderId) throw new Error("missing_yandex_cloud_credentials")
     const modelId = Deno.env.get("YANDEX_CLOUD_MODEL_ID") ?? "yandexgpt"
     const modelUri = `gpt://${folderId}/${modelId}/latest`
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    // Старые клиенты ещё могут обращаться к этой функции напрямую. Для
+    // разбора тренировки сохраняем совместимость, но не допускаем скрытый
+    // второй платный запрос. Повтор для настройки цели остаётся без изменений.
+    const maxAttempts = goalMode ? 2 : 1
+    const maxTokens = goalMode ? "2000" : "1200"
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       let response: Response
       try {
-        response = await fetch(URL, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Api-Key " + apiKey }, body: JSON.stringify({ modelUri, completionOptions: { stream: false, temperature: 0, maxTokens: "2000" }, jsonSchema: { schema: goalMode ? GOAL_OUTPUT_SCHEMA : workoutExtractionSchema }, messages: [{ role: "user", text: prompt }] }) })
+        response = await fetch(URL, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Api-Key " + apiKey }, body: JSON.stringify({ modelUri, completionOptions: { stream: false, temperature: 0, maxTokens }, jsonSchema: { schema: goalMode ? GOAL_OUTPUT_SCHEMA : workoutExtractionSchema }, messages: [{ role: "user", text: prompt }] }) })
       } catch (error) {
         console.error(JSON.stringify({ event: "workout_parse_llm_network_error", attempt, message: error instanceof Error ? error.message : "unknown" }))
-        if (attempt === 2) throw error
+        if (attempt === maxAttempts) throw error
         continue
       }
       if (!response.ok) {
         console.error(JSON.stringify({ event: "workout_parse_llm_error", attempt, status: response.status }))
-        if (response.status >= 500 && attempt < 2) continue
+        if (response.status >= 500 && attempt < maxAttempts) continue
         return json({ error: { code: "llm_unavailable", message: "Модель разбора временно недоступна" } }, 502)
       }
       try {
@@ -94,7 +99,7 @@ Deno.serve(async (request) => {
         return json(result)
       } catch (error) {
         console.error(JSON.stringify({ event: "workout_parse_invalid_response", attempt, message: error instanceof Error ? error.message : "unknown" }))
-        if (attempt === 2) throw error
+        if (attempt === maxAttempts) throw error
       }
     }
     throw new Error("workout_parse_retry_exhausted")
