@@ -291,41 +291,42 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
   const muscleSummary = [...musclePreview.visible, ...(musclePreview.hiddenCount > 0 ? [`+${musclePreview.hiddenCount}`] : [])].join(' · ')
 
   return <article className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}${historyListActions && done ? ' has-history-actions' : ''}`}>
-    <Link className="workout-chronicle-open" aria-label={`Открыть тренировку за ${formattedDate}`} to={`/workouts/${workout.id}`} state={detailState} />
-    <div className="workout-chronicle-head">
-      <strong>{formattedDate}</strong>
-      <div className="workout-chronicle-head-badges">
-        {workout.hasPr && <span className="workout-pr-badge"><RecordIcon />Личный рекорд</span>}
-        <WorkoutStatusBadge workout={workout} />
-      </div>
-    </div>
-    {contextLabel && <p className="card-author">{contextLabel}</p>}
-    <div className="workout-chronicle-exercises">
-      {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
-        const result = done
-          ? compactCompletedSetSummary(exercise.sets, false, exercise.ref)
-          : compactPlannedSetSummary(exercise.sets, false, exercise.ref)
-        return <div className="workout-chronicle-exercise" key={exercise.id}>
-          <span className="workout-chronicle-exercise-name">{exercise.name}
-            {exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
-          </span>
-          {result && <strong>{result}</strong>}
+    <Link className="workout-chronicle-open" aria-label={`Открыть тренировку за ${formattedDate}`} to={`/workouts/${workout.id}`} state={detailState}>
+      <div className="workout-chronicle-head">
+        <strong>{formattedDate}</strong>
+        <div className="workout-chronicle-head-badges">
+          {workout.hasPr && <span className="workout-pr-badge"><RecordIcon />Личный рекорд</span>}
+          <WorkoutStatusBadge workout={workout} />
         </div>
-      }) : <p className="muted">Без упражнений</p>}
-      {exercisePreview.hiddenCount > 0 && <p className="workout-chronicle-more">Ещё {exercisePreview.hiddenCount} {exerciseCountLabel(exercisePreview.hiddenCount)}</p>}
-    </div>
-    {muscleSummary && <p className="workout-chronicle-muscles" aria-label={`Основные группы мышц: ${muscleSummary}`}><span>Мышцы:</span> {muscleSummary}</p>}
-    {(meta.length > 0 || hasFeedback || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
-      {meta.map((item) => <span key={item}>{item}</span>)}
-      {hasFeedback && <span>RPE {workout.sessionRpe}/10</span>}
-      {workout.wellbeing && <span>{chronicleWellbeingLabels[workout.wellbeing]}</span>}
-      {workout.discomfort && <span className="attention">Дискомфорт</span>}
-    </div>}
-    {workout.clientComment && <p className="workout-chronicle-comment"><span className="workout-chronicle-note-label">Клиент</span><span className="workout-chronicle-note-text">{workout.clientComment}</span></p>}
-    {workout.trainerReview && <p className="workout-chronicle-response">
-      <span className="workout-chronicle-note-label">{workout.trainerReaction ? chronicleReactionLabels[workout.trainerReaction] : 'Тренер'}</span>
-      <span className="workout-chronicle-note-text">{workout.trainerReview}</span>
-    </p>}
+      </div>
+      {contextLabel && <p className="card-author">{contextLabel}</p>}
+      <div className="workout-chronicle-exercises">
+        {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
+          const result = done
+            ? compactCompletedSetSummary(exercise.sets, false, exercise.ref)
+            : compactPlannedSetSummary(exercise.sets, false, exercise.ref)
+          return <div className="workout-chronicle-exercise" key={exercise.id}>
+            <span className="workout-chronicle-exercise-name">{exercise.name}
+              {exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
+            </span>
+            {result && <strong>{result}</strong>}
+          </div>
+        }) : <p className="muted">Без упражнений</p>}
+        {exercisePreview.hiddenCount > 0 && <p className="workout-chronicle-more">Ещё {exercisePreview.hiddenCount} {exerciseCountLabel(exercisePreview.hiddenCount)}</p>}
+      </div>
+      {muscleSummary && <p className="workout-chronicle-muscles" aria-label={`Основные группы мышц: ${muscleSummary}`}><span>Мышцы:</span> {muscleSummary}</p>}
+      {(meta.length > 0 || hasFeedback || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
+        {meta.map((item) => <span key={item}>{item}</span>)}
+        {hasFeedback && <span>RPE {workout.sessionRpe}/10</span>}
+        {workout.wellbeing && <span>{chronicleWellbeingLabels[workout.wellbeing]}</span>}
+        {workout.discomfort && <span className="attention">Дискомфорт</span>}
+      </div>}
+      {workout.clientComment && <p className="workout-chronicle-comment"><span className="workout-chronicle-note-label">Клиент</span><span className="workout-chronicle-note-text">{workout.clientComment}</span></p>}
+      {workout.trainerReview && <p className="workout-chronicle-response">
+        <span className="workout-chronicle-note-label">{workout.trainerReaction ? chronicleReactionLabels[workout.trainerReaction] : 'Тренер'}</span>
+        <span className="workout-chronicle-note-text">{workout.trainerReview}</span>
+      </p>}
+    </Link>
     {historyListActions && done && <Link className="workout-chronicle-copy" aria-label={`Скопировать тренировку за ${formattedDate}`} title="Скопировать тренировку" to={`/workouts/new?copy=${workout.id}`} state={detailState}><CopyIcon /></Link>}
   </article>
 }

@@ -1445,10 +1445,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-history-set.missed { opacity:.72 }
 .workout-history-set.missed .workout-history-set-status { color:var(--muted); background:var(--surface-sunken); font-weight:700 }
 .workout-chronicle-list { gap:10px }
-.workout-chronicle-card { position:relative; display:grid; gap:11px; min-width:0; padding:16px; border-radius:20px; color:inherit }
-.workout-chronicle-open { position:absolute; z-index:1; inset:0; border-radius:inherit; color:inherit }
+.workout-chronicle-card { position:relative; display:block; min-width:0; padding:0; border-radius:20px; color:inherit }
+.workout-chronicle-open { display:grid; gap:11px; min-width:0; padding:16px; border-radius:inherit; color:inherit }
 .workout-chronicle-open:focus-visible { outline:3px solid var(--accent-ring); outline-offset:2px }
-.workout-chronicle-card > :not(.workout-chronicle-open):not(.workout-chronicle-copy) { pointer-events:none }
 .workout-chronicle-copy { position:absolute; z-index:2; top:10px; right:10px; width:44px; height:44px; display:grid; place-items:center; padding:0; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); box-shadow:none }
 .workout-chronicle-copy:hover, .workout-chronicle-copy:active { background:var(--surface-elevated); color:var(--fg) }
 .workout-chronicle-copy:focus-visible { outline:3px solid var(--accent-ring); outline-offset:1px }
