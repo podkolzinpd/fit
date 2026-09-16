@@ -203,6 +203,10 @@ describe('training summaries repository', () => {
     await expect(generate({ data: null, error: { context: { headers: { get: () => null }, json: () => Promise.resolve({ code: 'no_completed_workouts' }) } } })).rejects.toThrow('нет завершённых')
     await expect(generate({ data: null, error: { context: { json: () => Promise.resolve({ error: 'source_row_limit_reached' }) } } })).rejects.toThrow('меньший период')
     await expect(generate({ data: null, error: { context: { json: () => Promise.resolve({ message: 'Ответ сервера' }) } } })).rejects.toThrow('Ответ сервера')
+    await expect(generate({ data: null, error: { context: { status: 401, headers: { get: () => null } } } })).rejects.toMatchObject({
+      code: 'authentication_required',
+      immediateRetryAllowed: false,
+    })
     await expect(generate({ data: null, error: { context: { json: () => Promise.reject(new Error('invalid json')) } } })).rejects.toMatchObject({ code: 'database_error' })
     await expect(generate({ data: null, error: new Error('authentication_required') })).rejects.toMatchObject({
       code: 'authentication_required',

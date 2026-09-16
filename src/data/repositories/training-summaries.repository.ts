@@ -253,6 +253,9 @@ async function summaryGenerationError(error: unknown): Promise<Error> {
     const code = headers?.get?.('x-fit-error-code')
     if (code) return trainingSummaryGenerationError(code)
   }
+  if (context && typeof context === 'object' && 'status' in context && context.status === 401) {
+    return trainingSummaryGenerationError('authentication_required')
+  }
   if (context && typeof context === 'object' && 'json' in context && typeof context.json === 'function') {
     try {
       const payload = await (context as { json: () => Promise<unknown> }).json()
