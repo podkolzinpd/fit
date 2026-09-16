@@ -14,6 +14,8 @@ export async function handler(event: Event) {
   const reply = (statusCode: number, body: unknown) => ({ statusCode, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
   let metric: { usage: unknown; modelUri: string; requestId: string | null } | undefined
   const metrics: { usage: unknown; modelUri: string; requestId: string | null }[] = []
+  const modelInputs: Record<string, unknown>[] = []
+  const modelOutputs: unknown[] = []
   if (event.httpMethod !== 'POST') return reply(405, { error: 'method_not_allowed' })
   try {
     const text = typeof event.body === 'string' ? event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body : JSON.stringify(event.body)
@@ -51,6 +53,8 @@ progressionNote обязателен у каждой строки, до 240 си
       data: { brief: repair?.targetWeekday !== undefined ? { ...brief, frequency: 1, weekdays: [repair.targetWeekday] } : brief, context: body.context, load, catalog, ...(repair ? { repair, ...(repair.targetWeekday !== undefined ? { wholeProgramBrief: brief } : {}) } : {}) },
       schema: programPlanSchema(catalog, repair?.targetWeekday !== undefined ? { ...brief, frequency: 1, weekdays: [repair.targetWeekday] } : brief, load, repair?.targetWeekday !== undefined, timeRepair), maxTokens: 6500, timeoutMs: Math.max(1, deadline - Date.now()), functionName: 'fit-generate-program', operationId,
       onUsage: (usage, modelUri, requestId) => { metric = { usage, modelUri, requestId }; metrics.push(metric) },
+      onRequest: (request) => { modelInputs.push(request) },
+      onResponse: (response) => { modelOutputs.push(response) },
       })
     }
     const validate = (raw: unknown) => {
@@ -80,6 +84,8 @@ progressionNote обязателен у каждой строки, до 240 си
           schema: { type: 'object', additionalProperties: false, required: keys, properties: Object.fromEntries(keys.map((key) => [key, { type: 'string', minLength: 1, maxLength: 240 }])) },
           maxTokens: 2000, timeoutMs: Math.max(1, deadline - Date.now()), functionName: 'fit-generate-program', operationId,
           onUsage: (usage, modelUri, requestId) => { metric = { usage, modelUri, requestId }; metrics.push(metric) },
+          onRequest: (request) => { modelInputs.push(request) },
+          onResponse: (response) => { modelOutputs.push(response) },
         })
         acceptedRaw = replaceProgramNotes(acceptedRaw, diagnostics.noteIssues, replacement)
       } else if (invalidDays.length) {
@@ -106,6 +112,8 @@ progressionNote обязателен у каждой строки, до 240 си
             data: { brief, catalog, load, replacementOptions: qualityReplacementOptions(acceptedRaw, catalog, brief), previousPlan: acceptedRaw, qualityReview: quality, findings: quality.signals.map((signal) => QUALITY_REVIEW_NOTES[signal]) },
             schema: qualityPatchSchema(catalog, brief), maxTokens: 2500, timeoutMs: Math.max(1, deadline - Date.now()), functionName: 'fit-generate-program', operationId,
             onUsage: (usage, modelUri, requestId) => { metric = { usage, modelUri, requestId }; metrics.push(metric) },
+            onRequest: (request) => { modelInputs.push(request) },
+            onResponse: (response) => { modelOutputs.push(response) },
           }))
         const candidate = validate(reviewed)
         // A valid first draft survives an optional review timeout or malformed rewrite.
@@ -115,7 +123,15 @@ progressionNote обязателен у каждой строки, до 240 си
     const remainingSignals = assessProgramQuality(template, brief, load.familiarRefs).signals
     if (remainingSignals.length) template = { ...template, reviewNotes: remainingSignals.map((signal) => QUALITY_REVIEW_NOTES[signal]!) }
     console.info('program_generation_completed', { operationId: body.operationId, sessionsPerWeek: template.sessions.length })
-    return reply(200, { template, metric, metrics })
+    return reply(200, {
+      template,
+      metric,
+      metrics,
+      feedback: {
+        modelInput: { operationId, requests: modelInputs },
+        modelOutput: { operationId, responses: modelOutputs, acceptedTemplate: template, metrics },
+      },
+    })
   } catch (error) {
     const issues = error instanceof ProgramValidationError ? error.codes : []
     console.warn('program_generation_failed', { code: issues.length ? 'validation_failed' : error instanceof Error && /^program_[a-z_]+(?:_\d{3})?$/.test(error.message) ? error.message : 'generation_failed', issues })

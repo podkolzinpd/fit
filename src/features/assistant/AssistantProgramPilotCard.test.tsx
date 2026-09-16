@@ -63,6 +63,14 @@ describe('program pilot card', () => {
     render(<AssistantProgramPilotCard {...props()} payload={{ step: 'confirm', canonicalWorkouts, rationale: 'История записана не полностью. Стартовый объём — два подхода.' }} />)
     expect(screen.getByText('История записана не полностью. Стартовый объём — два подхода.')).toBeVisible()
   })
+  it('offers scoped feedback with the captured model request and response', async () => {
+    render(<AssistantProgramPilotCard {...props()} payload={{ step: 'confirm', canonicalWorkouts,
+      modelInputJson: { operationId: 'generation-1', requests: [{ messages: [] }] },
+      modelOutputJson: { operationId: 'generation-1', responses: [{}], metrics: [{ requestId: 'model-request-1' }] } }} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Оставить обратную связь' }))
+    expect(screen.getByRole('heading', { name: 'Как вам программа?' })).toBeVisible()
+    expect(screen.getByText(/полный JSON запроса к модели/)).toBeVisible()
+  })
 })
 
 it('submits a scoped edit without applying or regenerating the rest of the draft', async () => {
