@@ -1199,7 +1199,14 @@ export async function requestYandexSummaryDeduplicated(
   }
 }
 
-export const summarizeClientTraining = async (req: Request): Promise<Response> => {
+type SummarizeClientTrainingOptions = {
+  authorization?: YandexAiAuthorization
+}
+
+export const summarizeClientTraining = async (
+  req: Request,
+  options: SummarizeClientTrainingOptions = {},
+): Promise<Response> => {
     const suppliedRequestId = req.headers.get('x-fit-request-id')
     const requestId = suppliedRequestId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(suppliedRequestId)
       ? suppliedRequestId
@@ -1480,7 +1487,11 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
           throw new HttpError(409, 'diagnostic_input_changed')
         }
         try {
-          await requestYandexSummary(modelInput, trainingData.period.start, trainingData.period.end, { requestId, diagnostic: true })
+          await requestYandexSummary(modelInput, trainingData.period.start, trainingData.period.end, {
+            requestId,
+            diagnostic: true,
+            ...(options.authorization === undefined ? {} : { authorization: options.authorization }),
+          })
         } catch (error) {
           if (error instanceof PrivateSummaryDiagnostic) {
             return Response.json({ diagnostic: true, calls: 1, stats, fingerprint: inputFingerprint, ...error.result }, { headers })
@@ -1680,6 +1691,7 @@ export const summarizeClientTraining = async (req: Request): Promise<Response> =
             requestId,
             ...(invocationId === null ? {} : { invocationId }),
             ...(iamToken === null ? {} : { iamToken }),
+            ...(options.authorization === undefined ? {} : { authorization: options.authorization }),
           },
         )
       } catch (error) {

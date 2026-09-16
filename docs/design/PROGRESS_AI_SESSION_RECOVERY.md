@@ -1,6 +1,7 @@
 # Progress AI — восстановление истёкшей Supabase-сессии
 
-Статус: утверждено владельцем продукта 16.09.2026, реализовано и проверено локально.
+Статус: утверждено владельцем продукта 16.09.2026, реализуется по двум
+последовательно подтверждённым production-барьерам.
 
 ## Подтверждённая причина
 
@@ -8,6 +9,13 @@ Production-запрос клиента дошёл до legacy-маршрута Y
 Supabase access token. Сервер вернул `401 authentication_required` до
 агрегации, блокировки генерации и обращения к модели. Клиент повторно использовал
 тот же token, поэтому последующие нажатия не могли исправить состояние.
+
+После выкладки восстановления сессии бесплатный production-preflight подтвердил,
+что `401` устранён, и выявил второй независимый барьер: Yandex API вернул
+`503 service_unavailable` на этапе конфигурации. Контейнер уже настроен на
+краткоживущий IAM-токен из metadata service, но legacy summary handler создавался
+только при наличии статического `YANDEX_CLOUD_API_KEY`. Этого ключа в контейнере
+намеренно нет, поэтому обработчик не запускался и модель не вызывалась.
 
 ## План
 
@@ -25,6 +33,9 @@ Supabase access token. Сервер вернул `401 authentication_required` �
    обновления.
 5. Проверить всё локальными mock/component/repository-тестами. Live AI smoke и
    платные запросы в тестах не запускать.
+6. В API-контейнере включать legacy summary handler через уже настроенную
+   `YandexAiAuthorization`, а не требовать отдельный статический API key.
+   Передавать ту же IAM-авторизацию и в diagnostic, и в обычную генерацию.
 
 ## Ожидаемый результат
 
@@ -37,6 +48,8 @@ Supabase access token. Сервер вернул `401 authentication_required` �
   о необходимости заново войти;
 - служебный preflight показывает состояние реального production-маршрута при
   нулевом расходе токенов.
+- Yandex Serverless Container использует краткоживущий IAM-токен своей service
+  account; новый секрет и постоянный AI key не требуются.
 
 ## Acceptance
 
@@ -48,4 +61,9 @@ Supabase access token. Сервер вернул `401 authentication_required` �
   `diagnostic: preflight`.
 - [x] Yandex preflight остаётся на native diagnostic route.
 - [x] Unit/component tests не имеют live AI/network вызовов.
-- [ ] Production deploy и бесплатный preflight подтверждены отдельно.
+- [x] Первая production-выкладка и бесплатный preflight подтвердили устранение
+  `401` и точный второй барьер `503`.
+- [x] Legacy handler переведён со статического API key на runtime IAM
+  authorization; mock-тест проверяет заголовок без live AI-вызова.
+- [ ] Повторная API-выкладка и бесплатный production-preflight подтверждены
+  отдельно.
