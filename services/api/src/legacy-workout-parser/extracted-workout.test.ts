@@ -38,6 +38,16 @@ describe('workout extraction without a catalog prompt', () => {
     expect(result.unmatched).toEqual([])
   })
 
+  it('matches the shorter names returned by the live model when equipment makes them unique', () => {
+    const result = matchWorkoutExtraction(extracted([
+      { sourceText: 'отведение стоя гантелями', exerciseName: 'отведение стоя гантелями', equipment: null, muscle: null, sets: [], position: 0 },
+      { sourceText: 'отведение стоя в кроссовере', exerciseName: 'отведение стоя в кроссовере', equipment: null, muscle: null, sets: [], position: 1 },
+    ]), catalog)
+
+    expect(result.items.map((item) => item.exerciseRef)).toEqual(['lateral-dumbbell', 'cable-lateral'])
+    expect(result.unmatched).toEqual([])
+  })
+
   it('keeps values and matches a visible custom exercise', () => {
     const result = matchWorkoutExtraction(extracted([{
       sourceText: 'моя тяга с паузой 3 по 10 40 кг', exerciseName: 'Моя тяга с паузой', equipment: null, muscle: null,
