@@ -37,7 +37,8 @@ export async function programModelJson(input: {
   return JSON.parse(result.message.text) as unknown
 }
 
-export function isProgramPilotEnabled(userId: string): boolean {
-  const allowlist = (process.env.ASSISTANT_PROGRAM_PILOT_USER_IDS ?? '').split(',').map((entry) => entry.trim()).filter(Boolean)
-  return process.env.ASSISTANT_PROGRAM_ENABLED === 'true' && allowlist.length === 1 && allowlist[0] === userId
+export function isProgramEnabled(userId: string): boolean {
+  // Role and client ownership are checked by the authenticated orchestrator.
+  // The generator remains private to its service account.
+  return process.env.ASSISTANT_PROGRAM_ENABLED === 'true' && userId.trim().length > 0
 }

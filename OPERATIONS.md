@@ -564,18 +564,18 @@ progression constraints without replacing model doses. Every new exercise row
 requires a progression explanation, including a reason when doses stay unchanged.
 A model draft that fails validation is rejected.
 
-Independent default-off controls:
+Program access (all trainers):
 
-- The deployment workflow sets `ASSISTANT_PROGRAM_ENABLED=true` and the single
-  approved test trainer UUID on both functions; same-named repository variables
-  can override the release configuration. Runtime defaults remain disabled.
-- `vercel.json` build.env sets `VITE_ASSISTANT_PROGRAM_ENABLED=true` and
-  `VITE_ASSISTANT_PROGRAM_PILOT_USER_IDS=<same UUID>` via the reviewed PR,
-  exposing chat controls only for the test trainer.
-- More than one UUID, an empty list, or a missing flag disables the pilot.
-- Changing either set requires deployment. Disable the server flag and redeploy
-  to stop new quiz/generator calls; existing planned workouts remain ordinary
-  workouts. Existing server-created actions retain their normal apply lifecycle.
+- `ASSISTANT_PROGRAM_ENABLED=true` enables the authenticated trainer flow and
+  private generator. A missing/false flag disables new quiz/generator calls.
+- `VITE_ASSISTANT_PROGRAM_ENABLED=true` in `vercel.json` enables existing chat
+  controls for signed-in trainers. Client roles cannot access the trainer route;
+  the server checks authentication, conversation ownership and trainer role.
+- The former `*_PROGRAM_PILOT_USER_IDS` variables are no longer read. No per-user
+  deployment configuration is needed. Generator IAM remains private; client
+  selection still uses the actor-scoped client list.
+- Disable the server flag and redeploy to stop new calls. Existing planned
+  workouts and server-created action confirmation keep their normal lifecycle.
 
 One-time bootstrap before the first release: create a private function and runtime
 service account named `fit-generate-program` in the existing summary folder.
