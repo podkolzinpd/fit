@@ -1,7 +1,7 @@
 import { generateProgramOnce, programGenerationKey } from './program/job.js'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { aiStudioUsage, reportAiStudioMetric } from '../ai-studio-usage-metrics.js'
-import { isProgramPilotEnabled } from './program/model.js'
+import { isProgramEnabled } from './program/model.js'
 import { extractProgramBrief, invokeProgramGenerator, programPilotTurn } from './program/turn.js'
 import { loadProgramContext } from './program/source.js'
 import { assistantToolStateFilter, latestActiveAssistantTool, routedAssistantTurn } from './router.js'
@@ -796,7 +796,7 @@ export async function runAssistantTurn(
     if (isTurnIdReuse(existingUser?.content, command.message)) throw new HttpError(409, 'turn_id_reused')
   }
   if (isAssistantCapabilityQuestion(command.message)) {
-    const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply() + (isProgramPilotEnabled(user.id)
+    const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply() + (isProgramEnabled(user.id)
       ? '\nТакже могу составить программу на четыре недели: уточню цель и условия, учту историю клиента и покажу черновик перед добавлением в расписание.' : ''), action: null }
     console.info('assistant_capabilities_reply_persisted', { operationId: turnId, releaseSha })
     return persistAssistantResponse(service, command.conversationId, turnId, result)
@@ -812,7 +812,7 @@ export async function runAssistantTurn(
   const latestAssistantAction: unknown = (rows ?? []).find((row) => row.author === 'assistant')?.action
   const history = [...(rows ?? [])].reverse().flatMap((row): { author: string; content: string }[] =>
     typeof row.author === 'string' && typeof row.content === 'string' ? [{ author: row.author, content: row.content.slice(0, 1_000) }] : [])
-  if (isProgramPilotEnabled(user.id)) {
+  if (isProgramEnabled(user.id)) {
     // Ordinary conversation must not evict an unfinished tool from the short
     // model-history window. Read only its latest state or cancellation boundary.
     const state = await service.from('assistant_messages').select('author,content,action')

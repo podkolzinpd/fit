@@ -1,19 +1,19 @@
 import { programPlanFromTemplate, readProgramPlan } from './assistant-orchestrator/program/plan.js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { handler } from './yandex-program-generator-function.js'
-import { isProgramPilotEnabled, programModelJson } from './assistant-orchestrator/program/model.js'
+import { isProgramEnabled, programModelJson } from './assistant-orchestrator/program/model.js'
 import { buildProgramHistoryContext } from './assistant-orchestrator/program/context.js'
 import { fixture } from './assistant-orchestrator/program/fixtures.js'
 import { deriveProgramLoad } from './assistant-orchestrator/program/load.js'
 import { prescribeProgram } from './assistant-orchestrator/program/generate.js'
 
-vi.mock('./assistant-orchestrator/program/model.js', () => ({ isProgramPilotEnabled: vi.fn(), programModelJson: vi.fn() }))
+vi.mock('./assistant-orchestrator/program/model.js', () => ({ isProgramEnabled: vi.fn(), programModelJson: vi.fn() }))
 function request() {
   return { actorId: 'allowed-trainer', operationId: 'op', today: '2026-09-15', brief: fixture(1).brief,
     context: buildProgramHistoryContext({ clientId: 'client', periodStart: '2026-07-22', periodEnd: '2026-09-15', workouts: [], exercises: [], sets: [] }) }
 }
 const selection = { days: { day1: { squat: 'leg-press', hinge: 'fedb-butt-lift-bridge', horizontal_push: 'push-ups', horizontal_pull: 'seated-cable-row', core: 'plank', accessory: null } } }
-beforeEach(() => { vi.clearAllMocks(); vi.mocked(isProgramPilotEnabled).mockReturnValue(true); vi.mocked(programModelJson).mockResolvedValue(programPlanFromTemplate(prescribeProgram(selection, request().brief, request().today, deriveProgramLoad(request().brief, request().context.context, request().today)))) })
+beforeEach(() => { vi.clearAllMocks(); vi.mocked(isProgramEnabled).mockReturnValue(true); vi.mocked(programModelJson).mockResolvedValue(programPlanFromTemplate(prescribeProgram(selection, request().brief, request().today, deriveProgramLoad(request().brief, request().context.context, request().today)))) })
 describe('private generator load contract', () => {
   it('repairs invalid prescriptions once with exact validation feedback', async () => {
     const body = request()
@@ -106,7 +106,7 @@ describe('private generator load contract', () => {
     expect(JSON.stringify(vi.mocked(programModelJson).mock.calls[0]![0].schema)).not.toContain('vital-standing-dumbbell-press')
   })
   it('keeps other trainers outside the pilot', async () => {
-    vi.mocked(isProgramPilotEnabled).mockReturnValue(false)
+    vi.mocked(isProgramEnabled).mockReturnValue(false)
     const result = await handler({ httpMethod: 'POST', body: request() })
     expect(result.statusCode).toBe(403)
     expect(programModelJson).not.toHaveBeenCalled()

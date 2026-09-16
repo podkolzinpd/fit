@@ -4,7 +4,7 @@ import { programPlanFeedback, programPlanSchema, readProgramPlan, replaceProgram
 import { readProgramBrief } from './assistant-orchestrator/program/brief.js'
 import { eligibleProgramExercises } from './assistant-orchestrator/program/catalog.js'
 import { programBriefIssues, validateProgramLoad, ProgramValidationError } from './assistant-orchestrator/program/generate.js'
-import { isProgramPilotEnabled, programModelJson } from './assistant-orchestrator/program/model.js'
+import { isProgramEnabled, programModelJson } from './assistant-orchestrator/program/model.js'
 import { deriveProgramLoad } from './assistant-orchestrator/program/load.js'
 
 type Event = { body?: unknown; httpMethod?: string; isBase64Encoded?: boolean }
@@ -19,7 +19,7 @@ export async function handler(event: Event) {
     const text = typeof event.body === 'string' ? event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body : JSON.stringify(event.body)
     if (!text || text.length > 150_000) return reply(400, { error: 'invalid_program_request' })
     const body = JSON.parse(text) as Record<string, unknown>
-    if (!body || typeof body.actorId !== 'string' || !isProgramPilotEnabled(body.actorId)) return reply(403, { error: 'program_pilot_disabled' })
+    if (!body || typeof body.actorId !== 'string' || !isProgramEnabled(body.actorId)) return reply(403, { error: 'program_pilot_disabled' })
     const brief = readProgramBrief(body.brief)
     if (!brief || typeof body.today !== 'string' || typeof body.operationId !== 'string'
       || typeof body.context !== 'object' || body.context === null) return reply(400, { error: 'invalid_program_request' })

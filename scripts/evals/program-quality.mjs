@@ -3,7 +3,6 @@ import assert from 'node:assert/strict'
 const token = process.env.YANDEX_IAM_TOKEN
 if (!token || !process.env.YANDEX_CLOUD_FOLDER_ID) throw new Error('Set YANDEX_IAM_TOKEN and YANDEX_CLOUD_FOLDER_ID for this explicit paid synthetic evaluation.')
 process.env.ASSISTANT_PROGRAM_ENABLED='true'
-process.env.ASSISTANT_PROGRAM_PILOT_USER_IDS='synthetic-trainer'
 const outputDir = process.argv[2]
 if (!outputDir) throw new Error('Pass an output directory for synthetic results.')
 mkdirSync(outputDir, {recursive:true})
