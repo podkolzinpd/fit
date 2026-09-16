@@ -19,6 +19,13 @@ it('leaves ambiguous negatives and substantive preferences to the model', () => 
   expect(explicitBriefAnswer('нет, приседания не хочу')).toBeUndefined()
 })
 
+it('records unknown adaptations without erasing the stated limitation', () => {
+  const message = 'пока неизвестно'
+  const result = mergeExtractedBrief({ limitations: 'present', limitationsText: 'Дискомфорт при нагрузке' }, message,
+    explicitBriefAnswer(message, { question: 'Какие изменения нужны?', fields: ['limitationAdjustments'] }))
+  expect(result.brief).toMatchObject({ limitations: 'present', limitationAdjustments: message })
+})
+
 it.each([
   ['2026-09-16', 'со следующего понедельника', '2026-09-21'],
   ['2026-09-21', 'со следующего понедельника', '2026-09-28'],

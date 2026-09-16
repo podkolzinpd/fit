@@ -14,6 +14,7 @@ export interface ProgramBrief {
   equipment?: Equipment[]
   limitations?: 'none' | 'present' | 'unknown'
   limitationsText?: string
+  limitationAdjustments?: string
   preferences?: string
   excludedRefs?: string[]
   otherActivity?: string
@@ -36,6 +37,7 @@ export const briefProperties = {
   equipment: { type: 'array', items: { type: 'string', enum: PROGRAM_EQUIPMENT } },
   limitations: { type: 'string', enum: ['none', 'present', 'unknown'] },
   limitationsText: { type: 'string', maxLength: 500 },
+  limitationAdjustments: { type: 'string', maxLength: 500 },
   preferences: { type: 'string', maxLength: 800 },
   excludedRefs: { type: 'array', items: { type: 'string', enum: PROGRAM_CATALOG.map((row) => row.ref) } },
   otherActivity: { type: 'string', maxLength: 500 },
@@ -175,6 +177,10 @@ export function mergeExtractedBrief(previous: ProgramBrief, message: string, val
   const next: Record<string, unknown> = { ...previous }
   for (const key of clearedKeys) delete next[key]
   Object.assign(next, patch)
+  if (((patch.limitationsText !== undefined && patch.limitationsText !== previous.limitationsText)
+    || (patch.limitations !== undefined && patch.limitations !== previous.limitations)
+    || clearedKeys.includes('limitationsText')) && patch.limitationAdjustments === undefined) delete next.limitationAdjustments
+  if (patch.limitations === 'none') { delete next.limitationsText; delete next.limitationAdjustments }
   // Changes to either schedule invalidate the trainer's previous acknowledgement.
   if (patch.otherActivity !== undefined || patch.otherActivities !== undefined || patch.weekdays !== undefined || patch.frequency !== undefined
     || clearedKeys.some((key) => ['otherActivity', 'otherActivities', 'weekdays', 'frequency'].includes(key))) delete next.activityOverlapConfirmed
@@ -199,6 +205,8 @@ export const briefQuestions: Partial<Record<keyof ProgramBrief, string>> = {
   experience: 'Какой опыт тренировок и был ли в последнее время перерыв?',
   equipment: 'Какое оборудование доступно? Можно перечислить его или указать полностью оборудованный тренажёрный зал.',
   limitations: 'Есть ли сейчас боль, травмы или ограничения для упражнений? Если нет — так и напишите.',
+  limitationsText: 'Опишите ограничения: что беспокоит и при каких движениях или нагрузке?',
+  limitationAdjustments: 'Какие движения, упражнения или нагрузки нужно исключить или изменить? Укажите известные рекомендации и допустимые варианты. Если это пока неизвестно, так и напишите — отмечу это в черновике для проверки тренером.',
   preferences: 'Есть ли любимые или нежелательные упражнения? Можно ответить «предпочтений нет».',
   otherActivity: 'Есть ли другая регулярная нагрузка — бег, спорт или физическая работа? Если есть, укажите вид, частоту и дни; если нет — напишите «нет».',
   otherActivities: 'Уточните другую нагрузку: какой вид, сколько раз в неделю и в какие дни? Например: бег, дважды в неделю, вторник и суббота.',
@@ -206,7 +214,9 @@ export const briefQuestions: Partial<Record<keyof ProgramBrief, string>> = {
 }
 
 export function missingBriefFields(brief: ProgramBrief, hasHistory = false): (keyof ProgramBrief)[] {
-  const missing = Object.keys(briefQuestions).filter((key) => key !== 'otherActivities' && (key !== 'continuationPlan' || hasHistory) && brief[key as keyof ProgramBrief] === undefined) as (keyof ProgramBrief)[]
+  const missing = Object.keys(briefQuestions).filter((key) => key !== 'otherActivities' && (key !== 'continuationPlan' || hasHistory)
+    && (!['limitationsText', 'limitationAdjustments'].includes(key) || brief.limitations === 'present' || brief.limitations === 'unknown')
+    && brief[key as keyof ProgramBrief] === undefined) as (keyof ProgramBrief)[]
   if (brief.weekdays && brief.frequency && brief.weekdays.length !== brief.frequency && !missing.includes('weekdays')) missing.push('weekdays')
   if (activityNeedsDetails(brief)) missing.push('otherActivities')
   return missing
@@ -224,6 +234,7 @@ export function briefSummary(brief: ProgramBrief): string {
     brief.excludedRefs?.length && `Исключены: ${brief.excludedRefs.map((ref) => PROGRAM_CATALOG.find((row) => row.ref === ref)?.name).join(', ')}`,
     brief.experience && `Опыт: ${experience[brief.experience]}`,
     brief.limitations && `Ограничения: ${brief.limitations === 'none' ? 'не заявлены' : brief.limitationsText ?? 'нужно уточнить'}`,
+    brief.limitations !== 'none' && brief.limitationAdjustments && `Учесть при подборе: ${brief.limitationAdjustments}`,
     brief.preferences && `Пожелания: ${brief.preferences}`, brief.otherActivity && `Другая нагрузка: ${brief.otherActivity}`,
     brief.otherActivities?.map((activity) => `${activity.kind}: ${activity.frequency} в неделю, ${activity.weekdays.map((day) => days[day - 1]).join(', ')}`).join('\n'),
     brief.activityOverlapConfirmed && 'Совмещение нагрузок в одни дни согласовано.',

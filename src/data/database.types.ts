@@ -1,4 +1,4 @@
-// schema-sha256: f75978568bb8adfbb9fcd3ba03b55b965f06998b66accf34fbd8d3190c2f7714
+// schema-sha256: 5c80c08cafa2be8bd19b3e3e7f63e0d8cc963ca42fa272d11d1b4feeacf475d7
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -37,11 +37,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      assistant_program_generation_job: {
-        Args: { p_id: string; p_owner_id: string; p_client_id: string; p_lease_id: string; p_result?: Json }
-        Returns: Json
-      }
-
       graphql: {
         Args: {
           extensions?: Json
@@ -1957,6 +1952,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assistant_program_generation_job: {
+        Args: { p_id: string; p_owner_id: string; p_client_id: string; p_lease_id: string; p_result?: Json }
+        Returns: Json
+      }
+      release_assistant_program_generation_job: {
+        Args: { p_id: string; p_owner_id: string; p_client_id: string; p_lease_id: string }
+        Returns: boolean
+      }
       accept_chat_connection_invitation: {
         Args: { p_conversation_id: string }
         Returns: {

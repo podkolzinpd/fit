@@ -15,6 +15,18 @@ function request() {
 const selection = { days: { day1: { squat: 'leg-press', hinge: 'fedb-butt-lift-bridge', horizontal_push: 'push-ups', horizontal_pull: 'seated-cable-row', core: 'plank', accessory: null } } }
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(isProgramPilotEnabled).mockReturnValue(true); vi.mocked(programModelJson).mockResolvedValue(programPlanFromTemplate(prescribeProgram(selection, request().brief, request().today, deriveProgramLoad(request().brief, request().context.context, request().today)))) })
 describe('private generator load contract', () => {
+  it('repairs invalid prescriptions once with exact validation feedback', async () => {
+    const body = request()
+    const valid = programPlanFromTemplate(prescribeProgram(selection, body.brief, body.today, deriveProgramLoad(body.brief, body.context.context, body.today)))
+    const invalid = structuredClone(valid)
+    Object.assign(invalid.exercises[0]!, { rpe: [9, 9, 9, 9] })
+    vi.mocked(programModelJson).mockResolvedValueOnce(invalid).mockResolvedValueOnce(valid)
+    expect((await handler({ httpMethod: 'POST', body })).statusCode).toBe(200)
+    expect(programModelJson).toHaveBeenCalledTimes(2)
+    const retry = vi.mocked(programModelJson).mock.calls[1]![0]
+    expect(retry.data).toMatchObject({ repair: { previousPlan: invalid, issues: ['invalid_prescription'] } })
+    expect(retry.timeoutMs).toBeLessThanOrEqual(vi.mocked(programModelJson).mock.calls[0]![0].timeoutMs!)
+  })
   it('passes history bounds to the model and preserves its individual prescriptions', async () => {
     const body = request()
     const load = deriveProgramLoad(body.brief, body.context.context, body.today)
@@ -37,7 +49,19 @@ describe('private generator load contract', () => {
     vi.mocked(programModelJson).mockResolvedValue(plan)
     const result = await handler({ httpMethod: 'POST', body })
     expect(result.statusCode).toBe(422)
+    expect(programModelJson).toHaveBeenCalledTimes(2)
     expect(JSON.parse(result.body)).toMatchObject({ error: 'program_validation_failed', issues: ['invalid_progression_note'] })
+  })
+  it('generates a draft with stated limitations and passes adaptations to the model', async () => {
+    const body = request()
+    body.brief.limitations = 'present'
+    body.brief.limitationsText = 'Дискомфорт при жимах над головой'
+    body.brief.limitationAdjustments = 'Исключить жимы над головой'
+    body.brief.excludedRefs = ['overhead-press', 'vital-standing-dumbbell-press']
+    const result = await handler({ httpMethod: 'POST', body })
+    expect(result.statusCode).toBe(200)
+    expect(vi.mocked(programModelJson).mock.calls[0]![0].data).toMatchObject({ brief: { limitations: 'present', limitationAdjustments: 'Исключить жимы над головой' } })
+    expect(JSON.stringify(vi.mocked(programModelJson).mock.calls[0]![0].schema)).not.toContain('vital-standing-dumbbell-press')
   })
   it('keeps other trainers outside the pilot', async () => {
     vi.mocked(isProgramPilotEnabled).mockReturnValue(false)
@@ -49,5 +73,10 @@ describe('private generator load contract', () => {
     const body = request(); body.brief.otherActivity = 'бег'
     expect((await handler({ httpMethod: 'POST', body })).statusCode).toBe(422)
     expect(programModelJson).not.toHaveBeenCalled()
+  })
+  it('does not retry authorization or transport failures as plan repairs', async () => {
+    vi.mocked(programModelJson).mockRejectedValueOnce(new Error('program_model_http_403'))
+    expect((await handler({ httpMethod: 'POST', body: request() })).statusCode).toBe(502)
+    expect(programModelJson).toHaveBeenCalledOnce()
   })
 })
