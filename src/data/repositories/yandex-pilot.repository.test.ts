@@ -8,6 +8,7 @@ const queries = vi.hoisted(() => ({
   getAppSession: vi.fn(),
   revokeAppSession: vi.fn(),
   linkYandexAccount: vi.fn(),
+  getYandexAccountLinkStatus: vi.fn(),
   listClients: vi.fn(),
   listConnections: vi.fn(),
   listTrainingData: vi.fn(),
@@ -190,6 +191,7 @@ describe('yandexPilotRepository', () => {
     queries.getAppSession.mockReset()
     queries.revokeAppSession.mockReset()
     queries.linkYandexAccount.mockReset()
+    queries.getYandexAccountLinkStatus.mockReset()
     queries.listClients.mockReset()
     queries.listConnections.mockReset()
     queries.listTrainingData.mockReset()
@@ -421,6 +423,32 @@ describe('yandexPilotRepository', () => {
       'code',
       'verifier',
     )).rejects.toThrow('уже связан')
+  })
+
+  it('validates the current profile Yandex ID link status', async () => {
+    queries.getYandexAccountLinkStatus.mockResolvedValue(
+      new Response(JSON.stringify({ linked: true }), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.getYandexAccountLinkStatus(
+      'https://stage.example.test',
+      'supabase-session',
+    )).resolves.toEqual({ linked: true })
+    expect(queries.getYandexAccountLinkStatus).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      'supabase-session',
+    )
+  })
+
+  it('rejects unsupported link status responses', async () => {
+    queries.getYandexAccountLinkStatus.mockResolvedValue(
+      new Response(JSON.stringify({ linked: 'yes' }), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.getYandexAccountLinkStatus(
+      'https://stage.example.test',
+      'supabase-session',
+    )).rejects.toThrow('неподдерживаемый статус Yandex ID')
   })
 
   it('keeps non-allowlisted identities outside the pilot', async () => {

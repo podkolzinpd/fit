@@ -1019,12 +1019,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
       const linker = new DatabaseYandexAccountLinker(runtimePool)
 
+      await expect(linker.readStatus(LINK_ACTOR)).resolves.toEqual({ linked: false })
+
       await expect(
         linker.linkActor(LINK_ACTOR, LINK_SUBJECT_HASH),
       ).resolves.toEqual({ profileId: LINK_ACTOR_ID })
       await expect(
         linker.linkActor(LINK_ACTOR, LINK_SUBJECT_HASH),
       ).resolves.toEqual({ profileId: LINK_ACTOR_ID })
+      await expect(linker.readStatus(LINK_ACTOR)).resolves.toEqual({ linked: true })
 
       const linkedIdentities = await ownerPool.query<CountRow>(
         `

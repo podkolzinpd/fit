@@ -1502,14 +1502,19 @@ function buildExistingActorProvider(
 
 function buildYandexAccountLinker(
   result: { profileId: string } | Error = { profileId: PROFILE_ID },
+  status: { linked: boolean } | Error = { linked: true },
 ): {
   yandexAccountLinker: YandexAccountLinker
   linkActor: ReturnType<typeof vi.fn>
+  readStatus: ReturnType<typeof vi.fn>
 } {
   const linkActor = vi.fn(() =>
     result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
   )
-  return { yandexAccountLinker: { linkActor }, linkActor }
+  const readStatus = vi.fn(() =>
+    status instanceof Error ? Promise.reject(status) : Promise.resolve(status),
+  )
+  return { yandexAccountLinker: { linkActor, readStatus }, linkActor, readStatus }
 }
 
 function buildClientsReader(
@@ -2230,6 +2235,54 @@ describe('Yandex ID app session and account linking endpoints', () => {
     expect(response.statusCode).toBe(400)
     expect(response.json()).toEqual({ error: 'invalid_request' })
     expect(oauth.exchangeCode).not.toHaveBeenCalled()
+  })
+
+  it('returns the current FIT profile Yandex ID link status without identifiers', async () => {
+    const actor = buildExistingActorProvider()
+    const linker = buildYandexAccountLinker({ profileId: PROFILE_ID }, { linked: false })
+    const app = buildApp({
+      existingActorProvider: actor.existingActorProvider,
+      yandexAccountLinker: linker.yandexAccountLinker,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/auth/yandex/link',
+      headers: { 'x-supabase-authorization': 'Bearer supabase-session-token' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ linked: false })
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.body).not.toContain(PROFILE_ID)
+    expect(response.body).not.toContain('supabase-session-token')
+    expect(actor.resolveActor).toHaveBeenCalledWith('supabase-session-token')
+    expect(linker.readStatus).toHaveBeenCalledWith(EXISTING_ACTOR)
+    expect(linker.linkActor).not.toHaveBeenCalled()
+  })
+
+  it('rejects link status without a valid existing FIT session', async () => {
+    const actor = buildExistingActorProvider(null)
+    const linker = buildYandexAccountLinker()
+    const app = buildApp({
+      existingActorProvider: actor.existingActorProvider,
+      yandexAccountLinker: linker.yandexAccountLinker,
+      logger: false,
+    })
+    apps.push(app)
+
+    const missing = await app.inject({ method: 'GET', url: '/v1/auth/yandex/link' })
+    const invalid = await app.inject({
+      method: 'GET',
+      url: '/v1/auth/yandex/link',
+      headers: { 'x-supabase-authorization': 'Bearer invalid-session' },
+    })
+
+    expect(missing.statusCode).toBe(401)
+    expect(invalid.statusCode).toBe(401)
+    expect(linker.readStatus).not.toHaveBeenCalled()
   })
 
   it('links Yandex ID only after proving ownership of the current FIT account', async () => {

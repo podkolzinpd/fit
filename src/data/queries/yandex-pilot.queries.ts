@@ -79,6 +79,15 @@ export const yandexPilotQueries = {
     },
     body: JSON.stringify({ code, codeVerifier }),
   }),
+  getYandexAccountLinkStatus: (
+    apiBaseUrl: string,
+    supabaseAccessToken: string,
+  ) => yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/link`, {
+    cache: 'no-store',
+    headers: {
+      'x-supabase-authorization': `Bearer ${supabaseAccessToken}`,
+    },
+  }),
   listClients: (apiBaseUrl: string, sessionToken: string) => fetch(`${apiBaseUrl}/v1/clients`, {
     cache: 'no-store',
     headers: { 'x-fit-pilot-session': sessionToken },

@@ -1029,6 +1029,43 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   })
 
+  app.get('/v1/auth/yandex/link', async (request, reply) => {
+    const existingAuthorization = request.headers['x-supabase-authorization']
+    const actorToken = readBearerToken(
+      typeof existingAuthorization === 'string'
+        ? existingAuthorization
+        : undefined,
+    )
+    if (actorToken === undefined) {
+      request.log.warn({ failure: 'missing_existing_session' }, 'Yandex account link status rejected')
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (
+      options.existingActorProvider === undefined
+      || options.yandexAccountLinker === undefined
+    ) {
+      request.log.warn({ failure: 'service_not_configured' }, 'Yandex account link status unavailable')
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+
+    try {
+      const actor = await options.existingActorProvider.resolveActor(actorToken)
+      if (actor === undefined) {
+        request.log.warn({ failure: 'existing_session_invalid' }, 'Yandex account link status rejected')
+        return reply.code(401).send({ error: 'unauthorized' })
+      }
+      const status = await options.yandexAccountLinker.readStatus(actor)
+      return reply.header('cache-control', 'no-store').send(status)
+    } catch (error) {
+      if (error instanceof ExistingActorUnavailableError) {
+        request.log.warn({ failure: 'existing_provider_unavailable' }, 'Yandex account link status unavailable')
+      } else {
+        request.log.error({ failure: 'unexpected' }, 'Yandex account link status unavailable')
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
   app.post('/v1/auth/yandex/link', async (request, reply) => {
     const existingAuthorization = request.headers['x-supabase-authorization']
     const actorToken = readBearerToken(
