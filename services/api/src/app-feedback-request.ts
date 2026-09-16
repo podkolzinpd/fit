@@ -1,4 +1,4 @@
-export type AppFeedbackKind = 'suggestion' | 'problem'
+export type AppFeedbackKind = 'suggestion' | 'problem' | 'training program'
 export type AppDisplayMode = 'browser' | 'standalone'
 
 export interface AppFeedbackDraft {
@@ -8,6 +8,8 @@ export interface AppFeedbackDraft {
   appVersion: string
   displayMode: AppDisplayMode
   userAgent: string
+  modelInputJson?: Record<string, unknown>
+  modelOutputJson?: Record<string, unknown>
 }
 
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -21,6 +23,12 @@ function normalizedContext(value: unknown, fallback: string, max: number) {
   if (typeof value !== 'string') return undefined
   const normalized = value.trim() || fallback
   return normalized.slice(0, max)
+}
+
+function jsonObject(value: unknown): Record<string, unknown> | undefined {
+  if (value === undefined) return undefined
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+  return value as Record<string, unknown>
 }
 
 export function readAppFeedbackRequest(body: unknown): AppFeedbackDraft | undefined {
@@ -39,13 +47,17 @@ export function readAppFeedbackRequest(body: unknown): AppFeedbackDraft | undefi
   const appVersion = normalizedContext(input.appVersion, 'unknown', 64)
   const userAgent = normalizedContext(input.userAgent, 'unknown', 512)
 
-  if ((kind !== 'suggestion' && kind !== 'problem')
+  const modelInputJson = jsonObject(input.modelInputJson)
+  const modelOutputJson = jsonObject(input.modelOutputJson)
+  if ((kind !== 'suggestion' && kind !== 'problem' && kind !== 'training program')
     || message.length < 3
     || message.length > 2000
     || (displayMode !== 'browser' && displayMode !== 'standalone')
     || screenPath === undefined
     || appVersion === undefined
-    || userAgent === undefined) {
+    || userAgent === undefined
+    || (kind === 'training program' && (modelInputJson === undefined || modelOutputJson === undefined))
+    || ((modelInputJson === undefined) !== (modelOutputJson === undefined))) {
     return undefined
   }
 
@@ -56,5 +68,6 @@ export function readAppFeedbackRequest(body: unknown): AppFeedbackDraft | undefi
     appVersion,
     displayMode,
     userAgent,
+    ...(modelInputJson === undefined || modelOutputJson === undefined ? {} : { modelInputJson, modelOutputJson }),
   }
 }

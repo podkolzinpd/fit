@@ -1,12 +1,14 @@
 export type AppFeedbackDeliveryInput = {
   id: string
   accountRole: 'trainer' | 'client'
-  kind: 'suggestion' | 'problem'
+  kind: 'suggestion' | 'problem' | 'training program'
   message: string
   screenPath: string
   appVersion: string
   displayMode: 'browser' | 'standalone'
   createdAt: string
+  modelInputJson?: Record<string, unknown>
+  modelOutputJson?: Record<string, unknown>
   sendTracker: boolean
   sendTelegram: boolean
 }
@@ -54,24 +56,28 @@ function formatTimestamp(value: string): string {
 }
 
 function formatTelegramMessage(delivery: AppFeedbackDeliveryInput): string {
-  const title = delivery.kind === 'problem' ? 'Проблема' : 'Пожелание'
+  const title = delivery.kind === 'problem' ? 'Проблема' : delivery.kind === 'training program' ? 'Программа тренировок' : 'Пожелание'
+  const modelPayload = delivery.kind === 'training program'
+    ? `\n\nJSON запроса к модели:\n${JSON.stringify(delivery.modelInputJson)}\n\nJSON ответа модели:\n${JSON.stringify(delivery.modelOutputJson)}` : ''
   return trimMessage(
     `${title} · ${formatTimestamp(delivery.createdAt)}\n`
       + `Роль: ${delivery.accountRole} · Экран: ${delivery.screenPath}\n`
       + `Версия: ${delivery.appVersion} · Режим: ${delivery.displayMode}\n\n`
-      + `${delivery.message}\n\nКод сообщения: ${delivery.id}`,
+      + `${delivery.message}${modelPayload}\n\nКод сообщения: ${delivery.id}`,
     4_000,
   )
 }
 
 function formatTrackerDescription(delivery: AppFeedbackDeliveryInput): string {
+  const modelPayload = delivery.kind === 'training program'
+    ? `\n\nJSON запроса к модели:\n${JSON.stringify(delivery.modelInputJson)}\n\nJSON ответа модели:\n${JSON.stringify(delivery.modelOutputJson)}` : ''
   return `Роль: ${delivery.accountRole}\n`
     + `Экран: ${delivery.screenPath}\n`
     + `Версия приложения: ${delivery.appVersion}\n`
     + `Режим: ${delivery.displayMode}\n`
     + `Отправлено: ${formatTimestamp(delivery.createdAt)}\n`
     + `Код сообщения: ${delivery.id}\n\n`
-    + delivery.message
+    + delivery.message + modelPayload
 }
 
 async function readJson(response: Response): Promise<unknown> {

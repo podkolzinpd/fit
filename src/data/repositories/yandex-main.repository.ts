@@ -1010,8 +1010,8 @@ export function createYandexMainRepository(
       async unpublish(summary) { await writeEmpty(queries, `/v1/training-summaries/${summary.id}/unpublish`, 'POST', { expectedVersion: summary.version }) },
     },
     appFeedback: {
-      async submit(kind, message) {
-        const payload = await writeJson(queries, '/v1/app-feedback', 'POST', { kind, message: message.trim(), ...currentAppFeedbackContext() }, z.object({ feedback: z.object({ id: uuid }) }))
+      async submit(kind, message, metadata) {
+        const payload = await writeJson(queries, '/v1/app-feedback', 'POST', { kind, message: message.trim(), ...currentAppFeedbackContext(), ...metadata }, z.object({ feedback: z.object({ id: uuid }) }))
         return payload.feedback.id
       },
     },
