@@ -29,10 +29,11 @@ const profile = {
 }
 
 function Probe() {
-  const { session, loading, error, retry, signOut } = useYandexAppSession()
+  const { session, loading, error, retry, reset, signOut } = useYandexAppSession()
   return <div>
     <p>{loading ? 'loading' : session?.profile.firstName ?? error ?? 'anonymous'}</p>
     <button onClick={() => void retry()}>retry</button>
+    <button onClick={reset}>reset</button>
     <button onClick={() => void signOut()}>logout</button>
   </div>
 }
@@ -96,6 +97,20 @@ describe('YandexAppSessionProvider', () => {
     expect(window.localStorage.getItem('fit.yandexAppSession.v1')).not.toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'retry' }))
     expect(await screen.findByText('Ирина')).toBeVisible()
+  })
+
+  it('clears only the stored Yandex session after an explicit reset', async () => {
+    repository.getAppSession.mockRejectedValue(new Error('Yandex ID не ответил вовремя.'))
+    storeSession()
+    window.localStorage.setItem('fit.theme', 'dark')
+    render(<YandexAppSessionProvider><Probe /></YandexAppSessionProvider>)
+
+    expect(await screen.findByText('Yandex ID не ответил вовремя.')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'reset' }))
+
+    expect(await screen.findByText('anonymous')).toBeVisible()
+    expect(window.localStorage.getItem('fit.yandexAppSession.v1')).toBeNull()
+    expect(window.localStorage.getItem('fit.theme')).toBe('dark')
   })
 
   it('revokes the server session and clears the local token on logout', async () => {
