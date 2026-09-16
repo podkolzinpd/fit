@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExercisePicker, equipmentForSelection, filterExercises, groupsForSelection, musclesForGroup, purposesForSelection } from './ExercisePicker'
 import { recentExercisesForClient } from './client-recent-exercises'
@@ -37,6 +38,23 @@ function catalog(overrides: Partial<ExerciseCatalogState> = {}): ExerciseCatalog
     create: vi.fn(),
     ...overrides,
   }
+}
+
+function PickerDraftHarness({ onPickMany = () => undefined }: { onPickMany?: (exercises: ExerciseSnapshot[]) => void | Promise<void> }) {
+  const [open, setOpen] = useState(true)
+  const [selectionDraft, setSelectionDraft] = useState<ExerciseSnapshot[]>([])
+  return <>
+    <button type="button" onClick={() => setOpen(true)}>Открыть каталог</button>
+    {open && <ExercisePicker
+      catalog={catalog({ exercises: ENRICHED })}
+      onPick={vi.fn()}
+      onPickMany={async (exercises) => { await onPickMany(exercises); setOpen(false) }}
+      selectionDraft={selectionDraft}
+      onSelectionDraftChange={setSelectionDraft}
+      multiple
+      onClose={() => setOpen(false)}
+    />}
+  </>
 }
 
 describe('ExercisePicker', () => {
@@ -564,5 +582,48 @@ describe('ExercisePicker', () => {
       expect.objectContaining({ ref: 'a' }),
       expect.objectContaining({ ref: 'd' }),
     ])
+  })
+
+  it('keeps the selection draft after closing and lets the user clear it explicitly', async () => {
+    const user = userEvent.setup()
+    render(<PickerDraftHarness />)
+
+    await user.click(screen.getByRole('button', { name: /Выбрать: Присед/ }))
+    await user.click(screen.getByRole('button', { name: /Выбрать: Жим лёжа/ }))
+    expect(screen.getByText('Выбрано: 2')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Закрыть' }))
+    await user.click(screen.getByRole('button', { name: 'Открыть каталог' }))
+    expect(screen.getByText('Выбрано: 2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Убрать: Присед/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Убрать: Жим лёжа/ })).toHaveAttribute('aria-pressed', 'true')
+
+    const overlay = document.querySelector<HTMLElement>('.sheet-overlay')
+    if (!overlay) throw new Error('Picker overlay is missing')
+    await user.click(overlay)
+    await user.click(screen.getByRole('button', { name: 'Открыть каталог' }))
+    expect(screen.getByText('Выбрано: 2')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    await user.click(screen.getByRole('button', { name: 'Сбросить' }))
+    expect(screen.getByText('Выбрано: 2')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Очистить' }))
+    expect(screen.queryByText('Выбрано: 2')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Выбрать: Присед/ })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('clears the draft only after the selected exercises are added', async () => {
+    const user = userEvent.setup()
+    const onPickMany = vi.fn()
+    render(<PickerDraftHarness onPickMany={onPickMany} />)
+
+    await user.click(screen.getByRole('button', { name: /Выбрать: Присед/ }))
+    await user.click(screen.getByRole('button', { name: 'Добавить 1' }))
+    expect(onPickMany).toHaveBeenCalledWith([expect.objectContaining({ ref: 'a' })])
+
+    await user.click(screen.getByRole('button', { name: 'Открыть каталог' }))
+    expect(screen.queryByText('Выбрано: 1')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Выбрать: Присед/ })).toHaveAttribute('aria-pressed', 'false')
   })
 })

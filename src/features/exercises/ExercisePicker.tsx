@@ -103,7 +103,9 @@ interface ExercisePickerProps {
   catalog: ExerciseCatalogState
   clientRecent?: readonly ExerciseSnapshot[]
   onPick: (exercise: ExerciseSnapshot, runningFormat?: RunningFormat) => void
-  onPickMany?: (exercises: ExerciseSnapshot[]) => void
+  onPickMany?: (exercises: ExerciseSnapshot[]) => void | Promise<void>
+  selectionDraft?: readonly ExerciseSnapshot[]
+  onSelectionDraftChange?: (exercises: ExerciseSnapshot[]) => void
   multiple?: boolean
   initialSearch?: string
   initialMode?: ExercisePickerMode
@@ -160,7 +162,7 @@ function useVisualViewportStyle() {
   return { style, keyboardOpen }
 }
 
-export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, multiple = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', onClose }: ExercisePickerProps) {
+export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', onClose }: ExercisePickerProps) {
   const [mode, setMode] = useState<Exclude<ExercisePickerMode, 'choose' | 'strength'>>(
     !initialSearch.trim() && initialMode === 'running' ? 'running' : 'all',
   )
@@ -177,7 +179,8 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const [playingExerciseKey, setPlayingExerciseKey] = useState<string | null>(null)
   const [visibleCount, setVisibleCount] = useState(PICKER_BATCH_SIZE)
   const [customOnly, setCustomOnly] = useState(false)
-  const [selected, setSelected] = useState<Map<string, ExerciseSnapshot>>(() => new Map())
+  const [localSelected, setLocalSelected] = useState<Map<string, ExerciseSnapshot>>(() => new Map())
+  const [addingSelected, setAddingSelected] = useState(false)
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [group, setGroup] = useState<MuscleGroup | null>(null)
@@ -269,6 +272,12 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   )
   const visibleListExercises = useMemo(() => listExercises.slice(0, visibleCount), [listExercises, visibleCount])
   const hasVisibleExercises = promotedClient.length > 0 || recent.length > 0 || listExercises.length > 0
+  const selected = useMemo(
+    () => selectionDraft === undefined
+      ? localSelected
+      : new Map(selectionDraft.map((exercise) => [exerciseKey(exercise), exercise])),
+    [localSelected, selectionDraft],
+  )
 
   useEffect(() => {
     setVisibleCount(PICKER_BATCH_SIZE)
@@ -286,17 +295,29 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
       return
     }
     const key = exerciseKey(exercise)
-    setSelected((current) => {
-      const next = new Map(current)
-      if (next.has(key)) next.delete(key)
-      else next.set(key, exercise)
-      return next
-    })
+    const next = new Map(selected)
+    if (next.has(key)) next.delete(key)
+    else next.set(key, exercise)
+    updateSelection(next)
   }
-  function addSelected() {
+  function updateSelection(next: Map<string, ExerciseSnapshot>) {
+    if (selectionDraft === undefined) setLocalSelected(next)
+    else onSelectionDraftChange?.([...next.values()])
+  }
+  function clearSelection() {
+    updateSelection(new Map())
+  }
+  async function addSelected() {
     const exercises = [...selected.values()]
-    exercises.forEach(recordRecent)
-    onPickMany?.(exercises)
+    if (!exercises.length || !onPickMany || addingSelected) return
+    setAddingSelected(true)
+    try {
+      await onPickMany(exercises)
+      exercises.forEach(recordRecent)
+      clearSelection()
+    } finally {
+      setAddingSelected(false)
+    }
   }
   function pickRunningFormat(format: RunningFormat) {
     if (!runningExercise) return
@@ -445,7 +466,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
             <div className="running-format-list interval-list">{INTERVAL_RUNNING_FORMATS.map((option) => <button type="button" className="running-format-option" data-running-format={option.format} disabled={!runningExercise} key={option.format} onClick={() => pickRunningFormat(option.format)}><strong>{option.title}</strong><span>{option.description}</span></button>)}</div>
           </>}
           {!runningExercise && !catalog.loading && <p className="state">Базовое упражнение «Бег» не найдено</p>}
-          {multiple && selected.size > 0 && <div className="picker-selection-bar"><span>Выбрано: {selected.size}</span><button type="button" className="primary" onClick={addSelected}>Добавить {selected.size}</button></div>}
+          {multiple && selected.size > 0 && <div className="picker-selection-bar"><span className="picker-selection-summary"><span>Выбрано: {selected.size}</span><button type="button" className="link" onClick={clearSelection}>Очистить</button></span><button type="button" className="primary" disabled={addingSelected} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить ${selected.size}`}</button></div>}
         </div> : <>
           {hasVisibleExercises && <div className="picker-list-meta"><span>{hasFilters || search.trim() ? `Найдено: ${filtered.length}` : exerciseCountLabel(filtered.length)}</span>{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить</button>}</div>}
           {catalog.loading && <p className="state">Загрузка…</p>}
@@ -461,7 +482,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
             <p>{hasFilters || search.trim() ? 'Ничего не найдено' : 'В этом разделе пока нет упражнений'}</p>
             <div>{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить фильтры</button>}{search.trim() && <button type="button" className="link" onClick={openCreate}>{`Создать «${search.trim()}»`}</button>}</div>
           </div>}
-          {multiple && selected.size > 0 && <div className="picker-selection-bar"><span>Выбрано: {selected.size}</span><button type="button" className="primary" onClick={addSelected}>Добавить {selected.size}</button></div>}
+          {multiple && selected.size > 0 && <div className="picker-selection-bar"><span className="picker-selection-summary"><span>Выбрано: {selected.size}</span><button type="button" className="link" onClick={clearSelection}>Очистить</button></span><button type="button" className="primary" disabled={addingSelected} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить ${selected.size}`}</button></div>}
         </>}
       </>}
     </section>
