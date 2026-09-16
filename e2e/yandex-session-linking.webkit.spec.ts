@@ -38,7 +38,7 @@ test('Yandex session linking entry is visible on every trainer home when enabled
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 
-test('Yandex session linking entry is visible on every client home when enabled', async ({ page }) => {
+test('Yandex session linking entry disappears from client home after linking', async ({ page }) => {
   test.skip(
     process.env.VITE_YANDEX_SESSION_LINKING_ENABLED !== 'true',
     'Run with the global Yandex linking env to verify the client home entry.',
@@ -50,7 +50,7 @@ test('Yandex session linking entry is visible on every client home when enabled'
   }))
   await signIn(page, 'client@fit.local', /\/me$/)
 
-  await expect(page.getByRole('heading', { name: 'Yandex ID привязан' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Yandex ID/ })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Привязать Yandex ID' })).toHaveCount(0)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })

@@ -76,13 +76,14 @@ describe('YandexAccountLinkingCard', () => {
     )
   })
 
-  it('shows the linked status without offering another OAuth flow', async () => {
+  it('removes the home prompt after the account is linked', async () => {
     vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
     getYandexAccountLinkStatus.mockResolvedValue({ linked: true })
 
     renderCard()
 
-    expect(await screen.findByRole('heading', { name: 'Yandex ID привязан' })).toBeVisible()
+    await waitFor(() => expect(getYandexAccountLinkStatus).toHaveBeenCalledTimes(1))
+    expect(screen.queryByRole('heading', { name: /Yandex ID/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Привязать Yandex ID' })).not.toBeInTheDocument()
   })
 
@@ -97,7 +98,8 @@ describe('YandexAccountLinkingCard', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось проверить привязку Yandex ID.')
     await user.click(screen.getByRole('button', { name: 'Повторить' }))
-    expect(await screen.findByRole('heading', { name: 'Yandex ID привязан' })).toBeVisible()
+    await waitFor(() => expect(getYandexAccountLinkStatus).toHaveBeenCalledTimes(2))
+    expect(screen.queryByRole('heading', { name: /Yandex ID/ })).not.toBeInTheDocument()
   })
 
   it('starts the linking OAuth flow for an unlinked user', async () => {
