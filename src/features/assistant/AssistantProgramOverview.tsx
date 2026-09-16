@@ -9,7 +9,11 @@ type Exercise = z.infer<typeof exerciseSchema>
 
 export function programDoseText(exercise: Pick<Exercise, 'sets' | 'reps' | 'durationSec'>): string {
   const sets = `${exercise.sets} ${exercise.sets === 1 ? 'подход' : 'подхода'}`
-  if (exercise.reps === null) return `${sets}, удержание по ${exercise.durationSec} секунд`
+  if (exercise.reps === null) {
+    const seconds = exercise.durationSec ?? 0
+    const duration = seconds < 60 ? `${seconds} сек` : `${Math.floor(seconds / 60)} мин${seconds % 60 ? ` ${seconds % 60} сек` : ''}`
+    return `${sets} по ${duration}`
+  }
   const reps = exercise.reps
   const word = reps % 10 >= 2 && reps % 10 <= 4 && (reps < 12 || reps > 14) ? 'повторения' : 'повторений'
   return `${sets} по ${reps} ${word}`

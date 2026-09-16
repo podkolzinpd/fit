@@ -66,3 +66,15 @@ it('asks what to continue only when history exists and preserves an explicit ans
   expect(missingBriefFields(result.brief, true)).not.toContain('continuationPlan')
   expect(result.brief.preserveRefs).toEqual(['bench-press'])
 })
+
+it('retains years of experience and break duration alongside the returning category', () => {
+  const message = 'Опыт пять лет, перерыв два месяца'
+  const { brief } = mergeExtractedBrief({}, message, { patch: { experience: 'returning', experienceText: message }, clear: [],
+    evidence: { experience: message, experienceText: message }, clarification: null })
+  expect(brief).toEqual({ experience: 'returning', experienceText: message })
+  expect(briefSummary(brief)).toContain(message)
+})
+it('does not invent experience details or retain them after a corrected category', () => {
+  expect(() => mergeExtractedBrief({}, 'Был перерыв', { patch: { experienceText: 'Перерыв два месяца' }, clear: [], evidence: { experienceText: 'Был перерыв' }, clarification: null })).toThrow('brief_evidence_missing')
+  expect(mergeExtractedBrief({ experience: 'returning', experienceText: 'Перерыв два месяца' }, 'Я новичок', { patch: { experience: 'beginner' }, clear: [], evidence: { experience: 'Я новичок' }, clarification: null }).brief).toEqual({ experience: 'beginner' })
+})

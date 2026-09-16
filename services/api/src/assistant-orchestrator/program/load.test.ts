@@ -51,15 +51,15 @@ describe('observed history drives numerical prescriptions', () => {
   it('honors an explicit return from a break even when recent records exist', () => {
     const { brief } = fixture(); brief.experience = 'returning'
     const load = deriveProgramLoad(brief, history(), '2026-09-15')
-    expect(load).toMatchObject({ mode: 'starting', maxSetsPerExercise: 2, rpe: 6.5 })
+    expect(load).toMatchObject({ mode: 'starting', maxSetsPerExercise: 4, rpe: 7.5 })
     expect(load.summary).toContain('В анкете указан возврат')
   })
-  it('rejects a generator response that ignores the starting progression', () => {
+  it('allows progression after a break without a mandatory two-week plateau', () => {
     const { brief } = fixture()
     const load = deriveProgramLoad(brief, history({ weeks: 0 }), '2026-09-15')
     const result = prescribeProgram(selection(3), brief, '2026-09-15', load)
     result.sessions[0]!.exercises[0]!.weeks[1]!.reps = 9
-    expect(() => validateProgramLoad(result, load)).toThrow('program_validation_failed')
+    expect(() => validateProgramLoad(result, load)).not.toThrow()
   })
   it('uses historical volume as context when requested frequency rises', () => {
     const { brief } = fixture(); brief.experience = 'experienced'
@@ -83,7 +83,7 @@ describe('observed history drives numerical prescriptions', () => {
   ])('does not inflate the strength baseline from %s', (_, options) => {
     const { brief } = fixture(); brief.experience = 'experienced'
     const load = deriveProgramLoad(brief, history(options), '2026-09-15')
-    expect(load).toMatchObject({ mode: 'starting', maxSetsPerExercise: 2, meanWeeklyCatalogSets: 0 })
+    expect(load).toMatchObject({ mode: 'starting', maxSetsPerExercise: 4, meanWeeklyCatalogSets: 0 })
   })
   it('counts zero-record weeks rather than averaging only active weeks', () => {
     const { brief } = fixture()
@@ -112,11 +112,11 @@ it('incomplete catalog keeps observed volume separate from starting prescription
   const result = prescribeProgram(selection(3), brief, '2026-09-15', uncertain)
   expect(result.sessions.flatMap((session) => session.exercises).reduce((sum, exercise) => sum + exercise.weeks[0]!.sets, 0)).toBe(30)
 })
-it('difficult feedback changes effort and progression without diagnosing current limitations', () => {
+it('difficult feedback remains visible context without inventing numerical capacity', () => {
   const { brief } = fixture(); brief.experience = 'experienced'
   const context = history()
   context.feedback = { reportedWorkouts: 12, missingWorkouts: 0, hardDates: ['2026-09-14'], discomfortDates: ['2026-09-14'], meanSessionRpe: 10 }
   const load = deriveProgramLoad(brief, context, '2026-09-15')
-  expect(load).toMatchObject({ mode: 'starting', rpe: 6.5, increments: [0, 0, 1, 1] })
+  expect(load).toMatchObject({ mode: 'starting', rpe: 8, increments: [0, 2, 4, 6] })
   expect(load.summary).toContain('текущие ограничения проверяются отдельно')
 })
