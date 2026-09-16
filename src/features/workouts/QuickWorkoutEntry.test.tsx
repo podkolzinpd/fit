@@ -13,6 +13,31 @@ const catalog: ExerciseSnapshot[] = [
 const parseWorkout = vi.fn().mockResolvedValue({ items: [], unmatched: [] })
 
 describe('QuickWorkoutEntry circuit input', () => {
+  it('сохраняет разобранные значения при выборе упражнения из полного каталога', async () => {
+    const onAdd = vi.fn<(exercises: ParsedWorkoutExercise[]) => void>()
+    const onOpenCatalog = vi.fn((_search: string, onSelect?: (exercise: ExerciseSnapshot) => void) => onSelect?.(catalog[1]!))
+    const remote = vi.fn().mockResolvedValue({
+      items: [{ sourceText: 'Присед 3 по 10 30 килограмм', exerciseRef: 'squat', confidence: 0.8, sets: Array.from({ length: 3 }, () => ({ weightKg: 30, reps: 10 })) }],
+      unmatched: [],
+    })
+    render(<QuickWorkoutEntry catalog={catalog} parseWorkout={remote} onAdd={onAdd} onOpenCatalog={onOpenCatalog} />)
+
+    fireEvent.change(screen.getByLabelText('Запись тренировки'), { target: { value: 'Присед 3 по 10 30 килограмм' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Разобрать тренировку' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Все варианты' }))
+
+    expect(onOpenCatalog).toHaveBeenCalledWith('Присед', expect.any(Function))
+    expect(await screen.findByText('Фронтальный присед')).toBeInTheDocument()
+    expect(screen.getByText('3 × 30 кг × 10 повт.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить в план (1)' }))
+    expect(onAdd.mock.calls[0]?.[0][0]).toMatchObject({
+      exercise: { ref: 'front-squat' },
+      hasValues: true,
+      sets: Array.from({ length: 3 }, () => ({ weightKg: 30, reps: 10 })),
+    })
+  })
+
   it('добавляет явный сет как существующую круговую, не меняя подходы', async () => {
     const onAdd = vi.fn<(exercises: ParsedWorkoutExercise[]) => void>()
     render(<QuickWorkoutEntry catalog={catalog} parseWorkout={parseWorkout} onAdd={onAdd} />)
