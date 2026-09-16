@@ -110,8 +110,12 @@ test('today: живая диктовка с паузами и числами с�
   await expect(page.locator('.today-exercise')).toHaveCount(2)
 })
 
-test('today: ошибка voice-разбора сохраняет transcript и раскрывает текстовый fallback', async ({ page }) => {
-  await page.route('**/functions/v1/parse-workout', async (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporary' }) }))
+test('today: недоступный AI-разбор сохраняет transcript и открывает ручное уточнение без повтора', async ({ page }) => {
+  let parserRequests = 0
+  await page.route('**/functions/v1/parse-workout', async (route) => {
+    parserRequests += 1
+    await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporary' }) })
+  })
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -122,9 +126,10 @@ test('today: ошибка voice-разбора сохраняет transcript и 
 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
   await page.getByRole('button', { name: 'Готово' }).click()
-  await expect(page.getByText('Не удалось обработать диктовку. Исходный текст сохранён.')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('Не нашли упражнение')).toBeVisible({ timeout: 10_000 })
   await expect(page.getByLabel('Тренировка')).toHaveValue('Неизвестное упражнение абракадабра')
   await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeEnabled()
+  expect(parserRequests).toBe(1)
 })
 
 test('today: быстрый старт ведёт к единому выбору плана или завершённой тренировки', async ({ page }, testInfo) => {
