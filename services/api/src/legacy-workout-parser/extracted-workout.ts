@@ -58,8 +58,9 @@ export type ExtractedWorkout = {
 
 export const workoutExtractionSchema = {
   type: 'object', additionalProperties: false, required: ['items', 'unmatched'], properties: {
-    items: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['sourceText', 'exerciseName', 'equipment', 'muscle', 'sets', 'position'], properties: {
+    items: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['sourceText', 'exerciseName', 'equipment', 'muscle', 'sets', 'repeatCount', 'position'], properties: {
       sourceText: { type: 'string' }, exerciseName: { type: 'string' }, equipment: { type: ['string', 'null'] }, muscle: { type: ['string', 'null'] }, position: { type: 'integer' },
+      repeatCount: { type: 'integer', minimum: 1, maximum: 20 },
       sets: { type: 'array', items: { type: 'object', additionalProperties: false, properties: {
         weightKg: { type: 'number' }, reps: { type: 'number' }, durationMin: { type: 'number' }, distanceKm: { type: 'number' },
       } } },
@@ -75,7 +76,7 @@ export function workoutExtractionPrompt(text: string): string {
     'Разбери запись тренировки после диктовки и верни JSON строго по schema. Каталога упражнений у тебя нет: не придумывай идентификаторы и не выбирай карточку.',
     'Для каждого упражнения сохрани точный исходный фрагмент в sourceText, а в exerciseName дай короткое нормализованное спортивное название. Не теряй названные оборудование, положение тела и целевую мышцу: вынеси явно названные оборудование и мышцу в equipment и muscle, иначе верни null.',
     'Не объединяй разные упражнения. position — порядковый номер упражнения с нуля. Если фрагмент невозможно уверенно выделить как упражнение, верни его в unmatched с исходной позицией.',
-    'Если сказано N подходов (например, «3 подхода по 15 на 100», «15 повторений, 3 подхода, 100 кг» или «3 по 15 на 100»), верни N одинаковых объектов в sets. Порядок чисел в речи не важен. Не придумывай значения и не добавляй нули для отсутствующих повторов, веса, времени или дистанции.',
+    'Если сказано N одинаковых подходов (например, «3 подхода по 15 на 100»), верни один объект в sets и repeatCount=N. Если подходы различаются, перечисли их в sets и верни repeatCount=1. Порядок чисел в речи не важен. Не придумывай значения и не добавляй нули для отсутствующих повторов, веса, времени или дистанции.',
     `Текст: ${text}`,
   ].join('\n')
 }
@@ -118,12 +119,15 @@ export function validateWorkoutExtraction(value: unknown): ExtractedWorkout {
     const exerciseName = raw.exerciseName.trim()
     const sets = validatedSets(raw.sets)
     if (!sourceText || !exerciseName || sets === undefined) return []
+    const repeatCount = typeof raw.repeatCount === 'number' && Number.isInteger(raw.repeatCount) && raw.repeatCount > 1 && raw.repeatCount <= 20 && sets.length === 1
+      ? raw.repeatCount
+      : 1
     return [{
       sourceText,
       exerciseName,
       ...(typeof raw.equipment === 'string' && raw.equipment.trim() ? { equipment: raw.equipment.trim() } : {}),
       ...(typeof raw.muscle === 'string' && raw.muscle.trim() ? { muscle: raw.muscle.trim() } : {}),
-      sets,
+      sets: repeatCount > 1 ? Array.from({ length: repeatCount }, () => ({ ...sets[0]! })) : sets,
       position: validPosition(raw.position, index),
     }]
   })
