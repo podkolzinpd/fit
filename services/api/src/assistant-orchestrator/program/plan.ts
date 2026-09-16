@@ -116,3 +116,30 @@ export function programPlanFromTemplate(template: ProgramTemplate) {
     durationExercises: rows.filter((row) => isDuration(row.exerciseRef)),
   }
 }
+
+/** Measured feedback for repair; never edits model prescriptions. */
+export function programPlanFeedback(raw: unknown, brief: ProgramBrief) {
+  if (!record(raw)) return { expectedRootKeys: ROOT_KEYS }
+  const rows = [raw.exercises, raw.durationExercises].flatMap((value) => Array.isArray(value) ? value.filter(record) : [])
+  return {
+    expectedWeekdays: brief.weekdays,
+    sessions: Array.isArray(raw.sessions) ? raw.sessions.filter(record).map((session) => ({
+      weekday: session.weekday, titleLength: typeof session.title === 'string' ? session.title.length : null,
+      exerciseCount: rows.filter((row) => row.weekday === session.weekday).length,
+    })) : [],
+    requirements: {
+      exercisesPerDay: { minimum: 3, maximum: 8 }, titleLength: { minimum: 1, maximum: 100 },
+      uniqueSessionForEveryRequestedWeekday: true,
+      exerciseWeekdayMustMatchSessionWeekday: true,
+      countIncludesRepAndDurationExercises: true,
+    },
+  }
+}
+
+export function replaceProgramDay(raw: unknown, replacement: unknown, weekday: number): unknown {
+  if (!record(raw) || !record(replacement)) return replacement
+  const merge = (key: string) => Array.isArray(raw[key]) && Array.isArray(replacement[key])
+    ? [...(raw[key] as unknown[]).filter((row: unknown) => record(row) && row.weekday !== weekday),
+      ...(replacement[key] as unknown[]).filter((row: unknown) => record(row) && row.weekday === weekday)] : replacement[key]
+  return { ...raw, sessions: merge('sessions'), exercises: merge('exercises'), durationExercises: merge('durationExercises') }
+}
