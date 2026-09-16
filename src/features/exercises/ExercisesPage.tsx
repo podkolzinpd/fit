@@ -36,7 +36,7 @@ function useCustomExercises() {
   const save = useMutation({
     mutationFn: (value: { name: string; muscleGroup: MuscleGroup; inputKind: InputKind }) => editing
       ? exercisesRepository.update(editing, value)
-      : exercisesRepository.create(actor!.userId, value),
+      : exercisesRepository.create(actor!.userId, actor!.userId, value),
     onSuccess: async () => {
       setEditing(null)
       await queryClient.invalidateQueries({ queryKey: ['exercises'] })

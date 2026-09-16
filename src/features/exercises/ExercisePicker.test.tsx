@@ -8,6 +8,9 @@ import type { ExerciseCatalogState } from './exercise-catalog'
 import { SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISES } from '../../shared/system-exercises'
 import type { ExerciseSnapshot, Workout } from '../../shared/domain'
 
+const prepareExerciseImage = vi.hoisted(() => vi.fn())
+vi.mock('./exercise-image', () => ({ prepareExerciseImage }))
+
 // Обогащённая выборка для проверки иерархии
 // группа→мышца→оборудование→упражнение.
 const ENRICHED: ExerciseSnapshot[] = [
@@ -113,6 +116,8 @@ describe('ExercisePicker', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'localStorage', { configurable: true, value: browserStorage })
     browserStorage.clear()
+    prepareExerciseImage.mockReset()
+    prepareExerciseImage.mockResolvedValue({ dataUrl: 'data:image/jpeg;base64,AQID', mimeType: 'image/jpeg', width: 800, height: 800, sizeBytes: 3 })
   })
   afterEach(() => {
     if (originalLocalStorage) Object.defineProperty(window, 'localStorage', originalLocalStorage)
@@ -541,7 +546,10 @@ describe('ExercisePicker', () => {
     await user.type(screen.getByPlaceholderText('Например: Болгарский присед'), 'Тестовое')
     await user.click(screen.getByRole('button', { name: 'Ноги' }))
     await user.click(screen.getByRole('button', { name: 'Сохранить упражнение' }))
-    expect(create).toHaveBeenCalledWith({ name: 'Тестовое', muscleGroup: 'legs', inputKind: 'strength' })
+    expect(create).toHaveBeenCalledWith({
+      name: 'Тестовое', muscleGroup: 'legs', inputKind: 'strength',
+      primaryMuscleDetail: undefined, equipment: undefined, description: undefined,
+    }, null)
     expect(onPick).toHaveBeenCalledWith(created)
   })
 
@@ -555,7 +563,102 @@ describe('ExercisePicker', () => {
     await user.click(screen.getByRole('button', { name: 'Кардио' }))
     await user.click(screen.getByRole('button', { name: 'Время + повторы' }))
     await user.click(screen.getByRole('button', { name: 'Сохранить упражнение' }))
-    expect(create).toHaveBeenCalledWith({ name: 'Скакалка 2', muscleGroup: 'cardio', inputKind: 'reps' })
+    expect(create).toHaveBeenCalledWith({
+      name: 'Скакалка 2', muscleGroup: 'cardio', inputKind: 'reps',
+      primaryMuscleDetail: undefined, equipment: undefined, description: undefined,
+    }, null)
+  })
+
+  it('offers muscle/equipment from the same catalog dictionary as the filter, and sends the picked classification plus description to create()', async () => {
+    const user = userEvent.setup()
+    const created = { source: 'custom', ref: 'custom-3', customExerciseId: 'custom-3', name: 'Болгарский присед', muscleGroup: 'legs', inputKind: 'strength' } as const
+    const create = vi.fn().mockResolvedValue(created)
+    render(<ExercisePicker catalog={catalog({ exercises: ENRICHED, create })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    await user.type(screen.getByPlaceholderText('Например: Болгарский присед'), 'Болгарский присед')
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+
+    expect(screen.getByLabelText('Мышца')).toBeInTheDocument()
+    expect(screen.getByLabelText('Оборудование')).toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('Мышца'), 'Квадрицепс')
+    await user.selectOptions(screen.getByLabelText('Оборудование'), 'Тренажёр')
+    await user.type(screen.getByPlaceholderText('Как выполнять, на что обратить внимание'), 'Задняя нога на скамье.')
+    await user.click(screen.getByRole('button', { name: 'Сохранить упражнение' }))
+
+    expect(create).toHaveBeenCalledWith({
+      name: 'Болгарский присед', muscleGroup: 'legs', inputKind: 'strength',
+      primaryMuscleDetail: 'Квадрицепс', equipment: 'Тренажёр', description: 'Задняя нога на скамье.',
+    }, null)
+  })
+
+  it('changing the muscle after picking equipment resets the equipment choice, matching the filter panel', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    await user.selectOptions(screen.getByLabelText('Мышца'), 'Квадрицепс')
+    await user.selectOptions(screen.getByLabelText('Оборудование'), 'Тренажёр')
+    await user.selectOptions(screen.getByLabelText('Мышца'), 'Бицепс бедра')
+    expect(screen.getByLabelText('Оборудование')).toHaveValue('')
+  })
+
+  it('attaches a cover photo, shows a preview with a remove control, and sends the prepared image to create()', async () => {
+    const user = userEvent.setup()
+    const created = { source: 'custom', ref: 'custom-4', customExerciseId: 'custom-4', name: 'С фото', muscleGroup: 'legs', inputKind: 'strength' } as const
+    const create = vi.fn().mockResolvedValue(created)
+    render(<ExercisePicker catalog={catalog({ create })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    await user.type(screen.getByPlaceholderText('Например: Болгарский присед'), 'С фото')
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+
+    await user.upload(screen.getByLabelText('Выбрать фото'), new File(['photo'], 'cover.png', { type: 'image/png' }))
+    expect(await screen.findByAltText('Фото упражнения')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Добавить фото на обложку' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Сохранить упражнение' }))
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'С фото' }),
+      { dataUrl: 'data:image/jpeg;base64,AQID', mimeType: 'image/jpeg', width: 800, height: 800, sizeBytes: 3 },
+    )
+  })
+
+  it('removing an attached photo brings back the attach button and clears it from the next save', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker catalog={catalog()} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    await user.upload(screen.getByLabelText('Выбрать фото'), new File(['photo'], 'cover.png', { type: 'image/png' }))
+    await screen.findByAltText('Фото упражнения')
+    await user.click(screen.getByRole('button', { name: 'Убрать фото' }))
+    expect(screen.queryByAltText('Фото упражнения')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Добавить фото на обложку' })).toBeInTheDocument()
+  })
+
+  it('shows a clear error and keeps the form usable when the photo cannot be prepared', async () => {
+    const user = userEvent.setup()
+    prepareExerciseImage.mockRejectedValueOnce(new Error('Фото слишком большое'))
+    render(<ExercisePicker catalog={catalog()} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    await user.upload(screen.getByLabelText('Выбрать фото'), new File(['huge'], 'huge.png', { type: 'image/png' }))
+    expect(await screen.findByText('Фото слишком большое')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Добавить фото на обложку' })).toBeInTheDocument()
+  })
+
+  it('resets classification, description and photo when the create form is closed', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    await user.type(screen.getByPlaceholderText('Например: Болгарский присед'), 'Черновик')
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    await user.type(screen.getByPlaceholderText('Как выполнять, на что обратить внимание'), 'Заметка')
+    await user.upload(screen.getByLabelText('Выбрать фото'), new File(['photo'], 'cover.png', { type: 'image/png' }))
+    await screen.findByAltText('Фото упражнения')
+    await user.click(screen.getByRole('button', { name: 'Закрыть' }))
+
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    expect(screen.getByPlaceholderText('Например: Болгарский присед')).toHaveValue('')
+    expect(screen.getByPlaceholderText('Как выполнять, на что обратить внимание')).toHaveValue('')
+    expect(screen.queryByAltText('Фото упражнения')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Мышца')).not.toBeInTheDocument()
   })
 
   it('keeps the picker open when custom creation fails', async () => {

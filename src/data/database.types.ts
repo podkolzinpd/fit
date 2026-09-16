@@ -1,4 +1,4 @@
-// schema-sha256: b49f5361fea09093108c2a0b0af088fc569e8c0c1ad2c5802673c041e6cf6e5f
+// schema-sha256: d065904d8e9b1adb681c4d438e15a8d091269378bb5cdaaba4dd26244d212cdf
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1160,10 +1160,18 @@ export type Database = {
           archived_at: string | null
           created_at: string
           created_by: string
+          description: string | null
+          equipment: string | null
           id: string
+          image_height: number | null
+          image_mime_type: string | null
+          image_path: string | null
+          image_size_bytes: number | null
+          image_width: number | null
           input_kind: string
           muscle_group: string
           name: string
+          primary_muscle_detail: string | null
           trainer_id: string
           updated_at: string
           version: number
@@ -1172,10 +1180,18 @@ export type Database = {
           archived_at?: string | null
           created_at?: string
           created_by?: string
+          description?: string | null
+          equipment?: string | null
           id?: string
+          image_height?: number | null
+          image_mime_type?: string | null
+          image_path?: string | null
+          image_size_bytes?: number | null
+          image_width?: number | null
           input_kind: string
           muscle_group: string
           name: string
+          primary_muscle_detail?: string | null
           trainer_id: string
           updated_at?: string
           version?: number
@@ -1184,10 +1200,18 @@ export type Database = {
           archived_at?: string | null
           created_at?: string
           created_by?: string
+          description?: string | null
+          equipment?: string | null
           id?: string
+          image_height?: number | null
+          image_mime_type?: string | null
+          image_path?: string | null
+          image_size_bytes?: number | null
+          image_width?: number | null
           input_kind?: string
           muscle_group?: string
           name?: string
+          primary_muscle_detail?: string | null
           trainer_id?: string
           updated_at?: string
           version?: number
