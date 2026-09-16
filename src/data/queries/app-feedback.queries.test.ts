@@ -28,7 +28,19 @@ describe('appFeedbackQueries', () => {
       p_app_version: '0.1.0',
       p_display_mode: 'standalone',
       p_user_agent: 'Mobile Safari',
+      p_model_input_json: null,
+      p_model_output_json: null,
     })
   })
-})
 
+  it('passes the captured model payload for training-program feedback', () => {
+    const input = {
+      kind: 'training program' as const, message: 'Программа тренировок: всё хорошо.', screenPath: '/assistant', appVersion: '0.1.0', displayMode: 'browser' as const, userAgent: 'Browser',
+      modelInputJson: { operationId: 'generation-1' }, modelOutputJson: { responses: [{ sessions: [] }] },
+    }
+    appFeedbackQueries.submit(input)
+    expect(rpc).toHaveBeenCalledWith('submit_app_feedback', expect.objectContaining({
+      p_kind: 'training program', p_model_input_json: input.modelInputJson, p_model_output_json: input.modelOutputJson,
+    }))
+  })
+})
