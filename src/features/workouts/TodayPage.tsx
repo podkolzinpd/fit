@@ -15,9 +15,8 @@ import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { useRpeDisplay } from '../../app/rpe-display'
-import { workoutTrainerComment, type ParsedWorkoutExercise } from './quick-workout-entry'
-import { formatLlmWorkoutText, parseWorkoutWithLlm } from './llm-workout-parser'
-import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
+import { type ParsedWorkoutExercise } from './quick-workout-entry'
+import { formatLlmWorkoutText, orderParsedWorkoutItems, parsedWorkoutItems, parseWorkoutWithLlm, resolveWorkoutParseChoice, workoutParseSetSummary, workoutParseUnmatched, type WorkoutParseUnmatchedView } from './llm-workout-parser'
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 import { type WorkoutRecordMode } from './workout-entry-rules'
 import { WorkoutComposer } from './WorkoutComposer'
@@ -25,7 +24,7 @@ import { VoiceInputButton, type VoiceInputPhase } from '../voice-input'
 import { WorkoutParseErrorNotice, workoutParseErrorKind, type WorkoutParseErrorKind } from './WorkoutParseErrorNotice'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
-import { formatRunDuration, isRowingExerciseRef, rowingPaceLabel, runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
+import { isRowingExerciseRef } from '../../shared/run-metrics'
 import { WearableHealthCard } from '../wearables'
 import { isTodayGreetingPilotEnabled, isWearablesPilotEnabled } from '../../app/feature-flags'
 import { todayHeaderProps } from './today-header'
@@ -41,31 +40,15 @@ import { NotificationOnboarding } from '../notifications'
 import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, KeyboardIcon } from '../../shared/icons'
 import { ChatHeaderAction } from '../chat'
 import { TrainerDiscoveryHomeCard } from '../clients/TrainerDiscoveryHomeCard'
+import { YandexAccountLinkingCard } from '../auth'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
-type UnmatchedView = { line: string; reason: 'not-found' | 'ambiguous'; candidates: ExerciseSnapshot[] }
+type UnmatchedView = WorkoutParseUnmatchedView
 type VoiceRefinement = { state: 'loading' | 'success' | 'error'; message: string } | null
 
 interface TodayPageProps {
   clientMode?: boolean
-}
-
-function setSummary(item: ParsedWorkoutExercise): string {
-  const first = item.sets[0]
-  if (!item.hasValues || !first) return 'без значений'
-  if (item.exercise.inputKind === 'distance') {
-    const duration = formatRunDuration(first.durationSec)
-    const distance = runDistanceLabel(first.distanceKm)
-    const rowing = isRowingExerciseRef(item.exercise.ref)
-    const pace = rowing ? rowingPaceLabel(first.durationSec, first.distanceKm) : runPaceLabel(first.durationSec, first.distanceKm)
-    const result = [distance, duration, pace ? `темп ${pace}` : null, rowing && first.reps !== undefined ? `${first.reps} гребков/мин` : null].filter(Boolean).join(' · ')
-    return `${item.sets.length} × ${result || 'значения'}`
-  }
-  if (first.durationSec !== undefined) return `${item.sets.length} × ${first.durationSec} сек`
-  if (first.distanceKm !== undefined) return `${item.sets.length} × ${first.distanceKm} км`
-  const value = [first.weightKg !== undefined ? `${first.weightKg} кг` : '', first.reps !== undefined ? `${first.reps} повт.` : ''].filter(Boolean).join(' × ')
-  return `${item.sets.length} × ${value || 'значения'}`
 }
 
 function trainerPlanningDetail(value: string): string {
@@ -75,22 +58,6 @@ function trainerPlanningDetail(value: string): string {
 function appendVoiceText(previous: string, addition: string): string {
   const prefix = previous.trimEnd()
   return prefix ? `${prefix}\n${addition}` : addition
-}
-
-function parsedLlmItems(response: WorkoutParseResponse, catalog: readonly ExerciseSnapshot[]): ParsedWorkoutExercise[] {
-  const byRef = new Map(catalog.map((exercise) => [exercise.ref, exercise]))
-  return response.items.flatMap((item) => {
-    const exercise = byRef.get(item.exerciseRef)
-    if (!exercise) return []
-    const sets = item.sets.length ? item.sets.map((set, position) => ({
-      position,
-      weightKg: set.weightKg,
-      reps: set.reps,
-      ...(typeof set.durationMin === 'number' && set.durationMin > 0 ? { durationSec: Math.round(set.durationMin * 60) } : {}),
-      ...(typeof set.distanceKm === 'number' && set.distanceKm > 0 ? { distanceKm: set.distanceKm } : {}),
-    })) : [{ position: 0 }]
-    return [{ line: item.sourceText, exercise, sets, hasValues: sets.some((set) => Object.keys(set).some((key) => key !== 'position' && set[key as keyof typeof set] !== undefined)), trainerComment: workoutTrainerComment(item.sourceText) }]
-  })
 }
 
 function draftExercise(item: ParsedWorkoutExercise, position: number): WorkoutDraft['exercises'][number] {
@@ -163,6 +130,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [rpeOverrides, setRpeOverrides] = useState<Map<number, boolean>>(() => new Map())
   const [restOverrides, setRestOverrides] = useState<Map<number, boolean>>(() => new Map())
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerSelectionDraft, setPickerSelectionDraft] = useState<ExerciseSnapshot[]>([])
   const [pickerFromCompose, setPickerFromCompose] = useState(false)
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const [clientId, setClientId] = useState('')
@@ -354,27 +322,38 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     const request = ++reviewRequest.current
     trackGoal('workout_parse_submitted')
     setParseError(null)
+    const applyReview = (parsedItems: ParsedWorkoutExercise[], unmatched: UnmatchedView[]) => {
+      const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref))
+      const chosen = unmatched.flatMap((item) => choices[item.line] && !parsedItems.some((parsed) => parsed.line === item.line)
+        ? [resolveWorkoutParseChoice(item, choices[item.line]!)]
+        : [])
+      if (!parsedItems.length && !manualOnly.length && !chosen.length) {
+        trackGoal('workout_parse_failed')
+        setParseError('unrecognized')
+        return false
+      }
+      setItems([...manualOnly, ...orderParsedWorkoutItems([...parsedItems, ...chosen])])
+      setScreen('review')
+      trackGoal('workout_parse_completed')
+      trackGoal('workout_review_opened')
+      return true
+    }
+    if (lastLlmText === text && (recognized.length > 0 || llmUnmatched.length > 0)) {
+      applyReview(recognized, llmUnmatched)
+      return
+    }
     setParsing(true)
     try {
       const llm = await parseWorkoutWithLlm(text, catalog.exercises, {
         remoteParser: (sourceText, systemCatalog) => exercisesRepository.parseWorkout(sourceText, systemCatalog),
       })
       if (request !== reviewRequest.current) return
-      const parsedItems = parsedLlmItems(llm, catalog.exercises)
-      const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: item.suggestedExerciseRefs.flatMap((ref) => catalog.exercises.find((exercise) => exercise.ref === ref) ?? []) }))
+      const parsedItems = parsedWorkoutItems(llm, catalog.exercises)
+      const unmatched = workoutParseUnmatched(llm, catalog.exercises)
       setLlmUnmatched(unmatched)
       setRecognized(parsedItems)
-      const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref))
-      const chosen = unmatched.flatMap((item) => choices[item.line] ? [{ line: item.line, exercise: choices[item.line]!, sets: [{ position: 0 }], hasValues: false }] : [])
-      if (!parsedItems.length && !manualOnly.length && !chosen.length) {
-        trackGoal('workout_parse_failed')
-        setParseError('unrecognized')
-        return
-      }
-      setItems([...manualOnly, ...parsedItems, ...chosen])
-      setScreen('review')
-      trackGoal('workout_parse_completed')
-      trackGoal('workout_review_opened')
+      setLastLlmText(text)
+      applyReview(parsedItems, unmatched)
     } catch (error) {
       if (request === reviewRequest.current) {
         trackGoal('workout_parse_failed')
@@ -394,8 +373,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         remoteParser: (sourceText, systemCatalog) => exercisesRepository.parseWorkout(sourceText, systemCatalog),
       })
       if (version !== voiceParseVersion.current) return
-      const parsedItems = parsedLlmItems(llm, catalog.exercises)
-      const unmatched = llm.unmatched.map((item) => ({ line: item.sourceText, reason: 'not-found' as const, candidates: item.suggestedExerciseRefs.flatMap((ref) => catalog.exercises.find((exercise) => exercise.ref === ref) ?? []) }))
+      const positionOffset = previousValue.trim() ? previousValue.trim().split('\n').length : 0
+      const parsedItems = parsedWorkoutItems(llm, catalog.exercises).map((item) => item.sourcePosition === undefined ? item : { ...item, sourcePosition: item.sourcePosition + positionOffset })
+      const unmatched = workoutParseUnmatched(llm, catalog.exercises).map((item) => item.position === undefined ? item : { ...item, position: item.position + positionOffset })
       setLlmUnmatched((current) => [...current, ...unmatched.filter((item) => !current.some((existing) => existing.line === item.line))])
       setRecognized((current) => [...current, ...parsedItems.filter((item) => !current.some((existing) => existing.line === item.line && existing.exercise.ref === item.exercise.ref))])
       const formatted = formatLlmWorkoutText(llm, catalog.exercises)
@@ -641,6 +621,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const pageTitle = greetingHeaderPilotEnabled ? greeting : header.title
   return <Page title={pageTitle} hideTitle={header.hideTitle} className="today-page today-start-page" action={<div className="today-header-actions"><ChatHeaderAction />{header.showProfileAvatar && <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}</div>}>
     {actor && screen === 'compose' && !textComposerOpen && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} role={clientMode ? 'client' : 'trainer'} /></>}
+    {actor && screen === 'compose' && <YandexAccountLinkingCard actor={actor} />}
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
       {!greetingHeaderPilotEnabled && <p className="today-greeting">{greeting} 👋</p>}
       {clientMode && !textComposerOpen ? <><ClientHomeOverview
@@ -694,17 +675,17 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </div>}
       {!textComposerOpen && voicePhase === 'idle' && !greetingHeaderPilotEnabled && <button type="button" className="link today-text-toggle" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button>}
       {restoredDraftScreen && !textComposerOpen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
-      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>Новая тренировка</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={() => setTextComposerOpen(false)}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; setText(value); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setPickerFromCompose(true); setPickerOpen(true) }}>Выбрать упражнения вручную</button>}>
+      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>Новая тренировка</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={() => setTextComposerOpen(false)}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; reviewRequest.current += 1; setParsing(false); setText(value); setLastLlmText(null); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setPickerFromCompose(true); setPickerOpen(true) }}>Выбрать упражнения вручную</button>}>
       {voiceRefinement && voiceRefinement.state !== 'loading' && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {(resolved.length > 0 || clarification || displayedUnparsed.length > 0) && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">
           <p><strong>Распознано: {resolved.length}</strong></p>
-          <ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}><strong>{item.exercise.name}</strong><span>{setSummary(item)}</span></li>)}</ul>
+          <ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}><strong>{item.exercise.name}</strong><span>{workoutParseSetSummary(item)}</span></li>)}</ul>
         </section>}
         {clarification && <section className="today-clarification" aria-label={clarification.title}><strong>{clarification.title}</strong><p>{clarification.text}</p></section>}
         {displayedUnparsed.map((item) => <div className="today-unparsed" key={item.line}>
           <p>«{item.line}» — {item.reason === 'ambiguous' ? 'выберите вариант' : 'не нашли в каталоге'}</p>
-          {item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { trackGoal('today_parse_candidate_selected'); setChoices((current) => ({ ...current, [item.line]: exercise })); setRecognized((current) => current.some((recognizedItem) => recognizedItem.line === item.line) ? current : [...current, { line: item.line, exercise, sets: [{ position: 0 }], hasValues: false }]) }}>{exercise.name}</button>)}</div>}
+          {item.candidates.length > 0 && <div className="quick-workout-candidates">{item.candidates.map((exercise) => <button type="button" className={choices[item.line]?.ref === exercise.ref ? 'secondary selected' : 'secondary'} key={exercise.ref} onClick={() => { trackGoal('today_parse_candidate_selected'); setChoices((current) => ({ ...current, [item.line]: exercise })); setRecognized((current) => current.some((recognizedItem) => recognizedItem.line === item.line) ? current : orderParsedWorkoutItems([...current, resolveWorkoutParseChoice(item, exercise)])) }}>{exercise.name}</button>)}</div>}
         </div>)}
       </div>}
        {parseError && <WorkoutParseErrorNotice kind={parseError} onRetry={() => void review()} />}
@@ -733,8 +714,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
             { label: 'Заменить', onClick: () => { setReplaceIndex(index); setPickerOpen(true) } },
             { label: 'Удалить', danger: true, onClick: () => removeExercise(index) },
           ]} />} />
-          <p className={setSummary(item) === 'без значений' ? 'today-exercise-missing' : undefined}>{setSummary(item)}</p>
-          {!reordering && <details className="today-exercise-editor"><summary>{setSummary(item) === 'без значений' ? 'Добавить значения' : 'Править подходы'}</summary>{showRest && <label className="exercise-plan-rest-field">Отдых между подходами, с<input key={`${index}-${item.structure?.restBetweenSetsSec ?? 90}`} aria-label={`Отдых между подходами, ${item.exercise.name}`} type="number" inputMode="numeric" min="0" max="600" defaultValue={item.structure?.restBetweenSetsSec ?? 90} onFocus={(event) => event.currentTarget.select()} onBlur={(event) => { const raw = event.currentTarget.value; const next = raw === '' || Number.isNaN(Number(raw)) ? 90 : Math.min(600, Math.max(0, Number(raw))); event.currentTarget.value = String(next); updateRestBetweenSets(index, next) }} onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }} /></label>}<WorkoutSetTable variant="planned" inputKind={item.exercise.inputKind} layout={item.exercise.inputKind === 'distance' ? 'full' : 'singleValue'} showRpe={showRpe} className="today-set-list">{item.sets.map((set, setIndex) => <WorkoutSetRow state="planned" className={`today-set-editor planned-set ${showRpe ? 'rpe-visible' : ''}`} key={set.position}><strong className="workout-set-number planned-set-number">{setIndex + 1}</strong>{item.exercise.inputKind === 'strength' && <><label><span className="sr-only">Кг</span><input className="planned-set-input" aria-label={`${item.exercise.name}: вес, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.weightKg ?? ''} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label></>}{item.exercise.inputKind === 'duration' && <><label><span className="sr-only">Сек.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: секунды, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.durationSec ?? ''} onChange={(event) => updateSet(index, setIndex, { durationSec: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><span /></>}{item.exercise.inputKind === 'reps' && <><label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><span /></>}{item.exercise.inputKind === 'distance' && <RunMetricsFields idPrefix={`today-run-${index}-${setIndex}`} rowing={isRowingExerciseRef(item.exercise.ref)} durationSec={set.durationSec} distanceKm={set.distanceKm} strokeRate={set.reps} inputClassName="planned-set-input" durationLabel={`${item.exercise.name}: время, подход ${setIndex + 1}`} distanceLabel={`${item.exercise.name}: расстояние, подход ${setIndex + 1}`} distanceUnitLabel={`${item.exercise.name}: единица расстояния, подход ${setIndex + 1}`} onCommit={(patch) => updateSet(index, setIndex, patch)} />}{showRpe && <label><span className="sr-only">RPE</span><input className="planned-set-rpe" aria-label={`${item.exercise.name}: RPE, подход ${setIndex + 1}`} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.sets.length > 1 && <button type="button" className="link danger planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(index, setIndex)}><CloseIcon /></button>}</WorkoutSetRow>)}</WorkoutSetTable><div className="set-add-row"><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></div></details>}
+          <p className={workoutParseSetSummary(item) === 'без значений' ? 'today-exercise-missing' : undefined}>{workoutParseSetSummary(item)}</p>
+          {!reordering && <details className="today-exercise-editor"><summary>{workoutParseSetSummary(item) === 'без значений' ? 'Добавить значения' : 'Править подходы'}</summary>{showRest && <label className="exercise-plan-rest-field">Отдых между подходами, с<input key={`${index}-${item.structure?.restBetweenSetsSec ?? 90}`} aria-label={`Отдых между подходами, ${item.exercise.name}`} type="number" inputMode="numeric" min="0" max="600" defaultValue={item.structure?.restBetweenSetsSec ?? 90} onFocus={(event) => event.currentTarget.select()} onBlur={(event) => { const raw = event.currentTarget.value; const next = raw === '' || Number.isNaN(Number(raw)) ? 90 : Math.min(600, Math.max(0, Number(raw))); event.currentTarget.value = String(next); updateRestBetweenSets(index, next) }} onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }} /></label>}<WorkoutSetTable variant="planned" inputKind={item.exercise.inputKind} layout={item.exercise.inputKind === 'distance' ? 'full' : 'singleValue'} showRpe={showRpe} className="today-set-list">{item.sets.map((set, setIndex) => <WorkoutSetRow state="planned" className={`today-set-editor planned-set ${showRpe ? 'rpe-visible' : ''}`} key={set.position}><strong className="workout-set-number planned-set-number">{setIndex + 1}</strong>{item.exercise.inputKind === 'strength' && <><label><span className="sr-only">Кг</span><input className="planned-set-input" aria-label={`${item.exercise.name}: вес, подход ${setIndex + 1}`} type="number" inputMode="decimal" value={set.weightKg ?? ''} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label></>}{item.exercise.inputKind === 'duration' && <><label><span className="sr-only">Сек.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: секунды, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.durationSec ?? ''} onChange={(event) => updateSet(index, setIndex, { durationSec: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><span /></>}{item.exercise.inputKind === 'reps' && <><label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={`${item.exercise.name}: повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" value={set.reps ?? ''} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label><span /></>}{item.exercise.inputKind === 'distance' && <RunMetricsFields idPrefix={`today-run-${index}-${setIndex}`} rowing={isRowingExerciseRef(item.exercise.ref)} durationSec={set.durationSec} distanceKm={set.distanceKm} strokeRate={set.reps} inputClassName="planned-set-input" durationLabel={`${item.exercise.name}: время, подход ${setIndex + 1}`} distanceLabel={`${item.exercise.name}: расстояние, подход ${setIndex + 1}`} distanceUnitLabel={`${item.exercise.name}: единица расстояния, подход ${setIndex + 1}`} onCommit={(patch) => updateSet(index, setIndex, patch)} />}{showRpe && <label><span className="sr-only">RPE</span><input className="planned-set-rpe" aria-label={`${item.exercise.name}: RPE, подход ${setIndex + 1}`} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}{item.sets.length > 1 && <button type="button" className="link danger planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(index, setIndex)}><CloseIcon /></button>}</WorkoutSetRow>)}</WorkoutSetTable><div className="set-add-row"><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></div></details>}
         </WorkoutExercise>
       })}</div>)}</div> : <section className="today-empty today-exercise-empty"><p>Добавьте упражнения из каталога — можно выбрать несколько сразу.</p><button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button></section>}
       {items.length > 0 && !reordering && <button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button>}
@@ -758,7 +739,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </section></section>}
     </section>}
     {(catalog.error ?? (!clientMode ? todayWorkouts.error : null)) && <p className="error">{(catalog.error ?? (!clientMode ? todayWorkouts.error : null))?.message}</p>}
-    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} selectionDraft={replaceIndex === null ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
   </Page>
 }
 

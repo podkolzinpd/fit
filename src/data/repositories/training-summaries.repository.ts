@@ -14,7 +14,7 @@ import type {
 import { localDate } from '../../shared/local-date'
 import { trainingSummaryQueries } from '../queries/training-summaries.queries'
 import { repositoryError } from './error'
-import { generationErrorMessage } from './training-summary-errors'
+import { trainingSummaryGenerationError } from './training-summary-errors'
 
 type InternalRows = NonNullable<
   Awaited<ReturnType<typeof trainingSummaryQueries.listInternal>>['data']
@@ -214,7 +214,7 @@ export const trainingSummariesRepository = {
       cached?: boolean
       data?: { generated_at?: unknown }
     } | null
-    if (payload?.error) throw new Error(generationErrorMessage(payload.error))
+    if (payload?.error) throw trainingSummaryGenerationError(payload.error)
     if (typeof payload?.data?.generated_at !== 'string') {
       throw new Error('Сервер не подтвердил обновление ИИ-анализа. Попробуйте ещё раз.')
     }
@@ -236,6 +236,9 @@ export const trainingSummariesRepository = {
 }
 
 async function summaryGenerationError(error: unknown): Promise<Error> {
+  if (error instanceof Error && error.message === 'authentication_required') {
+    return trainingSummaryGenerationError('authentication_required')
+  }
   const context = error && typeof error === 'object' && 'context' in error
     ? (error as { context?: unknown }).context
     : undefined
@@ -248,7 +251,10 @@ async function summaryGenerationError(error: unknown): Promise<Error> {
   if (context && typeof context === 'object' && 'headers' in context) {
     const headers = (context as { headers?: { get?: (name: string) => string | null } }).headers
     const code = headers?.get?.('x-fit-error-code')
-    if (code) return new Error(generationErrorMessage(code))
+    if (code) return trainingSummaryGenerationError(code)
+  }
+  if (context && typeof context === 'object' && 'status' in context && context.status === 401) {
+    return trainingSummaryGenerationError('authentication_required')
   }
   if (context && typeof context === 'object' && 'json' in context && typeof context.json === 'function') {
     try {
@@ -260,7 +266,7 @@ async function summaryGenerationError(error: unknown): Promise<Error> {
           : typeof body.error === 'string'
             ? body.error
             : undefined
-        if (code) return new Error(generationErrorMessage(code))
+        if (code) return trainingSummaryGenerationError(code)
         if (typeof body.message === 'string') return new Error(body.message)
       }
     } catch {

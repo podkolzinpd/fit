@@ -274,7 +274,7 @@ export function syncBlockRounds(exercises: WorkoutExerciseDraft[], blockId: stri
 }
 
 // Объединяет блок упражнения по индексу со следующим в одну группу. Если один
-// из блоков уже группа — сохраняем его пресет/отдых, иначе новый пресет «Сет»
+// из блоков уже группа — сохраняем его пресет/отдых, иначе новая группа — «Круговая»
 // с дефолтами отдыха.
 export function mergeBlockWithNext(exercises: WorkoutExerciseDraft[], index: number): WorkoutExerciseDraft[] {
   const list = ensureBlockIds(exercises)
@@ -284,7 +284,7 @@ export function mergeBlockWithNext(exercises: WorkoutExerciseDraft[], index: num
   const currentSize = list.filter((e) => e.blockId === current.blockId).length
   const nextSize = list.filter((e) => e.blockId === next.blockId).length
   const seed = currentSize > 1 ? current : nextSize > 1 ? next : null
-  const preset: BlockPreset = seed?.blockPreset ?? 'set'
+  const preset: BlockPreset = seed?.blockPreset ?? 'circuit'
   const defaults = PRESET_REST_DEFAULTS[preset]
   const targetId = current.blockId!
   const fromId = next.blockId!
@@ -753,6 +753,24 @@ export function muscleGroupLabels(workout: Workout): string[] {
     if (!seen.has(label)) { seen.add(label); labels.push(label) }
   }
   return labels
+}
+
+// Основные группы на карточке завершённой тренировки считаются только по
+// реально подтверждённым подходам. Более нагруженные группы идут первыми;
+// при равенстве сохраняем порядок упражнений в тренировке.
+export function performedMuscleGroupLabels(workout: Workout): string[] {
+  const groups = new Map<string, { label: string; confirmedSets: number; firstPosition: number }>()
+  for (const exercise of workout.exercises) {
+    const confirmedSets = exercise.sets.filter((set) => set.confirmedAt).length
+    if (confirmedSets === 0) continue
+    const label = MUSCLE_GROUP_LABELS[exercise.muscleGroup]
+    const current = groups.get(label)
+    if (current) current.confirmedSets += confirmedSets
+    else groups.set(label, { label, confirmedSets, firstPosition: exercise.position })
+  }
+  return [...groups.values()]
+    .sort((left, right) => right.confirmedSets - left.confirmedSets || left.firstPosition - right.firstPosition)
+    .map((group) => group.label)
 }
 
 // Сводка тренировки для карточки истории/предстоящих/расписания: список

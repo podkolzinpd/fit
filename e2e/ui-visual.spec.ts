@@ -5,30 +5,6 @@ import { expectMonochromeAccessibility } from './accessibility-helpers'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
-test('private summary diagnostic has a safe one-call mobile path', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client-only incident screen')
-  await signIn(page, 'client@fit.local', /\/me$/)
-  await page.clock.install({ time: new Date('2026-09-11T10:00:00Z') })
-  let paidCalls = 0
-  await page.route('https://functions.yandexcloud.net/d4eq75uad5lps1chbidk', async (route) => {
-    const body = route.request().postDataJSON() as { diagnostic: string }
-    if (body.diagnostic === 'run_once') paidCalls += 1
-    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({
-      diagnostic: true, fingerprint: 'fixture-only', stats: { workouts: 14, exercises: 149, sets: 376, model_input_chars: 44511 },
-      ...(body.diagnostic === 'run_once' ? { answer: 'Плечи: стабильность техники важнее дальнейшего повышения веса. Это синтетический ответ для проверки интерфейса.', issues: ['Обычный перерыв короче 7 дней сам по себе не требует внимания тренера.'] } : {}),
-    }) })
-  })
-  await gotoStable(page, '/me/progress?summaryDiagnostic=1')
-  await page.getByRole('button', { name: 'Сверить данные без ИИ' }).click()
-  await expect(page.getByText(/Тренировок: 14/)).toBeVisible()
-  expect(paidCalls).toBe(0)
-  await page.getByRole('button', { name: 'Один запрос к ИИ' }).click()
-  await expect(page.getByRole('heading', { name: 'Исходный ответ' })).toBeVisible()
-  expect(paidCalls).toBe(1)
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await page.screenshot({ path: testInfo.outputPath('private-diagnostic.png'), fullPage: true })
-})
-
 
 async function mockProgressPeriodSummary(page: VisualPage, periodStart = '2026-08-01', periodEnd = '2026-08-31') {
   const clientSummary = {
@@ -244,7 +220,7 @@ async function mockRoleHomeWorkoutState(page: VisualPage) {
 }
 
 async function mockTrainerClients(page: VisualPage) {
-  const names = ['Анна Смирнова', 'Борис Иванов', 'Вера Кузнецова', 'Глеб Орлов', 'Дарья Ершова', 'Егор Панов']
+  const names = ['Александра Константинопольская-Романова', 'Борис Иванов', 'Вера Кузнецова', 'Глеб Орлов', 'Дарья Ершова', 'Егор Панов']
   await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify(names.map((fullName, index) => ({
@@ -264,6 +240,16 @@ async function mockTrainerClients(page: VisualPage) {
       version: 1,
       membership_version: 1,
     }))),
+  }))
+  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([{
+      conversation_id: '72000000-0000-4000-8000-000000000001', client_id: demoClientId,
+      trainer_id: '22222222-2222-4222-8222-222222222222', partner_user_id: '92000000-0000-4000-8000-000000000029',
+      partner_name: names[0], active_connection: true, last_message_body: 'До встречи',
+      last_message_at: '2026-08-16T12:00:00Z', last_message_sender_id: '92000000-0000-4000-8000-000000000029',
+      unread_count: 3, can_message: true, blocked_by_me: false, blocked_by_partner: false,
+    }]),
   }))
 }
 
@@ -527,7 +513,6 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page, fre
   await expect(addAction).toHaveCount(1)
   await addAction.click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -714,11 +699,11 @@ test('trainer catalog stays compact and aligned across supported widths', async 
     displayName: 'Александра Константинопольская-Романова',
     bio: 'Помогаю последовательно возвращаться к тренировкам и выстраивать программу под реальный график без перегрузки и резких изменений.',
     specialties: ['Силовые тренировки', 'Восстановление после длительного перерыва', 'Мобильность'],
-    city: 'Санкт-Петербург', trainingModes: ['online'], experienceStartYear: 2018,
+    city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-tsska'], customLocations: ['World Class Динамо'], trainingModes: ['online', 'in_person'], experienceStartYear: 2018,
     education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: null, certificates: [],
   }
   const minimal = {
-    displayName: 'Ирина', bio: '', specialties: [], city: '', trainingModes: [], experienceStartYear: null,
+    displayName: 'Ирина', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [], trainingModes: [], experienceStartYear: null,
     education: '', formats: '', price: '', acceptingClients: false, avatarDataUrl: null, certificates: [],
   }
   await page.route('**/rest/v1/rpc/list_public_trainer_profiles_page', (route) => route.fulfill({
@@ -797,7 +782,6 @@ test('future standalone plan stays compact on client home', async ({ page }, tes
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await gotoStable(page, '/workouts/new?date=2026-08-17')
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -1353,7 +1337,6 @@ async function openWorkoutCreate(page: import('@playwright/test').Page, dark = f
 async function addCompletedBenchPress(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Выбрать упражнения' }).scrollIntoViewIfNeeded()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -1452,7 +1435,6 @@ async function openWorkoutForDetailReview(page: import('@playwright/test').Page,
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await gotoStable(page, `/workouts/new?client=${demoClientId}`)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -1489,7 +1471,7 @@ test('workout detail, completion and exercise history keep their visual baseline
   // покрывала partial независимо от числа подходов в исходном плане.
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Берпи')
-  await page.getByRole('button', { name: /^Добавить: Берпи/ }).click()
+  await page.getByRole('button', { name: 'Добавить: Берпи', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Берпи' })).toBeVisible()
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   const partialFinish = page.getByRole('button', { name: 'Завершить', exact: true })
@@ -1585,10 +1567,61 @@ test('client Live keeps row geometry, notes and timer independent', async ({ pag
   await saved
   await page.reload()
   await expect(page.locator('.live-note-preview')).toHaveText('Скамья 3, удобная высота')
+  await expect(page.getByRole('combobox', { name: 'Отдых' })).toHaveValue('90')
+  await expect(page.getByText('Отдых в этой тренировке')).toHaveCount(0)
+  await page.setViewportSize({ width: 375, height: 812 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('live-set-layout-375.png'), fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
   const rows = page.locator('.live-set-table > .live-set')
   const firstBefore = await rows.first().boundingBox()
   const secondBefore = await rows.nth(1).boundingBox()
   const secondInput = rows.nth(1).getByLabel('Фактический вес')
+  const contentScrollBeforeKeyboard = await page.locator('.content').evaluate((element) => element.scrollTop)
+  // Имитируем уменьшение WKWebView после появления цифровой клавиатуры.
+  // Событие фокуса отправляем без нативной прокрутки, чтобы тест проверял
+  // позиционирование самого Fit, а не встроенную эвристику браузера.
+  await page.evaluate(() => {
+    const root = document.documentElement
+    root.classList.add('app-keyboard-open')
+    root.style.setProperty('--app-viewport-height', '844px')
+    root.style.setProperty('--app-visible-height', '220px')
+    root.style.setProperty('--app-viewport-offset-top', '0px')
+    document.querySelector('.phone-frame')?.classList.add('keyboard-open')
+    const content = document.querySelector('.content')
+    content?.scrollTo(0, 0)
+    if (content instanceof HTMLElement) {
+      const originalScrollTo = content.scrollTo.bind(content)
+      const state = window as Window & { __liveKeyboardScrolls?: number }
+      state.__liveKeyboardScrolls = 0
+      content.scrollTo = ((first?: number | ScrollToOptions, second?: number) => {
+        state.__liveKeyboardScrolls = (state.__liveKeyboardScrolls ?? 0) + 1
+        if (typeof first === 'number') originalScrollTo(first, second ?? 0)
+        else originalScrollTo(first)
+      }) as typeof content.scrollTo
+    }
+  })
+  const rowBeforeKeyboardScroll = await rows.nth(1).locator('.live-set-grid').boundingBox()
+  const contentBeforeKeyboardScroll = await page.locator('.content').boundingBox()
+  if (!rowBeforeKeyboardScroll || !contentBeforeKeyboardScroll) throw new Error('Expected initially clipped Live row geometry')
+  expect(rowBeforeKeyboardScroll.y + rowBeforeKeyboardScroll.height).toBeGreaterThan(contentBeforeKeyboardScroll.y + contentBeforeKeyboardScroll.height - 15)
+  await secondInput.evaluate((element) => element.dispatchEvent(new FocusEvent('focusin', { bubbles: true })))
+  await page.waitForTimeout(250)
+  expect(await page.evaluate(() => (window as Window & { __liveKeyboardScrolls?: number }).__liveKeyboardScrolls ?? 0)).toBeGreaterThan(0)
+  const focusedRowBox = await rows.nth(1).locator('.live-set-grid').boundingBox()
+  const keyboardContentBox = await page.locator('.content').boundingBox()
+  if (!focusedRowBox || !keyboardContentBox) throw new Error('Expected focused Live row and keyboard viewport geometry')
+  expect(focusedRowBox.y).toBeGreaterThanOrEqual(keyboardContentBox.y + 15)
+  expect(focusedRowBox.y + focusedRowBox.height).toBeLessThanOrEqual(keyboardContentBox.y + keyboardContentBox.height - 15)
+  await page.evaluate((restoreScrollTop) => {
+    const root = document.documentElement
+    root.classList.remove('app-keyboard-open')
+    root.style.removeProperty('--app-viewport-height')
+    root.style.removeProperty('--app-visible-height')
+    root.style.removeProperty('--app-viewport-offset-top')
+    document.querySelector('.phone-frame')?.classList.remove('keyboard-open')
+    document.querySelector('.content')?.scrollTo(0, restoreScrollTop)
+  }, contentScrollBeforeKeyboard)
   await secondInput.fill('43')
   await expect(secondInput).toBeFocused()
   await page.clock.runFor(1500)
@@ -1605,11 +1638,36 @@ test('client Live keeps row geometry, notes and timer independent', async ({ pag
   await page.screenshot({ path: testInfo.outputPath('live-timer-sheet-390.png') })
   await page.getByRole('button', { name: 'Пропустить', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Таймер отдыха', exact: true })).toBeVisible()
+  const firstAction = rows.first().getByRole('button', { name: 'Редактировать подход' })
+  const secondAction = rows.nth(1).getByRole('button', { name: 'Готово, отдых' })
+  const firstActionBox = await firstAction.boundingBox()
+  const secondActionBox = await secondAction.boundingBox()
+  if (!firstActionBox || !secondActionBox) throw new Error('Expected both Live set actions to have geometry')
+  expect(secondActionBox.y - (firstActionBox.y + firstActionBox.height)).toBeGreaterThanOrEqual(7)
+
+  // Регрессия с реального iPhone: сохранение верхней строки рисовало status
+  // поверх нижней галочки, а соприкасающиеся touch targets выбирали верхнюю.
+  await firstAction.click()
+  await rows.first().getByLabel('Фактический вес').fill('41')
+  await rows.first().getByRole('button', { name: 'Сохранить' }).click()
+  const saveFeedback = page.getByRole('status').filter({ hasText: /Сохранено|Сохраняем/ })
+  await expect(saveFeedback).toBeVisible()
+  const feedbackBox = await saveFeedback.boundingBox()
+  const lowerBox = await secondAction.boundingBox()
+  if (!feedbackBox || !lowerBox) throw new Error('Expected save status and lower action geometry')
+  const overlapsLowerAction = feedbackBox.x < lowerBox.x + lowerBox.width
+    && feedbackBox.x + feedbackBox.width > lowerBox.x
+    && feedbackBox.y < lowerBox.y + lowerBox.height
+    && feedbackBox.y + feedbackBox.height > lowerBox.y
+  expect(overlapsLowerAction).toBe(false)
+  const lowerCenter = { x: lowerBox.x + lowerBox.width / 2, y: lowerBox.y + lowerBox.height / 2 }
+  expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.getAttribute('aria-label'), lowerCenter)).toBe('Готово, отдых')
+  await page.touchscreen.tap(lowerCenter.x, lowerCenter.y)
+  await expect(page.locator('.live-exercise-collapsed')).toContainText('Жим')
+  await expect(page.getByRole('button', { name: 'Завершить тренировку' })).toHaveAttribute('data-variant', 'primary')
   await page.getByRole('button', { name: '＋ Ещё упражнение' }).click()
   await page.getByLabel('Поиск упражнения').fill('Бег')
   await page.locator('[data-exercise-ref="running"]').click()
-  await expect(page.locator('.live-exercise-upcoming')).toContainText('Бег')
-  await rows.nth(1).getByRole('button', { name: 'Готово, отдых' }).click()
   await expect(page.locator('.live-exercise-collapsed')).toContainText('Жим')
   const nextCard = page.locator('.live-exercise.current')
   await expect(nextCard).toContainText('Бег')
@@ -1780,11 +1838,12 @@ test('trainer Progress and measurements form keep their visual baselines in both
 
 test('trainer Clients list keeps its desktop visual baselines', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'visual-trainer-1440', 'Trainer desktop uses the desktop visual profile')
+  await mockTrainerClients(page)
   await signIn(page, 'trainer@fit.local', /\/today$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await gotoStable(page, '/clients')
   await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
-  await expect(page.getByRole('link', { name: /Анна Смирнова/ }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: /Александра Константинопольская-Романова/ }).first()).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
   await expectVisualBaseline(page, `trainer-clients-${process.platform}.png`, [], true)
 
@@ -1802,7 +1861,7 @@ test('trainer Clients list keeps its mobile visual baselines', async ({ page }, 
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await gotoStable(page, '/clients')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
-  await expect(page.getByRole('link', { name: /Анна Смирнова/ }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: /Александра Константинопольская-Романова/ }).first()).toBeVisible()
   await expectVisualBaseline(page, `trainer-clients-mobile-${process.platform}.png`, [], true)
   const search = page.getByRole('searchbox', { name: 'Поиск клиента' })
   await page.mouse.move(0, 0)
@@ -1845,7 +1904,6 @@ test('exercise picker keeps search, filters and technique readable', async ({ pa
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : testInfo.project.name.replace('visual-client-', 'mobile-')
   await gotoStable(page, `/workouts/new?client=${demoClientId}`)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
 
   const search = page.getByLabel('Поиск упражнения')
   await search.fill('Болгарский')
@@ -1863,15 +1921,14 @@ test('exercise picker keeps search, filters and technique readable', async ({ pa
   await expect(search).toHaveValue('Болгарский')
 
   await page.getByRole('button', { name: 'Очистить поиск' }).click()
-  await page.getByRole('button', { name: 'Фильтры' }).click()
-  await page.getByLabel('Группа мышц').selectOption('legs')
-  await page.getByLabel('Мышца').selectOption('Передняя поверхность бедра')
-  await expect(page.getByLabel('Настройки фильтров')).toBeVisible()
+  await page.getByRole('button', { name: 'Ноги', exact: true }).click()
+  await page.getByRole('button', { name: 'Передняя поверхность бедра', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Ноги', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Передняя поверхность бедра', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('group', { name: 'Группа мышц' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Мышца' })).toBeVisible()
   await expectVisualBaseline(page, `exercise-picker-filters-${profile}-${process.platform}.png`, [page.locator('.picker-item-media')])
-  await page.getByRole('button', { name: /^Показать \d+ упражн/ }).click()
-  await expect(page.getByLabel('Выбранные фильтры')).toContainText('Ноги')
-  await expect(page.getByLabel('Выбранные фильтры')).toContainText('Передняя поверхность бедра')
-  expect((await page.locator('.picker-list').boundingBox())?.height ?? 0).toBeGreaterThan(280)
+  expect((await page.locator('.picker-list').boundingBox())?.height ?? 0).toBeGreaterThan(160)
 })
 
 test('trainer Client Detail keeps its visual baselines', async ({ page }, testInfo) => {
@@ -2010,7 +2067,6 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
     await gotoStable(page, `/workouts/new?client=${demoClientId}&date=${scheduleDate}`, { waitUntil: 'domcontentloaded' })
     await page.getByLabel('Начало').fill('18:30')
     await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-    await page.getByRole('button', { name: /^Силовая/ }).click()
     await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
     await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()

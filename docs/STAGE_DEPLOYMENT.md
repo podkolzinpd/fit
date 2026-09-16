@@ -205,11 +205,14 @@ The automatic workflow verifies:
 5. the API has only the reviewed public invoker binding; the migration runner
    remains private.
 
-Until a separate cutover is reviewed, do not change the frontend API URL,
-production Vercel variables or the existing Supabase path. The Yandex ID browser
-pilot remains default-off and its workout UI remains read-only; stage mutation
-endpoints are exercised only by automated smoke until a separate repository
-adapter and UI rollout are reviewed.
+The Yandex ID browser pilot remains default-off and its workout UI remains
+read-only; stage mutation endpoints are exercised only by automated smoke until
+a separate repository adapter and UI rollout are reviewed. The only shared
+frontend bridge allowed during the Supabase-auth migration is
+`VITE_YANDEX_LEGACY_FUNCTIONS_API_BASE_URL`: it keeps the Supabase browser
+session for authorization while the stage API writes chat photos to private
+Yandex Object Storage. Set it to the reviewed stage API HTTPS origin and rebuild
+the frontend; it is not an OAuth-routing switch and must not contain a secret.
 
 The first browser pilot uses the existing branch-scoped Vercel Preview rather
 than a separate cloud frontend. Its exact origin is included in the stage CORS

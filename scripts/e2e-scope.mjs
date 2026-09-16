@@ -7,7 +7,7 @@ const SAFE_WITHOUT_E2E = [
   /^infra\/yandex\//,
   /^services\/api\//,
   /^\.github\/(?:copilot-instructions\.md|pull_request_template\.md)$/,
-  /^\.github\/workflows\/(?:deploy-database|deploy-summary-function|deploy-yandex-[^/]+|manage-yandex-stage-database-access|sync-yandex-stage-preview)\.yml$/,
+  /^\.github\/workflows\/(?:deploy-database|deploy-summary-function|deploy-yandex-[^/]+|manage-yandex-stage-database-access|migrate-yandex-media|sync-yandex-stage-preview)\.yml$/,
   /^(?:AGENTS|README|FEATURE_PARITY|OPERATIONS)\.md$/,
   /^scripts\/(?:check-yandex-terraform-plan|deploy-yandex-serverless-revision|deploy-yandex-stage-workflow|e2e-scope|verify-yandex-stage-access)(?:\.test)?\.mjs$/,
   /^vercel\.json$/,

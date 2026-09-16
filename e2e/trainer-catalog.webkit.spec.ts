@@ -5,7 +5,8 @@ test('iPhone catalog keeps search and filter sheet usable', async ({ page }) => 
     displayName: 'Александра Константинопольская-Романова',
     bio: 'Помогаю встроить тренировки в обычную жизнь.',
     specialties: ['Силовые тренировки', 'Мобильность'], city: 'Санкт-Петербург',
-    trainingModes: ['online'], experienceStartYear: 2018, education: '', formats: '', price: '',
+    metroStationIds: ['msk-dinamo'], customLocations: ['Клуб у дома'],
+    trainingModes: ['online', 'in_person'], experienceStartYear: 2018, education: '', formats: '', price: '',
     acceptingClients: true, avatarDataUrl: null, certificates: [],
   }
   await page.route('**/rest/v1/rpc/list_public_trainer_profiles_page', (route) => route.fulfill({
@@ -30,9 +31,11 @@ test('iPhone catalog keeps search and filter sheet usable', async ({ page }) => 
   await page.getByRole('button', { name: 'Фильтры' }).click()
   const sheet = page.getByRole('dialog', { name: 'Фильтры тренеров' })
   await expect(sheet).toBeVisible()
-  await sheet.getByLabel('Город').fill('Казань')
+  await sheet.getByLabel('Город').fill('Москва')
+  await sheet.getByRole('combobox', { name: 'Метро Москвы' }).fill('Динамо')
+  await sheet.getByRole('option', { name: /Динамо/ }).click()
   await sheet.getByRole('button', { name: 'Показать тренеров' }).click()
-  await expect(page.getByRole('button', { name: 'Фильтры · 1' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Фильтры · 2' })).toBeVisible()
 
   const geometry = await page.evaluate(() => ({
     overflow: document.documentElement.scrollWidth - window.innerWidth,

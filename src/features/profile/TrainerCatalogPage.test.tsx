@@ -15,12 +15,12 @@ const profile: TrainerProfessionalProfile = {
   publicId: '11111111-1111-4111-8111-111111111111',
   draft: {
     displayName: 'Анна Иванова', bio: 'Помогаю начать заниматься и спокойно двигаться к результату.',
-    specialties: ['Силовые'], city: 'Москва', trainingModes: ['online'], experienceStartYear: 2020,
+    specialties: ['Силовые'], city: 'Москва', metroStationIds: ['msk-dinamo'], customLocations: ['World Class Динамо', 'Лужники'], trainingModes: ['online', 'in_person'], experienceStartYear: 2020,
     education: '', formats: '', price: 'от 3 000 ₽', acceptingClients: true, avatarDataUrl: null, certificates: [],
   },
   published: {
     displayName: 'Анна Иванова', bio: 'Помогаю начать заниматься и спокойно двигаться к результату.',
-    specialties: ['Силовые'], city: 'Москва', trainingModes: ['online'], experienceStartYear: 2020,
+    specialties: ['Силовые'], city: 'Москва', metroStationIds: ['msk-dinamo'], customLocations: ['World Class Динамо', 'Лужники'], trainingModes: ['online', 'in_person'], experienceStartYear: 2020,
     education: '', formats: '', price: 'от 3 000 ₽', acceptingClients: true, avatarDataUrl: null, certificates: [],
   },
   listedInCatalog: true,
@@ -53,7 +53,8 @@ describe('TrainerCatalogPage', () => {
 
     const results = await screen.findByRole('region', { name: 'Найденные тренеры' })
     expect(within(results).getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
-    expect(within(results).getByText(/Онлайн · Москва/)).toBeVisible()
+    expect(within(results).getByText(/Онлайн · Лично · Москва/)).toBeVisible()
+    expect(within(results).getByText('Динамо · World Class Динамо · ещё 1')).toBeVisible()
     expect(within(results).getByRole('link', { name: 'Посмотреть анкету' })).toHaveAttribute('href', `/trainers/${profile.publicId}`)
   })
 
@@ -65,15 +66,17 @@ describe('TrainerCatalogPage', () => {
     await user.click(screen.getByRole('button', { name: 'Фильтры' }))
     const dialog = screen.getByRole('dialog', { name: 'Фильтры тренеров' })
     await user.type(within(dialog).getByLabelText('Направление'), 'Бег')
-    await user.type(within(dialog).getByLabelText('Город'), 'Казань')
+    await user.type(within(dialog).getByLabelText('Город'), 'Москва')
+    await user.type(within(dialog).getByRole('combobox', { name: 'Метро Москвы' }), 'Динамо')
+    await user.click(await within(dialog).findByRole('option', { name: /Динамо/ }))
     await user.selectOptions(within(dialog).getByLabelText('Формат'), 'online')
     await user.selectOptions(within(dialog).getByLabelText('Новые клиенты'), 'true')
     await user.click(within(dialog).getByRole('button', { name: 'Показать тренеров' }))
 
     await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith({
-      query: '', specialty: 'Бег', city: 'Казань', mode: 'online', acceptingClients: true,
+      query: '', specialty: 'Бег', city: 'Москва', metroStationIds: ['msk-dinamo'], mode: 'online', acceptingClients: true,
     }, { offset: 0, limit: 20 }))
-    expect(screen.getByRole('button', { name: 'Фильтры · 4' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Фильтры · 5' })).toBeVisible()
     expect(screen.queryByRole('dialog', { name: 'Фильтры тренеров' })).not.toBeInTheDocument()
   })
 
@@ -112,6 +115,24 @@ describe('TrainerCatalogPage', () => {
     await waitFor(() => expect(document.querySelector<HTMLElement>('.content')?.scrollTop).toBe(420))
   })
 
+  it('opens a catalog view saved before metro filters existed', async () => {
+    const legacyFilters = { query: 'Анна', specialty: '', city: 'Москва', mode: '', acceptingClients: null }
+    window.sessionStorage.setItem('fit.trainer-catalog.view.v1', JSON.stringify({
+      draft: legacyFilters,
+      filters: legacyFilters,
+      scrollTop: 120,
+    }))
+
+    renderPage()
+
+    expect(await screen.findByText('Анна Иванова')).toBeVisible()
+    await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith({
+      ...legacyFilters,
+      metroStationIds: [],
+    }, { offset: 0, limit: 20 }))
+    expect(screen.getByRole('button', { name: 'Фильтры · 1' })).toBeVisible()
+  })
+
   it('shows the full result count and loads the next page without replacing the first', async () => {
     const second = { ...profile, publicId: '22222222-2222-4222-8222-222222222222',
       draft: { ...profile.draft, displayName: 'Мария Петрова' },
@@ -126,7 +147,7 @@ describe('TrainerCatalogPage', () => {
 
     expect(await screen.findByText('Мария Петрова')).toBeVisible()
     expect(screen.getByText('Анна Иванова')).toBeVisible()
-    expect(listCatalog).toHaveBeenLastCalledWith({ query: '', specialty: '', city: '', mode: '', acceptingClients: null }, { offset: 1, limit: 20 })
+    expect(listCatalog).toHaveBeenLastCalledWith({ query: '', specialty: '', city: '', metroStationIds: [], mode: '', acceptingClients: null }, { offset: 1, limit: 20 })
     expect(screen.queryByRole('button', { name: 'Показать ещё' })).not.toBeInTheDocument()
   })
 

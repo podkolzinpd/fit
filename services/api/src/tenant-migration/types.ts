@@ -31,18 +31,29 @@ export interface StandaloneClientMigrationBundle {
   tables: TenantMigrationTable[]
 }
 
+export interface FullCohortMigrationBundle {
+  format: 'fit-full-cohort-bundle-v1'
+  createdAt: string
+  tenantFingerprint: string
+  tables: TenantMigrationTable[]
+}
+
 export type TenantMigrationBundle =
   | TrainerTenantMigrationBundle
   | StandaloneClientMigrationBundle
+  | FullCohortMigrationBundle
 
-export type TenantMigrationRootKind = 'trainer' | 'standalone-client'
+export type TenantMigrationRootKind =
+  | 'trainer'
+  | 'standalone-client'
+  | 'full-cohort'
 
 export interface TenantMigrationRoot {
   kind: TenantMigrationRootKind
   profileId: string
 }
 
-export interface TenantMigrationEnvelope {
+export interface LegacyTenantMigrationEnvelope {
   format: 'fit-tenant-envelope-v1'
   kdf: {
     name: 'scrypt'
@@ -55,6 +66,27 @@ export interface TenantMigrationEnvelope {
   }
   ciphertext: string
 }
+
+export interface CompressedTenantMigrationEnvelope {
+  format: 'fit-tenant-envelope-v2'
+  compression: {
+    name: 'gzip'
+  }
+  kdf: {
+    name: 'scrypt'
+    salt: string
+  }
+  cipher: {
+    name: 'aes-256-gcm'
+    iv: string
+    authTag: string
+  }
+  ciphertext: string
+}
+
+export type TenantMigrationEnvelope =
+  | LegacyTenantMigrationEnvelope
+  | CompressedTenantMigrationEnvelope
 
 export interface TenantMigrationTableReport {
   name: string

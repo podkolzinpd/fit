@@ -5,6 +5,7 @@ import {
   canonicalJson,
   decryptMigrationBundle,
   encryptMigrationBundle,
+  fingerprintFullCohort,
   fingerprintStandaloneClient,
   fingerprintTenant,
   getTenantMigrationRoot,
@@ -45,6 +46,20 @@ function buildStandaloneBundle(): TenantMigrationBundle {
   }
 }
 
+function buildFullCohortBundle(): TenantMigrationBundle {
+  const tables = [
+    buildMigrationTable('public.profiles', [
+      { id: TRAINER_ID, timezone: 'Europe/Moscow' },
+    ]),
+  ]
+  return {
+    format: 'fit-full-cohort-bundle-v1',
+    createdAt: '2026-09-01T10:00:00.000Z',
+    tenantFingerprint: fingerprintFullCohort(tables),
+    tables,
+  }
+}
+
 describe('tenant migration bundle', () => {
   it('canonicalizes object keys and table row order', () => {
     expect(canonicalJson({ z: 1, a: { y: true, x: null } })).toBe(
@@ -65,7 +80,29 @@ describe('tenant migration bundle', () => {
   it('encrypts and decrypts without exposing plaintext in the envelope', async () => {
     const bundle = buildBundle()
     const envelope = await encryptMigrationBundle(bundle, PASSPHRASE)
+    expect(envelope).toMatchObject({
+      format: 'fit-tenant-envelope-v2',
+      compression: { name: 'gzip' },
+    })
     expect(JSON.stringify(envelope)).not.toContain(TRAINER_ID)
+    await expect(decryptMigrationBundle(envelope, PASSPHRASE)).resolves.toEqual(bundle)
+  })
+
+  it('compresses repetitive cohort data before encryption', async () => {
+    const bundle = buildBundle()
+    bundle.tables[0] = buildMigrationTable(
+      'public.profiles',
+      Array.from({ length: 10_000 }, (_, index) => ({
+        id: `profile-${index}`,
+        repeatedValue: 'same value repeated in every exported row',
+      })),
+    )
+
+    const plaintextBytes = Buffer.byteLength(JSON.stringify(bundle))
+    const envelope = await encryptMigrationBundle(bundle, PASSPHRASE)
+    const encryptedBytes = Buffer.byteLength(JSON.stringify(envelope))
+
+    expect(encryptedBytes).toBeLessThan(plaintextBytes / 4)
     await expect(decryptMigrationBundle(envelope, PASSPHRASE)).resolves.toEqual(bundle)
   })
 
@@ -82,6 +119,26 @@ describe('tenant migration bundle', () => {
     await expect(decryptMigrationBundle(envelope, PASSPHRASE)).resolves.toEqual(bundle)
   })
 
+  it('binds a full-cohort fingerprint to the complete table snapshot', async () => {
+    const bundle = buildFullCohortBundle()
+    expect(getTenantMigrationRoot(bundle)).toEqual({
+      kind: 'full-cohort',
+      profileId: 'application-v1',
+    })
+    await expect(
+      decryptMigrationBundle(
+        await encryptMigrationBundle(bundle, PASSPHRASE),
+        PASSPHRASE,
+      ),
+    ).resolves.toEqual(bundle)
+
+    const changed = structuredClone(bundle)
+    changed.tables[0] = buildMigrationTable('public.profiles', [])
+    expect(() => readMigrationBundle(changed)).toThrowError(
+      TenantMigrationArtifactError,
+    )
+  })
+
   it('rejects a wrong passphrase and tampered table checksum', async () => {
     const bundle = buildBundle()
     const envelope = await encryptMigrationBundle(bundle, PASSPHRASE)
@@ -94,6 +151,17 @@ describe('tenant migration bundle', () => {
     expect(() => readMigrationBundle(tampered)).toThrowError(
       TenantMigrationArtifactError,
     )
+  })
+
+  it('rejects an unsupported compression contract', async () => {
+    const envelope = await encryptMigrationBundle(buildBundle(), PASSPHRASE)
+    const malformed = {
+      ...envelope,
+      compression: { name: 'unknown' },
+    }
+
+    await expect(decryptMigrationBundle(malformed, PASSPHRASE)).rejects
+      .toMatchObject({ code: 'artifact_invalid' })
   })
 
   it('rejects a short passphrase and mismatched tenant fingerprint', async () => {

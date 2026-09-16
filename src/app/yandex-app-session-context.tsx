@@ -32,6 +32,7 @@ interface YandexAppSessionState {
   error: string | null
   establish: (session: YandexAppSession) => void
   retry: () => Promise<void>
+  reset: () => void
   signOut: () => Promise<void>
 }
 
@@ -136,6 +137,11 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
     setLoading(false)
   }, [config])
 
+  const reset = useCallback(() => {
+    clearLocalSession()
+    setError(null)
+  }, [clearLocalSession])
+
   const signOut = useCallback(async () => {
     const current = session ?? (() => {
       const stored = readStoredSession(window.localStorage)
@@ -185,8 +191,9 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
     error,
     establish,
     retry: restore,
+    reset,
     signOut,
-  }), [session, loading, error, establish, restore, signOut])
+  }), [session, loading, error, establish, restore, reset, signOut])
 
   return <YandexAppSessionContext value={value}>{children}</YandexAppSessionContext>
 }

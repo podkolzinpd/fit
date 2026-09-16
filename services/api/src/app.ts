@@ -58,6 +58,10 @@ import type { PilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import type { PilotPushNotifications } from './pilot-push-notifications.js'
 import { ChatCommandError, type ChatMessage, type PilotChat } from './pilot-chat.js'
 import { readChatImageUpload, type ChatMediaStore } from './chat-media.js'
+import {
+  LegacyChatMediaAuthorizationError,
+  type LegacyChatMediaBridge,
+} from './legacy-chat-media.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
@@ -71,6 +75,7 @@ import type {
 import {
   ExistingActorUnavailableError,
   YandexAccountLinkError,
+  type ExistingActor,
   type ExistingActorProvider,
   type YandexAccountLinker,
 } from './yandex-account-linking.js'
@@ -80,6 +85,7 @@ import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
 import type { PilotWorkoutParser } from './pilot-workout-parser.js'
 import {
   PilotTrainingSummaryError,
+  type PilotTrainingSummaryDiagnostic,
   type PilotTrainingSummaryGenerator,
   type PilotTrainingSummaryPublisher,
   type PilotTrainingSummaryReader,
@@ -144,6 +150,7 @@ interface BuildAppOptions {
   pilotPushNotifications?: PilotPushNotifications
   pilotChat?: PilotChat
   chatMediaStore?: ChatMediaStore
+  legacyChatMediaBridge?: LegacyChatMediaBridge
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
   pilotConnectionsWriter?: PilotConnectionsWriter
@@ -155,6 +162,7 @@ interface BuildAppOptions {
   pilotWorkoutsWriter?: PilotWorkoutsWriter
   pilotWorkoutParser?: PilotWorkoutParser
   pilotTrainingSummaryGenerator?: PilotTrainingSummaryGenerator
+  pilotTrainingSummaryDiagnostic?: PilotTrainingSummaryDiagnostic
   pilotTrainingSummaryPublisher?: PilotTrainingSummaryPublisher
   pilotTrainingSummaryReader?: PilotTrainingSummaryReader
   legacyWorkoutParser?: LegacyWorkoutParser
@@ -198,11 +206,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .header('access-control-allow-methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
         .header(
           'access-control-allow-headers',
-          'authorization, content-type, x-fit-pilot-session, x-fit-session, x-supabase-authorization',
+          'authorization, content-type, x-fit-pilot-session, x-fit-session, x-fit-request-id, x-supabase-authorization',
         )
         .header(
           'access-control-expose-headers',
-          'x-fit-release-id, x-fit-error-category, x-fit-error-code',
+          'x-fit-release-id, x-fit-error-category, x-fit-error-code, x-fit-request-id',
         )
         .header('vary', 'Origin')
     }
@@ -275,14 +283,80 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.post('/v1/legacy/summarize-client-training', async (request, reply) => {
+    const externalRequestId = typeof request.headers['x-fit-request-id'] === 'string' && uuidPattern.test(request.headers['x-fit-request-id'])
+      ? request.headers['x-fit-request-id']
+      : crypto.randomUUID()
+    reply.header('x-fit-request-id', externalRequestId)
     const authorization = request.headers['x-supabase-authorization']
     if (typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) {
+      request.log.warn({ externalRequestId, stage: 'authorization', errorCode: 'authentication_required' }, 'summary pre-model request rejected')
       return reply.code(401).send({ error: 'authentication_required' })
     }
     if (options.legacySummaryHandler === undefined) {
+      request.log.error({ externalRequestId, stage: 'configuration', errorCode: 'service_unavailable' }, 'summary pre-model request rejected')
       return reply.code(503).send({ error: 'service_unavailable' })
     }
-    return forwardLegacySummary(authorization, request.body, reply)
+    request.log.info({ externalRequestId, stage: 'api_received' }, 'summary request received')
+    return forwardLegacySummary(authorization, request.body, reply, externalRequestId)
+  })
+
+  const legacyChatMediaToken = (headers: { readonly [header: string]: unknown }): string | undefined => {
+    const authorization = headers['x-supabase-authorization']
+    return typeof authorization === 'string' && authorization.startsWith('Bearer ')
+      ? authorization.slice('Bearer '.length)
+      : undefined
+  }
+  const legacyChatMediaFailure = (error: unknown, reply: FastifyReply) => {
+    if (error instanceof LegacyChatMediaAuthorizationError) {
+      return reply.code(error.status).send({ error: error.status === 503 ? 'service_unavailable' : 'unauthorized' })
+    }
+    return reply.code(503).send({ error: 'service_unavailable' })
+  }
+
+  app.post('/v1/legacy/chat-media/upload', { bodyLimit: 3 * 1024 * 1024 }, async (request, reply) => {
+    const token = legacyChatMediaToken(request.headers)
+    const body = request.body as { conversationId?: unknown; messageId?: unknown; image?: unknown } | null
+    const image = readChatImageUpload(body?.image)
+    if (token === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof body?.conversationId !== 'string' || !uuidPattern.test(body.conversationId)
+      || typeof body?.messageId !== 'string' || !uuidPattern.test(body.messageId) || image === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.legacyChatMediaBridge === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    try {
+      await options.legacyChatMediaBridge.upload(token, body.conversationId, body.messageId, image)
+      return reply.header('cache-control', 'no-store').code(204).send()
+    } catch (error) { return legacyChatMediaFailure(error, reply) }
+  })
+
+  app.post('/v1/legacy/chat-media/sign', async (request, reply) => {
+    const token = legacyChatMediaToken(request.headers)
+    const body = request.body as { conversationId?: unknown; messageId?: unknown } | null
+    if (token === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof body?.conversationId !== 'string' || !uuidPattern.test(body.conversationId)
+      || typeof body?.messageId !== 'string' || !uuidPattern.test(body.messageId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.legacyChatMediaBridge === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    try {
+      const signedUrl = await options.legacyChatMediaBridge.sign(token, body.conversationId, body.messageId)
+      return reply.header('cache-control', 'no-store').send({ signedUrl })
+    } catch (error) { return legacyChatMediaFailure(error, reply) }
+  })
+
+  app.post('/v1/legacy/chat-media/remove', async (request, reply) => {
+    const token = legacyChatMediaToken(request.headers)
+    const body = request.body as { conversationId?: unknown; messageId?: unknown } | null
+    if (token === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof body?.conversationId !== 'string' || !uuidPattern.test(body.conversationId)
+      || typeof body?.messageId !== 'string' || !uuidPattern.test(body.messageId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.legacyChatMediaBridge === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    try {
+      await options.legacyChatMediaBridge.remove(token, body.conversationId, body.messageId)
+      return reply.header('cache-control', 'no-store').code(204).send()
+    } catch (error) { return legacyChatMediaFailure(error, reply) }
   })
 
   // Первый assistant endpoint намеренно не является универсальным tool runner.
@@ -396,6 +470,47 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   })
 
+  app.post('/v1/clients/:clientId/training-summaries/diagnostic', async (request, reply) => {
+    const requestId = crypto.randomUUID()
+    reply.header('x-fit-request-id', requestId).header('cache-control', 'no-store')
+    const session = readYandexActorSession(request.headers)
+    const { clientId } = request.params as { clientId?: unknown }
+    const command = readAssistantProgressRequest(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId)
+      || command === undefined || command.clientId !== clientId) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainingSummaryDiagnostic === undefined) {
+      return reply.send({
+        diagnostic: true, route: 'yandex-main', calls: 0, ready: false,
+        code: 'training_summary_database_not_configured', request_id: requestId,
+      })
+    }
+    if (options.pilotTrainingSummaryGenerator === undefined) {
+      return reply.send({
+        diagnostic: true, route: 'yandex-main', calls: 0, ready: false,
+        code: 'training_summary_generation_not_configured', request_id: requestId,
+      })
+    }
+    try {
+      const result = await options.pilotTrainingSummaryDiagnostic.diagnose(session, command)
+      return reply.send({ ...(result as object), request_id: requestId })
+    } catch (error) {
+      if (error instanceof PilotTrainingSummaryError) {
+        return reply.header('x-fit-error-code', error.code)
+          .code(error.status).send({ error: error.code, request_id: requestId })
+      }
+      if (error instanceof SummaryModelError) {
+        return reply.header('x-fit-error-code', error.message)
+          .code(error.status).send({ error: error.message, request_id: requestId })
+      }
+      request.log.error({ requestId, error }, 'training summary diagnostic failed')
+      return reply.header('x-fit-error-code', 'diagnostic_internal_error')
+        .code(500).send({ error: 'diagnostic_internal_error', request_id: requestId })
+    }
+  })
+
   app.post('/v1/training-summaries/:summaryId/publish', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     const { summaryId } = request.params as { summaryId?: unknown }
@@ -494,7 +609,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return reply.code(503).send({ error: 'service_unavailable' })
   }
 
-  async function forwardLegacySummary(authorization: string, body: unknown, reply: FastifyReply) {
+  async function forwardLegacySummary(authorization: string, body: unknown, reply: FastifyReply, externalRequestId?: string) {
     if (options.legacySummaryHandler === undefined) {
       return reply.code(503).send({ error: 'service_unavailable' })
     }
@@ -502,12 +617,17 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       'http://legacy.internal/summarize-client-training',
       {
         method: 'POST',
-        headers: { authorization, 'content-type': 'application/json' },
+        headers: {
+          authorization,
+          'content-type': 'application/json',
+          ...(externalRequestId === undefined ? {} : { 'x-fit-request-id': externalRequestId }),
+        },
         body: JSON.stringify(body),
       },
     ))
     const errorCode = response.headers.get('x-fit-error-code')
     if (errorCode !== null) reply.header('x-fit-error-code', errorCode)
+    reply.log.info({ externalRequestId, stage: 'api_completed', status: response.status, errorCode }, 'summary request completed')
     return reply.code(response.status).type('application/json').send(await response.text())
   }
 
@@ -688,6 +808,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         : query.accepting === 'false' ? false : undefined
     const mode = query.mode === undefined || query.mode === '' ? ''
       : query.mode === 'online' || query.mode === 'in_person' ? query.mode : undefined
+    const metroValues = query.metro === undefined ? []
+      : Array.isArray(query.metro) ? query.metro : [query.metro]
+    const metroStation = (value: unknown) => {
+      const parsed = textFilter(value, 100)
+      return parsed !== undefined && parsed.length > 0 ? parsed : undefined
+    }
+    const metroStationIds = metroValues.length <= 20 && metroValues.every((value) => metroStation(value) !== undefined)
+      ? metroValues.map((value) => metroStation(value)!) : undefined
     const readInteger = (value: unknown, fallback: number, min: number, max: number) => {
       if (value === undefined) return fallback
       if (typeof value !== 'string' || !/^\d+$/.test(value)) return undefined
@@ -700,13 +828,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       query: textFilter(query.query, 100) ?? '',
       specialty: textFilter(query.specialty, 60) ?? '',
       city: textFilter(query.city, 100) ?? '',
+      metroStationIds: metroStationIds ?? [],
       mode: mode ?? '',
       acceptingClients: accepting ?? null,
     }
     if ((query.query !== undefined && textFilter(query.query, 100) === undefined)
       || (query.specialty !== undefined && textFilter(query.specialty, 60) === undefined)
       || (query.city !== undefined && textFilter(query.city, 100) === undefined)
-      || mode === undefined || accepting === undefined || offset === undefined || limit === undefined) {
+      || metroStationIds === undefined || mode === undefined || accepting === undefined || offset === undefined || limit === undefined) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
@@ -900,13 +1029,57 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   })
 
-  app.post('/v1/auth/yandex/link', async (request, reply) => {
-    const actorToken = readBearerToken(request.headers.authorization)
+  app.get('/v1/auth/yandex/link', async (request, reply) => {
+    const existingAuthorization = request.headers['x-supabase-authorization']
+    const actorToken = readBearerToken(
+      typeof existingAuthorization === 'string'
+        ? existingAuthorization
+        : undefined,
+    )
     if (actorToken === undefined) {
+      request.log.warn({ failure: 'missing_existing_session' }, 'Yandex account link status rejected')
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (
+      options.existingActorProvider === undefined
+      || options.yandexAccountLinker === undefined
+    ) {
+      request.log.warn({ failure: 'service_not_configured' }, 'Yandex account link status unavailable')
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+
+    try {
+      const actor = await options.existingActorProvider.resolveActor(actorToken)
+      if (actor === undefined) {
+        request.log.warn({ failure: 'existing_session_invalid' }, 'Yandex account link status rejected')
+        return reply.code(401).send({ error: 'unauthorized' })
+      }
+      const status = await options.yandexAccountLinker.readStatus(actor)
+      return reply.header('cache-control', 'no-store').send(status)
+    } catch (error) {
+      if (error instanceof ExistingActorUnavailableError) {
+        request.log.warn({ failure: 'existing_provider_unavailable' }, 'Yandex account link status unavailable')
+      } else {
+        request.log.error({ failure: 'unexpected' }, 'Yandex account link status unavailable')
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.post('/v1/auth/yandex/link', async (request, reply) => {
+    const existingAuthorization = request.headers['x-supabase-authorization']
+    const actorToken = readBearerToken(
+      typeof existingAuthorization === 'string'
+        ? existingAuthorization
+        : undefined,
+    )
+    if (actorToken === undefined) {
+      request.log.warn({ failure: 'missing_existing_session' }, 'Yandex account link rejected')
       return reply.code(401).send({ error: 'unauthorized' })
     }
     const command = readYandexCodeRequest(request.body)
     if (command === undefined) {
+      request.log.warn({ failure: 'invalid_request' }, 'Yandex account link rejected')
       return reply.code(400).send({ error: 'invalid_request' })
     }
     if (
@@ -915,18 +1088,21 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       options.existingActorProvider === undefined ||
       options.yandexAccountLinker === undefined
     ) {
+      request.log.warn({ failure: 'service_not_configured' }, 'Yandex account link unavailable')
       return reply.code(503).send({ error: 'service_unavailable' })
     }
 
-    let actorId: string
+    let actor: ExistingActor
     try {
-      const resolvedActorId = await options.existingActorProvider.resolveActor(actorToken)
-      if (resolvedActorId === undefined) {
+      const resolvedActor = await options.existingActorProvider.resolveActor(actorToken)
+      if (resolvedActor === undefined) {
+        request.log.warn({ failure: 'existing_session_invalid' }, 'Yandex account link rejected')
         return reply.code(401).send({ error: 'unauthorized' })
       }
-      actorId = resolvedActorId
+      actor = resolvedActor
     } catch (error) {
       if (error instanceof ExistingActorUnavailableError) {
+        request.log.warn({ failure: 'existing_provider_unavailable' }, 'Yandex account link unavailable')
         return reply.code(503).send({ error: 'service_unavailable' })
       }
       throw error
@@ -941,12 +1117,15 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       subjectHash = resolvedSubjectHash
     } catch (error) {
       const response = sendYandexOAuthFailure(reply, error)
-      if (response !== undefined) return response
+      if (response !== undefined) {
+        request.log.warn({ failure: 'oauth_exchange_failed' }, 'Yandex account link rejected')
+        return response
+      }
       throw error
     }
 
     try {
-      const link = await options.yandexAccountLinker.linkActor(actorId, subjectHash)
+      const link = await options.yandexAccountLinker.linkActor(actor, subjectHash)
       let appSession
       try {
         appSession = await options.yandexAppSessionIssuer?.issue(subjectHash)
@@ -954,14 +1133,20 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         if (!(error instanceof YandexAppSessionDeniedError)) throw error
       }
       if (appSession !== undefined && appSession.profile.id !== link.profileId) {
+        request.log.error({ failure: 'session_profile_mismatch' }, 'Yandex account link unavailable')
         return reply.code(503).send({ error: 'service_unavailable' })
       }
+      request.log.info(
+        { appSessionIssued: appSession !== undefined },
+        'Yandex account link completed',
+      )
       return reply.header('cache-control', 'no-store').send({
         ...link,
         ...(appSession === undefined ? {} : { appSession }),
       })
     } catch (error) {
       if (error instanceof YandexAccountLinkError) {
+        request.log.warn({ failure: error.failure }, 'Yandex account link rejected')
         if (error.failure === 'conflict') {
           return reply.code(409).send({ error: 'yandex_identity_conflict' })
         }
@@ -973,6 +1158,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         }
         return reply.code(403).send({ error: 'action_not_allowed' })
       }
+      request.log.error({ failure: 'unexpected' }, 'Yandex account link unavailable')
       return reply.code(503).send({ error: 'service_unavailable' })
     }
   })

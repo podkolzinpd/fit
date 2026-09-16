@@ -34,6 +34,9 @@ function runPolicy(resourceChanges, options = {}) {
       ...(options.allowPushPipelineBootstrap === true
         ? ['--allow-push-pipeline-bootstrap']
         : []),
+      ...(options.allowMediaStorageBootstrap === true
+        ? ['--allow-media-storage-bootstrap']
+        : []),
     ],
     { encoding: 'utf8' },
   )
@@ -121,6 +124,26 @@ describe('Yandex Terraform plan policy', () => {
       result.stderr,
       /Automatic stage deploy contains new or cost-sensitive infrastructure changes/,
     )
+  })
+
+  test('accepts the stage API read grant for the legacy Supabase bridge Lockbox', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader[0]',
+          change: {
+            actions: ['create'],
+            after: {
+              role: 'lockbox.payloadViewer',
+              member: 'serviceAccount:ajed7vfl6dnd1k2h6gt8',
+            },
+          },
+        },
+      ],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(result.status, 0)
   })
 
   test('accepts only the explicitly approved bounded push pipeline bootstrap', () => {
@@ -258,6 +281,89 @@ describe('Yandex Terraform plan policy', () => {
         automaticStageUpdate: true,
         allowPushPipelineBootstrap: true,
       },
+    )
+
+    assert.notEqual(result.status, 0)
+  })
+
+  test('accepts only the approved private media storage bootstrap', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_storage_bucket.media',
+          change: {
+            actions: ['create'],
+            after: {
+              anonymous_access_flags: [{ config_read: false, list: false, read: false }],
+              bucket: 'fit-stage-media-b1goqho1',
+              default_storage_class: 'STANDARD',
+              force_destroy: false,
+              lifecycle_rule: [{ abort_incomplete_multipart_upload_days: 7, enabled: true }],
+              versioning: [{ enabled: true }],
+            },
+          },
+        },
+        {
+          address: 'yandex_storage_bucket_iam_binding.media_api_editor',
+          change: {
+            actions: ['create'],
+            after: { members: ['serviceAccount:api123'], role: 'storage.editor' },
+          },
+        },
+        {
+          address: 'yandex_lockbox_secret.media_s3_credentials',
+          change: {
+            actions: ['create'],
+            after: { deletion_protection: true, name: 'fit-stage-media-s3' },
+          },
+        },
+        {
+          address: 'yandex_iam_service_account_static_access_key.api_media',
+          change: {
+            actions: ['create'],
+            after: {
+              service_account_id: 'api123',
+              output_to_lockbox: [{
+                entry_for_access_key: 'YANDEX_MEDIA_ACCESS_KEY_ID',
+                entry_for_secret_key: 'YANDEX_MEDIA_SECRET_ACCESS_KEY',
+              }],
+            },
+          },
+        },
+        {
+          address: 'yandex_lockbox_secret_iam_member.api_media_credentials_reader',
+          change: {
+            actions: ['create'],
+            after: { member: 'serviceAccount:api123', role: 'lockbox.payloadViewer' },
+          },
+        },
+      ],
+      { automaticStageUpdate: true, allowMediaStorageBootstrap: true },
+    )
+
+    assert.equal(result.status, 0)
+    assert.match(result.stdout, /Private media storage bootstrap cost estimate/)
+    assert.match(result.stdout, /about 19.73 RUB\/month/)
+    assert.match(result.stdout, /approve_media_storage=true/)
+  })
+
+  test('rejects public or destructive media storage even with bootstrap approval', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_storage_bucket.media',
+        change: {
+          actions: ['create'],
+          after: {
+            anonymous_access_flags: [{ config_read: false, list: false, read: true }],
+            bucket: 'fit-stage-media-b1goqho1',
+            default_storage_class: 'STANDARD',
+            force_destroy: true,
+            lifecycle_rule: [{ abort_incomplete_multipart_upload_days: 7, enabled: true }],
+            versioning: [{ enabled: true }],
+          },
+        },
+      }],
+      { automaticStageUpdate: true, allowMediaStorageBootstrap: true },
     )
 
     assert.notEqual(result.status, 0)

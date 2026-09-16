@@ -1,8 +1,10 @@
 import { supabase } from './client'
+import { refreshSupabaseAccessToken, verifiedSupabaseAccessToken } from './verified-supabase-session'
 
 type LegacyFunctionResult<T> = {
   data: T | null
   error: Error | { context: Response } | null
+  response?: Response
 }
 
 export function legacyCloudApiBaseUrl(): string | undefined {
@@ -20,28 +22,63 @@ export function legacyCloudApiBaseUrl(): string | undefined {
 export async function invokeLegacyCloudFunction<T>(
   name: 'parse-workout' | 'summarize-client-training',
   body: unknown,
+  options: { includeResponse?: boolean } = {},
 ): Promise<LegacyFunctionResult<T> | undefined> {
   const baseUrl = legacyCloudApiBaseUrl()
   if (baseUrl === undefined) return undefined
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
+  let accessToken: string
+  try {
+    accessToken = name === 'summarize-client-training'
+      ? await verifiedSupabaseAccessToken()
+      : (await supabase.auth.getSession()).data.session?.access_token ?? ''
+  } catch (error) {
+    return { data: null, error: error instanceof Error ? error : new Error('authentication_required') }
+  }
+  if (!accessToken) return { data: null, error: new Error('authentication_required') }
+  const request = (token: string) => fetch(`${baseUrl}/v1/legacy/${name}`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-supabase-authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  })
   let response: Response
   try {
-    response = await fetch(`${baseUrl}/v1/legacy/${name}`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-supabase-authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(body),
-    })
+    response = await request(accessToken)
   } catch (error) {
     return { data: null, error: error instanceof Error ? error : new Error('legacy_cloud_request_failed') }
   }
+
+  if (name === 'summarize-client-training' && await isAuthenticationRejection(response)) {
+    try {
+      accessToken = await refreshSupabaseAccessToken()
+      response = await request(accessToken)
+    } catch (error) {
+      return { data: null, error: error instanceof Error ? error : new Error('authentication_required') }
+    }
+  }
   if (!response.ok) return { data: null, error: { context: response } }
   try {
-    return { data: await response.json() as T, error: null }
+    return {
+      data: await response.json() as T,
+      error: null,
+      ...(options.includeResponse ? { response } : {}),
+    }
   } catch {
     return { data: null, error: new Error('invalid_json') }
+  }
+}
+
+async function isAuthenticationRejection(response: Response): Promise<boolean> {
+  if (response.status !== 401) return false
+  const headerCode = response.headers.get('x-fit-error-code')
+  if (headerCode === 'authentication_required' || headerCode === 'unauthorized') return true
+  try {
+    const payload = await response.clone().json() as { error?: unknown; code?: unknown }
+    return payload.error === 'authentication_required' || payload.error === 'unauthorized'
+      || payload.code === 'authentication_required' || payload.code === 'unauthorized'
+  } catch {
+    return false
   }
 }

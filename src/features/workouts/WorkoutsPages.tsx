@@ -8,7 +8,7 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { restDeadline, restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { LiveRestTimer } from './LiveRestTimer'
 import { LiveExerciseRest, readLiveRestOverrides } from './LiveExerciseRest'
@@ -49,7 +49,7 @@ import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 import { WorkoutCompletionCard } from './WorkoutCompletionCard'
 import { WorkoutCompletionReport } from './WorkoutCompletionReport'
-import { ArrowDownIcon, ArrowUpIcon, BackIcon, ChevronRightIcon, CloseIcon, HistoryIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
+import { ArrowDownIcon, ArrowUpIcon, BackIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
@@ -61,10 +61,31 @@ import { workoutFeedbackConfirmation } from './workout-feedback-copy'
 import { clearWorkoutInactivityReminder } from './workout-inactivity-reminder'
 import { useWorkoutInactivityReminder } from './use-workout-inactivity-reminder'
 import { LiveExerciseTechnique } from './LiveExerciseTechnique'
+import { useAppViewport } from '../../app/app-viewport'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
 export const WORKOUT_HISTORY_PAGE_SIZE = 20
+
+const LIVE_SET_KEYBOARD_GUTTER = 16
+
+function keepLiveSetFieldVisible(target: HTMLElement) {
+  const row = target.closest('.live-set-grid')
+  const content = target.closest('.content')
+  if (!(row instanceof HTMLElement) || !(content instanceof HTMLElement) || content.clientHeight <= 0) return
+
+  const rowRect = row.getBoundingClientRect()
+  const contentRect = content.getBoundingClientRect()
+  const visibleTop = contentRect.top + LIVE_SET_KEYBOARD_GUTTER
+  const visibleBottom = contentRect.bottom - LIVE_SET_KEYBOARD_GUTTER
+  if (rowRect.top >= visibleTop && rowRect.bottom <= visibleBottom) return
+
+  const centeredTop = content.scrollTop
+    + rowRect.top
+    - contentRect.top
+    - Math.max(LIVE_SET_KEYBOARD_GUTTER, (content.clientHeight - rowRect.height) / 2)
+  content.scrollTo({ top: Math.max(0, centeredTop), behavior: 'auto' })
+}
 
 function catalogExerciseFor(exercises: readonly ExerciseSnapshot[], exercise: { ref: string; source?: 'system' | 'custom' }) {
   return exercises.find((candidate) => candidate.ref === exercise.ref && (!exercise.source || candidate.source === exercise.source))
@@ -257,49 +278,57 @@ const chronicleReactionLabels: Record<TrainerReaction, string> = {
   strong: '💪',
 }
 
-export function WorkoutChronicleCard({ workout, contextLabel, returnTo }: { workout: Workout; contextLabel?: string | null; returnTo?: string }) {
+export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean }) {
   const done = workout.status === 'done'
   const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
   const tonnage = workoutTonnage(workout)
   const meta = done ? [duration, tonnage > 0 ? tonnageLabel(tonnage) : null].filter(Boolean) : []
   const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined
   const exercisePreview = chronicleExercisePreview(workout.exercises)
+  const musclePreview = chronicleExercisePreview(historyListActions && done ? performedMuscleGroupLabels(workout) : [], 3)
+  const detailState = returnTo ? { returnTo } : undefined
+  const formattedDate = formatLocalDate(workout.workoutDate)
+  const muscleSummary = [...musclePreview.visible, ...(musclePreview.hiddenCount > 0 ? [`+${musclePreview.hiddenCount}`] : [])].join(' · ')
 
-  return <Link className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}`} to={`/workouts/${workout.id}`} state={returnTo ? { returnTo } : undefined}>
-    <div className="workout-chronicle-head">
-      <strong>{formatLocalDate(workout.workoutDate)}</strong>
-      <div className="workout-chronicle-head-badges">
-        {workout.hasPr && <span className="workout-pr-badge"><RecordIcon />Личный рекорд</span>}
-        <WorkoutStatusBadge workout={workout} />
-      </div>
-    </div>
-    {contextLabel && <p className="card-author">{contextLabel}</p>}
-    <div className="workout-chronicle-exercises">
-      {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
-        const result = done
-          ? compactCompletedSetSummary(exercise.sets, false, exercise.ref)
-          : compactPlannedSetSummary(exercise.sets, false, exercise.ref)
-        return <div className="workout-chronicle-exercise" key={exercise.id}>
-          <span className="workout-chronicle-exercise-name">{exercise.name}
-            {exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
-          </span>
-          {result && <strong>{result}</strong>}
+  return <article className={`card workout-chronicle-card${workout.hasPr ? ' has-pr' : ''}${historyListActions && done ? ' has-history-actions' : ''}`}>
+    <Link className="workout-chronicle-open" aria-label={`Открыть тренировку за ${formattedDate}`} to={`/workouts/${workout.id}`} state={detailState}>
+      <div className="workout-chronicle-head">
+        <strong>{formattedDate}</strong>
+        <div className="workout-chronicle-head-badges">
+          {workout.hasPr && <span className="workout-pr-badge"><RecordIcon />Личный рекорд</span>}
+          <WorkoutStatusBadge workout={workout} />
         </div>
-      }) : <p className="muted">Без упражнений</p>}
-      {exercisePreview.hiddenCount > 0 && <p className="workout-chronicle-more">Ещё {exercisePreview.hiddenCount} {exerciseCountLabel(exercisePreview.hiddenCount)}</p>}
-    </div>
-    {(meta.length > 0 || hasFeedback || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
-      {meta.map((item) => <span key={item}>{item}</span>)}
-      {hasFeedback && <span>RPE {workout.sessionRpe}/10</span>}
-      {workout.wellbeing && <span>{chronicleWellbeingLabels[workout.wellbeing]}</span>}
-      {workout.discomfort && <span className="attention">Дискомфорт</span>}
-    </div>}
-    {workout.clientComment && <p className="workout-chronicle-comment"><span className="workout-chronicle-note-label">Клиент</span><span className="workout-chronicle-note-text">{workout.clientComment}</span></p>}
-    {workout.trainerReview && <p className="workout-chronicle-response">
-      <span className="workout-chronicle-note-label">{workout.trainerReaction ? chronicleReactionLabels[workout.trainerReaction] : 'Тренер'}</span>
-      <span className="workout-chronicle-note-text">{workout.trainerReview}</span>
-    </p>}
-  </Link>
+      </div>
+      {contextLabel && <p className="card-author">{contextLabel}</p>}
+      <div className="workout-chronicle-exercises">
+        {exercisePreview.visible.length > 0 ? exercisePreview.visible.map((exercise) => {
+          const result = done
+            ? compactCompletedSetSummary(exercise.sets, false, exercise.ref)
+            : compactPlannedSetSummary(exercise.sets, false, exercise.ref)
+          return <div className="workout-chronicle-exercise" key={exercise.id}>
+            <span className="workout-chronicle-exercise-name">{exercise.name}
+              {exercise.trainerComment && <small className="workout-exercise-comment">💬 {exercise.trainerComment}</small>}
+            </span>
+            {result && <strong>{result}</strong>}
+          </div>
+        }) : <p className="muted">Без упражнений</p>}
+        {exercisePreview.hiddenCount > 0 && <p className="workout-chronicle-more">Ещё {exercisePreview.hiddenCount} {exerciseCountLabel(exercisePreview.hiddenCount)}</p>}
+      </div>
+      {muscleSummary && <p className="workout-chronicle-muscles" aria-label={`Основные группы мышц: ${muscleSummary}`}><span>Мышцы:</span> {muscleSummary}</p>}
+      {(meta.length > 0 || hasFeedback || workout.discomfort) && <div className="card-meta workout-chronicle-facts">
+        {meta.map((item) => <span key={item}>{item}</span>)}
+        {hasFeedback && <span>RPE {workout.sessionRpe}/10</span>}
+        {workout.wellbeing && <span>{chronicleWellbeingLabels[workout.wellbeing]}</span>}
+        {workout.discomfort && <span className="attention">Дискомфорт</span>}
+      </div>}
+      {workout.clientComment && <p className="workout-chronicle-comment"><span className="workout-chronicle-note-label">Клиент</span><span className="workout-chronicle-note-text">{workout.clientComment}</span></p>}
+      {workout.trainerReview && <p className="workout-chronicle-response">
+        <span className="workout-chronicle-note-label">{workout.trainerReaction ? chronicleReactionLabels[workout.trainerReaction] : 'Тренер'}</span>
+        <span className="workout-chronicle-note-text">{workout.trainerReview}</span>
+      </p>}
+    </Link>
+    {historyListActions && done && <Link className="workout-chronicle-copy" aria-label={`Скопировать тренировку за ${formattedDate}`} title="Скопировать тренировку" to={`/workouts/new?copy=${workout.id}`} state={detailState}><CopyIcon /></Link>}
+  </article>
 }
 
 export function ClientWorkoutsPage() {
@@ -341,7 +370,7 @@ export function ClientWorkoutsPage() {
           </Coachmark>
         </div>
         {calendar.state.view === 'list' ? <>
-          <div className="cards workout-chronicle-list">{split.history.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={contextLabel(workout)} returnTo={returnTo} />)}</div>
+          <div className="cards workout-chronicle-list">{split.history.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={contextLabel(workout)} returnTo={returnTo} historyListActions />)}</div>
           {split.history.length === 0 && <p className="muted">Здесь появятся завершённые тренировки.</p>}
           <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
         </> : <ClientWorkoutHistoryCalendar month={calendar.state.month} today={today} workouts={calendarItems}
@@ -358,7 +387,7 @@ export function ClientWorkoutsPage() {
 }
 
 export function WorkoutFormPage() {
-  const { clients: clientsRepository, goals: goalsRepository, workouts: workoutsRepository } = useDataBackend()
+  const { clients: clientsRepository, exercises: exercisesRepository, goals: goalsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId } = useParams()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
@@ -394,13 +423,16 @@ export function WorkoutFormPage() {
   const [formDraftReady, setFormDraftReady] = useState(false)
   const [prefillError, setPrefillError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerSelectionDraft, setPickerSelectionDraft] = useState<ExerciseSnapshot[]>([])
   const [techniqueExercise, setTechniqueExercise] = useState<ExerciseSnapshot | null>(null)
   const [pickerSearch, setPickerSearch] = useState('')
+  const parsedExerciseSelection = useRef<((exercise: ExerciseSnapshot) => void) | null>(null)
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today, { refreshCatalogNames: true })) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
   const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`)
+  useEffect(() => { setPickerSelectionDraft([]) }, [draftKey])
   // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
   const defaultClientId = clientMode ? (mine.data?.id ?? '') : (initial?.clientId ?? routeClientId)
   const [selectedClientId, setSelectedClientId] = useState<string>('')
@@ -504,6 +536,12 @@ export function WorkoutFormPage() {
     }
   }
   async function pickExercise(selected: ExerciseSnapshot, runningFormat?: RunningFormat) {
+    const selectParsedExercise = parsedExerciseSelection.current
+    if (selectParsedExercise) {
+      selectParsedExercise(selected)
+      closePicker()
+      return
+    }
     if (runningFormat) {
       const selectedDrafts = createRunningFormatDrafts(selected, runningFormat, replaceIndex ?? exercises.length)
       if (selectedDrafts.length) {
@@ -544,21 +582,33 @@ export function WorkoutFormPage() {
     closePicker()
   }
   async function addQuickEntry(parsed: ParsedWorkoutExercise[]) {
-    const results = await previousResults(parsed.map((item) => item.exercise))
+    const exercisesWithoutParsedValues = parsed.filter((item) => !item.hasValues).map((item) => item.exercise)
+    const results = exercisesWithoutParsedValues.length > 0
+      ? await previousResults(exercisesWithoutParsedValues)
+      : new Map<string, PreviousExerciseResult>()
     rememberPreviousResults(results)
+    const additions = parsed.map((item, index) => {
+      const fallback = exerciseDraft(item.exercise, exercises.length + index, results.get(item.exercise.ref))
+      return {
+        ...fallback,
+        ...item.structure,
+        sets: item.hasValues ? item.sets : fallback.sets,
+      }
+    })
+    const roundsByGroup = new Map<string, number>()
+    for (const exercise of additions) {
+      if (exercise.blockType === 'group') {
+        roundsByGroup.set(exercise.blockId, Math.max(roundsByGroup.get(exercise.blockId) ?? 1, exercise.sets.length, 1))
+      }
+    }
     setDraftExercises([
       ...exercises,
-      ...parsed.map((item, index) => {
-        const fallback = exerciseDraft(item.exercise, exercises.length + index, results.get(item.exercise.ref))
-        return {
-          ...fallback,
-          ...item.structure,
-          sets: item.hasValues ? item.sets : fallback.sets,
-        }
-      }),
+      ...additions.map((exercise) => exercise.blockType === 'group'
+        ? { ...exercise, blockRounds: roundsByGroup.get(exercise.blockId) ?? exercise.blockRounds }
+        : exercise),
     ])
   }
-  function closePicker() { setPickerOpen(false); setReplaceIndex(null); setPickerSearch('') }
+  function closePicker() { parsedExerciseSelection.current = null; setPickerOpen(false); setReplaceIndex(null); setPickerSearch('') }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (exercises.length === 0) return
@@ -630,7 +680,7 @@ export function WorkoutFormPage() {
       </section>
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head workout-form-exercise-heading"><h2>{completedMode ? 'Что выполнено' : 'Упражнения'}</h2></div>
-        <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} onAdd={(parsed) => void addQuickEntry(parsed)} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search) => { setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} />
+        <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={(parsed) => void addQuickEntry(parsed)} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search, onSelect) => { parsedExerciseSelection.current = onSelect ?? null; setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} />
         {exercises.length === 0 && <p className="workout-empty-hint" role="status">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
         <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }}
           canOpenTechnique={(exercise) => hasExerciseTechnique(catalogExerciseFor(catalog.exercises, exercise))}
@@ -641,7 +691,7 @@ export function WorkoutFormPage() {
       {mutation.error && <p className="error">{mutation.error.message}</p>}
       <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>
     </form>}</AsyncView>
-    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={pickExercise} onPickMany={pickExercises} multiple={replaceIndex === null} onClose={closePicker} />}
+    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={parsedExerciseSelection.current ? 'all' : replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} techniqueActionLabel={parsedExerciseSelection.current ? 'Выбрать упражнение' : replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={pickExercise} onPickMany={pickExercises} selectionDraft={replaceIndex === null && !parsedExerciseSelection.current ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null && !parsedExerciseSelection.current ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null && !parsedExerciseSelection.current} onClose={closePicker} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmLeaveDialog}
   </Page>
@@ -1439,6 +1489,7 @@ export function LiveWorkoutPage() {
   const { pushNotifications: pushNotificationsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
+  const { keyboardOpen } = useAppViewport()
   const showRpeByDefault = useRpeDisplay(actor?.userId)
   const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
   const clientMode = actor?.role === 'client'
@@ -1481,6 +1532,21 @@ export function LiveWorkoutPage() {
     return () => { void setLiveScreenAwake(false) }
   }, [])
   useClientRealtime(query.data?.clientId)
+  useEffect(() => {
+    if (!keyboardOpen) return
+    const target = document.activeElement
+    if (!(target instanceof HTMLElement) || !target.matches('.live-set-input, .live-set-rpe')) return
+
+    // focusin приходит раньше, чем WKWebView сообщает новую высоту клавиатуры.
+    // Повторяем позиционирование после применения уменьшенного viewport, но
+    // прокручиваем только внутренний .content — корневое iOS-окно не сдвигаем.
+    const frame = window.requestAnimationFrame(() => keepLiveSetFieldVisible(target))
+    const timer = window.setTimeout(() => keepLiveSetFieldVisible(target), 180)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(timer)
+    }
+  }, [keyboardOpen])
   const catalog = useExerciseCatalog()
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', query.data?.clientId], queryFn: () => workoutsRepository.list(undefined, undefined, query.data!.clientId), enabled: Boolean(query.data?.clientId) })
   const previousExerciseResults = useQuery({ queryKey: ['latest-exercise-results', query.data?.clientId, query.data?.exercises.map((exercise) => exercise.ref).join('|')], queryFn: () => workoutsRepository.latestExerciseResults(query.data!.clientId, query.data!.exercises.map((exercise) => exercise.ref)), enabled: Boolean(query.data?.clientId && query.data?.exercises.length) })
@@ -2028,7 +2094,11 @@ export function LiveWorkoutPage() {
     // Однократный recovery-key нужен только после reload, чтобы применить
     // восстановленные defaultValue.
     const recoveryKey = recoveredFormIds.has(set.id) ? 'recovered' : 'stable'
-    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${showRpe ? 'rpe-visible' : ''}`} key={`${set.id}:${recoveryKey}`} onFocus={() => { if (!set.confirmedAt) openLiveSet(set.id) }} onInput={(event) => captureLiveDraft(set, event.currentTarget)} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
+    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''}`} key={`${set.id}:${recoveryKey}`} onFocusCapture={(event) => {
+      if (!set.confirmedAt) openLiveSet(set.id)
+      const target = event.target
+      if (target instanceof HTMLElement && target.matches('.live-set-input, .live-set-rpe')) keepLiveSetFieldVisible(target)
+    }} onInput={(event) => captureLiveDraft(set, event.currentTarget)} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
       if (set.confirmedAt && !isEditing) return
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
@@ -2046,9 +2116,9 @@ export function LiveWorkoutPage() {
             : <button type="button" className="live-set-check" aria-label={confirmLabel} disabled={confirm.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
                 onClick={(event) => { liveSetAutosave.clear(set.id); const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>}
-          <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} /></div>
         </div>
       </WorkoutSetRow>
+      <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} /></div>
       {showPlan && <small className="live-set-plan-caption">{planLine(exercise.inputKind, set, exercise.ref) ? `План · ${planLine(exercise.inputKind, set, exercise.ref)}` : 'Без плановых значений'}</small>}
     </form>
   }
@@ -2081,7 +2151,7 @@ export function LiveWorkoutPage() {
         <div className="live-pinned">
           <div className="live-timer-toolbar"><WorkoutTimer startedAt={query.data.startedAt ?? null} />
             <Coachmark id="live-timer-2026-09" userId={actor?.userId} title="Отдых — в кнопке таймера" description="Нажмите, чтобы запустить отдых, добавить время или пропустить его. Подходы можно заполнять прямо в таблице.">
-              <LiveRestTimer deadline={restEndsAt} onChange={startRestUntil} />
+              <LiveRestTimer deadline={restEndsAt} completedSetCount={sessionProgress.completedSetCount} onChange={startRestUntil} />
             </Coachmark>
           </div>
           {activeCircuit && circuitRounds && <div className="circuit-head pinned">
@@ -2135,7 +2205,7 @@ export function LiveWorkoutPage() {
               <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
               {liveTechniqueFor(exercise, blockStatus === 'current')}
               {clientMode && exercise.trainerComment && <p className="live-trainer-cue">Тренер: {exercise.trainerComment}</p>}
-              {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return <p className="live-previous-result">{line ? `В прошлый раз: ${line}` : 'Нет предыдущего результата'}</p> })()}
+              {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
               {block.blockType === 'single' && <div className="live-exercise-rest-row"><LiveExerciseRest seconds={restOverrides[exercise.id] ?? exercise.restBetweenSetsSec} onChange={(seconds) => setExerciseRest(exercise.id, seconds)} /></div>}
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
@@ -2201,7 +2271,7 @@ export function LiveWorkoutPage() {
                 <WorkoutCta pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>Завершить</WorkoutCta>
               </div>
             </div>
-          : <WorkoutCta variant="secondary" className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>}
+          : <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>}
       </div>
     </>}</AsyncView>
     {canManageLiveStructure && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onClose={closePicker} />}

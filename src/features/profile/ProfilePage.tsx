@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
-import { useOptionalYandexAppSession } from '../../app/yandex-app-session-context'
 import { setExercisePlanRestDisplay, useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { setLiveExerciseAnimation, useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { setRpeDisplay, useRpeDisplay } from '../../app/rpe-display'
@@ -9,7 +8,7 @@ import { setAppTheme, useAppTheme } from '../../app/theme'
 import { SettingsIcon } from '../../shared/icons'
 import { LEGAL_PATHS } from '../../shared/legal'
 import { Coachmark, Page, Switch } from '../../shared/ui'
-import { LogoutButton, YandexAccountLinkingCard } from '../auth'
+import { LogoutButton } from '../auth'
 import { AppInstallPanel } from '../install'
 import { NotificationsSetting } from '../notifications'
 import { BodyMapAppearanceSetting } from '../progress/BodyMapAppearanceSetting'
@@ -33,7 +32,6 @@ export function ProfilePage() {
 
 export function TrainerProfileSettingsPage() {
   const { actor } = useAuth()
-  const yandexSession = useOptionalYandexAppSession()?.session ?? null
   const theme = useAppTheme()
   const showRpe = useRpeDisplay(actor?.userId)
   const showExerciseRest = useExercisePlanRestDisplay(actor?.userId)
@@ -74,7 +72,6 @@ export function TrainerProfileSettingsPage() {
 
     <SettingsSection title="Аккаунт и помощь">
       <AccountSettingsCard />
-      {yandexSession === null && <YandexAccountLinkingCard actor={actor} />}
       <div className="menu">
         <button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button>
         <button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button>

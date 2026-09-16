@@ -16,12 +16,15 @@ export function LiveExerciseTechnique({ exercise, collapsed, onCollapsedChange, 
     </button>
   }
 
-  const hasMedia = hasExerciseMedia(exercise)
-  const instruction = exercise.instructions?.[0]
+  const hasMedia: boolean = hasExerciseMedia(exercise)
+  if (!hasMedia) {
+    return <button type="button" className="live-technique-collapsed live-technique-text-only" aria-label={`Открыть технику: ${exercise.name}`} onClick={onOpenTechnique}>
+      <span aria-hidden="true">›</span> Техника
+    </button>
+  }
+
   return <section className={`live-technique${hasMedia ? ' has-media' : ''}`} aria-label={`Техника текущего упражнения: ${exercise.name}`}>
-    {hasMedia
-      ? <ExerciseImage src={exercise.imageUrl} fallbackSrc={exercise.fallbackImageUrl} motionSrc={exercise.motionImageUrl} videoSrc={exercise.techniqueVideoUrl} alt={exercise.name} variant="technique" />
-      : <p className="live-technique-hint">{instruction}</p>}
+    <ExerciseImage src={exercise.imageUrl} fallbackSrc={exercise.fallbackImageUrl} motionSrc={exercise.motionImageUrl} videoSrc={exercise.techniqueVideoUrl} alt={exercise.name} variant="technique" />
     <div className="live-technique-actions">
       <button type="button" className="link" onClick={onOpenTechnique}>Подробнее</button>
       <button type="button" className="link" aria-label={`Свернуть анимацию: ${exercise.name}`} onClick={() => onCollapsedChange(true)}>Свернуть</button>

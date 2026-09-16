@@ -7,6 +7,7 @@ import { PgDatabasePool } from '../db/pg-pool.js'
 import type { DatabaseClient } from '../db/types.js'
 import { encryptMigrationBundle } from './bundle.js'
 import {
+  exportFullCohort,
   exportStandaloneClient,
   exportTenant,
   TenantMigrationError,
@@ -24,6 +25,7 @@ export type RemoteTenantSelection =
   | { kind: 'smallest-eligible' }
   | { kind: 'smallest-eligible-standalone-client' }
   | { kind: 'most-complete-standalone-client' }
+  | { kind: 'full-cohort' }
 
 type CandidateAcceptance = (
   bundle: TenantMigrationBundle,
@@ -253,7 +255,12 @@ export function readRemoteTenantRehearsalSettings(
     throw new RemoteTenantRehearsalError('tenant_fingerprint_invalid')
   }
   let tenantSelection: RemoteTenantSelection
-  if (
+  if (selectionMode === 'full-cohort') {
+    if (mode === 'apply' && expectedTenantFingerprint === undefined) {
+      throw new RemoteTenantRehearsalError('tenant_fingerprint_required')
+    }
+    tenantSelection = { kind: 'full-cohort' }
+  } else if (
     selectionMode === 'smallest-eligible'
     || selectionMode === 'smallest-eligible-standalone-client'
     || selectionMode === 'most-complete-standalone-client'
@@ -318,6 +325,9 @@ export async function exportSelectedTenant(
   if (selection.kind === 'configured') {
     return exportTenant(source, selection.trainerId, now)
   }
+  if (selection.kind === 'full-cohort') {
+    return exportFullCohort(source, now)
+  }
 
   let candidateProfileIds: readonly string[]
   try {
@@ -367,7 +377,7 @@ export async function exportSelectedTenant(
 }
 
 function isAutomaticSelection(selection: RemoteTenantSelection): boolean {
-  return selection.kind !== 'configured'
+  return selection.kind !== 'configured' && selection.kind !== 'full-cohort'
 }
 
 function readNonNegativeInteger(

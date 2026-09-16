@@ -36,16 +36,28 @@ test('exercise catalog search and technique detail work in the iOS shell', async
 
   await page.getByLabel('Поиск упражнения').fill('лежачий велотренажер')
   await expect(page.getByText('Найдено: 1', { exact: true })).toBeVisible()
-  const textOnlyResult = page.locator('.catalog-media-card').first()
-  await expect(textOnlyResult.getByText('Горизонтальный велотренажёр')).toBeVisible()
-  await expect(textOnlyResult.locator('.exercise-image, img, video')).toHaveCount(0)
-  await textOnlyResult.click()
-  await expect(page.getByRole('dialog').locator('.exercise-image, img, video')).toHaveCount(0)
+  const recumbentBikeResult = page.locator('.catalog-media-card').first()
+  await expect(recumbentBikeResult.getByText('Горизонтальный велотренажёр')).toBeVisible()
+  await expect(recumbentBikeResult.locator('.exercise-image')).toBeVisible()
+  await expect(recumbentBikeResult.locator('.catalog-media-card-play')).toBeVisible()
+  await recumbentBikeResult.click()
+  await expect(page.getByRole('dialog').locator('.exercise-image-technique video')).toHaveAttribute('src', '/exercises/vital/stationary-bike.mp4')
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 
 test('narrow-grip pulldown keeps exact media separate from the wide-grip variant', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
+  await page.route('**/exercises/vital-pro/vital-gym-pro-r407-1713*', async (route) => {
+    if (route.request().url().endsWith('.mp4')) {
+      await route.continue({ url: new URL('/exercises/vital/stationary-bike.mp4', route.request().url()).href })
+      return
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/gif',
+      body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', 'base64'),
+    })
+  })
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -56,7 +68,7 @@ test('narrow-grip pulldown keeps exact media separate from the wide-grip variant
   await page.getByLabel('Поиск упражнения').fill('тяга верхнего блока узким хватом')
   const narrowGrip = page.locator('.catalog-media-card').filter({ hasText: 'Тяга верхнего блока узким хватом' }).first()
   await expect(narrowGrip).toBeVisible()
-  await expect(narrowGrip.locator('img')).toHaveAttribute('src', '/exercises/reference/close-grip-lat-pulldown.jpg')
+  await expect(narrowGrip.locator('img')).toHaveAttribute('src', '/exercises/vital-pro/vital-gym-pro-r407-1713.jpg')
   await expect(narrowGrip.locator('video')).toHaveCount(0)
   await page.screenshot({ path: testInfo.outputPath('narrow-grip-pulldown-search-mobile.png'), fullPage: true })
   await narrowGrip.click()
@@ -64,10 +76,9 @@ test('narrow-grip pulldown keeps exact media separate from the wide-grip variant
   const detail = page.getByRole('dialog')
   await expect(detail.getByRole('heading', { name: 'Тяга верхнего блока узким хватом' })).toBeVisible()
   const technique = detail.locator('.exercise-image-technique')
-  await expect(technique.locator('img')).toHaveCount(2)
-  await expect(technique.locator('img').first()).toHaveAttribute('src', '/exercises/reference/close-grip-lat-pulldown.jpg')
-  await expect(technique.locator('img').nth(1)).toHaveAttribute('src', '/exercises/reference/close-grip-lat-pulldown-end.jpg')
-  await expect(technique.locator('video')).toHaveCount(0)
+  await expect(technique.locator('img')).toHaveCount(1)
+  await expect(technique.locator('img')).toHaveAttribute('src', '/exercises/vital-pro/vital-gym-pro-r407-1713.jpg')
+  await expect(technique.locator('video')).toHaveAttribute('src', '/exercises/vital-pro/vital-gym-pro-r407-1713.mp4')
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
   await page.waitForTimeout(1_800)
   await page.screenshot({ path: testInfo.outputPath('narrow-grip-pulldown-technique-mobile.png'), fullPage: true })

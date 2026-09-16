@@ -52,6 +52,7 @@ import type {
 import {
   ExistingActorUnavailableError,
   YandexAccountLinkError,
+  type ExistingActor,
   type ExistingActorProvider,
   type YandexAccountLinker,
 } from './yandex-account-linking.js'
@@ -270,7 +271,8 @@ describe('trainer professional profile', () => {
   const draft: TrainerProfileDraft = {
     displayName: 'Анна Иванова',
     bio: 'Помогаю безопасно начать силовые тренировки и видеть понятный прогресс.',
-    specialties: ['Силовые'], city: 'Москва', trainingModes: ['online'],
+    specialties: ['Силовые'], city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-aeroport'],
+    customLocations: ['Клуб'], trainingModes: ['online'],
     experienceStartYear: 2020, education: '', formats: '', price: '',
     acceptingClients: true, avatarDataUrl: null, certificates: [],
   }
@@ -319,12 +321,12 @@ describe('trainer professional profile', () => {
     const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
     const response = await app.inject({
       method: 'GET',
-      url: '/v1/trainers/catalog?query=%D0%90%D0%BD%D0%BD%D0%B0&specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&mode=online&accepting=true&offset=20&limit=10',
+      url: '/v1/trainers/catalog?query=%D0%90%D0%BD%D0%BD%D0%B0&specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&metro=msk-dinamo&metro=msk-aeroport&mode=online&accepting=true&offset=20&limit=10',
     })
 
     expect(response.statusCode).toBe(200)
     expect(listPublic).toHaveBeenCalledWith({
-      query: 'Анна', specialty: 'Силовые', city: 'Москва', mode: 'online', acceptingClients: true,
+      query: 'Анна', specialty: 'Силовые', city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-aeroport'], mode: 'online', acceptingClients: true,
     }, { offset: 20, limit: 10 })
     expect(response.json()).toEqual({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null })
   })
@@ -333,6 +335,11 @@ describe('trainer professional profile', () => {
     const app = buildApp({ pilotTrainerProfiles: profiles(), logger: false }); apps.push(app)
     expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?offset=-1' })).statusCode).toBe(400)
     expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?limit=51' })).statusCode).toBe(400)
+    expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?metro=' })).statusCode).toBe(400)
+    expect((await app.inject({
+      method: 'GET',
+      url: `/v1/trainers/catalog?${Array.from({ length: 21 }, (_, index) => `metro=msk-${index}`).join('&')}`,
+    })).statusCode).toBe(400)
   })
 
   it('lets a trainer opt into the catalog only from a read-write session', async () => {
@@ -465,6 +472,68 @@ describe('Vital exercise media', () => {
 })
 
 describe('legacy Supabase function bridge', () => {
+  const legacyConversationId = '10000000-0000-4000-8000-000000000001'
+  const legacyMessageId = '10000000-0000-4000-8000-000000000004'
+
+  it('writes browser-authenticated chat images to the legacy media bridge, never to Supabase Storage directly', async () => {
+    const upload = vi.fn().mockResolvedValue(undefined)
+    const app = buildApp({
+      legacyChatMediaBridge: { upload, sign: vi.fn(), remove: vi.fn() } as never,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/legacy/chat-media/upload`,
+      headers: { 'x-supabase-authorization': 'Bearer supabase-access-token' },
+      payload: {
+        conversationId: legacyConversationId,
+        messageId: legacyMessageId,
+        image: { dataUrl: 'data:image/jpeg;base64,AQID', mimeType: 'image/jpeg', width: 2, height: 2, sizeBytes: 3 },
+      },
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(upload).toHaveBeenCalledWith('supabase-access-token', legacyConversationId, legacyMessageId, expect.objectContaining({ sizeBytes: 3 }))
+  })
+
+  it('signs and removes chat objects only through the authenticated bridge', async () => {
+    const sign = vi.fn().mockResolvedValue('https://signed.example/chat.jpg')
+    const remove = vi.fn().mockResolvedValue(undefined)
+    const app = buildApp({
+      legacyChatMediaBridge: { upload: vi.fn(), sign, remove } as never,
+      logger: false,
+    })
+    apps.push(app)
+
+    const headers = { 'x-supabase-authorization': 'Bearer supabase-access-token' }
+    const signResponse = await app.inject({ method: 'POST', url: '/v1/legacy/chat-media/sign', headers,
+      payload: { conversationId: legacyConversationId, messageId: legacyMessageId } })
+    const removeResponse = await app.inject({ method: 'POST', url: '/v1/legacy/chat-media/remove', headers,
+      payload: { conversationId: legacyConversationId, messageId: legacyMessageId } })
+
+    expect(signResponse.statusCode).toBe(200)
+    expect(signResponse.json()).toEqual({ signedUrl: 'https://signed.example/chat.jpg' })
+    expect(removeResponse.statusCode).toBe(204)
+    expect(sign).toHaveBeenCalledWith('supabase-access-token', legacyConversationId, legacyMessageId)
+    expect(remove).toHaveBeenCalledWith('supabase-access-token', legacyConversationId, legacyMessageId)
+  })
+
+  it('does not expose the chat media bridge without both reviewed storage and Supabase bridge configuration', async () => {
+    const app = buildApp({ logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST', url: '/v1/legacy/chat-media/sign',
+      headers: { 'x-supabase-authorization': 'Bearer token' },
+      payload: { conversationId: legacyConversationId, messageId: legacyMessageId },
+    })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({ error: 'service_unavailable' })
+  })
+
   it('keeps the Supabase token out of the IAM Authorization header and returns the parser contract', async () => {
     const parse = vi.fn().mockResolvedValue({ items: [], unmatched: [] })
     const parser: LegacyWorkoutParser = { parse }
@@ -531,6 +600,7 @@ describe('legacy Supabase function bridge', () => {
   it('forwards the legacy summary body and Supabase JWT without using Authorization at the cloud boundary', async () => {
     const handler = vi.fn(async (request: Request) => {
       expect(request.headers.get('authorization')).toBe('Bearer supabase-access-token')
+      expect(request.headers.get('x-fit-request-id')).toBe('18940d82-9075-48d2-a847-8feee301b4d7')
       await expect(request.json()).resolves.toEqual({ client_id: PROFILE_ID, period_start: '2026-08-01', period_end: '2026-08-20', force: false })
       return new Response(JSON.stringify({ data: { id: 'summary-id' }, cached: false }), { headers: { 'content-type': 'application/json' } })
     })
@@ -540,11 +610,15 @@ describe('legacy Supabase function bridge', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/legacy/summarize-client-training',
-      headers: { 'x-supabase-authorization': 'Bearer supabase-access-token' },
+      headers: {
+        'x-fit-request-id': '18940d82-9075-48d2-a847-8feee301b4d7',
+        'x-supabase-authorization': 'Bearer supabase-access-token',
+      },
       payload: { client_id: PROFILE_ID, period_start: '2026-08-01', period_end: '2026-08-20', force: false },
     })
 
     expect(response.statusCode).toBe(200)
+    expect(response.headers['x-fit-request-id']).toBe('18940d82-9075-48d2-a847-8feee301b4d7')
     expect(response.json()).toEqual({ data: { id: 'summary-id' }, cached: false })
     expect(handler).toHaveBeenCalledOnce()
   })
@@ -933,11 +1007,87 @@ describe('native Yandex function contracts', () => {
     expect(generated.headers['x-fit-error-code'])
       .toBe('training_summary_generation_not_configured')
   })
+
+  it('diagnoses missing summary generation configuration without calling the model', async () => {
+    const diagnose = vi.fn()
+    const app = buildApp({
+      pilotTrainingSummaryDiagnostic: { diagnose },
+      releaseId: 'diagnostic-release',
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/clients/${PROFILE_ID}/training-summaries/diagnostic`,
+      headers: { 'x-fit-session': 's'.repeat(43) },
+      payload: {
+        client_id: PROFILE_ID,
+        period_start: '2026-08-01',
+        period_end: '2026-08-26',
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toMatchObject({
+      diagnostic: true,
+      calls: 0,
+      ready: false,
+      code: 'training_summary_generation_not_configured',
+      route: 'yandex-main',
+    })
+    expect(response.headers['x-fit-release-id']).toBe('diagnostic-release')
+    expect(response.headers['x-fit-request-id']).toMatch(/^[0-9a-f-]{36}$/)
+    expect(diagnose).not.toHaveBeenCalled()
+  })
+
+  it('runs the read-only summary preflight through the normal Yandex session', async () => {
+    const diagnose = vi.fn().mockResolvedValue({
+      diagnostic: true, route: 'yandex-main', calls: 0, ready: true,
+      code: 'available', stats: { workouts: 2, exercises: 8, sets: 24, model_input_chars: 3200 },
+    })
+    const generate = vi.fn()
+    const app = buildApp({
+      pilotTrainingSummaryDiagnostic: { diagnose },
+      pilotTrainingSummaryGenerator: { generate },
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/v1/clients/${PROFILE_ID}/training-summaries/diagnostic`,
+      headers: { 'x-fit-session': 's'.repeat(43) },
+      payload: {
+        client_id: PROFILE_ID,
+        period_start: '2026-08-01',
+        period_end: '2026-08-26',
+        force: true,
+        trigger_reason: 'manual_refresh',
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toMatchObject({ diagnostic: true, calls: 0, ready: true, code: 'available' })
+    expect(diagnose).toHaveBeenCalledWith({
+      accessMode: 'read_write', token: 's'.repeat(43),
+    }, {
+      clientId: PROFILE_ID,
+      periodStart: '2026-08-01',
+      periodEnd: '2026-08-26',
+      force: true,
+      triggerReason: 'manual_refresh',
+    })
+    expect(generate).not.toHaveBeenCalled()
+  })
 })
 
 describe('browser pilot CORS', () => {
-  it('allows only an explicitly configured origin', async () => {
-    const app = buildApp({ allowedOrigins: ['http://localhost:5173'], logger: false })
+  it('allows only explicitly configured web and iOS app origins', async () => {
+    const app = buildApp({
+      allowedOrigins: ['http://localhost:5173', 'capacitor://localhost'],
+      logger: false,
+    })
     apps.push(app)
 
     const preflight = await app.inject({
@@ -952,8 +1102,18 @@ describe('browser pilot CORS', () => {
     expect(preflight.headers['access-control-allow-headers']).toContain('authorization')
     expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-pilot-session')
     expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-session')
+    expect(preflight.headers['access-control-allow-headers']).toContain('x-fit-request-id')
     expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-release-id')
     expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-error-code')
+    expect(preflight.headers['access-control-expose-headers']).toContain('x-fit-request-id')
+
+    const iosPreflight = await app.inject({
+      method: 'OPTIONS',
+      url: '/v1/auth/yandex/link',
+      headers: { origin: 'capacitor://localhost' },
+    })
+    expect(iosPreflight.statusCode).toBe(204)
+    expect(iosPreflight.headers['access-control-allow-origin']).toBe('capacitor://localhost')
 
     const rejected = await app.inject({
       method: 'OPTIONS',
@@ -1065,6 +1225,22 @@ describe('readiness endpoint', () => {
 })
 
 const PROFILE_ID = 'a8e4d5cf-f021-4bfd-bd9e-62b1c30785c4'
+const EXISTING_ACTOR: ExistingActor = {
+  profile: {
+    id: PROFILE_ID,
+    firstName: 'Pilot',
+    lastName: null,
+    timezone: 'Europe/Moscow',
+    accountRole: 'trainer',
+    createdAt: '2026-08-01T10:00:00.000Z',
+    updatedAt: '2026-08-02T10:00:00.000Z',
+  },
+  trainer: {
+    profileId: PROFILE_ID,
+    createdAt: '2026-08-01T10:00:00.000Z',
+    updatedAt: '2026-08-01T10:00:00.000Z',
+  },
+}
 const SUBJECT_HASH = 'a'.repeat(64)
 
 function buildIdentityProvider(
@@ -1311,7 +1487,7 @@ function buildYandexAppSessionRevoker(
 }
 
 function buildExistingActorProvider(
-  result: string | null | Error = PROFILE_ID,
+  result: ExistingActor | null | Error = EXISTING_ACTOR,
 ): {
   existingActorProvider: ExistingActorProvider
   resolveActor: ReturnType<typeof vi.fn>
@@ -1326,14 +1502,19 @@ function buildExistingActorProvider(
 
 function buildYandexAccountLinker(
   result: { profileId: string } | Error = { profileId: PROFILE_ID },
+  status: { linked: boolean } | Error = { linked: true },
 ): {
   yandexAccountLinker: YandexAccountLinker
   linkActor: ReturnType<typeof vi.fn>
+  readStatus: ReturnType<typeof vi.fn>
 } {
   const linkActor = vi.fn(() =>
     result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
   )
-  return { yandexAccountLinker: { linkActor }, linkActor }
+  const readStatus = vi.fn(() =>
+    status instanceof Error ? Promise.reject(status) : Promise.resolve(status),
+  )
+  return { yandexAccountLinker: { linkActor, readStatus }, linkActor, readStatus }
 }
 
 function buildClientsReader(
@@ -2056,6 +2237,54 @@ describe('Yandex ID app session and account linking endpoints', () => {
     expect(oauth.exchangeCode).not.toHaveBeenCalled()
   })
 
+  it('returns the current FIT profile Yandex ID link status without identifiers', async () => {
+    const actor = buildExistingActorProvider()
+    const linker = buildYandexAccountLinker({ profileId: PROFILE_ID }, { linked: false })
+    const app = buildApp({
+      existingActorProvider: actor.existingActorProvider,
+      yandexAccountLinker: linker.yandexAccountLinker,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/auth/yandex/link',
+      headers: { 'x-supabase-authorization': 'Bearer supabase-session-token' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ linked: false })
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.body).not.toContain(PROFILE_ID)
+    expect(response.body).not.toContain('supabase-session-token')
+    expect(actor.resolveActor).toHaveBeenCalledWith('supabase-session-token')
+    expect(linker.readStatus).toHaveBeenCalledWith(EXISTING_ACTOR)
+    expect(linker.linkActor).not.toHaveBeenCalled()
+  })
+
+  it('rejects link status without a valid existing FIT session', async () => {
+    const actor = buildExistingActorProvider(null)
+    const linker = buildYandexAccountLinker()
+    const app = buildApp({
+      existingActorProvider: actor.existingActorProvider,
+      yandexAccountLinker: linker.yandexAccountLinker,
+      logger: false,
+    })
+    apps.push(app)
+
+    const missing = await app.inject({ method: 'GET', url: '/v1/auth/yandex/link' })
+    const invalid = await app.inject({
+      method: 'GET',
+      url: '/v1/auth/yandex/link',
+      headers: { 'x-supabase-authorization': 'Bearer invalid-session' },
+    })
+
+    expect(missing.statusCode).toBe(401)
+    expect(invalid.statusCode).toBe(401)
+    expect(linker.readStatus).not.toHaveBeenCalled()
+  })
+
   it('links Yandex ID only after proving ownership of the current FIT account', async () => {
     const oauth = buildOAuthCodeProvider()
     const identity = buildIdentityProvider()
@@ -2075,7 +2304,7 @@ describe('Yandex ID app session and account linking endpoints', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/auth/yandex/link',
-      headers: { authorization: 'Bearer supabase-session-token' },
+      headers: { 'x-supabase-authorization': 'Bearer supabase-session-token' },
       payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
     })
 
@@ -2090,7 +2319,7 @@ describe('Yandex ID app session and account linking endpoints', () => {
     expect(actor.resolveActor).toHaveBeenCalledWith('supabase-session-token')
     expect(oauth.exchangeCode).toHaveBeenCalledWith('one-time-code', 'v'.repeat(43))
     expect(identity.verifyAccessToken).toHaveBeenCalledWith('temporary-yandex-token')
-    expect(linker.linkActor).toHaveBeenCalledWith(PROFILE_ID, SUBJECT_HASH)
+    expect(linker.linkActor).toHaveBeenCalledWith(EXISTING_ACTOR, SUBJECT_HASH)
     expect(appSession.issue).toHaveBeenCalledWith(SUBJECT_HASH)
   })
 
@@ -2109,7 +2338,7 @@ describe('Yandex ID app session and account linking endpoints', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/auth/yandex/link',
-      headers: { authorization: 'Bearer supabase-session-token' },
+      headers: { 'x-supabase-authorization': 'Bearer supabase-session-token' },
       payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
     })
 
@@ -2138,12 +2367,19 @@ describe('Yandex ID app session and account linking endpoints', () => {
     const invalidAuth = await app.inject({
       method: 'POST',
       url: '/v1/auth/yandex/link',
-      headers: { authorization: 'Bearer invalid-supabase-session' },
+      headers: { 'x-supabase-authorization': 'Bearer invalid-supabase-session' },
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+    const reservedAuthorization = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/link',
+      headers: { authorization: 'Bearer supabase-session-token' },
       payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
     })
 
     expect(missingAuth.statusCode).toBe(401)
     expect(invalidAuth.statusCode).toBe(401)
+    expect(reservedAuthorization.statusCode).toBe(401)
     expect(actor.resolveActor).toHaveBeenCalledOnce()
     expect(oauth.exchangeCode).not.toHaveBeenCalled()
     expect(linker.linkActor).not.toHaveBeenCalled()
@@ -2164,7 +2400,7 @@ describe('Yandex ID app session and account linking endpoints', () => {
     const unavailable = await unavailableApp.inject({
       method: 'POST',
       url: '/v1/auth/yandex/link',
-      headers: { authorization: 'Bearer supabase-session-token' },
+      headers: { 'x-supabase-authorization': 'Bearer supabase-session-token' },
       payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
     })
     expect(unavailable.statusCode).toBe(503)
@@ -2184,7 +2420,7 @@ describe('Yandex ID app session and account linking endpoints', () => {
     const conflict = await conflictApp.inject({
       method: 'POST',
       url: '/v1/auth/yandex/link',
-      headers: { authorization: 'Bearer supabase-session-token' },
+      headers: { 'x-supabase-authorization': 'Bearer supabase-session-token' },
       payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
     })
     expect(conflict.statusCode).toBe(409)

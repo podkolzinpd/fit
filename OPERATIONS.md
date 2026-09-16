@@ -75,10 +75,49 @@ FIT_TENANT_REMOTE_APPLY_CONFIRMATION=APPLY_TENANT_TO_YANDEX_POSTGRES
 ```
 
 Эти значения — предохранители, не секреты и не замена явному подтверждению
-оператора. Перед production export отдельно сверяются cohort, отсутствие общих
-trainer-связей и pending push, freeze writes, target, backup и rollback plan.
+оператора. Перед isolated production export отдельно сверяются cohort,
+отсутствие общих trainer-связей и pending push, freeze writes, target, backup и
+rollback plan. Полный snapshot не копирует transient source push outbox; перед
+финальным cutover обязательны freeze writes, ограниченное окно drain и
+отключение Supabase dispatcher после него.
 Точные границы manifest и ограничения описаны в
 `docs/design/YANDEX_TENANT_MIGRATION_TOOLING.md`.
+
+### Перенос приватных media в Yandex
+
+До первого `full-cohort` dry-run с фото один раз создайте private media contour
+ручным запуском `Deploy Yandex stage`: `plan_only=false`,
+`approve_media_storage=true`. Terraform создаёт versioned Standard Object
+Storage bucket и статический S3-ключ API service account, но записывает обе
+части ключа сразу в deletion-protected `fit-stage-media-s3` Lockbox. Значения не
+попадают в Terraform state, GitHub variables, repository или вывод workflow.
+
+Чтобы stage API писал в уже созданный private bucket из другого Yandex Cloud,
+задайте GitHub repository variable `YC_STAGE_MEDIA_BUCKET` его именем и выдайте
+текущему stage API service account роль `storage.editor` на уровне этого bucket.
+Ключ остаётся в существующем stage Lockbox; не создавайте и не добавляйте новый
+статический ключ в GitHub variables. Пустая переменная возвращает штатный
+stage-managed bucket.
+
+Затем вручную запустите `Migrate Yandex media` из `main`:
+
+- `audit` читает source objects и сравнивает target без записи;
+- `apply` идемпотентно копирует отсутствующие или отличающиеся objects и
+  повторно проверяет их SHA-256 и размер.
+
+Workflow использует существующие `SUPABASE_ACCESS_TOKEN` и
+`SUPABASE_PROJECT_ID`, получает source service-role key только во временный файл
+с правами `0600`, а target key читает из Lockbox через short-lived GitHub OIDC.
+В summary выводятся только режим, количество objects, суммарный размер,
+количество скопированных/проверенных и content fingerprint. Пути, содержимое и
+ключи не логируются и не сохраняются как artifact. Успешный apply обязан иметь
+`objects == verified`; его можно безопасно повторять после новых source uploads.
+
+После этого запускайте full-cohort `audit` → `dry-run` → pinned `apply`.
+Private migration runner до подключения к PostgreSQL проверит наличие и точный
+размер каждого chat object, указанного в snapshot. Это исключает commit строк с
+неработающими вложениями. Перед финальным cutover после freeze writes повторите
+media `apply`, чтобы захватить файлы, появившиеся после первой репетиции.
 
 ### Удалённая репетиция на Yandex stage
 
@@ -107,9 +146,18 @@ GitHub OIDC → Yandex IAM token.
   кандидатов, не прошедших обычный tenant preflight, и не выводит найденный
   UUID. Если подходящего изолированного cohort-а нет, workflow завершается с
   `candidate_not_found`.
+- `full-cohort` не использует UUID secret и переносит весь поддерживаемый
+  application manifest одним согласованным snapshot. Его выбирают, когда merge
+  или membership пересекает границу trainer tenant. Перед `apply` обязательны
+  успешный `dry-run`, точный content-derived fingerprint из его отчёта и общая
+  apply-фраза. Режим не переносит `auth.users`, OAuth credentials, Yandex
+  sessions/rollout assignments, весь source push outbox и Live receipts. Chat
+  photo objects переносятся отдельным workflow выше и проверяются target runner
+  до DB-транзакции.
 
-Автовыбор нужен только для безопасной репетиции на реальных объёмах. Он не
-фиксирует tenant для cutover и намеренно запрещён для записи в stage.
+Автовыбор нужен только для безопасной репетиции на реальных объёмах и не
+фиксирует tenant для cutover. `full-cohort` не является автовыбором: его
+fingerprint фиксирует точное содержимое всего поддерживаемого snapshot.
 
 Режимы выполняются последовательно:
 
@@ -287,26 +335,38 @@ VITE_TODAY_GREETING_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 авторизации: данные и мутации защищаются существующими RLS/ownership-
 проверками.
 
-Закрытый пилот привязки существующего FIT-аккаунта к Yandex ID использует
-общие публичные настройки Yandex ID и две независимые build-time переменные:
+Привязка существующего FIT-аккаунта к Yandex ID использует общие публичные
+настройки Yandex ID и глобальный build-time switch:
 
 ```text
-VITE_YANDEX_ID_PILOT_ENABLED=true
 VITE_YANDEX_OAUTH_CLIENT_ID=<public Yandex OAuth client id>
 VITE_YANDEX_API_BASE_URL=<https Yandex stage API base URL>
 VITE_YANDEX_SESSION_LINKING_ENABLED=true
-VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 ```
 
-Механизм default-off: карточка привязки скрыта, пока
-`VITE_YANDEX_SESSION_LINKING_ENABLED` не равно точному `true`, allowlist пуст
-или текущий `actor.userId` отсутствует в
-`VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS`. Изменение списка требует нового
-deployment. UUID и публичный OAuth Client ID видны во frontend bundle, поэтому
-allowlist не является границей авторизации: callback передаёт текущую
-Supabase-сессию в stage API, а данные и мутации защищаются backend
-ownership/RLS-проверками. OAuth Client Secret в Vite/Vercel frontend variables
-не добавляется.
+При точном значении `true` блок показывается всем авторизованным пользователям
+на главной странице. Stage API по текущей Supabase-сессии возвращает только
+`linked: true/false`: непривязанный профиль видит действие, связанный — статус
+без повторной кнопки. При ошибке доступен явный retry, а auth-запрос ограничен
+таймаутом. Значение кроме точного `true` является глобальным аварийным
+выключателем. Его изменение требует нового deployment. Публичный OAuth Client
+ID виден во frontend bundle и не является границей авторизации: callback и
+проверка статуса передают текущую Supabase-сессию в stage API, а данные и
+мутации защищаются backend ownership/RLS-проверками. OAuth Client Secret в
+Vite/Vercel frontend variables не добавляется.
+
+Linking не требует предварительного tenant import только для корневой identity:
+после проверки Supabase access token stage читает через его RLS точную строку
+`profiles` и, для trainer, `trainers`, атомарно создаёт отсутствующий root в
+Yandex DB и затем связывает Yandex subject. Эта операция не создаёт rollout
+assignment, не переносит клиентов/тренировки и не разрешает Yandex-сессию до
+отдельного `yandex/read_write` назначения.
+
+Stage API CORS allowlist обязан содержать как production web origin, так и
+точный `capacitor://localhost` origin нативной iOS-оболочки. Произвольные
+`capacitor://` origins не разрешаются. Изменение выполняется через
+`TF_VAR_api_cors_allowed_origins` в deployment workflow, а не вручную в
+активной ревизии контейнера.
 
 Полноценная browser-сессия после Yandex ID использует те же публичные
 `VITE_YANDEX_OAUTH_CLIENT_ID` и `VITE_YANDEX_API_BASE_URL`, но имеет собственный
@@ -329,6 +389,15 @@ Opaque session token хранится в browser localStorage только дл�
 логи или аналитику и отзывается через API при выходе. Как и UUID allowlist, он
 доступен исполняемому frontend JavaScript, поэтому защита от доступа к данным
 остаётся на backend ownership/tenant-проверках.
+
+Frontend ограничивает OAuth exchange, linking, восстановление и отзыв Yandex
+ID-сессии 12 секундами. При таймауте сохранённый token остаётся доступен для
+повтора, но экран больше не может оставаться в бесконечном loading. Действие
+«Сбросить сессию Yandex ID» удаляет только ключ
+`fit.yandexAppSession.v1` на текущем устройстве и сразу возвращает обычный вход;
+прочие localStorage-настройки и черновики не очищаются. Это аварийный локальный
+сброс: серверная сессия остаётся действительной до штатного отзыва или истечения
+14-дневного срока.
 
 Sticky routing основного Trainer Assistant имеет отдельный default-off rollout:
 
@@ -491,3 +560,58 @@ Frontend redirect для разработки: `http://localhost:5173/auth/callb
 - Закрытые пункты `FEATURE_PARITY.md` и visual comparison с baseline V1.
 - Реальный Google OAuth smoke на production-like URL.
 - Только после этого команда переходит в V2; архивирование V1 выполняется отдельным подтверждённым действием.
+
+### Assistant four-week program pilot
+
+The production Supabase Assistant orchestrator calls the private Yandex Cloud
+Function `fit-generate-program`. Its input is an actor-scoped training aggregate
+and the explicitly confirmed quiz. The generator has no database credentials.
+For the pilot, a model router selects `record_workout`, `create_program_draft`,
+or a chat reply. The tools retain separate state and write paths. Switching
+away from an unfinished draft asks the trainer to finish or cancel it; the
+new request is never appended to the wrong tool. Clarifications stay in chat.
+The model proposes the full plan, individual sets/reps/time/RPE, rest and four
+weekly prescriptions. Code validates the catalog, observed load, time and
+progression constraints without replacing model doses. Every new exercise row
+requires a progression explanation, including a reason when doses stay unchanged.
+A model draft that fails validation is rejected.
+
+Program access (all trainers):
+
+- `ASSISTANT_PROGRAM_ENABLED=true` enables the authenticated trainer flow and
+  private generator. A missing/false flag disables new quiz/generator calls.
+- `VITE_ASSISTANT_PROGRAM_ENABLED=true` in `vercel.json` enables existing chat
+  controls for signed-in trainers. Client roles cannot access the trainer route;
+  the server checks authentication, conversation ownership and trainer role.
+- The former `*_PROGRAM_PILOT_USER_IDS` variables are no longer read. No per-user
+  deployment configuration is needed. Generator IAM remains private; client
+  selection still uses the actor-scoped client list.
+- Disable the server flag and redeploy to stop new calls. Existing planned
+  workouts and server-created action confirmation keep their normal lifecycle.
+
+One-time bootstrap before the first release: create a private function and runtime
+service account named `fit-generate-program` in the existing summary folder.
+Grant that runtime only `ai.languageModels.user` on the folder. Usage is
+returned to the orchestrator, which records it using its existing Monitoring role. On the function, grant `serverless.functions.invoker` only to the existing
+`fit-assistant-orchestrator` runtime SA. Do not grant `allUsers` or Lockbox access.
+The normal deployment workflow resolves these resources and publishes versions;
+it does not create or expand their IAM bindings. Keep the previous function
+versions for rollback and do not include quiz/client text in logs.
+
+The pilot supports 4 weeks × 1–3 trainer-supervised sessions (30+ minutes, a rest
+day between sessions): full body for one day, related A/B or A/B/C for two/three
+days, with simple repeated days permitted. It uses the bounded system-exercise catalog
+and adult clients without reported current limitations. Confirming an updated
+quiz explicitly creates a new full draft. The original canonical workout JSON
+is the only accepted apply payload; it expires after 24 hours and is rejected
+when client/history updates are newer than the captured source. All workouts
+save atomically with stable request IDs. Five explicit generation attempts per
+rolling 24 hours per trainer. A service-only generation job keyed by actor,
+client, brief and source fingerprint deduplicates retries across turns with a
+three-minute lease and completed-result cache. A revised draft atomically
+withdraws older proposed/failed actions for the same program. Scoped edits
+preserve unaffected workouts and IDs and revalidate the result before save.
+
+Native Yandex Assistant generation is not enabled in this first pilot. Its
+program-save RPC has the same 4/8/12 canonical-payload checks, but the native
+chat does not run the new quiz/loader. There is no cross-backend fallback.

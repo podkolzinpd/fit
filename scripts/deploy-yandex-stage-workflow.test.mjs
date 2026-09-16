@@ -62,6 +62,14 @@ const pushTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'push.tf'),
   'utf8',
 )
+const mediaTerraform = readFileSync(
+  join(import.meta.dirname, '..', 'infra', 'yandex', 'media.tf'),
+  'utf8',
+)
+const mediaMigrationWorkflow = readFileSync(
+  join(import.meta.dirname, '..', '.github', 'workflows', 'migrate-yandex-media.yml'),
+  'utf8',
+)
 
 test('publishes the final yandex-stage result without restoring an approval gate', () => {
   assert.match(workflow, /^  publish_deployment:$/m)
@@ -84,10 +92,10 @@ test('keeps enough time for the bounded three-attempt summary contract', () => {
   assert.match(workflow, /^  TF_VAR_api_execution_timeout: '120s'$/m)
 })
 
-test('allows the reviewed local, preview, and production frontend origins', () => {
+test('allows the reviewed local, iOS, preview, and production frontend origins', () => {
   assert.match(
     workflow,
-    /^  TF_VAR_api_cors_allowed_origins: '\["http:\/\/localhost:5173","https:\/\/fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects\.vercel\.app","https:\/\/fit-drab\.vercel\.app"\]'$/m,
+    /^  TF_VAR_api_cors_allowed_origins: '\["http:\/\/localhost:5173","capacitor:\/\/localhost","https:\/\/fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects\.vercel\.app","https:\/\/fit-drab\.vercel\.app"\]'$/m,
   )
 })
 
@@ -164,6 +172,68 @@ test('bootstraps the private push timer only after explicit cost approval and he
   assert.match(
     workflow,
     /deploy-yandex-serverless-revision\.mjs rollback[\s\S]*?push_previous\.outputs\.revision_id/,
+  )
+})
+
+test('bootstraps private media only after cost approval and keeps migration aggregate-only', () => {
+  assert.match(workflow, /^      approve_media_storage:$/m)
+  assert.ok(workflow.includes(
+    'MEDIA_STORAGE_PLAN_REVIEWED: ${{ (inputs.plan_only == true || inputs.approve_media_storage == true)',
+  ))
+  assert.equal(
+    [...workflow.matchAll(/policy_args\+=\(--allow-media-storage-bootstrap\)/g)].length,
+    3,
+  )
+  assert.match(workflow, /-target=yandex_storage_bucket\.media/)
+  assert.match(
+    workflow,
+    /-target=yandex_iam_service_account_static_access_key\.api_media/,
+  )
+  assert.match(mediaTerraform, /anonymous_access_flags \{[\s\S]*?read\s+= false[\s\S]*?list\s+= false/)
+  assert.match(mediaTerraform, /versioning \{\s+enabled = true/)
+  assert.match(mediaTerraform, /force_destroy\s+= false/)
+  assert.match(
+    mediaTerraform,
+    /output_to_lockbox \{[\s\S]*?entry_for_access_key = "YANDEX_MEDIA_ACCESS_KEY_ID"[\s\S]*?entry_for_secret_key = "YANDEX_MEDIA_SECRET_ACCESS_KEY"/,
+  )
+  assert.match(mediaMigrationWorkflow, /^  workflow_dispatch:$/m)
+  assert.doesNotMatch(mediaMigrationWorkflow, /^  (push|pull_request):$/m)
+  assert.match(mediaMigrationWorkflow, /supabase projects api-keys/)
+  assert.match(mediaMigrationWorkflow, /echo "::add-mask::\$source_key"/)
+  assert.match(
+    mediaMigrationWorkflow,
+    /^  YANDEX_MEDIA_BUCKET_OVERRIDE: \$\{\{ vars\.YC_STAGE_MEDIA_BUCKET \}\}$/m,
+  )
+  assert.match(
+    mediaMigrationWorkflow,
+    /target_bucket="\$\{YANDEX_MEDIA_BUCKET_OVERRIDE:-fit-stage-media-\$\{YC_FOLDER_ID:0:8\}\}"/,
+  )
+  assert.match(
+    mediaMigrationWorkflow,
+    /export YANDEX_MEDIA_BUCKET="\$target_bucket"/,
+  )
+  assert.match(mediaMigrationWorkflow, /npm --silent --prefix services\/api run media:migrate/)
+  assert.match(
+    mediaMigrationWorkflow,
+    /\.mode != "apply" or \.objects == \.verified/,
+  )
+  assert.doesNotMatch(mediaMigrationWorkflow, /actions\/upload-artifact/)
+  assert.doesNotMatch(mediaMigrationWorkflow, /\.path|object\.path|image_path/)
+})
+
+test('mirrors the Supabase bridge payload into a private stage Lockbox', () => {
+  assert.match(workflow, /^  YC_STAGE_LEGACY_SUPABASE_BRIDGE_LOCKBOX_NAME: fit-stage-legacy-supabase-bridge$/m)
+  assert.match(workflow, /Mirror Supabase credentials for the legacy chat media bridge[\s\S]*?supabase projects api-keys/)
+  assert.match(workflow, /mirror-yandex-legacy-supabase-bridge\.mjs[\s\S]*?--payload-file "\$payload_file"/)
+  assert.match(workflow, /-target=yandex_lockbox_secret_iam_member\.legacy_supabase_bridge_reader/)
+  assert.doesNotMatch(workflow, /SUPABASE_SERVICE_ROLE_KEY=.*>> "\$GITHUB_ENV"/)
+  assert.doesNotMatch(
+    containerTerraform,
+    /SUPABASE_SERVICE_ROLE_KEY\s+= "SUPABASE_SERVICE_ROLE_KEY"\s+YANDEX_CLOUD_API_KEY/,
+  )
+  assert.match(
+    readFileSync(join(import.meta.dirname, 'mirror-yandex-legacy-supabase-bridge.mjs'), 'utf8'),
+    /--deletion-protection[\s\S]*?--version-description[\s\S]*?--payload', '-'/,
   )
 })
 

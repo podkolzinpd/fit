@@ -1,8 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { yandexPilotQueries } from './yandex-pilot.queries'
+import {
+  YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE,
+  YANDEX_AUTH_REQUEST_TIMEOUT_MS,
+  yandexPilotQueries,
+} from './yandex-pilot.queries'
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
@@ -18,12 +23,12 @@ describe('yandexPilotQueries', () => {
     await yandexPilotQueries.exchangeCodeForAppSession(baseUrl, code, codeVerifier)
     expect(fetchMock).toHaveBeenLastCalledWith(
       `${baseUrl}/v1/auth/yandex/session`,
-      {
+      expect.objectContaining({
         method: 'POST',
         cache: 'no-store',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ code, codeVerifier }),
-      },
+      }),
     )
     expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
       .not.toHaveProperty('authorization')
@@ -33,20 +38,20 @@ describe('yandexPilotQueries', () => {
     await yandexPilotQueries.getAppSession(baseUrl, 'a'.repeat(43))
     expect(fetchMock).toHaveBeenLastCalledWith(
       `${baseUrl}/v1/auth/yandex/session`,
-      {
+      expect.objectContaining({
         cache: 'no-store',
         headers: { 'x-fit-session': 'a'.repeat(43) },
-      },
+      }),
     )
 
     await yandexPilotQueries.revokeAppSession(baseUrl, 'a'.repeat(43))
     expect(fetchMock).toHaveBeenLastCalledWith(
       `${baseUrl}/v1/auth/yandex/session`,
-      {
+      expect.objectContaining({
         method: 'DELETE',
         cache: 'no-store',
         headers: { 'x-fit-session': 'a'.repeat(43) },
-      },
+      }),
     )
 
     await yandexPilotQueries.linkYandexAccount(
@@ -57,16 +62,55 @@ describe('yandexPilotQueries', () => {
     )
     expect(fetchMock).toHaveBeenLastCalledWith(
       `${baseUrl}/v1/auth/yandex/link`,
-      {
+      expect.objectContaining({
         method: 'POST',
         cache: 'no-store',
         headers: {
-          authorization: 'Bearer supabase-session',
           'content-type': 'application/json',
+          'x-supabase-authorization': 'Bearer supabase-session',
         },
         body: JSON.stringify({ code, codeVerifier }),
-      },
+      }),
     )
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
+      .not.toHaveProperty('authorization')
+
+    await yandexPilotQueries.getYandexAccountLinkStatus(
+      baseUrl,
+      'supabase-session',
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/auth/yandex/link`,
+      expect.objectContaining({
+        cache: 'no-store',
+        headers: {
+          'x-supabase-authorization': 'Bearer supabase-session',
+        },
+      }),
+    )
+  })
+
+  it('aborts a hung Yandex app-session restore instead of loading forever', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn<typeof fetch>((_input, init) => new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener(
+        'abort',
+        () => reject(new DOMException('Aborted', 'AbortError')),
+        { once: true },
+      )
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const request = yandexPilotQueries.getAppSession(
+      'https://stage.example.test',
+      'a'.repeat(43),
+    )
+    const result = expect(request).rejects.toThrow(YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE)
+
+    await vi.advanceTimersByTimeAsync(YANDEX_AUTH_REQUEST_TIMEOUT_MS)
+    await result
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBe(true)
   })
 
   it('sends the Fit pilot session outside the Yandex IAM Authorization header', async () => {

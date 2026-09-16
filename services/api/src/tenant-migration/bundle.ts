@@ -5,6 +5,7 @@ import {
   randomBytes,
   scrypt,
 } from 'node:crypto'
+import { gzipSync, gunzipSync } from 'node:zlib'
 
 import type {
   JsonObject,
@@ -20,6 +21,7 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const KEY_BYTES = 32
 const SCRYPT_COST = 32_768
+const MAX_DECOMPRESSED_ARTIFACT_BYTES = 64 * 1024 * 1024
 
 export class TenantMigrationArtifactError extends Error {
   constructor(readonly code: string) {
@@ -90,12 +92,30 @@ export function fingerprintStandaloneClient(clientProfileId: string): string {
     .slice(0, 16)
 }
 
+export function fingerprintFullCohort(
+  tables: readonly TenantMigrationTable[],
+): string {
+  const manifest = tables.map((table) => ({
+    checksum: table.checksum,
+    name: table.name,
+    rowCount: table.rowCount,
+  }))
+  return createHash('sha256')
+    .update(`fit-full-cohort-v1:${canonicalJson(manifest)}`)
+    .digest('hex')
+    .slice(0, 16)
+}
+
 export function getTenantMigrationRoot(
   bundle: TenantMigrationBundle,
 ): TenantMigrationRoot {
-  return bundle.format === 'fit-tenant-bundle-v1'
-    ? { kind: 'trainer', profileId: bundle.trainerId }
-    : { kind: 'standalone-client', profileId: bundle.clientProfileId }
+  if (bundle.format === 'fit-tenant-bundle-v1') {
+    return { kind: 'trainer', profileId: bundle.trainerId }
+  }
+  if (bundle.format === 'fit-standalone-client-bundle-v1') {
+    return { kind: 'standalone-client', profileId: bundle.clientProfileId }
+  }
+  return { kind: 'full-cohort', profileId: 'application-v1' }
 }
 
 export function buildMigrationTable(
@@ -139,45 +159,63 @@ export function readMigrationBundle(value: unknown): TenantMigrationBundle {
     || (
       value.format !== 'fit-tenant-bundle-v1'
       && value.format !== 'fit-standalone-client-bundle-v1'
+      && value.format !== 'fit-full-cohort-bundle-v1'
     )
   ) {
     throw new TenantMigrationArtifactError('artifact_invalid')
   }
   const createdAt = readString(value, 'createdAt')
   const tenantFingerprint = readString(value, 'tenantFingerprint')
-  const rootProfileId = readString(
-    value,
-    value.format === 'fit-tenant-bundle-v1' ? 'trainerId' : 'clientProfileId',
-  )
+  const rootProfileId = value.format === 'fit-full-cohort-bundle-v1'
+    ? undefined
+    : readString(
+        value,
+        value.format === 'fit-tenant-bundle-v1'
+          ? 'trainerId'
+          : 'clientProfileId',
+      )
+  const tables = Array.isArray(value.tables)
+    ? value.tables.map(readMigrationTable)
+    : undefined
   const expectedFingerprint = value.format === 'fit-tenant-bundle-v1'
-    ? fingerprintTenant(rootProfileId)
-    : fingerprintStandaloneClient(rootProfileId)
+    ? fingerprintTenant(rootProfileId ?? '')
+    : value.format === 'fit-standalone-client-bundle-v1'
+      ? fingerprintStandaloneClient(rootProfileId ?? '')
+      : fingerprintFullCohort(tables ?? [])
   if (
     Number.isNaN(Date.parse(createdAt))
     || !/^[0-9a-f]{16}$/.test(tenantFingerprint)
-    || !UUID_PATTERN.test(rootProfileId)
+    || (rootProfileId !== undefined && !UUID_PATTERN.test(rootProfileId))
     || expectedFingerprint !== tenantFingerprint
-    || !Array.isArray(value.tables)
+    || tables === undefined
   ) throw new TenantMigrationArtifactError('artifact_invalid')
-  const tables = value.tables.map(readMigrationTable)
   if (new Set(tables.map((table) => table.name)).size !== tables.length) {
     throw new TenantMigrationArtifactError('artifact_invalid')
   }
-  return value.format === 'fit-tenant-bundle-v1'
-    ? {
-        format: 'fit-tenant-bundle-v1',
-        createdAt,
-        tenantFingerprint,
-        trainerId: rootProfileId,
-        tables,
-      }
-    : {
-        format: 'fit-standalone-client-bundle-v1',
-        createdAt,
-        tenantFingerprint,
-        clientProfileId: rootProfileId,
-        tables,
-      }
+  if (value.format === 'fit-tenant-bundle-v1') {
+    return {
+      format: 'fit-tenant-bundle-v1',
+      createdAt,
+      tenantFingerprint,
+      trainerId: rootProfileId ?? '',
+      tables,
+    }
+  }
+  if (value.format === 'fit-standalone-client-bundle-v1') {
+    return {
+      format: 'fit-standalone-client-bundle-v1',
+      createdAt,
+      tenantFingerprint,
+      clientProfileId: rootProfileId ?? '',
+      tables,
+    }
+  }
+  return {
+    format: 'fit-full-cohort-bundle-v1',
+    createdAt,
+    tenantFingerprint,
+    tables,
+  }
 }
 
 function deriveKey(passphrase: string, salt: Buffer): Promise<Buffer> {
@@ -206,12 +244,17 @@ export async function encryptMigrationBundle(
   const iv = randomBytes(12)
   const key = await deriveKey(passphrase, salt)
   const cipher = createCipheriv('aes-256-gcm', key, iv)
+  const compressed = gzipSync(
+    canonicalJson(readJsonObject(bundle)),
+    { level: 9 },
+  )
   const ciphertext = Buffer.concat([
-    cipher.update(canonicalJson(readJsonObject(bundle))),
+    cipher.update(compressed),
     cipher.final(),
   ])
   return {
-    format: 'fit-tenant-envelope-v1',
+    format: 'fit-tenant-envelope-v2',
+    compression: { name: 'gzip' },
     kdf: { name: 'scrypt', salt: salt.toString('base64') },
     cipher: {
       name: 'aes-256-gcm',
@@ -228,7 +271,17 @@ export async function decryptMigrationBundle(
 ): Promise<TenantMigrationBundle> {
   if (
     !isRecord(value)
-    || value.format !== 'fit-tenant-envelope-v1'
+    || (
+      value.format !== 'fit-tenant-envelope-v1'
+      && value.format !== 'fit-tenant-envelope-v2'
+    )
+    || (
+      value.format === 'fit-tenant-envelope-v2'
+      && (
+        !isRecord(value.compression)
+        || value.compression.name !== 'gzip'
+      )
+    )
     || !isRecord(value.kdf)
     || value.kdf.name !== 'scrypt'
     || !isRecord(value.cipher)
@@ -245,10 +298,17 @@ export async function decryptMigrationBundle(
     const key = await deriveKey(passphrase, salt)
     const decipher = createDecipheriv('aes-256-gcm', key, iv)
     decipher.setAuthTag(authTag)
-    const plaintext = Buffer.concat([
+    const decrypted = Buffer.concat([
       decipher.update(ciphertext),
       decipher.final(),
-    ]).toString('utf8')
+    ])
+    const plaintext = (
+      value.format === 'fit-tenant-envelope-v2'
+        ? gunzipSync(decrypted, {
+            maxOutputLength: MAX_DECOMPRESSED_ARTIFACT_BYTES,
+          })
+        : decrypted
+    ).toString('utf8')
     return readMigrationBundle(JSON.parse(plaintext))
   } catch (error) {
     if (error instanceof TenantMigrationArtifactError) throw error

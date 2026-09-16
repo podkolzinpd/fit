@@ -9,6 +9,8 @@ export interface ParsedWorkoutExercise {
   exercise: ExerciseSnapshot
   sets: WorkoutSetDraft[]
   hasValues: boolean
+  /** Исходная позиция в диктовке; нужна только до сохранения черновика. */
+  sourcePosition?: number
   trainerComment?: string
   structure?: {
     blockId?: string
@@ -36,6 +38,21 @@ export interface QuickWorkoutParseResult {
 export interface QuickWorkoutEntryOptions {
   /** История клиента влияет только на порядок альтернатив, не на авто-выбор. */
   preferredExerciseRefs?: readonly string[]
+}
+
+export interface StructuredQuickWorkoutItem {
+  /** Стабильный в пределах текущего текста ключ, в том числе для одинаковых строк. */
+  id: string
+  line: string
+  groupId?: string
+  parsed?: ParsedWorkoutExercise
+  unparsed?: UnparsedWorkoutLine
+}
+
+export interface StructuredQuickWorkoutParseResult {
+  /** Структурный путь включается только при отдельной строке «Сет/Круговая». */
+  hasStructure: boolean
+  items: StructuredQuickWorkoutItem[]
 }
 
 function normalize(value: string): string {
@@ -457,4 +474,121 @@ export function parseQuickWorkoutEntry(text: string, catalog: readonly ExerciseS
     parsed.push(resolveQuickWorkoutLine(line, matches[0]!))
   }
   return { parsed, unparsed }
+}
+
+const workoutGroupMarker = /^\s*(?:\d+\s*[.)]\s*)?(?:сет(?:ы)?|кругов(?:ая|ые))\s*:?\s*$/iu
+const workoutListBullet = /^\s*[-–—•]\s*(.+)$/u
+
+interface StructuredSourceLine {
+  line: string
+  sourceIndex: number
+  candidateGroupIndex?: number
+}
+
+/**
+ * Извлекает только явно записанную структуру списка. Обычный текст без
+ * самостоятельного заголовка «Сет/Круговая» сюда не попадает и продолжает
+ * разбираться прежней функцией parseQuickWorkoutEntry без изменений.
+ */
+function structuredSourceLines(text: string): { hasStructure: boolean; lines: StructuredSourceLine[] } {
+  const rawLines = text.split('\n')
+  const hasStructure = rawLines.some((line) => workoutGroupMarker.test(line))
+  if (!hasStructure) return { hasStructure: false, lines: [] }
+
+  const lines: StructuredSourceLine[] = []
+  const groupMemberCount = new Map<number, number>()
+  let candidateGroupIndex: number | undefined
+  let nextGroupIndex = 0
+
+  rawLines.forEach((rawLine, sourceIndex) => {
+    const line = rawLine.trim()
+    if (!line) return
+    if (workoutGroupMarker.test(line)) {
+      candidateGroupIndex = nextGroupIndex
+      nextGroupIndex += 1
+      return
+    }
+
+    const bullet = workoutListBullet.exec(line)
+    if (candidateGroupIndex !== undefined && bullet?.[1]) {
+      lines.push({ line: bullet[1].trim(), sourceIndex, candidateGroupIndex })
+      groupMemberCount.set(candidateGroupIndex, (groupMemberCount.get(candidateGroupIndex) ?? 0) + 1)
+      return
+    }
+
+    // Круговая заканчивается на первой строке, которая не является её
+    // маркированным пунктом. Так одиночное упражнение нельзя случайно включить
+    // в предыдущую группу.
+    candidateGroupIndex = undefined
+    lines.push({ line: bullet?.[1]?.trim() ?? line, sourceIndex })
+  })
+
+  const validGroupIndexes = new Set<number>()
+  for (const [groupIndex, memberCount] of groupMemberCount) {
+    // Одно упражнение не образует круговую: маркер игнорируется, упражнение
+    // остаётся одиночным и никакие значения за тренера не придумываются.
+    if (memberCount >= 2) validGroupIndexes.add(groupIndex)
+  }
+
+  return {
+    hasStructure: true,
+    lines: lines.map((item) => ({
+      ...item,
+      candidateGroupIndex: item.candidateGroupIndex !== undefined && validGroupIndexes.has(item.candidateGroupIndex)
+        ? item.candidateGroupIndex
+        : undefined,
+    })),
+  }
+}
+
+/**
+ * Безопасная надстройка для формы создания/редактирования тренировки.
+ * Определяет только принадлежность строк к круговой, а каждое упражнение
+ * разбирает существующим строгим парсером.
+ */
+export function parseStructuredQuickWorkoutEntry(
+  text: string,
+  catalog: readonly ExerciseSnapshot[],
+  options: QuickWorkoutEntryOptions = {},
+): StructuredQuickWorkoutParseResult {
+  const source = structuredSourceLines(text)
+  if (!source.hasStructure) return { hasStructure: false, items: [] }
+
+  const groupIds = new Map<number, string>()
+  const items: StructuredQuickWorkoutItem[] = []
+  for (const sourceLine of source.lines) {
+    const groupId = sourceLine.candidateGroupIndex === undefined
+      ? undefined
+      : groupIds.get(sourceLine.candidateGroupIndex) ?? (() => {
+        const id = crypto.randomUUID()
+        groupIds.set(sourceLine.candidateGroupIndex!, id)
+        return id
+      })()
+    const segments = splitWorkoutText(sourceLine.line, catalog)
+    for (const [segmentIndex, segment] of segments.entries()) {
+      const result = parseQuickWorkoutEntry(segment, catalog, options)
+      result.parsed.forEach((parsed, resultIndex) => items.push({
+        id: `${sourceLine.sourceIndex}:${segmentIndex}:parsed:${resultIndex}:${parsed.line}`,
+        line: parsed.line,
+        groupId,
+        parsed,
+      }))
+      result.unparsed.forEach((unparsed, resultIndex) => items.push({
+        id: `${sourceLine.sourceIndex}:${segmentIndex}:unparsed:${resultIndex}:${unparsed.line}`,
+        line: unparsed.line,
+        groupId,
+        unparsed,
+      }))
+    }
+  }
+  const itemCountByGroup = new Map<string, number>()
+  for (const item of items) {
+    if (item.groupId) itemCountByGroup.set(item.groupId, (itemCountByGroup.get(item.groupId) ?? 0) + 1)
+  }
+  return {
+    hasStructure: true,
+    items: items.map((item) => item.groupId && (itemCountByGroup.get(item.groupId) ?? 0) < 2
+      ? { ...item, groupId: undefined }
+      : item),
+  }
 }

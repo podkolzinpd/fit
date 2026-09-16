@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 
 // Temporary, explicitly authorized incident scope. Never use a body-supplied email.
 const EMAIL_SHA256 = 'fd477d96cbc17819d7516adccb42e5458ef81d6c35145300f5d5b9f1c6c07ede'
-const EXPIRES_AT = Date.parse('2026-09-13T00:00:00Z')
+const EXPIRES_AT = Date.parse('2026-09-18T00:00:00Z')
 
 export function diagnosticAllowed(user: { email?: string; email_confirmed_at?: string }, ownClient: boolean, now = Date.now()): boolean {
   return ownClient && now < EXPIRES_AT && Boolean(user.email_confirmed_at) &&

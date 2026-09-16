@@ -1,4 +1,19 @@
+import { fetchWithTimeout } from './request-timeout'
+
 export type YandexApiAccessMode = 'read_only' | 'read_write'
+
+export const YANDEX_AUTH_REQUEST_TIMEOUT_MS = 12_000
+export const YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE = 'Проверка сессии Yandex ID заняла слишком много времени.'
+
+function yandexAuthFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return fetchWithTimeout(
+    globalThis.fetch,
+    input,
+    init,
+    YANDEX_AUTH_REQUEST_TIMEOUT_MS,
+    YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE,
+  )
+}
 
 function sessionHeaders(
   sessionToken: string,
@@ -10,7 +25,7 @@ function sessionHeaders(
 }
 
 export const yandexPilotQueries = {
-  exchangeCodeForSession: (apiBaseUrl: string, code: string, codeVerifier: string) => fetch(`${apiBaseUrl}/v1/auth/yandex/pilot`, {
+  exchangeCodeForSession: (apiBaseUrl: string, code: string, codeVerifier: string) => yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/pilot`, {
     method: 'POST',
     cache: 'no-store',
     headers: { 'content-type': 'application/json' },
@@ -20,19 +35,19 @@ export const yandexPilotQueries = {
     apiBaseUrl: string,
     code: string,
     codeVerifier: string,
-  ) => fetch(`${apiBaseUrl}/v1/auth/yandex/session`, {
+  ) => yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/session`, {
     method: 'POST',
     cache: 'no-store',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ code, codeVerifier }),
   }),
   getAppSession: (apiBaseUrl: string, sessionToken: string) =>
-    fetch(`${apiBaseUrl}/v1/auth/yandex/session`, {
+    yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/session`, {
       cache: 'no-store',
       headers: { 'x-fit-session': sessionToken },
     }),
   revokeAppSession: (apiBaseUrl: string, sessionToken: string) =>
-    fetch(`${apiBaseUrl}/v1/auth/yandex/session`, {
+    yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/session`, {
       method: 'DELETE',
       cache: 'no-store',
       headers: { 'x-fit-session': sessionToken },
@@ -55,14 +70,23 @@ export const yandexPilotQueries = {
     supabaseAccessToken: string,
     code: string,
     codeVerifier: string,
-  ) => fetch(`${apiBaseUrl}/v1/auth/yandex/link`, {
+  ) => yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/link`, {
     method: 'POST',
     cache: 'no-store',
     headers: {
-      authorization: `Bearer ${supabaseAccessToken}`,
       'content-type': 'application/json',
+      'x-supabase-authorization': `Bearer ${supabaseAccessToken}`,
     },
     body: JSON.stringify({ code, codeVerifier }),
+  }),
+  getYandexAccountLinkStatus: (
+    apiBaseUrl: string,
+    supabaseAccessToken: string,
+  ) => yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/link`, {
+    cache: 'no-store',
+    headers: {
+      'x-supabase-authorization': `Bearer ${supabaseAccessToken}`,
+    },
   }),
   listClients: (apiBaseUrl: string, sessionToken: string) => fetch(`${apiBaseUrl}/v1/clients`, {
     cache: 'no-store',

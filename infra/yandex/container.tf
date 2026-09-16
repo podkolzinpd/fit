@@ -12,6 +12,10 @@ resource "yandex_serverless_container" "api" {
 
   lifecycle {
     precondition {
+      condition     = var.media_s3_credentials_override == null ? true : try(trimspace(var.media_bucket_override) != "", false)
+      error_message = "External media credentials require an explicit media bucket override."
+    }
+    precondition {
       condition = (
         (var.legacy_supabase_bridge_lockbox_secret_id == null && var.legacy_supabase_bridge_lockbox_secret_version_id == null)
         || (var.legacy_supabase_bridge_lockbox_secret_id != null && var.legacy_supabase_bridge_lockbox_secret_version_id != null)
@@ -42,6 +46,7 @@ resource "yandex_serverless_container" "api" {
         DATABASE_SSL_ROOT_CERT              = "/app/certs/yandex-cloud-ca.pem"
         YANDEX_CLOUD_FOLDER_ID              = var.folder_id
         YANDEX_CLOUD_USE_METADATA_IAM_TOKEN = "true"
+        YANDEX_MEDIA_BUCKET                 = local.media_bucket_name
       },
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id
@@ -59,12 +64,25 @@ resource "yandex_serverless_container" "api" {
     environment_variable = "DATABASE_PASSWORD"
   }
 
+  secrets {
+    id                   = local.media_s3_secret_id
+    version_id           = local.media_s3_secret_version_id
+    key                  = "YANDEX_MEDIA_ACCESS_KEY_ID"
+    environment_variable = "YANDEX_MEDIA_ACCESS_KEY_ID"
+  }
+
+  secrets {
+    id                   = local.media_s3_secret_id
+    version_id           = local.media_s3_secret_version_id
+    key                  = "YANDEX_MEDIA_SECRET_ACCESS_KEY"
+    environment_variable = "YANDEX_MEDIA_SECRET_ACCESS_KEY"
+  }
+
   dynamic "secrets" {
     for_each = var.legacy_supabase_bridge_lockbox_secret_id == null ? {} : {
       SUPABASE_URL              = "SUPABASE_URL"
       SUPABASE_PUBLISHABLE_KEY  = "SUPABASE_PUBLISHABLE_KEY"
       SUPABASE_SERVICE_ROLE_KEY = "SUPABASE_SERVICE_ROLE_KEY"
-      YANDEX_CLOUD_API_KEY      = "YANDEX_CLOUD_API_KEY"
     }
 
     content {
@@ -85,6 +103,7 @@ resource "yandex_serverless_container" "api" {
     yandex_iam_service_account_iam_member.deployer_self_use,
     yandex_iam_service_account_iam_member.api_deployer,
     yandex_lockbox_secret_iam_member.api_connection_secret_reader,
+    yandex_lockbox_secret_iam_member.api_media_credentials_reader,
     yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader,
   ]
 }
@@ -145,6 +164,7 @@ resource "yandex_serverless_container" "migration" {
         STAGE_RUNTIME_DATABASE_PREFLIGHT_ENABLED = var.environment == "stage" ? "true" : "false"
         STAGE_TENANT_MIGRATION_ENABLED           = var.environment == "stage" ? "true" : "false"
         STAGE_ROLLOUT_ASSIGNMENTS_ENABLED        = var.environment == "stage" ? "true" : "false"
+        YANDEX_MEDIA_BUCKET                      = local.media_bucket_name
       },
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id
@@ -157,6 +177,20 @@ resource "yandex_serverless_container" "migration" {
     version_id           = data.yandex_connectionmanager_connection.owner.lockbox_secret.version
     key                  = data.yandex_connectionmanager_connection.owner.params.postgresql.auth.user_password.password.lockbox_secret_key
     environment_variable = "MIGRATION_DATABASE_PASSWORD"
+  }
+
+  secrets {
+    id                   = local.media_s3_secret_id
+    version_id           = local.media_s3_secret_version_id
+    key                  = "YANDEX_MEDIA_ACCESS_KEY_ID"
+    environment_variable = "YANDEX_MEDIA_ACCESS_KEY_ID"
+  }
+
+  secrets {
+    id                   = local.media_s3_secret_id
+    version_id           = local.media_s3_secret_version_id
+    key                  = "YANDEX_MEDIA_SECRET_ACCESS_KEY"
+    environment_variable = "YANDEX_MEDIA_SECRET_ACCESS_KEY"
   }
 
   secrets {
@@ -177,6 +211,7 @@ resource "yandex_serverless_container" "migration" {
     yandex_iam_service_account_iam_member.migration_deployer,
     yandex_lockbox_secret_iam_member.migration_api_connection_secret_reader,
     yandex_lockbox_secret_iam_member.migration_connection_secret_reader,
+    yandex_lockbox_secret_iam_member.migration_media_credentials_reader,
   ]
 }
 

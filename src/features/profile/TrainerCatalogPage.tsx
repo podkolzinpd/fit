@@ -5,12 +5,15 @@ import { Link } from 'react-router-dom'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { TrainerCatalogFilters, TrainerProfessionalProfile } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
+import { moscowMetroStationById } from '../../shared/moscow-metro'
 import { AsyncView, Field, Page } from '../../shared/ui'
+import { MetroStationPicker } from './MetroStationPicker'
 
 const emptyFilters: TrainerCatalogFilters = {
   query: '',
   specialty: '',
   city: '',
+  metroStationIds: [],
   mode: '',
   acceptingClients: null,
 }
@@ -24,13 +27,30 @@ interface CatalogViewState {
   scrollTop: number
 }
 
+function readStoredFilters(value: unknown): TrainerCatalogFilters | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  const candidate = value as Partial<TrainerCatalogFilters>
+  return {
+    query: typeof candidate.query === 'string' ? candidate.query : '',
+    specialty: typeof candidate.specialty === 'string' ? candidate.specialty : '',
+    city: typeof candidate.city === 'string' ? candidate.city : '',
+    metroStationIds: Array.isArray(candidate.metroStationIds)
+      ? candidate.metroStationIds.filter((item): item is string => typeof item === 'string').slice(0, 20)
+      : [],
+    mode: candidate.mode === 'online' || candidate.mode === 'in_person' ? candidate.mode : '',
+    acceptingClients: typeof candidate.acceptingClients === 'boolean' ? candidate.acceptingClients : null,
+  }
+}
+
 function readCatalogView(): CatalogViewState | null {
   try {
     const raw = window.sessionStorage.getItem(catalogViewKey)
     if (!raw) return null
     const value = JSON.parse(raw) as Partial<CatalogViewState>
-    if (!value.draft || !value.filters || typeof value.scrollTop !== 'number') return null
-    return value as CatalogViewState
+    const draft = readStoredFilters(value.draft)
+    const filters = readStoredFilters(value.filters)
+    if (!draft || !filters || typeof value.scrollTop !== 'number') return null
+    return { draft, filters, scrollTop: value.scrollTop }
   } catch {
     return null
   }
@@ -50,6 +70,7 @@ function normalized(filters: TrainerCatalogFilters): TrainerCatalogFilters {
     query: filters.query.trim(),
     specialty: filters.specialty.trim(),
     city: filters.city.trim(),
+    metroStationIds: [...new Set(filters.metroStationIds)].slice(0, 20),
   }
 }
 
@@ -67,6 +88,9 @@ function CatalogCard({ profile, onOpen }: { profile: TrainerProfessionalProfile;
   const experience = published.experienceStartYear === null
     ? null
     : Math.max(0, currentYear - published.experienceStartYear)
+  const locationNames = published.trainingModes.includes('in_person')
+    ? [...published.metroStationIds.map((id) => moscowMetroStationById(id)?.name).filter((name): name is string => name !== undefined), ...published.customLocations]
+    : []
   return <article className="trainer-catalog-card card">
     <div className="trainer-catalog-card-head">
       {published.avatarDataUrl
@@ -80,6 +104,9 @@ function CatalogCard({ profile, onOpen }: { profile: TrainerProfessionalProfile;
     {(published.city || published.trainingModes.length > 0 || experience !== null) && <p className="trainer-catalog-facts">
       {[published.trainingModes.map((mode) => mode === 'online' ? 'Онлайн' : 'Лично').join(' · '), published.city,
         experience === null ? '' : `Опыт ${yearsLabel(experience)}`].filter(Boolean).join(' · ')}
+    </p>}
+    {locationNames.length > 0 && <p className="trainer-catalog-locations">
+      {locationNames.slice(0, 2).join(' · ')}{locationNames.length > 2 ? ` · ещё ${locationNames.length - 2}` : ''}
     </p>}
     {published.bio && <p className="trainer-catalog-bio">{published.bio}</p>}
     <Link className="button secondary" to={`/trainers/${profile.publicId}`} state={{ from: '/me/trainers' }} onClick={onOpen}>Посмотреть анкету</Link>
@@ -125,6 +152,7 @@ function CatalogFiltersSheet({ draft, setDraft, onApply, onReset, onClose, retur
       <div className="trainer-catalog-filters">
         <Field label="Направление"><input value={draft.specialty} maxLength={60} placeholder="Силовые, бег" onChange={(event) => setDraft((value) => ({ ...value, specialty: event.target.value }))} /></Field>
         <Field label="Город"><input value={draft.city} maxLength={100} onChange={(event) => setDraft((value) => ({ ...value, city: event.target.value }))} /></Field>
+        <div className="trainer-catalog-metro-filter"><MetroStationPicker selectedIds={draft.metroStationIds} onChange={(stationIds) => setDraft((value) => ({ ...value, metroStationIds: stationIds }))} /></div>
         <Field label="Формат"><select value={draft.mode} onChange={(event) => setDraft((value) => ({ ...value, mode: event.target.value as TrainerCatalogFilters['mode'] }))}>
           <option value="">Любой</option><option value="online">Онлайн</option><option value="in_person">Лично</option>
         </select></Field>
@@ -203,7 +231,7 @@ export function TrainerCatalogPage() {
     })
   }
 
-  const appliedExtraFilters = [filters.specialty, filters.city, filters.mode,
+  const appliedExtraFilters = [filters.specialty, filters.city, filters.metroStationIds.length ? 'metro' : '', filters.mode,
     filters.acceptingClients === null ? '' : String(filters.acceptingClients)].filter(Boolean).length
 
   return <Page title="Тренеры" back="/me/profile" center className="trainer-catalog-page ui-identity">

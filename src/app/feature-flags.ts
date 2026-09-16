@@ -147,15 +147,20 @@ export function getYandexMainRoutingConfig(): YandexIdPilotConfig | null {
   return getYandexPublicConfig()
 }
 
-// Привязка существующего FIT-профиля к Yandex ID — отдельный default-off
-// rollout. Он намеренно не переиспользует read-only pilot и Apple Health
-// allowlist: UUID видны во frontend bundle и служат только для показа UI.
-export function isYandexSessionLinkingPilotEnabled(userId: string): boolean {
-  if (import.meta.env.VITE_YANDEX_SESSION_LINKING_ENABLED !== 'true') return false
-  return isUserInPublicAllowlist(userId, import.meta.env.VITE_YANDEX_SESSION_LINKING_PILOT_USER_IDS)
+// Привязка существующего FIT-профиля к Yandex ID показывается всем
+// авторизованным пользователям. Отдельный глобальный kill switch позволяет
+// скрыть вход при массовой недоступности OAuth/API, но персонального allowlist
+// здесь больше нет.
+export function isYandexSessionLinkingEnabled(): boolean {
+  return import.meta.env.VITE_YANDEX_SESSION_LINKING_ENABLED === 'true'
 }
 
-export function getYandexSessionLinkingConfig(userId: string): YandexIdPilotConfig | null {
-  if (!isYandexSessionLinkingPilotEnabled(userId)) return null
+export function getYandexSessionLinkingConfig(): YandexIdPilotConfig | null {
+  if (!isYandexSessionLinkingEnabled()) return null
   return getYandexPublicConfig()
+}
+
+// Available to authenticated trainers; authorization is enforced by the server.
+export function isAssistantProgramEnabled(userId: string): boolean {
+  return import.meta.env.VITE_ASSISTANT_PROGRAM_ENABLED === 'true' && userId.trim().length > 0
 }

@@ -1,5 +1,8 @@
 import { z } from 'zod'
-import { yandexPilotQueries } from '../queries/yandex-pilot.queries'
+import {
+  YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE,
+  yandexPilotQueries,
+} from '../queries/yandex-pilot.queries'
 import type { YandexApiAccessMode } from '../queries/yandex-pilot.queries'
 
 const profilePayloadSchema = z.object({
@@ -41,6 +44,10 @@ const appSessionProfileSchema = appSessionSchema.omit({ session: true })
 const linkedYandexIdentitySchema = z.object({
   profileId: z.uuid(),
   appSession: appSessionSchema.optional(),
+})
+
+const yandexIdentityLinkStatusSchema = z.object({
+  linked: z.boolean(),
 })
 
 const clientSchema = z.object({
@@ -218,11 +225,19 @@ const parsedWorkoutSchema = z.object({
       durationMin: z.number().positive().optional(),
       distanceKm: z.number().positive().optional(),
     })),
+    position: z.number().int().nonnegative().optional(),
   })),
   unmatched: z.array(z.object({
     sourceText: z.string(),
     reason: z.string(),
     suggestedExerciseRefs: z.array(z.string()),
+    sets: z.array(z.object({
+      weightKg: z.number().nonnegative().optional(),
+      reps: z.number().positive().optional(),
+      durationMin: z.number().positive().optional(),
+      distanceKm: z.number().positive().optional(),
+    })).optional(),
+    position: z.number().int().nonnegative().optional(),
   })),
 })
 const assistantTurnActionSchema = z.object({
@@ -269,6 +284,7 @@ export type YandexPilotSession = z.infer<typeof sessionSchema>
 export type YandexAppSession = z.infer<typeof appSessionSchema>
 export type YandexAppSessionProfile = z.infer<typeof appSessionProfileSchema>
 export type YandexLinkedIdentity = z.infer<typeof linkedYandexIdentitySchema>
+export type YandexIdentityLinkStatus = z.infer<typeof yandexIdentityLinkStatusSchema>
 export type YandexPilotClient = z.infer<typeof clientSchema>
 export type YandexPilotMembership = z.infer<typeof membershipSchema>
 export type YandexPilotInvitation = z.infer<typeof invitationSchema>
@@ -309,6 +325,13 @@ function appSessionRestoreError(status: number): Error {
   return new Error('Не удалось восстановить сессию Yandex ID.')
 }
 
+function yandexAuthConnectionError(caught: unknown): Error {
+  if (caught instanceof Error && caught.message === YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE) {
+    return caught
+  }
+  return new Error('Не удалось подключиться к Yandex Cloud stage.')
+}
+
 function linkResponseError(status: number): Error {
   if (status === 401) {
     return new Error('Не удалось подтвердить текущий FIT-аккаунт или Yandex ID. Войдите заново.')
@@ -320,6 +343,12 @@ function linkResponseError(status: number): Error {
   }
   if (status === 503) return new Error('Связывание Yandex ID временно недоступно. Попробуйте позднее.')
   return new Error('Не удалось связать Yandex ID с FIT-профилем.')
+}
+
+function linkStatusResponseError(status: number): Error {
+  if (status === 401) return new Error('Сессия FIT истекла. Войдите заново.')
+  if (status === 503) return new Error('Не удалось проверить привязку Yandex ID. Попробуйте ещё раз.')
+  return new Error('Не удалось проверить статус Yandex ID.')
 }
 
 function clientsResponseError(status: number): Error {
@@ -397,8 +426,8 @@ export const yandexPilotRepository = {
     let response: Response
     try {
       response = await yandexPilotQueries.exchangeCodeForSession(apiBaseUrl, code, codeVerifier)
-    } catch {
-      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
     }
     if (!response.ok) throw responseError(response.status)
     const result = sessionSchema.safeParse(await response.json())
@@ -413,8 +442,8 @@ export const yandexPilotRepository = {
     let response: Response
     try {
       response = await yandexPilotQueries.exchangeCodeForAppSession(apiBaseUrl, code, codeVerifier)
-    } catch {
-      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
     }
     if (!response.ok) throw appSessionResponseError(response.status)
     const result = appSessionSchema.safeParse(await response.json())
@@ -428,8 +457,8 @@ export const yandexPilotRepository = {
     let response: Response
     try {
       response = await yandexPilotQueries.getAppSession(apiBaseUrl, sessionToken)
-    } catch {
-      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
     }
     if (!response.ok) throw appSessionRestoreError(response.status)
     const result = appSessionProfileSchema.safeParse(await response.json())
@@ -440,8 +469,8 @@ export const yandexPilotRepository = {
     let response: Response
     try {
       response = await yandexPilotQueries.revokeAppSession(apiBaseUrl, sessionToken)
-    } catch {
-      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
     }
     if (!response.ok) throw appSessionRestoreError(response.status)
   },
@@ -473,12 +502,30 @@ export const yandexPilotRepository = {
         code,
         codeVerifier,
       )
-    } catch {
-      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
     }
     if (!response.ok) throw linkResponseError(response.status)
     const result = linkedYandexIdentitySchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый результат связывания.')
+    return result.data
+  },
+  async getYandexAccountLinkStatus(
+    apiBaseUrl: string,
+    supabaseAccessToken: string,
+  ): Promise<YandexIdentityLinkStatus> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.getYandexAccountLinkStatus(
+        apiBaseUrl,
+        supabaseAccessToken,
+      )
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
+    }
+    if (!response.ok) throw linkStatusResponseError(response.status)
+    const result = yandexIdentityLinkStatusSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Stage вернул неподдерживаемый статус Yandex ID.')
     return result.data
   },
   async listClients(apiBaseUrl: string, sessionToken: string): Promise<YandexPilotClient[]> {

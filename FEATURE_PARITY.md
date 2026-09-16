@@ -4,8 +4,8 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 
 | Область | Обязательный результат V2 | Статус |
 |---|---|---|
-| Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset; постоянные роли trainer/client | Implemented; role-aware registration/session routing ready, production Google smoke passed, reset SMTP pending. Default-off Yandex app-session and safe linking can select one rehearsed tenant without hidden Supabase fallback; production rollout remains disabled |
-| Client account | Клиент входит в тот же frontend, создаёт собственную карточку или видит ранее связанную; тренеры подключаются одноразовым кодом; несколько тренеров получают membership-доступ | Implemented auth, standalone card onboarding, invitations and author-scoped data: client sees all assignments and creates own workouts; each trainer sees only own workouts; progress is shared read-only across trainers with owner/author mutation rights. Yandex migration tooling can copy an unlinked self-owned client or profile-only account without recreating trainer membership; remote rehearsal/cutover remains a separate gate |
+| Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset; постоянные роли trainer/client | Implemented; role-aware registration/session routing ready, production Google smoke passed, reset SMTP pending. Глобально включаемый Yandex linking показывает на главной проверенный server-side статус и не предлагает повторную привязку; default-off Yandex app-session может выбрать rehearsed tenant без скрытого Supabase fallback, production routing rollout остаётся отдельным |
+| Client account | Клиент входит в тот же frontend, создаёт собственную карточку или видит ранее связанную; тренеры подключаются одноразовым кодом; несколько тренеров получают membership-доступ | Implemented auth, standalone card onboarding, invitations and author-scoped data: client sees all assignments and creates own workouts; each trainer sees only own workouts; progress is shared read-only across trainers with owner/author mutation rights. Yandex migration tooling can copy an isolated root or one content-pinned full application cohort when merges/memberships cross tenant boundaries; remote full-cohort rehearsal/cutover remains a separate gate |
 | Profile | Просмотр и изменение имени, корректный Cancel, выбор темы | Implemented: клиентский edit/logout сохраняет прежний контракт. Тренер видит одну компактную анкету с режимами просмотра и редактирования; для публикации достаточно имени из аккаунта, остальные поля необязательны. Длинные сведения, образование и публикация раскрываются внутри карточки, а тема, параметры тренировок и аккаунт вынесены в настройки по шестерёнке. Публичная анкета прокручивается на мобильном экране, держит действие связи в доступной зоне и возвращает гостя после входа. Cancel не сохраняет черновик; Chromium/WebKit и visual 390/430/1440 px покрывают основные состояния |
 | Clients | List/empty/error/retry, create, detail, edit, archive/restore | Implemented; aggregate list uses one tenant-scoped RPC; core E2E + RLS ready; allowlisted-аккаунтам поиск отдаётся полем Fit с иконкой и сбросом и показывается от шести клиентов, остальным — прежним полем, covered component test |
 | Client stats | Сводка на карточке: количество выполненных, % выполнения, дата последней тренировки, дней в работе (от первой тренировки), индикатор «требует внимания» при 14+ днях без тренировки | Implemented: pure aggregation covered unit + E2E |
@@ -305,3 +305,12 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 - Подробности названы по содержимому, краткие цифры видны сразу, личный итог не повторяет Home.
 - ИИ shortcut ведёт к анализу; дата обновления и проверяемые новые completedAt не меняют генерацию или защиту client-copy.
 - Проверяются порядок, ranking/fallback, фильтры/возврат, период карты, замеры, AI error/force race, mobile light/dark.
+
+## Assistant program pilot — 2026-09-15
+
+Реализован в PR #955, production-приёмка ожидается: существующий чат, один
+все тренеры, цель и сохраняемый квиз, подтверждённая история клиента,
+private CF, упражнения из каталога и проверяемые назначения модели на 4 недели
+(4/8/12 тренировок), просмотр и атомарное сохранение. SQL проверяет неизменность
+черновика и идемпотентность. Native Yandex generation пока выключена.
+Контракт и границы: `docs/design/ASSISTANT_PROGRAM_PILOT_2026-09-15.md`.

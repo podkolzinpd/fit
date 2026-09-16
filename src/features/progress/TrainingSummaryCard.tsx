@@ -37,6 +37,9 @@ import { availableSummaryPeriods, SUMMARY_PERIODS, summaryPeriodMatch, summaryPe
 import { buildTrainerProgressSignals } from './trainer-progress-signals'
 import { buildWorkoutRegularityProgress } from './workout-regularity-progress'
 import type { TrainingSummaryTriggerReason } from '../../shared/domain'
+import { immediateSummaryRetryAllowed } from '../../data/repositories/training-summary-errors'
+import { getYandexMainRoutingConfig } from '../../app/feature-flags'
+import { useOptionalYandexAppSession } from '../../app/yandex-app-session-context'
 
 function PeriodTabs({ value, available, onChange }: {
   value: SummaryPeriod
@@ -71,7 +74,7 @@ function SummaryHeader({ published }: { published?: boolean }) {
 function SummaryGenerationError({ error, onRetry }: { error: Error; onRetry: () => void }) {
   return <p className="ai-progress-auto-error" role="alert">
     <span>{error.message}</span>
-    <button type="button" className="link" onClick={onRetry}>Повторить</button>
+    {immediateSummaryRetryAllowed(error) && <button type="button" className="link" onClick={onRetry}>Повторить</button>}
   </p>
 }
 
@@ -693,9 +696,15 @@ function ClientCopyEditor({ summary, clientId, onChanged }: {
 export function ClientTrainingSummaryCard(props: {
   clientId: string; profileGoal?: string | null; gender?: Gender | null; measurementManagement?: ReactNode
 }) {
+  const { actor } = useAuth()
+  const dataBackend = useDataBackend()
+  const yandexSession = useOptionalYandexAppSession()?.session ?? null
   const [params] = useSearchParams()
-  const [diagnosticWindow] = useState(() => Date.now() < Date.parse('2026-09-13T00:00:00Z'))
-  if (params.get('summaryDiagnostic') === '1' && diagnosticWindow) return <SummaryDiagnosticPanel clientId={props.clientId} />
+  const [diagnosticWindow] = useState(() => Date.now() < Date.parse('2026-09-18T00:00:00Z'))
+  if (params.get('summaryDiagnostic') === '1' && diagnosticWindow) {
+    const range = summaryPeriodRange('1m', todayInTimeZone(actor?.timezone))
+    return <SummaryDiagnosticPanel backendSource={dataBackend.source} apiBaseUrl={getYandexMainRoutingConfig()?.apiBaseUrl ?? null} sessionToken={yandexSession?.session.token ?? null} clientId={props.clientId} periodStart={range.start} periodEnd={range.end} />
+  }
   return <ClientTrainingSummaryContent {...props} />
 }
 

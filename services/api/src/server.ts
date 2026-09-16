@@ -10,6 +10,16 @@ import { DatabasePilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import { DatabasePilotPushNotifications } from './pilot-push-notifications.js'
 import { DatabasePilotChat } from './pilot-chat.js'
 import { SupabaseChatMediaStore } from './chat-media.js'
+import {
+  LegacyChatMediaBridge,
+  SupabaseLegacyChatMediaAuthorizer,
+} from './legacy-chat-media.js'
+import {
+  readYandexMediaStorageConfig,
+  YandexChatMediaStore,
+  YandexMediaObjectStorage,
+  YandexVitalMediaSigner,
+} from './object-storage-media.js'
 import { DatabasePilotConnectionsReader } from './pilot-connections-reader.js'
 import { DatabasePilotConnectionsWriter } from './pilot-connections-writer.js'
 import { DatabasePilotDomainWriter } from './pilot-domain-writer.js'
@@ -37,6 +47,7 @@ import { buildYandexAiAuthorization } from './yandex-ai-authorization.js'
 import { SupabaseVitalMediaSigner } from './vital-media.js'
 import { DatabasePilotTrainerProfiles } from './trainer-profile.js'
 import { DatabasePilotTrainerDiscovery } from './trainer-discovery.js'
+import { parseAllowedOrigins } from './cors-origins.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -46,20 +57,6 @@ function parsePort(value: string | undefined): number {
     throw new Error('PORT must be an integer between 1 and 65535')
   }
   return port
-}
-
-function parseAllowedOrigins(value: string | undefined): string[] {
-  if (value === undefined || value.trim() === '') return []
-  return value.split(',').map((candidate) => {
-    const origin = candidate.trim()
-    const url = new URL(origin)
-    const localHttp = url.protocol === 'http:'
-      && (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]')
-    if (url.origin !== origin || (url.protocol !== 'https:' && !localHttp)) {
-      throw new Error('CORS_ALLOWED_ORIGINS must contain comma-separated HTTP origins')
-    }
-    return origin
-  })
 }
 
 const databaseConfig = buildDatabaseConnectionConfig('DATABASE')
@@ -174,13 +171,28 @@ const pilotTrainingSummaryGenerator =
     ? undefined
     : pilotTrainingSummaryReader
 const supabaseBridgeConfig = readSupabaseBridgeConfig()
-const chatMediaStore = supabaseBridgeConfig === undefined
+const yandexMediaStorageConfig = readYandexMediaStorageConfig()
+const yandexMediaStorage = yandexMediaStorageConfig === undefined
   ? undefined
-  : new SupabaseChatMediaStore(supabaseBridgeConfig)
+  : new YandexMediaObjectStorage(yandexMediaStorageConfig)
+const chatMediaStore = yandexMediaStorage !== undefined
+  ? new YandexChatMediaStore(yandexMediaStorage)
+  : supabaseBridgeConfig === undefined
+    ? undefined
+    : new SupabaseChatMediaStore(supabaseBridgeConfig)
+const legacyChatMediaBridge = yandexMediaStorage === undefined || supabaseBridgeConfig === undefined
+  ? undefined
+  : new LegacyChatMediaBridge(
+    new SupabaseLegacyChatMediaAuthorizer(new SupabaseBridge(supabaseBridgeConfig)),
+    yandexMediaStorage,
+    new SupabaseChatMediaStore(supabaseBridgeConfig),
+  )
 const pilotChat = databasePool === undefined ? undefined : new DatabasePilotChat(databasePool)
-const vitalMediaSigner = supabaseBridgeConfig === undefined
-  ? undefined
-  : new SupabaseVitalMediaSigner(supabaseBridgeConfig)
+const vitalMediaSigner = yandexMediaStorage !== undefined
+  ? new YandexVitalMediaSigner(yandexMediaStorage)
+  : supabaseBridgeConfig === undefined
+    ? undefined
+    : new SupabaseVitalMediaSigner(supabaseBridgeConfig)
 const existingActorProvider =
   supabaseBridgeConfig === undefined
     ? undefined
@@ -198,10 +210,10 @@ const legacyWorkoutParser =
       )
 const legacySummaryHandler =
   supabaseBridgeConfig === undefined
-  || process.env.YANDEX_CLOUD_API_KEY === undefined
+  || yandexAiAuthorization === undefined
   || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
     ? undefined
-    : summarizeClientTraining
+    : (request: Request) => summarizeClientTraining(request, { authorization: yandexAiAuthorization })
 const app = buildApp(
   {
     allowedOrigins: parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS),
@@ -217,6 +229,7 @@ const app = buildApp(
     ...(pilotPushNotifications === undefined ? {} : { pilotPushNotifications }),
     ...(pilotChat === undefined ? {} : { pilotChat }),
     ...(chatMediaStore === undefined ? {} : { chatMediaStore }),
+    ...(legacyChatMediaBridge === undefined ? {} : { legacyChatMediaBridge }),
     ...(pilotClientsReader === undefined ? {} : { pilotClientsReader }),
     ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),
     ...(pilotConnectionsWriter === undefined ? {} : { pilotConnectionsWriter }),
@@ -238,6 +251,9 @@ const app = buildApp(
     ...(pilotTrainingSummaryGenerator === undefined
       ? {}
       : { pilotTrainingSummaryGenerator }),
+    ...(pilotTrainingSummaryReader === undefined
+      ? {}
+      : { pilotTrainingSummaryDiagnostic: pilotTrainingSummaryReader }),
     ...(pilotTrainingSummaryReader === undefined ? {} : { pilotTrainingSummaryReader }),
     ...(pilotTrainingSummaryReader === undefined
       ? {}

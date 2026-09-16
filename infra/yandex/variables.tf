@@ -29,6 +29,39 @@ variable "environment" {
   }
 }
 
+variable "media_bucket_override" {
+  description = "Optional existing private Object Storage bucket used by the API for media. Empty uses the stage-managed bucket."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = var.media_bucket_override == null || trimspace(var.media_bucket_override) == "" || (
+      length(trimspace(var.media_bucket_override)) > 0
+      && can(regex("^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$", trimspace(var.media_bucket_override)))
+    )
+    error_message = "media_bucket_override must be a valid non-empty bucket name or null."
+  }
+}
+
+variable "media_s3_credentials_override" {
+  description = "Optional bucket-owned S3 credentials in a pre-provisioned stage Lockbox. Required readers: API and migration service accounts. Does not replace the original stage media key."
+  type = object({
+    secret_id  = string
+    version_id = string
+  })
+  default  = null
+  nullable = true
+
+  validation {
+    condition = var.media_s3_credentials_override == null ? true : (
+      can(regex("^[a-z0-9]{20}$", var.media_s3_credentials_override.secret_id))
+      && can(regex("^[a-z0-9]{20}$", var.media_s3_credentials_override.version_id))
+    )
+    error_message = "Media credentials override must contain an immutable Lockbox secret ID and version ID."
+  }
+}
+
 variable "zone" {
   description = "Availability zone for the MVP PostgreSQL host and subnet."
   type        = string
@@ -127,7 +160,7 @@ variable "api_execution_timeout" {
 }
 
 variable "legacy_supabase_bridge_lockbox_secret_id" {
-  description = "Optional existing Lockbox secret ID with SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SERVICE_ROLE_KEY and YANDEX_CLOUD_API_KEY for the temporary legacy-function bridge."
+  description = "Optional existing Lockbox secret ID with SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY and SUPABASE_SERVICE_ROLE_KEY for the temporary chat-media bridge."
   type        = string
   default     = null
   nullable    = true
@@ -202,9 +235,9 @@ variable "api_cors_allowed_origins" {
   validation {
     condition = alltrue([
       for origin in var.api_cors_allowed_origins :
-      can(regex("^(https://[^/]+|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?)$", origin))
+      can(regex("^(https://[^/]+|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?|capacitor://localhost)$", origin))
     ])
-    error_message = "api_cors_allowed_origins must use HTTPS, except for exact localhost development origins."
+    error_message = "api_cors_allowed_origins must use HTTPS, exact localhost development origins, or capacitor://localhost for the iOS app."
   }
 }
 

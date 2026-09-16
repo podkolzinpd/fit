@@ -8,6 +8,7 @@ const queries = vi.hoisted(() => ({
   getAppSession: vi.fn(),
   revokeAppSession: vi.fn(),
   linkYandexAccount: vi.fn(),
+  getYandexAccountLinkStatus: vi.fn(),
   listClients: vi.fn(),
   listConnections: vi.fn(),
   listTrainingData: vi.fn(),
@@ -22,7 +23,10 @@ const queries = vi.hoisted(() => ({
   removeTrainer: vi.fn(),
   revokeInvitation: vi.fn(),
 }))
-vi.mock('../queries/yandex-pilot.queries', () => ({ yandexPilotQueries: queries }))
+vi.mock('../queries/yandex-pilot.queries', () => ({
+  YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE: 'Проверка сессии Yandex ID заняла слишком много времени.',
+  yandexPilotQueries: queries,
+}))
 
 const session = {
   accessMode: 'read_only',
@@ -187,6 +191,7 @@ describe('yandexPilotRepository', () => {
     queries.getAppSession.mockReset()
     queries.revokeAppSession.mockReset()
     queries.linkYandexAccount.mockReset()
+    queries.getYandexAccountLinkStatus.mockReset()
     queries.listClients.mockReset()
     queries.listConnections.mockReset()
     queries.listTrainingData.mockReset()
@@ -213,8 +218,8 @@ describe('yandexPilotRepository', () => {
       trainer_summary: { headline: 'Внутренний вывод' },
     }
     queries.parseWorkout.mockResolvedValue(new Response(JSON.stringify({
-      items: [{ sourceText: 'присед', exerciseRef: 'squat', confidence: 1, sets: [{ reps: 10 }] }],
-      unmatched: [],
+      items: [{ sourceText: 'присед', exerciseRef: 'squat', confidence: 1, sets: [{ reps: 10 }], position: 1 }],
+      unmatched: [{ sourceText: 'движение', reason: 'Нужно уточнить', suggestedExerciseRefs: ['move'], sets: [{ reps: 8 }], position: 0 }],
     }), { status: 200 }))
     queries.listTrainingSummaries.mockResolvedValue(new Response(JSON.stringify({
       summaries: [generated],
@@ -226,7 +231,10 @@ describe('yandexPilotRepository', () => {
 
     await expect(yandexPilotRepository.parseWorkout(
       'https://stage.example.test', 's'.repeat(43), 'присед', [],
-    )).resolves.toMatchObject({ items: [{ exerciseRef: 'squat' }] })
+    )).resolves.toEqual({
+      items: [{ sourceText: 'присед', exerciseRef: 'squat', confidence: 1, sets: [{ reps: 10 }], position: 1 }],
+      unmatched: [{ sourceText: 'движение', reason: 'Нужно уточнить', suggestedExerciseRefs: ['move'], sets: [{ reps: 8 }], position: 0 }],
+    })
     await expect(yandexPilotRepository.listTrainingSummaries(
       'https://stage.example.test', 's'.repeat(43), CLIENT_ID,
     )).resolves.toEqual([generated])
@@ -354,6 +362,17 @@ describe('yandexPilotRepository', () => {
     )).rejects.toThrow('Сессия Yandex ID истекла')
   })
 
+  it('preserves the actionable timeout message while restoring an app session', async () => {
+    queries.getAppSession.mockRejectedValue(
+      new TypeError('Проверка сессии Yandex ID заняла слишком много времени.'),
+    )
+
+    await expect(yandexPilotRepository.getAppSession(
+      'https://stage.example.test',
+      appSession.session.token,
+    )).rejects.toThrow('Проверка сессии Yandex ID заняла слишком много времени.')
+  })
+
   it('keeps a read-only pilot session outside the app session contract', async () => {
     queries.exchangeCodeForAppSession.mockResolvedValue(
       new Response(JSON.stringify(session), { status: 200 }),
@@ -404,6 +423,32 @@ describe('yandexPilotRepository', () => {
       'code',
       'verifier',
     )).rejects.toThrow('уже связан')
+  })
+
+  it('validates the current profile Yandex ID link status', async () => {
+    queries.getYandexAccountLinkStatus.mockResolvedValue(
+      new Response(JSON.stringify({ linked: true }), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.getYandexAccountLinkStatus(
+      'https://stage.example.test',
+      'supabase-session',
+    )).resolves.toEqual({ linked: true })
+    expect(queries.getYandexAccountLinkStatus).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      'supabase-session',
+    )
+  })
+
+  it('rejects unsupported link status responses', async () => {
+    queries.getYandexAccountLinkStatus.mockResolvedValue(
+      new Response(JSON.stringify({ linked: 'yes' }), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.getYandexAccountLinkStatus(
+      'https://stage.example.test',
+      'supabase-session',
+    )).rejects.toThrow('неподдерживаемый статус Yandex ID')
   })
 
   it('keeps non-allowlisted identities outside the pilot', async () => {

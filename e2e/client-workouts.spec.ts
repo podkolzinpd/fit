@@ -17,7 +17,6 @@ async function createClientAccount(page: import('@playwright/test').Page, email:
 async function createCompletedWorkout(page: import('@playwright/test').Page) {
   await page.goto('/workouts/new')
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.locator('[data-exercise-ref="bench-press"]').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -71,13 +70,41 @@ test('client switches workout history to a month calendar and returns to the sel
   await expect(page.locator('.client-history-calendar-day.selected')).toBeVisible()
 })
 
+test('client keeps an unfinished catalog selection until adding or clearing it', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await createClientAccount(page, `picker-draft-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+  await page.goto('/workouts/new')
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Планка')
+  await page.getByRole('button', { name: 'Выбрать: Планка', exact: true }).click()
+  await expect(page.getByText('Выбрано: 1')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Очистить', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Закрыть' }).click()
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await expect(page.getByText('Выбрано: 1')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Убрать: Планка', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
+
+  await page.setViewportSize({ width: 430, height: 932 })
+  await expect(page.locator('.picker-selection-bar')).toBeVisible()
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
+  await page.getByRole('button', { name: 'Очистить', exact: true }).click()
+  await expect(page.getByText('Выбрано: 1')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Выбрать: Планка', exact: true }).click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await expect(page.getByText('Планка', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '＋ Упражнение' }).click()
+  await expect(page.getByText('Выбрано: 1')).toHaveCount(0)
+})
+
 test('client creates a custom exercise and saves it in a completed workout', async ({ page }, testInfo) => {
   const exerciseName = `Моя румынская тяга ${testInfo.workerIndex}-${Date.now()}`
   await createClientAccount(page, `custom-exercise-${testInfo.workerIndex}-${Date.now()}@fit.local`)
 
   await page.goto('/workouts/new')
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByRole('button', { name: 'Создать упражнение' }).click()
   await page.getByLabel('Название').fill(exerciseName)
   await page.getByRole('button', { name: 'Ноги', exact: true }).click()

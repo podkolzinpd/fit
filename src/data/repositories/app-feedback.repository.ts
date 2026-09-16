@@ -2,7 +2,7 @@ import packageJson from '../../../package.json'
 import { appFeedbackQueries } from '../queries/app-feedback.queries'
 import { repositoryError } from './error'
 
-export type AppFeedbackKind = 'suggestion' | 'problem'
+export type AppFeedbackKind = 'suggestion' | 'problem' | 'training program'
 export type AppDisplayMode = 'browser' | 'standalone'
 
 export interface AppFeedbackInput {
@@ -12,6 +12,8 @@ export interface AppFeedbackInput {
   appVersion: string
   displayMode: AppDisplayMode
   userAgent: string
+  modelInputJson?: Record<string, unknown>
+  modelOutputJson?: Record<string, unknown>
 }
 
 export function appDisplayMode(): AppDisplayMode {
@@ -30,11 +32,10 @@ export function currentAppFeedbackContext(): Omit<AppFeedbackInput, 'kind' | 'me
 }
 
 export const appFeedbackRepository = {
-  async submit(kind: AppFeedbackKind, message: string): Promise<string> {
-    const result = await appFeedbackQueries.submit({ kind, message: message.trim(), ...currentAppFeedbackContext() })
+  async submit(kind: AppFeedbackKind, message: string, metadata?: Pick<AppFeedbackInput, 'modelInputJson' | 'modelOutputJson'>): Promise<string> {
+    const result = await appFeedbackQueries.submit({ kind, message: message.trim(), ...currentAppFeedbackContext(), ...metadata })
     if (result.error) throw repositoryError(result.error)
     if (!result.data) throw new Error('Сообщение не было сохранено')
     return result.data
   },
 }
-

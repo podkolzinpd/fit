@@ -5,11 +5,13 @@ import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile
 import { spawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { reviewedVitalGymProExercises } from './data/vital-gym-pro-catalog-reviewed.mjs'
 
 const MAGIC = Buffer.from('FITVITAL1')
 const projectRoot = resolve(import.meta.dirname, '..')
 const encryptedPath = join(projectRoot, 'scripts/data/vital-gym-pro-media.enc')
 const manifestPath = join(projectRoot, 'scripts/data/vital-gym-pro-media-manifest.json')
+const catalogPath = join(projectRoot, 'scripts/data/vital-gym-pro-catalog.json')
 const outputDir = join(projectRoot, 'public/exercises/vital-pro')
 
 function run(command, args) {
@@ -55,7 +57,9 @@ async function materializeReviewedMedia(manifest, unpackedDir) {
 }
 
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
-if (manifest.version !== 1 || manifest.exerciseCount !== 317 || manifest.files.length !== 951) {
+const baseCatalog = JSON.parse(await readFile(catalogPath, 'utf8'))
+const expectedExerciseCount = baseCatalog.exercises.length + reviewedVitalGymProExercises().length
+if (manifest.version !== 1 || manifest.exerciseCount !== expectedExerciseCount || manifest.files.length !== expectedExerciseCount * 3) {
   throw new Error('Unexpected Gym Pro media manifest')
 }
 if (await validateMedia(manifest).catch(() => false)) {
@@ -91,7 +95,7 @@ try {
   await run('tar', ['-xf', tarPath, '-C', unpackedDir])
   await materializeReviewedMedia(manifest, unpackedDir)
   if (!(await validateMedia(manifest))) throw new Error('Decrypted Gym Pro media does not match the reviewed manifest')
-  console.log('Prepared and verified 317 Gym Pro videos for this build.')
+  console.log(`Prepared and verified ${manifest.exerciseCount} Gym Pro videos for this build.`)
 } finally {
   await rm(temporaryDir, { recursive: true, force: true })
 }

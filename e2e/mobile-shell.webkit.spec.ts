@@ -66,10 +66,12 @@ test('trainer chat stays at the bottom and exits with swipe and back', async ({ 
   await page.getByRole('button', { name: /Александра Константинопольская-Романова/ }).click()
   await expect(page.getByRole('heading', { name: 'Александра Константинопольская-Романова' })).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
-  const bottomGap = await page.evaluate(() => {
+  const composer = page.locator('.chat-composer')
+  await expect(composer).toBeVisible()
+  const bottomGap = await composer.evaluate((element) => {
     const frame = document.querySelector('.phone-frame')!.getBoundingClientRect()
-    const composer = document.querySelector('.chat-composer')!.getBoundingClientRect()
-    return Math.abs(frame.bottom - composer.bottom)
+    const composerRect = element.getBoundingClientRect()
+    return Math.abs(frame.bottom - composerRect.bottom)
   })
   expect(bottomGap).toBeLessThanOrEqual(1)
 
@@ -85,6 +87,51 @@ test('trainer chat stays at the bottom and exits with swipe and back', async ({ 
   await expect(page.getByRole('heading', { name: 'Сообщения' })).toBeVisible()
   await page.getByRole('button', { name: 'Назад' }).click()
   await expect(page).toHaveURL(/\/today$/)
+})
+
+test('trainer opens client chat from the list and returns to the same search and scroll', async ({ page }) => {
+  const conversationId = 'b9100000-0000-4000-8000-000000000001'
+  const clients = Array.from({ length: 12 }, (_, index) => ({
+    id: index === 0 ? demoClientId : `b9200000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+    has_account: true, full_name: `Спортсмен ${String(index + 1).padStart(2, '0')}`,
+    canonical_full_name: `Спортсмен ${String(index + 1).padStart(2, '0')}`,
+    gender: null, age_years: 25 + index, age_updated_at: '2026-08-01', height_cm: 175,
+    goal: null, note: null, current_weight_kg: 70, last_activity_at: `2026-08-${String(20 - index).padStart(2, '0')}T10:00:00Z`,
+    archived_at: null, version: 1, membership_version: 1,
+  }))
+  await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(clients) }))
+  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+    conversation_id: conversationId, client_id: clients[5]!.id, trainer_id: '90000000-0000-4000-8000-000000000009',
+    partner_user_id: '92000000-0000-4000-8000-000000000029', partner_name: 'Спортсмен 06', active_connection: true,
+    last_message_body: 'До встречи', last_message_at: '2026-09-10T16:45:00.000Z',
+    last_message_sender_id: '92000000-0000-4000-8000-000000000029', unread_count: 4,
+    can_message: true, blocked_by_me: false, blocked_by_partner: false,
+  }]) }))
+  await page.route('**/rest/v1/rpc/list_chat_messages_v3', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await page.route('**/rest/v1/rpc/get_chat_unread_state', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await page.route('**/rest/v1/rpc/get_chat_connection_state', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+    active_connection: true, invitation_pending: false, invited_at: null, can_invite: false, can_accept: false, trainer_switch_required: false,
+  }]) }))
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+  await page.goto('/clients')
+  const search = page.getByRole('searchbox', { name: 'Поиск клиента' })
+  await search.fill('Спортсмен')
+  const content = page.locator('.content')
+  await content.evaluate((element) => element.scrollTo(0, 240))
+  const action = page.getByRole('button', { name: 'Сообщения с Спортсмен 06, непрочитанных: 4' })
+  await action.scrollIntoViewIfNeeded()
+  const scrollBefore = await content.evaluate((element) => element.scrollTop)
+  expect(scrollBefore).toBeGreaterThan(100)
+
+  await action.click()
+  await expect(page).toHaveURL(new RegExp(`/chat/${conversationId}$`))
+  await page.getByRole('button', { name: 'Назад' }).click()
+
+  await expect(page).toHaveURL(/\/clients\?q=%D0%A1%D0%BF%D0%BE%D1%80%D1%82%D1%81%D0%BC%D0%B5%D0%BD$/)
+  await expect(page.getByRole('searchbox', { name: 'Поиск клиента' })).toHaveValue('Спортсмен')
+  await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBe(scrollBefore)
 })
 
 async function mockAutomaticSummaryGeneration(page: Page) {
@@ -237,21 +284,23 @@ test('iPhone: поиск и фильтры каталога не перекры�
   await page.setViewportSize({ width: 390, height: 844 })
   await loginAsTrainer(page)
 
-  await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
+  await page.goto(`/workouts/new?client=${demoClientId}`)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
 
   const search = page.getByLabel('Поиск упражнения')
+  const groups = page.getByRole('group', { name: 'Группа мышц' })
+  const types = page.getByRole('group', { name: 'Тип упражнения' })
   await search.focus()
   await expect(search).toBeFocused()
-  await page.getByRole('button', { name: 'Фильтры' }).click()
-  await expect(search).not.toBeFocused()
-  await page.getByLabel('Группа мышц').selectOption('legs')
-  await expect(page.getByRole('button', { name: 'Фильтры 1' })).toBeVisible()
+  await expect(groups).toBeVisible()
+  await expect(types).toBeVisible()
+  await page.getByRole('button', { name: 'Ноги', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Ноги', exact: true })).toHaveAttribute('aria-pressed', 'true')
 
   await search.focus()
-  await expect(page.getByLabel('Группа мышц')).toBeHidden()
-  await expect(page.getByRole('button', { name: 'Фильтры 1' })).toBeVisible()
+  await expect(search).toBeFocused()
+  await expect(groups).toBeVisible()
+  await expect(types).toBeVisible()
   await search.fill('присед')
   await expect(page.locator('.picker-list-meta').getByText(/Найдено: \d+/)).toBeVisible()
   await expect(page.getByRole('button', { name: 'Очистить поиск' })).toBeVisible()
@@ -264,6 +313,72 @@ test('iPhone: поиск и фильтры каталога не перекры�
   await page.getByRole('button', { name: 'Назад к выбору' }).click()
   await expect(search).toHaveValue('присед')
   await expectNoHorizontalOverflow(page)
+})
+
+test('iPhone: встроенные фильтры выдерживают узкие, низкие и увеличенные экраны', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginAsTrainer(page)
+
+  await page.goto(`/workouts/new?client=${demoClientId}`)
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Добавить упражнение' })
+  const groups = dialog.getByRole('group', { name: 'Группа мышц' })
+  const types = dialog.getByRole('group', { name: 'Тип упражнения' })
+  const equipment = dialog.getByLabel('Оборудование')
+  const create = dialog.getByRole('button', { name: 'Создать упражнение' })
+  const profiles = [
+    { width: 320, height: 568, scale: '100%' },
+    { width: 360, height: 640, scale: '125%' },
+    { width: 375, height: 667, scale: '150%' },
+    { width: 390, height: 844, scale: '100%' },
+    { width: 430, height: 932, scale: '100%' },
+    { width: 844, height: 390, scale: '125%' },
+  ]
+
+  for (const profile of profiles) {
+    await page.setViewportSize({ width: profile.width, height: profile.height })
+    await page.evaluate((scale) => { document.documentElement.style.fontSize = scale }, profile.scale)
+    await expect(dialog).toBeVisible()
+    await expect(groups).toBeVisible()
+    await expect(types).toBeVisible()
+    await expect(equipment).toBeInViewport()
+    await expect(create).toBeInViewport()
+    const geometry = await dialog.evaluate((element) => {
+      const dialogBox = element.getBoundingClientRect()
+      const strips = Array.from(element.querySelectorAll<HTMLElement>('.picker-filter-strip')).map((strip) => {
+        const box = strip.getBoundingClientRect()
+        return {
+          left: box.left,
+          right: box.right,
+          clientWidth: strip.clientWidth,
+          scrollWidth: strip.scrollWidth,
+        }
+      })
+      const actionBox = element.querySelector<HTMLElement>('.picker-inline-actions')!.getBoundingClientRect()
+      return {
+        dialogLeft: dialogBox.left,
+        dialogRight: dialogBox.right,
+        dialogTop: dialogBox.top,
+        dialogBottom: dialogBox.bottom,
+        actionLeft: actionBox.left,
+        actionRight: actionBox.right,
+        strips,
+      }
+    })
+    expect(geometry.dialogLeft).toBeGreaterThanOrEqual(0)
+    expect(geometry.dialogRight).toBeLessThanOrEqual(profile.width)
+    expect(geometry.dialogTop).toBeGreaterThanOrEqual(0)
+    expect(geometry.dialogBottom).toBeLessThanOrEqual(profile.height)
+    expect(geometry.actionLeft).toBeGreaterThanOrEqual(geometry.dialogLeft)
+    expect(geometry.actionRight).toBeLessThanOrEqual(geometry.dialogRight)
+    expect(geometry.strips.length).toBeGreaterThanOrEqual(2)
+    expect(geometry.strips.every((strip) => strip.left >= geometry.dialogLeft && strip.right <= geometry.dialogRight)).toBe(true)
+    expect(geometry.strips.some((strip) => strip.scrollWidth > strip.clientWidth)).toBe(true)
+    expect((await equipment.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+    expect((await create.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+    await expectNoHorizontalOverflow(page)
+  }
 })
 
 test('iPhone: поля бега не перекрываются в быстрой проверке тренера на 390 px', async ({ page }, testInfo) => {
@@ -392,22 +507,23 @@ test('iPhone: тренер назначает интервалы, спортсм
 
     await trainer.goto(`/workouts/new?client=${clientId}`)
     await trainer.getByRole('button', { name: 'Выбрать упражнения' }).click()
-    await expect(trainer.getByRole('heading', { name: 'Тип тренировки' })).toBeVisible()
-    await expect(trainer.getByRole('button', { name: /^Силовая/ })).toBeVisible()
+    await expect(trainer.getByRole('heading', { name: 'Выберите упражнения' })).toBeVisible()
+    await expect(trainer.getByRole('group', { name: 'Группа мышц' })).toBeVisible()
+    await expect(trainer.getByRole('group', { name: 'Тип упражнения' })).toBeVisible()
     await expectNoHorizontalOverflow(trainer)
-    await trainer.screenshot({ path: testInfo.outputPath('workout-kind-trainer-390.png'), fullPage: true })
+    await trainer.screenshot({ path: testInfo.outputPath('exercise-picker-trainer-390.png'), fullPage: true })
     await trainer.setViewportSize({ width: 430, height: 932 })
     await expectNoHorizontalOverflow(trainer)
-    await trainer.screenshot({ path: testInfo.outputPath('workout-kind-trainer-430.png'), fullPage: true })
+    await trainer.screenshot({ path: testInfo.outputPath('exercise-picker-trainer-430.png'), fullPage: true })
     await trainer.setViewportSize({ width: 390, height: 844 })
-    await trainer.getByRole('button', { name: /^Бег/ }).click()
+    await trainer.getByRole('button', { name: 'Бег', exact: true }).click()
     await expect(trainer.getByRole('button', { name: /Свободный бег/ })).toBeVisible()
     await expect(trainer.getByRole('button', { name: /Лёгкий бег/ })).toBeVisible()
     await expect(trainer.getByRole('button', { name: /Длительный бег/ })).toBeVisible()
     await expect(trainer.getByRole('button', { name: /Темповый бег/ })).toBeVisible()
     await expect(trainer.getByRole('button', { name: /Восстановительный бег/ })).toBeVisible()
     await expect(trainer.getByRole('button', { name: /^Интервалы/ })).toBeVisible()
-    await expect(trainer.getByRole('button', { name: 'Посмотреть технику: Семенящий бег', exact: true })).toBeVisible()
+    await expect(trainer.getByRole('button', { name: 'Проиграть технику: Семенящий бег', exact: true })).toBeVisible()
     await expectNoHorizontalOverflow(trainer)
     await trainer.screenshot({ path: testInfo.outputPath('running-formats-390.png'), fullPage: true })
     await trainer.getByRole('button', { name: /^Интервалы/ }).click()
@@ -633,11 +749,12 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.goto('/me/workouts')
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await expect(page.getByRole('heading', { name: 'Тип тренировки' })).toBeVisible()
-  await expect(page.getByRole('button', { name: /^Силовая/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Выберите упражнения' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Группа мышц' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Тип упражнения' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
-  await page.screenshot({ path: testInfo.outputPath('workout-kind-client-390.png'), fullPage: true })
-  await page.getByRole('button', { name: /^Бег/ }).click()
+  await page.screenshot({ path: testInfo.outputPath('exercise-picker-client-390.png'), fullPage: true })
+  await page.getByRole('button', { name: 'Бег', exact: true }).click()
   await page.getByLabel('Поиск упражнения').fill('Бег')
   await page.locator('[data-exercise-ref="running"]').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -686,7 +803,6 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.goto('/me/workouts')
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
   await page.getByRole('button', { name: /^Выбрать: Планка/ }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -932,7 +1048,6 @@ async function createIsolatedClient(page: Page, testInfo: import('@playwright/te
 
 async function addExercise(page: Page, name: string, first = false) {
   await page.getByRole('button', { name: first ? 'Выбрать упражнения' : '＋ Упражнение' }).click()
-  if (first) await page.getByRole('button', { name: /^Силовая/ }).click()
   await page.getByLabel('Поиск упражнения').fill(name)
   await page.locator('.picker-select-mark').first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
@@ -944,8 +1059,8 @@ async function createGroupedWorkout(page: Page, clientName: string, preset: 'set
   await addExercise(page, 'Присед со штангой', true)
   await addExercise(page, 'Жим лёжа')
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
-  await page.getByRole('menuitem', { name: 'Объединить со следующим в блок' }).click()
-  if (preset === 'circuit') await page.getByLabel('Тип блока').selectOption('circuit')
+  await page.getByRole('menuitem', { name: 'Объединить со следующим в круговую' }).click()
+  await page.getByLabel('Тип блока').selectOption(preset)
   await page.getByLabel('Кругов').fill('2')
   for (let round = 1; round <= 2; round += 1) {
     for (let index = 0; index < 2; index += 1) {
@@ -1342,7 +1457,6 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await page.goto('/workouts/new')
   await selectClient(page)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
 
   await expect(page.getByText('Недавние')).toBeVisible()
   await expect(page.getByText('Все упражнения')).toBeVisible()
@@ -1366,7 +1480,6 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await page.reload()
   await selectClient(page)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await expect(page.locator('html')).not.toHaveClass(/theme-light/)
   await expectPickerItemsToKeepTheirGeometry()
   await expectNoHorizontalOverflow(page)
@@ -1381,7 +1494,6 @@ test('iPhone: ручной выбор начинает с недавних, а �
   await page.reload()
   await selectClient(page)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Силовая/ }).click()
   await expect(page.locator('html')).toHaveClass(/theme-light/)
   await expectPickerItemsToKeepTheirGeometry()
   await expectNoHorizontalOverflow(page)
@@ -1517,7 +1629,7 @@ test('iPhone: бег с RPE не сжимает время и дистанцию
   await loginAsTrainer(page)
   await page.goto(`/workouts/new?client=${demoClientId}`)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await page.getByRole('button', { name: /^Бег/ }).click()
+  await page.getByRole('button', { name: 'Бег', exact: true }).click()
   await page.locator('[data-running-format="free"]').click()
   await page.getByRole('button', { name: 'Ещё действия' }).click()
   await page.getByRole('menuitem', { name: 'Указать RPE' }).click()
@@ -1694,7 +1806,7 @@ test('iPhone: фактический вес переносится в следу
   await page.screenshot({ path: testInfo.outputPath('live-weight-carry-430.png'), fullPage: true })
 })
 
-test('iPhone: подходы Live стоят вплотную при крупных touch-зонах на 360 px', async ({ page }, testInfo) => {
+test('iPhone: подходы Live разделены при полноширинных touch-зонах на 360 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 360, height: 780 })
   const clientName = await createIsolatedClient(page, testInfo)
   await page.goto('/workouts/new')
@@ -1702,6 +1814,9 @@ test('iPhone: подходы Live стоят вплотную при крупн�
   await addExercise(page, 'Присед со штангой', true)
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
+  await page.getByRole('button', { name: '＋ Подход' }).click()
+  await page.getByLabel('Вес, подход 2').fill('40')
+  await page.getByLabel('Повторы, подход 2').fill('10')
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
@@ -1715,9 +1830,12 @@ test('iPhone: подходы Live стоят вплотную при крупн�
   expect(box!.height).toBeLessThanOrEqual(48)
   const setRow = confirm.locator('xpath=ancestor::form')
   const setRowBox = await setRow.boundingBox()
+  const nextSetRowBox = await page.locator('.live-set-table > .live-set').nth(1).boundingBox()
   expect(setRowBox).not.toBeNull()
-  expect(setRowBox!.height).toBeGreaterThanOrEqual(44)
-  expect(setRowBox!.height).toBeLessThanOrEqual(46)
+  expect(nextSetRowBox).not.toBeNull()
+  expect(setRowBox!.height).toBeGreaterThanOrEqual(48)
+  expect(setRowBox!.height).toBeLessThanOrEqual(50)
+  expect(nextSetRowBox!.y - (setRowBox!.y + setRowBox!.height)).toBeGreaterThanOrEqual(7)
   const activeExerciseStyle = await page.locator('.live-exercise.current').evaluate((element) => {
     const style = getComputedStyle(element)
     return { borderRadius: style.borderRadius, background: style.backgroundColor }

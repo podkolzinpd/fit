@@ -144,7 +144,7 @@ function zoneForMuscleDetail(detail?: string): BodyMapZone | undefined {
   if (!normalized) return undefined
   if (/внутренняя поверхность бедра/.test(normalized)) return 'inner_thigh'
   if (/наружная поверхность бедра/.test(normalized)) return 'outer_thigh'
-  if (/передняя поверхность бедра/.test(normalized)) return 'quadriceps'
+  if (/квадрицепс|передняя поверхность бедра/.test(normalized)) return 'quadriceps'
   if (/задняя поверхность бедра/.test(normalized)) return 'hamstrings'
   if (/икрон/.test(normalized)) return 'calves'
   if (/ягод/.test(normalized)) return 'glutes'
