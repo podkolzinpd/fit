@@ -1,11 +1,11 @@
-export const PROGRAM_CATALOG_VERSION = 'program-catalog-v1'
-export type Movement = 'squat' | 'hinge' | 'horizontal_push' | 'vertical_push' | 'horizontal_pull' | 'vertical_pull' | 'core' | 'accessory'
-export type Equipment = 'dumbbells' | 'barbell' | 'bench' | 'rack' | 'cable' | 'pullup_bar' | 'leg_press' | 'leg_curl' | 'leg_extension'
+export const PROGRAM_CATALOG_VERSION = 'program-catalog-v2'
+export type Movement = 'squat' | 'hinge' | 'horizontal_push' | 'vertical_push' | 'horizontal_pull' | 'vertical_pull' | 'core' | 'accessory' | 'aerobic'
+export type Equipment = 'dumbbells' | 'barbell' | 'bench' | 'rack' | 'cable' | 'pullup_bar' | 'leg_press' | 'leg_curl' | 'leg_extension' | 'stationary_bike'
 export interface ProgramExercise {
   ref: string
   name: string
   muscleGroup: string
-  inputKind: 'strength' | 'reps' | 'duration'
+  inputKind: 'strength' | 'reps' | 'duration' | 'distance'
   movement: Movement
   equipment: readonly Equipment[]
   unsupportedTrunk: boolean
@@ -14,6 +14,8 @@ export interface ProgramExercise {
 // Deliberately bounded programming annotations, not injury contraindications.
 // Canonical names/refs/types are checked against the application catalog in CI.
 export const PROGRAM_CATALOG: readonly ProgramExercise[] = [
+  { ref: 'walking', name: 'Ходьба', muscleGroup: 'cardio', inputKind: 'distance', movement: 'aerobic', equipment: [], unsupportedTrunk: false },
+  { ref: 'stationary-bike', name: 'Велотренажёр', muscleGroup: 'cardio', inputKind: 'distance', movement: 'aerobic', equipment: ['stationary_bike'], unsupportedTrunk: false },
   { ref: 'barbell-squat', name: 'Присед со штангой', muscleGroup: 'legs', inputKind: 'strength', movement: 'squat', equipment: ['barbell', 'rack'], unsupportedTrunk: true },
   { ref: 'leg-press', name: 'Жим ногами в тренажёре', muscleGroup: 'legs', inputKind: 'strength', movement: 'squat', equipment: ['leg_press'], unsupportedTrunk: false },
   { ref: 'vital-dumbbell-goblet-squat', name: 'Гоблет-присед с гантелью', muscleGroup: 'legs', inputKind: 'strength', movement: 'squat', equipment: ['dumbbells'], unsupportedTrunk: false },
@@ -41,7 +43,7 @@ export const PROGRAM_CATALOG: readonly ProgramExercise[] = [
   { ref: 'crunches', name: 'Скручивания', muscleGroup: 'core', inputKind: 'reps', movement: 'core', equipment: [], unsupportedTrunk: false },
 ]
 
-export const PROGRAM_EQUIPMENT: readonly Equipment[] = ['dumbbells', 'barbell', 'bench', 'rack', 'cable', 'pullup_bar', 'leg_press', 'leg_curl', 'leg_extension']
+export const PROGRAM_EQUIPMENT: readonly Equipment[] = ['dumbbells', 'barbell', 'bench', 'rack', 'cable', 'pullup_bar', 'leg_press', 'leg_curl', 'leg_extension', 'stationary_bike']
 
 export function eligibleProgramExercises(equipment: readonly Equipment[], excludedRefs: readonly string[]): ProgramExercise[] {
   return PROGRAM_CATALOG.filter((exercise) => !excludedRefs.includes(exercise.ref)
