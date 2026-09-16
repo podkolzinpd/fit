@@ -18,6 +18,7 @@ const ENRICHED: ExerciseSnapshot[] = [
 ]
 
 const originalLocalStorage = Object.getOwnPropertyDescriptor(window, 'localStorage')
+const originalVisualViewport = Object.getOwnPropertyDescriptor(window, 'visualViewport')
 const recentStore = new Map<string, string>()
 const browserStorage: Storage = {
   get length() { return recentStore.size },
@@ -117,6 +118,8 @@ describe('ExercisePicker', () => {
   afterEach(() => {
     if (originalLocalStorage) Object.defineProperty(window, 'localStorage', originalLocalStorage)
     else delete (window as { localStorage?: Storage }).localStorage
+    if (originalVisualViewport) Object.defineProperty(window, 'visualViewport', originalVisualViewport)
+    else delete (window as { visualViewport?: VisualViewport }).visualViewport
   })
 
   it('filters the complete catalog by search and category', () => {
@@ -529,6 +532,24 @@ describe('ExercisePicker', () => {
     rerender(<ExercisePicker catalog={catalog()} onPick={vi.fn()} onClose={onClose} />)
     await user.click(screen.getByRole('button', { name: 'Закрыть' }))
     expect(onClose).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not shrink the overlay to stale visual viewport dimensions', async () => {
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: {
+        height: 420,
+        offsetTop: 180,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      } as unknown as VisualViewport,
+    })
+
+    render(<ExercisePicker catalog={catalog()} onPick={vi.fn()} onClose={vi.fn()} />)
+    const dialog = screen.getByRole('dialog')
+    if (!dialog.parentElement) throw new Error('Picker overlay is missing')
+
+    await waitFor(() => expect(dialog.parentElement).not.toHaveAttribute('style'))
   })
 
   it('creates a custom strength exercise and picks it', async () => {
