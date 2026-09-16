@@ -4,7 +4,6 @@ import { aiStudioUsage, reportAiStudioMetric } from '../ai-studio-usage-metrics.
 import { isProgramPilotEnabled } from './program/model.js'
 import { extractProgramBrief, invokeProgramGenerator, programPilotTurn } from './program/turn.js'
 import { loadProgramContext } from './program/source.js'
-import { CONFIRM_PROGRAM_BRIEF } from './program/brief.js'
 import { assistantToolStateFilter, latestActiveAssistantTool, routedAssistantTurn } from './router.js'
 
 import {
@@ -847,13 +846,6 @@ export async function runAssistantTurn(
         generate: (brief, context, clientId) => {
           const key = programGenerationKey(user.id, clientId, brief, context.fingerprint)
           return generateProgramOnce(service, key, user.id, clientId, () => invokeProgramGenerator(user.id, key, today, brief, context))
-        },
-        canGenerate: async () => {
-          const count = await service.from('assistant_messages').select('id,assistant_conversations!inner(owner_id)', { count: 'exact', head: true })
-            .eq('assistant_conversations.owner_id', user.id).eq('author', 'user').eq('content', CONFIRM_PROGRAM_BRIEF)
-            .gte('created_at', new Date(Date.now() - 86_400_000).toISOString())
-          if (count.error || count.count === null) throw new HttpError(503, 'program_limit_unavailable')
-          return count.count <= 5
         },
       }, true),
     })
