@@ -160,8 +160,7 @@ export function getYandexSessionLinkingConfig(userId: string): YandexIdPilotConf
   return getYandexPublicConfig()
 }
 
-// Independent default-off pilot. Authorization is also enforced by the server.
-export function isAssistantProgramPilotEnabled(userId: string): boolean {
-  const ids = String(import.meta.env.VITE_ASSISTANT_PROGRAM_PILOT_USER_IDS ?? '').split(',').map((id) => id.trim()).filter(Boolean)
-  return import.meta.env.VITE_ASSISTANT_PROGRAM_ENABLED === 'true' && ids.length === 1 && ids[0] === userId
+// Available to authenticated trainers; authorization is enforced by the server.
+export function isAssistantProgramEnabled(userId: string): boolean {
+  return import.meta.env.VITE_ASSISTANT_PROGRAM_ENABLED === 'true' && userId.trim().length > 0
 }
