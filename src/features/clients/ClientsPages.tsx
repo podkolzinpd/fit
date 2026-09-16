@@ -18,6 +18,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, KeyboardIcon, ScheduleIcon } from '../../shared/icons'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { ChatStartButton } from '../chat'
+import { YandexAccountLinkingCard } from '../auth'
 
 export function MyClientPage() {
   const { clients: clientsRepository } = useDataBackend()
@@ -40,6 +41,7 @@ export function MyClientPage() {
   useClientRealtime(query.data?.id)
   if (query.data) return <TodayPage clientMode />
   return <Page title="Кабинет" className="client-home-page">
+    {actor && <YandexAccountLinkingCard actor={actor} />}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       <ClientFirstRunIntro actions={<section className="client-home-self-training primary">
         <div className="today-voice-hero-compact">

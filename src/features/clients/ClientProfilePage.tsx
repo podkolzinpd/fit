@@ -3,13 +3,12 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
-import { useOptionalYandexAppSession } from '../../app/yandex-app-session-context'
 import { setAppTheme, useAppTheme } from '../../app/theme'
 import { setLiveExerciseAnimation, useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { SettingsIcon } from '../../shared/icons'
 import { LEGAL_PATHS } from '../../shared/legal'
 import { AsyncView, Page, Switch } from '../../shared/ui'
-import { LogoutButton, YandexAccountLinkingCard } from '../auth'
+import { LogoutButton } from '../auth'
 import { AppInstallPanel } from '../install'
 import { NotificationsSetting } from '../notifications'
 import { AppFeedbackForm } from '../profile/AppFeedbackForm'
@@ -48,7 +47,6 @@ export function ClientProfilePage() {
 export function ClientProfileSettingsPage() {
   const { actor } = useAuth()
   const { clients: clientsRepository } = useDataBackend()
-  const yandexSession = useOptionalYandexAppSession()?.session ?? null
   const theme = useAppTheme()
   const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
@@ -76,7 +74,6 @@ export function ClientProfileSettingsPage() {
 
     <SettingsSection title="Аккаунт и помощь">
       <AccountSettingsCard />
-      {yandexSession === null && <YandexAccountLinkingCard actor={actor} />}
       <div className="menu">
         <Link to="/join">Ввести код приглашения</Link>
         <button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button>

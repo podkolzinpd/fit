@@ -74,6 +74,20 @@ describe('yandexPilotQueries', () => {
     )
     expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
       .not.toHaveProperty('authorization')
+
+    await yandexPilotQueries.getYandexAccountLinkStatus(
+      baseUrl,
+      'supabase-session',
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/auth/yandex/link`,
+      expect.objectContaining({
+        cache: 'no-store',
+        headers: {
+          'x-supabase-authorization': 'Bearer supabase-session',
+        },
+      }),
+    )
   })
 
   it('aborts a hung Yandex app-session restore instead of loading forever', async () => {
