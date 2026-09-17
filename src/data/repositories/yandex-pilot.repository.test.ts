@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { yandexPilotRepository } from './yandex-pilot.repository'
+import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 
 const queries = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   exchangeCodeForAppSession: vi.fn(),
+  registerYandexAccount: vi.fn(),
   getAppSession: vi.fn(),
   revokeAppSession: vi.fn(),
   linkYandexAccount: vi.fn(),
@@ -188,6 +190,7 @@ describe('yandexPilotRepository', () => {
   beforeEach(() => {
     queries.exchangeCodeForSession.mockReset()
     queries.exchangeCodeForAppSession.mockReset()
+    queries.registerYandexAccount.mockReset()
     queries.getAppSession.mockReset()
     queries.revokeAppSession.mockReset()
     queries.linkYandexAccount.mockReset()
@@ -334,6 +337,47 @@ describe('yandexPilotRepository', () => {
       'code',
       'verifier',
     )).resolves.toEqual(appSession)
+  })
+
+  it('validates native Yandex registration and maps an existing-account conflict', async () => {
+    queries.registerYandexAccount.mockResolvedValueOnce(
+      new Response(JSON.stringify(appSession), { status: 200 }),
+    )
+    await expect(yandexPilotRepository.registerYandexAccount(
+      'https://stage.example.test',
+      'oauth-code',
+      'v'.repeat(43),
+      {
+        accountRole: 'trainer', firstName: 'Ирина', timezone: 'Europe/Moscow',
+        termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION,
+      },
+    )).resolves.toEqual(appSession)
+
+    queries.registerYandexAccount.mockResolvedValueOnce(
+      new Response('{}', { status: 409 }),
+    )
+    await expect(yandexPilotRepository.registerYandexAccount(
+      'https://stage.example.test',
+      'oauth-code',
+      'v'.repeat(43),
+      {
+        accountRole: 'trainer', firstName: 'Ирина', timezone: 'Europe/Moscow',
+        termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION,
+      },
+    )).rejects.toThrow('уже связан со старым аккаунтом FIT')
+
+    queries.registerYandexAccount.mockResolvedValueOnce(
+      new Response('{}', { status: 412 }),
+    )
+    await expect(yandexPilotRepository.registerYandexAccount(
+      'https://stage.example.test',
+      'oauth-code',
+      'v'.repeat(43),
+      {
+        accountRole: 'trainer', firstName: 'Ирина', timezone: 'Europe/Moscow',
+        termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION,
+      },
+    )).rejects.toThrow('Условия использования обновились')
   })
 
   it('restores and revokes an opaque read-write app session', async () => {

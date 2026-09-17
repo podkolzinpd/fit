@@ -56,6 +56,14 @@ import {
   type ExistingActorProvider,
   type YandexAccountLinker,
 } from './yandex-account-linking.js'
+import {
+  YandexNativeRegistrationError,
+  type YandexNativeRegistrar,
+} from './yandex-native-registration.js'
+import {
+  CURRENT_PRIVACY_VERSION,
+  CURRENT_TERMS_VERSION,
+} from './legal-document-versions.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
 import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
 import type { PlannedWorkoutDraft } from './planned-workout-request.js'
@@ -1462,6 +1470,18 @@ function buildYandexAppSessionIssuer(
   return { yandexAppSessionIssuer: { issue }, issue }
 }
 
+function buildYandexNativeRegistrar(
+  result: { profileId: string } | Error = { profileId: PROFILE_ID },
+): {
+  yandexNativeRegistrar: YandexNativeRegistrar
+  register: ReturnType<typeof vi.fn>
+} {
+  const register = vi.fn(() =>
+    result instanceof Error ? Promise.reject(result) : Promise.resolve(result),
+  )
+  return { yandexNativeRegistrar: { register }, register }
+}
+
 function buildYandexAppSessionReader(
   result: ProfileResponse | Error = { ...PROFILE_RESPONSE, accessMode: 'read_write' },
 ): {
@@ -2101,6 +2121,176 @@ describe('Yandex PKCE pilot callback', () => {
 })
 
 describe('Yandex ID app session and account linking endpoints', () => {
+  it('registers a native Yandex account and returns its read-write session', async () => {
+    const oauth = buildOAuthCodeProvider()
+    const identity = buildIdentityProvider()
+    const registrar = buildYandexNativeRegistrar()
+    const appSession = buildYandexAppSessionIssuer()
+    const app = buildApp({
+      oauthCodeProvider: oauth.oauthCodeProvider,
+      identityProvider: identity.identityProvider,
+      yandexNativeRegistrar: registrar.yandexNativeRegistrar,
+      yandexAppSessionIssuer: appSession.yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/register',
+      payload: {
+        code: 'one-time-code',
+        codeVerifier: 'v'.repeat(43),
+        firstName: ' Ирина ',
+        timezone: 'Europe/Moscow',
+        accountRole: 'trainer',
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(APP_SESSION_RESPONSE)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.body).not.toContain('temporary-yandex-token')
+    expect(response.body).not.toContain(SUBJECT_HASH)
+    expect(registrar.register).toHaveBeenCalledWith(SUBJECT_HASH, {
+      accountRole: 'trainer',
+      firstName: 'Ирина',
+      timezone: 'Europe/Moscow',
+    })
+    expect(appSession.issue).toHaveBeenCalledWith(SUBJECT_HASH)
+  })
+
+  it('rejects malformed native registration before contacting OAuth', async () => {
+    const oauth = buildOAuthCodeProvider()
+    const registrar = buildYandexNativeRegistrar()
+    const app = buildApp({
+      oauthCodeProvider: oauth.oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      yandexNativeRegistrar: registrar.yandexNativeRegistrar,
+      yandexAppSessionIssuer: buildYandexAppSessionIssuer().yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/register',
+      payload: {
+        code: 'one-time-code',
+        codeVerifier: 'v'.repeat(43),
+        firstName: 'И',
+        timezone: 'not-a-timezone',
+        accountRole: 'admin',
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(oauth.exchangeCode).not.toHaveBeenCalled()
+    expect(registrar.register).not.toHaveBeenCalled()
+  })
+
+  it('rejects a stale legal-document acceptance before contacting OAuth', async () => {
+    const oauth = buildOAuthCodeProvider()
+    const registrar = buildYandexNativeRegistrar()
+    const app = buildApp({
+      oauthCodeProvider: oauth.oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      yandexNativeRegistrar: registrar.yandexNativeRegistrar,
+      yandexAppSessionIssuer: buildYandexAppSessionIssuer().yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/register',
+      payload: {
+        code: 'one-time-code',
+        codeVerifier: 'v'.repeat(43),
+        firstName: 'Ирина',
+        timezone: 'Europe/Moscow',
+        accountRole: 'client',
+        termsVersion: `sha256:${'0'.repeat(24)}`,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+      },
+    })
+
+    expect(response.statusCode).toBe(412)
+    expect(response.json()).toEqual({ error: 'legal_documents_changed' })
+    expect(oauth.exchangeCode).not.toHaveBeenCalled()
+    expect(registrar.register).not.toHaveBeenCalled()
+  })
+
+  it('keeps an existing linked account out of native registration', async () => {
+    const registrar = buildYandexNativeRegistrar(
+      new YandexNativeRegistrationError('conflict'),
+    )
+    const appSession = buildYandexAppSessionIssuer()
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      yandexNativeRegistrar: registrar.yandexNativeRegistrar,
+      yandexAppSessionIssuer: appSession.yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/register',
+      payload: {
+        code: 'one-time-code',
+        codeVerifier: 'v'.repeat(43),
+        firstName: 'Ирина',
+        timezone: 'Europe/Moscow',
+        accountRole: 'client',
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+      },
+    })
+
+    expect(response.statusCode).toBe(409)
+    expect(response.json()).toEqual({ error: 'yandex_identity_existing_account' })
+    expect(response.body).not.toContain(SUBJECT_HASH)
+    expect(appSession.issue).not.toHaveBeenCalled()
+  })
+
+  it('does not return a session for a mismatched registered profile', async () => {
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      yandexNativeRegistrar: buildYandexNativeRegistrar({
+        profileId: '6e577cc7-3b56-4a86-bc85-1ce2426ce249',
+      }).yandexNativeRegistrar,
+      yandexAppSessionIssuer: buildYandexAppSessionIssuer().yandexAppSessionIssuer,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/register',
+      payload: {
+        code: 'one-time-code',
+        codeVerifier: 'v'.repeat(43),
+        firstName: 'Ирина',
+        timezone: 'Europe/Moscow',
+        accountRole: 'trainer',
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+      },
+    })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({ error: 'service_unavailable' })
+    expect(response.body).not.toContain(PROFILE_ID)
+  })
+
   it('exchanges a Yandex code for a read-write app session without exposing provider tokens', async () => {
     const oauth = buildOAuthCodeProvider()
     const identity = buildIdentityProvider()

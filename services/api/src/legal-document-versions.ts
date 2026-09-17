@@ -1,0 +1,2 @@
+export const CURRENT_TERMS_VERSION = 'sha256:cab599a93dde50d93e903077'
+export const CURRENT_PRIVACY_VERSION = 'sha256:5371d0ac8c84bd4dda416083'

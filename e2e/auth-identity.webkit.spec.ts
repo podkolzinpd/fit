@@ -21,6 +21,36 @@ test('auth identity remains usable in WebKit light and dark themes', async ({ pa
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
 
+test('native Yandex registration is the primary mobile action at 390 and 430 px', async ({ page }, testInfo) => {
+  test.skip(
+    process.env.VITE_YANDEX_NATIVE_REGISTRATION_ENABLED !== 'true',
+    'Run with the native Yandex registration switch to verify the default-off flow.',
+  )
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/auth')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Регистрация' })).toBeVisible()
+  await expect(page.getByLabel('Тип аккаунта')).toHaveValue('trainer')
+  await expect(page.getByLabel('Имя')).toBeVisible()
+  await expect(page.getByLabel('Email')).toHaveCount(0)
+  await expect(page.getByLabel('Пароль')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Создать через Yandex ID', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Создать по email' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Условия использования' }).first()).toBeVisible()
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('yandex-native-registration-390.png'), fullPage: true })
+
+  await page.addInitScript(() => window.localStorage.setItem('fit.appTheme', 'dark'))
+  await page.setViewportSize({ width: 430, height: 932 })
+  await page.reload()
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page.getByRole('button', { name: 'Создать через Yandex ID', exact: true })).toBeVisible()
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('yandex-native-registration-430-dark.png'), fullPage: true })
+})
+
 test('password sign-in retries a network failure and unlocks the WebKit form', async ({ page }) => {
   let requests = 0
   await page.route('**/auth/v1/token?grant_type=password', async (route) => {
