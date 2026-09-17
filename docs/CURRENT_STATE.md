@@ -185,20 +185,22 @@
 - Yandex migration `000038` приводит push к multi-device контракту Supabase: отдельный PK подписки, `(user_id, endpoint)`, адресная строка outbox и удаление только протухшего устройства. API принимает endpoint только в actor-authenticated body; tenant catalog переносит подписки по `id`.
 - Tenant migration tooling сохраняет строгие isolated trainer/client режимы и
   content-pinned `full-cohort` для базы, где завершённые merge пересекают
-  trainer boundary. Audit 2026-09-17 прочитал 32 поддерживаемые таблицы; при
-  повторной репетиции источник содержал 14 705 строк. Gzip envelope v2 занимал
-  2 443 408 bytes: private runner успешно обработал меньший isolated snapshot,
-  но full-cohort invocation завершился инфраструктурным `502` до DB-импорта.
-  Текущая ветка переводит новые артефакты на более плотный Brotli envelope v3,
-  сохраняя чтение v1/v2. Предыдущий full-cohort dry-run дошёл до private target
-  runner и остановился на `tenant_media_missing`; прежний configured
-  root теперь отдельно отклоняется как `tenant_merge_crosses_boundary`, поэтому
-  актуальный cutover должен использовать полный snapshot. По явному продуктовому
-  решению manual workflow имеет default-off `allow_missing_media`: он сохраняет
-  исходные media paths и metadata, но разрешает DB dry-run/apply до копирования
-  objects. До последующего media apply такие вложения могут возвращать not found.
-  Auth users, Yandex sessions и rollout assignments в bundle не входят; routing
-  остаётся выключен до успешного pinned apply и отдельного rollout enable.
+  trainer boundary. Brotli envelope v3 развёрнут на stage с обратным чтением
+  v1/v2. Full-cohort dry-run 2026-09-17 успешно проверил 32 поддерживаемые
+  таблицы через private target runner. Обычный pinned apply по-прежнему требует
+  fingerprint конкретного dry-run, но для живого full cohort он может устареть
+  между отдельными GitHub runners до начала записи. Поэтому отдельный
+  current-snapshot apply разрешён только для `full-cohort`: один `REPEATABLE
+  READ` export и один encrypted envelope последовательно проходят target
+  dry-run, commit и обязательный повтор с нулём вставок. Остальные selections
+  сохраняют точный fingerprint guard. Прежний configured root отдельно
+  отклоняется как `tenant_merge_crosses_boundary`, поэтому актуальный cutover
+  использует полный snapshot. По явному продуктовому решению manual workflow
+  имеет default-off `allow_missing_media`: он сохраняет исходные media paths и
+  metadata, но разрешает DB dry-run/apply до копирования objects. До
+  последующего media apply такие вложения могут возвращать not found. Auth
+  users, Yandex sessions и rollout assignments в bundle не входят; routing
+  остаётся выключен до успешного apply и отдельного rollout enable.
 - YAFIT-490/510: личный чат спортсмена с каждым тренером хранит текст и приватное фото, черновик и повтор отправки без дубля. Меню даёт ответ/копирование и авторские изменение/удаление; фото открывается с zoom/save, поиск работает по всей истории, первое непрочитанное фиксируется точной парой времени и ID и отмечается только после показа. Отключение сохраняет переписку без возврата доступа к данным. Supabase использует realtime, Yandex — polling/foreground refresh; Web Push ведёт в диалог. Assistant не читает чат и вложения. YAFIT-511 сохраняет account-scoped состояние карточки поиска тренера и разрешает спортсмену один диалог с опубликованным тренером; сервер ограничивает новые обращения пятью за 24 часа, поддерживает взаимную блокировку и не выдаёт доступ к тренировочным данным. Вход из анкеты, приглашение и принятие связи работают внутри обычного чата. Компактная карточка «Нужен тренер?» стоит внизу Client Home только у спортсмена без тренера; её можно скрыть на 30 дней или навсегда, а каталог остаётся доступен из профиля.
 - YAFIT-517: единая кнопка сообщений на главной тренера и спортсмена показывает
   общую сумму непрочитанных до `99+`. Общий cache диалогов обновляется каждые
