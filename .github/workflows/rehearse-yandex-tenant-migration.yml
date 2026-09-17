@@ -24,7 +24,7 @@ on:
           - most-complete-standalone-client
           - full-cohort
       apply_confirmation:
-        description: 'For apply only: APPLY_TENANT_TO_YANDEX_STAGE'
+        description: 'Pinned apply, or APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE for one live snapshot'
         required: false
         type: string
       tenant_fingerprint_confirmation:
@@ -113,12 +113,22 @@ jobs:
           TENANT_FINGERPRINT_CONFIRMATION: ${{ inputs.tenant_fingerprint_confirmation }}
           TENANT_SELECTION: ${{ inputs.tenant_selection }}
         run: |
-          test "$APPLY_CONFIRMATION" = APPLY_TENANT_TO_YANDEX_STAGE
-          case "$TENANT_SELECTION" in
-            configured)
+          case "$APPLY_CONFIRMATION" in
+            APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE)
+              test "$TENANT_SELECTION" = full-cohort
+              test -z "$TENANT_FINGERPRINT_CONFIRMATION"
               ;;
-            smallest-eligible|smallest-eligible-standalone-client|most-complete-standalone-client|full-cohort)
-              [[ "$TENANT_FINGERPRINT_CONFIRMATION" =~ ^[0-9a-f]{16}$ ]]
+            APPLY_TENANT_TO_YANDEX_STAGE)
+              case "$TENANT_SELECTION" in
+                configured)
+                  ;;
+                smallest-eligible|smallest-eligible-standalone-client|most-complete-standalone-client|full-cohort)
+                  [[ "$TENANT_FINGERPRINT_CONFIRMATION" =~ ^[0-9a-f]{16}$ ]]
+                  ;;
+                *)
+                  exit 1
+                  ;;
+              esac
               ;;
             *)
               exit 1
