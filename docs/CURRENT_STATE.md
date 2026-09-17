@@ -181,11 +181,13 @@
 - Yandex migration `000038` приводит push к multi-device контракту Supabase: отдельный PK подписки, `(user_id, endpoint)`, адресная строка outbox и удаление только протухшего устройства. API принимает endpoint только в actor-authenticated body; tenant catalog переносит подписки по `id`.
 - Tenant migration tooling сохраняет строгие isolated trainer/client режимы и
   content-pinned `full-cohort` для базы, где завершённые merge пересекают
-  trainer boundary. Audit 2026-09-17 прочитал 32 поддерживаемые таблицы и
-  14 692 строки (114 profiles, 629 workouts, 3 210 workout exercises и 8 661
-  workout sets); compressed encrypted envelope занимает 2 442 164 bytes и
-  проходит прежний 3 MiB transport gate. Full-cohort dry-run дошёл до private
-  target runner и остановился на `tenant_media_missing`; прежний configured
+  trainer boundary. Audit 2026-09-17 прочитал 32 поддерживаемые таблицы; при
+  повторной репетиции источник содержал 14 705 строк. Gzip envelope v2 занимал
+  2 443 408 bytes: private runner успешно обработал меньший isolated snapshot,
+  но full-cohort invocation завершился инфраструктурным `502` до DB-импорта.
+  Текущая ветка переводит новые артефакты на более плотный Brotli envelope v3,
+  сохраняя чтение v1/v2. Предыдущий full-cohort dry-run дошёл до private target
+  runner и остановился на `tenant_media_missing`; прежний configured
   root теперь отдельно отклоняется как `tenant_merge_crosses_boundary`, поэтому
   актуальный cutover должен использовать полный snapshot. По явному продуктовому
   решению manual workflow имеет default-off `allow_missing_media`: он сохраняет
