@@ -55,6 +55,77 @@ function readyPool(identityLinked = false): RecordingPool {
 }
 
 describe('DatabaseStageRolloutAssignmentManager', () => {
+  it('inspects linked and domain-ready profiles without writing assignments', async () => {
+    const pool = new RecordingPool()
+    pool.connection.results = [
+      [],
+      [],
+      [{
+        domain_ready_profiles: 20,
+        linked_profiles: 12,
+        rollout_enabled_profiles: 8,
+      }],
+      [],
+    ]
+    const manager = new DatabaseStageRolloutAssignmentManager(pool)
+
+    await expect(manager.applyLinkedProfiles('inspect')).resolves.toEqual({
+      domainReadyProfiles: 20,
+      linkedProfiles: 12,
+      rolloutEnabledProfiles: 8,
+    })
+    expect(pool.connection.calls.every(({ text }) => !text.includes('insert into')))
+      .toBe(true)
+    expect(pool.connection.calls[3]?.text).toBe('commit')
+  })
+
+  it.each([
+    ['enable', 'insert into app_private.profile_rollout_assignments', 12],
+    ['disable', 'update app_private.profile_rollout_assignments', 0],
+  ] as const)('applies an idempotent linked-profile batch %s', async (action, mutation, enabled) => {
+    const pool = new RecordingPool()
+    pool.connection.results = [
+      [],
+      [],
+      [],
+      [{
+        domain_ready_profiles: '20',
+        linked_profiles: '12',
+        rollout_enabled_profiles: String(enabled),
+      }],
+      [],
+    ]
+    const manager = new DatabaseStageRolloutAssignmentManager(pool)
+
+    await expect(manager.applyLinkedProfiles(action)).resolves.toEqual({
+      domainReadyProfiles: 20,
+      linkedProfiles: 12,
+      rolloutEnabledProfiles: enabled,
+    })
+    expect(pool.connection.calls[2]?.text).toContain(mutation)
+    expect(pool.connection.calls[4]?.text).toBe('commit')
+  })
+
+  it('refuses to report a successful enable when no linked profile is ready', async () => {
+    const pool = new RecordingPool()
+    pool.connection.results = [
+      [],
+      [],
+      [],
+      [{
+        domain_ready_profiles: 20,
+        linked_profiles: 0,
+        rollout_enabled_profiles: 0,
+      }],
+      [],
+    ]
+    const manager = new DatabaseStageRolloutAssignmentManager(pool)
+
+    await expect(manager.applyLinkedProfiles('enable'))
+      .rejects.toBeInstanceOf(StageRolloutProfileNotReadyError)
+    expect(pool.connection.calls[4]?.text).toBe('rollback')
+  })
+
   it('inspects an existing assignment without changing it', async () => {
     const pool = readyPool(true)
     pool.connection.results.push([{ rollout_enabled: true }], [])

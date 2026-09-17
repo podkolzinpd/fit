@@ -9,8 +9,8 @@ import {
   isTrainerDiscoveryHomeEnabled,
   isWearablesPilotEnabled,
   isYandexAssistantRoutingPilotEnabled,
-  isYandexAppSessionPilotEnabled,
-  isYandexMainRoutingPilotEnabled,
+  isYandexAppSessionEnabled,
+  isYandexMainRoutingEnabled,
   isYandexSessionLinkingEnabled,
   trainerHomePath,
 } from './feature-flags'
@@ -254,29 +254,17 @@ describe('Yandex session linking global flag', () => {
   })
 })
 
-describe('Yandex app session pilot flag', () => {
+describe('Yandex app session flag', () => {
   it('is disabled unless the enabled flag is exactly "true"', () => {
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', 'trainer-1')
     vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', '')
-    expect(isYandexAppSessionPilotEnabled('trainer-1')).toBe(false)
+    expect(isYandexAppSessionEnabled()).toBe(false)
     vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'TRUE')
-    expect(isYandexAppSessionPilotEnabled('trainer-1')).toBe(false)
+    expect(isYandexAppSessionEnabled()).toBe(false)
   })
 
-  it('accepts only trimmed non-empty UUID entries from its own allowlist', () => {
+  it('opens the frontend entry point globally while the server keeps per-profile authorization', () => {
     vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', ' , trainer-1, ,trainer-2, ')
-    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
-    expect(isYandexAppSessionPilotEnabled('trainer-1')).toBe(true)
-    expect(isYandexAppSessionPilotEnabled('trainer-2')).toBe(true)
-    expect(isYandexAppSessionPilotEnabled('client-9')).toBe(false)
-    expect(isYandexAppSessionPilotEnabled('')).toBe(false)
-  })
-
-  it('is disabled for everyone with an empty allowlist', () => {
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', '')
-    expect(isYandexAppSessionPilotEnabled('trainer-1')).toBe(false)
+    expect(isYandexAppSessionEnabled()).toBe(true)
   })
 
   it('exposes an entry config only with the independent flag and safe public settings', () => {
@@ -309,7 +297,6 @@ describe('Yandex Assistant sticky routing flag', () => {
     vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS', ' , trainer-1, ')
     vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', 'client-9')
     expect(isYandexAssistantRoutingPilotEnabled('trainer-1')).toBe(true)
     expect(isYandexAssistantRoutingPilotEnabled('client-9')).toBe(false)
   })
@@ -340,36 +327,14 @@ describe('Yandex Assistant sticky routing flag', () => {
 
 describe('Yandex main sticky routing flag', () => {
   it('is default-off and requires the exact enabled value', () => {
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', 'trainer-1')
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', '')
-    expect(isYandexMainRoutingPilotEnabled('trainer-1')).toBe(false)
+    expect(isYandexMainRoutingEnabled()).toBe(false)
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'TRUE')
-    expect(isYandexMainRoutingPilotEnabled('trainer-1')).toBe(false)
+    expect(isYandexMainRoutingEnabled()).toBe(false)
   })
 
-  it('routes exactly one trimmed pilot profile', () => {
+  it('routes every server-authorized Yandex session when globally enabled', () => {
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', ' , trainer-1, ')
-    expect(isYandexMainRoutingPilotEnabled('trainer-1')).toBe(true)
-    expect(isYandexMainRoutingPilotEnabled('trainer-2')).toBe(false)
-    expect(isYandexMainRoutingPilotEnabled('')).toBe(false)
-  })
-
-  it('fails closed for an empty or multi-profile rollout', () => {
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', '')
-    expect(isYandexMainRoutingPilotEnabled('trainer-1')).toBe(false)
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', 'trainer-1,trainer-2')
-    expect(isYandexMainRoutingPilotEnabled('trainer-1')).toBe(false)
-    expect(isYandexMainRoutingPilotEnabled('trainer-2')).toBe(false)
-  })
-
-  it('does not reuse another feature allowlist', () => {
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', 'trainer-1')
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', 'trainer-2')
-    expect(isYandexMainRoutingPilotEnabled('trainer-1')).toBe(true)
-    expect(isYandexMainRoutingPilotEnabled('trainer-2')).toBe(false)
+    expect(isYandexMainRoutingEnabled()).toBe(true)
   })
 })

@@ -94,6 +94,7 @@ import {
   DatabaseStageDatabaseReaderAccessManager,
   StageDatabaseReaderNotReadyError,
 } from './stage-database-reader-access.js'
+import { DatabaseStageRolloutAssignmentManager } from './stage-rollout-assignment.js'
 import type { DatabasePool } from './types.js'
 import {
   DatabasePilotEnroller,
@@ -5041,6 +5042,21 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             values ($1)`,
           [ACTOR_ID],
         ))).rejects.toMatchObject({ code: '42501' })
+    })
+
+    it('manages linked domain-ready rollout assignments as one private batch', async () => {
+      if (enrollmentPool === undefined) throw new Error('Database pool is not ready')
+      const manager = new DatabaseStageRolloutAssignmentManager(enrollmentPool)
+
+      const inspected = await manager.applyLinkedProfiles('inspect')
+      expect(inspected.domainReadyProfiles).toBeGreaterThan(0)
+      expect(inspected.linkedProfiles).toBeGreaterThan(0)
+
+      const enabled = await manager.applyLinkedProfiles('enable')
+      expect(enabled.rolloutEnabledProfiles).toBe(enabled.linkedProfiles)
+
+      const disabled = await manager.applyLinkedProfiles('disable')
+      expect(disabled.rolloutEnabledProfiles).toBe(0)
     })
   },
 )

@@ -86,7 +86,6 @@ describe('Yandex app session auth flow', () => {
       signOut,
     })
     vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', PROFILE_ID)
     vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
     vi.stubGlobal('crypto', {
@@ -100,6 +99,15 @@ describe('Yandex app session auth flow', () => {
     vi.unstubAllGlobals()
     window.history.replaceState(null, '', '/')
     sessionStorage.clear()
+  })
+
+  it('offers Yandex ID to every visitor while keeping email sign-in available', () => {
+    render(<MemoryRouter><AuthPage /></MemoryRouter>)
+
+    expect(screen.getByRole('button', { name: 'Войти через Yandex ID' })).toBeVisible()
+    expect(screen.getByLabelText('Email')).toBeVisible()
+    expect(screen.getByLabelText('Пароль')).toBeVisible()
+    expect(screen.getByRole('button', { name: /^Войти$/ })).toBeEnabled()
   })
 
   it('exchanges an app OAuth callback and opens the session route', async () => {
@@ -119,21 +127,6 @@ describe('Yandex app session auth flow', () => {
     )
     expect(establish).toHaveBeenCalledWith(session)
     expect(window.location.search).toBe('')
-  })
-
-  it('revokes the returned token when the profile is outside the frontend rollout', async () => {
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', '11111111-1111-4111-8111-111111111111')
-    window.history.replaceState(null, '', `/auth/yandex/callback${await appCallbackSearch()}`)
-    render(<MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>)
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Этот профиль не добавлен в пилот входа через Yandex ID.',
-    )
-    expect(repository.revokeAppSession).toHaveBeenCalledWith(
-      'https://stage.example.test',
-      session.session.token,
-    )
-    expect(establish).not.toHaveBeenCalled()
   })
 
   it('opens a matching Yandex app session for the authenticated FIT actor', async () => {

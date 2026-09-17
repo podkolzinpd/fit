@@ -15,7 +15,7 @@ import {
   getYandexAppSessionEntryConfig,
   getYandexIdPilotConfig,
   getYandexSessionLinkingConfig,
-  isYandexAppSessionPilotEnabled,
+  isYandexAppSessionEnabled,
   trainerHomePath,
 } from '../../app/feature-flags'
 import { useYandexAppSession } from '../../app/yandex-app-session-context'
@@ -172,15 +172,6 @@ function YandexAppSessionCallbackPage() {
           )
         })
         const result = await sessionRequest.current
-        if (!isYandexAppSessionPilotEnabled(result.profile.id)) {
-          try {
-            await yandexPilotRepository.revokeAppSession(apiBaseUrl, result.session.token)
-          } catch {
-            // Токен не сохраняется и не показывается пользователю. Серверный
-            // rollout assignment остаётся настоящей границей доступа.
-          }
-          throw new Error('Этот профиль не добавлен в пилот входа через Yandex ID.')
-        }
         if (actor !== null && result.profile.id !== actor.userId) {
           try {
             await yandexPilotRepository.revokeAppSession(apiBaseUrl, result.session.token)
@@ -540,7 +531,7 @@ function YandexAccountLinkingCallbackPage() {
           if (result.appSession !== undefined
             && result.profileId === actor.userId
             && result.appSession.profile.id === actor.userId
-            && isYandexAppSessionPilotEnabled(result.profileId)) {
+            && isYandexAppSessionEnabled()) {
             establish(result.appSession)
           }
         })

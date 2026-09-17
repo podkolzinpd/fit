@@ -3,7 +3,7 @@ import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, 
 import type { SessionActor } from '../shared/domain'
 import { authRepository } from '../data/repositories/auth.repository'
 import { yandexPilotRepository } from '../data/repositories/yandex-pilot.repository'
-import { isYandexMainRoutingPilotEnabled } from './feature-flags'
+import { isYandexMainRoutingEnabled } from './feature-flags'
 import { useOptionalYandexAppSession } from './yandex-app-session-context'
 
 interface AuthUser {
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const yandexActor = useMemo<SessionActor | null>(() => {
     const profile = yandexSession?.session?.profile
-    if (profile === undefined || !isYandexMainRoutingPilotEnabled(profile.id)) return null
+    if (profile === undefined || !isYandexMainRoutingEnabled()) return null
     if (profile.accountRole === 'trainer') {
       return {
         kind: 'trainer', role: 'trainer', userId: profile.id, email: null,
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [yandexSession?.session])
   const yandexRoutingEnabled = yandexSession?.session !== null
     && yandexSession?.session !== undefined
-    && isYandexMainRoutingPilotEnabled(yandexSession.session.profile.id)
+    && isYandexMainRoutingEnabled()
   const actor = yandexRoutingEnabled ? yandexActor : supabaseActor
   const loading = yandexRoutingEnabled
     ? yandexSession.loading

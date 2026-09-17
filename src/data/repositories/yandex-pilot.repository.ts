@@ -306,7 +306,7 @@ function responseError(status: number): Error {
 function appSessionResponseError(status: number): Error {
   if (status === 401) return new YandexAppSessionExpiredError()
   if (status === 403) {
-    return new Error('Yandex ID связан, но профиль ещё не включён в основной Yandex Cloud rollout.')
+    return new Error('Этот Yandex ID ещё не готов для входа в FIT. Войдите по email и паролю, затем привяжите Yandex ID на главной.')
   }
   if (status === 503) return new Error('Yandex Cloud вход временно недоступен. Попробуйте позднее.')
   return new Error('Не удалось открыть сессию через Yandex ID.')
