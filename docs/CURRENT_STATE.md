@@ -129,6 +129,12 @@
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых domain grants, а private push timer создаётся
   только после отдельного cost approval и health-check точной ревизии.
+- `main` готовит отдельный manual-only production bootstrap на существующем
+  Terraform stack: state `fit/prod`, один private PostgreSQL host, 20 GB,
+  deletion protection, 14 дней managed backup/PITR и private API/migration
+  containers. Bootstrap не запущен, не создаёт public route, не переносит tenant
+  data и не переключает пользователей. Контракт:
+  `docs/YANDEX_PRODUCTION_PLATFORM.md`.
 - Ограниченный Yandex ID pilot и доменная цепочка представлены в `000001–000027`:
   `000026` добавляет actor-scoped Assistant state, `000027` — безопасное linking
   FIT-профиля с Yandex ID и read-write app-session только через явный

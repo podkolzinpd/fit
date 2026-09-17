@@ -1,0 +1,13 @@
+environment                         = "prod"
+zone                                = "ru-central1-d"
+subnet_cidr                         = "10.52.0.0/24"
+postgres_resource_preset_id         = "s3-c2-m8"
+postgres_disk_size_gb               = 20
+postgres_backup_retain_period_days  = 14
+postgres_backup_window_start = {
+  hours   = 0
+  minutes = 30
+}
+postgres_deletion_protection        = true
+migration_execution_timeout         = "900s"
+allow_unauthenticated_api           = false

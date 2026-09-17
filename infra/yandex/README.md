@@ -1,8 +1,10 @@
 # Yandex Cloud infrastructure foundation
 
-This directory describes the first Fit stage environment in Yandex Cloud. It
-does not apply infrastructure automatically and contains no cloud credentials,
-database password, OAuth secret or Terraform state.
+This directory describes the shared Fit stage/production foundation in Yandex
+Cloud. Stage remains the automatic compatibility environment. Production uses
+the same reviewed resources with a separate `fit/prod` state and a manual-only
+bootstrap. The configuration contains no cloud credentials, database password,
+OAuth secret or Terraform state.
 
 ## Resources described
 
@@ -135,6 +137,14 @@ those three least-privilege bindings before image work or migrations.
 The exact bootstrap, migration and smoke-test sequence is documented in
 `docs/STAGE_DEPLOYMENT.md`.
 
+The small production profile is intentionally separate from stage and is
+documented in `docs/YANDEX_PRODUCTION_PLATFORM.md`. Its manual workflow creates
+one private PostgreSQL host with 20 GB storage, 14-day managed backup/PITR
+retention and private API/migration containers. It does not create public
+invocation, push scheduling, tenant rollout assignments or a data cutover. The
+single-host availability tradeoff is explicit and can be revisited without an
+application schema change.
+
 The service network `198.19.0.0/16` is explicitly allowed to reach only the
 PostgreSQL Odyssey port `6432`. Yandex assigns addresses from this range to
 network-connected Serverless Containers; it is distinct from the user subnet.
@@ -206,6 +216,8 @@ apply remain restricted to `main`.
 
 - a single PostgreSQL host is the MVP cost choice, not a high-availability
   production topology;
+- production bootstrap is manual and private; it does not make a new data plane
+  active until the separate migration, auth and routing gates pass;
 - the first compatibility migration provides transaction-local actor context;
 - Yandex ID verification, controlled stage enrollment and the read-only profile
   endpoint are implemented. The default-off browser pilot still requires a

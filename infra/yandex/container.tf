@@ -129,7 +129,7 @@ resource "yandex_serverless_container" "migration" {
   cores              = 1
   core_fraction      = 100
   concurrency        = 1
-  execution_timeout  = "300s"
+  execution_timeout  = var.migration_execution_timeout
   service_account_id = yandex_iam_service_account.migration.id
   labels             = local.labels
 
