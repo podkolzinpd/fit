@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { PublishedTrainingSummary, Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
-import { bodyZoneForExerciseName, loadBodyMap, muscleGroupForExerciseName, progressBodyMap } from './body-progress-map'
+import { bodyZoneForExerciseName, loadBodyMap, muscleGroupForExerciseName, progressBodyMap, workoutProgressBodyMap } from './body-progress-map'
 
 const summary: PublishedTrainingSummary = {
   id: 'published-1', sourceSummaryId: 'summary-1', clientId: 'client-1',
@@ -136,5 +136,28 @@ describe('body progress map', () => {
 
     expect(progressBodyMap({ ...summary, metrics: { ...summary.metrics, progressFacts: [] } }).regions).toEqual([])
     expect(loadBodyMap([workout], '2026-08-01', '2026-08-25').regions[0]?.group).toBe('biceps')
+  })
+
+  it('builds progress zones from recorded workout results when the AI summary has no facts', () => {
+    const makeWorkout = (id: string, date: string, weight: number): Workout => ({
+      id, clientId: 'client-1', clientName: 'Тест', workoutDate: localDate(date), status: 'done',
+      startTime: null, endTime: null, startedAt: `${date}T09:00:00Z`, completedAt: `${date}T10:00:00Z`,
+      notes: null, stageId: null, stageTitle: null, version: 1,
+      exercises: [{
+        id: `exercise-${id}`, ref: 'system:bench-press', source: 'system',
+        name: 'Жим гантелей лёжа (Гантели)', muscleGroup: 'chest', inputKind: 'strength', position: 0,
+        blockId: `block-${id}`, blockType: 'single', blockPreset: 'set', blockRounds: 1,
+        restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+        sets: [{ id: `set-${id}`, position: 0, version: 1, confirmedAt: `${date}T10:00:00Z`, fact: { weightKg: weight, reps: 10 } }],
+      }],
+    })
+    const result = workoutProgressBodyMap([
+      makeWorkout('before', '2026-07-31', 20),
+      makeWorkout('during', '2026-08-12', 25),
+    ], '2026-08-01', '2026-08-31')
+
+    expect(result.regions).toHaveLength(1)
+    expect(result.regions[0]).toMatchObject({ group: 'chest', percent: 25, valueLabel: '+25%' })
+    expect(result.regions[0]?.primaryDetail).toContain('Максимальный вес: 20 → 25 кг')
   })
 })

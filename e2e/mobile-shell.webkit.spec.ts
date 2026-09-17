@@ -150,7 +150,8 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
 async function expectCompactBodyMap(map: Locator) {
   await expect(map).toBeVisible()
   const geometry = await map.evaluate((element) => {
-    const mapStyle = getComputedStyle(element.closest('.progress-pro-list') ?? element.closest('.client-body-map-disclosure') ?? element)
+    const proList = element.closest('.progress-pro-list')
+    const mapStyle = getComputedStyle(proList ?? element.closest('.client-body-map-disclosure') ?? element)
     const rect = (selector: string) => {
       const node = element.querySelector<HTMLElement>(selector)
       if (!node) return null
@@ -160,6 +161,7 @@ async function expectCompactBodyMap(map: Locator) {
     const sidesElement = element.querySelector<HTMLElement>('.body-progress-sides')
     const sidesTrack = sidesElement ? getComputedStyle(sidesElement, '::before') : null
     return {
+      isProList: Boolean(proList),
       borderRadius: Number.parseFloat(mapStyle.borderTopLeftRadius),
       borderWidth: Number.parseFloat(mapStyle.borderTopWidth),
       modes: rect('.body-progress-modes'),
@@ -175,8 +177,15 @@ async function expectCompactBodyMap(map: Locator) {
   })
 
   expect(geometry.modes).not.toBeNull()
-  expect(geometry.borderRadius).toBeGreaterThanOrEqual(16)
-  expect(geometry.borderWidth).toBeGreaterThanOrEqual(1)
+  if (geometry.isProList) {
+    // PRO is intentionally a flat list of disclosure buttons without an
+    // additional frame around the opened section.
+    expect(geometry.borderRadius).toBe(0)
+    expect(geometry.borderWidth).toBe(0)
+  } else {
+    expect(geometry.borderRadius).toBeGreaterThanOrEqual(16)
+    expect(geometry.borderWidth).toBeGreaterThanOrEqual(1)
+  }
   expect(geometry.modes!.width).toBeLessThanOrEqual(166)
   // WebKit can report a 44 CSS px control a few hundredths above or below 44 px
   // after device-scale rounding.
@@ -933,7 +942,7 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
   await expect(page.getByRole('button', { name: 'Прогресс', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Нагрузка', exact: true })).toBeVisible()
   await page.getByRole('tab', { name: 'Обзор' }).click()
-  await expect(page.getByText('Твоя цель', { exact: true })).toBeVisible()
+  await expect(page.locator('.progress-overview-panel').getByText('Твоя цель', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'На следующей тренировке' })).toHaveCount(0)
   await expect(page.getByText('Прогресс уже заметен, ты на верном пути.')).toHaveCount(0)
   await expect(page.locator('.client-progress-next-step')).toHaveCount(0)
@@ -992,12 +1001,14 @@ test('iPhone: standard goal facts stay readable without horizontal overflow', as
   await page.route('**/rest/v1/client_custom_metrics?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
 
   await page.goto('/me/progress')
-  const goal = page.locator('.client-progress-goal-story')
+  const overviewGoal = page.locator('.progress-overview-panel .client-progress-goal-story')
+  await expect(overviewGoal.getByText('В диапазоне сейчас', { exact: true })).toBeVisible()
+  await overviewGoal.getByRole('link', { name: 'Подробнее в ПРО' }).click()
+  const goal = page.locator('#goal-details .client-progress-goal-story')
   await expect(goal.getByText('В диапазоне сейчас', { exact: true })).toBeVisible()
   await expect(goal.getByText('Сейчас', { exact: true })).toBeVisible()
   await expect(goal.getByText('Цель', { exact: true })).toBeVisible()
   await expect(goal.getByRole('link', { name: 'Смотреть значения и график' })).toHaveCount(0)
-  await page.getByRole('tab', { name: 'ПРО' }).click()
   await page.getByText('Замеры и графики', { exact: true }).click()
   const measurements = page.locator('.client-progress-measurements-story')
   await expect(measurements.getByRole('heading', { name: 'Замеры' })).toBeVisible()
@@ -1321,9 +1332,10 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     await expect(summary.getByRole('heading', { name: 'Распределение подходов' })).toBeVisible()
     await expectCompactBodyMap(summary.locator('.body-progress-map'))
     await summary.getByRole('tab', { name: 'Обзор' }).click()
-    await expect(summary.getByRole('region', { name: 'Текущая неделя' })).toBeVisible()
-    await expect(summary.getByText('Твоя цель', { exact: true })).toBeVisible()
-    await expect(summary.getByText('Открыть анализ', { exact: true })).toBeVisible()
+    const overview = summary.getByLabel('Обзор')
+    await expect(overview.getByRole('region', { name: 'Текущая неделя' })).toBeVisible()
+    await expect(overview.getByText('Твоя цель', { exact: true })).toBeVisible()
+    await expect(overview.getByText('Открыть анализ', { exact: true })).toBeVisible()
     await page.evaluate(() => {
       window.localStorage.setItem('fit.appTheme', 'dark')
       window.dispatchEvent(new Event('fit-theme-change'))
