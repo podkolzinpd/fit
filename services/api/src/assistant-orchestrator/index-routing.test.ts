@@ -103,10 +103,13 @@ describe('program routing in the authenticated orchestrator', () => {
   })
 })
 
-it('rejects a client account before routing or calling the model', async () => {
+it('allows a client account to use the shared assistant without trainer program routing', async () => {
   const { actor, service } = setup('record_workout', 'applied', false, 'client')
-  await expect(runAssistantTurn('Bearer actor-token', { conversationId, turnId: crypto.randomUUID(), message: 'Составь программу' })).rejects.toMatchObject({ status: 403, code: 'trainer_role_required' })
+  await expect(runAssistantTurn('Bearer actor-token', { conversationId, turnId: crypto.randomUUID(), message: 'Что ты умеешь?' })).resolves.toEqual({
+    reply: 'Могу коротко пообщаться и записать тренировку — целиком или по одному упражнению, текстом или голосом.',
+    action: null,
+  })
   expect(programModelJson).not.toHaveBeenCalled()
   expect(actor.rpc).not.toHaveBeenCalled()
-  expect(service.rpc).not.toHaveBeenCalled()
+  expect(service.rpc).toHaveBeenCalledWith('persist_assistant_response', expect.any(Object))
 })

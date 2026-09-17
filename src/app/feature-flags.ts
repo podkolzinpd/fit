@@ -15,8 +15,8 @@ export function isTrainerDiscoveryHomeEnabled() {
   return import.meta.env.VITE_TRAINER_DISCOVERY_HOME_ENABLED !== 'false'
 }
 
-// Ассистент доступен всем тренерам в production; TrainerOnly и RLS/ownership
-// остаются границами роли и данных. VITE_ASSISTANT_NAV_ENABLED=false —
+// Ассистент доступен обеим продуктовым ролям в production; серверные проверки
+// роли и ownership остаются границами данных. VITE_ASSISTANT_NAV_ENABLED=false —
 // мгновенный production kill switch. В development allowlist сохраняет
 // изолированный локальный пилот.
 export function isAssistantNavPilotEnabled(userId: string, email?: string | null) {

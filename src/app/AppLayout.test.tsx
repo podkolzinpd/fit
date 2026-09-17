@@ -82,6 +82,7 @@ describe('AppLayout: единственная UI Identity', () => {
     ['trainer', '/exercises', 'exercise-catalog-identity'],
     ['trainer', '/profile', 'trainer-profile-identity'],
     ['trainer', '/profile/settings', 'trainer-profile-identity'],
+    ['client', '/assistant', 'assistant-identity'],
     ['trainer', '/assistant', 'assistant-identity'],
   ] as const)('применяет identity для %s %s', (role, path, routeClass) => {
     authState.role = role
@@ -199,12 +200,14 @@ describe('AppLayout: вкладка ассистента', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Ассистент теперь доступен')
   })
 
-  it('не показывает trainer-only вкладку клиенту', () => {
+  it('показывает клиенту ассистента третьим пунктом того же меню', () => {
     vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
     vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'pilot-client')
     authState.userId = 'pilot-client'
     renderLayout('/me')
     const navigation = screen.getByRole('navigation', { name: 'Основная навигация' })
-    expect(within(navigation).queryByRole('link', { name: 'Ассистент' })).toBeNull()
+    expect(within(navigation).getAllByRole('link').map((link) => link.textContent)).toEqual(['Кабинет', 'Тренировки', 'Ассистент', 'Прогресс', 'Профиль'])
+    expect(iconName(within(navigation).getByRole('link', { name: 'Ассистент' }))).toBe('assistant')
+    expect(screen.getByRole('status')).toHaveTextContent('Ассистент теперь доступен')
   })
 })
