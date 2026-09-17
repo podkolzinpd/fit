@@ -1,3 +1,6 @@
+import { createCipheriv, randomBytes, scryptSync } from 'node:crypto'
+import { gzipSync } from 'node:zlib'
+
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -9,10 +12,14 @@ import {
   fingerprintStandaloneClient,
   fingerprintTenant,
   getTenantMigrationRoot,
+  readJsonObject,
   readMigrationBundle,
   TenantMigrationArtifactError,
 } from './bundle.js'
-import type { TenantMigrationBundle } from './types.js'
+import type {
+  TenantMigrationBundle,
+  TenantMigrationEnvelope,
+} from './types.js'
 
 const TRAINER_ID = '11111111-1111-4111-8111-111111111111'
 const CLIENT_PROFILE_ID = '22222222-2222-4222-8222-222222222222'
@@ -60,6 +67,35 @@ function buildFullCohortBundle(): TenantMigrationBundle {
   }
 }
 
+function encryptLegacyGzipEnvelope(
+  bundle: TenantMigrationBundle,
+): TenantMigrationEnvelope {
+  const salt = randomBytes(16)
+  const iv = randomBytes(12)
+  const key = scryptSync(PASSPHRASE, salt, 32, {
+    N: 32_768,
+    r: 8,
+    p: 1,
+    maxmem: 64 * 1024 * 1024,
+  })
+  const cipher = createCipheriv('aes-256-gcm', key, iv)
+  const ciphertext = Buffer.concat([
+    cipher.update(gzipSync(canonicalJson(readJsonObject(bundle)), { level: 9 })),
+    cipher.final(),
+  ])
+  return {
+    format: 'fit-tenant-envelope-v2',
+    compression: { name: 'gzip' },
+    kdf: { name: 'scrypt', salt: salt.toString('base64') },
+    cipher: {
+      name: 'aes-256-gcm',
+      iv: iv.toString('base64'),
+      authTag: cipher.getAuthTag().toString('base64'),
+    },
+    ciphertext: ciphertext.toString('base64'),
+  }
+}
+
 describe('tenant migration bundle', () => {
   it('canonicalizes object keys and table row order', () => {
     expect(canonicalJson({ z: 1, a: { y: true, x: null } })).toBe(
@@ -81,14 +117,14 @@ describe('tenant migration bundle', () => {
     const bundle = buildBundle()
     const envelope = await encryptMigrationBundle(bundle, PASSPHRASE)
     expect(envelope).toMatchObject({
-      format: 'fit-tenant-envelope-v2',
-      compression: { name: 'gzip' },
+      format: 'fit-tenant-envelope-v3',
+      compression: { name: 'brotli' },
     })
     expect(JSON.stringify(envelope)).not.toContain(TRAINER_ID)
     await expect(decryptMigrationBundle(envelope, PASSPHRASE)).resolves.toEqual(bundle)
   })
 
-  it('compresses repetitive cohort data before encryption', async () => {
+  it('compresses repetitive cohort data densely before encryption', async () => {
     const bundle = buildBundle()
     bundle.tables[0] = buildMigrationTable(
       'public.profiles',
@@ -104,6 +140,13 @@ describe('tenant migration bundle', () => {
 
     expect(encryptedBytes).toBeLessThan(plaintextBytes / 4)
     await expect(decryptMigrationBundle(envelope, PASSPHRASE)).resolves.toEqual(bundle)
+  })
+
+  it('keeps accepting gzip-compressed v2 envelopes', async () => {
+    const bundle = buildBundle()
+    await expect(
+      decryptMigrationBundle(encryptLegacyGzipEnvelope(bundle), PASSPHRASE),
+    ).resolves.toEqual(bundle)
   })
 
   it('keeps standalone client artifacts distinct from trainer tenants', async () => {
