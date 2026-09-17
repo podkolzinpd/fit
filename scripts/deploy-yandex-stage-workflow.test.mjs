@@ -7,13 +7,21 @@ const workflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-yandex-stage.yml'),
   'utf8',
 )
+const oidcExchangeScript = readFileSync(
+  join(import.meta.dirname, 'yandex-github-oidc.sh'),
+  'utf8',
+)
 
-test('configures and refreshes an explicit ephemeral Yandex CLI profile', () => {
-  assert.equal(
-    workflow.match(/config profile create github-actions/g)?.length,
-    2,
+test('configures a fresh ephemeral Yandex CLI profile after every OIDC exchange', () => {
+  assert.match(oidcExchangeScript, /if command -v yc >\/dev\/null 2>&1/)
+  assert.match(
+    oidcExchangeScript,
+    /profile_name="github-actions-\$\{GITHUB_RUN_ID:-local\}-\$\{GITHUB_JOB:-job\}-\$\{RANDOM\}"/,
   )
-  assert.equal(workflow.match(/config set token "\$YC_IAM_TOKEN"/g)?.length, 4)
+  assert.match(oidcExchangeScript, /yc config profile create "\$profile_name"/)
+  assert.match(oidcExchangeScript, /yc config set token "\$iam_token"/)
+  assert.match(oidcExchangeScript, /yc config set folder-id "\$YC_FOLDER_ID"/)
+  assert.doesNotMatch(workflow, /yc config profile create|yc config set token/)
 })
 const previewSyncWorkflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'sync-yandex-stage-preview.yml'),
