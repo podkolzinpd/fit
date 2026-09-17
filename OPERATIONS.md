@@ -265,6 +265,24 @@ Queue по умолчанию — `YAFIT`; заголовок организац
 `app_feedback_tracker_org_header="X-Cloud-Org-ID"`. Секреты нельзя добавлять в
 GitHub/Vercel variables, `.env`, команды или логи.
 
+## Подготовка существующего Yandex-контура к production
+
+Отдельный `fit-prod` stack не создаётся. Текущий контур остаётся в state
+`fit/stage/terraform.tfstate` и после завершения auth/data cutover становится
+production data plane. Имена ресурсов не переименовываются, чтобы не допустить
+их replacement.
+
+Workflow `Deploy Yandex stage` задаёт существующему Managed PostgreSQL 14 дней
+backup retention и окно `00:30 UTC`. Automatic plan policy разрешает только это
+точное in-place изменение: второй cluster, resize, новый host, public IP,
+delete/replace и любые сопутствующие изменения database config остаются
+заблокированы. Диск остаётся 10 GB, topology — один private host.
+
+Этот этап не переключает routing, не переносит данные и не отключает Supabase.
+Проверка восстановления в отдельный временный cluster выполняется перед
+финальным cutover и не запускается автоматически, потому что временно создаёт
+платный ресурс. Полный контракт: `docs/YANDEX_PRODUCTION_PLATFORM.md`.
+
 ## GitHub Secrets
 
 В repository secrets должны быть настроены:

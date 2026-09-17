@@ -108,6 +108,19 @@ test('keeps enough time for the bounded three-attempt summary contract', () => {
   assert.match(workflow, /^  TF_VAR_api_execution_timeout: '120s'$/m)
 })
 
+test('hardens backups on the existing database without provisioning a second stack', () => {
+  assert.match(
+    workflow,
+    /^  TF_VAR_postgres_backup_retain_period_days: '14'$/m,
+  )
+  assert.match(
+    workflow,
+    /^  TF_VAR_postgres_backup_window_start: '\{"hours":0,"minutes":30\}'$/m,
+  )
+  assert.match(workflow, /key=fit\/stage\/terraform\.tfstate/)
+  assert.doesNotMatch(workflow, /fit\/prod\/terraform\.tfstate/)
+})
+
 test('allows the reviewed local, iOS, preview, and production frontend origins', () => {
   assert.match(
     workflow,

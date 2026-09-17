@@ -231,6 +231,48 @@ const isExactDatabasePublicAccessRemoval = (resource) => {
   )
 }
 
+const normalizeSingleNestedBlock = (value) => {
+  if (!Array.isArray(value)) return value
+  return value.length === 1 ? value[0] : undefined
+}
+
+const databaseBackupConfigFields = new Set([
+  'backup_retain_period_days',
+  'backup_window_start',
+])
+
+const isExactDatabaseBackupHardening = (resource) => {
+  if (
+    resource.address !== 'yandex_mdb_postgresql_cluster_v2.fit'
+    || resource.change.actions.join(',') !== 'update'
+    || !hasOnlyTopLevelChanges(resource, new Set(['config']))
+  ) return false
+
+  const beforeConfig = normalizeSingleNestedBlock(resource.change.before?.config)
+  const afterConfig = normalizeSingleNestedBlock(resource.change.after?.config)
+  if (
+    beforeConfig === null
+    || afterConfig === null
+    || typeof beforeConfig !== 'object'
+    || typeof afterConfig !== 'object'
+  ) return false
+
+  const withoutBackupSettings = (config) => Object.fromEntries(
+    Object.entries(config).filter(
+      ([key]) => !databaseBackupConfigFields.has(key),
+    ),
+  )
+  if (!isDeepStrictEqual(
+    withoutBackupSettings(beforeConfig),
+    withoutBackupSettings(afterConfig),
+  )) return false
+
+  const backupWindow = normalizeSingleNestedBlock(afterConfig.backup_window_start)
+  return Number(afterConfig.backup_retain_period_days) === 14
+    && Number(backupWindow?.hours) === 0
+    && Number(backupWindow?.minutes) === 30
+}
+
 const isExactLegacyDataLensIngressRemoval = (resource) => {
   if (
     resource.address !== postgresSecurityGroupAddress
@@ -415,6 +457,7 @@ const isAutomaticStageChange = (resource) => {
     isExactPushDispatcherImagePullerUpdate(resource)
     || isExactPushDispatcherTriggerDescriptionUpdate(resource)
     || isExactDatabasePublicAccessRemoval(resource)
+    || isExactDatabaseBackupHardening(resource)
     || isExactLegacyDataLensIngressRemoval(resource)
   ) {
     return true

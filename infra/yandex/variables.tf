@@ -108,6 +108,41 @@ variable "postgres_disk_size_gb" {
   }
 }
 
+variable "postgres_backup_retain_period_days" {
+  description = "Optional Managed PostgreSQL automatic backup and PITR retention window. Production uses 14 days."
+  type        = number
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = var.postgres_backup_retain_period_days == null || (
+      var.postgres_backup_retain_period_days >= 7
+      && var.postgres_backup_retain_period_days <= 60
+    )
+    error_message = "postgres_backup_retain_period_days must be between 7 and 60 days."
+  }
+}
+
+variable "postgres_backup_window_start" {
+  description = "Optional UTC start time for the daily Managed PostgreSQL backup."
+  type = object({
+    hours   = number
+    minutes = number
+  })
+  default  = null
+  nullable = true
+
+  validation {
+    condition = var.postgres_backup_window_start == null || (
+      var.postgres_backup_window_start.hours >= 0
+      && var.postgres_backup_window_start.hours <= 23
+      && var.postgres_backup_window_start.minutes >= 0
+      && var.postgres_backup_window_start.minutes <= 59
+    )
+    error_message = "Backup window hours must be 0-23 and minutes 0-59."
+  }
+}
+
 variable "postgres_deletion_protection" {
   description = "Protect the managed PostgreSQL cluster from accidental deletion."
   type        = bool

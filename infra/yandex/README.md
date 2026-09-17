@@ -1,8 +1,10 @@
 # Yandex Cloud infrastructure foundation
 
-This directory describes the first Fit stage environment in Yandex Cloud. It
-does not apply infrastructure automatically and contains no cloud credentials,
-database password, OAuth secret or Terraform state.
+This directory describes the Fit Yandex Cloud foundation. The existing stage
+resources stay in `fit/stage/terraform.tfstate` and are promoted in place after
+the migration gates pass; a second production stack is not created. The
+configuration contains no cloud credentials, database password, OAuth secret
+or Terraform state.
 
 ## Resources described
 
@@ -135,6 +137,15 @@ those three least-privilege bindings before image work or migrations.
 The exact bootstrap, migration and smoke-test sequence is documented in
 `docs/STAGE_DEPLOYMENT.md`.
 
+No separate production stack is created for the current scale. The existing
+`fit/stage/terraform.tfstate` resources are promoted in place after the auth and
+data cutover gates pass. The current private PostgreSQL host keeps its 10 GB
+disk, deletion protection and single-host topology; Terraform only hardens its
+managed backup retention to 14 days with a `00:30 UTC` window. Exact plan-policy
+checks prevent a resize, second cluster, public IP, delete or replacement from
+riding along with that update. The promotion contract is documented in
+`docs/YANDEX_PRODUCTION_PLATFORM.md`.
+
 The service network `198.19.0.0/16` is explicitly allowed to reach only the
 PostgreSQL Odyssey port `6432`. Yandex assigns addresses from this range to
 network-connected Serverless Containers; it is distinct from the user subnet.
@@ -206,6 +217,8 @@ apply remain restricted to `main`.
 
 - a single PostgreSQL host is the MVP cost choice, not a high-availability
   production topology;
+- the existing Yandex stack is not an active production data plane until the
+  separate migration, auth and routing gates pass;
 - the first compatibility migration provides transaction-local actor context;
 - Yandex ID verification, controlled stage enrollment and the read-only profile
   endpoint are implemented. The default-off browser pilot still requires a
