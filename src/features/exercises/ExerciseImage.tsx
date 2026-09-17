@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ExerciseIcon } from '../../shared/icons'
+import { useCustomExercisePhotoUrl } from './custom-exercise-photo'
 import { shouldUsePrivateVitalStorage, useVitalMediaUrl } from './vitalMedia'
 
 export type ExerciseImageVariant = 'thumbnail' | 'preview' | 'picker' | 'detail' | 'technique'
@@ -27,16 +28,17 @@ function usePrefersReducedMotion() {
   return reducedMotion
 }
 
-export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, alt = '', variant = 'thumbnail', playVideo = false }: {
+export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, customPhotoPath, alt = '', variant = 'thumbnail', playVideo = false }: {
   src?: string
   fallbackSrc?: string
   motionSrc?: string
   videoSrc?: string
+  /** Приватный storage-путь фото кастомного упражнения (custom_exercises.image_path) — подписывается отдельно от src. */
+  customPhotoPath?: string | null
   alt?: string
   variant?: ExerciseImageVariant
   playVideo?: boolean
 }) {
-  const safeSrc = reviewedExerciseImageSource(src)
   const safeFallbackSrc = reviewedExerciseImageSource(fallbackSrc)
   const safeMotionSrc = reviewedExerciseImageSource(motionSrc)
   const [primaryFailed, setPrimaryFailed] = useState(false)
@@ -48,6 +50,9 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, alt = '',
   const videoRef = useRef<HTMLVideoElement>(null)
   const reducedMotion = usePrefersReducedMotion()
   const wantsVideo = variant === 'technique' || (variant === 'picker' && playVideo)
+  const resolvedCustomPhoto = useCustomExercisePhotoUrl(customPhotoPath)
+  const customPhotoLoading = Boolean(customPhotoPath) && !resolvedCustomPhoto
+  const safeSrc = resolvedCustomPhoto ?? reviewedExerciseImageSource(src)
   const privateVitalMedia = shouldUsePrivateVitalStorage(safeSrc) || shouldUsePrivateVitalStorage(videoSrc)
   const resolvedSrc = useVitalMediaUrl(safeSrc)
   const resolvedMotionSrc = useVitalMediaUrl(safeMotionSrc, variant === 'technique' && !privateVitalMedia)
@@ -88,7 +93,7 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, alt = '',
   // after an explicit tap. Scrolling or visibility never starts playback.
   const videoAvailable = wantsVideo && Boolean(resolvedVideoSrc) && !videoFailed
   if (!primaryAvailable && !stillFallbackAvailable && !motionFallbackAvailable && !videoAvailable) {
-    return <span className={`${className} exercise-image-empty${privateVitalMedia ? ' exercise-image-loading' : ''}`} aria-hidden="true"><ExerciseIcon /></span>
+    return <span className={`${className} exercise-image-empty${(privateVitalMedia || customPhotoLoading) ? ' exercise-image-loading' : ''}`} aria-hidden="true"><ExerciseIcon /></span>
   }
 
   // Compact cards never animate, but the end frame still protects them from a

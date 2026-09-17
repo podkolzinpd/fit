@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExercisePicker, equipmentForSelection, filterExercises, groupsForSelection, musclesForGroup, purposesForSelection } from './ExercisePicker'
 import { recentExercisesForClient } from './client-recent-exercises'
 import type { ExerciseCatalogState } from './exercise-catalog'
+import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISES } from '../../shared/system-exercises'
 import type { ExerciseSnapshot, Workout } from '../../shared/domain'
 
@@ -125,6 +126,7 @@ describe('ExercisePicker', () => {
     else delete (window as { localStorage?: Storage }).localStorage
     if (originalVisualViewport) Object.defineProperty(window, 'visualViewport', originalVisualViewport)
     else delete (window as { visualViewport?: VisualViewport }).visualViewport
+    vi.restoreAllMocks()
   })
 
   it('filters the complete catalog by search and category', () => {
@@ -169,6 +171,19 @@ describe('ExercisePicker', () => {
 
     expect([...document.querySelectorAll<HTMLElement>('.picker-item [data-exercise-ref]')].map((node) => node.dataset.exerciseRef))
       .toEqual(['recent-row', 'custom-row', 'system-row'])
+  })
+
+  it('показывает миниатюру сохранённого фото кастомного упражнения в списке', async () => {
+    vi.spyOn(exercisesRepository, 'createCustomExercisePhotoUrl').mockResolvedValue('https://signed.example/jump.jpg')
+    const withPhoto: ExerciseSnapshot = {
+      source: 'custom', ref: 'jump', customExerciseId: 'jump', name: 'Прыжки радости',
+      muscleGroup: 'cardio', inputKind: 'reps', imagePath: 'trainer-1/jump.jpg',
+    }
+
+    render(<ExercisePicker catalog={catalog({ exercises: [withPhoto] })} onPick={vi.fn()} onClose={vi.fn()} />)
+
+    const row = document.querySelector('[data-exercise-ref="jump"]')!.closest('.picker-item')!
+    await waitFor(() => expect(row.querySelector('.picker-item-media img')).toHaveAttribute('src', 'https://signed.example/jump.jpg'))
   })
 
   it('скрывает только системный дубль при новом выборе и оставляет одноимённое упражнение тренера', () => {

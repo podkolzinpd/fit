@@ -306,6 +306,8 @@ export interface ExerciseSnapshot {
   /** Короткая петля техники; без неё медиаблок упражнения не показывается. */
   techniqueVideoUrl?: string
   instructions?: string[]
+  /** Путь к фото на обложку в приватном Storage кастомного упражнения (не готовый URL — см. useCustomExercisePhotoUrl). */
+  imagePath?: string | null
 }
 
 export type RunningProgressFormat =

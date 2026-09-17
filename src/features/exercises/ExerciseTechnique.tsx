@@ -32,6 +32,7 @@ export function hasExerciseMedia(exercise?: ExerciseSnapshot): exercise is Exerc
     || reviewedExerciseImageSource(exercise.fallbackImageUrl)
     || reviewedExerciseImageSource(exercise.motionImageUrl)
     || exercise.techniqueVideoUrl
+    || exercise.imagePath
   ))
 }
 
@@ -41,13 +42,14 @@ export function ExerciseTechniqueContent({ exercise, beforeFacts }: {
 }) {
   const hasMedia = hasExerciseMedia(exercise)
   return <div className="picker-technique-scroll">
-    {hasMedia && <ExerciseImage src={exercise.imageUrl} fallbackSrc={exercise.fallbackImageUrl} motionSrc={exercise.motionImageUrl} videoSrc={exercise.techniqueVideoUrl} alt={exercise.name} variant="technique" />}
+    {hasMedia && <ExerciseImage src={exercise.imageUrl} fallbackSrc={exercise.fallbackImageUrl} motionSrc={exercise.motionImageUrl} videoSrc={exercise.techniqueVideoUrl} customPhotoPath={exercise.imagePath} alt={exercise.name} variant="technique" />}
     <div className="picker-technique-title"><h2>{exercise.name}</h2><p>{[exercise.equipment ?? 'Без оборудования', MUSCLE_GROUP_LABELS[exercise.muscleGroup]].join(' · ')}</p></div>
     {beforeFacts}
     <div className="picker-technique-facts"><span><small>Формат</small><strong>{INPUT_KIND_LABELS[exercise.inputKind]}</strong></span>{exercise.primaryMuscleDetail && <span><small>Основная мышца</small><strong>{exercise.primaryMuscleDetail}</strong></span>}</div>
+    {exercise.description && <div className="picker-technique-description"><h3>Описание</h3><p>{exercise.description}</p></div>}
     {exercise.instructions?.length
       ? <div className="picker-technique-instructions"><h3>Как выполнять</h3><ol>{exercise.instructions.map((instruction, index) => <li key={`${exercise.ref}-${index}`}>{instruction}</li>)}</ol></div>
-      : <p className="picker-technique-note">{hasMedia ? 'Пошагового описания пока нет — ориентируйтесь на движение в превью.' : 'Для этого упражнения пока нет изображения и пошагового описания.'}</p>}
+      : !exercise.description && <p className="picker-technique-note">{hasMedia ? 'Пошагового описания пока нет — ориентируйтесь на движение в превью.' : 'Для этого упражнения пока нет изображения и пошагового описания.'}</p>}
   </div>
 }
 
