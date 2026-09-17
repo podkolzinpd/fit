@@ -105,6 +105,15 @@ export function isYandexAppSessionEnabled(): boolean {
   return import.meta.env.VITE_YANDEX_APP_SESSION_ENABLED === 'true'
 }
 
+// Новая регистрация создаёт профиль только в Yandex PostgreSQL, поэтому она
+// доступна лишь когда полноценная app-session и sticky routing включены вместе.
+// Отдельный default-off switch позволяет доставить код до продуктового rollout.
+export function getYandexNativeRegistrationConfig(): YandexIdPilotConfig | null {
+  if (import.meta.env.VITE_YANDEX_NATIVE_REGISTRATION_ENABLED !== 'true') return null
+  if (!isYandexAppSessionEnabled() || !isYandexMainRoutingEnabled()) return null
+  return getYandexPublicConfig()
+}
+
 // Sticky routing основного Assistant — отдельный default-off rollout. Он не
 // переиспользует allowlist входа: после включения выбранный профиль работает
 // только с Yandex API и не откатывает отдельные запросы на Supabase.

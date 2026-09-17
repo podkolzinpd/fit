@@ -312,6 +312,24 @@ function appSessionResponseError(status: number): Error {
   return new Error('Не удалось открыть сессию через Yandex ID.')
 }
 
+export class YandexNativeRegistrationRefreshRequiredError extends Error {
+  constructor() {
+    super('Условия использования обновились. Обновите регистрацию и подтвердите их заново.')
+    this.name = 'YandexNativeRegistrationRefreshRequiredError'
+  }
+}
+
+function nativeRegistrationResponseError(status: number): Error {
+  if (status === 409) {
+    return new Error('Этот Yandex ID уже связан со старым аккаунтом FIT. Войдите в старый аккаунт и привяжите его в настройках.')
+  }
+  if (status === 400) return new Error('Проверьте имя, роль и часовой пояс.')
+  if (status === 412) return new YandexNativeRegistrationRefreshRequiredError()
+  if (status === 401) return new Error('Вход через Yandex ID не подтверждён. Начните заново.')
+  if (status === 403) return new Error('Регистрация через Yandex ID пока недоступна.')
+  return new Error('Не удалось создать аккаунт через Yandex ID. Попробуйте ещё раз.')
+}
+
 export class YandexAppSessionExpiredError extends Error {
   constructor() {
     super('Сессия Yandex ID истекла. Войдите заново.')
@@ -448,6 +466,36 @@ export const yandexPilotRepository = {
     if (!response.ok) throw appSessionResponseError(response.status)
     const result = appSessionSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат Yandex ID сессии.')
+    return result.data
+  },
+  async registerYandexAccount(
+    apiBaseUrl: string,
+    code: string,
+    codeVerifier: string,
+    input: {
+      accountRole: 'trainer' | 'client'
+      firstName: string
+      timezone: string
+      termsVersion: string
+      privacyVersion: string
+    },
+  ): Promise<YandexAppSession> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.registerYandexAccount(
+        apiBaseUrl,
+        code,
+        codeVerifier,
+        input,
+      )
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
+    }
+    if (!response.ok) throw nativeRegistrationResponseError(response.status)
+    const result = appSessionSchema.safeParse(await response.json())
+    if (!result.success) {
+      throw new Error('Stage вернул неподдерживаемый формат регистрации Yandex ID.')
+    }
     return result.data
   },
   async getAppSession(

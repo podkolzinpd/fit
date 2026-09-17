@@ -2,7 +2,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthPage, YandexAppSessionPage, YandexPilotCallbackPage } from './AuthPages'
-import { createYandexAuthorizationUrl } from './yandex-pilot-oauth'
+import {
+  createYandexAuthorizationUrl,
+  readPendingYandexNativeRegistration,
+  savePendingYandexNativeRegistration,
+} from './yandex-pilot-oauth'
+import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 
 const PROFILE_ID = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
 const session = {
@@ -46,6 +51,7 @@ vi.mock('../../app/yandex-app-session-context', () => ({
 
 const repository = vi.hoisted(() => ({
   exchangeCodeForAppSession: vi.fn(),
+  registerYandexAccount: vi.fn(),
   revokeAppSession: vi.fn(),
 }))
 vi.mock('../../data/repositories/yandex-pilot.repository', () => ({
@@ -67,6 +73,23 @@ async function appCallbackSearch(): Promise<string> {
   return `?code=one-time-code&state=${authorizationUrl.searchParams.get('state')}`
 }
 
+async function registrationCallbackSearch(): Promise<string> {
+  savePendingYandexNativeRegistration({
+    accountRole: 'trainer',
+    firstName: 'Ирина',
+    timezone: 'Europe/Moscow',
+    termsVersion: TERMS_VERSION,
+    privacyVersion: PRIVACY_VERSION,
+  })
+  const authorizationUrl = new URL(await createYandexAuthorizationUrl(
+    'public-client-id',
+    'http://localhost/auth/yandex/callback',
+    sessionStorage,
+    'register',
+  ))
+  return `?code=registration-code&state=${authorizationUrl.searchParams.get('state')}`
+}
+
 describe('Yandex app session auth flow', () => {
   beforeEach(() => {
     establish.mockReset()
@@ -74,6 +97,7 @@ describe('Yandex app session auth flow', () => {
     reset.mockReset()
     signOut.mockReset().mockResolvedValue(undefined)
     repository.exchangeCodeForAppSession.mockReset().mockResolvedValue(session)
+    repository.registerYandexAccount.mockReset().mockResolvedValue(session)
     repository.revokeAppSession.mockReset().mockResolvedValue(undefined)
     authState.mockReset().mockReturnValue({ actor: null, loading: false, error: null })
     appSessionState.mockReset().mockReturnValue({
@@ -108,6 +132,86 @@ describe('Yandex app session auth flow', () => {
     expect(screen.getByLabelText('Email')).toBeVisible()
     expect(screen.getByLabelText('Пароль')).toBeVisible()
     expect(screen.getByRole('button', { name: /^Войти$/ })).toBeEnabled()
+  })
+
+  it('uses Yandex ID as the only primary registration action when the native flow is enabled', () => {
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    render(<MemoryRouter><AuthPage /></MemoryRouter>)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Создать аккаунт' }))
+    expect(screen.getByLabelText('Тип аккаунта')).toBeVisible()
+    expect(screen.getByLabelText('Имя')).toBeVisible()
+    expect(screen.queryByLabelText('Email')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Пароль')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Создать через Yandex ID' })).toHaveClass('primary')
+    expect(screen.getByRole('button', { name: 'Создать по email' })).toBeVisible()
+  })
+
+  it('registers after the PKCE callback and clears the pending profile draft', async () => {
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    window.history.replaceState(null, '', `/auth/yandex/callback${await registrationCallbackSearch()}`)
+    render(<MemoryRouter initialEntries={['/auth/yandex/callback']}>
+      <Routes>
+        <Route path="/auth/yandex/callback" element={<YandexPilotCallbackPage />} />
+        <Route path="/auth/yandex/session" element={<p>registered session</p>} />
+      </Routes>
+    </MemoryRouter>)
+
+    expect(await screen.findByText('registered session')).toBeVisible()
+    expect(repository.registerYandexAccount).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      'registration-code',
+      expect.stringMatching(/^[A-Za-z0-9_-]{43,128}$/),
+      {
+        accountRole: 'trainer',
+        firstName: 'Ирина',
+        timezone: 'Europe/Moscow',
+        termsVersion: TERMS_VERSION,
+        privacyVersion: PRIVACY_VERSION,
+      },
+    )
+    expect(establish).toHaveBeenCalledWith(session)
+    expect(readPendingYandexNativeRegistration()).toBeNull()
+  })
+
+  it('keeps the registration draft for a safe OAuth restart after an API error', async () => {
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    repository.registerYandexAccount.mockRejectedValueOnce(
+      new Error('Yandex Cloud временно недоступен.'),
+    )
+    window.history.replaceState(null, '', `/auth/yandex/callback${await registrationCallbackSearch()}`)
+    render(<MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Yandex Cloud временно недоступен.')
+    expect(window.location.search).toBe('')
+    expect(screen.getByRole('button', { name: 'Начать заново' })).toBeEnabled()
+    expect(readPendingYandexNativeRegistration()).toEqual({
+      accountRole: 'trainer',
+      firstName: 'Ирина',
+      timezone: 'Europe/Moscow',
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+    })
+  })
+
+  it('clears stale legal acceptance and requires a fresh registration page', async () => {
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    const refreshRequired = new Error('Условия использования обновились.')
+    refreshRequired.name = 'YandexNativeRegistrationRefreshRequiredError'
+    repository.registerYandexAccount.mockRejectedValueOnce(refreshRequired)
+    window.history.replaceState(null, '', `/auth/yandex/callback${await registrationCallbackSearch()}`)
+    render(<MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Условия использования обновились.')
+    expect(readPendingYandexNativeRegistration()).toBeNull()
+    expect(screen.getByRole('link', { name: 'Обновить регистрацию' })).toHaveAttribute(
+      'href',
+      '/auth',
+    )
   })
 
   it('exchanges an app OAuth callback and opens the session route', async () => {

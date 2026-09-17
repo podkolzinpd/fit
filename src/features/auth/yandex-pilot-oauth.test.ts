@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  clearPendingYandexNativeRegistration,
   consumeYandexAuthorizationCallback,
   createYandexAuthorizationUrl,
   peekPendingYandexAuthorizationIntent,
+  readPendingYandexNativeRegistration,
+  savePendingYandexNativeRegistration,
 } from './yandex-pilot-oauth'
+import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 
 const storage = new Map<string, string>()
 const storageAdapter = {
@@ -85,6 +89,34 @@ describe('Yandex ID pilot OAuth', () => {
 
     expect(result.intent).toBe('app')
     expect(peekPendingYandexAuthorizationIntent(storageAdapter)).toBe('pilot')
+  })
+
+  it('keeps native registration data out of the OAuth URL and clears it explicitly', async () => {
+    savePendingYandexNativeRegistration({
+      accountRole: 'client',
+      firstName: ' Ирина ',
+      timezone: 'Europe/Moscow',
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+    }, storageAdapter)
+    const authorizationUrl = new URL(await createYandexAuthorizationUrl(
+      'public-client-id',
+      'http://localhost/auth/yandex/callback',
+      storageAdapter,
+      'register',
+    ))
+    expect(authorizationUrl.toString()).not.toContain(encodeURIComponent('Ирина'))
+    expect(peekPendingYandexAuthorizationIntent(storageAdapter)).toBe('register')
+    expect(readPendingYandexNativeRegistration(storageAdapter)).toEqual({
+      accountRole: 'client',
+      firstName: 'Ирина',
+      timezone: 'Europe/Moscow',
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+    })
+
+    clearPendingYandexNativeRegistration(storageAdapter)
+    expect(readPendingYandexNativeRegistration(storageAdapter)).toBeNull()
   })
 
   it('rejects a mismatched state and OAuth errors', async () => {
