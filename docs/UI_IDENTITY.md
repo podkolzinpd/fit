@@ -558,9 +558,10 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 
 ### Product realization: Assistant
 
-- Scope — точный trainer-only route `/assistant`. Существующий отдельный
-  Assistant pilot определяет доступ к продукту независимо от глобального
-  identity rollout; Task 26 не расширяет allowlist и не меняет authorization.
+- Scope — точный route `/assistant` для тренера и клиента. Существующий
+  Assistant rollout определяет доступ к продукту независимо от глобального
+  identity rollout; клиент использует только собственную карточку, а
+  тренерские действия остаются недоступны по серверной роли и ownership.
 - История, read-only archive, empty first entry, user/assistant messages,
   error/retry, composer/voice, client/program/progress/workout flows,
   ambiguity, draft/result и applied states используют прежние данные и
@@ -579,9 +580,9 @@ light/dark при 390 и 430 px. Роль сохраняется в UI Identity 
 - Flow primary actions — base 48 px, choice/history controls — explicit compact
   44 px. Высота не кодирует semantic priority. Light/dark сохраняют одинаковую
   геометрию, keyboard viewport, inner draft scroll и bottom navigation.
-- Assistant использует ту же production identity без отдельной UI rollback-
-  ветви; его продуктовый allowlist и authorization остаются независимыми от
-  визуальной темы.
+- Assistant использует ту же production identity и один общий интерфейс для
+  обеих ролей без отдельной UI rollback-ветви; authorization остаётся
+  независимой от визуальной темы.
 
 
 

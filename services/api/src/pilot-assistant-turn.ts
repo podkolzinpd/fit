@@ -48,6 +48,10 @@ interface HistoryRow extends QueryResultRow {
   action: Record<string, unknown> | null
 }
 
+interface ActorRoleRow extends QueryResultRow {
+  account_role: 'trainer' | 'client'
+}
+
 export interface PilotAssistantTurnRunner {
   runTurn(
     session: YandexActorSessionInput,
@@ -146,6 +150,17 @@ async function readClients(client: DatabaseClient) {
   return rows.map(clientContext)
 }
 
+async function readActorRole(client: DatabaseClient): Promise<'trainer' | 'client'> {
+  const rows = await client.query<ActorRoleRow>(`
+    select account_role
+    from public.profiles
+    where id = auth.uid()
+  `)
+  const role = rows[0]?.account_role
+  if (role !== 'trainer' && role !== 'client') throw new AssistantStateError('forbidden')
+  return role
+}
+
 async function readRecentHistory(
   client: DatabaseClient,
   conversationId: string,
@@ -187,6 +202,7 @@ export async function runNativePilotAssistantTurn(
     )
   }
 
+  const role = await readActorRole(client)
   const clients = await readClients(client)
   const history = await readRecentHistory(client, command.conversationId)
   const latestAssistantAction = history.find((row) => row.author === 'assistant')?.action
@@ -194,9 +210,14 @@ export async function runNativePilotAssistantTurn(
     command.message,
     clients,
     latestAssistantAction,
+    false,
+    role === 'client',
   )
   if (workoutDraft !== undefined) {
-    return persistTurnResponse(client, command, turnId, workoutDraft, createId)
+    const response: AssistantTurnResponse = role === 'client' && clients.length === 0
+      ? { reply: 'Сначала заполните свою карточку в разделе «Кабинет», затем вернитесь к записи тренировки.', action: null }
+      : workoutDraft
+    return persistTurnResponse(client, command, turnId, response, createId)
   }
 
   return persistTurnResponse(
