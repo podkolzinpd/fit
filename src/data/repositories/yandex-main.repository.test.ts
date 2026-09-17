@@ -264,7 +264,7 @@ describe('Yandex main repository', () => {
     })
     const custom = (await repository.exercises.list())[0]!
     expect(custom.createdBy).toBe(actor.userId)
-    const created = await repository.exercises.create(actor.userId, customExerciseDraft())
+    const created = await repository.exercises.create(actor.userId, actor.userId, customExerciseDraft())
     const updated = await repository.exercises.update(created, customExerciseDraft())
     await repository.exercises.setArchived(updated, true)
 

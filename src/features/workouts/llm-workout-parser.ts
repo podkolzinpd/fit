@@ -27,18 +27,31 @@ export async function parseWorkoutWithLlm(text: string, catalog: readonly Exerci
   // когда одна разговорная связка означает два упражнения.
   const preparedText = splitWorkoutText(text, catalog).join('\n')
   const local = localWorkoutParse(preparedText, catalog)
+  if (local.unmatched.length === 0) {
+    console.info(JSON.stringify({ event: 'workout_parse_local_only', itemCount: local.items.length }))
+    return orderWorkoutParseResponse(local)
+  }
+  const unresolvedText = local.unmatched
+    .map((item) => ({ item, position: item.position ?? Number.MAX_SAFE_INTEGER }))
+    .sort((left, right) => left.position - right.position)
+    .map(({ item }) => item.sourceText)
+    .join('\n')
   try {
     const remote = await (options.remoteParser ?? exercisesRepository.parseWorkout)(
-      preparedText,
+      unresolvedText,
       selectableExercises(catalog).filter((exercise) => exercise.source === 'system'),
     )
+    console.info(JSON.stringify({
+      event: 'workout_parse_ai_fallback',
+      localItemCount: local.items.length,
+      unresolvedCount: local.unmatched.length,
+      modelCallCount: 1,
+    }))
     return orderWorkoutParseResponse(requireExerciseConfirmation(mergeWorkoutParse(remote, local, catalog), catalog, options))
-  } catch (error) {
-    // Явные названия и числовые значения не должны пропадать только из-за
-    // временной ошибки или нестандартного ответа модели. Не угадываем:
-    // fallback включается лишь для упражнений, безопасно найденных в каталоге.
-    if (local.items.length) return orderWorkoutParseResponse(local)
-    throw error
+  } catch {
+    // Не запускаем второй платный запрос. Уже найденные строки и безопасная
+    // очередь уточнений остаются доступны пользователю локально.
+    return orderWorkoutParseResponse(local)
   }
 }
 

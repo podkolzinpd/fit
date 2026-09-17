@@ -1,5 +1,4 @@
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
-import { PersonalWorkoutResult } from '../../shared/PersonalWorkoutResult'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -40,6 +39,7 @@ import { useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { useRpeDisplay } from '../../app/rpe-display'
 import { useClientRealtime } from '../../app/use-client-realtime'
+import { isWearablesPilotEnabled } from '../../app/feature-flags'
 import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
 import { plannedWorkoutActionLabels } from './workout-entry-rules'
 import { WorkoutSetTable } from './WorkoutSetTable'
@@ -50,18 +50,21 @@ import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProg
 import { WorkoutCompletionCard } from './WorkoutCompletionCard'
 import { WorkoutCompletionReport } from './WorkoutCompletionReport'
 import { ArrowDownIcon, ArrowUpIcon, BackIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
+import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
 import { formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes } from './schedule-presentation'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { trackGoal } from '../../shared/yandex-metrika'
+import { latestWorkoutFact } from '../../shared/workout-results'
 import { liveOperationWithTimeout } from './live-operation-timeout'
 import { workoutFeedbackConfirmation } from './workout-feedback-copy'
 import { clearWorkoutInactivityReminder } from './workout-inactivity-reminder'
 import { useWorkoutInactivityReminder } from './use-workout-inactivity-reminder'
 import { LiveExerciseTechnique } from './LiveExerciseTechnique'
 import { useAppViewport } from '../../app/app-viewport'
+import { loadWorkoutActiveEnergy } from '../wearables'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -710,6 +713,9 @@ export function WorkoutDetailPage() {
   const [rescheduleTime, setRescheduleTime] = useState('')
   const [firstPlanInviteCode, setFirstPlanInviteCode] = useState<string | null>(null)
   const query = useQuery({ queryKey: ['workout', workoutId], queryFn: () => workoutsRepository.get(workoutId) })
+  const clientMode = actor?.role === 'client'
+  const justCompleted = query.data?.status === 'done' && navigationState?.justCompleted === true
+  const clientCompletionReport = Boolean(justCompleted && clientMode)
   const backTo = workoutListFallback(actor?.role === 'client', query.data?.clientId)
   const goBack = useWorkoutBack(backTo)
   const childNavigationState: WorkoutNavigationState = { returnTo: `${location.pathname}${location.search}`, fromWorkoutDetailId: workoutId }
@@ -822,8 +828,6 @@ export function WorkoutDetailPage() {
   const tonnage = workout ? workoutTonnage(workout) : 0
   const sets = workout?.exercises.flatMap((exercise) => exercise.sets) ?? []
   const completedSets = sets.filter((set) => set.confirmedAt).length
-  const justCompleted = done && navigationState?.justCompleted === true
-  const clientMode = actor?.role === 'client'
   const clientOwned = clientMode && workout?.createdBy === actor.userId
   const trainerOwned = !clientMode && Boolean(workout && (!workout.createdBy || workout.createdBy === actor?.userId))
   const canManage = clientMode ? clientOwned : trainerOwned
@@ -835,7 +839,20 @@ export function WorkoutDetailPage() {
   ))
   const trainers = useQuery({ queryKey: ['client-trainers', workout?.clientId], queryFn: () => invitationsRepository.listTrainers(workout!.clientId), enabled: clientMode && Boolean(workout?.clientId) })
   const hasActiveTrainer = Boolean(trainers.data?.length)
-  const clientCompletionReport = Boolean(justCompleted && clientMode)
+  const workoutActiveEnergy = useQuery({
+    queryKey: ['workout-active-energy', workoutId, workout?.startedAt, workout?.completedAt],
+    queryFn: () => loadWorkoutActiveEnergy(workout!.startedAt!, workout!.completedAt!),
+    enabled: Boolean(clientCompletionReport && actor?.userId && isWearablesPilotEnabled(actor.userId) && workout?.startedAt && workout?.completedAt),
+    retry: false,
+  })
+  const completionPersonalResult = useMemo(
+    () => latestWorkoutFact(completionHistory.data ?? [], workoutId).result,
+    [completionHistory.data, workoutId],
+  )
+  const completionVolumeComparison = useMemo(
+    () => workout ? workoutVolumeComparison(workout, completionHistory.data ?? []) : null,
+    [completionHistory.data, workout],
+  )
   const completedExercises = workout?.exercises.filter((exercise) => exercise.sets.length > 0 && exercise.sets.every((set) => Boolean(set.confirmedAt))).length ?? 0
   const incompleteExercises = workout?.exercises.flatMap((exercise) => {
     const missingSets = exercise.sets.filter((set) => !set.confirmedAt).length
@@ -918,6 +935,7 @@ export function WorkoutDetailPage() {
         <Link className="button secondary wide" to="/today">Перейти на главную</Link>
       </section>}
       {clientCompletionReport && <WorkoutCompletionReport
+        date={formatLocalDate(workout.workoutDate)}
         completedSets={completedSets}
         totalSets={sets.length}
         completedExercises={completedExercises}
@@ -925,8 +943,14 @@ export function WorkoutDetailPage() {
         incompleteExercises={incompleteExercises}
         duration={duration && duration !== '0 мин' ? duration : null}
         tonnage={tonnage > 0 ? tonnageLabel(tonnage) : null}
+        caloriesKcal={workoutActiveEnergy.data?.activeCaloriesKcal}
         muscleGroups={groups}
-        personalResult={<PersonalWorkoutResult workouts={completionHistory.data} workoutId={workoutId} loading={completionHistory.isLoading} error={completionHistory.error} onRetry={() => void completionHistory.refetch()} />}
+        personalResult={completionPersonalResult}
+        resultLoading={completionHistory.isLoading}
+        resultError={completionHistory.error}
+        onRetryResult={() => void completionHistory.refetch()}
+        volumeComparison={completionVolumeComparison}
+        comparisonLoading={completionHistory.isLoading}
         hasTrainer={hasActiveTrainer}
       />}
       {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}

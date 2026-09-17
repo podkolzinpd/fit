@@ -45,68 +45,52 @@ export async function parseWorkout(request: Request): Promise<Response> {
     const modelUri = `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`
     const invocationId = request.headers.get('x-yc-request-id')
     const iamToken = request.headers.get('x-yc-iam-token')
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      let response: Response
-      try {
-        response = await fetch(completionUrl, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Api-Key ${apiKey}` }, body: JSON.stringify({ modelUri, completionOptions: { stream: false, temperature: 0, maxTokens: '2000' }, jsonSchema: { schema: workoutExtractionSchema }, messages: [{ role: 'user', text: prompt }] }) })
-      } catch (error) {
-        console.error(JSON.stringify({ event: 'workout_parse_llm_network_error', attempt, message: error instanceof Error ? error.message : 'unknown' }))
-        if (attempt === 2) throw new HttpError(502, 'llm_unavailable')
-        continue
-      }
-      if (!response.ok) {
-        await reportAiStudioMetric({
-          functionName: 'fit-parse-workout',
-          modelUri,
-          invocationId,
-          iamToken,
-          upstreamRequestId: response.headers.get('x-request-id'),
-          usage: null,
-        })
-        console.error(JSON.stringify({ event: 'workout_parse_llm_error', attempt, status: response.status, catalogCount: catalog.length, promptBytes: Buffer.byteLength(prompt) }))
-        if (response.status >= 500 && attempt < 2) continue
-        throw new HttpError(502, 'llm_unavailable')
-      }
-      let payload: { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
-      try {
-        payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
-      } catch (error) {
-        await reportAiStudioMetric({
-          functionName: 'fit-parse-workout',
-          modelUri,
-          invocationId,
-          iamToken,
-          upstreamRequestId: response.headers.get('x-request-id'),
-          usage: null,
-        })
-        console.error(JSON.stringify({ event: 'workout_parse_invalid_response', attempt, message: error instanceof Error ? error.message : 'unknown' }))
-        if (attempt === 2) throw error
-        continue
-      }
-      await reportAiStudioMetric({
-        functionName: 'fit-parse-workout',
-        modelUri,
-        invocationId,
-        iamToken,
-        upstreamRequestId: response.headers.get('x-request-id'),
-        usage: aiStudioUsage(payload.result?.usage),
-      })
-      try {
-        const extracted = validateWorkoutExtraction(JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? ''))
-        const result = matchWorkoutExtraction(extracted, catalog)
-        console.log(JSON.stringify({
-          event: 'workout_parse_completed', attempt, durationMs: Date.now() - startedAt,
-          catalogCount: catalog.length, promptBytes: Buffer.byteLength(prompt), extractedCount: extracted.items.length,
-          matchedCount: result.items.length, unmatchedCount: result.unmatched.length,
-          ambiguousCount: result.unmatched.filter((item) => item.suggestedExerciseRefs.length > 1).length,
-        }))
-        return Response.json(result)
-      } catch (error) {
-        console.error(JSON.stringify({ event: 'workout_parse_invalid_response', attempt, message: error instanceof Error ? error.message : 'unknown' }))
-        if (attempt === 2) throw error
-      }
+    let response: Response
+    try {
+      response = await fetch(completionUrl, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Api-Key ${apiKey}` }, body: JSON.stringify({ modelUri, completionOptions: { stream: false, temperature: 0, maxTokens: '1200' }, jsonSchema: { schema: workoutExtractionSchema }, messages: [{ role: 'user', text: prompt }] }) })
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'workout_parse_llm_network_error', modelCallCount: 1, message: error instanceof Error ? error.message : 'unknown' }))
+      throw new HttpError(502, 'llm_unavailable')
     }
-    throw new Error('workout_parse_retry_exhausted')
+    if (!response.ok) {
+      await reportAiStudioMetric({
+        functionName: 'fit-parse-workout', modelUri, invocationId, iamToken,
+        upstreamRequestId: response.headers.get('x-request-id'), usage: null,
+      })
+      console.error(JSON.stringify({ event: 'workout_parse_llm_error', modelCallCount: 1, status: response.status, catalogCount: catalog.length, promptBytes: Buffer.byteLength(prompt) }))
+      throw new HttpError(502, 'llm_unavailable')
+    }
+    let payload: { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
+    try {
+      payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
+    } catch (error) {
+      await reportAiStudioMetric({
+        functionName: 'fit-parse-workout', modelUri, invocationId, iamToken,
+        upstreamRequestId: response.headers.get('x-request-id'), usage: null,
+      })
+      console.error(JSON.stringify({ event: 'workout_parse_invalid_response', modelCallCount: 1, message: error instanceof Error ? error.message : 'unknown' }))
+      throw new HttpError(502, 'parse_failed')
+    }
+    const usage = aiStudioUsage(payload.result?.usage)
+    await reportAiStudioMetric({
+      functionName: 'fit-parse-workout', modelUri, invocationId, iamToken,
+      upstreamRequestId: response.headers.get('x-request-id'), usage,
+    })
+    try {
+      const extracted = validateWorkoutExtraction(JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? ''))
+      const result = matchWorkoutExtraction(extracted, catalog)
+      console.log(JSON.stringify({
+        event: 'workout_parse_completed', modelCallCount: 1, durationMs: Date.now() - startedAt,
+        inputLineCount: body.text.split('\n').filter(Boolean).length,
+        catalogCount: catalog.length, promptBytes: Buffer.byteLength(prompt), usage, extractedCount: extracted.items.length,
+        matchedCount: result.items.length, unmatchedCount: result.unmatched.length,
+        ambiguousCount: result.unmatched.filter((item) => item.suggestedExerciseRefs.length > 1).length,
+      }))
+      return Response.json(result)
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'workout_parse_invalid_response', modelCallCount: 1, message: error instanceof Error ? error.message : 'unknown' }))
+      throw new HttpError(502, 'parse_failed')
+    }
   } catch (error) {
     const known = error instanceof HttpError ? error : new HttpError(502, 'parse_failed')
     console.error(JSON.stringify({ event: 'workout_parse_failed', code: known.code, status: known.status }))

@@ -24,6 +24,11 @@ export interface WearableSnapshot {
   readAt: string
 }
 
+export interface WorkoutActiveEnergy {
+  activeCaloriesKcal: number
+  sources: string[]
+}
+
 export const nativeHealthSource: WearableHealthSource = {
   availability: () => Health.isAvailable(),
   async authorize() {
@@ -86,5 +91,27 @@ export async function loadWearableSnapshot(
     heartRateVariabilityMs: rounded(latest(hrv), 1),
     sources,
     readAt: endDate,
+  }
+}
+
+export async function loadWorkoutActiveEnergy(
+  startDate: string,
+  endDate: string,
+  source: WearableHealthSource = nativeHealthSource,
+): Promise<WorkoutActiveEnergy | null> {
+  const start = Date.parse(startDate)
+  const end = Date.parse(endDate)
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null
+
+  const availability = await source.availability()
+  if (!availability.available) return null
+
+  const samples = await source.read('calories', new Date(start).toISOString(), new Date(end).toISOString())
+  const activeCaloriesKcal = rounded(sum(samples))
+  if (activeCaloriesKcal === null || activeCaloriesKcal <= 0) return null
+
+  return {
+    activeCaloriesKcal,
+    sources: [...new Set(samples.map((sample) => sample.sourceName?.trim()).filter((name): name is string => Boolean(name)))].sort(),
   }
 }
