@@ -119,6 +119,11 @@ test('hardens backups on the existing database without provisioning a second sta
   )
   assert.match(workflow, /key=fit\/stage\/terraform\.tfstate/)
   assert.doesNotMatch(workflow, /fit\/prod\/terraform\.tfstate/)
+  assert.match(
+    databaseTerraform,
+    /backup_window_start\s+= var\.postgres_backup_window_start/,
+  )
+  assert.doesNotMatch(databaseTerraform, /dynamic "backup_window_start"/)
 })
 
 test('allows the reviewed local, iOS, preview, and production frontend origins', () => {
