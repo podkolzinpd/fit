@@ -7955,6 +7955,7 @@ h3 {
 .meeting-weekly-active { fill: none; stroke: var(--paper); stroke-width: 5; }
 .meeting-weekly-reg-dot { fill: #77797d; stroke: var(--dark); stroke-width: 3; }
 .meeting-weekly-active-dot { fill: var(--paper); stroke: var(--dark); stroke-width: 4; }
+.meeting-weekly-end-value { fill: var(--paper); font-size: 17px; font-weight: 800; }
 .meeting-weekly-new { fill: #477a61; }
 .meeting-weekly-current { fill: rgba(216,180,107,.07); }
 .meeting-weekly-current-line { stroke: #d8b46b; stroke-width: 1; stroke-dasharray: 6 6; }
@@ -9927,22 +9928,21 @@ Strava, поддерживаемые виды спорта: https://support.stra
     </section>
 
     <section class="slide slide-dark meeting-reference-slide meeting-weekly-slide" data-section="Материалы встречи" data-slide-type="progress-trend" data-golden="whoop/11-whoop-progress-trend.png">
-      <div class="eyebrow">МАТЕРИАЛЫ · НЕДЕЛЬНАЯ АКТИВНОСТЬ ТРЕНЕРОВ</div>
-      <h2 class="meeting-weekly-title">Тренеры возвращаются<br>в Fit каждую неделю</h2>
+      <div class="eyebrow">МАТЕРИАЛЫ · ТРЕНЕРЫ</div>
+      <h2 class="meeting-weekly-title">51 тренер зарегистрирован.<br>14 активны сейчас</h2>
 
       <div class="meeting-weekly-metrics">
         <div class="meeting-weekly-metric"><span>Зарегистрировано</span><strong>51</strong></div>
-        <div class="meeting-weekly-metric"><span>Активны за неделю</span><strong>15</strong></div>
-        <div class="meeting-weekly-metric"><span>Доля базы</span><strong>29%</strong></div>
+        <div class="meeting-weekly-metric"><span>Активны за 7 дней</span><strong>14</strong></div>
+        <div class="meeting-weekly-metric"><span>Доля базы</span><strong>27%</strong></div>
       </div>
 
       <div class="meeting-weekly-legend" aria-label="Легенда графика">
         <span><i></i>накоплено регистраций</span>
-        <span><i class="is-active"></i>активны за неделю</span>
         <span><i class="is-new"></i>новые регистрации</span>
       </div>
 
-      <div class="meeting-weekly-chart" aria-label="Регистрации и продуктовая активность тренеров по неделям">
+      <div class="meeting-weekly-chart" aria-label="Точные регистрации тренеров по неделям">
         <svg viewBox="0 0 1416 430" role="img">
           <rect x="1271" y="20" width="145" height="374" class="meeting-weekly-current"></rect>
           <line x1="1271" y1="20" x2="1271" y2="394" class="meeting-weekly-current-line"></line>
@@ -9968,11 +9968,10 @@ Strava, поддерживаемые виды спорта: https://support.stra
           <rect x="1385" y="321.2" width="24" height="72.8" rx="4" class="meeting-weekly-new"></rect>
 
           <path d="M77 357.6 L242 331.6 L407 321.2 L572 305.6 L737 295.2 L902 264 L1067 227.6 L1232 201.6 L1397 128.8" class="meeting-weekly-registered"></path>
-          <path d="M77 378.4 L242 357.6 L407 373.2 L572 373.2 L737 373.2 L902 352.4 L1067 336.8 L1232 347.2 L1397 316" class="meeting-weekly-active"></path>
 
           <g>
             <circle cx="77" cy="357.6" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="242" cy="331.6" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="407" cy="321.2" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="572" cy="305.6" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="737" cy="295.2" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="902" cy="264" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="1067" cy="227.6" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="1232" cy="201.6" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="1397" cy="128.8" r="6" class="meeting-weekly-reg-dot"></circle>
-            <circle cx="77" cy="378.4" r="6" class="meeting-weekly-active-dot"></circle><circle cx="242" cy="357.6" r="6" class="meeting-weekly-active-dot"></circle><circle cx="407" cy="373.2" r="6" class="meeting-weekly-active-dot"></circle><circle cx="572" cy="373.2" r="6" class="meeting-weekly-active-dot"></circle><circle cx="737" cy="373.2" r="6" class="meeting-weekly-active-dot"></circle><circle cx="902" cy="352.4" r="6" class="meeting-weekly-active-dot"></circle><circle cx="1067" cy="336.8" r="6" class="meeting-weekly-active-dot"></circle><circle cx="1232" cy="347.2" r="6" class="meeting-weekly-active-dot"></circle><circle cx="1397" cy="316" r="7" class="meeting-weekly-active-dot"></circle>
+            <text x="1382" y="112" text-anchor="end" class="meeting-weekly-end-value">51</text>
           </g>
 
           <g class="meeting-weekly-axis">
@@ -9983,55 +9982,54 @@ Strava, поддерживаемые виды спорта: https://support.stra
 
       <div class="meeting-weekly-takeaway">
         <div class="meeting-weekly-info is-result">
-          <span>Что видим</span>
-          <strong>Даже неполная неделя уже даёт максимум — 15 активных тренеров.</strong>
-          <p>Тестовые аккаунты исключены.</p>
+          <span>Регистрации</span>
+          <strong>За неполную неделю зарегистрировались ещё 14 тренеров.</strong>
+          <p>Точный ряд по полю регистрации; тестовые аккаунты исключены.</p>
         </div>
         <div class="meeting-weekly-info">
-          <span>Что считаем активностью</span>
-          <p>Любое продуктовое действие: работа с тренировкой, клиентом, прогрессом, упражнением, целью, сводкой или AI-ассистентом. Обычный вход не учитывается.</p>
+          <span>Активность сейчас</span>
+          <p><strong>14 из 51</strong> совершили продуктовое действие за последние 7 дней. Это точный текущий срез на 17 сентября.</p>
         </div>
         <div class="meeting-weekly-info">
-          <span>Как читать период</span>
-          <p>Активность рассчитана по доступным временным меткам продуктовых действий. Неделя 14–20 сентября неполная: данные по 17 сентября.</p>
+          <span>История активности</span>
+          <p><strong>Нет данных.</strong> Текущая витрина хранит последний факт активности, но не недельный исторический ряд — поэтому линия активности не показана.</p>
         </div>
       </div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Показать одновременно приток тренеров и факт их еженедельного возвращения в продукт.
+Показать только те показатели по тренерам, которые прямо доступны в базе.
 
 ЧТО ГОВОРИМ
-На 17 сентября зарегистрирован 51 реальный тренер. На текущей неполной неделе 15 из них уже совершили хотя бы одно продуктовое действие — это 29% всей накопленной базы и максимальное абсолютное значение за период.
+На 17 сентября зарегистрирован 51 реальный тренер. Точный ряд регистраций строится по дате создания аккаунта. За неполную неделю 14–20 сентября зарегистрировались 14 тренеров.
 
-Активностью считаем не простой вход, а работу с клиентом, тренировкой, прогрессом, упражнением, целью, опубликованной сводкой или AI-ассистентом. Тестовые аккаунты исключены.
+В текущем срезе 14 тренеров совершили хотя бы одно продуктовое действие за последние 7 дней — 27% зарегистрированной базы. Тестовые аккаунты исключены.
 
 ОГРАНИЧЕНИЕ
-Еженедельная активность рассчитана по доступным временным меткам продуктовых действий. Неделя 14–20 сентября неполная, данные по 17 сентября.
+Недельного исторического ряда продуктовой активности в текущей витрине нет. Последняя активность пользователя не позволяет восстановить прошлые недели, поэтому такую динамику не показываем. Неделя 14–20 сентября неполная; срез обновлён 17 сентября в 20:00.
 
 [Sources]
-Supabase Fit, live production aggregate, 17.09.2026.</aside>
+DataLens, analytics.trainer_overview, 17.09.2026 20:00.</aside>
     </section>
 
     <section class="slide slide-dark meeting-reference-slide meeting-weekly-slide" data-section="Материалы встречи" data-slide-type="progress-trend" data-golden="whoop/11-whoop-progress-trend.png">
-      <div class="eyebrow">МАТЕРИАЛЫ · НЕДЕЛЬНАЯ АКТИВНОСТЬ СПОРТСМЕНОВ</div>
-      <h2 class="meeting-weekly-title is-compact">Самостоятельные спортсмены<br>возвращаются в Fit</h2>
+      <div class="eyebrow">МАТЕРИАЛЫ · САМОСТОЯТЕЛЬНЫЕ СПОРТСМЕНЫ</div>
+      <h2 class="meeting-weekly-title is-compact">47 спортсменов пришли сами.<br>11 активны сейчас</h2>
 
       <div class="meeting-weekly-metrics">
-        <div class="meeting-weekly-metric"><span>Зарегистрировано</span><strong>61</strong></div>
-        <div class="meeting-weekly-metric"><span>Активны за неделю</span><strong>14</strong></div>
+        <div class="meeting-weekly-metric"><span>Зарегистрировались сами</span><strong>47</strong></div>
+        <div class="meeting-weekly-metric"><span>Активны за 7 дней</span><strong>11</strong></div>
         <div class="meeting-weekly-metric"><span>Доля базы</span><strong>23%</strong></div>
       </div>
 
       <div class="meeting-weekly-legend" aria-label="Легенда графика">
         <span><i></i>накоплено регистраций</span>
-        <span><i class="is-active"></i>активны за неделю</span>
         <span><i class="is-new"></i>новые регистрации</span>
       </div>
 
-      <div class="meeting-weekly-chart" aria-label="Регистрации и продуктовая активность самостоятельно зарегистрированных спортсменов по неделям">
+      <div class="meeting-weekly-chart" aria-label="Точные самостоятельные регистрации спортсменов по неделям">
         <svg viewBox="0 0 1416 430" role="img">
-          <rect x="1271" y="20" width="145" height="374" class="meeting-weekly-current"></rect>
-          <line x1="1271" y1="20" x2="1271" y2="394" class="meeting-weekly-current-line"></line>
-          <text x="1284" y="38" class="meeting-weekly-current-label">НЕПОЛНАЯ НЕДЕЛЯ</text>
+          <rect x="1300" y="20" width="116" height="374" class="meeting-weekly-current"></rect>
+          <line x1="1300" y1="20" x2="1300" y2="394" class="meeting-weekly-current-line"></line>
+          <text x="1309" y="38" class="meeting-weekly-current-label">НЕПОЛНАЯ НЕДЕЛЯ</text>
 
           <line x1="48" y1="394" x2="1416" y2="394" class="meeting-weekly-grid"></line>
           <line x1="48" y1="290" x2="1416" y2="290" class="meeting-weekly-grid"></line>
@@ -10042,60 +10040,56 @@ Supabase Fit, live production aggregate, 17.09.2026.</aside>
           <text x="34" y="190" text-anchor="end" class="meeting-weekly-axis">40</text>
           <text x="34" y="86" text-anchor="end" class="meeting-weekly-axis">60</text>
 
-          <rect x="65" y="394" width="24" height="0" rx="4" class="meeting-weekly-new"></rect>
-          <rect x="230" y="368" width="24" height="26" rx="4" class="meeting-weekly-new"></rect>
-          <rect x="395" y="383.6" width="24" height="10.4" rx="4" class="meeting-weekly-new"></rect>
-          <rect x="560" y="352.4" width="24" height="41.6" rx="4" class="meeting-weekly-new"></rect>
-          <rect x="725" y="388.8" width="24" height="5.2" rx="4" class="meeting-weekly-new"></rect>
-          <rect x="890" y="373.2" width="24" height="20.8" rx="4" class="meeting-weekly-new"></rect>
-          <rect x="1055" y="310.8" width="24" height="83.2" rx="4" class="meeting-weekly-new"></rect>
-          <rect x="1220" y="305.6" width="24" height="88.4" rx="4" class="meeting-weekly-new"></rect>
+          <rect x="65" y="368" width="24" height="26" rx="4" class="meeting-weekly-new"></rect>
+          <rect x="253.5" y="383.6" width="24" height="10.4" rx="4" class="meeting-weekly-new"></rect>
+          <rect x="442" y="368" width="24" height="26" rx="4" class="meeting-weekly-new"></rect>
+          <rect x="630.5" y="388.8" width="24" height="5.2" rx="4" class="meeting-weekly-new"></rect>
+          <rect x="819" y="383.6" width="24" height="10.4" rx="4" class="meeting-weekly-new"></rect>
+          <rect x="1007.5" y="336.8" width="24" height="57.2" rx="4" class="meeting-weekly-new"></rect>
+          <rect x="1196" y="326.4" width="24" height="67.6" rx="4" class="meeting-weekly-new"></rect>
           <rect x="1385" y="352.4" width="24" height="41.6" rx="4" class="meeting-weekly-new"></rect>
 
-          <path d="M77 394 L242 368 L407 357.6 L572 316 L737 310.8 L902 290 L1067 206.8 L1232 118.4 L1397 76.8" class="meeting-weekly-registered"></path>
-          <path d="M77 394 L242 394 L407 388.8 L572 388.8 L737 373.2 L902 373.2 L1067 352.4 L1232 336.8 L1397 321.2" class="meeting-weekly-active"></path>
+          <path d="M77 368 L265.5 357.6 L454 331.6 L642.5 326.4 L831 316 L1019.5 258.8 L1208 191.2 L1397 149.6" class="meeting-weekly-registered"></path>
 
           <g>
-            <circle cx="77" cy="394" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="242" cy="368" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="407" cy="357.6" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="572" cy="316" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="737" cy="310.8" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="902" cy="290" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="1067" cy="206.8" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="1232" cy="118.4" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="1397" cy="76.8" r="6" class="meeting-weekly-reg-dot"></circle>
-            <circle cx="77" cy="394" r="6" class="meeting-weekly-active-dot"></circle><circle cx="242" cy="394" r="6" class="meeting-weekly-active-dot"></circle><circle cx="407" cy="388.8" r="6" class="meeting-weekly-active-dot"></circle><circle cx="572" cy="388.8" r="6" class="meeting-weekly-active-dot"></circle><circle cx="737" cy="373.2" r="6" class="meeting-weekly-active-dot"></circle><circle cx="902" cy="373.2" r="6" class="meeting-weekly-active-dot"></circle><circle cx="1067" cy="352.4" r="6" class="meeting-weekly-active-dot"></circle><circle cx="1232" cy="336.8" r="6" class="meeting-weekly-active-dot"></circle><circle cx="1397" cy="321.2" r="7" class="meeting-weekly-active-dot"></circle>
+            <circle cx="77" cy="368" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="265.5" cy="357.6" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="454" cy="331.6" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="642.5" cy="326.4" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="831" cy="316" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="1019.5" cy="258.8" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="1208" cy="191.2" r="5" class="meeting-weekly-reg-dot"></circle><circle cx="1397" cy="149.6" r="6" class="meeting-weekly-reg-dot"></circle>
+            <text x="1382" y="133" text-anchor="end" class="meeting-weekly-end-value">47</text>
           </g>
 
           <g class="meeting-weekly-axis">
-            <text x="77" y="423" text-anchor="middle">20.07</text><text x="242" y="423" text-anchor="middle">27.07</text><text x="407" y="423" text-anchor="middle">03.08</text><text x="572" y="423" text-anchor="middle">10.08</text><text x="737" y="423" text-anchor="middle">17.08</text><text x="902" y="423" text-anchor="middle">24.08</text><text x="1067" y="423" text-anchor="middle">31.08</text><text x="1232" y="423" text-anchor="middle">07.09</text><text x="1397" y="423" text-anchor="middle">14.09</text>
+            <text x="77" y="423" text-anchor="middle">27.07</text><text x="265.5" y="423" text-anchor="middle">03.08</text><text x="454" y="423" text-anchor="middle">10.08</text><text x="642.5" y="423" text-anchor="middle">17.08</text><text x="831" y="423" text-anchor="middle">24.08</text><text x="1019.5" y="423" text-anchor="middle">31.08</text><text x="1208" y="423" text-anchor="middle">07.09</text><text x="1397" y="423" text-anchor="middle">14.09</text>
           </g>
         </svg>
       </div>
 
       <div class="meeting-weekly-takeaway">
         <div class="meeting-weekly-info is-result">
-          <span>Что видим</span>
-          <strong>Самостоятельная активность растёт: 14 спортсменов за неполную неделю.</strong>
-          <p>Только самостоятельная регистрация; клиенты, заведённые тренером, исключены.</p>
+          <span>Регистрации</span>
+          <strong>За неполную неделю сами зарегистрировались ещё 8 спортсменов.</strong>
+          <p>Клиенты, заведённые тренером, исключены.</p>
         </div>
         <div class="meeting-weekly-info">
-          <span>Что считаем активностью</span>
-          <p>Любое продуктовое действие: работа с тренировкой, прогрессом, упражнением, целью или AI-ассистентом. Обычный вход в приложение не учитывается.</p>
+          <span>Активность сейчас</span>
+          <p><strong>11 из 47</strong> совершили продуктовое действие за последние 7 дней. Это точный текущий срез на 17 сентября.</p>
         </div>
         <div class="meeting-weekly-info">
-          <span>Как читать период</span>
-          <p>Активность рассчитана по доступным временным меткам продуктовых действий. Неделя 14–20 сентября неполная: данные по 17 сентября.</p>
+          <span>История активности</span>
+          <p><strong>Нет данных.</strong> Текущая витрина хранит последний факт активности, но не недельный исторический ряд — поэтому линия активности не показана.</p>
         </div>
       </div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Отдельно показать поведение спортсменов, которые пришли и зарегистрировались сами, без создания профиля тренером.
+Показать только точные показатели по спортсменам, которые зарегистрировались сами.
 
 ЧТО ГОВОРИМ
-В продукте 61 самостоятельно зарегистрированный спортсмен. На текущей неполной неделе 14 из них уже совершили продуктовое действие — это 23% накопленной базы и максимальное абсолютное значение за период.
+В продукте 47 самостоятельно зарегистрированных спортсменов. Точный ряд регистраций строится по дате создания аккаунта. За неполную неделю 14–20 сентября сами зарегистрировались 8 спортсменов.
 
-В этот разрез входят аккаунты с ролью client, зарегистрированные самими спортсменами. Клиенты, которых создал тренер, исключены, даже если затем получили доступ к приложению.
-
-Активностью считаем работу с тренировкой, прогрессом, упражнением, целью или AI-ассистентом. Простой вход в приложение не учитывается.
+В текущем срезе 11 из них совершили хотя бы одно продуктовое действие за последние 7 дней — 23% этой группы. Клиенты, которых создал тренер, исключены.
 
 ОГРАНИЧЕНИЕ
-Еженедельная активность рассчитана по доступным временным меткам продуктовых действий. Неделя 14–20 сентября неполная, данные по 17 сентября.
+Недельного исторического ряда продуктовой активности в текущей витрине нет. Последняя активность пользователя не позволяет восстановить прошлые недели, поэтому такую динамику не показываем. Неделя 14–20 сентября неполная; срез обновлён 17 сентября в 20:00.
 
 [Sources]
-Supabase Fit, live production aggregate, 17.09.2026.</aside>
+DataLens, analytics.client_overview, 17.09.2026 20:00.</aside>
     </section>
 
   </main>
