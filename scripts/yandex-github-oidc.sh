@@ -47,3 +47,15 @@ fi
 echo "::add-mask::$iam_token"
 printf 'YC_TOKEN=%s\n' "$iam_token" >>"$GITHUB_ENV"
 printf 'YC_IAM_TOKEN=%s\n' "$iam_token" >>"$GITHUB_ENV"
+
+# A freshly installed yc CLI has no active profile. Keep the token exchange
+# usable by every workflow that invokes yc directly, while leaving
+# Terraform-only workflows free to consume YC_TOKEN from GITHUB_ENV.
+if command -v yc >/dev/null 2>&1; then
+  profile_name="github-actions-${GITHUB_RUN_ID:-local}-${GITHUB_JOB:-job}-${RANDOM}"
+  yc config profile create "$profile_name"
+  yc config set token "$iam_token"
+  if [[ -n "${YC_FOLDER_ID:-}" ]]; then
+    yc config set folder-id "$YC_FOLDER_ID"
+  fi
+fi
