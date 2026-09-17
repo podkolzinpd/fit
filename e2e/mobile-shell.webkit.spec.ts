@@ -150,7 +150,7 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
 async function expectCompactBodyMap(map: Locator) {
   await expect(map).toBeVisible()
   const geometry = await map.evaluate((element) => {
-    const mapStyle = getComputedStyle(element.closest('.client-body-map-disclosure') ?? element)
+    const mapStyle = getComputedStyle(element.closest('.progress-pro-list') ?? element.closest('.client-body-map-disclosure') ?? element)
     const rect = (selector: string) => {
       const node = element.querySelector<HTMLElement>(selector)
       if (!node) return null
@@ -846,6 +846,7 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   await login(page, 'client@fit.local')
   await page.goto('/me/progress')
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
+  await page.getByRole('tab', { name: 'ПРО' }).click()
   await page.getByRole('button', { name: 'Добавить замер' }).click()
   await expect(page.getByLabel(`${metricName}, балл`)).toBeVisible()
   await page.getByRole('button', { name: /История замеров ·/ }).click()
