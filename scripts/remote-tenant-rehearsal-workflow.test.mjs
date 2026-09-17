@@ -39,6 +39,10 @@ test('keeps tenant rehearsal manual and single-flight', () => {
   )
   assert.match(workflow, /group: yandex-tenant-migration/)
   assert.match(workflow, /cancel-in-progress: false/)
+  assert.match(
+    workflow,
+    /allow_missing_media:[\s\S]*?type: boolean[\s\S]*?default: false/,
+  )
   assert.doesNotMatch(workflow, /environment:/)
 })
 
@@ -53,6 +57,10 @@ test('keeps the selected profile masked and the encrypted bundle ephemeral', () 
   assert.match(
     workflow,
     /FIT_TENANT_SELECTION_MODE: \$\{\{ inputs\.tenant_selection \}\}/g,
+  )
+  assert.match(
+    workflow,
+    /FIT_TENANT_ALLOW_MISSING_MEDIA: \$\{\{ inputs\.allow_missing_media \}\}/,
   )
 })
 

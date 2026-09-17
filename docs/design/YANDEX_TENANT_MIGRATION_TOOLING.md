@@ -59,9 +59,11 @@ isolated-tenant checks or silently dropping a merge target.
     cannot contain a broken attachment link.
 14. `full-cohort` keeps the strict isolated modes unchanged, but does not apply
     trainer-boundary checks because every manifest row is copied together. Its
-    transient push outbox is not application data and is excluded. Chat photo
-    rows are accepted only because the target runner verifies the corresponding
-    private Yandex Object Storage object before opening a database connection.
+    transient push outbox is not application data and is excluded. By default,
+    the target runner verifies every referenced private Yandex Object Storage
+    object before opening a database connection. An explicit default-off
+    `allow_missing_media` operator policy may defer only object existence
+    validation while preserving the original paths and media metadata.
 15. The full-cohort fingerprint is derived from every table name, row count and
     checksum. An apply therefore requires the exact snapshot fingerprint from
     a successful dry-run and fails before target access if source data changed.
@@ -127,15 +129,23 @@ boundary. It never skips candidates: audit and dry-run must cover the same full
 manifest, and apply requires both the normal apply phrase and the exact
 content-derived fingerprint from that dry-run.
 
-Before a full-cohort dry-run or apply containing chat photos, the manual
-`Migrate Yandex media` workflow must finish in `apply` mode with
+By default, before a full-cohort dry-run or apply containing chat photos, the
+manual `Migrate Yandex media` workflow must finish in `apply` mode with
 `objects == verified`. It recursively reads `chat-media` and
 `fit-exercise-media`, preserves their paths under separate target prefixes and
 is safe to repeat. The migration runner then HEAD-checks every chat object and
 its exact recorded byte length before it obtains a PostgreSQL connection. A
 missing, inaccessible or mismatched object rejects the complete database run.
-The API uses the same private bucket for new chat uploads and exercise-media
-signed links after the storage-backed revision is deployed.
+
+When the product owner explicitly accepts temporarily broken media reads, the
+manual rehearsal workflow may set `allow_missing_media=true` for both dry-run
+and pinned apply. The private request carries the exact `allow-missing` policy;
+unknown policy values are rejected. The runner still parses and validates media
+metadata, but skips target object existence checks. Original paths remain in
+the database, so a later idempotent media apply restores those reads without a
+second database import. The API uses the same private bucket for new chat
+uploads and exercise-media signed links after the storage-backed revision is
+deployed.
 
 The full snapshot deliberately ignores the source push outbox in every delivery
 state. It is transient transport state, not application-domain data; Supabase

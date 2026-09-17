@@ -179,22 +179,20 @@
   email-вход сохраняется как временный fallback.
 - Yandex migration `000035` сохраняет author-scoped пользовательские упражнения; доступ и `created_by` остаются tenant-safe.
 - Yandex migration `000038` приводит push к multi-device контракту Supabase: отдельный PK подписки, `(user_id, endpoint)`, адресная строка outbox и удаление только протухшего устройства. API принимает endpoint только в actor-authenticated body; tenant catalog переносит подписки по `id`.
-- Tenant migration tooling сохраняет прежние строгие isolated trainer/client
-  режимы и добавляет content-pinned `full-cohort` для текущей небольшой базы,
-  где завершённые merge пересекают trainer boundary. Все 32 поддерживаемые
-  таблицы, включая анкеты тренеров, проходят encrypted dry-run, transactional
-  apply, повтор с нулём inserts и checksum validation. Первый remote audit
-  обнаружил legacy pending source outbox; полный snapshot теперь исключает весь
-  transient outbox, а финальный cutover требует отдельного drain-and-disable
-  шага. Приватный versioned Object Storage и Lockbox развёрнуты; remote media
-  apply скопировал и SHA-256-проверил оба поддерживаемых префикса. Реальный
-  full-cohort audit прошёл для всех 32 таблиц и 12 876 строк. Первый dry-run
-  подтвердил целостность snapshot, но остановился до обращения к target из-за
-  3 MiB transport gate: зашифрованный несжатый envelope занимал около 13 MiB.
-  `main` сжимает canonical JSON перед AES-GCM, сохраняя один приватный запрос и
-  одну target-транзакцию; теперь нужно повторить full-cohort
-  dry-run и pinned apply. Auth users, Yandex sessions и rollout assignments в
-  bundle не входят.
+- Tenant migration tooling сохраняет строгие isolated trainer/client режимы и
+  content-pinned `full-cohort` для базы, где завершённые merge пересекают
+  trainer boundary. Audit 2026-09-17 прочитал 32 поддерживаемые таблицы и
+  14 692 строки (114 profiles, 629 workouts, 3 210 workout exercises и 8 661
+  workout sets); compressed encrypted envelope занимает 2 442 164 bytes и
+  проходит прежний 3 MiB transport gate. Full-cohort dry-run дошёл до private
+  target runner и остановился на `tenant_media_missing`; прежний configured
+  root теперь отдельно отклоняется как `tenant_merge_crosses_boundary`, поэтому
+  актуальный cutover должен использовать полный snapshot. По явному продуктовому
+  решению manual workflow имеет default-off `allow_missing_media`: он сохраняет
+  исходные media paths и metadata, но разрешает DB dry-run/apply до копирования
+  objects. До последующего media apply такие вложения могут возвращать not found.
+  Auth users, Yandex sessions и rollout assignments в bundle не входят; routing
+  остаётся выключен до успешного pinned apply и отдельного rollout enable.
 - YAFIT-490/510: личный чат спортсмена с каждым тренером хранит текст и приватное фото, черновик и повтор отправки без дубля. Меню даёт ответ/копирование и авторские изменение/удаление; фото открывается с zoom/save, поиск работает по всей истории, первое непрочитанное фиксируется точной парой времени и ID и отмечается только после показа. Отключение сохраняет переписку без возврата доступа к данным. Supabase использует realtime, Yandex — polling/foreground refresh; Web Push ведёт в диалог. Assistant не читает чат и вложения. YAFIT-511 сохраняет account-scoped состояние карточки поиска тренера и разрешает спортсмену один диалог с опубликованным тренером; сервер ограничивает новые обращения пятью за 24 часа, поддерживает взаимную блокировку и не выдаёт доступ к тренировочным данным. Вход из анкеты, приглашение и принятие связи работают внутри обычного чата. Компактная карточка «Нужен тренер?» стоит внизу Client Home только у спортсмена без тренера; её можно скрыть на 30 дней или навсегда, а каталог остаётся доступен из профиля.
 - YAFIT-517: единая кнопка сообщений на главной тренера и спортсмена показывает
   общую сумму непрочитанных до `99+`. Общий cache диалогов обновляется каждые

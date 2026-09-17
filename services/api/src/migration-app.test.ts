@@ -598,7 +598,7 @@ describe('stage tenant migration', () => {
       tenantFingerprint: 'a'.repeat(16),
       tables: report.tables,
     })
-    expect(run).toHaveBeenCalledWith(envelope, 'p'.repeat(32), false)
+    expect(run).toHaveBeenCalledWith(envelope, 'p'.repeat(32), false, false)
     expect(response.body).not.toContain('encrypted-payload')
     expect(response.body).not.toContain('p'.repeat(32))
   })
@@ -631,7 +631,34 @@ describe('stage tenant migration', () => {
       tenantFingerprint: 'a'.repeat(16),
       tables: report.tables,
     })
-    expect(run).toHaveBeenCalledWith(envelope, 'p'.repeat(32), true)
+    expect(run).toHaveBeenCalledWith(envelope, 'p'.repeat(32), true, false)
+  })
+
+  it('allows missing media only through an explicit private request policy', async () => {
+    const { app, run } = buildTenantMigration()
+
+    const accepted = await app.inject({
+      method: 'POST',
+      url: '/stage/tenant-migration/dry-run',
+      headers: {
+        'x-fit-tenant-migration-passphrase': 'p'.repeat(32),
+        'x-fit-tenant-migration-media-policy': 'allow-missing',
+      },
+      payload: envelope,
+    })
+    expect(accepted.statusCode).toBe(200)
+    expect(run).toHaveBeenCalledWith(envelope, 'p'.repeat(32), false, true)
+
+    const rejected = await app.inject({
+      method: 'POST',
+      url: '/stage/tenant-migration/dry-run',
+      headers: {
+        'x-fit-tenant-migration-passphrase': 'p'.repeat(32),
+        'x-fit-tenant-migration-media-policy': 'skip',
+      },
+      payload: envelope,
+    })
+    expect(rejected.statusCode).toBe(400)
   })
 
   it('rejects missing passphrases and oversized artifacts before import', async () => {
