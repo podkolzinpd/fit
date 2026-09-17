@@ -235,15 +235,15 @@ export function TrainerProfessionalProfileSection() {
         <div className="trainer-profile-form-section">
           <Field label="Имя в анкете"><input value={draft.displayName} maxLength={120} onChange={(event) => set('displayName', event.target.value)} /></Field>
           <Field label="О себе"><textarea value={draft.bio} maxLength={1200} placeholder="Опыт, подход и кому вы помогаете" onChange={(event) => set('bio', event.target.value)} /></Field>
-          <div className="trainer-specialties-fields" role="group" aria-label="Направления">
-            <strong>Направления</strong>
-            <div className="trainer-specialties-options">
+          <details className="trainer-profile-form-disclosure">
+            <summary><span>Направления{draft.specialties.length > 0 ? ` · ${draft.specialties.length}` : ''}</span><ChevronDownIcon /></summary>
+            <div className="trainer-specialties-options" role="group" aria-label="Направления">
               {TRAINER_SPECIALTIES.map((specialty) => <label key={specialty} className="trainer-specialty-option">
                 <input type="checkbox" checked={draft.specialties.includes(specialty)} onChange={(event) => toggleSpecialty(specialty, event.target.checked)} />
                 <span>{specialty}</span>
               </label>)}
             </div>
-          </div>
+          </details>
         </div>
         <div className="trainer-profile-form-section">
           <div className="trainer-profile-form-grid">
