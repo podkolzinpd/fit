@@ -1332,9 +1332,10 @@ for (const viewport of [{ width: 320, height: 700 }, { width: 375, height: 812 }
     await expect(summary.getByRole('heading', { name: 'Распределение подходов' })).toBeVisible()
     await expectCompactBodyMap(summary.locator('.body-progress-map'))
     await summary.getByRole('tab', { name: 'Обзор' }).click()
-    await expect(summary.getByRole('region', { name: 'Текущая неделя' })).toBeVisible()
-    await expect(summary.getByText('Твоя цель', { exact: true })).toBeVisible()
-    await expect(summary.getByText('Открыть анализ', { exact: true })).toBeVisible()
+    const overview = summary.getByLabel('Обзор')
+    await expect(overview.getByRole('region', { name: 'Текущая неделя' })).toBeVisible()
+    await expect(overview.getByText('Твоя цель', { exact: true })).toBeVisible()
+    await expect(overview.getByText('Открыть анализ', { exact: true })).toBeVisible()
     await page.evaluate(() => {
       window.localStorage.setItem('fit.appTheme', 'dark')
       window.dispatchEvent(new Event('fit-theme-change'))
