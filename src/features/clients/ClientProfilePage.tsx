@@ -7,6 +7,7 @@ import { setAppTheme, useAppTheme } from '../../app/theme'
 import { setLiveExerciseAnimation, useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { SettingsIcon } from '../../shared/icons'
 import { LEGAL_PATHS } from '../../shared/legal'
+import { SUPPORT_TELEGRAM_URL } from '../../shared/support'
 import { AsyncView, Page, Switch } from '../../shared/ui'
 import { LogoutButton } from '../auth'
 import { AppInstallPanel } from '../install'
@@ -78,6 +79,7 @@ export function ClientProfileSettingsPage() {
         <Link to="/join">Ввести код приглашения</Link>
         <button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button>
         <button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button>
+        <a href={SUPPORT_TELEGRAM_URL} target="_blank" rel="noopener noreferrer">Поддержка в Telegram</a>
         <Link to={LEGAL_PATHS.terms}>Условия использования</Link>
         <Link to={LEGAL_PATHS.privacy}>Политика конфиденциальности</Link>
         <Link to={LEGAL_PATHS.deleteAccount}>Удаление аккаунта</Link>
