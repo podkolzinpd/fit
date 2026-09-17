@@ -739,12 +739,13 @@ export function createYandexMainRepository(
         )
         return payload.signedUrl
       },
-      async createCustomExercisePhotoUrl() {
+      createCustomExercisePhotoUrl() {
         // customExercise() всегда отдаёт imagePath: null на этом бэкенде
         // (YAFIT-521, см. FEATURE_PARITY.md), так что этот путь не должен
         // достигаться из реального UI — но интерфейс DataBackend требует
-        // метод структурно.
-        throw new RepositoryError('custom_exercise_photo_unsupported', 'Фото упражнений пока не поддерживается на Yandex-бэкенде')
+        // метод структурно. Rejected promise (не синхронный throw), чтобы
+        // поведение совпадало с остальными async-методами интерфейса.
+        return Promise.reject(new RepositoryError('custom_exercise_photo_unsupported', 'Фото упражнений пока не поддерживается на Yandex-бэкенде'))
       },
       parseWorkout: (text, systemCatalog) => yandexPilotRepository.parseWorkout(
         apiBaseUrl, sessionToken, text, systemCatalog, 'read_write',
