@@ -9,7 +9,7 @@ Baseline V1: зафиксированный снимок `legacy trainer-app`, c
 | Profile | Просмотр и изменение имени, корректный Cancel, выбор темы | Implemented: клиентский edit/logout сохраняет прежний контракт. Тренер видит одну компактную анкету с режимами просмотра и редактирования; для публикации достаточно имени из аккаунта, остальные поля необязательны. Длинные сведения, образование и публикация раскрываются внутри карточки, а тема, параметры тренировок и аккаунт вынесены в настройки по шестерёнке. Публичная анкета прокручивается на мобильном экране, держит действие связи в доступной зоне и возвращает гостя после входа. Cancel не сохраняет черновик; Chromium/WebKit и visual 390/430/1440 px покрывают основные состояния |
 | Clients | List/empty/error/retry, create, detail, edit, archive/restore | Implemented; aggregate list uses one tenant-scoped RPC; core E2E + RLS ready; allowlisted-аккаунтам поиск отдаётся полем Fit с иконкой и сбросом и показывается от шести клиентов, остальным — прежним полем, covered component test |
 | Client stats | Сводка на карточке: количество выполненных, % выполнения, дата последней тренировки, дней в работе (от первой тренировки), индикатор «требует внимания» при 14+ днях без тренировки | Implemented: pure aggregation covered unit + E2E |
-| Exercises | System search/filter; custom create/edit/archive/restore | Implemented: shared picker and curated catalog (80 core / 279 uncommon / 215 rare + 7 formats), variant selection, new names with all prior aliases preserved; клиент с тренером и без него создаёт свои упражнения и сохраняет их в тренировке, SQL/RLS и mobile E2E; Yandex PostgreSQL сохраняет тот же `created_by`/partition ownership и cross-tenant contract; права тренера и исторические ID сохраняются, чужие клиентские упражнения скрыты; бег и СБУ доступны отдельным быстрым фильтром, варианты обычного бега используют единый ref; full management E2E pending |
+| Exercises | System search/filter; custom create/edit/archive/restore | Implemented: shared picker and curated catalog (80 core / 279 uncommon / 215 rare + 7 formats), variant selection, new names with all prior aliases preserved; клиент с тренером и без него создаёт свои упражнения и сохраняет их в тренировке, SQL/RLS и mobile E2E; Yandex PostgreSQL сохраняет тот же `created_by`/partition ownership и cross-tenant contract, а tenant import — разметку, описание и метаданные фото без обязательного копирования объекта; редактирование этих новых полей через Yandex API ещё parity gap; права тренера и исторические ID сохраняются, чужие клиентские упражнения скрыты; бег и СБУ доступны отдельным быстрым фильтром, варианты обычного бега используют единый ref; full management E2E pending |
 | Workout | Create/view/edit/correct/copy/delete, strength/distance/reps, atomic save | Implemented: multi-set plan, load correction, беговые интервалы с пассивным/активным восстановлением и подтверждением каждого отрезка covered; wider acceptance pending |
 | Voice notes | Browser-only Russian transcription into editable workout and client trainer notes; manual input remains available | Prototype: local whisper.cpp WASM ready; real-device acceptance pending |
 | Schedule | Week/month/local date, timed/untimed, open workout/back | Implemented: недельная лента дней + часовая сетка на день (timed по времени, untimed отдельно), закреплённая шапка с прокруткой только сетки, автоскролл к 07:00/первой тренировке, кнопка «Сегодня», выбор дня и недели в URL, календарь-переход к дате; covered unit + E2E |
@@ -314,3 +314,13 @@ private CF, упражнения из каталога и проверяемые
 (4/8/12 тренировок), просмотр и атомарное сохранение. SQL проверяет неизменность
 черновика и идемпотентность. Native Yandex generation пока выключена.
 Контракт и границы: `docs/design/ASSISTANT_PROGRAM_PILOT_2026-09-15.md`.
+
+## Client Assistant — 2026-09-17
+
+- Клиенту открыт существующий `/assistant` и третья кнопка нижнего меню; новый
+  экран или отдельная архитектура не создаются.
+- История, composer, микрофон, отправка и карточки общие с тренером. Клиентский
+  контекст автоматически привязан к собственной карточке.
+- Сервер разрешает клиенту только собственные диалоги и `record_workout` для
+  себя; выбор чужого клиента и тренерские действия закрыты в Supabase и Yandex.
+- Контракт и проверки: `docs/design/CLIENT_ASSISTANT_ACCESS_2026-09-17.md`.

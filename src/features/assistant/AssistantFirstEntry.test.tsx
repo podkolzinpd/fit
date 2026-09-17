@@ -23,4 +23,15 @@ describe('assistant first entry', () => {
     expect(onChoose).toHaveBeenCalledExactlyOnceWith('Составь программу тренировок')
     expect(screen.getByRole('button', { name: 'Записать тренировку' })).toBeVisible()
   })
+  it('uses the current client without trainer-only wording', async () => {
+    const onChoose = vi.fn()
+    render(<AssistantFirstEntry clientMode onChoose={onChoose} />)
+
+    expect(screen.getByText(/в твой кабинет/i)).toBeVisible()
+    expect(screen.queryByText(/уточнит клиента/i)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Записать тренировку' }))
+    expect(onChoose).toHaveBeenCalledWith('Запиши мою тренировку: жим лёжа 3 по 10 по 60 кг')
+    await userEvent.click(screen.getByRole('button', { name: 'Показать прогресс' }))
+    expect(onChoose).toHaveBeenLastCalledWith('Покажи мой прогресс за месяц')
+  })
 })
