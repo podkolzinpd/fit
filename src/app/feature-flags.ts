@@ -145,7 +145,8 @@ export function getYandexSessionLinkingConfig(): YandexIdPilotConfig | null {
   return getYandexPublicConfig()
 }
 
-// Available to authenticated trainers; authorization is enforced by the server.
+// Available to both authenticated product roles; the server keeps trainer
+// ownership and client self-only authorization separate from this UI switch.
 export function isAssistantProgramEnabled(userId: string): boolean {
   return import.meta.env.VITE_ASSISTANT_PROGRAM_ENABLED === 'true' && userId.trim().length > 0
 }

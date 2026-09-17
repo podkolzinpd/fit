@@ -58,7 +58,7 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
       {typeof payload.rationale === 'string' && <p>{payload.rationale}</p>}
       {typeof payload.limitationReview === 'string' && <p className="assistant-message-copy">{payload.limitationReview}</p>}
       {typeof payload.progression === 'string' && <p>{payload.progression}</p>}
-      <p className="assistant-flow-guidance">Занятия — под наблюдением тренера. Усилие — насколько тяжело выполнять подход, по шкале от 1 до 10. Рабочий вес и технику подбирайте с тренером. На разминку предусмотрено 10 минут.</p>
+      <p className="assistant-flow-guidance">Это рекомендация к программе, а не медицинское назначение. Усилие — насколько тяжело выполнять подход, по шкале от 1 до 10. Подбирайте рабочий вес с запасом и сохраняйте технику; при боли или ухудшении самочувствия остановите упражнение. На разминку предусмотрено 10 минут.</p>
       <AssistantProgramOverview payload={payload} />
       <div className="assistant-program-sessions">{parsed.data.canonicalWorkouts.map((workout, index) => <details key={workout.requestId}>
         <summary><span><strong>Неделя {Math.floor(index / (parsed.data.canonicalWorkouts.length / 4)) + 1} · {workout.workoutDate}</strong><small>{workout.exercises.length} упражнений</small></span><b>Посмотреть</b></summary>

@@ -114,11 +114,12 @@ Workflow использует существующие `SUPABASE_ACCESS_TOKEN` �
 `objects == verified`; его можно безопасно повторять после новых source uploads.
 
 По умолчанию после этого запускайте full-cohort `audit` → `dry-run` → pinned
-`apply`. Private migration runner до подключения к PostgreSQL проверит наличие
-и точный размер каждого chat object, указанного в snapshot. Это исключает
-commit строк с неработающими вложениями. Перед финальным cutover после freeze
-writes повторите media `apply`, чтобы захватить файлы, появившиеся после первой
-репетиции.
+`apply`. Для живого source, в котором записи продолжают меняться между двумя
+GitHub runners, используйте отдельный current-snapshot apply ниже. Private
+migration runner до подключения к PostgreSQL проверит наличие и точный размер
+каждого chat object, указанного в snapshot. Это исключает commit строк с
+неработающими вложениями. Перед финальным cutover после freeze writes повторите
+media `apply`, чтобы захватить файлы, появившиеся после первой репетиции.
 
 Если product owner явно принимает временно неработающие вложения, оба target
 запуска можно выполнить с `allow_missing_media=true`. Это отдельный default-off
@@ -127,7 +128,7 @@ input workflow `Rehearse Yandex tenant migration`: runner по-прежнему 
 удаляются и не переписываются; до последующего `Migrate Yandex media: apply`
 чтение таких файлов вернёт not found, а после копирования те же ссылки начнут
 работать без повторной DB migration. Не используйте этот режим как неявный
-fallback и фиксируйте одинаковую policy для dry-run и pinned apply.
+fallback и фиксируйте одинаковую policy для dry-run и apply.
 
 ### Удалённая репетиция на Yandex stage
 
@@ -158,13 +159,19 @@ GitHub OIDC → Yandex IAM token.
   `candidate_not_found`.
 - `full-cohort` не использует UUID secret и переносит весь поддерживаемый
   application manifest одним согласованным snapshot. Его выбирают, когда merge
-  или membership пересекает границу trainer tenant. Перед `apply` обязательны
-  успешный `dry-run`, точный content-derived fingerprint из его отчёта и общая
-  apply-фраза. Режим не переносит `auth.users`, OAuth credentials, Yandex
-  sessions/rollout assignments, весь source push outbox и Live receipts. Chat
-  photo objects переносятся отдельным workflow выше и по умолчанию проверяются
-  target runner до DB-транзакции. Явный `allow_missing_media=true` сохраняет
-  ссылки, но откладывает проверку наличия файлов.
+  или membership пересекает границу trainer tenant. Для замороженного source
+  применяйте обычный pinned-путь: успешный `dry-run`, точный content-derived
+  fingerprint и `APPLY_TENANT_TO_YANDEX_STAGE`. Для живого source используйте
+  `APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE` с пустым fingerprint: workflow
+  экспортирует один `REPEATABLE READ` snapshot и тем же encrypted envelope
+  выполняет target dry-run, commit и повторный apply с нулём вставок. Эта фраза
+  принимается только для `full-cohort`; автоматические и configured selections
+  не получают ослабления fingerprint/selection guard. Режим не переносит
+  `auth.users`, OAuth credentials, Yandex sessions/rollout assignments, весь
+  source push outbox и Live receipts. Chat photo objects переносятся отдельным
+  workflow выше и по умолчанию проверяются target runner до DB-транзакции.
+  Явный `allow_missing_media=true` сохраняет ссылки, но откладывает проверку
+  наличия файлов.
 
 Автовыбор нужен только для безопасной репетиции на реальных объёмах и не
 фиксирует tenant для cutover. `full-cohort` не является автовыбором: его
@@ -177,8 +184,10 @@ fingerprint фиксирует точное содержимое всего по
 - `dry-run` — повторяет audit, передаёт envelope только в памяти private runner
   и откатывает полную target-транзакцию после constraints/checksum validation;
 - `apply` — сначала выполняет dry-run, затем commit и обязательный повторный
-  apply, который должен вставить ноль строк. Требует точное отдельное значение
-  `APPLY_TENANT_TO_YANDEX_STAGE`.
+  apply того же encrypted envelope, который должен вставить ноль строк. Pinned
+  путь требует `APPLY_TENANT_TO_YANDEX_STAGE`; current-snapshot путь требует
+  `APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE`, `full-cohort` и пустой внешний
+  fingerprint.
 
 При отклонении target с `409` orchestration принимает и выводит только узкий
 `tenant_migration_rejected` code, прошедший allowlist-проверку символов. Полное
@@ -621,16 +630,18 @@ progression constraints without replacing model doses. Every new exercise row
 requires a progression explanation, including a reason when doses stay unchanged.
 A model draft that fails validation is rejected.
 
-Program access (all trainers):
+Program access (trainers and clients):
 
-- `ASSISTANT_PROGRAM_ENABLED=true` enables the authenticated trainer flow and
+- `ASSISTANT_PROGRAM_ENABLED=true` enables the authenticated program flow and
   private generator. A missing/false flag disables new quiz/generator calls.
 - `VITE_ASSISTANT_PROGRAM_ENABLED=true` in `vercel.json` enables existing chat
-  controls for signed-in trainers. Client roles cannot access the trainer route;
-  the server checks authentication, conversation ownership and trainer role.
+  controls for both signed-in product roles. Trainers can select only connected
+  clients; a client is bound to their own active card. The server checks
+  authentication, conversation ownership, role and target ownership.
 - The former `*_PROGRAM_PILOT_USER_IDS` variables are no longer read. No per-user
   deployment configuration is needed. Generator IAM remains private; client
-  selection still uses the actor-scoped client list.
+  selection still uses the actor-scoped client list; client program apply also
+  requires the validated `program-v1` payload in both databases.
 - Disable the server flag and redeploy to stop new calls. Existing planned
   workouts and server-created action confirmation keep their normal lifecycle.
 

@@ -92,8 +92,9 @@ export async function verifyAnalysisShortcutKeepsShell(page: Page) {
 
 export async function verifyResultsSources(page: Page) {
   const center = page.locator('#results-center')
-  await expect(page.locator('.period-exercise-results #results-center')).toHaveCount(1)
   await verifyAnalysisShortcutKeepsShell(page)
+  await page.getByRole('tab', { name: 'ПРО' }).click()
+  await expect(page.locator('.progress-pro-list #results-center')).toHaveCount(1)
   for (const control of await page.locator('.progress-details-toggle:visible').all()) {
     expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44)
   }
@@ -101,6 +102,9 @@ export async function verifyResultsSources(page: Page) {
   await expect(page.locator('.weekly-training-load')).not.toHaveAttribute('open')
   await center.getByText('Все результаты', { exact: true }).click()
   await center.scrollIntoViewIfNeeded()
+  await page.locator('.content').evaluate((element) => {
+    element.scrollTop = Math.min(element.scrollTop + 120, element.scrollHeight - element.clientHeight)
+  })
   const scrollBeforeFilters = await page.locator('.content').evaluate((element) => element.scrollTop)
   expect(scrollBeforeFilters).toBeGreaterThan(0)
   await center.getByRole('combobox', { name: 'Упражнение', exact: true }).selectOption('system:press:strength')

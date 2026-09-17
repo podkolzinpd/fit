@@ -18,7 +18,7 @@ test.beforeAll(async () => {
 const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8')
 const programQuestions = ['Продолжаем прежний подход или меняем программу? Что важно сохранить?', 'Какова цель именно этой четырёхнедельной программы: что хотите улучшить?']
 
-function collectingShell(theme: string) {
+function collectingShell(theme: string, role: 'trainer' | 'client' = 'trainer') {
   const content = renderToString(createElement(ProgramCard, { enabled: true, running: false, showGuidance: false,
     payload: { step: 'brief', briefStatus: 'needs_answers', clientName: 'Сан Саныч', readyToGenerate: false,
       guidance: programQuestions.join('\n'), hasHistory: true,
@@ -30,10 +30,12 @@ function collectingShell(theme: string) {
     <div class="phone-frame theme-${theme} assistant-shell ui-identity assistant-identity"><div class="content"><main class="assistant-page assistant-program-collecting">
       <section class="assistant-session-switcher"><div class="assistant-session-bar"><strong>Сегодня</strong></div></section>
       <section class="assistant-thread" aria-label="Диалог с ассистентом"><article class="assistant-message assistant-message-user"><p>Подготовить программу для Сан Саныч</p></article>
-        <article class="assistant-message assistant-message-assistant"><div class="assistant-message-copy"><p>Пилот: четыре недели занятий под наблюдением тренера, 1–3 раза в неделю от 30 минут, с днём отдыха между занятиями.</p><p>Клиент: Сан Саныч. За последние восемь недель вижу 24 завершённые тренировки.</p>${programQuestions.map((question, index) => `<p data-testid="program-question-${index}">${question}</p>`).join('')}</div></article></section>
+        <article class="assistant-message assistant-message-assistant"><div class="assistant-message-copy"><p>Подготовлю рекомендованный черновик на четыре недели: 1–3 занятия в неделю от 30 минут, с днём отдыха между занятиями. Это не медицинское назначение; итоговую нагрузку нужно сверять с самочувствием и техникой.</p><p>Профиль: Сан Саныч. За последние восемь недель вижу 24 завершённые тренировки.</p>${programQuestions.map((question, index) => `<p data-testid="program-question-${index}">${question}</p>`).join('')}</div></article></section>
       <section class="assistant-context-panel" aria-label="Текущий контекст ассистента">${content}</section>
       <form class="assistant-composer" data-testid="composer"><textarea aria-label="Сообщение ассистенту" placeholder="Напишите, чем помочь"></textarea><div class="voice-input voice-input-icon"><button class="assistant-icon-button" type="button" aria-label="Голосовой ввод">М</button></div><button class="assistant-icon-button" type="button" aria-label="Отправить сообщение">→</button></form>
-    </main></div><nav class="tab-bar trainer-tab-bar" data-testid="tabbar"><a>Сегодня</a><a>Клиенты</a><a>Ассистент</a><a>Расписание</a></nav></div></div></body></html>`
+    </main></div>${role === 'client'
+      ? '<nav class="tab-bar client-tab-bar" data-testid="tabbar"><a>Кабинет</a><a>Тренировки</a><a>Ассистент</a><a>Прогресс</a><a>Профиль</a></nav>'
+      : '<nav class="tab-bar trainer-tab-bar" data-testid="tabbar"><a>Сегодня</a><a>Клиенты</a><a>Ассистент</a><a>Расписание</a></nav>'}</div></div></body></html>`
 }
 
 async function expectUnclipped(locator: Locator) {
@@ -102,6 +104,21 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
   }
 }
 
+for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
+  for (const theme of ['light', 'dark']) {
+    test(`client program questions in complete shell at ${viewport.width} ${theme}`, async ({ page }, testInfo) => {
+      await page.setViewportSize(viewport)
+      await page.setContent(collectingShell(theme, 'client'))
+      await anchorProgramShell(page)
+      await expectProgramConversationVisible(page)
+      await expect(page.getByTestId('tabbar')).toContainText('Кабинет')
+      await expect(page.locator('.assistant-message-assistant')).toContainText('рекомендованный черновик')
+      await expect(page.locator('.assistant-message-assistant')).not.toContainText('тренер')
+      await page.screenshot({ path: testInfo.outputPath(`client-questions-${viewport.width}-${theme}.png`) })
+    })
+  }
+}
+
 for (const width of [390, 430, 1440]) {
   for (const theme of ['light', 'dark']) {
     test(`history question at ${width} ${theme}`, async ({ page }, testInfo) => {
@@ -127,7 +144,7 @@ for (const width of [390, 430, 1440]) {
         exercises: [{ name: 'Приседания с гантелью у груди', restBetweenSetsSec: 90, sets: Array.from({ length: 2 }, () => ({ reps: index < 6 ? 10 : 11, rpe: 6.5 })) }, { name: 'Ходьба', restBetweenSetsSec: 0, trainerComment: 'Аэробное усилие 4/10. Разговорный темп.', sets: [{ durationSec: 600 }] }],
       }))
       const content = renderToString(createElement(ProgramCard, { enabled: true, running: false,
-        payload: { step: 'confirm', limitationReview: 'Ограничения: дискомфорт при жимах над головой. Учесть: исключить жимы над головой. Тренеру: проверьте назначения перед добавлением.', clientName: 'Тестовый клиент с длинным именем', goal: 'Вернуться к регулярным занятиям после перерыва', canonicalWorkouts: workouts, historyFacts: [], sessions: workouts.map((workout, index) => ({ day: workout.workoutDate, week: Math.floor(index / 3) + 1, title: 'День', exercises: [{ exerciseRef: 'squat', name: 'Приседания с гантелью у груди', sets: 2, reps: index < 6 ? 10 : 11, durationSec: null, rpe: 6.5, restSec: 90,
+        payload: { step: 'confirm', limitationReview: 'Ограничения: дискомфорт при жимах над головой. Учесть: исключить жимы над головой. Проверьте назначения перед добавлением.', clientName: 'Тестовый клиент с длинным именем', goal: 'Вернуться к регулярным занятиям после перерыва', canonicalWorkouts: workouts, historyFacts: [], sessions: workouts.map((workout, index) => ({ day: workout.workoutDate, week: Math.floor(index / 3) + 1, title: 'День', exercises: [{ exerciseRef: 'squat', name: 'Приседания с гантелью у груди', sets: 2, reps: index < 6 ? 10 : 11, durationSec: null, rpe: 6.5, restSec: 90,
           progressionNote: 'Первые две недели закрепляйте технику. В третью добавьте одно повторение, если все подходы выполнены с целевым усилием; иначе сохраните прежнюю нагрузку.' }, { exerciseRef: 'walking', name: 'Ходьба', sets: 1, reps: null, durationSec: 600, rpe: 4, restSec: 0, progressionNote: 'Разговорный темп.' }] })) },
         onApply: async () => {}, onSaved: () => {}, onSuggestion: () => {}, onCancel: () => {},
       }))

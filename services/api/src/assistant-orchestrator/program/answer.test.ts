@@ -33,3 +33,20 @@ it.each([
 ])('resolves a named next weekday by the calendar from %s', (today, message, expected) => {
   expect(mergeExtractedBrief({}, message, explicitBriefAnswer(message, undefined, today)).brief.startDate).toBe(expected)
 })
+
+it.each([
+  ['Да все равно', 1, [1]],
+  ['Не важно', 2, [1, 4]],
+  ['В любые', 3, [1, 3, 5]],
+  ['без разницы.', 3, [1, 3, 5]],
+] as const)('uses a stable rest-day schedule for an indifferent weekday answer: %s', (message, frequency, weekdays) => {
+  const previous = { frequency }
+  const result = mergeExtractedBrief(previous, message, explicitBriefAnswer(message,
+    { question: 'В какие дни недели удобно тренироваться?', fields: ['weekdays'] }, undefined, previous))
+  expect(result.brief).toEqual({ frequency, weekdays })
+})
+
+it('does not infer weekdays from an indifferent answer outside the weekday question', () => {
+  expect(explicitBriefAnswer('Не важно', { question: 'Какова цель?', fields: ['goalText'] }, undefined, { frequency: 3 })).toBeUndefined()
+  expect(explicitBriefAnswer('В любые', { question: 'В какие дни?', fields: ['weekdays'] })).toBeUndefined()
+})

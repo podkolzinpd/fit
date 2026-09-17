@@ -90,14 +90,14 @@ test('pins the reviewed Supabase root CA without disabling verification', () => 
   assert.doesNotMatch(workflow, /rejectUnauthorized:\s*false|sslmode=no-verify/)
 })
 
-test('requires independent apply confirmation and a private stage route', () => {
+test('bounds both apply confirmations and keeps a private stage route', () => {
   assert.match(
     workflow,
-    /test "\$APPLY_CONFIRMATION" = APPLY_TENANT_TO_YANDEX_STAGE/,
+    /APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE\)[\s\S]*?test "\$TENANT_SELECTION" = full-cohort[\s\S]*?test -z "\$TENANT_FINGERPRINT_CONFIRMATION"/,
   )
   assert.match(
     workflow,
-    /smallest-eligible\|smallest-eligible-standalone-client\|most-complete-standalone-client\|full-cohort\)[\s\S]*?TENANT_FINGERPRINT_CONFIRMATION[\s\S]*?\^\[0-9a-f\]\{16\}\$/,
+    /APPLY_TENANT_TO_YANDEX_STAGE\)[\s\S]*?smallest-eligible\|smallest-eligible-standalone-client\|most-complete-standalone-client\|full-cohort\)[\s\S]*?TENANT_FINGERPRINT_CONFIRMATION[\s\S]*?\^\[0-9a-f\]\{16\}\$/,
   )
   assert.match(
     workflow,

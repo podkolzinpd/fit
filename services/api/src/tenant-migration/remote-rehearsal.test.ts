@@ -149,6 +149,61 @@ describe('remote tenant rehearsal configuration', () => {
     )).toThrowError(new RemoteTenantRehearsalError('apply_not_confirmed'))
   })
 
+  it('allows current-snapshot apply only for the complete cohort', () => {
+    const settings = readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_REHEARSAL_MODE: 'apply',
+        FIT_TENANT_REMOTE_APPLY_CONFIRMATION:
+          'APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE',
+        FIT_TENANT_SELECTION_MODE: 'full-cohort',
+        FIT_TENANT_STAGE_CONTAINER_URL:
+          'https://bba123stage.containers.yandexcloud.net',
+        FIT_TENANT_TRAINER_ID: undefined,
+        YC_TOKEN: 'ephemeral-iam-token',
+      },
+      () => 'trusted-ca',
+    )
+
+    expect(settings.tenantSelection).toEqual({ kind: 'full-cohort' })
+    expect(settings.expectedTenantFingerprint).toBeUndefined()
+
+    expect(() => readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_REHEARSAL_MODE: 'apply',
+        FIT_TENANT_REMOTE_APPLY_CONFIRMATION:
+          'APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE',
+        FIT_TENANT_SELECTION_MODE: 'smallest-eligible',
+        FIT_TENANT_STAGE_CONTAINER_URL:
+          'https://bba123stage.containers.yandexcloud.net',
+        FIT_TENANT_TRAINER_ID: undefined,
+        YC_TOKEN: 'ephemeral-iam-token',
+      },
+      () => 'trusted-ca',
+    )).toThrowError(new RemoteTenantRehearsalError(
+      'current_snapshot_apply_requires_full_cohort',
+    ))
+
+    expect(() => readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_REHEARSAL_MODE: 'apply',
+        FIT_TENANT_REMOTE_APPLY_CONFIRMATION:
+          'APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE',
+        FIT_TENANT_SELECTION_MODE: 'full-cohort',
+        FIT_TENANT_EXPECTED_FINGERPRINT: 'a'.repeat(16),
+        FIT_TENANT_STAGE_CONTAINER_URL:
+          'https://bba123stage.containers.yandexcloud.net',
+        FIT_TENANT_TRAINER_ID: undefined,
+        YC_TOKEN: 'ephemeral-iam-token',
+      },
+      () => 'trusted-ca',
+    )).toThrowError(new RemoteTenantRehearsalError(
+      'current_snapshot_apply_fingerprint_forbidden',
+    ))
+  })
+
   it('requires a rehearsed fingerprint for automatic apply selection', () => {
     const audit = readRemoteTenantRehearsalSettings(
       {

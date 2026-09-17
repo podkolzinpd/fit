@@ -88,9 +88,9 @@ export function prescribeProgram(raw: unknown, brief: ProgramBrief, today: strin
     while (duration() > (brief.durationMin ?? 0) && sets > 1) exercises = prescriptions(--sets)
     return { weekday: session.weekday, title: session.title, exercises }
   })
-  const template = validateProgramTemplate({ rationale: `Цель: ${(brief.goalText ?? '').slice(0, 160)}. Четыре недели, ${brief.frequency ?? 0} занятий в неделю. ${load.summary} В каждом занятии пять основных движений; рабочий вес подбирает тренер.`, sessions,
+  const template = validateProgramTemplate({ rationale: `Цель: ${(brief.goalText ?? '').slice(0, 160)}. Четыре недели, ${brief.frequency ?? 0} занятий в неделю. ${load.summary} В каждом занятии пять основных движений; рабочий вес подбирается по технике, целевому усилию и запасу сил.`, sessions,
     progression: (load.mode === 'recent' ? 'Во вторую и третью недели добавляйте по одному повторению (в удержаниях — по 5 секунд).' : 'Первые две недели закрепляйте нагрузку; в третью добавьте одно повторение (в удержаниях — 5 секунд).')
-      + ' Повышайте нагрузку только при сохранении техники и запаса сил. Подходы и целевое усилие сохраняются; четвёртая неделя — закрепление. При дискомфорте остановитесь и обсудите корректировку с тренером.',
+      + ' Повышайте нагрузку только при сохранении техники и запаса сил. Подходы и целевое усилие сохраняются; четвёртая неделя — закрепление. При боли остановите упражнение и обратитесь за профильной консультацией.',
   }, brief, today)
   validateProgramLoad(template, load)
   return template
@@ -241,7 +241,7 @@ function stableId(seed: string): string {
 
 export function materializeProgram(template: ProgramTemplate, brief: ProgramBrief, clientId: string, generationId: string) {
   const limitationReview = brief.limitations === 'present' || brief.limitations === 'unknown'
-    ? `Ограничения: ${brief.limitationsText ?? 'не уточнены'}. Учесть: ${brief.limitationAdjustments ?? 'нужно уточнить'}. Тренеру: проверьте совместимость упражнений и нагрузки с этими условиями перед добавлением программы.` : undefined
+    ? `Ограничения: ${brief.limitationsText ?? 'не уточнены'}. Учесть: ${brief.limitationAdjustments ?? 'нужно уточнить'}. Перед добавлением программы дополнительно проверьте совместимость упражнений и нагрузки с этими условиями.` : undefined
   const byRef = new Map(eligibleProgramExercises(brief.equipment!, brief.excludedRefs ?? []).map((row) => [row.ref, row]))
   const sessions = scheduleSessions(brief, template.sessions).map(({ date, week, session }) => ({
     day: date, week: week + 1, title: `Неделя ${week + 1}: ${session.title}`,
