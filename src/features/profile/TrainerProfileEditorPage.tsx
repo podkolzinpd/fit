@@ -8,16 +8,12 @@ import type { TrainerCertificate, TrainerProfileDraft, TrainerTrainingMode } fro
 import { copyText } from '../../shared/clipboard'
 import { ChevronDownIcon } from '../../shared/icons'
 import { prepareProfileImage } from '../../shared/profile-image'
-import { emptyTrainerProfileDraft, trainerProfileDraftSchema, validatePublishableTrainerProfile } from '../../shared/trainer-profile'
+import { emptyTrainerProfileDraft, trainerProfileDraftSchema, TRAINER_SPECIALTIES, validatePublishableTrainerProfile } from '../../shared/trainer-profile'
 import { AsyncView, Field, SaveStatus, Switch } from '../../shared/ui'
 import { MetroStationPicker } from './MetroStationPicker'
 import { TrainerProfileCard } from './TrainerProfileCard'
 
 const key = ['trainer-professional-profile'] as const
-
-function commaList(value: string): string[] {
-  return [...new Set(value.split(',').map((item) => item.trim()).filter(Boolean))].slice(0, 12)
-}
 
 function hasProfileContent(draft: TrainerProfileDraft): boolean {
   return Boolean(
@@ -73,7 +69,6 @@ export function TrainerProfessionalProfileSection() {
   const profile = useQuery({ queryKey: key, queryFn: () => trainerProfiles.getOwn() })
   const [draft, setDraft] = useState<TrainerProfileDraft | null>(null)
   const [editing, setEditing] = useState(false)
-  const [specialtiesText, setSpecialtiesText] = useState('')
   const [customLocationText, setCustomLocationText] = useState('')
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle')
   const [localError, setLocalError] = useState<string | null>(null)
@@ -84,7 +79,6 @@ export function TrainerProfessionalProfileSection() {
     const name = [actor?.firstName, actor?.lastName].filter(Boolean).join(' ')
     const initial = profile.data?.draft ?? emptyTrainerProfileDraft(name)
     setDraft(initial)
-    setSpecialtiesText(initial.specialties.join(', '))
   }, [actor?.firstName, actor?.lastName, draft, profile.data, profile.isLoading])
 
   const save = useMutation({
@@ -92,7 +86,6 @@ export function TrainerProfessionalProfileSection() {
     onSuccess: (value) => {
       queryClient.setQueryData(key, value)
       setDraft(value.draft)
-      setSpecialtiesText(value.draft.specialties.join(', '))
       setStatus('saved')
       setEditing(false)
     },
@@ -107,7 +100,6 @@ export function TrainerProfessionalProfileSection() {
       forgetPublicTrainerProfile(value.publicId)
       queryClient.setQueryData(key, value)
       setDraft(value.draft)
-      setSpecialtiesText(value.draft.specialties.join(', '))
       setStatus('saved')
       setLocalError(null)
     },
@@ -145,6 +137,10 @@ export function TrainerProfessionalProfileSection() {
   function toggleMode(mode: TrainerTrainingMode, checked: boolean) {
     if (!draft) return
     set('trainingModes', checked ? [...new Set([...draft.trainingModes, mode])] : draft.trainingModes.filter((item) => item !== mode))
+  }
+  function toggleSpecialty(specialty: string, checked: boolean) {
+    if (!draft) return
+    set('specialties', checked ? [...new Set([...draft.specialties, specialty])] : draft.specialties.filter((item) => item !== specialty))
   }
   async function imageChanged(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -188,7 +184,6 @@ export function TrainerProfessionalProfileSection() {
     const name = [actor?.firstName, actor?.lastName].filter(Boolean).join(' ')
     const savedDraft = profile.data?.draft ?? emptyTrainerProfileDraft(name)
     setDraft(savedDraft)
-    setSpecialtiesText(savedDraft.specialties.join(', '))
     setCustomLocationText('')
     setStatus('idle')
     setLocalError(null)
@@ -240,7 +235,15 @@ export function TrainerProfessionalProfileSection() {
         <div className="trainer-profile-form-section">
           <Field label="Имя в анкете"><input value={draft.displayName} maxLength={120} onChange={(event) => set('displayName', event.target.value)} /></Field>
           <Field label="О себе"><textarea value={draft.bio} maxLength={1200} placeholder="Опыт, подход и кому вы помогаете" onChange={(event) => set('bio', event.target.value)} /></Field>
-          <Field label="Направления"><input value={specialtiesText} placeholder="Силовые, бег, снижение веса" onChange={(event) => { setSpecialtiesText(event.target.value); set('specialties', commaList(event.target.value)) }} /></Field>
+          <div className="trainer-specialties-fields" role="group" aria-label="Направления">
+            <strong>Направления</strong>
+            <div className="trainer-specialties-options">
+              {TRAINER_SPECIALTIES.map((specialty) => <label key={specialty} className="trainer-specialty-option">
+                <input type="checkbox" checked={draft.specialties.includes(specialty)} onChange={(event) => toggleSpecialty(specialty, event.target.checked)} />
+                <span>{specialty}</span>
+              </label>)}
+            </div>
+          </div>
         </div>
         <div className="trainer-profile-form-section">
           <div className="trainer-profile-form-grid">

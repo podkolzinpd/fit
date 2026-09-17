@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { emptyTrainerProfileDraft } from '../../shared/trainer-profile'
+import { emptyTrainerProfileDraft, TRAINER_SPECIALTIES } from '../../shared/trainer-profile'
 import type { TrainerProfessionalProfile, TrainerProfileDraft } from '../../shared/domain'
 import { TrainerProfessionalProfileSection } from './TrainerProfileEditorPage'
 
@@ -36,7 +36,7 @@ const profile: TrainerProfessionalProfile = {
 const completeDraft: TrainerProfileDraft = {
   ...empty,
   bio: 'Помогаю тренироваться регулярно и безопасно.',
-  specialties: ['Силовые', 'Бег'],
+  specialties: ['Кроссфит', 'Йога / пилатес / стретчинг'],
   city: 'Москва',
   trainingModes: ['online', 'in_person'],
   experienceStartYear: 2020,
@@ -91,8 +91,8 @@ describe('TrainerProfessionalProfileSection', () => {
     await user.click(await screen.findByRole('button', { name: 'Редактировать' }))
     await user.clear(screen.getByLabelText('О себе'))
     await user.type(screen.getByLabelText('О себе'), 'Новый короткий текст.')
-    await user.clear(screen.getByLabelText('Направления'))
-    await user.type(screen.getByLabelText('Направления'), 'Йога, йога, Мобилити')
+    await user.click(screen.getByRole('checkbox', { name: 'Кроссфит' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Похудение и коррекция фигуры' }))
     await user.click(screen.getByRole('switch', { name: 'Онлайн' }))
     await user.type(screen.getByRole('combobox', { name: 'Метро Москвы' }), 'Динамо')
     await user.click(await screen.findByRole('option', { name: /Динамо/ }))
@@ -109,7 +109,7 @@ describe('TrainerProfessionalProfileSection', () => {
     await waitFor(() => expect(repository.saveDraft).toHaveBeenCalledTimes(1))
     const saved = repository.saveDraft.mock.calls[0]?.[0] as TrainerProfileDraft | undefined
     expect(saved?.bio).toBe('Новый короткий текст.')
-    expect(saved?.specialties).toEqual(['Йога', 'йога', 'Мобилити'])
+    expect(saved?.specialties).toEqual(['Йога / пилатес / стретчинг', 'Похудение и коррекция фигуры'])
     expect(saved?.trainingModes).toEqual(['in_person'])
     expect(saved?.metroStationIds).toEqual(['msk-dinamo'])
     expect(saved?.customLocations).toEqual(['World Class Динамо'])
@@ -129,6 +129,28 @@ describe('TrainerProfessionalProfileSection', () => {
     expect(screen.getByRole('link', { name: 'Открыть анкету' })).toHaveAttribute('href', `/trainers/${profile.publicId}`)
     await user.click(screen.getByRole('button', { name: 'Снять с публикации' }))
     await waitFor(() => expect(repository.unpublish).toHaveBeenCalledTimes(1))
+  })
+
+  it('shows all standardized specialty checkboxes and keeps a legacy free-text value intact when toggling a standard one', async () => {
+    const legacyDraft: TrainerProfileDraft = { ...completeDraft, specialties: ['Кроссфит', 'Индивидуальный подход к каждому'] }
+    const legacyProfile = { ...publishedProfile, draft: legacyDraft, published: legacyDraft }
+    repository.getOwn.mockResolvedValue(legacyProfile)
+    repository.saveDraft.mockImplementation((draft: TrainerProfileDraft) => Promise.resolve({ ...legacyProfile, draft }))
+    const user = userEvent.setup()
+    renderSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Редактировать' }))
+    const group = screen.getByRole('group', { name: 'Направления' })
+    expect(within(group).getAllByRole('checkbox')).toHaveLength(TRAINER_SPECIALTIES.length)
+    expect(within(group).getByRole('checkbox', { name: 'Кроссфит' })).toBeChecked()
+    expect(within(group).getByRole('checkbox', { name: 'Другое' })).not.toBeChecked()
+
+    await user.click(within(group).getByRole('checkbox', { name: 'Йога / пилатес / стретчинг' }))
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+    await waitFor(() => expect(repository.saveDraft).toHaveBeenCalledTimes(1))
+    const saved = repository.saveDraft.mock.calls[0]?.[0] as TrainerProfileDraft
+    expect(saved.specialties).toEqual(['Кроссфит', 'Индивидуальный подход к каждому', 'Йога / пилатес / стретчинг'])
   })
 
   it('restores saved values when editing is cancelled', async () => {
