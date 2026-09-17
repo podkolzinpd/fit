@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 import { authRepository } from './auth.repository'
 
 const queries = vi.hoisted(() => ({
@@ -122,7 +123,7 @@ describe('authRepository.initialize', () => {
       'FitLocal123!',
       'Анна',
       'client',
-      expect.objectContaining({ termsVersion: '2026-09-09', privacyVersion: '2026-09-09' }),
+      expect.objectContaining({ termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION }),
     )
     expect(acceptCurrent).toHaveBeenCalledWith('registration')
   })

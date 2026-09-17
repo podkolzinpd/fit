@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test'
 
 for (const legalPage of [
-  { path: '/legal/terms', title: 'Условия использования', lastSection: '8. Изменение Условий' },
-  { path: '/legal/privacy', title: 'Политика конфиденциальности', lastSection: '10. Изменения Политики' },
+  { path: '/legal/terms', title: 'Условия использования сервиса Fit', lastSection: '4. Изменение Условий' },
+  { path: '/legal/privacy', title: 'Политика конфиденциальности', lastSection: '10. Изменения настоящей Политики конфиденциальности' },
 ]) {
   test(`${legalPage.title} scrolls to the end in the iPhone WebKit viewport`, async ({ page }) => {
     await page.goto(legalPage.path)

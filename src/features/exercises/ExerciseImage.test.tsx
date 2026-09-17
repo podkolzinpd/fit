@@ -144,6 +144,22 @@ describe('ExerciseImage', () => {
     expect(container.innerHTML).not.toContain('fedb-dumbbell-lunge')
   })
 
+  it('signs and shows a custom exercise cover photo from its stored path', async () => {
+    const createCustomExercisePhotoUrl = vi.spyOn(exercisesRepository, 'createCustomExercisePhotoUrl')
+      .mockResolvedValue('https://signed.example/jump.jpg')
+
+    render(<ExerciseImage customPhotoPath="trainer-1/jump.jpg" alt="Прыжки радости" variant="picker" />)
+    await waitFor(() => expect(screen.getByRole('img', { name: 'Прыжки радости' })).toHaveAttribute('src', 'https://signed.example/jump.jpg'))
+    expect(createCustomExercisePhotoUrl).toHaveBeenCalledWith('trainer-1/jump.jpg', 3600)
+  })
+
+  it('shows a loading placeholder, not the empty icon, while a custom photo is being signed', () => {
+    vi.spyOn(exercisesRepository, 'createCustomExercisePhotoUrl').mockReturnValue(new Promise(() => {}))
+    const { container } = render(<ExerciseImage customPhotoPath="trainer-1/pending-jump.jpg" alt="Прыжки радости" variant="picker" />)
+    expect(container.firstElementChild).toHaveClass('exercise-image-empty', 'exercise-image-loading')
+    expect(container.querySelector('img')).not.toBeInTheDocument()
+  })
+
   it('keeps compact catalog cards static even when video is available', () => {
     const { container } = render(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="preview" />)
     expect(container.querySelector('video')).not.toBeInTheDocument()

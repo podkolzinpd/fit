@@ -220,6 +220,10 @@ insert into public.user_legal_acceptances (
   source,
   accepted_at
 )
-select id, '2026-09-09', '2026-09-09', 'existing_user', now()
+select id,
+  'sha256:cab599a93dde50d93e903077',
+  'sha256:5371d0ac8c84bd4dda416083',
+  'existing_user',
+  now()
 from auth.users
 on conflict (user_id, terms_version, privacy_version) do nothing;

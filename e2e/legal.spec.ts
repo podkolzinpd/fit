@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test'
 
 for (const legalPage of [
-  { path: '/legal/terms', title: 'Условия использования', lastSection: '8. Изменение Условий' },
-  { path: '/legal/privacy', title: 'Политика конфиденциальности', lastSection: '10. Изменения Политики' },
+  { path: '/legal/terms', title: 'Условия использования сервиса Fit', lastSection: '4. Изменение Условий' },
+  { path: '/legal/privacy', title: 'Политика конфиденциальности', lastSection: '10. Изменения настоящей Политики конфиденциальности' },
 ]) {
   test(`${legalPage.title} scrolls to the end in the Android viewport`, async ({ page }) => {
     await page.goto(legalPage.path)
@@ -28,7 +28,8 @@ for (const legalPage of [
 test('legal documents are public and account deletion stays a reversible request', async ({ page }, testInfo) => {
   await page.goto('/legal/privacy')
   await expect(page.getByRole('heading', { level: 1, name: 'Политика конфиденциальности' })).toBeVisible()
-  await expect(page.getByText(/Supabase, Vercel и сервисы Yandex Cloud/)).toBeVisible()
+  await expect(page.getByText('Сервис не передает персональные данные в третьи страны.')).toBeVisible()
+  await expect(page.getByRole('table', { name: 'Перечень обрабатываемых персональных данных' })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
 
   await page.goto('/legal/delete-account')

@@ -41,6 +41,11 @@ export const exercisesRepository = {
     if (result.error || !result.data?.signedUrl) throw repositoryError(result.error ?? new Error('Пустой адрес медиа'))
     return result.data.signedUrl
   },
+  async createCustomExercisePhotoUrl(path: string, expiresIn: number) {
+    const result = await exerciseQueries.createCustomExercisePhotoUrl(path, expiresIn)
+    if (result.error || !result.data?.signedUrl) throw repositoryError(result.error ?? new Error('Пустой адрес фото'))
+    return result.data.signedUrl
+  },
   async parseWorkout(text: string, systemCatalog: readonly ExerciseSnapshot[]): Promise<WorkoutParseResponse> {
     const result = await exerciseQueries.parseWorkout(text, systemCatalog)
     if (result.error || !result.data) throw repositoryError(result.error ?? new Error('Пустой ответ парсера'))
