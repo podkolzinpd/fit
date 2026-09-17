@@ -5,6 +5,7 @@ import { CloseIcon } from '../../shared/icons'
 import {
   loadBodyMap,
   progressBodyMap,
+  workoutProgressBodyMap,
   type BodyMapData,
   type BodyMapMode,
   type BodyMapRegion,
@@ -249,7 +250,9 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
   const { actor } = useAuth()
   const displayMode = useBodyMapDisplayMode(actor?.userId, actor?.role, clientId, clientGender)
   const variant = resolveBodyFigureVariant(displayMode, clientGender)
-  const progress = useMemo(() => progressBodyMap(summary), [summary])
+  const recordedProgress = useMemo(() => workoutProgressBodyMap(workouts, summary.periodStart, summary.periodEnd), [summary.periodEnd, summary.periodStart, workouts])
+  const summaryProgress = useMemo(() => progressBodyMap(summary), [summary])
+  const progress = recordedProgress.regions.length > 0 ? recordedProgress : summaryProgress
   const load = useMemo(() => loadBodyMap(workouts, summary.periodStart, summary.periodEnd), [summary, workouts])
   const initialMode: BodyMapMode = progress.regions.length > 0 ? 'progress' : 'load'
   const [mode, setMode] = useState<BodyMapMode>(initialMode)

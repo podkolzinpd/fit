@@ -20,3 +20,11 @@ export function storeRestDeadline(workoutId: string, deadline: number | null) {
   if (deadline === null) sessionStorage.removeItem(storageKey(workoutId))
   else sessionStorage.setItem(storageKey(workoutId), String(deadline))
 }
+
+export function readLiveRestOverrides(key: string): Record<string, number> {
+  try {
+    const parsed: unknown = JSON.parse(sessionStorage.getItem(key) ?? '{}')
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    return Object.fromEntries(Object.entries(parsed).filter(([, value]) => typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 3600))
+  } catch { return {} }
+}

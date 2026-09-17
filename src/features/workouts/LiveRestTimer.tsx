@@ -34,17 +34,12 @@ function TimeWheel({ label, value, values, disabled = false, onChange }: {
   onChange: (value: number) => void
 }) {
   const wheel = useRef<HTMLDivElement>(null)
-  const scrolling = useRef<number | null>(null)
   const selectedIndex = Math.max(0, values.indexOf(value))
 
   useLayoutEffect(() => {
     if (!wheel.current) return
     wheel.current.scrollTop = selectedIndex * WHEEL_ROW_HEIGHT
   }, [selectedIndex])
-
-  useEffect(() => () => {
-    if (scrolling.current !== null) window.cancelAnimationFrame(scrolling.current)
-  }, [])
 
   function select(index: number) {
     const nextIndex = Math.min(values.length - 1, Math.max(0, index))
@@ -64,12 +59,13 @@ function TimeWheel({ label, value, values, disabled = false, onChange }: {
       tabIndex={disabled ? -1 : 0}
       onScroll={() => {
         if (disabled) return
-        if (scrolling.current !== null) window.cancelAnimationFrame(scrolling.current)
-        scrolling.current = window.requestAnimationFrame(() => {
-          const index = Math.min(values.length - 1, Math.max(0, Math.round((wheel.current?.scrollTop ?? 0) / WHEEL_ROW_HEIGHT)))
-          const next = values[index] ?? values[0] ?? 0
-          if (next !== value) onChange(next)
-        })
+        // Keep the selected value synchronous with the physical wheel. On iOS
+        // a user can tap the primary action immediately after a short flick;
+        // deferring this through requestAnimationFrame used to submit the old
+        // duration in that narrow window.
+        const index = Math.min(values.length - 1, Math.max(0, Math.round((wheel.current?.scrollTop ?? 0) / WHEEL_ROW_HEIGHT)))
+        const next = values[index] ?? values[0] ?? 0
+        if (next !== value) onChange(next)
       }}
       onKeyDown={(event) => {
         if (disabled) return
@@ -95,10 +91,12 @@ function TimeWheel({ label, value, values, disabled = false, onChange }: {
 }
 
 /** Only this small subtree ticks; workout inputs do not rerender every second. */
-export function LiveRestTimer({ workoutId, deadline, onChange }: {
+export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange }: {
   workoutId: string
   deadline: number | null
+  defaultDurationSeconds?: number
   onChange: (deadline: number | null) => void
+  onDurationChange?: (seconds: number) => void
 }) {
   const [now, setNow] = useState(Date.now)
   const [open, setOpen] = useState(false)
@@ -108,6 +106,7 @@ export function LiveRestTimer({ workoutId, deadline, onChange }: {
   const backgrounded = useRef(document.visibilityState !== 'visible')
   const trigger = useRef<HTMLButtonElement>(null)
   const dialog = useRef<HTMLElement>(null)
+  const selectedDurationRef = useRef(90)
 
   const signedRemaining = useMemo(() => {
     if (deadline === null) return null
@@ -172,13 +171,22 @@ export function LiveRestTimer({ workoutId, deadline, onChange }: {
   const overdue = deadline !== null && now >= deadline
 
   function setDuration(duration: number) {
-    setMinutes(Math.floor(duration / 60))
-    setSeconds(duration % 60)
+    const normalized = Math.min(3600, Math.max(1, Math.round(duration)))
+    selectedDurationRef.current = normalized
+    setMinutes(Math.floor(normalized / 60))
+    setSeconds(normalized % 60)
   }
 
   function changeMinutes(value: number) {
+    const nextSeconds = value === 60 ? 0 : selectedDurationRef.current % 60
+    selectedDurationRef.current = value * 60 + nextSeconds
     setMinutes(value)
     if (value === 60) setSeconds(0)
+  }
+
+  function changeSeconds(value: number) {
+    selectedDurationRef.current = Math.floor(selectedDurationRef.current / 60) * 60 + value
+    setSeconds(value)
   }
 
   function shift(delta: number) {
@@ -186,10 +194,18 @@ export function LiveRestTimer({ workoutId, deadline, onChange }: {
   }
 
   function start() {
-    if (!valid) return
+    const duration = selectedDurationRef.current
+    if (duration <= 0 || duration > 3600) return
     prepareGong()
-    onChange(Date.now() + selectedDuration * 1000)
+    onDurationChange?.(duration)
+    onChange(Date.now() + duration * 1000)
     setOpen(false)
+  }
+
+  function openPicker() {
+    prepareGong()
+    setDuration(defaultDurationSeconds)
+    setOpen(true)
   }
 
   const stateClass = active ? ' resting' : overdue ? ' rest-overdue' : ''
@@ -201,7 +217,7 @@ export function LiveRestTimer({ workoutId, deadline, onChange }: {
   const triggerText = signedRemaining !== null ? `Отдых ${formatRest(signedRemaining)}` : 'Таймер'
 
   return <>
-    <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel} onClick={() => { prepareGong(); setOpen(true) }}>
+    <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel} onClick={openPicker}>
       <TimerIcon /><span>{triggerText}</span>
     </button>
     {open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
@@ -217,10 +233,10 @@ export function LiveRestTimer({ workoutId, deadline, onChange }: {
         <div className="rest-time-picker" aria-label="Время отдыха">
           <TimeWheel label="минуты" value={minutes} values={MINUTES} onChange={changeMinutes} />
           <span className="rest-time-separator" aria-hidden="true">:</span>
-          <TimeWheel label="секунды" value={seconds} values={minutes === 60 ? [0] : SECONDS} disabled={minutes === 60} onChange={setSeconds} />
+          <TimeWheel label="секунды" value={seconds} values={minutes === 60 ? [0] : SECONDS} disabled={minutes === 60} onChange={changeSeconds} />
         </div>
         <div className="rest-controls rest-presets">{[60, 90, 120, 180].map((value) => <button key={value} type="button" className="secondary" onClick={() => setDuration(value)}>{formatRest(value)}</button>)}</div>
-        <button type="button" disabled={!valid} onClick={start}>{signedRemaining === null ? 'Начать отдых' : 'Запустить заново'}</button>
+        <div className="live-rest-apply"><button type="button" disabled={!valid} onClick={start}>{signedRemaining === null ? `Начать отдых · ${formatRest(selectedDuration)}` : `Применить время · ${formatRest(selectedDuration)}`}</button></div>
       </section>
     </div>, document.querySelector('.phone-frame') ?? document.body)}
   </>
