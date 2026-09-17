@@ -385,14 +385,14 @@ describe('yandexPilotRepository', () => {
     )).rejects.toThrow('Stage вернул неподдерживаемый формат Yandex ID сессии')
   })
 
-  it('maps a disabled app rollout to a Yandex Cloud rollout message', async () => {
+  it('maps an unavailable Yandex app session to the email-linking recovery path', async () => {
     queries.exchangeCodeForAppSession.mockResolvedValue(new Response('{}', { status: 403 }))
 
     await expect(yandexPilotRepository.exchangeCodeForAppSession(
       'https://stage.example.test',
       'code',
       'verifier',
-    )).rejects.toThrow('профиль ещё не включён')
+    )).rejects.toThrow('Войдите по email и паролю')
   })
 
   it('links Yandex ID to the existing FIT profile with a validated result', async () => {

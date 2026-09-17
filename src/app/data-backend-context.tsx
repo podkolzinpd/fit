@@ -13,7 +13,7 @@ import { trainerProfilesRepository } from '../data/repositories/trainer-profiles
 import { trainerDiscoveryRepository } from '../data/repositories/trainer-discovery.repository'
 import { workoutsRepository } from '../data/repositories/workouts.repository'
 import { createYandexMainRepository } from '../data/repositories/yandex-main.repository'
-import { getYandexMainRoutingConfig, isYandexMainRoutingPilotEnabled } from './feature-flags'
+import { getYandexMainRoutingConfig, isYandexMainRoutingEnabled } from './feature-flags'
 import { useAuth } from './auth-context'
 import { useYandexAppSession } from './yandex-app-session-context'
 
@@ -60,7 +60,7 @@ export function DataBackendProvider({ children }: PropsWithChildren) {
   const value = useMemo(() => {
     if (actor === null || session === null || config === null
       || actor.userId !== session.profile.id
-      || !isYandexMainRoutingPilotEnabled(actor.userId)) {
+      || !isYandexMainRoutingEnabled()) {
       return supabaseDataBackend
     }
     return createYandexMainRepository(config.apiBaseUrl, session.session.token, actor)

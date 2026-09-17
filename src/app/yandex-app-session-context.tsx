@@ -15,7 +15,6 @@ import {
 } from '../data/repositories/yandex-pilot.repository'
 import {
   getYandexAppSessionEntryConfig,
-  isYandexAppSessionPilotEnabled,
 } from './feature-flags'
 
 const STORAGE_KEY = 'fit.yandexAppSession.v1'
@@ -103,18 +102,6 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
     try {
       const restored = await yandexPilotRepository.getAppSession(config.apiBaseUrl, stored.token)
       if (revision !== revisionRef.current) return
-      if (!isYandexAppSessionPilotEnabled(restored.profile.id)) {
-        try {
-          await yandexPilotRepository.revokeAppSession(config.apiBaseUrl, stored.token)
-        } catch {
-          // Не сохраняем и не возвращаем токен. Серверный rollout assignment
-          // остаётся границей авторизации, даже если revoke временно недоступен.
-        }
-        clearStoredSession(window.localStorage)
-        setSession(null)
-        setError('Этот профиль не добавлен в пилот входа через Yandex ID.')
-        return
-      }
       setSession({ ...restored, session: stored })
     } catch (caught) {
       if (revision !== revisionRef.current) return
@@ -127,9 +114,7 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
   }, [config])
 
   const establish = useCallback((nextSession: YandexAppSession) => {
-    if (config === null || !isYandexAppSessionPilotEnabled(nextSession.profile.id)) {
-      throw new Error('Этот профиль не добавлен в пилот входа через Yandex ID.')
-    }
+    if (config === null) throw new Error('Вход через Yandex ID сейчас выключен.')
     revisionRef.current += 1
     persistSession(window.localStorage, nextSession)
     setSession(nextSession)

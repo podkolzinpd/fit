@@ -1,6 +1,6 @@
 name: Manage Yandex stage rollout
 
-run-name: ${{ inputs.rollout_action }} Yandex read-write rollout
+run-name: ${{ inputs.rollout_action }} Yandex read-write rollout (${{ inputs.rollout_scope }})
 
 on:
   workflow_dispatch:
@@ -13,8 +13,16 @@ on:
           - inspect
           - enable
           - disable
+      rollout_scope:
+        description: One reviewed tenant or every linked domain-ready profile
+        required: true
+        type: choice
+        default: selected-tenant
+        options:
+          - selected-tenant
+          - linked-ready
       confirmation:
-        description: 'For writes: ENABLE_YANDEX_READ_WRITE or DISABLE_YANDEX_READ_WRITE'
+        description: 'Write confirmation shown in the workflow documentation'
         required: false
         type: string
 
@@ -46,20 +54,33 @@ jobs:
         env:
           CONFIRMATION: ${{ inputs.confirmation }}
           ROLLOUT_ACTION: ${{ inputs.rollout_action }}
+          ROLLOUT_SCOPE: ${{ inputs.rollout_scope }}
           TENANT_FINGERPRINT: ${{ vars.FIT_YANDEX_ROLLOUT_TENANT_FINGERPRINT }}
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
-          [[ "$TENANT_FINGERPRINT" =~ ^[0-9a-f]{16}$ ]]
+          if test "$ROLLOUT_SCOPE" = selected-tenant; then
+            [[ "$TENANT_FINGERPRINT" =~ ^[0-9a-f]{16}$ ]]
+          elif test "$ROLLOUT_SCOPE" != linked-ready; then
+            exit 1
+          fi
           case "$ROLLOUT_ACTION" in
             inspect)
               test -z "$CONFIRMATION"
               ;;
             enable)
-              test "$CONFIRMATION" = ENABLE_YANDEX_READ_WRITE
+              if test "$ROLLOUT_SCOPE" = linked-ready; then
+                test "$CONFIRMATION" = ENABLE_ALL_LINKED_YANDEX_READ_WRITE
+              else
+                test "$CONFIRMATION" = ENABLE_YANDEX_READ_WRITE
+              fi
               ;;
             disable)
-              test "$CONFIRMATION" = DISABLE_YANDEX_READ_WRITE
+              if test "$ROLLOUT_SCOPE" = linked-ready; then
+                test "$CONFIRMATION" = DISABLE_ALL_YANDEX_READ_WRITE
+              else
+                test "$CONFIRMATION" = DISABLE_YANDEX_READ_WRITE
+              fi
               ;;
             *)
               exit 1
@@ -88,23 +109,31 @@ jobs:
         working-directory: infra/yandex
         env:
           ROLLOUT_ACTION: ${{ inputs.rollout_action }}
+          ROLLOUT_SCOPE: ${{ inputs.rollout_scope }}
           TENANT_FINGERPRINT: ${{ vars.FIT_YANDEX_ROLLOUT_TENANT_FINGERPRINT }}
         run: |
           set -euo pipefail
           umask 077
           migration_url=$(terraform output -raw migration_container_url)
-          jq -n \
-            --arg action "$ROLLOUT_ACTION" \
-            --arg tenantFingerprint "$TENANT_FINGERPRINT" \
-            '{action: $action, tenantFingerprint: $tenantFingerprint}' \
-            > rollout-request.json
+          rollout_path=/stage/rollout-assignments/yandex
+          if test "$ROLLOUT_SCOPE" = linked-ready; then
+            rollout_path=/stage/rollout-assignments/yandex/linked-ready
+            jq -n --arg action "$ROLLOUT_ACTION" \
+              '{action: $action, scope: "linked-ready"}' > rollout-request.json
+          else
+            jq -n \
+              --arg action "$ROLLOUT_ACTION" \
+              --arg tenantFingerprint "$TENANT_FINGERPRINT" \
+              '{action: $action, tenantFingerprint: $tenantFingerprint}' \
+              > rollout-request.json
+          fi
           status=$(curl --silent --show-error \
             --output rollout-response.json --write-out '%{http_code}' \
             --request POST \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header 'Content-Type: application/json' \
             --data-binary @rollout-request.json \
-            "${migration_url%/}/stage/rollout-assignments/yandex")
+            "${migration_url%/}${rollout_path}")
           if test "$status" = 409; then
             echo 'The migrated tenant fingerprint or its role-specific domain root is absent from Yandex stage.' >&2
             exit 1
@@ -113,24 +142,44 @@ jobs:
             echo "Rollout runner returned HTTP $status." >&2
             exit 1
           fi
-          expected_status="rollout_${ROLLOUT_ACTION}d"
-          if test "$ROLLOUT_ACTION" = inspect; then
-            expected_status=rollout_inspected
+          if test "$ROLLOUT_SCOPE" = linked-ready; then
+            expected_status="rollout_batch_${ROLLOUT_ACTION}d"
+            if test "$ROLLOUT_ACTION" = inspect; then
+              expected_status=rollout_batch_inspected
+            fi
+            jq -e --arg expected "$expected_status" \
+              '.status == $expected
+               and (.domainReadyProfiles | type == "number")
+               and (.linkedProfiles | type == "number")
+               and (.rolloutEnabledProfiles | type == "number")' \
+              rollout-response.json >/dev/null
+            {
+              echo '### Yandex stage linked-profile rollout'
+              echo "- Operation: \`$ROLLOUT_ACTION\`"
+              echo "- Domain-ready profiles: $(jq -r '.domainReadyProfiles' rollout-response.json)"
+              echo "- Linked profiles: $(jq -r '.linkedProfiles' rollout-response.json)"
+              echo "- Read-write enabled: $(jq -r '.rolloutEnabledProfiles' rollout-response.json)"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            expected_status="rollout_${ROLLOUT_ACTION}d"
+            if test "$ROLLOUT_ACTION" = inspect; then
+              expected_status=rollout_inspected
+            fi
+            jq -e --arg expected "$expected_status" \
+              '.status == $expected and .domainReady == true' \
+              rollout-response.json >/dev/null
+            if test "$ROLLOUT_ACTION" = enable; then
+              jq -e '.rolloutEnabled == true' rollout-response.json >/dev/null
+            elif test "$ROLLOUT_ACTION" = disable; then
+              jq -e '.rolloutEnabled == false' rollout-response.json >/dev/null
+            fi
+            linked=$(jq -r 'if .identityLinked then "linked" else "not linked yet" end' rollout-response.json)
+            enabled=$(jq -r 'if .rolloutEnabled then "enabled" else "disabled" end' rollout-response.json)
+            {
+              echo '### Yandex stage read-write rollout'
+              echo "- Operation: \`$ROLLOUT_ACTION\`"
+              echo '- Migrated domain root: ready'
+              echo "- Yandex ID: $linked"
+              echo "- Read-write rollout: $enabled"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
-          jq -e --arg expected "$expected_status" \
-            '.status == $expected and .domainReady == true' \
-            rollout-response.json >/dev/null
-          if test "$ROLLOUT_ACTION" = enable; then
-            jq -e '.rolloutEnabled == true' rollout-response.json >/dev/null
-          elif test "$ROLLOUT_ACTION" = disable; then
-            jq -e '.rolloutEnabled == false' rollout-response.json >/dev/null
-          fi
-          linked=$(jq -r 'if .identityLinked then "linked" else "not linked yet" end' rollout-response.json)
-          enabled=$(jq -r 'if .rolloutEnabled then "enabled" else "disabled" end' rollout-response.json)
-          {
-            echo '### Yandex stage read-write rollout'
-            echo "- Operation: \`$ROLLOUT_ACTION\`"
-            echo '- Migrated domain root: ready'
-            echo "- Yandex ID: $linked"
-            echo "- Read-write rollout: $enabled"
-          } >> "$GITHUB_STEP_SUMMARY"

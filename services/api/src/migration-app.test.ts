@@ -293,15 +293,21 @@ describe('stage rollout assignment', () => {
       identityLinked: false,
       rolloutEnabled: true,
     }),
+    applyLinkedProfiles: StageRolloutAssignmentManager['applyLinkedProfiles'] = () => Promise.resolve({
+      domainReadyProfiles: 20,
+      linkedProfiles: 12,
+      rolloutEnabledProfiles: 12,
+    }),
   ) {
     const rollout = vi.fn(apply)
+    const batchRollout = vi.fn(applyLinkedProfiles)
     const app = buildMigrationApp({
       logger: false,
-      rolloutAssignment: { apply: rollout },
+      rolloutAssignment: { apply: rollout, applyLinkedProfiles: batchRollout },
       runMigrations: () => Promise.resolve([]),
     })
     apps.push(app)
-    return { app, rollout }
+    return { app, batchRollout, rollout }
   }
 
   it('does not expose the route unless explicitly enabled', async () => {
@@ -348,6 +354,44 @@ describe('stage rollout assignment', () => {
     })
     expect(rollout).toHaveBeenCalledWith(action, { profileId: STAGE_CLIENT_ID })
     expect(response.body).not.toContain(STAGE_CLIENT_ID)
+  })
+
+  it.each([
+    ['inspect', 'rollout_batch_inspected'],
+    ['enable', 'rollout_batch_enabled'],
+    ['disable', 'rollout_batch_disabled'],
+  ] as const)('applies a validated linked-profile batch %s request', async (action, status) => {
+    const { app, batchRollout } = buildRolloutAssignment()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/rollout-assignments/yandex/linked-ready',
+      payload: { action, scope: 'linked-ready' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      status,
+      domainReadyProfiles: 20,
+      linkedProfiles: 12,
+      rolloutEnabledProfiles: 12,
+    })
+    expect(batchRollout).toHaveBeenCalledWith(action)
+    expect(response.body).not.toMatch(/[0-9a-f]{8}-[0-9a-f-]{27,}/i)
+  })
+
+  it('rejects a batch request without the exact linked-ready scope', async () => {
+    const { app, batchRollout } = buildRolloutAssignment()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/rollout-assignments/yandex/linked-ready',
+      payload: { action: 'enable', scope: 'all' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(batchRollout).not.toHaveBeenCalled()
   })
 
   it('accepts the non-reversible fingerprint recorded by tenant migration', async () => {
