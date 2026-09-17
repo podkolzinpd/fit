@@ -185,7 +185,7 @@ export function mergeExtractedBrief(previous: ProgramBrief, message: string, val
     || (patch.limitations !== undefined && patch.limitations !== previous.limitations)
     || clearedKeys.includes('limitationsText')) && patch.limitationAdjustments === undefined) delete next.limitationAdjustments
   if (patch.limitations === 'none') { delete next.limitationsText; delete next.limitationAdjustments }
-  // Changes to either schedule invalidate the trainer's previous acknowledgement.
+  // Changes to either schedule invalidate the user's previous acknowledgement.
   if (patch.otherActivity !== undefined || patch.otherActivities !== undefined || patch.weekdays !== undefined || patch.frequency !== undefined
     || clearedKeys.some((key) => ['otherActivity', 'otherActivities', 'weekdays', 'frequency'].includes(key))) delete next.activityOverlapConfirmed
   if (patch.otherActivity !== undefined && patch.otherActivities === undefined && previous.otherActivity !== patch.otherActivity) delete next.otherActivities
@@ -210,7 +210,7 @@ export const briefQuestions: Partial<Record<keyof ProgramBrief, string>> = {
   equipment: 'Какое оборудование доступно? Можно перечислить его или указать полностью оборудованный тренажёрный зал.',
   limitations: 'Есть ли сейчас боль, травмы или ограничения для упражнений? Если нет — так и напишите.',
   limitationsText: 'Опишите ограничения: что беспокоит и при каких движениях или нагрузке?',
-  limitationAdjustments: 'Какие движения, упражнения или нагрузки нужно исключить или изменить? Укажите известные рекомендации и допустимые варианты. Если это пока неизвестно, так и напишите — отмечу это в черновике для проверки тренером.',
+  limitationAdjustments: 'Какие движения, упражнения или нагрузки нужно исключить или изменить? Укажите известные рекомендации и допустимые варианты. Если это пока неизвестно, так и напишите — отмечу это в рекомендованном черновике для дополнительной проверки.',
   preferences: 'Есть ли любимые или нежелательные упражнения? Можно ответить «предпочтений нет».',
   otherActivity: 'Есть ли другая регулярная нагрузка — бег, спорт или физическая работа? Если есть, укажите вид, частоту и дни; если нет — напишите «нет».',
   otherActivities: 'Уточните другую нагрузку: какой вид, сколько раз в неделю и в какие дни? Например: бег, дважды в неделю, вторник и суббота.',

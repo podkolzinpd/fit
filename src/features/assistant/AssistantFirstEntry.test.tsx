@@ -34,4 +34,13 @@ describe('assistant first entry', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Показать прогресс' }))
     expect(onChoose).toHaveBeenLastCalledWith('Покажи мой прогресс за месяц')
   })
+  it('offers the same recommended program entry to a client', async () => {
+    const onChoose = vi.fn()
+    render(<AssistantFirstEntry clientMode programEnabled onChoose={onChoose} />)
+
+    expect(screen.getByText(/рекомендованный черновик программы/i)).toBeVisible()
+    expect(screen.queryByText(/тренер/iu)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Составить программу' }))
+    expect(onChoose).toHaveBeenCalledExactlyOnceWith('Составь программу тренировок')
+  })
 })

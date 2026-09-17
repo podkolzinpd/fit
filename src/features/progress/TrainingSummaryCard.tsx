@@ -6,7 +6,7 @@ import { RunningProgressCard } from './RunningProgressCard'
 import { ClientBodyMapDisclosure } from './WorkoutBodyMap'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ClientGoalFacts, ClientCurrentWeek, PeriodExerciseResults, ClientPeriodComparison } from './ClientProgressFacts'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
@@ -76,6 +76,25 @@ function SummaryGenerationError({ error, onRetry }: { error: Error; onRetry: () 
     <span>{error.message}</span>
     {immediateSummaryRetryAllowed(error) && <button type="button" className="link" onClick={onRetry}>Повторить</button>}
   </p>
+}
+
+function ProgressProSection({ title, description, children, defaultOpen = false, id }: {
+  title: string; description: string; children: ReactNode; defaultOpen?: boolean; id?: string
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  useEffect(() => {
+    if (defaultOpen) setOpen(true)
+  }, [defaultOpen])
+
+  return <details
+    id={id}
+    className="progress-pro-section"
+    open={open}
+    onToggle={(event) => setOpen(event.currentTarget.open)}
+  >
+    <ProgressDetailsSummary description={description}>{title}</ProgressDetailsSummary>
+    <div className="progress-pro-section-content">{children}</div>
+  </details>
 }
 
 export function TrainerTrainingSummaryCard({ clientId, profileGoal, gender = null }: {
@@ -716,8 +735,12 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
   const today = todayInTimeZone(actor?.timezone)
   const queryClient = useQueryClient()
   const [params, setParams] = useSearchParams()
+  const location = useLocation()
+  const navigate = useNavigate()
   const requestedPeriod = params.get('period')
   const period: SummaryPeriod = requestedPeriod === '3m' || requestedPeriod === '6m' ? requestedPeriod : '1m'
+  const advancedTarget = params.get('resultsOpen') === '1' || Boolean(params.get('mapWorkout')) || location.hash === '#measurements'
+  const progressView: 'overview' | 'pro' = params.get('view') === 'pro' || advancedTarget ? 'pro' : 'overview'
   const [detailsOpen, setDetailsOpen] = useState(false)
   const analysisTriggerRef = useRef<HTMLButtonElement>(null)
   const allWorkouts = useQuery({ queryKey: ['workouts', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
@@ -730,6 +753,16 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
   const historyLoaded = firstWorkout.isSuccess || allWorkouts.isSuccess
   const availablePeriods = historyLoaded ? availableSummaryPeriods(firstDate, today) : SUMMARY_PERIODS.map((item) => item.key)
   const changePeriod = (nextPeriod: SummaryPeriod) => setParams((current) => { const next = new URLSearchParams(current); next.set('period', nextPeriod); ['mapWorkout', 'mapFrom', 'mapTo', 'mapMode', 'mapZone'].forEach((key) => next.delete(key)); return next }, { replace: true, preventScrollReset: true })
+  const changeProgressView = (nextView: 'overview' | 'pro') => {
+    const next = new URLSearchParams(params)
+    if (nextView === 'pro') next.set('view', 'pro')
+    else {
+      next.delete('view')
+      next.delete('resultsOpen')
+      for (const key of ['mapWorkout', 'mapFrom', 'mapTo', 'mapMode', 'mapZone']) next.delete(key)
+    }
+    void navigate({ pathname: location.pathname, search: next.size ? `?${next}` : '', hash: nextView === 'overview' ? '' : location.hash }, { replace: true, preventScrollReset: true })
+  }
   useEffect(() => { if (historyLoaded && !availablePeriods.includes(period)) changePeriod('1m') }, [historyLoaded, period, availablePeriods])
   const range = summaryPeriodRange(period, today)
   // An exact current result takes precedence over an older window with a closer month length.
@@ -778,6 +811,12 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
       <SummaryHeader /><span className="sr-only" id="client-progress-period-title">Период прогресса</span>
       <PeriodTabs value={period} available={availablePeriods} onChange={changePeriod} />
       <p className="progress-period-dates">{formatLocalDate(range.start)} — {formatLocalDate(range.end)}</p>
+      <div className="progress-view-tabs" role="tablist" aria-label="Режим прогресса">
+        <button id="progress-overview-tab" type="button" role="tab" aria-selected={progressView === 'overview'} aria-controls="progress-overview-panel" className={progressView === 'overview' ? 'active' : ''} onClick={() => changeProgressView('overview')}>Обзор</button>
+        <button id="progress-pro-tab" type="button" role="tab" aria-selected={progressView === 'pro'} aria-controls="progress-pro-panel" className={progressView === 'pro' ? 'active' : ''} onClick={() => changeProgressView('pro')}>ПРО</button>
+      </div>
+    </section>
+    <div id="progress-overview-panel" className="progress-view-panel progress-overview-panel" role="tabpanel" aria-labelledby="progress-overview-tab" hidden={progressView !== 'overview'}>
       <div className="progress-analysis-preview" aria-label="ИИ-анализ за период">
         <div className="progress-analysis-preview-head"><h3>{exactAnalysis ? 'ИИ-анализ' : summary ? 'Предыдущий ИИ-анализ' : 'ИИ-анализ'}</h3>{analysisDate && <span>{analysisDate}</span>}</div>
         {summary && !exactAnalysis && <p className="muted">{savedAnalysisLabel}</p>}
@@ -790,30 +829,47 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
           ? <div className="progress-analysis-actions"><button ref={analysisTriggerRef} type="button" className="secondary" aria-haspopup="dialog" onClick={() => setDetailsOpen(true)}>Открыть анализ</button>{(newWorkouts || !exactAnalysis) && <button type="button" className="link" disabled={refreshBusy} onClick={requestRefresh}>Обновить анализ</button>}</div>
           : firstDate && <div className="progress-analysis-actions"><button type="button" className="secondary" disabled={refreshBusy} onClick={requestRefresh}>{refreshBusy ? 'Формируем ИИ-анализ…' : 'Создать анализ'}</button></div>}
       </div>
-    </section>
-    <ClientCurrentWeek workouts={allWorkouts.data} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
-    <ClientGoalFacts goal={goal.data} profileGoal={profileGoal} entries={measurements.data ?? []} workouts={allWorkouts.data ?? []}
-      periodStart={range.start} periodEnd={range.end} today={today}
-      loading={goal.isLoading || measurements.isLoading || allWorkouts.isLoading}
-      error={goal.error ?? measurements.error ?? allWorkouts.error}
-      onRetry={() => void Promise.all([goal.refetch(), measurements.refetch(), allWorkouts.refetch()])} />
-    <PeriodExerciseResults workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()}>
-      <ClientResultsCenter workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
-    </PeriodExerciseResults>
-    <MeasurementProgressSection clientId={clientId} entries={measurements.data ?? []} customMetrics={customMetrics.data ?? []} goal={goal.data}
-      periodStart={range.start} periodEnd={range.end} today={today} role="client" compact
-      loading={measurements.isLoading || customMetrics.isLoading} error={measurements.error ?? customMetrics.error} onRetry={retryMeasurements} management={measurementManagement} />
-    <ClientBodyMapDisclosure workouts={allWorkouts.data} clientId={clientId} gender={gender}
-      summary={summary} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
-    <WeeklyTrainingLoad workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
-    <details className="period-rhythm card"><ProgressDetailsSummary>Регулярность тренировок</ProgressDetailsSummary>
-      <WorkoutRegularityProgressSection currentWorkouts={currentWorkouts} previousWorkouts={previousWorkouts} periodStart={range.start} periodEnd={range.end}
-        previousPeriodStart={previousStart} previousPeriodEnd={previousEnd} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
-    </details>
-    <ClientPeriodComparison workouts={allWorkouts.data} entries={measurements.data ?? []} goal={goal.data} periodStart={range.start} periodEnd={range.end}
-      loading={allWorkouts.isLoading || measurements.isLoading || goal.isLoading} error={allWorkouts.error ?? measurements.error ?? goal.error}
-      onRetry={() => void Promise.all([allWorkouts.refetch(), measurements.refetch(), goal.refetch()])} />
-    <RunningProgressCard clientId={clientId} periodMonths={periodMonths} keepVisible />
+      <ClientCurrentWeek workouts={allWorkouts.data} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+      <ClientGoalFacts goal={goal.data} profileGoal={profileGoal} entries={measurements.data ?? []} workouts={allWorkouts.data ?? []}
+        periodStart={range.start} periodEnd={range.end} today={today}
+        loading={goal.isLoading || measurements.isLoading || allWorkouts.isLoading}
+        error={goal.error ?? measurements.error ?? allWorkouts.error}
+        onRetry={() => void Promise.all([goal.refetch(), measurements.refetch(), allWorkouts.refetch()])} compact />
+      <PeriodExerciseResults showOverflow={false} workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+    </div>
+    <div id="progress-pro-panel" className="progress-view-panel progress-pro-panel" role="tabpanel" aria-labelledby="progress-pro-tab" hidden={progressView !== 'pro'}>
+      <p className="progress-pro-intro">Подробные данные сохранены, но не мешают быстрому просмотру прогресса.</p>
+      <div className="progress-pro-list">
+        <ClientResultsCenter workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()}>
+          <PeriodExerciseResults variant="overflow" workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+        </ClientResultsCenter>
+        <ProgressProSection id="goal-details" title="Цель и показатели" description="Текущие значения и ориентиры" defaultOpen={location.hash === '#goal-details'}>
+          <ClientGoalFacts goal={goal.data} profileGoal={profileGoal} entries={measurements.data ?? []} workouts={allWorkouts.data ?? []}
+            periodStart={range.start} periodEnd={range.end} today={today}
+            loading={goal.isLoading || measurements.isLoading || allWorkouts.isLoading}
+            error={goal.error ?? measurements.error ?? allWorkouts.error}
+            onRetry={() => void Promise.all([goal.refetch(), measurements.refetch(), allWorkouts.refetch()])} />
+        </ProgressProSection>
+        <ProgressProSection title="Замеры и графики" description="Вес, объёмы, минимум и максимум" defaultOpen={location.hash === '#measurements'}>
+          <MeasurementProgressSection clientId={clientId} entries={measurements.data ?? []} customMetrics={customMetrics.data ?? []} goal={goal.data}
+            periodStart={range.start} periodEnd={range.end} today={today} role="client" compact
+            loading={measurements.isLoading || customMetrics.isLoading} error={measurements.error ?? customMetrics.error} onRetry={retryMeasurements} management={measurementManagement} />
+        </ProgressProSection>
+        <ClientBodyMapDisclosure workouts={allWorkouts.data} clientId={clientId} gender={gender}
+          summary={summary} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+        <details className="period-rhythm card"><ProgressDetailsSummary description="Ритм и выполнение плана">Регулярность</ProgressDetailsSummary>
+          <WorkoutRegularityProgressSection currentWorkouts={currentWorkouts} previousWorkouts={previousWorkouts} periodStart={range.start} periodEnd={range.end}
+            previousPeriodStart={previousStart} previousPeriodEnd={previousEnd} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+        </details>
+        <ClientPeriodComparison workouts={allWorkouts.data} entries={measurements.data ?? []} goal={goal.data} periodStart={range.start} periodEnd={range.end}
+          loading={allWorkouts.isLoading || measurements.isLoading || goal.isLoading} error={allWorkouts.error ?? measurements.error ?? goal.error}
+          onRetry={() => void Promise.all([allWorkouts.refetch(), measurements.refetch(), goal.refetch()])} />
+        <ProgressProSection title="Бег" description="Темп, дистанция и RPE">
+          <RunningProgressCard clientId={clientId} periodMonths={periodMonths} keepVisible />
+        </ProgressProSection>
+        <WeeklyTrainingLoad workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} today={today} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
+      </div>
+    </div>
     {detailsOpen && <SummarySheet title="Подробный анализ" onClose={closeDetails}>
       <AsyncView loading={query.isLoading || firstWorkout.isLoading} error={summary ? null : query.error ?? firstWorkout.error} onRetry={() => void Promise.all([query.refetch(), firstWorkout.refetch()])}>
         {summary ? <><p>{savedAnalysisLabel}</p><p className="muted">{analysisDate}</p>{newWorkouts && <p>Есть новые тренировки</p>}<ProgressDetailedAnalysis sections={analysis} compact /></>

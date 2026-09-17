@@ -125,7 +125,7 @@ export function readProgramPlan(raw: unknown, brief: ProgramBrief, today: string
 export function programPlanFromTemplate(template: ProgramTemplate) {
   const rows = template.sessions.flatMap((session) => session.exercises.map((exercise) => ({
     weekday: session.weekday, exerciseRef: exercise.exerciseRef,
-    progressionNote: exercise.progressionNote ?? 'Закрепляем технику упражнения; повышение нагрузки — при выполнении всех подходов с целевым усилием и сохранением техники под наблюдением тренера.',
+    progressionNote: exercise.progressionNote ?? 'Закрепляем технику упражнения; повышение нагрузки — только при выполнении всех подходов с целевым усилием, запасом сил и сохранением техники.',
     ...Object.fromEntries(DOSES.map((key) => [key, exercise.weeks.map((week) => key === 'amount' ? week.reps ?? week.durationSec : week[key])])),
   })))
   const isDuration = (ref: string) => PROGRAM_CATALOG.some((exercise) => exercise.ref === ref && ['duration', 'distance'].includes(exercise.inputKind))
@@ -133,7 +133,7 @@ export function programPlanFromTemplate(template: ProgramTemplate) {
   return { a_strategy: template.rationale,
     increaseWhen: 'Все подходы выполнены с целевым усилием и сохранением техники: перейти к следующей неделе.',
     holdWhen: 'Не достигнуты повторы или усилие выше целевого: повторить предыдущую выполненную нагрузку.',
-    reduceWhen: 'При выраженной усталости снизить нагрузку с тренером; при боли остановить упражнение и обсудить корректировку.',
+    reduceWhen: 'При выраженной усталости снизить нагрузку; при боли остановить упражнение и обратиться за профильной консультацией.',
     sessions: template.sessions.map(({ weekday, title }) => ({ weekday, title })),
     exercises: rows.filter((row) => !isDuration(row.exerciseRef)),
     durationExercises: rows.filter((row) => isDuration(row.exerciseRef) && !isAerobic(row.exerciseRef)),

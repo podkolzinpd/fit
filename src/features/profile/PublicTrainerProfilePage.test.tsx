@@ -41,6 +41,7 @@ const fullProfile: TrainerProfessionalProfile = {
   publishedAt: '2026-09-13T09:00:00.000Z',
   updatedAt: '2026-09-13T09:00:00.000Z',
   version: 1,
+  isBrandTrainer: false,
 }
 fullProfile.published = fullProfile.draft
 
@@ -74,6 +75,18 @@ describe('PublicTrainerProfilePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Назад' }))
     expect(screen.getByText('Маршрут: /me/trainers')).toBeVisible()
+  })
+
+  it('hides the brand-trainer badge by default', async () => {
+    renderPage()
+    await screen.findByRole('heading', { name: 'Анна Иванова' })
+    expect(screen.queryByText('Бренд-тренер', { exact: false })).not.toBeInTheDocument()
+  })
+
+  it('shows the brand-trainer badge when the flag is set', async () => {
+    mocks.getPublicTrainerProfile.mockResolvedValue({ ...fullProfile, isBrandTrainer: true })
+    renderPage()
+    expect(await screen.findByText('Бренд-тренер', { exact: false })).toBeVisible()
   })
 
   it('explains that contact is unavailable without rendering a dead action', async () => {

@@ -1,6 +1,7 @@
 import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } from 'react-router-dom'
 import { useAuth } from './auth-context'
 import { trackPageView } from '../shared/yandex-metrika'
+import { AuthenticatedMetrika } from './authenticated-metrika'
 import { AppLayout } from './AppLayout'
 import { AppViewportProvider } from './app-viewport'
 import { isAssistantNavPilotEnabled, trainerHomePath } from './feature-flags'
@@ -116,5 +117,5 @@ router.subscribe((state) => {
 })
 
 export function App() {
-  return <AppViewportProvider><RouterProvider router={router} /></AppViewportProvider>
+  return <AppViewportProvider><AuthenticatedMetrika /><RouterProvider router={router} /></AppViewportProvider>
 }

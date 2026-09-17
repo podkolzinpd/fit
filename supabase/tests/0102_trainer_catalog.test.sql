@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(24);
+select plan(26);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('a3000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'catalog-one@example.test', ''),
@@ -63,6 +63,14 @@ select is((select count(*)::integer from public.list_public_trainer_profiles('А
 select is(
   (select item->'published'->>'displayName' from public.list_public_trainer_profiles('Анна Каталогова') item),
   'Анна Каталогова', 'catalog returns the published snapshot'
+);
+select is(
+  (select (item->>'isBrandTrainer')::boolean from public.list_public_trainer_profiles('Анна Каталогова') item),
+  false, 'catalog defaults the brand-trainer flag to false'
+);
+select is(
+  ((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 1)->'items'->0->>'isBrandTrainer')::boolean),
+  false, 'paged catalog exposes the brand-trainer flag'
 );
 select is((select count(*)::integer from public.list_public_trainer_profiles('Каталогова')), 1, 'catalog searches by name');
 select is((select count(*)::integer from public.list_public_trainer_profiles(null, 'Тестовые силовые', 'Тестоград', 'online', true)), 1, 'catalog filters published fields');

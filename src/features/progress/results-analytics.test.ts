@@ -17,9 +17,9 @@ describe('weekly confirmed work and volume explanations', () => {
     const unknown = record('unknown', '2026-08-12', [[10, 10]]); unknown.exercises[0]!.muscleGroup = 'other'; unknown.exercises[0]!.name = 'Неопределённое движение'; unknown.exercises[0]!.ref = 'unknown'; unknown.exercises[0]!.customExerciseId = 'unknown'
     const result = weeklySetDistribution([record('earlier', '2026-07-31', [[10, 10]]), record('mapped', '2026-08-04', [[10, 10], [10, 10]]), cardio, unknown, record('future', '2026-08-13', [[10, 10]])], localDate('2026-08-01'), localDate('2026-08-31'), localDate('2026-08-12'))
     expect(result).toHaveLength(3)
-    expect(result[0]).toMatchObject({ start: '2026-08-01', end: '2026-08-02', partial: true, totalSets: 0 })
+    expect(result[0]).toMatchObject({ start: '2026-07-27', end: '2026-08-02', partial: true, totalSets: 0 })
     expect(result[1]).toMatchObject({ start: '2026-08-03', end: '2026-08-09', partial: false, totalSets: 2, mappedSets: 2 })
-    expect(result[2]).toMatchObject({ start: '2026-08-10', end: '2026-08-12', partial: true, totalSets: 2, cardioSets: 1, unknownSets: 1, mappedSets: 0 })
+    expect(result[2]).toMatchObject({ start: '2026-08-10', end: '2026-08-16', partial: true, totalSets: 2, cardioSets: 1, unknownSets: 1, mappedSets: 0 })
     expect(weeklySetDistribution([], localDate('2026-09-01'), localDate('2026-09-30'), localDate('2026-08-12'))).toEqual([])
   })
   it('explains actual set, repetition and weight changes across exact exercise identity', () => {

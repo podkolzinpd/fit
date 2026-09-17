@@ -37,6 +37,18 @@ describe('program chat state', () => {
     expect(result?.action?.payload.askedFields).toEqual(['otherActivity'])
     expect(result?.reply).not.toContain('любимые')
   })
+  it.each(['Да все равно', 'Не важно', 'В любые'])('finishes the weekday question without looping on %s', async (message) => {
+    const { deps, latest } = setup()
+    const brief = { ...latest.payload.briefState }
+    delete brief.weekdays
+    const active = { payload: { ...latest.payload, briefState: brief, readyToGenerate: false,
+      askedFields: ['weekdays'], guidance: 'В какие дни недели удобно тренироваться?' } }
+    deps.extract.mockImplementation((current: ProgramBrief, text: string, context?: BriefAnswerContext) => extractProgramBrief(current, text, deps.today, deps.turnId, context))
+    const result = await programPilotTurn(message, [client], active, deps)
+    expect(result?.action?.payload.briefState).toMatchObject({ frequency: 3, weekdays: [1, 3, 5] })
+    expect(result?.action?.payload.readyToGenerate).toBe(true)
+    expect(result?.reply).not.toContain('В какие дни недели')
+  })
   it('does not generate from an old quiz where a preference negative could erase pain', async () => {
     const { deps, latest } = setup()
     const old = { ...latest.payload, briefAnswerVersion: undefined }

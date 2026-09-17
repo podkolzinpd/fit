@@ -84,7 +84,7 @@ describe('Client facts independent of AI', () => {
   it('keeps period comparison collapsed with explicit loading, retry and baseline', async () => {
     const retry = vi.fn(); const { rerender } = render(<ClientPeriodComparison {...base} entries={[]} loading />)
     expect(screen.getByText('Сравниваем периоды…')).not.toBeVisible()
-    await userEvent.setup().click(screen.getByText('Сравнить периоды'))
+    await userEvent.setup().click(screen.getByText('Сравнение периодов'))
     expect(screen.getByRole('status')).toBeVisible()
     rerender(<ClientPeriodComparison {...base} entries={[]} error={new Error('offline')} onRetry={retry} />)
     await userEvent.setup().click(screen.getByRole('button', { name: 'Повторить' }))
@@ -94,7 +94,7 @@ describe('Client facts independent of AI', () => {
   })
   it('retains period and body-map scope when a goal asks for a new measurement', () => {
     render(<ClientGoalFacts {...base} today={end} entries={[]} workouts={[]} goal={{ id: 'g', clientId: 'c', title: 'Вес', targetDate: null, status: 'active', version: 1, stages: [], criteria: [{ id: 'criterion', goalId: 'g', metric: 'weight', operation: 'decrease_to', targetValue: 70, rangeMin: null, rangeMax: null, unit: 'кг', baselineValue: null, baselineRecordedOn: null, confirmationStatus: 'confirmed', position: 0, version: 1 }] }} />, { wrapper })
-    expect(screen.getByRole('link', { name: 'Добавить замер' })).toHaveAttribute('href', '/me/progress?period=3m&mapZone=chest#measurements')
+    expect(screen.getByRole('link', { name: 'Добавить замер' })).toHaveAttribute('href', '/me/progress?period=3m&mapZone=chest&view=pro#measurements')
   })
 
   it('promotes an earlier record over a newer decline and recent first results', () => {

@@ -31,6 +31,7 @@ const profile: TrainerProfessionalProfile = {
   publishedAt: null,
   updatedAt: '2026-09-13T09:00:00.000Z',
   version: 1,
+  isBrandTrainer: false,
 }
 
 const completeDraft: TrainerProfileDraft = {
@@ -123,12 +124,57 @@ describe('TrainerProfessionalProfileSection', () => {
     const user = userEvent.setup()
     renderSection()
 
-    await user.click(await screen.findByText('Публикация'))
+    const unpublishButton = await screen.findByRole('button', { name: 'Снять с публикации' })
+    expect(unpublishButton).toBeVisible()
+    await user.click(unpublishButton)
+    expect(screen.getByRole('alertdialog', { name: /Снять анкету с публикации/ })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(repository.unpublish).not.toHaveBeenCalled()
+
+    await user.click(screen.getByText('Публикация'))
     await user.click(screen.getByRole('switch', { name: 'Показывать в каталоге' }))
     await waitFor(() => expect(repository.setCatalogListing).toHaveBeenCalledWith(false))
     expect(screen.getByRole('link', { name: 'Открыть анкету' })).toHaveAttribute('href', `/trainers/${profile.publicId}`)
+
     await user.click(screen.getByRole('button', { name: 'Снять с публикации' }))
+    await user.click(screen.getByRole('button', { name: /^Снять$/ }))
     await waitFor(() => expect(repository.unpublish).toHaveBeenCalledTimes(1))
+    expect(await screen.findByRole('heading', { name: completeDraft.displayName })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Опубликовать' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Снять с публикации' })).not.toBeInTheDocument()
+  })
+
+  it('blocks duplicate unpublish requests while the profile is being hidden', async () => {
+    repository.getOwn.mockResolvedValue(publishedProfile)
+    let finishUnpublish: ((value: TrainerProfessionalProfile) => void) | undefined
+    repository.unpublish.mockImplementation(() => new Promise<TrainerProfessionalProfile>((resolve) => { finishUnpublish = resolve }))
+    const user = userEvent.setup()
+    renderSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Снять с публикации' }))
+    await user.click(screen.getByRole('button', { name: /^Снять$/ }))
+
+    const pendingButton = await screen.findByRole('button', { name: 'Снимаем с публикации…' })
+    expect(pendingButton).toBeDisabled()
+    await user.click(pendingButton)
+    expect(repository.unpublish).toHaveBeenCalledTimes(1)
+
+    finishUnpublish?.({ ...publishedProfile, published: null, listedInCatalog: false, publishedAt: null })
+    expect(await screen.findByRole('button', { name: 'Опубликовать' })).toBeVisible()
+  })
+
+  it('keeps the published profile visible after an unpublish error', async () => {
+    repository.getOwn.mockResolvedValue(publishedProfile)
+    repository.unpublish.mockRejectedValue(new Error('Не удалось снять анкету с публикации.'))
+    const user = userEvent.setup()
+    renderSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Снять с публикации' }))
+    await user.click(screen.getByRole('button', { name: /^Снять$/ }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось снять анкету с публикации.')
+    expect(screen.getByRole('button', { name: 'Снять с публикации' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: completeDraft.displayName })).toBeVisible()
   })
 
   it('shows all standardized specialty checkboxes and keeps a legacy free-text value intact when toggling a standard one', async () => {

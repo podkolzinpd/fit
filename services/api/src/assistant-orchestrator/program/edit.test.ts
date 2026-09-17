@@ -20,8 +20,8 @@ it('changes one dated exercise and preserves every other workout and request ID'
   expect(edited.canonicalWorkouts[0]!.requestId).toBe(payload.canonicalWorkouts[0]!.requestId)
   expect(edited.canonicalWorkouts[0]!.exercises.slice(1)).toEqual(payload.canonicalWorkouts[0]!.exercises.slice(1))
   expect(payload.canonicalWorkouts[0]!.exercises[0]!.sets[0]).toHaveProperty('reps', 8)
-  expect(edited.sessions[0]!.exercises[0]!.progressionNote).toContain(`Назначение изменено тренером для занятия ${date}`)
-  expect(edited.canonicalWorkouts[0]!.exercises[0]!.trainerComment).toContain(`Назначение изменено тренером для занятия ${date}`)
+  expect(edited.sessions[0]!.exercises[0]!.progressionNote).toContain(`Назначение изменено пользователем для занятия ${date}`)
+  expect(edited.canonicalWorkouts[0]!.exercises[0]!.trainerComment).toContain(`Назначение изменено пользователем для занятия ${date}`)
   expect(edited.sessions[0]!.exercises[0]!.progressionNote).not.toBe(payload.sessions[0]!.exercises[0]!.progressionNote)
 })
 it('replaces an exercise only in the explicitly selected day across weeks', () => {

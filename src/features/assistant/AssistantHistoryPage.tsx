@@ -22,10 +22,10 @@ import { AssistantInlineSummaryCard } from './AssistantInlineSummary'
 import { parseAssistantInlineSummary } from './assistant-inline-summary'
 import { assistantActionView } from './assistant-action-view'
 import { AssistantWorkoutDraftSurface } from './AssistantWorkoutDraftSurface'
-import { isAssistantProgramEnabled } from '../../app/feature-flags'
 import { AssistantProgramPilotCard } from './AssistantProgramPilotCard'
 import { AssistantFirstEntry } from './AssistantFirstEntry'
 import { anchorAssistantViewport } from './assistant-viewport'
+import { isAssistantProgramSurfaceEnabled } from './assistant-program-availability'
 
 type FailedTurn = { turnId: string; message: string }
 
@@ -157,9 +157,7 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
   const lastMessageId = messages[messages.length - 1]?.id
   const latestActiveAction = readOnly ? undefined : latestActiveAssistantAction(messages, conversationId)
   const programCollecting = latestActiveAction?.action.tool === 'create_program_draft' && latestActiveAction.action.status === 'needs_input'
-  const programEnabled = backend.cacheKey === 'supabase'
-    && actor?.role === 'trainer'
-    && isAssistantProgramEnabled(actor.userId)
+  const programEnabled = isAssistantProgramSurfaceEnabled(backend.cacheKey, actor?.userId)
 
   useLayoutEffect(() => {
     if (!conversationId || loadingMessages) return

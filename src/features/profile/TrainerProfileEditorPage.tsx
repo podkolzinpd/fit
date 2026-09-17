@@ -9,7 +9,7 @@ import { copyText } from '../../shared/clipboard'
 import { ChevronDownIcon } from '../../shared/icons'
 import { prepareProfileImage } from '../../shared/profile-image'
 import { emptyTrainerProfileDraft, trainerProfileDraftSchema, TRAINER_SPECIALTIES, validatePublishableTrainerProfile } from '../../shared/trainer-profile'
-import { AsyncView, Field, SaveStatus, Switch } from '../../shared/ui'
+import { AsyncView, Field, SaveStatus, Switch, useConfirm } from '../../shared/ui'
 import { MetroStationPicker } from './MetroStationPicker'
 import { TrainerProfileCard } from './TrainerProfileCard'
 
@@ -73,6 +73,7 @@ export function TrainerProfessionalProfileSection() {
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle')
   const [localError, setLocalError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [confirm, confirmDialog] = useConfirm()
 
   useEffect(() => {
     if (profile.isLoading || draft !== null) return
@@ -202,6 +203,14 @@ export function TrainerProfessionalProfileSection() {
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1800)
   }
+  async function requestUnpublish() {
+    const accepted = await confirm({
+      message: 'Снять анкету с публикации? Она исчезнет из каталога и перестанет открываться по ссылке. Данные сохранятся.',
+      confirmLabel: 'Снять',
+      danger: true,
+    })
+    if (accepted) unpublish.mutate()
+  }
 
   const publicationControls = <>
     <SaveStatus status={pending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message} />
@@ -214,16 +223,19 @@ export function TrainerProfessionalProfileSection() {
     <details className="trainer-card-disclosure trainer-publication-disclosure">
       <summary><span><strong>Публикация</strong><small>{profile.data?.published ? publishedMatchesDraft ? profile.data.listedInCatalog ? 'Видна в каталоге' : 'Доступна по ссылке' : 'Есть сохранённые изменения' : publishValidation ? 'Пока не опубликована' : 'Готова к публикации'}</small></span><ChevronDownIcon /></summary>
       <div className="trainer-publication-controls">
-        {!showPublishAction && localError && <p className="error" role="alert">{localError}</p>}
         {!profile.data?.published && publishValidation && <p>{publishValidation}</p>}
         {profile.data?.published && <div className="trainer-catalog-visibility"><Switch label="Показывать в каталоге" checked={profile.data.listedInCatalog} disabled={pending} onChange={(listed) => catalogListing.mutate(listed)} /></div>}
         {profile.data?.published && <div className="trainer-publication-actions"><Link className="button secondary" to={`/trainers/${profile.data.publicId}`}>Открыть анкету</Link></div>}
-        {profile.data?.published && <div className="trainer-publication-links"><button type="button" className="link" onClick={() => void copyLink()}>{copied ? 'Скопировано' : 'Скопировать ссылку'}</button><button type="button" className="link danger" onClick={() => unpublish.mutate()} disabled={pending}>Снять с публикации</button></div>}
+        {profile.data?.published && <div className="trainer-publication-links"><button type="button" className="link" onClick={() => void copyLink()}>{copied ? 'Скопировано' : 'Скопировать ссылку'}</button></div>}
       </div>
     </details>
+    {profile.data?.published && <button type="button" className="secondary danger wide trainer-profile-unpublish-action" onClick={() => void requestUnpublish()} disabled={pending} aria-busy={unpublish.isPending}>
+      {unpublish.isPending ? 'Снимаем с публикации…' : 'Снять с публикации'}
+    </button>}
   </>
 
   return <section className="trainer-professional-editor trainer-professional-embedded ui-identity" aria-label="Анкета тренера">
+    {confirmDialog}
     <AsyncView loading={profile.isLoading} error={profile.error} onRetry={() => void profile.refetch()}>
       {draft && editing && <form className="trainer-profile-form trainer-profile-edit-card card" onSubmit={submit} aria-label="Редактирование анкеты тренера">
         <header className="trainer-profile-edit-head"><div><p className="eyebrow">АНКЕТА ТРЕНЕРА</p><h2>Редактирование</h2></div></header>
@@ -304,6 +316,7 @@ export function TrainerProfessionalProfileSection() {
       </article>}
       {draft && !editing && hasProfileContent(draft) && <TrainerProfileCard
         profile={draft}
+        isBrandTrainer={profile.data?.isBrandTrainer ?? false}
         compact
         action={<button type="button" className="primary trainer-profile-edit-action" onClick={() => setEditing(true)}>Редактировать</button>}
         footer={publicationControls}

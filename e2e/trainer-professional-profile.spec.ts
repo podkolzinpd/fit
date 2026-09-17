@@ -18,9 +18,10 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   await expect(editAction).toBeVisible()
   const existingUnpublishButton = profile.locator('button', { hasText: 'Снять с публикации' })
   if (await existingUnpublishButton.count()) {
-    await profile.locator('.trainer-publication-disclosure summary').click()
+    await expect(existingUnpublishButton).toBeVisible()
     const unpublishRequest = page.waitForResponse((response) => response.url().includes('/rpc/unpublish_trainer_profile'))
     await existingUnpublishButton.click()
+    await page.getByRole('button', { name: 'Снять', exact: true }).click()
     expect((await unpublishRequest).status()).toBe(200)
     await expect(existingUnpublishButton).toHaveCount(0)
   }
@@ -30,9 +31,10 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
     await expect(profile.getByRole('button', { name: 'Заполнить анкету' })).toBeVisible()
     await minimalPublishButton.click()
     await expect(profile.getByText('Видна в каталоге')).toBeVisible()
-    await profile.locator('.trainer-publication-disclosure summary').click()
     const minimalUnpublish = profile.getByRole('button', { name: 'Снять с публикации' })
+    await expect(minimalUnpublish).toBeVisible()
     await minimalUnpublish.click()
+    await page.getByRole('button', { name: 'Снять', exact: true }).click()
     await expect(minimalUnpublish).toHaveCount(0)
   }
   await editAction.click()
@@ -169,6 +171,7 @@ test('athlete loads every page of the trainer catalog', async ({ page }) => {
       publicId: `92000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
       draft: published, published, listedInCatalog: true,
       publishedAt: '2026-09-13T01:00:00Z', updatedAt: '2026-09-13T01:00:00Z', version: 1,
+      isBrandTrainer: false,
     }
   }
   await page.route('**/rest/v1/rpc/list_public_trainer_profiles_page', (route) => {
