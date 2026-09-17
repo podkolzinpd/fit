@@ -9,13 +9,15 @@ import { goalStory } from './client-progress-presentation'
 import { buildPeriodComparison } from './period-comparison'
 import { mondayStart, regularityWorkoutLabel } from './workout-regularity-progress'
 
-export function ClientGoalFacts({ goal, profileGoal, entries, workouts, periodStart, periodEnd, today, loading, error, onRetry }: {
+export function ClientGoalFacts({ goal, profileGoal, entries, workouts, periodStart, periodEnd, today, loading, error, onRetry, compact = false }: {
   goal?: ClientGoal | null; profileGoal?: string | null; entries: readonly ProgressEntry[]; workouts: readonly Workout[]
-  periodStart: LocalDate; periodEnd: LocalDate; today: LocalDate; loading: boolean; error: Error | null; onRetry: () => void
+  periodStart: LocalDate; periodEnd: LocalDate; today: LocalDate; loading: boolean; error: Error | null; onRetry: () => void; compact?: boolean
 }) {
   const location = useLocation()
   const measurementSearch = new URLSearchParams(location.search)
   measurementSearch.set('view', 'pro')
+  const goalDetailsSearch = new URLSearchParams(location.search)
+  goalDetailsSearch.set('view', 'pro')
   const story = goalStory({ periodStart, periodEnd }, { goal, profileGoal, measurements: entries, currentWorkouts: workouts, today, role: 'client' })
   const criterionRow = (criterion: NonNullable<NonNullable<typeof story>['criteria']>[number]) => <article className="goal-criterion-progress-row" key={criterion.id}>
         <header><strong>{criterion.label}</strong><span>{criterion.status === "Движение к ориентиру" ? "В процессе" : criterion.status}</span></header>
@@ -24,12 +26,15 @@ export function ClientGoalFacts({ goal, profileGoal, entries, workouts, periodSt
         {criterion.action === 'measurement' && <Link className="link" to={{ pathname: location.pathname, search: `?${measurementSearch}`, hash: '#measurements' }}>Добавить замер</Link>}
         {criterion.action === 'workout' && <Link className="link" to="/workouts/new">Записать тренировку</Link>}
       </article>
-  return <section className="client-progress-goal-story standalone" aria-label="Твоя цель">
+  return <section className={`client-progress-goal-story standalone${compact ? ' compact' : ''}`} aria-label="Твоя цель">
     <header className="client-progress-goal-story-head"><span>Твоя цель</span><Link className="link" to="/me/goal">Изменить цель</Link></header>
     {loading ? <p role="status">Загружаем цель…</p> : error ? <p role="alert">Не удалось загрузить данные цели. <button type="button" className="link" onClick={onRetry}>Повторить</button></p> : !story ? <><h3>Цель пока не указана</h3><Link className="link" to="/me/goal">Добавить цель</Link></> : <>
       <h3>{story.title}</h3>
 
-      {story.criteria?.length ? <div className="goal-criteria-progress-list">{story.criteria.slice(0, 2).map(criterionRow)}{story.criteria.length > 2 && <details><summary>Все показатели · {story.criteria.length - 2}</summary>{story.criteria.slice(2).map(criterionRow)}</details>}</div> : <><p>{story.state === 'needs_review' ? 'Цель изменилась. Проверь показатели.' : 'Выбери, что отслеживать.'}</p><Link className="link" to="/me/goal">{story.state === 'needs_review' ? 'Проверить показатели' : 'Настроить цель'}</Link></>}
+      {compact && story.criteria?.length ? <>
+        <p className="goal-compact-status"><strong>{story.statusLabel}</strong>{story.criterionLabel && story.currentLabel && story.targetLabel ? ` · ${story.criterionLabel}: ${story.currentLabel} / ${story.targetLabel}` : ''}</p>
+        <Link className="link goal-details-link" to={{ pathname: location.pathname, search: `?${goalDetailsSearch}`, hash: '#goal-details' }}>Подробнее в ПРО</Link>
+      </> : story.criteria?.length ? <div className="goal-criteria-progress-list">{story.criteria.slice(0, 2).map(criterionRow)}{story.criteria.length > 2 && <details><summary>Все показатели · {story.criteria.length - 2}</summary>{story.criteria.slice(2).map(criterionRow)}</details>}</div> : <><p>{story.state === 'needs_review' ? 'Цель изменилась. Проверь показатели.' : 'Выбери, что отслеживать.'}</p><Link className="link" to="/me/goal">{story.state === 'needs_review' ? 'Проверить показатели' : 'Настроить цель'}</Link></>}
     </>}
   </section>
 }

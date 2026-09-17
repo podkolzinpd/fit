@@ -90,7 +90,7 @@ describe('result center and weekly work', () => {
     expect(screen.queryByText(/Это записанная работа/)).toBeNull()
     await userEvent.setup().click(screen.getByText('Нагрузка по неделям'))
     expect(await screen.findAllByText('Часть недели')).toHaveLength(2)
-    expect(screen.getByText('10 августа 2026 г. — 12 августа 2026 г.')).toBeVisible()
+    expect(screen.getByText('10 августа 2026 г. — 16 августа 2026 г.')).toBeVisible()
     expect(screen.getAllByText('1 подход')).toHaveLength(3)
   })
   it('recalculates records after editing and deleting their source without preserving a stale PR', () => {
