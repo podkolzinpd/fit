@@ -150,7 +150,8 @@ async function expectNoHorizontalOverflow(page: import('@playwright/test').Page)
 async function expectCompactBodyMap(map: Locator) {
   await expect(map).toBeVisible()
   const geometry = await map.evaluate((element) => {
-    const mapStyle = getComputedStyle(element.closest('.progress-pro-list') ?? element.closest('.client-body-map-disclosure') ?? element)
+    const proList = element.closest('.progress-pro-list')
+    const mapStyle = getComputedStyle(proList ?? element.closest('.client-body-map-disclosure') ?? element)
     const rect = (selector: string) => {
       const node = element.querySelector<HTMLElement>(selector)
       if (!node) return null
@@ -160,6 +161,7 @@ async function expectCompactBodyMap(map: Locator) {
     const sidesElement = element.querySelector<HTMLElement>('.body-progress-sides')
     const sidesTrack = sidesElement ? getComputedStyle(sidesElement, '::before') : null
     return {
+      isProList: Boolean(proList),
       borderRadius: Number.parseFloat(mapStyle.borderTopLeftRadius),
       borderWidth: Number.parseFloat(mapStyle.borderTopWidth),
       modes: rect('.body-progress-modes'),
@@ -175,8 +177,15 @@ async function expectCompactBodyMap(map: Locator) {
   })
 
   expect(geometry.modes).not.toBeNull()
-  expect(geometry.borderRadius).toBeGreaterThanOrEqual(16)
-  expect(geometry.borderWidth).toBeGreaterThanOrEqual(1)
+  if (geometry.isProList) {
+    // PRO is intentionally a flat list of disclosure buttons without an
+    // additional frame around the opened section.
+    expect(geometry.borderRadius).toBe(0)
+    expect(geometry.borderWidth).toBe(0)
+  } else {
+    expect(geometry.borderRadius).toBeGreaterThanOrEqual(16)
+    expect(geometry.borderWidth).toBeGreaterThanOrEqual(1)
+  }
   expect(geometry.modes!.width).toBeLessThanOrEqual(166)
   // WebKit can report a 44 CSS px control a few hundredths above or below 44 px
   // after device-scale rounding.
