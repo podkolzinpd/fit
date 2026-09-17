@@ -7,6 +7,14 @@ const workflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-yandex-stage.yml'),
   'utf8',
 )
+
+test('configures and refreshes an explicit ephemeral Yandex CLI profile', () => {
+  assert.equal(
+    workflow.match(/config profile create github-actions/g)?.length,
+    2,
+  )
+  assert.equal(workflow.match(/config set token "\$YC_IAM_TOKEN"/g)?.length, 4)
+})
 const previewSyncWorkflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'sync-yandex-stage-preview.yml'),
   'utf8',
