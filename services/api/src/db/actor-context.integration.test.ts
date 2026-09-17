@@ -146,6 +146,8 @@ const CLIENT_ASSISTANT_ACTION_ID = 'eb691fd5-86ee-4740-838c-b37166df7e71'
 const CLIENT_ASSISTANT_FORBIDDEN_TURN_ID = 'a36c6f9e-86ee-4740-838c-b37166df7e71'
 const CLIENT_ASSISTANT_FORBIDDEN_ACTION_ID = 'ec691fd5-86ee-4740-838c-b37166df7e71'
 const CLIENT_ASSISTANT_WORKOUT_REQUEST_ID = 'ed691fd5-86ee-4740-838c-b37166df7e71'
+const CLIENT_ASSISTANT_PROGRAM_TURN_ID = 'a46c6f9e-86ee-4740-838c-b37166df7e71'
+const CLIENT_ASSISTANT_PROGRAM_ACTION_ID = 'ee691fd5-86ee-4740-838c-b37166df7e71'
 const PROGRESS_WORKOUT_EXERCISE_ID = '736e9f0c-634a-42e0-a13b-2c5b070fe5ef'
 const PROGRESS_WORKOUT_SET_ID = '9a15f723-44cb-4cf1-9bcf-4659c43cc764'
 const ROOT_WORKOUT_EXERCISE_ID = 'd40b742b-5d5b-41ab-91df-ed464414d034'
@@ -5049,7 +5051,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         ))).rejects.toMatchObject({ code: '42501' })
     })
 
-    it('lets a client use Assistant only for their own completed workout', async () => {
+    it('lets a client use Assistant only for their own workout and validated program', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
       }
@@ -5150,6 +5152,71 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         created_by: OTHER_ACTOR_ID,
       }])
 
+      const programWorkouts = Array.from({ length: 4 }, (_, index) => ({
+        ...workout,
+        requestId: `ef691fd5-86ee-4740-838c-b37166df7e7${index}`,
+        workoutDate: `2026-09-${21 + index * 3}`,
+        notes: 'Клиентская программа из Assistant',
+      }))
+      await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+        appendAssistantUserMessage(
+          client,
+          conversation.id,
+          CLIENT_ASSISTANT_PROGRAM_TURN_ID,
+          'Составь мою программу',
+        ))
+      await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+        persistAssistantResponse(
+          client,
+          conversation.id,
+          CLIENT_ASSISTANT_PROGRAM_TURN_ID,
+          'Рекомендованный черновик программы',
+          {
+            id: CLIENT_ASSISTANT_PROGRAM_ACTION_ID,
+            tool: 'create_program_draft',
+            status: 'proposed',
+            title: 'Программа на четыре недели',
+            description: 'Проверьте назначения',
+            payload: {
+              schemaVersion: 'program-v1',
+              clientId: CLIENT_ID,
+              sourceCapturedAt: new Date().toISOString(),
+              canonicalWorkouts: programWorkouts,
+              step: 'confirm',
+            },
+          },
+        ))
+      const programApplied = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => applyAssistantAction(
+          client,
+          CLIENT_ASSISTANT_PROGRAM_ACTION_ID,
+          { workouts: programWorkouts },
+          1,
+        ),
+      )
+      const programAppliedAgain = await withActorTransaction(
+        runtimePool,
+        OTHER_ACTOR_ID,
+        (client) => applyAssistantAction(
+          client,
+          CLIENT_ASSISTANT_PROGRAM_ACTION_ID,
+          {},
+          2,
+        ),
+      )
+      expect(programApplied).toMatchObject({ status: 'applied', version: 2 })
+      expect(programApplied.workoutIds).toHaveLength(4)
+      expect(programAppliedAgain).toMatchObject({ status: 'applied', version: 2 })
+      const storedProgram = await ownerPool.query<CountRow>(
+        `select count(*)::integer count from public.workouts
+         where notes = 'Клиентская программа из Assistant'
+           and client_id = $1 and created_by = $2`,
+        [CLIENT_ID, OTHER_ACTOR_ID],
+      )
+      expect(storedProgram.rows[0]?.count).toBe(4)
+
       await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
         appendAssistantUserMessage(
           client,
@@ -5184,6 +5251,12 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       )).rejects.toMatchObject({ failure: 'forbidden' })
 
       await ownerPool.query('delete from public.workouts where id = $1', [applied.workoutId])
+      await ownerPool.query(
+        `delete from public.workouts
+         where notes = 'Клиентская программа из Assistant'
+           and created_by = $1`,
+        [OTHER_ACTOR_ID],
+      )
       await ownerPool.query('delete from public.assistant_conversations where id = $1', [conversation.id])
     })
 

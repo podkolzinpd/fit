@@ -74,6 +74,20 @@ describe('buildWorkoutRegularityProgress', () => {
     expect(result.currentStreakWeeks).toBe(2)
   })
 
+  it('labels partial periods with complete Monday-to-Sunday calendar weeks', () => {
+    const result = buildWorkoutRegularityProgress({
+      currentWorkouts: [workout('one', '2026-08-16'), workout('two', '2026-08-17')],
+      periodStart: localDate('2026-08-16'),
+      periodEnd: localDate('2026-08-20'),
+      today: localDate('2026-08-20'),
+    })
+
+    expect(result.weeks.map((week) => [week.start, week.end, week.workoutCount])).toEqual([
+      ['2026-08-10', '2026-08-16', 1],
+      ['2026-08-17', '2026-08-23', 1],
+    ])
+  })
+
   it('detects a return after a long internal pause', () => {
     const result = buildWorkoutRegularityProgress({
       ...period,

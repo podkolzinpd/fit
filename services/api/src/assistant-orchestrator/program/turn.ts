@@ -115,7 +115,7 @@ export async function programPilotTurn(message: string, clients: readonly Progra
     catch { return collect(client, brief, 'Не удалось загрузить историю клиента. Ответы сохранены; перед составлением программы повторно проверю историю.', clarification !== null) }
     basis = { summary: programSourceSummary(source), hasHistory: source.context.completedWorkouts > 0 }
     const feedback = source.context.feedback
-    return collect(client, brief, `Пилот: четыре недели занятий под наблюдением тренера, 1–3 раза в неделю от 30 минут, с днём отдыха между занятиями.\nКлиент: ${client.fullName}. За последние восемь недель вижу ${source.context.completedWorkouts} завершённых тренировок.`
+    return collect(client, brief, `Подготовлю рекомендованный черновик на четыре недели: 1–3 занятия в неделю от 30 минут, с днём отдыха между занятиями. Это не медицинское назначение; итоговую нагрузку нужно сверять с самочувствием и техникой.\nПрофиль: ${client.fullName}. За последние восемь недель вижу ${source.context.completedWorkouts} завершённых тренировок.`
       + (feedback.discomfortDates.length ? ` Есть сообщения о дискомфорте: ${feedback.discomfortDates.join(', ')}. Уточним текущее состояние в чате.` : '')
       + (clarification ? `\n${clarification}` : ''), clarification !== null)
   }
@@ -200,7 +200,7 @@ export async function programPilotTurn(message: string, clients: readonly Progra
 }
 
 function briefIssueText(issues: string[]): string {
-  if (issues.includes('other_activity_overlap_requires_review')) return `Дни программы совпадают с другой нагрузкой. Уточните расписание или подтвердите после проверки тренером: «${CONFIRM_ACTIVITY_OVERLAP}». Автоматический коэффициент снижения нагрузки не применяется.`
+  if (issues.includes('other_activity_overlap_requires_review')) return `Дни программы совпадают с другой нагрузкой. Уточните расписание или подтвердите после самостоятельной проверки общей нагрузки: «${CONFIRM_ACTIVITY_OVERLAP}». Автоматический коэффициент снижения нагрузки не применяется.`
   if (issues.includes('adjacent_training_days')) return 'В этом пилоте занятия на всё тело требуют дня отдыха между ними. Уточните дни недели, например понедельник, среда и пятница.'
   if (issues.includes('insufficient_training_time')) return 'Для программы этого пилота нужно хотя бы 30 минут на занятие с разминкой и отдыхом. Уточните доступное время.'
   if (issues.includes('invalid_start_date')) return 'Укажите дату начала от сегодняшнего дня до ближайших трёх месяцев.'
@@ -209,7 +209,7 @@ function briefIssueText(issues: string[]): string {
 }
 
 export async function extractProgramBrief(brief: ProgramBrief, message: string, today: string, operationId: string, answerContext?: BriefAnswerContext): Promise<unknown> {
-  const explicit = explicitBriefAnswer(message, answerContext, today)
+  const explicit = explicitBriefAnswer(message, answerContext, today, brief)
   if (explicit) return explicit
   const raw = await programModelJson({ functionName: 'fit-assistant-program-quiz', operationId, maxTokens: 1800,
     schema: briefExtractionSchema,
@@ -226,13 +226,13 @@ lastQuestion — вопрос, на который отвечает пользо
 goalText — цель именно программы; goal — strength, hypertrophy, general_fitness либо weight_loss. Частота только 1–3. weekdays: пн=1,...вс=7. startDate YYYY-MM-DD относительно today. Опыт beginner/returning/experienced. Время 30–120 минут. Дни занятий должны иметь минимум один день отдыха между ними.
 equipment: только предложенные коды. «Полностью оборудованный зал» означает полный список; не считай любое упоминание зала подтверждением всего оборудования. Для «дома с гантелями» только dumbbells, без bench если не названа.
 limitations none только при явном отрицании актуальной боли/травм/ограничений. Старое сообщение о боли не доказывает текущую травму. Не решай медицинские вопросы. adult только из явного возраста/ответа.
-limitationsText сохраняет описание ограничений. limitationAdjustments сохраняет ответ тренера: какие движения/нагрузки исключить или изменить, что допустимо. Ответ «пока неизвестно» тоже запиши как limitationAdjustments, если задан этот вопрос; не превращай его в limitations=none. Не придумывай рекомендации врача и не запрещай генерацию только из-за наличия ограничений. excludedRefs заполни для явно названных исключённых упражнений из каталога, с цитатой пользователя.
+limitationsText сохраняет описание ограничений. limitationAdjustments сохраняет ответ пользователя: какие движения/нагрузки исключить или изменить, что допустимо. Ответ «пока неизвестно» тоже запиши как limitationAdjustments, если задан этот вопрос; не превращай его в limitations=none. Не придумывай рекомендации врача и не запрещай генерацию только из-за наличия ограничений. excludedRefs заполни для явно названных исключённых упражнений из каталога, с цитатой пользователя.
 Если askedFields содержит limitationAdjustments, ответ об исключениях заполняет ОБА поля: limitationAdjustments (слова пользователя) и excludedRefs (коды упражнений). Пример «Не делать тягу нижнего блока» → limitationAdjustments="Не делать тягу нижнего блока", excludedRefs="seated-cable-row", обе quote="Не делать тягу нижнего блока". Пример «пока неизвестно» → limitationAdjustments="пока неизвестно"; остальные поля не изменяй.
 Для otherActivities value — строка с JSON-массивом объектов, например [{"kind":"бег","frequency":2,"weekdays":[2,6]}]; это единственное исключение из формата простых массивов через запятую.
 Явное отрицание другой нагрузки записывай ТОЛЬКО в текстовое поле otherActivity со значением "нет". Не создавай изменение otherActivities при отрицании: туда нельзя помещать "нет", пустую строку или текст отрицания; этот массив заполняется только при явно перечисленных видах нагрузки, частоте и днях.
 Пример message «Другой регулярной нагрузки нет.» → changes: [{"field":"otherActivity","operation":"set","value":"нет","quote":"Другой регулярной нагрузки нет"}]. В этом примере otherActivities отсутствует в changes.
 preferences и otherActivity — слова пользователя, допустимо «нет». При другой нагрузке otherActivities содержит каждый вид kind, frequency (1–7) и weekdays. Не заполняй otherActivities без явно указанных вида, частоты и дней. activityOverlapConfirmed не устанавливай: согласование обрабатывает код. excludedRefs — только явные исключения из каталога. Если пожелание требует неразмеченного упражнения, clarification сообщает об этом; не подменяй другим упражнением.
-continuationPlan — что продолжить или изменить по словам тренера. preserveRefs — только явно названные упражнения, которые важно сохранить. Не додумывай их; этот вопрос нужен только при наличии истории.
+continuationPlan — что продолжить или изменить по словам пользователя. preserveRefs — только явно названные упражнения, которые важно сохранить. Не додумывай их; этот вопрос нужен только при наличии истории.
 historyComplete — только явное подтверждение полноты записей или сообщение, что тренировки записаны не полностью/проходили вне Fit. Не делай вывод о полноте по отсутствию записей.
 Если запрос выходит за пределы схемы или двусмысленен, уточни его и очисти противоречивое поле. На «изменить условия» не меняй ответы, спроси что изменить.`,
     data: { today, currentBrief: brief, message, lastQuestion: answerContext?.question ?? null, askedFields: answerContext?.fields ?? [], fieldDefinitions: briefProperties, equipment: PROGRAM_EQUIPMENT,
@@ -242,7 +242,7 @@ historyComplete — только явное подтверждение полн�
   const value = record(decoded)
   const patch = record(value?.patch)
   // A confirmed exercise exclusion answers the active adjustment question too.
-  // Preserve the trainer's exact words rather than asking the same question again.
+  // Preserve the user's exact words rather than asking the same question again.
   if (answerContext?.fields.length === 1 && answerContext.fields[0] === 'limitationAdjustments'
     && patch && Array.isArray(patch.excludedRefs) && patch.limitationAdjustments === undefined
     && value?.clarification === null && message.trim().length > 0 && message.length <= 500) {
@@ -283,7 +283,7 @@ function programSourceSummary(source: ProgramSourceSnapshot): string {
   return `Из Fit: ${history.periodStart}–${history.periodEnd}. Завершённых тренировок: ${history.completedWorkouts}. Последняя запись: ${history.lastCompletedDate ?? 'нет записей'}. `
     + (weight?.weightKg !== null && weight?.weightKg !== undefined ? `Вес: ${weight.weightKg} кг, ${weight.date}. ` : 'Подтверждённый замер веса отсутствует. ')
     + `Обратная связь отсутствует у ${history.feedback.missingWorkouts} записей. `
-    + (history.completedWorkouts ? 'Замысел предыдущей программы уточняем у тренера.' : 'Отсутствие записей не означает отсутствие опыта: опыт берём из ответа тренера.')
+    + (history.completedWorkouts ? 'Замысел предыдущей программы уточняем в диалоге.' : 'Отсутствие записей не означает отсутствие опыта: опыт берём из ответа пользователя.')
 }
 function programEditIssue(codes: string[]): string {
   if (codes.includes('session_exceeds_time_budget')) return 'Занятие не укладывается в выбранное время. Уменьшите подходы или измените условия программы.'

@@ -12,7 +12,7 @@ export function weeklySetDistribution(workouts: readonly Workout[], start: Local
     const fullEnd = addDays(week, 6)
     const to = fullEnd > effectiveEnd ? effectiveEnd : fullEnd
     const data = loadBodyMap(workouts, from, to)
-    weeks.push({ week, start: from, end: to, partial: from !== week || to !== fullEnd, ...data.coverage, regions: data.regions })
+    weeks.push({ week, start: week, end: fullEnd, partial: from !== week || to !== fullEnd, ...data.coverage, regions: data.regions })
   }
   return weeks
 }

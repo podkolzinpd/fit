@@ -1,7 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LiveRestTimer, formatRest } from './LiveRestTimer'
-import { readLiveRestOverrides } from './LiveExerciseRest'
 import { playGong, prepareGong } from '../../shared/gong'
 import { wasNativeRestTimerNotificationScheduled } from './rest-timer-notification'
 
@@ -45,7 +44,7 @@ describe('Live rest timer', () => {
     expect(screen.getByRole('listbox', { name: 'секунды' })).toBeVisible()
     fireEvent.click(screen.getByRole('option', { name: '02 минуты' }))
     fireEvent.click(screen.getByRole('option', { name: '05 секунды' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Начать отдых' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Начать отдых · 2:05' }))
     expect(onChange).toHaveBeenCalledWith(225_000)
     expect(prepareGong).toHaveBeenCalledTimes(2)
   })
@@ -59,11 +58,11 @@ describe('Live rest timer', () => {
 
     fireEvent.click(screen.getByRole('option', { name: '00 минуты' }))
     fireEvent.click(screen.getByRole('option', { name: '00 секунды' }))
-    expect(screen.getByRole('button', { name: 'Начать отдых' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Начать отдых · 0:00' })).toBeDisabled()
 
     fireEvent.click(screen.getByRole('option', { name: '60 минуты' }))
     expect(screen.getByRole('listbox', { name: 'секунды' })).toHaveAttribute('aria-disabled', 'true')
-    fireEvent.click(screen.getByRole('button', { name: 'Начать отдых' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Начать отдых · 60:00' }))
     expect(onChange).toHaveBeenLastCalledWith(3_700_000)
   })
 
@@ -83,8 +82,31 @@ describe('Live rest timer', () => {
     view.rerender(<LiveRestTimer workoutId="workout-1" deadline={99_000} onChange={onChange} />)
     fireEvent.click(screen.getByRole('button', { name: 'Отдых превышен на 0:01' }))
     fireEvent.click(screen.getByRole('button', { name: '2:00' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Запустить заново' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Применить время · 2:00' }))
     expect(onChange).toHaveBeenLastCalledWith(220_000)
+  })
+
+  it('applies the physical wheel position immediately and reports the duration for future rests', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(100_000)
+    const onChange = vi.fn()
+    const onDurationChange = vi.fn()
+    render(<LiveRestTimer workoutId="workout-1" deadline={190_000} defaultDurationSeconds={45} onChange={onChange} onDurationChange={onDurationChange} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Таймер отдыха: 1:30' }))
+    expect(screen.getByRole('option', { name: '00 минуты' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('option', { name: '45 секунды' })).toHaveAttribute('aria-selected', 'true')
+
+    const minutesWheel = screen.getByRole('listbox', { name: 'минуты' })
+    minutesWheel.scrollTop = 2 * 44
+    fireEvent.scroll(minutesWheel)
+    const secondsWheel = screen.getByRole('listbox', { name: 'секунды' })
+    secondsWheel.scrollTop = 5 * 44
+    fireEvent.scroll(secondsWheel)
+    fireEvent.click(screen.getByRole('button', { name: 'Применить время · 2:05' }))
+
+    expect(onDurationChange).toHaveBeenCalledWith(125)
+    expect(onChange).toHaveBeenCalledWith(225_000)
   })
 
   it('does not replay the web gong after a native background signal', () => {
@@ -123,12 +145,5 @@ describe('Live rest timer', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(formatRest(90)).toBe('1:30')
     expect(formatRest(-90)).toBe('−1:30')
-  })
-
-  it('ignores corrupt or invalid session rest overrides', () => {
-    sessionStorage.setItem('test', '{')
-    expect(readLiveRestOverrides('test')).toEqual({})
-    sessionStorage.setItem('test', JSON.stringify({ good: 90, off: 0, bad: -2, huge: 100000, text: '30' }))
-    expect(readLiveRestOverrides('test')).toEqual({ good: 90, off: 0 })
   })
 })
