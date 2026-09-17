@@ -141,7 +141,7 @@ test('linked client sees only the published client progress view', async ({ page
   await page.getByRole('button', { name: 'Закрыть' }).click()
   await expect(page.locator('.progress-overview-panel').getByText('Твоя цель', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Повысить силовые показатели и улучшить выносливость' })).toBeVisible()
-  await expect(page.getByText('Выбери, что отслеживать.')).toBeVisible()
+  await expect(page.locator('.progress-overview-panel').getByText('Выбери, что отслеживать.')).toBeVisible()
   await expect(page.locator('.personal-workout-result')).toHaveCount(0)
   await expect(page.locator('.client-progress-goal-story a[href="/me/goal"]').first()).toBeVisible()
   await expect(page.getByText(/Рост рабочего веса поддерживает цель/)).toHaveCount(0)
