@@ -19,7 +19,8 @@ afterEach(() => vi.unstubAllEnvs())
 
 function setup(tool: 'record_workout' | 'create_program_draft', status: string, hideActiveFromHistory = false, role = 'trainer') {
   const action: AssistantAction = { id: actionId, tool, status: 'proposed', title: 'Черновик', description: 'Проверьте', payload: { step: 'confirm', transcript: 'жим 3 по 10', clientId: 'client-1', ...(tool === 'create_program_draft' ? { programPilot: true } : {}) } }
-  const actor = { auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: actorId } } }) }, from: vi.fn(), rpc: vi.fn().mockImplementation((name: string) => Promise.resolve({ error: null, data: name === 'list_clients' ? [{ id: 'client-1', full_name: 'Антон Ковалёв', age_years: 30 }] : {} })) }
+  const actor = { auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: actorId } } }) }, from: vi.fn(), rpc: vi.fn().mockImplementation((name: string) => Promise.resolve({ error: null,
+    data: name === 'list_clients' || name === 'get_my_client' ? [{ id: 'client-1', full_name: 'Антон Ковалёв', age_years: 30 }] : {} })) }
   const service = { rpc: vi.fn().mockResolvedValue({ error: null, data: {} }), from: vi.fn((table: string) => {
     let stateQuery = false
     const history = hideActiveFromHistory ? Array.from({ length: 20 }, () => ({ author: 'assistant', content: 'Обычная реплика', action: null }))
@@ -103,13 +104,25 @@ describe('program routing in the authenticated orchestrator', () => {
   })
 })
 
-it('allows a client account to use the shared assistant without trainer program routing', async () => {
+it('describes the recommended program capability to a client account', async () => {
   const { actor, service } = setup('record_workout', 'applied', false, 'client')
   await expect(runAssistantTurn('Bearer actor-token', { conversationId, turnId: crypto.randomUUID(), message: 'Что ты умеешь?' })).resolves.toEqual({
-    reply: 'Могу коротко пообщаться и записать тренировку — целиком или по одному упражнению, текстом или голосом.',
+    reply: 'Могу коротко пообщаться и записать тренировку — целиком или по одному упражнению, текстом или голосом.\nТакже могу составить рекомендованный черновик программы на четыре недели: уточню цель и условия, учту доступную историю и покажу результат перед добавлением в расписание.',
     action: null,
   })
   expect(programModelJson).not.toHaveBeenCalled()
   expect(actor.rpc).not.toHaveBeenCalled()
   expect(service.rpc).toHaveBeenCalledWith('persist_assistant_response', expect.any(Object))
+})
+
+it('routes a client program request directly to the client own card', async () => {
+  const { actor } = setup('record_workout', 'applied', false, 'client')
+  vi.mocked(programModelJson).mockResolvedValueOnce({ tool: 'create_program_draft', mode: 'start', reply: '' })
+    .mockResolvedValueOnce({ changes: [], clarification: null })
+  const result = await runAssistantTurn('Bearer actor-token', {
+    conversationId, turnId: crypto.randomUUID(), message: 'Составь мне программу на четыре недели',
+  })
+  expect(result.action?.payload).toMatchObject({ step: 'brief', clientId: 'client-1', clientName: 'Антон Ковалёв' })
+  expect(result.reply).not.toContain('Для кого составить программу')
+  expect(actor.rpc).toHaveBeenCalledWith('get_my_client')
 })

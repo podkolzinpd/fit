@@ -62,7 +62,7 @@ select throws_ok(
   'PT403', null, 'client action cannot target another client card');
 select throws_ok(
   $$select public.apply_assistant_action('e0000000-0000-4000-8000-000000000117', '{}'::jsonb, 1)$$,
-  'PT403', null, 'client cannot apply trainer-only assistant action');
+  'PT403', null, 'client cannot apply an unvalidated legacy program');
 select is(public.cancel_assistant_action('e0000000-0000-4000-8000-000000000118', 1)->>'status', 'cancelled', 'client cancels own workout action');
 
 reset role;
