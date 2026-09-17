@@ -8,7 +8,7 @@ import type { TrainerCertificate, TrainerProfileDraft, TrainerTrainingMode } fro
 import { copyText } from '../../shared/clipboard'
 import { ChevronDownIcon } from '../../shared/icons'
 import { prepareProfileImage } from '../../shared/profile-image'
-import { emptyTrainerProfileDraft, trainerProfileDraftSchema, TRAINER_SPECIALTIES, validatePublishableTrainerProfile } from '../../shared/trainer-profile'
+import { emptyTrainerProfileDraft, trainerProfileDraftSchema, TRAINER_SPECIALTIES, TRAINER_SPECIALTIES_MAX, validatePublishableTrainerProfile } from '../../shared/trainer-profile'
 import { AsyncView, Field, SaveStatus, Switch, useConfirm } from '../../shared/ui'
 import { MetroStationPicker } from './MetroStationPicker'
 import { TrainerProfileCard } from './TrainerProfileCard'
@@ -141,6 +141,7 @@ export function TrainerProfessionalProfileSection() {
   }
   function toggleSpecialty(specialty: string, checked: boolean) {
     if (!draft) return
+    if (checked && draft.specialties.length >= TRAINER_SPECIALTIES_MAX) return
     set('specialties', checked ? [...new Set([...draft.specialties, specialty])] : draft.specialties.filter((item) => item !== specialty))
   }
   async function imageChanged(event: ChangeEvent<HTMLInputElement>) {
@@ -248,12 +249,16 @@ export function TrainerProfessionalProfileSection() {
           <Field label="Имя в анкете"><input value={draft.displayName} maxLength={120} onChange={(event) => set('displayName', event.target.value)} /></Field>
           <Field label="О себе"><textarea value={draft.bio} maxLength={1200} placeholder="Опыт, подход и кому вы помогаете" onChange={(event) => set('bio', event.target.value)} /></Field>
           <details className="trainer-profile-form-disclosure">
-            <summary><span>Направления{draft.specialties.length > 0 ? ` · ${draft.specialties.length}` : ''}</span><ChevronDownIcon /></summary>
+            <summary><span>Направления · {draft.specialties.length}/{TRAINER_SPECIALTIES_MAX}</span><ChevronDownIcon /></summary>
+            {draft.specialties.length >= TRAINER_SPECIALTIES_MAX && <p className="trainer-specialties-limit-note" role="status">Выбрано максимум направлений ({TRAINER_SPECIALTIES_MAX}). Уберите одно, чтобы выбрать другое.</p>}
             <div className="trainer-specialties-options" role="group" aria-label="Направления">
-              {TRAINER_SPECIALTIES.map((specialty) => <label key={specialty} className="trainer-specialty-option">
-                <input type="checkbox" checked={draft.specialties.includes(specialty)} onChange={(event) => toggleSpecialty(specialty, event.target.checked)} />
-                <span>{specialty}</span>
-              </label>)}
+              {TRAINER_SPECIALTIES.map((specialty) => {
+                const checked = draft.specialties.includes(specialty)
+                return <label key={specialty} className={`trainer-specialty-option${!checked && draft.specialties.length >= TRAINER_SPECIALTIES_MAX ? ' disabled' : ''}`}>
+                  <input type="checkbox" checked={checked} disabled={!checked && draft.specialties.length >= TRAINER_SPECIALTIES_MAX} onChange={(event) => toggleSpecialty(specialty, event.target.checked)} />
+                  <span>{specialty}</span>
+                </label>
+              })}
             </div>
           </details>
         </div>
