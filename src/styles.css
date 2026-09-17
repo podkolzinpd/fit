@@ -2473,6 +2473,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .picker-technique-facts span + span { border-left:1px solid var(--border) }
 .picker-technique-facts small { color:var(--muted); font-size:11px }
 .picker-technique-facts strong { overflow-wrap:anywhere; font-size:13px; line-height:1.3 }
+.picker-technique-description { display:grid; gap:8px }
+.picker-technique-description h3 { margin:0; font-size:17px }
+.picker-technique-description p { margin:0; color:var(--fg); font-size:14px; line-height:1.45; white-space:pre-wrap }
 .picker-technique-instructions { display:grid; gap:8px }
 .picker-technique-instructions h3 { margin:0; font-size:17px }
 .picker-technique-instructions ol { display:grid; gap:8px; margin:0; padding-left:22px; color:var(--fg); font-size:14px; line-height:1.45 }

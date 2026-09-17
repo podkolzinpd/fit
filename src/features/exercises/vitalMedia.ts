@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useDataBackend } from '../../app/data-backend-context'
+import { createSignedUrlCache } from '../../shared/signed-media-cache'
 
 const LOCAL_PREFIX = '/exercises/vital-pro/'
 const STORAGE_FOLDER = 'vital-pro/'
 const SIGNED_URL_TTL_SECONDS = 60 * 60
 const CACHE_TTL_MS = 50 * 60 * 1_000
 
-const signedUrlCache = new Map<string, { expiresAt: number; promise: Promise<string> }>()
+const signedUrlCache = createSignedUrlCache(CACHE_TTL_MS)
 
 export function shouldUsePrivateVitalStorage(source: string | undefined) {
   if (!source) return false
@@ -24,15 +25,7 @@ async function createVitalSignedUrl(source: string, signer: (path: string, expir
 
 function resolveVitalMedia(source: string, signer: (path: string, expiresIn: number) => Promise<string>) {
   if (!shouldUsePrivateVitalStorage(source)) return Promise.resolve(source)
-  const cached = signedUrlCache.get(source)
-  if (cached && cached.expiresAt > Date.now()) return cached.promise
-
-  const promise = createVitalSignedUrl(source, signer).catch((error) => {
-    signedUrlCache.delete(source)
-    throw error
-  })
-  signedUrlCache.set(source, { expiresAt: Date.now() + CACHE_TTL_MS, promise })
-  return promise
+  return signedUrlCache.resolve(source, () => createVitalSignedUrl(source, signer))
 }
 
 export function useVitalMediaUrl(source: string | undefined, enabled = true) {

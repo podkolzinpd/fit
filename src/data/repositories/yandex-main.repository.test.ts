@@ -161,6 +161,15 @@ describe('Yandex main repository', () => {
     expect(init.body).toBe(JSON.stringify({ path: 'vital-pro/squat.mp4' }))
   })
 
+  it('rejects a custom exercise photo url request instead of hitting the network (YAFIT-521 gap, see FEATURE_PARITY.md)', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.exercises.createCustomExercisePhotoUrl('trainer-1/exercise-1.jpg', 60 * 60)).rejects.toThrow()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('accepts the resource-specific version returned by a Live mutation', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
       set: { id: '9fcce2c2-e182-433e-bb16-a481705c75fd', replayed: false, version: 4 },
