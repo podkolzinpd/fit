@@ -93,6 +93,7 @@ describe('native pilot assistant turn', () => {
     const { client, query } = clientWithRows([
       [],
       [],
+      [{ account_role: 'trainer' }],
       [{
         id: CLIENT_ID,
         full_name: 'Анна Смирнова',
@@ -145,6 +146,35 @@ describe('native pilot assistant turn', () => {
       id: ACTION_ID,
       tool: 'record_workout',
       status: 'proposed',
+    })
+  })
+
+  it('automatically records a client workout against the actor client card', async () => {
+    const { client } = clientWithRows([
+      [],
+      [],
+      [{ account_role: 'client' }],
+      [{
+        id: CLIENT_ID,
+        full_name: 'Анна Смирнова',
+        goal: null,
+        age_years: 30,
+        height_cm: '170',
+        gender: 'female',
+      }],
+      [],
+      [{ result: { messageId: 'message-id', deduplicated: false } }],
+    ])
+
+    await expect(runNativePilotAssistantTurn(client, {
+      conversationId: CONVERSATION_ID,
+      turnId: TURN_ID,
+      message: 'Запиши мою тренировку: присед 3 по 10',
+    })).resolves.toMatchObject({
+      action: {
+        tool: 'record_workout',
+        payload: { step: 'workout', clientId: CLIENT_ID, clientName: 'Анна Смирнова' },
+      },
     })
   })
 })

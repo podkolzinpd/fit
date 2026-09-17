@@ -112,6 +112,14 @@ export function AppLayout() {
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
     <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>
     <NavLink to="/me/workouts"><ScheduleIcon />Тренировки</NavLink>
+    {isAssistantNavPilotEnabled(actor.userId, actor.email) && <Coachmark
+      id="client-assistant-2026-09"
+      userId={actor.userId}
+      title="Ассистент теперь доступен"
+      description="Пишите или диктуйте: ассистент подготовит запись вашей тренировки и попросит подтверждение."
+    >
+      <NavLink to="/assistant"><AssistantIcon />Ассистент</NavLink>
+    </Coachmark>}
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/me/profile"><ProfileIcon />Профиль</NavLink>
   </nav>}</div>
