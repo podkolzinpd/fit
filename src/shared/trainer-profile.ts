@@ -1,6 +1,25 @@
 import { z } from 'zod'
 import type { TrainerCatalogPage, TrainerProfileDraft, TrainerProfessionalProfile } from './domain'
 
+// Фиксированный список направлений тренера — стандартизирует анкету и
+// упрощает поиск клиента (вместо свободного текста). Порядок — как в анкете.
+export const TRAINER_SPECIALTIES = [
+  'Тренажёрный зал / силовой тренинг',
+  'Функциональный тренинг',
+  'Кроссфит',
+  'Групповые программы (степ, аэробика и т.п.)',
+  'Йога / пилатес / стретчинг',
+  'Единоборства / бокс / кикбоксинг',
+  'Танцевальный фитнес (зумба и т.п.)',
+  'Похудение и коррекция фигуры',
+  'Набор мышечной массы / бодибилдинг',
+  'Реабилитация и адаптивная физкультура (после травм, ограничения по здоровью)',
+  'Фитнес для беременных и после родов',
+  'Детский фитнес',
+  'Тренировки для пожилых (senior-фитнес)',
+  'Другое',
+] as const
+
 const certificateSchema = z.object({
   title: z.string().trim().min(1).max(120),
   organization: z.string().trim().max(120),
@@ -21,7 +40,10 @@ function removeEmptyCertificates(value: unknown): unknown {
 export const trainerProfileDraftSchema = z.object({
   displayName: z.string().trim().min(2).max(120),
   bio: z.string().trim().max(1200),
-  specialties: z.array(z.string().trim().min(1).max(60)).max(12),
+  // Свободные строки на схеме (не z.enum) намеренно: уже опубликованные
+  // анкеты со старым свободным текстом не должны падать на parse при чтении.
+  // Новые значения в UI ограничены TRAINER_SPECIALTIES чекбоксами.
+  specialties: z.array(z.string().trim().min(1).max(80)).max(TRAINER_SPECIALTIES.length),
   city: z.string().trim().max(100),
   metroStationIds: z.array(z.string().trim().min(1).max(100)).max(20).default([]),
   customLocations: z.array(z.string().trim().min(1).max(160)).max(20).default([]),
