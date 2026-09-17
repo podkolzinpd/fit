@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { emptyTrainerProfileDraft, TRAINER_SPECIALTIES } from '../../shared/trainer-profile'
+import { emptyTrainerProfileDraft, TRAINER_SPECIALTIES, TRAINER_SPECIALTIES_MAX } from '../../shared/trainer-profile'
 import type { TrainerProfessionalProfile, TrainerProfileDraft } from '../../shared/domain'
 import { TrainerProfessionalProfileSection } from './TrainerProfileEditorPage'
 
@@ -197,6 +197,29 @@ describe('TrainerProfessionalProfileSection', () => {
     await waitFor(() => expect(repository.saveDraft).toHaveBeenCalledTimes(1))
     const saved = repository.saveDraft.mock.calls[0]?.[0] as TrainerProfileDraft
     expect(saved.specialties).toEqual(['Кроссфит', 'Индивидуальный подход к каждому', 'Йога / пилатес / стретчинг'])
+  })
+
+  it('caps specialties at six, disables the rest and lets unchecking one free up a slot', async () => {
+    const atLimit = [...TRAINER_SPECIALTIES].slice(0, TRAINER_SPECIALTIES_MAX)
+    const limitDraft: TrainerProfileDraft = { ...completeDraft, specialties: atLimit }
+    const limitProfile = { ...publishedProfile, draft: limitDraft, published: limitDraft }
+    repository.getOwn.mockResolvedValue(limitProfile)
+    const user = userEvent.setup()
+    renderSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Редактировать' }))
+    await user.click(screen.getByText(`Направления · ${TRAINER_SPECIALTIES_MAX}/${TRAINER_SPECIALTIES_MAX}`))
+    const group = screen.getByRole('group', { name: 'Направления' })
+    expect(screen.getByText(`Выбрано максимум направлений (${TRAINER_SPECIALTIES_MAX}). Уберите одно, чтобы выбрать другое.`)).toBeVisible()
+
+    const unselected = within(group).getByRole('checkbox', { name: 'Другое' })
+    expect(unselected).toBeDisabled()
+    await user.click(unselected)
+    expect(unselected).not.toBeChecked()
+
+    await user.click(within(group).getByRole('checkbox', { name: atLimit[0] }))
+    expect(screen.queryByText(/Выбрано максимум направлений/)).not.toBeInTheDocument()
+    expect(unselected).toBeEnabled()
   })
 
   it('restores saved values when editing is cancelled', async () => {
