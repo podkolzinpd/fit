@@ -84,9 +84,27 @@ export interface CompressedTenantMigrationEnvelope {
   ciphertext: string
 }
 
+export interface BrotliTenantMigrationEnvelope {
+  format: 'fit-tenant-envelope-v3'
+  compression: {
+    name: 'brotli'
+  }
+  kdf: {
+    name: 'scrypt'
+    salt: string
+  }
+  cipher: {
+    name: 'aes-256-gcm'
+    iv: string
+    authTag: string
+  }
+  ciphertext: string
+}
+
 export type TenantMigrationEnvelope =
   | LegacyTenantMigrationEnvelope
   | CompressedTenantMigrationEnvelope
+  | BrotliTenantMigrationEnvelope
 
 export interface TenantMigrationTableReport {
   name: string

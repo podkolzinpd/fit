@@ -5997,6 +5997,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-card h2 { font-size:24px; line-height:1.15; }
 .trainer-card h3 { margin-bottom:6px; font-size:16px; }
 .trainer-card-head p, .trainer-card-facts dt, .trainer-certificates span { color:var(--muted); font-size:var(--type-caption-size); }
+.trainer-brand-badge { display:inline-flex; align-items:center; gap:4px; width:fit-content; margin-top:4px; padding:4px 10px; border-radius:var(--radius-pill); background:var(--accent-surface); border:1px solid var(--accent-surface-border); color:var(--fg); font-size:var(--type-caption-size); font-weight:700; }
 .trainer-card-bio, .trainer-card section p { white-space:pre-wrap; line-height:1.5; }
 .trainer-specialties { display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:0; list-style:none; }
 .trainer-specialties li { padding:7px 10px; border-radius:var(--radius-pill); background:var(--surface-sunken); font-size:var(--type-caption-size); }

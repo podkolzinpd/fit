@@ -5,7 +5,12 @@ import {
   randomBytes,
   scrypt,
 } from 'node:crypto'
-import { gzipSync, gunzipSync } from 'node:zlib'
+import {
+  brotliCompressSync,
+  brotliDecompressSync,
+  constants as zlibConstants,
+  gunzipSync,
+} from 'node:zlib'
 
 import type {
   JsonObject,
@@ -244,17 +249,21 @@ export async function encryptMigrationBundle(
   const iv = randomBytes(12)
   const key = await deriveKey(passphrase, salt)
   const cipher = createCipheriv('aes-256-gcm', key, iv)
-  const compressed = gzipSync(
-    canonicalJson(readJsonObject(bundle)),
-    { level: 9 },
-  )
+  const plaintext = canonicalJson(readJsonObject(bundle))
+  const compressed = brotliCompressSync(plaintext, {
+    params: {
+      [zlibConstants.BROTLI_PARAM_MODE]: zlibConstants.BROTLI_MODE_TEXT,
+      [zlibConstants.BROTLI_PARAM_QUALITY]: 11,
+      [zlibConstants.BROTLI_PARAM_SIZE_HINT]: Buffer.byteLength(plaintext),
+    },
+  })
   const ciphertext = Buffer.concat([
     cipher.update(compressed),
     cipher.final(),
   ])
   return {
-    format: 'fit-tenant-envelope-v2',
-    compression: { name: 'gzip' },
+    format: 'fit-tenant-envelope-v3',
+    compression: { name: 'brotli' },
     kdf: { name: 'scrypt', salt: salt.toString('base64') },
     cipher: {
       name: 'aes-256-gcm',
@@ -274,12 +283,17 @@ export async function decryptMigrationBundle(
     || (
       value.format !== 'fit-tenant-envelope-v1'
       && value.format !== 'fit-tenant-envelope-v2'
+      && value.format !== 'fit-tenant-envelope-v3'
     )
     || (
-      value.format === 'fit-tenant-envelope-v2'
+      value.format !== 'fit-tenant-envelope-v1'
       && (
         !isRecord(value.compression)
-        || value.compression.name !== 'gzip'
+        || (
+          value.format === 'fit-tenant-envelope-v2'
+            ? value.compression.name !== 'gzip'
+            : value.compression.name !== 'brotli'
+        )
       )
     )
     || !isRecord(value.kdf)
@@ -302,13 +316,15 @@ export async function decryptMigrationBundle(
       decipher.update(ciphertext),
       decipher.final(),
     ])
-    const plaintext = (
-      value.format === 'fit-tenant-envelope-v2'
+    const plaintext = (value.format === 'fit-tenant-envelope-v3'
+      ? brotliDecompressSync(decrypted, {
+          maxOutputLength: MAX_DECOMPRESSED_ARTIFACT_BYTES,
+        })
+      : value.format === 'fit-tenant-envelope-v2'
         ? gunzipSync(decrypted, {
             maxOutputLength: MAX_DECOMPRESSED_ARTIFACT_BYTES,
           })
-        : decrypted
-    ).toString('utf8')
+        : decrypted).toString('utf8')
     return readMigrationBundle(JSON.parse(plaintext))
   } catch (error) {
     if (error instanceof TenantMigrationArtifactError) throw error

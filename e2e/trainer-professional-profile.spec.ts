@@ -169,6 +169,7 @@ test('athlete loads every page of the trainer catalog', async ({ page }) => {
       publicId: `92000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
       draft: published, published, listedInCatalog: true,
       publishedAt: '2026-09-13T01:00:00Z', updatedAt: '2026-09-13T01:00:00Z', version: 1,
+      isBrandTrainer: false,
     }
   }
   await page.route('**/rest/v1/rpc/list_public_trainer_profiles_page', (route) => {

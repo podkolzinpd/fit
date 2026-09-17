@@ -108,6 +108,7 @@ describe('Yandex main repository', () => {
     const profile = {
       publicId: publicProfileId, draft, published: draft, listedInCatalog: true,
       publishedAt: '2026-09-13T01:00:00.000Z', updatedAt: '2026-09-13T01:00:00.000Z', version: 1,
+      isBrandTrainer: false,
     }
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [profile], totalCount: 21, nextOffset: 20 }))
     vi.stubGlobal('fetch', fetchMock)

@@ -43,6 +43,7 @@ interface TrainerProfileRow extends QueryResultRow {
   published_at: string | null
   updated_at: string
   version: string | number
+  is_brand_trainer: boolean
 }
 
 export class TrainerProfileError extends Error {
@@ -61,6 +62,7 @@ function response(row: TrainerProfileRow) {
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
     version: Number(row.version),
+    isBrandTrainer: row.is_brand_trainer,
   }
 }
 

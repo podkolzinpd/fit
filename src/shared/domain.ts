@@ -700,6 +700,8 @@ export interface TrainerProfessionalProfile {
   publishedAt: string | null
   updatedAt: string
   version: number
+  /** Проставляется только вручную (SQL), никогда самим тренером через анкету. */
+  isBrandTrainer: boolean
 }
 
 export interface TrainerCatalogFilters {
