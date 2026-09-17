@@ -807,8 +807,8 @@ export async function runAssistantTurn(
     if (isTurnIdReuse(existingUser?.content, command.message)) throw new HttpError(409, 'turn_id_reused')
   }
   if (isAssistantCapabilityQuestion(command.message)) {
-    const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply() + (accountRole === 'trainer' && isProgramEnabled(user.id)
-      ? '\nТакже могу составить программу на четыре недели: уточню цель и условия, учту историю клиента и покажу черновик перед добавлением в расписание.' : ''), action: null }
+    const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply() + (isProgramEnabled(user.id)
+      ? '\nТакже могу составить рекомендованный черновик программы на четыре недели: уточню цель и условия, учту доступную историю и покажу результат перед добавлением в расписание.' : ''), action: null }
     console.info('assistant_capabilities_reply_persisted', { operationId: turnId, releaseSha })
     return persistAssistantResponse(service, command.conversationId, turnId, result)
   }
@@ -825,7 +825,7 @@ export async function runAssistantTurn(
   const latestAssistantAction: unknown = (rows ?? []).find((row) => row.author === 'assistant')?.action
   const history = [...(rows ?? [])].reverse().flatMap((row): { author: string; content: string }[] =>
     typeof row.author === 'string' && typeof row.content === 'string' ? [{ author: row.author, content: row.content.slice(0, 1_000) }] : [])
-  if (accountRole === 'trainer' && isProgramEnabled(user.id)) {
+  if (isProgramEnabled(user.id)) {
     // Ordinary conversation must not evict an unfinished tool from the short
     // model-history window. Read only its latest state or cancellation boundary.
     const state = await service.from('assistant_messages').select('author,content,action')
@@ -841,7 +841,7 @@ export async function runAssistantTurn(
     }
     const today = new Date().toLocaleDateString('en-CA', { timeZone: typeof profileRecord?.timezone === 'string' ? profileRecord.timezone : 'Europe/Moscow' })
     const routed = await routedAssistantTurn({ message: command.message, history, active, operationId: turnId }, {
-      record: (previous) => recordWorkoutTurn(command.message, clientRows, previous, true),
+      record: (previous) => recordWorkoutTurn(command.message, clientRows, previous, true, accountRole === 'client'),
       cancel: async (action) => {
         if (!action.id) return
         const lifecycle = await service.from('assistant_actions').select('status,version').eq('id', action.id).eq('owner_id', user.id).maybeSingle()
@@ -851,16 +851,21 @@ export async function runAssistantTurn(
         const cancelled = await actorClient.rpc('cancel_assistant_action', { p_action_id: action.id, p_expected_version: version })
         if (cancelled.error) throw new HttpError(409, 'assistant_action_conflict')
       },
-      program: (previous) => programPilotTurn(command.message, clientRows, previous, {
-        actorId: user.id, turnId, today, duplicateTurn: userInsert.error?.code === '23505',
-        matchClients: (message) => matchingSummaryClients(message, clientRows),
-        loadContext: (client) => loadProgramContext(actorClient, client, today),
-        extract: (brief, message, answerContext) => extractProgramBrief(brief, message, today, turnId, answerContext),
-        generate: (brief, context, clientId) => {
-          const key = programGenerationKey(user.id, clientId, brief, context.fingerprint)
-          return generateProgramOnce(service, key, user.id, clientId, () => invokeProgramGenerator(user.id, key, today, brief, context))
-        },
-      }, true),
+      program: (previous) => accountRole === 'client' && clientRows.length === 0
+        ? Promise.resolve({ reply: 'Сначала заполните свою карточку в разделе «Кабинет», затем вернитесь к составлению программы.', action: null })
+        : programPilotTurn(command.message, clientRows, previous, {
+          actorId: user.id, turnId, today, duplicateTurn: userInsert.error?.code === '23505',
+          matchClients: (message) => {
+            const matches = matchingSummaryClients(message, clientRows)
+            return accountRole === 'client' && matches.length === 0 && clientRows.length === 1 ? clientRows : matches
+          },
+          loadContext: (client) => loadProgramContext(actorClient, client, today),
+          extract: (brief, message, answerContext) => extractProgramBrief(brief, message, today, turnId, answerContext),
+          generate: (brief, context, clientId) => {
+            const key = programGenerationKey(user.id, clientId, brief, context.fingerprint)
+            return generateProgramOnce(service, key, user.id, clientId, () => invokeProgramGenerator(user.id, key, today, brief, context))
+          },
+        }, true),
     })
     return persistAssistantResponse(service, command.conversationId, turnId, routed)
   }

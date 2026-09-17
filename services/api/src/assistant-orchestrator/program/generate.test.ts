@@ -42,7 +42,7 @@ describe('four-week program contract', () => {
   })
   it('preserves exercise progression through validation, dated sessions and saved workout notes', () => {
     const { brief, template } = fixture(1)
-    const progressionNote = 'Первые две недели — 8 повторений, затем 9 при выполнении всех подходов с целевым усилием и техникой. Рабочий вес подбирает тренер.'
+    const progressionNote = 'Первые две недели — 8 повторений, затем 9 при выполнении всех подходов с целевым усилием и техникой. Рабочий вес подбирайте с запасом.'
     template.sessions[0]!.exercises[0]!.progressionNote = ` ${progressionNote} `
     const checked = validateProgramTemplate(template, brief, '2026-09-15')
     expect(checked.sessions[0]!.exercises[0]!.progressionNote).toBe(progressionNote)

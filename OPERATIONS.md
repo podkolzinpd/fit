@@ -598,16 +598,18 @@ progression constraints without replacing model doses. Every new exercise row
 requires a progression explanation, including a reason when doses stay unchanged.
 A model draft that fails validation is rejected.
 
-Program access (all trainers):
+Program access (trainers and clients):
 
-- `ASSISTANT_PROGRAM_ENABLED=true` enables the authenticated trainer flow and
+- `ASSISTANT_PROGRAM_ENABLED=true` enables the authenticated program flow and
   private generator. A missing/false flag disables new quiz/generator calls.
 - `VITE_ASSISTANT_PROGRAM_ENABLED=true` in `vercel.json` enables existing chat
-  controls for signed-in trainers. Client roles cannot access the trainer route;
-  the server checks authentication, conversation ownership and trainer role.
+  controls for both signed-in product roles. Trainers can select only connected
+  clients; a client is bound to their own active card. The server checks
+  authentication, conversation ownership, role and target ownership.
 - The former `*_PROGRAM_PILOT_USER_IDS` variables are no longer read. No per-user
   deployment configuration is needed. Generator IAM remains private; client
-  selection still uses the actor-scoped client list.
+  selection still uses the actor-scoped client list; client program apply also
+  requires the validated `program-v1` payload in both databases.
 - Disable the server flag and redeploy to stop new calls. Existing planned
   workouts and server-created action confirmation keep their normal lifecycle.
 

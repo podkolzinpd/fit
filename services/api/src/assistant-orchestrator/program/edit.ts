@@ -30,7 +30,7 @@ export function editProgram(message: string, payload: Record<string, unknown>, b
     if (!exercise) throw new ProgramValidationError(['invalid_edit_position'])
     exercise.exerciseRef = replacement.ref
     exercise.weeks = Array.from({ length: 4 }, () => ({ ...prescription }))
-    exercise.progressionNote = `Назначение изменено тренером для ${match[3] === 'только это занятие' ? `занятия ${target.day}` : 'этого дня во всех четырёх неделях'}. Сравните новые значения с соседними неделями; дальнейшую нагрузку согласуйте с тренером по технике и целевому усилию.`
+    exercise.progressionNote = `Назначение изменено пользователем для ${match[3] === 'только это занятие' ? `занятия ${target.day}` : 'этого дня во всех четырёх неделях'}. Сравните новые значения с соседними неделями; дальнейшую нагрузку меняйте только при сохранении техники, целевого усилия и запаса сил.`
   }
   const load = payload.loadBasis as ProgramLoad
   if (!load || load.version !== 'observed-load-v1') throw new Error('program_edit_missing_basis')
