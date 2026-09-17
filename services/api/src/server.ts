@@ -37,6 +37,7 @@ import {
   DatabaseYandexAccountLinker,
   SupabaseExistingActorProvider,
 } from './yandex-account-linking.js'
+import { DatabaseYandexNativeRegistrar } from './yandex-native-registration.js'
 import {
   DatabaseYandexAppSessionIssuer,
   DatabaseYandexAppSessionReader,
@@ -96,6 +97,12 @@ const yandexAccountLinker =
   databasePool === undefined
     ? undefined
     : new DatabaseYandexAccountLinker(databasePool)
+const yandexNativeRegistrationEnabled =
+  process.env.YANDEX_NATIVE_REGISTRATION_ENABLED === 'true'
+const yandexNativeRegistrar =
+  databasePool === undefined || !yandexNativeRegistrationEnabled
+    ? undefined
+    : new DatabaseYandexNativeRegistrar(databasePool)
 const pilotClientsReader =
   databasePool === undefined
     ? undefined
@@ -241,6 +248,7 @@ const app = buildApp(
     ...(yandexAppSessionRevoker === undefined ? {} : { yandexAppSessionRevoker }),
     ...(vitalMediaSigner === undefined ? {} : { vitalMediaSigner }),
     ...(yandexAccountLinker === undefined ? {} : { yandexAccountLinker }),
+    ...(yandexNativeRegistrar === undefined ? {} : { yandexNativeRegistrar }),
     ...(existingActorProvider === undefined ? {} : { existingActorProvider }),
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
     ...(pilotTrainerProfiles === undefined ? {} : { pilotTrainerProfiles }),

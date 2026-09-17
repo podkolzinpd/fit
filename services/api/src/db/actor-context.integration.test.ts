@@ -106,6 +106,13 @@ import {
   type ExistingActor,
 } from '../yandex-account-linking.js'
 import {
+  DatabaseYandexNativeRegistrar,
+} from '../yandex-native-registration.js'
+import {
+  CURRENT_PRIVACY_VERSION,
+  CURRENT_TERMS_VERSION,
+} from '../legal-document-versions.js'
+import {
   DatabaseYandexAppSessionIssuer,
   DatabaseYandexAppSessionRevoker,
 } from '../yandex-app-session.js'
@@ -185,6 +192,8 @@ const LINK_SUBJECT_HASH = '6'.repeat(64)
 const OTHER_LINK_SUBJECT_HASH = '7'.repeat(64)
 const BOOTSTRAP_LINK_ACTOR_ID = 'f3f04352-32ac-4a8c-86d1-46cc8e8a6b13'
 const BOOTSTRAP_LINK_SUBJECT_HASH = '8'.repeat(64)
+const NATIVE_TRAINER_SUBJECT_HASH = '9'.repeat(64)
+const NATIVE_CLIENT_SUBJECT_HASH = '0'.repeat(64)
 const LINK_ACTOR: ExistingActor = {
   profile: {
     id: LINK_ACTOR_ID,
@@ -487,6 +496,26 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         [[APP_ACTOR_ID, LINK_ACTOR_ID, BOOTSTRAP_LINK_ACTOR_ID]],
       )
       await ownerPool.query(
+        `delete from public.trainers
+         where profile_id in (
+           select identity.profile_id
+           from app_private.auth_identities identity
+           where identity.provider = 'yandex'
+             and identity.provider_subject_sha256 = any($1::text[])
+         )`,
+        [[NATIVE_TRAINER_SUBJECT_HASH, NATIVE_CLIENT_SUBJECT_HASH]],
+      )
+      await ownerPool.query(
+        `delete from public.profiles
+         where id in (
+           select identity.profile_id
+           from app_private.auth_identities identity
+           where identity.provider = 'yandex'
+             and identity.provider_subject_sha256 = any($1::text[])
+         )`,
+        [[NATIVE_TRAINER_SUBJECT_HASH, NATIVE_CLIENT_SUBJECT_HASH]],
+      )
+      await ownerPool.query(
         `
           delete from app_private.auth_identities
           where provider = 'yandex'
@@ -501,6 +530,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             LINK_SUBJECT_HASH,
             OTHER_LINK_SUBJECT_HASH,
             BOOTSTRAP_LINK_SUBJECT_HASH,
+            NATIVE_TRAINER_SUBJECT_HASH,
+            NATIVE_CLIENT_SUBJECT_HASH,
           ],
           [APP_ACTOR_ID, LINK_ACTOR_ID, BOOTSTRAP_LINK_ACTOR_ID],
         ],
@@ -1018,6 +1049,157 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         issuer.issue(PILOT_SUBJECT_HASH),
       ).rejects.toBeInstanceOf(YandexAppSessionDeniedError)
       expect(await readActor(runtimePool)).toBeNull()
+    })
+
+    it('registers native trainer and client accounts atomically and idempotently', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const registrar = new DatabaseYandexNativeRegistrar(runtimePool)
+      const issuer = new DatabaseYandexAppSessionIssuer(runtimePool)
+      const trainer = await registrar.register(NATIVE_TRAINER_SUBJECT_HASH, {
+        accountRole: 'trainer',
+        firstName: 'Нативный тренер',
+        timezone: 'Europe/Moscow',
+      })
+      const repeated = await registrar.register(NATIVE_TRAINER_SUBJECT_HASH, {
+        accountRole: 'client',
+        firstName: 'Не перезаписывать',
+        timezone: 'Asia/Yekaterinburg',
+      })
+      const client = await registrar.register(NATIVE_CLIENT_SUBJECT_HASH, {
+        accountRole: 'client',
+        firstName: 'Нативный клиент',
+        timezone: 'Asia/Yekaterinburg',
+      })
+
+      expect(repeated).toEqual(trainer)
+      expect(client.profileId).not.toBe(trainer.profileId)
+      await expect(issuer.issue(NATIVE_TRAINER_SUBJECT_HASH)).resolves.toMatchObject({
+        accessMode: 'read_write',
+        profile: { id: trainer.profileId, accountRole: 'trainer' },
+      })
+      await expect(issuer.issue(NATIVE_CLIENT_SUBJECT_HASH)).resolves.toMatchObject({
+        accessMode: 'read_write',
+        profile: { id: client.profileId, accountRole: 'client', client: null },
+      })
+
+      const accounts = await ownerPool.query<{
+        account_role: string
+        first_name: string
+        identity_origin: string
+        rollout_access_mode: string
+        rollout_enabled: boolean
+        rollout_target_backend: string
+        trainer_exists: boolean
+        client_card_exists: boolean
+        acceptance_count: number
+        acceptance_privacy_version: string
+        acceptance_terms_version: string
+      } & QueryResultRow>(
+        `select profile.account_role, profile.first_name,
+           identity.identity_origin,
+           rollout.access_mode rollout_access_mode,
+           rollout.target_backend rollout_target_backend,
+           rollout.enabled rollout_enabled,
+           exists (
+             select 1 from public.trainers trainer
+             where trainer.profile_id = profile.id
+           ) trainer_exists,
+           exists (
+             select 1 from public.clients client
+             where client.auth_user_id = profile.id
+           ) client_card_exists,
+           (
+             select count(*)::int
+             from public.user_legal_acceptances acceptance
+             where acceptance.user_id = profile.id
+               and acceptance.source = 'registration'
+           ) acceptance_count
+           ,(
+             select acceptance.terms_version
+             from public.user_legal_acceptances acceptance
+             where acceptance.user_id = profile.id
+               and acceptance.source = 'registration'
+             order by acceptance.accepted_at desc
+             limit 1
+           ) acceptance_terms_version
+           ,(
+             select acceptance.privacy_version
+             from public.user_legal_acceptances acceptance
+             where acceptance.user_id = profile.id
+               and acceptance.source = 'registration'
+             order by acceptance.accepted_at desc
+             limit 1
+           ) acceptance_privacy_version
+         from public.profiles profile
+         join app_private.auth_identities identity
+           on identity.profile_id = profile.id and identity.provider = 'yandex'
+         join app_private.profile_rollout_assignments rollout
+           on rollout.profile_id = profile.id
+         where profile.id = any($1::uuid[])
+         order by profile.account_role desc`,
+        [[trainer.profileId, client.profileId]],
+      )
+      expect(accounts.rows).toEqual([
+        {
+          account_role: 'trainer',
+          first_name: 'Нативный тренер',
+          identity_origin: 'native',
+          rollout_access_mode: 'read_write',
+          rollout_enabled: true,
+          rollout_target_backend: 'yandex',
+          trainer_exists: true,
+          client_card_exists: false,
+          acceptance_count: 1,
+          acceptance_privacy_version: CURRENT_PRIVACY_VERSION,
+          acceptance_terms_version: CURRENT_TERMS_VERSION,
+        },
+        {
+          account_role: 'client',
+          first_name: 'Нативный клиент',
+          identity_origin: 'native',
+          rollout_access_mode: 'read_write',
+          rollout_enabled: true,
+          rollout_target_backend: 'yandex',
+          trainer_exists: false,
+          client_card_exists: false,
+          acceptance_count: 1,
+          acceptance_privacy_version: CURRENT_PRIVACY_VERSION,
+          acceptance_terms_version: CURRENT_TERMS_VERSION,
+        },
+      ])
+      expect(await readActor(runtimePool)).toBeNull()
+    })
+
+    it('does not turn an existing linked identity into a native account', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      await ownerPool.query(
+        'update app_private.profile_rollout_assignments set enabled = false where profile_id = $1',
+        [APP_ACTOR_ID],
+      )
+      try {
+        const registrar = new DatabaseYandexNativeRegistrar(runtimePool)
+        await expect(registrar.register(APP_SUBJECT_HASH, {
+          accountRole: 'trainer',
+          firstName: 'Не менять',
+          timezone: 'Europe/Moscow',
+        })).rejects.toMatchObject({ failure: 'conflict' })
+        const rollout = await ownerPool.query<{ enabled: boolean } & QueryResultRow>(
+          'select enabled from app_private.profile_rollout_assignments where profile_id = $1',
+          [APP_ACTOR_ID],
+        )
+        expect(rollout.rows).toEqual([{ enabled: false }])
+      } finally {
+        await ownerPool.query(
+          'update app_private.profile_rollout_assignments set enabled = true where profile_id = $1',
+          [APP_ACTOR_ID],
+        )
+      }
     })
 
     it('links Yandex ID to the current FIT actor without granting rollout access', async () => {

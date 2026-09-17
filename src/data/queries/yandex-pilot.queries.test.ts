@@ -5,6 +5,7 @@ import {
   YANDEX_AUTH_REQUEST_TIMEOUT_MS,
   yandexPilotQueries,
 } from './yandex-pilot.queries'
+import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -34,6 +35,33 @@ describe('yandexPilotQueries', () => {
       .not.toHaveProperty('authorization')
     expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
       .not.toHaveProperty('x-fit-pilot-session')
+
+    await yandexPilotQueries.registerYandexAccount(baseUrl, code, codeVerifier, {
+      accountRole: 'client',
+      firstName: 'Ирина',
+      timezone: 'Europe/Moscow',
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+    })
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `${baseUrl}/v1/auth/yandex/register`,
+      expect.objectContaining({
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          codeVerifier,
+          accountRole: 'client',
+          firstName: 'Ирина',
+          timezone: 'Europe/Moscow',
+          termsVersion: TERMS_VERSION,
+          privacyVersion: PRIVACY_VERSION,
+        }),
+      }),
+    )
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
+      .not.toHaveProperty('authorization')
 
     await yandexPilotQueries.getAppSession(baseUrl, 'a'.repeat(43))
     expect(fetchMock).toHaveBeenLastCalledWith(

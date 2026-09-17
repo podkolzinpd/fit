@@ -1,7 +1,18 @@
 const OAUTH_STATE_KEY = 'fit.yandexIdPilot.oauthState'
 const OAUTH_VERIFIER_KEY = 'fit.yandexIdPilot.oauthVerifier'
 const OAUTH_INTENT_KEY = 'fit.yandexIdPilot.oauthIntent'
-export type YandexAuthorizationIntent = 'pilot' | 'link' | 'app'
+const NATIVE_REGISTRATION_KEY = 'fit.yandexIdPilot.nativeRegistration'
+export type YandexAuthorizationIntent = 'pilot' | 'link' | 'app' | 'register'
+
+export interface PendingYandexNativeRegistration {
+  accountRole: 'trainer' | 'client'
+  firstName: string
+  timezone: string
+  termsVersion: string
+  privacyVersion: string
+}
+
+const LEGAL_VERSION_PATTERN = /^sha256:[0-9a-f]{24}$/
 
 function randomBase64Url(byteLength: number): string {
   const bytes = crypto.getRandomValues(new Uint8Array(byteLength))
@@ -50,7 +61,65 @@ export function peekPendingYandexAuthorizationIntent(
   storage: Pick<Storage, 'getItem'> = sessionStorage,
 ): YandexAuthorizationIntent {
   const value = storage.getItem(OAUTH_INTENT_KEY)
-  return value === 'link' || value === 'app' ? value : 'pilot'
+  return value === 'link' || value === 'app' || value === 'register' ? value : 'pilot'
+}
+
+export function savePendingYandexNativeRegistration(
+  registration: PendingYandexNativeRegistration,
+  storage: Pick<Storage, 'setItem'> = sessionStorage,
+): void {
+  storage.setItem(NATIVE_REGISTRATION_KEY, JSON.stringify({
+    accountRole: registration.accountRole,
+    firstName: registration.firstName.trim(),
+    timezone: registration.timezone.trim(),
+    termsVersion: registration.termsVersion,
+    privacyVersion: registration.privacyVersion,
+  }))
+}
+
+export function readPendingYandexNativeRegistration(
+  storage: Pick<Storage, 'getItem'> = sessionStorage,
+): PendingYandexNativeRegistration | null {
+  const raw = storage.getItem(NATIVE_REGISTRATION_KEY)
+  if (raw === null) return null
+  try {
+    const value: unknown = JSON.parse(raw)
+    if (
+      typeof value !== 'object'
+      || value === null
+      || !('accountRole' in value)
+      || !('firstName' in value)
+      || !('timezone' in value)
+      || !('termsVersion' in value)
+      || !('privacyVersion' in value)
+      || (value.accountRole !== 'trainer' && value.accountRole !== 'client')
+      || typeof value.firstName !== 'string'
+      || value.firstName.trim().length < 2
+      || value.firstName.trim().length > 120
+      || typeof value.timezone !== 'string'
+      || value.timezone.trim().length === 0
+      || value.timezone.trim().length > 100
+      || typeof value.termsVersion !== 'string'
+      || !LEGAL_VERSION_PATTERN.test(value.termsVersion)
+      || typeof value.privacyVersion !== 'string'
+      || !LEGAL_VERSION_PATTERN.test(value.privacyVersion)
+    ) return null
+    return {
+      accountRole: value.accountRole,
+      firstName: value.firstName.trim(),
+      timezone: value.timezone.trim(),
+      termsVersion: value.termsVersion,
+      privacyVersion: value.privacyVersion,
+    }
+  } catch {
+    return null
+  }
+}
+
+export function clearPendingYandexNativeRegistration(
+  storage: Pick<Storage, 'removeItem'> = sessionStorage,
+): void {
+  storage.removeItem(NATIVE_REGISTRATION_KEY)
 }
 
 export function clearPendingYandexAuthorization(
