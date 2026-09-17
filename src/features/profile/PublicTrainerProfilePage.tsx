@@ -30,7 +30,7 @@ export function PublicTrainerProfilePage() {
     <AsyncView loading={loading} error={error} empty={!profile?.published}
       emptyTitle="Анкета недоступна" emptyDescription="Тренер снял её с публикации или ссылка устарела."
       emptyAction={<Link className="button secondary" to="/auth">Открыть Fit</Link>} onRetry={() => { setLoading(true); setError(null); void getPublicTrainerProfile(publicId).then((value) => { setProfile(value); setLoading(false) }, (caught: unknown) => { setError(caught instanceof Error ? caught : new Error('Не удалось открыть анкету.')); setLoading(false) }) }}>
-      {profile?.published && <TrainerProfileCard profile={profile.published} publicView primaryAction={profile.published.acceptingClients
+      {profile?.published && <TrainerProfileCard profile={profile.published} isBrandTrainer={profile.isBrandTrainer} publicView primaryAction={profile.published.acceptingClients
         ? <PublicTrainerChatButton publicProfileId={publicId} />
         : <p className="trainer-contact-unavailable">Тренер временно не принимает новых клиентов</p>} />}
     </AsyncView>

@@ -96,7 +96,8 @@ function CatalogCard({ profile, onOpen }: { profile: TrainerProfessionalProfile;
       {published.avatarDataUrl
         ? <img src={published.avatarDataUrl} alt="" className="trainer-card-avatar" />
         : <span className="trainer-card-avatar trainer-card-avatar-placeholder" aria-hidden="true">{published.displayName.slice(0, 1).toUpperCase()}</span>}
-      <div><h2>{published.displayName}</h2><p>{published.acceptingClients ? 'Берёт новых клиентов' : 'Сейчас без новых клиентов'}</p></div>
+      <div><h2>{published.displayName}</h2><p>{published.acceptingClients ? 'Берёт новых клиентов' : 'Сейчас без новых клиентов'}</p>
+        {profile.isBrandTrainer && <span className="trainer-brand-badge">👑 Бренд-тренер</span>}</div>
     </div>
     {published.specialties.length > 0 && <ul className="trainer-specialties" aria-label="Направления">
       {published.specialties.slice(0, 4).map((item) => <li key={item}>{item}</li>)}
