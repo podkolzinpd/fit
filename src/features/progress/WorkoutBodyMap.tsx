@@ -14,7 +14,7 @@ import { resolveBodyFigureVariant, useBodyMapDisplayMode } from './body-map-appe
 const mapParams = ['mapWorkout', 'mapZone', 'mapMode', 'mapFrom', 'mapTo']
 
 export function workoutMapLink(workout: Workout, zone?: BodyMapZone): string {
-  const params = new URLSearchParams({ mapWorkout: workout.id, mapMode: 'load', mapFrom: workout.workoutDate, mapTo: workout.workoutDate })
+  const params = new URLSearchParams({ view: 'pro', mapWorkout: workout.id, mapMode: 'load', mapFrom: workout.workoutDate, mapTo: workout.workoutDate })
   if (zone) params.set('mapZone', zone)
   return `/me/progress?${params}#body-map`
 }
@@ -100,7 +100,7 @@ export function ClientBodyMapDisclosure({ workouts, clientId, gender, summary, p
   const clearScope = () => setParams((current) => { const next = new URLSearchParams(current); mapParams.forEach((key) => next.delete(key)); return next }, { replace: true, preventScrollReset: true })
   const periodSummary: BodyProgressSummary = summary?.periodStart === periodStart && summary.periodEnd === periodEnd ? summary : { id: `${periodStart}:${periodEnd}`, periodStart, periodEnd, metrics: { progressFacts: [] } }
   return <details id="body-map" className="client-body-map-disclosure card" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
-    <ProgressDetailsSummary>Карта тела{workoutId ? ' · тренировка' : ''}</ProgressDetailsSummary>
+    <ProgressDetailsSummary description="Распределение подходов по мышцам">Карта тела{workoutId ? ' · тренировка' : ''}</ProgressDetailsSummary>
     {open && <>
       {workoutId && <button type="button" className="link" onClick={clearScope}>Перейти к карте за период</button>}
       {error ? <p role="alert">Не удалось загрузить тренировки. <button type="button" className="link" onClick={onRetry}>Повторить</button></p>

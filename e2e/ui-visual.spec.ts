@@ -437,10 +437,16 @@ async function openClientProgress(page: import('@playwright/test').Page, options
 
 async function expectClientFactsOrder(page: VisualPage) {
   await expect(page.locator('.client-progress-card').evaluate((element) => {
-    const order = ['.progress-story-period', '.client-current-week', '.client-progress-goal-story', '.period-exercise-results', '.client-progress-measurements-story', '.client-body-map-disclosure', '.weekly-training-load', '.period-rhythm', '.client-progress-comparison']
-    const children = Array.from(element.children)
-    const positions = order.map((selector) => children.findIndex((child) => child.matches(selector)))
-    return positions.every((position, index) => position >= 0 && (!index || position > positions[index - 1]!))
+    const overview = element.querySelector('.progress-overview-panel')
+    const pro = element.querySelector('.progress-pro-panel')
+    return Boolean(overview?.querySelector('.client-current-week')
+      && overview.querySelector('.client-progress-goal-story')
+      && overview.querySelector('.period-exercise-results')
+      && pro?.querySelector('.client-progress-measurements-story')
+      && pro.querySelector('.client-body-map-disclosure')
+      && pro.querySelector('.weekly-training-load')
+      && pro.querySelector('.period-rhythm')
+      && pro.querySelector('.client-progress-comparison'))
   })).resolves.toBe(true)
 }
 
@@ -822,6 +828,7 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   await mockClientWorkoutHistory(page)
   await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
   await openClientProgress(page)
+  await page.getByRole('tab', { name: 'ПРО' }).click()
   await expect(page.locator('.client-body-map-disclosure')).not.toHaveAttribute('open')
   await page.locator('.client-body-map-disclosure > summary').click()
   const bodyMap = page.locator('.client-progress-card .body-progress-map')
@@ -832,12 +839,13 @@ test('client key routes keep their visual baselines', async ({ page }, testInfo)
   await expect(bodyMap.getByText('Лучший результат зоны')).toHaveCount(0)
   await expect(bodyMap.evaluate((element) => Number.parseFloat(getComputedStyle(element).borderTopLeftRadius))).resolves.toBeGreaterThanOrEqual(16)
   await expectBodyMapBaseline(bodyMap, `client-body-map-female-${process.platform}.png`)
+  await page.getByRole('tab', { name: 'Обзор' }).click()
   await expect(page.locator('.client-current-week')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Текущая неделя' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Лучшие результаты за период' })).toBeVisible()
   await expect(page.getByText('Твоя цель', { exact: true })).toBeVisible()
   await expect(page.locator('.client-progress-main-now')).toHaveCount(0)
-  await expect(page.locator('.progress-story-period').getByRole('button', { name: 'Открыть анализ' })).toBeVisible()
+  await expect(page.locator('.progress-overview-panel').getByRole('button', { name: 'Открыть анализ' })).toBeVisible()
   await expectClientFactsOrder(page)
   const progressCoachmark = page.getByRole('button', { name: 'Понятно' })
   if (await progressCoachmark.isVisible()) await progressCoachmark.click()
@@ -957,6 +965,7 @@ test('client Progress scheme keeps its visual baseline', async ({ page }, testIn
   await mockClientWorkoutHistory(page)
   await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
   await openClientProgress(page, { scheme: true })
+  await page.getByRole('tab', { name: 'ПРО' }).click()
   await page.locator('.client-body-map-disclosure > summary').click()
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
@@ -970,6 +979,7 @@ test('client Progress scheme keeps its dark visual baseline', async ({ page }, t
   await mockClientWorkoutHistory(page)
   await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
   await openClientProgress(page, { scheme: true, dark: true })
+  await page.getByRole('tab', { name: 'ПРО' }).click()
   await page.locator('.client-body-map-disclosure > summary').click()
   await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
   await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-scheme-dark-${process.platform}.png`)
@@ -1020,6 +1030,7 @@ test('period comparison stays compact for client and trainer in both themes', as
     await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
   } else {
     await openClientProgress(page)
+    await page.getByRole('tab', { name: 'ПРО' }).click()
   }
 
   let comparison = page.locator('.client-progress-comparison')
@@ -1058,6 +1069,7 @@ test('period comparison stays compact for client and trainer in both themes', as
   await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
+  if (!trainer) await page.getByRole('tab', { name: 'ПРО' }).click()
   comparison = page.locator('.client-progress-comparison')
   if (!trainer) await comparison.locator(':scope > summary').click()
   await expect(comparison.locator('.period-comparison-facts > div')).toHaveCount(trainer ? 3 : 8)
@@ -1077,7 +1089,8 @@ test('measurement trends stay readable for client and trainer in both themes', a
     await gotoStable(page, `/progress/${demoClientId}`)
   } else {
     await openClientProgress(page, { scheme: true })
-  await page.locator('.client-body-map-disclosure > summary').click()
+    await page.getByRole('tab', { name: 'ПРО' }).click()
+    await page.getByText('Замеры и графики', { exact: true }).click()
   }
 
   let measurements = page.locator('.client-progress-measurements-story')
@@ -1116,6 +1129,10 @@ test('measurement trends stay readable for client and trainer in both themes', a
   await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
+  if (!trainer) {
+    await page.getByRole('tab', { name: 'ПРО' }).click()
+    await page.getByText('Замеры и графики', { exact: true }).click()
+  }
   measurements = page.locator('.client-progress-measurements-story')
   await expect(measurements.getByRole('heading', { name: trainer ? 'Тренд по значениям' : 'Замеры' })).toBeVisible()
   await measurements.scrollIntoViewIfNeeded()
@@ -1134,10 +1151,10 @@ test('weekly training rhythm stays visual and readable for client and trainer in
     await gotoStable(page, `/progress/${demoClientId}`)
   } else {
     await openClientProgress(page, { scheme: true })
-  await page.locator('.client-body-map-disclosure > summary').click()
+    await page.getByRole('tab', { name: 'ПРО' }).click()
   }
 
-  if (!trainer) await page.getByText('Регулярность тренировок', { exact: true }).click()
+  if (!trainer) await page.getByText('Регулярность', { exact: true }).click()
   let regularity = page.locator('.client-progress-regularity-story')
   await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
   await expect(regularity.getByText(trainer ? '3 тренировки' : '6 тренировок', { exact: true })).toBeVisible()
@@ -1184,7 +1201,10 @@ test('weekly training rhythm stays visual and readable for client and trainer in
   await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
-  if (!trainer) await page.getByText('Регулярность тренировок', { exact: true }).click()
+  if (!trainer) {
+    await page.getByRole('tab', { name: 'ПРО' }).click()
+    await page.getByText('Регулярность', { exact: true }).click()
+  }
   regularity = page.locator('.client-progress-regularity-story')
   await expect(regularity.getByRole('heading', { name: 'Тренировочный ритм' })).toBeVisible()
   await regularity.scrollIntoViewIfNeeded()
@@ -1203,7 +1223,8 @@ test('next-step suggestion stays off the main progress screen for client and tra
     await gotoStable(page, `/progress/${demoClientId}`)
   } else {
     await openClientProgress(page, { scheme: true })
-  await page.locator('.client-body-map-disclosure > summary').click()
+    await page.getByRole('tab', { name: 'ПРО' }).click()
+    await page.getByText('Замеры и графики', { exact: true }).click()
   }
 
   await expect(page.locator('.client-progress-next-step')).toHaveCount(0)
@@ -1236,6 +1257,8 @@ test('client measurement management keeps its visual baseline', async ({ page },
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client measurement management uses mobile visual profiles')
   await mockMeasurementProgress(page)
   await openClientProgress(page, { scheme: true })
+  await page.getByRole('tab', { name: 'ПРО' }).click()
+  await page.getByText('Замеры и графики', { exact: true }).click()
   const management = page.locator('.client-progress-measurements-story')
   await management.evaluate((element) => {
     element.scrollIntoView({ block: 'start' })
@@ -2360,8 +2383,9 @@ test('best results show several real records and keep the remaining achievements
     animations: 'disabled',
     maxDiffPixelRatio: 0.01,
   })
-  await results.getByText('Ещё достижения · 1', { exact: true }).click()
-  await expect(results.getByRole('link', { name: 'Открыть тренировку' })).toHaveCount(4)
+  await page.getByRole('tab', { name: 'ПРО' }).click()
+  await page.getByText('Все результаты', { exact: true }).click()
+  await expect(page.locator('.period-extra-achievements').getByRole('link', { name: 'Открыть тренировку' })).toHaveCount(1)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
 })
 
@@ -2408,6 +2432,7 @@ test('results center keeps detailed analytics in dark theme', async ({ page }, t
   await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
   await mockResultsHistory(page)
   await openClientProgress(page, { dark: true })
+  await page.getByRole('tab', { name: 'ПРО' }).click()
   const center = page.locator('#results-center')
   await center.getByText('Все результаты', { exact: true }).click()
   await center.getByRole('combobox', { name: 'Упражнение', exact: true }).selectOption('system:press:strength')
