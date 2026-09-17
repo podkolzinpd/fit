@@ -55,4 +55,16 @@ describe('DatabaseStageTenantMigrationRunner media gate', () => {
     expect(verify).toHaveBeenCalledOnce()
     expect(connect).not.toHaveBeenCalled()
   })
+
+  it('preserves references and continues to import without target media when explicitly allowed', async () => {
+    const { connect, pool } = buildPool()
+    const verify = vi.fn().mockRejectedValue(new Error('media rejected'))
+    const runner = new DatabaseStageTenantMigrationRunner(pool, { verify })
+
+    await expect(runner.run(await buildEnvelope(), PASSPHRASE, false, true))
+      .rejects.toThrow('manifest_mismatch')
+
+    expect(verify).not.toHaveBeenCalled()
+    expect(connect).toHaveBeenCalledOnce()
+  })
 })

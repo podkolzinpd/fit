@@ -31,6 +31,11 @@ on:
         description: 'For automatic/full-cohort apply: fingerprint from its successful dry-run'
         required: false
         type: string
+      allow_missing_media:
+        description: 'Preserve media references but do not require objects in Yandex yet'
+        required: true
+        type: boolean
+        default: false
 
 concurrency:
   group: yandex-tenant-migration
@@ -149,6 +154,7 @@ jobs:
           FIT_TENANT_REHEARSAL_MODE: ${{ inputs.mode }}
           FIT_TENANT_SELECTION_MODE: ${{ inputs.tenant_selection }}
           FIT_TENANT_EXPECTED_FINGERPRINT: ${{ inputs.tenant_fingerprint_confirmation }}
+          FIT_TENANT_ALLOW_MISSING_MEDIA: ${{ inputs.allow_missing_media }}
           FIT_TENANT_REMOTE_APPLY_CONFIRMATION: ${{ inputs.apply_confirmation }}
           FIT_TENANT_SOURCE_SSL_ROOT_CERT: certs/supabase-prod-ca-2021.crt
           FIT_TENANT_TRAINER_ID: ${{ secrets.FIT_TENANT_TRAINER_ID }}

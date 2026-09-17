@@ -329,6 +329,14 @@ export function buildMigrationApp(
           if (passphrase === undefined) {
             return reply.code(400).send({ status: 'invalid_request' })
           }
+          const mediaPolicy =
+            request.headers['x-fit-tenant-migration-media-policy']
+          if (
+            mediaPolicy !== undefined
+            && mediaPolicy !== 'allow-missing'
+          ) {
+            return reply.code(400).send({ status: 'invalid_request' })
+          }
           if (
             apply
             && request.headers['x-fit-tenant-migration-confirmation']
@@ -342,6 +350,7 @@ export function buildMigrationApp(
               request.body,
               passphrase,
               apply,
+              mediaPolicy === 'allow-missing',
             )
             return {
               status: apply

@@ -32,6 +32,7 @@ type CandidateAcceptance = (
 ) => Promise<boolean>
 
 interface RemoteTenantRehearsalSettings {
+  allowMissingMedia: boolean
   mode: RemoteTenantRehearsalMode
   sourceConfig: PoolConfig
   expectedTenantFingerprint?: string
@@ -166,6 +167,13 @@ function readMode(environment: Environment): RemoteTenantRehearsalMode {
   return mode
 }
 
+function readAllowMissingMedia(environment: Environment): boolean {
+  const value = environment.FIT_TENANT_ALLOW_MISSING_MEDIA
+  if (value === undefined || value === '' || value === 'false') return false
+  if (value === 'true') return true
+  throw new RemoteTenantRehearsalError('allow_missing_media_invalid')
+}
+
 export function buildSupabaseSourceConfig(
   environment: Environment,
   readCertificate: (path: string) => string = (path) =>
@@ -242,6 +250,7 @@ export function readRemoteTenantRehearsalSettings(
   readCertificate?: (path: string) => string,
 ): RemoteTenantRehearsalSettings {
   const mode = readMode(environment)
+  const allowMissingMedia = readAllowMissingMedia(environment)
   const selectionMode = environment.FIT_TENANT_SELECTION_MODE ?? 'configured'
   const fingerprintValue = environment.FIT_TENANT_EXPECTED_FINGERPRINT
   const expectedTenantFingerprint = fingerprintValue === undefined
@@ -281,6 +290,7 @@ export function readRemoteTenantRehearsalSettings(
   const sourceConfig = buildSupabaseSourceConfig(environment, readCertificate)
   if (mode === 'audit') {
     return {
+      allowMissingMedia,
       mode,
       sourceConfig,
       ...(expectedTenantFingerprint === undefined
@@ -295,6 +305,7 @@ export function readRemoteTenantRehearsalSettings(
     throw new RemoteTenantRehearsalError('yandex_token_invalid')
   }
   return {
+    allowMissingMedia,
     mode,
     sourceConfig,
     ...(expectedTenantFingerprint === undefined
@@ -474,6 +485,9 @@ async function requestStage(
           authorization: `Bearer ${settings.yandexIamToken}`,
           'content-type': 'application/json',
           'x-fit-tenant-migration-passphrase': passphrase,
+          ...(settings.allowMissingMedia
+            ? { 'x-fit-tenant-migration-media-policy': 'allow-missing' }
+            : {}),
           ...(apply
             ? {
                 'x-fit-tenant-migration-confirmation':
@@ -664,6 +678,9 @@ export async function runRemoteTenantRehearsal(
   const envelope = await encryptMigrationBundle(bundle, passphrase)
   const encryptedBytes = Buffer.byteLength(JSON.stringify(envelope))
   printBundleSummary(bundle, encryptedBytes)
+  if (settings.allowMissingMedia) {
+    process.stdout.write('media_validation: allow-missing\n')
+  }
   if (settings.mode === 'audit') return
   if (encryptedBytes > STAGE_ARTIFACT_LIMIT_BYTES) {
     throw new RemoteTenantRehearsalError('artifact_too_large_for_stage')
