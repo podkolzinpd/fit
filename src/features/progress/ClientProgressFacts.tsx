@@ -31,10 +31,12 @@ export function ClientGoalFacts({ goal, profileGoal, entries, workouts, periodSt
     {loading ? <p role="status">Загружаем цель…</p> : error ? <p role="alert">Не удалось загрузить данные цели. <button type="button" className="link" onClick={onRetry}>Повторить</button></p> : !story ? <><h3>Цель пока не указана</h3><Link className="link" to="/me/goal">Добавить цель</Link></> : <>
       <h3>{story.title}</h3>
 
-      {compact && story.criteria?.length ? <>
-        <p className="goal-compact-status"><strong>{story.statusLabel}</strong>{story.criterionLabel && story.currentLabel && story.targetLabel ? ` · ${story.criterionLabel}: ${story.currentLabel} / ${story.targetLabel}` : ''}</p>
+      {compact ? <div className="goal-compact-footer">
+        <p className="goal-compact-status">{story.criteria?.length
+          ? <><strong>{story.statusLabel}</strong>{story.criterionLabel && story.currentLabel && story.targetLabel ? ` · ${story.criterionLabel}: ${story.currentLabel} / ${story.targetLabel}` : ''}</>
+          : story.state === 'needs_review' ? 'Показатели цели нужно проверить.' : 'Показатели цели ещё не выбраны.'}</p>
         <Link className="link goal-details-link" to={{ pathname: location.pathname, search: `?${goalDetailsSearch}`, hash: '#goal-details' }}>Подробнее в ПРО</Link>
-      </> : story.criteria?.length ? <div className="goal-criteria-progress-list">{story.criteria.slice(0, 2).map(criterionRow)}{story.criteria.length > 2 && <details><summary>Все показатели · {story.criteria.length - 2}</summary>{story.criteria.slice(2).map(criterionRow)}</details>}</div> : <><p>{story.state === 'needs_review' ? 'Цель изменилась. Проверь показатели.' : 'Выбери, что отслеживать.'}</p><Link className="link" to="/me/goal">{story.state === 'needs_review' ? 'Проверить показатели' : 'Настроить цель'}</Link></>}
+      </div> : story.criteria?.length ? <div className="goal-criteria-progress-list">{story.criteria.slice(0, 2).map(criterionRow)}{story.criteria.length > 2 && <details><summary>Все показатели · {story.criteria.length - 2}</summary>{story.criteria.slice(2).map(criterionRow)}</details>}</div> : <><p>{story.state === 'needs_review' ? 'Цель изменилась. Проверь показатели.' : 'Выбери, что отслеживать.'}</p><Link className="link" to="/me/goal">{story.state === 'needs_review' ? 'Проверить показатели' : 'Настроить цель'}</Link></>}
     </>}
   </section>
 }
