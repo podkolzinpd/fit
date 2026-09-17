@@ -317,7 +317,7 @@ VITE_WEARABLES_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 нового deployment. UUID попадают во frontend bundle, поэтому этот механизм
 служит только для rollout интерфейса и не является границей авторизации.
 
-Ассистент в production доступен всем тренерам. Build-time переменная
+Ассистент в production доступен тренерам и клиентам. Build-time переменная
 Vercel остаётся мгновенным kill switch:
 
 ```text
@@ -325,10 +325,10 @@ VITE_ASSISTANT_NAV_ENABLED=true
 ```
 
 По умолчанию production rollout включён; точное `false` скрывает вкладку и закрывает
-маршрут для всех тренеров после нового deployment. `VITE_ASSISTANT_NAV_PILOT_USER_IDS`
+маршрут для обеих ролей после нового deployment. `VITE_ASSISTANT_NAV_PILOT_USER_IDS`
 и `VITE_ASSISTANT_NAV_PILOT_EMAILS` сохраняются только для изолированной local/preview-разработки
-и в production игнорируются. Роль защищает `TrainerOnly`, данные и мутации — существующие
-RLS/ownership-проверки.
+и в production игнорируются. Клиентский ассистент автоматически использует собственную
+карточку; данные и мутации защищены серверными role/ownership-проверками.
 
 Закрытый пилот приветствия в шапке «Сегодня»/«Кабинет» управляется build-time
 переменными Vercel:

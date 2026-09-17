@@ -135,6 +135,23 @@ describe('assistant orchestrator contract', () => {
     expect(recordWorkoutTurn('отмена', clients, draft?.action)).toEqual({ reply: 'Хорошо, запись тренировки отменена.', action: null })
   })
 
+  it('automatically uses the only current client in client mode', () => {
+    const client = { id: 'client-1', fullName: 'Анна Смирнова', goal: null, ageYears: 30, heightCm: 170, gender: 'female' }
+    const result = recordWorkoutTurn(
+      'Запиши мою тренировку: жим лёжа 3 по 10 по 60 кг',
+      [client],
+      null,
+      false,
+      true,
+    )
+
+    expect(result?.action).toMatchObject({
+      tool: 'record_workout',
+      payload: { step: 'workout', clientId: client.id, clientName: client.fullName },
+    })
+    expect(result?.reply).not.toContain('Для кого')
+  })
+
   it('keeps dictated exercises while the trainer clarifies the client', () => {
     const clients = [{ id: 'client-1', fullName: 'Анна Смирнова', goal: null, ageYears: null, heightCm: null, gender: null }]
     const clarification = recordWorkoutTurn('Запиши тренировку: жим гантелей лёжа 3 по 10 по 20 кг', clients, null)

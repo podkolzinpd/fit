@@ -95,6 +95,12 @@ export async function loadAssistantClientContext(actorClient: SupabaseClient): P
   return clientContextRows(result.data)
 }
 
+export async function loadAssistantSelfClientContext(actorClient: SupabaseClient): Promise<ClientContextRow[]> {
+  const result: unknown = await actorClient.rpc('get_my_client')
+  if (!record(result) || result.error) throw new HttpError(503, 'context_unavailable')
+  return clientContextRows(result.data)
+}
+
 function clientContextRows(value: unknown): ClientContextRow[] {
   if (!Array.isArray(value)) return []
   return value.flatMap((row): ClientContextRow[] => {
@@ -543,6 +549,7 @@ export function recordWorkoutTurn(
   clients: readonly ClientContextRow[],
   latestAction: unknown,
   invoked = false,
+  autoSelectSingleClient = false,
 ): AssistantTurnResponse | undefined {
   const previousAction = actionRecord(latestAction)
   const previousPayload = actionRecord(previousAction?.payload)
@@ -566,7 +573,9 @@ export function recordWorkoutTurn(
     : clients.filter((client) => client.id === numberedClient.id)
   const selectedClient = matches.length === 1
     ? matches[0]
-    : (previousStep === 'workout' || (previousStep === 'confirm' && continuation)) ? summaryClientFromAction(latestAction, clients) : undefined
+    : autoSelectSingleClient && clients.length === 1
+      ? clients[0]
+      : (previousStep === 'workout' || (previousStep === 'confirm' && continuation)) ? summaryClientFromAction(latestAction, clients) : undefined
   const pendingTranscript = previousStep === 'client'
     ? workoutTranscript(previousPayload?.transcript)
     : explicitRequest
@@ -769,7 +778,9 @@ export async function runAssistantTurn(
   const { data: profile, error: profileError } = await service.from('profiles')
     .select('account_role,timezone').eq('id', user.id).maybeSingle()
   if (profileError) throw new HttpError(503, 'context_unavailable')
-  if (profile?.account_role !== 'trainer') throw new HttpError(403, 'trainer_role_required')
+  const profileRecord = record(profile) ? profile : null
+  const accountRole: unknown = profileRecord?.account_role
+  if (accountRole !== 'trainer' && accountRole !== 'client') throw new HttpError(403, 'assistant_role_required')
 
   const { data: storedAssistant, error: storedAssistantError } = await service.from('assistant_messages')
     .select('content,action').eq('conversation_id', command.conversationId).eq('turn_id', turnId).eq('author', 'assistant').maybeSingle()
@@ -796,7 +807,7 @@ export async function runAssistantTurn(
     if (isTurnIdReuse(existingUser?.content, command.message)) throw new HttpError(409, 'turn_id_reused')
   }
   if (isAssistantCapabilityQuestion(command.message)) {
-    const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply() + (isProgramEnabled(user.id)
+    const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply() + (accountRole === 'trainer' && isProgramEnabled(user.id)
       ? '\nТакже могу составить программу на четыре недели: уточню цель и условия, учту историю клиента и покажу черновик перед добавлением в расписание.' : ''), action: null }
     console.info('assistant_capabilities_reply_persisted', { operationId: turnId, releaseSha })
     return persistAssistantResponse(service, command.conversationId, turnId, result)
@@ -805,14 +816,16 @@ export async function runAssistantTurn(
   // Use the same actor-scoped source as the Clients screen. A direct
   // clients.trainer_id filter misses clients connected through
   // client_trainers and also loses the trainer-specific alias.
-  const clientRows = await loadAssistantClientContext(actorClient)
+  const clientRows = accountRole === 'client'
+    ? await loadAssistantSelfClientContext(actorClient)
+    : await loadAssistantClientContext(actorClient)
   const { data: rows, error: historyError } = await service.from('assistant_messages')
     .select('author,content,action').eq('conversation_id', command.conversationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20)
   if (historyError) throw new HttpError(503, 'history_unavailable')
   const latestAssistantAction: unknown = (rows ?? []).find((row) => row.author === 'assistant')?.action
   const history = [...(rows ?? [])].reverse().flatMap((row): { author: string; content: string }[] =>
     typeof row.author === 'string' && typeof row.content === 'string' ? [{ author: row.author, content: row.content.slice(0, 1_000) }] : [])
-  if (isProgramEnabled(user.id)) {
+  if (accountRole === 'trainer' && isProgramEnabled(user.id)) {
     // Ordinary conversation must not evict an unfinished tool from the short
     // model-history window. Read only its latest state or cancellation boundary.
     const state = await service.from('assistant_messages').select('author,content,action')
@@ -826,7 +839,7 @@ export async function runAssistantTurn(
       if (!lifecycle.data) throw new HttpError(503, 'history_unavailable')
       if (lifecycle.data.status === 'applied' || lifecycle.data.status === 'cancelled') active = null
     }
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: typeof profile.timezone === 'string' ? profile.timezone : 'Europe/Moscow' })
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: typeof profileRecord?.timezone === 'string' ? profileRecord.timezone : 'Europe/Moscow' })
     const routed = await routedAssistantTurn({ message: command.message, history, active, operationId: turnId }, {
       record: (previous) => recordWorkoutTurn(command.message, clientRows, previous, true),
       cancel: async (action) => {
@@ -851,10 +864,22 @@ export async function runAssistantTurn(
     })
     return persistAssistantResponse(service, command.conversationId, turnId, routed)
   }
-  const workoutDraft = recordWorkoutTurn(command.message, clientRows, latestAssistantAction)
+  const workoutDraft = recordWorkoutTurn(
+    command.message,
+    clientRows,
+    latestAssistantAction,
+    false,
+    accountRole === 'client',
+  )
   if (workoutDraft !== undefined) {
+    const clientCardMissing = accountRole === 'client'
+      && clientRows.length === 0
+      && workoutDraft.action?.tool === 'record_workout'
+    const response = clientCardMissing
+      ? { reply: 'Сначала заполните свою карточку в разделе «Кабинет», затем вернитесь к записи тренировки.', action: null }
+      : workoutDraft
     console.info('assistant_workout_draft_reply_persisted', { operationId: turnId, releaseSha, status: workoutDraft.action?.status })
-    return persistAssistantResponse(service, command.conversationId, turnId, workoutDraft)
+    return persistAssistantResponse(service, command.conversationId, turnId, response)
   }
   let result: AssistantTurnResponse = { reply: assistantSmallTalkFallback(command.message), action: null }
   try {
