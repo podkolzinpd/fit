@@ -45,6 +45,26 @@ describe('ExerciseTechniqueSheet', () => {
     expect(screen.getByText('Поставьте стопы устойчиво.')).toBeInTheDocument()
   })
 
+  it('shows a custom exercise description and suppresses the "no info" note even without step instructions', () => {
+    const custom = { ...squat, imageUrl: undefined, techniqueVideoUrl: undefined, instructions: undefined, description: 'Держите спину ровно и прыгайте мягко.' }
+    render(<ExerciseTechniqueContent exercise={custom} />)
+    expect(screen.getByRole('heading', { name: 'Описание' })).toBeInTheDocument()
+    expect(screen.getByText('Держите спину ровно и прыгайте мягко.')).toBeInTheDocument()
+    expect(screen.queryByText('Для этого упражнения пока нет изображения и пошагового описания.')).not.toBeInTheDocument()
+  })
+
+  it('shows both the description and the step-by-step instructions when both are present', () => {
+    const withBoth = { ...squat, description: 'Общая идея движения.' }
+    render(<ExerciseTechniqueContent exercise={withBoth} />)
+    expect(screen.getByText('Общая идея движения.')).toBeInTheDocument()
+    expect(screen.getByText('Опуститесь под контролем.')).toBeInTheDocument()
+  })
+
+  it('treats a stored custom exercise photo path as media, distinct from the legacy image fields', () => {
+    const customPhoto = { ...squat, imageUrl: undefined, fallbackImageUrl: undefined, motionImageUrl: undefined, techniqueVideoUrl: undefined, imagePath: 'trainer-1/exercise-1.jpg' }
+    expect(hasExerciseMedia(customPhoto)).toBe(true)
+  })
+
   it('shows reviewed start and end frames without pretending they are a video', () => {
     const stillTechnique = {
       ...squat,

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const queries = vi.hoisted(() => ({
-  createVitalMediaUrl: vi.fn(), parseWorkout: vi.fn(), suggestGoalCriteria: vi.fn(),
+  createVitalMediaUrl: vi.fn(), createCustomExercisePhotoUrl: vi.fn(), parseWorkout: vi.fn(), suggestGoalCriteria: vi.fn(),
   list: vi.fn(), create: vi.fn(), update: vi.fn(), setArchived: vi.fn(),
 }))
 const media = vi.hoisted(() => ({ upload: vi.fn() }))
@@ -63,6 +63,12 @@ describe('exercisesRepository custom exercises', () => {
     media.upload.mockResolvedValue({ data: null, error: { message: 'storage_error' } })
     await expect(exercisesRepository.create('trainer-1', 'trainer-1', draft, photo)).rejects.toThrow()
     expect(queries.create).not.toHaveBeenCalled()
+  })
+
+  it('signs the stored photo path for display', async () => {
+    queries.createCustomExercisePhotoUrl.mockResolvedValue({ data: { signedUrl: 'https://signed.example/exercise-1.jpg' }, error: null })
+    await expect(exercisesRepository.createCustomExercisePhotoUrl('trainer-1/exercise-1.jpg', 3600)).resolves.toBe('https://signed.example/exercise-1.jpg')
+    expect(queries.createCustomExercisePhotoUrl).toHaveBeenCalledWith('trainer-1/exercise-1.jpg', 3600)
   })
 
   it('sends classification and description on update, without touching the photo', async () => {
