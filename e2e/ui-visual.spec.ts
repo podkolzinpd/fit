@@ -724,8 +724,8 @@ test('trainer catalog stays compact and aligned across supported widths', async 
   }
   await page.route('**/rest/v1/rpc/list_public_trainer_profiles_page', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify({ items: [
-      { publicId: '91000000-0000-4000-8000-000000000001', draft, published: draft, listedInCatalog: true, publishedAt: '2026-09-12T10:00:00Z', updatedAt: '2026-09-12T10:00:00Z', version: 2 },
-      { publicId: '91000000-0000-4000-8000-000000000002', draft: minimal, published: minimal, listedInCatalog: true, publishedAt: '2026-09-11T10:00:00Z', updatedAt: '2026-09-11T10:00:00Z', version: 1 },
+      { publicId: '91000000-0000-4000-8000-000000000001', draft, published: draft, listedInCatalog: true, publishedAt: '2026-09-12T10:00:00Z', updatedAt: '2026-09-12T10:00:00Z', version: 2, isBrandTrainer: false },
+      { publicId: '91000000-0000-4000-8000-000000000002', draft: minimal, published: minimal, listedInCatalog: true, publishedAt: '2026-09-11T10:00:00Z', updatedAt: '2026-09-11T10:00:00Z', version: 1, isBrandTrainer: false },
     ], totalCount: 2, nextOffset: null }),
   }))
   await signIn(page, 'client@fit.local', /\/me$/)
@@ -904,6 +904,7 @@ async function mockOwnTrainerProfile(page: VisualPage) {
       publishedAt: '2026-09-10T12:00:00+00:00',
       updatedAt: '2026-09-10T12:00:00+00:00',
       version: 2,
+      isBrandTrainer: false,
     }),
   }))
 }
