@@ -158,7 +158,7 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
   const latestActiveAction = readOnly ? undefined : latestActiveAssistantAction(messages, conversationId)
   const programCollecting = latestActiveAction?.action.tool === 'create_program_draft' && latestActiveAction.action.status === 'needs_input'
   const programEnabled = backend.cacheKey === 'supabase'
-    && actor?.role === 'trainer'
+    && actor !== null
     && isAssistantProgramEnabled(actor.userId)
 
   useLayoutEffect(() => {
