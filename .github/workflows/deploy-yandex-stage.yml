@@ -132,6 +132,10 @@ jobs:
         env:
           YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
         run: scripts/yandex-github-oidc.sh
+      - name: Configure ephemeral Yandex Cloud CLI profile
+        run: |
+          yc config profile create github-actions
+          yc config set token "$YC_IAM_TOKEN"
       - name: Resolve immutable push transport metadata
         run: |
           function_id=$(yc serverless function get \
@@ -153,6 +157,8 @@ jobs:
         env:
           YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
         run: scripts/yandex-github-oidc.sh
+      - name: Refresh ephemeral Yandex Cloud CLI token
+        run: yc config set token "$YC_IAM_TOKEN"
       - name: Prefer the existing stage-local push transport mirror
         run: |
           set -euo pipefail
@@ -290,6 +296,10 @@ jobs:
         env:
           YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
         run: scripts/yandex-github-oidc.sh
+      - name: Configure ephemeral Yandex Cloud CLI profile
+        run: |
+          yc config profile create github-actions
+          yc config set token "$YC_IAM_TOKEN"
       - name: Resolve immutable push transport metadata
         run: |
           set -euo pipefail
@@ -319,6 +329,8 @@ jobs:
         env:
           YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
         run: scripts/yandex-github-oidc.sh
+      - name: Refresh ephemeral Yandex Cloud CLI token
+        run: yc config set token "$YC_IAM_TOKEN"
       - name: Mirror the push transport payload into stage Lockbox
         run: >-
           node scripts/mirror-yandex-push-transport.mjs
