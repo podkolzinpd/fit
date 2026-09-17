@@ -3,19 +3,13 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Client } from '../../shared/domain'
-import { localDate } from '../../shared/local-date'
 import { SUPPORT_TELEGRAM_URL } from '../../shared/support'
-import { ClientProfilePage, ClientProfileSettingsPage } from './ClientProfilePage'
+import { TrainerProfileSettingsPage } from './ProfilePage'
 
-type MockActor = { role: 'client'; userId: string; email: string }
+type MockActor = { role: 'trainer'; userId: string; email: string }
 const useAuth = vi.hoisted(() => vi.fn<() => { actor: MockActor | null }>())
 vi.mock('../../app/auth-context', () => ({ useAuth: () => useAuth() }))
 
-const getMine = vi.hoisted(() => vi.fn<() => Promise<Client | null>>())
-vi.mock('../../data/repositories/clients.repository', () => ({ clientsRepository: { getMine } }))
-
-vi.mock('./ClientTrainerConnections', () => ({ ClientTrainerConnections: () => null }))
 vi.mock('../progress/BodyMapAppearanceSetting', () => ({ BodyMapAppearanceSetting: () => null }))
 
 const notificationsStatus = vi.hoisted(() => vi.fn())
@@ -28,12 +22,6 @@ vi.mock('../../data/repositories/push-notifications.repository', () => ({
 vi.mock('../notifications/push-subscription', () => ({ isPushSupported: () => true, getCurrentPushSubscription: () => Promise.resolve(null) }))
 vi.mock('../install', () => ({ detectInstallPlatform: () => 'other', isAppInstalled: () => false }))
 
-const client: Client = {
-  id: 'client-1', hasAccount: true, fullName: 'Тест Клиент', canonicalFullName: 'тест клиент',
-  gender: 'male', ageYears: 30, ageUpdatedAt: localDate('2026-01-01'), heightCm: 180, goal: null, note: null,
-  currentWeightKg: null, archivedAt: null, version: 1, membershipVersion: 1,
-}
-
 function wrapper() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return ({ children }: { children: ReactNode }) => (
@@ -41,29 +29,16 @@ function wrapper() {
   )
 }
 
-describe('ClientProfilePage', () => {
+describe('TrainerProfileSettingsPage', () => {
   beforeEach(() => {
     useAuth.mockReset()
-    getMine.mockReset()
     notificationsStatus.mockReset()
-    useAuth.mockReturnValue({ actor: { role: 'client', userId: 'client-user-1', email: 'client@test.com' } })
-    getMine.mockResolvedValue(client)
+    useAuth.mockReturnValue({ actor: { role: 'trainer', userId: 'trainer-user-1', email: 'trainer@test.com' } })
     notificationsStatus.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
   })
 
-  it('keeps the profile focused and links to separate settings', async () => {
-    render(<ClientProfilePage />, { wrapper: wrapper() })
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Настройки профиля' })).toHaveAttribute('href', '/me/settings'))
-    expect(screen.queryByText('Уведомления')).not.toBeInTheDocument()
-  })
-
-  it('renders notification controls on the client settings page', async () => {
-    render(<ClientProfileSettingsPage />, { wrapper: wrapper() })
-    await waitFor(() => expect(screen.getByRole('switch', { name: 'Напоминать о незавершённой тренировке' })).toBeVisible())
-  })
-
   it('links to the Telegram support channel next to the feedback form entry', async () => {
-    render(<ClientProfileSettingsPage />, { wrapper: wrapper() })
+    render(<TrainerProfileSettingsPage />, { wrapper: wrapper() })
     await waitFor(() => expect(screen.getByRole('link', { name: 'Поддержка в Telegram' })).toHaveAttribute('href', SUPPORT_TELEGRAM_URL))
     expect(screen.getByRole('link', { name: 'Поддержка в Telegram' })).toHaveAttribute('target', '_blank')
     expect(screen.getByRole('link', { name: 'Поддержка в Telegram' })).toHaveAttribute('rel', 'noopener noreferrer')
