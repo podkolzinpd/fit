@@ -64,6 +64,8 @@ const SUPABASE_POOLER_HOST_PATTERN =
 const STAGE_CONTAINER_HOST_PATTERN =
   /^[a-z0-9]+\.containers\.yandexcloud\.net$/
 const STAGE_APPLY_CONFIRMATION = 'APPLY_TENANT_TO_YANDEX_STAGE'
+const CURRENT_FULL_COHORT_APPLY_CONFIRMATION =
+  'APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE'
 const STAGE_ARTIFACT_LIMIT_BYTES = 3 * 1024 * 1024
 const RESPONSE_LIMIT_BYTES = 1024 * 1024
 const AUTO_CANDIDATE_LIMIT = 1_000
@@ -163,6 +165,8 @@ function readMode(environment: Environment): RemoteTenantRehearsalMode {
     mode === 'apply'
     && environment.FIT_TENANT_REMOTE_APPLY_CONFIRMATION
       !== STAGE_APPLY_CONFIRMATION
+    && environment.FIT_TENANT_REMOTE_APPLY_CONFIRMATION
+      !== CURRENT_FULL_COHORT_APPLY_CONFIRMATION
   ) throw new RemoteTenantRehearsalError('apply_not_confirmed')
   return mode
 }
@@ -263,9 +267,26 @@ export function readRemoteTenantRehearsalSettings(
   ) {
     throw new RemoteTenantRehearsalError('tenant_fingerprint_invalid')
   }
+  const currentFullCohortApply = mode === 'apply'
+    && environment.FIT_TENANT_REMOTE_APPLY_CONFIRMATION
+      === CURRENT_FULL_COHORT_APPLY_CONFIRMATION
+  if (currentFullCohortApply && selectionMode !== 'full-cohort') {
+    throw new RemoteTenantRehearsalError(
+      'current_snapshot_apply_requires_full_cohort',
+    )
+  }
   let tenantSelection: RemoteTenantSelection
   if (selectionMode === 'full-cohort') {
-    if (mode === 'apply' && expectedTenantFingerprint === undefined) {
+    if (currentFullCohortApply && expectedTenantFingerprint !== undefined) {
+      throw new RemoteTenantRehearsalError(
+        'current_snapshot_apply_fingerprint_forbidden',
+      )
+    }
+    if (
+      mode === 'apply'
+      && expectedTenantFingerprint === undefined
+      && !currentFullCohortApply
+    ) {
       throw new RemoteTenantRehearsalError('tenant_fingerprint_required')
     }
     tenantSelection = { kind: 'full-cohort' }
