@@ -12,6 +12,7 @@ export interface StageTenantMigrationRunner {
     envelope: unknown,
     passphrase: string,
     apply: boolean,
+    allowMissingMedia?: boolean,
   ): Promise<TenantMigrationReport>
 }
 
@@ -26,9 +27,11 @@ implements StageTenantMigrationRunner {
     envelope: unknown,
     passphrase: string,
     apply: boolean,
+    allowMissingMedia = false,
   ): Promise<TenantMigrationReport> {
     const bundle = await decryptMigrationBundle(envelope, passphrase)
-    if (chatMediaReferences(bundle).length > 0) {
+    const mediaReferences = chatMediaReferences(bundle)
+    if (mediaReferences.length > 0 && !allowMissingMedia) {
       if (this.mediaVerifier === undefined) {
         throw new TenantMigrationError('tenant_media_storage_not_configured')
       }

@@ -92,6 +92,7 @@ describe('remote tenant rehearsal configuration', () => {
       () => 'trusted-ca',
     )
     expect(audit.mode).toBe('audit')
+    expect(audit.allowMissingMedia).toBe(false)
     expect(audit.stageContainerUrl).toBeUndefined()
     expect(audit.tenantSelection).toEqual({
       kind: 'configured',
@@ -111,6 +112,28 @@ describe('remote tenant rehearsal configuration', () => {
     expect(dryRun.stageContainerUrl).toBe(
       'https://bba123stage.containers.yandexcloud.net',
     )
+    expect(dryRun.allowMissingMedia).toBe(false)
+  })
+
+  it('requires an exact opt-in before allowing missing target media', () => {
+    const allowed = readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_ALLOW_MISSING_MEDIA: 'true',
+      },
+      () => 'trusted-ca',
+    )
+    expect(allowed.allowMissingMedia).toBe(true)
+
+    expect(() => readRemoteTenantRehearsalSettings(
+      {
+        ...SOURCE_ENVIRONMENT,
+        FIT_TENANT_ALLOW_MISSING_MEDIA: 'yes',
+      },
+      () => 'trusted-ca',
+    )).toThrowError(new RemoteTenantRehearsalError(
+      'allow_missing_media_invalid',
+    ))
   })
 
   it('requires an exact independent apply confirmation', () => {

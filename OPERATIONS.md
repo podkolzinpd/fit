@@ -113,11 +113,21 @@ Workflow использует существующие `SUPABASE_ACCESS_TOKEN` �
 ключи не логируются и не сохраняются как artifact. Успешный apply обязан иметь
 `objects == verified`; его можно безопасно повторять после новых source uploads.
 
-После этого запускайте full-cohort `audit` → `dry-run` → pinned `apply`.
-Private migration runner до подключения к PostgreSQL проверит наличие и точный
-размер каждого chat object, указанного в snapshot. Это исключает commit строк с
-неработающими вложениями. Перед финальным cutover после freeze writes повторите
-media `apply`, чтобы захватить файлы, появившиеся после первой репетиции.
+По умолчанию после этого запускайте full-cohort `audit` → `dry-run` → pinned
+`apply`. Private migration runner до подключения к PostgreSQL проверит наличие
+и точный размер каждого chat object, указанного в snapshot. Это исключает
+commit строк с неработающими вложениями. Перед финальным cutover после freeze
+writes повторите media `apply`, чтобы захватить файлы, появившиеся после первой
+репетиции.
+
+Если product owner явно принимает временно неработающие вложения, оба target
+запуска можно выполнить с `allow_missing_media=true`. Это отдельный default-off
+input workflow `Rehearse Yandex tenant migration`: runner по-прежнему проверяет
+формат media metadata, но не требует наличия objects в Yandex. Пути в строках не
+удаляются и не переписываются; до последующего `Migrate Yandex media: apply`
+чтение таких файлов вернёт not found, а после копирования те же ссылки начнут
+работать без повторной DB migration. Не используйте этот режим как неявный
+fallback и фиксируйте одинаковую policy для dry-run и pinned apply.
 
 ### Удалённая репетиция на Yandex stage
 
@@ -152,8 +162,9 @@ GitHub OIDC → Yandex IAM token.
   успешный `dry-run`, точный content-derived fingerprint из его отчёта и общая
   apply-фраза. Режим не переносит `auth.users`, OAuth credentials, Yandex
   sessions/rollout assignments, весь source push outbox и Live receipts. Chat
-  photo objects переносятся отдельным workflow выше и проверяются target runner
-  до DB-транзакции.
+  photo objects переносятся отдельным workflow выше и по умолчанию проверяются
+  target runner до DB-транзакции. Явный `allow_missing_media=true` сохраняет
+  ссылки, но откладывает проверку наличия файлов.
 
 Автовыбор нужен только для безопасной репетиции на реальных объёмах и не
 фиксирует tenant для cutover. `full-cohort` не является автовыбором: его
