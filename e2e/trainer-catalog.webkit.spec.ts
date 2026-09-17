@@ -13,6 +13,7 @@ test('iPhone catalog keeps search and filter sheet usable', async ({ page }) => 
     contentType: 'application/json', body: JSON.stringify({ items: [{
       publicId: '92000000-0000-4000-8000-000000000001', draft: published, published,
       listedInCatalog: true, publishedAt: '2026-09-12T10:00:00Z', updatedAt: '2026-09-12T10:00:00Z', version: 1,
+      isBrandTrainer: false,
     }], totalCount: 1, nextOffset: null }),
   }))
 

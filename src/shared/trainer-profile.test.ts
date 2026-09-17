@@ -27,6 +27,7 @@ describe('trainer profile', () => {
       publishedAt: '2026-09-10T09:00:00.000Z',
       updatedAt: '2026-09-10T09:00:00.044607+00:00',
       version: 2,
+      isBrandTrainer: false,
     }).published?.displayName).toBe('Анна Иванова')
   })
 
@@ -38,7 +39,7 @@ describe('trainer profile', () => {
     }
     expect(parseTrainerProfile({ publicId: '9190a86f-a191-42d8-912e-a7e0ea0f331d', draft,
       published: draft, listedInCatalog: true, updatedAt: '2026-09-10T09:37:38.59182+00:00',
-      publishedAt: '2026-09-10T09:37:38.59182+00:00', version: 10 }).published).toEqual(draft)
+      publishedAt: '2026-09-10T09:37:38.59182+00:00', version: 10, isBrandTrainer: false }).published).toEqual(draft)
   })
 
   it('reads a filled legacy profile without rewriting its existing fields', () => {
@@ -60,6 +61,7 @@ describe('trainer profile', () => {
       updatedAt: '2026-09-15T09:37:38.59182+00:00',
       publishedAt: '2026-09-10T09:37:38.59182+00:00',
       version: 10,
+      isBrandTrainer: false,
     })
 
     expect(profile.published).toEqual({ ...legacy, metroStationIds: [], customLocations: [] })
@@ -79,6 +81,7 @@ describe('trainer profile', () => {
       updatedAt: '2026-09-10T09:37:38.59182+00:00',
       publishedAt: null,
       version: 1,
+      isBrandTrainer: false,
     })
     expect(profile.draft.certificates).toEqual([])
   })
