@@ -25,6 +25,7 @@ const profile: TrainerProfessionalProfile = {
   },
   listedInCatalog: true,
   publishedAt: '2026-09-10T09:00:00.000Z', updatedAt: '2026-09-10T09:00:00.000Z', version: 2,
+  isBrandTrainer: false,
 }
 
 const catalogPage = (items = [profile], totalCount = items.length, nextOffset: number | null = null) => ({
@@ -56,6 +57,20 @@ describe('TrainerCatalogPage', () => {
     expect(within(results).getByText(/Онлайн · Лично · Москва/)).toBeVisible()
     expect(within(results).getByText('Динамо · World Class Динамо · ещё 1')).toBeVisible()
     expect(within(results).getByRole('link', { name: 'Посмотреть анкету' })).toHaveAttribute('href', `/trainers/${profile.publicId}`)
+  })
+
+  it('shows the brand-trainer badge on the compact card only when the flag is set', async () => {
+    listCatalog.mockResolvedValue(catalogPage())
+    const first = renderPage()
+    const results = await screen.findByRole('region', { name: 'Найденные тренеры' })
+    await within(results).findByRole('heading', { name: 'Анна Иванова' })
+    expect(within(results).queryByText('Бренд-тренер', { exact: false })).not.toBeInTheDocument()
+    first.unmount()
+
+    listCatalog.mockResolvedValue(catalogPage([{ ...profile, isBrandTrainer: true }]))
+    renderPage()
+    const brandResults = await screen.findByRole('region', { name: 'Найденные тренеры' })
+    expect(await within(brandResults).findByText('Бренд-тренер', { exact: false })).toBeVisible()
   })
 
   it('applies optional filters from a compact dialog and shows their count', async () => {

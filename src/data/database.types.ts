@@ -1,4 +1,4 @@
-// schema-sha256: 0efff283669250c025ed47cac225974e06a2595b8da7a83ed9de0c17c1ad62bd
+// schema-sha256: 7ced46c482759ef265182456f99779a871c7077a60db4fe9fbbfcded4af5924d
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1547,6 +1547,7 @@ export type Database = {
         Row: {
           created_at: string
           draft_data: Json
+          is_brand_trainer: boolean
           listed_in_catalog: boolean
           public_id: string
           published_at: string | null
@@ -1558,6 +1559,7 @@ export type Database = {
         Insert: {
           created_at?: string
           draft_data?: Json
+          is_brand_trainer?: boolean
           listed_in_catalog?: boolean
           public_id?: string
           published_at?: string | null
@@ -1569,6 +1571,7 @@ export type Database = {
         Update: {
           created_at?: string
           draft_data?: Json
+          is_brand_trainer?: boolean
           listed_in_catalog?: boolean
           public_id?: string
           published_at?: string | null

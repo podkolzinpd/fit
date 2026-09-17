@@ -65,6 +65,7 @@ export const trainerProfessionalProfileSchema = z.object({
   publishedAt: z.iso.datetime({ offset: true }).nullable(),
   updatedAt: z.iso.datetime({ offset: true }),
   version: z.number().int().positive(),
+  isBrandTrainer: z.boolean(),
 })
 
 export const trainerCatalogPageSchema = z.object({

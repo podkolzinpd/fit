@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(17);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('a2000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'trainer-profile@example.test', ''),
@@ -30,6 +30,13 @@ create temp table saved_profile as select public.save_trainer_profile_draft(json
   'avatarDataUrl', null, 'certificates', '[]'::jsonb
 )) as value;
 select is((select value->'draft'->>'displayName' from saved_profile), 'Анна Иванова', 'trainer saves own draft');
+select is((select value->>'isBrandTrainer' from saved_profile), 'false', 'brand-trainer flag defaults to false');
+select throws_ok(
+  $$update public.trainer_professional_profiles set is_brand_trainer = true where trainer_id = 'a2000000-0000-4000-8000-000000000001'$$,
+  '42501',
+  'permission denied for table trainer_professional_profiles',
+  'trainer cannot set the brand-trainer flag on themselves'
+);
 select is(public.publish_trainer_profile()->'published'->>'displayName', 'Анна Иванова', 'trainer publishes a snapshot');
 select is(public.get_own_trainer_profile()->'published'->>'bio', '', 'minimal published profile keeps optional biography empty');
 select public.save_trainer_profile_draft(jsonb_build_object(
@@ -42,6 +49,12 @@ select public.save_trainer_profile_draft(jsonb_build_object(
 select is((select published_data->>'displayName' from public.trainer_professional_profiles), 'Анна Иванова', 'draft edit keeps the published snapshot');
 
 reset role;
+update public.trainer_professional_profiles set is_brand_trainer = true
+  where trainer_id = 'a2000000-0000-4000-8000-000000000001';
+select is(
+  (select is_brand_trainer from public.trainer_professional_profiles where trainer_id = 'a2000000-0000-4000-8000-000000000001'),
+  true, 'service role can set the brand-trainer flag directly'
+);
 create temp table public_profile_id as
   select public_id from public.trainer_professional_profiles
   where trainer_id = 'a2000000-0000-4000-8000-000000000001';
@@ -50,6 +63,10 @@ set local role anon;
 select is(
   public.get_public_trainer_profile((select public_id from public_profile_id))->'published'->>'displayName',
   'Анна Иванова', 'anonymous reader sees only the published snapshot'
+);
+select is(
+  (public.get_public_trainer_profile((select public_id from public_profile_id))->>'isBrandTrainer')::boolean,
+  true, 'public profile reflects the brand-trainer flag'
 );
 
 reset role;

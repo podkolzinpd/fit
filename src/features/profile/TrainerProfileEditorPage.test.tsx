@@ -31,6 +31,7 @@ const profile: TrainerProfessionalProfile = {
   publishedAt: null,
   updatedAt: '2026-09-13T09:00:00.000Z',
   version: 1,
+  isBrandTrainer: false,
 }
 
 const completeDraft: TrainerProfileDraft = {
