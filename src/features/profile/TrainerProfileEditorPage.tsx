@@ -304,6 +304,7 @@ export function TrainerProfessionalProfileSection() {
       </article>}
       {draft && !editing && hasProfileContent(draft) && <TrainerProfileCard
         profile={draft}
+        isBrandTrainer={profile.data?.isBrandTrainer ?? false}
         compact
         action={<button type="button" className="primary trainer-profile-edit-action" onClick={() => setEditing(true)}>Редактировать</button>}
         footer={publicationControls}

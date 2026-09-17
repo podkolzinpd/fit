@@ -31,8 +31,9 @@ function Locations({ metroStationIds, customLocations }: { metroStationIds: stri
   </div>
 }
 
-export function TrainerProfileCard({ profile, publicView = false, compact = false, action, primaryAction, footer }: {
+export function TrainerProfileCard({ profile, isBrandTrainer = false, publicView = false, compact = false, action, primaryAction, footer }: {
   profile: TrainerProfileDraft
+  isBrandTrainer?: boolean
   publicView?: boolean
   compact?: boolean
   action?: ReactNode
@@ -49,7 +50,8 @@ export function TrainerProfileCard({ profile, publicView = false, compact = fals
         ? <img src={profile.avatarDataUrl} alt="" className="trainer-card-avatar" />
         : <span className="trainer-card-avatar trainer-card-avatar-placeholder" aria-hidden="true">{profile.displayName.slice(0, 1).toUpperCase() || 'Ф'}</span>}
       <div className="trainer-card-identity"><h2>{profile.displayName || 'Имя тренера'}</h2>
-        <p>{profile.acceptingClients ? 'Берёт новых клиентов' : 'Сейчас без новых клиентов'}</p></div>
+        <p>{profile.acceptingClients ? 'Берёт новых клиентов' : 'Сейчас без новых клиентов'}</p>
+        {isBrandTrainer && <span className="trainer-brand-badge">👑 Бренд-тренер</span>}</div>
       {action && <div className="trainer-card-action">{action}</div>}
     </header>
     {profile.specialties.length > 0 && <ul className="trainer-specialties" aria-label="Направления">
