@@ -133,7 +133,6 @@ describe('Yandex account linking callback', () => {
       appSession: linkedSession,
     })
     vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', linkedSession.profile.id)
     window.history.replaceState(null, '', `/auth/yandex/callback${await linkingCallbackSearch()}`)
 
     renderCallback()

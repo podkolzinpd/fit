@@ -59,7 +59,6 @@ describe('YandexAppSessionProvider', () => {
     repository.getAppSession.mockReset().mockResolvedValue(profile)
     repository.revokeAppSession.mockReset().mockResolvedValue(undefined)
     vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', PROFILE_ID)
     vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
   })
@@ -127,13 +126,11 @@ describe('YandexAppSessionProvider', () => {
     expect(window.localStorage.getItem('fit.yandexAppSession.v1')).toBeNull()
   })
 
-  it('revokes and rejects a profile outside the frontend rollout allowlist', async () => {
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_PILOT_USER_IDS', '11111111-1111-4111-8111-111111111111')
+  it('trusts a profile restored through the server-side rollout boundary', async () => {
     storeSession()
     render(<YandexAppSessionProvider><Probe /></YandexAppSessionProvider>)
 
-    expect(await screen.findByText('Этот профиль не добавлен в пилот входа через Yandex ID.')).toBeVisible()
-    expect(repository.revokeAppSession).toHaveBeenCalledWith('https://stage.example.test', TOKEN)
-    expect(window.localStorage.getItem('fit.yandexAppSession.v1')).toBeNull()
+    expect(await screen.findByText('Ирина')).toBeVisible()
+    expect(repository.revokeAppSession).not.toHaveBeenCalled()
   })
 })

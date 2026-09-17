@@ -370,26 +370,25 @@ Stage API CORS allowlist обязан содержать как production web o
 активной ревизии контейнера.
 
 Полноценная browser-сессия после Yandex ID использует те же публичные
-`VITE_YANDEX_OAUTH_CLIENT_ID` и `VITE_YANDEX_API_BASE_URL`, но имеет собственный
-default-off rollout:
+`VITE_YANDEX_OAUTH_CLIENT_ID` и `VITE_YANDEX_API_BASE_URL` и общий аварийный
+switch:
 
 ```text
 VITE_YANDEX_APP_SESSION_ENABLED=true
-VITE_YANDEX_APP_SESSION_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 ```
 
-Без точного `true`, при пустом allowlist или для профиля вне списка сессия не
-сохраняется. До завершения OAuth внутренний UUID профиля неизвестен, поэтому
-кнопка входа защищена глобальным kill switch, а настоящая серверная граница —
-`profile_rollout_assignments` со значениями `provider=yandex` и
-`access_mode=read_write`. Frontend повторно проверяет UUID после callback и при
-каждом восстановлении. Изменение флага или списка требует нового deployment.
+Без точного `true` вход через Yandex ID выключен. Публичного UUID allowlist для
+app-session больше нет: настоящая персональная граница — связанная строка
+`auth_identities` и включённый `profile_rollout_assignments` со значениями
+`target_backend=yandex` и `access_mode=read_write`. Сервер проверяет её при
+выдаче и каждом восстановлении opaque session. Изменение switch требует нового
+deployment.
 
 Opaque session token хранится в browser localStorage только для восстановления
 после перезагрузки, передаётся API в `x-fit-session`, не попадает в URL, UI,
-логи или аналитику и отзывается через API при выходе. Как и UUID allowlist, он
-доступен исполняемому frontend JavaScript, поэтому защита от доступа к данным
-остаётся на backend ownership/tenant-проверках.
+логи или аналитику и отзывается через API при выходе. Token доступен
+исполняемому frontend JavaScript, поэтому защита от доступа к данным остаётся
+на backend session, ownership и tenant-проверках.
 
 Frontend ограничивает OAuth exchange, linking, восстановление и отзыв Yandex
 ID-сессии 12 секундами. При таймауте сохранённый token остаётся доступен для
@@ -414,8 +413,7 @@ sticky-флаг выбирает backend и не может сам открыт�
 Флаг включается только при точном `true`; пустой/отсутствующий allowlist или
 профиль вне него сохраняет прежний Supabase Assistant. Для первой репетиции в
 списке должен быть ровно один заранее перенесённый тестовый trainer UUID. Этот
-же UUID обязан входить в `VITE_YANDEX_APP_SESSION_PILOT_USER_IDS`, иметь
-действующую `read_write` app-session и серверное назначение `provider=yandex`,
+же UUID обязан иметь действующую `read_write` app-session и серверное назначение `provider=yandex`,
 `access_mode=read_write`. UUID виден во frontend bundle и не
 является авторизацией: Yandex API повторно разрешает actor через opaque session,
 ownership и tenant-проверки.
@@ -434,18 +432,15 @@ pilot UUID) и выполнить новый deployment; данные между
 не синхронизируются, поэтому переключение допускается только после проверки
 export/import и отсутствия незавершённых mutations.
 
-Sticky routing всего основного интерфейса имеет собственный независимый
-default-off rollout:
+Sticky routing всего основного интерфейса имеет собственный общий kill switch:
 
 ```text
 VITE_YANDEX_MAIN_ROUTING_ENABLED=true
-VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS=<one-auth-user-uuid>
 ```
 
-Флаг работает только при точном `true` и ровно одном непустом UUID в allowlist.
-Тот же UUID должен быть включён в `VITE_YANDEX_APP_SESSION_PILOT_USER_IDS`,
-иметь серверное назначение `provider=yandex`, `access_mode=read_write` и уже
-перенесённые данные. Также обязательны публичные
+Флаг работает только при точном `true`. Он применяется только к уже выданной
+Yandex app-session, поэтому профиль всё равно обязан иметь серверное назначение
+`provider=yandex`, `access_mode=read_write` и уже перенесённые данные. Также обязательны публичные
 `VITE_YANDEX_OAUTH_CLIENT_ID` и `VITE_YANDEX_API_BASE_URL`.
 
 После входа выбранный профиль использует Yandex API во всех основных вкладках:
@@ -456,11 +451,10 @@ lifecycle, связи/приглашения, Assistant, сводки, feedback 
 успешного выбора Yandex backend, чтобы истечение Yandex token не переключило
 источник данных скрыто. Интерфейс и маршруты приложения остаются прежними.
 
-Пустой список, несколько UUID или выключенный флаг сохраняют Supabase для всех
-пользователей. UUID виден в публичном frontend bundle и не является границей
-авторизации: каждое чтение и изменение повторно защищается opaque session,
-actor/tenant ownership и правами БД. Изменение флага или списка требует нового
-Vercel deployment. До завершения export/import и rehearsal включать этот флаг
+Выключенный флаг сохраняет Supabase для пользователей без активной Yandex
+app-session. Каждое чтение и изменение повторно защищается opaque session,
+actor/tenant ownership и правами БД. Изменение флага требует нового Vercel
+deployment. До завершения full-cohort export/import и rehearsal включать его
 нельзя. Rollback после начала mutations требует согласованного окна и проверки
 расхождений данных, а не только выключения frontend-флага.
 
@@ -486,6 +480,22 @@ role-specific profile root. UUID не передаётся как workflow input
 Для полного rollback сначала выключите frontend sticky routing новым Vercel
 deployment, затем выполните `disable`; обратный порядок мгновенно завершит
 доступ выбранного пользователя к Yandex API.
+
+После подтверждённого `full-cohort` dry-run и pinned apply тот же workflow
+можно запустить со scope `linked-ready`. Он никогда не принимает список UUID и
+работает только с профилями, у которых одновременно существуют role-specific
+domain root и связанная Yandex identity:
+
+- `inspect` возвращает только агрегированные количества domain-ready,
+  linked-ready и уже включённых профилей;
+- `enable` требует `ENABLE_ALL_LINKED_YANDEX_READ_WRITE` и идемпотентно включает
+  `yandex/read_write` всем linked-ready профилям;
+- `disable` требует `DISABLE_ALL_YANDEX_READ_WRITE` и выключает все активные
+  read-write назначения как аварийный rollback.
+
+Batch workflow не доказывает полноту данных сам по себе: перед `enable`
+обязательны успешные full-cohort validation и apply. Ни UUID, ни Yandex subject
+в ответ и GitHub summary не выводятся.
 
 Светлая и тёмная палитры Foundation UI Identity v1 доступны всем пользователям
 и выбираются обычной настройкой темы в профиле. Отдельных Figma/dark pilot

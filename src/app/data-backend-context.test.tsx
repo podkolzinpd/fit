@@ -45,7 +45,6 @@ describe('DataBackendProvider', () => {
   it('keeps the existing Supabase backend while main routing is default-off', () => {
     vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', USER_ID)
 
     render(<DataBackendProvider><Probe /></DataBackendProvider>)
 
@@ -53,9 +52,8 @@ describe('DataBackendProvider', () => {
     expect(createYandexMainRepository).not.toHaveBeenCalled()
   })
 
-  it('selects one Yandex backend for the matching session and allowlist', () => {
+  it('selects the Yandex backend for a matching server-authorized session', () => {
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', USER_ID)
     vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test/')
 
@@ -67,9 +65,8 @@ describe('DataBackendProvider', () => {
     )
   })
 
-  it('fails closed when more than one profile is configured', () => {
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', `${USER_ID},11111111-1111-4111-8111-111111111111`)
+  it('fails closed when the global routing switch is not exact', () => {
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'TRUE')
     vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
 

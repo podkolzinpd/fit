@@ -19,11 +19,20 @@ export interface StageRolloutAssignmentResult {
   rolloutEnabled: boolean
 }
 
+export interface StageRolloutBatchResult {
+  domainReadyProfiles: number
+  linkedProfiles: number
+  rolloutEnabledProfiles: number
+}
+
 export interface StageRolloutAssignmentManager {
   apply(
     action: StageRolloutAssignmentAction,
     target: StageRolloutAssignmentTarget,
   ): Promise<StageRolloutAssignmentResult>
+  applyLinkedProfiles(
+    action: StageRolloutAssignmentAction,
+  ): Promise<StageRolloutBatchResult>
 }
 
 interface ProfileCandidateRow extends QueryResultRow {
@@ -39,6 +48,12 @@ interface ProfileReadinessRow extends QueryResultRow {
 
 interface RolloutRow extends QueryResultRow {
   rollout_enabled: boolean
+}
+
+interface BatchRolloutRow extends QueryResultRow {
+  domain_ready_profiles: number | string
+  linked_profiles: number | string
+  rollout_enabled_profiles: number | string
 }
 
 export class StageRolloutProfileNotReadyError extends Error {
@@ -149,6 +164,124 @@ implements StageRolloutAssignmentManager {
           throw new AggregateError(
             [error, rollbackError],
             'Stage rollout assignment and rollback both failed',
+            { cause: rollbackError },
+          )
+        }
+      }
+      throw error
+    } finally {
+      connection.release()
+    }
+  }
+
+  async applyLinkedProfiles(
+    action: StageRolloutAssignmentAction,
+  ): Promise<StageRolloutBatchResult> {
+    const connection = await this.pool.connect()
+    let transactionStarted = false
+
+    try {
+      await connection.query('begin')
+      transactionStarted = true
+      await connection.query(
+        "select pg_advisory_xact_lock(hashtextextended('yandex-linked-ready-rollout', 0))",
+      )
+
+      if (action === 'enable') {
+        await connection.query(`
+          with domain_ready as (
+            select profile.id
+            from public.profiles profile
+            where (profile.account_role = 'trainer' and exists (
+              select 1 from public.trainers trainer
+              where trainer.profile_id = profile.id
+            )) or (profile.account_role = 'client' and exists (
+              select 1 from public.clients client
+              where client.auth_user_id = profile.id
+            ))
+          ), linked_ready as (
+            select domain_ready.id
+            from domain_ready
+            join app_private.auth_identities identity
+              on identity.profile_id = domain_ready.id
+             and identity.provider = 'yandex'
+          )
+          insert into app_private.profile_rollout_assignments (
+            profile_id, target_backend, access_mode, enabled
+          )
+          select id, 'yandex', 'read_write', true
+          from linked_ready
+          on conflict (profile_id) do update set
+            target_backend = excluded.target_backend,
+            access_mode = excluded.access_mode,
+            enabled = excluded.enabled
+        `)
+      } else if (action === 'disable') {
+        await connection.query(`
+          update app_private.profile_rollout_assignments
+          set enabled = false
+          where target_backend = 'yandex'
+            and access_mode = 'read_write'
+            and enabled
+        `)
+      }
+
+      const counts = await connection.query<BatchRolloutRow>(`
+        with domain_ready as (
+          select profile.id
+          from public.profiles profile
+          where (profile.account_role = 'trainer' and exists (
+            select 1 from public.trainers trainer
+            where trainer.profile_id = profile.id
+          )) or (profile.account_role = 'client' and exists (
+            select 1 from public.clients client
+            where client.auth_user_id = profile.id
+          ))
+        ), linked_ready as (
+          select domain_ready.id
+          from domain_ready
+          join app_private.auth_identities identity
+            on identity.profile_id = domain_ready.id
+           and identity.provider = 'yandex'
+        )
+        select
+          (select count(*)::integer from domain_ready) as domain_ready_profiles,
+          (select count(*)::integer from linked_ready) as linked_profiles,
+          (select count(*)::integer
+           from linked_ready
+           join app_private.profile_rollout_assignments assignment
+             on assignment.profile_id = linked_ready.id
+            and assignment.target_backend = 'yandex'
+            and assignment.access_mode = 'read_write'
+            and assignment.enabled) as rollout_enabled_profiles
+      `)
+      const row = counts[0]
+      if (row === undefined) throw new StageRolloutProfileNotReadyError()
+      const result = {
+        domainReadyProfiles: Number(row.domain_ready_profiles),
+        linkedProfiles: Number(row.linked_profiles),
+        rolloutEnabledProfiles: Number(row.rollout_enabled_profiles),
+      }
+      if (
+        !Number.isSafeInteger(result.domainReadyProfiles)
+        || !Number.isSafeInteger(result.linkedProfiles)
+        || !Number.isSafeInteger(result.rolloutEnabledProfiles)
+        || result.domainReadyProfiles < 0
+        || result.linkedProfiles < 0
+        || result.rolloutEnabledProfiles < 0
+        || (action === 'enable' && result.linkedProfiles === 0)
+      ) throw new StageRolloutProfileNotReadyError()
+
+      await connection.query('commit')
+      return result
+    } catch (error) {
+      if (transactionStarted) {
+        try {
+          await connection.query('rollback')
+        } catch (rollbackError) {
+          throw new AggregateError(
+            [error, rollbackError],
+            'Stage batch rollout assignment and rollback both failed',
             { cause: rollbackError },
           )
         }
