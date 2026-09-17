@@ -92,8 +92,9 @@ export async function verifyAnalysisShortcutKeepsShell(page: Page) {
 
 export async function verifyResultsSources(page: Page) {
   const center = page.locator('#results-center')
-  await expect(page.locator('.period-exercise-results #results-center')).toHaveCount(1)
   await verifyAnalysisShortcutKeepsShell(page)
+  await page.getByRole('tab', { name: 'ПРО' }).click()
+  await expect(page.locator('.progress-pro-list #results-center')).toHaveCount(1)
   for (const control of await page.locator('.progress-details-toggle:visible').all()) {
     expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44)
   }
