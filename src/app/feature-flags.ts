@@ -62,14 +62,6 @@ export function isTodayGreetingPilotEnabled(userId: string) {
   return allowedUserIds.includes(userId)
 }
 
-function isUserInPublicAllowlist(userId: string, value: unknown): boolean {
-  const allowedUserIds = String(value ?? '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-  return allowedUserIds.includes(userId)
-}
-
 export interface YandexIdPilotConfig {
   apiBaseUrl: string
   clientId: string
@@ -101,18 +93,16 @@ export function getYandexIdPilotConfig(): YandexIdPilotConfig | null {
   return getYandexPublicConfig()
 }
 
-// Полноценная Yandex ID сессия — отдельный default-off rollout. До завершения
-// OAuth внутренний UUID профиля неизвестен, поэтому entry point защищён
-// глобальным kill switch и серверным rollout assignment. Публичный UUID
-// allowlist дополнительно проверяется сразу после обмена кода и при restore.
+// Полноценная Yandex ID сессия открывается общим kill switch. Персональный
+// доступ не дублируется в публичном frontend bundle: сервер выдаёт сессию
+// только связанному профилю с активным read-write rollout assignment.
 export function getYandexAppSessionEntryConfig(): YandexIdPilotConfig | null {
   if (import.meta.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true') return null
   return getYandexPublicConfig()
 }
 
-export function isYandexAppSessionPilotEnabled(userId: string): boolean {
-  if (import.meta.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true') return false
-  return isUserInPublicAllowlist(userId, import.meta.env.VITE_YANDEX_APP_SESSION_PILOT_USER_IDS)
+export function isYandexAppSessionEnabled(): boolean {
+  return import.meta.env.VITE_YANDEX_APP_SESSION_ENABLED === 'true'
 }
 
 // Sticky routing основного Assistant — отдельный default-off rollout. Он не
@@ -130,16 +120,11 @@ export function isYandexAssistantRoutingPilotEnabled(userId: string): boolean {
 }
 
 // Основной интерфейс выбирает один источник данных на всю Yandex ID сессию.
-// Rollout независим от входа и ассистента и намеренно допускает только один
-// tenant/profile UUID в первой итерации. Ошибка Yandex API не переключает
-// отдельный запрос обратно на Supabase.
-export function isYandexMainRoutingPilotEnabled(userId: string): boolean {
-  if (import.meta.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true') return false
-  const pilotUserIds = String(import.meta.env.VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS ?? '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-  return pilotUserIds.length === 1 && pilotUserIds[0] === userId
+// Персональную границу задаёт серверный rollout assignment, а frontend хранит
+// только общий kill switch. Ошибка Yandex API не переключает отдельный запрос
+// обратно на Supabase.
+export function isYandexMainRoutingEnabled(): boolean {
+  return import.meta.env.VITE_YANDEX_MAIN_ROUTING_ENABLED === 'true'
 }
 
 export function getYandexMainRoutingConfig(): YandexIdPilotConfig | null {

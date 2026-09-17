@@ -119,7 +119,7 @@ describe('AuthProvider', () => {
     expect(auth.initialize).toHaveBeenCalledWith(user)
   })
 
-  it('uses one allowlisted Yandex session for the app actor and its session actions', async () => {
+  it('uses a server-authorized Yandex session for the app actor and its session actions', async () => {
     const retry = vi.fn().mockResolvedValue(undefined)
     const signOut = vi.fn().mockResolvedValue(undefined)
     yandex.state = {
@@ -134,7 +134,6 @@ describe('AuthProvider', () => {
       signOut,
     } as typeof yandex.state
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_PILOT_USER_IDS', 'trainer-1')
 
     renderAuth(<YandexProbe />)
 

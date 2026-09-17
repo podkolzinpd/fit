@@ -165,6 +165,16 @@ function readRolloutAssignmentRequest(body: unknown): {
   return { action, target: { tenantFingerprint } }
 }
 
+function readBatchRolloutAssignmentRequest(body: unknown): {
+  action: StageRolloutAssignmentAction
+} | undefined {
+  if (typeof body !== 'object' || body === null || !('action' in body)) return undefined
+  const action = body.action
+  if (action !== 'inspect' && action !== 'enable' && action !== 'disable') return undefined
+  if (!('scope' in body) || body.scope !== 'linked-ready') return undefined
+  return { action }
+}
+
 export function buildMigrationApp(
   options: BuildMigrationAppOptions,
 ): FastifyInstance {
@@ -248,6 +258,30 @@ export function buildMigrationApp(
 
   if (options.rolloutAssignment !== undefined) {
     const rolloutAssignment = options.rolloutAssignment
+    app.post('/stage/rollout-assignments/yandex/linked-ready', async (request, reply) => {
+      const rolloutRequest = readBatchRolloutAssignmentRequest(request.body)
+      if (rolloutRequest === undefined) {
+        return reply.code(400).send({ status: 'invalid_request' })
+      }
+
+      try {
+        const result = await rolloutAssignment.applyLinkedProfiles(rolloutRequest.action)
+        return {
+          status: rolloutRequest.action === 'inspect'
+            ? 'rollout_batch_inspected'
+            : rolloutRequest.action === 'enable'
+              ? 'rollout_batch_enabled'
+              : 'rollout_batch_disabled',
+          ...result,
+        }
+      } catch (error) {
+        if (error instanceof StageRolloutProfileNotReadyError) {
+          return reply.code(409).send({ status: 'profiles_not_ready' })
+        }
+        return reply.code(500).send({ status: 'rollout_assignment_failed' })
+      }
+    })
+
     app.post('/stage/rollout-assignments/yandex', async (request, reply) => {
       const rolloutRequest = readRolloutAssignmentRequest(request.body)
       if (rolloutRequest === undefined) {

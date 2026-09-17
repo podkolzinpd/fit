@@ -39,13 +39,9 @@ test('password sign-in retries a network failure and unlocks the WebKit form', a
 })
 
 test('Yandex ID app session restores and logs out in mobile WebKit', async ({ page }) => {
-  const allowlist = (process.env.VITE_YANDEX_APP_SESSION_PILOT_USER_IDS ?? '')
-    .split(',')
-    .map((value) => value.trim())
   test.skip(
-    process.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true'
-      || !allowlist.includes('d2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'),
-    'Run with Yandex app-session env to verify the default-off route.',
+    process.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true',
+    'Run with the Yandex app-session switch to verify the default-off route.',
   )
   const token = 'a'.repeat(43)
   let revokeCount = 0
@@ -97,13 +93,9 @@ test('Yandex ID app session restores and logs out in mobile WebKit', async ({ pa
 })
 
 test('Yandex ID restore failure leaves loading and allows a local reset in mobile WebKit', async ({ page }) => {
-  const allowlist = (process.env.VITE_YANDEX_APP_SESSION_PILOT_USER_IDS ?? '')
-    .split(',')
-    .map((value) => value.trim())
   test.skip(
-    process.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true'
-      || !allowlist.includes('d2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'),
-    'Run with Yandex app-session env to verify the default-off route.',
+    process.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true',
+    'Run with the Yandex app-session switch to verify the default-off route.',
   )
   await page.route('https://stage.example.test/v1/auth/yandex/session', (route) => route.abort('failed'))
   await page.addInitScript(() => {
