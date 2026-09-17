@@ -13,7 +13,7 @@ export function WeeklyTrainingLoad({ workouts, periodStart, periodEnd, today, lo
   const weeks = useMemo(() => open ? weeklySetDistribution(workouts ?? [], periodStart, periodEnd, today).reverse() : [], [open, workouts, periodStart, periodEnd, today])
   const maximum = Math.max(1, ...weeks.map((week) => week.totalSets))
   const visible = all ? weeks : weeks.slice(0, 8)
-  return <details className="weekly-training-load card" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}><ProgressDetailsSummary>Нагрузка по неделям</ProgressDetailsSummary>
+  return <details className="weekly-training-load card" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}><ProgressDetailsSummary description="Объём и распределение нагрузки">Нагрузка по неделям</ProgressDetailsSummary>
     {open && <>
       {error ? <p role="alert">Не удалось загрузить недельную нагрузку. <button className="link" type="button" onClick={onRetry}>Повторить</button></p> : loading && !workouts ? <p role="status">Загружаем нагрузку…</p> : !weeks.length ? <p>За этот период пока нет данных.</p> : <>
         <ol className="weekly-load-list">{visible.map((week) => <li key={week.week}>

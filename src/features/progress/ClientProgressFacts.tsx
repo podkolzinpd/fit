@@ -14,12 +14,14 @@ export function ClientGoalFacts({ goal, profileGoal, entries, workouts, periodSt
   periodStart: LocalDate; periodEnd: LocalDate; today: LocalDate; loading: boolean; error: Error | null; onRetry: () => void
 }) {
   const location = useLocation()
+  const measurementSearch = new URLSearchParams(location.search)
+  measurementSearch.set('view', 'pro')
   const story = goalStory({ periodStart, periodEnd }, { goal, profileGoal, measurements: entries, currentWorkouts: workouts, today, role: 'client' })
   const criterionRow = (criterion: NonNullable<NonNullable<typeof story>['criteria']>[number]) => <article className="goal-criterion-progress-row" key={criterion.id}>
         <header><strong>{criterion.label}</strong><span>{criterion.status === "Движение к ориентиру" ? "В процессе" : criterion.status}</span></header>
         <dl><div><dt>Сейчас</dt><dd>{criterion.current}</dd></div><div><dt>Цель</dt><dd>{criterion.target.replace(/^(увеличить до|снизить до|уменьшить до) /u, "")}</dd></div></dl>
         <p>{criterion.dynamics === "недостаточно данных для динамики" ? "Пока нечего сравнивать" : criterion.dynamics.split(" · ")[0]}</p><details><summary>{criterion.dataOwner === "workout" ? "Дата тренировки" : "Дата замера"}</summary><p>{criterion.lastDate ?? 'Дата отсутствует'} · {criterion.freshness}</p></details>
-        {criterion.action === 'measurement' && <Link className="link" to={{ pathname: location.pathname, search: location.search, hash: '#measurements' }}>Добавить замер</Link>}
+        {criterion.action === 'measurement' && <Link className="link" to={{ pathname: location.pathname, search: `?${measurementSearch}`, hash: '#measurements' }}>Добавить замер</Link>}
         {criterion.action === 'workout' && <Link className="link" to="/workouts/new">Записать тренировку</Link>}
       </article>
   return <section className="client-progress-goal-story standalone" aria-label="Твоя цель">
@@ -73,8 +75,9 @@ const previousRecord = (result: WorkoutResult) => {
   return `${result.metric === 'volume' ? 'Прежний максимум' : 'Прежний рекорд'} — ${resultNumber(result.previousBest.value)} ${unit}`
 }
 
-export function PeriodExerciseResults({ workouts, periodStart, periodEnd, loading, error, onRetry, children }: {
+export function PeriodExerciseResults({ workouts, periodStart, periodEnd, loading, error, onRetry, children, variant = 'overview', showOverflow = true }: {
   workouts?: readonly Workout[]; periodStart: LocalDate; periodEnd: LocalDate; loading: boolean; error: Error | null; onRetry: () => void; children?: ReactNode
+  variant?: 'overview' | 'overflow'; showOverflow?: boolean
 }) {
   const location = useLocation()
   const achievements = useMemo(() => {
@@ -96,10 +99,17 @@ export function PeriodExerciseResults({ workouts, periodStart, periodEnd, loadin
     {previousRecord(result) && <p className="muted">{previousRecord(result)}</p>}
     <div className="actions"><span className="muted">{formatLocalDate(result.workout.workoutDate)}</span><Link className="link" to={`/workouts/${result.workout.id}`} state={{ returnTo: location.pathname + location.search + '#results' }}>Открыть тренировку</Link></div>
   </article>
+  if (variant === 'overflow') {
+    if (loading || error || achievements.length <= 3) return null
+    return <section className="period-extra-achievements" aria-label="Остальные достижения за период">
+      <h4>Остальные достижения</h4>
+      {achievements.slice(3).map(row)}
+    </section>
+  }
   return <section className="period-exercise-results card" id="results" aria-label="Лучшие результаты за период">
-    <h3>Лучшие результаты за период</h3>
+    <h3>Лучшие результаты</h3><p className="muted">За выбранный период</p>
     {error ? <p role="alert">Не удалось загрузить результаты. <button type="button" className="link" onClick={onRetry}>Повторить</button></p> : loading && !workouts ? <p role="status">Загружаем результаты…</p> : !achievements.length ? <p>За этот период новых достижений нет.</p> : <>
-      {achievements.slice(0, 3).map(row)}{achievements.length > 3 && <details className="period-achievements-more"><ProgressDetailsSummary>Ещё достижения · {achievements.length - 3}</ProgressDetailsSummary>{achievements.slice(3).map(row)}</details>}
+      {achievements.slice(0, 3).map(row)}{showOverflow && achievements.length > 3 && <details className="period-achievements-more"><ProgressDetailsSummary>Ещё достижения · {achievements.length - 3}</ProgressDetailsSummary>{achievements.slice(3).map(row)}</details>}
     </>}
     {children}
   </section>
@@ -114,7 +124,7 @@ export function ClientPeriodComparison({ workouts, entries, goal, periodStart, p
   const inRange = (start: LocalDate, end: LocalDate) => (workouts ?? []).filter((workout) => workout.workoutDate >= start && workout.workoutDate <= end)
   const comparison = buildPeriodComparison({ currentPeriod: { start: periodStart, end: periodEnd }, previousPeriod: previous,
     currentWorkouts: inRange(periodStart, periodEnd), previousWorkouts: inRange(previous.start, previous.end), measurements: entries, goal })
-  return <details className="client-progress-comparison card"><ProgressDetailsSummary>Сравнить периоды</ProgressDetailsSummary>
+  return <details className="client-progress-comparison card"><ProgressDetailsSummary description="Предыдущий период против текущего">Сравнение периодов</ProgressDetailsSummary>
     <p>{formatLocalDate(previous.start)} — {formatLocalDate(previous.end)} → {formatLocalDate(periodStart)} — {formatLocalDate(periodEnd)}</p>
     {error ? <p role="alert">Не удалось загрузить сравнение. <button type="button" className="link" onClick={onRetry}>Повторить</button></p> : loading ? <p role="status">Сравниваем периоды…</p> : <>
       <dl className="period-comparison-facts">{comparison.facts.map((fact) => <div key={fact.factId} className={fact.tone}><dt>{fact.subject}<span>{fact.previousLabel} → {fact.currentLabel}</span></dt><dd>{fact.value}</dd></div>)}</dl>

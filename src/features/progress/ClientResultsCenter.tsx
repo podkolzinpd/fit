@@ -1,5 +1,5 @@
 import { ProgressDetailsSummary } from './ProgressDetailsSummary'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { Workout } from '../../shared/domain'
 import { ArrowUpIcon } from '../../shared/icons'
@@ -12,7 +12,7 @@ const metrics: Array<{ key: ResultMetric; label: string }> = [
   { key: 'weight', label: 'Максимальный вес' }, { key: 'fixed_reps', label: 'Повторы при фиксированном весе' },
   { key: 'volume', label: 'Объём' }, { key: 'reps', label: 'Повторы' }, { key: 'distance', label: 'Дистанция' }, { key: 'duration', label: 'Длительность' },
 ]
-type Props = { workouts?: readonly Workout[]; periodStart: LocalDate; periodEnd: LocalDate; loading: boolean; error: Error | null; onRetry: () => void }
+type Props = { workouts?: readonly Workout[]; periodStart: LocalDate; periodEnd: LocalDate; loading: boolean; error: Error | null; onRetry: () => void; children?: ReactNode }
 
 function useResultsParams() {
   const location = useLocation()
@@ -24,6 +24,7 @@ function useResultsParams() {
     const current = latestLocation.current
     const next = new URLSearchParams(current.search)
     change(next)
+    next.set('view', 'pro')
     const destination = { ...current, search: `?${next}`, hash: '#results-center' }
     latestLocation.current = destination
     void navigate(destination, { replace: true, preventScrollReset: true })
@@ -86,11 +87,11 @@ function ResultsContent({ workouts, periodStart, periodEnd, loading, error, onRe
   </>
 }
 
-export function ClientResultsCenter(props: Props) {
+export function ClientResultsCenter({ children, ...props }: Props) {
   const { params, update } = useResultsParams()
   const open = params.get('resultsOpen') === '1'
   return <details className="client-results-center" id="results-center" open={open} onToggle={(event) => {
     const nextOpen = event.currentTarget.open
     if (nextOpen !== open) update((next) => { if (nextOpen) next.set('resultsOpen', '1'); else next.delete('resultsOpen') })
-  }}><ProgressDetailsSummary>Все результаты</ProgressDetailsSummary>{open && <ResultsContent {...props} />}</details>
+  }}><ProgressDetailsSummary description="История, упражнения и показатели">Все результаты</ProgressDetailsSummary>{open && <>{children}<ResultsContent {...props} /></>}</details>
 }
