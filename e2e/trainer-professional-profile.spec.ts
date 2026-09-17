@@ -60,7 +60,7 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
     mimeType: 'image/png',
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
   })
-  await editor.locator('.trainer-profile-form-disclosure > summary').click()
+  await editor.getByText('Образование и сертификаты', { exact: true }).click()
   await editor.getByLabel('Образование и квалификация').fill('Высшее физкультурное образование.')
   await editor.getByRole('button', { name: 'Добавить сертификат' }).click()
   await editor.getByLabel('Название сертификата 1').fill('Персональный тренер')
