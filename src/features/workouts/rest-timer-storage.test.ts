@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { restDeadline, restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
+import { readLiveRestOverrides, restDeadline, restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
 
 afterEach(() => sessionStorage.clear())
 
@@ -27,5 +27,12 @@ describe('live rest timer storage', () => {
     expect(restoreRestDeadline('workout-1')).toBeNull()
     sessionStorage.setItem('fit:live-rest-until:workout-1', '-1')
     expect(restoreRestDeadline('workout-1')).toBeNull()
+  })
+
+  it('ignores corrupt or invalid live-only rest overrides', () => {
+    sessionStorage.setItem('test', '{')
+    expect(readLiveRestOverrides('test')).toEqual({})
+    sessionStorage.setItem('test', JSON.stringify({ good: 90, off: 0, bad: -2, huge: 100000, text: '30' }))
+    expect(readLiveRestOverrides('test')).toEqual({ good: 90, off: 0 })
   })
 })

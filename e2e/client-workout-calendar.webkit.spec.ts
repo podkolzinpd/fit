@@ -214,7 +214,7 @@ test('client: rest picker uses minute and second wheels and keeps overdue time v
   }
   await page.getByRole('option', { name: '00 минуты' }).click()
   await page.getByRole('option', { name: '01 секунды' }).click()
-  await page.getByRole('button', { name: 'Начать отдых' }).click()
+  await page.getByRole('button', { name: 'Начать отдых · 0:01' }).click()
   await page.clock.fastForward(2_100)
 
   const overdue = page.getByRole('button', { name: 'Отдых превышен на 0:01', exact: true })

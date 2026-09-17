@@ -1691,7 +1691,7 @@ test('client Live keeps row geometry, notes and timer independent', async ({ pag
   await saved
   await page.reload()
   await expect(page.locator('.live-note-preview')).toHaveText('Скамья 3, удобная высота')
-  await expect(page.getByRole('combobox', { name: 'Отдых' })).toHaveValue('90')
+  await expect(page.getByRole('combobox', { name: 'Отдых' })).toHaveCount(0)
   await expect(page.getByText('Отдых в этой тренировке')).toHaveCount(0)
   await page.setViewportSize({ width: 375, height: 812 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
