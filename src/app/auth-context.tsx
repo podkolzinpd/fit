@@ -116,7 +116,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
         firstName: profile.firstName, lastName: profile.lastName, timezone: profile.timezone,
       }
     }
-    if (profile.client === null || profile.client === undefined) return null
+    if (profile.client === null || profile.client === undefined) {
+      // Новый спортсмен сначала имеет только account profile. Сохраняем тот же
+      // pre-card actor contract, что и email-регистрация: роль уже клиентская,
+      // а собственная client card появится после явного первого действия.
+      return {
+        kind: 'trainer', role: 'client', userId: profile.id, email: null,
+        firstName: profile.firstName, lastName: profile.lastName, timezone: profile.timezone,
+      }
+    }
     return {
       kind: 'client', role: 'client', userId: profile.id, email: null,
       firstName: profile.firstName, lastName: profile.lastName, timezone: profile.timezone,

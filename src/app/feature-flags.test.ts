@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   getYandexIdPilotConfig,
   getYandexAppSessionEntryConfig,
+  getYandexNativeRegistrationConfig,
   getYandexSessionLinkingConfig,
   isAssistantNavPilotEnabled,
   isTodayGreetingPilotEnabled,
@@ -282,6 +283,32 @@ describe('Yandex app session flag', () => {
 
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'http://stage.example.test')
     expect(getYandexAppSessionEntryConfig()).toBeNull()
+  })
+})
+
+describe('Yandex native registration flag', () => {
+  it('stays off until registration, app-session and main routing are all enabled', () => {
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', '')
+    expect(getYandexNativeRegistrationConfig()).toBeNull()
+
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    expect(getYandexNativeRegistrationConfig()).toEqual({
+      apiBaseUrl: 'https://stage.example.test',
+      clientId: 'public-client-id',
+    })
+  })
+
+  it('rejects an implicit or malformed enabled value', () => {
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'TRUE')
+    expect(getYandexNativeRegistrationConfig()).toBeNull()
   })
 })
 

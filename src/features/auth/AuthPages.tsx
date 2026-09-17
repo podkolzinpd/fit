@@ -14,6 +14,7 @@ import { useAuth } from '../../app/auth-context'
 import {
   getYandexAppSessionEntryConfig,
   getYandexIdPilotConfig,
+  getYandexNativeRegistrationConfig,
   getYandexSessionLinkingConfig,
   isYandexAppSessionEnabled,
   trainerHomePath,
@@ -23,18 +24,23 @@ import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme 
 import { ProfileIcon } from '../../shared/icons'
 import { AsyncView, Field, StatePanel } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
-import { LEGAL_PATHS } from '../../shared/legal'
+import { LEGAL_PATHS, PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
+import { systemTimeZone } from '../../shared/local-date'
 import {
+  clearPendingYandexNativeRegistration,
   clearPendingYandexAuthorization,
   consumeYandexAuthorizationCallback,
   createYandexAuthorizationUrl,
   peekPendingYandexAuthorizationIntent,
+  readPendingYandexNativeRegistration,
+  savePendingYandexNativeRegistration,
 } from './yandex-pilot-oauth'
 import { YandexPilotConnections } from './YandexPilotConnections'
 import { YandexPilotTrainingData } from './YandexPilotTrainingData'
 import { useYandexPilotPolling } from './use-yandex-pilot-polling'
 
 type Mode = 'login' | 'register'
+type RegistrationMethod = 'yandex' | 'email'
 
 function AuthIdentityScreen({ children, className }: PropsWithChildren<{ className?: string }>) {
   const theme = useAppTheme()
@@ -63,7 +69,12 @@ function AuthIdentityScreen({ children, className }: PropsWithChildren<{ classNa
 export function AuthPage() {
   const location = useLocation()
   const returnTo = (location.state as { from?: string } | null)?.from
+  const nativeRegistrationConfig = getYandexNativeRegistrationConfig()
   const [mode, setMode] = useState<Mode>('login')
+  const [registrationMethod, setRegistrationMethod] = useState<RegistrationMethod>(
+    nativeRegistrationConfig === null ? 'email' : 'yandex',
+  )
+  const [firstName, setFirstName] = useState('')
   const [busy, setBusy] = useState(false)
   const [yandexBusy, setYandexBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -79,13 +90,39 @@ export function AuthPage() {
   if (yandexAppSession.session) return <Navigate to="/auth/yandex/session" replace />
 
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setError(null)
+    event.preventDefault(); setError(null)
     const values = new FormData(event.currentTarget)
+    if (mode === 'register' && registrationMethod === 'yandex') {
+      if (nativeRegistrationConfig === null) {
+        setError('Регистрация через Yandex ID пока недоступна.')
+        return
+      }
+      setYandexBusy(true)
+      savePendingYandexNativeRegistration({
+        accountRole: role,
+        firstName,
+        timezone: systemTimeZone(),
+        termsVersion: TERMS_VERSION,
+        privacyVersion: PRIVACY_VERSION,
+      })
+      try {
+        const url = await createYandexAuthorizationUrl(
+          nativeRegistrationConfig.clientId,
+          `${window.location.origin}/auth/yandex/callback`,
+          sessionStorage,
+          'register',
+        )
+        window.location.assign(url)
+      } catch {
+        setError('Не удалось начать регистрацию через Yandex ID.')
+        setYandexBusy(false)
+      }
+      return
+    }
+    setBusy(true)
     try {
       if (mode === 'login') await authRepository.signIn(String(values.get('email')), String(values.get('password')))
-      else {
-        await authRepository.signUp(String(values.get('email')), String(values.get('password')), String(values.get('firstName')), role)
-      }
+      else await authRepository.signUp(String(values.get('email')), String(values.get('password')), firstName, role)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Не удалось войти') }
     finally { setBusy(false) }
   }
@@ -102,15 +139,23 @@ export function AuthPage() {
         <Field label="Тип аккаунта"><select value={role} onChange={(event) => setRole(event.target.value as AccountRole)}>
           <option value="trainer">Я тренер</option><option value="client">Я клиент</option>
         </select></Field>
-        <Field label="Имя"><input name="firstName" minLength={2} autoComplete="given-name" required /></Field>
+        <Field label="Имя"><input name="firstName" minLength={2} maxLength={120} autoComplete="given-name" required value={firstName} onChange={(event) => setFirstName(event.target.value)} /></Field>
       </>}
-      <Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>
-      <Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required /></Field>
+      {(mode === 'login' || registrationMethod === 'email') && <>
+        <Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>
+        <Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required /></Field>
+      </>}
       {error && <p className="error" role="alert">{error}</p>}
-      <button className="primary" disabled={busy} aria-busy={busy}>{busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}</button>
+      <button className="primary" disabled={busy || yandexBusy} aria-busy={busy || yandexBusy}>{busy || yandexBusy
+        ? 'Подождите…'
+        : mode === 'login'
+          ? 'Войти'
+          : registrationMethod === 'yandex'
+            ? 'Создать через Yandex ID'
+            : 'Создать аккаунт'}</button>
     </form>
     {mode === 'register' && <p className="auth-consent">Создавая аккаунт, вы принимаете <Link to={LEGAL_PATHS.terms}>Условия использования</Link> и <Link to={LEGAL_PATHS.privacy}>Политику конфиденциальности</Link>.</p>}
-    {(yandexAppSessionConfig ?? yandexPilotConfig) && <button className="secondary auth-yandex" disabled={yandexBusy} onClick={() => {
+    {mode === 'login' && (yandexAppSessionConfig ?? yandexPilotConfig) && <button className="secondary auth-yandex" disabled={yandexBusy} onClick={() => {
       setError(null); setYandexBusy(true)
       const redirectUri = `${window.location.origin}/auth/yandex/callback`
       const config = yandexAppSessionConfig ?? yandexPilotConfig
@@ -133,7 +178,21 @@ export function AuthPage() {
         <button className="link" type="button" onClick={yandexAppSession.reset}>Сбросить сессию Yandex ID</button>
       </div>
     </div>}
-    <div className="auth-links"><button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Создать аккаунт' : 'У меня есть аккаунт'}</button>{mode === 'login' && <Link to="/auth/forgot">Забыли пароль?</Link>}</div>
+    <div className="auth-links">
+      <button className="link" onClick={() => {
+        const nextMode = mode === 'login' ? 'register' : 'login'
+        setMode(nextMode)
+        setError(null)
+        if (nextMode === 'register') {
+          setRegistrationMethod(nativeRegistrationConfig === null ? 'email' : 'yandex')
+        }
+      }}>{mode === 'login' ? 'Создать аккаунт' : 'У меня есть аккаунт'}</button>
+      {mode === 'register' && nativeRegistrationConfig !== null && <button className="link" type="button" onClick={() => {
+        setRegistrationMethod(registrationMethod === 'yandex' ? 'email' : 'yandex')
+        setError(null)
+      }}>{registrationMethod === 'yandex' ? 'Создать по email' : 'Создать через Yandex ID'}</button>}
+      {mode === 'login' && <Link to="/auth/forgot">Забыли пароль?</Link>}
+    </div>
     <nav className="auth-legal-links" aria-label="Юридическая информация"><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Конфиденциальность</Link></nav>
   </AuthIdentityScreen>
 }
@@ -142,7 +201,111 @@ export function YandexPilotCallbackPage() {
   const [intent] = useState(() => peekPendingYandexAuthorizationIntent())
   return intent === 'link'
     ? <YandexAccountLinkingCallbackPage />
-    : intent === 'app' ? <YandexAppSessionCallbackPage /> : <YandexReadOnlyPilotCallbackPage />
+    : intent === 'app'
+      ? <YandexAppSessionCallbackPage />
+      : intent === 'register'
+        ? <YandexNativeRegistrationCallbackPage />
+        : <YandexReadOnlyPilotCallbackPage />
+}
+
+function YandexNativeRegistrationCallbackPage() {
+  const navigate = useNavigate()
+  const { establish } = useYandexAppSession()
+  const config = useMemo(() => getYandexNativeRegistrationConfig(), [])
+  const [registration] = useState(() => readPendingYandexNativeRegistration())
+  const [callbackSearch] = useState(() => window.location.search)
+  const [error, setError] = useState<string | null>(null)
+  const [refreshRegistration, setRefreshRegistration] = useState(false)
+  const [restartBusy, setRestartBusy] = useState(false)
+  const registrationRequest = useRef<Promise<YandexAppSession> | null>(null)
+
+  useEffect(() => {
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [])
+
+  useEffect(() => {
+    if (config === null || registration === null) return
+    const registrationConfig = config
+    const registrationDraft = registration
+    let cancelled = false
+
+    async function register(): Promise<void> {
+      try {
+        registrationRequest.current ??= Promise.resolve().then(() => {
+          const authorization = consumeYandexAuthorizationCallback(callbackSearch)
+          if (authorization.intent !== 'register') {
+            throw new Error('Начните регистрацию через Yandex ID заново.')
+          }
+          return yandexPilotRepository.registerYandexAccount(
+            registrationConfig.apiBaseUrl,
+            authorization.code,
+            authorization.codeVerifier,
+            registrationDraft,
+          )
+        })
+        const result = await registrationRequest.current
+        if (cancelled) return
+        clearPendingYandexNativeRegistration()
+        establish(result)
+        navigate('/auth/yandex/session', { replace: true })
+      } catch (caught) {
+        if (!cancelled) {
+          if (caught instanceof Error
+            && caught.name === 'YandexNativeRegistrationRefreshRequiredError') {
+            clearPendingYandexNativeRegistration()
+            setRefreshRegistration(true)
+          }
+          setError(caught instanceof Error ? caught.message : 'Не удалось создать аккаунт через Yandex ID.')
+        }
+      }
+    }
+
+    void register()
+    return () => { cancelled = true }
+  }, [callbackSearch, config, establish, navigate, registration])
+
+  async function restart(): Promise<void> {
+    if (config === null || registration === null) return
+    setRestartBusy(true)
+    setError(null)
+    clearPendingYandexAuthorization()
+    savePendingYandexNativeRegistration(registration)
+    try {
+      const url = await createYandexAuthorizationUrl(
+        config.clientId,
+        `${window.location.origin}/auth/yandex/callback`,
+        sessionStorage,
+        'register',
+      )
+      window.location.assign(url)
+    } catch {
+      setError('Не удалось начать регистрацию через Yandex ID.')
+      setRestartBusy(false)
+    }
+  }
+
+  if (config === null) return <Navigate to="/auth" replace />
+  const visibleError = registration === null
+    ? 'Данные регистрации не найдены. Заполните форму заново.'
+    : error
+  return <AuthIdentityScreen>
+    <header className="auth-entry-head">
+      <div className="brand" aria-hidden="true">FIT</div>
+      <p className="eyebrow">YANDEX ID</p>
+      <h1>{visibleError ? 'Не удалось зарегистрироваться' : 'Создаём аккаунт'}</h1>
+      <p className="muted">{visibleError ?? 'Подтверждаем Yandex ID и готовим защищённый профиль FIT…'}</p>
+    </header>
+    {visibleError && <StatePanel
+      tone="error"
+      title="Аккаунт не создан"
+      description={visibleError}
+      action={registration === null || refreshRegistration
+        ? <Link reloadDocument to="/auth">Обновить регистрацию</Link>
+        : <button type="button" className="primary" aria-busy={restartBusy} disabled={restartBusy} onClick={() => void restart()}>
+          {restartBusy ? 'Переходим в Yandex ID…' : 'Начать заново'}
+        </button>}
+    />}
+  </AuthIdentityScreen>
 }
 
 function YandexAppSessionCallbackPage() {

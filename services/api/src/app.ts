@@ -79,6 +79,14 @@ import {
   type ExistingActorProvider,
   type YandexAccountLinker,
 } from './yandex-account-linking.js'
+import {
+  YandexNativeRegistrationError,
+  type YandexNativeRegistrar,
+} from './yandex-native-registration.js'
+import {
+  CURRENT_PRIVACY_VERSION,
+  CURRENT_TERMS_VERSION,
+} from './legal-document-versions.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
 import type { PilotProgressData } from './progress-data.js'
 import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
@@ -169,6 +177,7 @@ interface BuildAppOptions {
   legacySummaryHandler?: LegacySummaryHandler
   existingActorProvider?: ExistingActorProvider
   yandexAccountLinker?: YandexAccountLinker
+  yandexNativeRegistrar?: YandexNativeRegistrar
   yandexAppSessionIssuer?: YandexAppSessionIssuer
   yandexAppSessionReader?: YandexAppSessionReader
   yandexAppSessionRevoker?: YandexAppSessionRevoker
@@ -708,6 +717,43 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return { code, codeVerifier }
   }
 
+  function readYandexRegistrationRequest(body: unknown) {
+    const command = readYandexCodeRequest(body)
+    if (command === undefined || typeof body !== 'object' || body === null) {
+      return undefined
+    }
+    const firstName = 'firstName' in body ? body.firstName : undefined
+    const timezone = 'timezone' in body ? body.timezone : undefined
+    const accountRole = 'accountRole' in body ? body.accountRole : undefined
+    const termsVersion = 'termsVersion' in body ? body.termsVersion : undefined
+    const privacyVersion = 'privacyVersion' in body ? body.privacyVersion : undefined
+    if (
+      typeof firstName !== 'string'
+      || firstName.trim().length < 2
+      || firstName.trim().length > 120
+      || typeof timezone !== 'string'
+      || timezone.trim().length === 0
+      || timezone.trim().length > 100
+      || (accountRole !== 'trainer' && accountRole !== 'client')
+      || typeof termsVersion !== 'string'
+      || typeof privacyVersion !== 'string'
+    ) return undefined
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: timezone.trim() }).format()
+    } catch {
+      return undefined
+    }
+    const normalizedRole: 'trainer' | 'client' = accountRole
+    return {
+      ...command,
+      firstName: firstName.trim(),
+      timezone: timezone.trim(),
+      accountRole: normalizedRole,
+      termsVersion,
+      privacyVersion,
+    }
+  }
+
   async function readYandexSubjectHash(command: { code: string; codeVerifier: string }) {
     if (
       options.oauthCodeProvider === undefined ||
@@ -985,6 +1031,80 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       if (error instanceof YandexAppSessionDeniedError) {
         return reply.code(403).send({ error: 'yandex_session_denied' })
       }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.post('/v1/auth/yandex/register', async (request, reply) => {
+    const command = readYandexRegistrationRequest(request.body)
+    if (command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (
+      command.termsVersion !== CURRENT_TERMS_VERSION
+      || command.privacyVersion !== CURRENT_PRIVACY_VERSION
+    ) {
+      return reply.code(412).send({ error: 'legal_documents_changed' })
+    }
+    if (
+      options.oauthCodeProvider === undefined
+      || options.identityProvider === undefined
+      || options.yandexNativeRegistrar === undefined
+      || options.yandexAppSessionIssuer === undefined
+    ) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+
+    let subjectHash: string
+    try {
+      const resolvedSubjectHash = await readYandexSubjectHash(command)
+      if (resolvedSubjectHash === undefined) {
+        return reply.code(503).send({ error: 'service_unavailable' })
+      }
+      subjectHash = resolvedSubjectHash
+    } catch (error) {
+      const response = sendYandexOAuthFailure(reply, error)
+      if (response !== undefined) return response
+      throw error
+    }
+
+    try {
+      const registration = await options.yandexNativeRegistrar.register(subjectHash, {
+        accountRole: command.accountRole,
+        firstName: command.firstName,
+        timezone: command.timezone,
+      })
+      const session = await options.yandexAppSessionIssuer.issue(subjectHash)
+      if (session === undefined || session.profile.id !== registration.profileId) {
+        request.log.error(
+          { failure: 'session_profile_mismatch' },
+          'Yandex native registration unavailable',
+        )
+        return reply.code(503).send({ error: 'service_unavailable' })
+      }
+      request.log.info(
+        { accountRole: command.accountRole },
+        'Yandex native registration completed',
+      )
+      return reply.header('cache-control', 'no-store').send(session)
+    } catch (error) {
+      if (error instanceof YandexNativeRegistrationError) {
+        request.log.warn(
+          { failure: error.failure },
+          'Yandex native registration rejected',
+        )
+        if (error.failure === 'conflict') {
+          return reply.code(409).send({ error: 'yandex_identity_existing_account' })
+        }
+        return reply.code(400).send({ error: 'invalid_request' })
+      }
+      if (error instanceof YandexAppSessionDeniedError) {
+        return reply.code(403).send({ error: 'yandex_session_denied' })
+      }
+      request.log.error(
+        { failure: 'unexpected' },
+        'Yandex native registration unavailable',
+      )
       return reply.code(503).send({ error: 'service_unavailable' })
     }
   })

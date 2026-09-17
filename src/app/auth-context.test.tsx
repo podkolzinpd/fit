@@ -30,7 +30,12 @@ const yandex = vi.hoisted(() => ({ state: null as null | {
       firstName: string | null
       lastName: string | null
       timezone: string
-      accountRole: 'trainer'
+      accountRole: 'trainer' | 'client'
+      client?: {
+        id: string
+        trainerId: string
+        fullName: string
+      } | null
     }
     session: { token: string; expiresAt: string }
     accessMode: 'read_write'
@@ -73,6 +78,11 @@ function RefreshProbe() {
 function YandexProbe() {
   const state = useAuth()
   return <><p>{state.loading ? 'loading' : state.actor?.userId ?? state.error ?? 'anonymous'}</p><button onClick={() => void state.refresh()}>Обновить</button><button onClick={() => void state.signOut()}>Выйти</button></>
+}
+
+function YandexActorKindProbe() {
+  const { actor, loading, error } = useAuth()
+  return <p>{loading ? 'loading' : actor ? `${actor.kind}:${actor.role}` : error ?? 'anonymous'}</p>
 }
 
 function SignOutProbe() {
@@ -143,6 +153,32 @@ describe('AuthProvider', () => {
     screen.getByRole('button', { name: 'Выйти' }).click()
     await waitFor(() => expect(signOut).toHaveBeenCalledOnce())
     expect(auth.signOut).toHaveBeenCalled()
+  })
+
+  it('opens client onboarding before the native account has a client card', async () => {
+    yandex.state = {
+      session: {
+        accessMode: 'read_write',
+        profile: {
+          id: 'client-profile-1',
+          firstName: 'Ирина',
+          lastName: null,
+          timezone: 'Europe/Moscow',
+          accountRole: 'client',
+          client: null,
+        },
+        session: { token: 'a'.repeat(43), expiresAt: '2099-01-01T00:00:00.000Z' },
+      },
+      loading: false,
+      error: null,
+      retry: vi.fn().mockResolvedValue(undefined),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    }
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+
+    renderAuth(<YandexActorKindProbe />)
+
+    expect(await screen.findByText('trainer:client')).toBeVisible()
   })
 
   it('reuses the initialized actor for repeated events from the same session', async () => {
