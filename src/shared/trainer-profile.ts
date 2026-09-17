@@ -20,6 +20,11 @@ export const TRAINER_SPECIALTIES = [
   'Другое',
 ] as const
 
+// Ограничивает анкету узким, действительно значимым набором направлений —
+// без лимита список из TRAINER_SPECIALTIES легко выбрать целиком, что для
+// поиска клиента не отличается от пустого фильтра.
+export const TRAINER_SPECIALTIES_MAX = 6
+
 const certificateSchema = z.object({
   title: z.string().trim().min(1).max(120),
   organization: z.string().trim().max(120),
@@ -43,6 +48,11 @@ export const trainerProfileDraftSchema = z.object({
   // Свободные строки на схеме (не z.enum) намеренно: уже опубликованные
   // анкеты со старым свободным текстом не должны падать на parse при чтении.
   // Новые значения в UI ограничены TRAINER_SPECIALTIES чекбоксами.
+  // Максимум здесь — щедрая граница (не 6): схема читает и уже сохранённые
+  // анкеты, а не только новые. Реальный лимит TRAINER_SPECIALTIES_MAX
+  // держит форма (checkbox'ы блокируются) и validatePublishableTrainerProfile
+  // — иначе анкета тренера, успевшего выбрать 7+ направлений до появления
+  // лимита, перестанет читаться вовсе.
   specialties: z.array(z.string().trim().min(1).max(80)).max(TRAINER_SPECIALTIES.length),
   city: z.string().trim().max(100),
   metroStationIds: z.array(z.string().trim().min(1).max(100)).max(20).default([]),
@@ -107,5 +117,9 @@ export function parseTrainerProfileDraft(value: unknown): TrainerProfileDraft {
 
 export function validatePublishableTrainerProfile(draft: TrainerProfileDraft): string | null {
   if (draft.displayName.trim().length < 2) return 'Укажите имя тренера.'
+  // Форма не даёт выбрать больше TRAINER_SPECIALTIES_MAX, но анкета, где
+  // направления выбирались до появления лимита, могла сохранить больше —
+  // ловим это здесь, а не тихо публикуем как есть.
+  if (draft.specialties.length > TRAINER_SPECIALTIES_MAX) return `Оставьте не больше ${TRAINER_SPECIALTIES_MAX} направлений.`
   return null
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emptyTrainerProfileDraft, parseTrainerProfile, validatePublishableTrainerProfile } from './trainer-profile'
+import { emptyTrainerProfileDraft, parseTrainerProfile, TRAINER_SPECIALTIES, TRAINER_SPECIALTIES_MAX, validatePublishableTrainerProfile } from './trainer-profile'
 
 describe('trainer profile', () => {
   it('allows a trainer to publish a profile with only the account name', () => {
@@ -66,6 +66,25 @@ describe('trainer profile', () => {
 
     expect(profile.published).toEqual({ ...legacy, metroStationIds: [], customLocations: [] })
     expect(profile.listedInCatalog).toBe(true)
+  })
+
+  it('still reads a profile that picked more specialties before the six-item limit existed', () => {
+    const legacySpecialties = [...TRAINER_SPECIALTIES].slice(0, TRAINER_SPECIALTIES_MAX + 2)
+    const draft = { ...emptyTrainerProfileDraft('Анна Иванова'), specialties: legacySpecialties }
+    const profile = parseTrainerProfile({
+      publicId: '9190a86f-a191-42d8-912e-a7e0ea0f331d',
+      draft, published: draft, listedInCatalog: false,
+      updatedAt: '2026-09-10T09:37:38.59182+00:00', publishedAt: null, version: 1, isBrandTrainer: false,
+    })
+    expect(profile.draft.specialties).toHaveLength(TRAINER_SPECIALTIES_MAX + 2)
+  })
+
+  it('blocks publishing a profile with more than six specialties', () => {
+    const draft = {
+      ...emptyTrainerProfileDraft('Анна Иванова'),
+      specialties: [...TRAINER_SPECIALTIES].slice(0, TRAINER_SPECIALTIES_MAX + 1),
+    }
+    expect(validatePublishableTrainerProfile(draft)).toBe(`Оставьте не больше ${TRAINER_SPECIALTIES_MAX} направлений.`)
   })
 
   it('recovers a legacy draft with an entirely empty certificate row', () => {

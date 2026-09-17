@@ -5916,11 +5916,14 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-photo-button input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
 .trainer-mode-fields { overflow:hidden; border:1px solid var(--border); border-radius:14px; }
 .trainer-mode-fields .switch-row:first-child { border-top:0; }
+.trainer-specialties-limit-note { margin:6px 0 0; color:var(--warning-fg); font-size:13px; font-weight:700; }
 .trainer-specialties-options { display:grid; gap:2px; margin-top:6px; overflow:hidden; border:1px solid var(--border); border-radius:14px; }
 .trainer-specialty-option { display:flex; align-items:center; gap:10px; min-height:44px; padding:6px 12px; }
 .trainer-specialty-option + .trainer-specialty-option { border-top:1px solid var(--border); }
 .trainer-specialty-option input { flex:0 0 auto; width:18px; height:18px; }
 .trainer-specialty-option span { font-size:14px; line-height:1.35; }
+.trainer-specialty-option.disabled { opacity:.5; }
+.trainer-specialty-option.disabled input { cursor:not-allowed; }
 .trainer-certificates-editor { display:grid; gap:10px; }
 .trainer-certificates-editor > .secondary { min-height:44px; }
 .trainer-certificate-fields { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 94px auto; gap:8px; align-items:center; padding-top:10px; border-top:1px solid var(--border); }
