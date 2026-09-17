@@ -43,7 +43,7 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   await expect(editor.locator('.trainer-profile-fields')).toHaveCount(0)
   await editor.getByLabel('Имя в анкете').fill('Анна Иванова')
   await editor.getByLabel('О себе').fill('Помогаю безопасно начать силовые тренировки, встроить движение в обычную жизнь и видеть понятный прогресс без перегрузки.')
-  await editor.getByText('Направления', { exact: true }).click()
+  await editor.getByText(/^Направления · \d\/6$/).click()
   await editor.getByRole('checkbox', { name: 'Тренажёрный зал / силовой тренинг' }).check()
   await editor.getByRole('checkbox', { name: 'Похудение и коррекция фигуры' }).check()
   await editor.getByRole('switch', { name: 'Онлайн' }).check()
