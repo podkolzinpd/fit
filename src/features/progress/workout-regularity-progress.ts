@@ -83,13 +83,13 @@ function weeksForPeriod(
   const effectiveEnd = minimum(periodEnd, today)
   const weeks: RegularityWeek[] = []
   for (let cursor = mondayStart(periodStart); cursor <= effectiveEnd; cursor = addDays(cursor, 7)) {
-    const start = maximum(cursor, periodStart)
     const bucketEnd = minimum(addDays(cursor, 6), periodEnd)
-    const end = minimum(bucketEnd, effectiveEnd)
-    const workoutCount = dates.filter((date) => date >= start && date <= end).length
+    const countedStart = maximum(cursor, periodStart)
+    const countedEnd = minimum(bucketEnd, effectiveEnd)
+    const workoutCount = dates.filter((date) => date >= countedStart && date <= countedEnd).length
     weeks.push({
-      start,
-      end,
+      start: cursor,
+      end: addDays(cursor, 6),
       workoutCount,
       status: workoutCount > 0 ? 'active' : bucketEnd <= effectiveEnd ? 'missed' : 'current',
     })

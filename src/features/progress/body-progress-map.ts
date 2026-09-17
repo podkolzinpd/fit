@@ -1,5 +1,6 @@
 import type { MuscleGroup, TrainingProgressFactChange, TrainingSummaryMetrics, Workout } from '../../shared/domain'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
+import { resultNumber, workoutResults, type WorkoutResult } from '../../shared/workout-results'
 import { progressFactComparisonLabel } from './progress-facts'
 
 export type BodyMapMode = 'progress' | 'load'
@@ -209,6 +210,73 @@ export function progressBodyMap(summary: BodyProgressSummary): BodyMapData {
       detail: `${fact.exerciseName} · ${progressFactComparisonLabel(change)}`,
     })
     grouped.set(group, current)
+  }
+
+  const regions = [...grouped.entries()]
+    .map(([group, values]) => {
+      const sorted = values.sort((left, right) => right.percent - left.percent)
+      const percent = Math.max(1, Math.round(sorted[0]!.percent))
+      return {
+        group,
+        label: BODY_ZONE_LABELS[group],
+        percent,
+        valueLabel: `+${percent}%`,
+        metricLabel: 'Результат зоны',
+        primaryDetail: sorted[0]!.detail,
+        details: sorted.slice(1).map((value) => value.detail),
+        intensity: Math.min(1, Math.max(.28, percent / 50)),
+      }
+    })
+    .sort((left, right) => right.percent - left.percent)
+
+  return {
+    mode: 'progress',
+    title: 'Где выросли результаты',
+    regions,
+    emptyMessage: 'Сохрани ещё один результат — и здесь появятся первые зоны прогресса.',
+  }
+}
+
+const WORKOUT_RESULT_PRIORITY: Record<WorkoutResult['metric'], number> = {
+  weight: 0,
+  fixed_reps: 1,
+  reps: 2,
+  volume: 3,
+  distance: 4,
+  duration: 5,
+}
+
+function workoutResultDetail(result: WorkoutResult, previous: number): string {
+  const unit = result.metric === 'fixed_reps' || result.metric === 'reps' ? 'повт.' : result.unit
+  const metric = result.metric === 'fixed_reps' && result.fixedWeight !== undefined
+    ? `Повторы при ${resultNumber(result.fixedWeight)} кг`
+    : result.label
+  return `${result.exerciseName} · ${metric}: ${resultNumber(previous)} → ${resultNumber(result.value)} ${unit}`
+}
+
+/** Build the progress layer from recorded workout results, without depending on an AI summary. */
+export function workoutProgressBodyMap(workouts: readonly Workout[], periodStart: string, periodEnd: string): BodyMapData {
+  const strongestByExercise = new Map<string, { result: WorkoutResult; previous: number; percent: number }>()
+  for (const result of workoutResults(workouts)) {
+    if (result.workout.workoutDate < periodStart || result.workout.workoutDate > periodEnd) continue
+    if (result.state !== 'record' || !result.previousBest || result.previousBest.value <= 0) continue
+    const percent = ((result.value - result.previousBest.value) / result.previousBest.value) * 100
+    if (!Number.isFinite(percent) || percent <= 0) continue
+    const current = strongestByExercise.get(result.exerciseKey)
+    if (!current
+      || WORKOUT_RESULT_PRIORITY[result.metric] < WORKOUT_RESULT_PRIORITY[current.result.metric]
+      || (WORKOUT_RESULT_PRIORITY[result.metric] === WORKOUT_RESULT_PRIORITY[current.result.metric] && percent > current.percent)) {
+      strongestByExercise.set(result.exerciseKey, { result, previous: result.previousBest.value, percent })
+    }
+  }
+
+  const grouped = new Map<BodyMapZone, Array<{ percent: number; detail: string }>>()
+  for (const { result, previous, percent } of strongestByExercise.values()) {
+    const group = bodyZoneForExerciseName(result.exerciseName)
+    if (!group) continue
+    const values = grouped.get(group) ?? []
+    values.push({ percent, detail: workoutResultDetail(result, previous) })
+    grouped.set(group, values)
   }
 
   const regions = [...grouped.entries()]
