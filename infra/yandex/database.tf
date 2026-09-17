@@ -9,7 +9,17 @@ resource "yandex_mdb_postgresql_cluster_v2" "fit" {
   labels              = local.labels
 
   config {
-    version = var.postgres_version
+    version                   = var.postgres_version
+    backup_retain_period_days = var.postgres_backup_retain_period_days
+
+    dynamic "backup_window_start" {
+      for_each = var.postgres_backup_window_start == null ? [] : [var.postgres_backup_window_start]
+
+      content {
+        hours   = backup_window_start.value.hours
+        minutes = backup_window_start.value.minutes
+      }
+    }
 
     resources {
       resource_preset_id = var.postgres_resource_preset_id

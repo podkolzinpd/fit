@@ -397,6 +397,81 @@ describe('Yandex Terraform plan policy', () => {
     )
   })
 
+  test('allows only the exact 14-day backup hardening on the existing database', () => {
+    const accepted = runPolicy(
+      [{
+        address: 'yandex_mdb_postgresql_cluster_v2.fit',
+        change: {
+          actions: ['update'],
+          before: {
+            name: 'fit-stage-postgres',
+            config: {
+              version: 17,
+              backup_retain_period_days: 7,
+              backup_window_start: { hours: 1, minutes: 0 },
+              resources: { disk_size: 10 },
+            },
+          },
+          after: {
+            name: 'fit-stage-postgres',
+            config: {
+              version: 17,
+              backup_retain_period_days: 14,
+              backup_window_start: { hours: 0, minutes: 30 },
+              resources: { disk_size: 10 },
+            },
+          },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+    const piggybackResize = runPolicy(
+      [{
+        address: 'yandex_mdb_postgresql_cluster_v2.fit',
+        change: {
+          actions: ['update'],
+          before: {
+            config: [{
+              backup_retain_period_days: 7,
+              backup_window_start: [{ hours: 1, minutes: 0 }],
+              resources: [{ disk_size: 10 }],
+            }],
+          },
+          after: {
+            config: [{
+              backup_retain_period_days: 14,
+              backup_window_start: [{ hours: 0, minutes: 30 }],
+              resources: [{ disk_size: 20 }],
+            }],
+          },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+    const excessiveRetention = runPolicy(
+      [{
+        address: 'yandex_mdb_postgresql_cluster_v2.fit',
+        change: {
+          actions: ['update'],
+          before: {
+            config: { backup_retain_period_days: 7 },
+          },
+          after: {
+            config: {
+              backup_retain_period_days: 30,
+              backup_window_start: { hours: 0, minutes: 30 },
+            },
+          },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(accepted.status, 0)
+    assert.notEqual(piggybackResize.status, 0)
+    assert.notEqual(excessiveRetention.status, 0)
+  })
+
   test('allows only removing the stage database public IP automatically', () => {
     const privateOnly = runPolicy(
       [{
