@@ -46,6 +46,7 @@ describe('assistant nav pilot flag', () => {
     vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', '')
     expect(isAssistantNavPilotEnabled('trainer-1', 'first@example.test')).toBe(true)
     expect(isAssistantNavPilotEnabled('trainer-2', 'second@example.test')).toBe(true)
+    expect(isAssistantNavPilotEnabled('client-1', 'client@example.test')).toBe(true)
     vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'false')
     expect(isAssistantNavPilotEnabled('trainer-1', 'first@example.test')).toBe(false)
   })

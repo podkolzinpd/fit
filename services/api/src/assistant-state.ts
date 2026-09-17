@@ -106,7 +106,11 @@ function mappedError(error: unknown): AssistantStateError | undefined {
     return undefined
   }
   const message = error.message
-  if (message === 'assistant_trainer_required') {
+  if (
+    message === 'assistant_trainer_required'
+    || message === 'assistant_action_forbidden'
+    || message === 'assistant_client_card_required'
+  ) {
     return new AssistantStateError('forbidden')
   }
   if (
