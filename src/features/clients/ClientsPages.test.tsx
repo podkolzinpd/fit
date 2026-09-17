@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Client, ProgressEntry, SessionActor } from '../../shared/domain'
+import { localDate } from '../../shared/local-date'
 import { MyClientEditPage } from './ClientsPages'
 
 const repository = vi.hoisted(() => ({
@@ -31,7 +32,7 @@ vi.mock('../../app/data-backend-context', () => ({
 
 const client: Client = {
   id: 'client-1', hasAccount: true, fullName: 'Анна Иванова', canonicalFullName: 'Анна Иванова',
-  gender: 'female', ageYears: 28, ageUpdatedAt: '2026-09-01', heightCm: 168,
+  gender: 'female', ageYears: 28, ageUpdatedAt: localDate('2026-09-01'), heightCm: 168,
   goal: null, note: null, currentWeightKg: null, archivedAt: null, version: 1, membershipVersion: null,
 }
 
@@ -65,7 +66,7 @@ describe('MyClientEditPage', () => {
   })
 
   it('hides the initial weight field once the client already has a measurement', async () => {
-    const entry: ProgressEntry = { id: 'p1', clientId: 'client-1', createdBy: 'client-1', recordedOn: '2026-09-10', weightKg: 70, customMetrics: [], version: 1 }
+    const entry: ProgressEntry = { id: 'p1', clientId: 'client-1', createdBy: 'client-1', recordedOn: localDate('2026-09-10'), weightKg: 70, customMetrics: [], version: 1 }
     progress.list.mockResolvedValue([entry])
     const user = userEvent.setup()
     renderPage()
