@@ -194,27 +194,40 @@ for (const role of ['trainer', 'client'] as const) {
   })
 }
 
-test('client: finished rest stays visible in the pinned Live toolbar', async ({ page }, testInfo) => {
+test('client: rest picker uses minute and second wheels and keeps overdue time visible', async ({ page }, testInfo) => {
   const state = await mockNavigationWorkouts(page)
   state.status = 'in_progress'
   state.setConfirmed = false
   await loginForHistory(page, 'client')
   await page.goto(`${detailPath}/live`)
-  await dismissVisibleHints(page)
+  await expect(page.getByRole('button', { name: 'Таймер отдыха', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
 
   await page.getByRole('button', { name: 'Таймер отдыха', exact: true }).click()
-  await page.getByLabel('Время отдыха, сек').fill('1')
-  await page.getByRole('button', { name: 'Начать отдых' }).click()
-  await page.clock.fastForward(1_500)
-
-  const finished = page.getByRole('button', { name: 'Отдых завершён', exact: true })
-  await expect(finished).toBeVisible()
-  await expect(finished).toHaveClass(/rest-finished/)
+  await expect(page.getByRole('listbox', { name: 'минуты' })).toBeVisible()
+  await expect(page.getByRole('listbox', { name: 'секунды' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '1:30' })).toBeVisible()
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: 932 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-    await page.screenshot({ path: testInfo.outputPath(`client-rest-finished-${width}.png`), fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath(`client-rest-picker-${width}.png`), fullPage: true })
   }
+  await page.getByRole('option', { name: '00 минуты' }).click()
+  await page.getByRole('option', { name: '01 секунды' }).click()
+  await page.getByRole('button', { name: 'Начать отдых' }).click()
+  await page.clock.fastForward(2_100)
+
+  const overdue = page.getByRole('button', { name: 'Отдых превышен на 0:01', exact: true })
+  await expect(overdue).toBeVisible()
+  await expect(overdue).toHaveText(/Отдых −0:01/)
+  await expect(overdue).toHaveClass(/rest-overdue/)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 932 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`client-rest-overdue-${width}.png`), fullPage: true })
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(overdue).toHaveCSS('animation-name', 'none')
 })
 
 test('client: unfinished Live workout reminds once after twenty minutes of inactivity', async ({ page }, testInfo) => {

@@ -5804,11 +5804,26 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-timer-toolbar .coachmark-anchor, .live-timer-toolbar .live-rest-trigger { width: 100%; }
 .live-rest-sheet { display: grid; gap: 16px; }
 .live-rest-sheet button { min-height: 48px; }
-.live-rest-sheet input { min-height: 48px; font-size: 16px; }
 .live-rest-sheet .picker-close { width: 48px; height: 48px; }
 .live-rest-sheet .rest-controls { display: flex; flex-wrap: wrap; gap: 8px; }
 .live-rest-sheet .rest-controls > button { flex: 1; }
 .live-rest-countdown { margin: 0; text-align: center; font-size: 40px; font-variant-numeric: tabular-nums; }
+.live-rest-countdown.overdue { color:var(--danger); }
+.live-rest-divider { border-top:1px solid var(--border); }
+.live-rest-new-time { font-size:var(--type-body-size); text-align:center; }
+.rest-time-picker { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:end; gap:8px; }
+.rest-time-wheel-field { min-width:0; display:grid; gap:8px; }
+.rest-time-wheel-field > span { color:var(--secondary-label-fg); font-size:var(--type-caption-size); font-weight:var(--weight-medium); text-align:center; }
+.rest-time-wheel { height:220px; overflow-y:auto; overscroll-behavior:contain; scroll-snap-type:y mandatory; scrollbar-width:none; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken); font-variant-numeric:tabular-nums; touch-action:pan-y; }
+.rest-time-wheel::-webkit-scrollbar { display:none; }
+.rest-time-wheel:focus-visible { outline:2px solid var(--fg); outline-offset:2px; }
+.rest-time-wheel-spacer { height:88px; }
+.rest-time-wheel [role='option'] { height:44px; display:grid; place-items:center; scroll-snap-align:center; color:var(--muted); font-size:18px; font-weight:var(--weight-medium); cursor:pointer; user-select:none; }
+.rest-time-wheel [role='option'].selected { border-block:1px solid var(--border); background:var(--surface-raised); color:var(--fg); font-weight:var(--weight-semibold); }
+.rest-time-wheel-field.disabled .rest-time-wheel { overflow:hidden; }
+.rest-time-separator { align-self:center; margin-top:20px; font-size:24px; font-weight:var(--weight-semibold); }
+.live-rest-sheet .rest-presets { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
+.live-rest-sheet .rest-presets > button { min-width:0; padding-inline:6px; }
 .live-set-plan-caption { display: block; min-height: 20px; padding-left: 32px; color: var(--secondary-label-fg); font-size: 12px; }
 .live-exercise-rest-row { min-height:44px; display:flex; justify-content:flex-end; }
 .live-exercise-note:not([open]) .live-note-preview { display:inline; min-width:0; margin-left:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -5825,7 +5840,12 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-trainer-cue { color: var(--secondary-label-fg); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .live-identity .live-previous-result { min-height: 20px; }
 .live-rest-trigger.resting { color: var(--warning-fg); }
-.live-rest-trigger.rest-finished { border-color:var(--success-border); background:var(--success-surface); color:var(--success-fg); }
+.live-rest-trigger.rest-overdue { border-color:var(--danger-border); background:var(--danger-surface); color:var(--danger); animation:live-rest-overdue-pulse 1s ease-in-out infinite; }
+@keyframes live-rest-overdue-pulse {
+  0%, 100% { border-color:var(--danger-border); background:var(--danger-surface); }
+  50% { border-color:var(--danger); background:color-mix(in srgb, var(--danger) 14%, var(--danger-surface)); }
+}
+@media (prefers-reduced-motion:reduce) { .live-rest-trigger.rest-overdue { animation:none; } }
 .live-identity .live-workout-page .live-set-table > .live-set,
 .live-identity .live-workout-page .circuit-round .live-set { border:0; }
 .live-identity .live-workout-page .live-set-table > .live-set + .live-set,
