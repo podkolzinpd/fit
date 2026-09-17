@@ -82,18 +82,35 @@ export function ClientFormPage() {
 }
 
 export function MyClientEditPage() {
-  const { clients: clientsRepository } = useDataBackend()
+  const { clients: clientsRepository, progress: progressRepository } = useDataBackend()
   const navigate = useNavigate(); const queryClient = useQueryClient()
   const { actor, refresh } = useAuth()
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   useClientRealtime(query.data?.id)
   const initialFullName = [actor?.firstName, actor?.lastName].filter(Boolean).join(' ').trim()
-  return <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
-    {!query.isLoading && <ClientForm existing={query.data ?? undefined} initialFullName={initialFullName} createMode="self" onSaved={async () => {
-      await queryClient.invalidateQueries({ queryKey: ['my-client'] })
-      await refresh()
-      navigate('/me')
-    }} onCancel={() => navigate(query.data ? '/me/profile' : '/me')} />}
+  // "Начальный вес" — не отдельная колонка, а первая запись в client_progress
+  // (см. create_own_client). Для уже существующей карточки предлагаем это
+  // поле только пока замеров ещё не было — иначе непонятно, что оно перезапишет.
+  const progressEntries = useQuery({
+    queryKey: ['progress', query.data?.id],
+    queryFn: () => progressRepository.list(query.data!.id),
+    enabled: Boolean(query.data),
+  })
+  const stillResolvingWeightEligibility = Boolean(query.data) && progressEntries.isLoading
+  return <AsyncView loading={query.isLoading || stillResolvingWeightEligibility} error={query.error} onRetry={() => void query.refetch()}>
+    {!query.isLoading && !stillResolvingWeightEligibility && <ClientForm
+      existing={query.data ?? undefined}
+      initialFullName={initialFullName}
+      createMode="self"
+      canRecordInitialWeight={Boolean(query.data) && (progressEntries.data?.length ?? 0) === 0}
+      onSaved={async () => {
+        await queryClient.invalidateQueries({ queryKey: ['my-client'] })
+        await queryClient.invalidateQueries({ queryKey: ['progress', query.data?.id] })
+        await refresh()
+        navigate('/me')
+      }}
+      onCancel={() => navigate(query.data ? '/me/profile' : '/me')}
+    />}
   </AsyncView>
 }
 
@@ -101,6 +118,7 @@ function ClientForm({
   existing,
   initialFullName,
   createMode = 'trainer',
+  canRecordInitialWeight = false,
   embedded = false,
   onSaved,
   onCancel,
@@ -108,13 +126,15 @@ function ClientForm({
   existing?: Client
   initialFullName?: string
   createMode?: 'trainer' | 'self'
+  canRecordInitialWeight?: boolean
   embedded?: boolean
   onSaved: (id: string) => Promise<void>
   onCancel?: () => void
 }) {
-  const { clients: clientsRepository } = useDataBackend()
+  const { clients: clientsRepository, progress: progressRepository } = useDataBackend()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
+  const showInitialWeight = !existing || canRecordInitialWeight
   const form = useForm<ClientProfileValues>({ resolver: zodResolver(clientProfileSchema), defaultValues: existing ? {
     fullName: existing.fullName, gender: existing.gender ?? undefined, ageYears: existing.ageYears ?? undefined, heightCm: existing.heightCm ?? undefined,
     goal: existing.goal ?? '', note: existing.note ?? '', alias: existing.fullName, privateNote: existing.note ?? '',
@@ -125,7 +145,12 @@ function ClientForm({
       const input = { id: existing.id, version: existing.version, fullName: parsed.fullName,
         gender: parsed.gender as Gender, ageYears: parsed.ageYears, ageUpdatedAt: existing.ageUpdatedAt ?? today,
         heightCm: parsed.heightCm, goal: parsed.goal, note: parsed.note }
-      if (createMode === 'self') await clientsRepository.updateOwn(input)
+      if (createMode === 'self') {
+        await clientsRepository.updateOwn(input)
+        if (canRecordInitialWeight && parsed.initialWeightKg !== undefined) {
+          await progressRepository.save({ clientId: existing.id, recordedOn: today, weightKg: parsed.initialWeightKg, customMetrics: [] })
+        }
+      }
       else {
         await clientsRepository.update(input)
         const alias = values.alias.trim() === existing.fullName && existing.fullName === existing.canonicalFullName
@@ -150,7 +175,7 @@ function ClientForm({
         <Field label="Имя" error={form.formState.errors.fullName?.message}><input {...form.register('fullName')} /></Field>
         <Field label="Пол"><select {...form.register('gender')}><option value="">Выберите</option><option value="female">Женский</option><option value="male">Мужской</option></select></Field>
         <div className="split"><Field label="Возраст"><input type="number" {...form.register('ageYears')} /></Field><Field label="Рост, см"><input type="number" step="0.1" {...form.register('heightCm')} /></Field></div>
-        {!existing && <Field label="Начальный вес, кг" error={form.formState.errors.initialWeightKg?.message}><input type="number" step="0.1" {...form.register('initialWeightKg', { setValueAs: (value: unknown) => value === '' ? undefined : Number(value) })} /></Field>}
+        {showInitialWeight && <Field label="Начальный вес, кг" error={form.formState.errors.initialWeightKg?.message}><input type="number" step="0.1" {...form.register('initialWeightKg', { setValueAs: (value: unknown) => value === '' ? undefined : Number(value) })} /></Field>}
         <Field label="Цель"><textarea {...form.register('goal')} /></Field>
         {createMode === 'trainer' && <Controller
           control={form.control}
