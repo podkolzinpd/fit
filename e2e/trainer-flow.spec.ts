@@ -317,7 +317,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: 'Плюс 15 секунд' }).click()
   await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых 1:3\d/ })).toBeVisible()
   if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click()
-  await page.getByRole('button', { name: 'Пропустить' }).click()
+  await page.getByRole('button', { name: 'Остановить отдых' }).click()
   await page.getByRole('button', { name: '＋ Подход' }).click()
   // Дождаться, пока добавленный подход подтянется (refetch завершён и version
   // актуальна), иначе следующая правка ловит конфликт оптимистичной блокировки.
@@ -815,7 +815,7 @@ test('план: два упражнения объединяются в круг
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toHaveCount(1)
   await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых/ })).toBeVisible()
   if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click()
-  await page.getByRole('button', { name: 'Пропустить' }).click()
+  await page.getByRole('button', { name: 'Остановить отдых' }).click()
   // Второе (последнее) упражнение круга 1 — круг завершён, отдых запускается,
   // счётчик переключается на «Круг 2 из 2».
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
@@ -828,7 +828,7 @@ test('план: два упражнения объединяются в круг
   // Круг 2: упр.A → отдыха нет; упр.B — последнее упражнение последнего круга,
   // блок завершён → отдых НЕ запускается (регресс: раньше запускался лишний).
   if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click()
-  await page.getByRole('button', { name: 'Пропустить' }).click()
+  await page.getByRole('button', { name: 'Остановить отдых' }).click()
   // Берём кнопки именно из текущего круга. На странице остаются disabled-кнопки
   // уже завершённого круга, поэтому глобальный `.first()` иногда выбирал их,
   // а клик уходил в закреплённую нижнюю панель.

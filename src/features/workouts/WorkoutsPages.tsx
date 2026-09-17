@@ -10,6 +10,7 @@ import { restDeadline, restoreRestDeadline, storeRestDeadline } from './rest-tim
 import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { LiveRestTimer } from './LiveRestTimer'
+import { cancelNativeRestTimerNotification, scheduleNativeRestTimerNotification } from './rest-timer-notification'
 import { LiveExerciseRest, readLiveRestOverrides } from './LiveExerciseRest'
 import {
   addDays, currentTimeInTimeZone, dayOfMonth, formatLocalDate, formatMonth, localDate, todayInTimeZone, weekdayShort,
@@ -40,6 +41,7 @@ import { useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { useRpeDisplay } from '../../app/rpe-display'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { isWearablesPilotEnabled } from '../../app/feature-flags'
+import { prepareGong } from '../../shared/gong'
 import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
 import { plannedWorkoutActionLabels } from './workout-entry-rules'
 import { WorkoutSetTable } from './WorkoutSetTable'
@@ -1913,6 +1915,8 @@ export function LiveWorkoutPage() {
     setRestEndsAt(endsAt)
     storeRestDeadline(workoutId, endsAt)
     inactivityReminder.noteActivity(endsAt)
+    if (endsAt !== null && endsAt > Date.now()) void scheduleNativeRestTimerNotification(workoutId, endsAt)
+    else void cancelNativeRestTimerNotification(workoutId)
   }
   function stopRest() {
     startRestUntil(null)
@@ -2028,6 +2032,7 @@ export function LiveWorkoutPage() {
   }, onSuccess: async () => {
     const clientId = query.data?.clientId
     if (actor?.userId) clearPendingLiveSetDrafts(actor.userId, workoutId)
+    stopRest()
     if (actor?.userId) clearWorkoutInactivityReminder(actor.userId, workoutId)
     // Освежаем не только саму тренировку, но и статистику клиента и списки
     // тренировок (карточка, история, расписание), иначе кол-во/% выполнения
@@ -2138,8 +2143,8 @@ export function LiveWorkoutPage() {
                 onClick={(event) => { const form = event.currentTarget.form; if (form) persistLiveDraft(set, draftFrom(form), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>
             : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}><span aria-hidden="true">✓</span></button>
             : <button type="button" className="live-set-check" aria-label={confirmLabel} disabled={confirm.isPending}
-                onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
-                onClick={(event) => { liveSetAutosave.clear(set.id); const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>}
+                onPointerDown={() => { prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
+                onClick={(event) => { prepareGong(); liveSetAutosave.clear(set.id); const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>}
         </div>
       </WorkoutSetRow>
       <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} /></div>
@@ -2174,8 +2179,8 @@ export function LiveWorkoutPage() {
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <div className="live-pinned">
           <div className="live-timer-toolbar"><WorkoutTimer startedAt={query.data.startedAt ?? null} />
-            <Coachmark id="live-timer-2026-09" userId={actor?.userId} title="Отдых — в кнопке таймера" description="Нажмите, чтобы запустить отдых, добавить время или пропустить его. Подходы можно заполнять прямо в таблице.">
-              <LiveRestTimer deadline={restEndsAt} completedSetCount={sessionProgress.completedSetCount} onChange={startRestUntil} />
+            <Coachmark id="live-timer-2026-09" userId={actor?.userId} title="Отдых — в кнопке таймера" description="Нажмите, чтобы запустить отдых, добавить время или остановить его. Подходы можно заполнять прямо в таблице.">
+              <LiveRestTimer workoutId={workoutId} deadline={restEndsAt} onChange={startRestUntil} />
             </Coachmark>
           </div>
           {activeCircuit && circuitRounds && <div className="circuit-head pinned">

@@ -1760,7 +1760,7 @@ test('client Live keeps row geometry, notes and timer independent', async ({ pag
   await expect(page.getByRole('dialog', { name: 'Таймер отдыха' })).toBeVisible()
   await expectMonochromeAccessibility(page)
   await page.screenshot({ path: testInfo.outputPath('live-timer-sheet-390.png') })
-  await page.getByRole('button', { name: 'Пропустить', exact: true }).click()
+  await page.getByRole('button', { name: 'Остановить отдых', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Таймер отдыха', exact: true })).toBeVisible()
   const firstAction = rows.first().getByRole('button', { name: 'Редактировать подход' })
   const secondAction = rows.nth(1).getByRole('button', { name: 'Готово, отдых' })
