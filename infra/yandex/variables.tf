@@ -9,7 +9,7 @@ variable "cloud_id" {
 }
 
 variable "folder_id" {
-  description = "Yandex Cloud folder ID for the selected environment."
+  description = "Yandex Cloud folder ID for the stage environment."
   type        = string
 
   validation {
@@ -63,7 +63,7 @@ variable "media_s3_credentials_override" {
 }
 
 variable "zone" {
-  description = "Primary availability zone for PostgreSQL and Serverless Containers connectivity."
+  description = "Availability zone for the MVP PostgreSQL host and subnet."
   type        = string
   default     = "ru-central1-d"
 }
@@ -72,11 +72,6 @@ variable "subnet_cidr" {
   description = "Private subnet CIDR shared by PostgreSQL and Serverless Containers connectivity."
   type        = string
   default     = "10.42.0.0/24"
-
-  validation {
-    condition     = can(cidrnetmask(var.subnet_cidr))
-    error_message = "subnet_cidr must be a valid IPv4 CIDR."
-  }
 }
 
 variable "serverless_service_cidr" {
@@ -164,20 +159,6 @@ variable "migration_image_tag" {
   description = "Candidate image tag deployed to the migration runner before the API revision."
   type        = string
   default     = "foundation"
-}
-
-variable "migration_execution_timeout" {
-  description = "Maximum private migration-container request duration. Production full-cohort migration may need up to 30 minutes."
-  type        = string
-  default     = "300s"
-
-  validation {
-    condition = (
-      can(regex("^[1-9][0-9]*s$", var.migration_execution_timeout))
-      && tonumber(trimsuffix(var.migration_execution_timeout, "s")) <= 3600
-    )
-    error_message = "migration_execution_timeout must be a positive whole number of seconds up to 3600s."
-  }
 }
 
 variable "api_memory_mb" {

@@ -146,12 +146,13 @@
   доставляются автоматически через GitHub OIDC, private runner и forward-only
   policy; `fit_api` не имеет прямых domain grants, а private push timer создаётся
   только после отдельного cost approval и health-check точной ревизии.
-- `main` готовит отдельный manual-only production bootstrap на существующем
-  Terraform stack: state `fit/prod`, один private PostgreSQL host, 20 GB,
-  deletion protection, 14 дней managed backup/PITR и private API/migration
-  containers. Bootstrap не запущен, не создаёт public route, не переносит tenant
-  data и не переключает пользователей. Контракт:
-  `docs/YANDEX_PRODUCTION_PLATFORM.md`.
+- Отдельный production-кластер не создаётся: существующий Yandex stack в state
+  `fit/stage` готовится стать production data plane. Текущие один private
+  PostgreSQL host, 10 GB disk, API/migration containers, Lockbox и Object Storage
+  переиспользуются. Terraform задаёт базе 14 дней backup retention с окном
+  `00:30 UTC`; policy разрешает только это in-place изменение и блокирует второй
+  cluster, resize, delete/replace и public IP. Routing, tenant data и пользователи
+  этим этапом не переключаются. Контракт: `docs/YANDEX_PRODUCTION_PLATFORM.md`.
 - Ограниченный Yandex ID pilot и доменная цепочка представлены в `000001–000027`:
   `000026` добавляет actor-scoped Assistant state, `000027` — безопасное linking
   FIT-профиля с Yandex ID и read-write app-session только через явный

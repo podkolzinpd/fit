@@ -265,28 +265,23 @@ Queue по умолчанию — `YAFIT`; заголовок организац
 `app_feedback_tracker_org_header="X-Cloud-Org-ID"`. Секреты нельзя добавлять в
 GitHub/Vercel variables, `.env`, команды или логи.
 
-## Минимальный Yandex production bootstrap
+## Подготовка существующего Yandex-контура к production
 
-`Provision Yandex production platform` использует существующие repository
-variables `YC_CLOUD_ID`, `YC_FOLDER_ID`, `YC_DEPLOY_SA_ID`,
-`YC_TFSTATE_BUCKET` и state S3 secrets. Отдельные production credentials в GitHub
-не добавляются: Managed PostgreSQL генерирует пароли в Connection Manager, а
-runtime получает только version-pinned Lockbox mounts.
+Отдельный `fit-prod` stack не создаётся. Текущий контур остаётся в state
+`fit/stage/terraform.tfstate` и после завершения auth/data cutover становится
+production data plane. Имена ресурсов не переименовываются, чтобы не допустить
+их replacement.
 
-Сначала запустите workflow с `plan_only=true`. Apply разрешён только отдельным
-manual run с:
+Workflow `Deploy Yandex stage` задаёт существующему Managed PostgreSQL 14 дней
+backup retention и окно `00:30 UTC`. Automatic plan policy разрешает только это
+точное in-place изменение: второй cluster, resize, новый host, public IP,
+delete/replace и любые сопутствующие изменения database config остаются
+заблокированы. Диск остаётся 10 GB, topology — один private host.
 
-```text
-plan_only=false
-confirmation=PROVISION_FIT_YANDEX_PRODUCTION
-```
-
-State key — только `fit/prod/terraform.tfstate`; stage state не читается и не
-изменяется. Bootstrap создаёт private production DB/API/migration resources и
-проверяет schema, health, readiness, отсутствие public IP, deletion protection
-и 14-дневный backup retention. Он не включает production routing, tenant apply,
-push timer и public API binding. Полный ресурсный профиль, alerts и restore
-checklist: `docs/YANDEX_PRODUCTION_PLATFORM.md`.
+Этот этап не переключает routing, не переносит данные и не отключает Supabase.
+Проверка восстановления в отдельный временный cluster выполняется перед
+финальным cutover и не запускается автоматически, потому что временно создаёт
+платный ресурс. Полный контракт: `docs/YANDEX_PRODUCTION_PLATFORM.md`.
 
 ## GitHub Secrets
 

@@ -1,106 +1,75 @@
-# Минимальный production-контур в Yandex Cloud
+# Перевод существующего Yandex-контура в production
 
-## Результат
+## Решение
 
-Fit получает чистое production-окружение на уже проверенном Yandex Terraform
-stack. Оно изолировано от stage отдельным remote state и именами `fit-prod-*`,
-но намеренно не добавляет инфраструктуру, которая не нужна продукту примерно до
-1 000 пользователей.
+Отдельный production-кластер не создаётся. Для текущего масштаба Fit использует
+уже развёрнутый контур `fit-stage` как будущий production data plane:
 
-Создание платформы само по себе не переносит данные, не делает API публичным,
-не включает Yandex routing и не меняет текущий production Supabase.
+- существующий Terraform state `fit/stage/terraform.tfstate`;
+- существующий private Managed PostgreSQL 17 с одним host;
+- существующие API, migration runner, Lockbox, Object Storage и Container
+  Registry;
+- текущий диск 10 GB без автоматического увеличения;
+- deletion protection остаётся включённой;
+- резервные копии хранятся 14 дней, ежедневное окно начинается в `00:30 UTC`.
 
-## Профиль ресурсов
+Имя `stage` пока сохраняется в ресурсах и state: переименование не даёт
+пользовательской ценности, но создаёт риск замены работающих ресурсов. Оно не
+определяет, какие пользователи направляются в Yandex — routing управляется
+отдельными server-side assignments и frontend kill switch.
 
-- отдельный Terraform state `fit/prod/terraform.tfstate`;
-- существующий Yandex cloud/folder и OIDC deploy identity;
-- один private Managed PostgreSQL 17 host `s3-c2-m8` без публичного IP;
-- 20 GB network SSD и deletion protection;
-- ежедневный managed backup с окном `00:30 UTC`;
-- 14 дней automatic backup/PITR retention;
-- отдельные `fit_owner` и `fit_api` credentials через Connection Manager;
-- private API и private migration Serverless Containers;
-- zero provisioned instances: контейнеры оплачиваются только при вызовах;
-- private versioned Object Storage для новых медиа; старые Supabase objects этим
-  bootstrap не копируются;
-- существующие Container Registry, Lockbox и immutable image conventions.
+## Что изменяет этот этап
 
-Один host — осознанный MVP-компромисс. Во время обслуживания или отказа host
-приложение может быть недоступно. Второй host добавляется только после фактической
-потребности в SLA; схема данных и приложение для этого не меняются.
+Обычный workflow `Deploy Yandex stage` применяет к существующей базе только
+настройки backup retention и backup window. Terraform plan policy разрешает
+автоматически ровно это in-place изменение:
 
-## Provisioning workflow
+- адрес ресурса должен быть только `yandex_mdb_postgresql_cluster_v2.fit`;
+- действие — только `update`;
+- retention после изменения — ровно 14 дней;
+- backup window — ровно `00:30 UTC`;
+- все остальные поля `config`, включая размер диска и compute preset, должны
+  остаться побайтно эквивалентными в Terraform plan.
 
-Workflow `.github/workflows/provision-yandex-production.yml` запускается только
-вручную и single-flight.
+Создание второго PostgreSQL, resize, новый host, public IP, удаление или
+replacement по-прежнему блокируются policy.
 
-Первый запуск:
+## Стоимость и доступность
 
-1. `plan_only=true`;
-2. проверить список создаваемых ресурсов и отсутствие delete/replace;
-3. убедиться, что план содержит ровно один PostgreSQL host;
-4. сохранить plan summary в журнале запуска; сам `.tfplan` не публикуется как
-   artifact.
+Новые постоянно оплачиваемые ресурсы не создаются. Возможна только небольшая
+прибавка за хранение дополнительных backup-данных между прежним и 14-дневным
+окном. Точный счёт зависит от фактического объёма и тарифа Yandex Cloud.
 
-Apply требует отдельного запуска:
+Один host остаётся осознанным компромиссом для масштаба до примерно 1 000
+пользователей. Во время обслуживания или отказа host приложение может быть
+временно недоступно. HA replica добавляется только по фактическим требованиям к
+SLA, без изменения прикладной схемы.
 
-```text
-plan_only=false
-confirmation=PROVISION_FIT_YANDEX_PRODUCTION
-```
+## Проверка после применения
 
-Workflow применяет только узкий production platform target, собирает один
-immutable API image, создаёт private API/migration containers, применяет
-numbered Yandex migrations через private runner и проверяет `/health`, `/ready`,
-private network, deletion protection и 14-дневный backup retention.
+В run `Deploy Yandex stage` необходимо проверить:
 
-Workflow не создаёт push timer, не включает `system:allUsers`, не выдаёт
-rollout assignments и не вызывает tenant data apply.
+1. Terraform plan не содержит create, delete или replace PostgreSQL-ресурса.
+2. После apply второй plan является no-op для базы.
+3. `/health` и `/ready` существующего API проходят штатную проверку workflow.
+4. В Yandex Cloud последний автоматический backup появляется не позднее суток,
+   retention равен 14 дням, а у PostgreSQL остаётся один private host.
 
-## Мониторинг
+Проверка восстановления выполняется только перед окончательным cutover: backup
+восстанавливается во временный private cluster, проверяются схема и агрегированные
+counts без вывода PII, затем временный cluster удаляется. Такой restore drill
+создаёт временный платный ресурс и не запускается этим PR автоматически.
 
-Для текущего масштаба используется встроенный Yandex Monitoring, без отдельного
-observability stack. Перед data cutover оператор создаёт alerts из service
-dashboards:
+## Что пока не меняется
 
-| Сигнал | Warning | Alarm |
-| --- | --- | --- |
-| `postgres-is_alive` | — | меньше `1` или no data |
-| `disk.used_bytes` для 20 GiB | `17 179 869 184` bytes | `19 327 352 832` bytes |
-| `serverless.containers.errors_per_second` для API | больше `0` пять минут | устойчивый рост десять минут |
-| API synthetic `/health` и `/ready` | один сбой | три последовательных сбоя |
+- production-пользователи не переключаются на Yandex;
+- tenant/full-cohort данные не загружаются повторно;
+- stage fixtures и миграционные endpoints не удаляются до завершения cutover;
+- Yandex ID-only регистрация не включается;
+- Supabase не отключается;
+- старые media objects не копируются;
+- текущие API/container/storage ресурсы не дублируются.
 
-В single-host topology replication-lag alert не нужен. Он становится
-обязательным одновременно с добавлением replica.
-
-Ни alert, ни health-check не должны включать UUID, пользовательские данные,
-токены или тела ошибок.
-
-## Backup и восстановление
-
-Managed PostgreSQL ежедневно создаёт backups и поддерживает point-in-time
-recovery в пределах 14-дневного окна. Восстановление всегда выполняется в новый
-временный cluster, а не поверх production.
-
-Проверка перед первым cutover:
-
-1. убедиться, что последний backup завершён не более 24 часов назад;
-2. восстановить его в отдельный private cluster;
-3. применить только необходимые forward migrations;
-4. проверить количество таблиц и агрегированные counts без чтения PII в CI;
-5. удалить временный cluster после фиксации результата проверки.
-
-Автоматическое удаление production cluster запрещено Terraform plan policy даже
-при ручном override.
-
-## Не входит в bootstrap
-
-- перенос Supabase tenant/full-cohort данных;
-- Yandex ID-only регистрация;
-- public API invocation и frontend routing;
-- push dispatcher/timer;
-- перенос старых media objects;
-- отключение Supabase;
-- HA replica и multi-zone topology.
-
-Эти изменения выполняются только после отдельного parity/data/auth gate.
+Финальное переключение выполняется отдельным релизным этапом после auth, legal и
+functional parity gates. После него названия `fit-stage-*` могут оставаться как
+техническое наследие: менять их ради косметики не требуется.
