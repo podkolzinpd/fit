@@ -2,4 +2,5 @@ export { AuthPage, ForgotPasswordPage, ResetPasswordPage, AuthCallbackPage, Yand
 export { JoinPage } from './JoinPage'
 export { LogoutButton } from './LogoutButton'
 export { YandexAccountLinkingCard } from './YandexAccountLinkingCard'
+export { YandexAccountLinkRequiredGate } from './YandexAccountLinkRequiredGate'
 export { createYandexAuthorizationUrl } from './yandex-pilot-oauth'
