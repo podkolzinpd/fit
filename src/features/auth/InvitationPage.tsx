@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../app/auth-context'
@@ -10,6 +10,7 @@ import { RepositoryError } from '../../data/repositories/error'
 import { invitationsRepository } from '../../data/repositories/invitations.repository'
 import { publicInvitationLinksRepository } from '../../data/repositories/public-invitation-links.repository'
 import { StatePanel } from '../../shared/ui'
+import { trackGoal } from '../../shared/yandex-metrika'
 import {
   captureInvitationLink,
   clearPendingInvitationLink,
@@ -47,6 +48,7 @@ export function InvitationPage() {
   const [pending] = useState<PendingInvitationLink | null>(() =>
     captureInvitationLink(window.location.hash))
   const [signingOut, setSigningOut] = useState(false)
+  const openedTracked = useRef(false)
 
   useEffect(() => {
     if (window.location.hash) {
@@ -64,6 +66,10 @@ export function InvitationPage() {
     if (preview.data !== null && preview.data !== undefined && preview.data.status !== 'active') {
       clearPendingInvitationLink()
     }
+    if (preview.data?.status === 'active' && !openedTracked.current) {
+      openedTracked.current = true
+      trackGoal('invitation_opened')
+    }
   }, [preview.data])
   const claim = useMutation({
     mutationFn: async () => {
@@ -77,9 +83,11 @@ export function InvitationPage() {
       throw new Error('Завершите вход через Yandex ID и откройте ссылку снова.')
     },
     onSuccess: async () => {
+      trackGoal('invitation_claimed')
       clearPendingInvitationLink()
       await queryClient.invalidateQueries()
     },
+    onError: () => trackGoal('invitation_claim_error'),
   })
 
   const invitation = preview.data
@@ -161,12 +169,12 @@ export function InvitationPage() {
       <div><span>Действует до</span><strong>{expiresAt}</strong></div>
     </section>
     {actor === null ? <div className="stack invitation-actions">
-      <button type="button" className="primary" onClick={() => navigate('/auth', {
+      <button type="button" className="primary" onClick={() => { trackGoal('invitation_login_started'); navigate('/auth', {
         state: { from: '/invite', mode: 'login', inviteRole: invitation.targetRole },
-      })}>Войти и подключиться</button>
-      <button type="button" className="secondary" onClick={() => navigate('/auth', {
+      }) }}>Войти и подключиться</button>
+      <button type="button" className="secondary" onClick={() => { trackGoal('invitation_registration_started'); navigate('/auth', {
         state: { from: '/invite', mode: 'register', inviteRole: invitation.targetRole },
-      })}>Создать аккаунт</button>
+      }) }}>Создать аккаунт</button>
     </div> : roleMismatch ? <StatePanel
       tone="error"
       title={`Это приглашение предназначено ${invitation.targetRole === 'trainer' ? 'тренеру' : 'спортсмену'}`}
