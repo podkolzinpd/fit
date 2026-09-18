@@ -168,7 +168,6 @@ describe('full application cohort migration', () => {
       if (sql.includes('as has_native_identity')) {
         return Promise.resolve([{
           has_native_identity: false,
-          has_missing_anchor: false,
         }])
       }
       if (
@@ -197,6 +196,15 @@ describe('full application cohort migration', () => {
     expect(targetQuery).toHaveBeenCalledWith(
       expect.stringContaining('insert into app_private.auth_identities'),
     )
+    expect(targetQuery).toHaveBeenCalledWith(
+      expect.stringContaining('create temporary table expected_full_cohort_profiles'),
+      [JSON.stringify(bundle.tables[0]?.rows)],
+    )
+    expect(targetQuery).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /create temporary table preserved_auth_identities[\s\S]*join expected_full_cohort_profiles/u,
+      ),
+    )
     expect(targetQuery).toHaveBeenCalledWith('rollback')
   })
 
@@ -206,7 +214,6 @@ describe('full application cohort migration', () => {
       if (sql.includes('as has_native_identity')) {
         return Promise.resolve([{
           has_native_identity: false,
-          has_missing_anchor: false,
         }])
       }
       if (
@@ -231,24 +238,19 @@ describe('full application cohort migration', () => {
     expect(targetQuery).toHaveBeenCalledWith('rollback')
   })
 
-  it.each([
-    [
-      'full_cohort_target_has_native_identity',
-      { has_native_identity: true, has_missing_anchor: false },
-    ],
-    [
-      'full_cohort_target_anchor_missing_from_snapshot',
-      { has_native_identity: false, has_missing_anchor: true },
-    ],
-  ])('refuses an unsafe target before deleting rows: %s', async (code, row) => {
+  it('refuses a native-identity target before deleting rows', async () => {
     const bundle = await fullCohortBundleWithProfile()
     const targetQuery = vi.fn((sql: string) => {
-      if (sql.includes('as has_native_identity')) return Promise.resolve([row])
+      if (sql.includes('as has_native_identity')) {
+        return Promise.resolve([{ has_native_identity: true }])
+      }
       return Promise.resolve([])
     }) as unknown as DatabaseClient['query']
 
     await expect(importTenant({ query: targetQuery }, bundle, true))
-      .rejects.toEqual(new TenantMigrationError(code))
+      .rejects.toEqual(
+        new TenantMigrationError('full_cohort_target_has_native_identity'),
+      )
     expect(targetQuery).not.toHaveBeenCalledWith(
       expect.stringMatching(/^delete from /u),
     )

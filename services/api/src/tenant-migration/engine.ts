@@ -64,7 +64,6 @@ interface FullCohortSourcePreflightRow extends QueryResultRow {
 
 interface FullCohortTargetPreflightRow extends QueryResultRow {
   has_native_identity: boolean
-  has_missing_anchor: boolean
 }
 
 export class TenantMigrationError extends Error {
@@ -405,53 +404,18 @@ async function readFullCohortTargetTable(
 
 async function inspectFullCohortTarget(
   target: DatabaseClient,
-  bundle: TenantMigrationBundle,
 ): Promise<void> {
-  const profiles = getBundleTable(bundle, 'public.profiles')
   const result = requireSingleRow(
     await target.query<FullCohortTargetPreflightRow>(
-      `with expected_profiles as (
-         select expected.id
-         from jsonb_populate_recordset(
-           null::public.profiles,
-           $1::jsonb
-         ) expected
-       ), anchored_profiles as (
-         select identity.profile_id
+      `select exists (
+         select 1
          from app_private.auth_identities identity
-         union
-         select assignment.profile_id
-         from app_private.profile_rollout_assignments assignment
-         union
-         select session.profile_id
-         from app_private.yandex_app_sessions session
-         union
-         select session.profile_id
-         from app_private.yandex_pilot_sessions session
-       )
-       select
-         exists (
-           select 1
-           from app_private.auth_identities identity
-           where identity.identity_origin = 'native'
-         ) as has_native_identity,
-         exists (
-           select 1
-           from anchored_profiles anchor
-           where not exists (
-             select 1
-             from expected_profiles expected
-             where expected.id = anchor.profile_id
-           )
-         ) as has_missing_anchor`,
-      [JSON.stringify(profiles.rows)],
+         where identity.identity_origin = 'native'
+       ) as has_native_identity`,
     ),
   )
   if (result.has_native_identity) {
     throw new TenantMigrationError('full_cohort_target_has_native_identity')
-  }
-  if (result.has_missing_anchor) {
-    throw new TenantMigrationError('full_cohort_target_anchor_missing_from_snapshot')
   }
 }
 
@@ -470,23 +434,51 @@ async function clearFullCohortTarget(
   await target.query(
     `lock table ${lockedTables.join(', ')} in access exclusive mode`,
   )
-  await inspectFullCohortTarget(target, bundle)
+  await inspectFullCohortTarget(target)
+
+  const profiles = getBundleTable(bundle, 'public.profiles')
+  await target.query(
+    `create temporary table expected_full_cohort_profiles
+       on commit drop as
+     select expected.id
+     from jsonb_populate_recordset(
+       null::public.profiles,
+       $1::jsonb
+     ) expected`,
+    [JSON.stringify(profiles.rows)],
+  )
 
   await target.query(
     `create temporary table preserved_auth_identities
-       on commit drop as table app_private.auth_identities`,
+       on commit drop as
+     select identity.*
+     from app_private.auth_identities identity
+     join expected_full_cohort_profiles expected
+       on expected.id = identity.profile_id`,
   )
   await target.query(
     `create temporary table preserved_profile_rollout_assignments
-       on commit drop as table app_private.profile_rollout_assignments`,
+       on commit drop as
+     select assignment.*
+     from app_private.profile_rollout_assignments assignment
+     join expected_full_cohort_profiles expected
+       on expected.id = assignment.profile_id`,
   )
   await target.query(
     `create temporary table preserved_yandex_app_sessions
-       on commit drop as table app_private.yandex_app_sessions`,
+       on commit drop as
+     select session.*
+     from app_private.yandex_app_sessions session
+     join expected_full_cohort_profiles expected
+       on expected.id = session.profile_id`,
   )
   await target.query(
     `create temporary table preserved_yandex_pilot_sessions
-       on commit drop as table app_private.yandex_pilot_sessions`,
+       on commit drop as
+     select session.*
+     from app_private.yandex_pilot_sessions session
+     join expected_full_cohort_profiles expected
+       on expected.id = session.profile_id`,
   )
   await target.query('delete from app_private.yandex_app_sessions')
   await target.query('delete from app_private.yandex_pilot_sessions')

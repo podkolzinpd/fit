@@ -69,11 +69,12 @@ isolated-tenant checks or silently dropping a merge target.
     successful dry-run; current-snapshot apply uses one repeatable-read export
     for dry-run and both replacement passes.
 16. Full-cohort target import takes exclusive locks, preserves Yandex identity,
-    app/pilot sessions and rollout assignments in transaction-local tables,
-    clears all transferable tables, loads the snapshot and restores those
-    anchors. Validation reads the complete target tables, so changed and stale
-    rows cannot survive. A native Yandex identity or an anchor missing from the
-    source snapshot rejects the operation before the first delete.
+    app/pilot sessions and rollout assignments for profiles present in the
+    source snapshot in transaction-local tables, clears all transferable
+    tables, loads the snapshot and restores those anchors. Linked anchors for
+    profiles absent from the source snapshot are pruned. Validation reads the
+    complete target tables, so changed and stale rows cannot survive. A native
+    Yandex identity rejects the operation before the first delete.
 17. Media migration is a separate idempotent gate. It copies the two private
     source buckets to namespace-isolated keys in one private, versioned Yandex
     bucket and verifies source SHA-256 metadata plus byte length. Reports expose
@@ -266,9 +267,10 @@ application data and are included in the manifest.
   32 tables and 12 876 rows with a content-derived fingerprint; no source
   contract or table-parity mismatch remained.
 - [x] Replace full-cohort insert-only import with an atomic 34-table rebuild,
-  preserve Yandex auth/session/rollout anchors and reject native-only target
-  profiles before deletion. Two local PostgreSQL 17 rehearsals on 2026-09-19
-  each applied, repeated and validated 88 synthetic rows across all 34 tables.
+  preserve current-snapshot Yandex auth/session/rollout anchors, prune stale
+  linked anchors and reject native-only target profiles before deletion. Local
+  PostgreSQL 17 rehearsal on 2026-09-19 applies, repeats and validates 88
+  synthetic rows across all 34 tables while removing an extra stale profile.
 - [ ] Repeat the real full-cohort stage `dry-run` with compressed envelope v3,
   then use its exact fingerprint for pinned `apply` and repeated zero-insert
   validation.
