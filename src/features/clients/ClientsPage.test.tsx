@@ -121,10 +121,11 @@ describe('ClientsPage archive actions', () => {
 })
 
 describe('ClientsPage search', () => {
-  it('keeps client-code entry visible even before the trainer has clients', async () => {
+  it('offers a direct invitation and keeps manual profile creation available', async () => {
     renderPage([])
 
-    expect(await screen.findByRole('link', { name: 'Ввести код' })).toHaveAttribute('href', '/join')
+    expect(await screen.findByRole('button', { name: 'Пригласить спортсмена' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Добавить' })).toHaveAttribute('href', '/clients/new')
   })
 
   it('filters by name and clears the query from the field itself', async () => {
