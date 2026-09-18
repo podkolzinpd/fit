@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(14);
 
 select is(
   (select count(*) from pg_proc procedure join pg_namespace namespace on namespace.oid = procedure.pronamespace where namespace.nspname = 'public' and procedure.proname like 'legacy_%'),
@@ -70,6 +70,11 @@ select lives_ok(
 );
 select is(public.start_workout('96000000-0000-4000-8000-000000000006', 1), 2::bigint, 'client owner starts assigned workout');
 select is(
+  (select started_by from public.workouts where id = '96000000-0000-4000-8000-000000000006'),
+  '93000000-0000-4000-8000-000000000003'::uuid,
+  'start records the real client actor'
+);
+select is(
   public.save_live_set_draft('98000000-0000-4000-8000-000000000008', '{"weightKg":40,"reps":10}', 1),
   2::bigint,
   'client owner saves live fact'
@@ -81,6 +86,11 @@ select is(
   'client owner adds a set to trainer workout during live'
 );
 select is(public.finish_workout('96000000-0000-4000-8000-000000000006', 3), 4::bigint, 'client owner finishes workout');
+select is(
+  (select completed_by from public.workouts where id = '96000000-0000-4000-8000-000000000006'),
+  '93000000-0000-4000-8000-000000000003'::uuid,
+  'finish records the real client actor'
+);
 reset role;
 
 set local role authenticated;

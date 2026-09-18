@@ -88,6 +88,10 @@ with recursive scope_clients as (
     where criterion.client_id in (select id from scope_clients)
   union select workout.created_by from public.workouts workout
     where workout.client_id in (select id from scope_clients)
+  union select workout.started_by from public.workouts workout
+    where workout.client_id in (select id from scope_clients)
+  union select workout.completed_by from public.workouts workout
+    where workout.client_id in (select id from scope_clients)
   union select workout.updated_by from public.workouts workout
     where workout.client_id in (select id from scope_clients)
   union select workout.trainer_review_author_id from public.workouts workout
@@ -948,6 +952,14 @@ export const SOURCE_PREFLIGHT_SQL = `${scopeCte}, actor_references as (
   where criterion.client_id in (select id from scope_clients)
   union all
   select workout.created_by
+  from public.workouts workout
+  where workout.client_id in (select id from scope_clients)
+  union all
+  select workout.started_by
+  from public.workouts workout
+  where workout.client_id in (select id from scope_clients)
+  union all
+  select workout.completed_by
   from public.workouts workout
   where workout.client_id in (select id from scope_clients)
   union all

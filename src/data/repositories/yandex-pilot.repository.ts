@@ -149,6 +149,8 @@ const workoutSchema = z.object({
   clientId: z.uuid(),
   clientName: z.string().min(1),
   createdBy: z.uuid().nullable(),
+  startedBy: z.uuid().nullable(),
+  completedBy: z.uuid().nullable(),
   workoutDate: z.iso.date(),
   startTime: z.string().regex(/^\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/).nullable(),
   endTime: z.string().regex(/^\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/).nullable(),

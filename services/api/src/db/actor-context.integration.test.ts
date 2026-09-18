@@ -289,6 +289,11 @@ interface WorkoutAuditRow extends QueryResultRow {
   version: string
 }
 
+interface WorkoutExecutionAuditRow extends QueryResultRow {
+  started_by: string | null
+  completed_by: string | null
+}
+
 interface ChildAuditRow extends QueryResultRow {
   updated_by: string | null
 }
@@ -1970,6 +1975,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             clientId: smokeIds.clientId,
             clientName: 'Тестовый клиент Yandex stage',
             createdBy: STAGE_SMOKE_PROFILE_ID,
+            startedBy: null,
+            completedBy: null,
             workoutDate: '2026-08-22',
             startTime: '10:00:00',
             endTime: '11:00:00',
@@ -3245,7 +3252,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           set
             status = 'planned',
             started_at = null,
+            started_by = null,
             completed_at = null,
+            completed_by = null,
             updated_by = null,
             version = 1
           where client_id = $1 and status = 'in_progress'
@@ -3258,7 +3267,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           set
             status = 'planned',
             started_at = null,
+            started_by = null,
             completed_at = null,
+            completed_by = null,
             updated_by = null,
             version = 1
           where id in ($1, $2)
@@ -3295,6 +3306,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           ),
         )
         expect(started).toEqual({ version: 2, replayed: false })
+
+        const startedActors = await ownerPool.query<WorkoutExecutionAuditRow>(
+          'select started_by, completed_by from public.workouts where id = $1',
+          [ROOT_WORKOUT_ID],
+        )
+        expect(startedActors.rows).toEqual([{
+          started_by: OTHER_ACTOR_ID,
+          completed_by: null,
+        }])
 
         await expect(withActorTransaction(
           runtimePool,
@@ -3452,6 +3472,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           (workout) => workout.id === ROOT_WORKOUT_ID,
         )).toMatchObject({
           status: 'done',
+          startedBy: OTHER_ACTOR_ID,
+          completedBy: OTHER_ACTOR_ID,
           version: 3,
           exercises: [{
             sets: [{
@@ -3460,6 +3482,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             }],
           }],
         })
+
+        const completedActors = await ownerPool.query<WorkoutExecutionAuditRow>(
+          'select started_by, completed_by from public.workouts where id = $1',
+          [ROOT_WORKOUT_ID],
+        )
+        expect(completedActors.rows).toEqual([{
+          started_by: OTHER_ACTOR_ID,
+          completed_by: OTHER_ACTOR_ID,
+        }])
 
         const operationRows = await ownerPool.query<LiveOperationAuditRow>(
           `
@@ -3495,7 +3526,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             set
               status = 'planned',
               started_at = null,
+              started_by = null,
               completed_at = null,
+              completed_by = null,
               updated_by = null,
               version = 1
             where id in ($1, $2)
@@ -5559,6 +5592,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         workoutDate: `2026-09-${21 + index * 3}`,
         notes: 'Клиентская программа из Assistant',
       }))
+      // PostgreSQL and the Node test process can differ by a few milliseconds.
+      // Keep the synthetic capture safely after the committed workout above.
+      const programSourceCapturedAt = new Date(Date.now() + 1_000).toISOString()
       await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
         appendAssistantUserMessage(
           client,
@@ -5581,7 +5617,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             payload: {
               schemaVersion: 'program-v1',
               clientId: CLIENT_ID,
-              sourceCapturedAt: new Date().toISOString(),
+              sourceCapturedAt: programSourceCapturedAt,
               canonicalWorkouts: programWorkouts,
               step: 'confirm',
             },

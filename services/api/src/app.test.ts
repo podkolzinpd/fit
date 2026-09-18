@@ -1368,6 +1368,8 @@ const TRAINING_DATA_RESPONSE: PilotTrainingDataResponse = {
     clientId: CLIENTS_RESPONSE.clients[0]!.id,
     clientName: 'Тестовый клиент',
     createdBy: PROFILE_ID,
+    startedBy: null,
+    completedBy: null,
     workoutDate: '2026-08-20',
     startTime: '10:00:00',
     endTime: null,

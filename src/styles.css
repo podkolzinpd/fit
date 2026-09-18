@@ -65,6 +65,9 @@
   --warning-fg:#d7b56d;
   --warning-surface:color-mix(in srgb, #d7b56d 12%, var(--surface-raised));
   --warning-border:color-mix(in srgb, #d7b56d 36%, var(--border));
+  --independent-fg:#9fb4c8;
+  --independent-surface:color-mix(in srgb, #718aa3 14%, var(--surface-raised));
+  --independent-border:color-mix(in srgb, #718aa3 42%, var(--border));
   --live-indicator:#f0a0a0;
   --live-indicator-ring:color-mix(in srgb, #f0a0a0 40%, transparent);
   --live-warm:var(--warning-surface);
@@ -222,6 +225,9 @@
   --warning-fg:#8a5e12;
   --warning-surface:color-mix(in srgb, #8a5e12 9%, var(--surface-raised));
   --warning-border:color-mix(in srgb, #8a5e12 30%, var(--border));
+  --independent-fg:#526b82;
+  --independent-surface:color-mix(in srgb, #7890a8 12%, var(--surface-raised));
+  --independent-border:color-mix(in srgb, #7890a8 38%, var(--border));
   --live-indicator:#a73737;
   --live-indicator-ring:color-mix(in srgb, #a73737 32%, transparent);
   --progress-dot:#dedbd4;
@@ -4909,6 +4915,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-schedule-identity .schedule-event-done { border-color:var(--border); background:var(--surface-raised); box-shadow:none}
 .trainer-schedule-identity .schedule-event-done .day-grid-event-time,
 .trainer-schedule-identity .schedule-event-done .day-grid-event-status { color:var(--success-fg) }
+.trainer-schedule-identity .schedule-event-self-led { border-color:var(--independent-border); background:var(--independent-surface); box-shadow:none }
+.trainer-schedule-identity .schedule-event-self-led .day-grid-event-time,
+.trainer-schedule-identity .schedule-event-self-led .day-grid-event-status { color:var(--independent-fg) }
 .trainer-schedule-identity .schedule-event-skipped { border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); box-shadow:none}
 .trainer-schedule-identity .schedule-event-skipped .day-grid-event-name,
 .trainer-schedule-identity .schedule-event-skipped .day-grid-event-status { color:var(--secondary-label-fg) }
