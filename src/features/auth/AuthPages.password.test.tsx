@@ -56,4 +56,14 @@ describe('AuthPage password sign-in', () => {
     expect(screen.getAllByRole('link', { name: 'Условия использования' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: /Политик|Конфиденциальность/ }).length).toBeGreaterThan(0)
   })
+
+  it('открывает регистрацию с ролью из приглашения', () => {
+    render(<MemoryRouter initialEntries={[{
+      pathname: '/auth',
+      state: { from: '/invite', mode: 'register', inviteRole: 'trainer' },
+    }]}><AuthPage /></MemoryRouter>)
+
+    expect(screen.getByRole('heading', { name: 'Регистрация' })).toBeVisible()
+    expect(screen.getByLabelText('Тип аккаунта')).toHaveValue('trainer')
+  })
 })

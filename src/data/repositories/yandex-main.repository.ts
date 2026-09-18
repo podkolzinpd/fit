@@ -97,6 +97,14 @@ const invitationSchema = z.object({
   expiresAt: z.iso.datetime(),
   createdAt: z.iso.datetime(),
 })
+const invitationShareSchema = z.object({
+  id: uuid,
+  clientId: uuid,
+  targetRole: z.enum(['client', 'trainer']),
+  code: z.string().length(12),
+  token: z.string().regex(/^[A-F0-9]{12}\.[0-9a-f]{64}$/),
+  expiresAt: z.iso.datetime(),
+})
 const connectionsSchema = z.object({
   memberships: z.array(membershipSchema),
   invitations: z.array(invitationSchema),
@@ -989,6 +997,17 @@ export function createYandexMainRepository(
       async create(clientId, targetRole) {
         const payload = await writeJson(queries, '/v1/invitations', 'POST', { clientId, targetRole }, z.object({ invitation: z.object({ code: z.string() }) }))
         invalidate(); return payload.invitation.code
+      },
+      async createShare(clientId, targetRole) {
+        const payload = await writeJson(queries, '/v1/invitation-links', 'POST', { clientId, targetRole }, z.object({ invitation: invitationShareSchema }))
+        invalidate(); return payload.invitation
+      },
+      previewLink() {
+        throw new Error('Публичный предпросмотр приглашения выполняется без сессии.')
+      },
+      async claimLink(token) {
+        const payload = await writeJson(queries, '/v1/invitation-links/claim', 'POST', { token }, z.object({ clientId: uuid }))
+        invalidate(); return payload.clientId
       },
       async claim(code) {
         const payload = await writeJson(queries, '/v1/invitations/claim', 'POST', { code: code.trim().toUpperCase() }, z.object({ clientId: uuid }))
