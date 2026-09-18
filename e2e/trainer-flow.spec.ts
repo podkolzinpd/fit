@@ -874,7 +874,7 @@ test('profile Cancel resets unsaved edits', async ({ page }) => {
   await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-light/)
 })
 
-test('schedule shows week strip and hour grid with day/week navigation', async ({ page }) => {
+test('schedule shows the whole week and opens the existing hour grid by day', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -884,28 +884,29 @@ test('schedule shows week strip and hour grid with day/week navigation', async (
 
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Расписание' })).toBeVisible()
-  await expect(page.locator('.schedule-selected-date')).toBeHidden()
-  await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
+  await expect(page.locator('.schedule-week-day')).toHaveCount(7)
+  await expect(page.locator('.day-grid-hour')).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toHaveCount(0)
 
-  // Week strip has 7 day buttons, hour grid is rendered.
-  await expect(page.locator('.week-day')).toHaveCount(7)
-  await expect(page.locator('.day-grid-hour')).toHaveCount(24)
-
-  // Picking another weekday selects it (active class moves) and does not error.
-  const other = page.locator('.week-day').nth(1)
+  // День открывает прежнюю подробную сетку и планирование.
+  const other = page.locator('.schedule-week-day').nth(1)
   await other.click()
-  await expect(other).toHaveClass(/active/)
+  await expect(page).toHaveURL(/date=/)
+  await expect(page.locator('.day-grid-hour')).toHaveCount(24)
+  await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'К неделе' }).click()
+  await expect(page.locator('.schedule-week-day')).toHaveCount(7)
 
   // Week arrows shift the visible week — day numbers change.
-  const firstDayBefore = await page.locator('.week-day .day-num').first().innerText()
+  const firstDayBefore = await page.locator('.schedule-week-day-heading > span').first().innerText()
   await page.getByRole('button', { name: 'Следующая неделя' }).click()
-  await expect(page.locator('.week-day .day-num').first()).not.toHaveText(firstDayBefore)
+  await expect(page.locator('.schedule-week-day-heading > span').first()).not.toHaveText(firstDayBefore)
 
   // «Сегодня» видна всегда: вне текущей недели активна и возвращает обратно,
   // на сегодняшней неделе — задизейблена.
   await expect(page.getByRole('button', { name: 'Сегодня' })).toBeEnabled()
   await page.getByRole('button', { name: 'Сегодня' }).click()
-  await expect(page.locator('.week-day .day-num').first()).toHaveText(firstDayBefore)
+  await expect(page.locator('.schedule-week-day-heading > span').first()).toHaveText(firstDayBefore)
   await expect(page.getByRole('button', { name: 'Сегодня' })).toBeDisabled()
 })
 
@@ -926,6 +927,7 @@ test('расписание: тренировка без времени оста�
   await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
 
   await page.goto('/schedule')
+  await page.locator('.schedule-week-day.is-today').click()
   await page.locator('a[href^="/workouts/new?date="]').click()
   await selectClient(page, clientName)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
@@ -936,6 +938,7 @@ test('расписание: тренировка без времени оста�
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   await page.goto('/schedule')
+  await page.locator('.schedule-week-day.is-today').click()
   const untimed = page.locator('.schedule-untimed-section')
   await expect(untimed).toBeVisible()
   await expect(untimed.getByText('Без времени', { exact: true })).toBeVisible()
@@ -974,6 +977,7 @@ test('расписание: создание тренировки из расп�
 
   // Идём в расписание и создаём тренировку прямо оттуда.
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
+  await page.locator('.schedule-week-day.is-today').click()
   await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Запланировать' }).click()
   // Форма открылась; дата предзаполнена (не пустая), клиента выбираем.
@@ -997,16 +1001,17 @@ test('расписание: отмена создания возвращает �
   await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
-  const selectedDay = page.locator('.week-day').nth(1)
+  const selectedDay = page.locator('.schedule-week-day').nth(1)
+  const selectedNumber = await selectedDay.locator('.schedule-week-day-heading > span').innerText()
   await selectedDay.click()
-  const selectedNumber = await selectedDay.locator('.day-num').innerText()
   await page.getByRole('link', { name: 'Запланировать' }).click()
   const selectedDate = await page.getByLabel('Дата').inputValue()
   await page.getByRole('button', { name: 'Назад' }).click()
 
   await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`date=${selectedDate}`))
-  await expect(page.locator('.week-day.active .day-num')).toHaveText(selectedNumber)
+  await page.getByRole('button', { name: 'К неделе' }).click()
+  await expect(page.locator('.schedule-week-day').nth(1).locator('.schedule-week-day-heading > span')).toHaveText(selectedNumber)
 })
 
 test('расписание: карточка события — время, имя клиента, до двух упражнений', async ({ page }, testInfo) => {
@@ -1026,6 +1031,7 @@ test('расписание: карточка события — время, им
   await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
 
   await page.getByRole('link', { name: 'Расписание', exact: true }).click()
+  await page.locator('.schedule-week-day.is-today').click()
   await page.getByRole('link', { name: 'Запланировать' }).click()
   await selectClient(page, clientName)
   await page.getByLabel('Начало').fill('09:00')
@@ -1042,6 +1048,10 @@ test('расписание: карточка события — время, им
   // Навигация таббара проверяется отдельно; здесь фиксируем только
   // отображение только что созданного события в расписании.
   await page.goto('/schedule')
+  const weekLine = page.locator('.schedule-week-workout').filter({ hasText: clientName })
+  await expect(weekLine.locator('.schedule-week-workout-time')).toHaveText('09:00')
+  await expect(weekLine.locator('.schedule-week-workout-name')).toHaveText(clientName)
+  await page.locator('.schedule-week-day.is-today').click()
   await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
   const card = page.locator('.day-grid-event').filter({ hasText: clientName })
   await expect(card.locator('.day-grid-event-time')).toHaveText('09:00')

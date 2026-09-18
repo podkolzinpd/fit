@@ -216,6 +216,15 @@ OIDC и идемпотентно синхронизирует deletion-protected
 GitHub outputs/env, логи или Terraform state. Dispatcher получает
 `lockbox.payloadViewer` только на stage-копию.
 
+Мульти-device контракт использует отдельную subscription UUID и уникальность
+`(user_id, endpoint)`. Producer сразу создаёт по одной outbox-строке на каждую
+активную подписку и включает `subscription_id` в dedupe key. Dispatcher
+claim/finalize работает с точной подпиской; terminal Web Push response 404/410
+удаляет только этот endpoint. Actor-authenticated API принимает endpoint только
+в body, а tenant export/import переносит подписки по `id`. Любое изменение
+producer, subscription schema или migration catalog обязано сохранять этот
+контракт в Supabase и Yandex.
+
 После merge первый автоматический `Deploy Yandex stage` ожидаемо остановится на
 проверке Terraform plan. Запустите workflow вручную с `plan_only=true` и
 `approve_push_pipeline=false`: такой запуск только покажет точный список

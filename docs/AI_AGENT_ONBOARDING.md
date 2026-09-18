@@ -11,7 +11,8 @@
 - видит приватный репозиторий `podkolzinpd/fit`;
 - работает в отдельной ветке и может открыть pull request;
 - установил зависимости из lock-файла;
-- запускает локальные Supabase и frontend командой `npm run dev`;
+- запускает локальные Supabase, PostgreSQL для Yandex API и frontend командой
+  `npm run dev` через Podman;
 - успешно выполняет `npm run check`;
 - не сохранил токен GitHub или production-секреты в репозитории.
 
@@ -93,17 +94,18 @@ git switch -c codex/<краткое-название-задачи>
 Нужны:
 
 - Node.js и npm версий, совместимых с `package.json` и `package-lock.json`;
-- Docker Desktop, Colima или другой Docker-совместимый runtime;
+- Podman и запущенная Podman machine;
 - Git и GitHub CLI;
-- свободные локальные порты Supabase и порт `5173`.
+- свободные локальные порты Supabase, Yandex PostgreSQL/API и порт `5173`.
 
 Проверка:
 
 ```bash
 node --version
 npm --version
-docker version
-docker info
+podman version
+podman machine list
+podman info
 git --version
 gh --version
 ```
@@ -119,12 +121,17 @@ Supabase CLI отдельно глобально устанавливать не
 AGENTS.md
 docs/FIT_WORKFLOW.md
 docs/CURRENT_STATE.md
+docs/UI_TASK_PROMPT.md
 ```
 
 `ARCHITECTURE.md`, `FEATURE_PARITY.md`, `docs/PRODUCT_WIKI.md` и материалы из
 `docs/design/` читаются только релевантными текущей задаче разделами. После
 подтверждённого merge агент сам обновляет rolling snapshot в
 `docs/CURRENT_STATE.md`, не накапливая в нём историю.
+
+До завершения перехода задачи по auth, БД, repositories/queries, media,
+Assistant, SpeechKit, push, backend routing и переносимым продуктовым данным
+также требуют полного чтения `docs/YANDEX_CUTOVER_PLAYBOOK.md`.
 
 Затем устанавливает точные зависимости из lock-файла и запускает проект:
 
@@ -133,15 +140,21 @@ npm ci
 npm run dev
 ```
 
-`npm run dev` поднимает локальный Supabase, а затем Vite на
-`http://localhost:5173`. Безопасные локальные значения уже находятся в
-закоммиченном `.env.development`.
+`npm run dev` через Podman готовит локальные Supabase и PostgreSQL 17 для
+Yandex API, запускает API, а затем Vite на `http://localhost:5173`. Безопасные
+локальные значения уже находятся в закоммиченном `.env.development`.
 
 Для пересоздания и проверки локальной базы:
 
 ```bash
 npm run db:reset
 npm run db:test
+```
+
+После изменения любой migration выполните общую локальную проверку обеих цепочек:
+
+```bash
+npm run local:verify
 ```
 
 После сброса базы доступны только локальные демонстрационные аккаунты:
