@@ -49,6 +49,14 @@ import {
 type Mode = 'login' | 'register'
 type RegistrationMethod = 'yandex' | 'email'
 
+function internalAuthReturnPath(value: unknown): string | undefined {
+  if (typeof value !== 'string'
+    || !value.startsWith('/')
+    || value.startsWith('//')
+    || value.includes('\\')) return undefined
+  return value
+}
+
 function InvitationAuthRedirect({
   role,
   preferred,
@@ -93,9 +101,10 @@ export function AuthIdentityScreen({ children, className }: PropsWithChildren<{ 
 export function AuthPage() {
   const location = useLocation()
   const authState = location.state as { from?: string; mode?: Mode; inviteRole?: AccountRole } | null
-  const [stateReturnTo] = useState(() => saveInvitationAuthReturn(authState?.from))
-  const returnTo = stateReturnTo
-    ?? (hasPendingInvitationLink() ? '/invite' : readInvitationAuthReturn() ?? undefined)
+  const directReturnTo = internalAuthReturnPath(authState?.from)
+  const [initialInvitationReturn] = useState(() => saveInvitationAuthReturn(directReturnTo))
+  const returnTo = directReturnTo
+    ?? (hasPendingInvitationLink() ? '/invite' : initialInvitationReturn ?? readInvitationAuthReturn() ?? undefined)
   const nativeRegistrationConfig = getYandexNativeRegistrationConfig()
   const [mode, setMode] = useState<Mode>(authState?.mode === 'register' ? 'register' : 'login')
   const [registrationMethod, setRegistrationMethod] = useState<RegistrationMethod>(
@@ -111,7 +120,7 @@ export function AuthPage() {
   const yandexAppSession = useYandexAppSession()
   const yandexAppSessionConfig = getYandexAppSessionEntryConfig()
   const yandexPilotConfig = getYandexIdPilotConfig()
-  if (actor) return <InvitationAuthRedirect role={actor.role} preferred={stateReturnTo} />
+  if (actor) return <InvitationAuthRedirect role={actor.role} preferred={directReturnTo} />
   if (yandexAppSession.loading) return <AuthIdentityScreen>
     <StatePanel tone="info" title="Восстанавливаем сессию" description="Проверяем действующую сессию Yandex ID…" />
   </AuthIdentityScreen>

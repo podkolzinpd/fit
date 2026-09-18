@@ -142,6 +142,44 @@ describe('Yandex app session auth flow', () => {
     expect(screen.getByRole('button', { name: 'Войти по email' })).toHaveClass('secondary')
   })
 
+  it('keeps the existing internal return path for an email-authenticated account', async () => {
+    authState.mockReturnValue({
+      actor: { userId: PROFILE_ID, role: 'trainer' },
+      loading: false,
+      error: null,
+    })
+    render(<MemoryRouter initialEntries={[{
+      pathname: '/auth',
+      state: { from: '/legal/delete-account' },
+    }]}>
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/legal/delete-account" element={<p>delete account route</p>} />
+      </Routes>
+    </MemoryRouter>)
+
+    expect(await screen.findByText('delete account route')).toBeVisible()
+  })
+
+  it('rejects an external return target after authentication', async () => {
+    authState.mockReturnValue({
+      actor: { userId: PROFILE_ID, role: 'trainer' },
+      loading: false,
+      error: null,
+    })
+    render(<MemoryRouter initialEntries={[{
+      pathname: '/auth',
+      state: { from: 'https://attacker.example.test/' },
+    }]}>
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/today" element={<p>trainer home</p>} />
+      </Routes>
+    </MemoryRouter>)
+
+    expect(await screen.findByText('trainer home')).toBeVisible()
+  })
+
   it('explains the pending invitation and prepares client registration', () => {
     vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
