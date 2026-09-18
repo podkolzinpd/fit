@@ -742,6 +742,34 @@ test('iPhone: client voice-first home сохраняет тренировку т
   await expectNoHorizontalOverflow(page)
 })
 
+test('iPhone: новый клиент выбирает готовую тренировку на первом экране на 390 px', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/auth')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByLabel('Имя').fill('Клиент')
+  await page.getByLabel('Email').fill(`client-preset-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+
+  await expect(page.getByRole('button', { name: 'Попробовать готовую тренировку' })).toBeVisible()
+  await page.getByRole('button', { name: 'Попробовать готовую тренировку' }).click()
+  await expect(page.getByText('Всё тело без инвентаря')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+
+  await page.getByRole('article').filter({ hasText: 'Всё тело без инвентаря' }).getByRole('button', { name: 'Выбрать' }).click()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+  await expect(page.getByText('Распознано: 5')).toBeVisible()
+  await expect(page.getByText('Отжимания')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Далее' }).click()
+  await expect(page.getByText('Тренировка будет сохранена в ваш кабинет')).toBeVisible()
+  await page.getByRole('button', { name: 'Записать выполненную' }).click()
+  await expect(page.getByRole('button', { name: 'Записать тренировку' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Записать тренировку' }).click()
+  await expect(page.getByText('Завершена', { exact: true })).toBeVisible()
+})
+
 test('iPhone: в live клиент видит те же действия с тренировкой, что и тренер, на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')

@@ -4,7 +4,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { bmiLabel, computeClientStats, splitClientWorkouts } from '../../data/repositories/workouts.repository'
-import { ClientFirstRunIntro, TodayPage, WorkoutExercisesSummary, storeFirstWorkoutIntent, workoutCountLabel } from '../workouts'
+import { ClientFirstRunIntro, PresetWorkoutPicker, TodayPage, WorkoutExercisesSummary, storeFirstWorkoutIntent, workoutCountLabel, type FirstWorkoutIntent } from '../workouts'
 import type { Client, Gender } from '../../shared/domain'
 import { currentStage, daysToTarget, stageProgress } from '../../shared/goal-rules'
 import { formatLocalDate, formatLocalDateShort, localDate, normalizeTimeZone, todayInTimeZone } from '../../shared/local-date'
@@ -27,7 +27,7 @@ export function MyClientPage() {
   const [voicePhase, setVoicePhase] = useState<VoiceInputPhase>('idle')
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   const quickStart = useMutation({
-    mutationFn: async (intent: { mode: 'voice'; transcript: string } | { mode: 'text' }) => {
+    mutationFn: async (intent: FirstWorkoutIntent) => {
       if (!actor) throw new Error('Профиль пользователя не найден')
       const fullName = [actor.firstName, actor.lastName].filter(Boolean).join(' ').trim()
       await clientsRepository.createQuickOwn(fullName)
@@ -55,6 +55,7 @@ export function MyClientPage() {
           />
         </div>
         {quickStart.error && <p className="error" role="alert">{quickStart.error.message}</p>}
+        <PresetWorkoutPicker onSelect={(presetId) => quickStart.mutate({ mode: 'preset', presetId })} pending={quickStart.isPending} />
       </section>} />
     </AsyncView>
   </Page>
