@@ -134,6 +134,53 @@ test('trainer opens client chat from the list and returns to the same search and
   await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBe(scrollBefore)
 })
 
+test('trainer client archive action opens with a horizontal swipe without stealing a vertical gesture', async ({ page }) => {
+  const clientId = 'b9300000-0000-4000-8000-000000000001'
+  await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([{
+      id: clientId, can_archive: true, has_account: false,
+      full_name: 'Анна Смирнова', canonical_full_name: 'Анна Смирнова',
+      gender: null, age_years: 30, age_updated_at: '2026-08-01', height_cm: 170,
+      goal: null, note: null, current_weight_kg: 65,
+      last_activity_at: '2026-09-18T10:00:00.000Z', archived_at: null,
+      version: 1, membership_version: 1,
+    }]),
+  }))
+  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await loginAsTrainer(page)
+  await page.goto('/clients')
+
+  const surface = page.locator('.client-swipe-surface')
+  const rail = page.locator('.client-swipe-actions')
+  await expect(surface).toBeVisible()
+  await surface.evaluate((element) => {
+    const emit = (type: string, clientX: number, clientY: number) => element.dispatchEvent(new PointerEvent(type, {
+      bubbles: true, cancelable: true, pointerId: 1, pointerType: 'touch', isPrimary: true, clientX, clientY,
+    }))
+    emit('pointerdown', 220, 120)
+    emit('pointermove', 216, 55)
+    emit('pointerup', 216, 55)
+  })
+  await expect(rail).toHaveAttribute('aria-hidden', 'true')
+
+  await surface.evaluate((element) => {
+    const emit = (type: string, clientX: number) => element.dispatchEvent(new PointerEvent(type, {
+      bubbles: true, cancelable: true, pointerId: 2, pointerType: 'touch', isPrimary: true, clientX, clientY: 120,
+    }))
+    emit('pointerdown', 250)
+    emit('pointermove', 155)
+    emit('pointerup', 155)
+  })
+  await expect(rail).toHaveAttribute('aria-hidden', 'false')
+  await expect(page.getByRole('button', { name: 'В архив' })).toBeVisible()
+  await expect(surface).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -112, 0)')
+
+  await page.getByRole('link', { name: /Анна Смирнова/ }).click()
+  await expect(page).toHaveURL(/\/clients$/)
+  await expect(rail).toHaveAttribute('aria-hidden', 'true')
+})
+
 async function mockAutomaticSummaryGeneration(page: Page) {
   const response = {
     contentType: 'application/json',

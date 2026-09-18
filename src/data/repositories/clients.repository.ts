@@ -9,7 +9,7 @@ type MyClientRow = NonNullable<Awaited<ReturnType<typeof clientQueries.getMine>>
 
 function fromListRow(row: ClientListRow): Client {
   return {
-    id: row.id, hasAccount: row.has_account, fullName: row.full_name, canonicalFullName: row.canonical_full_name,
+    id: row.id, canArchive: row.can_archive, hasAccount: row.has_account, fullName: row.full_name, canonicalFullName: row.canonical_full_name,
     gender: row.gender as Gender | null,
     ageYears: row.age_years, ageUpdatedAt: row.age_updated_at ? localDate(row.age_updated_at) : null, heightCm: row.height_cm === null ? null : Number(row.height_cm),
     goal: row.goal, note: row.note, currentWeightKg: row.current_weight_kg === null ? null : Number(row.current_weight_kg),
@@ -18,12 +18,12 @@ function fromListRow(row: ClientListRow): Client {
   }
 }
 
-async function enrich(row: NonNullable<ClientRow>): Promise<Client> {
+async function enrich(row: NonNullable<ClientRow>, canArchive = false): Promise<Client> {
   const [note, weight] = await Promise.all([clientQueries.getNote(row.id), clientQueries.getLatestWeight(row.id)])
   if (note.error) throw repositoryError(note.error)
   if (weight.error) throw repositoryError(weight.error)
   return {
-    id: row.id, hasAccount: row.auth_user_id !== null, fullName: row.full_name, canonicalFullName: row.full_name,
+    id: row.id, canArchive, hasAccount: row.auth_user_id !== null, fullName: row.full_name, canonicalFullName: row.full_name,
     gender: row.gender as Gender | null,
     ageYears: row.age_years, ageUpdatedAt: row.age_updated_at ? localDate(row.age_updated_at) : null, heightCm: row.height_cm === null ? null : Number(row.height_cm),
     goal: row.goal, note: note.data?.note ?? null, currentWeightKg: weight.data?.weight_kg === null || weight.data?.weight_kg === undefined ? null : Number(weight.data.weight_kg),
@@ -132,6 +132,6 @@ export const clientsRepository = {
   async setArchived(client: Client, archived: boolean): Promise<Client> {
     const result = await clientQueries.setArchived(client.id, client.version, archived)
     if (result.error) throw repositoryError(result.error)
-    return enrich(result.data)
+    return enrich(result.data, client.canArchive === true)
   },
 }

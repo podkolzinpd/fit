@@ -233,6 +233,7 @@ async function mockTrainerClients(page: VisualPage) {
     contentType: 'application/json',
     body: JSON.stringify(names.map((fullName, index) => ({
       id: index === 0 ? demoClientId : `71000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      can_archive: true,
       has_account: index === 0,
       full_name: fullName,
       canonical_full_name: fullName,

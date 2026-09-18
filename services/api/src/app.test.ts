@@ -1309,6 +1309,7 @@ const CLIENTS_RESPONSE: PilotClientsResponse = {
   accessMode: 'read_only',
   clients: [{
     id: '1a0c5295-0a0f-4ccb-a39a-e58090967245',
+    canArchive: true,
     hasAccount: false,
     fullName: 'Тестовый клиент',
     canonicalFullName: 'Тестовый клиент',
