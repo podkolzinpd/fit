@@ -70,8 +70,9 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   `user_legal_acceptances` и `account_deletion_requests`. Новый import атомарно
   пересобирает переносимые таблицы из свежего snapshot вместо insert-only
   конфликта на изменившихся строках. Yandex identity/session/rollout строки
-  временно сохраняются и восстанавливаются; наличие нативного Yandex-профиля
-  или auth/session-ссылки вне snapshot блокирует операцию до удаления данных.
+  профилей из snapshot временно сохраняются и восстанавливаются, а устаревшие
+  linked-привязки профилей вне snapshot удаляются; наличие нативного
+  Yandex-профиля блокирует операцию до удаления данных.
 - Server-side rollout assignments для `linked-ready` профилей включены и
   проверены агрегированно. Обязательная привязка включена отдельно; frontend
   app-session, main-routing и native-registration switches остаются выключены.
