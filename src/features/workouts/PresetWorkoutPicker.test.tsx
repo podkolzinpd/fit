@@ -2,7 +2,23 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { PRESET_WORKOUTS } from '../../shared/preset-workouts'
-import { PresetWorkoutPicker } from './PresetWorkoutPicker'
+import { PresetWorkoutList, PresetWorkoutPicker } from './PresetWorkoutPicker'
+
+describe('PresetWorkoutList', () => {
+  it('renders every preset as a card without needing a toggle', () => {
+    render(<PresetWorkoutList onSelect={vi.fn()} />)
+    expect(screen.getAllByRole('button', { name: 'Выбрать' })).toHaveLength(PRESET_WORKOUTS.length)
+    for (const preset of PRESET_WORKOUTS) expect(screen.getByText(preset.title)).toBeInTheDocument()
+  })
+
+  it('calls onSelect with the chosen preset id', async () => {
+    const onSelect = vi.fn()
+    render(<PresetWorkoutList onSelect={onSelect} />)
+    const [firstButton] = screen.getAllByRole('button', { name: 'Выбрать' })
+    await userEvent.click(firstButton!)
+    expect(onSelect).toHaveBeenCalledWith(PRESET_WORKOUTS[0]!.id)
+  })
+})
 
 describe('PresetWorkoutPicker', () => {
   it('reveals every preset as a card once the toggle is opened', async () => {
