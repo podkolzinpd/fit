@@ -16,6 +16,7 @@ import {
   getYandexIdPilotConfig,
   getYandexNativeRegistrationConfig,
   getYandexSessionLinkingConfig,
+  isYandexAccountLinkRequired,
   isYandexAppSessionEnabled,
   trainerHomePath,
 } from '../../app/feature-flags'
@@ -643,6 +644,7 @@ function YandexAccountLinkingCallbackPage() {
   const [restartBusy, setRestartBusy] = useState(false)
   const linkRequest = useRef<Promise<void> | null>(null)
   const homePath = actor?.role === 'client' ? '/me' : trainerHomePath()
+  const linkRequired = isYandexAccountLinkRequired()
 
   async function restartLinking(): Promise<void> {
     if (clientId === null) return
@@ -721,13 +723,17 @@ function YandexAccountLinkingCallbackPage() {
       <p className="eyebrow">YANDEX ID · ПРИВЯЗКА</p>
       <h1>{linked ? 'Yandex ID привязан' : error ? 'Не удалось привязать' : 'Завершаем привязку'}</h1>
       <p className="muted">{linked
-        ? 'Теперь этот Yandex ID связан с текущим FIT-профилем. Основной вход пока остаётся прежним.'
+        ? linkRequired
+          ? 'Yandex ID связан с текущим FIT-профилем. Теперь можно продолжить работу.'
+          : 'Теперь этот Yandex ID связан с текущим FIT-профилем. Основной вход пока остаётся прежним.'
         : error ?? 'Проверяем текущую FIT-сессию и подтверждение от Yandex ID…'}</p>
     </header>
     {linked && <section className="compact stack yandex-pilot-profile yandex-link-result" aria-label="Результат привязки">
       <div><span>Статус</span><strong>Готово</strong></div>
-      <div><span>Доступ</span><strong>Через rollout</strong></div>
-      <p>Следующий шаг — включить полноценную Yandex ID-сессию для выбранных пользователей отдельным флагом.</p>
+      <div><span>Доступ</span><strong>{linkRequired ? 'Открыт' : 'Через rollout'}</strong></div>
+      <p>{linkRequired
+        ? 'Вернитесь в FIT — повторная привязка не потребуется.'
+        : 'Следующий шаг — включить полноценную Yandex ID-сессию для выбранных пользователей отдельным флагом.'}</p>
     </section>}
     {error && <StatePanel
       tone="error"
@@ -739,7 +745,9 @@ function YandexAccountLinkingCallbackPage() {
           {restartBusy ? 'Переходим в Yandex ID…' : 'Начать заново'}
         </button>}
     />}
-    <Link className="auth-back-link" to={actor ? homePath : '/auth'}>{actor ? 'Вернуться на главную' : 'Вернуться ко входу'}</Link>
+    <Link className={linked && linkRequired ? 'button primary' : 'auth-back-link'} to={actor ? homePath : '/auth'}>
+      {linked && linkRequired ? 'Продолжить в FIT' : actor ? 'Вернуться на главную' : 'Вернуться ко входу'}
+    </Link>
   </AuthIdentityScreen>
 }
 

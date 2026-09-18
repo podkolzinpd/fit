@@ -11,6 +11,7 @@ import {
   isWearablesPilotEnabled,
   isYandexAssistantRoutingPilotEnabled,
   isYandexAppSessionEnabled,
+  isYandexAccountLinkRequired,
   isYandexMainRoutingEnabled,
   isYandexSessionLinkingEnabled,
   trainerHomePath,
@@ -253,6 +254,19 @@ describe('Yandex session linking global flag', () => {
       apiBaseUrl: 'https://stage.example.test',
       clientId: 'public-client-id',
     })
+  })
+})
+
+describe('required Yandex account link gate', () => {
+  it('is default-off and requires the exact value "true"', () => {
+    vi.stubEnv('VITE_YANDEX_ACCOUNT_LINK_REQUIRED', '')
+    expect(isYandexAccountLinkRequired()).toBe(false)
+    vi.stubEnv('VITE_YANDEX_ACCOUNT_LINK_REQUIRED', 'TRUE')
+    expect(isYandexAccountLinkRequired()).toBe(false)
+    vi.stubEnv('VITE_YANDEX_ACCOUNT_LINK_REQUIRED', '1')
+    expect(isYandexAccountLinkRequired()).toBe(false)
+    vi.stubEnv('VITE_YANDEX_ACCOUNT_LINK_REQUIRED', 'true')
+    expect(isYandexAccountLinkRequired()).toBe(true)
   })
 })
 

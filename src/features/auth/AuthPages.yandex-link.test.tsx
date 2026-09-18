@@ -141,6 +141,17 @@ describe('Yandex account linking callback', () => {
     expect(establishYandexSession).toHaveBeenCalledWith(linkedSession)
   })
 
+  it('opens the required gate after linking and offers one clear continuation action', async () => {
+    vi.stubEnv('VITE_YANDEX_ACCOUNT_LINK_REQUIRED', 'true')
+    window.history.replaceState(null, '', `/auth/yandex/callback${await linkingCallbackSearch()}`)
+
+    renderCallback()
+
+    expect(await screen.findByText('Yandex ID связан с текущим FIT-профилем. Теперь можно продолжить работу.')).toBeVisible()
+    expect(screen.getByText('Открыт')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Продолжить в FIT' })).toHaveAttribute('href', '/today')
+  })
+
   it('does not link when the global switch is off', async () => {
     vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', '')
     window.history.replaceState(null, '', `/auth/yandex/callback${await linkingCallbackSearch()}`)
