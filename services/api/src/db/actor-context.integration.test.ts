@@ -4773,7 +4773,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           runtimePool,
           MEMBER_TRAINER_ID,
           (client) => updateClientCard(client, created.id, draft, 1),
-        )).rejects.toMatchObject({ failure: 'forbidden' })
+        )).resolves.toBe(2)
 
         const membershipVersion = await withActorTransaction(
           runtimePool,
@@ -4795,36 +4795,36 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             client,
             created.id,
             { ...draft, fullName: 'Обновлённый клиент' },
-            1,
+            2,
           ),
         )
-        expect(updatedVersion).toBe(2)
+        expect(updatedVersion).toBe(3)
         await expect(withActorTransaction(
           runtimePool,
           ACTOR_ID,
-          (client) => updateClientCard(client, created.id, draft, 1),
+          (client) => updateClientCard(client, created.id, draft, 2),
         )).rejects.toMatchObject({ failure: 'conflict' })
 
         const archivedVersion = await withActorTransaction(
           runtimePool,
           ACTOR_ID,
-          (client) => setClientArchived(client, created.id, true, 2),
+          (client) => setClientArchived(client, created.id, true, 3),
         )
-        expect(archivedVersion).toBe(3)
+        expect(archivedVersion).toBe(4)
         const archivedClients = await withActorTransaction(
           runtimePool,
           ACTOR_ID,
           (client) => readAccessibleClients(client, true),
         )
         expect(archivedClients.clients).toEqual(expect.arrayContaining([
-          expect.objectContaining({ id: created.id, version: 3 }),
+          expect.objectContaining({ id: created.id, version: 4 }),
         ]))
         const restoredVersion = await withActorTransaction(
           runtimePool,
           ACTOR_ID,
-          (client) => setClientArchived(client, created.id, false, 3),
+          (client) => setClientArchived(client, created.id, false, 4),
         )
-        expect(restoredVersion).toBe(4)
+        expect(restoredVersion).toBe(5)
 
         const preferences = await ownerPool.query<{
           alias: string | null

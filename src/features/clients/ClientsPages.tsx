@@ -19,6 +19,7 @@ import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, KeyboardIcon, ScheduleIco
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { ChatStartButton } from '../chat'
 import { YandexAccountLinkingCard } from '../auth'
+import { isRepositoryConflict } from '../../data/repositories/error'
 
 export function MyClientPage() {
   const { clients: clientsRepository } = useDataBackend()
@@ -134,10 +135,11 @@ function ClientForm({
 }) {
   const { clients: clientsRepository, progress: progressRepository } = useDataBackend()
   const { actor } = useAuth()
+  const queryClient = useQueryClient()
   const today = todayInTimeZone(actor?.timezone)
   const showInitialWeight = !existing || canRecordInitialWeight
   const form = useForm<ClientProfileValues>({ resolver: zodResolver(clientProfileSchema), defaultValues: existing ? {
-    fullName: existing.fullName, gender: existing.gender ?? undefined, ageYears: existing.ageYears ?? undefined, heightCm: existing.heightCm ?? undefined,
+    fullName: existing.canonicalFullName, gender: existing.gender ?? undefined, ageYears: existing.ageYears ?? undefined, heightCm: existing.heightCm ?? undefined,
     goal: existing.goal ?? '', note: existing.note ?? '', alias: existing.fullName, privateNote: existing.note ?? '',
   } : { fullName: initialFullName, gender: undefined, ageYears: undefined, heightCm: undefined, alias: '', privateNote: '' } })
   const mutation = useMutation({ mutationFn: async (values: ClientProfileValues) => {
@@ -153,10 +155,22 @@ function ClientForm({
         }
       }
       else {
-        await clientsRepository.update(input)
         const alias = values.alias.trim() === existing.fullName && existing.fullName === existing.canonicalFullName
           ? parsed.fullName : values.alias.trim()
-        await clientsRepository.updatePreferences({ clientId: existing.id, alias, note: values.privateNote.trim() || undefined, version: existing.membershipVersion ?? 1 })
+        const note = values.privateNote.trim() || undefined
+        const profileChanged = parsed.fullName !== existing.canonicalFullName
+          || (parsed.gender ?? null) !== existing.gender
+          || (parsed.ageYears ?? null) !== existing.ageYears
+          || (parsed.heightCm ?? null) !== existing.heightCm
+          || (parsed.goal?.trim() || undefined) !== (existing.goal?.trim() || undefined)
+          || (parsed.note?.trim() || undefined) !== (existing.note?.trim() || undefined)
+        const preferencesChanged = alias !== existing.fullName
+          || note !== (existing.note?.trim() || undefined)
+
+        if (profileChanged) await clientsRepository.update(input)
+        if (preferencesChanged) {
+          await clientsRepository.updatePreferences({ clientId: existing.id, alias, note, version: existing.membershipVersion ?? 1 })
+        }
       }
       return existing.id
     }
@@ -165,7 +179,13 @@ function ClientForm({
       goal: parsed.goal, note: parsed.note, initialWeightKg: parsed.initialWeightKg,
       initialWeightRecordedOn: today }
     return createMode === 'self' ? clientsRepository.createOwn(input) : clientsRepository.create(input)
-  }, onSuccess: (id) => onSaved(id) })
+  }, onSuccess: (id) => onSaved(id), onError: async (error) => {
+    if (!existing || !isRepositoryConflict(error)) return
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['clients'] }),
+      queryClient.invalidateQueries({ queryKey: ['client', existing.id] }),
+    ])
+  } })
   const contents = <form className="stack client-profile-form" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
       <section className="client-form-section">
         <div className="client-form-section-head">
