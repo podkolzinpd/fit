@@ -4850,7 +4850,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           (client) => readAccessibleClients(client, true),
         )
         expect(archivedClients.clients).toEqual(expect.arrayContaining([
-          expect.objectContaining({ id: created.id, version: 4 }),
+          expect.objectContaining({ id: created.id, version: 4, canArchive: true }),
         ]))
         const restoredVersion = await withActorTransaction(
           runtimePool,
@@ -5156,6 +5156,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         (client) => readAccessibleClients(client),
       )
       expect(memberOverview.clients.find((client) => client.id === CLIENT_ID)).toMatchObject({
+        canArchive: false,
         currentWeightKg: 70,
         activity: {
           doneCount: 1,

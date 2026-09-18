@@ -1,4 +1,4 @@
-// schema-sha256: 9e23c10a1854db5c394328c49547af99c1e14c2110209bd2bafe25bb8be5f0db
+// schema-sha256: 6d15a1025e7de798ad2596ab25cd1981d6a626e0da59c4e52dc71aaaf6a7d330
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -2387,6 +2387,7 @@ export type Database = {
           age_updated_at: string
           age_years: number
           archived_at: string
+          can_archive: boolean
           canonical_full_name: string
           current_weight_kg: number
           full_name: string

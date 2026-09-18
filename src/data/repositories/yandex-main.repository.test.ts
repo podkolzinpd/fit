@@ -148,7 +148,7 @@ describe('Yandex main repository', () => {
     vi.useFakeTimers()
     let version = 1
     const clientPayload = () => ({ clients: [{
-      id: clientId, hasAccount: true, fullName: 'Клиент', canonicalFullName: 'Клиент',
+      id: clientId, canArchive: true, hasAccount: true, fullName: 'Клиент', canonicalFullName: 'Клиент',
       gender: 'female', ageYears: 30, ageUpdatedAt: '2026-08-01', heightCm: 170,
       goal: null, note: null, currentWeightKg: null, lastActivityAt: '2026-09-18T10:00:00.000Z',
       archivedAt: null, version, membershipVersion: 1,
@@ -669,9 +669,10 @@ function installContractFetch() {
     const url = new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url)
     const method = init?.method ?? 'GET'
     const path = url.pathname
-    if (method === 'GET' && path === '/v1/clients') return jsonResponse({ clients: [
-      { id: clientId, hasAccount: true, fullName: 'Клиент', canonicalFullName: 'Клиент', gender: 'male', ageYears: 30, ageUpdatedAt: '2026-08-01', heightCm: 180, goal: 'Сила', note: null, currentWeightKg: 80, lastActivityAt: '2026-08-20T10:00:00.000Z', archivedAt: null, version: 1, membershipVersion: 1 },
-      { id: archivedClientId, hasAccount: false, fullName: 'Архив', canonicalFullName: 'Архив', gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null, currentWeightKg: null, archivedAt: '2026-08-01T00:00:00.000Z', version: 1, membershipVersion: null },
+    if (method === 'GET' && path === '/v1/clients') return jsonResponse({ clients: url.searchParams.get('archived') === 'true' ? [
+      { id: archivedClientId, canArchive: true, hasAccount: false, fullName: 'Архив', canonicalFullName: 'Архив', gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null, currentWeightKg: null, lastActivityAt: '2026-08-01T00:00:00.000Z', archivedAt: '2026-08-01T00:00:00.000Z', version: 1, membershipVersion: 1 },
+    ] : [
+      { id: clientId, canArchive: true, hasAccount: true, fullName: 'Клиент', canonicalFullName: 'Клиент', gender: 'male', ageYears: 30, ageUpdatedAt: '2026-08-01', heightCm: 180, goal: 'Сила', note: null, currentWeightKg: 80, lastActivityAt: '2026-08-20T10:00:00.000Z', archivedAt: null, version: 1, membershipVersion: 1 },
     ] })
     if (method === 'GET' && path === '/v1/connections') return jsonResponse({
       memberships: [{ clientId, trainerId: actor.userId, firstName: 'Ирина', lastName: null, joinedAt: '2026-08-01T00:00:00.000Z', isRoot: true }],

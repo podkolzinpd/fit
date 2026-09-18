@@ -6,9 +6,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChatThread, Client } from '../../shared/domain'
 import { ClientsPage } from './ClientsListPage'
 
-const backend = vi.hoisted(() => ({ list: vi.fn(), listThreads: vi.fn(), open: vi.fn() }))
+const backend = vi.hoisted(() => ({ list: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn() }))
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ clients: { list: backend.list }, chat: { listThreads: backend.listThreads, open: backend.open } }),
+  useDataBackend: () => ({ clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open } }),
 }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { role: 'trainer', userId: 'trainer-1' } }) }))
 
@@ -18,7 +18,7 @@ vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { role: 'tra
 vi.mock('../../data/repositories/workouts.repository', () => ({ bmiLabel: () => '23.3' }))
 
 const client = (id: string, fullName: string, hasAccount = false, archivedAt: string | null = null): Client => ({
-  id, fullName, canonicalFullName: fullName, hasAccount, gender: null,
+  id, canArchive: false, fullName, canonicalFullName: fullName, hasAccount, gender: null,
   ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null,
   currentWeightKg: null, archivedAt, version: 1, membershipVersion: null,
 })
@@ -44,10 +44,80 @@ function renderPage(clients: Client[], initialEntry = '/clients') {
 
 beforeEach(() => {
   backend.list.mockReset()
+  backend.setArchived.mockReset()
   backend.listThreads.mockReset().mockResolvedValue([])
   backend.open.mockReset().mockResolvedValue('conversation-new')
   window.localStorage?.clear()
   window.sessionStorage?.clear()
+})
+
+describe('ClientsPage archive actions', () => {
+  it('shows archive controls only to the root trainer and keeps one action rail open', async () => {
+    const user = userEvent.setup()
+    renderPage([
+      { ...client('root-1', 'Анна Смирнова'), canArchive: true },
+      { ...client('root-2', 'Борис Иванов'), canArchive: true },
+      client('member', 'Вера Кузнецова'),
+    ])
+
+    const first = await screen.findByRole('button', { name: 'Действия с клиентом Анна Смирнова' })
+    const second = screen.getByRole('button', { name: 'Действия с клиентом Борис Иванов' })
+    expect(screen.queryByRole('button', { name: 'Действия с клиентом Вера Кузнецова' })).not.toBeInTheDocument()
+
+    await user.click(first)
+    expect(first).toHaveAttribute('aria-expanded', 'true')
+    await user.click(second)
+    expect(first).toHaveAttribute('aria-expanded', 'false')
+    expect(second).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('archives only after the explicit action and can restore the returned version', async () => {
+    const user = userEvent.setup()
+    const rootClient = { ...client('root', 'Анна Смирнова'), canArchive: true }
+    backend.setArchived
+      .mockResolvedValueOnce({ ...rootClient, archivedAt: '2026-09-18T10:00:00.000Z', version: 2 })
+      .mockResolvedValueOnce({ ...rootClient, archivedAt: null, version: 3 })
+    renderPage([rootClient])
+
+    await user.click(await screen.findByRole('button', { name: 'Действия с клиентом Анна Смирнова' }))
+    expect(backend.setArchived).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'В архив' }))
+    await waitFor(() => expect(backend.setArchived).toHaveBeenCalledWith(rootClient, true))
+    expect(await screen.findByText('Карточка «Анна Смирнова» перемещена в архив')).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'Вернуть' }))
+    await waitFor(() => expect(backend.setArchived).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: 'root', version: 2, archivedAt: '2026-09-18T10:00:00.000Z' }),
+      false,
+    ))
+    expect(await screen.findByText('Карточка «Анна Смирнова» восстановлена')).toBeVisible()
+  })
+
+  it('offers restoration for an archived root client', async () => {
+    const user = userEvent.setup()
+    const archived = { ...client('archived-root', 'Архивный спортсмен', false, '2026-09-01T00:00:00.000Z'), canArchive: true }
+    backend.setArchived.mockResolvedValue({ ...archived, archivedAt: null, version: 2 })
+    renderPage([archived])
+
+    await user.click(await screen.findByRole('button', { name: 'Действия с клиентом Архивный спортсмен' }))
+    await user.click(screen.getByRole('button', { name: 'Восстановить' }))
+    await waitFor(() => expect(backend.setArchived).toHaveBeenCalledWith(archived, false))
+  })
+
+  it('keeps the action open and shows the server error when archiving fails', async () => {
+    const user = userEvent.setup()
+    const rootClient = { ...client('root-error', 'Анна Смирнова'), canArchive: true }
+    backend.setArchived.mockRejectedValue(new Error('Данные уже изменились. Обновите страницу и повторите.'))
+    renderPage([rootClient])
+
+    const menu = await screen.findByRole('button', { name: 'Действия с клиентом Анна Смирнова' })
+    await user.click(menu)
+    await user.click(screen.getByRole('button', { name: 'В архив' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Данные уже изменились')
+    expect(menu).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.queryByRole('button', { name: 'Вернуть' })).not.toBeInTheDocument()
+  })
 })
 
 describe('ClientsPage search', () => {

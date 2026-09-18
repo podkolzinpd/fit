@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(21);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('d1000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'alias-root@example.test', ''),
@@ -148,6 +148,7 @@ select is(
   'Иван Финальный',
   'membership without alias falls back to canonical name'
 );
+select is((select can_archive from public.list_clients()), false, 'connected trainer cannot archive the root client');
 select lives_ok(
   format(
     'select public.update_client_trainer_preferences(%L, %L, null, 1)',

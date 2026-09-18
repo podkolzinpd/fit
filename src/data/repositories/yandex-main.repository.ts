@@ -66,6 +66,7 @@ const chatMessageSchema = z.object({
 })
 const clientSchema = z.object({
   id: uuid,
+  canArchive: z.boolean(),
   hasAccount: z.boolean(),
   fullName: z.string(),
   canonicalFullName: z.string(),
@@ -564,11 +565,13 @@ export function createYandexMainRepository(
 ): DataBackend {
   const queries = createYandexMainQueries(apiBaseUrl, sessionToken)
   let trainingDataPromise: Promise<YandexPilotTrainingData> | null = null
-  let clientsPromise: Promise<Client[]> | null = null
+  let activeClientsPromise: Promise<Client[]> | null = null
+  let archivedClientsPromise: Promise<Client[]> | null = null
   let connectionsPromise: Promise<z.infer<typeof connectionsSchema>> | null = null
   const invalidate = () => {
     trainingDataPromise = null
-    clientsPromise = null
+    activeClientsPromise = null
+    archivedClientsPromise = null
     connectionsPromise = null
   }
   const trainingData = async () => {
@@ -584,10 +587,14 @@ export function createYandexMainRepository(
     })()
     return trainingDataPromise
   }
-  const clients = async () => {
-    clientsPromise ??= readJson(queries, '/v1/clients', clientsSchema)
+  const clients = async (archived = false) => {
+    const path = archived ? '/v1/clients?archived=true' : '/v1/clients'
+    const promise = archived ? archivedClientsPromise : activeClientsPromise
+    const nextPromise = promise ?? readJson(queries, path, clientsSchema)
       .then((payload) => payload.clients.map(client))
-    return clientsPromise
+    if (archived) archivedClientsPromise = nextPromise
+    else activeClientsPromise = nextPromise
+    return nextPromise
   }
   const connections = async () => {
     connectionsPromise ??= readJson(queries, '/v1/connections', connectionsSchema)
@@ -669,10 +676,12 @@ export function createYandexMainRepository(
       },
       async resolveId(id) {
         if ((await clients()).some((item) => item.id === id)) return id
+        if ((await clients(true)).some((item) => item.id === id)) return id
         throw new Error('Карточка клиента не найдена')
       },
       async list(includeArchived = false) {
-        return (await clients()).filter((item) => includeArchived || item.archivedAt === null)
+        const active = await clients()
+        return includeArchived ? [...active, ...await clients(true)] : active
       },
       async listAttentionPreferences() {
         const data = await trainingData()
@@ -683,6 +692,7 @@ export function createYandexMainRepository(
       },
       async get(id) {
         const result = (await clients()).find((item) => item.id === id)
+          ?? (await clients(true)).find((item) => item.id === id)
         if (!result) throw new Error('Карточка клиента не найдена')
         return result
       },
