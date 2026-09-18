@@ -441,9 +441,9 @@ async function expectClientFactsOrder(page: VisualPage) {
     const pro = element.querySelector('.progress-pro-panel')
     return Boolean(overview?.querySelector('.client-current-week')
       && overview.querySelector('.client-progress-goal-story')
+      && overview.querySelector('.client-progress-measurements-story')
       && overview.querySelector('.period-exercise-results')
-      && pro?.querySelector('.client-progress-measurements-story')
-      && pro.querySelector('.client-body-map-disclosure')
+      && pro?.querySelector('.client-body-map-disclosure')
       && pro.querySelector('.weekly-training-load')
       && pro.querySelector('.period-rhythm')
       && pro.querySelector('.client-progress-comparison'))
@@ -1093,8 +1093,6 @@ test('measurement trends stay readable for client and trainer in both themes', a
     await gotoStable(page, `/progress/${demoClientId}`)
   } else {
     await openClientProgress(page, { scheme: true })
-    await page.getByRole('tab', { name: 'ПРО' }).click()
-    await page.getByText('Замеры и графики', { exact: true }).click()
   }
 
   let measurements = page.locator('.client-progress-measurements-story')
@@ -1133,10 +1131,6 @@ test('measurement trends stay readable for client and trainer in both themes', a
   await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, trainer ? `/progress/${demoClientId}` : '/me/progress')
-  if (!trainer) {
-    await page.getByRole('tab', { name: 'ПРО' }).click()
-    await page.getByText('Замеры и графики', { exact: true }).click()
-  }
   measurements = page.locator('.client-progress-measurements-story')
   await expect(measurements.getByRole('heading', { name: trainer ? 'Тренд по значениям' : 'Замеры' })).toBeVisible()
   await measurements.scrollIntoViewIfNeeded()
@@ -1227,8 +1221,6 @@ test('next-step suggestion stays off the main progress screen for client and tra
     await gotoStable(page, `/progress/${demoClientId}`)
   } else {
     await openClientProgress(page, { scheme: true })
-    await page.getByRole('tab', { name: 'ПРО' }).click()
-    await page.getByText('Замеры и графики', { exact: true }).click()
   }
 
   await expect(page.locator('.client-progress-next-step')).toHaveCount(0)
@@ -1261,8 +1253,6 @@ test('client measurement management keeps its visual baseline', async ({ page },
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client measurement management uses mobile visual profiles')
   await mockMeasurementProgress(page)
   await openClientProgress(page, { scheme: true })
-  await page.getByRole('tab', { name: 'ПРО' }).click()
-  await page.getByText('Замеры и графики', { exact: true }).click()
   const management = page.locator('.client-progress-measurements-story')
   await management.evaluate((element) => {
     element.scrollIntoView({ block: 'start' })

@@ -225,15 +225,13 @@ describe('Training summary card states', () => {
     />, { wrapper: wrapper(queryClient()) })
 
     expect(await screen.findByRole('heading', { name: 'ИИ-анализ' })).toBeVisible()
-    await openPro()
-    await userEvent.setup().click(screen.getByText('Замеры и графики'))
     const measurements = screen.getByRole('region', { name: 'Замеры' })
     expect(within(measurements).getByRole('button', { name: 'Добавить замер' })).toBeVisible()
     await waitFor(() => expect(repositories.progress).toHaveBeenCalledWith('client-1'))
     expect(repositories.generate).not.toHaveBeenCalled()
   })
 
-  it('keeps the overview focused and moves every detailed block to the PRO tab', async () => {
+  it('keeps measurements in the overview and the remaining detailed blocks in PRO', async () => {
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
     repositories.listForClient.mockResolvedValue([publishedSummary])
     const user = userEvent.setup()
@@ -244,13 +242,14 @@ describe('Training summary card states', () => {
     expect(screen.getByRole('region', { name: 'Текущая неделя' })).toBeVisible()
     expect(screen.getByRole('region', { name: 'Твоя цель' })).toBeVisible()
     expect(screen.getByRole('region', { name: 'Лучшие результаты за период' })).toBeVisible()
-    expect(document.querySelector('.client-progress-measurements-story')).not.toBeVisible()
+    expect(screen.getByRole('region', { name: 'Замеры' })).toBeVisible()
 
     await openPro(user)
     expect(screen.getByText('Подробные данные сохранены, но не мешают быстрому просмотру прогресса.')).toBeVisible()
-    for (const label of ['Все результаты', 'Замеры и графики', 'Карта тела', 'Нагрузка по неделям', 'Регулярность', 'Сравнение периодов', 'Бег']) {
+    for (const label of ['Все результаты', 'Карта тела', 'Нагрузка по неделям', 'Регулярность', 'Сравнение периодов', 'Бег']) {
       expect(screen.getByText(label, { exact: true })).toBeVisible()
     }
+    expect(document.querySelector('.progress-pro-panel .client-progress-measurements-story')).toBeNull()
     expect(document.querySelector('.progress-analysis-preview')).not.toBeVisible()
 
     await openOverview(user)
@@ -258,7 +257,7 @@ describe('Training summary card states', () => {
     expect(repositories.generate).not.toHaveBeenCalled()
   })
 
-  it('opens a linked measurements target directly inside PRO', async () => {
+  it('opens a legacy linked measurements target directly inside Overview', async () => {
     repositories.firstCompletedWorkoutDate.mockResolvedValue(null)
     repositories.listForClient.mockResolvedValue([])
     const cache = queryClient()
@@ -267,8 +266,7 @@ describe('Training summary card states', () => {
       <ClientTrainingSummaryCard clientId="client-1" measurementManagement={<button type="button">Добавить замер</button>} />
     </QueryClientProvider></MemoryRouter>)
 
-    expect(await screen.findByRole('tab', { name: 'ПРО' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByText('Замеры и графики')).toBeVisible()
+    expect(await screen.findByRole('tab', { name: 'Обзор' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('region', { name: 'Замеры' })).toBeVisible()
   })
 
@@ -391,12 +389,13 @@ describe('Training summary card states', () => {
     const detailedGoal = screen.getByRole('region', { name: 'Твоя цель' })
     await user.click(within(detailedGoal).getByText('Дата замера'))
     expect(within(detailedGoal).getByText(/81,5 кг/)).toBeVisible()
-    await user.click(screen.getByText('Замеры и графики'))
+    await openOverview(user)
     const measurements = screen.getByRole('region', { name: 'Замеры' })
     expect(within(measurements).getByText('Вес (кг)')).toBeVisible()
     expect(within(measurements).getByText('Связан с целью')).not.toBeVisible()
     await user.click(within(measurements).getByText('Подробности замеров'))
     expect(within(measurements).getByText('Связан с целью')).toBeVisible()
+    await openPro(user)
     await user.click(screen.getByText('Регулярность', { exact: true }))
     expect(screen.getByRole('list', { name: 'Завершённые тренировки по неделям' })).toBeVisible()
     await user.click(screen.getByText('Сравнение периодов', { exact: true }))
@@ -405,11 +404,13 @@ describe('Training summary card states', () => {
     const overview = document.querySelector('.progress-overview-panel')!
     expect(overview.querySelector('.client-current-week')).not.toBeNull()
     expect(overview.querySelector('.client-progress-goal-story')).not.toBeNull()
+    expect(overview.querySelector('.client-progress-measurements-story')).not.toBeNull()
     expect(overview.querySelector('.period-exercise-results')).not.toBeNull()
     const pro = document.querySelector('.progress-pro-panel')!
-    for (const selector of ['.client-progress-measurements-story', '.client-body-map-disclosure', '.weekly-training-load', '.period-rhythm', '.client-progress-comparison']) {
+    for (const selector of ['.client-body-map-disclosure', '.weekly-training-load', '.period-rhythm', '.client-progress-comparison']) {
       expect(pro.querySelector(selector)).not.toBeNull()
     }
+    expect(pro.querySelector('.client-progress-measurements-story')).toBeNull()
     expect(document.querySelector('.client-progress-main-now')).toBeNull()
     expect(document.querySelector('.client-progress-next-step')).toBeNull()
     expect(document.body).not.toHaveTextContent('Прогресс уже заметен, ты на верном пути')
@@ -809,8 +810,6 @@ describe('Training summary card states', () => {
     const analysisAlert = await within(document.querySelector('.progress-analysis-preview') as HTMLElement).findByRole('alert')
     expect(analysisAlert).toHaveTextContent('Не удалось загрузить сохранённый анализ')
     expect(within(analysisAlert).getByRole('button', { name: 'Повторить' })).toBeVisible()
-    await openPro()
-    await userEvent.setup().click(screen.getByText('Замеры и графики'))
     expect(await screen.findByText('80 кг')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Добавить замер' })).toBeVisible()
     expect(screen.getByRole('button', { name: '1 месяц' })).toBeVisible()
