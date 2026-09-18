@@ -7,12 +7,16 @@ import { ClientTrainerConnections } from './ClientTrainerConnections'
 
 const repository = vi.hoisted(() => ({
   create: vi.fn(),
+  createShare: vi.fn(),
   removeTrainer: vi.fn(),
   list: vi.fn(),
   listTrainers: vi.fn(),
   revoke: vi.fn(),
 }))
 vi.mock('../../data/repositories/invitations.repository', () => ({ invitationsRepository: repository }))
+vi.mock('../../app/auth-context', () => ({
+  useAuth: () => ({ actor: { userId: 'client-user', role: 'client', firstName: 'Антон' } }),
+}))
 
 const connectedTrainer = {
   trainerId: 'trainer-1', firstName: 'Александр', lastName: 'Ситников',
@@ -83,15 +87,21 @@ describe('ClientTrainerConnections safe disconnect', () => {
     expect(repository.listTrainers).toHaveBeenCalledTimes(2)
   })
 
-  it('shows an explicit copy action next to a newly created trainer code', async () => {
+  it('opens sharing actions for a protected trainer invitation link and keeps the code as fallback', async () => {
     const user = userEvent.setup()
-    repository.create.mockResolvedValue('ABC123DEF456')
+    repository.createShare.mockResolvedValue({
+      id: 'invite-1', clientId: 'client-1', targetRole: 'trainer',
+      code: 'ABC123DEF456', token: `ABC123DEF456.${'a'.repeat(64)}`,
+      expiresAt: '2026-09-25T12:00:00.000Z',
+    })
     renderConnections()
 
     await user.click(screen.getByRole('button', { name: 'Пригласить тренера' }))
 
-    expect(await screen.findByText(/Код для тренера:/)).toHaveTextContent('ABC123DEF456')
-    expect(screen.getByRole('button', { name: 'Скопировать код для тренера' })).toBeVisible()
+    expect(await screen.findByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Отправить ссылку' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Скопировать ссылку' })).toBeVisible()
+    expect(screen.getByText('ABC123DEF456')).toBeVisible()
   })
 
   it('keeps the trainer catalog available as a quiet link in the profile', async () => {
