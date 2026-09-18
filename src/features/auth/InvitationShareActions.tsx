@@ -8,6 +8,7 @@ import type { InvitationShare } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
 import { invitationShareText } from '../../shared/invitation-share'
 import { InvitationShareDialog } from '../../shared/InvitationShareDialog'
+import { trackGoal } from '../../shared/yandex-metrika'
 
 function inviterName(firstName: string | null | undefined): string {
   return firstName?.trim() || 'Пользователь Fit'
@@ -29,7 +30,11 @@ export function InvitationShareButton({
   const queryClient = useQueryClient()
   const invitation = useMutation({
     mutationFn: () => backend.invitations.createShare(clientId, targetRole),
-    onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] }),
+    onSuccess: async () => {
+      trackGoal('invitation_created')
+      await queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] })
+    },
+    onError: () => trackGoal('invitation_create_error'),
   })
 
   async function revoke(share: InvitationShare): Promise<void> {
@@ -64,10 +69,14 @@ export function InviteAthleteButton({ className, label = 'Пригласить �
       const share = await backend.invitations.createShare(id, 'client')
       return { clientId: id, share }
     },
-    onSuccess: async () => Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['clients'] }),
-      queryClient.invalidateQueries({ queryKey: ['client-invitations'] }),
-    ]),
+    onSuccess: async () => {
+      trackGoal('invitation_created')
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['clients'] }),
+        queryClient.invalidateQueries({ queryKey: ['client-invitations'] }),
+      ])
+    },
+    onError: () => trackGoal('invitation_create_error'),
   })
 
   function close(): void {
