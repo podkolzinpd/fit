@@ -14,4 +14,15 @@ describe('first workout intent', () => {
     storeFirstWorkoutIntent('user-1', { mode: 'text' })
     expect(takeFirstWorkoutIntent('user-1')).toEqual({ mode: 'text' })
   })
+
+  it('transfers a preset workout selection exactly once', () => {
+    storeFirstWorkoutIntent('user-1', { mode: 'preset', presetId: 'full-body-no-equipment' })
+    expect(takeFirstWorkoutIntent('user-1')).toEqual({ mode: 'preset', presetId: 'full-body-no-equipment' })
+    expect(takeFirstWorkoutIntent('user-1')).toBeNull()
+  })
+
+  it('rejects a preset intent with an empty presetId', () => {
+    storeFirstWorkoutIntent('user-1', { mode: 'preset', presetId: '' })
+    expect(takeFirstWorkoutIntent('user-1')).toBeNull()
+  })
 })
