@@ -2639,6 +2639,225 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('adds and replaces an accessible cross-partition custom exercise in Live', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const standaloneActorId = 'bef10000-0000-4000-8000-000000000001'
+      const standaloneClientId = 'bef20000-0000-4000-8000-000000000002'
+      const requestId = 'bef30000-0000-4000-8000-000000000003'
+      const startOperationId = 'bef40000-0000-4000-8000-000000000004'
+      const appendOperationId = 'bef50000-0000-4000-8000-000000000005'
+      const replaceOperationId = 'bef60000-0000-4000-8000-000000000006'
+      let workoutId: string | undefined
+      let customExerciseId: string | undefined
+
+      await ownerPool.query(
+        `
+          insert into public.profiles (id, first_name, account_role)
+          values ($1, 'Live standalone client', 'client')
+        `,
+        [standaloneActorId],
+      )
+      await ownerPool.query(
+        `
+          insert into public.clients (
+            id, trainer_id, auth_user_id, full_name, gender, age_years,
+            height_cm
+          ) values ($1, $2, $2, 'Live standalone client', 'female', 30, 170)
+        `,
+        [standaloneClientId, standaloneActorId],
+      )
+      await ownerPool.query(
+        `
+          insert into public.client_trainers (client_id, trainer_id)
+          values ($1, $2)
+        `,
+        [standaloneClientId, ACTOR_ID],
+      )
+
+      const draft: PlannedWorkoutDraft = {
+        id: null,
+        requestId,
+        clientId: standaloneClientId,
+        workoutDate: '2026-08-23',
+        startTime: null,
+        endTime: null,
+        notes: 'Live с упражнением из другого раздела данных',
+        exercises: [{
+          position: 0,
+          source: 'system',
+          ref: 'running',
+          customExerciseId: null,
+          name: 'Бег',
+          muscleGroup: 'cardio',
+          inputKind: 'distance',
+          blockId: 'bef70000-0000-4000-8000-000000000007',
+          blockType: 'single',
+          blockPreset: 'set',
+          blockRounds: 1,
+          restBetweenExercisesSec: 0,
+          restBetweenRoundsSec: 90,
+          restBetweenSetsSec: 90,
+          trainerComment: null,
+          sets: [{
+            position: 0,
+            weightKg: null,
+            reps: null,
+            durationMin: 10,
+            durationSec: 600,
+            distanceKm: 2,
+            rpe: null,
+          }],
+        }],
+      }
+
+      try {
+        const planned = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => savePlannedWorkout(client, draft, null),
+        )
+        workoutId = planned.id
+
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => startLiveWorkout(
+            client,
+            planned.id,
+            planned.version,
+            startOperationId,
+          ),
+        )).resolves.toEqual({ version: 2, replayed: false })
+
+        const createdCustomExercise = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => createCustomExercise(client, {
+            name: 'Halo',
+            muscleGroup: 'shoulders',
+            inputKind: 'reps',
+          }),
+        )
+        customExerciseId = createdCustomExercise.id
+        const customExercise = {
+          source: 'custom' as const,
+          ref: `custom:${createdCustomExercise.id}`,
+          customExerciseId: createdCustomExercise.id,
+          name: 'Подменённое название',
+          muscleGroup: 'other' as const,
+          inputKind: 'reps' as const,
+        }
+        const appended = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => appendLiveExercise(
+            client,
+            planned.id,
+            customExercise,
+            2,
+            appendOperationId,
+          ),
+        )
+        expect(appended).toMatchObject({ version: 3, replayed: false })
+
+        const originalExercise = await ownerPool.query<{ id: string }>(
+          `
+            select id
+            from public.workout_exercises
+            where workout_id = $1 and id <> $2
+          `,
+          [planned.id, appended.resourceId],
+        )
+        const originalExerciseId = originalExercise.rows[0]?.id
+        if (originalExerciseId === undefined) {
+          throw new Error('Original Live exercise is missing')
+        }
+
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => replaceLiveExercise(
+            client,
+            planned.id,
+            originalExerciseId,
+            customExercise,
+            3,
+            replaceOperationId,
+          ),
+        )).resolves.toEqual({
+          resourceId: originalExerciseId,
+          version: 4,
+          replayed: false,
+        })
+
+        const stored = await ownerPool.query<QueryResultRow & {
+          custom_exercise_id: string | null
+          exercise_name: string
+          exercise_ref: string
+          exercise_source: string
+          input_kind: string
+          muscle_group: string
+        }>(
+          `
+            select
+              exercise_source,
+              exercise_ref,
+              custom_exercise_id,
+              exercise_name,
+              muscle_group,
+              input_kind
+            from public.workout_exercises
+            where workout_id = $1
+            order by position
+          `,
+          [planned.id],
+        )
+        expect(stored.rows).toEqual(Array.from({ length: 2 }, () => ({
+          exercise_source: 'system',
+          exercise_ref: `snapshot:custom:${createdCustomExercise.id}`,
+          custom_exercise_id: null,
+          exercise_name: 'Halo',
+          muscle_group: 'shoulders',
+          input_kind: 'reps',
+        })))
+      } finally {
+        await ownerPool.query(
+          `
+            delete from app_private.live_workout_operations
+            where actor_id = $1 and operation_id = any($2::uuid[])
+          `,
+          [ACTOR_ID, [startOperationId, appendOperationId, replaceOperationId]],
+        )
+        if (workoutId !== undefined) {
+          await ownerPool.query(
+            'delete from public.workouts where id = $1',
+            [workoutId],
+          )
+        }
+        if (customExerciseId !== undefined) {
+          await ownerPool.query(
+            'delete from public.custom_exercises where id = $1',
+            [customExerciseId],
+          )
+        }
+        await ownerPool.query(
+          'delete from public.client_trainers where client_id = $1',
+          [standaloneClientId],
+        )
+        await ownerPool.query(
+          'delete from public.clients where id = $1',
+          [standaloneClientId],
+        )
+        await ownerPool.query(
+          'delete from public.profiles where id = $1',
+          [standaloneActorId],
+        )
+      }
+    })
+
     it('records a past plan atomically and resolves cancel, reschedule and comment actions', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
