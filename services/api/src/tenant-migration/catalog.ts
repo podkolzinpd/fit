@@ -120,6 +120,30 @@ export const TENANT_MIGRATION_TABLES: readonly TenantMigrationTableSpec[] = [
     targetRecord: 'public.profiles',
   },
   {
+    name: 'public.user_legal_acceptances',
+    sourceSql: publicRows(
+      'user_legal_acceptances',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetSql: publicRows(
+      'user_legal_acceptances',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetRecord: 'public.user_legal_acceptances',
+  },
+  {
+    name: 'public.account_deletion_requests',
+    sourceSql: publicRows(
+      'account_deletion_requests',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetSql: publicRows(
+      'account_deletion_requests',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetRecord: 'public.account_deletion_requests',
+  },
+  {
     name: 'public.trainers',
     sourceSql: publicRows('trainers', 'row.profile_id = $1'),
     targetSql: publicRows('trainers', 'row.profile_id = $1'),
@@ -503,6 +527,30 @@ readonly TenantMigrationTableSpec[] = [
     sourceSql: standalonePublicRows('profiles', 'row.id in (select id from scope_users)'),
     targetSql: standalonePublicRows('profiles', 'row.id in (select id from scope_users)'),
     targetRecord: 'public.profiles',
+  },
+  {
+    name: 'public.user_legal_acceptances',
+    sourceSql: standalonePublicRows(
+      'user_legal_acceptances',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetSql: standalonePublicRows(
+      'user_legal_acceptances',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetRecord: 'public.user_legal_acceptances',
+  },
+  {
+    name: 'public.account_deletion_requests',
+    sourceSql: standalonePublicRows(
+      'account_deletion_requests',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetSql: standalonePublicRows(
+      'account_deletion_requests',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetRecord: 'public.account_deletion_requests',
   },
   {
     name: 'public.trainers',

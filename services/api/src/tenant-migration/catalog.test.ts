@@ -11,7 +11,7 @@ import {
 function expectSafeManifest(
   manifest: typeof TENANT_MIGRATION_TABLES,
 ): void {
-  expect(manifest).toHaveLength(32)
+  expect(manifest).toHaveLength(34)
   const names = manifest.map((spec) => spec.name)
   expect(new Set(names).size).toBe(names.length)
   for (const spec of manifest) {
@@ -42,6 +42,10 @@ describe('tenant migration catalog', () => {
     )
     expect(byName.get('public.clients')?.sourceSql)
       .toContain("$1::text = 'application-v1'")
+    expect(byName.get('public.user_legal_acceptances')?.sourceSql)
+      .toContain('user_legal_acceptances')
+    expect(byName.get('public.account_deletion_requests')?.sourceSql)
+      .toContain('account_deletion_requests')
     expect(byName.get('public.trainer_professional_profiles')?.sourceSql)
       .toContain('trainer_professional_profiles')
     expect(byName.get('public.client_trainers')?.sourceSql)

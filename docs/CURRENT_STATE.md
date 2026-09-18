@@ -66,6 +66,12 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   audit — 14 819 строк, apply — 14 805 вставок, повторный apply — 0. Запуск
   использовал `media_validation: allow-missing`, поэтому не является финальной
   cutover-репетицией.
+- Текущий full-cohort manifest расширен до 34 таблиц: в snapshot входят
+  `user_legal_acceptances` и `account_deletion_requests`. Новый import атомарно
+  пересобирает переносимые таблицы из свежего snapshot вместо insert-only
+  конфликта на изменившихся строках. Yandex identity/session/rollout строки
+  временно сохраняются и восстанавливаются; наличие нативного Yandex-профиля
+  или auth/session-ссылки вне snapshot блокирует операцию до удаления данных.
 - Server-side rollout assignments для `linked-ready` профилей включены и
   проверены агрегированно. Обязательная привязка включена отдельно; frontend
   app-session, main-routing и native-registration switches остаются выключены.
@@ -89,8 +95,9 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
    exercise и custom-exercise objects; подтвердить upload/sign/read/delete.
 2. Добавить Yandex custom-exercise photo adapter и эквивалентный client
    Assistant program jobs/generation path.
-3. Перенести legal acceptance существующих пользователей и account deletion
-   requests в общий repository/API-контракт и tenant catalog.
+3. Данные legal acceptance и account deletion requests уже входят в 34-table
+   tenant catalog; остаётся перевести legal/deletion UI на общий Yandex
+   repository/API-контракт.
 4. Убрать обязательность Supabase env и runtime fallback из production
    composition; сделать публичный профиль и остальные прямые пути Yandex-first.
 5. Проложить server/frontend native-registration flags, проверить linked и
@@ -99,7 +106,8 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
 6. Провести backup restore drill во временный private cluster, повторить AI
    summary и push smoke.
 7. После короткого freeze выполнить свежий full-cohort snapshot, media delta,
-   validate и повторный apply с нулём вставок; только затем включать routing.
+   validate и повторную атомарную пересборку с тем же checksum; только затем
+   включать routing.
 
 ## Ближайший порядок
 

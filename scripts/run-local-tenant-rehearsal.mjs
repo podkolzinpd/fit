@@ -22,7 +22,7 @@ const TARGET_DATABASE_PREFIX = 'fit_tenant_rehearsal_'
 const DATABASE_NAME_PATTERN = /^fit_tenant_rehearsal_[1-9][0-9]*_[12]$/u
 const SYNTHETIC_TRAINER_ID = '90000000-0000-4000-8000-000000000009'
 const STANDALONE_CLIENT_PROFILE_ID = 'a1000000-0000-4000-8000-000000000001'
-const EXPECTED_TABLE_COUNT = 32
+const EXPECTED_TABLE_COUNT = 34
 const FIXTURE_PATH = join(
   ROOT_DIRECTORY,
   'services/api/src/tenant-migration/rehearsal-source-fixture.sql',
@@ -35,6 +35,8 @@ const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
 export const PRODUCTION_LIKE_TABLES = Object.freeze([
   'public.profiles',
+  'public.user_legal_acceptances',
+  'public.account_deletion_requests',
   'public.trainers',
   'public.trainer_professional_profiles',
   'public.clients',
@@ -73,6 +75,8 @@ export const EXPECTED_EMPTY_TABLES = Object.freeze([
 
 export const STANDALONE_CLIENT_DATA_TABLES = Object.freeze([
   'public.profiles',
+  'public.user_legal_acceptances',
+  'public.account_deletion_requests',
   'public.trainers',
   'public.clients',
   'public.client_invitations',
@@ -405,6 +409,81 @@ function readProfileCount(databaseName) {
   return Number(count)
 }
 
+function seedPreservedYandexAnchors(databaseName) {
+  assertRehearsalDatabaseName(databaseName)
+  run(
+    'podman',
+    [
+      'exec',
+      TARGET_CONTAINER,
+      'psql',
+      '--username',
+      'postgres',
+      '--dbname',
+      databaseName,
+      '--set',
+      'ON_ERROR_STOP=1',
+      '--command',
+      `insert into app_private.auth_identities (
+         provider, provider_subject_sha256, profile_id, identity_origin, created_at
+       ) values (
+         'yandex', '${'a'.repeat(64)}', '${SYNTHETIC_TRAINER_ID}', 'linked',
+         timestamptz '2026-09-01 10:00:00+00'
+       );
+       insert into app_private.profile_rollout_assignments (
+         profile_id, target_backend, access_mode, enabled, created_at, updated_at
+       ) values (
+         '${SYNTHETIC_TRAINER_ID}', 'yandex', 'read_write', true,
+         timestamptz '2026-09-01 10:00:00+00',
+         timestamptz '2026-09-01 10:00:00+00'
+       );
+       insert into app_private.yandex_app_sessions (
+         token_sha256, profile_id, access_mode, expires_at, created_at
+       ) values (
+         '${'b'.repeat(64)}', '${SYNTHETIC_TRAINER_ID}', 'read_write',
+         timestamptz '2030-01-01 00:00:00+00',
+         timestamptz '2026-09-01 10:00:00+00'
+       );
+       insert into app_private.yandex_pilot_sessions (
+         token_sha256, profile_id, expires_at, created_at
+       ) values (
+         '${'c'.repeat(64)}', '${SYNTHETIC_TRAINER_ID}',
+         timestamptz '2030-01-01 00:00:00+00',
+         timestamptz '2026-09-01 10:00:00+00'
+       )`,
+    ],
+    { capture: true, label: 'preserved_yandex_anchor_seed' },
+  )
+}
+
+function assertPreservedYandexAnchors(databaseName) {
+  assertRehearsalDatabaseName(databaseName)
+  const count = run(
+    'podman',
+    [
+      'exec',
+      TARGET_CONTAINER,
+      'psql',
+      '--username',
+      'postgres',
+      '--dbname',
+      databaseName,
+      '--tuples-only',
+      '--no-align',
+      '--set',
+      'ON_ERROR_STOP=1',
+      '--command',
+      `select
+         (select count(*) from app_private.auth_identities)
+         + (select count(*) from app_private.profile_rollout_assignments)
+         + (select count(*) from app_private.yandex_app_sessions)
+         + (select count(*) from app_private.yandex_pilot_sessions)`,
+    ],
+    { capture: true, label: 'preserved_yandex_anchor_check' },
+  ).trim()
+  if (count !== '4') throw new Error('preserved_yandex_anchors_missing')
+}
+
 function assertEncryptedArtifact(artifactPath, rootProfileId) {
   const artifact = lstatSync(artifactPath)
   if (!artifact.isFile() || artifact.isSymbolicLink()) {
@@ -448,6 +527,7 @@ function rehearseMigrationRoot({
   databaseName,
   databaseUrl,
   exportArguments,
+  expectZeroInsertedOnRepeat = true,
   label,
   passphrase,
   rootProfileId,
@@ -498,7 +578,7 @@ function rehearseMigrationRoot({
     ),
     'applied',
   )
-  assertIdempotentApply(repeated)
+  if (expectZeroInsertedOnRepeat) assertIdempotentApply(repeated)
   const validated = parseMigrationReport(
     runMigrationCli(
       ['validate', '--in', artifactPath],
@@ -565,16 +645,19 @@ async function rehearse(runNumber) {
       passphrase,
       rootProfileId: STANDALONE_CLIENT_PROFILE_ID,
     })
+    seedPreservedYandexAnchors(databaseName)
     const fullCohort = rehearseMigrationRoot({
       artifactPath: fullCohortArtifactPath,
       assertManifest: assertFullCohortManifest,
       databaseName,
       databaseUrl,
       exportArguments: ['export', '--full-cohort'],
+      expectZeroInsertedOnRepeat: false,
       label: 'full_cohort',
       passphrase,
       rootProfileId: 'application-v1',
     })
+    assertPreservedYandexAnchors(databaseName)
     console.log(
       `[tenant-rehearsal] ${runNumber}/2 пройдена: trainer ${trainer.fingerprint} `
         + `(${trainer.rows} строк), standalone client ${standaloneClient.fingerprint} `

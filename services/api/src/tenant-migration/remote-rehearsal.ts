@@ -716,6 +716,13 @@ export async function runRemoteTenantRehearsal(
     await requestStage(settings, bundle, envelope, passphrase, true),
   )
   printStageSummary(
-    await requestStage(settings, bundle, envelope, passphrase, true, true),
+    await requestStage(
+      settings,
+      bundle,
+      envelope,
+      passphrase,
+      true,
+      bundle.format !== 'fit-full-cohort-bundle-v1',
+    ),
   )
 }
