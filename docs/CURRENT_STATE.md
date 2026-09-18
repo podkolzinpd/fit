@@ -3,7 +3,7 @@
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
 
-Обновлено: 2026-09-18. База изменений: `eeb2491a` (#1037) + текущий PR. Frontend
+Обновлено: 2026-09-18. База изменений: `eeb2491a` (#1037) + #1040. Frontend
 остаётся на Vercel. Production-пользователи пока используют Supabase; Yandex
 app-session, main routing и native registration не включены глобально.
 
