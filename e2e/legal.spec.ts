@@ -25,6 +25,15 @@ for (const legalPage of [
   })
 }
 
+test('privacy policy references in the terms open the privacy page', async ({ page }) => {
+  await page.goto('/legal/terms')
+  const privacyPolicyReference = page.getByRole('link', { name: 'Политикой конфиденциальности' }).first()
+  await expect(privacyPolicyReference).toHaveAttribute('href', '/legal/privacy')
+  await privacyPolicyReference.click()
+  await expect(page).toHaveURL(/\/legal\/privacy$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Политика конфиденциальности' })).toBeVisible()
+})
+
 test('legal documents are public and account deletion stays a reversible request', async ({ page }, testInfo) => {
   await page.goto('/legal/privacy')
   await expect(page.getByRole('heading', { level: 1, name: 'Политика конфиденциальности' })).toBeVisible()
