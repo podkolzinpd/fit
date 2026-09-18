@@ -144,6 +144,40 @@ describe('Yandex main repository', () => {
     })
   })
 
+  it('drops a stale client snapshot after a conflict and on realtime refresh', async () => {
+    vi.useFakeTimers()
+    let version = 1
+    const clientPayload = () => ({ clients: [{
+      id: clientId, hasAccount: true, fullName: 'Клиент', canonicalFullName: 'Клиент',
+      gender: 'female', ageYears: 30, ageUpdatedAt: '2026-08-01', heightCm: 170,
+      goal: null, note: null, currentWeightKg: null, lastActivityAt: '2026-09-18T10:00:00.000Z',
+      archivedAt: null, version, membershipVersion: 1,
+    }] })
+    const fetchMock = vi.fn((input: string | URL | Request, init?: RequestInit) => {
+      const path = new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url).pathname
+      if (path === '/v1/clients' && (init?.method ?? 'GET') === 'GET') return Promise.resolve(jsonResponse(clientPayload()))
+      if (path === `/v1/clients/${clientId}` && init?.method === 'PUT') {
+        return Promise.resolve(jsonResponse({ error: 'client_conflict' }, 409))
+      }
+      return Promise.resolve(new Response(null, { status: 204 }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    expect((await repository.clients.get(clientId)).version).toBe(1)
+    version = 2
+    await expect(repository.clients.update({
+      id: clientId, version: 1, fullName: 'Клиент', gender: 'female', ageYears: 30,
+      ageUpdatedAt: localDate('2026-08-01'), heightCm: 170,
+    })).rejects.toMatchObject({ code: 'PT409' })
+    expect((await repository.clients.get(clientId)).version).toBe(2)
+
+    version = 3
+    const unsubscribe = repository.realtime.subscribeToClientChanges(clientId, vi.fn())
+    expect((await repository.clients.get(clientId)).version).toBe(3)
+    unsubscribe()
+  })
+
   it('requests a private Vital media URL through the authenticated Yandex backend', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
       signedUrl: 'https://project.supabase.co/storage/v1/object/sign/fit-exercise-media/vital-pro/squat.mp4?token=redacted',

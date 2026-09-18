@@ -702,19 +702,25 @@ export function createYandexMainRepository(
         return this.create(input)
       },
       async update(input) {
-        await writeJson(queries, `/v1/clients/${input.id}`, 'PUT', {
-          draft: { fullName: input.fullName, gender: input.gender, ageYears: input.ageYears,
-            ageUpdatedAt: input.ageUpdatedAt, heightCm: input.heightCm, goal: input.goal ?? null },
-          expectedVersion: input.version,
-        }, z.object({ client: z.object({ id: uuid, version: z.number().int().positive() }) }))
-        invalidate()
+        try {
+          await writeJson(queries, `/v1/clients/${input.id}`, 'PUT', {
+            draft: { fullName: input.fullName, gender: input.gender, ageYears: input.ageYears,
+              ageUpdatedAt: input.ageUpdatedAt, heightCm: input.heightCm, goal: input.goal ?? null },
+            expectedVersion: input.version,
+          }, z.object({ client: z.object({ id: uuid, version: z.number().int().positive() }) }))
+        } finally {
+          invalidate()
+        }
       },
       async updateOwn(input) { await this.update(input) },
       async updatePreferences(input) {
-        await writeJson(queries, `/v1/clients/${input.clientId}/preferences`, 'PUT', {
-          alias: input.alias, note: input.note ?? null, expectedVersion: input.version,
-        }, z.object({ client: z.object({ membershipVersion: z.number().int().positive() }) }))
-        invalidate()
+        try {
+          await writeJson(queries, `/v1/clients/${input.clientId}/preferences`, 'PUT', {
+            alias: input.alias, note: input.note ?? null, expectedVersion: input.version,
+          }, z.object({ client: z.object({ membershipVersion: z.number().int().positive() }) }))
+        } finally {
+          invalidate()
+        }
       },
       async setArchived(item, archived) {
         const payload = await writeJson(queries, `/v1/clients/${item.id}/archive`, 'PUT', {
@@ -1140,8 +1146,12 @@ export function createYandexMainRepository(
     },
     realtime: {
       subscribeToClientChanges(_clientId, onChange, onReady) {
+        invalidate()
         onReady?.()
-        const interval = window.setInterval(() => onChange({ table: 'clients', eventType: 'UPDATE', new: {}, old: {} }), 15_000)
+        const interval = window.setInterval(() => {
+          invalidate()
+          onChange({ table: 'clients', eventType: 'UPDATE', new: {}, old: {} })
+        }, 15_000)
         return () => window.clearInterval(interval)
       },
     },
