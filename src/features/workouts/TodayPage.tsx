@@ -29,6 +29,8 @@ import { WearableHealthCard } from '../wearables'
 import { isTodayGreetingPilotEnabled, isWearablesPilotEnabled } from '../../app/feature-flags'
 import { todayHeaderProps } from './today-header'
 import { ClientHomeOverview } from './ClientHomeOverview'
+import { PresetWorkoutPicker } from './PresetWorkoutPicker'
+import { PRESET_WORKOUTS, presetWorkoutToParsedItems } from '../../shared/preset-workouts'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { WorkoutCta, WorkoutExercise, WorkoutHeader, WorkoutSetRow } from './WorkoutSurface'
 import { trainerActionItems, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
@@ -424,6 +426,20 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     void handleHeroTranscript(firstWorkoutIntent.transcript)
   }, [firstWorkoutIntent])
 
+  function handlePresetSelected(presetId: string) {
+    const preset = PRESET_WORKOUTS.find((item) => item.id === presetId)
+    if (!preset) return
+    setItems(presetWorkoutToParsedItems(preset, catalog.exercises))
+    trackGoal('today_preset_workout_selected')
+    setScreen('review')
+  }
+
+  useEffect(() => {
+    if (firstIntentConsumed.current || firstWorkoutIntent?.mode !== 'preset') return
+    firstIntentConsumed.current = true
+    handlePresetSelected(firstWorkoutIntent.presetId)
+  }, [firstWorkoutIntent])
+
   async function previousResults(selected: ExerciseSnapshot[]): Promise<Map<string, PreviousExerciseResult>> {
     if (!effectiveClientId) return new Map()
     try {
@@ -659,6 +675,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         showFirstRunConnection={actor?.kind === 'client' && actor.trainerId === actor.userId}
         wearable={actor && isWearablesPilotEnabled(actor.userId) ? <WearableHealthCard /> : undefined}
         trainerDiscovery={mine.data ? <TrainerDiscoveryHomeCard clientId={mine.data.id} /> : undefined}
+        presetPrompt={<PresetWorkoutPicker onSelect={handlePresetSelected} />}
       /></> : <>
       {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}
       {!clientMode && firstPlanClient && !textComposerOpen && <TrainerFirstPlanPrompt clientName={firstPlanClient.fullName} />}
