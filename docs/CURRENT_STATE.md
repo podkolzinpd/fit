@@ -3,7 +3,7 @@
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
 
-Обновлено: 2026-09-18. База изменений: `759eee63` (#1038). Frontend
+Обновлено: 2026-09-19. База изменений: `6fe7bf29` (#1041) + #1042. Frontend
 остаётся на Vercel. Production-пользователи пока используют Supabase; Yandex
 app-session, main routing и native registration не включены глобально.
 
@@ -73,6 +73,12 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   assignment и legal acceptance находятся в `main`; frontend и server flags
   default-off. `YANDEX_NATIVE_REGISTRATION_ENABLED` ещё не проложен в
   deployment environment.
+- Защищённый `/invite#token=…&source=…` показывает публичный Supabase/Yandex
+  preview, хранит bearer-token только в browser session и возвращает связанный
+  либо новый аккаунт на явный claim; legacy `/join?code=…` теперь также
+  переживает Yandex OAuth.
+  При включённой app-session Yandex ID становится primary login action, email
+  остаётся secondary fallback; production flags в этом PR не меняются.
 - Yandex API покрывает основные profile/client/workout/Live/progress/chat/push
   read-write сценарии через `x-fit-session`. Ошибка выбранного Yandex backend
   не должна переключать отдельный запрос обратно на Supabase.

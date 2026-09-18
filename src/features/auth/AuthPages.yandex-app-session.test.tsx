@@ -7,6 +7,14 @@ import {
   readPendingYandexNativeRegistration,
   savePendingYandexNativeRegistration,
 } from './yandex-pilot-oauth'
+import {
+  readInvitationAuthReturn,
+  saveInvitationAuthReturn,
+} from './invitation-auth-return'
+import {
+  captureInvitationLink,
+  readPendingInvitationLink,
+} from './invitation-link-continuation'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 
 const PROFILE_ID = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
@@ -125,13 +133,132 @@ describe('Yandex app session auth flow', () => {
     sessionStorage.clear()
   })
 
-  it('offers Yandex ID to every visitor while keeping email sign-in available', () => {
+  it('uses Yandex ID as the primary login while keeping email sign-in available', () => {
     render(<MemoryRouter><AuthPage /></MemoryRouter>)
 
-    expect(screen.getByRole('button', { name: 'Войти через Yandex ID' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Продолжить с Yandex ID' })).toHaveClass('primary')
     expect(screen.getByLabelText('Email')).toBeVisible()
     expect(screen.getByLabelText('Пароль')).toBeVisible()
-    expect(screen.getByRole('button', { name: /^Войти$/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Войти по email' })).toHaveClass('secondary')
+  })
+
+  it('keeps the existing internal return path for an email-authenticated account', async () => {
+    authState.mockReturnValue({
+      actor: { userId: PROFILE_ID, role: 'trainer' },
+      loading: false,
+      error: null,
+    })
+    render(<MemoryRouter initialEntries={[{
+      pathname: '/auth',
+      state: { from: '/legal/delete-account' },
+    }]}>
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/legal/delete-account" element={<p>delete account route</p>} />
+      </Routes>
+    </MemoryRouter>)
+
+    expect(await screen.findByText('delete account route')).toBeVisible()
+  })
+
+  it('rejects an external return target after authentication', async () => {
+    authState.mockReturnValue({
+      actor: { userId: PROFILE_ID, role: 'trainer' },
+      loading: false,
+      error: null,
+    })
+    render(<MemoryRouter initialEntries={[{
+      pathname: '/auth',
+      state: { from: 'https://attacker.example.test/' },
+    }]}>
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/today" element={<p>trainer home</p>} />
+      </Routes>
+    </MemoryRouter>)
+
+    expect(await screen.findByText('trainer home')).toBeVisible()
+  })
+
+  it('explains the pending invitation and prepares client registration', () => {
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    render(<MemoryRouter initialEntries={[{
+      pathname: '/auth',
+      state: { from: '/join?code=AB12CD34EF56' },
+    }]}><AuthPage /></MemoryRouter>)
+
+    expect(screen.getByText('Войдите или создайте аккаунт, чтобы продолжить по приглашению.')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Создать аккаунт' }))
+    expect(screen.getByLabelText('Тип аккаунта')).toHaveValue('client')
+    expect(screen.getByRole('button', { name: 'Продолжить с Yandex ID' })).toHaveClass('primary')
+  })
+
+  it('opens native registration with the role from a protected invitation preview', () => {
+    const token = `AB12CD34EF56.${'a'.repeat(64)}`
+    captureInvitationLink(`#token=${token}&source=yandex`)
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    render(<MemoryRouter initialEntries={[{
+      pathname: '/auth',
+      state: {
+        from: '/invite',
+        inviteRole: 'client',
+        mode: 'register',
+      },
+    }]}><AuthPage /></MemoryRouter>)
+
+    expect(screen.getByRole('heading', { name: 'Регистрация' })).toBeVisible()
+    expect(screen.getByLabelText('Тип аккаунта')).toHaveValue('client')
+    expect(screen.queryByText(token)).not.toBeInTheDocument()
+    expect(readInvitationAuthReturn()).toBe('/invite')
+    expect(readPendingInvitationLink()?.token).toBe(token)
+  })
+
+  it('returns a restored Yandex session to the pending invitation once', async () => {
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    saveInvitationAuthReturn('/join?code=ab12cd34ef56')
+    authState.mockReturnValue({
+      actor: { userId: PROFILE_ID, role: 'client' },
+      loading: false,
+      error: null,
+    })
+    appSessionState.mockReturnValue({
+      session,
+      loading: false,
+      error: null,
+      establish,
+      retry,
+      reset,
+      signOut,
+    })
+    render(<MemoryRouter initialEntries={['/auth/yandex/session']}>
+      <Routes>
+        <Route path="/auth/yandex/session" element={<YandexAppSessionPage />} />
+        <Route path="/join" element={<p>invitation route</p>} />
+      </Routes>
+    </MemoryRouter>)
+
+    expect(await screen.findByText('invitation route')).toBeVisible()
+    await waitFor(() => expect(readInvitationAuthReturn()).toBeNull())
+  })
+
+  it('clears a pending Yandex invitation when the email fallback signs in', async () => {
+    saveInvitationAuthReturn('/join?code=ab12cd34ef56')
+    authState.mockReturnValue({
+      actor: { userId: PROFILE_ID, role: 'client' },
+      loading: false,
+      error: null,
+    })
+    render(<MemoryRouter initialEntries={['/auth']}>
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/join" element={<p>invitation route</p>} />
+      </Routes>
+    </MemoryRouter>)
+
+    expect(await screen.findByText('invitation route')).toBeVisible()
+    await waitFor(() => expect(readInvitationAuthReturn()).toBeNull())
   })
 
   it('uses Yandex ID as the only primary registration action when the native flow is enabled', () => {
@@ -144,7 +271,7 @@ describe('Yandex app session auth flow', () => {
     expect(screen.getByLabelText('Имя')).toBeVisible()
     expect(screen.queryByLabelText('Email')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Пароль')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Создать через Yandex ID' })).toHaveClass('primary')
+    expect(screen.getByRole('button', { name: 'Продолжить с Yandex ID' })).toHaveClass('primary')
     expect(screen.getByRole('button', { name: 'Создать по email' })).toBeVisible()
   })
 
@@ -182,6 +309,7 @@ describe('Yandex app session auth flow', () => {
     repository.registerYandexAccount.mockRejectedValueOnce(
       new Error('Yandex Cloud временно недоступен.'),
     )
+    saveInvitationAuthReturn('/join?code=ab12cd34ef56')
     window.history.replaceState(null, '', `/auth/yandex/callback${await registrationCallbackSearch()}`)
     render(<MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>)
 
@@ -195,6 +323,7 @@ describe('Yandex app session auth flow', () => {
       termsVersion: TERMS_VERSION,
       privacyVersion: PRIVACY_VERSION,
     })
+    expect(readInvitationAuthReturn()).toBe('/join?code=AB12CD34EF56')
   })
 
   it('clears stale legal acceptance and requires a fresh registration page', async () => {
@@ -231,6 +360,25 @@ describe('Yandex app session auth flow', () => {
     )
     expect(establish).toHaveBeenCalledWith(session)
     expect(window.location.search).toBe('')
+  })
+
+  it('returns a linked Yandex account to the pending invitation', async () => {
+    const token = `AB12CD34EF56.${'a'.repeat(64)}`
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    captureInvitationLink(`#token=${token}&source=yandex`)
+    saveInvitationAuthReturn('/invite')
+    window.history.replaceState(null, '', `/auth/yandex/callback${await appCallbackSearch()}`)
+    render(<MemoryRouter initialEntries={['/auth/yandex/callback']}>
+      <Routes>
+        <Route path="/auth/yandex/callback" element={<YandexPilotCallbackPage />} />
+        <Route path="/auth/yandex/session" element={<p>session route</p>} />
+      </Routes>
+    </MemoryRouter>)
+
+    expect(await screen.findByText('session route')).toBeVisible()
+    expect(establish).toHaveBeenCalledWith(session)
+    expect(readInvitationAuthReturn()).toBe('/invite')
+    expect(readPendingInvitationLink()?.token).toBe(token)
   })
 
   it('opens a matching Yandex app session for the authenticated FIT actor', async () => {

@@ -23,25 +23,27 @@ function memoryStorage(): Storage {
 
 describe('invitation link continuation', () => {
   beforeEach(() => {
-    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() })
+    Object.defineProperty(window, 'sessionStorage', { configurable: true, value: memoryStorage() })
   })
 
   it('keeps the protected token through authentication without putting personal data in storage', () => {
-    expect(captureInvitationLink(`#token=${token}&source=yandex`, window.localStorage, 1000)).toEqual({
+    expect(captureInvitationLink(`#token=${token}&source=yandex`, window.sessionStorage, 1000)).toEqual({
       token, source: 'yandex', savedAt: 1000,
     })
-    expect(readPendingInvitationLink(window.localStorage, 2000)).toEqual({
+    expect(readPendingInvitationLink(window.sessionStorage, 2000)).toEqual({
       token, source: 'yandex', savedAt: 1000,
     })
-    expect(window.localStorage.getItem('fit.pendingInvitationLink.v1')).not.toContain('Антон')
+    expect(window.sessionStorage.getItem('fit.pendingInvitationLink.v1')).not.toContain('Антон')
   })
 
   it('rejects malformed and stale values and removes a completed invitation', () => {
-    expect(captureInvitationLink('#token=short&source=supabase', window.localStorage, 1000)).toBeNull()
-    captureInvitationLink(`#token=${token}&source=supabase`, window.localStorage, 1000)
-    expect(readPendingInvitationLink(window.localStorage, 8 * 24 * 60 * 60 * 1000)).toBeNull()
+    expect(captureInvitationLink('#token=short&source=supabase', window.sessionStorage, 1000)).toBeNull()
+    expect(captureInvitationLink(`#token=${token}&source=supabase&next=/clients`, window.sessionStorage, 1000)).toBeNull()
+    expect(captureInvitationLink(`#token=${token}&token=${token}`, window.sessionStorage, 1000)).toBeNull()
+    captureInvitationLink(`#token=${token}&source=supabase`, window.sessionStorage, 1000)
+    expect(readPendingInvitationLink(window.sessionStorage, 8 * 24 * 60 * 60 * 1000)).toBeNull()
 
-    captureInvitationLink(`#token=${token}&source=supabase`, window.localStorage, Date.now())
+    captureInvitationLink(`#token=${token}&source=supabase`, window.sessionStorage, Date.now())
     expect(hasPendingInvitationLink()).toBe(true)
     clearPendingInvitationLink()
     expect(hasPendingInvitationLink()).toBe(false)

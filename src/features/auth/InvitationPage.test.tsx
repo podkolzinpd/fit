@@ -75,7 +75,7 @@ describe('InvitationPage', () => {
     preview.mockReset()
     signOut.mockReset().mockResolvedValue(undefined)
     signOutYandex.mockReset().mockResolvedValue(undefined)
-    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() })
+    Object.defineProperty(window, 'sessionStorage', { configurable: true, value: memoryStorage() })
     window.history.replaceState(null, '', `/invite#token=${token}&source=supabase`)
     preview.mockResolvedValue({
       targetRole: 'trainer', inviterName: 'Антон',
@@ -119,7 +119,7 @@ describe('InvitationPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Стать тренером' }))
     expect(await screen.findByRole('heading', { name: 'Спортсмен подключён' })).toBeVisible()
     expect(claimLink).toHaveBeenCalledTimes(1)
-    expect(window.localStorage.getItem('fit.pendingInvitationLink.v1')).toBeNull()
+    expect(window.sessionStorage.getItem('fit.pendingInvitationLink.v1')).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Открыть карточку' }))
     expect(screen.getByRole('status')).toHaveTextContent('/clients/52500000-0000-4000-8000-000000000010')
