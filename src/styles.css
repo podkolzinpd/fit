@@ -847,6 +847,7 @@ p { margin: 6px 0 }
 .client-trainer-catalog-link strong { font-size:14px; font-weight:600; }
 .client-trainer-catalog-link small { color:var(--muted); font-size:12px; }
 .client-trainer-catalog-link > span:last-child { color:var(--muted); font-size:24px; line-height:1; }
+.client-trainer-catalog-link > svg { width:18px; height:18px; flex:0 0 auto; color:var(--muted) }
 .invitation-code-card { display:grid; align-items:stretch; gap:10px }
 .invitation-code-row { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:12px }
 .invitation-code-content { min-width:0 }
@@ -4567,6 +4568,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-clients-identity .clients-page .page-header { min-height:44px; margin-bottom:16px }
 .trainer-clients-identity .clients-page .page-header h1 { color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
 .trainer-clients-identity .clients-page .page-header .button { display:inline-flex; align-items:center; justify-content:center; height:44px; min-height:44px; padding:0 14px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:14px; font-weight:500; line-height:1; white-space:nowrap; box-shadow:none}
+.trainer-clients-identity .clients-page-header-actions { display:flex; align-items:center; gap:8px }
+.trainer-clients-identity .clients-page .page-header .button.secondary { border-color:var(--border); background:var(--surface-raised); color:var(--fg) }
 .trainer-clients-identity .clients-search { min-height:48px; margin-bottom:12px; padding:0 8px 0 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); box-shadow:none}
 .trainer-clients-identity .clients-search:focus-within { border-color:var(--fg); box-shadow:none}
 .trainer-clients-identity .clients-search > svg { color:var(--secondary-label-fg) }

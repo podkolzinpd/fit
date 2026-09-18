@@ -97,6 +97,7 @@ describe('ClientTrainerConnections safe disconnect', () => {
   it('keeps the trainer catalog available as a quiet link in the profile', async () => {
     renderConnections()
 
+    expect(await screen.findByRole('link', { name: /Ввести код тренера/ })).toHaveAttribute('href', '/join')
     expect(await screen.findByRole('link', { name: /Найти тренера/ })).toHaveAttribute('href', '/me/trainers')
   })
 

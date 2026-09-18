@@ -51,6 +51,12 @@ beforeEach(() => {
 })
 
 describe('ClientsPage search', () => {
+  it('keeps client-code entry visible even before the trainer has clients', async () => {
+    renderPage([])
+
+    expect(await screen.findByRole('link', { name: 'Ввести код' })).toHaveAttribute('href', '/join')
+  })
+
   it('filters by name and clears the query from the field itself', async () => {
     const user = userEvent.setup()
     renderPage(NAMES.map((name, index) => client(`c${index}`, name)))
