@@ -267,6 +267,7 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await page.getByRole('button', { name: 'Скопировать код для тренера' }).click()
   await expect(page.getByRole('button', { name: 'Код для тренера скопирован' })).toBeVisible()
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(trainerCode)
+  await page.getByRole('button', { name: 'Закрыть' }).click()
   await page.getByRole('button', { name: 'Отозвать' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отозвать' }).click()
   await expect(page.getByRole('heading', { name: 'Активные приглашения' })).toHaveCount(0)

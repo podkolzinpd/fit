@@ -5,7 +5,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import type { TrainerMembership } from '../../shared/domain'
 import { ChevronRightIcon } from '../../shared/icons'
 import { useConfirm } from '../../shared/ui'
-import { InvitationCodeCard } from '../../shared/invitation-code-card'
+import { InvitationShareButton } from '../auth/InvitationShareActions'
 import { ChatStartButton } from '../chat'
 
 export function ClientTrainerConnections({ clientId }: { clientId: string }) {
@@ -13,7 +13,6 @@ export function ClientTrainerConnections({ clientId }: { clientId: string }) {
   const queryClient = useQueryClient()
   const trainers = useQuery({ queryKey: ['client-trainers', clientId], queryFn: () => invitationsRepository.listTrainers(clientId) })
   const invitations = useQuery({ queryKey: ['client-invitations', clientId], queryFn: () => invitationsRepository.list(clientId) })
-  const invite = useMutation({ mutationFn: () => invitationsRepository.create(clientId, 'trainer'), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] }) })
   const revoke = useMutation({ mutationFn: (invitationId: string) => invitationsRepository.revoke(invitationId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] }) })
   const [disconnectMessage, setDisconnectMessage] = useState<string | null>(null)
   const disconnectTrainer = useMutation({
@@ -29,9 +28,7 @@ export function ClientTrainerConnections({ clientId }: { clientId: string }) {
   })
   const [confirm, confirmDialog] = useConfirm()
   const hasTrainers = (trainers.data?.length ?? 0) > 0
-  return <section className="client-home-connections"><div className="client-home-section-head"><div><p className="eyebrow">СВЯЗЬ С ТРЕНЕРОМ</p><h2>{hasTrainers ? 'Мои тренеры' : 'Тренеры'}</h2></div><button className="secondary" disabled={invite.isPending} onClick={() => invite.mutate()}>Пригласить тренера</button></div>
-    {invite.data && <InvitationCodeCard code={invite.data} label="Код для тренера" description="Действует 7 дней и используется один раз." />}
-    {invite.error && <p className="error">{invite.error.message}</p>}
+  return <section className="client-home-connections"><div className="client-home-section-head"><div><p className="eyebrow">СВЯЗЬ С ТРЕНЕРОМ</p><h2>{hasTrainers ? 'Мои тренеры' : 'Тренеры'}</h2></div><InvitationShareButton clientId={clientId} targetRole="trainer" label="Пригласить тренера" className="secondary" /></div>
     {trainers.isLoading && <p className="muted">Загрузка тренеров…</p>}
     {trainers.error && <div><p className="error">{trainers.error.message}</p><button className="secondary" onClick={() => void trainers.refetch()}>Повторить</button></div>}
     {trainers.data?.length === 0 && <p className="muted">Сейчас вы занимаетесь самостоятельно.</p>}
@@ -39,7 +36,7 @@ export function ClientTrainerConnections({ clientId }: { clientId: string }) {
     <Link className="client-trainer-catalog-link client-trainer-code-link" to="/join"><span><strong>Ввести код тренера</strong><small>Если тренер прислал приглашение</small></span><ChevronRightIcon aria-hidden="true" /></Link>
     {trainers.data && <Link className="client-trainer-catalog-link" to="/me/trainers"><span><strong>Найти тренера</strong><small>Посмотреть анкеты</small></span><ChevronRightIcon aria-hidden="true" /></Link>}
     {invitations.isLoading && <p className="muted">Загрузка приглашений…</p>}
-    {invitations.data && invitations.data.length > 0 && <div className="client-home-invitations"><h3>Активные приглашения</h3>{invitations.data.map((item) => <article className="card" key={item.id}><div><strong>Приглашение для тренера</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</p></div><button className="link danger" disabled={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Код больше нельзя будет использовать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>Отозвать</button></article>)}</div>}
+    {invitations.data && invitations.data.length > 0 && <div className="client-home-invitations"><h3>Активные приглашения</h3>{invitations.data.map((item) => <article className="card" key={item.id}><div><strong>Приглашение для тренера</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</p></div><button className="link danger" disabled={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Ссылка, QR-код и код больше не будут работать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>Отозвать</button></article>)}</div>}
     {invitations.error && <div><p className="error">{invitations.error.message}</p><button className="secondary" onClick={() => void invitations.refetch()}>Повторить</button></div>}
     {disconnectMessage && <p className="client-trainer-disconnect-success" role="status">{disconnectMessage}</p>}
     {(disconnectTrainer.error || revoke.error) && <p className="error">{(disconnectTrainer.error ?? revoke.error)?.message}</p>}
