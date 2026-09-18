@@ -1860,6 +1860,8 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await gotoStable(page, '/schedule')
   await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
+  const scheduleHint = page.getByRole('button', { name: 'Понятно' })
+  if (await scheduleHint.isVisible()) await scheduleHint.click()
   await expectVisualBaseline(page, 'trainer-schedule.png')
 
   await gotoStable(page, `/progress/${demoClientId}`)
@@ -2194,6 +2196,24 @@ test('trainer Client Goal keeps its real create, stage and edit states in both t
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })
 
+test('trainer Schedule week overview keeps the approved two-day grid', async ({ page }, testInfo) => {
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  await page.evaluate(() => {
+    window.localStorage.setItem('fit.appTheme', 'light')
+    window.dispatchEvent(new Event('fit-theme-change'))
+  })
+  await gotoStable(page, '/schedule')
+  await expect(page.locator('.schedule-week-day')).toHaveCount(7)
+  const hint = page.getByRole('button', { name: 'Понятно' })
+  if (await hint.isVisible()) await hint.click()
+  const pairHeights = await page.locator('.schedule-week-day').evaluateAll((days) => days.slice(0, 2).map((day) => day.getBoundingClientRect().height))
+  expect(pairHeights[0]).toBe(pairHeights[1])
+  expect(pairHeights[0]).toBeGreaterThanOrEqual(148)
+  const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
+  await expectVisualBaseline(page, `trainer-schedule-week-${profile}-${process.platform}.png`)
+})
+
 test('trainer Schedule keeps its compact workspace in both themes', async ({ page }, testInfo) => {
   test.setTimeout(180_000)
   await signIn(page, 'trainer@fit.local', /\/today$/)
@@ -2222,9 +2242,9 @@ test('trainer Schedule keeps its compact workspace in both themes', async ({ pag
     await gotoStable(page, `/schedule?date=${scheduleDate}`)
     await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
     await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
-    await expect(page.locator('.week-day')).toHaveCount(7)
+    await expect(page.locator('.schedule-week-day')).toHaveCount(0)
     await expect(page.locator('.day-grid-hour')).toHaveCount(24)
-    await expect(page.locator('.schedule-selected-date')).toBeHidden()
+    await expect(page.locator('.schedule-selected-date')).toBeVisible()
     await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
     await expect(page.locator('.day-grid-event').filter({ hasText: clientName })).toHaveCount(1)
     await expectVisualBaseline(page, `trainer-schedule-${profile}-${process.platform}.png`)

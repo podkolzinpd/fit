@@ -1237,8 +1237,11 @@ for (const viewport of mobileViewports) {
         await expect(page.locator('.client-detail-overview')).toHaveCount(0)
       }
       if (screen === '/schedule') {
-        await expect(page.locator('.schedule-selected-date')).toBeHidden()
-        await expectActionTextVerticallyCentered(page.getByRole('link', { name: 'Запланировать', exact: true }))
+        await expect(page.locator('.schedule-week-day')).toHaveCount(7)
+        await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toHaveCount(0)
+        const firstPairHeights = await page.locator('.schedule-week-day').evaluateAll((days) => days.slice(0, 2).map((day) => day.getBoundingClientRect().height))
+        expect(firstPairHeights[0]).toBe(firstPairHeights[1])
+        expect(firstPairHeights[0]).toBeGreaterThanOrEqual(148)
       }
       await expectNoHorizontalOverflow(page)
     }

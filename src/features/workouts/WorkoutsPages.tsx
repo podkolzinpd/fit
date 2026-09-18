@@ -12,7 +12,7 @@ import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerRea
 import { LiveRestTimer } from './LiveRestTimer'
 import { cancelNativeRestTimerNotification, scheduleNativeRestTimerNotification } from './rest-timer-notification'
 import {
-  addDays, currentTimeInTimeZone, dayOfMonth, formatLocalDate, formatMonth, localDate, todayInTimeZone, weekdayShort,
+  addDays, currentTimeInTimeZone, dayOfMonth, formatLocalDate, formatMonth, formatWeekRange, localDate, todayInTimeZone, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
 import { AsyncView, Coachmark, EmptyState, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
@@ -112,64 +112,111 @@ export function SchedulePage() {
   const [params, setParams] = useSearchParams()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
-  const selected = params.get('date') ? localDate(params.get('date')!) : today
+  const dateParam = params.get('date')
+  const weekParam = params.get('week')
+  const isDayView = Boolean(dateParam)
+  const selected = dateParam ? localDate(dateParam) : weekParam ? localDate(weekParam) : today
   const weekStart = mondayWeekStart(selected)
+  const weekEnd = addDays(weekStart, 6)
+  const todayWeekStart = mondayWeekStart(today)
   const weekDays = HOURS.slice(0, 7).map((offset) => addDays(weekStart, offset))
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  function selectDate(date: LocalDate) { setParams({ date }) }
-  function shiftWeek(direction: -1 | 1) { selectDate(addDays(selected, direction * 7)) }
+  function openDay(date: LocalDate) { setParams({ date }) }
+  function showWeek(date: LocalDate) {
+    const start = mondayWeekStart(date)
+    setParams(start === todayWeekStart ? {} : { week: start })
+  }
+  function shiftWeek(direction: -1 | 1) { showWeek(addDays(weekStart, direction * 7)) }
 
-  const query = useInfiniteQuery({
-    queryKey: ['workouts', selected],
-    initialPageParam: 0,
-    queryFn: ({ pageParam }) => workoutsRepository.listPage(selected, selected, undefined, pageParam),
-    getNextPageParam: (page) => page.nextOffset,
+  const query = useQuery({
+    queryKey: ['workouts', 'schedule-week', weekStart, weekEnd],
+    queryFn: () => workoutsRepository.list(weekStart, weekEnd),
   })
-  const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data])
-  const totalCount = query.data?.pages[0]?.totalCount ?? 0
-  const timed = useMemo(() => items.filter((workout) => workout.startTime).sort((a, b) => minutesOf(a.startTime!) - minutesOf(b.startTime!)), [items])
-  const untimed = useMemo(() => items.filter((workout) => !workout.startTime), [items])
+  const items = query.data ?? []
+  const itemsByDay = new Map<LocalDate, Workout[]>()
+  for (const day of weekDays) itemsByDay.set(day, [])
+  for (const workout of items) itemsByDay.get(workout.workoutDate)?.push(workout)
+  for (const workouts of itemsByDay.values()) {
+    workouts.sort((left, right) => {
+      if (left.startTime && right.startTime) return minutesOf(left.startTime) - minutesOf(right.startTime)
+      if (left.startTime) return -1
+      if (right.startTime) return 1
+      return left.clientName.localeCompare(right.clientName, 'ru')
+    })
+  }
+  const dayItems = itemsByDay.get(selected) ?? []
+  const totalCount = dayItems.length
+  const timed = dayItems.filter((workout) => workout.startTime)
+  const untimed = dayItems.filter((workout) => !workout.startTime)
 
   useEffect(() => {
-    if (query.isLoading || !scrollRef.current) return
+    if (!isDayView || query.isLoading || !scrollRef.current) return
     const focusMinutes = scheduleFocusMinutes(timed, currentTimeInTimeZone(actor?.timezone))
     // Оставляем первую видимую часовую отметку целиком внутри viewport:
     // подпись линии визуально поднята на 6 px относительно самой линии.
     scrollRef.current.scrollTop = Math.max(0, (focusMinutes / 60) * HOUR_HEIGHT - 44)
-  }, [actor?.timezone, query.isLoading, selected, timed])
+  }, [actor?.timezone, isDayView, query.isLoading, selected, timed])
 
-  return <Page className="schedule-page" title="Расписание" action={
+  const todayDisabled = isDayView ? selected === today : weekStart === todayWeekStart
+
+  return <Page className={`schedule-page ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}`} title="Расписание" action={
     <div className="schedule-controls">
       <div className="schedule-month-row">
         <strong>{formatMonth(selected)}</strong>
         <div className="schedule-month-actions">
-          <button type="button" className="schedule-today" disabled={selected === today} onClick={() => selectDate(today)}>Сегодня</button>
-          <label className="schedule-jump" aria-label="Выбрать дату"><ScheduleIcon /><input type="date" value={selected} onChange={(event) => event.target.value && selectDate(localDate(event.target.value))} /></label>
+          <button type="button" className="schedule-today" disabled={todayDisabled} onClick={() => showWeek(today)}>Сегодня</button>
+          <label className="schedule-jump" aria-label="Выбрать дату"><ScheduleIcon /><input type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label>
         </div>
       </div>
-      <div className="week-nav">
-        <button type="button" className="week-arrow" aria-label="Предыдущая неделя" onClick={() => shiftWeek(-1)}><BackIcon /></button>
-        <div className="week-strip">
-          {weekDays.map((day) => (
-            <button key={day} type="button" className={`week-day${day === selected ? ' active' : ''}${day === today && day !== selected ? ' is-today' : ''}`} onClick={() => selectDate(day)}>
-              <span className="day-label">{weekdayShort(day)}</span>
-              <span className="day-num">{dayOfMonth(day)}</span>
-            </button>
-          ))}
+      {isDayView ? <div className="schedule-selected-row">
+        <button type="button" className="schedule-week-back" onClick={() => showWeek(weekStart)}><BackIcon />К неделе</button>
+        <div className="schedule-selected-actions">
+          <div className="schedule-selected-date">
+            <strong>{formatScheduleDateLabel(selected)}</strong>
+            <span>{query.isLoading ? 'Загружаем…' : workoutCountLabel(totalCount)}</span>
+          </div>
+          <Link className="button secondary schedule-plan" to={`/workouts/new?date=${selected}`}>Запланировать</Link>
         </div>
-        <button type="button" className="week-arrow" aria-label="Следующая неделя" onClick={() => shiftWeek(1)}><ChevronRightIcon /></button>
-      </div>
-      <div className="schedule-selected-row">
-        <div className="schedule-selected-date">
-          <strong>{formatScheduleDateLabel(selected)}</strong>
-          <span>{query.isLoading ? 'Загружаем…' : workoutCountLabel(totalCount)}</span>
-        </div>
-        <Link className="button secondary schedule-plan" to={`/workouts/new?date=${selected}`}>Запланировать</Link>
-      </div>
+      </div> : <div className="week-nav schedule-week-navigation">
+        <strong>{formatWeekRange(weekStart, weekEnd)}</strong>
+        <span className="schedule-week-arrows">
+          <button type="button" className="week-arrow" aria-label="Предыдущая неделя" onClick={() => shiftWeek(-1)}><BackIcon /></button>
+          <button type="button" className="week-arrow" aria-label="Следующая неделя" onClick={() => shiftWeek(1)}><ChevronRightIcon /></button>
+        </span>
+      </div>}
     </div>
   }>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+      {!isDayView ? <Coachmark id="trainer-schedule-week-overview-2026-09" userId={actor?.userId} title="Неделя теперь целиком" description="Все тренировки недели видны сразу. Нажмите на день, чтобы открыть подробное расписание.">
+        <section className="schedule-week-grid" aria-label={`Расписание на неделю: ${formatWeekRange(weekStart, weekEnd)}`}>
+          {weekDays.map((day, index) => {
+            const workouts = itemsByDay.get(day) ?? []
+            return <button
+              key={day}
+              type="button"
+              className={`schedule-week-day${index === 6 ? ' schedule-week-sunday' : ''}${day === today ? ' is-today' : ''}`}
+              aria-label={`${formatScheduleDateLabel(day)}, ${workoutCountLabel(workouts.length)}`}
+              onClick={() => openDay(day)}
+            >
+              <span className="schedule-week-day-heading">
+                <strong>{weekdayShort(day)}</strong>
+                <span>{dayOfMonth(day)}</span>
+              </span>
+              <span className="schedule-week-workouts">
+                {workouts.length > 0 ? workouts.map((workout) => {
+                  const status = scheduleEventStatus(workout, today)
+                  return <span key={workout.id} className="schedule-week-workout" title={`${eventTime(workout) || 'Без времени'} · ${workout.clientName}`}>
+                    <span className="schedule-week-workout-time">{workout.startTime?.slice(0, 5) ?? '—'}</span>
+                    <span className="schedule-week-workout-name">{workout.clientName}</span>
+                    <span className="sr-only">, {status.label}</span>
+                  </span>
+                }) : <span className="schedule-week-empty">Нет тренировок</span>}
+              </span>
+            </button>
+          })}
+        </section>
+      </Coachmark> : <>
       {untimed.length > 0 && <section className="schedule-untimed-section" aria-labelledby="schedule-untimed-title">
         <div className="schedule-untimed-heading">
           <strong id="schedule-untimed-title">Без времени</strong>
@@ -211,7 +258,7 @@ export function SchedulePage() {
           })}
          </div>
        </div>
-       <LoadMoreButton hasMore={query.hasNextPage} loading={query.isFetchingNextPage} onLoadMore={() => void query.fetchNextPage()} />
+       </>}
      </AsyncView>
   </Page>
 }
