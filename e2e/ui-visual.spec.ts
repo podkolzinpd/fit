@@ -629,7 +629,7 @@ test('Join keeps manual and invitation states in the auth family', async ({ page
   await signIn(page, 'client@fit.local', /\/me$/)
   await gotoStable(page, '/join')
   await expect(page.locator('.phone-frame')).toHaveClass(/auth-join-identity/)
-  await expect(page.getByRole('heading', { name: 'Введите код приглашения' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Введите код тренера' })).toBeVisible()
   await expectVisualBaseline(page, `auth-join-${process.platform}.png`, [], true)
 
   await gotoStable(page, '/join?code=ABCDEF123456')
