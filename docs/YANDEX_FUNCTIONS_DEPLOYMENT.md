@@ -22,6 +22,22 @@ Runtime service accounts keep only their model invocation and Lockbox payload
 viewer roles. GitHub uses a short-lived OIDC IAM token; no authorized-key JSON
 is required by either workflow.
 
+One-time bootstrap uses an approved deployment identity after the operator has
+verified the exact folder, function and runtime service account. Required
+bindings are:
+
+- deploy service account: `serverless.functions.admin` on the target folder;
+- runtime service account: `ai.languageModels.user` on the target folder;
+- runtime service account: `lockbox.payloadViewer` on the assistant Lockbox;
+- function: `serverless.functions.invoker` for the intended public endpoint.
+
+No credential or secret value belongs in this repository or an operator
+command recorded in shell history. After bootstrap, an unauthenticated
+`POST {}` must return `401`, then the normal deploy workflow performs the
+candidate verification. Every function version mounts an explicit immutable
+Lockbox `version-id`; rotating a shared Lockbox requires a coordinated release
+of every consumer and a new candidate verification.
+
 ## Automatic release contract
 
 Every function workflow:
