@@ -33,7 +33,7 @@ export const PRESET_WORKOUTS: readonly PresetWorkoutTemplate[] = [
     exercises: [
       { ref: 'joint-warmup', sets: sets(1, { durationSec: 180 }) },
       { ref: 'push-ups', sets: sets(3, { reps: 8 }) },
-      { ref: 'lunges', sets: sets(3, { reps: 10 }) },
+      { ref: 'vital-lunge-forward-ex314', sets: sets(3, { reps: 10 }) },
       { ref: 'plank', sets: sets(3, { durationSec: 30 }) },
       { ref: 'crunches', sets: sets(3, { reps: 15 }) },
     ],

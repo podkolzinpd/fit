@@ -20,6 +20,22 @@ describe('preset workouts catalog contract', () => {
     expect(canonical).toBeDefined()
     expect(isActiveCatalogExercise(canonical!)).toBe(true)
   })
+
+  // Каталог упражнений — общий, живой источник: ref может со временем стать
+  // указывать на другой вариант того же упражнения (например, со штангой
+  // вместо своего веса). Для пресетов, которые прямо обещают «без инвентаря»,
+  // это меняет реальный смысл тренировки, хотя ref остаётся валидным и
+  // активным — поэтому проверяем оборудование отдельно.
+  const noEquipmentPresetIds = ['full-body-no-equipment', 'core-basics']
+  const noEquipmentTags = ['Без оборудования', 'Своё тело']
+  it.each(
+    PRESET_WORKOUTS
+      .filter((preset) => noEquipmentPresetIds.includes(preset.id))
+      .flatMap((preset) => preset.exercises.map((exercise) => ({ presetId: preset.id, ref: exercise.ref }))),
+  )('$presetId: $ref requires no equipment', ({ ref }) => {
+    const canonical = SYSTEM_EXERCISE_CATALOG.find((row) => row.ref === ref)
+    expect(canonical?.equipment === undefined || noEquipmentTags.includes(canonical.equipment)).toBe(true)
+  })
 })
 
 describe('presetWorkoutToParsedItems', () => {
