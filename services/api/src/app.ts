@@ -64,6 +64,7 @@ import {
 } from './legacy-chat-media.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
+import type { PilotInvitationLinks } from './pilot-invitation-links.js'
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer } from './pilot-session.js'
@@ -162,6 +163,7 @@ interface BuildAppOptions {
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
   pilotConnectionsWriter?: PilotConnectionsWriter
+  pilotInvitationLinks?: PilotInvitationLinks
   pilotDomainWriter?: PilotDomainWriter
   pilotProfileReader?: PilotProfileReader
   pilotSessionIssuer?: PilotSessionIssuer
@@ -3276,6 +3278,81 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .header('cache-control', 'no-store')
         .code(201)
         .send({ invitation }),
+    )
+  })
+
+  const invitationTokenPattern = /^[A-F0-9]{12}\.[0-9a-f]{64}$/
+
+  app.post('/v1/invitation-links/preview', async (request, reply) => {
+    const body = request.body
+    if (
+      typeof body !== 'object'
+      || body === null
+      || !('token' in body)
+      || typeof body.token !== 'string'
+      || !invitationTokenPattern.test(body.token.trim())
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const invitationLinks = options.pilotInvitationLinks
+    if (invitationLinks === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    try {
+      const invitation = await invitationLinks.preview(body.token.trim())
+      if (invitation === null) return reply.code(404).send({ error: 'resource_not_found' })
+      return reply.header('cache-control', 'no-store').send({ invitation })
+    } catch (error) {
+      return sendSafeDatabaseFailure(reply, error, 'Invitation preview failed')
+    }
+  })
+
+  app.post('/v1/invitation-links', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const body = request.body
+    if (sessionToken === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (
+      typeof body !== 'object'
+      || body === null
+      || !('clientId' in body)
+      || !('targetRole' in body)
+      || typeof body.clientId !== 'string'
+      || !uuidPattern.test(body.clientId)
+      || (body.targetRole !== 'client' && body.targetRole !== 'trainer')
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const invitationLinks = options.pilotInvitationLinks
+    if (invitationLinks === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    const clientId = body.clientId
+    const targetRole = body.targetRole
+    return sendPilotCommand(
+      reply,
+      () => invitationLinks.create(sessionToken, clientId, targetRole),
+      (invitation) => reply.header('cache-control', 'no-store').code(201).send({ invitation }),
+    )
+  })
+
+  app.post('/v1/invitation-links/claim', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const body = request.body
+    if (sessionToken === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (
+      typeof body !== 'object'
+      || body === null
+      || !('token' in body)
+      || typeof body.token !== 'string'
+      || !invitationTokenPattern.test(body.token.trim())
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const invitationLinks = options.pilotInvitationLinks
+    if (invitationLinks === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    const token = body.token.trim()
+    return sendPilotCommand(
+      reply,
+      () => invitationLinks.claim(sessionToken, token),
+      (clientId) => reply.header('cache-control', 'no-store').send({ clientId }),
     )
   })
 

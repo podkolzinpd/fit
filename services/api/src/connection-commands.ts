@@ -8,6 +8,10 @@ interface InvitationCommandRow extends QueryResultRow {
   expires_at: Date
 }
 
+interface InvitationShareCommandRow extends InvitationCommandRow {
+  invitation_token: string
+}
+
 interface ClaimedInvitationRow extends QueryResultRow {
   client_id: string
 }
@@ -31,6 +35,10 @@ export interface CreatedPilotInvitation {
   targetRole: 'client' | 'trainer'
   code: string
   expiresAt: string
+}
+
+export interface CreatedPilotInvitationShare extends CreatedPilotInvitation {
+  token: string
 }
 
 function commandError(error: unknown): PilotConnectionCommandError | undefined {
@@ -99,6 +107,32 @@ export function createClientInvitation(
   })
 }
 
+export function createClientInvitationShare(
+  client: DatabaseClient,
+  clientId: string,
+  targetRole: 'client' | 'trainer',
+): Promise<CreatedPilotInvitationShare> {
+  return runCommand(async () => {
+    const rows = await client.query<InvitationShareCommandRow>(
+      `
+        select invitation_id, invitation_code, invitation_token, expires_at
+        from public.create_client_invitation_share($1, $2)
+      `,
+      [clientId, targetRole],
+    )
+    const invitation = rows[0]
+    if (invitation === undefined) throw new Error('Invitation share was not created')
+    return {
+      id: invitation.invitation_id,
+      clientId,
+      targetRole,
+      code: invitation.invitation_code,
+      token: invitation.invitation_token,
+      expiresAt: invitation.expires_at.toISOString(),
+    }
+  })
+}
+
 export function claimClientInvitation(
   client: DatabaseClient,
   code: string,
@@ -110,6 +144,21 @@ export function claimClientInvitation(
     )
     const clientId = rows[0]?.client_id
     if (clientId === undefined) throw new Error('Invitation was not claimed')
+    return clientId
+  })
+}
+
+export function claimClientInvitationLink(
+  client: DatabaseClient,
+  token: string,
+): Promise<string> {
+  return runCommand(async () => {
+    const rows = await client.query<ClaimedInvitationRow>(
+      'select public.claim_client_invitation_link($1) as client_id',
+      [token],
+    )
+    const clientId = rows[0]?.client_id
+    if (clientId === undefined) throw new Error('Invitation link was not claimed')
     return clientId
   })
 }
