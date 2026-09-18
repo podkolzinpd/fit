@@ -23,7 +23,10 @@ begin
   returning client.version into next_version;
 
   if next_version is null then
-    raise exception 'client_conflict' using errcode = '40001';
+    if public.is_active_client_trainer_connection(client_id_value, actor_id) then
+      raise exception 'client_conflict' using errcode = 'PT409';
+    end if;
+    raise exception 'client_forbidden' using errcode = 'PT403';
   end if;
 
   update public.client_private_details
