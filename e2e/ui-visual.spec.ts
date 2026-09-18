@@ -490,6 +490,30 @@ async function expectBodyMapBaseline(map: import('@playwright/test').Locator, na
   }
 }
 
+test('required Yandex ID link gate keeps one clear action for both roles', async ({ page }, testInfo) => {
+  test.skip(
+    process.env.VITE_YANDEX_SESSION_LINKING_ENABLED !== 'true'
+      || process.env.VITE_YANDEX_ACCOUNT_LINK_REQUIRED !== 'true',
+    'Run with both Yandex linking switches to verify the required gate.',
+  )
+  await page.route('**/v1/auth/yandex/link', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ linked: false }),
+  }))
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
+
+  await expect(page.getByRole('heading', { name: 'Привяжите Yandex ID' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Привязать Yandex ID' })).toHaveClass(/primary/)
+  const logout = page.getByRole('button', { name: 'Выйти' })
+  await expect(logout).toHaveClass(/yandex-link-gate-logout/)
+  await expect(logout).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(logout).toHaveCSS('border-top-width', '0px')
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
+  await expectVisualBaseline(page, `yandex-link-required-${trainer ? 'trainer' : 'client'}-${process.platform}.png`)
+})
+
 async function createStandaloneClient(
   page: import('@playwright/test').Page,
   projectName: string,

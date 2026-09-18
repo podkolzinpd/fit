@@ -149,6 +149,14 @@ export function isYandexSessionLinkingEnabled(): boolean {
   return import.meta.env.VITE_YANDEX_SESSION_LINKING_ENABLED === 'true'
 }
 
+// Обязательная привязка — отдельный default-off gate поверх уже существующего
+// linking flow. Она не включает Yandex app-session и не меняет data backend.
+// Если gate включён без публичной linking-конфигурации, UI должен fail closed
+// с явной ошибкой, а не молча пропустить пользователя в приложение.
+export function isYandexAccountLinkRequired(): boolean {
+  return import.meta.env.VITE_YANDEX_ACCOUNT_LINK_REQUIRED === 'true'
+}
+
 export function getYandexSessionLinkingConfig(): YandexIdPilotConfig | null {
   if (!isYandexSessionLinkingEnabled()) return null
   return getYandexPublicConfig()

@@ -389,6 +389,7 @@ VITE_TODAY_GREETING_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 VITE_YANDEX_OAUTH_CLIENT_ID=<public Yandex OAuth client id>
 VITE_YANDEX_API_BASE_URL=<https Yandex stage API base URL>
 VITE_YANDEX_SESSION_LINKING_ENABLED=true
+VITE_YANDEX_ACCOUNT_LINK_REQUIRED=false
 ```
 
 При точном значении `true` блок показывается всем непривязанным авторизованным
@@ -409,6 +410,17 @@ Linking не требует предварительного tenant import то�
 Yandex DB и затем связывает Yandex subject. Эта операция не создаёт rollout
 assignment, не переносит клиентов/тренировки и не разрешает Yandex-сессию до
 отдельного `yandex/read_write` назначения.
+
+Отдельный `VITE_YANDEX_ACCOUNT_LINK_REQUIRED=true` превращает существующую
+привязку в обязательный шаг для всех пользователей с Supabase-сессией. Gate
+проверяется до любого защищённого продуктового маршрута: связанный профиль и
+пользователь с действующей Yandex app-session проходят без дополнительного
+действия, непривязанный видит только PKCE-привязку, юридические документы и
+выход. Ошибка проверки не открывает приложение автоматически и показывает
+`Повторить`; отсутствие полной публичной linking-конфигурации также закрывает
+доступ с явной ошибкой. Флаг default-off, не создаёт rollout assignment, не
+включает Yandex app-session и не меняет выбранный data backend. Для аварийного
+возврата необязательной привязки нужен новый deployment со значением `false`.
 
 Stage API CORS allowlist обязан содержать как production web origin, так и
 точный `capacitor://localhost` origin нативной iOS-оболочки. Произвольные

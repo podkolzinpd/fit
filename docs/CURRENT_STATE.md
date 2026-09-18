@@ -3,7 +3,7 @@
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
 
-Обновлено: 2026-09-18. Проверенный `main`: `e7acefa6` (#1031). Frontend
+Обновлено: 2026-09-18. Проверенный `main`: `cea78ac3` (#1032). Frontend
 остаётся на Vercel. Production-пользователи пока используют Supabase; Yandex
 app-session, main routing и native registration не включены глобально.
 
@@ -46,6 +46,9 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
 - Публичные условия и политика показывают утверждённый текст. Supabase хранит
   versioned legal acceptance и account deletion requests; Yandex native
   registration фиксирует legal acceptance только для нового аккаунта.
+- Подготовлен независимый default-off gate: при включении защищённые маршруты
+  требуют привязанный Yandex ID, но не меняют app-session, backend routing и
+  rollout assignment. Production-флаг остаётся выключенным.
 
 ## Yandex Cloud — подтверждённая база
 
