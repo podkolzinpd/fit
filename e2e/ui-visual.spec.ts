@@ -511,6 +511,16 @@ test('required Yandex ID link gate keeps one clear action for both roles', async
   await expect(logout).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
   await expect(logout).toHaveCSS('border-top-width', '0px')
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
+  const [brandBox, cardBox] = await Promise.all([
+    page.locator('.yandex-link-required-gate > .brand').boundingBox(),
+    page.locator('.yandex-link-required-card').boundingBox(),
+  ])
+  expect(brandBox).not.toBeNull()
+  expect(cardBox).not.toBeNull()
+  expect(Math.abs(
+    (brandBox?.x ?? 0) + (brandBox?.width ?? 0) / 2
+      - ((cardBox?.x ?? 0) + (cardBox?.width ?? 0) / 2),
+  )).toBeLessThanOrEqual(1)
   await expectVisualBaseline(page, `yandex-link-required-${trainer ? 'trainer' : 'client'}-${process.platform}.png`)
 })
 
