@@ -1570,6 +1570,7 @@ test('workout detail, completion and exercise history keep their visual baseline
     await expect(page.getByRole('link', { name: 'Посмотреть прогресс' })).toHaveAttribute('href', '/me/progress')
   }
   const detailPath = new URL(page.url()).pathname
+  await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `workout-detail-completion-${process.platform}.png`, [], false, '#f8f5ef', 0.005)
   if (!trainer) {
     await page.locator('.content').evaluate((element) => { element.scrollTop = element.scrollHeight })

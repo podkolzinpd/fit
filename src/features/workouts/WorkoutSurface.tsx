@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, CSSProperties, InputHTMLAttributes, PropsWithChildren, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, PropsWithChildren, ReactNode } from 'react'
 
 export type WorkoutUiState = 'planned' | 'current' | 'upcoming' | 'completed' | 'partial' | 'decision' | 'cancelled' | 'skipped' | 'history'
 export type WorkoutUiTone = 'accent' | 'success' | 'warning' | 'neutral'
@@ -125,21 +125,21 @@ const RPE_LABELS: Record<number, string> = {
   6: 'Ощутимо', 7: 'Тяжело', 8: 'Очень тяжело', 9: 'Почти максимум', 10: 'Максимум',
 }
 
-export function WorkoutRpeScale({ value, onChange, disabled = false, ...props }: {
+export function WorkoutRpeScale({ value, onChange, disabled = false, 'aria-label': ariaLabel = 'Нагрузка по шкале RPE' }: {
   value?: number
   onChange: (value: number) => void
-} & Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'min' | 'max' | 'step' | 'onChange'>) {
-  const displayValue = value ?? 5
-  const progress = value === undefined ? 0 : ((value - 1) / 9) * 100
-  return <div className="workout-rpe-scale" data-control-state={disabled ? 'disabled' : value === undefined ? 'idle' : 'selected'}
-    style={{ '--rpe-progress': `${progress}%` } as CSSProperties}>
+  disabled?: boolean
+  'aria-label'?: string
+}) {
+  return <div className="workout-rpe-scale" data-control-state={disabled ? 'disabled' : value === undefined ? 'idle' : 'selected'}>
     <div className="workout-rpe-scale-value" aria-live="polite">
-      {value === undefined ? <><strong>Выберите нагрузку</strong><span>Проведите по шкале</span></> : <><strong>RPE {value}</strong><span>{RPE_LABELS[value]}</span></>}
+      {value === undefined ? <><strong>Выберите нагрузку</strong><span>1 — легко, 10 — максимум</span></> : <><strong>RPE {value}</strong><span>{RPE_LABELS[value]}</span></>}
     </div>
-    <input {...props} className={`workout-rpe-range ${props.className ?? ''}`.trim()} type="range" min={1} max={10} step={1}
-      value={displayValue} disabled={disabled} aria-valuetext={value === undefined ? 'Не выбрано' : `RPE ${value}, ${RPE_LABELS[value]}`}
-      onChange={(event) => onChange(Number(event.target.value))} />
-    <div className="workout-rpe-scale-ticks" aria-hidden="true"><span>1</span><span>5</span><span>10</span></div>
-    <div className="workout-rpe-scale-ends" aria-hidden="true"><span>Очень легко</span><span>Максимум</span></div>
+    <div className="workout-rpe-options" role="radiogroup" aria-label={ariaLabel}>
+      {Object.keys(RPE_LABELS).map(Number).map((option) => <button key={option} type="button" role="radio"
+        aria-checked={value === option} aria-label={`${option} — ${RPE_LABELS[option]}`} disabled={disabled}
+        className="workout-rpe-option" data-control-state={value === option ? 'selected' : 'idle'}
+        onClick={() => onChange(option)}>{option}</button>)}
+    </div>
   </div>
 }

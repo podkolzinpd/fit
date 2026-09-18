@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(18);
+select plan(19);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('41000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'feedback-trainer@example.test', ''),
@@ -57,8 +57,8 @@ select is(
 );
 select is(
   (select client_comment from public.workouts where id = '41000000-0000-4000-8000-000000000005'),
-  null::text,
-  'comment is cleared when discomfort is no'
+  'не сохранять'::text,
+  'neutral workout note is saved when discomfort is no'
 );
 select throws_ok(
   $$select public.submit_workout_feedback('41000000-0000-4000-8000-000000000007', 5::smallint, 'normal', false, '', 1)$$,
@@ -75,6 +75,10 @@ select throws_ok(
 select throws_ok(
   $$select public.submit_workout_feedback('41000000-0000-4000-8000-000000000006', 6::smallint, 'hard', true, '   ', 1)$$,
   'PT422', 'discomfort_comment_required', 'discomfort yes requires a short explanation'
+);
+select throws_ok(
+  $$select public.submit_workout_feedback('41000000-0000-4000-8000-000000000006', 9::smallint, 'hard', false, '   ', 1)$$,
+  'PT422', 'discomfort_comment_required', 'RPE 9 or 10 requires a short explanation'
 );
 select is(
   public.submit_workout_feedback('41000000-0000-4000-8000-000000000006', 6::smallint, 'hard', true, 'Болит плечо', 1),
