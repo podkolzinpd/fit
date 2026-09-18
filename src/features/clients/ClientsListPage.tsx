@@ -76,7 +76,12 @@ export function ClientsPage() {
     return () => window.cancelAnimationFrame(frame)
   }, [location.pathname, location.search, query.isSuccess])
 
-  return <div ref={pageRef}><Page title="Клиенты" className="clients-page" action={query.data?.length ? <Link className="button" to="/clients/new">Добавить</Link> : undefined}>
+  const pageActions = <div className="clients-page-header-actions">
+    <Link className="button secondary" to="/join">Ввести код</Link>
+    {query.data?.length ? <Link className="button" to="/clients/new">Добавить</Link> : null}
+  </div>
+
+  return <div ref={pageRef}><Page title="Клиенты" className="clients-page" action={pageActions}>
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}
       emptyTitle="Клиентов пока нет"
       emptyDescription="Добавьте первого клиента, чтобы планировать тренировки и отслеживать прогресс."

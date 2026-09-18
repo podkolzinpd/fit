@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { TrainerMembership } from '../../shared/domain'
+import { ChevronRightIcon } from '../../shared/icons'
 import { useConfirm } from '../../shared/ui'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { ChatStartButton } from '../chat'
@@ -35,7 +36,8 @@ export function ClientTrainerConnections({ clientId }: { clientId: string }) {
     {trainers.error && <div><p className="error">{trainers.error.message}</p><button className="secondary" onClick={() => void trainers.refetch()}>Повторить</button></div>}
     {trainers.data?.length === 0 && <p className="muted">Сейчас вы занимаетесь самостоятельно.</p>}
     {trainers.data?.map((trainer) => <article className="card" key={trainer.trainerId}><div><strong>{[trainer.firstName, trainer.lastName].filter(Boolean).join(' ') || 'Тренер'}</strong><p>{trainer.isRoot ? 'Основной тренер' : 'Подключённый тренер'}</p></div><div className="client-trainer-actions"><ChatStartButton clientId={clientId} trainerId={trainer.trainerId} /><button className="link danger" disabled={disconnectTrainer.isPending} onClick={async () => { if (await confirm({ message: 'Отключить тренера? Он потеряет доступ к вашим тренировкам и прогрессу. Ваш аккаунт, история тренировок, замеры и цели сохранятся.', confirmLabel: 'Отключить', danger: true })) disconnectTrainer.mutate(trainer.trainerId) }}>{disconnectTrainer.isPending ? 'Отключаем…' : 'Отключить'}</button></div></article>)}
-    {trainers.data && <Link className="client-trainer-catalog-link" to="/me/trainers"><span><strong>Найти тренера</strong><small>Посмотреть анкеты</small></span><span aria-hidden="true">›</span></Link>}
+    <Link className="client-trainer-catalog-link client-trainer-code-link" to="/join"><span><strong>Ввести код тренера</strong><small>Если тренер прислал приглашение</small></span><ChevronRightIcon aria-hidden="true" /></Link>
+    {trainers.data && <Link className="client-trainer-catalog-link" to="/me/trainers"><span><strong>Найти тренера</strong><small>Посмотреть анкеты</small></span><ChevronRightIcon aria-hidden="true" /></Link>}
     {invitations.isLoading && <p className="muted">Загрузка приглашений…</p>}
     {invitations.data && invitations.data.length > 0 && <div className="client-home-invitations"><h3>Активные приглашения</h3>{invitations.data.map((item) => <article className="card" key={item.id}><div><strong>Приглашение для тренера</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</p></div><button className="link danger" disabled={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Код больше нельзя будет использовать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>Отозвать</button></article>)}</div>}
     {invitations.error && <div><p className="error">{invitations.error.message}</p><button className="secondary" onClick={() => void invitations.refetch()}>Повторить</button></div>}
