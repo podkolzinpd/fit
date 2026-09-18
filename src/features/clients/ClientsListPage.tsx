@@ -9,6 +9,7 @@ import { AsyncView, Page } from '../../shared/ui'
 import { CloseIcon, MoreIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
 import { ChatStartButton } from '../chat'
 import { useChatThreads } from '../chat/use-chat-threads'
+import { InviteAthleteButton } from '../auth/InvitationShareActions'
 
 // Порог, с которого список перестаёт охватываться взглядом и поиск начинает
 // экономить время. Ниже него поле только занимало верх экрана: у тренера с
@@ -190,8 +191,8 @@ export function ClientsPage() {
   }, [location.pathname, location.search, query.isSuccess])
 
   const pageActions = <div className="clients-page-header-actions">
-    <Link className="button secondary" to="/join">Ввести код</Link>
-    {query.data?.length ? <Link className="button" to="/clients/new">Добавить</Link> : null}
+    <Link className="button secondary" to="/clients/new">Добавить</Link>
+    <InviteAthleteButton className="button" label="Пригласить" />
   </div>
 
   return <div ref={pageRef} onPointerDownCapture={(event) => {
@@ -208,8 +209,8 @@ export function ClientsPage() {
     {archive.error && <p className="error clients-archive-error" role="alert">{archive.error.message}</p>}
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}
       emptyTitle="Клиентов пока нет"
-      emptyDescription="Добавьте первого клиента, чтобы планировать тренировки и отслеживать прогресс."
-      emptyAction={<Link className="button" to="/clients/new">Добавить клиента</Link>}>
+      emptyDescription="Пригласите первого спортсмена или создайте его профиль вручную."
+      emptyAction={<Link className="button secondary" to="/clients/new">Создать профиль вручную</Link>}>
       {showSearch && <div className="clients-search">
           <SearchIcon aria-hidden="true" />
           <input type="search" aria-label="Поиск клиента" value={search} onChange={(event) => updateSearch(event.target.value)} placeholder="Поиск по имени" autoComplete="off" />
@@ -236,5 +237,6 @@ export function ClientsPage() {
           onBeforeOpen={rememberListPosition} />
       })}</div> : <p className="clients-search-empty">По этому имени клиентов не найдено.</p>}
     </AsyncView>
+    <Link className="clients-code-fallback" aria-label="Ввести код" to="/join">Ввести код приглашения</Link>
   </Page></div>
 }
