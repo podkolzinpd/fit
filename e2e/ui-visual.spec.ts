@@ -1238,6 +1238,29 @@ test('next-step suggestion stays off the main progress screen for client and tra
       expect(actionsBox).not.toBeNull()
       expect(navigationBox).not.toBeNull()
       expect(actionsBox!.y + actionsBox!.height).toBeLessThanOrEqual(navigationBox!.y)
+      const actionLayout = await measurementActions.evaluate((element) => {
+        const container = element.getBoundingClientRect()
+        const buttons = [...element.querySelectorAll('button')].map((button) => {
+          const rect = button.getBoundingClientRect()
+          return {
+            left: rect.left,
+            right: rect.right,
+            top: rect.top,
+            bottom: rect.bottom,
+            height: rect.height,
+            fontSize: Number.parseFloat(getComputedStyle(button).fontSize),
+          }
+        })
+        const overlaps = buttons.some((button, index) => buttons.slice(index + 1).some((other) => !(
+          button.right <= other.left || other.right <= button.left || button.bottom <= other.top || other.bottom <= button.top
+        )))
+        return {
+          inside: buttons.every((button) => button.left >= container.left && button.right <= container.right),
+          overlaps,
+          usable: buttons.every((button) => button.height >= 44 && button.fontSize >= 12),
+        }
+      })
+      expect(actionLayout).toEqual({ inside: true, overlaps: false, usable: true })
     }
     if (initialViewport) await page.setViewportSize(initialViewport)
   }
