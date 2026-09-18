@@ -18,6 +18,8 @@ interface LegalDocumentContent {
   blocks: LegalBlock[]
 }
 
+const privacyPolicyReference = 'Политикой конфиденциальности'
+
 const documents = legalDocuments as {
   terms: LegalDocumentContent
   privacy: LegalDocumentContent
@@ -39,7 +41,16 @@ function LegalShell({ title, children }: PropsWithChildren<{ title: string }>) {
   </main>
 }
 
-function LegalDocumentBody({ document }: { document: LegalDocumentContent }) {
+function renderParagraphText(text: string, linkPrivacyPolicy: boolean) {
+  if (!linkPrivacyPolicy || !text.includes(privacyPolicyReference)) return text
+
+  return text.split(privacyPolicyReference).map((part, index) => <span key={`${part}-${index}`}>
+    {index > 0 && <Link to={LEGAL_PATHS.privacy}>{privacyPolicyReference}</Link>}
+    {part}
+  </span>)
+}
+
+function LegalDocumentBody({ document, linkPrivacyPolicy = false }: { document: LegalDocumentContent; linkPrivacyPolicy?: boolean }) {
   return document.blocks.map((block, index) => {
     const key = `${block.type}-${index}`
     if (block.type === 'heading') {
@@ -47,7 +58,7 @@ function LegalDocumentBody({ document }: { document: LegalDocumentContent }) {
         ? <h2 key={key}>{block.text}</h2>
         : <h3 key={key}>{block.text}</h3>
     }
-    if (block.type === 'paragraph') return <p key={key}>{block.text}</p>
+    if (block.type === 'paragraph') return <p key={key}>{renderParagraphText(block.text, linkPrivacyPolicy)}</p>
     if (block.type === 'list') return <ul key={key}>{block.items.map((item) => <li key={item}>{item}</li>)}</ul>
     return <div className="legal-table-wrap" key={key}>
       <table className="legal-data-table">
@@ -65,7 +76,7 @@ function LegalDocumentBody({ document }: { document: LegalDocumentContent }) {
 
 export function TermsPage() {
   return <LegalShell title={documents.terms.title}>
-    <LegalDocumentBody document={documents.terms} />
+    <LegalDocumentBody document={documents.terms} linkPrivacyPolicy />
   </LegalShell>
 }
 
