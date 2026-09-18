@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useDataBackend } from '../../app/data-backend-context'
@@ -12,7 +12,7 @@ import { AsyncView, EmptyState, Field, Page, useConfirm } from '../../shared/ui'
 import { ClientTrainingSummaryCard, groupMetricRows } from '../progress'
 import { MetricsManager } from '../progress/MetricsManager'
 import { measurementSummaryText } from '../progress/measurement-summary'
-import { LoadMoreButton, PastWorkoutPlanCard, PresetWorkoutPicker, WorkoutChronicleCard, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE, storeFirstWorkoutIntent } from '../workouts'
+import { LoadMoreButton, PastWorkoutPlanCard, PresetWorkoutList, WorkoutChronicleCard, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE, storeFirstWorkoutIntent } from '../workouts'
 import { clientWorkoutAuthorLabel } from './workout-author'
 import { ClientWorkoutHistoryCalendar } from './ClientWorkoutHistoryCalendar'
 import { useWorkoutHistoryCalendar } from './use-workout-history-calendar'
@@ -28,6 +28,14 @@ export function MyWorkoutsPage() {
   const { invitations: invitationsRepository, workouts: workoutsRepository } = useDataBackend()
   const { actor } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const workoutsView: 'current' | 'presets' = searchParams.get('tab') === 'presets' ? 'presets' : 'current'
+  const setWorkoutsView = (next: 'current' | 'presets') => {
+    const params = new URLSearchParams(searchParams)
+    if (next === 'presets') params.set('tab', 'presets')
+    else params.delete('tab')
+    setSearchParams(params, { replace: true })
+  }
   const mine = useMine()
   const today = todayInTimeZone(actor?.timezone)
   const calendar = useWorkoutHistoryCalendar(today)
@@ -62,34 +70,44 @@ export function MyWorkoutsPage() {
   const calendarReturnTo = `/me/workouts${calendar.search}`
   return <Page className="client-workouts-page" title="Мои тренировки" action={mine.data && hasWorkouts && <Link className="button" to="/workouts/new">Добавить</Link>}><AsyncView loading={mine.isLoading || upcoming.isLoading || history.isLoading || trainers.isLoading} error={mine.error ?? upcoming.error ?? history.error ?? trainers.error} empty={!mine.data} onRetry={() => { void mine.refetch(); void upcoming.refetch(); void history.refetch(); void trainers.refetch() }}
     emptyTitle="Заполните профиль спортсмена" emptyDescription="Он нужен, чтобы добавлять самостоятельные тренировки и получать назначения тренера." emptyAction={<Link className="button primary" to="/me/edit">Заполнить профиль</Link>}>
-    {mine.data && <PresetWorkoutPicker onSelect={(presetId) => {
-      if (!actor) return
-      storeFirstWorkoutIntent(actor.userId, { mode: 'preset', presetId })
-      navigate('/me')
-    }} />}
-    {mine.data && (hasWorkouts || calendarState.view === 'calendar' ? <div className="client-workouts-stack">
-      {upcomingItems.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div><div className="cards client-workout-cards">{upcomingItems.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p className="muted">{clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>)}</div></section>}
-      {pastItems.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{pastItems.needsDecision.map((workout) => <PastWorkoutPlanCard key={workout.id} workout={workout} contextLabel={clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)} returnTo="/me/workouts" />)}</div></section>}
-      {showHistorySection && <section className="client-workout-section client-history-section"><div className="client-workout-section-head client-history-section-head"><div><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div><div className="client-history-view-toggle" role="group" aria-label="Вид истории тренировок"><button type="button" aria-pressed={calendarState.view === 'list'} onClick={showHistoryList}>Список</button><button type="button" aria-pressed={calendarState.view === 'calendar'} onClick={showHistoryCalendar}><ScheduleIcon />Календарь</button></div></div>{calendarState.view === 'list'
-        ? <><div className="cards client-workout-cards workout-chronicle-list">{historyItems.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)} historyListActions />)}</div><LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} /></>
-        : <ClientWorkoutHistoryCalendar
-            month={calendarState.month}
-            today={today}
-            workouts={calendarHistoryItems}
-            selectedDate={calendarState.selectedDate}
-            loading={calendarHistory.isLoading}
-            error={calendarHistory.error}
-            returnTo={calendarReturnTo}
-            contextLabel={(workout) => clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)}
-            onRetry={() => void calendarHistory.refetch()}
-            onMonthChange={calendar.shiftMonth}
-            onDateSelect={calendar.selectDate}
-          />}</section>}
-    </div> : <EmptyState
-      title="Новая тренировка"
-      description="Добавьте упражнения голосом, текстом или из каталога."
-      action={<Link className="button secondary" to="/workouts/new">Добавить тренировку</Link>}
-    />)}
+    {mine.data && <>
+      <div className="progress-view-tabs" role="tablist" aria-label="Режим тренировок">
+        <button id="workouts-current-tab" type="button" role="tab" aria-selected={workoutsView === 'current'} aria-controls="workouts-current-panel" className={workoutsView === 'current' ? 'active' : ''} onClick={() => setWorkoutsView('current')}>Актуальное</button>
+        <button id="workouts-presets-tab" type="button" role="tab" aria-selected={workoutsView === 'presets'} aria-controls="workouts-presets-panel" className={workoutsView === 'presets' ? 'active' : ''} onClick={() => setWorkoutsView('presets')}>Готовые тренировки</button>
+      </div>
+      <div id="workouts-current-panel" className="progress-view-panel" role="tabpanel" aria-labelledby="workouts-current-tab" hidden={workoutsView !== 'current'}>
+        {hasWorkouts || calendarState.view === 'calendar' ? <div className="client-workouts-stack">
+          {upcomingItems.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div><div className="cards client-workout-cards">{upcomingItems.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p className="muted">{clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>)}</div></section>}
+          {pastItems.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{pastItems.needsDecision.map((workout) => <PastWorkoutPlanCard key={workout.id} workout={workout} contextLabel={clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)} returnTo="/me/workouts" />)}</div></section>}
+          {showHistorySection && <section className="client-workout-section client-history-section"><div className="client-workout-section-head client-history-section-head"><div><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div><div className="client-history-view-toggle" role="group" aria-label="Вид истории тренировок"><button type="button" aria-pressed={calendarState.view === 'list'} onClick={showHistoryList}>Список</button><button type="button" aria-pressed={calendarState.view === 'calendar'} onClick={showHistoryCalendar}><ScheduleIcon />Календарь</button></div></div>{calendarState.view === 'list'
+            ? <><div className="cards client-workout-cards workout-chronicle-list">{historyItems.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)} historyListActions />)}</div><LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} /></>
+            : <ClientWorkoutHistoryCalendar
+                month={calendarState.month}
+                today={today}
+                workouts={calendarHistoryItems}
+                selectedDate={calendarState.selectedDate}
+                loading={calendarHistory.isLoading}
+                error={calendarHistory.error}
+                returnTo={calendarReturnTo}
+                contextLabel={(workout) => clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data)}
+                onRetry={() => void calendarHistory.refetch()}
+                onMonthChange={calendar.shiftMonth}
+                onDateSelect={calendar.selectDate}
+              />}</section>}
+        </div> : <EmptyState
+          title="Новая тренировка"
+          description="Добавьте упражнения голосом, текстом или из каталога."
+          action={<Link className="button secondary" to="/workouts/new">Добавить тренировку</Link>}
+        />}
+      </div>
+      <div id="workouts-presets-panel" className="progress-view-panel" role="tabpanel" aria-labelledby="workouts-presets-tab" hidden={workoutsView !== 'presets'}>
+        <PresetWorkoutList onSelect={(presetId) => {
+          if (!actor) return
+          storeFirstWorkoutIntent(actor.userId, { mode: 'preset', presetId })
+          navigate('/me')
+        }} />
+      </div>
+    </>}
   </AsyncView></Page>
 }
 
