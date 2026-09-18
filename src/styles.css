@@ -1758,6 +1758,16 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-home-self-training.compact .voice-input { width:100%; }
 .client-home-self-training.compact .voice-input-button { width:100%; min-height:46px; justify-content:center; border-radius:14px; }
 .client-home-self-training.compact .today-text-toggle { min-height:36px; padding:4px; border:0; background:transparent; }
+.today-preset-toggle { align-self:flex-start; font-size:13px; }
+.preset-workout-picker { display:grid; gap:10px; padding-top:4px; }
+.preset-workout-picker-hint { margin:0; color:var(--voice-copy); font-size:13px; line-height:1.35; }
+.preset-workout-picker-list { display:grid; gap:10px; }
+.preset-workout-card { align-items:center; }
+.preset-workout-card > div { display:grid; gap:2px; min-width:0; }
+.preset-workout-card strong { font-size:15px; }
+.preset-workout-card p { margin:0; color:var(--muted); font-size:13px; line-height:1.35; }
+.preset-workout-card small { color:var(--muted); font-size:12px; }
+.preset-workout-card > button { flex:0 0 auto; min-height:40px; padding-inline:14px; border-radius:14px; font-size:13px; }
 .client-home-loading { min-height:84px; display:grid; place-items:center; color:var(--voice-copy); font-size:14px; text-align:center; }
 .client-home-error { display:flex; align-items:center; justify-content:space-between; gap:12px; border-color:var(--danger-border); background:var(--danger-surface); }
 .client-home-error p { margin:0; font-size:13px; line-height:1.35; }
