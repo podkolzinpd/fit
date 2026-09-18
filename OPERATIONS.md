@@ -389,7 +389,7 @@ VITE_TODAY_GREETING_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 VITE_YANDEX_OAUTH_CLIENT_ID=<public Yandex OAuth client id>
 VITE_YANDEX_API_BASE_URL=<https Yandex stage API base URL>
 VITE_YANDEX_SESSION_LINKING_ENABLED=true
-VITE_YANDEX_ACCOUNT_LINK_REQUIRED=false
+VITE_YANDEX_ACCOUNT_LINK_REQUIRED=true
 ```
 
 При точном значении `true` блок показывается всем непривязанным авторизованным
@@ -418,9 +418,12 @@ assignment, не переносит клиентов/тренировки и н�
 действия, непривязанный видит только PKCE-привязку, юридические документы и
 выход. Ошибка проверки не открывает приложение автоматически и показывает
 `Повторить`; отсутствие полной публичной linking-конфигурации также закрывает
-доступ с явной ошибкой. Флаг default-off, не создаёт rollout assignment, не
-включает Yandex app-session и не меняет выбранный data backend. Для аварийного
-возврата необязательной привязки нужен новый deployment со значением `false`.
+доступ с явной ошибкой. Реализация остаётся default-off, но в Vercel Production
+Environment глобально включены оба linking-флага: персонального allowlist нет,
+а Preview и локальная разработка не затронуты. Gate не создаёт rollout
+assignment, не включает Yandex app-session и не меняет выбранный data backend.
+Для аварийного возврата необязательной привязки нужен новый deployment со
+значением `false`.
 
 Stage API CORS allowlist обязан содержать как production web origin, так и
 точный `capacitor://localhost` origin нативной iOS-оболочки. Произвольные
