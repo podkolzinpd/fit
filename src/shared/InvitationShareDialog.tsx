@@ -7,6 +7,7 @@ import { copyText } from './clipboard'
 import { CloseIcon } from './icons'
 import { invitationShareUrl } from './invitation-share'
 import { useConfirm } from './ui'
+import { trackGoal } from './yandex-metrika'
 
 type ActionState = 'idle' | 'busy' | 'done' | 'error'
 
@@ -59,9 +60,11 @@ export function InvitationShareDialog({
     setCopyState('busy')
     try {
       await copyText(url)
+      trackGoal('invitation_link_copied')
       setCopyState('done')
     } catch {
       setCopyState('error')
+      trackGoal('invitation_share_error')
     }
   }
 
@@ -80,10 +83,12 @@ export function InvitationShareDialog({
     try {
       if (canUseSystemShare) {
         await navigator.share({ title: 'Приглашение в Fit', text: message, url })
+        trackGoal('invitation_link_shared')
         setShareState('done')
         return
       }
       await copyText(`${message}\n${url}`)
+      trackGoal('invitation_link_shared')
       setShareState('done')
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
@@ -91,6 +96,7 @@ export function InvitationShareDialog({
         return
       }
       setShareState('error')
+      trackGoal('invitation_share_error')
     }
   }
 
@@ -100,6 +106,7 @@ export function InvitationShareDialog({
     link.href = qrDataUrl
     link.download = 'fit-invitation-qr.png'
     link.click()
+    trackGoal('invitation_qr_saved')
   }
 
   async function revoke(): Promise<void> {
@@ -111,10 +118,12 @@ export function InvitationShareDialog({
     setRevokeState('busy')
     try {
       await onRevoke()
+      trackGoal('invitation_revoked')
       setRevokeState('done')
       onClose()
     } catch {
       setRevokeState('error')
+      trackGoal('invitation_revoke_error')
     }
   }
 
@@ -139,7 +148,7 @@ export function InvitationShareDialog({
         <div className="invitation-share-actions">
           <button type="button" className="primary" disabled={shareState === 'busy'} onClick={() => void sendLink()}>{shareState === 'busy' ? 'Открываем…' : shareState === 'done' ? (canUseSystemShare ? 'Отправлено' : 'Текст скопирован') : 'Отправить ссылку'}</button>
           <button type="button" className="secondary" disabled={copyState === 'busy'} onClick={() => void copyLink()}>{copyState === 'done' ? 'Ссылка скопирована' : copyState === 'busy' ? 'Копируем…' : 'Скопировать ссылку'}</button>
-          <button type="button" className="secondary" aria-expanded={showQr} onClick={() => setShowQr((value) => !value)}>{showQr ? 'Скрыть QR-код' : 'Показать QR-код'}</button>
+          <button type="button" className="secondary" aria-expanded={showQr} onClick={() => setShowQr((value) => { if (!value) trackGoal('invitation_qr_opened'); return !value })}>{showQr ? 'Скрыть QR-код' : 'Показать QR-код'}</button>
         </div>
         {(copyState === 'error' || shareState === 'error') && <p className="error" role="alert">Не удалось выполнить действие. Попробуйте ещё раз.</p>}
 
