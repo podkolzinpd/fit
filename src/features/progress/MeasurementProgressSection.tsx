@@ -59,7 +59,7 @@ export function MeasurementProgressSection({
     ?? progress.primary
   const currentObservation = selected ? compact ? selected.periodEnd : selected.latest : null
   const explanation = selected ? buildMeasurementExplanation(selected, llmCandidates) : null
-  const measurementLink = role === 'client' ? '/me/progress?view=pro#measurements' : `/progress/${clientId}?view=measurements`
+  const measurementLink = role === 'client' ? '/me/progress#measurements' : `/progress/${clientId}?view=measurements`
 
   return <section className="client-progress-measurements-story" id={role === 'client' ? 'measurements' : 'progress-measurements'} aria-labelledby={`${role}-progress-measurements-title`}>
     <header>

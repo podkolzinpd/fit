@@ -5705,7 +5705,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .progress-analysis-actions .link { min-height:44px; padding:10px 0; }
 .progress-overview-panel > .client-current-week,
 .progress-overview-panel > .client-progress-goal-story,
+.progress-overview-panel > .client-progress-measurements-story,
 .progress-overview-panel > .period-exercise-results { margin:0; }
+.progress-overview-panel > .client-progress-measurements-story { min-width:0; }
 .progress-overview-panel .period-exercise-results > h3 + .muted { margin-top:-6px; font-size:var(--type-caption-size); }
 .progress-pro-intro { margin:2px 4px 0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body); }
 .progress-pro-list { display:grid; gap:8px; overflow:visible; border:0; border-radius:0; background:transparent; }
