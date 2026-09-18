@@ -45,12 +45,13 @@ test('global rollout gives a new client the My Workouts identity', async ({ page
   await expect(page.locator('html')).toHaveClass(/ui-identity/)
 })
 
-test('client always has a preset workout entry point on My Workouts, before and after their first workout', async ({ page }, testInfo) => {
+test('client always has a preset workout tab on My Workouts, before and after their first workout', async ({ page }, testInfo) => {
   await createClientAccount(page, `workouts-preset-${testInfo.workerIndex}-${Date.now()}@fit.local`)
   await page.goto('/me/workouts')
 
-  await expect(page.getByRole('button', { name: 'Попробовать готовую тренировку' })).toBeVisible()
-  await page.getByRole('button', { name: 'Попробовать готовую тренировку' }).click()
+  await expect(page.getByRole('tab', { name: 'Актуальное' })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('tab', { name: 'Готовые тренировки' }).click()
+  await expect(page).toHaveURL(/\/me\/workouts\?tab=presets$/)
   await page.getByRole('article').filter({ hasText: 'Всё тело без инвентаря' }).getByRole('button', { name: 'Выбрать' }).click()
   await expect(page).toHaveURL(/\/me$/)
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
@@ -63,7 +64,8 @@ test('client always has a preset workout entry point on My Workouts, before and 
 
   await page.goto('/me/workouts')
   await expect(page.getByRole('heading', { name: 'История' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Попробовать готовую тренировку' })).toBeVisible()
+  await page.getByRole('tab', { name: 'Готовые тренировки' }).click()
+  await expect(page.getByText('Всё тело без инвентаря')).toBeVisible()
 })
 
 test('client switches workout history to a month calendar and returns to the selected date', async ({ page }, testInfo) => {
