@@ -107,19 +107,19 @@ test('protected invitation link previews and survives Yandex registration at 390
     { width: 430, height: 932 },
   ]) {
     await page.setViewportSize(viewport)
-    await page.goto(`/invite?token=${token}`)
+    await page.goto(`/invite#token=${token}&source=yandex`)
 
-    await expect(page.getByRole('heading', { name: 'Тренироваться вместе' })).toBeVisible()
-    await expect(page.getByText('Анастасия приглашает вас тренироваться вместе в Fit.')).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Войти и подключиться' })).toHaveClass(/primary/)
-    await expect(page.getByRole('link', { name: 'Зарегистрироваться' })).toHaveClass(/secondary/)
+    await expect(page.getByRole('heading', { name: 'Анастасия приглашает вас стать спортсменом' })).toBeVisible()
+    await expect(page.getByText('После подключения вы увидите общие тренировки и сможете общаться в Fit.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Войти и подключиться' })).toHaveClass(/primary/)
+    await expect(page.getByRole('button', { name: 'Создать аккаунт' })).toHaveClass(/secondary/)
     await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
     await page.screenshot({
       path: testInfo.outputPath(`protected-invitation-${viewport.width}.png`),
       fullPage: true,
     })
 
-    await page.getByRole('link', { name: 'Зарегистрироваться' }).click()
+    await page.getByRole('button', { name: 'Создать аккаунт' }).click()
     await expect(page).toHaveURL(/\/auth$/)
     await expect(page.getByLabel('Тип аккаунта')).toHaveValue('client')
     await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID' })).toBeVisible()

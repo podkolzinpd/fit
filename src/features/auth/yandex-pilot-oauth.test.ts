@@ -7,14 +7,17 @@ import {
   readPendingYandexNativeRegistration,
   savePendingYandexNativeRegistration,
 } from './yandex-pilot-oauth'
-import { readPendingInvitation, savePendingInvitation } from './invitation-auth'
+import { captureInvitationLink, readPendingInvitationLink } from './invitation-link-continuation'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 
 const storage = new Map<string, string>()
-const storageAdapter = {
+const storageAdapter: Storage = {
+  get length() { return storage.size },
+  clear: () => storage.clear(),
   getItem: (key: string) => storage.get(key) ?? null,
-  removeItem: (key: string) => storage.delete(key),
-  setItem: (key: string, value: string) => storage.set(key, value),
+  key: (index: number) => [...storage.keys()][index] ?? null,
+  removeItem: (key: string) => { storage.delete(key) },
+  setItem: (key: string, value: string) => { storage.set(key, value) },
 }
 
 describe('Yandex ID pilot OAuth', () => {
@@ -122,7 +125,7 @@ describe('Yandex ID pilot OAuth', () => {
 
   it('keeps a protected invitation token out of the Yandex OAuth URL', async () => {
     const token = `AB12CD34EF56.${'a'.repeat(64)}`
-    savePendingInvitation(`/invite?token=${token}`, storageAdapter)
+    captureInvitationLink(`#token=${token}&source=yandex`, storageAdapter)
 
     const authorizationUrl = await createYandexAuthorizationUrl(
       'public-client-id',
@@ -132,7 +135,7 @@ describe('Yandex ID pilot OAuth', () => {
     )
 
     expect(authorizationUrl).not.toContain(token)
-    expect(readPendingInvitation(storageAdapter)).toBe(`/invite?token=${token}`)
+    expect(readPendingInvitationLink(storageAdapter)?.token).toBe(token)
   })
 
   it('rejects a mismatched state and OAuth errors', async () => {

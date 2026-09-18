@@ -7,18 +7,19 @@
 ## Пользовательский результат
 
 Незарегистрированный или вышедший пользователь открывает защищённую ссылку
-`/invite?token=…`, видит отправителя и назначенную роль, входит либо создаёт
+`/invite#token=…&source=…` из #1038, видит отправителя и назначенную роль, входит либо создаёт
 аккаунт через Yandex ID и возвращается к тому же приглашению. Старый
 `/join?code=…` остаётся совместимым fallback. Ни один auth-поток не создаёт
 связь без отдельного подтверждения пользователя.
 
 ## Acceptance cases
 
-1. Публичный `/invite?token=<12 символов>.<64 hex>` получает безопасный preview
-   через выбранный Supabase/Yandex transport и показывает отправителя, роль,
-   срок и active/claimed/revoked/expired состояния. Bearer-token передаётся
-   только в POST body, не выводится в логи и пользовательские тексты.
-2. Валидный `/invite?token=…` или legacy `/join?code=<12 символов>` сохраняется
+1. Публичный `/invite#token=<12 символов>.<64 hex>&source=<backend>` из #1038
+   получает безопасный preview и показывает отправителя, роль, срок и
+   active/claimed/revoked/expired состояния. Bearer-token передаётся только в
+   POST body, не выводится в логи и не остаётся в адресной строке после capture.
+2. Валидный `/invite` с уже проверенным session context или legacy
+   `/join?code=<12 символов>` сохраняется
    в browser session перед Yandex OAuth, email login/registration и password
    recovery. После callback связанный или новый пользователь возвращается на
    исходный маршрут; bearer-token не добавляется в Yandex OAuth URL.
@@ -28,10 +29,10 @@
 4. Ошибка OAuth/API и безопасный restart сохраняют приглашение. Успешный
    переход потребляет сохранённый контекст один раз; новый вход без приглашения
    очищает устаревший контекст.
-5. В session storage принимается только точный внутренний `/invite` с одним
-   валидным bearer-token либо legacy `/join` с одним 12-значным кодом. Внешний
-   URL, другой маршрут, дополнительные параметры и fragment не могут стать
-   redirect target.
+5. В auth return storage принимается только точный внутренний `/invite` либо
+   legacy `/join` с одним 12-значным кодом. Сам bearer-token хранится отдельным
+   invitation context. Внешний URL, другой маршрут, дополнительные параметры
+   и fragment не могут стать redirect target.
 6. При включённой Yandex app-session конфигурации вход через Yandex ID является
    единственным primary-действием login-состояния. Email/password остаются
    видимым secondary fallback для ещё не привязанных старых аккаунтов. При
@@ -49,7 +50,7 @@
 
 | Пункт | Видимый результат | Проверка | Статус |
 | --- | --- | --- | --- |
-| 1 | Защищённая ссылка показывает preview без входа | Supabase/Yandex repository + page tests | Готово |
+| 1 | Защищённая ссылка показывает preview без входа | Контракт и page tests из #1038 + security regression | Готово |
 | 2 | OAuth/email recovery возвращают на исходное приглашение | auth helper + callback component tests | Готово |
 | 3 | Связь создаётся только после отдельного подтверждения | page component + legacy JoinPage E2E | Готово |
 | 4 | Retry сохраняет, успех и новый flow очищают контекст | unit/component tests | Готово |

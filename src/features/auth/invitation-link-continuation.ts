@@ -12,7 +12,7 @@ export interface PendingInvitationLink {
 
 function browserStorage(): Storage | undefined {
   try {
-    return typeof window === 'undefined' ? undefined : window.localStorage
+    return typeof window === 'undefined' ? undefined : window.sessionStorage
   } catch {
     return undefined
   }
@@ -54,9 +54,16 @@ export function captureInvitationLink(
 ): PendingInvitationLink | null {
   if (storage === undefined) return null
   const params = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash)
-  const token = params.get('token')?.trim() ?? ''
-  const sourceValue = params.get('source') ?? 'supabase'
-  if (!tokenPattern.test(token) || !validSource(sourceValue)) {
+  const keys = [...params.keys()]
+  const tokens = params.getAll('token')
+  const sources = params.getAll('source')
+  const token = tokens[0]?.trim() ?? ''
+  const sourceValue = sources[0] ?? 'supabase'
+  if (keys.some((key) => key !== 'token' && key !== 'source')
+    || tokens.length !== 1
+    || sources.length > 1
+    || !tokenPattern.test(token)
+    || !validSource(sourceValue)) {
     return readPendingInvitationLink(storage, now)
   }
   const invitation = { token, source: sourceValue, savedAt: now }

@@ -55,7 +55,7 @@ export function InvitationPage() {
   }, [])
 
   const preview = useQuery({
-    queryKey: ['invitation-link-preview', pending?.source, pending?.token],
+    queryKey: ['invitation-link-preview', pending?.source, pending?.token.slice(0, 12)],
     queryFn: () => publicInvitationLinksRepository.preview(pending!.source, pending!.token),
     enabled: pending !== null,
     retry: false,

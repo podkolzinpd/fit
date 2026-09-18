@@ -12,8 +12,6 @@ export const invitationQueries = {
   previewLink: (token: string) => supabase.rpc('get_client_invitation_preview', { p_token: token }),
   claimLink: (token: string) => supabase.rpc('claim_client_invitation_link', { p_token: token }),
   claim: (code: string) => supabase.rpc('claim_client_invitation', { p_code: code }),
-  previewLink: (token: string) => supabase.rpc('get_client_invitation_preview', { p_token: token }),
-  claimLink: (token: string) => supabase.rpc('claim_client_invitation_link', { p_token: token }),
   reconnect: (code: string) => supabase.rpc('reconnect_client_trainer', { p_code: code }),
   list: (clientId: string) => supabase.from('client_invitations')
     .select('id,client_id,target_role,expires_at,created_at')

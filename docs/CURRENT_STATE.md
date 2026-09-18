@@ -73,9 +73,10 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   assignment и legal acceptance находятся в `main`; frontend и server flags
   default-off. `YANDEX_NATIVE_REGISTRATION_ENABLED` ещё не проложен в
   deployment environment.
-- Защищённый `/invite?token=…` теперь показывает публичный Supabase/Yandex
-  preview, переживает Yandex/email auth в browser session и возвращает
-  связанный либо новый аккаунт на явный claim; legacy `/join?code=…` сохранён.
+- Защищённый `/invite#token=…&source=…` показывает публичный Supabase/Yandex
+  preview, хранит bearer-token только в browser session и возвращает связанный
+  либо новый аккаунт на явный claim; legacy `/join?code=…` теперь также
+  переживает Yandex OAuth.
   При включённой app-session Yandex ID становится primary login action, email
   остаётся secondary fallback; production flags в этом PR не меняются.
 - Yandex API покрывает основные profile/client/workout/Live/progress/chat/push
