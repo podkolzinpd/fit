@@ -739,8 +739,9 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
   const navigate = useNavigate()
   const requestedPeriod = params.get('period')
   const period: SummaryPeriod = requestedPeriod === '3m' || requestedPeriod === '6m' ? requestedPeriod : '1m'
-  const advancedTarget = params.get('resultsOpen') === '1' || Boolean(params.get('mapWorkout')) || location.hash === '#measurements'
-  const progressView: 'overview' | 'pro' = params.get('view') === 'pro' || advancedTarget ? 'pro' : 'overview'
+  const measurementsTarget = location.hash === '#measurements'
+  const advancedTarget = params.get('resultsOpen') === '1' || Boolean(params.get('mapWorkout'))
+  const progressView: 'overview' | 'pro' = measurementsTarget ? 'overview' : params.get('view') === 'pro' || advancedTarget ? 'pro' : 'overview'
   const [detailsOpen, setDetailsOpen] = useState(false)
   const analysisTriggerRef = useRef<HTMLButtonElement>(null)
   const allWorkouts = useQuery({ queryKey: ['workouts', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
@@ -761,7 +762,7 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
       next.delete('resultsOpen')
       for (const key of ['mapWorkout', 'mapFrom', 'mapTo', 'mapMode', 'mapZone']) next.delete(key)
     }
-    void navigate({ pathname: location.pathname, search: next.size ? `?${next}` : '', hash: nextView === 'overview' ? '' : location.hash }, { replace: true, preventScrollReset: true })
+    void navigate({ pathname: location.pathname, search: next.size ? `?${next}` : '', hash: nextView === 'overview' || measurementsTarget ? '' : location.hash }, { replace: true, preventScrollReset: true })
   }
   useEffect(() => { if (historyLoaded && !availablePeriods.includes(period)) changePeriod('1m') }, [historyLoaded, period, availablePeriods])
   const range = summaryPeriodRange(period, today)
@@ -835,6 +836,9 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
         loading={goal.isLoading || measurements.isLoading || allWorkouts.isLoading}
         error={goal.error ?? measurements.error ?? allWorkouts.error}
         onRetry={() => void Promise.all([goal.refetch(), measurements.refetch(), allWorkouts.refetch()])} compact />
+      <MeasurementProgressSection clientId={clientId} entries={measurements.data ?? []} customMetrics={customMetrics.data ?? []} goal={goal.data}
+        periodStart={range.start} periodEnd={range.end} today={today} role="client" compact
+        loading={measurements.isLoading || customMetrics.isLoading} error={measurements.error ?? customMetrics.error} onRetry={retryMeasurements} management={measurementManagement} />
       <PeriodExerciseResults showOverflow={false} workouts={allWorkouts.data} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />
     </div>
     <div id="progress-pro-panel" className="progress-view-panel progress-pro-panel" role="tabpanel" aria-labelledby="progress-pro-tab" hidden={progressView !== 'pro'}>
@@ -849,11 +853,6 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
             loading={goal.isLoading || measurements.isLoading || allWorkouts.isLoading}
             error={goal.error ?? measurements.error ?? allWorkouts.error}
             onRetry={() => void Promise.all([goal.refetch(), measurements.refetch(), allWorkouts.refetch()])} />
-        </ProgressProSection>
-        <ProgressProSection title="Замеры и графики" description="Вес, объёмы, минимум и максимум" defaultOpen={location.hash === '#measurements'}>
-          <MeasurementProgressSection clientId={clientId} entries={measurements.data ?? []} customMetrics={customMetrics.data ?? []} goal={goal.data}
-            periodStart={range.start} periodEnd={range.end} today={today} role="client" compact
-            loading={measurements.isLoading || customMetrics.isLoading} error={measurements.error ?? customMetrics.error} onRetry={retryMeasurements} management={measurementManagement} />
         </ProgressProSection>
         <ClientBodyMapDisclosure workouts={allWorkouts.data} clientId={clientId} gender={gender}
           summary={summary} periodStart={range.start} periodEnd={range.end} loading={allWorkouts.isLoading} error={allWorkouts.error} onRetry={() => void allWorkouts.refetch()} />

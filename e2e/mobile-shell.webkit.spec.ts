@@ -855,8 +855,6 @@ test('iPhone: client edits shared progress, custom metrics and deletion safely',
   await login(page, 'client@fit.local')
   await page.goto('/me/progress')
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
-  await page.getByRole('tab', { name: 'ПРО' }).click()
-  await page.getByText('Замеры и графики', { exact: true }).click()
   await page.getByRole('button', { name: 'Добавить замер' }).click()
   await expect(page.getByLabel(`${metricName}, балл`)).toBeVisible()
   await page.getByRole('button', { name: /История замеров ·/ }).click()
@@ -958,7 +956,7 @@ test('iPhone: client progress keeps one goal-aware LLM summary and compact runni
   await expect(runningProgress).toContainText('быстрее на 8%')
   await expect(runningProgress).toContainText('Последняя нагрузка: RPE 7')
 
-  await page.getByText('Замеры и графики', { exact: true }).click()
+  await page.getByRole('tab', { name: 'Обзор' }).click()
   const measurementActions = page.getByRole('navigation', { name: 'Действия с замерами' })
   await measurementActions.scrollIntoViewIfNeeded()
   const [actionsBox, navigationBox] = await Promise.all([
@@ -1009,7 +1007,7 @@ test('iPhone: standard goal facts stay readable without horizontal overflow', as
   await expect(goal.getByText('Сейчас', { exact: true })).toBeVisible()
   await expect(goal.getByText('Цель', { exact: true })).toBeVisible()
   await expect(goal.getByRole('link', { name: 'Смотреть значения и график' })).toHaveCount(0)
-  await page.getByText('Замеры и графики', { exact: true }).click()
+  await page.getByRole('tab', { name: 'Обзор' }).click()
   const measurements = page.locator('.client-progress-measurements-story')
   await expect(measurements.getByRole('heading', { name: 'Замеры' })).toBeVisible()
   await measurements.getByText('Подробности замеров', { exact: true }).click()
