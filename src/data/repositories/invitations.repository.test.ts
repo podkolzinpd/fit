@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const queries = vi.hoisted(() => ({ disconnectTrainer: vi.fn(), reconnect: vi.fn() }))
+const queries = vi.hoisted(() => ({
+  claimLink: vi.fn(),
+  createShare: vi.fn(),
+  disconnectTrainer: vi.fn(),
+  previewLink: vi.fn(),
+  reconnect: vi.fn(),
+}))
 vi.mock('../queries/invitations.queries', () => ({ invitationQueries: queries }))
 
 import { invitationsRepository } from './invitations.repository'
@@ -64,5 +70,44 @@ describe('invitationsRepository.reconnect', () => {
       code: 'trainer_disconnect_required',
       message: 'Сначала отключите текущего тренера в профиле. Ваши тренировки и результаты сохранятся.',
     })
+  })
+})
+
+describe('invitationsRepository links', () => {
+  beforeEach(() => {
+    queries.claimLink.mockReset()
+    queries.createShare.mockReset()
+    queries.previewLink.mockReset()
+  })
+
+  it('maps a protected invitation share without inventing personal data', async () => {
+    queries.createShare.mockResolvedValue({ data: [{
+      invitation_id: 'invite-1',
+      invitation_code: 'ABCDEF123456',
+      invitation_token: `ABCDEF123456.${'a'.repeat(64)}`,
+      expires_at: '2026-09-25T12:00:00.000Z',
+    }], error: null })
+
+    await expect(invitationsRepository.createShare('client-1', 'trainer')).resolves.toEqual({
+      id: 'invite-1', clientId: 'client-1', targetRole: 'trainer',
+      code: 'ABCDEF123456', token: `ABCDEF123456.${'a'.repeat(64)}`,
+      expiresAt: '2026-09-25T12:00:00.000Z',
+    })
+  })
+
+  it('maps public preview and claims the exact bearer token', async () => {
+    const token = `ABCDEF123456.${'b'.repeat(64)}`
+    queries.previewLink.mockResolvedValue({ data: [{
+      target_role: 'trainer', inviter_name: 'Антон',
+      expires_at: '2026-09-25T12:00:00.000Z', invitation_status: 'active',
+    }], error: null })
+    queries.claimLink.mockResolvedValue({ data: 'client-1', error: null })
+
+    await expect(invitationsRepository.previewLink(token)).resolves.toEqual({
+      targetRole: 'trainer', inviterName: 'Антон',
+      expiresAt: '2026-09-25T12:00:00.000Z', status: 'active',
+    })
+    await expect(invitationsRepository.claimLink(token)).resolves.toBe('client-1')
+    expect(queries.claimLink).toHaveBeenCalledWith(token)
   })
 })

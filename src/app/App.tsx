@@ -5,7 +5,7 @@ import { AuthenticatedMetrika } from './authenticated-metrika'
 import { AppLayout } from './AppLayout'
 import { AppViewportProvider } from './app-viewport'
 import { isAssistantNavPilotEnabled, trainerHomePath } from './feature-flags'
-import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage, YandexAccountLinkRequiredGate, YandexAppSessionPage, YandexPilotCallbackPage } from '../features/auth'
+import { AuthCallbackPage, AuthPage, ForgotPasswordPage, InvitationPage, JoinPage, ResetPasswordPage, YandexAccountLinkRequiredGate, YandexAppSessionPage, YandexPilotCallbackPage } from '../features/auth'
 import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientProfileSettingsPage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
@@ -47,6 +47,13 @@ function Home() {
   return <Navigate to={actor?.role === 'client' ? '/me' : trainerHomePath()} replace />
 }
 
+function InvitationRoute() {
+  const { actor } = useAuth()
+  return actor === null
+    ? <InvitationPage />
+    : <LegalAcceptanceGate><YandexAccountLinkRequiredGate><InvitationPage /></YandexAccountLinkRequiredGate></LegalAcceptanceGate>
+}
+
 function AssistantPage() {
   return <YandexAssistantRoute />
 }
@@ -62,6 +69,7 @@ const router = createBrowserRouter([
   { path: '/legal/privacy', element: <PrivacyPage /> },
   { path: '/legal/delete-account', element: <AccountDeletionPage /> },
   { path: '/trainers/:publicId', element: <PublicTrainerProfilePage /> },
+  { path: '/invite', element: <InvitationRoute /> },
   { element: <Protected />, children: [{ element: <AppLayout />, children: [
     { index: true, element: <Home /> },
     { path: '/join', element: <JoinPage /> },

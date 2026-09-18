@@ -125,6 +125,24 @@ export interface ClientInvitation {
   createdAt: string
 }
 
+export type InvitationLinkSource = 'supabase' | 'yandex'
+
+export interface InvitationLinkPreview {
+  targetRole: AccountRole
+  inviterName: string
+  expiresAt: string
+  status: 'active' | 'claimed' | 'revoked' | 'expired'
+}
+
+export interface InvitationShare {
+  id: UUID
+  clientId: UUID
+  targetRole: AccountRole
+  code: string
+  token: string
+  expiresAt: string
+}
+
 export interface Client {
   id: UUID
   hasAccount: boolean | null
