@@ -323,6 +323,7 @@ describe('Yandex ID pilot callback page', () => {
     })
     pilot.listClients.mockResolvedValue([{
       id: clientId,
+      canArchive: false,
       hasAccount: false,
       fullName: 'Анна Смирнова',
       ageYears: 31,
@@ -408,6 +409,7 @@ describe('Yandex ID pilot membership controls', () => {
   const clientActorId = '25cbe3d6-c291-4bef-8d3e-f210dbde6fa9'
   const clients = [{
     id: clientId,
+    canArchive: false,
     hasAccount: true,
     fullName: 'Анна Смирнова',
     canonicalFullName: 'Анна Смирнова',

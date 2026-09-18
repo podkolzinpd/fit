@@ -52,6 +52,7 @@ const yandexIdentityLinkStatusSchema = z.object({
 
 const clientSchema = z.object({
   id: z.uuid(),
+  canArchive: z.boolean(),
   hasAccount: z.boolean(),
   fullName: z.string().min(1),
   canonicalFullName: z.string().min(1),

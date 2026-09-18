@@ -61,6 +61,7 @@ const clients = {
   accessMode: 'read_only',
   clients: [{
     id: CLIENT_ID,
+    canArchive: true,
     hasAccount: false,
     fullName: 'Анна Смирнова',
     canonicalFullName: 'Анна Смирнова',

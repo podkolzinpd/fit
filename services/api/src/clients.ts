@@ -4,6 +4,7 @@ import type { DatabaseClient } from './db/types.js'
 
 interface ClientRow extends QueryResultRow {
   id: string
+  can_archive: boolean
   has_account: boolean
   full_name: string
   canonical_full_name: string
@@ -27,6 +28,7 @@ interface ClientRow extends QueryResultRow {
 
 export interface PilotClient {
   id: string
+  canArchive: boolean
   hasAccount: boolean
   fullName: string
   canonicalFullName: string
@@ -82,6 +84,7 @@ export async function readAccessibleClients(
     accessMode: 'read_only',
     clients: rows.map((row) => ({
       id: row.id,
+      canArchive: row.can_archive,
       hasAccount: row.has_account,
       fullName: row.full_name,
       canonicalFullName: row.canonical_full_name,

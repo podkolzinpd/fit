@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(10);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password)
 values
@@ -37,6 +37,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '51000000-0000-4000-8000-000000000001', true);
 select is((select count(*) from public.list_clients(false)), 1::bigint, 'active list excludes archived clients');
 select is((select count(*) from public.list_clients(true)), 2::bigint, 'archive filter can include archived clients');
+select is((select can_archive from public.list_clients(false)), true, 'root trainer may archive own client');
 select is((select note from public.list_clients(false)), 'Private A', 'private note is returned in the aggregate');
 select is((select current_weight_kg from public.list_clients(false)), 62::numeric, 'latest active non-null weight is returned');
 select is((select count(*) from public.list_clients(true) where full_name = 'Active B'), 0::bigint, 'trainer cannot read another tenant');
