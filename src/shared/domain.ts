@@ -427,6 +427,8 @@ export interface Workout {
   trainerId?: UUID
   clientName: string
   createdBy?: UUID | null
+  startedBy?: UUID | null
+  completedBy?: UUID | null
   workoutDate: LocalDate
   startTime: string | null
   endTime: string | null

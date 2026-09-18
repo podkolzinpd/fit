@@ -1,4 +1,4 @@
-// schema-sha256: 73e75c3ef05af75564467463ef3da597ba5a2b4e17bc357017aed536953647c2
+// schema-sha256: dc855366b43e84efbb0be581c353741f19c81737a88dd00b951aa1fc24bc0ab7
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -22,7 +22,7 @@ type WorkoutListExerciseRow = {
   sets: WorkoutListSetRow[]
 }
 export type WorkoutListRow = {
-  id: string; client_id: string; trainer_id: string; client_name: string; created_by: string | null; workout_date: string; start_time: string | null; end_time: string | null
+  id: string; client_id: string; trainer_id: string; client_name: string; created_by: string | null; started_by: string | null; completed_by: string | null; workout_date: string; start_time: string | null; end_time: string | null
   started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; trainer_reaction: string | null; trainer_review_author_id: string | null; trainer_reviewed_at: string | null; client_comment: string | null
   session_rpe: number | null; wellbeing: string | null; discomfort: boolean | null; has_pr: boolean
   stage_id: string | null; stage_title: string | null; version: number; total_count: number; exercises: WorkoutListExerciseRow[]
@@ -1856,6 +1856,7 @@ export type Database = {
           client_question_asked_at: string | null
           client_question_resolved_at: string | null
           completed_at: string | null
+          completed_by: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
@@ -1868,6 +1869,7 @@ export type Database = {
           stage_id: string | null
           start_time: string | null
           started_at: string | null
+          started_by: string | null
           status: string
           trainer_id: string
           trainer_reaction: string | null
@@ -1887,6 +1889,7 @@ export type Database = {
           client_question_asked_at?: string | null
           client_question_resolved_at?: string | null
           completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -1899,6 +1902,7 @@ export type Database = {
           stage_id?: string | null
           start_time?: string | null
           started_at?: string | null
+          started_by?: string | null
           status?: string
           trainer_id: string
           trainer_reaction?: string | null
@@ -1918,6 +1922,7 @@ export type Database = {
           client_question_asked_at?: string | null
           client_question_resolved_at?: string | null
           completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -1930,6 +1935,7 @@ export type Database = {
           stage_id?: string | null
           start_time?: string | null
           started_at?: string | null
+          started_by?: string | null
           status?: string
           trainer_id?: string
           trainer_reaction?: string | null
@@ -1943,6 +1949,13 @@ export type Database = {
           workout_date?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "workouts_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "workouts_client_fk"
             columns: ["client_id", "trainer_id"]
@@ -1962,6 +1975,13 @@ export type Database = {
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "goal_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workouts_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -2483,6 +2503,7 @@ export type Database = {
           client_id: string
           client_name: string
           completed_at: string
+          completed_by: string
           created_by: string
           discomfort: boolean
           end_time: string
@@ -2495,6 +2516,7 @@ export type Database = {
           stage_title: string
           start_time: string
           started_at: string
+          started_by: string
           status: string
           total_count: number
           trainer_id: string

@@ -2,7 +2,7 @@ import type { Workout } from '../../shared/domain'
 import { addDays, weekdayIndex, type LocalDate } from '../../shared/local-date'
 import { workoutStatusPresentation } from '../../data/repositories/workout-rules'
 
-export type ScheduleEventTone = 'planned' | 'current' | 'done' | 'partial' | 'skipped' | 'decision'
+export type ScheduleEventTone = 'planned' | 'current' | 'done' | 'partial' | 'skipped' | 'decision' | 'self-led'
 
 export interface ScheduleEventStatus {
   label: string
@@ -23,6 +23,16 @@ export function formatScheduleDateLabel(value: LocalDate, locale = 'ru-RU'): str
 
 export function scheduleEventStatus(workout: Workout, today: LocalDate): ScheduleEventStatus {
   const status = workoutStatusPresentation(workout, today)
+  const assignmentAuthor = workout.createdBy ?? workout.trainerId
+  const selfLed = Boolean(
+    assignmentAuthor
+    && workout.startedBy
+    && workout.completedBy
+    && workout.startedBy === workout.completedBy
+    && workout.startedBy !== assignmentAuthor,
+  )
+  if (selfLed && status.tone === 'done') return { label: 'Самостоятельно', tone: 'self-led' }
+  if (selfLed && status.tone === 'partial') return { label: 'Самостоятельно · частично', tone: 'partial' }
   if (status.tone === 'cancelled') return { label: 'Пропущена', tone: 'skipped' }
   if (status.tone === 'in_progress') return { label: status.label, tone: 'current' }
   return { label: status.label, tone: status.tone }

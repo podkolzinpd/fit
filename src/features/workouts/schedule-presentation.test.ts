@@ -46,6 +46,19 @@ describe('schedule presentation', () => {
     expect(scheduleEventStatus(workout({ status: 'cancelled' }), today)).toEqual({ label: 'Пропущена', tone: 'skipped' })
   })
 
+  it('marks only trainer-assigned workouts started and finished by the same athlete', () => {
+    const today = localDate('2026-08-26')
+    const actors = { trainerId: 'trainer-1', createdBy: 'trainer-1', startedBy: 'client-1', completedBy: 'client-1' }
+    expect(scheduleEventStatus(workout({ status: 'done', ...actors }), today))
+      .toEqual({ label: 'Самостоятельно', tone: 'self-led' })
+    expect(scheduleEventStatus(workout({ status: 'done', ...actors, completedBy: 'trainer-1' }), today))
+      .toEqual({ label: 'Готово', tone: 'done' })
+    expect(scheduleEventStatus(workout({ status: 'done', ...actors, createdBy: 'client-1' }), today))
+      .toEqual({ label: 'Готово', tone: 'done' })
+    expect(scheduleEventStatus(workout({ status: 'done', trainerId: 'trainer-1', createdBy: 'trainer-1' }), today))
+      .toEqual({ label: 'Готово', tone: 'done' })
+  })
+
   it('focuses the nearest workout, the first when all ended, or current time when empty', () => {
     const workouts = [
       workout({ id: 'early', startTime: '07:10', endTime: '08:00' }),

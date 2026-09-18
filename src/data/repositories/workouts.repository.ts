@@ -67,6 +67,7 @@ async function get(id: string): Promise<Workout> {
   const client = await clientsRepository.get(root.data.client_id)
   return {
     id: root.data.id, trainerId: root.data.trainer_id, clientId: root.data.client_id, clientName: client.fullName, createdBy: root.data.created_by,
+    startedBy: root.data.started_by, completedBy: root.data.completed_by,
     workoutDate: localDate(root.data.workout_date), startTime: root.data.start_time,
     endTime: root.data.end_time, startedAt: root.data.started_at ?? null, completedAt: root.data.completed_at ?? null,
     status: root.data.status as Workout['status'], notes: root.data.notes,
@@ -94,6 +95,8 @@ function mapWorkout(row: WorkoutListRow): Workout {
     clientId: row.client_id,
     clientName: row.client_name,
     createdBy: row.created_by,
+    startedBy: row.started_by,
+    completedBy: row.completed_by,
     workoutDate: localDate(row.workout_date),
     startTime: row.start_time,
     endTime: row.end_time,

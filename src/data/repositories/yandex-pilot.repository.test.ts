@@ -120,6 +120,8 @@ const trainingData = {
     clientId: CLIENT_ID,
     clientName: 'Анна Смирнова',
     createdBy: session.profile.id,
+    startedBy: session.profile.id,
+    completedBy: session.profile.id,
     workoutDate: '2026-08-20',
     startTime: null,
     endTime: null,
