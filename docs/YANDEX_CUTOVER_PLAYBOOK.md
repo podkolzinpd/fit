@@ -140,8 +140,8 @@ environment contract. Их изменение заранее отмечаетс�
 
 ### 2. Rehearsal ready
 
-- свежий full-cohort audit/dry-run/apply/validate проходит с повторным
-  `inserted=0`;
+- свежий full-cohort audit/dry-run/apply/validate проходит с повторной атомарной
+  пересборкой и тем же полным checksum snapshot-а;
 - media validation проходит без `allow-missing`, проверены все используемые
   bucket types;
 - backup восстановлен во временный private cluster, схема и агрегированные
