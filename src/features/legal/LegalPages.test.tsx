@@ -52,6 +52,9 @@ describe('legal pages', () => {
   it('publishes readable terms and privacy pages without authentication', () => {
     const terms = render(wrapper(<TermsPage />))
     expect(screen.getByRole('heading', { level: 1, name: 'Условия использования сервиса Fit' })).toBeVisible()
+    const privacyPolicyReferences = screen.getAllByRole('link', { name: 'Политикой конфиденциальности' })
+    expect(privacyPolicyReferences).toHaveLength(2)
+    for (const link of privacyPolicyReferences) expect(link).toHaveAttribute('href', '/legal/privacy')
     expect(screen.getByText('2.4. Тренеру может быть доступна функция ассистента (далее – Ассистент), позволяющая получить справочную информацию по отдельным вопросам, связанным с планированием тренировок. Ассистент предоставляет консультационные услуги. Рекомендации, даваемые Ассистентом, не являются медицинской консультацией.')).toBeVisible()
     expect(screen.queryByText(/Ассистент помогает разобрать/)).not.toBeInTheDocument()
     terms.unmount()
