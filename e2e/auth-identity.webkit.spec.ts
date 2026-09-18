@@ -6,7 +6,7 @@ test('auth identity remains usable in WebKit light and dark themes', async ({ pa
   await expect(page.locator('html')).toHaveClass(/ui-identity/)
   await expect(page.getByLabel('Email')).toBeVisible()
   await expect(page.getByLabel('Пароль')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeEnabled()
+  await expect(page.getByRole('button', { name: /^Войти(?: по email)?$/ })).toBeEnabled()
   await expect(page.getByRole('button', { name: /Google/ })).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -36,7 +36,7 @@ test('native Yandex registration is the primary mobile action at 390 and 430 px'
   await expect(page.getByLabel('Имя')).toBeVisible()
   await expect(page.getByLabel('Email')).toHaveCount(0)
   await expect(page.getByLabel('Пароль')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Создать через Yandex ID', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Создать по email' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Условия использования' }).first()).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
@@ -46,9 +46,89 @@ test('native Yandex registration is the primary mobile action at 390 and 430 px'
   await page.setViewportSize({ width: 430, height: 932 })
   await page.reload()
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page.getByRole('button', { name: 'Создать через Yandex ID', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID', exact: true })).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
   await page.screenshot({ path: testInfo.outputPath('yandex-native-registration-430-dark.png'), fullPage: true })
+})
+
+test('invitation opens a Yandex-first auth path at 390 and 430 px', async ({ page }, testInfo) => {
+  test.skip(
+    process.env.VITE_YANDEX_NATIVE_REGISTRATION_ENABLED !== 'true'
+      || process.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true'
+      || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true',
+    'Run with the complete Yandex auth switches to verify the invitation handoff.',
+  )
+
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+  ]) {
+    await page.setViewportSize(viewport)
+    await page.goto('/join?code=AB12CD34EF56')
+
+    await expect(page).toHaveURL(/\/auth$/)
+    await expect(page.getByText('Войдите или создайте аккаунт, чтобы продолжить по приглашению.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID' })).toHaveClass(/primary/)
+    await expect(page.getByRole('button', { name: 'Войти по email' })).toHaveClass(/secondary/)
+
+    await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+    await expect(page.getByLabel('Тип аккаунта')).toHaveValue('client')
+    await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID' })).toBeVisible()
+    await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+    await page.screenshot({
+      path: testInfo.outputPath(`yandex-invitation-auth-${viewport.width}.png`),
+      fullPage: true,
+    })
+  }
+})
+
+test('protected invitation link previews and survives Yandex registration at 390 and 430 px', async ({ page }, testInfo) => {
+  test.skip(
+    process.env.VITE_YANDEX_NATIVE_REGISTRATION_ENABLED !== 'true'
+      || process.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true'
+      || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true',
+    'Run with the complete Yandex auth switches to verify the protected invitation handoff.',
+  )
+  const token = `AB12CD34EF56.${'a'.repeat(64)}`
+  await page.route('**/v1/invitation-links/preview', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ invitation: {
+        targetRole: 'client',
+        inviterName: 'Анастасия',
+        expiresAt: '2099-09-25T12:00:00.000Z',
+        status: 'active',
+      } }),
+    })
+  })
+
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+  ]) {
+    await page.setViewportSize(viewport)
+    await page.goto(`/invite?token=${token}`)
+
+    await expect(page.getByRole('heading', { name: 'Тренироваться вместе' })).toBeVisible()
+    await expect(page.getByText('Анастасия приглашает вас тренироваться вместе в Fit.')).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Войти и подключиться' })).toHaveClass(/primary/)
+    await expect(page.getByRole('link', { name: 'Зарегистрироваться' })).toHaveClass(/secondary/)
+    await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+    await page.screenshot({
+      path: testInfo.outputPath(`protected-invitation-${viewport.width}.png`),
+      fullPage: true,
+    })
+
+    await page.getByRole('link', { name: 'Зарегистрироваться' }).click()
+    await expect(page).toHaveURL(/\/auth$/)
+    await expect(page.getByLabel('Тип аккаунта')).toHaveValue('client')
+    await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID' })).toBeVisible()
+    await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+    await page.screenshot({
+      path: testInfo.outputPath(`protected-invitation-auth-${viewport.width}.png`),
+      fullPage: true,
+    })
+  }
 })
 
 test('password sign-in retries a network failure and unlocks the WebKit form', async ({ page }) => {
@@ -60,11 +140,11 @@ test('password sign-in retries a network failure and unlocks the WebKit form', a
   await page.goto('/auth')
   await page.getByLabel('Email').fill('client@example.test')
   await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти', exact: true }).click()
+  await page.getByRole('button', { name: /^Войти(?: по email)?$/ }).click()
 
   await expect(page.getByRole('alert')).toHaveText('Не удалось войти. Проверьте интернет и попробуйте ещё раз.')
-  await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeEnabled()
-  await expect(page.getByRole('button', { name: 'Войти', exact: true })).toHaveAttribute('aria-busy', 'false')
+  await expect(page.getByRole('button', { name: /^Войти(?: по email)?$/ })).toBeEnabled()
+  await expect(page.getByRole('button', { name: /^Войти(?: по email)?$/ })).toHaveAttribute('aria-busy', 'false')
   expect(requests).toBe(2)
 })
 
@@ -158,7 +238,7 @@ for (const account of [
     await page.goto('/auth')
     await page.getByLabel('Email').fill(account.email)
     await page.getByLabel('Пароль').fill('FitLocal123!')
-    await page.getByRole('button', { name: 'Войти', exact: true }).click()
+    await page.getByRole('button', { name: /^Войти(?: по email)?$/ }).click()
     await expect(page).toHaveURL(account.home)
     await page.route('**/auth/v1/logout*', (route) => route.abort('failed'))
 
