@@ -3126,7 +3126,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 
 .legal-gate { min-height:100dvh; display:grid; place-content:center; gap:16px; padding:24px; background:var(--bg); color:var(--fg) }
 .legal-gate > .brand { width:52px; height:52px; display:grid; place-items:center; justify-self:center; border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:16px; font-weight:600 }
-.legal-gate-card { width:min(100%, 420px); display:grid; gap:14px; padding:22px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
+.legal-gate-card { width:min(100%, 420px); display:grid; justify-self:center; gap:14px; padding:22px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
 .legal-gate-card .eyebrow { margin:0; color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
 .legal-gate-card h1 { margin:0; font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
 .legal-gate-card > p:not(.eyebrow):not(.error) { margin:0; color:var(--secondary-label-fg); font-size:14px; line-height:1.45 }
