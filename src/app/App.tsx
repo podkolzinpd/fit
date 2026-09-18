@@ -5,7 +5,7 @@ import { AuthenticatedMetrika } from './authenticated-metrika'
 import { AppLayout } from './AppLayout'
 import { AppViewportProvider } from './app-viewport'
 import { isAssistantNavPilotEnabled, trainerHomePath } from './feature-flags'
-import { AuthCallbackPage, AuthPage, ForgotPasswordPage, JoinPage, ResetPasswordPage, YandexAccountLinkRequiredGate, YandexAppSessionPage, YandexPilotCallbackPage } from '../features/auth'
+import { AuthCallbackPage, AuthPage, ForgotPasswordPage, InvitationLinkPage, JoinPage, ResetPasswordPage, YandexAccountLinkRequiredGate, YandexAppSessionPage, YandexPilotCallbackPage } from '../features/auth'
 import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientProfileSettingsPage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
@@ -58,6 +58,7 @@ const router = createBrowserRouter([
   { path: '/auth/callback', element: <AuthCallbackPage /> },
   { path: '/auth/yandex/callback', element: <YandexPilotCallbackPage /> },
   { path: '/auth/yandex/session', element: <YandexAppSessionPage /> },
+  { path: '/invite', element: <InvitationLinkPage /> },
   { path: '/legal/terms', element: <TermsPage /> },
   { path: '/legal/privacy', element: <PrivacyPage /> },
   { path: '/legal/delete-account', element: <AccountDeletionPage /> },

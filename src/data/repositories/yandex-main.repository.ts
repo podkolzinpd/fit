@@ -46,6 +46,7 @@ import {
 import { trainingSummaryGenerationError } from './training-summary-errors'
 import { yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pilot.repository'
 import { trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
+import { createYandexInvitationLinksRepository } from './invitations.repository'
 
 const uuid = z.uuid()
 const chatThreadSchema = z.object({
@@ -1012,6 +1013,7 @@ export function createYandexMainRepository(
       async removeTrainer(clientId, trainerId) { await writeEmpty(queries, `/v1/clients/${clientId}/trainers/${trainerId}`, 'DELETE'); invalidate() },
       async leave(clientId) { await writeEmpty(queries, `/v1/clients/${clientId}/memberships/me`, 'DELETE'); invalidate() },
     },
+    invitationLinks: createYandexInvitationLinksRepository(apiBaseUrl, sessionToken),
     trainingSummaries: {
       async firstCompletedWorkoutDate(clientId) {
         const first = (await trainingData()).workouts.filter((item) => item.clientId === clientId && item.status === 'done').at(-1)

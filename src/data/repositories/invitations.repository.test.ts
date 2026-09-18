@@ -1,9 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const queries = vi.hoisted(() => ({ disconnectTrainer: vi.fn(), reconnect: vi.fn() }))
+const queries = vi.hoisted(() => ({
+  claimLink: vi.fn(),
+  disconnectTrainer: vi.fn(),
+  previewLink: vi.fn(),
+  reconnect: vi.fn(),
+}))
+const yandexQueries = vi.hoisted(() => ({ claim: vi.fn(), preview: vi.fn() }))
 vi.mock('../queries/invitations.queries', () => ({ invitationQueries: queries }))
+vi.mock('../queries/yandex-invitation-links.queries', () => ({ yandexInvitationLinkQueries: yandexQueries }))
 
-import { invitationsRepository } from './invitations.repository'
+import {
+  createYandexInvitationLinksRepository,
+  invitationLinksRepository,
+  invitationsRepository,
+} from './invitations.repository'
 
 describe('invitationsRepository.disconnectTrainer', () => {
   beforeEach(() => queries.disconnectTrainer.mockReset())
@@ -64,5 +75,74 @@ describe('invitationsRepository.reconnect', () => {
       code: 'trainer_disconnect_required',
       message: 'Сначала отключите текущего тренера в профиле. Ваши тренировки и результаты сохранятся.',
     })
+  })
+})
+
+describe('invitationLinksRepository', () => {
+  beforeEach(() => {
+    queries.previewLink.mockReset()
+    queries.claimLink.mockReset()
+    yandexQueries.preview.mockReset()
+    yandexQueries.claim.mockReset()
+  })
+
+  it('maps the public Supabase preview and claims only after authentication', async () => {
+    queries.previewLink.mockResolvedValue({
+      data: [{
+        target_role: 'client',
+        inviter_name: 'Анастасия',
+        expires_at: '2099-09-25T12:00:00.000Z',
+        invitation_status: 'active',
+      }],
+      error: null,
+    })
+    queries.claimLink.mockResolvedValue({ data: '52500000-0000-4000-8000-000000000010', error: null })
+
+    await expect(invitationLinksRepository.preview('protected-token')).resolves.toMatchObject({
+      targetRole: 'client',
+      inviterName: 'Анастасия',
+      status: 'active',
+    })
+    await expect(invitationLinksRepository.claim('protected-token')).resolves.toBe(
+      '52500000-0000-4000-8000-000000000010',
+    )
+  })
+
+  it('uses the Yandex public preview without a session and requires a session to claim', async () => {
+    yandexQueries.preview.mockResolvedValue(new Response(JSON.stringify({ invitation: {
+      targetRole: 'trainer',
+      inviterName: 'Антон',
+      expiresAt: '2099-09-25T12:00:00.000Z',
+      status: 'active',
+    } })))
+    const publicRepository = createYandexInvitationLinksRepository('https://stage.example.test', null)
+
+    await expect(publicRepository.preview('protected-token')).resolves.toMatchObject({
+      targetRole: 'trainer',
+      inviterName: 'Антон',
+    })
+    await expect(publicRepository.claim('protected-token')).rejects.toMatchObject({
+      code: 'authentication_required',
+    })
+    expect(yandexQueries.claim).not.toHaveBeenCalled()
+  })
+
+  it('claims a protected link through the Yandex app session', async () => {
+    yandexQueries.claim.mockResolvedValue(new Response(JSON.stringify({
+      clientId: '52500000-0000-4000-8000-000000000010',
+    })))
+    const repository = createYandexInvitationLinksRepository(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )
+
+    await expect(repository.claim('protected-token')).resolves.toBe(
+      '52500000-0000-4000-8000-000000000010',
+    )
+    expect(yandexQueries.claim).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      's'.repeat(43),
+      'protected-token',
+    )
   })
 })

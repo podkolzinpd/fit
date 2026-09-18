@@ -1,5 +1,5 @@
 export { AuthPage, ForgotPasswordPage, ResetPasswordPage, AuthCallbackPage, YandexAppSessionPage, YandexPilotCallbackPage } from './AuthPages'
-export { JoinPage } from './JoinPage'
+export { InvitationLinkPage, JoinPage } from './JoinPage'
 export { LogoutButton } from './LogoutButton'
 export { YandexAccountLinkingCard } from './YandexAccountLinkingCard'
 export { YandexAccountLinkRequiredGate } from './YandexAccountLinkRequiredGate'

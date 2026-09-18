@@ -1,6 +1,25 @@
+import { z } from 'zod'
 import { invitationQueries } from '../queries/invitations.queries'
-import { repositoryError } from './error'
+import { yandexInvitationLinkQueries } from '../queries/yandex-invitation-links.queries'
+import { RepositoryError, repositoryError } from './error'
 import type { ClientInvitation, TrainerMembership } from '../../shared/domain'
+
+const invitationLinkPreviewSchema = z.object({
+  targetRole: z.enum(['client', 'trainer']),
+  inviterName: z.string().min(1),
+  expiresAt: z.iso.datetime(),
+  status: z.enum(['active', 'claimed', 'revoked', 'expired']),
+})
+
+const invitationLinkResponseSchema = z.object({ invitation: invitationLinkPreviewSchema })
+const claimedInvitationLinkSchema = z.object({ clientId: z.uuid() })
+
+export type InvitationLinkPreview = z.infer<typeof invitationLinkPreviewSchema>
+
+export interface InvitationLinksRepository {
+  preview(token: string): Promise<InvitationLinkPreview | null>
+  claim(token: string): Promise<string>
+}
 
 export interface DisconnectTrainerResult {
   clientId: string
@@ -73,4 +92,78 @@ export const invitationsRepository = {
     const result = await invitationQueries.leave(clientId)
     if (result.error) throw repositoryError(result.error)
   },
+}
+
+export const invitationLinksRepository: InvitationLinksRepository = {
+  async preview(token) {
+    const result = await invitationQueries.previewLink(token)
+    if (result.error) throw repositoryError(result.error)
+    const row = result.data[0]
+    if (row === undefined) return null
+    return invitationLinkPreviewSchema.parse({
+      targetRole: row.target_role,
+      inviterName: row.inviter_name,
+      expiresAt: row.expires_at,
+      status: row.invitation_status,
+    })
+  },
+  async claim(token) {
+    const result = await invitationQueries.claimLink(token)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+}
+
+function yandexInvitationLinkError(status: number): RepositoryError {
+  if (status === 401) return new RepositoryError('authentication_required', 'Войдите в аккаунт и повторите подключение.')
+  if (status === 403) return new RepositoryError('invitation_role_mismatch', 'Это приглашение предназначено для другого типа аккаунта.')
+  if (status === 404) return new RepositoryError('invitation_invalid', 'Ссылка приглашения недействительна или больше не доступна.')
+  if (status === 409) return new RepositoryError('invitation_conflict', 'Связь уже создана или требует отключить текущего тренера.')
+  if (status >= 500) return new RepositoryError('service_unavailable', 'Yandex Cloud временно недоступен. Попробуйте позднее.')
+  return new RepositoryError('invalid_request', 'Сервер не принял приглашение. Обновите страницу и повторите.')
+}
+
+async function yandexInvitationLinkResponse(work: () => Promise<Response>): Promise<Response> {
+  let response: Response
+  try {
+    response = await work()
+  } catch (error) {
+    throw new RepositoryError(
+      'network_unavailable',
+      'Не удалось подключиться к серверу. Проверьте интернет и повторите попытку.',
+      { cause: error },
+    )
+  }
+  if (!response.ok) throw yandexInvitationLinkError(response.status)
+  return response
+}
+
+export function createYandexInvitationLinksRepository(
+  apiBaseUrl: string,
+  sessionToken: string | null,
+): InvitationLinksRepository {
+  return {
+    async preview(token) {
+      let response: Response
+      try {
+        response = await yandexInvitationLinkQueries.preview(apiBaseUrl, token)
+      } catch (error) {
+        throw new RepositoryError(
+          'network_unavailable',
+          'Не удалось подключиться к серверу. Проверьте интернет и повторите попытку.',
+          { cause: error },
+        )
+      }
+      if (response.status === 404) return null
+      if (!response.ok) throw yandexInvitationLinkError(response.status)
+      return invitationLinkResponseSchema.parse(await response.json()).invitation
+    },
+    async claim(token) {
+      if (sessionToken === null) throw yandexInvitationLinkError(401)
+      const response = await yandexInvitationLinkResponse(
+        () => yandexInvitationLinkQueries.claim(apiBaseUrl, sessionToken, token),
+      )
+      return claimedInvitationLinkSchema.parse(await response.json()).clientId
+    },
+  }
 }

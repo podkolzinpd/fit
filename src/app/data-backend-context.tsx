@@ -4,7 +4,12 @@ import { clientsRepository } from '../data/repositories/clients.repository'
 import { chatRepository } from '../data/repositories/chat.repository'
 import { exercisesRepository } from '../data/repositories/exercises.repository'
 import { goalsRepository } from '../data/repositories/goals.repository'
-import { invitationsRepository } from '../data/repositories/invitations.repository'
+import {
+  createYandexInvitationLinksRepository,
+  invitationLinksRepository,
+  invitationsRepository,
+  type InvitationLinksRepository,
+} from '../data/repositories/invitations.repository'
 import { progressRepository } from '../data/repositories/progress.repository'
 import { pushNotificationsRepository } from '../data/repositories/push-notifications.repository'
 import { realtimeRepository } from '../data/repositories/realtime.repository'
@@ -24,6 +29,7 @@ export interface DataBackend {
   exercises: typeof exercisesRepository
   goals: typeof goalsRepository
   invitations: typeof invitationsRepository
+  invitationLinks: InvitationLinksRepository
   progress: typeof progressRepository
   workouts: typeof workoutsRepository
   trainingSummaries: typeof trainingSummariesRepository
@@ -41,6 +47,7 @@ const supabaseDataBackend: DataBackend = {
   exercises: exercisesRepository,
   goals: goalsRepository,
   invitations: invitationsRepository,
+  invitationLinks: invitationLinksRepository,
   progress: progressRepository,
   workouts: workoutsRepository,
   trainingSummaries: trainingSummariesRepository,
@@ -61,7 +68,12 @@ export function DataBackendProvider({ children }: PropsWithChildren) {
     if (actor === null || session === null || config === null
       || actor.userId !== session.profile.id
       || !isYandexMainRoutingEnabled()) {
-      return supabaseDataBackend
+      return actor === null && config !== null && isYandexMainRoutingEnabled()
+        ? {
+            ...supabaseDataBackend,
+            invitationLinks: createYandexInvitationLinksRepository(config.apiBaseUrl, null),
+          }
+        : supabaseDataBackend
     }
     return createYandexMainRepository(config.apiBaseUrl, session.session.token, actor)
   }, [actor, config, session])

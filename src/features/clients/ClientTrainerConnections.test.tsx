@@ -12,7 +12,11 @@ const repository = vi.hoisted(() => ({
   listTrainers: vi.fn(),
   revoke: vi.fn(),
 }))
-vi.mock('../../data/repositories/invitations.repository', () => ({ invitationsRepository: repository }))
+vi.mock('../../data/repositories/invitations.repository', () => ({
+  createYandexInvitationLinksRepository: vi.fn(),
+  invitationLinksRepository: {},
+  invitationsRepository: repository,
+}))
 
 const connectedTrainer = {
   trainerId: 'trainer-1', firstName: 'Александр', lastName: 'Ситников',

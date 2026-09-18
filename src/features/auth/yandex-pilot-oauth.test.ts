@@ -7,6 +7,7 @@ import {
   readPendingYandexNativeRegistration,
   savePendingYandexNativeRegistration,
 } from './yandex-pilot-oauth'
+import { readPendingInvitation, savePendingInvitation } from './invitation-auth'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 
 const storage = new Map<string, string>()
@@ -117,6 +118,21 @@ describe('Yandex ID pilot OAuth', () => {
 
     clearPendingYandexNativeRegistration(storageAdapter)
     expect(readPendingYandexNativeRegistration(storageAdapter)).toBeNull()
+  })
+
+  it('keeps a protected invitation token out of the Yandex OAuth URL', async () => {
+    const token = `AB12CD34EF56.${'a'.repeat(64)}`
+    savePendingInvitation(`/invite?token=${token}`, storageAdapter)
+
+    const authorizationUrl = await createYandexAuthorizationUrl(
+      'public-client-id',
+      'http://localhost/auth/yandex/callback',
+      storageAdapter,
+      'app',
+    )
+
+    expect(authorizationUrl).not.toContain(token)
+    expect(readPendingInvitation(storageAdapter)).toBe(`/invite?token=${token}`)
   })
 
   it('rejects a mismatched state and OAuth errors', async () => {
