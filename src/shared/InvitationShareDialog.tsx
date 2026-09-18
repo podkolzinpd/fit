@@ -157,7 +157,7 @@ export function InvitationShareDialog({
         </section>
         {codeCopyState === 'error' && <p className="error" role="alert">Не удалось скопировать код.</p>}
 
-        <button type="button" className="link danger invitation-revoke" aria-label="Отозвать" disabled={revokeState === 'busy'} onClick={() => void revoke()}>{revokeState === 'busy' ? 'Отменяем…' : 'Отменить приглашение'}</button>
+        <button type="button" className="link danger invitation-revoke" disabled={revokeState === 'busy'} onClick={() => void revoke()}>{revokeState === 'busy' ? 'Отменяем…' : 'Отменить приглашение'}</button>
         {revokeState === 'error' && <p className="error" role="alert">Не удалось отменить приглашение.</p>}
       </section>
     </div>

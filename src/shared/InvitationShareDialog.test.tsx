@@ -60,7 +60,7 @@ describe('InvitationShareDialog', () => {
     const onRevoke = vi.fn().mockResolvedValue(undefined)
     render(<InvitationShareDialog share={share} source="supabase" message="Приглашение" onClose={onClose} onRevoke={onRevoke} />)
 
-    await user.click(screen.getByRole('button', { name: 'Отозвать' }))
+    await user.click(screen.getByRole('button', { name: 'Отменить приглашение' }))
     expect(onRevoke).not.toHaveBeenCalled()
     const confirmation = screen.getByRole('alertdialog')
     await user.click(within(confirmation).getByRole('button', { name: 'Отозвать' }))
