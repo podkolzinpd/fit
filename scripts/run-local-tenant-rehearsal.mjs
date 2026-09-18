@@ -22,6 +22,7 @@ const TARGET_DATABASE_PREFIX = 'fit_tenant_rehearsal_'
 const DATABASE_NAME_PATTERN = /^fit_tenant_rehearsal_[1-9][0-9]*_[12]$/u
 const SYNTHETIC_TRAINER_ID = '90000000-0000-4000-8000-000000000009'
 const STANDALONE_CLIENT_PROFILE_ID = 'a1000000-0000-4000-8000-000000000001'
+const STALE_YANDEX_PROFILE_ID = 'f1000000-0000-4000-8000-000000000001'
 const EXPECTED_TABLE_COUNT = 34
 const FIXTURE_PATH = join(
   ROOT_DIRECTORY,
@@ -424,33 +425,63 @@ function seedPreservedYandexAnchors(databaseName) {
       '--set',
       'ON_ERROR_STOP=1',
       '--command',
-      `insert into app_private.auth_identities (
-         provider, provider_subject_sha256, profile_id, identity_origin, created_at
+      `insert into public.profiles (
+         id, first_name, timezone, account_role, created_at, updated_at
        ) values (
-         'yandex', '${'a'.repeat(64)}', '${SYNTHETIC_TRAINER_ID}', 'linked',
-         timestamptz '2026-09-01 10:00:00+00'
+         '${STALE_YANDEX_PROFILE_ID}', 'Устаревший', 'Europe/Moscow', 'client',
+         timestamptz '2026-09-01 09:00:00+00',
+         timestamptz '2026-09-01 09:00:00+00'
        );
+       insert into app_private.auth_identities (
+         provider, provider_subject_sha256, profile_id, identity_origin, created_at
+       ) values
+         (
+           'yandex', '${'a'.repeat(64)}', '${SYNTHETIC_TRAINER_ID}', 'linked',
+           timestamptz '2026-09-01 10:00:00+00'
+         ),
+         (
+           'yandex', '${'d'.repeat(64)}', '${STALE_YANDEX_PROFILE_ID}', 'linked',
+           timestamptz '2026-09-01 09:00:00+00'
+         );
        insert into app_private.profile_rollout_assignments (
          profile_id, target_backend, access_mode, enabled, created_at, updated_at
-       ) values (
-         '${SYNTHETIC_TRAINER_ID}', 'yandex', 'read_write', true,
-         timestamptz '2026-09-01 10:00:00+00',
-         timestamptz '2026-09-01 10:00:00+00'
-       );
+       ) values
+         (
+           '${SYNTHETIC_TRAINER_ID}', 'yandex', 'read_write', true,
+           timestamptz '2026-09-01 10:00:00+00',
+           timestamptz '2026-09-01 10:00:00+00'
+         ),
+         (
+           '${STALE_YANDEX_PROFILE_ID}', 'yandex', 'read_write', false,
+           timestamptz '2026-09-01 09:00:00+00',
+           timestamptz '2026-09-01 09:00:00+00'
+         );
        insert into app_private.yandex_app_sessions (
          token_sha256, profile_id, access_mode, expires_at, created_at
-       ) values (
-         '${'b'.repeat(64)}', '${SYNTHETIC_TRAINER_ID}', 'read_write',
-         timestamptz '2030-01-01 00:00:00+00',
-         timestamptz '2026-09-01 10:00:00+00'
-       );
+       ) values
+         (
+           '${'b'.repeat(64)}', '${SYNTHETIC_TRAINER_ID}', 'read_write',
+           timestamptz '2030-01-01 00:00:00+00',
+           timestamptz '2026-09-01 10:00:00+00'
+         ),
+         (
+           '${'e'.repeat(64)}', '${STALE_YANDEX_PROFILE_ID}', 'read_write',
+           timestamptz '2030-01-01 00:00:00+00',
+           timestamptz '2026-09-01 09:00:00+00'
+         );
        insert into app_private.yandex_pilot_sessions (
          token_sha256, profile_id, expires_at, created_at
-       ) values (
-         '${'c'.repeat(64)}', '${SYNTHETIC_TRAINER_ID}',
-         timestamptz '2030-01-01 00:00:00+00',
-         timestamptz '2026-09-01 10:00:00+00'
-       )`,
+       ) values
+         (
+           '${'c'.repeat(64)}', '${SYNTHETIC_TRAINER_ID}',
+           timestamptz '2030-01-01 00:00:00+00',
+           timestamptz '2026-09-01 10:00:00+00'
+         ),
+         (
+           '${'f'.repeat(64)}', '${STALE_YANDEX_PROFILE_ID}',
+           timestamptz '2030-01-01 00:00:00+00',
+           timestamptz '2026-09-01 09:00:00+00'
+         )`,
     ],
     { capture: true, label: 'preserved_yandex_anchor_seed' },
   )
@@ -482,6 +513,30 @@ function assertPreservedYandexAnchors(databaseName) {
     { capture: true, label: 'preserved_yandex_anchor_check' },
   ).trim()
   if (count !== '4') throw new Error('preserved_yandex_anchors_missing')
+
+  const staleProfileCount = run(
+    'podman',
+    [
+      'exec',
+      TARGET_CONTAINER,
+      'psql',
+      '--username',
+      'postgres',
+      '--dbname',
+      databaseName,
+      '--tuples-only',
+      '--no-align',
+      '--set',
+      'ON_ERROR_STOP=1',
+      '--command',
+      `select count(*) from public.profiles
+       where id = '${STALE_YANDEX_PROFILE_ID}'`,
+    ],
+    { capture: true, label: 'stale_yandex_profile_check' },
+  ).trim()
+  if (staleProfileCount !== '0') {
+    throw new Error('stale_yandex_profile_not_pruned')
+  }
 }
 
 function assertEncryptedArtifact(artifactPath, rootProfileId) {
