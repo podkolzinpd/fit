@@ -1748,7 +1748,13 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .client-home-self-training.compact .voice-input { width:100%; }
 .client-home-self-training.compact .voice-input-button { width:100%; min-height:46px; justify-content:center; border-radius:14px; }
 .client-home-self-training.compact .today-text-toggle { min-height:36px; padding:4px; border:0; background:transparent; }
-.today-preset-toggle { align-self:flex-start; font-size:13px; }
+.preset-workout-cta { display:flex; align-items:center; gap:12px; min-height:64px; padding:12px 14px; border:0; border-radius:16px; background:var(--mono-primary); color:var(--mono-on-primary); text-align:left; box-shadow:none; }
+.preset-workout-cta-icon { flex:0 0 auto; width:36px; height:36px; display:grid; place-items:center; border-radius:11px; background:var(--mono-on-primary); color:var(--mono-primary); }
+.preset-workout-cta-icon svg { width:17px; height:17px; }
+.preset-workout-cta-copy { flex:1 1 auto; min-width:0; display:grid; gap:1px; }
+.preset-workout-cta-copy strong { color:var(--mono-on-primary); font-size:14.5px; font-weight:600; letter-spacing:-.008em; }
+.preset-workout-cta-copy small { font-size:11.5px; font-weight:500; opacity:.78; }
+.preset-workout-cta-chev { flex:0 0 auto; width:16px; height:16px; opacity:.7; }
 .preset-workout-picker { display:grid; gap:10px; padding-top:4px; }
 .preset-workout-picker-hint { margin:0; color:var(--voice-copy); font-size:13px; line-height:1.35; }
 .preset-workout-picker-list { display:grid; gap:10px; }
