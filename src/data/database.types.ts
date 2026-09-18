@@ -1,4 +1,4 @@
-// schema-sha256: dc855366b43e84efbb0be581c353741f19c81737a88dd00b951aa1fc24bc0ab7
+// schema-sha256: 9e23c10a1854db5c394328c49547af99c1e14c2110209bd2bafe25bb8be5f0db
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -547,6 +547,7 @@ export type Database = {
           created_by: string
           expires_at: string
           id: string
+          link_token_hash: string | null
           revoked_at: string | null
           target_role: string
         }
@@ -559,6 +560,7 @@ export type Database = {
           created_by: string
           expires_at: string
           id?: string
+          link_token_hash?: string | null
           revoked_at?: string | null
           target_role: string
         }
@@ -571,6 +573,7 @@ export type Database = {
           created_by?: string
           expires_at?: string
           id?: string
+          link_token_hash?: string | null
           revoked_at?: string | null
           target_role?: string
         }
@@ -2085,6 +2088,10 @@ export type Database = {
         Returns: number
       }
       claim_client_invitation: { Args: { p_code: string }; Returns: string }
+      claim_client_invitation_link: {
+        Args: { p_token: string }
+        Returns: string
+      }
       claim_training_summary_generation: {
         Args: {
           p_client_id: string
@@ -2141,6 +2148,15 @@ export type Database = {
         Args: { p_client_id: string; p_target_role: string }
         Returns: string
       }
+      create_client_invitation_share: {
+        Args: { p_client_id: string; p_target_role: string }
+        Returns: {
+          expires_at: string
+          invitation_code: string
+          invitation_id: string
+          invitation_token: string
+        }[]
+      }
       create_own_client: { Args: { p_client: Json }; Returns: string }
       create_quick_client: { Args: { p_full_name: string }; Returns: string }
       create_quick_own_client: {
@@ -2175,6 +2191,15 @@ export type Database = {
       finish_workout: {
         Args: { p_expected_version: number; p_workout_id: string }
         Returns: number
+      }
+      get_client_invitation_preview: {
+        Args: { p_token: string }
+        Returns: {
+          expires_at: string
+          invitation_status: string
+          inviter_name: string
+          target_role: string
+        }[]
       }
       get_client_goal: { Args: { p_client_id: string }; Returns: Json }
       get_chat_message_window: {
