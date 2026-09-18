@@ -68,17 +68,18 @@ describe('workout surface contract', () => {
     expect(screen.getByRole('button', { name: 'Недоступно' })).toHaveAttribute('data-control-state', 'disabled')
   })
 
-  it('exposes RPE as one labelled scale and reports the selected effort', () => {
+  it('exposes RPE as one labelled radio group and reports the selected effort', () => {
     const onChange = vi.fn()
-    const { rerender } = render(<WorkoutRpeScale aria-label="Общая тяжесть по шкале RPE" onChange={onChange} />)
-    const scale = screen.getByRole('slider', { name: 'Общая тяжесть по шкале RPE' })
-    expect(scale).toHaveAttribute('aria-valuetext', 'Не выбрано')
-    fireEvent.change(scale, { target: { value: '8' } })
+    const { rerender } = render(<WorkoutRpeScale aria-label="Нагрузка по шкале RPE" onChange={onChange} />)
+    expect(screen.getByRole('radiogroup', { name: 'Нагрузка по шкале RPE' })).toBeVisible()
+    const option = screen.getByRole('radio', { name: '8 — Очень тяжело' })
+    expect(option).toHaveAttribute('aria-checked', 'false')
+    fireEvent.click(option)
     expect(onChange).toHaveBeenCalledWith(8)
 
-    rerender(<WorkoutRpeScale aria-label="Общая тяжесть по шкале RPE" value={8} onChange={onChange} />)
+    rerender(<WorkoutRpeScale aria-label="Нагрузка по шкале RPE" value={8} onChange={onChange} />)
     expect(screen.getByText('RPE 8')).toBeVisible()
     expect(screen.getByText('Очень тяжело')).toBeVisible()
-    expect(scale).toHaveAttribute('aria-valuetext', 'RPE 8, Очень тяжело')
+    expect(screen.getByRole('radio', { name: '8 — Очень тяжело' })).toHaveAttribute('aria-checked', 'true')
   })
 })

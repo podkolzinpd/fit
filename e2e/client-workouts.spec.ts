@@ -26,7 +26,7 @@ async function createCompletedWorkout(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Записать тренировку' }).click()
   await expect(page).not.toHaveURL(/\/workouts\/new/)
   await expect(page).toHaveURL(/\/workouts\/[^/?]+$/)
-  await expect(page.getByRole('heading', { name: 'Ваша тренировка' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Грудь' })).toBeVisible()
 }
 
 test('global rollout gives a new client the My Workouts identity', async ({ page }, testInfo) => {
@@ -126,6 +126,6 @@ test('client creates a custom exercise and saves it in a completed workout', asy
   await page.getByRole('button', { name: 'Записать тренировку' }).click()
 
   await expect(page).toHaveURL(/\/workouts\/[^/?]+$/)
-  await expect(page.getByRole('heading', { name: 'Ваша тренировка' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ноги' })).toBeVisible()
   await expect(page.getByText(exerciseName, { exact: true })).toBeVisible()
 })
