@@ -39,11 +39,12 @@ import {
 import { YandexPilotConnections } from './YandexPilotConnections'
 import { YandexPilotTrainingData } from './YandexPilotTrainingData'
 import { useYandexPilotPolling } from './use-yandex-pilot-polling'
+import { hasPendingInvitationLink } from './invitation-link-continuation'
 
 type Mode = 'login' | 'register'
 type RegistrationMethod = 'yandex' | 'email'
 
-function AuthIdentityScreen({ children, className }: PropsWithChildren<{ className?: string }>) {
+export function AuthIdentityScreen({ children, className }: PropsWithChildren<{ className?: string }>) {
   const theme = useAppTheme()
   const themeVariant = resolveThemeVariant(theme)
 
@@ -69,9 +70,10 @@ function AuthIdentityScreen({ children, className }: PropsWithChildren<{ classNa
 
 export function AuthPage() {
   const location = useLocation()
-  const returnTo = (location.state as { from?: string } | null)?.from
+  const authState = location.state as { from?: string; mode?: Mode; inviteRole?: AccountRole } | null
+  const returnTo = authState?.from ?? (hasPendingInvitationLink() ? '/invite' : undefined)
   const nativeRegistrationConfig = getYandexNativeRegistrationConfig()
-  const [mode, setMode] = useState<Mode>('login')
+  const [mode, setMode] = useState<Mode>(authState?.mode === 'register' ? 'register' : 'login')
   const [registrationMethod, setRegistrationMethod] = useState<RegistrationMethod>(
     nativeRegistrationConfig === null ? 'email' : 'yandex',
   )
@@ -79,7 +81,8 @@ export function AuthPage() {
   const [busy, setBusy] = useState(false)
   const [yandexBusy, setYandexBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [role, setRole] = useState<AccountRole>(returnTo?.startsWith('/join') ? 'client' : 'trainer')
+  const [role, setRole] = useState<AccountRole>(authState?.inviteRole
+    ?? (returnTo?.startsWith('/join') ? 'client' : 'trainer'))
   const { actor } = useAuth()
   const yandexAppSession = useYandexAppSession()
   const yandexAppSessionConfig = getYandexAppSessionEntryConfig()
@@ -192,7 +195,7 @@ export function AuthPage() {
         setRegistrationMethod(registrationMethod === 'yandex' ? 'email' : 'yandex')
         setError(null)
       }}>{registrationMethod === 'yandex' ? 'Создать по email' : 'Создать через Yandex ID'}</button>}
-      {mode === 'login' && <Link to="/auth/forgot">Забыли пароль?</Link>}
+      {mode === 'login' && <Link to="/auth/forgot" state={{ from: returnTo }}>Забыли пароль?</Link>}
     </div>
     <nav className="auth-legal-links" aria-label="Юридическая информация"><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Конфиденциальность</Link></nav>
   </AuthIdentityScreen>
@@ -387,7 +390,7 @@ export function YandexAppSessionPage() {
     <StatePanel tone="info" title="Восстанавливаем сессию" description="Проверяем действующую сессию Yandex ID…" />
   </AuthIdentityScreen>
   if (actor !== null) {
-    return <Navigate to={actor.role === 'client' ? '/me' : trainerHomePath()} replace />
+    return <Navigate to={hasPendingInvitationLink() ? '/invite' : actor.role === 'client' ? '/me' : trainerHomePath()} replace />
   }
   if (error && session === null) return <AuthIdentityScreen>
     <StatePanel
@@ -775,7 +778,7 @@ export function ResetPasswordPage() {
   const navigate = useNavigate(); const [error, setError] = useState<string | null>(null)
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    try { await authRepository.updatePassword(String(new FormData(event.currentTarget).get('password'))); navigate('/') }
+    try { await authRepository.updatePassword(String(new FormData(event.currentTarget).get('password'))); navigate(hasPendingInvitationLink() ? '/invite' : '/') }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }
   }
   return <AuthIdentityScreen><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">БЕЗОПАСНОСТЬ</p><h1>Новый пароль</h1><p className="muted">Выберите новый пароль для входа в FIT.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete="new-password" required /></Field>{error && <p className="error" role="alert">{error}</p>}<button className="primary">Сохранить</button></form></AuthIdentityScreen>
@@ -783,6 +786,6 @@ export function ResetPasswordPage() {
 
 export function AuthCallbackPage() {
   const { loading, error, actor } = useAuth()
-  if (actor) return <Navigate to={actor.role === 'client' ? '/me' : trainerHomePath()} replace />
+  if (actor) return <Navigate to={hasPendingInvitationLink() ? '/invite' : actor.role === 'client' ? '/me' : trainerHomePath()} replace />
   return <AuthIdentityScreen><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">ВХОД В АККАУНТ</p><h1>Завершаем вход</h1><p className="muted">{loading ? 'Проверяем сессию…' : error ?? 'Не удалось получить сессию.'}</p></header><Link className="auth-back-link" to="/auth">Вернуться</Link></AuthIdentityScreen>
 }

@@ -3086,6 +3086,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .auth-flow-identity .yandex-pilot-client p,
 .auth-flow-identity .yandex-pilot-connection p,
 .auth-flow-identity .yandex-pilot-training p { color:var(--muted); font-size:12px; font-weight:400 }
+.auth-flow-identity.invitation-page { justify-content:flex-start }
+.invitation-summary { gap:0; padding:6px 16px }
+.invitation-summary > div { min-height:48px; display:flex; align-items:center; justify-content:space-between; gap:16px; border-bottom:1px solid var(--border) }
+.invitation-summary > div:last-child { border-bottom:0 }
+.invitation-summary span { color:var(--muted); font-size:13px }
+.invitation-summary strong { text-align:right; font-size:14px; font-weight:600 }
+.invitation-actions { gap:10px }
+.invitation-actions > button { width:100% }
 
 /* Public legal documents and the one-time acceptance gate use the same quiet
    identity as auth, without the product tab bar. */

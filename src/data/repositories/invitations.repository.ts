@@ -1,6 +1,6 @@
 import { invitationQueries } from '../queries/invitations.queries'
 import { repositoryError } from './error'
-import type { ClientInvitation, TrainerMembership } from '../../shared/domain'
+import type { ClientInvitation, InvitationLinkPreview, InvitationShare, TrainerMembership } from '../../shared/domain'
 
 export interface DisconnectTrainerResult {
   clientId: string
@@ -22,6 +22,43 @@ function disconnectTrainerResult(value: unknown): DisconnectTrainerResult {
 export const invitationsRepository = {
   async create(clientId: string, targetRole: 'client' | 'trainer'): Promise<string> {
     const result = await invitationQueries.create(clientId, targetRole)
+    if (result.error) throw repositoryError(result.error)
+    return result.data
+  },
+  async createShare(clientId: string, targetRole: 'client' | 'trainer'): Promise<InvitationShare> {
+    const result = await invitationQueries.createShare(clientId, targetRole)
+    if (result.error) throw repositoryError(result.error)
+    const row = result.data[0]
+    if (row === undefined) throw new Error('Приглашение не создано.')
+    return {
+      id: row.invitation_id,
+      clientId,
+      targetRole,
+      code: row.invitation_code,
+      token: row.invitation_token,
+      expiresAt: row.expires_at,
+    }
+  },
+  async previewLink(token: string): Promise<InvitationLinkPreview | null> {
+    const result = await invitationQueries.previewLink(token)
+    if (result.error) throw repositoryError(result.error)
+    const row = result.data[0]
+    if (row === undefined) return null
+    if (row.target_role !== 'client' && row.target_role !== 'trainer') {
+      throw new Error('Некорректная роль приглашения.')
+    }
+    if (!['active', 'claimed', 'revoked', 'expired'].includes(row.invitation_status)) {
+      throw new Error('Некорректный статус приглашения.')
+    }
+    return {
+      targetRole: row.target_role,
+      inviterName: row.inviter_name,
+      expiresAt: row.expires_at,
+      status: row.invitation_status as InvitationLinkPreview['status'],
+    }
+  },
+  async claimLink(token: string): Promise<string> {
+    const result = await invitationQueries.claimLink(token)
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
