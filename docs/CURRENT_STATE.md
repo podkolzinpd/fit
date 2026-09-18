@@ -3,7 +3,7 @@
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
 
-Обновлено: 2026-09-18. Проверенный `main`: `cea78ac3` (#1032). Frontend
+Обновлено: 2026-09-18. Проверенный `main`: `1b047bf6` (#1033). Frontend
 остаётся на Vercel. Production-пользователи пока используют Supabase; Yandex
 app-session, main routing и native registration не включены глобально.
 
@@ -46,9 +46,10 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
 - Публичные условия и политика показывают утверждённый текст. Supabase хранит
   versioned legal acceptance и account deletion requests; Yandex native
   registration фиксирует legal acceptance только для нового аккаунта.
-- Подготовлен независимый default-off gate: при включении защищённые маршруты
-  требуют привязанный Yandex ID, но не меняют app-session, backend routing и
-  rollout assignment. Production-флаг остаётся выключенным.
+- Независимый gate обязательной привязки Yandex ID включён глобально в
+  production build без персонального allowlist: защищённые маршруты доступны
+  только связанным профилям. Gate не меняет app-session, backend routing и
+  rollout assignment; продуктовые данные продолжают идти через Supabase.
 
 ## Yandex Cloud — подтверждённая база
 
@@ -61,7 +62,8 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   использовал `media_validation: allow-missing`, поэтому не является финальной
   cutover-репетицией.
 - Server-side rollout assignments для `linked-ready` профилей включены и
-  проверены агрегированно. Frontend kill switches остаются выключенными.
+  проверены агрегированно. Обязательная привязка включена отдельно; frontend
+  app-session, main-routing и native-registration switches остаются выключены.
 - Нативная регистрация через Yandex ID, атомарное создание профиля/роли,
   assignment и legal acceptance находятся в `main`; frontend и server flags
   default-off. `YANDEX_NATIVE_REGISTRATION_ENABLED` ещё не проложен в
