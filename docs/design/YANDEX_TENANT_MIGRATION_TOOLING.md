@@ -65,12 +65,15 @@ isolated-tenant checks or silently dropping a merge target.
     `allow_missing_media` operator policy may defer only object existence
     validation while preserving the original paths and media metadata.
 15. The full-cohort fingerprint is derived from every table name, row count and
-    checksum. An apply therefore requires the exact snapshot fingerprint from
-    a successful dry-run and fails before target access if source data changed.
-16. Target validation for a full cohort reads only the primary/composite keys
-    present in the encrypted bundle. Existing unrelated stage fixture rows do
-    not create false conflicts; an existing row with the same key and different
-    application fields still aborts the complete transaction.
+    checksum. A pinned apply requires the exact snapshot fingerprint from a
+    successful dry-run; current-snapshot apply uses one repeatable-read export
+    for dry-run and both replacement passes.
+16. Full-cohort target import takes exclusive locks, preserves Yandex identity,
+    app/pilot sessions and rollout assignments in transaction-local tables,
+    clears all transferable tables, loads the snapshot and restores those
+    anchors. Validation reads the complete target tables, so changed and stale
+    rows cannot survive. A native Yandex identity or an anchor missing from the
+    source snapshot rejects the operation before the first delete.
 17. Media migration is a separate idempotent gate. It copies the two private
     source buckets to namespace-isolated keys in one private, versioned Yandex
     bucket and verifies source SHA-256 metadata plus byte length. Reports expose
@@ -208,7 +211,7 @@ trainer-owned rows.
 
 Standalone artifacts use the distinct
 `fit-standalone-client-bundle-v1` format and fingerprint namespace while
-retaining the same ordered 32-table manifest. Client-scoped tables follow the
+retaining the same ordered 34-table manifest. Client-scoped tables follow the
 canonical card and its reverse merge closure. Custom exercises include both
 client-authored rows and exact custom rows referenced by those workouts.
 Account-scoped Assistant, feedback, push preferences/subscriptions and workout
@@ -219,6 +222,8 @@ Full application snapshots use `fit-full-cohort-bundle-v1`. Identity mappings,
 hashed app sessions, rollout assignments, sent push outbox history and Live
 operation receipts remain outside this format. The format copies application
 profiles, not Supabase `auth.users`, passwords or provider credentials.
+Legal acceptance history and account deletion requests are transferable
+application data and are included in the manifest.
 
 ## Acceptance checklist
 
@@ -260,6 +265,10 @@ profiles, not Supabase `auth.users`, passwords or provider credentials.
 - [x] Run the real full-cohort source `audit`. The 2026-09-14 run exported all
   32 tables and 12 876 rows with a content-derived fingerprint; no source
   contract or table-parity mismatch remained.
+- [x] Replace full-cohort insert-only import with an atomic 34-table rebuild,
+  preserve Yandex auth/session/rollout anchors and reject native-only target
+  profiles before deletion. Two local PostgreSQL 17 rehearsals on 2026-09-19
+  each applied, repeated and validated 88 synthetic rows across all 34 tables.
 - [ ] Repeat the real full-cohort stage `dry-run` with compressed envelope v3,
   then use its exact fingerprint for pinned `apply` and repeated zero-insert
   validation.

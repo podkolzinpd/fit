@@ -43,17 +43,25 @@ npm run tenant:rehearse:local
 Команда работает только с loopback-портами локального Podman, дополняет
 исключительно синтетический demo cohort production-like данными, дважды создаёт
 чистую временную PostgreSQL 17 базу и для каждой выполняет export, dry-run,
-проверку rollback, apply, повторный apply с `inserted=0` и validate всех 28
-таблиц. Зашифрованные artifacts и обе временные базы удаляются после прогона.
+проверку rollback, apply, повторный apply и validate всех 34 таблиц.
+Для isolated trainer/client повторный apply остаётся insert-only и показывает
+`inserted=0`; full-cohort повторно пересобирает переносимый слой и доказывает
+идемпотентность совпадением полного checksum snapshot-а. Зашифрованные
+artifacts и обе временные базы удаляются после прогона.
 Подключить этой командой stage или production нельзя. Она проверяет данные,
 чистую цепочку миграций и идемпотентность, но не заменяет отдельную проверку
 сетевого доступа, IAM, remote credentials и согласованного окна переноса.
 
 Первый `import` — обязательный dry-run: он открывает транзакцию, проверяет все
 FK/unique/check constraints и checksums, затем делает rollback. `--apply`
-фиксирует данные только после полной проверки. Повторный apply безопасен и
-должен показать `inserted=0`. Существующие отличающиеся строки не
-перезаписываются: операция завершается ошибкой и целиком откатывается.
+фиксирует данные только после полной проверки. Isolated trainer/client import
+не перезаписывает существующие отличающиеся строки. Full-cohort import работает
+иначе: под exclusive lock он временно сохраняет Yandex identity, app/pilot
+sessions и rollout assignments, очищает 34 переносимые таблицы, загружает
+свежий snapshot и возвращает сохранённые Yandex-привязки. Любая ошибка
+откатывает всю транзакцию. Операция заранее отказывается работать, если в target
+есть нативный Yandex-профиль или сохранённая auth/session-ссылка отсутствует в
+source snapshot; поэтому этот режим предназначен только для pre-cutover окна.
 
 Артефакт зашифрован AES-256-GCM, создаётся с правами `0600` и не
 перезаписывается. Он всё равно считается чувствительным backup-файлом: хранить
@@ -164,7 +172,8 @@ GitHub OIDC → Yandex IAM token.
   fingerprint и `APPLY_TENANT_TO_YANDEX_STAGE`. Для живого source используйте
   `APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE` с пустым fingerprint: workflow
   экспортирует один `REPEATABLE READ` snapshot и тем же encrypted envelope
-  выполняет target dry-run, commit и повторный apply с нулём вставок. Эта фраза
+  выполняет target dry-run, commit и повторную полную пересборку с тем же
+  checksum. Эта фраза
   принимается только для `full-cohort`; автоматические и configured selections
   не получают ослабления fingerprint/selection guard. Режим не переносит
   `auth.users`, OAuth credentials, Yandex sessions/rollout assignments, весь
@@ -184,7 +193,9 @@ fingerprint фиксирует точное содержимое всего по
 - `dry-run` — повторяет audit, передаёт envelope только в памяти private runner
   и откатывает полную target-транзакцию после constraints/checksum validation;
 - `apply` — сначала выполняет dry-run, затем commit и обязательный повторный
-  apply того же encrypted envelope, который должен вставить ноль строк. Pinned
+  apply того же encrypted envelope. Для isolated cohort он должен вставить ноль
+  строк; для full-cohort он снова атомарно пересобирает переносимые таблицы и
+  должен получить тот же checksum. Pinned
   путь требует `APPLY_TENANT_TO_YANDEX_STAGE`; current-snapshot путь требует
   `APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE`, `full-cohort` и пустой внешний
   fingerprint.
