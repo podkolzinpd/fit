@@ -29,11 +29,9 @@ function dateOffset(days: number) {
 }
 
 async function setRpe(page: Page, value: number) {
-  const scale = page.getByRole('slider', { name: 'Общая тяжесть по шкале RPE' })
-  await scale.focus()
-  await scale.press('Home')
-  for (let current = 1; current < value; current += 1) await scale.press('ArrowRight')
-  await expect(scale).toHaveValue(String(value))
+  const option = page.getByRole('radio', { name: new RegExp(`^${value} —`) })
+  await option.click()
+  await expect(option).toHaveAttribute('aria-checked', 'true')
 }
 
 async function loginDemo(page: Page, email: string, destination: RegExp) {
@@ -189,10 +187,10 @@ test('client and trainer receive progress and workout changes without reload', a
     await setRpe(client, 7)
     await feedbackCard.getByRole('button', { name: 'Нормально', exact: true }).click()
     await feedbackCard.getByRole('button', { name: 'Да', exact: true }).click()
-    await client.getByRole('textbox', { name: 'Пояснение о дискомфорте', exact: true }).fill(clientComment)
-    await feedbackCard.getByRole('button', { name: 'Отправить отзыв', exact: true }).click()
+    await client.getByRole('textbox', { name: 'Заметка к итогам тренировки', exact: true }).fill(clientComment)
+    await feedbackCard.getByRole('button', { name: 'Сохранить итоги', exact: true }).click()
     await expect(trainer.getByText('RPE 7/10', { exact: true })).toBeVisible({ timeout: 10_000 })
-    await expect(trainer.getByText(clientComment, { exact: true })).toBeVisible({ timeout: 10_000 })
+    await expect(trainer.locator('.workout-feedback .workout-review-text')).toContainText(clientComment, { timeout: 10_000 })
 
     const trainerReview = `Realtime отзыв ${suffix}`
     const trainerReviewCard = trainer.locator('.workout-review').filter({

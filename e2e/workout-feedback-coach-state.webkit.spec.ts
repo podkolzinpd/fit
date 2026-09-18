@@ -27,23 +27,20 @@ async function logout(page: Page, role: 'trainer' | 'client') {
 }
 
 async function setRpe(page: Page, value: number) {
-  const scale = page.getByRole('slider', { name: 'Общая тяжесть по шкале RPE' })
-  await scale.focus()
-  await scale.press('Home')
-  for (let current = 1; current < value; current += 1) await scale.press('ArrowRight')
+  await page.getByRole('radio', { name: new RegExp(`^${value} —`) }).click()
 }
 
-async function saveFeedback(page: Page, wellbeing: 'Хорошо' | 'Нормально' | 'Тяжело') {
+async function saveFeedback(page: Page, wellbeing: 'Хорошо' | 'Нормально' | 'Плохо') {
   const card = page.locator('.workout-feedback')
   await setRpe(page, wellbeing === 'Хорошо' ? 5 : wellbeing === 'Нормально' ? 6 : 7)
   await card.getByRole('button', { name: wellbeing, exact: true }).click()
   await card.getByRole('button', { name: 'Нет', exact: true }).click()
-  await card.getByRole('button', { name: /^(Отправить отзыв|Сохранить изменения)$/ }).click()
+  await card.getByRole('button', { name: 'Сохранить итоги', exact: true }).click()
   await expect(card).toHaveClass(/workout-review-readonly/)
   return card
 }
 
-test('client feedback names a trainer only while the trainer connection is active', async ({ page }, testInfo) => {
+test('workout result stays neutral with and without an active trainer', async ({ page }, testInfo) => {
   testInfo.setTimeout(180_000)
   const suffix = `${testInfo.workerIndex}-${Date.now()}`
   const clientEmail = `feedback-standalone-client-${suffix}@fit.local`
@@ -70,7 +67,7 @@ test('client feedback names a trainer only while the trainer connection is activ
   const workoutUrl = page.url()
 
   let feedback = await saveFeedback(page, 'Нормально')
-  await expect(feedback.getByText('Спасибо, данные о самочувствии сохранены.', { exact: false })).toBeVisible()
+  await expect(feedback.getByText('Итоги тренировки сохранены.', { exact: true })).toBeVisible()
   await expect(feedback.getByText('тренер увидит', { exact: false })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Задать вопрос тренеру' })).toHaveCount(0)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
@@ -103,7 +100,8 @@ test('client feedback names a trainer only while the trainer connection is activ
   feedback = page.locator('.workout-feedback')
   await feedback.getByRole('button', { name: 'Изменить', exact: true }).click()
   feedback = await saveFeedback(page, 'Хорошо')
-  await expect(feedback.getByText('Спасибо, тренер увидит ваш отзыв.', { exact: false })).toBeVisible()
+  await expect(feedback.getByText('Итоги тренировки сохранены.', { exact: true })).toBeVisible()
+  await expect(feedback.getByText('тренер увидит', { exact: false })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Задать вопрос тренеру' })).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
   await page.screenshot({ path: testInfo.outputPath('feedback-with-active-trainer-430.png'), fullPage: true })
@@ -119,8 +117,8 @@ test('client feedback names a trainer only while the trainer connection is activ
   await page.goto(workoutUrl)
   feedback = page.locator('.workout-feedback')
   await feedback.getByRole('button', { name: 'Изменить', exact: true }).click()
-  feedback = await saveFeedback(page, 'Тяжело')
-  await expect(feedback.getByText('Спасибо, данные о самочувствии сохранены.', { exact: false })).toBeVisible()
+  feedback = await saveFeedback(page, 'Плохо')
+  await expect(feedback.getByText('Итоги тренировки сохранены.', { exact: true })).toBeVisible()
   await expect(page.getByText('тренер увидит', { exact: false })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Задать вопрос тренеру' })).toHaveCount(0)
   await page.reload()

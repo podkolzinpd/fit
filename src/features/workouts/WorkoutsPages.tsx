@@ -273,7 +273,7 @@ export function PastWorkoutPlanCard({ workout, contextLabel, returnTo }: { worko
 const chronicleWellbeingLabels: Record<WorkoutWellbeing, string> = {
   good: 'Хорошо',
   normal: 'Нормально',
-  hard: 'Тяжело',
+  hard: 'Плохо',
 }
 
 const chronicleReactionLabels: Record<TrainerReaction, string> = {
@@ -955,11 +955,11 @@ export function WorkoutDetailPage() {
         hasTrainer={hasActiveTrainer}
       />}
       {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
-      {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? 'Ваша тренировка' : workout.clientName} state={detailState}
+      {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode && done ? 'ТРЕНИРОВКА ЗАВЕРШЕНА' : clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? (done ? workoutFocusTitle(groups) : 'Ваша тренировка') : workout.clientName} state={detailState}
         statusLabel={statusPresentation?.label}
         showStatus={detailState !== 'completed'}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
-        meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>{clientMode && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · только просмотр</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
+        meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · только просмотр</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
       {plannedActions && canExecute && <div className="workout-detail-primary-actions">
         {workout.workoutDate < today ? <Coachmark id="missed-workout-actions-2026-08" userId={actor?.userId} title="План можно закрыть спокойно" description="Запишите результат, перенесите тренировку или сохраните, что она не состоялась.">
           <WorkoutCta className="wide" pending={start.isPending || cancelPlanned.isPending || reschedule.isPending} pendingLabel="Сохраняем…" onClick={() => setDecisionSheet('actions')}>{plannedActions.primary}</WorkoutCta>
@@ -973,11 +973,13 @@ export function WorkoutDetailPage() {
         openLive(workoutId)
       }}>Продолжить тренировку</Link>}
       {done && !clientCompletionReport && <section className="workout-fact-summary" aria-label="Сводка тренировки">
-        {duration && <p><span>Время</span><strong>{duration}</strong></p>}
-        {tonnage > 0 && <p><span>Тоннаж</span><strong>{tonnageLabel(tonnage)}</strong></p>}
+        <p><span>Время</span><strong>{duration && duration !== '0 мин' ? duration : '—'}</strong></p>
+        <p><span>Тоннаж</span><strong>{tonnage > 0 ? tonnageLabel(tonnage) : '—'}</strong></p>
+        <p><span>Подходы</span><strong>{completedSets}</strong></p>
         {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
+        {clientMode && workout.hasPr && <p className="workout-fact-summary-record"><RecordIcon /><span>Личный рекорд</span><strong>Лучший результат тренировки</strong></p>}
       </section>}
-      {done && <WorkoutClientFeedback workout={workout} canEdit={clientMode} hasActiveTrainer={hasActiveTrainer} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
+      {done && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       {done && clientMode && hasActiveTrainer && !clientCompletionReport && <WorkoutClientQuestion workout={workout} saving={question.isPending} error={question.error} onSave={(value) => question.mutateAsync(value)} />}
       {done && !clientMode && workout.clientQuestion && <WorkoutTrainerQuestion workout={workout} canReply={canReview} startEditing={new URLSearchParams(location.search).get('reply') === '1'} authorName={responseAuthorName} saving={questionAnswer.isPending} error={questionAnswer.error} onSave={(value) => questionAnswer.mutateAsync(value)} />}
       {done && (clientMode || !workout.clientQuestion) && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
@@ -1029,7 +1031,14 @@ export function WorkoutDetailPage() {
 const wellbeingLabels: Record<WorkoutWellbeing, string> = {
   good: 'Хорошо',
   normal: 'Нормально',
-  hard: 'Тяжело',
+  hard: 'Плохо',
+}
+
+function workoutFocusTitle(groups: readonly string[]): string {
+  if (groups.length === 0) return 'Тренировка'
+  if (groups.length === 1) return groups[0]!
+  if (groups.length === 2) return `${groups[0]} и ${groups[1]}`
+  return `${groups[0]}, ${groups[1]} и ${groups[2]}`
 }
 
 const trainerReactionLabels: Record<TrainerReaction, string> = {
@@ -1045,10 +1054,9 @@ function trainerResponseTime(value: string | undefined) {
   }).format(new Date(value))
 }
 
-function WorkoutClientFeedback({ workout, canEdit, hasActiveTrainer, saving, error, onSave }: {
+function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
   workout: Workout
   canEdit: boolean
-  hasActiveTrainer: boolean
   saving: boolean
   error: Error | null
   onSave: (value: WorkoutFeedbackDraft) => Promise<unknown>
@@ -1060,6 +1068,7 @@ function WorkoutClientFeedback({ workout, canEdit, hasActiveTrainer, saving, err
   const [wellbeing, setWellbeing] = useState<WorkoutWellbeing | undefined>(workout.wellbeing)
   const [discomfort, setDiscomfort] = useState<boolean | undefined>(workout.discomfort ?? (workout.clientComment ? true : undefined))
   const [comment, setComment] = useState(workout.clientComment ?? '')
+  const [noteOpen, setNoteOpen] = useState(Boolean(workout.clientComment))
 
   useEffect(() => {
     if (editing) return
@@ -1067,31 +1076,34 @@ function WorkoutClientFeedback({ workout, canEdit, hasActiveTrainer, saving, err
     setWellbeing(workout.wellbeing)
     setDiscomfort(workout.discomfort ?? (workout.clientComment ? true : undefined))
     setComment(workout.clientComment ?? '')
+    setNoteOpen(Boolean(workout.clientComment))
   }, [editing, workout.clientComment, workout.discomfort, workout.id, workout.sessionRpe, workout.wellbeing])
 
   if (!canEdit && !hasFeedback) return null
+  const needsExplanation = discomfort === true || (sessionRpe ?? 0) >= 9
+  const showNote = noteOpen || needsExplanation
   const valid = sessionRpe !== undefined && wellbeing !== undefined && discomfort !== undefined
-    && (!discomfort || comment.trim().length > 0)
+    && (!needsExplanation || comment.trim().length > 0)
 
   if (!editing) return <section className="workout-review workout-feedback workout-review-readonly" aria-labelledby="workout-feedback-title">
     <div className="workout-review-head">
-      <div><p className="eyebrow">ОБРАТНАЯ СВЯЗЬ</p><h2 id="workout-feedback-title">{canEdit ? 'Ваш итог' : 'Самочувствие клиента'}</h2></div>
+      <div><h2 id="workout-feedback-title">Итоги тренировки</h2></div>
       {canEdit && <button type="button" className="secondary" onClick={() => { setSaved(false); setEditing(true) }}>Изменить</button>}
     </div>
-    {saved && <p className="workout-feedback-confirmation" role="status">{workoutFeedbackConfirmation(hasActiveTrainer)}</p>}
+    {saved && <p className="workout-feedback-confirmation" role="status">{workoutFeedbackConfirmation()}</p>}
     <div className="workout-feedback-summary">
-      <p><span>Общая тяжесть</span><strong>RPE {workout.sessionRpe}/10</strong></p>
-      <p><span>Самочувствие</span><strong>{workout.wellbeing ? wellbeingLabels[workout.wellbeing] : '—'}</strong></p>
-      <p><span>Дискомфорт</span><strong>{workout.discomfort ? 'Да' : 'Нет'}</strong></p>
+      <p><span>Нагрузка</span><strong>RPE {workout.sessionRpe}/10</strong></p>
+      <p><span>Самочувствие после</span><strong>{workout.wellbeing ? wellbeingLabels[workout.wellbeing] : '—'}</strong></p>
+      <p><span>Боль</span><strong>{workout.discomfort ? 'Да' : 'Нет'}</strong></p>
     </div>
-    {workout.discomfort && workout.clientComment && <p className="workout-review-text">{workout.clientComment}</p>}
+    {workout.clientComment && <p className="workout-review-text"><strong>Заметка:</strong> {workout.clientComment}</p>}
   </section>
 
   return <form className="workout-review workout-feedback" aria-labelledby="workout-feedback-title" onSubmit={async (event) => {
     event.preventDefault()
     if (!valid || sessionRpe === undefined || wellbeing === undefined || discomfort === undefined) return
     try {
-      await onSave({ sessionRpe, wellbeing, discomfort, comment: discomfort ? comment : '' })
+      await onSave({ sessionRpe, wellbeing, discomfort, comment: showNote ? comment : '' })
       setSaved(true)
       setEditing(false)
     } catch {
@@ -1099,29 +1111,35 @@ function WorkoutClientFeedback({ workout, canEdit, hasActiveTrainer, saving, err
       // тот же submit, а RPC безопасно дедуплицирует потерянный ответ.
     }
   }}>
-    <div className="workout-review-head"><div><p className="eyebrow">ПОСЛЕ ТРЕНИРОВКИ</p><h2 id="workout-feedback-title">Как прошла тренировка?</h2></div></div>
+    <div className="workout-review-head"><div><h2 id="workout-feedback-title">Как прошла тренировка?</h2></div></div>
     <fieldset className="workout-feedback-fieldset">
-      <legend>Общая тяжесть</legend>
-      <WorkoutRpeScale aria-label="Общая тяжесть по шкале RPE" value={sessionRpe} disabled={saving} onChange={setSessionRpe} />
+      <legend>Нагрузка</legend>
+      <WorkoutRpeScale aria-label="Нагрузка по шкале RPE" value={sessionRpe} disabled={saving} onChange={setSessionRpe} />
     </fieldset>
     <fieldset className="workout-feedback-fieldset">
-      <legend>Самочувствие</legend>
+      <legend>Самочувствие после</legend>
       <div className="workout-feedback-options">
         {(Object.keys(wellbeingLabels) as WorkoutWellbeing[]).map((value) => <WorkoutChoice key={value} className="workout-feedback-option" selected={wellbeing === value} disabled={saving} onClick={() => setWellbeing(value)}>{wellbeingLabels[value]}</WorkoutChoice>)}
       </div>
     </fieldset>
     <fieldset className="workout-feedback-fieldset">
-      <legend>Был дискомфорт?</legend>
+      <legend>Боль или дискомфорт?</legend>
       <div className="workout-feedback-options">
         <WorkoutChoice className="workout-feedback-option" selected={discomfort === false} disabled={saving} onClick={() => setDiscomfort(false)}>Нет</WorkoutChoice>
         <WorkoutChoice className="workout-feedback-option" selected={discomfort === true} tone="destructive" disabled={saving} onClick={() => setDiscomfort(true)}>Да</WorkoutChoice>
       </div>
     </fieldset>
-    {discomfort && <Field label="Что беспокоило?"><textarea aria-label="Пояснение о дискомфорте" rows={3} maxLength={500} placeholder="Где и на каком движении почувствовали дискомфорт" value={comment} onChange={(event) => setComment(event.target.value)} /></Field>}
+    {!showNote && <button type="button" className="link workout-feedback-note-toggle" disabled={saving} onClick={() => setNoteOpen(true)}>Добавить заметку</button>}
+    {showNote && <Field label={discomfort ? 'Где и насколько сильно?' : (sessionRpe ?? 0) >= 9 ? 'Почему было настолько тяжело?' : 'Заметка'}>
+      <textarea aria-label="Заметка к итогам тренировки" rows={3} maxLength={500}
+        placeholder={discomfort ? 'Например: правое плечо, умеренно, при жиме' : (sessionRpe ?? 0) >= 9 ? 'Например: не восстановился или не выспался' : 'Что важно отметить?'}
+        value={comment} onChange={(event) => setComment(event.target.value)} />
+    </Field>}
+    {showNote && !needsExplanation && <button type="button" className="link workout-feedback-note-toggle" disabled={saving} onClick={() => { setNoteOpen(false); setComment('') }}>Убрать заметку</button>}
     {error && <p className="error">{error.message}</p>}
     <div className="actions workout-review-actions workout-action-row">
       {hasFeedback && <WorkoutCta type="button" variant="tertiary" disabled={saving} onClick={() => setEditing(false)}>Отмена</WorkoutCta>}
-      <WorkoutCta type="submit" pending={saving} pendingLabel="Сохраняем…" disabled={!valid}>{hasFeedback ? 'Сохранить изменения' : 'Отправить отзыв'}</WorkoutCta>
+      <WorkoutCta type="submit" pending={saving} pendingLabel="Сохраняем…" disabled={!valid}>Сохранить итоги</WorkoutCta>
     </div>
   </form>
 }
