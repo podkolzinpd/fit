@@ -30,8 +30,14 @@ export type TrainerCatalogFilters = {
 }
 
 export type TrainerCatalogPageOptions = { offset: number; limit: number }
+export const MAX_TRAINER_CATALOG_PAGE_SIZE = 3
+export type TrainerCatalogItem = {
+  publicId: string
+  profile: TrainerProfileDraft
+  isBrandTrainer: boolean
+}
 export type TrainerCatalogPage = {
-  items: Array<ReturnType<typeof response>>
+  items: TrainerCatalogItem[]
   totalCount: number
   nextOffset: number | null
 }
@@ -44,6 +50,22 @@ interface TrainerProfileRow extends QueryResultRow {
   published_at: string | null
   updated_at: string
   version: string | number
+  is_brand_trainer: boolean
+}
+
+interface PublicTrainerProfileRow extends QueryResultRow {
+  public_id: string
+  published_data: TrainerProfileDraft
+  listed_in_catalog: boolean
+  published_at: string | null
+  updated_at: string
+  version: string | number
+  is_brand_trainer: boolean
+}
+
+interface TrainerCatalogRow extends QueryResultRow {
+  public_id: string
+  published_data: TrainerProfileDraft
   is_brand_trainer: boolean
 }
 
@@ -63,6 +85,27 @@ function response(row: TrainerProfileRow) {
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
     version: Number(row.version),
+    isBrandTrainer: row.is_brand_trainer,
+  }
+}
+
+function publicResponse(row: PublicTrainerProfileRow) {
+  return {
+    publicId: row.public_id,
+    draft: row.published_data,
+    published: row.published_data,
+    listedInCatalog: row.listed_in_catalog,
+    publishedAt: row.published_at,
+    updatedAt: row.updated_at,
+    version: Number(row.version),
+    isBrandTrainer: row.is_brand_trainer,
+  }
+}
+
+function catalogResponse(row: TrainerCatalogRow): TrainerCatalogItem {
+  return {
+    publicId: row.public_id,
+    profile: row.published_data,
     isBrandTrainer: row.is_brand_trainer,
   }
 }
@@ -121,7 +164,7 @@ export interface PilotTrainerProfiles {
   publish(session: YandexActorSessionInput): Promise<ReturnType<typeof response>>
   unpublish(session: YandexActorSessionInput): Promise<ReturnType<typeof response>>
   setCatalogListing(session: YandexActorSessionInput, listed: boolean): Promise<ReturnType<typeof response>>
-  getPublic(publicId: string): Promise<ReturnType<typeof response> | null>
+  getPublic(publicId: string): Promise<ReturnType<typeof publicResponse> | null>
   listPublic(filters: TrainerCatalogFilters, page: TrainerCatalogPageOptions): Promise<TrainerCatalogPage>
 }
 
@@ -199,11 +242,13 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
   async getPublic(publicId: string) {
     const connection = await this.pool.connect()
     try {
-      const rows = await connection.query<TrainerProfileRow>(`
-        select * from public.trainer_professional_profiles
+      const rows = await connection.query<PublicTrainerProfileRow>(`
+        select public_id, published_data, listed_in_catalog, published_at,
+          updated_at, version, is_brand_trainer
+        from public.trainer_professional_profiles
         where public_id = $1 and published_data is not null
       `, [publicId])
-      return rows[0] === undefined ? null : response(rows[0])
+      return rows[0] === undefined ? null : publicResponse(rows[0])
     } finally {
       connection.release()
     }
@@ -240,9 +285,10 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
         where ${clauses.join(' and ')}
       `, values)
       const offsetParam = add(page.offset)
-      const limitParam = add(page.limit)
-      const rows = await connection.query<TrainerProfileRow>(`
-        select * from public.trainer_professional_profiles
+      const limitParam = add(Math.min(page.limit, MAX_TRAINER_CATALOG_PAGE_SIZE))
+      const rows = await connection.query<TrainerCatalogRow>(`
+        select public_id, published_data, is_brand_trainer
+        from public.trainer_professional_profiles
         where ${clauses.join(' and ')}
         order by ((published_data->>'acceptingClients')::boolean) desc,
           published_at desc, lower(published_data->>'displayName'), public_id
@@ -250,7 +296,7 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
       `, values)
       const totalCount = Number(countRows[0]?.total ?? 0)
       const next = page.offset + rows.length
-      return { items: rows.map(response), totalCount, nextOffset: next < totalCount ? next : null }
+      return { items: rows.map(catalogResponse), totalCount, nextOffset: next < totalCount ? next : null }
     } finally {
       connection.release()
     }

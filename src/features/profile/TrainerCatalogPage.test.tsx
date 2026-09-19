@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { TrainerCatalogFilters, TrainerProfessionalProfile } from '../../shared/domain'
+import type { TrainerCatalogFilters, TrainerCatalogItem } from '../../shared/domain'
 import { TRAINER_SPECIALTIES } from '../../shared/trainer-profile'
 import { TrainerCatalogPage } from './TrainerCatalogPage'
 
@@ -12,20 +12,13 @@ vi.mock('../../app/data-backend-context', () => ({
   useDataBackend: () => ({ trainerProfiles: { listCatalog } }),
 }))
 
-const profile: TrainerProfessionalProfile = {
+const profile: TrainerCatalogItem = {
   publicId: '11111111-1111-4111-8111-111111111111',
-  draft: {
+  profile: {
     displayName: 'Анна Иванова', bio: 'Помогаю начать заниматься и спокойно двигаться к результату.',
     specialties: ['Силовые'], city: 'Москва', metroStationIds: ['msk-dinamo'], customLocations: ['World Class Динамо', 'Лужники'], trainingModes: ['online', 'in_person'], experienceStartYear: 2020,
     education: '', formats: '', price: 'от 3 000 ₽', acceptingClients: true, avatarDataUrl: null, certificates: [],
   },
-  published: {
-    displayName: 'Анна Иванова', bio: 'Помогаю начать заниматься и спокойно двигаться к результату.',
-    specialties: ['Силовые'], city: 'Москва', metroStationIds: ['msk-dinamo'], customLocations: ['World Class Динамо', 'Лужники'], trainingModes: ['online', 'in_person'], experienceStartYear: 2020,
-    education: '', formats: '', price: 'от 3 000 ₽', acceptingClients: true, avatarDataUrl: null, certificates: [],
-  },
-  listedInCatalog: true,
-  publishedAt: '2026-09-10T09:00:00.000Z', updatedAt: '2026-09-10T09:00:00.000Z', version: 2,
   isBrandTrainer: false,
 }
 
@@ -92,7 +85,7 @@ describe('TrainerCatalogPage', () => {
 
     await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith({
       query: '', specialties: ['Похудение и коррекция фигуры'], city: 'Москва', metroStationIds: ['msk-dinamo'], mode: 'online', acceptingClients: true, brandTrainerOnly: false,
-    }, { offset: 0, limit: 20 }))
+    }, { offset: 0, limit: 3 }))
     expect(screen.getByRole('button', { name: 'Фильтры · 5' })).toBeVisible()
     expect(screen.queryByRole('dialog', { name: 'Фильтры тренеров' })).not.toBeInTheDocument()
   })
@@ -128,7 +121,7 @@ describe('TrainerCatalogPage', () => {
 
     renderPage()
     expect(screen.getByLabelText('Имя тренера')).toHaveValue('Анна')
-    await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith(expect.objectContaining({ query: 'Анна' }), { offset: 0, limit: 20 }))
+    await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith(expect.objectContaining({ query: 'Анна' }), { offset: 0, limit: 3 }))
     await waitFor(() => expect(document.querySelector<HTMLElement>('.content')?.scrollTop).toBe(420))
   })
 
@@ -146,14 +139,13 @@ describe('TrainerCatalogPage', () => {
     await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith({
       query: 'Анна', city: 'Москва', mode: '', acceptingClients: null,
       metroStationIds: [], specialties: [], brandTrainerOnly: false,
-    }, { offset: 0, limit: 20 }))
+    }, { offset: 0, limit: 3 }))
     expect(screen.getByRole('button', { name: 'Фильтры · 1' })).toBeVisible()
   })
 
   it('shows the full result count and loads the next page without replacing the first', async () => {
     const second = { ...profile, publicId: '22222222-2222-4222-8222-222222222222',
-      draft: { ...profile.draft, displayName: 'Мария Петрова' },
-      published: { ...profile.published!, displayName: 'Мария Петрова' } }
+      profile: { ...profile.profile, displayName: 'Мария Петрова' } }
     listCatalog.mockImplementation((_filters: TrainerCatalogFilters, page: { offset: number }) =>
       Promise.resolve(page.offset === 0 ? catalogPage([profile], 2, 1) : catalogPage([second], 2)))
     const user = userEvent.setup()
@@ -164,7 +156,7 @@ describe('TrainerCatalogPage', () => {
 
     expect(await screen.findByText('Мария Петрова')).toBeVisible()
     expect(screen.getByText('Анна Иванова')).toBeVisible()
-    expect(listCatalog).toHaveBeenLastCalledWith({ query: '', specialties: [], city: '', metroStationIds: [], mode: '', acceptingClients: null, brandTrainerOnly: false }, { offset: 1, limit: 20 })
+    expect(listCatalog).toHaveBeenLastCalledWith({ query: '', specialties: [], city: '', metroStationIds: [], mode: '', acceptingClients: null, brandTrainerOnly: false }, { offset: 1, limit: 3 })
     expect(screen.queryByRole('button', { name: 'Показать ещё' })).not.toBeInTheDocument()
   })
 
@@ -206,7 +198,7 @@ describe('TrainerCatalogPage', () => {
 
     await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith(
       expect.objectContaining({ specialties: [...TRAINER_SPECIALTIES] }),
-      { offset: 0, limit: 20 },
+      { offset: 0, limit: 3 },
     ))
   })
 
@@ -230,7 +222,7 @@ describe('TrainerCatalogPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Показать тренеров' }))
     await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith(
       expect.objectContaining({ specialties: [] }),
-      { offset: 0, limit: 20 },
+      { offset: 0, limit: 3 },
     ))
   })
 
@@ -246,7 +238,7 @@ describe('TrainerCatalogPage', () => {
 
     await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith(
       expect.objectContaining({ brandTrainerOnly: true }),
-      { offset: 0, limit: 20 },
+      { offset: 0, limit: 3 },
     ))
     expect(screen.getByRole('button', { name: 'Фильтры · 1' })).toBeVisible()
   })

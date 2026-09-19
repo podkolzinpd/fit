@@ -744,8 +744,14 @@ export interface TrainerCatalogFilters {
   brandTrainerOnly: boolean
 }
 
+export interface TrainerCatalogItem {
+  publicId: UUID
+  profile: TrainerProfileDraft
+  isBrandTrainer: boolean
+}
+
 export interface TrainerCatalogPage {
-  items: TrainerProfessionalProfile[]
+  items: TrainerCatalogItem[]
   totalCount: number
   nextOffset: number | null
 }

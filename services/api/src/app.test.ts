@@ -398,7 +398,9 @@ describe('trainer professional profile', () => {
     publicId: '11111111-1111-4111-8111-111111111111', draft, published: draft,
     listedInCatalog: false,
     publishedAt: '2026-09-10T09:00:00.000Z', updatedAt: '2026-09-10T09:00:00.000Z', version: 2,
+    isBrandTrainer: false,
   }
+  const catalogItem = { publicId: value.publicId, profile: draft, isBrandTrainer: false }
 
   function profiles(): PilotTrainerProfiles {
     return {
@@ -408,7 +410,7 @@ describe('trainer professional profile', () => {
       unpublish: vi.fn().mockResolvedValue({ ...value, published: null, publishedAt: null }),
       setCatalogListing: vi.fn().mockResolvedValue({ ...value, listedInCatalog: true }),
       getPublic: vi.fn().mockResolvedValue(value),
-      listPublic: vi.fn().mockResolvedValue({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null }),
+      listPublic: vi.fn().mockResolvedValue({ items: [catalogItem], totalCount: 1, nextOffset: null }),
     }
   }
 
@@ -434,7 +436,7 @@ describe('trainer professional profile', () => {
 
   it('lists published catalog profiles with validated filters', async () => {
     const pilotTrainerProfiles = profiles()
-    const listPublic = vi.fn().mockResolvedValue({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null })
+    const listPublic = vi.fn().mockResolvedValue({ items: [catalogItem], totalCount: 1, nextOffset: null })
     pilotTrainerProfiles.listPublic = listPublic
     const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
     const response = await app.inject({
@@ -445,8 +447,8 @@ describe('trainer professional profile', () => {
     expect(response.statusCode).toBe(200)
     expect(listPublic).toHaveBeenCalledWith({
       query: 'Анна', specialties: ['Силовые'], city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-aeroport'], mode: 'online', acceptingClients: true, brandTrainerOnly: true,
-    }, { offset: 20, limit: 10 })
-    expect(response.json()).toEqual({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null })
+    }, { offset: 20, limit: 3 })
+    expect(response.json()).toEqual({ items: [catalogItem], totalCount: 1, nextOffset: null })
   })
 
   it('accepts repeated specialty filters', async () => {
@@ -461,7 +463,7 @@ describe('trainer professional profile', () => {
     expect(response.statusCode).toBe(200)
     expect(listPublic).toHaveBeenCalledWith(
       expect.objectContaining({ specialties: ['Силовые', 'Бег'] }),
-      { offset: 0, limit: 20 },
+      { offset: 0, limit: 3 },
     )
   })
 
@@ -474,7 +476,7 @@ describe('trainer professional profile', () => {
     expect(response.statusCode).toBe(200)
     expect(listPublic).toHaveBeenCalledWith(
       expect.objectContaining({ brandTrainerOnly: true }),
-      { offset: 0, limit: 20 },
+      { offset: 0, limit: 3 },
     )
   })
 
