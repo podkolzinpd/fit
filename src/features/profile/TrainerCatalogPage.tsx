@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type Dispatch, type FormEvent, type RefObj
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useDataBackend } from '../../app/data-backend-context'
-import type { TrainerCatalogFilters, TrainerProfessionalProfile } from '../../shared/domain'
+import type { TrainerCatalogFilters, TrainerCatalogItem } from '../../shared/domain'
 import { ChevronDownIcon, CloseIcon } from '../../shared/icons'
 import { moscowMetroStationById } from '../../shared/moscow-metro'
 import { AsyncView, Field, Page, Switch } from '../../shared/ui'
@@ -21,7 +21,7 @@ const emptyFilters: TrainerCatalogFilters = {
 }
 
 const catalogViewKey = 'fit.trainer-catalog.view.v1'
-const catalogPageSize = 20
+const catalogPageSize = 3
 
 interface CatalogViewState {
   draft: TrainerCatalogFilters
@@ -86,9 +86,8 @@ function yearsLabel(value: number): string {
   return `${value} ${word}`
 }
 
-function CatalogCard({ profile, onOpen }: { profile: TrainerProfessionalProfile; onOpen: () => void }) {
-  const published = profile.published
-  if (!published) return null
+function CatalogCard({ profile, onOpen }: { profile: TrainerCatalogItem; onOpen: () => void }) {
+  const published = profile.profile
   const currentYear = new Date().getFullYear()
   const experience = published.experienceStartYear === null
     ? null

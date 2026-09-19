@@ -139,7 +139,7 @@ import {
   readVersionedProgressRequest,
 } from './progress-request.js'
 import { readVitalMediaRequest, type VitalMediaSigner } from './vital-media.js'
-import { readTrainerProfileDraft, TrainerProfileError, type PilotTrainerProfiles, type TrainerCatalogFilters } from './trainer-profile.js'
+import { MAX_TRAINER_CATALOG_PAGE_SIZE, readTrainerProfileDraft, TrainerProfileError, type PilotTrainerProfiles, type TrainerCatalogFilters } from './trainer-profile.js'
 import {
   TrainerDiscoveryError,
   type PilotTrainerDiscovery,
@@ -1067,7 +1067,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return Number.isSafeInteger(parsed) && parsed >= min && parsed <= max ? parsed : undefined
     }
     const offset = readInteger(query.offset, 0, 0, 2_147_483_647)
-    const limit = readInteger(query.limit, 20, 1, 50)
+    const limit = readInteger(query.limit, MAX_TRAINER_CATALOG_PAGE_SIZE, 1, 50)
     const filters: TrainerCatalogFilters = {
       query: textFilter(query.query, 100) ?? '',
       specialties: specialties ?? [],
@@ -1085,7 +1085,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     try {
-      return reply.send(await options.pilotTrainerProfiles.listPublic(filters, { offset, limit }))
+      return reply.send(await options.pilotTrainerProfiles.listPublic(filters, {
+        offset,
+        limit: Math.min(limit, MAX_TRAINER_CATALOG_PAGE_SIZE),
+      }))
     } catch (error) {
       return sendSafeDatabaseFailure(reply, error, 'Trainer catalog query failed')
     }

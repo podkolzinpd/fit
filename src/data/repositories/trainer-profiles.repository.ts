@@ -1,5 +1,5 @@
 import type { TrainerCatalogFilters, TrainerCatalogPage, TrainerCatalogPageOptions, TrainerProfileDraft, TrainerProfessionalProfile } from '../../shared/domain'
-import { parseTrainerCatalogPage, parseTrainerProfile } from '../../shared/trainer-profile'
+import { parseLegacyTrainerCatalogPage, parseTrainerProfile } from '../../shared/trainer-profile'
 import { getYandexMainRoutingConfig } from '../../app/feature-flags'
 import { supabase } from '../queries/client'
 import { toJson } from '../queries/json'
@@ -57,7 +57,7 @@ export const trainerProfilesRepository: TrainerProfilesRepository = {
       p_brand_trainer_only: filters.brandTrainerOnly || undefined,
     })
     if (result.error) throw repositoryError(result.error)
-    return parseTrainerCatalogPage(result.data)
+    return parseLegacyTrainerCatalogPage(result.data)
   },
 }
 

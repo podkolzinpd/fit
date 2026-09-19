@@ -1,7 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-20. База изменений: `d8dbebda` (#1069). Frontend остаётся
+Обновлено: 2026-09-20. База изменений: `a0cba171` (#1070). Frontend остаётся
 на Vercel, а production data plane — принятый Yandex Cloud stage stack. Yandex
 ID является единственным production-входом; app-session, main routing и native
 registration включены глобально.
@@ -78,9 +78,7 @@ Supabase из эксплуатации. До закрытия rollback-окна 
   Production OAuth smoke подтвердил PKCE-переход на `oauth.yandex.ru`, а
   защищённый маршрут и старый password-recovery route возвращаются на единый
   Yandex ID экран без email/password формы.
-- Yandex API покрывает основные profile/client/workout/Live/progress/chat/push
-  read-write сценарии через `x-fit-session`. Ошибка выбранного Yandex backend
-  не должна переключать отдельный запрос обратно на Supabase.
+- Yandex API покрывает основные read-write сценарии без fallback; каталог тренеров отдаёт только опубликованные данные по три карточки, а Supabase adapter приводит legacy RPC к тому же компактному DTO.
 - Yandex Web Push pipeline и production parser развёрнуты; нужны authenticated
   end-to-end smoke push и текущего summary-контракта.
 - Для 670 упражнений Vital Gym Pro подготовлен OIDC/private-runner перенос 2 010

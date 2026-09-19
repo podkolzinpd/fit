@@ -78,8 +78,22 @@ export const trainerProfessionalProfileSchema = z.object({
   isBrandTrainer: z.boolean(),
 })
 
+export const trainerCatalogItemSchema = z.object({
+  publicId: z.uuid(),
+  profile: trainerProfileDraftSchema,
+  isBrandTrainer: z.boolean(),
+})
+
 export const trainerCatalogPageSchema = z.object({
-  items: z.array(trainerProfessionalProfileSchema),
+  items: z.array(trainerCatalogItemSchema),
+  totalCount: z.number().int().nonnegative(),
+  nextOffset: z.number().int().nonnegative().nullable(),
+})
+
+const legacyTrainerCatalogPageSchema = z.object({
+  items: z.array(trainerProfessionalProfileSchema.extend({
+    published: trainerProfileDraftSchema,
+  })),
   totalCount: z.number().int().nonnegative(),
   nextOffset: z.number().int().nonnegative().nullable(),
 })
@@ -109,6 +123,18 @@ export function parseTrainerProfile(value: unknown): TrainerProfessionalProfile 
 
 export function parseTrainerCatalogPage(value: unknown): TrainerCatalogPage {
   return trainerCatalogPageSchema.parse(value)
+}
+
+export function parseLegacyTrainerCatalogPage(value: unknown): TrainerCatalogPage {
+  const page = legacyTrainerCatalogPageSchema.parse(value)
+  return {
+    ...page,
+    items: page.items.map((item) => ({
+      publicId: item.publicId,
+      profile: item.published,
+      isBrandTrainer: item.isBrandTrainer,
+    })),
+  }
 }
 
 export function parseTrainerProfileDraft(value: unknown): TrainerProfileDraft {
