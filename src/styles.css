@@ -1817,6 +1817,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .favorite-workout-remove svg { width:16px; height:16px; }
 .favorite-workouts-limit-note { margin:10px 0 0; font-size:13px; }
 .favorite-workouts-empty { margin:0; font-size:13px; line-height:1.4; }
+.favorite-workouts-error { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:4px 2px; }
+.favorite-workouts-error p { margin:0; color:var(--danger); font-size:13px; }
 .client-home-loading { min-height:84px; display:grid; place-items:center; color:var(--voice-copy); font-size:14px; text-align:center; }
 .client-home-error { display:flex; align-items:center; justify-content:space-between; gap:12px; border-color:var(--danger-border); background:var(--danger-surface); }
 .client-home-error p { margin:0; font-size:13px; line-height:1.35; }
