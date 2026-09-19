@@ -280,8 +280,9 @@ application data and are included in the manifest.
 - [x] Repeat the real full-cohort stage `dry-run` with compressed envelope v3.
   Run `35466016700` exported and transactionally validated all 16,192 rows
   across the 35-table manifest, then rolled the target transaction back.
-- [ ] Use the exact reviewed fingerprint for pinned `apply` and repeat the
-  full-cohort rebuild to confirm the same final checksum.
+- [x] Apply the exact reviewed current snapshot and repeat the full-cohort
+  rebuild. Run `35466744381` performed dry-run, apply and repeated apply for all
+  16,192 rows across 35 tables with the same content fingerprint.
 - [ ] Run one real unlinked client through remote stage dry-run and pinned apply
   before enabling that profile's Yandex ID session or sticky routing.
 - [ ] Freeze writes, validate the selected real cohort and change its sticky
