@@ -191,7 +191,7 @@ fingerprint фиксирует точное содержимое всего по
 Режимы выполняются последовательно:
 
 - `audit` — одна `REPEATABLE READ READ ONLY` транзакция в Supabase; показывает
-  только fingerprint, таблицы, количества строк и размер encrypted envelope;
+  только fingerprint, таблицы, количества строк и размер encrypted wire body;
 - `dry-run` — повторяет audit, передаёт envelope только в памяти private runner
   и откатывает полную target-транзакцию после constraints/checksum validation;
 - `apply` — сначала выполняет dry-run, затем commit и обязательный повторный
@@ -207,8 +207,11 @@ fingerprint фиксирует точное содержимое всего по
 тело ответа, значения строк и database error message в Actions logs не попадают.
 
 Artifact не записывается в GitHub Artifacts, workspace или Object Storage.
-Размер JSON body ограничен 3 400 000 байт: это оставляет запас относительно
-неизменяемого
+Envelope v3 передаётся как raw encrypted binary body; format, salt, IV и auth
+tag находятся в проверяемых служебных заголовках. Это убирает Base64/JSON
+накладные расходы, не меняя шифрование, единый snapshot или атомарную target-
+транзакцию. Размер binary body ограничен 3 400 000 байт: это оставляет запас
+относительно неизменяемого
 [лимита Yandex Serverless Containers](https://yandex.cloud/ru/docs/serverless-containers/concepts/limits)
 3,5 МБ на весь HTTP-запрос вместе с заголовками. Превышение останавливает
 workflow после read-only audit;
