@@ -121,6 +121,19 @@ export function getYandexNativeRegistrationConfig(): YandexIdPilotConfig | null 
   return getYandexPublicConfig()
 }
 
+// Финальный auth cutover — отдельный общий switch. Он становится эффективным
+// только поверх готовых app-session, native registration и sticky Yandex
+// routing, чтобы один ошибочный env не оставил пользователя без рабочего пути.
+export function getYandexOnlyAuthConfig(): YandexIdPilotConfig | null {
+  if (import.meta.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true') return null
+  if (getYandexNativeRegistrationConfig() === null) return null
+  return getYandexPublicConfig()
+}
+
+export function isYandexOnlyAuthEnabled(): boolean {
+  return getYandexOnlyAuthConfig() !== null
+}
+
 // Sticky routing основного Assistant — отдельный default-off rollout. Он не
 // переиспользует allowlist входа: после включения выбранный профиль работает
 // только с Yandex API и не откатывает отдельные запросы на Supabase.

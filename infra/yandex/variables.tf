@@ -29,6 +29,18 @@ variable "environment" {
   }
 }
 
+variable "yandex_native_registration_enabled" {
+  description = "Enable native Yandex ID account registration in the API. Default-off cutover switch."
+  type        = bool
+  default     = false
+}
+
+variable "yandex_only_auth_enabled" {
+  description = "Enable the one-time legacy recovery and Yandex-only authentication endpoints. Default-off cutover switch."
+  type        = bool
+  default     = false
+}
+
 variable "media_bucket_override" {
   description = "Optional existing private Object Storage bucket used by the API for media. Empty uses the stage-managed bucket."
   type        = string

@@ -40,6 +40,19 @@ type RequestOptions = {
 export class SupabaseBridge {
   constructor(private readonly config: SupabaseBridgeConfig, private readonly request = fetch) {}
 
+  async passwordAccessToken(email: string, password: string): Promise<string | undefined> {
+    const response = await this.call('/auth/v1/token?grant_type=password', {
+      body: { email, password },
+      method: 'POST',
+    })
+    if (response.status === 400 || response.status === 401) return undefined
+    if (!response.ok) throw new SupabaseBridgeError(response.status, 'supabase_auth_failed')
+    const value = await response.json() as { access_token?: unknown }
+    return typeof value.access_token === 'string' && value.access_token.length > 0
+      ? value.access_token
+      : undefined
+  }
+
   async authenticatedUserId(actorToken: string): Promise<string | undefined> {
     const response = await this.call('/auth/v1/user', { actorToken })
     if (!response.ok) return undefined
