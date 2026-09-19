@@ -34,10 +34,11 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   только связанным профилям. Gate не меняет app-session, backend routing и
   rollout assignment; продуктовые данные продолжают идти через Supabase.
 - Экран технических работ и блокировка product runtime подготовлены как
-  `VITE_MAINTENANCE_MODE`, строго default-off. Флаг не включён: при точном
-  `true` любой маршрут заменяется до монтирования auth/query/data providers.
-  Независимый owner-only Supabase write gate default-off блокирует DML старых
-  вкладок, RPC и background writers на 37 source-таблицах.
+  `VITE_MAINTENANCE_MODE`, строго default-off в коде. На production флаг включён
+  оператором 2026-09-19: при точном `true` любой маршрут заменяется до
+  монтирования auth/query/data providers. Независимый owner-only Supabase write
+  gate также переведён в `paused` и блокирует DML старых вкладок, RPC и
+  background writers на 38 source-таблицах.
 
 ## Yandex Cloud — подтверждённая база
 
@@ -49,20 +50,27 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   audit — 14 819 строк, apply — 14 805 вставок, повторный apply — 0. Запуск
   использовал `media_validation: allow-missing`, поэтому не является финальной
   cutover-репетицией.
-- Текущий full-cohort manifest расширен до 34 таблиц: в snapshot входят
-  `user_legal_acceptances` и `account_deletion_requests`. Новый import атомарно
+- Текущий full-cohort manifest расширен до 35 таблиц: в snapshot входят
+  `user_legal_acceptances`, `account_deletion_requests` и `favorite_workouts`.
+  Новый import атомарно
   пересобирает переносимые таблицы из свежего snapshot вместо insert-only
   конфликта на изменившихся строках. Yandex identity/session/rollout строки
   профилей из snapshot временно сохраняются и восстанавливаются, а устаревшие
   linked-привязки профилей вне snapshot удаляются; наличие нативного
   Yandex-профиля блокирует операцию до удаления данных.
-- Локальная двухпроходная репетиция 34 таблиц снова зелёная. Tenant migration
+- Локальная двухпроходная репетиция 35 таблиц снова зелёная. Tenant migration
   включает transaction-local restore mode, поэтому исторические progress/goal
   строки не запускают побочное обновление `clients.updated_at`; обычные
   продуктовые записи по-прежнему обновляют source timestamp. Оба чистых прогона
   подтвердили одинаковые trainer, standalone-client и full-cohort fingerprints,
-  повторный apply и финальный checksum.
-- Свежий remote dry-run подтвердил 34 таблицы и 16 111 строк, включая 124 legal
+  повторный apply и финальный checksum; текущий full-cohort fixture содержит
+  69 строк.
+- Свежий read-only source audit при `paused` write gate подтвердил все 35
+  таблиц и 16 192 строки: `favorite_workouts` — 1, legal acceptance — 128,
+  deletion requests — 0. Зашифрованный snapshot занял 2 738 473 байта;
+  source fingerprint стабилен до снятия gate. Target dry-run требуется запускать
+  из `main`, потому что Yandex OIDC намеренно не доверяет feature-веткам.
+- Предыдущий remote dry-run подтвердил 34 таблицы и 16 111 строк, включая 124 legal
   acceptance и 0 deletion requests. Binary ciphertext занял 2 613 883 байта
   вместо 3 484 918 байт JSON envelope; target проверил 16 111 inserts и откатил
   транзакцию. Media policy — `allow-missing`; apply не запускался.
