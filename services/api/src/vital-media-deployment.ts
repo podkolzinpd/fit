@@ -2,7 +2,6 @@ import { createHash, randomUUID } from 'node:crypto'
 
 import {
   DeleteObjectCommand,
-  GetBucketVersioningCommand,
   GetObjectCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
@@ -26,6 +25,8 @@ const VERIFY_CONCURRENCY = 8
 
 export const VITAL_MEDIA_BINARY_CONTENT_TYPE = 'application/vnd.fit.vital-media'
 export const VITAL_MEDIA_APPLY_CONFIRMATION = 'APPLY_VITAL_MEDIA_TO_YANDEX_STAGE'
+export const VITAL_MEDIA_BUCKET_CONFIGURATION_CONFIRMATION =
+  'PRIVATE_VERSIONED_BUCKET_INSPECTED_BY_YC_CONTROL_PLANE'
 
 export interface VitalMediaManifestFile {
   bytes: number
@@ -45,7 +46,7 @@ export interface VitalMediaAuditReport {
 
 export interface VitalMediaDeploymentService {
   audit(files: readonly VitalMediaManifestFile[]): Promise<VitalMediaAuditReport>
-  preflight(allowWrite: boolean): Promise<{ bucket: string; private: true; versioned: true }>
+  preflight(allowWrite: boolean): Promise<{ bucket: string; private: true }>
   upload(file: VitalMediaManifestFile, body: Uint8Array): Promise<'skipped' | 'uploaded'>
 }
 
@@ -148,16 +149,7 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
     })
   }
 
-  async preflight(allowWrite: boolean): Promise<{ bucket: string; private: true; versioned: true }> {
-    const versioning = await this.client.send(new GetBucketVersioningCommand({
-      Bucket: this.config.bucket,
-    })).catch(() => {
-      throw new VitalMediaDeploymentError('vital_media_bucket_inspection_failed')
-    })
-    if (versioning.Status !== 'Enabled') {
-      throw new VitalMediaDeploymentError('vital_media_bucket_not_versioned')
-    }
-
+  async preflight(allowWrite: boolean): Promise<{ bucket: string; private: true }> {
     const anonymousList = await fetch(
       `${OBJECT_STORAGE_ENDPOINT}/${this.config.bucket}?list-type=2&max-keys=1&prefix=${encodeURIComponent(VITAL_PREFIX)}`,
       { redirect: 'manual' },
@@ -167,7 +159,7 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
     }
 
     if (allowWrite) await this.writeProbe()
-    return { bucket: this.config.bucket, private: true, versioned: true }
+    return { bucket: this.config.bucket, private: true }
   }
 
   async upload(
