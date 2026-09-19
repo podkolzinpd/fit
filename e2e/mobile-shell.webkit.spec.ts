@@ -24,6 +24,35 @@ async function login(page: import('@playwright/test').Page, email: string) {
   await expect(page).toHaveURL(/\/me$/)
 }
 
+test('trainer invitation name stays inside the visible iPhone viewport above the keyboard', async ({ page }) => {
+  await loginAsTrainer(page)
+  await page.goto('/clients')
+  await page.getByRole('button', { name: 'Пригласить спортсмена' }).click()
+  await page.getByLabel('Имя спортсмена').focus()
+  await page.evaluate(() => {
+    document.documentElement.style.setProperty('--app-visible-height', '420px')
+    document.documentElement.style.setProperty('--app-viewport-offset-top', '0px')
+  })
+
+  const geometry = await page.locator('.invitation-name-overlay').evaluate((overlay) => {
+    const overlayBox = overlay.getBoundingClientRect()
+    const dialogBox = overlay.querySelector('.invitation-name-dialog')!.getBoundingClientRect()
+    const inputBox = overlay.querySelector('input')!.getBoundingClientRect()
+    return {
+      overlayHeight: overlayBox.height,
+      overlayBottom: overlayBox.bottom,
+      dialogTop: dialogBox.top,
+      dialogBottom: dialogBox.bottom,
+      inputBottom: inputBox.bottom,
+    }
+  })
+
+  expect(geometry.overlayHeight).toBe(420)
+  expect(geometry.dialogTop).toBeGreaterThanOrEqual(0)
+  expect(geometry.dialogBottom).toBeLessThanOrEqual(geometry.overlayBottom)
+  expect(geometry.inputBottom).toBeLessThanOrEqual(geometry.overlayBottom)
+})
+
 test('chat entry and conversation list fit the iPhone shell', async ({ page }) => {
   await login(page, 'client@fit.local')
   const entry = page.getByRole('link', { name: /Сообщения/ })
