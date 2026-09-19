@@ -207,11 +207,55 @@ fingerprint фиксирует точное содержимое всего по
 тело ответа, значения строк и database error message в Actions logs не попадают.
 
 Artifact не записывается в GitHub Artifacts, workspace или Object Storage.
-Размер запроса ограничен 3 МиБ; превышение останавливает workflow после
-read-only audit. Workflow не меняет sticky routing, Yandex ID assignment,
+Размер JSON body ограничен 3 400 000 байт: это оставляет запас относительно
+неизменяемого
+[лимита Yandex Serverless Containers](https://yandex.cloud/ru/docs/serverless-containers/concepts/limits)
+3,5 МБ на весь HTTP-запрос вместе с заголовками. Превышение останавливает
+workflow после read-only audit;
+дальнейший рост требует chunk/Object Storage transport, а не повышения этого
+предела. Workflow не меняет sticky routing, Yandex ID assignment,
 production frontend или Supabase. Перенос на stage оплачивает только фактические
 холодные вызовы уже существующего Serverless Container; новый постоянно
 работающий или provisioned ресурс не создаётся.
+
+## Окно технических работ
+
+Глобальный build-time switch остаётся default-off:
+
+```text
+VITE_MAINTENANCE_MODE=false
+```
+
+Только точное `true` заменяет любой маршрут отдельным экраном технических
+работ до монтирования auth, query и data providers. Поэтому новая сборка не
+восстанавливает сессии, не читает продуктовые данные и не запускает product
+mutations; это не визуальный overlay поверх работающего приложения. Единственное
+действие экрана — перезагрузить страницу и повторно проверить значение флага.
+
+Флаг меняется только после прямой команды владельца продукта и требует нового
+Vercel deployment. Уже открытая вкладка со старым JS bundle не узнает о новом
+build-time значении до reload, поэтому перед финальным snapshot обязателен
+короткий drain: дождаться распространения deployment, обновить контролируемые
+клиенты и подтвердить отсутствие новых source mutations. Сам frontend-флаг не
+является блокировкой PostgreSQL для старого bundle или внешнего service-role
+процесса; producer/outbox и служебные записи останавливаются и проверяются
+отдельно владельцем cutover.
+
+Порядок включения после отдельной команды:
+
+1. Установить `VITE_MAINTENANCE_MODE=true`, выполнить production deployment и
+   проверить прямые `/auth`, `/clients` и `/workouts/<id>/live` на 390/430 px.
+2. Дождаться drain уже открытых клиентов и фоновых mutations; не включать
+   Yandex routing или native registration.
+3. Выполнить свежий `full-cohort` dry-run/apply/repeat/validate с одинаковой
+   media policy и проверить 34 таблицы, counts и checksums.
+4. Включить `linked-ready` assignments, провести smoke обеих ролей и только
+   затем включать app-session/main-routing/native-registration switches.
+5. После успешного smoke установить `VITE_MAINTENANCE_MODE=false` и выполнить
+   ещё один production deployment.
+
+Выключение окна до успешного smoke не означает безопасный rollback после первой
+Yandex-записи: обратный перенос всё равно нужен отдельно.
 
 ## Первый запуск Yandex push pipeline
 
