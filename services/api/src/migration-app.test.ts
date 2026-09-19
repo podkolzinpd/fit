@@ -28,7 +28,6 @@ import type { BrotliTenantMigrationEnvelope } from './tenant-migration/types.js'
 import {
   VITAL_MEDIA_APPLY_CONFIRMATION,
   VITAL_MEDIA_BINARY_CONTENT_TYPE,
-  VITAL_MEDIA_BUCKET_CONFIGURATION_CONFIRMATION,
   type VitalMediaDeploymentService,
 } from './vital-media-deployment.js'
 
@@ -107,10 +106,13 @@ describe('stage Vital media deployment', () => {
       unexpected: 0,
       verified: 2_010,
     })
-    const preflight = vi.fn().mockResolvedValue({
+    const preflight = vi.fn((allowWrite: boolean) => Promise.resolve({
       bucket: 'fit-media-example',
       private: true as const,
-    })
+      versioning: allowWrite
+        ? 'verified_by_write_probe' as const
+        : 'not_probed_read_only' as const,
+    }))
     const upload = vi.fn().mockResolvedValue('uploaded' as const)
     const deployment: VitalMediaDeploymentService = {
       audit,
@@ -144,42 +146,36 @@ describe('stage Vital media deployment', () => {
 
   it('keeps the bucket probe read-only unless apply is confirmed exactly', async () => {
     const { app, preflight } = buildVitalMediaDeployment()
-    const bucketHeaders = {
-      'x-fit-vital-media-bucket-confirmation':
-        VITAL_MEDIA_BUCKET_CONFIGURATION_CONFIRMATION,
-    }
     const rejected = await app.inject({
       method: 'POST',
       url: '/stage/vital-media/preflight',
-      headers: bucketHeaders,
       payload: { allowWrite: true },
-    })
-    const unverifiedBucket = await app.inject({
-      method: 'POST',
-      url: '/stage/vital-media/preflight',
-      payload: { allowWrite: false },
     })
     const audited = await app.inject({
       method: 'POST',
       url: '/stage/vital-media/preflight',
-      headers: bucketHeaders,
       payload: { allowWrite: false },
     })
     const confirmed = await app.inject({
       method: 'POST',
       url: '/stage/vital-media/preflight',
       headers: {
-        ...bucketHeaders,
         'x-fit-vital-media-confirmation': VITAL_MEDIA_APPLY_CONFIRMATION,
       },
       payload: { allowWrite: true },
     })
 
     expect(rejected.statusCode).toBe(403)
-    expect(unverifiedBucket.statusCode).toBe(403)
     expect(audited.statusCode).toBe(200)
-    expect(audited.json()).toMatchObject({ private: true, versioned: true })
+    expect(audited.json()).toMatchObject({
+      private: true,
+      versioning: 'not_probed_read_only',
+    })
     expect(confirmed.statusCode).toBe(200)
+    expect(confirmed.json()).toMatchObject({
+      private: true,
+      versioning: 'verified_by_write_probe',
+    })
     expect(preflight).toHaveBeenNthCalledWith(1, false)
     expect(preflight).toHaveBeenNthCalledWith(2, true)
   })
