@@ -521,6 +521,36 @@ switch:
 VITE_YANDEX_APP_SESSION_ENABLED=true
 ```
 
+Финальный единый вход доставляется отдельным default-off набором:
+
+```text
+# Yandex API container (Terraform repository variables)
+YC_STAGE_YANDEX_NATIVE_REGISTRATION_ENABLED=true
+YC_STAGE_YANDEX_ONLY_AUTH_ENABLED=true
+
+# Vercel Production Environment
+VITE_YANDEX_APP_SESSION_ENABLED=true
+VITE_YANDEX_MAIN_ROUTING_ENABLED=true
+VITE_YANDEX_NATIVE_REGISTRATION_ENABLED=true
+VITE_YANDEX_ONLY_AUTH_ENABLED=true
+```
+
+`VITE_YANDEX_ONLY_AUTH_ENABLED` эффективен только при всех трёх frontend
+зависимостях и валидных OAuth/API settings. Серверные recovery/registration
+handoff endpoints скрыты с `404`, пока `YANDEX_ONLY_AUTH_ENABLED` не равен
+точному `true`; создание нового профиля дополнительно требует
+`YANDEX_NATIVE_REGISTRATION_ENABLED=true`. Обычный merge/deploy не включает ни
+один из этих switches: stage Terraform читает отсутствующие repository
+variables как `false`.
+
+Не включайте frontend раньше server revision. Порядок cutover: maintenance →
+fresh 34-table apply → repeat checksum → linked-ready assignments → server
+variables и успешный stage deploy → smoke linked/recovery/native/invite →
+frontend variables и production deployment → снять maintenance. При неверных
+старых credentials пользователь должен получить retry, а не автоматический
+пустой профиль. После первой Yandex mutation rollback выполняется по playbook,
+а не простым возвратом Supabase UI.
+
 Без точного `true` вход через Yandex ID выключен. Публичного UUID allowlist для
 app-session больше нет: настоящая персональная граница — связанная строка
 `auth_identities` и включённый `profile_rollout_assignments` со значениями

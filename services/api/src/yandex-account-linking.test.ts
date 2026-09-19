@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { SupabaseBridge } from './supabase-bridge.js'
-import { SupabaseExistingActorProvider } from './yandex-account-linking.js'
+import {
+  SupabaseExistingActorProvider,
+  SupabaseExistingCredentialsProvider,
+} from './yandex-account-linking.js'
 
 const config = {
   url: 'https://supabase.example.test',
@@ -85,5 +88,53 @@ describe('SupabaseExistingActorProvider', () => {
     await expect(new SupabaseExistingActorProvider(
       new SupabaseBridge(config, request),
     ).resolveActor('existing-session')).resolves.toBeUndefined()
+  })
+})
+
+describe('SupabaseExistingCredentialsProvider', () => {
+  it('uses password grant once and resolves the exact authenticated profile', async () => {
+    const request = vi.fn<typeof fetch>().mockImplementation((input, init) => {
+      const url = requestUrl(input)
+      if (url.endsWith('/auth/v1/token?grant_type=password')) {
+        expect(init?.body).toBe(JSON.stringify({
+          email: 'person@example.test',
+          password: 'secret-password',
+        }))
+        return Promise.resolve(Response.json({ access_token: 'temporary-access-token' }))
+      }
+      if (url.endsWith('/auth/v1/user')) return Promise.resolve(Response.json({ id: actorId }))
+      if (url.includes('/rest/v1/profiles?')) {
+        return Promise.resolve(Response.json([{
+          id: actorId,
+          first_name: 'Fit',
+          last_name: null,
+          timezone: 'Europe/Moscow',
+          account_role: 'client',
+          created_at: '2026-08-01T10:00:00.000Z',
+          updated_at: '2026-08-02T10:00:00.000Z',
+        }]))
+      }
+      if (url.includes('/rest/v1/trainers?')) return Promise.resolve(Response.json([]))
+      return Promise.resolve(new Response(null, { status: 404 }))
+    })
+
+    await expect(new SupabaseExistingCredentialsProvider(
+      new SupabaseBridge(config, request),
+    ).resolveCredentials('person@example.test', 'secret-password')).resolves.toMatchObject({
+      profile: { id: actorId, accountRole: 'client' },
+    })
+    expect(request.mock.calls.every(([input]) =>
+      !requestUrl(input).includes('person@example.test')
+      && !requestUrl(input).includes('secret-password'))).toBe(true)
+  })
+
+  it('returns no actor for rejected credentials without querying profile data', async () => {
+    const request = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({ error: 'invalid_grant' }, { status: 400 }),
+    )
+    await expect(new SupabaseExistingCredentialsProvider(
+      new SupabaseBridge(config, request),
+    ).resolveCredentials('person@example.test', 'wrong-password')).resolves.toBeUndefined()
+    expect(request).toHaveBeenCalledOnce()
   })
 })

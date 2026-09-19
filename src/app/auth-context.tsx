@@ -3,7 +3,7 @@ import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, 
 import type { SessionActor } from '../shared/domain'
 import { authRepository } from '../data/repositories/auth.repository'
 import { yandexPilotRepository } from '../data/repositories/yandex-pilot.repository'
-import { isYandexMainRoutingEnabled } from './feature-flags'
+import { isYandexMainRoutingEnabled, isYandexOnlyAuthEnabled } from './feature-flags'
 import { useOptionalYandexAppSession } from './yandex-app-session-context'
 
 interface AuthUser {
@@ -135,11 +135,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const yandexRoutingEnabled = yandexSession?.session !== null
     && yandexSession?.session !== undefined
     && isYandexMainRoutingEnabled()
-  const actor = yandexRoutingEnabled ? yandexActor : supabaseActor
-  const loading = yandexRoutingEnabled
+  const yandexOnlyAuthEnabled = isYandexOnlyAuthEnabled()
+  const actor = yandexOnlyAuthEnabled
+    ? yandexActor
+    : yandexRoutingEnabled ? yandexActor : supabaseActor
+  const loading = yandexOnlyAuthEnabled
+    ? yandexSession?.loading ?? false
+    : yandexRoutingEnabled
     ? yandexSession.loading
     : Boolean(yandexSession?.loading && import.meta.env.VITE_YANDEX_MAIN_ROUTING_ENABLED === 'true') || supabaseLoading
-  const error = yandexRoutingEnabled
+  const error = yandexOnlyAuthEnabled
+    ? yandexActor === null
+      && yandexSession?.session !== null
+      && yandexSession?.session !== undefined
+      ? 'Yandex ID профиль не содержит данных выбранной роли.'
+      : yandexSession?.error ?? null
+    : yandexRoutingEnabled
     ? yandexActor === null ? 'Yandex ID профиль не содержит данных выбранной роли.' : yandexSession.error
     : supabaseError
 

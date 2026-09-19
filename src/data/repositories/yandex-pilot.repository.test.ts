@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { yandexPilotRepository } from './yandex-pilot.repository'
+import {
+  YandexAccountSetupRequiredError,
+  yandexPilotRepository,
+} from './yandex-pilot.repository'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 
 const queries = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   exchangeCodeForAppSession: vi.fn(),
   registerYandexAccount: vi.fn(),
+  recoverYandexAccount: vi.fn(),
+  completeYandexRegistration: vi.fn(),
   getAppSession: vi.fn(),
   revokeAppSession: vi.fn(),
   linkYandexAccount: vi.fn(),
@@ -194,6 +199,8 @@ describe('yandexPilotRepository', () => {
     queries.exchangeCodeForSession.mockReset()
     queries.exchangeCodeForAppSession.mockReset()
     queries.registerYandexAccount.mockReset()
+    queries.recoverYandexAccount.mockReset()
+    queries.completeYandexRegistration.mockReset()
     queries.getAppSession.mockReset()
     queries.revokeAppSession.mockReset()
     queries.linkYandexAccount.mockReset()
@@ -339,6 +346,52 @@ describe('yandexPilotRepository', () => {
       'https://stage.example.test',
       'code',
       'verifier',
+    )).resolves.toEqual(appSession)
+  })
+
+  it('returns a validated setup handoff without exposing the Yandex subject', async () => {
+    queries.exchangeCodeForAppSession.mockResolvedValue(
+      new Response(JSON.stringify({
+        error: 'yandex_identity_unlinked',
+        handoff: {
+          token: 'h'.repeat(43),
+          expiresAt: '2099-09-19T12:10:00.000Z',
+        },
+      }), { status: 409 }),
+    )
+
+    const result = yandexPilotRepository.exchangeCodeForAppSession(
+      'https://stage.example.test',
+      'code',
+      'verifier',
+    )
+    await expect(result).rejects.toBeInstanceOf(YandexAccountSetupRequiredError)
+    await expect(result).rejects.toMatchObject({
+      handoff: {
+        token: 'h'.repeat(43),
+        expiresAt: '2099-09-19T12:10:00.000Z',
+      },
+    })
+  })
+
+  it('validates recovered and newly registered app sessions', async () => {
+    queries.recoverYandexAccount.mockResolvedValue(
+      new Response(JSON.stringify(appSession), { status: 200 }),
+    )
+    queries.completeYandexRegistration.mockResolvedValue(
+      new Response(JSON.stringify(appSession), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.recoverYandexAccount(
+      'https://stage.example.test',
+      { handoffToken: 'h'.repeat(43), email: 'person@example.test', password: 'secret-password' },
+    )).resolves.toEqual(appSession)
+    await expect(yandexPilotRepository.completeYandexRegistration(
+      'https://stage.example.test',
+      {
+        handoffToken: 'h'.repeat(43), accountRole: 'trainer', firstName: 'Ирина',
+        timezone: 'Europe/Moscow', termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION,
+      },
     )).resolves.toEqual(appSession)
   })
 

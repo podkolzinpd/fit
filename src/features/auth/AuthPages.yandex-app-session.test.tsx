@@ -16,6 +16,7 @@ import {
   readPendingInvitationLink,
 } from './invitation-link-continuation'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
+import { YandexAccountSetupRequiredError } from '../../data/repositories/yandex-pilot.repository'
 
 const PROFILE_ID = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
 const session = {
@@ -60,9 +61,12 @@ vi.mock('../../app/yandex-app-session-context', () => ({
 const repository = vi.hoisted(() => ({
   exchangeCodeForAppSession: vi.fn(),
   registerYandexAccount: vi.fn(),
+  recoverYandexAccount: vi.fn(),
+  completeYandexRegistration: vi.fn(),
   revokeAppSession: vi.fn(),
 }))
-vi.mock('../../data/repositories/yandex-pilot.repository', () => ({
+vi.mock('../../data/repositories/yandex-pilot.repository', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../data/repositories/yandex-pilot.repository')>(),
   yandexPilotRepository: repository,
 }))
 
@@ -106,6 +110,8 @@ describe('Yandex app session auth flow', () => {
     signOut.mockReset().mockResolvedValue(undefined)
     repository.exchangeCodeForAppSession.mockReset().mockResolvedValue(session)
     repository.registerYandexAccount.mockReset().mockResolvedValue(session)
+    repository.recoverYandexAccount.mockReset().mockResolvedValue(session)
+    repository.completeYandexRegistration.mockReset().mockResolvedValue(session)
     repository.revokeAppSession.mockReset().mockResolvedValue(undefined)
     authState.mockReset().mockReturnValue({ actor: null, loading: false, error: null })
     appSessionState.mockReset().mockReturnValue({
@@ -140,6 +146,19 @@ describe('Yandex app session auth flow', () => {
     expect(screen.getByLabelText('Email')).toBeVisible()
     expect(screen.getByLabelText('Пароль')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Войти по email' })).toHaveClass('secondary')
+  })
+
+  it('shows only Yandex ID when the final auth cutover flag and its dependencies are enabled', () => {
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
+    render(<MemoryRouter><AuthPage /></MemoryRouter>)
+
+    expect(screen.getByRole('button', { name: 'Продолжить с Yandex ID' })).toHaveClass('primary')
+    expect(screen.queryByLabelText('Email')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Пароль')).not.toBeInTheDocument()
+    expect(screen.queryByText('Забыли пароль?')).not.toBeInTheDocument()
+    expect(screen.queryByText('Создать аккаунт')).not.toBeInTheDocument()
   })
 
   it('keeps the existing internal return path for an email-authenticated account', async () => {
@@ -360,6 +379,83 @@ describe('Yandex app session auth flow', () => {
     )
     expect(establish).toHaveBeenCalledWith(session)
     expect(window.location.search).toBe('')
+  })
+
+  it('links an existing profile from the one-time Yandex handoff', async () => {
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
+    repository.exchangeCodeForAppSession.mockRejectedValueOnce(
+      new YandexAccountSetupRequiredError({
+        token: 'h'.repeat(43),
+        expiresAt: '2099-09-19T12:10:00.000Z',
+      }),
+    )
+    window.history.replaceState(null, '', `/auth/yandex/callback${await appCallbackSearch()}`)
+    render(<MemoryRouter initialEntries={['/auth/yandex/callback']}>
+      <Routes>
+        <Route path="/auth/yandex/callback" element={<YandexPilotCallbackPage />} />
+        <Route path="/auth/yandex/session" element={<p>recovered session</p>} />
+      </Routes>
+    </MemoryRouter>)
+
+    expect(await screen.findByRole('heading', { name: 'У вас уже был аккаунт FIT?' })).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Да, был аккаунт' }))
+    fireEvent.change(screen.getByLabelText('Email старого аккаунта'), {
+      target: { value: 'person@example.test' },
+    })
+    fireEvent.change(screen.getByLabelText('Пароль старого аккаунта'), {
+      target: { value: 'secret-password' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Связать и продолжить' }))
+
+    expect(await screen.findByText('recovered session')).toBeVisible()
+    expect(repository.recoverYandexAccount).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      {
+        handoffToken: 'h'.repeat(43),
+        email: 'person@example.test',
+        password: 'secret-password',
+      },
+    )
+    expect(establish).toHaveBeenCalledWith(session)
+  })
+
+  it('creates a new profile only after the user explicitly chooses that path', async () => {
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
+    repository.exchangeCodeForAppSession.mockRejectedValueOnce(
+      new YandexAccountSetupRequiredError({
+        token: 'h'.repeat(43),
+        expiresAt: '2099-09-19T12:10:00.000Z',
+      }),
+    )
+    window.history.replaceState(null, '', `/auth/yandex/callback${await appCallbackSearch()}`)
+    render(<MemoryRouter initialEntries={['/auth/yandex/callback']}>
+      <Routes>
+        <Route path="/auth/yandex/callback" element={<YandexPilotCallbackPage />} />
+        <Route path="/auth/yandex/session" element={<p>new session</p>} />
+      </Routes>
+    </MemoryRouter>)
+
+    await screen.findByRole('heading', { name: 'У вас уже был аккаунт FIT?' })
+    expect(repository.completeYandexRegistration).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Нет, создать новый' }))
+    fireEvent.change(screen.getByLabelText('Имя'), { target: { value: 'Ирина' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Создать аккаунт' }))
+
+    expect(await screen.findByText('new session')).toBeVisible()
+    expect(repository.completeYandexRegistration).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      expect.objectContaining({
+        handoffToken: 'h'.repeat(43),
+        accountRole: 'trainer',
+        firstName: 'Ирина',
+        termsVersion: TERMS_VERSION,
+        privacyVersion: PRIVACY_VERSION,
+      }),
+    )
   })
 
   it('returns a linked Yandex account to the pending invitation', async () => {
