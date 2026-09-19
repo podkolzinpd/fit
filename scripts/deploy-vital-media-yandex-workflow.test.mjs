@@ -22,8 +22,10 @@ test('deploys Vital media through the private OIDC migration runtime', () => {
 test('requires the reviewed package contract, full readback and signed URL smoke', () => {
   assert.match(script, /validateVitalGymProMediaManifest/)
   assert.match(script, /verified_by_write_probe/)
+  assert.match(script, /enumeration !== 'manifest_only'/)
   assert.match(service, /vital_media_probe_version_missing/)
   assert.match(service, /VersionId: versionId/)
+  assert.doesNotMatch(service, /ListObjectsV2Command/)
   assert.match(script, /verified !== 2_010/)
   assert.match(script, /JSON\.stringify\(after\) !== JSON\.stringify\(repeated\)/)
   assert.match(script, /x-fit-session/)

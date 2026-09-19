@@ -89,16 +89,15 @@ jobs:
             (.mode == "audit" or .mode == "apply")
             and .objects == 2010
             and .bytes == 71514430
+            and .enumeration == "manifest_only"
             and (.verified | type == "number")
             and (.missing | type == "number")
             and (.mismatched | type == "number")
-            and (.unexpected | type == "number")
             and (.fingerprint | test("^[a-f0-9]{16}$"))
             and (.mode != "apply" or (
               .verified == 2010
               and .missing == 0
               and .mismatched == 0
-              and .unexpected == 0
               and .uploaded + .skipped == 2010
               and .signedUrlSmoke == true
             ))
@@ -110,7 +109,7 @@ jobs:
             "Verified: " + (.verified | tostring),
             "Missing: " + (.missing | tostring),
             "Mismatched: " + (.mismatched | tostring),
-            "Unexpected: " + (.unexpected | tostring),
+            "Enumeration: " + .enumeration,
             "Uploaded: " + ((.uploaded // 0) | tostring),
             "Skipped: " + ((.skipped // 0) | tostring),
             "Fingerprint: " + .fingerprint,
