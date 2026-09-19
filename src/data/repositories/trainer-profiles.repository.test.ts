@@ -12,7 +12,7 @@ vi.mock('../queries/client', () => ({
   supabase: { rpc: mocks.rpc },
 }))
 
-import { forgetPublicTrainerProfile, getPublicTrainerProfile } from './trainer-profiles.repository'
+import { forgetPublicTrainerProfile, getPublicTrainerProfile, trainerProfilesRepository } from './trainer-profiles.repository'
 
 const publicId = '1594d7d6-9532-494f-8497-b0745de99ab0'
 const profile = {
@@ -79,5 +79,25 @@ describe('public trainer profile backend selection', () => {
 
     await expect(getPublicTrainerProfile(publicId)).rejects.toMatchObject({ code: 'service_unavailable' })
     expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('maps the Supabase catalog RPC to the compact published profile contract', async () => {
+    const unpublishedDraft = { ...profile.draft, displayName: 'Неопубликованное имя' }
+    mocks.rpc.mockResolvedValue({
+      data: {
+        items: [{ ...profile, draft: unpublishedDraft }],
+        totalCount: 1,
+        nextOffset: null,
+      },
+      error: null,
+    })
+
+    await expect(trainerProfilesRepository.listCatalog({
+      query: '', specialties: [], city: '', metroStationIds: [], mode: '', acceptingClients: null, brandTrainerOnly: false,
+    }, { offset: 0, limit: 3 })).resolves.toEqual({
+      items: [{ publicId, profile: profile.published, isBrandTrainer: false }],
+      totalCount: 1,
+      nextOffset: null,
+    })
   })
 })

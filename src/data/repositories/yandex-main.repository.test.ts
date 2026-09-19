@@ -204,21 +204,20 @@ describe('Yandex main repository', () => {
       avatarDataUrl: null, certificates: [],
     }
     const profile = {
-      publicId: publicProfileId, draft, published: draft, listedInCatalog: true,
-      publishedAt: '2026-09-13T01:00:00.000Z', updatedAt: '2026-09-13T01:00:00.000Z', version: 1,
+      publicId: publicProfileId, profile: draft,
       isBrandTrainer: false,
     }
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [profile], totalCount: 21, nextOffset: 20 }))
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [profile], totalCount: 21, nextOffset: 3 }))
     vi.stubGlobal('fetch', fetchMock)
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
 
     await expect(repository.trainerProfiles.listCatalog({
       query: 'Анна', specialties: [], city: '', metroStationIds: ['msk-dinamo', 'msk-aeroport'], mode: 'online', acceptingClients: true, brandTrainerOnly: true,
-    }, { offset: 0, limit: 20 })).resolves.toEqual({ items: [profile], totalCount: 21, nextOffset: 20 })
+    }, { offset: 0, limit: 3 })).resolves.toEqual({ items: [profile], totalCount: 21, nextOffset: 3 })
     const requested = new URL(String(fetchMock.mock.calls[0]?.[0]))
     expect(requested.pathname).toBe('/v1/trainers/catalog')
     expect(requested.searchParams.getAll('metro')).toEqual(['msk-dinamo', 'msk-aeroport'])
-    expect(Object.fromEntries(requested.searchParams)).toEqual({ query: 'Анна', metro: 'msk-aeroport', mode: 'online', accepting: 'true', brand: 'true', offset: '0', limit: '20' })
+    expect(Object.fromEntries(requested.searchParams)).toEqual({ query: 'Анна', metro: 'msk-aeroport', mode: 'online', accepting: 'true', brand: 'true', offset: '0', limit: '3' })
   })
 
   it('creates a quick client without fabricating profile measurements', async () => {

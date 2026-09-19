@@ -47,7 +47,7 @@ import {
 } from './training-summaries.repository'
 import { trainingSummaryGenerationError } from './training-summary-errors'
 import { yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pilot.repository'
-import { trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
+import { trainerCatalogPageSchema, trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
 import {
   PRIVACY_VERSION,
   TERMS_VERSION,
@@ -802,11 +802,7 @@ export function createYandexMainRepository(
         params.set('offset', String(page.offset))
         params.set('limit', String(page.limit))
         const suffix = params.size > 0 ? `?${params.toString()}` : ''
-        return readJson(queries, `/v1/trainers/catalog${suffix}`, z.object({
-          items: z.array(trainerProfessionalProfileSchema),
-          totalCount: z.number().int().nonnegative(),
-          nextOffset: z.number().int().nonnegative().nullable(),
-        }))
+        return readJson(queries, `/v1/trainers/catalog${suffix}`, trainerCatalogPageSchema)
       },
     },
     trainerDiscovery: {
