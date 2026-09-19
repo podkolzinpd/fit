@@ -534,7 +534,7 @@ const favoriteWorkoutExerciseSchema = z.object({
 const favoriteWorkoutSchema = z.object({
   id: uuid,
   title: z.string(),
-  createdAt: z.iso.datetime(),
+  createdAt: z.iso.datetime({ offset: true }),
   exercises: z.array(favoriteWorkoutExerciseSchema),
 })
 const favoriteWorkoutsListSchema = z.object({ favorites: z.array(favoriteWorkoutSchema) })
