@@ -56,6 +56,12 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   профилей из snapshot временно сохраняются и восстанавливаются, а устаревшие
   linked-привязки профилей вне snapshot удаляются; наличие нативного
   Yandex-профиля блокирует операцию до удаления данных.
+- Локальная двухпроходная репетиция 34 таблиц снова зелёная. Tenant migration
+  включает transaction-local restore mode, поэтому исторические progress/goal
+  строки не запускают побочное обновление `clients.updated_at`; обычные
+  продуктовые записи по-прежнему обновляют source timestamp. Оба чистых прогона
+  подтвердили одинаковые trainer, standalone-client и full-cohort fingerprints,
+  повторный apply и финальный checksum.
 - Свежий remote dry-run подтвердил 34 таблицы и 16 111 строк, включая 124 legal
   acceptance и 0 deletion requests. Binary ciphertext занял 2 613 883 байта
   вместо 3 484 918 байт JSON envelope; target проверил 16 111 inserts и откатил
@@ -102,10 +108,6 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
 6. После короткого freeze выполнить свежий full-cohort snapshot, media delta,
    validate и повторную атомарную пересборку с тем же checksum; только затем
    включать routing.
-7. Локальная full-cohort репетиция на неизменённом `origin/main` воспроизводимо
-   останавливается на `target_validation_failed:public.clients`, хотя свежий
-   remote dry-run 34 таблиц проходил. До cutover нужно устранить или объяснить
-   этот локальный validation drift и снова получить зелёную репетицию.
 
 ## Ближайший порядок
 
