@@ -9,6 +9,7 @@ import { inspectRuntimeDomainReadiness } from './db/runtime-domain-readiness.js'
 import { DatabaseStageDatabaseReaderAccessManager } from './db/stage-database-reader-access.js'
 import { DatabaseStageRolloutAssignmentManager } from './db/stage-rollout-assignment.js'
 import { DatabaseStageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
+import { DatabaseYandexIdentityUnlinkManager } from './db/yandex-identity-unlink.js'
 import { DatabasePilotEnroller } from './db/yandex-pilot-enrollment.js'
 import { buildMigrationApp } from './migration-app.js'
 import {
@@ -75,6 +76,11 @@ const stageRolloutAssignmentsEnabled =
 if (stageRolloutAssignmentsEnabled && process.env.APP_ENV !== 'stage') {
   throw new Error('Stage rollout assignments can be enabled only in stage')
 }
+const yandexIdentityUnlinkEnabled =
+  process.env.STAGE_YANDEX_IDENTITY_UNLINK_ENABLED === 'true'
+if (yandexIdentityUnlinkEnabled && process.env.APP_ENV !== 'stage') {
+  throw new Error('Yandex identity unlink can be enabled only in stage')
+}
 const vitalMediaDeploymentEnabled =
   process.env.STAGE_VITAL_MEDIA_DEPLOYMENT_ENABLED === 'true'
 if (vitalMediaDeploymentEnabled && process.env.APP_ENV !== 'stage') {
@@ -85,6 +91,7 @@ const privateFeaturePool = pilotEnrollmentEnabled
   || stageDatabaseAccessEnabled
   || stageTenantMigrationEnabled
   || stageRolloutAssignmentsEnabled
+  || yandexIdentityUnlinkEnabled
   ? new PgDatabasePool(databaseConfig)
   : undefined
 const runtimeDatabaseConfig = stageRuntimeDatabasePreflightEnabled
@@ -145,6 +152,12 @@ const app = buildMigrationApp({
     : {
         rolloutAssignment:
           new DatabaseStageRolloutAssignmentManager(privateFeaturePool),
+      }),
+  ...(privateFeaturePool === undefined || !yandexIdentityUnlinkEnabled
+    ? {}
+    : {
+        yandexIdentityUnlink:
+          new DatabaseYandexIdentityUnlinkManager(privateFeaturePool),
       }),
   ...(privateFeaturePool === undefined || yandexClientId === undefined
     ? {}

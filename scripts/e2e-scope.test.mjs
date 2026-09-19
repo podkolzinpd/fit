@@ -11,6 +11,7 @@ test('skips the browser runtime for explicit non-browser scopes', () => {
     'services/api/src/server.test.ts',
     'services/api/package-lock.json',
     '.github/workflows/deploy-yandex-stage.yml',
+    '.github/workflows/manage-yandex-stage-identity-unlink.yml',
     'OPERATIONS.md',
     'scripts/check-yandex-terraform-plan.mjs',
     'scripts/check-yandex-terraform-plan.test.mjs',
