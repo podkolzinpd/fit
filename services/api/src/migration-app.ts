@@ -26,6 +26,7 @@ import {
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
 import type { StageTenantMigrationRunner } from './tenant-migration/stage-runner.js'
+import { STAGE_TENANT_ARTIFACT_LIMIT_BYTES } from './tenant-migration/transport-limits.js'
 
 interface PilotEnrollmentOptions {
   enroller: PilotEnroller
@@ -51,7 +52,6 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const TENANT_FINGERPRINT_PATTERN = /^[0-9a-f]{16}$/
 const STAGE_TENANT_APPLY_CONFIRMATION = 'APPLY_TENANT_TO_YANDEX_STAGE'
-const STAGE_TENANT_ARTIFACT_LIMIT_BYTES = 3 * 1024 * 1024
 const SAFE_TENANT_MIGRATION_ERROR_PATTERN = /^[a-z0-9_.:-]{1,96}$/
 const SAFE_DATABASE_ERROR_CODE_PATTERN = /^[A-Z0-9]{5}$/i
 const SAFE_MIGRATION_ERROR_MESSAGE_PATTERN = /^[\p{L}\p{N}\s._:(),'"-]{1,500}$/u
