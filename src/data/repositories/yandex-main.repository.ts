@@ -702,6 +702,7 @@ export function createYandexMainRepository(
         for (const stationId of filters.metroStationIds) params.append('metro', stationId)
         if (filters.mode) params.set('mode', filters.mode)
         if (filters.acceptingClients !== null) params.set('accepting', String(filters.acceptingClients))
+        if (filters.brandTrainerOnly) params.set('brand', 'true')
         params.set('offset', String(page.offset))
         params.set('limit', String(page.limit))
         const suffix = params.size > 0 ? `?${params.toString()}` : ''

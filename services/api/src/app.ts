@@ -1032,6 +1032,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const accepting = query.accepting === undefined ? null
       : query.accepting === 'true' ? true
         : query.accepting === 'false' ? false : undefined
+    const brandTrainerOnly = query.brand === undefined ? false
+      : query.brand === 'true' ? true
+        : query.brand === 'false' ? false : undefined
     const mode = query.mode === undefined || query.mode === '' ? ''
       : query.mode === 'online' || query.mode === 'in_person' ? query.mode : undefined
     const metroValues = query.metro === undefined ? []
@@ -1065,10 +1068,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       metroStationIds: metroStationIds ?? [],
       mode: mode ?? '',
       acceptingClients: accepting ?? null,
+      brandTrainerOnly: brandTrainerOnly ?? false,
     }
     if ((query.query !== undefined && textFilter(query.query, 100) === undefined)
       || (query.city !== undefined && textFilter(query.city, 100) === undefined)
-      || specialties === undefined || metroStationIds === undefined || mode === undefined || accepting === undefined || offset === undefined || limit === undefined) {
+      || specialties === undefined || metroStationIds === undefined || mode === undefined || accepting === undefined
+      || brandTrainerOnly === undefined || offset === undefined || limit === undefined) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
