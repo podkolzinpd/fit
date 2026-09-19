@@ -9,6 +9,7 @@ import type {
   ChatThread,
   ExerciseProgressPage,
   ExerciseSnapshot,
+  FavoriteWorkoutTemplate,
   ProgressDraft,
   ProgressEntry,
   PublishedTrainingSummary,
@@ -22,6 +23,7 @@ import type {
   TrainerProfileDraft,
   Workout,
   WorkoutDraft,
+  WorkoutExerciseDraft,
   WorkoutPersonalRecord,
   WorkoutSetDraft,
   WorkoutSummary,
@@ -456,6 +458,37 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
   }
 }
 
+function workoutExerciseDraftsPayload(exercises: readonly WorkoutExerciseDraft[]): Record<string, unknown>[] {
+  return exercises.map((exercise) => ({
+    sourceExerciseId: exercise.sourceExerciseId ?? null,
+    position: exercise.position,
+    source: exercise.source,
+    ref: exercise.ref,
+    customExerciseId: exercise.customExerciseId ?? null,
+    name: exercise.name,
+    muscleGroup: exercise.muscleGroup,
+    inputKind: exercise.inputKind,
+    blockId: exercise.blockId ?? crypto.randomUUID(),
+    blockType: exercise.blockType ?? 'single',
+    blockPreset: exercise.blockPreset ?? 'set',
+    blockRounds: exercise.blockRounds ?? 1,
+    restBetweenExercisesSec: exercise.restBetweenExercisesSec ?? 0,
+    restBetweenRoundsSec: exercise.restBetweenRoundsSec ?? 0,
+    restBetweenSetsSec: exercise.restBetweenSetsSec ?? 0,
+    trainerComment: exercise.trainerComment ?? null,
+    sets: exercise.sets.map((set) => ({
+      sourceSetId: set.sourceSetId ?? null,
+      position: set.position,
+      weightKg: set.weightKg ?? null,
+      reps: set.reps ?? null,
+      durationMin: set.durationMin ?? null,
+      durationSec: set.durationSec ?? null,
+      distanceKm: set.distanceKm ?? null,
+      rpe: set.rpe ?? null,
+    })),
+  }))
+}
+
 function workoutDraft(draft: WorkoutDraft): Record<string, unknown> {
   return {
     clientId: draft.clientId,
@@ -466,32 +499,77 @@ function workoutDraft(draft: WorkoutDraft): Record<string, unknown> {
     notes: draft.notes ?? null,
     stageId: draft.stageId ?? null,
     ...(draft.id === undefined ? {} : { expectedVersion: draft.version }),
-    exercises: draft.exercises.map((exercise) => ({
-      sourceExerciseId: exercise.sourceExerciseId ?? null,
+    exercises: workoutExerciseDraftsPayload(draft.exercises),
+  }
+}
+
+const favoriteWorkoutExerciseSchema = z.object({
+  sourceExerciseId: uuid.nullable().optional(),
+  position: z.number(),
+  source: z.enum(['system', 'custom']),
+  ref: z.string(),
+  customExerciseId: uuid.nullable(),
+  name: z.string(),
+  muscleGroup: z.enum(['legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'other']),
+  inputKind: z.enum(['strength', 'distance', 'reps', 'duration']),
+  blockId: z.string(),
+  blockType: z.enum(['single', 'group']),
+  blockPreset: z.enum(['set', 'circuit', 'interval']),
+  blockRounds: z.number(),
+  restBetweenExercisesSec: z.number(),
+  restBetweenRoundsSec: z.number(),
+  restBetweenSetsSec: z.number(),
+  trainerComment: z.string().nullable(),
+  sets: z.array(z.object({
+    sourceSetId: uuid.nullable().optional(),
+    position: z.number(),
+    weightKg: z.number().nullable(),
+    reps: z.number().nullable(),
+    durationMin: z.number().nullable(),
+    durationSec: z.number().nullable(),
+    distanceKm: z.number().nullable(),
+    rpe: z.number().nullable(),
+  })),
+})
+const favoriteWorkoutSchema = z.object({
+  id: uuid,
+  title: z.string(),
+  createdAt: z.iso.datetime(),
+  exercises: z.array(favoriteWorkoutExerciseSchema),
+})
+const favoriteWorkoutsListSchema = z.object({ favorites: z.array(favoriteWorkoutSchema) })
+
+function favoriteWorkout(payload: z.infer<typeof favoriteWorkoutSchema>): FavoriteWorkoutTemplate {
+  return {
+    id: payload.id,
+    title: payload.title,
+    createdAt: payload.createdAt,
+    exercises: payload.exercises.map((exercise) => ({
+      ...(exercise.sourceExerciseId ? { sourceExerciseId: exercise.sourceExerciseId } : {}),
       position: exercise.position,
       source: exercise.source,
       ref: exercise.ref,
-      customExerciseId: exercise.customExerciseId ?? null,
+      customExerciseId: exercise.customExerciseId ?? undefined,
       name: exercise.name,
       muscleGroup: exercise.muscleGroup,
       inputKind: exercise.inputKind,
-      blockId: exercise.blockId ?? crypto.randomUUID(),
-      blockType: exercise.blockType ?? 'single',
-      blockPreset: exercise.blockPreset ?? 'set',
-      blockRounds: exercise.blockRounds ?? 1,
-      restBetweenExercisesSec: exercise.restBetweenExercisesSec ?? 0,
-      restBetweenRoundsSec: exercise.restBetweenRoundsSec ?? 0,
-      restBetweenSetsSec: exercise.restBetweenSetsSec ?? 0,
-      trainerComment: exercise.trainerComment ?? null,
+      blockId: exercise.blockId,
+      blockType: exercise.blockType,
+      blockPreset: exercise.blockPreset,
+      blockRounds: exercise.blockRounds,
+      restBetweenExercisesSec: exercise.restBetweenExercisesSec,
+      restBetweenRoundsSec: exercise.restBetweenRoundsSec,
+      restBetweenSetsSec: exercise.restBetweenSetsSec,
+      trainerComment: exercise.trainerComment ?? undefined,
       sets: exercise.sets.map((set) => ({
-        sourceSetId: set.sourceSetId ?? null,
+        ...(set.sourceSetId ? { sourceSetId: set.sourceSetId } : {}),
         position: set.position,
-        weightKg: set.weightKg ?? null,
-        reps: set.reps ?? null,
-        durationMin: set.durationMin ?? null,
-        durationSec: set.durationSec ?? null,
-        distanceKm: set.distanceKm ?? null,
-        rpe: set.rpe ?? null,
+        weightKg: set.weightKg ?? undefined,
+        reps: set.reps ?? undefined,
+        durationMin: set.durationMin ?? undefined,
+        durationSec: set.durationSec ?? undefined,
+        distanceKm: set.distanceKm ?? undefined,
+        rpe: set.rpe ?? undefined,
       })),
     })),
   }
@@ -739,6 +817,23 @@ export function createYandexMainRepository(
       async setPromptPreference(action: TrainerDiscoveryPromptAction) {
         return writeJson(queries, '/v1/trainer-discovery/prompt', 'PUT', { action }, z.unknown())
           .then(parseTrainerDiscoveryPrompt)
+      },
+    },
+    favoriteWorkouts: {
+      async list() {
+        const payload = await readJson(queries, '/v1/favorite-workouts', favoriteWorkoutsListSchema)
+        return payload.favorites.map(favoriteWorkout)
+      },
+      async save(title: string, exercises: WorkoutExerciseDraft[]) {
+        const payload = await writeJson(
+          queries, '/v1/favorite-workouts', 'POST',
+          { title, exercises: workoutExerciseDraftsPayload(exercises) },
+          favoriteWorkoutSchema,
+        )
+        return favoriteWorkout(payload)
+      },
+      async remove(id: string) {
+        await writeEmpty(queries, `/v1/favorite-workouts/${id}`, 'DELETE')
       },
     },
     clients: {

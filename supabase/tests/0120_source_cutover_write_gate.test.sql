@@ -19,7 +19,7 @@ select is(
     where trigger.tgname = 'source_cutover_write_gate'
       and not trigger.tgisinternal
   ),
-  37::bigint,
+  38::bigint,
   'one gate protects every product and background-write table'
 );
 select is_empty(

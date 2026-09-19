@@ -1,4 +1,4 @@
-// schema-sha256: 7be817aacdf8db5d7b3520e341f5465225a749a7f97e8f4532441b64204620bf
+// schema-sha256: 3508d3db1fd619f04a86e3b5baf0a26df210bbb318d6bd38fcb06f04d5cbd048
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -2171,6 +2171,7 @@ export type Database = {
         Args: { p_body: string; p_conversation_id: string; p_message_id: string }
         Returns: Database["public"]["Tables"]["chat_messages"]["Row"][]
       }
+      delete_favorite_workout: { Args: { p_id: string }; Returns: undefined }
       delete_goal_stage: { Args: { p_stage_id: string }; Returns: undefined }
       disconnect_client_trainer: {
         Args: { p_client_id: string }
@@ -2434,6 +2435,7 @@ export type Database = {
           workout_id: string
         }[]
       }
+      list_favorite_workouts: { Args: never; Returns: Json }
       list_latest_exercise_results: {
         Args: { p_client_id: string; p_exercise_refs: string[] }
         Returns: {
@@ -2673,6 +2675,10 @@ export type Database = {
       save_completed_workout: {
         Args: { p_expected_version?: number | null; p_workout: Json }
         Returns: string
+      }
+      save_favorite_workout: {
+        Args: { p_exercises: Json; p_title: string }
+        Returns: Json
       }
       save_goal_stage: {
         Args: { p_expected_version?: number; p_stage: Json }
