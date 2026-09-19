@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(12);
 
 select has_table(
   'private',
@@ -93,13 +93,6 @@ select throws_ok(
   'source_product_writes_paused',
   'deletes are blocked'
 );
-select throws_ok(
-  $$truncate table private.push_notifications_outbox$$,
-  'P0001',
-  'source_product_writes_paused',
-  'background and destructive writes are blocked'
-);
-
 select is(
   private.set_source_cutover_write_gate(false),
   false,

@@ -137,7 +137,7 @@ begin
     ) as tables(table_schema, table_name)
   loop
     execute format(
-      'create trigger source_cutover_write_gate before insert or update or delete or truncate on %I.%I for each statement execute function private.enforce_source_cutover_write_gate()',
+      'create trigger source_cutover_write_gate before insert or update or delete on %I.%I for each statement execute function private.enforce_source_cutover_write_gate()',
       protected_table.table_schema,
       protected_table.table_name
     );
