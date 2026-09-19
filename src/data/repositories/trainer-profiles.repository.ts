@@ -47,7 +47,7 @@ export const trainerProfilesRepository: TrainerProfilesRepository = {
   async listCatalog(filters, page) {
     const result = await supabase.rpc('list_public_trainer_profiles_page', {
       p_query: filters.query || undefined,
-      p_specialty: filters.specialty || undefined,
+      p_specialties: filters.specialties.length ? filters.specialties : undefined,
       p_city: filters.city || undefined,
       p_metro_station_ids: filters.metroStationIds.length ? filters.metroStationIds : undefined,
       p_mode: filters.mode || undefined,

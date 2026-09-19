@@ -1,4 +1,4 @@
-// schema-sha256: 6d15a1025e7de798ad2596ab25cd1981d6a626e0da59c4e52dc71aaaf6a7d330
+// schema-sha256: 5638d9c5992d93e02813eacb0522337c0fa494e35b6a792184b01826d21dd026
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -2461,7 +2461,7 @@ export type Database = {
           p_mode?: string
           p_offset?: number
           p_query?: string
-          p_specialty?: string
+          p_specialties?: string[]
         }
         Returns: Json
       }
