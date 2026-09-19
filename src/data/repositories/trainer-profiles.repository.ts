@@ -3,7 +3,7 @@ import { parseTrainerCatalogPage, parseTrainerProfile } from '../../shared/train
 import { getYandexMainRoutingConfig } from '../../app/feature-flags'
 import { supabase } from '../queries/client'
 import { toJson } from '../queries/json'
-import { repositoryError } from './error'
+import { RepositoryError, repositoryError } from './error'
 
 export interface TrainerProfilesRepository {
   getOwn(): Promise<TrainerProfessionalProfile | null>
@@ -61,17 +61,27 @@ export const trainerProfilesRepository: TrainerProfilesRepository = {
   },
 }
 
-async function readYandexPublicProfile(publicId: string): Promise<TrainerProfessionalProfile | null | undefined> {
-  const config = getYandexMainRoutingConfig()
-  if (config === null) return undefined
+async function readYandexPublicProfile(publicId: string, apiBaseUrl: string): Promise<TrainerProfessionalProfile | null> {
   let response: Response
   try {
-    response = await fetch(`${config.apiBaseUrl}/v1/trainers/${encodeURIComponent(publicId)}/public-profile`)
-  } catch {
-    return undefined
+    response = await fetch(`${apiBaseUrl}/v1/trainers/${encodeURIComponent(publicId)}/public-profile`)
+  } catch (error) {
+    throw repositoryError(error)
   }
-  if (!response.ok) return undefined
-  return parseTrainerProfile(await response.json())
+  if (response.status === 404) return null
+  if (!response.ok) {
+    throw new RepositoryError(
+      response.status >= 500 ? 'service_unavailable' : 'request_failed',
+      response.status >= 500
+        ? 'Yandex Cloud временно недоступен. Попробуйте позднее.'
+        : 'Не удалось открыть анкету. Попробуйте ещё раз.',
+    )
+  }
+  try {
+    return parseTrainerProfile(await response.json())
+  } catch (error) {
+    throw new RepositoryError('invalid_response', 'Не удалось открыть анкету. Попробуйте ещё раз.', { cause: error })
+  }
 }
 
 const publicProfileRequests = new Map<string, Promise<TrainerProfessionalProfile | null>>()
@@ -81,11 +91,12 @@ export function forgetPublicTrainerProfile(publicId: string) {
 }
 
 async function loadPublicTrainerProfile(publicId: string): Promise<TrainerProfessionalProfile | null> {
+  const yandex = getYandexMainRoutingConfig()
+  if (yandex !== null) return readYandexPublicProfile(publicId, yandex.apiBaseUrl)
+
   const result = await supabase.rpc('get_public_trainer_profile', { p_public_id: publicId })
   if (result.error) throw repositoryError(result.error)
-  const supabaseProfile = parseNullable(result.data)
-  if (supabaseProfile !== null) return supabaseProfile
-  return (await readYandexPublicProfile(publicId)) ?? null
+  return parseNullable(result.data)
 }
 
 export function getPublicTrainerProfile(publicId: string): Promise<TrainerProfessionalProfile | null> {

@@ -1,7 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-19. База изменений: `51195c9e` (#1053). Frontend
+Обновлено: 2026-09-19. База изменений: `51833cff` (#1056). Frontend
 остаётся на Vercel. Production-пользователи пока используют Supabase; Yandex
 app-session, main routing и native registration не включены глобально.
 
@@ -91,8 +91,9 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
    exercise и custom-exercise objects; подтвердить upload/sign/read/delete.
 2. Добавить Yandex custom-exercise photo adapter и эквивалентный client
    Assistant program jobs/generation path.
-3. Убрать обязательность Supabase env и runtime fallback из production
-   composition; сделать публичный профиль и остальные прямые пути Yandex-first.
+3. Убрать обязательность Supabase env из production composition и проверить
+   остальные прямые пути. Публичная анкета уже выбирает Supabase либо Yandex
+   вместе с глобальным main routing без межпровайдерного fallback.
 4. После свежего full-cohort apply проверить на stage linked trainer/client,
    recovery старого email-only профиля, новый Yandex-only аккаунт и приглашение;
    только затем по отдельной команде включить server/frontend cutover flags.
