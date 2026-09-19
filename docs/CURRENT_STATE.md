@@ -65,6 +65,11 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   подтвердили одинаковые trainer, standalone-client и full-cohort fingerprints,
   повторный apply и финальный checksum; текущий full-cohort fixture содержит
   69 строк.
+- Свежий read-only source audit при `paused` write gate подтвердил все 35
+  таблиц и 16 192 строки: `favorite_workouts` — 1, legal acceptance — 128,
+  deletion requests — 0. Зашифрованный snapshot занял 2 738 473 байта;
+  source fingerprint стабилен до снятия gate. Target dry-run требуется запускать
+  из `main`, потому что Yandex OIDC намеренно не доверяет feature-веткам.
 - Предыдущий remote dry-run подтвердил 34 таблицы и 16 111 строк, включая 124 legal
   acceptance и 0 deletion requests. Binary ciphertext занял 2 613 883 байта
   вместо 3 484 918 байт JSON envelope; target проверил 16 111 inserts и откатил
