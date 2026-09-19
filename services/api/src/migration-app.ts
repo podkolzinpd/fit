@@ -31,6 +31,13 @@ import {
   STAGE_TENANT_ARTIFACT_LIMIT_BYTES,
   STAGE_TENANT_BINARY_CONTENT_TYPE,
 } from './tenant-migration/transport.js'
+import {
+  VITAL_MEDIA_APPLY_CONFIRMATION,
+  VITAL_MEDIA_BINARY_CONTENT_TYPE,
+  VitalMediaDeploymentError,
+  type VitalMediaDeploymentService,
+  type VitalMediaManifestFile,
+} from './vital-media-deployment.js'
 
 interface PilotEnrollmentOptions {
   enroller: PilotEnroller
@@ -48,6 +55,7 @@ interface BuildMigrationAppOptions {
     clientId: string,
   ) => Promise<RuntimeDomainReadinessResult>
   stageTenantMigration?: StageTenantMigrationRunner
+  vitalMediaDeployment?: VitalMediaDeploymentService
   stageWorkoutFixture?: StageWorkoutFixtureLoader
 }
 
@@ -59,6 +67,45 @@ const STAGE_TENANT_APPLY_CONFIRMATION = 'APPLY_TENANT_TO_YANDEX_STAGE'
 const SAFE_TENANT_MIGRATION_ERROR_PATTERN = /^[a-z0-9_.:-]{1,96}$/
 const SAFE_DATABASE_ERROR_CODE_PATTERN = /^[A-Z0-9]{5}$/i
 const SAFE_MIGRATION_ERROR_MESSAGE_PATTERN = /^[\p{L}\p{N}\s._:(),'"-]{1,500}$/u
+const VITAL_MEDIA_MAX_OBJECT_BYTES = 1_048_576
+
+function readVitalMediaManifest(body: unknown): readonly VitalMediaManifestFile[] | undefined {
+  if (typeof body !== 'object' || body === null || !('files' in body)) {
+    return undefined
+  }
+  const values: unknown = body.files
+  if (!Array.isArray(values)) return undefined
+  const files: VitalMediaManifestFile[] = []
+  for (const value of values as unknown[]) {
+    if (
+      typeof value !== 'object'
+      || value === null
+      || !('path' in value)
+      || !('bytes' in value)
+      || !('sha256' in value)
+      || typeof value.path !== 'string'
+      || typeof value.bytes !== 'number'
+      || typeof value.sha256 !== 'string'
+    ) return undefined
+    files.push({ path: value.path, bytes: value.bytes, sha256: value.sha256 })
+  }
+  return files
+}
+
+function readVitalMediaUpload(
+  headers: Record<string, string | string[] | undefined>,
+): VitalMediaManifestFile | undefined {
+  const path = headers['x-fit-vital-media-path']
+  const bytesHeader = headers['x-fit-vital-media-bytes']
+  const sha256 = headers['x-fit-vital-media-sha256']
+  if (
+    typeof path !== 'string'
+    || typeof bytesHeader !== 'string'
+    || typeof sha256 !== 'string'
+  ) return undefined
+  const bytes = Number(bytesHeader)
+  return { path, bytes, sha256 }
+}
 
 function migrationFailureDetails(error: unknown): {
   code: string
@@ -202,6 +249,75 @@ export function buildMigrationApp(
       })
     }
   })
+
+  if (options.vitalMediaDeployment !== undefined) {
+    const vitalMediaDeployment = options.vitalMediaDeployment
+    app.addContentTypeParser(
+      VITAL_MEDIA_BINARY_CONTENT_TYPE,
+      { parseAs: 'buffer' },
+      (_request, body, done) => done(null, body),
+    )
+
+    app.post('/stage/vital-media/preflight', async (request, reply) => {
+      const body = request.body
+      const allowWrite = typeof body === 'object'
+        && body !== null
+        && 'allowWrite' in body
+        && body.allowWrite === true
+      if (
+        allowWrite
+        && request.headers['x-fit-vital-media-confirmation']
+          !== VITAL_MEDIA_APPLY_CONFIRMATION
+      ) return reply.code(403).send({ status: 'apply_not_confirmed' })
+      try {
+        const result = await vitalMediaDeployment.preflight(allowWrite)
+        return { status: 'vital_media_preflight_ready', ...result }
+      } catch (error) {
+        const code = error instanceof VitalMediaDeploymentError
+          ? error.code
+          : 'vital_media_preflight_failed'
+        return reply.code(409).send({ status: 'vital_media_preflight_failed', code })
+      }
+    })
+
+    app.put(
+      '/stage/vital-media/object',
+      { bodyLimit: VITAL_MEDIA_MAX_OBJECT_BYTES },
+      async (request, reply) => {
+        if (
+          request.headers['x-fit-vital-media-confirmation']
+            !== VITAL_MEDIA_APPLY_CONFIRMATION
+        ) return reply.code(403).send({ status: 'apply_not_confirmed' })
+        const file = readVitalMediaUpload(request.headers)
+        if (file === undefined || !Buffer.isBuffer(request.body)) {
+          return reply.code(400).send({ status: 'invalid_request' })
+        }
+        try {
+          const result = await vitalMediaDeployment.upload(file, request.body)
+          return { status: result === 'uploaded' ? 'vital_media_uploaded' : 'vital_media_skipped' }
+        } catch (error) {
+          const code = error instanceof VitalMediaDeploymentError
+            ? error.code
+            : 'vital_media_upload_failed'
+          return reply.code(409).send({ status: 'vital_media_upload_failed', code })
+        }
+      },
+    )
+
+    app.post('/stage/vital-media/audit', async (request, reply) => {
+      const files = readVitalMediaManifest(request.body)
+      if (files === undefined) return reply.code(400).send({ status: 'invalid_request' })
+      try {
+        const report = await vitalMediaDeployment.audit(files)
+        return { status: 'vital_media_audited', ...report }
+      } catch (error) {
+        const code = error instanceof VitalMediaDeploymentError
+          ? error.code
+          : 'vital_media_audit_failed'
+        return reply.code(409).send({ status: 'vital_media_audit_failed', code })
+      }
+    })
+  }
 
   if (options.runtimeDatabaseReadiness !== undefined) {
     const runtimeDatabaseReadiness = options.runtimeDatabaseReadiness
@@ -439,6 +555,10 @@ export function buildMigrationApp(
           clientSession: {
             token: result.clientSessionToken,
             expiresAt: result.clientSessionExpiresAt,
+          },
+          mediaSession: {
+            token: result.mediaSessionToken,
+            expiresAt: result.mediaSessionExpiresAt,
           },
         }
       } catch {
