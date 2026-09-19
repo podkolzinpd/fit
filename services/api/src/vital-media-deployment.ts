@@ -25,8 +25,8 @@ const VERIFY_CONCURRENCY = 8
 
 export const VITAL_MEDIA_BINARY_CONTENT_TYPE = 'application/vnd.fit.vital-media'
 export const VITAL_MEDIA_APPLY_CONFIRMATION = 'APPLY_VITAL_MEDIA_TO_YANDEX_STAGE'
-export const VITAL_MEDIA_BUCKET_CONFIGURATION_CONFIRMATION =
-  'PRIVATE_VERSIONED_BUCKET_INSPECTED_BY_YC_CONTROL_PLANE'
+
+type VitalMediaVersioningCheck = 'not_probed_read_only' | 'verified_by_write_probe'
 
 export interface VitalMediaManifestFile {
   bytes: number
@@ -46,7 +46,11 @@ export interface VitalMediaAuditReport {
 
 export interface VitalMediaDeploymentService {
   audit(files: readonly VitalMediaManifestFile[]): Promise<VitalMediaAuditReport>
-  preflight(allowWrite: boolean): Promise<{ bucket: string; private: true }>
+  preflight(allowWrite: boolean): Promise<{
+    bucket: string
+    private: true
+    versioning: VitalMediaVersioningCheck
+  }>
   upload(file: VitalMediaManifestFile, body: Uint8Array): Promise<'skipped' | 'uploaded'>
 }
 
@@ -149,7 +153,11 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
     })
   }
 
-  async preflight(allowWrite: boolean): Promise<{ bucket: string; private: true }> {
+  async preflight(allowWrite: boolean): Promise<{
+    bucket: string
+    private: true
+    versioning: VitalMediaVersioningCheck
+  }> {
     const anonymousList = await fetch(
       `${OBJECT_STORAGE_ENDPOINT}/${this.config.bucket}?list-type=2&max-keys=1&prefix=${encodeURIComponent(VITAL_PREFIX)}`,
       { redirect: 'manual' },
@@ -158,8 +166,19 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
       throw new VitalMediaDeploymentError('vital_media_bucket_not_private')
     }
 
-    if (allowWrite) await this.writeProbe()
-    return { bucket: this.config.bucket, private: true }
+    if (allowWrite) {
+      await this.writeProbe()
+      return {
+        bucket: this.config.bucket,
+        private: true,
+        versioning: 'verified_by_write_probe',
+      }
+    }
+    return {
+      bucket: this.config.bucket,
+      private: true,
+      versioning: 'not_probed_read_only',
+    }
   }
 
   async upload(

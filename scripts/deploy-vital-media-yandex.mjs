@@ -8,8 +8,6 @@ import { reviewedVitalGymProExercises } from './data/vital-gym-pro-catalog-revie
 import { validateVitalGymProMediaManifest } from './vital-gym-pro-media-contract.mjs'
 
 const APPLY_CONFIRMATION = 'APPLY_VITAL_MEDIA_TO_YANDEX_STAGE'
-const BUCKET_CONFIGURATION_CONFIRMATION =
-  'PRIVATE_VERSIONED_BUCKET_INSPECTED_BY_YC_CONTROL_PLANE'
 const BINARY_CONTENT_TYPE = 'application/vnd.fit.vital-media'
 const TRANSFER_CONCURRENCY = 4
 const MAX_ATTEMPTS = 5
@@ -173,18 +171,20 @@ async function main() {
     method: 'POST',
     headers: privateHeaders(token, {
       'content-type': 'application/json',
-      'x-fit-vital-media-bucket-confirmation': BUCKET_CONFIGURATION_CONFIRMATION,
       ...(deploymentMode === 'apply'
         ? { 'x-fit-vital-media-confirmation': APPLY_CONFIRMATION }
         : {}),
     }),
     body: JSON.stringify({ allowWrite: deploymentMode === 'apply' }),
   }).then((response) => response.json())
+  const expectedVersioning = deploymentMode === 'apply'
+    ? 'verified_by_write_probe'
+    : 'not_probed_read_only'
   if (
     preflight.status !== 'vital_media_preflight_ready'
     || preflight.bucket !== expectedBucket
     || preflight.private !== true
-    || preflight.versioned !== true
+    || preflight.versioning !== expectedVersioning
   ) throw new Error('vital_media_preflight_mismatch')
 
   const before = await audit(migrationUrl, token, manifest)

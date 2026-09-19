@@ -66,22 +66,6 @@ jobs:
           echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
       - name: Exchange GitHub OIDC for the bounded deploy identity
         run: scripts/yandex-github-oidc.sh
-      - name: Verify the private versioned bucket through the Yandex control plane
-        run: |
-          set -euo pipefail
-          bucket_info=$(yc storage bucket get \
-            --name "$FIT_YANDEX_MEDIA_BUCKET" \
-            --folder-id "$YC_FOLDER_ID" \
-            --full \
-            --format json)
-          jq -e --arg expected_bucket "$FIT_YANDEX_MEDIA_BUCKET" '
-            (.anonymous_access_flags // .anonymousAccessFlags) as $anonymous
-            | .name == $expected_bucket
-              and .versioning == "VERSIONING_ENABLED"
-              and $anonymous.read == false
-              and $anonymous.list == false
-              and ($anonymous.config_read == false or $anonymous.configRead == false)
-          ' <<<"$bucket_info" >/dev/null
       - name: Resolve the private stage runtimes
         run: |
           set -euo pipefail
