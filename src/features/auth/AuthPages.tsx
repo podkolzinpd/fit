@@ -187,23 +187,27 @@ export function AuthPage() {
   if (yandexOnlyAuthConfig !== null) return <AuthIdentityScreen>
     <header className="auth-entry-head">
       <div className="brand" aria-hidden="true">FIT</div>
-      <p className="eyebrow">ЕДИНЫЙ ВХОД</p>
-      <h1>Вход в FIT</h1>
-      <p className="muted">Войдите через Yandex ID. Если у вас уже был аккаунт FIT, после входа мы поможем связать его с перенесёнными данными.</p>
-      {returnTo !== undefined && <p className="muted">После входа вы вернётесь к приглашению.</p>}
+      <p className="eyebrow">ВАШ РАБОЧИЙ ПРОЦЕСС</p>
+      <h1>Вход</h1>
+      <p className="muted">Планируйте тренировки и следите за прогрессом клиентов.</p>
+      {(hasPendingInvitationLink() || returnTo?.startsWith('/invite') || returnTo?.startsWith('/join'))
+        && <p className="muted">Войдите, чтобы продолжить по приглашению.</p>}
     </header>
-    <button
-      className="primary auth-yandex"
-      type="button"
-      disabled={yandexBusy}
-      aria-busy={yandexBusy}
-      onClick={startYandexLogin}
-    >{yandexBusy ? 'Переходим в Yandex ID…' : 'Продолжить с Yandex ID'}</button>
-    {error && <p className="error" role="alert">{error}</p>}
-    {yandexAppSession.error && <div className="stack" role="alert">
-      <p className="error">{yandexAppSession.error}</p>
-      <button className="secondary" type="button" onClick={() => void yandexAppSession.retry()}>Повторить проверку</button>
-    </div>}
+    <section className="stack auth-form" aria-label="Авторизация через Yandex ID">
+      <p className="muted">Вход и регистрация выполняются через Yandex ID.</p>
+      <button
+        className="primary auth-yandex"
+        type="button"
+        disabled={yandexBusy}
+        aria-busy={yandexBusy}
+        onClick={startYandexLogin}
+      >{yandexBusy ? 'Переходим в Yandex ID…' : 'Продолжить с Yandex ID'}</button>
+      {error && <p className="error" role="alert">{error}</p>}
+      {yandexAppSession.error && <div className="stack" role="alert">
+        <p className="error">{yandexAppSession.error}</p>
+        <button className="secondary" type="button" onClick={() => void yandexAppSession.retry()}>Повторить проверку</button>
+      </div>}
+    </section>
     <nav className="auth-legal-links" aria-label="Юридическая информация"><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Конфиденциальность</Link></nav>
   </AuthIdentityScreen>
 

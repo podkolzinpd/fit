@@ -154,6 +154,10 @@ describe('Yandex app session auth flow', () => {
     vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
     render(<MemoryRouter><AuthPage /></MemoryRouter>)
 
+    expect(screen.getByRole('heading', { name: 'Вход' })).toBeVisible()
+    expect(screen.getByText('Планируйте тренировки и следите за прогрессом клиентов.')).toBeVisible()
+    expect(screen.getByRole('region', { name: 'Авторизация через Yandex ID' })).toBeVisible()
+    expect(screen.getByText('Вход и регистрация выполняются через Yandex ID.')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Продолжить с Yandex ID' })).toHaveClass('primary')
     expect(screen.queryByLabelText('Email')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Пароль')).not.toBeInTheDocument()

@@ -16,7 +16,9 @@ test('Yandex-only entry has one primary action at 390 and 430 px', async ({ page
     await page.setViewportSize(viewport)
     await page.goto('/auth')
 
-    await expect(page.getByRole('heading', { name: 'Вход в FIT' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Авторизация через Yandex ID' })).toBeVisible()
+    await expect(page.getByText('Вход и регистрация выполняются через Yandex ID.')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID' })).toHaveClass(/primary/)
     await expect(page.getByLabel('Email')).toHaveCount(0)
     await expect(page.getByLabel('Пароль')).toHaveCount(0)
@@ -27,6 +29,23 @@ test('Yandex-only entry has one primary action at 390 and 430 px', async ({ page
       path: testInfo.outputPath(`yandex-only-entry-${viewport.width}.png`),
       fullPage: true,
     })
+
+    if (viewport.width === 390) {
+      await page.evaluate(() => {
+        localStorage.setItem('fit.appTheme', 'dark')
+        window.dispatchEvent(new Event('fit-theme-change'))
+      })
+      await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+      await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+      await page.screenshot({
+        path: testInfo.outputPath('yandex-only-entry-dark-390.png'),
+        fullPage: true,
+      })
+      await page.evaluate(() => {
+        localStorage.setItem('fit.appTheme', 'light')
+        window.dispatchEvent(new Event('fit-theme-change'))
+      })
+    }
 
     await page.goto('/auth/forgot')
     await expect(page).toHaveURL(/\/auth$/)
