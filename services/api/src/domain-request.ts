@@ -48,6 +48,9 @@ export interface CustomExerciseDraft {
   name: string
   muscleGroup: MuscleGroup
   inputKind: InputKind
+  primaryMuscleDetail?: string | null
+  equipment?: string | null
+  description?: string | null
 }
 
 export interface VersionedCustomExerciseRequest {
@@ -211,9 +214,21 @@ export function readCustomExerciseDraft(
   const inputKind = enumValue(input.inputKind, [
     'strength', 'distance', 'reps', 'duration',
   ] as const)
+  const primaryMuscleDetail = nullableText(input.primaryMuscleDetail, 300)
+  const equipment = nullableText(input.equipment, 300)
+  const description = nullableText(input.description, 2_000)
   return name === undefined || muscleGroup === undefined || inputKind === undefined
+    || primaryMuscleDetail === undefined || equipment === undefined
+    || description === undefined
     ? undefined
-    : { name, muscleGroup, inputKind }
+    : {
+        name,
+        muscleGroup,
+        inputKind,
+        primaryMuscleDetail,
+        equipment,
+        description,
+      }
 }
 
 export function readVersionedCustomExerciseRequest(

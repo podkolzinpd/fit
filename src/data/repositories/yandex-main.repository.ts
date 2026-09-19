@@ -128,6 +128,22 @@ const accountDeletionStatusSchema = z.object({
   supported: z.literal(true),
   request: accountDeletionRequestSchema.nullable(),
 })
+const customExerciseMutationSchema = z.object({
+  exercise: z.object({
+    id: uuid,
+    name: z.string(),
+    muscleGroup: z.enum([
+      'legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core',
+      'cardio', 'other',
+    ]),
+    inputKind: z.enum(['strength', 'distance', 'reps', 'duration']),
+    primaryMuscleDetail: z.string().nullable().optional(),
+    equipment: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+    archivedAt: z.iso.datetime().nullable(),
+    version: z.number().int().positive(),
+  }),
+})
 const customMetricSchema = z.object({
   id: uuid,
   clientId: uuid,
@@ -355,11 +371,13 @@ function customExercise(value: YandexPilotTrainingData['customExercises'][number
     name: value.name,
     muscleGroup: value.muscleGroup,
     inputKind: value.inputKind,
+    primaryMuscleDetail: value.primaryMuscleDetail ?? undefined,
+    equipment: value.equipment ?? undefined,
+    description: value.description ?? undefined,
     createdBy: value.createdBy ?? '',
     archivedAt: value.archivedAt,
     version: value.version,
-    // Мышца/оборудование/описание/обложка (YAFIT-521) — пока только на
-    // Supabase-бэкенде, см. FEATURE_PARITY.md.
+    // Фото (YAFIT-521) пока поддерживается только Supabase-бэкендом.
     imagePath: null,
   }
 }
@@ -840,26 +858,22 @@ export function createYandexMainRepository(
       },
       async list() { return (await trainingData()).customExercises.map(customExercise) },
       async create(_partitionOwnerId, _actorId, value) {
-        // Разметка (мышца/оборудование/описание) и фото на обложку
-        // (YAFIT-521) пока не реализованы на Yandex-бэкенде — value
-        // передаётся как есть, лишние поля сервер молча игнорирует; фото
-        // не отправляется вовсе. См. FEATURE_PARITY.md.
         const payload = await writeJson(queries, '/v1/custom-exercises', 'POST', value,
-          z.object({ exercise: z.object({ id: uuid, name: z.string(), muscleGroup: z.enum(['legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'other']), inputKind: z.enum(['strength', 'distance', 'reps', 'duration']), archivedAt: z.iso.datetime().nullable(), version: z.number().int().positive() }) }))
+          customExerciseMutationSchema)
         invalidate()
         return customExercise({ ...payload.exercise, createdBy: actor.userId })
       },
       async update(item, value) {
         const payload = await writeJson(queries, `/v1/custom-exercises/${item.id}`, 'PUT', {
           draft: value, expectedVersion: item.version,
-        }, z.object({ exercise: z.object({ id: uuid, name: z.string(), muscleGroup: z.enum(['legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'other']), inputKind: z.enum(['strength', 'distance', 'reps', 'duration']), archivedAt: z.iso.datetime().nullable(), version: z.number().int().positive() }) }))
+        }, customExerciseMutationSchema)
         invalidate()
         return customExercise({ ...payload.exercise, createdBy: item.createdBy })
       },
       async setArchived(item, archived) {
         const payload = await writeJson(queries, `/v1/custom-exercises/${item.id}/archive`, 'PUT', {
           archived, expectedVersion: item.version,
-        }, z.object({ exercise: z.object({ id: uuid, name: z.string(), muscleGroup: z.enum(['legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'other']), inputKind: z.enum(['strength', 'distance', 'reps', 'duration']), archivedAt: z.iso.datetime().nullable(), version: z.number().int().positive() }) }))
+        }, customExerciseMutationSchema)
         invalidate()
         return customExercise({ ...payload.exercise, createdBy: item.createdBy })
       },
