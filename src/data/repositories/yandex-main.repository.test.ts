@@ -164,8 +164,11 @@ describe('Yandex main repository', () => {
       sets: [{ sourceSetId: null, position: 0, weightKg: 60, reps: 5, durationMin: null, durationSec: null, distanceKm: null, rpe: null }],
     }
     const wireFavorite = {
+      // Postgres jsonb_build_object serializes timestamptz with a numeric
+      // offset ("+00:00"), never a literal "Z" — the schema must accept this
+      // native shape, not just a hand-typed "Z" fixture.
       id: '12acc6d6-7ca8-43cd-b124-b4224c917fae', title: 'Ноги и кор',
-      createdAt: '2026-09-19T09:00:00.000Z', exercises: [wireExercise],
+      createdAt: '2026-09-19T09:00:00.000000+00:00', exercises: [wireExercise],
     }
     const domainExercise: WorkoutExerciseDraft = {
       position: 0, source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength',

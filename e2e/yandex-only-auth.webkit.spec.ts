@@ -51,3 +51,53 @@ test('Yandex-only entry has one primary action at 390 and 430 px', async ({ page
     await expect(page).toHaveURL(/\/auth$/)
   }
 })
+
+test('restored Yandex session completes the legal check after reload', async ({ page }) => {
+  test.skip(
+    process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true'
+      || process.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true'
+      || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true',
+    'Run with the complete Yandex-only session switches.',
+  )
+  const token = 'a'.repeat(43)
+  let legalRequests = 0
+  await page.route('https://stage.example.test/v1/auth/yandex/session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        accessMode: 'read_write',
+        profile: {
+          id: 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+          firstName: 'Ирина',
+          lastName: null,
+          timezone: 'Europe/Moscow',
+          accountRole: 'trainer',
+        },
+      }),
+    })
+  })
+  await page.route('https://stage.example.test/v1/legal/acceptance', async (route) => {
+    legalRequests += 1
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ applicable: true, accepted: false, acceptedAt: null }),
+    })
+  })
+  await page.addInitScript(([sessionToken]) => {
+    window.localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({
+      token: sessionToken,
+      expiresAt: '2099-09-01T12:00:00.000Z',
+    }))
+  }, [token])
+
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Условия обновились' })).toBeVisible()
+
+  await page.reload()
+
+  await expect(page.getByRole('heading', { name: 'Условия обновились' })).toBeVisible()
+  await expect(page.getByText('Проверяем документы…')).toHaveCount(0)
+  expect(legalRequests).toBe(2)
+})
