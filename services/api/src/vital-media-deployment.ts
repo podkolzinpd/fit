@@ -4,7 +4,6 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
-  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3'
@@ -20,7 +19,6 @@ const SHA256 = /^[a-f0-9]{64}$/
 const EXPECTED_FILES = 2_010
 const EXPECTED_BYTES = 71_514_430
 const MAX_OBJECT_BYTES = 1_048_576
-const MAX_LISTED_OBJECTS = 3_000
 const VERIFY_CONCURRENCY = 8
 
 export const VITAL_MEDIA_BINARY_CONTENT_TYPE = 'application/vnd.fit.vital-media'
@@ -36,11 +34,11 @@ export interface VitalMediaManifestFile {
 
 export interface VitalMediaAuditReport {
   bytes: number
+  enumeration: 'manifest_only'
   fingerprint: string
   mismatched: number
   missing: number
   objects: number
-  unexpected: number
   verified: number
 }
 
@@ -232,29 +230,6 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
 
   async audit(files: readonly VitalMediaManifestFile[]): Promise<VitalMediaAuditReport> {
     const contract = validateVitalMediaManifestFiles(files)
-    const listed = new Set<string>()
-    let continuationToken: string | undefined
-    do {
-      const response = await this.client.send(new ListObjectsV2Command({
-        Bucket: this.config.bucket,
-        ContinuationToken: continuationToken,
-        Prefix: VITAL_PREFIX,
-      })).catch(() => {
-        throw new VitalMediaDeploymentError('vital_media_target_list_failed')
-      })
-      for (const object of response.Contents ?? []) {
-        if (object.Key?.startsWith(VITAL_PREFIX)) listed.add(object.Key.slice(VITAL_PREFIX.length))
-        if (listed.size > MAX_LISTED_OBJECTS) {
-          throw new VitalMediaDeploymentError('vital_media_target_limit_exceeded')
-        }
-      }
-      continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined
-      if (response.IsTruncated && continuationToken === undefined) {
-        throw new VitalMediaDeploymentError('vital_media_target_list_failed')
-      }
-    } while (continuationToken !== undefined)
-
-    const expected = new Set(files.map((file) => file.path))
     let missingCount = 0
     let mismatched = 0
     let verified = 0
@@ -267,19 +242,18 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
         throw error
       })
       if (result === undefined) {
-        if (listed.has(file.path)) mismatched += 1
-        else missingCount += 1
+        missingCount += 1
       } else if (result.matches) verified += 1
       else mismatched += 1
     })
 
     return {
       bytes: contract.bytes,
+      enumeration: 'manifest_only',
       fingerprint: contract.fingerprint,
       mismatched,
       missing: missingCount,
       objects: files.length,
-      unexpected: [...listed].filter((path) => !expected.has(path)).length,
       verified,
     }
   }

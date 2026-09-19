@@ -99,11 +99,11 @@ describe('stage Vital media deployment', () => {
   function buildVitalMediaDeployment() {
     const audit = vi.fn().mockResolvedValue({
       bytes: 71_514_430,
+      enumeration: 'manifest_only' as const,
       fingerprint: 'a'.repeat(16),
       mismatched: 0,
       missing: 0,
       objects: 2_010,
-      unexpected: 0,
       verified: 2_010,
     })
     const preflight = vi.fn((allowWrite: boolean) => Promise.resolve({
@@ -219,11 +219,11 @@ describe('stage Vital media deployment', () => {
     expect(response.json()).toEqual({
       status: 'vital_media_audited',
       bytes: 71_514_430,
+      enumeration: 'manifest_only',
       fingerprint: 'a'.repeat(16),
       mismatched: 0,
       missing: 0,
       objects: 2_010,
-      unexpected: 0,
       verified: 2_010,
     })
     expect(audit).toHaveBeenCalledWith(files)
