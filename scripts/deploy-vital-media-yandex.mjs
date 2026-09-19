@@ -178,7 +178,7 @@ async function main() {
     body: JSON.stringify({ allowWrite: deploymentMode === 'apply' }),
   }).then((response) => response.json())
   const expectedVersioning = deploymentMode === 'apply'
-    ? 'verified_by_write_probe'
+    ? 'pending_manifest_write'
     : 'not_probed_read_only'
   if (
     preflight.status !== 'vital_media_preflight_ready'
@@ -197,7 +197,7 @@ async function main() {
   let uploaded = 0
   let skipped = 0
   let completed = 0
-  await parallel(manifest.files, async (file) => {
+  async function upload(file) {
     const body = await readFile(join(mediaDir, file.path))
     const response = await request(`${migrationUrl}/stage/vital-media/object`, {
       method: 'PUT',
@@ -211,6 +211,9 @@ async function main() {
       body,
     })
     const result = await response.json()
+    if (result.versioning !== 'verified') {
+      throw new Error('vital_media_object_versioning_unverified')
+    }
     if (result.status === 'vital_media_uploaded') uploaded += 1
     else if (result.status === 'vital_media_skipped') skipped += 1
     else throw new Error('vital_media_upload_response_invalid')
@@ -218,7 +221,12 @@ async function main() {
     if (completed % 100 === 0 || completed === manifest.files.length) {
       process.stderr.write(`Processed ${completed}/${manifest.files.length} reviewed media objects.\n`)
     }
-  })
+  }
+
+  const [firstFile, ...remainingFiles] = manifest.files
+  if (firstFile === undefined) throw new Error('vital_media_manifest_empty')
+  await upload(firstFile)
+  await parallel(remainingFiles, upload)
 
   const after = await audit(migrationUrl, token, manifest)
   if (
@@ -243,6 +251,7 @@ async function main() {
     uploaded,
     skipped,
     signedUrlSmoke: true,
+    versioning: 'verified_by_manifest_objects',
   })}\n`)
 }
 

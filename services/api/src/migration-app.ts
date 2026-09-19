@@ -294,7 +294,12 @@ export function buildMigrationApp(
         }
         try {
           const result = await vitalMediaDeployment.upload(file, request.body)
-          return { status: result === 'uploaded' ? 'vital_media_uploaded' : 'vital_media_skipped' }
+          return {
+            status: result.outcome === 'uploaded'
+              ? 'vital_media_uploaded'
+              : 'vital_media_skipped',
+            versioning: result.versioning,
+          }
         } catch (error) {
           const code = error instanceof VitalMediaDeploymentError
             ? error.code
