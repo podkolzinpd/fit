@@ -25,6 +25,11 @@ import {
   STAGE_TENANT_BINARY_CONTENT_TYPE,
 } from './tenant-migration/transport.js'
 import type { BrotliTenantMigrationEnvelope } from './tenant-migration/types.js'
+import {
+  VITAL_MEDIA_APPLY_CONFIRMATION,
+  VITAL_MEDIA_BINARY_CONTENT_TYPE,
+  type VitalMediaDeploymentService,
+} from './vital-media-deployment.js'
 
 const apps: ReturnType<typeof buildMigrationApp>[] = []
 const STAGE_CLIENT_ID = '10000000-0000-4000-8000-000000000001'
@@ -87,6 +92,130 @@ describe('migration endpoint', () => {
         message: 'relation public.training_summary_generation_guard does not exist',
       },
     })
+  })
+})
+
+describe('stage Vital media deployment', () => {
+  function buildVitalMediaDeployment() {
+    const audit = vi.fn().mockResolvedValue({
+      bytes: 71_514_430,
+      fingerprint: 'a'.repeat(16),
+      mismatched: 0,
+      missing: 0,
+      objects: 2_010,
+      unexpected: 0,
+      verified: 2_010,
+    })
+    const preflight = vi.fn().mockResolvedValue({
+      bucket: 'fit-media-example',
+      private: true as const,
+      versioned: true as const,
+    })
+    const upload = vi.fn().mockResolvedValue('uploaded' as const)
+    const deployment: VitalMediaDeploymentService = {
+      audit,
+      preflight,
+      upload,
+    }
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      vitalMediaDeployment: deployment,
+    })
+    apps.push(app)
+    return { app, audit, preflight, upload }
+  }
+
+  it('does not expose media deployment routes unless explicitly configured', async () => {
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/vital-media/preflight',
+      payload: { allowWrite: false },
+    })
+
+    expect(response.statusCode).toBe(404)
+  })
+
+  it('keeps the bucket probe read-only unless apply is confirmed exactly', async () => {
+    const { app, preflight } = buildVitalMediaDeployment()
+    const rejected = await app.inject({
+      method: 'POST',
+      url: '/stage/vital-media/preflight',
+      payload: { allowWrite: true },
+    })
+    const audited = await app.inject({
+      method: 'POST',
+      url: '/stage/vital-media/preflight',
+      payload: { allowWrite: false },
+    })
+    const confirmed = await app.inject({
+      method: 'POST',
+      url: '/stage/vital-media/preflight',
+      headers: { 'x-fit-vital-media-confirmation': VITAL_MEDIA_APPLY_CONFIRMATION },
+      payload: { allowWrite: true },
+    })
+
+    expect(rejected.statusCode).toBe(403)
+    expect(audited.statusCode).toBe(200)
+    expect(confirmed.statusCode).toBe(200)
+    expect(preflight).toHaveBeenNthCalledWith(1, false)
+    expect(preflight).toHaveBeenNthCalledWith(2, true)
+  })
+
+  it('accepts one confirmed binary object without exposing its bytes', async () => {
+    const { app, upload } = buildVitalMediaDeployment()
+    const body = Buffer.from('private-animation')
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/stage/vital-media/object',
+      headers: {
+        'content-type': VITAL_MEDIA_BINARY_CONTENT_TYPE,
+        'x-fit-vital-media-bytes': String(body.byteLength),
+        'x-fit-vital-media-confirmation': VITAL_MEDIA_APPLY_CONFIRMATION,
+        'x-fit-vital-media-path': 'exercise.mp4',
+        'x-fit-vital-media-sha256': 'b'.repeat(64),
+      },
+      payload: body,
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ status: 'vital_media_uploaded' })
+    expect(upload).toHaveBeenCalledWith({
+      bytes: body.byteLength,
+      path: 'exercise.mp4',
+      sha256: 'b'.repeat(64),
+    }, body)
+    expect(response.body).not.toContain('private-animation')
+  })
+
+  it('returns only aggregate audit data', async () => {
+    const { app, audit } = buildVitalMediaDeployment()
+    const files = [{ bytes: 10, path: 'exercise.jpg', sha256: 'c'.repeat(64) }]
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/vital-media/audit',
+      payload: { files },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      status: 'vital_media_audited',
+      bytes: 71_514_430,
+      fingerprint: 'a'.repeat(16),
+      mismatched: 0,
+      missing: 0,
+      objects: 2_010,
+      unexpected: 0,
+      verified: 2_010,
+    })
+    expect(audit).toHaveBeenCalledWith(files)
+    expect(response.body).not.toContain('exercise.jpg')
   })
 })
 
@@ -494,6 +623,8 @@ describe('stage workout fixture', () => {
       sessionExpiresAt: '2026-08-22T12:15:00.000Z',
       clientSessionToken: 'c'.repeat(43),
       clientSessionExpiresAt: '2026-08-22T12:15:00.000Z',
+      mediaSessionToken: 'm'.repeat(43),
+      mediaSessionExpiresAt: '2026-08-22T12:15:00.000Z',
     })
     const app = buildMigrationApp({
       logger: false,
@@ -518,6 +649,10 @@ describe('stage workout fixture', () => {
       },
       clientSession: {
         token: 'c'.repeat(43),
+        expiresAt: '2026-08-22T12:15:00.000Z',
+      },
+      mediaSession: {
+        token: 'm'.repeat(43),
         expiresAt: '2026-08-22T12:15:00.000Z',
       },
     })

@@ -80,8 +80,11 @@ Supabase из эксплуатации. До закрытия rollback-окна 
 - Yandex API покрывает основные profile/client/workout/Live/progress/chat/push
   read-write сценарии через `x-fit-session`. Ошибка выбранного Yandex backend
   не должна переключать отдельный запрос обратно на Supabase.
-- Yandex Web Push pipeline и production parser развёрнуты. Нужны authenticated
+- Yandex Web Push pipeline и production parser развёрнуты; нужны authenticated
   end-to-end smoke push и текущего summary-контракта.
+- Для 670 упражнений Vital Gym Pro подготовлен OIDC/private-runner перенос 2 010
+  объектов по exact manifest. Код слит в #1065; remote audit/apply/readback и
+  signed-URL smoke ещё не запускались.
 
 ## Открытые post-cutover задачи и риски
 
