@@ -167,6 +167,7 @@ resource "yandex_serverless_container" "migration" {
         STAGE_RUNTIME_DATABASE_PREFLIGHT_ENABLED = var.environment == "stage" ? "true" : "false"
         STAGE_TENANT_MIGRATION_ENABLED           = var.environment == "stage" ? "true" : "false"
         STAGE_ROLLOUT_ASSIGNMENTS_ENABLED        = var.environment == "stage" ? "true" : "false"
+        STAGE_YANDEX_IDENTITY_UNLINK_ENABLED     = var.environment == "stage" ? "true" : "false"
         STAGE_VITAL_MEDIA_DEPLOYMENT_ENABLED     = var.environment == "stage" ? "true" : "false"
         YANDEX_MEDIA_BUCKET                      = local.media_bucket_name
       },

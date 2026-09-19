@@ -1,0 +1,103 @@
+name: Manage Yandex stage identity unlink
+
+run-name: Unlink Yandex identity from reviewed test profile
+
+on:
+  workflow_dispatch:
+    inputs:
+      tenant_fingerprint:
+        description: Non-reversible migrated tenant fingerprint
+        required: true
+        type: string
+      confirmation:
+        description: Type UNLINK_YANDEX_IDENTITY_FROM_TEST_PROFILE
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: yandex-stage
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-provider-cache
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
+
+jobs:
+  unlink:
+    name: Apply bounded Yandex identity unlink
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require main and validate the requested operation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          TENANT_FINGERPRINT: ${{ inputs.tenant_fingerprint }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          [[ "$TENANT_FINGERPRINT" =~ ^[0-9a-f]{16}$ ]]
+          test "$CONFIRMATION" = UNLINK_YANDEX_IDENTITY_FROM_TEST_PROFILE
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - uses: actions/cache@v4
+        with:
+          path: .terraform-provider-cache
+          key: terraform-yandex-${{ runner.os }}-${{ hashFiles('infra/yandex/.terraform.lock.hcl') }}
+      - name: Prepare Terraform provider cache
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - name: Exchange GitHub OIDC token for a short-lived IAM token
+        run: scripts/yandex-github-oidc.sh
+      - name: Read the private runner URL from remote state
+        working-directory: infra/yandex
+        run: >-
+          terraform init
+          -backend-config=backend.hcl.example
+          -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
+          -backend-config=key=fit/stage/terraform.tfstate
+      - name: Apply the identity unlink operation
+        working-directory: infra/yandex
+        env:
+          TENANT_FINGERPRINT: ${{ inputs.tenant_fingerprint }}
+        run: |
+          set -euo pipefail
+          umask 077
+          migration_url=$(terraform output -raw migration_container_url)
+          jq -n \
+            --arg tenantFingerprint "$TENANT_FINGERPRINT" \
+            '{tenantFingerprint: $tenantFingerprint}' \
+            > identity-unlink-request.json
+          status=$(curl --silent --show-error \
+            --output identity-unlink-response.json --write-out '%{http_code}' \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header 'Content-Type: application/json' \
+            --data-binary @identity-unlink-request.json \
+            "${migration_url%/}/stage/yandex-identity/unlink")
+          if test "$status" != 200; then
+            echo "Identity unlink runner returned HTTP $status." >&2
+            exit 1
+          fi
+          jq -e \
+            '.status == "yandex_identity_unlinked"
+             and (.identityDeleted | type == "boolean")
+             and (.sessionsRevoked | type == "number")' \
+            identity-unlink-response.json >/dev/null
+          {
+            echo '### Yandex stage identity unlink'
+            echo '- Operation: `unlink`'
+            echo "- Identity deleted: $(jq -r '.identityDeleted' identity-unlink-response.json)"
+            echo "- Sessions revoked: $(jq -r '.sessionsRevoked' identity-unlink-response.json)"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "identity_unlink_result identity_deleted=$(jq -r '.identityDeleted' identity-unlink-response.json) sessions_revoked=$(jq -r '.sessionsRevoked' identity-unlink-response.json)"
