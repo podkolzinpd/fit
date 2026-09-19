@@ -235,26 +235,48 @@ VITE_MAINTENANCE_MODE=false
 mutations; это не визуальный overlay поверх работающего приложения. Единственное
 действие экрана — перезагрузить страницу и повторно проверить значение флага.
 
-Флаг меняется только после прямой команды владельца продукта и требует нового
+Frontend-флаг меняется только после прямой команды владельца продукта и требует нового
 Vercel deployment. Уже открытая вкладка со старым JS bundle не узнает о новом
 build-time значении до reload, поэтому перед финальным snapshot обязателен
 короткий drain: дождаться распространения deployment, обновить контролируемые
-клиенты и подтвердить отсутствие новых source mutations. Сам frontend-флаг не
-является блокировкой PostgreSQL для старого bundle или внешнего service-role
-процесса; producer/outbox и служебные записи останавливаются и проверяются
-отдельно владельцем cutover.
+клиенты и подтвердить отсутствие незавершённых source mutations.
+
+Старые вкладки, RPC и фоновые writers блокирует отдельный source-side gate в
+Supabase. Он default-off и защищает одним statement trigger все 37 product и
+background-write таблиц, включая source-only program jobs, summary guard,
+private details и push outbox. Reads и полный snapshot продолжают работать.
+Переключатель не опубликован через Data API и управляется только ручным
+workflow `Manage Supabase cutover write gate`, сериализованным с tenant
+migration:
+
+```text
+action=inspect
+action=enable  confirmation=PAUSE_SUPABASE_PRODUCT_WRITES_FOR_CUTOVER
+action=disable confirmation=RESUME_SUPABASE_PRODUCT_WRITES_BEFORE_YANDEX_WRITES
+```
+
+`disable` допустим только до первой пользовательской записи в Yandex. После
+успешного переключения source gate остаётся включённым до decommission
+Supabase. `enable` берёт краткие `SHARE` locks на защищённые таблицы: команда
+дожидается завершения уже начатых DML, не пропускает новую запись между fence и
+фиксацией gate и только после этого возвращает успех. Перед `enable` всё равно
+остановите producers и дайте dispatcher опустошить текущий push outbox: после
+включения gate любые новые и фоновые DML получают
+`source_product_writes_paused`.
 
 Порядок включения после отдельной команды:
 
 1. Установить `VITE_MAINTENANCE_MODE=true`, выполнить production deployment и
    проверить прямые `/auth`, `/clients` и `/workouts/<id>/live` на 390/430 px.
-2. Дождаться drain уже открытых клиентов и фоновых mutations; не включать
-   Yandex routing или native registration.
-3. Выполнить свежий `full-cohort` dry-run/apply/repeat/validate с одинаковой
+2. Дождаться drain уже открытых клиентов, остановить producers, опустошить
+   push outbox и проверить `action=inspect`; не включать Yandex routing.
+3. Выполнить `action=enable`, подтвердить отказ контрольной source mutation и
+   только затем снять свежий snapshot.
+4. Выполнить `full-cohort` dry-run/apply/repeat/validate с одинаковой
    media policy и проверить 34 таблицы, counts и checksums.
-4. Включить `linked-ready` assignments, провести smoke обеих ролей и только
+5. Включить `linked-ready` assignments, провести smoke обеих ролей и только
    затем включать app-session/main-routing/native-registration switches.
-5. После успешного smoke установить `VITE_MAINTENANCE_MODE=false` и выполнить
+6. После успешного smoke установить `VITE_MAINTENANCE_MODE=false` и выполнить
    ещё один production deployment.
 
 Выключение окна до успешного smoke не означает безопасный rollback после первой
