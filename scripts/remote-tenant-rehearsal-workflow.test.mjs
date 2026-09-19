@@ -14,6 +14,15 @@ const workflow = readFileSync(
   ),
   'utf8',
 )
+const sourceWriteGateWorkflow = readFileSync(
+  join(
+    repositoryRoot,
+    '.github',
+    'workflows',
+    'manage-supabase-cutover-write-gate.yml',
+  ),
+  'utf8',
+)
 const container = readFileSync(
   join(repositoryRoot, 'infra', 'yandex', 'container.tf'),
   'utf8',
@@ -44,6 +53,39 @@ test('keeps tenant rehearsal manual and single-flight', () => {
     /allow_missing_media:[\s\S]*?type: boolean[\s\S]*?default: false/,
   )
   assert.doesNotMatch(workflow, /environment:/)
+})
+
+test('keeps the source write gate manual, source-only and serialized with migration', () => {
+  assert.match(sourceWriteGateWorkflow, /^  workflow_dispatch:$/m)
+  assert.doesNotMatch(sourceWriteGateWorkflow, /^  (push|pull_request):$/m)
+  assert.match(
+    sourceWriteGateWorkflow,
+    /options:\n\s+- inspect\n\s+- enable\n\s+- disable/,
+  )
+  assert.match(sourceWriteGateWorkflow, /group: yandex-tenant-migration/)
+  assert.match(sourceWriteGateWorkflow, /cancel-in-progress: false/)
+  assert.match(sourceWriteGateWorkflow, /tenant:cutover-write-gate/)
+  assert.match(sourceWriteGateWorkflow, /SUPABASE_DB_PASSWORD/)
+  assert.doesNotMatch(
+    sourceWriteGateWorkflow,
+    /id-token: write|yandex-github-oidc|YC_[A-Z_]+|environment:/,
+  )
+})
+
+test('requires bounded source write gate confirmations inside the command', () => {
+  const command = readFileSync(
+    join(
+      repositoryRoot,
+      'services',
+      'api',
+      'src',
+      'tenant-migration',
+      'source-cutover-write-gate.ts',
+    ),
+    'utf8',
+  )
+  assert.match(command, /PAUSE_SUPABASE_PRODUCT_WRITES_FOR_CUTOVER/)
+  assert.match(command, /RESUME_SUPABASE_PRODUCT_WRITES_BEFORE_YANDEX_WRITES/)
 })
 
 test('keeps the selected profile masked and the encrypted bundle ephemeral', () => {

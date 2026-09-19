@@ -1,8 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-
-Обновлено: 2026-09-19. База изменений: `f01516da` (#1049). Frontend
+Обновлено: 2026-09-19. База изменений: `9e56300a` (#1050). Frontend
 остаётся на Vercel. Production-пользователи пока используют Supabase; Yandex
 app-session, main routing и native registration не включены глобально.
 
@@ -35,6 +34,8 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
 - Экран технических работ и блокировка product runtime подготовлены как
   `VITE_MAINTENANCE_MODE`, строго default-off. Флаг не включён: при точном
   `true` любой маршрут заменяется до монтирования auth/query/data providers.
+  Независимый owner-only Supabase write gate default-off блокирует DML старых
+  вкладок, RPC и background writers на 37 source-таблицах.
 
 ## Yandex Cloud — подтверждённая база
 
