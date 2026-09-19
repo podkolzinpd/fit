@@ -22,9 +22,9 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   занятия из PostgreSQL, использует короткие idempotent generation leases и
   вызывает тот же валидируемый YandexGPT generator вне DB-транзакции.
 - Свои упражнения поддерживают мышцы, оборудование, описание и private JPEG до
-  2 МБ. Yandex migration сохраняет metadata, но Yandex repository всё ещё
-  отклоняет изменение фото; объекты custom exercise media не входят в
-  подтверждённый перенос.
+  2 МБ. Yandex API и repository читают, создают и обновляют текстовую разметку
+  с тем же provider-neutral контрактом; изменение фото всё ещё отклоняется, а
+  объекты custom exercise media не входят в подтверждённый перенос.
 - Публичные условия и политика показывают утверждённый текст. Общий legal
   contract сохраняет versioned acceptance и отменяемые account deletion
   requests через выбранный Supabase или Yandex backend. Yandex API использует
@@ -102,6 +102,10 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
 6. После короткого freeze выполнить свежий full-cohort snapshot, media delta,
    validate и повторную атомарную пересборку с тем же checksum; только затем
    включать routing.
+7. Локальная full-cohort репетиция на неизменённом `origin/main` воспроизводимо
+   останавливается на `target_validation_failed:public.clients`, хотя свежий
+   remote dry-run 34 таблиц проходил. До cutover нужно устранить или объяснить
+   этот локальный validation drift и снова получить зелёную репетицию.
 
 ## Ближайший порядок
 

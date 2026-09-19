@@ -25,6 +25,9 @@ interface CustomExerciseRow extends QueryResultRow {
   exercise_name: string
   muscle_group: MuscleGroup
   input_kind: InputKind
+  primary_muscle_detail: string | null
+  equipment: string | null
+  description: string | null
   archived_at: Date | null
   version: string
 }
@@ -53,6 +56,9 @@ export interface PilotCustomExerciseMutation {
   name: string
   muscleGroup: MuscleGroup
   inputKind: InputKind
+  primaryMuscleDetail: string | null
+  equipment: string | null
+  description: string | null
   archivedAt: string | null
   version: number
 }
@@ -196,6 +202,9 @@ function runCustomExerciseCommand(
       name: exercise.exercise_name,
       muscleGroup: exercise.muscle_group,
       inputKind: exercise.input_kind,
+      primaryMuscleDetail: exercise.primary_muscle_detail,
+      equipment: exercise.equipment,
+      description: exercise.description,
       archivedAt: exercise.archived_at?.toISOString() ?? null,
       version: safeVersion(exercise.version),
     }
@@ -208,8 +217,15 @@ export function createCustomExercise(
 ): Promise<PilotCustomExerciseMutation> {
   return runCustomExerciseCommand(
     client,
-    `select exercise_id, exercise_name, muscle_group, input_kind, archived_at, version
-     from public.create_custom_exercise($1::jsonb)`,
+    `with mutated as (
+       select exercise_id, exercise_name, muscle_group, input_kind, archived_at, version
+       from public.create_custom_exercise($1::jsonb)
+     )
+     select mutated.*,
+       nullif(btrim($1::jsonb->>'primaryMuscleDetail'), '') primary_muscle_detail,
+       nullif(btrim($1::jsonb->>'equipment'), '') equipment,
+       nullif(btrim($1::jsonb->>'description'), '') description
+     from mutated`,
     [JSON.stringify(draft)],
   )
 }
@@ -222,8 +238,15 @@ export function updateCustomExercise(
 ): Promise<PilotCustomExerciseMutation> {
   return runCustomExerciseCommand(
     client,
-    `select exercise_id, exercise_name, muscle_group, input_kind, archived_at, version
-     from public.update_custom_exercise($1, $2::jsonb, $3)`,
+    `with mutated as (
+       select exercise_id, exercise_name, muscle_group, input_kind, archived_at, version
+       from public.update_custom_exercise($1, $2::jsonb, $3)
+     )
+     select mutated.*,
+       nullif(btrim($2::jsonb->>'primaryMuscleDetail'), '') primary_muscle_detail,
+       nullif(btrim($2::jsonb->>'equipment'), '') equipment,
+       nullif(btrim($2::jsonb->>'description'), '') description
+     from mutated`,
     [exerciseId, JSON.stringify(draft), expectedVersion],
   )
 }
@@ -236,8 +259,14 @@ export function setCustomExerciseArchived(
 ): Promise<PilotCustomExerciseMutation> {
   return runCustomExerciseCommand(
     client,
-    `select exercise_id, exercise_name, muscle_group, input_kind, archived_at, version
-     from public.set_custom_exercise_archived($1, $2, $3)`,
+    `with mutated as (
+       select exercise_id, exercise_name, muscle_group, input_kind, archived_at, version
+       from public.set_custom_exercise_archived($1, $2, $3)
+     )
+     select mutated.*, exercise.primary_muscle_detail, exercise.equipment,
+       exercise.description
+     from mutated
+     join public.custom_exercises exercise on exercise.id = mutated.exercise_id`,
     [exerciseId, archived, expectedVersion],
   )
 }

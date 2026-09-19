@@ -28,6 +28,9 @@ interface CustomExerciseRow extends QueryResultRow {
   name: string
   muscle_group: MuscleGroup
   input_kind: InputKind
+  primary_muscle_detail: string | null
+  equipment: string | null
+  description: string | null
   archived_at: Date | null
   version: string
   trainer_id: string
@@ -131,6 +134,9 @@ export interface PilotCustomExercise {
   name: string
   muscleGroup: MuscleGroup
   inputKind: InputKind
+  primaryMuscleDetail: string | null
+  equipment: string | null
+  description: string | null
   archivedAt: string | null
   version: number
   createdBy?: string
@@ -263,7 +269,8 @@ export async function readAccessibleTrainingData(
 ): Promise<PilotTrainingDataResponse> {
   const [customExerciseRows, workoutLookahead, attentionRows, preferenceRows] = await Promise.all([
     client.query<CustomExerciseRow>(`
-      select id, created_by, name, muscle_group, input_kind, archived_at, version
+      select id, created_by, name, muscle_group, input_kind,
+        primary_muscle_detail, equipment, description, archived_at, version
       from public.custom_exercises
       order by archived_at nulls first, lower(name), id
     `),
@@ -415,6 +422,9 @@ export async function readAccessibleTrainingData(
       name: row.name,
       muscleGroup: row.muscle_group,
       inputKind: row.input_kind,
+      primaryMuscleDetail: row.primary_muscle_detail,
+      equipment: row.equipment,
+      description: row.description,
       archivedAt: row.archived_at?.toISOString() ?? null,
       version: safeInteger(row.version, 'custom exercise version'),
       createdBy: row.created_by,
