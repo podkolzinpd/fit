@@ -32,7 +32,10 @@ Supabase из эксплуатации. До закрытия rollback-окна 
   email/password/reset routes возвращаются на единый вход. Связанный профиль с
   `yandex/read_write` assignment получает Yandex app-session и весь основной UI
   выбирает Yandex API без request-level fallback. Неизвестный Yandex ID получает
-  recovery/new-account handoff.
+  recovery/new-account handoff. При восстановлении Yandex app-session после
+  reload legacy `SIGNED_OUT` от Supabase больше не очищает активные Yandex
+  requests, поэтому legal gate завершает проверку вместо бесконечного
+  «Проверяем документы…».
 - `VITE_MAINTENANCE_MODE` выключен после выпуска и production-проверки
   обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
   `paused`: он блокирует DML старых вкладок, RPC и background writers на 38
