@@ -209,7 +209,7 @@ const trainingDataSchema = z.object({
     clientQuestion: z.string().max(500).nullable(),
     clientQuestionAskedAt: z.iso.datetime().nullable(),
     discomfort: z.boolean(),
-    clientComment: z.string().max(500).nullable(),
+    clientComment: z.string().max(5_000).nullable(),
     feedbackSubmittedAt: z.iso.datetime(),
     version: z.number().int().positive(),
   })),

@@ -113,10 +113,13 @@ describe('stage Vital media deployment', () => {
       bucket: 'fit-media-example',
       private: true as const,
       versioning: allowWrite
-        ? 'verified_by_write_probe' as const
+        ? 'pending_manifest_write' as const
         : 'not_probed_read_only' as const,
     }))
-    const upload = vi.fn().mockResolvedValue('uploaded' as const)
+    const upload = vi.fn().mockResolvedValue({
+      outcome: 'uploaded' as const,
+      versioning: 'verified' as const,
+    })
     const deployment: VitalMediaDeploymentService = {
       audit,
       preflight,
@@ -147,7 +150,7 @@ describe('stage Vital media deployment', () => {
     expect(response.statusCode).toBe(404)
   })
 
-  it('keeps the bucket probe read-only unless apply is confirmed exactly', async () => {
+  it('keeps preflight read-only unless manifest writes are confirmed exactly', async () => {
     const { app, preflight } = buildVitalMediaDeployment()
     const rejected = await app.inject({
       method: 'POST',
@@ -177,7 +180,7 @@ describe('stage Vital media deployment', () => {
     expect(confirmed.statusCode).toBe(200)
     expect(confirmed.json()).toMatchObject({
       private: true,
-      versioning: 'verified_by_write_probe',
+      versioning: 'pending_manifest_write',
     })
     expect(preflight).toHaveBeenNthCalledWith(1, false)
     expect(preflight).toHaveBeenNthCalledWith(2, true)
@@ -200,7 +203,10 @@ describe('stage Vital media deployment', () => {
     })
 
     expect(response.statusCode).toBe(200)
-    expect(response.json()).toEqual({ status: 'vital_media_uploaded' })
+    expect(response.json()).toEqual({
+      status: 'vital_media_uploaded',
+      versioning: 'verified',
+    })
     expect(upload).toHaveBeenCalledWith({
       bytes: body.byteLength,
       path: 'exercise.mp4',

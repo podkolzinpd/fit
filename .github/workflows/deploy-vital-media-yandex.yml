@@ -100,6 +100,7 @@ jobs:
               and .mismatched == 0
               and .uploaded + .skipped == 2010
               and .signedUrlSmoke == true
+              and .versioning == "verified_by_manifest_objects"
             ))
           ' "$report" >/dev/null
           jq -r '
@@ -113,5 +114,6 @@ jobs:
             "Uploaded: " + ((.uploaded // 0) | tostring),
             "Skipped: " + ((.skipped // 0) | tostring),
             "Fingerprint: " + .fingerprint,
-            "Signed URL smoke: " + ((.signedUrlSmoke // false) | tostring)
+            "Signed URL smoke: " + ((.signedUrlSmoke // false) | tostring),
+            "Versioning: " + (.versioning // "not_applicable")
           ' "$report" >> "$GITHUB_STEP_SUMMARY"
