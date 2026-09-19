@@ -331,12 +331,12 @@ describe('trainer professional profile', () => {
     const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
     const response = await app.inject({
       method: 'GET',
-      url: '/v1/trainers/catalog?query=%D0%90%D0%BD%D0%BD%D0%B0&specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&metro=msk-dinamo&metro=msk-aeroport&mode=online&accepting=true&offset=20&limit=10',
+      url: '/v1/trainers/catalog?query=%D0%90%D0%BD%D0%BD%D0%B0&specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&metro=msk-dinamo&metro=msk-aeroport&mode=online&accepting=true&brand=true&offset=20&limit=10',
     })
 
     expect(response.statusCode).toBe(200)
     expect(listPublic).toHaveBeenCalledWith({
-      query: 'Анна', specialties: ['Силовые'], city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-aeroport'], mode: 'online', acceptingClients: true,
+      query: 'Анна', specialties: ['Силовые'], city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-aeroport'], mode: 'online', acceptingClients: true, brandTrainerOnly: true,
     }, { offset: 20, limit: 10 })
     expect(response.json()).toEqual({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null })
   })
@@ -357,11 +357,25 @@ describe('trainer professional profile', () => {
     )
   })
 
+  it('accepts the brand-trainer filter toggle', async () => {
+    const pilotTrainerProfiles = profiles()
+    const listPublic = vi.fn().mockResolvedValue({ items: [], totalCount: 0, nextOffset: null })
+    pilotTrainerProfiles.listPublic = listPublic
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'GET', url: '/v1/trainers/catalog?brand=true' })
+    expect(response.statusCode).toBe(200)
+    expect(listPublic).toHaveBeenCalledWith(
+      expect.objectContaining({ brandTrainerOnly: true }),
+      { offset: 0, limit: 20 },
+    )
+  })
+
   it('rejects invalid catalog pagination', async () => {
     const app = buildApp({ pilotTrainerProfiles: profiles(), logger: false }); apps.push(app)
     expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?offset=-1' })).statusCode).toBe(400)
     expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?limit=51' })).statusCode).toBe(400)
     expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?metro=' })).statusCode).toBe(400)
+    expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?brand=maybe' })).statusCode).toBe(400)
     expect((await app.inject({
       method: 'GET',
       url: `/v1/trainers/catalog?${Array.from({ length: 21 }, (_, index) => `metro=msk-${index}`).join('&')}`,
