@@ -23,6 +23,10 @@ import {
   type StageRolloutAssignmentManager,
   type StageRolloutAssignmentTarget,
 } from './db/stage-rollout-assignment.js'
+import type {
+  YandexIdentityUnlinkTarget,
+  YandexIdentityUnlinkManager,
+} from './db/yandex-identity-unlink.js'
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
 import type { StageTenantMigrationRunner } from './tenant-migration/stage-runner.js'
@@ -57,6 +61,7 @@ interface BuildMigrationAppOptions {
   stageTenantMigration?: StageTenantMigrationRunner
   vitalMediaDeployment?: VitalMediaDeploymentService
   stageWorkoutFixture?: StageWorkoutFixtureLoader
+  yandexIdentityUnlink?: YandexIdentityUnlinkManager
 }
 
 const DATABASE_USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._@-]{0,62}$/
@@ -224,6 +229,22 @@ function readBatchRolloutAssignmentRequest(body: unknown): {
   if (action !== 'inspect' && action !== 'enable' && action !== 'disable') return undefined
   if (!('scope' in body) || body.scope !== 'linked-ready') return undefined
   return { action }
+}
+
+function readYandexIdentityUnlinkRequest(
+  body: unknown,
+): YandexIdentityUnlinkTarget | undefined {
+  if (typeof body !== 'object' || body === null) return undefined
+  const payload = body as Record<string, unknown>
+  if ('profileId' in payload) return undefined
+  const tenantFingerprint = payload.tenantFingerprint
+  if (
+    typeof tenantFingerprint !== 'string'
+    || !TENANT_FINGERPRINT_PATTERN.test(tenantFingerprint)
+  ) {
+    return undefined
+  }
+  return { tenantFingerprint }
 }
 
 export function buildMigrationApp(
@@ -434,6 +455,27 @@ export function buildMigrationApp(
           return reply.code(409).send({ status: 'profile_not_ready' })
         }
         return reply.code(500).send({ status: 'rollout_assignment_failed' })
+      }
+    })
+  }
+
+  if (options.yandexIdentityUnlink !== undefined) {
+    const yandexIdentityUnlink = options.yandexIdentityUnlink
+    app.post('/stage/yandex-identity/unlink', async (request, reply) => {
+      const unlinkRequest = readYandexIdentityUnlinkRequest(request.body)
+      if (unlinkRequest === undefined) {
+        return reply.code(400).send({ status: 'invalid_request' })
+      }
+
+      try {
+        const result = await yandexIdentityUnlink.unlink(unlinkRequest)
+        return {
+          status: 'yandex_identity_unlinked',
+          identityDeleted: result.identityDeleted,
+          sessionsRevoked: result.sessionsRevoked,
+        }
+      } catch {
+        return reply.code(500).send({ status: 'yandex_identity_unlink_failed' })
       }
     })
   }

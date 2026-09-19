@@ -17,6 +17,9 @@ import {
   StageRolloutProfileNotReadyError,
   type StageRolloutAssignmentManager,
 } from './db/stage-rollout-assignment.js'
+import type {
+  YandexIdentityUnlinkManager,
+} from './db/yandex-identity-unlink.js'
 import { buildMigrationApp } from './migration-app.js'
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
@@ -614,6 +617,102 @@ describe('stage rollout assignment', () => {
     expect(failedResponse.statusCode).toBe(500)
     expect(failedResponse.json()).toEqual({ status: 'rollout_assignment_failed' })
     expect(failedResponse.body).not.toContain('secret')
+  })
+})
+
+describe('stage Yandex identity unlink', () => {
+  function buildIdentityUnlink(
+    unlink: YandexIdentityUnlinkManager['unlink'] = () => Promise.resolve({
+      identityDeleted: true,
+      sessionsRevoked: 2,
+    }),
+  ) {
+    const unlinkIdentity = vi.fn(unlink)
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      yandexIdentityUnlink: { unlink: unlinkIdentity },
+    })
+    apps.push(app)
+    return { app, unlinkIdentity }
+  }
+
+  it('does not expose the route unless explicitly enabled', async () => {
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/yandex-identity/unlink',
+      payload: { tenantFingerprint: 'a'.repeat(16) },
+    })
+
+    expect(response.statusCode).toBe(404)
+  })
+
+  it('accepts the non-reversible fingerprint recorded by tenant migration', async () => {
+    const { app, unlinkIdentity } = buildIdentityUnlink()
+    const tenantFingerprint = 'a'.repeat(16)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/yandex-identity/unlink',
+      payload: { tenantFingerprint },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(unlinkIdentity).toHaveBeenCalledWith({ tenantFingerprint })
+    expect(response.body).not.toContain(tenantFingerprint)
+  })
+
+  it('rejects raw profile identifiers before touching the database', async () => {
+    const { app, unlinkIdentity } = buildIdentityUnlink()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/yandex-identity/unlink',
+      payload: { profileId: STAGE_CLIENT_ID },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(unlinkIdentity).not.toHaveBeenCalled()
+  })
+
+  it('rejects ambiguous unlink targets before touching the database', async () => {
+    const { app, unlinkIdentity } = buildIdentityUnlink()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/yandex-identity/unlink',
+      payload: {
+        profileId: STAGE_CLIENT_ID,
+        tenantFingerprint: 'a'.repeat(16),
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(unlinkIdentity).not.toHaveBeenCalled()
+  })
+
+  it('keeps unexpected database failures generic', async () => {
+    const { app } = buildIdentityUnlink(
+      () => Promise.reject(new Error('postgresql://owner:secret@database')),
+    )
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/yandex-identity/unlink',
+      payload: { tenantFingerprint: 'a'.repeat(16) },
+    })
+
+    expect(response.statusCode).toBe(500)
+    expect(response.json()).toEqual({ status: 'yandex_identity_unlink_failed' })
+    expect(response.body).not.toContain('secret')
   })
 })
 
