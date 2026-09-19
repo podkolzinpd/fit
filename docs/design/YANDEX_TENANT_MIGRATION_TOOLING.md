@@ -277,9 +277,11 @@ application data and are included in the manifest.
   stale profile;
   the 2026-09-19 rerun after adding `favorite_workouts` validated 69 full-cohort
   rows twice with the same checksum.
-- [ ] Repeat the real full-cohort stage `dry-run` with compressed envelope v3,
-  then use its exact fingerprint for pinned `apply` and repeated zero-insert
-  validation.
+- [x] Repeat the real full-cohort stage `dry-run` with compressed envelope v3.
+  Run `35466016700` exported and transactionally validated all 16,192 rows
+  across the 35-table manifest, then rolled the target transaction back.
+- [ ] Use the exact reviewed fingerprint for pinned `apply` and repeat the
+  full-cohort rebuild to confirm the same final checksum.
 - [ ] Run one real unlinked client through remote stage dry-run and pinned apply
   before enabling that profile's Yandex ID session or sticky routing.
 - [ ] Freeze writes, validate the selected real cohort and change its sticky
