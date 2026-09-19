@@ -1,7 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-20. База изменений: `58c7a74e` (#1067). Frontend остаётся
+Обновлено: 2026-09-20. База изменений: `9e3fee8f` (#1068). Frontend остаётся
 на Vercel, а production data plane — принятый Yandex Cloud stage stack. Yandex
 ID является единственным production-входом; app-session, main routing и native
 registration включены глобально.
@@ -33,7 +33,7 @@ Supabase из эксплуатации. До закрытия rollback-окна 
   `yandex/read_write` assignment получает Yandex app-session и весь основной UI
   выбирает Yandex API без request-level fallback. Неизвестный Yandex ID получает
   recovery/new-account handoff.
-- `VITE_MAINTENANCE_MODE` после cutover снова включён на время выпуска
+- `VITE_MAINTENANCE_MODE` выключен после выпуска и production-проверки
   обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
   `paused`: он блокирует DML старых вкладок, RPC и background writers на 38
   source-таблицах.
