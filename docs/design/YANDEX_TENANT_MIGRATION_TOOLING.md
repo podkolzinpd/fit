@@ -215,7 +215,7 @@ trainer-owned rows.
 
 Standalone artifacts use the distinct
 `fit-standalone-client-bundle-v1` format and fingerprint namespace while
-retaining the same ordered 34-table manifest. Client-scoped tables follow the
+retaining the same ordered 35-table manifest. Client-scoped tables follow the
 canonical card and its reverse merge closure. Custom exercises include both
 client-authored rows and exact custom rows referenced by those workouts.
 Account-scoped Assistant, feedback, push preferences/subscriptions and workout
@@ -269,11 +269,14 @@ application data and are included in the manifest.
 - [x] Run the real full-cohort source `audit`. The 2026-09-14 run exported all
   32 tables and 12 876 rows with a content-derived fingerprint; no source
   contract or table-parity mismatch remained.
-- [x] Replace full-cohort insert-only import with an atomic 34-table rebuild,
+- [x] Replace full-cohort insert-only import with an atomic 35-table rebuild,
   preserve current-snapshot Yandex auth/session/rollout anchors, prune stale
   linked anchors and reject native-only target profiles before deletion. Local
   PostgreSQL 17 rehearsal on 2026-09-19 applies, repeats and validates 88
-  synthetic rows across all 34 tables while removing an extra stale profile.
+  synthetic rows across the then-current 34 tables while removing an extra
+  stale profile;
+  the 2026-09-19 rerun after adding `favorite_workouts` validated 69 full-cohort
+  rows twice with the same checksum.
 - [ ] Repeat the real full-cohort stage `dry-run` with compressed envelope v3,
   then use its exact fingerprint for pinned `apply` and repeated zero-insert
   validation.

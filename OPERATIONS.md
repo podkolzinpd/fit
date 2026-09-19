@@ -43,7 +43,7 @@ npm run tenant:rehearse:local
 Команда работает только с loopback-портами локального Podman, дополняет
 исключительно синтетический demo cohort production-like данными, дважды создаёт
 чистую временную PostgreSQL 17 базу и для каждой выполняет export, dry-run,
-проверку rollback, apply, повторный apply и validate всех 34 таблиц.
+проверку rollback, apply, повторный apply и validate всех 35 таблиц.
 Для isolated trainer/client повторный apply остаётся insert-only и показывает
 `inserted=0`; full-cohort повторно пересобирает переносимый слой и доказывает
 идемпотентность совпадением полного checksum snapshot-а. Зашифрованные
@@ -57,7 +57,7 @@ FK/unique/check constraints и checksums, затем делает rollback. `--a
 фиксирует данные только после полной проверки. Isolated trainer/client import
 не перезаписывает существующие отличающиеся строки. Full-cohort import работает
 иначе: под exclusive lock он временно сохраняет Yandex identity, app/pilot
-sessions и rollout assignments, очищает 34 переносимые таблицы, загружает
+sessions и rollout assignments, очищает 35 переносимых таблиц, загружает
 свежий snapshot и возвращает Yandex-привязки только для профилей из этого
 snapshot. Устаревшие linked identity/session/rollout строки профилей, которых
 уже нет в source, удаляются вместе с ними. Любая ошибка откатывает всю
@@ -273,7 +273,7 @@ Supabase. `enable` берёт краткие `SHARE` locks на защищённ
 3. Выполнить `action=enable`, подтвердить отказ контрольной source mutation и
    только затем снять свежий snapshot.
 4. Выполнить `full-cohort` dry-run/apply/repeat/validate с одинаковой
-   media policy и проверить 34 таблицы, counts и checksums.
+   media policy и проверить 35 таблиц, counts и checksums.
 5. Включить `linked-ready` assignments, провести smoke обеих ролей и только
    затем включать app-session/main-routing/native-registration switches.
 6. После успешного smoke установить `VITE_MAINTENANCE_MODE=false` и выполнить
@@ -544,7 +544,7 @@ handoff endpoints скрыты с `404`, пока `YANDEX_ONLY_AUTH_ENABLED` н�
 variables как `false`.
 
 Не включайте frontend раньше server revision. Порядок cutover: maintenance →
-fresh 34-table apply → repeat checksum → linked-ready assignments → server
+fresh 35-table apply → repeat checksum → linked-ready assignments → server
 variables и успешный stage deploy → smoke linked/recovery/native/invite →
 frontend variables и production deployment → снять maintenance. При неверных
 старых credentials пользователь должен получить retry, а не автоматический

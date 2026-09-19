@@ -23,7 +23,7 @@ const DATABASE_NAME_PATTERN = /^fit_tenant_rehearsal_[1-9][0-9]*_[12]$/u
 const SYNTHETIC_TRAINER_ID = '90000000-0000-4000-8000-000000000009'
 const STANDALONE_CLIENT_PROFILE_ID = 'a1000000-0000-4000-8000-000000000001'
 const STALE_YANDEX_PROFILE_ID = 'f1000000-0000-4000-8000-000000000001'
-const EXPECTED_TABLE_COUNT = 34
+const EXPECTED_TABLE_COUNT = 35
 const FIXTURE_PATH = join(
   ROOT_DIRECTORY,
   'services/api/src/tenant-migration/rehearsal-source-fixture.sql',
@@ -36,6 +36,7 @@ const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
 export const PRODUCTION_LIKE_TABLES = Object.freeze([
   'public.profiles',
+  'public.favorite_workouts',
   'public.user_legal_acceptances',
   'public.account_deletion_requests',
   'public.trainers',
@@ -76,6 +77,7 @@ export const EXPECTED_EMPTY_TABLES = Object.freeze([
 
 export const STANDALONE_CLIENT_DATA_TABLES = Object.freeze([
   'public.profiles',
+  'public.favorite_workouts',
   'public.user_legal_acceptances',
   'public.account_deletion_requests',
   'public.trainers',
