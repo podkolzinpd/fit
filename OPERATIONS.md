@@ -764,7 +764,9 @@ A model draft that fails validation is rejected.
 Program access (trainers and clients):
 
 - `ASSISTANT_PROGRAM_ENABLED=true` enables the authenticated program flow and
-  private generator. A missing/false flag disables new quiz/generator calls.
+  private generator. The Yandex API container sets it for backend parity; user
+  access remains controlled by the existing frontend Assistant flag and Yandex
+  routing assignment. A missing/false flag disables new quiz/generator calls.
 - `VITE_ASSISTANT_PROGRAM_ENABLED=true` in `vercel.json` enables existing chat
   controls for both signed-in product roles. Trainers can select only connected
   clients; a client is bound to their own active card. The server checks

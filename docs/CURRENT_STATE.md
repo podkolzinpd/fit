@@ -1,7 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-19. База изменений: `51833cff` (#1056). Frontend
+Обновлено: 2026-09-19. База изменений: `ae46b2d2` (#1057). Frontend
 остаётся на Vercel. Production-пользователи пока используют Supabase; Yandex
 app-session, main routing и native registration не включены глобально.
 
@@ -17,9 +17,10 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
 
 - Assistant доступен тренеру и клиенту через общий экран; клиент работает
   только со своей карточкой. Программы остаются за общим kill switch.
-- #1025 разрешил клиенту запускать собственную генерацию программы и добавил
-  Supabase jobs. Эквивалентной Yandex migration/API execution path пока нет —
-  это cutover blocker, а не готовая backend parity.
+- Клиентская генерация четырёхнедельной программы работает через выбранный
+  backend. Yandex API читает actor-scoped историю, цель, замеры и будущие
+  занятия из PostgreSQL, использует короткие idempotent generation leases и
+  вызывает тот же валидируемый YandexGPT generator вне DB-транзакции.
 - Свои упражнения поддерживают мышцы, оборудование, описание и private JPEG до
   2 МБ. Yandex migration сохраняет metadata, но Yandex repository всё ещё
   отклоняет изменение фото; объекты custom exercise media не входят в
@@ -89,8 +90,7 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
 
 1. Выполнить успешный media migration без `allow-missing` для chat,
    exercise и custom-exercise objects; подтвердить upload/sign/read/delete.
-2. Добавить Yandex custom-exercise photo adapter и эквивалентный client
-   Assistant program jobs/generation path.
+2. Добавить Yandex custom-exercise photo adapter.
 3. Убрать обязательность Supabase env из production composition и проверить
    остальные прямые пути. Публичная анкета уже выбирает Supabase либо Yandex
    вместе с глобальным main routing без межпровайдерного fallback.

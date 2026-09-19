@@ -46,6 +46,7 @@ resource "yandex_serverless_container" "api" {
         DATABASE_SSL_ROOT_CERT              = "/app/certs/yandex-cloud-ca.pem"
         YANDEX_CLOUD_FOLDER_ID              = var.folder_id
         YANDEX_CLOUD_USE_METADATA_IAM_TOKEN = "true"
+        ASSISTANT_PROGRAM_ENABLED           = "true"
         YANDEX_MEDIA_BUCKET                 = local.media_bucket_name
         YANDEX_NATIVE_REGISTRATION_ENABLED  = var.yandex_native_registration_enabled ? "true" : "false"
         YANDEX_ONLY_AUTH_ENABLED            = var.yandex_only_auth_enabled ? "true" : "false"
