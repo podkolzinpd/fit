@@ -162,11 +162,16 @@ async function seedTrainerFixture(
   await client.query(
     `
       insert into public.custom_exercises (
-        id, trainer_id, created_by, name, muscle_group, input_kind
+        id, trainer_id, created_by, name, muscle_group, input_kind,
+        primary_muscle_detail, equipment, description
       ) values (
-        $1, $2, $2, 'Тестовая тяга Yandex stage', 'back', 'strength'
+        $1, $2, $2, 'Тестовая тяга Yandex stage', 'back', 'strength',
+        'Широчайшие', 'Сани', 'Сохраняйте нейтральное положение спины.'
       )
-      on conflict (id) do nothing
+      on conflict (id) do update set
+        primary_muscle_detail = excluded.primary_muscle_detail,
+        equipment = excluded.equipment,
+        description = excluded.description
     `,
     [ids.customExerciseId, trainerId],
   )

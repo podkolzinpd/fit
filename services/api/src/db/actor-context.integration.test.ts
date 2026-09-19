@@ -2139,6 +2139,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             name: 'Тестовая тяга Yandex stage',
             muscleGroup: 'back',
             inputKind: 'strength',
+            primaryMuscleDetail: 'Широчайшие',
+            equipment: 'Сани',
+            description: 'Сохраняйте нейтральное положение спины.',
             archivedAt: null,
             version: 1,
             createdBy: STAGE_SMOKE_PROFILE_ID,
@@ -4962,6 +4965,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         name: 'Контрактная тяга саней',
         muscleGroup: 'legs' as const,
         inputKind: 'strength' as const,
+        primaryMuscleDetail: 'Квадрицепс',
+        equipment: 'Сани',
+        description: 'Толкайте сани с устойчивым корпусом.',
       }
       const created = await withActorTransaction(
         runtimePool,
@@ -5059,6 +5065,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         exerciseId = exercise.id
         expect(exercise).toMatchObject({ ...exerciseDraft, version: 1 })
 
+        const catalogAfterCreate = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          readAccessibleTrainingData,
+        )
+        expect(catalogAfterCreate.customExercises).toEqual(expect.arrayContaining([
+          expect.objectContaining({ id: exercise.id, ...exerciseDraft }),
+        ]))
+
         await expect(withActorTransaction(
           runtimePool,
           OUTSIDE_TRAINER_ID,
@@ -5071,12 +5086,20 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           (client) => updateCustomExercise(
             client,
             exercise.id,
-            { ...exerciseDraft, name: 'Обновлённая тяга саней' },
+            {
+              ...exerciseDraft,
+              name: 'Обновлённая тяга саней',
+              equipment: 'Нагруженные сани',
+              description: 'Сохраняйте нейтральное положение спины.',
+            },
             1,
           ),
         )
         expect(updatedExercise).toMatchObject({
           name: 'Обновлённая тяга саней',
+          primaryMuscleDetail: 'Квадрицепс',
+          equipment: 'Нагруженные сани',
+          description: 'Сохраняйте нейтральное положение спины.',
           version: 2,
         })
         await expect(withActorTransaction(

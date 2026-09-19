@@ -1503,6 +1503,9 @@ const TRAINING_DATA_RESPONSE: PilotTrainingDataResponse = {
     name: 'Тяга саней',
     muscleGroup: 'legs',
     inputKind: 'strength',
+    primaryMuscleDetail: 'Квадрицепс',
+    equipment: 'Сани',
+    description: 'Держите корпус устойчиво.',
     archivedAt: null,
     version: 1,
   }],
@@ -1952,6 +1955,9 @@ function buildDomainWriter(error?: Error): {
     name: 'Тяга саней',
     muscleGroup: 'legs' as const,
     inputKind: 'strength' as const,
+    primaryMuscleDetail: 'Квадрицепс',
+    equipment: 'Сани',
+    description: 'Держите корпус устойчиво.',
     archivedAt: null,
     version: 1,
   }
@@ -3728,6 +3734,9 @@ describe('pilot client and custom exercise domain commands', () => {
     name: 'Тяга саней',
     muscleGroup: 'legs',
     inputKind: 'strength',
+    primaryMuscleDetail: 'Квадрицепс',
+    equipment: 'Сани',
+    description: 'Держите корпус устойчиво.',
   }
 
   it('creates, updates and archives a client with separate private preferences', async () => {
@@ -3807,6 +3816,13 @@ describe('pilot client and custom exercise domain commands', () => {
 
     expect([created.statusCode, updated.statusCode, archived.statusCode, restored.statusCode])
       .toEqual([201, 200, 200, 200])
+    expect(created.json()).toMatchObject({
+      exercise: {
+        primaryMuscleDetail: exerciseDraft.primaryMuscleDetail,
+        equipment: exerciseDraft.equipment,
+        description: exerciseDraft.description,
+      },
+    })
     expect(writer.createCustomExercise).toHaveBeenCalledWith(sessionToken, exerciseDraft)
     expect(writer.updateCustomExercise).toHaveBeenCalledWith(
       sessionToken, exerciseId, exerciseDraft, 1,
@@ -3834,8 +3850,14 @@ describe('pilot client and custom exercise domain commands', () => {
       headers: { 'x-fit-pilot-session': sessionToken },
       payload: { draft: exerciseDraft, expectedVersion: 1 },
     })
+    const exerciseDescription = await app.inject({
+      method: 'POST', url: '/v1/custom-exercises',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { ...exerciseDraft, description: 'а'.repeat(2_001) },
+    })
 
-    expect([client.statusCode, exercise.statusCode]).toEqual([400, 400])
+    expect([client.statusCode, exercise.statusCode, exerciseDescription.statusCode])
+      .toEqual([400, 400, 400])
     expect(writer.createClient).not.toHaveBeenCalled()
     expect(writer.updateCustomExercise).not.toHaveBeenCalled()
   })
