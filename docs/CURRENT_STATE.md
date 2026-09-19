@@ -61,10 +61,13 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
 - Server-side rollout assignments для `linked-ready` профилей включены и
   проверены агрегированно. Обязательная привязка включена отдельно; frontend
   app-session, main-routing и native-registration switches остаются выключены.
-- Нативная регистрация через Yandex ID, атомарное создание профиля/роли,
-  assignment и legal acceptance находятся в `main`; frontend и server flags
-  default-off. `YANDEX_NATIVE_REGISTRATION_ENABLED` ещё не проложен в
-  deployment environment.
+- Нативная регистрация через Yandex ID и финальный Yandex-only auth flow
+  реализованы за независимыми default-off frontend/server switches. Неизвестный
+  Yandex ID получает одноразовый 10-минутный handoff: старые Supabase
+  credentials могут связать только уже перенесённый rollout-ready UUID, а новый
+  профиль создаётся только после отдельного явного выбора. Неверный пароль не
+  создаёт пустой профиль. Оба server switch проложены в Terraform через
+  default-false repository variables; production значения не включены.
 - Защищённый `/invite#token=…&source=…` показывает публичный Supabase/Yandex
   preview, хранит bearer-token только в browser session и возвращает связанный
   либо новый аккаунт на явный claim; legacy `/join?code=…` теперь также
@@ -92,9 +95,9 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
    repository/API-контракт.
 4. Убрать обязательность Supabase env и runtime fallback из production
    composition; сделать публичный профиль и остальные прямые пути Yandex-first.
-5. Проложить server/frontend native-registration flags, проверить linked и
-   новый Yandex-only аккаунт, затем определить обработку оставшихся email-only
-   пользователей.
+5. После свежего full-cohort apply проверить на stage linked trainer/client,
+   recovery старого email-only профиля, новый Yandex-only аккаунт и приглашение;
+   только затем по отдельной команде включить server/frontend cutover flags.
 6. Провести backup restore drill во временный private cluster, повторить AI
    summary и push smoke.
 7. После короткого freeze выполнить свежий full-cohort snapshot, media delta,

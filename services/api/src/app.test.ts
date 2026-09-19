@@ -53,9 +53,11 @@ import {
   ExistingActorUnavailableError,
   YandexAccountLinkError,
   type ExistingActor,
+  type ExistingCredentialsProvider,
   type ExistingActorProvider,
   type YandexAccountLinker,
 } from './yandex-account-linking.js'
+import type { YandexAuthHandoffService } from './yandex-auth-handoff.js'
 import {
   YandexNativeRegistrationError,
   type YandexNativeRegistrar,
@@ -1543,6 +1545,51 @@ function buildExistingActorProvider(
   return { existingActorProvider: { resolveActor }, resolveActor }
 }
 
+function buildExistingCredentialsProvider(
+  result: ExistingActor | null | Error = EXISTING_ACTOR,
+): {
+  existingCredentialsProvider: ExistingCredentialsProvider
+  resolveCredentials: ReturnType<typeof vi.fn>
+} {
+  const resolveCredentials = vi.fn(() =>
+    result instanceof Error
+      ? Promise.reject(result)
+      : Promise.resolve(result ?? undefined),
+  )
+  return { existingCredentialsProvider: { resolveCredentials }, resolveCredentials }
+}
+
+function buildYandexAuthHandoffService(options: {
+  issue?: Exclude<Awaited<ReturnType<YandexAuthHandoffService['issue']>>, undefined> | null | Error
+  link?: Awaited<ReturnType<YandexAuthHandoffService['linkExisting']>> | Error
+  register?: Awaited<ReturnType<YandexAuthHandoffService['register']>> | Error
+} = {}) {
+  const issueResult = options.issue === undefined ? {
+    token: 'h'.repeat(43),
+    expiresAt: '2026-09-19T12:10:00.000Z',
+  } : options.issue
+  const completed = { profileId: PROFILE_ID, subjectHash: SUBJECT_HASH }
+  const issue = vi.fn(() => issueResult instanceof Error
+    ? Promise.reject(issueResult)
+    : Promise.resolve(issueResult ?? undefined))
+  const linkExisting = vi.fn(() => options.link instanceof Error
+    ? Promise.reject(options.link)
+    : Promise.resolve(options.link ?? completed))
+  const register = vi.fn(() => options.register instanceof Error
+    ? Promise.reject(options.register)
+    : Promise.resolve(options.register ?? completed))
+  const recordRecoveryAttempt = vi.fn().mockResolvedValue(undefined)
+  return {
+    yandexAuthHandoffService: {
+      issue, recordRecoveryAttempt, linkExisting, register,
+    } satisfies YandexAuthHandoffService,
+    issue,
+    recordRecoveryAttempt,
+    linkExisting,
+    register,
+  }
+}
+
 function buildYandexAccountLinker(
   result: { profileId: string } | Error = { profileId: PROFILE_ID },
   status: { linked: boolean } | Error = { linked: true },
@@ -2361,6 +2408,176 @@ describe('Yandex ID app session and account linking endpoints', () => {
 
     expect(response.statusCode).toBe(403)
     expect(response.json()).toEqual({ error: 'yandex_session_denied' })
+  })
+
+  it('returns a short-lived one-time handoff for an unlinked Yandex identity only when cutover is enabled', async () => {
+    const handoff = buildYandexAuthHandoffService()
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      yandexAppSessionIssuer: buildYandexAppSessionIssuer(
+        new YandexAppSessionDeniedError(),
+      ).yandexAppSessionIssuer,
+      yandexAuthHandoffService: handoff.yandexAuthHandoffService,
+      yandexOnlyAuthEnabled: true,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(409)
+    expect(response.json()).toEqual({
+      error: 'yandex_identity_unlinked',
+      handoff: {
+        token: 'h'.repeat(43),
+        expiresAt: '2026-09-19T12:10:00.000Z',
+      },
+    })
+    expect(response.body).not.toContain(SUBJECT_HASH)
+    expect(handoff.issue).toHaveBeenCalledWith(SUBJECT_HASH)
+  })
+
+  it('fails closed when the identity is linked but its migrated profile is not rollout-ready', async () => {
+    const handoff = buildYandexAuthHandoffService({ issue: null })
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      yandexAppSessionIssuer: buildYandexAppSessionIssuer(
+        new YandexAppSessionDeniedError(),
+      ).yandexAppSessionIssuer,
+      yandexAuthHandoffService: handoff.yandexAuthHandoffService,
+      yandexOnlyAuthEnabled: true,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(403)
+    expect(response.json()).toEqual({ error: 'yandex_profile_not_ready' })
+  })
+
+  it('links verified legacy credentials and returns only the Yandex app session', async () => {
+    const credentials = buildExistingCredentialsProvider()
+    const handoff = buildYandexAuthHandoffService()
+    const session = buildYandexAppSessionIssuer()
+    const app = buildApp({
+      existingCredentialsProvider: credentials.existingCredentialsProvider,
+      yandexAuthHandoffService: handoff.yandexAuthHandoffService,
+      yandexAppSessionIssuer: session.yandexAppSessionIssuer,
+      yandexOnlyAuthEnabled: true,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/recover',
+      payload: {
+        handoffToken: 'h'.repeat(43),
+        email: 'person@example.test',
+        password: 'secret-password',
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(APP_SESSION_RESPONSE)
+    expect(response.body).not.toContain('person@example.test')
+    expect(response.body).not.toContain('secret-password')
+    expect(credentials.resolveCredentials).toHaveBeenCalledWith(
+      'person@example.test',
+      'secret-password',
+    )
+    expect(handoff.recordRecoveryAttempt).toHaveBeenCalledWith('h'.repeat(43))
+    expect(handoff.linkExisting).toHaveBeenCalledWith('h'.repeat(43), EXISTING_ACTOR)
+    expect(session.issue).toHaveBeenCalledWith(SUBJECT_HASH)
+  })
+
+  it('does not turn invalid old-account credentials into a new empty profile', async () => {
+    const credentials = buildExistingCredentialsProvider(null)
+    const handoff = buildYandexAuthHandoffService()
+    const app = buildApp({
+      existingCredentialsProvider: credentials.existingCredentialsProvider,
+      yandexAuthHandoffService: handoff.yandexAuthHandoffService,
+      yandexAppSessionIssuer: buildYandexAppSessionIssuer().yandexAppSessionIssuer,
+      yandexOnlyAuthEnabled: true,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/recover',
+      payload: {
+        handoffToken: 'h'.repeat(43),
+        email: 'person@example.test',
+        password: 'wrong-password',
+      },
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual({ error: 'legacy_credentials_invalid' })
+    expect(handoff.linkExisting).not.toHaveBeenCalled()
+    expect(handoff.register).not.toHaveBeenCalled()
+  })
+
+  it('creates a new Yandex account from the verified handoff only behind the server flag', async () => {
+    const handoff = buildYandexAuthHandoffService()
+    const session = buildYandexAppSessionIssuer()
+    const registrar = buildYandexNativeRegistrar()
+    const app = buildApp({
+      yandexAuthHandoffService: handoff.yandexAuthHandoffService,
+      yandexAppSessionIssuer: session.yandexAppSessionIssuer,
+      yandexNativeRegistrar: registrar.yandexNativeRegistrar,
+      yandexOnlyAuthEnabled: true,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/complete-registration',
+      payload: {
+        handoffToken: 'h'.repeat(43),
+        firstName: ' Ирина ',
+        timezone: 'Europe/Moscow',
+        accountRole: 'client',
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(APP_SESSION_RESPONSE)
+    expect(handoff.register).toHaveBeenCalledWith('h'.repeat(43), {
+      accountRole: 'client', firstName: 'Ирина', timezone: 'Europe/Moscow',
+    })
+    expect(session.issue).toHaveBeenCalledWith(SUBJECT_HASH)
+
+    const disabled = buildApp({ logger: false })
+    apps.push(disabled)
+    const hidden = await disabled.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/complete-registration',
+      payload: {
+        handoffToken: 'h'.repeat(43),
+        firstName: 'Ирина',
+        timezone: 'Europe/Moscow',
+        accountRole: 'client',
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+      },
+    })
+    expect(hidden.statusCode).toBe(404)
   })
 
   it('restores and revokes an opaque read-write app session', async () => {

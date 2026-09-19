@@ -77,9 +77,14 @@ import {
   ExistingActorUnavailableError,
   YandexAccountLinkError,
   type ExistingActor,
+  type ExistingCredentialsProvider,
   type ExistingActorProvider,
   type YandexAccountLinker,
 } from './yandex-account-linking.js'
+import {
+  YandexAuthHandoffError,
+  type YandexAuthHandoffService,
+} from './yandex-auth-handoff.js'
 import {
   YandexNativeRegistrationError,
   type YandexNativeRegistrar,
@@ -178,7 +183,10 @@ interface BuildAppOptions {
   legacyWorkoutParser?: LegacyWorkoutParser
   legacySummaryHandler?: LegacySummaryHandler
   existingActorProvider?: ExistingActorProvider
+  existingCredentialsProvider?: ExistingCredentialsProvider
   yandexAccountLinker?: YandexAccountLinker
+  yandexAuthHandoffService?: YandexAuthHandoffService
+  yandexOnlyAuthEnabled?: boolean
   yandexNativeRegistrar?: YandexNativeRegistrar
   yandexAppSessionIssuer?: YandexAppSessionIssuer
   yandexAppSessionReader?: YandexAppSessionReader
@@ -756,6 +764,85 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   }
 
+  function readHandoffRegistrationRequest(body: unknown) {
+    if (typeof body !== 'object' || body === null || !('handoffToken' in body)) return undefined
+    const handoffToken = body.handoffToken
+    const firstName = 'firstName' in body ? body.firstName : undefined
+    const timezone = 'timezone' in body ? body.timezone : undefined
+    const accountRole = 'accountRole' in body ? body.accountRole : undefined
+    const termsVersion = 'termsVersion' in body ? body.termsVersion : undefined
+    const privacyVersion = 'privacyVersion' in body ? body.privacyVersion : undefined
+    if (
+      typeof handoffToken !== 'string'
+      || !/^[A-Za-z0-9_-]{43}$/.test(handoffToken)
+      || typeof firstName !== 'string'
+      || firstName.trim().length < 2
+      || firstName.trim().length > 120
+      || typeof timezone !== 'string'
+      || timezone.trim().length === 0
+      || timezone.trim().length > 100
+      || (accountRole !== 'trainer' && accountRole !== 'client')
+      || typeof termsVersion !== 'string'
+      || typeof privacyVersion !== 'string'
+    ) return undefined
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: timezone.trim() }).format()
+    } catch {
+      return undefined
+    }
+    const normalizedRole: 'trainer' | 'client' = accountRole
+    return {
+      handoffToken,
+      firstName: firstName.trim(),
+      timezone: timezone.trim(),
+      accountRole: normalizedRole,
+      termsVersion,
+      privacyVersion,
+    }
+  }
+
+  function readLegacyRecoveryRequest(body: unknown) {
+    if (
+      typeof body !== 'object'
+      || body === null
+      || !('handoffToken' in body)
+      || !('email' in body)
+      || !('password' in body)
+    ) return undefined
+    const handoffToken = body.handoffToken
+    const email = body.email
+    const password = body.password
+    if (
+      typeof handoffToken !== 'string'
+      || !/^[A-Za-z0-9_-]{43}$/.test(handoffToken)
+      || typeof email !== 'string'
+      || email.trim().length < 3
+      || email.trim().length > 320
+      || !email.includes('@')
+      || typeof password !== 'string'
+      || password.length < 8
+      || password.length > 1_024
+    ) return undefined
+    return { handoffToken, email: email.trim(), password }
+  }
+
+  function sendHandoffFailure(reply: FastifyReply, error: unknown) {
+    if (!(error instanceof YandexAuthHandoffError)) return undefined
+    if (error.failure === 'expired') {
+      return reply.code(401).send({ error: 'yandex_auth_handoff_expired' })
+    }
+    if (error.failure === 'not_found') {
+      return reply.code(404).send({ error: 'migrated_profile_not_found' })
+    }
+    if (error.failure === 'not_ready') {
+      return reply.code(403).send({ error: 'migrated_profile_not_ready' })
+    }
+    if (error.failure === 'conflict') {
+      return reply.code(409).send({ error: 'yandex_identity_conflict' })
+    }
+    return reply.code(400).send({ error: 'invalid_request' })
+  }
+
   async function readYandexSubjectHash(command: { code: string; codeVerifier: string }) {
     if (
       options.oauthCodeProvider === undefined ||
@@ -1033,13 +1120,121 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     try {
       const session = await options.yandexAppSessionIssuer.issue(subjectHash)
       if (session === undefined) {
-        return reply.code(403).send({ error: 'yandex_session_denied' })
+        if (!options.yandexOnlyAuthEnabled || options.yandexAuthHandoffService === undefined) {
+          return reply.code(403).send({ error: 'yandex_session_denied' })
+        }
+        const handoff = await options.yandexAuthHandoffService.issue(subjectHash)
+        return handoff === undefined
+          ? reply.code(403).send({ error: 'yandex_profile_not_ready' })
+          : reply.header('cache-control', 'no-store').code(409).send({
+              error: 'yandex_identity_unlinked',
+              handoff,
+            })
       }
       return reply.header('cache-control', 'no-store').send(session)
     } catch (error) {
       if (error instanceof YandexAppSessionDeniedError) {
+        if (!options.yandexOnlyAuthEnabled || options.yandexAuthHandoffService === undefined) {
+          return reply.code(403).send({ error: 'yandex_session_denied' })
+        }
+        try {
+          const handoff = await options.yandexAuthHandoffService.issue(subjectHash)
+          return handoff === undefined
+            ? reply.code(403).send({ error: 'yandex_profile_not_ready' })
+            : reply.header('cache-control', 'no-store').code(409).send({
+                error: 'yandex_identity_unlinked',
+                handoff,
+              })
+        } catch (handoffError) {
+          const response = sendHandoffFailure(reply, handoffError)
+          if (response !== undefined) return response
+        }
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.post('/v1/auth/yandex/recover', async (request, reply) => {
+    if (!options.yandexOnlyAuthEnabled) {
+      return reply.code(404).send({ error: 'not_found' })
+    }
+    const command = readLegacyRecoveryRequest(request.body)
+    if (command === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    if (
+      options.existingCredentialsProvider === undefined
+      || options.yandexAuthHandoffService === undefined
+      || options.yandexAppSessionIssuer === undefined
+    ) return reply.code(503).send({ error: 'service_unavailable' })
+
+    try {
+      await options.yandexAuthHandoffService.recordRecoveryAttempt(command.handoffToken)
+      const actor = await options.existingCredentialsProvider.resolveCredentials(
+        command.email,
+        command.password,
+      )
+      if (actor === undefined) {
+        request.log.warn({ failure: 'legacy_credentials_invalid' }, 'Yandex auth recovery rejected')
+        return reply.code(401).send({ error: 'legacy_credentials_invalid' })
+      }
+      const completed = await options.yandexAuthHandoffService.linkExisting(
+        command.handoffToken,
+        actor,
+      )
+      const session = await options.yandexAppSessionIssuer.issue(completed.subjectHash)
+      if (session === undefined || session.profile.id !== completed.profileId) {
+        return reply.code(503).send({ error: 'service_unavailable' })
+      }
+      request.log.info({ accountRole: actor.profile.accountRole }, 'Yandex auth recovery completed')
+      return reply.header('cache-control', 'no-store').send(session)
+    } catch (error) {
+      if (error instanceof ExistingActorUnavailableError) {
+        return reply.code(503).send({ error: 'legacy_auth_unavailable' })
+      }
+      const response = sendHandoffFailure(reply, error)
+      if (response !== undefined) return response
+      if (error instanceof YandexAppSessionDeniedError) {
+        return reply.code(403).send({ error: 'migrated_profile_not_ready' })
+      }
+      request.log.error({ failure: 'unexpected' }, 'Yandex auth recovery unavailable')
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.post('/v1/auth/yandex/complete-registration', async (request, reply) => {
+    if (!options.yandexOnlyAuthEnabled) {
+      return reply.code(404).send({ error: 'not_found' })
+    }
+    const command = readHandoffRegistrationRequest(request.body)
+    if (command === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    if (
+      command.termsVersion !== CURRENT_TERMS_VERSION
+      || command.privacyVersion !== CURRENT_PRIVACY_VERSION
+    ) return reply.code(412).send({ error: 'legal_documents_changed' })
+    if (
+      options.yandexAuthHandoffService === undefined
+      || options.yandexAppSessionIssuer === undefined
+      || options.yandexNativeRegistrar === undefined
+    ) return reply.code(503).send({ error: 'service_unavailable' })
+
+    try {
+      const completed = await options.yandexAuthHandoffService.register(command.handoffToken, {
+        accountRole: command.accountRole,
+        firstName: command.firstName,
+        timezone: command.timezone,
+      })
+      const session = await options.yandexAppSessionIssuer.issue(completed.subjectHash)
+      if (session === undefined || session.profile.id !== completed.profileId) {
+        return reply.code(503).send({ error: 'service_unavailable' })
+      }
+      request.log.info({ accountRole: command.accountRole }, 'Yandex handoff registration completed')
+      return reply.header('cache-control', 'no-store').send(session)
+    } catch (error) {
+      const response = sendHandoffFailure(reply, error)
+      if (response !== undefined) return response
+      if (error instanceof YandexAppSessionDeniedError) {
         return reply.code(403).send({ error: 'yandex_session_denied' })
       }
+      request.log.error({ failure: 'unexpected' }, 'Yandex handoff registration unavailable')
       return reply.code(503).send({ error: 'service_unavailable' })
     }
   })

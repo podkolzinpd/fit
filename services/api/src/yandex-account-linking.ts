@@ -11,6 +11,10 @@ export interface ExistingActorProvider {
   resolveActor(accessToken: string): Promise<ExistingActor | undefined>
 }
 
+export interface ExistingCredentialsProvider {
+  resolveCredentials(email: string, password: string): Promise<ExistingActor | undefined>
+}
+
 export interface ExistingActorProfile {
   id: string
   firstName: string | null
@@ -226,6 +230,27 @@ export class SupabaseExistingActorProvider implements ExistingActorProvider {
       return { profile }
     } catch (error) {
       if (error instanceof SupabaseBridgeError && error.status === 503) {
+        throw new ExistingActorUnavailableError()
+      }
+      throw error
+    }
+  }
+}
+
+export class SupabaseExistingCredentialsProvider implements ExistingCredentialsProvider {
+  constructor(
+    private readonly supabase: SupabaseBridge,
+    private readonly actorProvider = new SupabaseExistingActorProvider(supabase),
+  ) {}
+
+  async resolveCredentials(email: string, password: string): Promise<ExistingActor | undefined> {
+    try {
+      const accessToken = await this.supabase.passwordAccessToken(email, password)
+      return accessToken === undefined
+        ? undefined
+        : await this.actorProvider.resolveActor(accessToken)
+    } catch (error) {
+      if (error instanceof SupabaseBridgeError && error.status >= 500) {
         throw new ExistingActorUnavailableError()
       }
       throw error

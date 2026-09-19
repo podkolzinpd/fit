@@ -9,12 +9,15 @@ import {
   type YandexAppSession,
   type YandexPilotSession,
   type YandexPilotTrainingData as YandexPilotTrainingDataState,
+  YandexAccountSetupRequiredError,
+  YandexAuthHandoffRefreshRequiredError,
 } from '../../data/repositories/yandex-pilot.repository'
 import { useAuth } from '../../app/auth-context'
 import {
   getYandexAppSessionEntryConfig,
   getYandexIdPilotConfig,
   getYandexNativeRegistrationConfig,
+  getYandexOnlyAuthConfig,
   getYandexSessionLinkingConfig,
   isYandexAccountLinkRequired,
   isYandexAppSessionEnabled,
@@ -106,6 +109,7 @@ export function AuthPage() {
   const returnTo = directReturnTo
     ?? (hasPendingInvitationLink() ? '/invite' : initialInvitationReturn ?? readInvitationAuthReturn() ?? undefined)
   const nativeRegistrationConfig = getYandexNativeRegistrationConfig()
+  const yandexOnlyAuthConfig = getYandexOnlyAuthConfig()
   const [mode, setMode] = useState<Mode>(authState?.mode === 'register' ? 'register' : 'login')
   const [registrationMethod, setRegistrationMethod] = useState<RegistrationMethod>(
     nativeRegistrationConfig === null ? 'email' : 'yandex',
@@ -165,7 +169,7 @@ export function AuthPage() {
   }
 
   function startYandexLogin(): void {
-    const config = yandexAppSessionConfig ?? yandexPilotConfig
+    const config = yandexOnlyAuthConfig ?? yandexAppSessionConfig ?? yandexPilotConfig
     if (config === null) return
     if (returnTo !== undefined) saveInvitationAuthReturn(returnTo)
     setError(null)
@@ -179,6 +183,29 @@ export function AuthPage() {
       .then((url) => window.location.assign(url))
       .catch(() => { setError('Не удалось начать вход через Yandex ID.'); setYandexBusy(false) })
   }
+
+  if (yandexOnlyAuthConfig !== null) return <AuthIdentityScreen>
+    <header className="auth-entry-head">
+      <div className="brand" aria-hidden="true">FIT</div>
+      <p className="eyebrow">ЕДИНЫЙ ВХОД</p>
+      <h1>Вход в FIT</h1>
+      <p className="muted">Войдите через Yandex ID. Если у вас уже был аккаунт FIT, после входа мы поможем связать его с перенесёнными данными.</p>
+      {returnTo !== undefined && <p className="muted">После входа вы вернётесь к приглашению.</p>}
+    </header>
+    <button
+      className="primary auth-yandex"
+      type="button"
+      disabled={yandexBusy}
+      aria-busy={yandexBusy}
+      onClick={startYandexLogin}
+    >{yandexBusy ? 'Переходим в Yandex ID…' : 'Продолжить с Yandex ID'}</button>
+    {error && <p className="error" role="alert">{error}</p>}
+    {yandexAppSession.error && <div className="stack" role="alert">
+      <p className="error">{yandexAppSession.error}</p>
+      <button className="secondary" type="button" onClick={() => void yandexAppSession.retry()}>Повторить проверку</button>
+    </div>}
+    <nav className="auth-legal-links" aria-label="Юридическая информация"><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Конфиденциальность</Link></nav>
+  </AuthIdentityScreen>
 
   return <AuthIdentityScreen>
     <header className="auth-entry-head">
@@ -361,6 +388,14 @@ function YandexAppSessionCallbackPage() {
   const { establish } = useYandexAppSession()
   const config = useMemo(() => getYandexAppSessionEntryConfig(), [])
   const [error, setError] = useState<string | null>(null)
+  const [handoff, setHandoff] = useState<{ token: string; expiresAt: string } | null>(null)
+  const [setupMode, setSetupMode] = useState<'choice' | 'existing' | 'new'>('choice')
+  const [setupBusy, setSetupBusy] = useState(false)
+  const [setupError, setSetupError] = useState<string | null>(null)
+  const [firstName, setFirstName] = useState('')
+  const [invitationRequiresClient] = useState(() => hasPendingInvitationLink()
+    || readInvitationAuthReturn()?.startsWith('/join') === true)
+  const [role, setRole] = useState<AccountRole>(() => invitationRequiresClient ? 'client' : 'trainer')
   const sessionRequest = useRef<Promise<YandexAppSession> | null>(null)
 
   useEffect(() => {
@@ -397,7 +432,12 @@ function YandexAppSessionCallbackPage() {
         navigate(actor === null || hasInvitationReturn ? '/auth/yandex/session' : '/assistant', { replace: true })
       } catch (caught) {
         if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : 'Не удалось открыть сессию Yandex ID.')
+          if (caught instanceof YandexAccountSetupRequiredError) {
+            setHandoff(caught.handoff)
+            setError(null)
+          } else {
+            setError(caught instanceof Error ? caught.message : 'Не удалось открыть сессию Yandex ID.')
+          }
         }
       }
     }
@@ -406,7 +446,88 @@ function YandexAppSessionCallbackPage() {
     return () => { cancelled = true }
   }, [actor, authLoading, config, establish, navigate])
 
+  async function completeSetup(
+    request: () => Promise<YandexAppSession>,
+  ): Promise<void> {
+    if (handoff === null) return
+    setSetupBusy(true)
+    setSetupError(null)
+    try {
+      const result = await request()
+      establish(result)
+      navigate('/auth/yandex/session', { replace: true })
+    } catch (caught) {
+      if (caught instanceof YandexAuthHandoffRefreshRequiredError) {
+        setHandoff(null)
+        setError(caught.message)
+      } else {
+        setSetupError(caught instanceof Error ? caught.message : 'Не удалось завершить вход.')
+      }
+    } finally {
+      setSetupBusy(false)
+    }
+  }
+
+  function recoverExisting(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault()
+    if (config === null || handoff === null) return
+    const values = new FormData(event.currentTarget)
+    void completeSetup(() => yandexPilotRepository.recoverYandexAccount(config.apiBaseUrl, {
+      handoffToken: handoff.token,
+      email: String(values.get('email')),
+      password: String(values.get('password')),
+    }))
+  }
+
+  function registerNew(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault()
+    if (config === null || handoff === null) return
+    void completeSetup(() => yandexPilotRepository.completeYandexRegistration(config.apiBaseUrl, {
+      handoffToken: handoff.token,
+      accountRole: role,
+      firstName,
+      timezone: systemTimeZone(),
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+    }))
+  }
+
   if (config === null) return <Navigate to="/auth" replace />
+  if (handoff !== null) return <AuthIdentityScreen>
+    <header className="auth-entry-head">
+      <div className="brand" aria-hidden="true">FIT</div>
+      <p className="eyebrow">YANDEX ID ПОДТВЕРЖДЁН</p>
+      <h1>{setupMode === 'choice'
+        ? 'У вас уже был аккаунт FIT?'
+        : setupMode === 'existing' ? 'Найдём прежний аккаунт' : 'Создадим новый аккаунт'}</h1>
+      <p className="muted">{setupMode === 'choice'
+        ? 'Свяжем Yandex ID с перенесёнными тренировками или начнём с чистого профиля.'
+        : setupMode === 'existing'
+          ? 'Введите данные, которыми вы раньше входили в FIT. Они нужны один раз и не сохраняются.'
+          : 'Новый профиль будет создан сразу в Yandex Cloud.'}</p>
+    </header>
+    {setupMode === 'choice' && <div className="stack auth-setup-actions">
+      <button className="primary" type="button" onClick={() => setSetupMode('existing')}>Да, был аккаунт</button>
+      <button className="secondary" type="button" onClick={() => setSetupMode('new')}>Нет, создать новый</button>
+    </div>}
+    {setupMode === 'existing' && <form className="stack auth-form" onSubmit={recoverExisting}>
+      <Field label="Email старого аккаунта"><input name="email" type="email" autoComplete="email" required /></Field>
+      <Field label="Пароль старого аккаунта"><input name="password" type="password" minLength={8} autoComplete="current-password" required /></Field>
+      {setupError && <p className="error" role="alert">{setupError}</p>}
+      <button className="primary" disabled={setupBusy} aria-busy={setupBusy}>{setupBusy ? 'Проверяем…' : 'Связать и продолжить'}</button>
+      <button className="link" type="button" disabled={setupBusy} onClick={() => { setSetupMode('choice'); setSetupError(null) }}>Назад</button>
+    </form>}
+    {setupMode === 'new' && <form className="stack auth-form" onSubmit={registerNew}>
+      <Field label="Тип аккаунта"><select value={role} disabled={invitationRequiresClient} onChange={(event) => setRole(event.target.value as AccountRole)}>
+        <option value="trainer">Я тренер</option><option value="client">Я клиент</option>
+      </select></Field>
+      <Field label="Имя"><input minLength={2} maxLength={120} autoComplete="given-name" required value={firstName} onChange={(event) => setFirstName(event.target.value)} /></Field>
+      {setupError && <p className="error" role="alert">{setupError}</p>}
+      <button className="primary" disabled={setupBusy} aria-busy={setupBusy}>{setupBusy ? 'Создаём…' : 'Создать аккаунт'}</button>
+      <button className="link" type="button" disabled={setupBusy} onClick={() => { setSetupMode('choice'); setSetupError(null) }}>Назад</button>
+    </form>}
+    {setupMode === 'new' && <p className="auth-consent">Создавая аккаунт, вы принимаете <Link to={LEGAL_PATHS.terms}>Условия использования</Link> и <Link to={LEGAL_PATHS.privacy}>Политику конфиденциальности</Link>.</p>}
+  </AuthIdentityScreen>
   return <AuthIdentityScreen>
     <header className="auth-entry-head">
       <div className="brand" aria-hidden="true">FIT</div>
@@ -811,6 +932,7 @@ function pilotClientSummary(client: YandexPilotClient): string {
 export function ForgotPasswordPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  if (getYandexOnlyAuthConfig() !== null) return <Navigate to="/auth" replace />
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(null)
     try { await authRepository.resetPassword(String(new FormData(event.currentTarget).get('email'))); setMessage('Ссылка отправлена, если такой аккаунт существует.') }
@@ -821,6 +943,7 @@ export function ForgotPasswordPage() {
 
 export function ResetPasswordPage() {
   const navigate = useNavigate(); const [error, setError] = useState<string | null>(null)
+  if (getYandexOnlyAuthConfig() !== null) return <Navigate to="/auth" replace />
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     try {
@@ -834,6 +957,7 @@ export function ResetPasswordPage() {
 
 export function AuthCallbackPage() {
   const { loading, error, actor } = useAuth()
+  if (getYandexOnlyAuthConfig() !== null) return <Navigate to="/auth" replace />
   if (actor) return <InvitationAuthRedirect role={actor.role} />
   return <AuthIdentityScreen><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">ВХОД В АККАУНТ</p><h1>Завершаем вход</h1><p className="muted">{loading ? 'Проверяем сессию…' : error ?? 'Не удалось получить сессию.'}</p></header><Link className="auth-back-link" to="/auth">Вернуться</Link></AuthIdentityScreen>
 }

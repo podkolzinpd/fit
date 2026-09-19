@@ -37,8 +37,10 @@ import { readSupabaseBridgeConfig, SupabaseBridge } from './supabase-bridge.js'
 import {
   DatabaseYandexAccountLinker,
   SupabaseExistingActorProvider,
+  SupabaseExistingCredentialsProvider,
 } from './yandex-account-linking.js'
 import { DatabaseYandexNativeRegistrar } from './yandex-native-registration.js'
+import { DatabaseYandexAuthHandoffService } from './yandex-auth-handoff.js'
 import {
   DatabaseYandexAppSessionIssuer,
   DatabaseYandexAppSessionReader,
@@ -100,10 +102,16 @@ const yandexAccountLinker =
     : new DatabaseYandexAccountLinker(databasePool)
 const yandexNativeRegistrationEnabled =
   process.env.YANDEX_NATIVE_REGISTRATION_ENABLED === 'true'
+const yandexOnlyAuthEnabled =
+  process.env.YANDEX_ONLY_AUTH_ENABLED === 'true'
 const yandexNativeRegistrar =
   databasePool === undefined || !yandexNativeRegistrationEnabled
     ? undefined
     : new DatabaseYandexNativeRegistrar(databasePool)
+const yandexAuthHandoffService =
+  databasePool === undefined || !yandexOnlyAuthEnabled
+    ? undefined
+    : new DatabaseYandexAuthHandoffService(databasePool)
 const pilotClientsReader =
   databasePool === undefined
     ? undefined
@@ -208,6 +216,10 @@ const existingActorProvider =
   supabaseBridgeConfig === undefined
     ? undefined
     : new SupabaseExistingActorProvider(new SupabaseBridge(supabaseBridgeConfig))
+const existingCredentialsProvider =
+  supabaseBridgeConfig === undefined || !yandexOnlyAuthEnabled
+    ? undefined
+    : new SupabaseExistingCredentialsProvider(new SupabaseBridge(supabaseBridgeConfig))
 const legacyWorkoutParser =
   supabaseBridgeConfig === undefined
     || process.env.YANDEX_CLOUD_API_KEY === undefined
@@ -254,7 +266,10 @@ const app = buildApp(
     ...(vitalMediaSigner === undefined ? {} : { vitalMediaSigner }),
     ...(yandexAccountLinker === undefined ? {} : { yandexAccountLinker }),
     ...(yandexNativeRegistrar === undefined ? {} : { yandexNativeRegistrar }),
+    ...(yandexAuthHandoffService === undefined ? {} : { yandexAuthHandoffService }),
     ...(existingActorProvider === undefined ? {} : { existingActorProvider }),
+    ...(existingCredentialsProvider === undefined ? {} : { existingCredentialsProvider }),
+    yandexOnlyAuthEnabled,
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
     ...(pilotTrainerProfiles === undefined ? {} : { pilotTrainerProfiles }),
     ...(pilotTrainerDiscovery === undefined ? {} : { pilotTrainerDiscovery }),
