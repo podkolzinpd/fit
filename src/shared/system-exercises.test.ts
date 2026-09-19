@@ -275,6 +275,13 @@ describe('system exercise catalog', () => {
     expect(VITAL_GYM_PRO_NEW_EXERCISES).toHaveLength(502)
     expect(Object.keys(VITAL_GYM_PRO_ASSETS)).toHaveLength(670)
     expect(new Set(VITAL_GYM_PRO_MAIN_REFS).size).toBe(670)
+    const expectedPackagedPaths = new Set(Object.keys(VITAL_GYM_PRO_ASSETS).flatMap((ref) => [
+      `${ref}.jpg`,
+      `${ref}-end.jpg`,
+      `${ref}.mp4`,
+    ]))
+    expect(new Set(vitalGymProMediaManifest.files.map(({ path }) => path)))
+      .toEqual(expectedPackagedPaths)
     const finalCatalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
     expect(VITAL_GYM_PRO_MAIN_REFS.filter((ref) => !finalCatalogByRef.get(ref)?.techniqueVideoUrl)).toEqual([])
     for (const exercise of VITAL_GYM_PRO_NEW_EXERCISES) {
