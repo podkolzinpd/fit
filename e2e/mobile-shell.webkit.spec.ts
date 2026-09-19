@@ -134,7 +134,7 @@ test('trainer opens client chat from the list and returns to the same search and
   await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBe(scrollBefore)
 })
 
-test('trainer client archive action opens with a horizontal swipe without stealing a vertical gesture', async ({ page }) => {
+test('trainer client archive action opens with a browser-generated drag without stealing a vertical gesture', async ({ page }) => {
   const clientId = 'b9300000-0000-4000-8000-000000000001'
   await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({
     contentType: 'application/json',
@@ -154,24 +154,21 @@ test('trainer client archive action opens with a horizontal swipe without steali
   const surface = page.locator('.client-swipe-surface')
   const rail = page.locator('.client-swipe-actions')
   await expect(surface).toBeVisible()
-  await surface.evaluate((element) => {
-    const emit = (type: string, clientX: number, clientY: number) => element.dispatchEvent(new PointerEvent(type, {
-      bubbles: true, cancelable: true, pointerId: 1, pointerType: 'touch', isPrimary: true, clientX, clientY,
-    }))
-    emit('pointerdown', 220, 120)
-    emit('pointermove', 216, 55)
-    emit('pointerup', 216, 55)
-  })
+  const box = await surface.boundingBox()
+  expect(box).not.toBeNull()
+  const centerX = box!.x + box!.width * 0.72
+  const centerY = box!.y + box!.height / 2
+
+  await page.mouse.move(centerX, centerY)
+  await page.mouse.down()
+  await page.mouse.move(centerX - 4, centerY + 70, { steps: 5 })
+  await page.mouse.up()
   await expect(rail).toHaveAttribute('aria-hidden', 'true')
 
-  await surface.evaluate((element) => {
-    const emit = (type: string, clientX: number) => element.dispatchEvent(new PointerEvent(type, {
-      bubbles: true, cancelable: true, pointerId: 2, pointerType: 'touch', isPrimary: true, clientX, clientY: 120,
-    }))
-    emit('pointerdown', 250)
-    emit('pointermove', 155)
-    emit('pointerup', 155)
-  })
+  await page.mouse.move(centerX, centerY)
+  await page.mouse.down()
+  await page.mouse.move(centerX - 96, centerY + 2, { steps: 8 })
+  await page.mouse.up()
   await expect(rail).toHaveAttribute('aria-hidden', 'false')
   await expect(page.getByRole('button', { name: 'В архив' })).toBeVisible()
   await expect(surface).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -112, 0)')

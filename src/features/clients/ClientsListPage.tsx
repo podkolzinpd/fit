@@ -55,6 +55,12 @@ function ClientSwipeCard({
       if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 8) return
       active.axis = Math.abs(deltaX) > Math.abs(deltaY) * 1.2 ? 'horizontal' : 'vertical'
       if (active.axis === 'vertical') return
+      // Захватываем указатель только после того, как отличили горизонтальный
+      // жест от прокрутки. Иначе Safari/Chrome могут передать следующие move/up
+      // вложенной ссылке или соседней карточке, и строка останется на месте.
+      if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+        try { event.currentTarget.setPointerCapture(event.pointerId) } catch { /* Старые WebView могут не поддержать capture. */ }
+      }
     }
     event.preventDefault()
     suppressClick.current = true
@@ -66,6 +72,7 @@ function ClientSwipeCard({
     const active = pointer.current
     if (!active || active.id !== event.pointerId) return
     pointer.current = null
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
     if (active.axis === 'horizontal') {
       const finalOffset = dragOffsetRef.current ?? baseOffset
       onOpenChange(finalOffset <= -CLIENT_SWIPE_WIDTH / 2)
@@ -73,6 +80,15 @@ function ClientSwipeCard({
     }
     dragOffsetRef.current = null
     setDragOffset(null)
+  }
+  const cancelDrag = (event: ReactPointerEvent<HTMLElement>) => {
+    const active = pointer.current
+    if (!active || active.id !== event.pointerId) return
+    pointer.current = null
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    dragOffsetRef.current = null
+    setDragOffset(null)
+    suppressClick.current = false
   }
   const captureClick = (event: React.MouseEvent<HTMLElement>) => {
     if (suppressClick.current) {
@@ -98,9 +114,10 @@ function ClientSwipeCard({
     </div>
     <article className="card client-card client-swipe-surface"
       style={{ transform: `translate3d(${dragOffset ?? baseOffset}px, 0, 0)` }}
-      onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={finishDrag} onPointerCancel={finishDrag}
+      onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={finishDrag} onPointerCancel={cancelDrag}
+      onDragStart={(event) => event.preventDefault()}
       onClickCapture={captureClick}>
-      <Link className="client-card-main" to={`/clients/${client.id}`} onClick={onBeforeOpen}>
+      <Link className="client-card-main" to={`/clients/${client.id}`} draggable={false} onClick={onBeforeOpen}>
         <span className="client-avatar" aria-hidden="true"><ProfileIcon /></span>
         <span className="client-card-copy"><strong>{client.fullName}</strong><span>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</span></span>
         {client.archivedAt && <span className="badge">Архив</span>}
