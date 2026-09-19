@@ -6,7 +6,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import type { TrainerCatalogFilters, TrainerProfessionalProfile } from '../../shared/domain'
 import { ChevronDownIcon, CloseIcon } from '../../shared/icons'
 import { moscowMetroStationById } from '../../shared/moscow-metro'
-import { AsyncView, Field, Page } from '../../shared/ui'
+import { AsyncView, Field, Page, Switch } from '../../shared/ui'
 import { MetroStationPicker } from './MetroStationPicker'
 import { SpecialtyChecklist } from './SpecialtyChecklist'
 
@@ -17,6 +17,7 @@ const emptyFilters: TrainerCatalogFilters = {
   metroStationIds: [],
   mode: '',
   acceptingClients: null,
+  brandTrainerOnly: false,
 }
 
 const catalogViewKey = 'fit.trainer-catalog.view.v1'
@@ -42,6 +43,7 @@ function readStoredFilters(value: unknown): TrainerCatalogFilters | null {
       : [],
     mode: candidate.mode === 'online' || candidate.mode === 'in_person' ? candidate.mode : '',
     acceptingClients: typeof candidate.acceptingClients === 'boolean' ? candidate.acceptingClients : null,
+    brandTrainerOnly: typeof candidate.brandTrainerOnly === 'boolean' ? candidate.brandTrainerOnly : false,
   }
 }
 
@@ -171,6 +173,10 @@ function CatalogFiltersSheet({ draft, setDraft, onApply, onReset, onClose, retur
         <Field label="Новые клиенты"><select value={draft.acceptingClients === null ? '' : String(draft.acceptingClients)} onChange={(event) => setDraft((value) => ({ ...value, acceptingClients: event.target.value === '' ? null : event.target.value === 'true' }))}>
           <option value="">Неважно</option><option value="true">Берёт клиентов</option><option value="false">Сейчас не берёт</option>
         </select></Field>
+        <div className="trainer-catalog-brand-filter">
+          <Switch label="Только бренд-тренеры" checked={draft.brandTrainerOnly}
+            onChange={(checked) => setDraft((value) => ({ ...value, brandTrainerOnly: checked }))} />
+        </div>
       </div>
       <div className="trainer-catalog-filter-actions">
         <button type="button" className="secondary" onClick={onReset}>Сбросить</button>
@@ -244,7 +250,7 @@ export function TrainerCatalogPage() {
   }
 
   const appliedExtraFilters = [filters.specialties.length ? 'specialty' : '', filters.city, filters.metroStationIds.length ? 'metro' : '', filters.mode,
-    filters.acceptingClients === null ? '' : String(filters.acceptingClients)].filter(Boolean).length
+    filters.acceptingClients === null ? '' : String(filters.acceptingClients), filters.brandTrainerOnly ? 'brand' : ''].filter(Boolean).length
 
   return <Page title="Тренеры" back="/me/profile" center className="trainer-catalog-page ui-identity">
     <p className="trainer-catalog-intro">Найдите своего тренера.</p>

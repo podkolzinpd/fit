@@ -1,4 +1,4 @@
-// schema-sha256: 174d7fa689b5356d5702b562a7c4ec10de38d14d9e89a6a9d3b3c06db8b05c69
+// schema-sha256: d5eda5bf07e4dac7c2b0fcc86feb32f2e64d7e5a3512fedfe21667b3ad3db749
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -2455,6 +2455,7 @@ export type Database = {
       list_public_trainer_profiles_page: {
         Args: {
           p_accepting_clients?: boolean
+          p_brand_trainer_only?: boolean
           p_city?: string
           p_limit?: number
           p_metro_station_ids?: string[]

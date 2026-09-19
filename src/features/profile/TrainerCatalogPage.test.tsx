@@ -91,7 +91,7 @@ describe('TrainerCatalogPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Показать тренеров' }))
 
     await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith({
-      query: '', specialties: ['Похудение и коррекция фигуры'], city: 'Москва', metroStationIds: ['msk-dinamo'], mode: 'online', acceptingClients: true,
+      query: '', specialties: ['Похудение и коррекция фигуры'], city: 'Москва', metroStationIds: ['msk-dinamo'], mode: 'online', acceptingClients: true, brandTrainerOnly: false,
     }, { offset: 0, limit: 20 }))
     expect(screen.getByRole('button', { name: 'Фильтры · 5' })).toBeVisible()
     expect(screen.queryByRole('dialog', { name: 'Фильтры тренеров' })).not.toBeInTheDocument()
@@ -145,7 +145,7 @@ describe('TrainerCatalogPage', () => {
     expect(await screen.findByText('Анна Иванова')).toBeVisible()
     await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith({
       query: 'Анна', city: 'Москва', mode: '', acceptingClients: null,
-      metroStationIds: [], specialties: [],
+      metroStationIds: [], specialties: [], brandTrainerOnly: false,
     }, { offset: 0, limit: 20 }))
     expect(screen.getByRole('button', { name: 'Фильтры · 1' })).toBeVisible()
   })
@@ -164,7 +164,7 @@ describe('TrainerCatalogPage', () => {
 
     expect(await screen.findByText('Мария Петрова')).toBeVisible()
     expect(screen.getByText('Анна Иванова')).toBeVisible()
-    expect(listCatalog).toHaveBeenLastCalledWith({ query: '', specialties: [], city: '', metroStationIds: [], mode: '', acceptingClients: null }, { offset: 1, limit: 20 })
+    expect(listCatalog).toHaveBeenLastCalledWith({ query: '', specialties: [], city: '', metroStationIds: [], mode: '', acceptingClients: null, brandTrainerOnly: false }, { offset: 1, limit: 20 })
     expect(screen.queryByRole('button', { name: 'Показать ещё' })).not.toBeInTheDocument()
   })
 
@@ -208,5 +208,22 @@ describe('TrainerCatalogPage', () => {
       expect.objectContaining({ specialties: [...TRAINER_SPECIALTIES] }),
       { offset: 0, limit: 20 },
     ))
+  })
+
+  it('filters to only brand trainers via the dedicated switch', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByText('Анна Иванова')
+
+    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
+    const dialog = screen.getByRole('dialog', { name: 'Фильтры тренеров' })
+    await user.click(within(dialog).getByRole('switch', { name: 'Только бренд-тренеры' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Показать тренеров' }))
+
+    await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith(
+      expect.objectContaining({ brandTrainerOnly: true }),
+      { offset: 0, limit: 20 },
+    ))
+    expect(screen.getByRole('button', { name: 'Фильтры · 1' })).toBeVisible()
   })
 })

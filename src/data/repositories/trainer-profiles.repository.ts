@@ -54,6 +54,7 @@ export const trainerProfilesRepository: TrainerProfilesRepository = {
       p_accepting_clients: filters.acceptingClients ?? undefined,
       p_offset: page.offset,
       p_limit: page.limit,
+      p_brand_trainer_only: filters.brandTrainerOnly || undefined,
     })
     if (result.error) throw repositoryError(result.error)
     return parseTrainerCatalogPage(result.data)

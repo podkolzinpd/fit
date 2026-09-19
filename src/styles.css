@@ -6019,6 +6019,8 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-catalog-filters input, .trainer-catalog-filters select { min-height:48px; }
 .trainer-catalog-metro-filter { grid-column:1 / -1; min-width:0; }
 .trainer-catalog-specialty-filter { grid-column:1 / -1; min-width:0; }
+.trainer-catalog-brand-filter { grid-column:1 / -1; min-width:0; overflow:hidden; border:1px solid var(--border); border-radius:14px; }
+.trainer-catalog-brand-filter .switch-row { border-top:0; }
 .trainer-catalog-specialty-disclosure { border:1px solid var(--border); border-radius:14px; overflow:hidden; background:var(--surface); }
 .trainer-catalog-specialty-disclosure > summary { min-height:48px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 14px; cursor:pointer; list-style:none; color:var(--fg); font-size:14px; font-weight:500; border-bottom:1px solid transparent; }
 .trainer-catalog-specialty-disclosure[open] > summary { border-bottom-color:var(--border); }

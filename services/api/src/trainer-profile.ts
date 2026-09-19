@@ -26,6 +26,7 @@ export type TrainerCatalogFilters = {
   metroStationIds: string[]
   mode: 'online' | 'in_person' | ''
   acceptingClients: boolean | null
+  brandTrainerOnly: boolean
 }
 
 export type TrainerCatalogPageOptions = { offset: number; limit: number }
@@ -232,6 +233,7 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
     if (filters.acceptingClients !== null) {
       clauses.push(`(published_data->>'acceptingClients')::boolean = ${add(filters.acceptingClients)}`)
     }
+    if (filters.brandTrainerOnly) clauses.push('is_brand_trainer = true')
     try {
       const countRows = await connection.query<{ total: string }>(`
         select count(*)::text as total from public.trainer_professional_profiles

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(33);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('a3000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'catalog-one@example.test', ''),
@@ -18,7 +18,7 @@ insert into public.trainers (profile_id) values
 select has_column('public', 'trainer_professional_profiles', 'listed_in_catalog', 'catalog choice is stored');
 select has_function('public', 'set_trainer_profile_catalog_listing', array['boolean'], 'catalog choice RPC exists');
 select has_function('public', 'list_public_trainer_profiles', array['text', 'text', 'text', 'text', 'boolean'], 'catalog list RPC exists');
-select has_function('public', 'list_public_trainer_profiles_page', array['text', 'text[]', 'text', 'text', 'boolean', 'integer', 'integer', 'text[]'], 'paged catalog RPC exists');
+select has_function('public', 'list_public_trainer_profiles_page', array['text', 'text[]', 'text', 'text', 'boolean', 'integer', 'integer', 'text[]', 'boolean'], 'paged catalog RPC exists');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'a3000000-0000-4000-8000-000000000001', true);
@@ -57,6 +57,8 @@ values (
   true,
   now()
 );
+update public.trainer_professional_profiles set is_brand_trainer = true
+  where trainer_id = 'a3000000-0000-4000-8000-000000000003';
 
 set local role anon;
 select is((select count(*)::integer from public.list_public_trainer_profiles('Анна Каталогова')), 1, 'catalog returns the automatically listed profile');
@@ -90,6 +92,12 @@ select is((public.list_public_trainer_profiles_page(null, array['Тестовы�
 select is((public.list_public_trainer_profiles_page(null, array['Тестовые силовые', 'Нет такого направления'], null, null, null, 0, 20)->>'totalCount')::integer, 1, 'catalog matches any of several selected specialties');
 select is((public.list_public_trainer_profiles_page(null, array['Нет такого направления'], null, null, null, 0, 20)->>'totalCount')::integer, 0, 'catalog excludes profiles without a selected specialty');
 select is((public.list_public_trainer_profiles_page(null, array['Тестовые'], null, null, null, 0, 20)->>'totalCount')::integer, 0, 'catalog specialty filter is an exact match, not a substring');
+select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 20)->>'totalCount')::integer, 2, 'catalog returns everyone when the brand toggle is off by default');
+select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 20, null, true)->>'totalCount')::integer, 1, 'catalog matches only brand trainers when the toggle is on');
+select is(
+  (public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 20, null, true)->'items'->0->'published'->>'displayName'),
+  'Борис Новиков', 'catalog returns the brand trainer profile when filtered'
+);
 
 reset role;
 set local role authenticated;

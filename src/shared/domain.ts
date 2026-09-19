@@ -733,6 +733,7 @@ export interface TrainerCatalogFilters {
   metroStationIds: string[]
   mode: TrainerTrainingMode | ''
   acceptingClients: boolean | null
+  brandTrainerOnly: boolean
 }
 
 export interface TrainerCatalogPage {
