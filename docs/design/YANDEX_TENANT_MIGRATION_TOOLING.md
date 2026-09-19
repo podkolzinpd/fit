@@ -164,13 +164,16 @@ identity and invokes the private `fit-stage-migration` container. The encrypted
 envelope and a random one-run passphrase exist only in memory; the workflow
 does not upload an artifact. Envelope v3 Brotli-compresses the canonical JSON
 before AES-256-GCM encryption and keeps v1/v2 decryption support for existing
-local gzip artifacts. This preserves the single-request, single-transaction
-import for the complete cohort instead of creating partially staged batches.
-The runner still accepts at most 3 MiB on the wire, caps decompressed data at
-64 MiB, exposes neither row contents nor identifiers, and is registered only when
-`APP_ENV=stage`. Dry-run rolls back after full import validation. Apply requires
-the independent `APPLY_TENANT_TO_YANDEX_STAGE` confirmation and immediately
-repeats the import, requiring zero inserted rows.
+local gzip artifacts. Remote v3 transport sends the ciphertext as a raw binary
+body and puts only bounded format, salt, IV and authentication-tag metadata in
+headers. Removing Base64/JSON wire overhead preserves the single-request,
+single-transaction import for the complete cohort instead of creating partially
+staged batches. The runner accepts at most 3,400,000 binary body bytes, leaving
+room for headers under the immutable 3.5 MB platform request limit, caps
+decompressed data at 64 MiB, exposes neither row contents nor identifiers, and
+is registered only when `APP_ENV=stage`. Dry-run rolls back after full import
+validation. Apply requires the independent `APPLY_TENANT_TO_YANDEX_STAGE`
+confirmation and immediately repeats the import, requiring zero inserted rows.
 
 This stage workflow still does not change routing or provision a rollout
 assignment. It adds no always-on resource: only the invoked execution time of
