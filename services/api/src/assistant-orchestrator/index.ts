@@ -1,4 +1,4 @@
-import { generateProgramOnce, programGenerationKey } from './program/job.js'
+import { generateProgramOnce, programGenerationKey, supabaseProgramGenerationJobs } from './program/job.js'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { aiStudioUsage, reportAiStudioMetric } from '../ai-studio-usage-metrics.js'
 import { isProgramEnabled } from './program/model.js'
@@ -172,7 +172,7 @@ function clientNameWordMatches(actual: string, expected: string): boolean {
 // identity. They can still occur in an explicitly supplied full name/alias.
 const clientLookupCommandWord = /^(?:сводк|прогресс|динамик|сдела|покаж|показ|состав|созда|подготов|запис|запиш|добав|внес|занес|зафикс|оформ|разбер|разбор|заполн|собер|продикт|программ|план|трениров|заняти|упражнен|подход|повтор|нагруз|расписан|клиент|тренер|недел|месяц|сегодня|завтра|цель|вес|отдых|жим|тяга|присед|бег)/u
 
-function matchingSummaryClients(message: string, clients: readonly ClientContextRow[]): ClientContextRow[] {
+export function matchingSummaryClients(message: string, clients: readonly ClientContextRow[]): ClientContextRow[] {
   const normalized = normalizeAssistantMessage(message)
   const messageWords = normalized.split(' ').filter(Boolean)
   const fullMatches = clients.filter((client) => {
@@ -863,7 +863,8 @@ export async function runAssistantTurn(
           extract: (brief, message, answerContext) => extractProgramBrief(brief, message, today, turnId, answerContext),
           generate: (brief, context, clientId) => {
             const key = programGenerationKey(user.id, clientId, brief, context.fingerprint)
-            return generateProgramOnce(service, key, user.id, clientId, () => invokeProgramGenerator(user.id, key, today, brief, context))
+            return generateProgramOnce(supabaseProgramGenerationJobs(service, user.id), key, clientId,
+              () => invokeProgramGenerator(user.id, key, today, brief, context))
           },
         }, true),
     })

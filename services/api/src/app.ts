@@ -65,6 +65,7 @@ import {
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import type { PilotInvitationLinks } from './pilot-invitation-links.js'
+import type { PilotLegal } from './pilot-legal.js'
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer } from './pilot-session.js'
@@ -175,6 +176,7 @@ interface BuildAppOptions {
   pilotConnectionsReader?: PilotConnectionsReader
   pilotConnectionsWriter?: PilotConnectionsWriter
   pilotInvitationLinks?: PilotInvitationLinks
+  pilotLegal?: PilotLegal
   pilotDomainWriter?: PilotDomainWriter
   pilotProfileReader?: PilotProfileReader
   pilotSessionIssuer?: PilotSessionIssuer
@@ -888,6 +890,95 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     return sendPilotProfile(token, reply)
+  })
+
+  app.get('/v1/legal/acceptance', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const legal = options.pilotLegal
+    if (legal === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => legal.acceptance(
+        session,
+        CURRENT_TERMS_VERSION,
+        CURRENT_PRIVACY_VERSION,
+      ),
+      (status) => reply.header('cache-control', 'no-store').send({ applicable: true, ...status }),
+    )
+  })
+
+  app.put('/v1/legal/acceptance', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const body = request.body as Record<string, unknown> | null
+    const source = body?.source
+    if (
+      body === null
+      || typeof body !== 'object'
+      || (source !== 'registration' && source !== 'existing_user')
+      || typeof body.termsVersion !== 'string'
+      || typeof body.privacyVersion !== 'string'
+    ) return reply.code(400).send({ error: 'invalid_request' })
+    if (
+      body.termsVersion !== CURRENT_TERMS_VERSION
+      || body.privacyVersion !== CURRENT_PRIVACY_VERSION
+    ) return reply.code(412).send({ error: 'legal_documents_changed' })
+    const legal = options.pilotLegal
+    if (legal === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => legal.accept(
+        session,
+        CURRENT_TERMS_VERSION,
+        CURRENT_PRIVACY_VERSION,
+        source,
+      ),
+      (acceptedAt) => reply.header('cache-control', 'no-store').send({ acceptedAt }),
+    )
+  })
+
+  app.get('/v1/account-deletion-request', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const legal = options.pilotLegal
+    if (legal === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => legal.deletionRequest(session),
+      (deletionRequest) => reply
+        .header('cache-control', 'no-store')
+        .send({ supported: true, request: deletionRequest }),
+    )
+  })
+
+  app.post('/v1/account-deletion-request', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const legal = options.pilotLegal
+    if (legal === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => legal.requestDeletion(session),
+      (requestId) => reply.header('cache-control', 'no-store').send({ requestId }),
+    )
+  })
+
+  app.delete('/v1/account-deletion-request', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const legal = options.pilotLegal
+    if (legal === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => legal.cancelDeletion(session),
+      () => reply.header('cache-control', 'no-store').code(204).send(),
+    )
   })
 
   app.get('/v1/trainer-profile', async (request, reply) => {

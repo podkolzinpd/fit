@@ -48,6 +48,10 @@ import {
 import { trainingSummaryGenerationError } from './training-summary-errors'
 import { yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pilot.repository'
 import { trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
+import {
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+} from '../../shared/legal'
 
 const uuid = z.uuid()
 const chatThreadSchema = z.object({
@@ -111,6 +115,36 @@ const invitationShareSchema = z.object({
 const connectionsSchema = z.object({
   memberships: z.array(membershipSchema),
   invitations: z.array(invitationSchema),
+})
+const legalAcceptanceStatusSchema = z.object({
+  applicable: z.literal(true),
+  accepted: z.boolean(),
+  acceptedAt: z.iso.datetime().nullable(),
+})
+const accountDeletionRequestSchema = z.object({
+  id: uuid,
+  status: z.enum(['requested', 'cancelled', 'completed']),
+  requestedAt: z.iso.datetime(),
+})
+const accountDeletionStatusSchema = z.object({
+  supported: z.literal(true),
+  request: accountDeletionRequestSchema.nullable(),
+})
+const customExerciseMutationSchema = z.object({
+  exercise: z.object({
+    id: uuid,
+    name: z.string(),
+    muscleGroup: z.enum([
+      'legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core',
+      'cardio', 'other',
+    ]),
+    inputKind: z.enum(['strength', 'distance', 'reps', 'duration']),
+    primaryMuscleDetail: z.string().nullable().optional(),
+    equipment: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+    archivedAt: z.iso.datetime().nullable(),
+    version: z.number().int().positive(),
+  }),
 })
 const customMetricSchema = z.object({
   id: uuid,
@@ -339,11 +373,13 @@ function customExercise(value: YandexPilotTrainingData['customExercises'][number
     name: value.name,
     muscleGroup: value.muscleGroup,
     inputKind: value.inputKind,
+    primaryMuscleDetail: value.primaryMuscleDetail ?? undefined,
+    equipment: value.equipment ?? undefined,
+    description: value.description ?? undefined,
     createdBy: value.createdBy ?? '',
     archivedAt: value.archivedAt,
     version: value.version,
-    // Мышца/оборудование/описание/обложка (YAFIT-521) — пока только на
-    // Supabase-бэкенде, см. FEATURE_PARITY.md.
+    // Фото (YAFIT-521) пока поддерживается только Supabase-бэкендом.
     imagePath: null,
   }
 }
@@ -703,6 +739,41 @@ export function createYandexMainRepository(
 
   return {
     source: 'yandex',
+    legal: {
+      async getAcceptanceStatus() {
+        return readJson(queries, '/v1/legal/acceptance', legalAcceptanceStatusSchema)
+      },
+      async acceptCurrent(source = 'existing_user') {
+        const payload = await writeJson(
+          queries,
+          '/v1/legal/acceptance',
+          'PUT',
+          {
+            termsVersion: TERMS_VERSION,
+            privacyVersion: PRIVACY_VERSION,
+            source,
+          },
+          z.object({ acceptedAt: z.iso.datetime() }),
+        )
+        return payload.acceptedAt
+      },
+      async getAccountDeletionStatus() {
+        return readJson(queries, '/v1/account-deletion-request', accountDeletionStatusSchema)
+      },
+      async requestAccountDeletion() {
+        const payload = await writeJson(
+          queries,
+          '/v1/account-deletion-request',
+          'POST',
+          undefined,
+          z.object({ requestId: uuid }),
+        )
+        return payload.requestId
+      },
+      async cancelAccountDeletionRequest() {
+        await writeEmpty(queries, '/v1/account-deletion-request', 'DELETE')
+      },
+    },
     trainerProfiles: {
       async getOwn() {
         return readJson(queries, '/v1/trainer-profile', trainerProfessionalProfileSchema.nullable())
@@ -882,26 +953,22 @@ export function createYandexMainRepository(
       },
       async list() { return (await trainingData()).customExercises.map(customExercise) },
       async create(_partitionOwnerId, _actorId, value) {
-        // Разметка (мышца/оборудование/описание) и фото на обложку
-        // (YAFIT-521) пока не реализованы на Yandex-бэкенде — value
-        // передаётся как есть, лишние поля сервер молча игнорирует; фото
-        // не отправляется вовсе. См. FEATURE_PARITY.md.
         const payload = await writeJson(queries, '/v1/custom-exercises', 'POST', value,
-          z.object({ exercise: z.object({ id: uuid, name: z.string(), muscleGroup: z.enum(['legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'other']), inputKind: z.enum(['strength', 'distance', 'reps', 'duration']), archivedAt: z.iso.datetime().nullable(), version: z.number().int().positive() }) }))
+          customExerciseMutationSchema)
         invalidate()
         return customExercise({ ...payload.exercise, createdBy: actor.userId })
       },
       async update(item, value) {
         const payload = await writeJson(queries, `/v1/custom-exercises/${item.id}`, 'PUT', {
           draft: value, expectedVersion: item.version,
-        }, z.object({ exercise: z.object({ id: uuid, name: z.string(), muscleGroup: z.enum(['legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'other']), inputKind: z.enum(['strength', 'distance', 'reps', 'duration']), archivedAt: z.iso.datetime().nullable(), version: z.number().int().positive() }) }))
+        }, customExerciseMutationSchema)
         invalidate()
         return customExercise({ ...payload.exercise, createdBy: item.createdBy })
       },
       async setArchived(item, archived) {
         const payload = await writeJson(queries, `/v1/custom-exercises/${item.id}/archive`, 'PUT', {
           archived, expectedVersion: item.version,
-        }, z.object({ exercise: z.object({ id: uuid, name: z.string(), muscleGroup: z.enum(['legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'other']), inputKind: z.enum(['strength', 'distance', 'reps', 'duration']), archivedAt: z.iso.datetime().nullable(), version: z.number().int().positive() }) }))
+        }, customExerciseMutationSchema)
         invalidate()
         return customExercise({ ...payload.exercise, createdBy: item.createdBy })
       },

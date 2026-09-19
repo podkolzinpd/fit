@@ -7,6 +7,7 @@ import type {
   WorkoutExerciseDraft,
 } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
+import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 import { createYandexMainRepository } from './yandex-main.repository'
 
 const pilot = vi.hoisted(() => ({ listTrainingData: vi.fn(), parseWorkout: vi.fn() }))
@@ -76,6 +77,60 @@ describe('Yandex main repository', () => {
     pilot.parseWorkout.mockReset()
     push.subscribe.mockReset()
     push.unsubscribe.mockReset()
+  })
+
+  it('uses the Yandex API for legal acceptance and account deletion lifecycle', async () => {
+    const requestId = '8fc45130-9bcf-4b77-9ff7-f0872a354034'
+    const acceptedAt = '2026-09-19T10:00:00.000Z'
+    const requestedAt = '2026-09-19T11:00:00.000Z'
+    const fetchMock = vi.fn(
+      (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+        void input
+        void init
+        return Promise.resolve(new Response(null, { status: 500 }))
+      },
+    )
+      .mockResolvedValueOnce(jsonResponse({ applicable: true, accepted: false, acceptedAt: null }))
+      .mockResolvedValueOnce(jsonResponse({ acceptedAt }))
+      .mockResolvedValueOnce(jsonResponse({
+        supported: true,
+        request: { id: requestId, status: 'requested', requestedAt },
+      }))
+      .mockResolvedValueOnce(jsonResponse({ requestId }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.legal.getAcceptanceStatus()).resolves.toEqual({
+      applicable: true,
+      accepted: false,
+      acceptedAt: null,
+    })
+    await expect(repository.legal.acceptCurrent('existing_user')).resolves.toBe(acceptedAt)
+    await expect(repository.legal.getAccountDeletionStatus()).resolves.toEqual({
+      supported: true,
+      request: { id: requestId, status: 'requested', requestedAt },
+    })
+    await expect(repository.legal.requestAccountDeletion()).resolves.toBe(requestId)
+    await expect(repository.legal.cancelAccountDeletionRequest()).resolves.toBeUndefined()
+
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      `${apiBaseUrl}/v1/legal/acceptance`,
+      `${apiBaseUrl}/v1/legal/acceptance`,
+      `${apiBaseUrl}/v1/account-deletion-request`,
+      `${apiBaseUrl}/v1/account-deletion-request`,
+      `${apiBaseUrl}/v1/account-deletion-request`,
+    ])
+    const acceptanceRequest = fetchMock.mock.calls[1]?.[1]
+    expect(acceptanceRequest?.method).toBe('PUT')
+    expect(new Headers(acceptanceRequest?.headers).get('x-fit-session')).toBe(sessionToken)
+    expect(acceptanceRequest?.body).toBe(JSON.stringify({
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+      source: 'existing_user',
+    }))
+    expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({ method: 'POST' })
+    expect(fetchMock.mock.calls[4]?.[1]).toMatchObject({ method: 'DELETE' })
   })
 
   it('reads and updates the trainer discovery prompt', async () => {
@@ -347,9 +402,16 @@ describe('Yandex main repository', () => {
       criteria: [], needsInput: [], unsupportedReason: null,
     })
     const custom = (await repository.exercises.list())[0]!
-    expect(custom.createdBy).toBe(actor.userId)
+    expect(custom).toMatchObject({
+      createdBy: actor.userId,
+      primaryMuscleDetail: 'Широчайшие',
+      equipment: 'Сани',
+      description: 'Сохраняйте нейтральное положение спины.',
+    })
     const created = await repository.exercises.create(actor.userId, actor.userId, customExerciseDraft())
+    expect(created).toMatchObject(customExerciseDraft())
     const updated = await repository.exercises.update(created, customExerciseDraft())
+    expect(updated).toMatchObject(customExerciseDraft())
     await repository.exercises.setArchived(updated, true)
 
     expect(await repository.progress.regularity(clientId)).toHaveLength(1)
@@ -600,6 +662,8 @@ function installTrainingData() {
   pilot.listTrainingData.mockResolvedValue({
     customExercises: [{
       id: customExerciseId, name: 'Тяга', muscleGroup: 'back', inputKind: 'strength',
+      primaryMuscleDetail: 'Широчайшие', equipment: 'Сани',
+      description: 'Сохраняйте нейтральное положение спины.',
       archivedAt: null, version: 1, createdBy: actor.userId,
     }],
     workouts: [workoutPayload(plannedWorkoutId, 'in_progress', '2026-08-21'), workoutPayload(workoutId, 'done', '2026-08-20')],
@@ -654,7 +718,14 @@ function clientUpdate() {
 }
 
 function customExerciseDraft() {
-  return { name: 'Тяга', muscleGroup: 'back' as const, inputKind: 'strength' as const }
+  return {
+    name: 'Тяга',
+    muscleGroup: 'back' as const,
+    inputKind: 'strength' as const,
+    primaryMuscleDetail: 'Широчайшие',
+    equipment: 'Сани',
+    description: 'Сохраняйте нейтральное положение спины.',
+  }
 }
 
 function progressDraft() {
@@ -743,7 +814,7 @@ function installContractFetch() {
     if (path === '/v1/invitations' && method === 'POST') return jsonResponse({ invitation: { code: 'ABCDEF123456' } }, 201)
     if (path === '/v1/invitations/claim') return jsonResponse({ clientId })
     if (path === '/v1/app-feedback') return jsonResponse({ feedback: { id: progressId } }, 201)
-    if (path === '/v1/custom-exercises' || path.includes('/custom-exercises/')) return jsonResponse({ exercise: { id: customExerciseId, name: 'Тяга', muscleGroup: 'back', inputKind: 'strength', archivedAt: path.endsWith('/archive') ? '2026-09-01T00:00:00.000Z' : null, version: 2 } })
+    if (path === '/v1/custom-exercises' || path.includes('/custom-exercises/')) return jsonResponse({ exercise: { id: customExerciseId, ...customExerciseDraft(), archivedAt: path.endsWith('/archive') ? '2026-09-01T00:00:00.000Z' : null, version: 2 } })
     if (path === '/v1/progress' || path.startsWith('/v1/progress/')) return jsonResponse({ progress: { id: progressId, version: 2 } })
     if (path === '/v1/progress-metrics' || path.startsWith('/v1/progress-metrics/')) return jsonResponse({ metric: { id: metricId, archivedAt: path.endsWith('/archive') ? '2026-09-01T00:00:00.000Z' : null, version: 2 } })
     if (path === '/v1/goals' || path.startsWith('/v1/goals/')) return jsonResponse({ goal: { id: goalId, version: 2 } })

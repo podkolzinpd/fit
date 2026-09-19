@@ -253,13 +253,27 @@ historyComplete — только явное подтверждение полн�
 
 export async function invokeProgramGenerator(actorId: string, operationId: string, today: string, brief: ProgramBrief, context: ProgramSourceSnapshot): Promise<unknown> {
   const endpoint = process.env.ASSISTANT_PROGRAM_GENERATOR_URL?.trim()
-  if (!endpoint || !/^https:\/\/functions\.yandexcloud\.net\/[a-z0-9]+$/.test(endpoint)) throw new Error('program_generator_unconfigured')
-  const token = await programIamToken()
-  const response = await fetch(endpoint, { method: 'POST', signal: AbortSignal.timeout(105_000),
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ actorId, operationId, today, brief, context }),
-  })
-  const raw: unknown = await response.json()
+  const requestBody = JSON.stringify({ actorId, operationId, today, brief, context })
+  let status: number
+  let raw: unknown
+  let token: string
+  if (endpoint) {
+    if (!/^https:\/\/functions\.yandexcloud\.net\/[a-z0-9]+$/.test(endpoint)) throw new Error('program_generator_unconfigured')
+    token = await programIamToken()
+    const response = await fetch(endpoint, { method: 'POST', signal: AbortSignal.timeout(105_000),
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: requestBody })
+    status = response.status
+    raw = await response.json()
+  } else {
+    // The Yandex API container already has the same runtime identity and model
+    // permissions. Running the private handler in-process avoids another
+    // public endpoint while preserving the exact generator contract.
+    const { handler } = await import('../../yandex-program-generator-function.js')
+    const response = await handler({ httpMethod: 'POST', body: requestBody })
+    status = response.statusCode
+    raw = JSON.parse(response.body) as unknown
+    token = await programIamToken()
+  }
   const rawMetrics = record(raw)?.metrics
   const metrics = Array.isArray(rawMetrics) ? rawMetrics : [record(raw)?.metric]
   for (const value of metrics) {
@@ -267,9 +281,9 @@ export async function invokeProgramGenerator(actorId: string, operationId: strin
     if (metric && typeof metric.modelUri === 'string') await reportAiStudioMetric({ functionName: 'fit-generate-program', invocationId: operationId, iamToken: token,
       modelUri: metric.modelUri, upstreamRequestId: typeof metric.requestId === 'string' ? metric.requestId : null, usage: aiStudioUsage(metric.usage) })
   }
-  if (!response.ok) {
+  if (status < 200 || status >= 300) {
     const failure = record(raw)
-    if (response.status === 422 && failure?.error === 'program_validation_failed' && Array.isArray(failure.issues)
+    if (status === 422 && failure?.error === 'program_validation_failed' && Array.isArray(failure.issues)
       && failure.issues.every((issue: unknown) => typeof issue === 'string')) throw new ProgramValidationError(failure.issues)
     throw new Error('program_generator_failed')
   }

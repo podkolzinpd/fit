@@ -5,7 +5,7 @@ import { DataBackendProvider, useDataBackend } from './data-backend-context'
 const USER_ID = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
 const supabaseBackendParts = vi.hoisted(() => ({
   appFeedbackRepository: {}, clientsRepository: {}, exercisesRepository: {}, goalsRepository: {},
-  invitationsRepository: {}, progressRepository: {}, pushNotificationsRepository: {},
+  invitationsRepository: {}, legalRepository: {}, progressRepository: {}, pushNotificationsRepository: {},
   realtimeRepository: {}, trainingSummariesRepository: {}, workoutsRepository: {},
 }))
 const createYandexMainRepository = vi.hoisted(() => vi.fn(() => ({ source: 'yandex' as const })))
@@ -15,6 +15,7 @@ vi.mock('../data/repositories/clients.repository', () => ({ clientsRepository: s
 vi.mock('../data/repositories/exercises.repository', () => ({ exercisesRepository: supabaseBackendParts.exercisesRepository }))
 vi.mock('../data/repositories/goals.repository', () => ({ goalsRepository: supabaseBackendParts.goalsRepository }))
 vi.mock('../data/repositories/invitations.repository', () => ({ invitationsRepository: supabaseBackendParts.invitationsRepository }))
+vi.mock('../data/repositories/legal.repository', () => ({ legalRepository: supabaseBackendParts.legalRepository }))
 vi.mock('../data/repositories/progress.repository', () => ({ progressRepository: supabaseBackendParts.progressRepository }))
 vi.mock('../data/repositories/push-notifications.repository', () => ({ pushNotificationsRepository: supabaseBackendParts.pushNotificationsRepository }))
 vi.mock('../data/repositories/realtime.repository', () => ({ realtimeRepository: supabaseBackendParts.realtimeRepository }))

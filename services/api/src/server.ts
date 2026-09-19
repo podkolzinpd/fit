@@ -23,6 +23,7 @@ import {
 import { DatabasePilotConnectionsReader } from './pilot-connections-reader.js'
 import { DatabasePilotConnectionsWriter } from './pilot-connections-writer.js'
 import { DatabasePilotInvitationLinks } from './pilot-invitation-links.js'
+import { DatabasePilotLegal } from './pilot-legal.js'
 import { DatabasePilotDomainWriter } from './pilot-domain-writer.js'
 import { DatabasePilotProfileReader } from './pilot-profile-reader.js'
 import { DatabasePilotSessionIssuer } from './pilot-session.js'
@@ -144,6 +145,9 @@ const pilotConnectionsWriter =
 const pilotInvitationLinks = databasePool === undefined
   ? undefined
   : new DatabasePilotInvitationLinks(databasePool)
+const pilotLegal = databasePool === undefined
+  ? undefined
+  : new DatabasePilotLegal(databasePool)
 const pilotDomainWriter =
   databasePool === undefined
     ? undefined
@@ -261,6 +265,7 @@ const app = buildApp(
     ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),
     ...(pilotConnectionsWriter === undefined ? {} : { pilotConnectionsWriter }),
     ...(pilotInvitationLinks === undefined ? {} : { pilotInvitationLinks }),
+    ...(pilotLegal === undefined ? {} : { pilotLegal }),
     ...(pilotDomainWriter === undefined ? {} : { pilotDomainWriter }),
     ...(pilotProfileReader === undefined ? {} : { pilotProfileReader }),
     ...(pilotSessionIssuer === undefined ? {} : { pilotSessionIssuer }),

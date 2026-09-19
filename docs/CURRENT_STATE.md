@@ -1,7 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-19. База изменений: `9e56300a` (#1050). Frontend
+Обновлено: 2026-09-19. База изменений: `ae46b2d2` (#1057). Frontend
 остаётся на Vercel. Production-пользователи пока используют Supabase; Yandex
 app-session, main routing и native registration не включены глобально.
 
@@ -17,16 +17,18 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
 
 - Assistant доступен тренеру и клиенту через общий экран; клиент работает
   только со своей карточкой. Программы остаются за общим kill switch.
-- #1025 разрешил клиенту запускать собственную генерацию программы и добавил
-  Supabase jobs. Эквивалентной Yandex migration/API execution path пока нет —
-  это cutover blocker, а не готовая backend parity.
+- Клиентская генерация четырёхнедельной программы работает через выбранный
+  backend. Yandex API читает actor-scoped историю, цель, замеры и будущие
+  занятия из PostgreSQL, использует короткие idempotent generation leases и
+  вызывает тот же валидируемый YandexGPT generator вне DB-транзакции.
 - Свои упражнения поддерживают мышцы, оборудование, описание и private JPEG до
-  2 МБ. Yandex migration сохраняет metadata, но Yandex repository всё ещё
-  отклоняет изменение фото; объекты custom exercise media не входят в
-  подтверждённый перенос.
-- Публичные условия и политика показывают утверждённый текст. Supabase хранит
-  versioned legal acceptance и account deletion requests; Yandex native
-  registration фиксирует legal acceptance только для нового аккаунта.
+  2 МБ. Yandex API и repository читают, создают и обновляют текстовую разметку
+  с тем же provider-neutral контрактом; изменение фото всё ещё отклоняется, а
+  объекты custom exercise media не входят в подтверждённый перенос.
+- Публичные условия и политика показывают утверждённый текст. Общий legal
+  contract сохраняет versioned acceptance и отменяемые account deletion
+  requests через выбранный Supabase или Yandex backend. Yandex API использует
+  actor-scoped RLS/RPC; UI не ветвится по имени провайдера.
 - Независимый gate обязательной привязки Yandex ID включён глобально в
   production build без персонального allowlist: защищённые маршруты доступны
   только связанным профилям. Gate не меняет app-session, backend routing и
@@ -54,6 +56,12 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   профилей из snapshot временно сохраняются и восстанавливаются, а устаревшие
   linked-привязки профилей вне snapshot удаляются; наличие нативного
   Yandex-профиля блокирует операцию до удаления данных.
+- Локальная двухпроходная репетиция 34 таблиц снова зелёная. Tenant migration
+  включает transaction-local restore mode, поэтому исторические progress/goal
+  строки не запускают побочное обновление `clients.updated_at`; обычные
+  продуктовые записи по-прежнему обновляют source timestamp. Оба чистых прогона
+  подтвердили одинаковые trainer, standalone-client и full-cohort fingerprints,
+  повторный apply и финальный checksum.
 - Свежий remote dry-run подтвердил 34 таблицы и 16 111 строк, включая 124 legal
   acceptance и 0 deletion requests. Binary ciphertext занял 2 613 883 байта
   вместо 3 484 918 байт JSON envelope; target проверил 16 111 inserts и откатил
@@ -88,19 +96,16 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
 
 1. Выполнить успешный media migration без `allow-missing` для chat,
    exercise и custom-exercise objects; подтвердить upload/sign/read/delete.
-2. Добавить Yandex custom-exercise photo adapter и эквивалентный client
-   Assistant program jobs/generation path.
-3. Данные legal acceptance и account deletion requests уже входят в 34-table
-   tenant catalog; остаётся перевести legal/deletion UI на общий Yandex
-   repository/API-контракт.
-4. Убрать обязательность Supabase env и runtime fallback из production
-   composition; сделать публичный профиль и остальные прямые пути Yandex-first.
-5. После свежего full-cohort apply проверить на stage linked trainer/client,
+2. Добавить Yandex custom-exercise photo adapter.
+3. Убрать обязательность Supabase env из production composition и проверить
+   остальные прямые пути. Публичная анкета уже выбирает Supabase либо Yandex
+   вместе с глобальным main routing без межпровайдерного fallback.
+4. После свежего full-cohort apply проверить на stage linked trainer/client,
    recovery старого email-only профиля, новый Yandex-only аккаунт и приглашение;
    только затем по отдельной команде включить server/frontend cutover flags.
-6. Провести backup restore drill во временный private cluster, повторить AI
+5. Провести backup restore drill во временный private cluster, повторить AI
    summary и push smoke.
-7. После короткого freeze выполнить свежий full-cohort snapshot, media delta,
+6. После короткого freeze выполнить свежий full-cohort snapshot, media delta,
    validate и повторную атомарную пересборку с тем же checksum; только затем
    включать routing.
 
