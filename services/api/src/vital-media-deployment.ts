@@ -1,7 +1,6 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { createHash } from 'node:crypto'
 
 import {
-  DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
@@ -13,7 +12,6 @@ import type { YandexMediaStorageConfig } from './object-storage-media.js'
 const OBJECT_STORAGE_ENDPOINT = 'https://storage.yandexcloud.net'
 const OBJECT_STORAGE_REGION = 'ru-central1'
 const VITAL_PREFIX = 'fit-exercise-media/vital-pro/'
-const PROBE_PREFIX = 'fit-exercise-media/_migration-probes/'
 const SAFE_PATH = /^[a-z0-9][a-z0-9-]*(?:-end)?\.(?:jpg|mp4)$/
 const SHA256 = /^[a-f0-9]{64}$/
 const EXPECTED_FILES = 2_010
@@ -24,7 +22,11 @@ const VERIFY_CONCURRENCY = 8
 export const VITAL_MEDIA_BINARY_CONTENT_TYPE = 'application/vnd.fit.vital-media'
 export const VITAL_MEDIA_APPLY_CONFIRMATION = 'APPLY_VITAL_MEDIA_TO_YANDEX_STAGE'
 
-type VitalMediaVersioningCheck = 'not_probed_read_only' | 'verified_by_write_probe'
+type VitalMediaVersioningCheck = 'not_probed_read_only' | 'pending_manifest_write'
+type VitalMediaUploadResult = {
+  outcome: 'skipped' | 'uploaded'
+  versioning: 'verified'
+}
 
 export interface VitalMediaManifestFile {
   bytes: number
@@ -49,7 +51,7 @@ export interface VitalMediaDeploymentService {
     private: true
     versioning: VitalMediaVersioningCheck
   }>
-  upload(file: VitalMediaManifestFile, body: Uint8Array): Promise<'skipped' | 'uploaded'>
+  upload(file: VitalMediaManifestFile, body: Uint8Array): Promise<VitalMediaUploadResult>
 }
 
 export class VitalMediaDeploymentError extends Error {
@@ -164,25 +166,17 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
       throw new VitalMediaDeploymentError('vital_media_bucket_not_private')
     }
 
-    if (allowWrite) {
-      await this.writeProbe()
-      return {
-        bucket: this.config.bucket,
-        private: true,
-        versioning: 'verified_by_write_probe',
-      }
-    }
     return {
       bucket: this.config.bucket,
       private: true,
-      versioning: 'not_probed_read_only',
+      versioning: allowWrite ? 'pending_manifest_write' : 'not_probed_read_only',
     }
   }
 
   async upload(
     file: VitalMediaManifestFile,
     body: Uint8Array,
-  ): Promise<'skipped' | 'uploaded'> {
+  ): Promise<VitalMediaUploadResult> {
     if (
       !SAFE_PATH.test(file.path)
       || !Number.isSafeInteger(file.bytes)
@@ -207,9 +201,12 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
       head?.ContentLength === file.bytes
       && head.Metadata?.['source-sha256'] === file.sha256
       && head.ContentType === expectedType
-    ) return 'skipped'
+      && typeof head.VersionId === 'string'
+      && head.VersionId !== ''
+      && head.VersionId !== 'null'
+    ) return { outcome: 'skipped', versioning: 'verified' }
 
-    await this.client.send(new PutObjectCommand({
+    const put = await this.client.send(new PutObjectCommand({
       Body: body,
       Bucket: this.config.bucket,
       CacheControl: 'private, max-age=3600',
@@ -220,12 +217,17 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
     })).catch(() => {
       throw new VitalMediaDeploymentError('vital_media_upload_failed')
     })
+    if (
+      typeof put.VersionId !== 'string'
+      || put.VersionId === ''
+      || put.VersionId === 'null'
+    ) throw new VitalMediaDeploymentError('vital_media_object_version_missing')
 
     const stored = await this.readObject(file).catch(() => undefined)
     if (stored === undefined || !stored.matches) {
       throw new VitalMediaDeploymentError('vital_media_upload_verification_failed')
     }
-    return 'uploaded'
+    return { outcome: 'uploaded', versioning: 'verified' }
   }
 
   async audit(files: readonly VitalMediaManifestFile[]): Promise<VitalMediaAuditReport> {
@@ -277,52 +279,4 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
     }
   }
 
-  private async writeProbe(): Promise<void> {
-    const probeKey = `${PROBE_PREFIX}${randomUUID()}.bin`
-    const probeBody = Buffer.from(randomUUID(), 'utf8')
-    let versionId: string | undefined
-    try {
-      const put = await this.client.send(new PutObjectCommand({
-        Body: probeBody,
-        Bucket: this.config.bucket,
-        CacheControl: 'no-store',
-        ContentLength: probeBody.byteLength,
-        ContentType: 'application/octet-stream',
-        Key: probeKey,
-      }))
-      versionId = put.VersionId
-      if (versionId === undefined) {
-        throw new VitalMediaDeploymentError('vital_media_probe_version_missing')
-      }
-      const get = await this.client.send(new GetObjectCommand({
-        Bucket: this.config.bucket,
-        Key: probeKey,
-        VersionId: versionId,
-      }))
-      const body = await get.Body?.transformToByteArray()
-      if (body === undefined || !Buffer.from(body).equals(probeBody)) {
-        throw new VitalMediaDeploymentError('vital_media_probe_read_failed')
-      }
-      const anonymous = await fetch(
-        `${OBJECT_STORAGE_ENDPOINT}/${this.config.bucket}/${probeKey}`,
-        { redirect: 'manual' },
-      )
-      if (anonymous.status !== 403) {
-        throw new VitalMediaDeploymentError('vital_media_bucket_not_private')
-      }
-    } catch (error) {
-      if (error instanceof VitalMediaDeploymentError) throw error
-      throw new VitalMediaDeploymentError('vital_media_probe_failed')
-    } finally {
-      if (versionId !== undefined) {
-        await this.client.send(new DeleteObjectCommand({
-          Bucket: this.config.bucket,
-          Key: probeKey,
-          VersionId: versionId,
-        })).catch(() => {
-          throw new VitalMediaDeploymentError('vital_media_probe_cleanup_failed')
-        })
-      }
-    }
-  }
 }
