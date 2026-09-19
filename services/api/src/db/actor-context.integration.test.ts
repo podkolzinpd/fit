@@ -5954,6 +5954,55 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       )
     })
 
+    it('preserves client source timestamps only during a tenant migration restore', async () => {
+      if (ownerPool === undefined) throw new Error('Database pool is not ready')
+      const connection = await ownerPool.connect()
+      const migrationClientId = 'fe000000-0000-4000-8000-000000000077'
+      try {
+        await connection.query('begin')
+        await connection.query(
+          `insert into public.clients (
+             id, trainer_id, full_name, updated_at
+           ) values ($1, $2, 'Migration fixture', timestamptz '2026-01-01 00:00:00+00')`,
+          [migrationClientId, ACTOR_ID],
+        )
+        await connection.query(
+          "select set_config('fit.tenant_migration_restore', 'on', true)",
+        )
+        await connection.query(
+          `insert into public.client_progress (
+             trainer_id, client_id, created_by, recorded_on, weight_kg
+           ) values ($1, $2, $1, date '2026-01-01', 70)`,
+          [ACTOR_ID, migrationClientId],
+        )
+        const preserved = await connection.query<{ preserved: boolean } & QueryResultRow>(
+          `select updated_at = timestamptz '2026-01-01 00:00:00+00' preserved
+           from public.clients where id = $1`,
+          [migrationClientId],
+        )
+        expect(preserved.rows[0]?.preserved).toBe(true)
+
+        await connection.query(
+          "select set_config('fit.tenant_migration_restore', 'off', true)",
+        )
+        await connection.query(
+          `insert into public.client_progress (
+             trainer_id, client_id, created_by, recorded_on, weight_kg
+           ) values ($1, $2, $1, date '2026-01-02', 69)`,
+          [ACTOR_ID, migrationClientId],
+        )
+        const advanced = await connection.query<{ advanced: boolean } & QueryResultRow>(
+          `select updated_at > timestamptz '2026-01-01 00:00:00+00' advanced
+           from public.clients where id = $1`,
+          [migrationClientId],
+        )
+        expect(advanced.rows[0]?.advanced).toBe(true)
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+
     it('manages linked domain-ready rollout assignments as one private batch', async () => {
       if (enrollmentPool === undefined) throw new Error('Database pool is not ready')
       const manager = new DatabaseStageRolloutAssignmentManager(enrollmentPool)

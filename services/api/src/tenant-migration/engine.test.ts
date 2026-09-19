@@ -86,6 +86,9 @@ describe('standalone client tenant migration', () => {
       expect.stringContaining("hashtextextended('fit-tenant:migration', 0)"),
     )
     expect(query).toHaveBeenCalledWith(
+      "select set_config('fit.tenant_migration_restore', 'on', true)",
+    )
+    expect(query).toHaveBeenCalledWith(
       expect.stringContaining("'fit-tenant:' || $1 || ':' || $2"),
       ['standalone-client', CLIENT_PROFILE_ID],
     )
