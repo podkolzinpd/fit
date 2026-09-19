@@ -1,17 +1,16 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-19. База изменений: `ae46b2d2` (#1057). Frontend
-остаётся на Vercel. Production-пользователи пока используют Supabase; Yandex
-app-session, main routing и native registration не включены глобально.
+Обновлено: 2026-09-19. База изменений: `05d60c20` (#1064). Frontend остаётся
+на Vercel, а production data plane — принятый Yandex Cloud stage stack. Yandex
+ID является единственным production-входом; app-session, main routing и native
+registration включены глобально.
 
 ## Активная цель
 
-Полностью переключить production data plane на существующий Yandex Cloud
-контур и оставить Yandex ID единственным способом входа. До окончания cutover
-новые продуктовые функции используют общий доменный контракт и эквивалентные
-Supabase/Yandex adapters без dual-write. Координация, потоки и гейты описаны в
-`docs/YANDEX_CUTOVER_PLAYBOOK.md`.
+Стабилизировать Yandex-only production после переключения и затем вывести
+Supabase из эксплуатации. До закрытия rollback-окна сохраняется общий доменный
+контракт без dual-write; гейты описаны в `docs/YANDEX_CUTOVER_PLAYBOOK.md`.
 
 ## Последняя проверенная продуктовая точка
 
@@ -29,16 +28,14 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   contract сохраняет versioned acceptance и отменяемые account deletion
   requests через выбранный Supabase или Yandex backend. Yandex API использует
   actor-scoped RLS/RPC; UI не ветвится по имени провайдера.
-- Независимый gate обязательной привязки Yandex ID включён глобально в
-  production build без персонального allowlist: защищённые маршруты доступны
-  только связанным профилям. Gate не меняет app-session, backend routing и
-  rollout assignment; продуктовые данные продолжают идти через Supabase.
-- Экран технических работ и блокировка product runtime подготовлены как
-  `VITE_MAINTENANCE_MODE`, строго default-off в коде. На production флаг включён
-  оператором 2026-09-19: при точном `true` любой маршрут заменяется до
-  монтирования auth/query/data providers. Независимый owner-only Supabase write
-  gate также переведён в `paused` и блокирует DML старых вкладок, RPC и
-  background writers на 38 source-таблицах.
+- Production auth показывает только действие «Продолжить с Yandex ID»; старые
+  email/password/reset routes возвращаются на единый вход. Связанный профиль с
+  `yandex/read_write` assignment получает Yandex app-session и весь основной UI
+  выбирает Yandex API без request-level fallback. Неизвестный Yandex ID получает
+  recovery/new-account handoff.
+- `VITE_MAINTENANCE_MODE` был включён на время freeze/apply и после cutover снова
+  выключен. Owner-only Supabase write gate остаётся в `paused`: он блокирует DML
+  старых вкладок, RPC и background writers на 38 source-таблицах.
 
 ## Yandex Cloud — подтверждённая база
 
@@ -46,89 +43,73 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   Managed PostgreSQL 17, один private host, диск 10 GB, API/migration
   containers, Lockbox и Object Storage. Backup retention — 14 дней, окно —
   `00:30 UTC`; отдельный production cluster не создаётся.
-- Full-cohort current-snapshot apply от 2026-09-17 успешно проверил 32 таблицы:
-  audit — 14 819 строк, apply — 14 805 вставок, повторный apply — 0. Запуск
-  использовал `media_validation: allow-missing`, поэтому не является финальной
-  cutover-репетицией.
 - Текущий full-cohort manifest расширен до 35 таблиц: в snapshot входят
   `user_legal_acceptances`, `account_deletion_requests` и `favorite_workouts`.
-  Новый import атомарно
-  пересобирает переносимые таблицы из свежего snapshot вместо insert-only
-  конфликта на изменившихся строках. Yandex identity/session/rollout строки
-  профилей из snapshot временно сохраняются и восстанавливаются, а устаревшие
-  linked-привязки профилей вне snapshot удаляются; наличие нативного
-  Yandex-профиля блокирует операцию до удаления данных.
+  Import атомарно пересобирает их из свежего snapshot, сохраняя актуальные
+  Yandex identity/session/rollout строки; устаревшие linked-привязки удаляются,
+  а наличие нативного Yandex-профиля блокирует destructive rebuild.
 - Локальная двухпроходная репетиция 35 таблиц снова зелёная. Tenant migration
   включает transaction-local restore mode, поэтому исторические progress/goal
-  строки не запускают побочное обновление `clients.updated_at`; обычные
-  продуктовые записи по-прежнему обновляют source timestamp. Оба чистых прогона
-  подтвердили одинаковые trainer, standalone-client и full-cohort fingerprints,
-  повторный apply и финальный checksum; текущий full-cohort fixture содержит
-  69 строк.
+  строки не обновляют `clients.updated_at`. Оба чистых прогона подтвердили
+  одинаковые role/full-cohort fingerprints, repeat apply и checksum.
 - Свежий current-snapshot cutover cycle при `paused` write gate завершён для
   всех 35 таблиц и 16 192 строк: source audit, target dry-run с rollback, первый
-  apply и повторная полная пересборка подтвердили один content fingerprint.
+  apply и повторная полная пересборка подтвердили fingerprint
+  `d59e1f1b9adb4361`.
   Оба apply проверили по 16 192 inserts; `favorite_workouts` — 1, legal
-  acceptance — 128, deletion requests — 0. Media policy — `allow-missing`;
-  Yandex routing и auth switches после apply не включались.
+  acceptance — 128, deletion requests — 0. Media policy — `allow-missing`.
 - Server-side rollout assignments для `linked-ready` профилей включены и
-  проверены агрегированно. Обязательная привязка включена отдельно; frontend
-  app-session, main-routing и native-registration switches остаются выключены.
+  проверены агрегированно. Server switches
+  `YC_STAGE_YANDEX_NATIVE_REGISTRATION_ENABLED` и
+  `YC_STAGE_YANDEX_ONLY_AUTH_ENABLED` включены; deploy `35467406265` прошёл
+  migrations, runtime identity, health и readiness без rollback.
 - Нативная регистрация через Yandex ID и финальный Yandex-only auth flow
-  реализованы за независимыми default-off frontend/server switches. Неизвестный
+  включены независимыми frontend/server switches. Неизвестный
   Yandex ID получает одноразовый 10-минутный handoff: старые Supabase
   credentials могут связать только уже перенесённый rollout-ready UUID, а новый
   профиль создаётся только после отдельного явного выбора. Неверный пароль не
-  создаёт пустой профиль. Оба server switch проложены в Terraform через
-  default-false repository variables; production значения не включены.
+  создаёт пустой профиль. Новая регистрация создаёт данные только в Yandex
+  PostgreSQL.
 - Защищённый `/invite#token=…&source=…` показывает публичный Supabase/Yandex
   preview, хранит bearer-token только в browser session и возвращает связанный
   либо новый аккаунт на явный claim; legacy `/join?code=…` теперь также
   переживает Yandex OAuth.
-  При включённой app-session Yandex ID становится primary login action, email
-  остаётся secondary fallback; production flags в этом PR не меняются.
+  Production OAuth smoke подтвердил PKCE-переход на `oauth.yandex.ru`, а
+  защищённый маршрут и старый password-recovery route возвращаются на единый
+  Yandex ID экран без email/password формы.
 - Yandex API покрывает основные profile/client/workout/Live/progress/chat/push
   read-write сценарии через `x-fit-session`. Ошибка выбранного Yandex backend
   не должна переключать отдельный запрос обратно на Supabase.
-- Yandex Web Push producer, recoverable lease/retry, multi-device subscriptions
-  и минутный private dispatcher развёрнуты. Финальный end-to-end smoke входит в
-  cutover gate.
-- Для 670 проверенных упражнений Vital Gym Pro подготовлен отдельный ручной
-  перенос 2 010 объектов в закрытый Yandex bucket через private migration-runner:
-  GitHub использует только OIDC, а путь/размер/SHA-256 сверяются с точным
-  `ref → JPG + end JPG + MP4` contract. Код и workflow проходят проверку в PR;
-  удалённые audit/apply/readback и signed-URL smoke ещё не запускались.
-- Production parser работает через Yandex Cloud Function. Summary live smoke
-  ранее получил HTTP 400 из-за формата тестового запроса; нужен повторный
-  authenticated smoke текущего контракта.
+- Yandex Web Push pipeline и production parser развёрнуты; нужны authenticated
+  end-to-end smoke push и текущего summary-контракта.
+- Для 670 упражнений Vital Gym Pro подготовлен OIDC/private-runner перенос 2 010
+  объектов по exact manifest. Код слит в #1065; remote audit/apply/readback и
+  signed-URL smoke ещё не запускались.
 
-## Открытые cutover blockers
+## Открытые post-cutover задачи и риски
 
 1. Выполнить успешный media migration без `allow-missing` для chat,
    exercise и custom-exercise objects; подтвердить upload/sign/read/delete.
 2. Добавить Yandex custom-exercise photo adapter.
-3. Убрать обязательность Supabase env из production composition и проверить
-   остальные прямые пути. Публичная анкета уже выбирает Supabase либо Yandex
-   вместе с глобальным main routing без межпровайдерного fallback.
-4. После свежего full-cohort apply проверить на stage linked trainer/client,
-   recovery старого email-only профиля, новый Yandex-only аккаунт и приглашение;
-   только затем по отдельной команде включить server/frontend cutover flags.
-5. Провести backup restore drill во временный private cluster, повторить AI
-   summary и push smoke.
-6. После короткого freeze выполнить свежий full-cohort snapshot, media delta,
-   validate и повторную атомарную пересборку с тем же checksum; только затем
-   включать routing.
+3. Убрать обязательность Supabase env и legacy bridge из production composition.
+   Публичная анкета уже выбирает Supabase либо Yandex вместе с main routing без
+   межпровайдерного fallback.
+4. Провести ручной E2E matrix с реальными тестовыми identities: linked trainer,
+   linked client, recovery старого email-only профиля, новый Yandex-only аккаунт
+   и оба invitation path. Автоматизированы серверные контракты, production auth
+   DOM, PKCE redirect и unauthenticated guards; реальный OAuth callback в этом
+   cutover-сеансе не выполнялся.
+5. Провести backup restore drill, повторить authenticated AI summary и push
+   smoke. До завершения observation window Supabase не удалять: write gate
+   остаётся paused, а обратной миграции Yandex writes нет.
 
 ## Ближайший порядок
 
-1. Вести параллельные потоки `identity-runtime`, `data-media`,
-   `assistant-ops` и `product` по cutover playbook; назначить одного
-   интеграционного владельца.
-2. Сначала закрыть parity blockers и общие contract tests, затем провести одну
-   полную локальную репетицию и стабилизационный CI checkpoint.
-3. Отдельной согласованной задачей выполнить production cutover. После первой
-   Yandex-записи rollback флагом без reverse migration небезопасен.
-4. После согласованного окна стабильности отключить Supabase Auth/Data API/
+1. Наблюдать Yandex auth/API errors и выполнить ручной E2E matrix тестовыми
+   trainer/client accounts; при инциденте возвращать maintenance и делать
+   forward-fix, а не включать Supabase UI поверх появившихся Yandex writes.
+2. Закрыть media/custom-photo и AI/push/backup задачи.
+3. После согласованного окна стабильности отключить Supabase Auth/Data API/
    Storage/Edge Functions, удалить fallback-код и production secrets.
 
 ## Отложено
