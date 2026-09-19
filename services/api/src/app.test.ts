@@ -33,6 +33,7 @@ import type { PilotAssistantState } from './pilot-assistant-state.js'
 import type { PilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
+import type { PilotLegal } from './pilot-legal.js'
 import { PilotConnectionCommandError } from './connection-commands.js'
 import { PilotDomainCommandError } from './domain-commands.js'
 import type {
@@ -86,6 +87,112 @@ const apps: ReturnType<typeof buildApp>[] = []
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()))
+})
+
+describe('legal and account lifecycle API', () => {
+  const sessionToken = 'l'.repeat(43)
+  const session = { accessMode: 'read_write', token: sessionToken }
+  const requestId = '8fc45130-9bcf-4b77-9ff7-f0872a354034'
+
+  function legal() {
+    const acceptance = vi.fn<PilotLegal['acceptance']>()
+      .mockResolvedValue({ accepted: false, acceptedAt: null })
+    const accept = vi.fn<PilotLegal['accept']>()
+      .mockResolvedValue('2026-09-19T10:00:00.000Z')
+    const deletionRequest = vi.fn<PilotLegal['deletionRequest']>().mockResolvedValue({
+        id: requestId,
+        status: 'requested',
+        requestedAt: '2026-09-19T11:00:00.000Z',
+      })
+    const requestDeletion = vi.fn<PilotLegal['requestDeletion']>().mockResolvedValue(requestId)
+    const cancelDeletion = vi.fn<PilotLegal['cancelDeletion']>().mockResolvedValue(undefined)
+    const pilotLegal: PilotLegal = {
+      acceptance,
+      accept,
+      deletionRequest,
+      requestDeletion,
+      cancelDeletion,
+    }
+    return { pilotLegal, acceptance, accept, deletionRequest, requestDeletion, cancelDeletion }
+  }
+
+  it('serves the complete legal and deletion lifecycle for a writable Yandex session', async () => {
+    const { pilotLegal, acceptance: readAcceptance, accept, deletionRequest,
+      requestDeletion, cancelDeletion } = legal()
+    const app = buildApp({ pilotLegal, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': sessionToken }
+
+    const acceptance = await app.inject({ method: 'GET', url: '/v1/legal/acceptance', headers })
+    const accepted = await app.inject({
+      method: 'PUT',
+      url: '/v1/legal/acceptance',
+      headers,
+      payload: {
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+        source: 'existing_user',
+      },
+    })
+    const deletion = await app.inject({ method: 'GET', url: '/v1/account-deletion-request', headers })
+    const requested = await app.inject({ method: 'POST', url: '/v1/account-deletion-request', headers })
+    const cancelled = await app.inject({ method: 'DELETE', url: '/v1/account-deletion-request', headers })
+
+    expect(acceptance.statusCode).toBe(200)
+    expect(acceptance.headers['cache-control']).toBe('no-store')
+    expect(acceptance.json()).toEqual({ applicable: true, accepted: false, acceptedAt: null })
+    expect(accepted.json()).toEqual({ acceptedAt: '2026-09-19T10:00:00.000Z' })
+    expect(deletion.json()).toEqual({
+      supported: true,
+      request: {
+        id: requestId,
+        status: 'requested',
+        requestedAt: '2026-09-19T11:00:00.000Z',
+      },
+    })
+    expect(requested.json()).toEqual({ requestId })
+    expect(cancelled.statusCode).toBe(204)
+    expect(readAcceptance).toHaveBeenCalledWith(
+      session,
+      CURRENT_TERMS_VERSION,
+      CURRENT_PRIVACY_VERSION,
+    )
+    expect(accept).toHaveBeenCalledWith(
+      session,
+      CURRENT_TERMS_VERSION,
+      CURRENT_PRIVACY_VERSION,
+      'existing_user',
+    )
+    expect(deletionRequest).toHaveBeenCalledWith(session)
+    expect(requestDeletion).toHaveBeenCalledWith(session)
+    expect(cancelDeletion).toHaveBeenCalledWith(session)
+  })
+
+  it('rejects unauthenticated, read-only and stale legal mutations before storage', async () => {
+    const { pilotLegal, accept, requestDeletion } = legal()
+    const app = buildApp({ pilotLegal, logger: false }); apps.push(app)
+    const unauthenticated = await app.inject({ method: 'GET', url: '/v1/legal/acceptance' })
+    const readOnly = await app.inject({
+      method: 'POST',
+      url: '/v1/account-deletion-request',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+    const stale = await app.inject({
+      method: 'PUT',
+      url: '/v1/legal/acceptance',
+      headers: { 'x-fit-session': sessionToken },
+      payload: {
+        termsVersion: 'sha256:stale',
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+        source: 'existing_user',
+      },
+    })
+
+    expect(unauthenticated.statusCode).toBe(401)
+    expect(readOnly.statusCode).toBe(403)
+    expect(stale.statusCode).toBe(412)
+    expect(accept).not.toHaveBeenCalled()
+    expect(requestDeletion).not.toHaveBeenCalled()
+  })
 })
 
 describe('reliable chat API', () => {

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type PropsWithChildren } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
-import { legalRepository } from '../../data/repositories/legal.repository'
+import { useDataBackend } from '../../app/data-backend-context'
 import legalDocuments from '../../shared/legal-documents.json'
 import { LEGAL_PATHS } from '../../shared/legal'
 import { StatePanel, useConfirm } from '../../shared/ui'
@@ -88,29 +88,31 @@ export function PrivacyPage() {
 
 export function LegalAcceptanceGate({ children }: PropsWithChildren) {
   const { actor, signOut } = useAuth()
+  const { source, legal: legalRepository } = useDataBackend()
   const queryClient = useQueryClient()
-  const [acceptedUserId, setAcceptedUserId] = useState<string | null>(null)
+  const actorKey = actor === null ? null : `${source}:${actor.userId}`
+  const [acceptedActorKey, setAcceptedActorKey] = useState<string | null>(null)
   const status = useQuery({
-    queryKey: ['legal-acceptance', actor?.userId],
+    queryKey: ['legal-acceptance', source, actor?.userId],
     queryFn: () => legalRepository.getAcceptanceStatus(),
     staleTime: Infinity,
   })
   const accept = useMutation({
     mutationFn: () => legalRepository.acceptCurrent('existing_user'),
-    onSuccess: () => queryClient.setQueryData(['legal-acceptance', actor?.userId], {
+    onSuccess: (acceptedAt) => queryClient.setQueryData(['legal-acceptance', source, actor?.userId], {
       applicable: true,
       accepted: true,
-      acceptedAt: new Date().toISOString(),
+      acceptedAt,
     }),
   })
 
   useEffect(() => {
-    if (status.data?.accepted && actor) setAcceptedUserId(actor.userId)
-  }, [actor, status.data?.accepted])
+    if (status.data?.accepted && actorKey !== null) setAcceptedActorKey(actorKey)
+  }, [actorKey, status.data?.accepted])
 
   // Profile refresh clears server-state queries. Keep an already accepted user
   // inside the app while the same actor's audit row is checked again.
-  if (acceptedUserId === actor?.userId || status.data?.accepted) return children
+  if ((actorKey !== null && acceptedActorKey === actorKey) || status.data?.accepted) return children
   if (status.isLoading) return <main className="legal-gate ui-identity"><p>Проверяем документы…</p></main>
   if (status.error) return <main className="legal-gate ui-identity"><StatePanel
     tone="error"
@@ -134,20 +136,21 @@ export function LegalAcceptanceGate({ children }: PropsWithChildren) {
 
 export function AccountDeletionPage() {
   const { actor } = useAuth()
+  const { source, legal: legalRepository } = useDataBackend()
   const queryClient = useQueryClient()
   const [confirm, confirmDialog] = useConfirm()
   const status = useQuery({
-    queryKey: ['account-deletion-request', actor?.userId],
+    queryKey: ['account-deletion-request', source, actor?.userId],
     queryFn: () => legalRepository.getAccountDeletionStatus(),
     enabled: actor !== null,
   })
   const request = useMutation({
     mutationFn: () => legalRepository.requestAccountDeletion(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['account-deletion-request', actor?.userId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['account-deletion-request', source, actor?.userId] }),
   })
   const cancel = useMutation({
     mutationFn: () => legalRepository.cancelAccountDeletionRequest(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['account-deletion-request', actor?.userId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['account-deletion-request', source, actor?.userId] }),
   })
 
   return <LegalShell title="Удаление аккаунта">

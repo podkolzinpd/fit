@@ -6,6 +6,7 @@ import type {
   WorkoutDraft,
 } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
+import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 import { createYandexMainRepository } from './yandex-main.repository'
 
 const pilot = vi.hoisted(() => ({ listTrainingData: vi.fn(), parseWorkout: vi.fn() }))
@@ -75,6 +76,60 @@ describe('Yandex main repository', () => {
     pilot.parseWorkout.mockReset()
     push.subscribe.mockReset()
     push.unsubscribe.mockReset()
+  })
+
+  it('uses the Yandex API for legal acceptance and account deletion lifecycle', async () => {
+    const requestId = '8fc45130-9bcf-4b77-9ff7-f0872a354034'
+    const acceptedAt = '2026-09-19T10:00:00.000Z'
+    const requestedAt = '2026-09-19T11:00:00.000Z'
+    const fetchMock = vi.fn(
+      (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+        void input
+        void init
+        return Promise.resolve(new Response(null, { status: 500 }))
+      },
+    )
+      .mockResolvedValueOnce(jsonResponse({ applicable: true, accepted: false, acceptedAt: null }))
+      .mockResolvedValueOnce(jsonResponse({ acceptedAt }))
+      .mockResolvedValueOnce(jsonResponse({
+        supported: true,
+        request: { id: requestId, status: 'requested', requestedAt },
+      }))
+      .mockResolvedValueOnce(jsonResponse({ requestId }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.legal.getAcceptanceStatus()).resolves.toEqual({
+      applicable: true,
+      accepted: false,
+      acceptedAt: null,
+    })
+    await expect(repository.legal.acceptCurrent('existing_user')).resolves.toBe(acceptedAt)
+    await expect(repository.legal.getAccountDeletionStatus()).resolves.toEqual({
+      supported: true,
+      request: { id: requestId, status: 'requested', requestedAt },
+    })
+    await expect(repository.legal.requestAccountDeletion()).resolves.toBe(requestId)
+    await expect(repository.legal.cancelAccountDeletionRequest()).resolves.toBeUndefined()
+
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      `${apiBaseUrl}/v1/legal/acceptance`,
+      `${apiBaseUrl}/v1/legal/acceptance`,
+      `${apiBaseUrl}/v1/account-deletion-request`,
+      `${apiBaseUrl}/v1/account-deletion-request`,
+      `${apiBaseUrl}/v1/account-deletion-request`,
+    ])
+    const acceptanceRequest = fetchMock.mock.calls[1]?.[1]
+    expect(acceptanceRequest?.method).toBe('PUT')
+    expect(new Headers(acceptanceRequest?.headers).get('x-fit-session')).toBe(sessionToken)
+    expect(acceptanceRequest?.body).toBe(JSON.stringify({
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+      source: 'existing_user',
+    }))
+    expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({ method: 'POST' })
+    expect(fetchMock.mock.calls[4]?.[1]).toMatchObject({ method: 'DELETE' })
   })
 
   it('reads and updates the trainer discovery prompt', async () => {
