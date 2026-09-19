@@ -162,7 +162,7 @@ function CatalogFiltersSheet({ draft, setDraft, onApply, onReset, onClose, retur
             <SpecialtyChecklist selected={draft.specialties} onToggle={(specialty, checked) => setDraft((value) => ({
               ...value,
               specialties: checked ? [...new Set([...value.specialties, specialty])] : value.specialties.filter((item) => item !== specialty),
-            }))} />
+            }))} allowAll onSelectAll={() => setDraft((value) => ({ ...value, specialties: [] }))} />
           </details>
         </div>
         <Field label="Город"><input value={draft.city} maxLength={100} onChange={(event) => setDraft((value) => ({ ...value, city: event.target.value }))} /></Field>

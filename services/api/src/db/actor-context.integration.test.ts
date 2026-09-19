@@ -108,6 +108,7 @@ import {
 import {
   DatabaseYandexNativeRegistrar,
 } from '../yandex-native-registration.js'
+import { DatabaseYandexAuthHandoffService } from '../yandex-auth-handoff.js'
 import {
   CURRENT_PRIVACY_VERSION,
   CURRENT_TERMS_VERSION,
@@ -1204,6 +1205,87 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           'update app_private.profile_rollout_assignments set enabled = true where profile_id = $1',
           [APP_ACTOR_ID],
         )
+      }
+    })
+
+    it('uses an opaque one-time handoff to link only a migrated rollout-ready profile', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      const migratedProfileId = 'd05d1bb4-4da0-4846-a8c7-e3f1dd1ee821'
+      const subjectHash = 'd'.repeat(64)
+      const handoff = new DatabaseYandexAuthHandoffService(runtimePool)
+      await ownerPool.query('delete from public.trainers where profile_id = $1', [migratedProfileId])
+      await ownerPool.query('delete from public.profiles where id = $1', [migratedProfileId])
+      await ownerPool.query(
+        `insert into public.profiles (id, first_name, timezone, account_role)
+         values ($1, 'Перенесённый тренер', 'Europe/Moscow', 'trainer')`,
+        [migratedProfileId],
+      )
+      await ownerPool.query(
+        'insert into public.trainers (profile_id) values ($1)',
+        [migratedProfileId],
+      )
+      await ownerPool.query(
+        `insert into app_private.profile_rollout_assignments (
+           profile_id, target_backend, access_mode, enabled
+         ) values ($1, 'yandex', 'read_write', true)`,
+        [migratedProfileId],
+      )
+
+      try {
+        const issued = await handoff.issue(subjectHash)
+        expect(issued?.token).toMatch(/^[A-Za-z0-9_-]{43}$/)
+        const stored = await ownerPool.query<{ token_sha256: string } & QueryResultRow>(
+          `select token_sha256 from app_private.yandex_auth_handoffs
+           where subject_sha256 = $1`,
+          [subjectHash],
+        )
+        expect(stored.rows).toHaveLength(1)
+        expect(stored.rows[0]?.token_sha256).not.toBe(issued?.token)
+        await handoff.recordRecoveryAttempt(issued?.token ?? '')
+        const attempts = await ownerPool.query<{ recovery_attempt_count: number } & QueryResultRow>(
+          `select recovery_attempt_count from app_private.yandex_auth_handoffs
+           where subject_sha256 = $1`,
+          [subjectHash],
+        )
+        expect(attempts.rows).toEqual([{ recovery_attempt_count: 1 }])
+
+        await expect(handoff.linkExisting(issued?.token ?? '', {
+          profile: {
+            id: migratedProfileId,
+            firstName: 'Перенесённый тренер',
+            lastName: null,
+            timezone: 'Europe/Moscow',
+            accountRole: 'trainer',
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+          trainer: {
+            profileId: migratedProfileId,
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+        })).resolves.toEqual({ profileId: migratedProfileId, subjectHash })
+        await expect(handoff.linkExisting(issued?.token ?? '', {
+          profile: {
+            id: migratedProfileId,
+            firstName: 'Перенесённый тренер',
+            lastName: null,
+            timezone: 'Europe/Moscow',
+            accountRole: 'trainer',
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+          trainer: {
+            profileId: migratedProfileId,
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+        })).rejects.toMatchObject({ failure: 'expired' })
+      } finally {
+        await ownerPool.query('delete from public.trainers where profile_id = $1', [migratedProfileId])
+        await ownerPool.query('delete from public.profiles where id = $1', [migratedProfileId])
       }
     })
 

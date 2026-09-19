@@ -6070,6 +6070,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-specialty-option span { font-size:14px; line-height:1.35; }
 .trainer-specialty-option.disabled { opacity:.5; }
 .trainer-specialty-option.disabled input { cursor:not-allowed; }
+.trainer-specialty-option-all span { font-weight:600; }
 .trainer-certificates-editor { display:grid; gap:10px; }
 .trainer-certificates-editor > .secondary { min-height:44px; }
 .trainer-certificate-fields { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 94px auto; gap:8px; align-items:center; padding-top:10px; border-top:1px solid var(--border); }

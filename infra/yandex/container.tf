@@ -47,6 +47,8 @@ resource "yandex_serverless_container" "api" {
         YANDEX_CLOUD_FOLDER_ID              = var.folder_id
         YANDEX_CLOUD_USE_METADATA_IAM_TOKEN = "true"
         YANDEX_MEDIA_BUCKET                 = local.media_bucket_name
+        YANDEX_NATIVE_REGISTRATION_ENABLED  = var.yandex_native_registration_enabled ? "true" : "false"
+        YANDEX_ONLY_AUTH_ENABLED            = var.yandex_only_auth_enabled ? "true" : "false"
       },
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id

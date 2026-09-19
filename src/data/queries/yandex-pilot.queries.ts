@@ -58,6 +58,31 @@ export const yandexPilotQueries = {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ code, codeVerifier, ...input }),
   }),
+  recoverYandexAccount: (
+    apiBaseUrl: string,
+    input: { handoffToken: string; email: string; password: string },
+  ) => yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/recover`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  }),
+  completeYandexRegistration: (
+    apiBaseUrl: string,
+    input: {
+      handoffToken: string
+      accountRole: 'trainer' | 'client'
+      firstName: string
+      timezone: string
+      termsVersion: string
+      privacyVersion: string
+    },
+  ) => yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/complete-registration`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  }),
   getAppSession: (apiBaseUrl: string, sessionToken: string) =>
     yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/session`, {
       cache: 'no-store',

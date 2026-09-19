@@ -210,6 +210,30 @@ describe('TrainerCatalogPage', () => {
     ))
   })
 
+  it('lets a client return to "all specialties" after narrowing the filter', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByText('Анна Иванова')
+
+    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
+    const dialog = screen.getByRole('dialog', { name: 'Фильтры тренеров' })
+    await user.click(within(dialog).getByText('Направления · Все направления'))
+    expect(within(dialog).getByRole('checkbox', { name: 'Все направления' })).toBeChecked()
+
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Похудение и коррекция фигуры' }))
+    expect(within(dialog).getByRole('checkbox', { name: 'Все направления' })).not.toBeChecked()
+
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Все направления' }))
+    expect(within(dialog).getByRole('checkbox', { name: 'Все направления' })).toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: 'Похудение и коррекция фигуры' })).not.toBeChecked()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Показать тренеров' }))
+    await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith(
+      expect.objectContaining({ specialties: [] }),
+      { offset: 0, limit: 20 },
+    ))
+  })
+
   it('filters to only brand trainers via the dedicated switch', async () => {
     const user = userEvent.setup()
     renderPage()
