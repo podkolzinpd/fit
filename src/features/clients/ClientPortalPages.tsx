@@ -122,7 +122,10 @@ export function MyWorkoutsPage() {
       <div id="workouts-presets-panel" className="progress-view-panel" role="tabpanel" aria-labelledby="workouts-presets-tab" hidden={workoutsView !== 'presets'}>
         <section className="client-workout-section favorite-workouts-section">
           <div className="client-workout-section-head"><p className="eyebrow">МОЁ</p><h2>Избранное</h2></div>
-          {favorites.data && favorites.data.length > 0 ? <>
+          {favorites.error ? <div className="favorite-workouts-error" role="alert">
+            <p>Не удалось загрузить избранное.</p>
+            <button type="button" className="link" onClick={() => void favorites.refetch()}>Повторить</button>
+          </div> : favorites.data && favorites.data.length > 0 ? <>
             <div className="cards favorite-workout-cards">
               {favorites.data.map((favorite) => <article className="favorite-workout-card card" key={favorite.id}>
                 <div><strong>{favorite.title}</strong><small>{favorite.exercises.length} {favoriteExerciseCountLabel(favorite.exercises.length)}</small></div>
