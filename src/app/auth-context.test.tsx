@@ -155,6 +155,22 @@ describe('AuthProvider', () => {
     expect(auth.signOut).toHaveBeenCalled()
   })
 
+  it('does not reopen the Supabase backend from a stale browser session after Yandex-only cutover', async () => {
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
+
+    renderAuth(<AuthProbe />)
+    authCallback()('INITIAL_SESSION', { user })
+
+    await waitFor(() => expect(auth.initialize).toHaveBeenCalledWith(user))
+    expect(screen.getByText('anonymous')).toBeVisible()
+    expect(screen.queryByText(user.email)).not.toBeInTheDocument()
+  })
+
   it('opens client onboarding before the native account has a client card', async () => {
     yandex.state = {
       session: {
