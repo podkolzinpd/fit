@@ -108,6 +108,7 @@ import {
 import {
   DatabaseYandexNativeRegistrar,
 } from '../yandex-native-registration.js'
+import { loadDatabaseProgramContext } from '../assistant-orchestrator/program/source.js'
 import { DatabaseYandexAuthHandoffService } from '../yandex-auth-handoff.js'
 import {
   CURRENT_PRIVACY_VERSION,
@@ -163,6 +164,9 @@ const CLIENT_ASSISTANT_FORBIDDEN_ACTION_ID = 'ec691fd5-86ee-4740-838c-b37166df7e
 const CLIENT_ASSISTANT_WORKOUT_REQUEST_ID = 'ed691fd5-86ee-4740-838c-b37166df7e71'
 const CLIENT_ASSISTANT_PROGRAM_TURN_ID = 'a46c6f9e-86ee-4740-838c-b37166df7e71'
 const CLIENT_ASSISTANT_PROGRAM_ACTION_ID = 'ee691fd5-86ee-4740-838c-b37166df7e71'
+const CLIENT_PROGRAM_JOB_ID = 'f1691fd5-86ee-4740-838c-b37166df7e71'
+const CLIENT_PROGRAM_JOB_LEASE_ID = 'f2691fd5-86ee-4740-838c-b37166df7e71'
+const CLIENT_PROGRAM_JOB_OTHER_LEASE_ID = 'f3691fd5-86ee-4740-838c-b37166df7e71'
 const PROGRESS_WORKOUT_EXERCISE_ID = '736e9f0c-634a-42e0-a13b-2c5b070fe5ef'
 const PROGRESS_WORKOUT_SET_ID = '9a15f723-44cb-4cf1-9bcf-4659c43cc764'
 const ROOT_WORKOUT_EXERCISE_ID = 'd40b742b-5d5b-41ab-91df-ed464414d034'
@@ -5868,6 +5872,63 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         [OTHER_ACTOR_ID],
       )
       await ownerPool.query('delete from public.assistant_conversations where id = $1', [conversation.id])
+    })
+
+    it('loads client program context and scopes generation leases to the actor', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      await ownerPool.query(
+        'delete from private.assistant_program_generations where id = $1',
+        [CLIENT_PROGRAM_JOB_ID],
+      )
+
+      const context = await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+        loadDatabaseProgramContext(client, {
+          id: CLIENT_ID,
+          ageYears: 30,
+          goal: null,
+        }, '2026-09-19'))
+      expect(context.context.periodEnd).toBe('2026-09-19')
+      expect(context.fingerprint).toMatch(/^[0-9a-f]{64}$/u)
+
+      const claim = await withActorTransaction(runtimePool, OTHER_ACTOR_ID, async (client) => {
+        const rows = await client.query<{ result: Record<string, unknown> } & QueryResultRow>(
+          'select public.assistant_program_generation_job($1, $2, $3, null) result',
+          [CLIENT_PROGRAM_JOB_ID, CLIENT_ID, CLIENT_PROGRAM_JOB_LEASE_ID],
+        )
+        return rows[0]?.result
+      })
+      expect(claim).toEqual({ status: 'claimed' })
+
+      const busy = await withActorTransaction(runtimePool, OTHER_ACTOR_ID, async (client) => {
+        const rows = await client.query<{ result: Record<string, unknown> } & QueryResultRow>(
+          'select public.assistant_program_generation_job($1, $2, $3, null) result',
+          [CLIENT_PROGRAM_JOB_ID, CLIENT_ID, CLIENT_PROGRAM_JOB_OTHER_LEASE_ID],
+        )
+        return rows[0]?.result
+      })
+      expect(busy).toEqual({ status: 'busy' })
+
+      await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+        client.query(
+          'select public.assistant_program_generation_job($1, $2, $3, null)',
+          [CLIENT_PROGRAM_JOB_ID, CLIENT_ID, CLIENT_PROGRAM_JOB_OTHER_LEASE_ID],
+        ))).rejects.toMatchObject({ code: 'PT403' })
+
+      const complete = await withActorTransaction(runtimePool, OTHER_ACTOR_ID, async (client) => {
+        const rows = await client.query<{ result: Record<string, unknown> } & QueryResultRow>(
+          'select public.assistant_program_generation_job($1, $2, $3, $4::jsonb) result',
+          [CLIENT_PROGRAM_JOB_ID, CLIENT_ID, CLIENT_PROGRAM_JOB_LEASE_ID, JSON.stringify({ template: { sessions: [] } })],
+        )
+        return rows[0]?.result
+      })
+      expect(complete).toEqual({ status: 'complete', result: { template: { sessions: [] } } })
+
+      await ownerPool.query(
+        'delete from private.assistant_program_generations where id = $1',
+        [CLIENT_PROGRAM_JOB_ID],
+      )
     })
 
     it('manages linked domain-ready rollout assignments as one private batch', async () => {
