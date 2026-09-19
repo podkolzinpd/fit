@@ -18,7 +18,9 @@ const legal = vi.hoisted(() => ({
 }))
 
 vi.mock('../../app/auth-context', () => ({ useAuth: () => useAuth() }))
-vi.mock('../../data/repositories/legal.repository', () => ({ legalRepository: legal }))
+vi.mock('../../app/data-backend-context', () => ({
+  useDataBackend: () => ({ source: 'supabase', legal }),
+}))
 
 function wrapper(children: ReactNode) {
   return <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -87,5 +89,33 @@ describe('legal pages', () => {
     await user.click(await screen.findByRole('button', { name: 'Принять и продолжить' }))
     expect(await screen.findByText('Приложение открыто')).toBeVisible()
     expect(legal.acceptCurrent).toHaveBeenCalledWith('existing_user')
+  })
+
+  it('creates and cancels the current account deletion request through the selected backend', async () => {
+    const user = userEvent.setup()
+    useAuth.mockReturnValue({ actor: { userId: 'user-1' }, signOut: vi.fn(() => Promise.resolve()) })
+    legal.getAccountDeletionStatus
+      .mockResolvedValueOnce({ supported: true, request: null })
+      .mockResolvedValueOnce({
+        supported: true,
+        request: {
+          id: '8fc45130-9bcf-4b77-9ff7-f0872a354034',
+          status: 'requested',
+          requestedAt: '2026-09-19T10:00:00.000Z',
+        },
+      })
+      .mockResolvedValueOnce({ supported: true, request: null })
+    legal.requestAccountDeletion.mockResolvedValue('8fc45130-9bcf-4b77-9ff7-f0872a354034')
+    legal.cancelAccountDeletionRequest.mockResolvedValue(undefined)
+    render(wrapper(<AccountDeletionPage />))
+
+    await user.click(await screen.findByRole('button', { name: 'Запросить удаление аккаунта' }))
+    await user.click(await screen.findByRole('button', { name: 'Отправить запрос' }))
+    expect(legal.requestAccountDeletion).toHaveBeenCalledOnce()
+    expect(await screen.findByRole('button', { name: 'Отменить запрос' })).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'Отменить запрос' }))
+    expect(legal.cancelAccountDeletionRequest).toHaveBeenCalledOnce()
+    expect(await screen.findByRole('button', { name: 'Запросить удаление аккаунта' })).toBeVisible()
   })
 })
