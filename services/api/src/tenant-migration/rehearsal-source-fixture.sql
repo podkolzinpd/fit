@@ -710,6 +710,30 @@ values (
 )
 on conflict do nothing;
 
+insert into public.favorite_workouts (
+  id,
+  client_id,
+  title,
+  exercises,
+  created_at
+)
+values
+  (
+    'a2000000-0000-4000-8000-000000000001',
+    '92000000-0000-4000-8000-000000000029',
+    'Тренировка связанного клиента',
+    '[{"exerciseId":"push-ups","sets":[{"reps":12}]}]'::jsonb,
+    timestamptz '2026-08-06 08:10:00+00'
+  ),
+  (
+    'a2000000-0000-4000-8000-000000000002',
+    'a1000000-0000-4000-8000-000000000001',
+    'Самостоятельная тренировка',
+    '[{"exerciseId":"squats","sets":[{"reps":15}]}]'::jsonb,
+    timestamptz '2026-08-06 08:11:00+00'
+  )
+on conflict do nothing;
+
 insert into public.user_legal_acceptances (
   id,
   user_id,
