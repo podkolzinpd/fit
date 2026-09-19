@@ -1,7 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-20. База изменений: `a0cba171` (#1070). Frontend остаётся
+Обновлено: 2026-09-20. База изменений: `b31b4d69` (#1074). Frontend остаётся
 на Vercel, а production data plane — принятый Yandex Cloud stage stack. Yandex
 ID является единственным production-входом; app-session, main routing и native
 registration включены глобально.
@@ -74,6 +74,11 @@ Supabase из эксплуатации. До закрытия rollback-окна 
   профиль создаётся только после отдельного явного выбора. Неверный пароль не
   создаёт пустой профиль. Новая регистрация создаёт данные только в Yandex
   PostgreSQL.
+- Для reviewed test-profile corrections добавлен приватный stage workflow
+  отвязки Yandex identity по non-reversible tenant fingerprint. Он удаляет
+  `app_private.auth_identities` provider `yandex` и отзывает активные
+  `app_private.yandex_app_sessions` в одной транзакции без вывода raw UUID или
+  provider subject в логи.
 - Защищённый `/invite#token=…&source=…` показывает публичный Supabase/Yandex
   preview, хранит bearer-token только в browser session и возвращает связанный
   либо новый аккаунт на явный claim; legacy `/join?code=…` теперь также

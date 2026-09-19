@@ -59,3 +59,18 @@ test('client saves a workout to favorites, then plans a new one from it', async 
   await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
   await expect(favoriteCard).toHaveCount(0)
 })
+
+test('client sees a retry action, not a misleading empty state, when favorites fail to load', async ({ page }) => {
+  await page.route('**/rest/v1/rpc/list_favorite_workouts', (route) => route.fulfill({
+    status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'internal error' }),
+  }))
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('client@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+
+  await page.goto('/me/workouts?tab=presets')
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить избранное.' })).toBeVisible()
+  await expect(page.getByText('Сохраняйте тренировки, которые вам нравятся')).not.toBeVisible()
+})

@@ -360,7 +360,24 @@ roles. Existing readers automatically receive future views created by
 `fit_owner`; a new domain table must add its curated view as part of that
 table's normal migration, never as a per-person migration.
 
-## 10. Legacy credential transition
+## 10. Reviewed Yandex identity unlink
+
+Use this only for a reviewed test-profile correction after the profile has been
+identified outside the workflow. Do not paste raw profile UUIDs or Yandex IDs
+into GitHub Actions inputs, logs or comments. Compute the non-reversible tenant
+fingerprint locally, then open GitHub Actions, select
+`Manage Yandex stage identity unlink`, run it from `main`, enter that
+fingerprint and type the exact confirmation phrase shown in the workflow.
+
+The workflow uses GitHub OIDC to call the private migration runner. The runner
+resolves the fingerprint inside the stage database, deletes the single
+`app_private.auth_identities` row for provider `yandex`, and revokes active
+`app_private.yandex_app_sessions` for that profile in one transaction. Repeating
+the operation is safe: the identity deletion becomes `false` and active-session
+revocation becomes `0`. The workflow summary and logs expose only aggregate
+booleans/counts, never the profile UUID or provider subject hash.
+
+## 11. Legacy credential transition
 
 The first deployment through this pipeline switches the containers from the
 manually created URL secrets to the managed Connection Manager secrets. Keep
