@@ -114,6 +114,13 @@ import {
   CURRENT_TERMS_VERSION,
 } from '../legal-document-versions.js'
 import {
+  acceptLegalDocuments,
+  cancelAccountDeletionRequest,
+  readAccountDeletionRequest,
+  readLegalAcceptance,
+  requestAccountDeletion,
+} from '../legal.js'
+import {
   DatabaseYandexAppSessionIssuer,
   DatabaseYandexAppSessionRevoker,
 } from '../yandex-app-session.js'
@@ -887,6 +894,89 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
       expect(actorInsideTransaction).toBe(ACTOR_ID)
       expect(await readActor(runtimePool)).toBeNull()
+    })
+
+    it('keeps legal acceptance and deletion requests idempotent and actor-scoped', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      await ownerPool.query(
+        'delete from public.account_deletion_requests where user_id = any($1::uuid[])',
+        [[ACTOR_ID, OTHER_ACTOR_ID]],
+      )
+      await ownerPool.query(
+        'delete from public.user_legal_acceptances where user_id = any($1::uuid[])',
+        [[ACTOR_ID, OTHER_ACTOR_ID]],
+      )
+
+      try {
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          readLegalAcceptance(client, CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION)))
+          .resolves.toEqual({ accepted: false, acceptedAt: null })
+
+        const acceptedAt = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          acceptLegalDocuments(
+            client,
+            CURRENT_TERMS_VERSION,
+            CURRENT_PRIVACY_VERSION,
+            'existing_user',
+          ))
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          acceptLegalDocuments(
+            client,
+            CURRENT_TERMS_VERSION,
+            CURRENT_PRIVACY_VERSION,
+            'existing_user',
+          ))).resolves.toBe(acceptedAt)
+
+        const acceptanceCount = await ownerPool.query<CountRow>(
+          `select count(*)::integer count
+           from public.user_legal_acceptances
+           where user_id = $1 and terms_version = $2 and privacy_version = $3`,
+          [ACTOR_ID, CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION],
+        )
+        expect(acceptanceCount.rows[0]?.count).toBe(1)
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+          readLegalAcceptance(client, CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION)))
+          .resolves.toEqual({ accepted: false, acceptedAt: null })
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+          client.query(
+            `insert into public.user_legal_acceptances (
+               user_id, terms_version, privacy_version, source
+             ) values ($1, $2, $3, 'existing_user')`,
+            [ACTOR_ID, CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION],
+          ))).rejects.toMatchObject({ code: '42501' })
+
+        const deletionRequestId = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          requestAccountDeletion,
+        )
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, requestAccountDeletion))
+          .resolves.toBe(deletionRequestId)
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, readAccountDeletionRequest))
+          .resolves.toMatchObject({ id: deletionRequestId, status: 'requested' })
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID, readAccountDeletionRequest))
+          .resolves.toBeNull()
+
+        await withActorTransaction(runtimePool, ACTOR_ID, cancelAccountDeletionRequest)
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, readAccountDeletionRequest))
+          .resolves.toBeNull()
+        const cancelled = await ownerPool.query<{ status: string } & QueryResultRow>(
+          'select status from public.account_deletion_requests where id = $1',
+          [deletionRequestId],
+        )
+        expect(cancelled.rows).toEqual([{ status: 'cancelled' }])
+      } finally {
+        await ownerPool.query(
+          'delete from public.account_deletion_requests where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
+        await ownerPool.query(
+          'delete from public.user_legal_acceptances where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
+      }
     })
 
     it('maps only an allowlisted Yandex identity to the internal actor', async () => {
