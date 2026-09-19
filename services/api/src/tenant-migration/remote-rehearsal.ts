@@ -17,7 +17,11 @@ import type {
   TenantMigrationEnvelope,
   TenantMigrationTableReport,
 } from './types.js'
-import { STAGE_TENANT_ARTIFACT_LIMIT_BYTES } from './transport-limits.js'
+import {
+  encodeStageTenantMigrationTransport,
+  STAGE_TENANT_ARTIFACT_LIMIT_BYTES,
+  STAGE_TENANT_BINARY_CONTENT_TYPE,
+} from './transport.js'
 
 type Environment = Readonly<Record<string, string | undefined>>
 export type RemoteTenantRehearsalMode = 'audit' | 'dry-run' | 'apply'
@@ -496,15 +500,21 @@ async function requestStage(
     || settings.yandexIamToken === undefined
   ) throw new RemoteTenantRehearsalError('stage_configuration_missing')
 
+  if (envelope.format !== 'fit-tenant-envelope-v3') {
+    throw new RemoteTenantRehearsalError('artifact_transport_unsupported')
+  }
+  const transport = encodeStageTenantMigrationTransport(envelope)
+
   let response: Response
   try {
     response = await fetch(
       `${settings.stageContainerUrl}/stage/tenant-migration/${apply ? 'apply' : 'dry-run'}`,
       {
-        body: JSON.stringify(envelope),
+        body: new Uint8Array(transport.body),
         headers: {
           authorization: `Bearer ${settings.yandexIamToken}`,
-          'content-type': 'application/json',
+          'content-type': STAGE_TENANT_BINARY_CONTENT_TYPE,
+          ...transport.headers,
           'x-fit-tenant-migration-passphrase': passphrase,
           ...(settings.allowMissingMedia
             ? { 'x-fit-tenant-migration-media-policy': 'allow-missing' }
@@ -635,7 +645,13 @@ export async function runRemoteTenantRehearsal(
         ? async (candidate) => {
             const passphrase = randomBytes(48).toString('base64url')
             const envelope = await encryptMigrationBundle(candidate, passphrase)
-            const encryptedBytes = Buffer.byteLength(JSON.stringify(envelope))
+            if (envelope.format !== 'fit-tenant-envelope-v3') {
+              throw new RemoteTenantRehearsalError(
+                'artifact_transport_unsupported',
+              )
+            }
+            const encryptedBytes = encodeStageTenantMigrationTransport(envelope)
+              .body.byteLength
             if (encryptedBytes > STAGE_TENANT_ARTIFACT_LIMIT_BYTES) {
               throw new RemoteTenantRehearsalError(
                 'artifact_too_large_for_stage',
@@ -697,7 +713,11 @@ export async function runRemoteTenantRehearsal(
 
   const passphrase = randomBytes(48).toString('base64url')
   const envelope = await encryptMigrationBundle(bundle, passphrase)
-  const encryptedBytes = Buffer.byteLength(JSON.stringify(envelope))
+  if (envelope.format !== 'fit-tenant-envelope-v3') {
+    throw new RemoteTenantRehearsalError('artifact_transport_unsupported')
+  }
+  const encryptedBytes = encodeStageTenantMigrationTransport(envelope)
+    .body.byteLength
   printBundleSummary(bundle, encryptedBytes)
   if (settings.allowMissingMedia) {
     process.stdout.write('media_validation: allow-missing\n')

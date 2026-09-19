@@ -2,7 +2,7 @@
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
 
-Обновлено: 2026-09-19. База изменений: `b1223199` (#1047). Frontend
+Обновлено: 2026-09-19. База изменений: `f01516da` (#1049). Frontend
 остаётся на Vercel. Production-пользователи пока используют Supabase; Yandex
 app-session, main routing и native registration не включены глобально.
 
@@ -53,11 +53,10 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   профилей из snapshot временно сохраняются и восстанавливаются, а устаревшие
   linked-привязки профилей вне snapshot удаляются; наличие нативного
   Yandex-профиля блокирует операцию до удаления данных.
-- Read-only export 2026-09-19 подтвердил 34 таблицы и 16 066 строк, включая
-  123 legal acceptance и 0 deletion requests. Dry-run не дошёл до target из-за
-  прежнего внутреннего лимита 3 МиБ при envelope 3 182 026 байт; предел поднят
-  до 3 400 000 байт с запасом к жёсткому transport limit 3,5 МБ. Apply не
-  запускался.
+- Свежий remote dry-run подтвердил 34 таблицы и 16 111 строк, включая 124 legal
+  acceptance и 0 deletion requests. Binary ciphertext занял 2 613 883 байта
+  вместо 3 484 918 байт JSON envelope; target проверил 16 111 inserts и откатил
+  транзакцию. Media policy — `allow-missing`; apply не запускался.
 - Server-side rollout assignments для `linked-ready` профилей включены и
   проверены агрегированно. Обязательная привязка включена отдельно; frontend
   app-session, main-routing и native-registration switches остаются выключены.

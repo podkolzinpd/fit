@@ -20,6 +20,11 @@ import {
 import { buildMigrationApp } from './migration-app.js'
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
+import {
+  encodeStageTenantMigrationTransport,
+  STAGE_TENANT_BINARY_CONTENT_TYPE,
+} from './tenant-migration/transport.js'
+import type { BrotliTenantMigrationEnvelope } from './tenant-migration/types.js'
 
 const apps: ReturnType<typeof buildMigrationApp>[] = []
 const STAGE_CLIENT_ID = '10000000-0000-4000-8000-000000000001'
@@ -552,6 +557,20 @@ describe('stage tenant migration', () => {
     tenantFingerprint: 'a'.repeat(16),
     tables: [{ name: 'public.profiles', rows: 2, inserted: 2 }],
   }
+  const binaryEnvelope: BrotliTenantMigrationEnvelope = {
+    format: 'fit-tenant-envelope-v3',
+    compression: { name: 'brotli' },
+    kdf: {
+      name: 'scrypt',
+      salt: Buffer.alloc(16, 1).toString('base64'),
+    },
+    cipher: {
+      name: 'aes-256-gcm',
+      iv: Buffer.alloc(12, 2).toString('base64'),
+      authTag: Buffer.alloc(16, 3).toString('base64'),
+    },
+    ciphertext: Buffer.from('encrypted-payload').toString('base64'),
+  }
 
   function buildTenantMigration(
     run = vi.fn().mockResolvedValue(report),
@@ -601,6 +620,48 @@ describe('stage tenant migration', () => {
     expect(run).toHaveBeenCalledWith(envelope, 'p'.repeat(32), false, false)
     expect(response.body).not.toContain('encrypted-payload')
     expect(response.body).not.toContain('p'.repeat(32))
+  })
+
+  it('reconstructs a Brotli envelope from the encrypted binary transport', async () => {
+    const { app, run } = buildTenantMigration()
+    const transport = encodeStageTenantMigrationTransport(binaryEnvelope)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/tenant-migration/dry-run',
+      headers: {
+        ...transport.headers,
+        'content-type': STAGE_TENANT_BINARY_CONTENT_TYPE,
+        'x-fit-tenant-migration-passphrase': 'p'.repeat(32),
+      },
+      payload: transport.body,
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(run).toHaveBeenCalledWith(
+      binaryEnvelope,
+      'p'.repeat(32),
+      false,
+      false,
+    )
+  })
+
+  it('rejects binary artifacts with missing envelope metadata', async () => {
+    const { app, run } = buildTenantMigration()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/tenant-migration/dry-run',
+      headers: {
+        'content-type': STAGE_TENANT_BINARY_CONTENT_TYPE,
+        'x-fit-tenant-migration-passphrase': 'p'.repeat(32),
+      },
+      payload: Buffer.from('encrypted-payload'),
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(run).not.toHaveBeenCalled()
   })
 
   it('requires an independent exact confirmation before apply', async () => {
