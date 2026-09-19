@@ -34,6 +34,7 @@ import {
 import {
   VITAL_MEDIA_APPLY_CONFIRMATION,
   VITAL_MEDIA_BINARY_CONTENT_TYPE,
+  VITAL_MEDIA_BUCKET_CONFIGURATION_CONFIRMATION,
   VitalMediaDeploymentError,
   type VitalMediaDeploymentService,
   type VitalMediaManifestFile,
@@ -269,9 +270,13 @@ export function buildMigrationApp(
         && request.headers['x-fit-vital-media-confirmation']
           !== VITAL_MEDIA_APPLY_CONFIRMATION
       ) return reply.code(403).send({ status: 'apply_not_confirmed' })
+      if (
+        request.headers['x-fit-vital-media-bucket-confirmation']
+          !== VITAL_MEDIA_BUCKET_CONFIGURATION_CONFIRMATION
+      ) return reply.code(403).send({ status: 'bucket_configuration_not_confirmed' })
       try {
         const result = await vitalMediaDeployment.preflight(allowWrite)
-        return { status: 'vital_media_preflight_ready', ...result }
+        return { status: 'vital_media_preflight_ready', ...result, versioned: true }
       } catch (error) {
         const code = error instanceof VitalMediaDeploymentError
           ? error.code
