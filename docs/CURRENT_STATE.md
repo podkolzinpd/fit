@@ -65,12 +65,12 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
   подтвердили одинаковые trainer, standalone-client и full-cohort fingerprints,
   повторный apply и финальный checksum; текущий full-cohort fixture содержит
   69 строк.
-- Свежие read-only source audit и rollback-only Yandex target dry-run при
-  `paused` write gate подтвердили одинаковый content fingerprint, все 35 таблиц
-  и 16 192 строки: `favorite_workouts` — 1, legal acceptance — 128, deletion
-  requests — 0. В dry-run зашифрованный snapshot занял 2 738 453 байта; target
-  проверил 16 192 inserts и откатил транзакцию. Media policy — `allow-missing`;
-  apply не запускался.
+- Свежий current-snapshot cutover cycle при `paused` write gate завершён для
+  всех 35 таблиц и 16 192 строк: source audit, target dry-run с rollback, первый
+  apply и повторная полная пересборка подтвердили один content fingerprint.
+  Оба apply проверили по 16 192 inserts; `favorite_workouts` — 1, legal
+  acceptance — 128, deletion requests — 0. Media policy — `allow-missing`;
+  Yandex routing и auth switches после apply не включались.
 - Server-side rollout assignments для `linked-ready` профилей включены и
   проверены агрегированно. Обязательная привязка включена отдельно; frontend
   app-session, main-routing и native-registration switches остаются выключены.
