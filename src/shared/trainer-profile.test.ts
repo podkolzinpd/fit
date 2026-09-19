@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emptyTrainerProfileDraft, parseTrainerProfile, TRAINER_SPECIALTIES, TRAINER_SPECIALTIES_MAX, validatePublishableTrainerProfile } from './trainer-profile'
+import { emptyTrainerProfileDraft, parseLegacyTrainerCatalogPage, parseTrainerCatalogPage, parseTrainerProfile, TRAINER_SPECIALTIES, TRAINER_SPECIALTIES_MAX, validatePublishableTrainerProfile } from './trainer-profile'
 
 describe('trainer profile', () => {
   it('allows a trainer to publish a profile with only the account name', () => {
@@ -40,6 +40,45 @@ describe('trainer profile', () => {
     expect(parseTrainerProfile({ publicId: '9190a86f-a191-42d8-912e-a7e0ea0f331d', draft,
       published: draft, listedInCatalog: true, updatedAt: '2026-09-10T09:37:38.59182+00:00',
       publishedAt: '2026-09-10T09:37:38.59182+00:00', version: 10, isBrandTrainer: false }).published).toEqual(draft)
+  })
+
+  it('maps the legacy Supabase catalog response to the compact public contract', () => {
+    const published = emptyTrainerProfileDraft('Анна Иванова')
+    const draft = { ...published, displayName: 'Неопубликованное имя' }
+    const page = parseLegacyTrainerCatalogPage({
+      items: [{
+        publicId: '9190a86f-a191-42d8-912e-a7e0ea0f331d',
+        draft,
+        published,
+        listedInCatalog: true,
+        updatedAt: '2026-09-10T09:37:38.59182+00:00',
+        publishedAt: '2026-09-10T09:37:38.59182+00:00',
+        version: 10,
+        isBrandTrainer: false,
+      }],
+      totalCount: 1,
+      nextOffset: null,
+    })
+
+    expect(page.items).toEqual([{
+      publicId: '9190a86f-a191-42d8-912e-a7e0ea0f331d',
+      profile: published,
+      isBrandTrainer: false,
+    }])
+  })
+
+  it('rejects the old duplicated profile shape from the Yandex catalog contract', () => {
+    const profile = emptyTrainerProfileDraft('Анна Иванова')
+    expect(() => parseTrainerCatalogPage({
+      items: [{
+        publicId: '9190a86f-a191-42d8-912e-a7e0ea0f331d',
+        draft: profile,
+        published: profile,
+        isBrandTrainer: false,
+      }],
+      totalCount: 1,
+      nextOffset: null,
+    })).toThrow()
   })
 
   it('reads a filled legacy profile without rewriting its existing fields', () => {

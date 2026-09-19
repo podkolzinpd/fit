@@ -64,6 +64,8 @@ import {
 } from './legacy-chat-media.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
+import type { PilotInvitationLinks } from './pilot-invitation-links.js'
+import type { PilotLegal } from './pilot-legal.js'
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer } from './pilot-session.js'
@@ -76,9 +78,14 @@ import {
   ExistingActorUnavailableError,
   YandexAccountLinkError,
   type ExistingActor,
+  type ExistingCredentialsProvider,
   type ExistingActorProvider,
   type YandexAccountLinker,
 } from './yandex-account-linking.js'
+import {
+  YandexAuthHandoffError,
+  type YandexAuthHandoffService,
+} from './yandex-auth-handoff.js'
 import {
   YandexNativeRegistrationError,
   type YandexNativeRegistrar,
@@ -107,6 +114,8 @@ import {
 } from './live-workout-request.js'
 import {
   readExpectedVersion,
+  readFavoriteWorkoutExercises,
+  readFavoriteWorkoutTitle,
   readSavePlannedWorkoutRequest,
 } from './planned-workout-request.js'
 import {
@@ -130,11 +139,15 @@ import {
   readVersionedProgressRequest,
 } from './progress-request.js'
 import { readVitalMediaRequest, type VitalMediaSigner } from './vital-media.js'
-import { readTrainerProfileDraft, TrainerProfileError, type PilotTrainerProfiles, type TrainerCatalogFilters } from './trainer-profile.js'
+import { MAX_TRAINER_CATALOG_PAGE_SIZE, readTrainerProfileDraft, TrainerProfileError, type PilotTrainerProfiles, type TrainerCatalogFilters } from './trainer-profile.js'
 import {
   TrainerDiscoveryError,
   type PilotTrainerDiscovery,
 } from './trainer-discovery.js'
+import {
+  FavoriteWorkoutsError,
+  type PilotFavoriteWorkouts,
+} from './favorite-workouts.js'
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
@@ -162,6 +175,8 @@ interface BuildAppOptions {
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
   pilotConnectionsWriter?: PilotConnectionsWriter
+  pilotInvitationLinks?: PilotInvitationLinks
+  pilotLegal?: PilotLegal
   pilotDomainWriter?: PilotDomainWriter
   pilotProfileReader?: PilotProfileReader
   pilotSessionIssuer?: PilotSessionIssuer
@@ -176,7 +191,10 @@ interface BuildAppOptions {
   legacyWorkoutParser?: LegacyWorkoutParser
   legacySummaryHandler?: LegacySummaryHandler
   existingActorProvider?: ExistingActorProvider
+  existingCredentialsProvider?: ExistingCredentialsProvider
   yandexAccountLinker?: YandexAccountLinker
+  yandexAuthHandoffService?: YandexAuthHandoffService
+  yandexOnlyAuthEnabled?: boolean
   yandexNativeRegistrar?: YandexNativeRegistrar
   yandexAppSessionIssuer?: YandexAppSessionIssuer
   yandexAppSessionReader?: YandexAppSessionReader
@@ -184,6 +202,7 @@ interface BuildAppOptions {
   vitalMediaSigner?: VitalMediaSigner
   pilotTrainerProfiles?: PilotTrainerProfiles
   pilotTrainerDiscovery?: PilotTrainerDiscovery
+  pilotFavoriteWorkouts?: PilotFavoriteWorkouts
   logger?: boolean
   releaseId?: string
 }
@@ -754,6 +773,85 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   }
 
+  function readHandoffRegistrationRequest(body: unknown) {
+    if (typeof body !== 'object' || body === null || !('handoffToken' in body)) return undefined
+    const handoffToken = body.handoffToken
+    const firstName = 'firstName' in body ? body.firstName : undefined
+    const timezone = 'timezone' in body ? body.timezone : undefined
+    const accountRole = 'accountRole' in body ? body.accountRole : undefined
+    const termsVersion = 'termsVersion' in body ? body.termsVersion : undefined
+    const privacyVersion = 'privacyVersion' in body ? body.privacyVersion : undefined
+    if (
+      typeof handoffToken !== 'string'
+      || !/^[A-Za-z0-9_-]{43}$/.test(handoffToken)
+      || typeof firstName !== 'string'
+      || firstName.trim().length < 2
+      || firstName.trim().length > 120
+      || typeof timezone !== 'string'
+      || timezone.trim().length === 0
+      || timezone.trim().length > 100
+      || (accountRole !== 'trainer' && accountRole !== 'client')
+      || typeof termsVersion !== 'string'
+      || typeof privacyVersion !== 'string'
+    ) return undefined
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: timezone.trim() }).format()
+    } catch {
+      return undefined
+    }
+    const normalizedRole: 'trainer' | 'client' = accountRole
+    return {
+      handoffToken,
+      firstName: firstName.trim(),
+      timezone: timezone.trim(),
+      accountRole: normalizedRole,
+      termsVersion,
+      privacyVersion,
+    }
+  }
+
+  function readLegacyRecoveryRequest(body: unknown) {
+    if (
+      typeof body !== 'object'
+      || body === null
+      || !('handoffToken' in body)
+      || !('email' in body)
+      || !('password' in body)
+    ) return undefined
+    const handoffToken = body.handoffToken
+    const email = body.email
+    const password = body.password
+    if (
+      typeof handoffToken !== 'string'
+      || !/^[A-Za-z0-9_-]{43}$/.test(handoffToken)
+      || typeof email !== 'string'
+      || email.trim().length < 3
+      || email.trim().length > 320
+      || !email.includes('@')
+      || typeof password !== 'string'
+      || password.length < 8
+      || password.length > 1_024
+    ) return undefined
+    return { handoffToken, email: email.trim(), password }
+  }
+
+  function sendHandoffFailure(reply: FastifyReply, error: unknown) {
+    if (!(error instanceof YandexAuthHandoffError)) return undefined
+    if (error.failure === 'expired') {
+      return reply.code(401).send({ error: 'yandex_auth_handoff_expired' })
+    }
+    if (error.failure === 'not_found') {
+      return reply.code(404).send({ error: 'migrated_profile_not_found' })
+    }
+    if (error.failure === 'not_ready') {
+      return reply.code(403).send({ error: 'migrated_profile_not_ready' })
+    }
+    if (error.failure === 'conflict') {
+      return reply.code(409).send({ error: 'yandex_identity_conflict' })
+    }
+    return reply.code(400).send({ error: 'invalid_request' })
+  }
+
   async function readYandexSubjectHash(command: { code: string; codeVerifier: string }) {
     if (
       options.oauthCodeProvider === undefined ||
@@ -792,6 +890,95 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.code(401).send({ error: 'unauthorized' })
     }
     return sendPilotProfile(token, reply)
+  })
+
+  app.get('/v1/legal/acceptance', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const legal = options.pilotLegal
+    if (legal === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => legal.acceptance(
+        session,
+        CURRENT_TERMS_VERSION,
+        CURRENT_PRIVACY_VERSION,
+      ),
+      (status) => reply.header('cache-control', 'no-store').send({ applicable: true, ...status }),
+    )
+  })
+
+  app.put('/v1/legal/acceptance', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const body = request.body as Record<string, unknown> | null
+    const source = body?.source
+    if (
+      body === null
+      || typeof body !== 'object'
+      || (source !== 'registration' && source !== 'existing_user')
+      || typeof body.termsVersion !== 'string'
+      || typeof body.privacyVersion !== 'string'
+    ) return reply.code(400).send({ error: 'invalid_request' })
+    if (
+      body.termsVersion !== CURRENT_TERMS_VERSION
+      || body.privacyVersion !== CURRENT_PRIVACY_VERSION
+    ) return reply.code(412).send({ error: 'legal_documents_changed' })
+    const legal = options.pilotLegal
+    if (legal === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => legal.accept(
+        session,
+        CURRENT_TERMS_VERSION,
+        CURRENT_PRIVACY_VERSION,
+        source,
+      ),
+      (acceptedAt) => reply.header('cache-control', 'no-store').send({ acceptedAt }),
+    )
+  })
+
+  app.get('/v1/account-deletion-request', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const legal = options.pilotLegal
+    if (legal === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => legal.deletionRequest(session),
+      (deletionRequest) => reply
+        .header('cache-control', 'no-store')
+        .send({ supported: true, request: deletionRequest }),
+    )
+  })
+
+  app.post('/v1/account-deletion-request', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const legal = options.pilotLegal
+    if (legal === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => legal.requestDeletion(session),
+      (requestId) => reply.header('cache-control', 'no-store').send({ requestId }),
+    )
+  })
+
+  app.delete('/v1/account-deletion-request', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const legal = options.pilotLegal
+    if (legal === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => legal.cancelDeletion(session),
+      () => reply.header('cache-control', 'no-store').code(204).send(),
+    )
   })
 
   app.get('/v1/trainer-profile', async (request, reply) => {
@@ -852,6 +1039,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const accepting = query.accepting === undefined ? null
       : query.accepting === 'true' ? true
         : query.accepting === 'false' ? false : undefined
+    const brandTrainerOnly = query.brand === undefined ? false
+      : query.brand === 'true' ? true
+        : query.brand === 'false' ? false : undefined
     const mode = query.mode === undefined || query.mode === '' ? ''
       : query.mode === 'online' || query.mode === 'in_person' ? query.mode : undefined
     const metroValues = query.metro === undefined ? []
@@ -862,6 +1052,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
     const metroStationIds = metroValues.length <= 20 && metroValues.every((value) => metroStation(value) !== undefined)
       ? metroValues.map((value) => metroStation(value)!) : undefined
+    const specialtyValues = query.specialty === undefined ? []
+      : Array.isArray(query.specialty) ? query.specialty : [query.specialty]
+    const specialtyFilter = (value: unknown) => {
+      const parsed = textFilter(value, 60)
+      return parsed !== undefined && parsed.length > 0 ? parsed : undefined
+    }
+    const specialties = specialtyValues.length <= 20 && specialtyValues.every((value) => specialtyFilter(value) !== undefined)
+      ? specialtyValues.map((value) => specialtyFilter(value)!) : undefined
     const readInteger = (value: unknown, fallback: number, min: number, max: number) => {
       if (value === undefined) return fallback
       if (typeof value !== 'string' || !/^\d+$/.test(value)) return undefined
@@ -869,24 +1067,28 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return Number.isSafeInteger(parsed) && parsed >= min && parsed <= max ? parsed : undefined
     }
     const offset = readInteger(query.offset, 0, 0, 2_147_483_647)
-    const limit = readInteger(query.limit, 20, 1, 50)
+    const limit = readInteger(query.limit, MAX_TRAINER_CATALOG_PAGE_SIZE, 1, 50)
     const filters: TrainerCatalogFilters = {
       query: textFilter(query.query, 100) ?? '',
-      specialty: textFilter(query.specialty, 60) ?? '',
+      specialties: specialties ?? [],
       city: textFilter(query.city, 100) ?? '',
       metroStationIds: metroStationIds ?? [],
       mode: mode ?? '',
       acceptingClients: accepting ?? null,
+      brandTrainerOnly: brandTrainerOnly ?? false,
     }
     if ((query.query !== undefined && textFilter(query.query, 100) === undefined)
-      || (query.specialty !== undefined && textFilter(query.specialty, 60) === undefined)
       || (query.city !== undefined && textFilter(query.city, 100) === undefined)
-      || metroStationIds === undefined || mode === undefined || accepting === undefined || offset === undefined || limit === undefined) {
+      || specialties === undefined || metroStationIds === undefined || mode === undefined || accepting === undefined
+      || brandTrainerOnly === undefined || offset === undefined || limit === undefined) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     try {
-      return reply.send(await options.pilotTrainerProfiles.listPublic(filters, { offset, limit }))
+      return reply.send(await options.pilotTrainerProfiles.listPublic(filters, {
+        offset,
+        limit: Math.min(limit, MAX_TRAINER_CATALOG_PAGE_SIZE),
+      }))
     } catch (error) {
       return sendSafeDatabaseFailure(reply, error, 'Trainer catalog query failed')
     }
@@ -931,6 +1133,48 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       reply,
       () => options.pilotTrainerDiscovery!.setPrompt(session, action),
       (prompt) => reply.header('cache-control', 'no-store').send(prompt),
+    )
+  })
+
+  app.get('/v1/favorite-workouts', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (options.pilotFavoriteWorkouts === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => options.pilotFavoriteWorkouts!.list(session),
+      (favorites) => reply.header('cache-control', 'no-store').send({ favorites }),
+    )
+  })
+
+  app.post('/v1/favorite-workouts', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const body = request.body
+    const input = typeof body === 'object' && body !== null ? body as Record<string, unknown> : undefined
+    const title = input ? readFavoriteWorkoutTitle(input.title) : undefined
+    const exercises = input ? readFavoriteWorkoutExercises(input.exercises) : undefined
+    if (title === undefined || exercises === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotFavoriteWorkouts === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => options.pilotFavoriteWorkouts!.save(session, title, exercises),
+      (favorite) => reply.header('cache-control', 'no-store').code(201).send(favorite),
+    )
+  })
+
+  app.delete('/v1/favorite-workouts/:id', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const { id } = request.params as { id?: unknown }
+    if (typeof id !== 'string' || !uuidPattern.test(id)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotFavoriteWorkouts === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => options.pilotFavoriteWorkouts!.remove(session, id),
+      () => reply.header('cache-control', 'no-store').code(204).send(),
     )
   })
 
@@ -1024,13 +1268,121 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     try {
       const session = await options.yandexAppSessionIssuer.issue(subjectHash)
       if (session === undefined) {
-        return reply.code(403).send({ error: 'yandex_session_denied' })
+        if (!options.yandexOnlyAuthEnabled || options.yandexAuthHandoffService === undefined) {
+          return reply.code(403).send({ error: 'yandex_session_denied' })
+        }
+        const handoff = await options.yandexAuthHandoffService.issue(subjectHash)
+        return handoff === undefined
+          ? reply.code(403).send({ error: 'yandex_profile_not_ready' })
+          : reply.header('cache-control', 'no-store').code(409).send({
+              error: 'yandex_identity_unlinked',
+              handoff,
+            })
       }
       return reply.header('cache-control', 'no-store').send(session)
     } catch (error) {
       if (error instanceof YandexAppSessionDeniedError) {
+        if (!options.yandexOnlyAuthEnabled || options.yandexAuthHandoffService === undefined) {
+          return reply.code(403).send({ error: 'yandex_session_denied' })
+        }
+        try {
+          const handoff = await options.yandexAuthHandoffService.issue(subjectHash)
+          return handoff === undefined
+            ? reply.code(403).send({ error: 'yandex_profile_not_ready' })
+            : reply.header('cache-control', 'no-store').code(409).send({
+                error: 'yandex_identity_unlinked',
+                handoff,
+              })
+        } catch (handoffError) {
+          const response = sendHandoffFailure(reply, handoffError)
+          if (response !== undefined) return response
+        }
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.post('/v1/auth/yandex/recover', async (request, reply) => {
+    if (!options.yandexOnlyAuthEnabled) {
+      return reply.code(404).send({ error: 'not_found' })
+    }
+    const command = readLegacyRecoveryRequest(request.body)
+    if (command === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    if (
+      options.existingCredentialsProvider === undefined
+      || options.yandexAuthHandoffService === undefined
+      || options.yandexAppSessionIssuer === undefined
+    ) return reply.code(503).send({ error: 'service_unavailable' })
+
+    try {
+      await options.yandexAuthHandoffService.recordRecoveryAttempt(command.handoffToken)
+      const actor = await options.existingCredentialsProvider.resolveCredentials(
+        command.email,
+        command.password,
+      )
+      if (actor === undefined) {
+        request.log.warn({ failure: 'legacy_credentials_invalid' }, 'Yandex auth recovery rejected')
+        return reply.code(401).send({ error: 'legacy_credentials_invalid' })
+      }
+      const completed = await options.yandexAuthHandoffService.linkExisting(
+        command.handoffToken,
+        actor,
+      )
+      const session = await options.yandexAppSessionIssuer.issue(completed.subjectHash)
+      if (session === undefined || session.profile.id !== completed.profileId) {
+        return reply.code(503).send({ error: 'service_unavailable' })
+      }
+      request.log.info({ accountRole: actor.profile.accountRole }, 'Yandex auth recovery completed')
+      return reply.header('cache-control', 'no-store').send(session)
+    } catch (error) {
+      if (error instanceof ExistingActorUnavailableError) {
+        return reply.code(503).send({ error: 'legacy_auth_unavailable' })
+      }
+      const response = sendHandoffFailure(reply, error)
+      if (response !== undefined) return response
+      if (error instanceof YandexAppSessionDeniedError) {
+        return reply.code(403).send({ error: 'migrated_profile_not_ready' })
+      }
+      request.log.error({ failure: 'unexpected' }, 'Yandex auth recovery unavailable')
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.post('/v1/auth/yandex/complete-registration', async (request, reply) => {
+    if (!options.yandexOnlyAuthEnabled) {
+      return reply.code(404).send({ error: 'not_found' })
+    }
+    const command = readHandoffRegistrationRequest(request.body)
+    if (command === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    if (
+      command.termsVersion !== CURRENT_TERMS_VERSION
+      || command.privacyVersion !== CURRENT_PRIVACY_VERSION
+    ) return reply.code(412).send({ error: 'legal_documents_changed' })
+    if (
+      options.yandexAuthHandoffService === undefined
+      || options.yandexAppSessionIssuer === undefined
+      || options.yandexNativeRegistrar === undefined
+    ) return reply.code(503).send({ error: 'service_unavailable' })
+
+    try {
+      const completed = await options.yandexAuthHandoffService.register(command.handoffToken, {
+        accountRole: command.accountRole,
+        firstName: command.firstName,
+        timezone: command.timezone,
+      })
+      const session = await options.yandexAppSessionIssuer.issue(completed.subjectHash)
+      if (session === undefined || session.profile.id !== completed.profileId) {
+        return reply.code(503).send({ error: 'service_unavailable' })
+      }
+      request.log.info({ accountRole: command.accountRole }, 'Yandex handoff registration completed')
+      return reply.header('cache-control', 'no-store').send(session)
+    } catch (error) {
+      const response = sendHandoffFailure(reply, error)
+      if (response !== undefined) return response
+      if (error instanceof YandexAppSessionDeniedError) {
         return reply.code(403).send({ error: 'yandex_session_denied' })
       }
+      request.log.error({ failure: 'unexpected' }, 'Yandex handoff registration unavailable')
       return reply.code(503).send({ error: 'service_unavailable' })
     }
   })
@@ -1523,6 +1875,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       }
       if (error instanceof TrainerDiscoveryError) {
         return reply.code(403).send({ error: 'action_not_allowed' })
+      }
+      if (error instanceof FavoriteWorkoutsError) {
+        if (error.failure === 'forbidden') return reply.code(403).send({ error: 'action_not_allowed' })
+        if (error.failure === 'not_found') return reply.code(404).send({ error: 'resource_not_found' })
+        if (error.failure === 'limit_reached') return reply.code(422).send({ error: 'favorite_workout_limit_reached' })
+        return reply.code(422).send({ error: 'invalid_favorite_workout' })
       }
       if (error instanceof AssistantStateError) {
         if (error.failure === 'forbidden') {
@@ -3276,6 +3634,81 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .header('cache-control', 'no-store')
         .code(201)
         .send({ invitation }),
+    )
+  })
+
+  const invitationTokenPattern = /^[A-F0-9]{12}\.[0-9a-f]{64}$/
+
+  app.post('/v1/invitation-links/preview', async (request, reply) => {
+    const body = request.body
+    if (
+      typeof body !== 'object'
+      || body === null
+      || !('token' in body)
+      || typeof body.token !== 'string'
+      || !invitationTokenPattern.test(body.token.trim())
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const invitationLinks = options.pilotInvitationLinks
+    if (invitationLinks === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    try {
+      const invitation = await invitationLinks.preview(body.token.trim())
+      if (invitation === null) return reply.code(404).send({ error: 'resource_not_found' })
+      return reply.header('cache-control', 'no-store').send({ invitation })
+    } catch (error) {
+      return sendSafeDatabaseFailure(reply, error, 'Invitation preview failed')
+    }
+  })
+
+  app.post('/v1/invitation-links', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const body = request.body
+    if (sessionToken === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (
+      typeof body !== 'object'
+      || body === null
+      || !('clientId' in body)
+      || !('targetRole' in body)
+      || typeof body.clientId !== 'string'
+      || !uuidPattern.test(body.clientId)
+      || (body.targetRole !== 'client' && body.targetRole !== 'trainer')
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const invitationLinks = options.pilotInvitationLinks
+    if (invitationLinks === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    const clientId = body.clientId
+    const targetRole = body.targetRole
+    return sendPilotCommand(
+      reply,
+      () => invitationLinks.create(sessionToken, clientId, targetRole),
+      (invitation) => reply.header('cache-control', 'no-store').code(201).send({ invitation }),
+    )
+  })
+
+  app.post('/v1/invitation-links/claim', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const body = request.body
+    if (sessionToken === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (
+      typeof body !== 'object'
+      || body === null
+      || !('token' in body)
+      || typeof body.token !== 'string'
+      || !invitationTokenPattern.test(body.token.trim())
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const invitationLinks = options.pilotInvitationLinks
+    if (invitationLinks === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    const token = body.token.trim()
+    return sendPilotCommand(
+      reply,
+      () => invitationLinks.claim(sessionToken, token),
+      (clientId) => reply.header('cache-control', 'no-store').send({ clientId }),
     )
   })
 

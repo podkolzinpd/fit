@@ -3,23 +3,25 @@ import { useEffect, useRef, useState, type Dispatch, type FormEvent, type RefObj
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useDataBackend } from '../../app/data-backend-context'
-import type { TrainerCatalogFilters, TrainerProfessionalProfile } from '../../shared/domain'
-import { CloseIcon } from '../../shared/icons'
+import type { TrainerCatalogFilters, TrainerCatalogItem } from '../../shared/domain'
+import { ChevronDownIcon, CloseIcon } from '../../shared/icons'
 import { moscowMetroStationById } from '../../shared/moscow-metro'
-import { AsyncView, Field, Page } from '../../shared/ui'
+import { AsyncView, Field, Page, Switch } from '../../shared/ui'
 import { MetroStationPicker } from './MetroStationPicker'
+import { SpecialtyChecklist } from './SpecialtyChecklist'
 
 const emptyFilters: TrainerCatalogFilters = {
   query: '',
-  specialty: '',
+  specialties: [],
   city: '',
   metroStationIds: [],
   mode: '',
   acceptingClients: null,
+  brandTrainerOnly: false,
 }
 
 const catalogViewKey = 'fit.trainer-catalog.view.v1'
-const catalogPageSize = 20
+const catalogPageSize = 3
 
 interface CatalogViewState {
   draft: TrainerCatalogFilters
@@ -32,13 +34,16 @@ function readStoredFilters(value: unknown): TrainerCatalogFilters | null {
   const candidate = value as Partial<TrainerCatalogFilters>
   return {
     query: typeof candidate.query === 'string' ? candidate.query : '',
-    specialty: typeof candidate.specialty === 'string' ? candidate.specialty : '',
+    specialties: Array.isArray(candidate.specialties)
+      ? candidate.specialties.filter((item): item is string => typeof item === 'string')
+      : [],
     city: typeof candidate.city === 'string' ? candidate.city : '',
     metroStationIds: Array.isArray(candidate.metroStationIds)
       ? candidate.metroStationIds.filter((item): item is string => typeof item === 'string').slice(0, 20)
       : [],
     mode: candidate.mode === 'online' || candidate.mode === 'in_person' ? candidate.mode : '',
     acceptingClients: typeof candidate.acceptingClients === 'boolean' ? candidate.acceptingClients : null,
+    brandTrainerOnly: typeof candidate.brandTrainerOnly === 'boolean' ? candidate.brandTrainerOnly : false,
   }
 }
 
@@ -68,7 +73,7 @@ function normalized(filters: TrainerCatalogFilters): TrainerCatalogFilters {
   return {
     ...filters,
     query: filters.query.trim(),
-    specialty: filters.specialty.trim(),
+    specialties: [...new Set(filters.specialties)],
     city: filters.city.trim(),
     metroStationIds: [...new Set(filters.metroStationIds)].slice(0, 20),
   }
@@ -81,9 +86,8 @@ function yearsLabel(value: number): string {
   return `${value} ${word}`
 }
 
-function CatalogCard({ profile, onOpen }: { profile: TrainerProfessionalProfile; onOpen: () => void }) {
-  const published = profile.published
-  if (!published) return null
+function CatalogCard({ profile, onOpen }: { profile: TrainerCatalogItem; onOpen: () => void }) {
+  const published = profile.profile
   const currentYear = new Date().getFullYear()
   const experience = published.experienceStartYear === null
     ? null
@@ -151,7 +155,15 @@ function CatalogFiltersSheet({ draft, setDraft, onApply, onReset, onClose, retur
     <section ref={dialog} className="trainer-catalog-filter-sheet" role="dialog" aria-modal="true" aria-label="Фильтры тренеров">
       <header className="picker-header"><h2>Фильтры</h2><button type="button" className="picker-close" aria-label="Закрыть фильтры" onClick={onClose}><CloseIcon /></button></header>
       <div className="trainer-catalog-filters">
-        <Field label="Направление"><input value={draft.specialty} maxLength={60} placeholder="Силовые, бег" onChange={(event) => setDraft((value) => ({ ...value, specialty: event.target.value }))} /></Field>
+        <div className="trainer-catalog-specialty-filter">
+          <details className="trainer-catalog-specialty-disclosure">
+            <summary><span>{draft.specialties.length ? `Направления · Выбрано: ${draft.specialties.length}` : 'Направления · Все направления'}</span><ChevronDownIcon /></summary>
+            <SpecialtyChecklist selected={draft.specialties} onToggle={(specialty, checked) => setDraft((value) => ({
+              ...value,
+              specialties: checked ? [...new Set([...value.specialties, specialty])] : value.specialties.filter((item) => item !== specialty),
+            }))} allowAll onSelectAll={() => setDraft((value) => ({ ...value, specialties: [] }))} />
+          </details>
+        </div>
         <Field label="Город"><input value={draft.city} maxLength={100} onChange={(event) => setDraft((value) => ({ ...value, city: event.target.value }))} /></Field>
         <div className="trainer-catalog-metro-filter"><MetroStationPicker selectedIds={draft.metroStationIds} onChange={(stationIds) => setDraft((value) => ({ ...value, metroStationIds: stationIds }))} /></div>
         <Field label="Формат"><select value={draft.mode} onChange={(event) => setDraft((value) => ({ ...value, mode: event.target.value as TrainerCatalogFilters['mode'] }))}>
@@ -160,6 +172,10 @@ function CatalogFiltersSheet({ draft, setDraft, onApply, onReset, onClose, retur
         <Field label="Новые клиенты"><select value={draft.acceptingClients === null ? '' : String(draft.acceptingClients)} onChange={(event) => setDraft((value) => ({ ...value, acceptingClients: event.target.value === '' ? null : event.target.value === 'true' }))}>
           <option value="">Неважно</option><option value="true">Берёт клиентов</option><option value="false">Сейчас не берёт</option>
         </select></Field>
+        <div className="trainer-catalog-brand-filter">
+          <Switch label="Только бренд-тренеры" checked={draft.brandTrainerOnly}
+            onChange={(checked) => setDraft((value) => ({ ...value, brandTrainerOnly: checked }))} />
+        </div>
       </div>
       <div className="trainer-catalog-filter-actions">
         <button type="button" className="secondary" onClick={onReset}>Сбросить</button>
@@ -232,8 +248,8 @@ export function TrainerCatalogPage() {
     })
   }
 
-  const appliedExtraFilters = [filters.specialty, filters.city, filters.metroStationIds.length ? 'metro' : '', filters.mode,
-    filters.acceptingClients === null ? '' : String(filters.acceptingClients)].filter(Boolean).length
+  const appliedExtraFilters = [filters.specialties.length ? 'specialty' : '', filters.city, filters.metroStationIds.length ? 'metro' : '', filters.mode,
+    filters.acceptingClients === null ? '' : String(filters.acceptingClients), filters.brandTrainerOnly ? 'brand' : ''].filter(Boolean).length
 
   return <Page title="Тренеры" back="/me/profile" center className="trainer-catalog-page ui-identity">
     <p className="trainer-catalog-intro">Найдите своего тренера.</p>

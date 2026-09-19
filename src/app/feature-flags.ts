@@ -1,3 +1,10 @@
+// Cutover maintenance is a global build-time stop. When enabled, the root does
+// not mount auth, query or data providers, so protected routes and product
+// mutations are unavailable rather than merely covered by a visual overlay.
+export function isMaintenanceModeEnabled(): boolean {
+  return import.meta.env.VITE_MAINTENANCE_MODE === 'true'
+}
+
 // Флаг позволяет включать новый стартовый путь постепенно и мгновенно
 // возвращать прежнее поведение без изменения роутинга. По умолчанию новый
 // экран включён; для отката в окружении сборки задаётся "false".
@@ -114,6 +121,19 @@ export function getYandexNativeRegistrationConfig(): YandexIdPilotConfig | null 
   return getYandexPublicConfig()
 }
 
+// Финальный auth cutover — отдельный общий switch. Он становится эффективным
+// только поверх готовых app-session, native registration и sticky Yandex
+// routing, чтобы один ошибочный env не оставил пользователя без рабочего пути.
+export function getYandexOnlyAuthConfig(): YandexIdPilotConfig | null {
+  if (import.meta.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true') return null
+  if (getYandexNativeRegistrationConfig() === null) return null
+  return getYandexPublicConfig()
+}
+
+export function isYandexOnlyAuthEnabled(): boolean {
+  return getYandexOnlyAuthConfig() !== null
+}
+
 // Sticky routing основного Assistant — отдельный default-off rollout. Он не
 // переиспользует allowlist входа: после включения выбранный профиль работает
 // только с Yandex API и не откатывает отдельные запросы на Supabase.
@@ -147,6 +167,14 @@ export function getYandexMainRoutingConfig(): YandexIdPilotConfig | null {
 // здесь больше нет.
 export function isYandexSessionLinkingEnabled(): boolean {
   return import.meta.env.VITE_YANDEX_SESSION_LINKING_ENABLED === 'true'
+}
+
+// Обязательная привязка — отдельный default-off gate поверх уже существующего
+// linking flow. Она не включает Yandex app-session и не меняет data backend.
+// Если gate включён без публичной linking-конфигурации, UI должен fail closed
+// с явной ошибкой, а не молча пропустить пользователя в приложение.
+export function isYandexAccountLinkRequired(): boolean {
+  return import.meta.env.VITE_YANDEX_ACCOUNT_LINK_REQUIRED === 'true'
 }
 
 export function getYandexSessionLinkingConfig(): YandexIdPilotConfig | null {

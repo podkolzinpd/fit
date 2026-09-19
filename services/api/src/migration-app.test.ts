@@ -17,9 +17,22 @@ import {
   StageRolloutProfileNotReadyError,
   type StageRolloutAssignmentManager,
 } from './db/stage-rollout-assignment.js'
+import type {
+  YandexIdentityUnlinkManager,
+} from './db/yandex-identity-unlink.js'
 import { buildMigrationApp } from './migration-app.js'
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
+import {
+  encodeStageTenantMigrationTransport,
+  STAGE_TENANT_BINARY_CONTENT_TYPE,
+} from './tenant-migration/transport.js'
+import type { BrotliTenantMigrationEnvelope } from './tenant-migration/types.js'
+import {
+  VITAL_MEDIA_APPLY_CONFIRMATION,
+  VITAL_MEDIA_BINARY_CONTENT_TYPE,
+  type VitalMediaDeploymentService,
+} from './vital-media-deployment.js'
 
 const apps: ReturnType<typeof buildMigrationApp>[] = []
 const STAGE_CLIENT_ID = '10000000-0000-4000-8000-000000000001'
@@ -82,6 +95,148 @@ describe('migration endpoint', () => {
         message: 'relation public.training_summary_generation_guard does not exist',
       },
     })
+  })
+})
+
+describe('stage Vital media deployment', () => {
+  function buildVitalMediaDeployment() {
+    const audit = vi.fn().mockResolvedValue({
+      bytes: 71_514_430,
+      enumeration: 'manifest_only' as const,
+      fingerprint: 'a'.repeat(16),
+      mismatched: 0,
+      missing: 0,
+      objects: 2_010,
+      verified: 2_010,
+    })
+    const preflight = vi.fn((allowWrite: boolean) => Promise.resolve({
+      bucket: 'fit-media-example',
+      private: true as const,
+      versioning: allowWrite
+        ? 'pending_manifest_write' as const
+        : 'not_probed_read_only' as const,
+    }))
+    const upload = vi.fn().mockResolvedValue({
+      outcome: 'uploaded' as const,
+      versioning: 'verified' as const,
+    })
+    const deployment: VitalMediaDeploymentService = {
+      audit,
+      preflight,
+      upload,
+    }
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      vitalMediaDeployment: deployment,
+    })
+    apps.push(app)
+    return { app, audit, preflight, upload }
+  }
+
+  it('does not expose media deployment routes unless explicitly configured', async () => {
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/vital-media/preflight',
+      payload: { allowWrite: false },
+    })
+
+    expect(response.statusCode).toBe(404)
+  })
+
+  it('keeps preflight read-only unless manifest writes are confirmed exactly', async () => {
+    const { app, preflight } = buildVitalMediaDeployment()
+    const rejected = await app.inject({
+      method: 'POST',
+      url: '/stage/vital-media/preflight',
+      payload: { allowWrite: true },
+    })
+    const audited = await app.inject({
+      method: 'POST',
+      url: '/stage/vital-media/preflight',
+      payload: { allowWrite: false },
+    })
+    const confirmed = await app.inject({
+      method: 'POST',
+      url: '/stage/vital-media/preflight',
+      headers: {
+        'x-fit-vital-media-confirmation': VITAL_MEDIA_APPLY_CONFIRMATION,
+      },
+      payload: { allowWrite: true },
+    })
+
+    expect(rejected.statusCode).toBe(403)
+    expect(audited.statusCode).toBe(200)
+    expect(audited.json()).toMatchObject({
+      private: true,
+      versioning: 'not_probed_read_only',
+    })
+    expect(confirmed.statusCode).toBe(200)
+    expect(confirmed.json()).toMatchObject({
+      private: true,
+      versioning: 'pending_manifest_write',
+    })
+    expect(preflight).toHaveBeenNthCalledWith(1, false)
+    expect(preflight).toHaveBeenNthCalledWith(2, true)
+  })
+
+  it('accepts one confirmed binary object without exposing its bytes', async () => {
+    const { app, upload } = buildVitalMediaDeployment()
+    const body = Buffer.from('private-animation')
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/stage/vital-media/object',
+      headers: {
+        'content-type': VITAL_MEDIA_BINARY_CONTENT_TYPE,
+        'x-fit-vital-media-bytes': String(body.byteLength),
+        'x-fit-vital-media-confirmation': VITAL_MEDIA_APPLY_CONFIRMATION,
+        'x-fit-vital-media-path': 'exercise.mp4',
+        'x-fit-vital-media-sha256': 'b'.repeat(64),
+      },
+      payload: body,
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      status: 'vital_media_uploaded',
+      versioning: 'verified',
+    })
+    expect(upload).toHaveBeenCalledWith({
+      bytes: body.byteLength,
+      path: 'exercise.mp4',
+      sha256: 'b'.repeat(64),
+    }, body)
+    expect(response.body).not.toContain('private-animation')
+  })
+
+  it('returns only aggregate audit data', async () => {
+    const { app, audit } = buildVitalMediaDeployment()
+    const files = [{ bytes: 10, path: 'exercise.jpg', sha256: 'c'.repeat(64) }]
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/vital-media/audit',
+      payload: { files },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      status: 'vital_media_audited',
+      bytes: 71_514_430,
+      enumeration: 'manifest_only',
+      fingerprint: 'a'.repeat(16),
+      mismatched: 0,
+      missing: 0,
+      objects: 2_010,
+      verified: 2_010,
+    })
+    expect(audit).toHaveBeenCalledWith(files)
+    expect(response.body).not.toContain('exercise.jpg')
   })
 })
 
@@ -465,6 +620,102 @@ describe('stage rollout assignment', () => {
   })
 })
 
+describe('stage Yandex identity unlink', () => {
+  function buildIdentityUnlink(
+    unlink: YandexIdentityUnlinkManager['unlink'] = () => Promise.resolve({
+      identityDeleted: true,
+      sessionsRevoked: 2,
+    }),
+  ) {
+    const unlinkIdentity = vi.fn(unlink)
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      yandexIdentityUnlink: { unlink: unlinkIdentity },
+    })
+    apps.push(app)
+    return { app, unlinkIdentity }
+  }
+
+  it('does not expose the route unless explicitly enabled', async () => {
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/yandex-identity/unlink',
+      payload: { tenantFingerprint: 'a'.repeat(16) },
+    })
+
+    expect(response.statusCode).toBe(404)
+  })
+
+  it('accepts the non-reversible fingerprint recorded by tenant migration', async () => {
+    const { app, unlinkIdentity } = buildIdentityUnlink()
+    const tenantFingerprint = 'a'.repeat(16)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/yandex-identity/unlink',
+      payload: { tenantFingerprint },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(unlinkIdentity).toHaveBeenCalledWith({ tenantFingerprint })
+    expect(response.body).not.toContain(tenantFingerprint)
+  })
+
+  it('rejects raw profile identifiers before touching the database', async () => {
+    const { app, unlinkIdentity } = buildIdentityUnlink()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/yandex-identity/unlink',
+      payload: { profileId: STAGE_CLIENT_ID },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(unlinkIdentity).not.toHaveBeenCalled()
+  })
+
+  it('rejects ambiguous unlink targets before touching the database', async () => {
+    const { app, unlinkIdentity } = buildIdentityUnlink()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/yandex-identity/unlink',
+      payload: {
+        profileId: STAGE_CLIENT_ID,
+        tenantFingerprint: 'a'.repeat(16),
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(unlinkIdentity).not.toHaveBeenCalled()
+  })
+
+  it('keeps unexpected database failures generic', async () => {
+    const { app } = buildIdentityUnlink(
+      () => Promise.reject(new Error('postgresql://owner:secret@database')),
+    )
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/yandex-identity/unlink',
+      payload: { tenantFingerprint: 'a'.repeat(16) },
+    })
+
+    expect(response.statusCode).toBe(500)
+    expect(response.json()).toEqual({ status: 'yandex_identity_unlink_failed' })
+    expect(response.body).not.toContain('secret')
+  })
+})
+
 describe('stage workout fixture', () => {
   it('does not expose the fixture route unless explicitly enabled', async () => {
     const app = buildMigrationApp({
@@ -489,6 +740,8 @@ describe('stage workout fixture', () => {
       sessionExpiresAt: '2026-08-22T12:15:00.000Z',
       clientSessionToken: 'c'.repeat(43),
       clientSessionExpiresAt: '2026-08-22T12:15:00.000Z',
+      mediaSessionToken: 'm'.repeat(43),
+      mediaSessionExpiresAt: '2026-08-22T12:15:00.000Z',
     })
     const app = buildMigrationApp({
       logger: false,
@@ -513,6 +766,10 @@ describe('stage workout fixture', () => {
       },
       clientSession: {
         token: 'c'.repeat(43),
+        expiresAt: '2026-08-22T12:15:00.000Z',
+      },
+      mediaSession: {
+        token: 'm'.repeat(43),
         expiresAt: '2026-08-22T12:15:00.000Z',
       },
     })
@@ -551,6 +808,20 @@ describe('stage tenant migration', () => {
     mode: 'dry-run' as const,
     tenantFingerprint: 'a'.repeat(16),
     tables: [{ name: 'public.profiles', rows: 2, inserted: 2 }],
+  }
+  const binaryEnvelope: BrotliTenantMigrationEnvelope = {
+    format: 'fit-tenant-envelope-v3',
+    compression: { name: 'brotli' },
+    kdf: {
+      name: 'scrypt',
+      salt: Buffer.alloc(16, 1).toString('base64'),
+    },
+    cipher: {
+      name: 'aes-256-gcm',
+      iv: Buffer.alloc(12, 2).toString('base64'),
+      authTag: Buffer.alloc(16, 3).toString('base64'),
+    },
+    ciphertext: Buffer.from('encrypted-payload').toString('base64'),
   }
 
   function buildTenantMigration(
@@ -601,6 +872,48 @@ describe('stage tenant migration', () => {
     expect(run).toHaveBeenCalledWith(envelope, 'p'.repeat(32), false, false)
     expect(response.body).not.toContain('encrypted-payload')
     expect(response.body).not.toContain('p'.repeat(32))
+  })
+
+  it('reconstructs a Brotli envelope from the encrypted binary transport', async () => {
+    const { app, run } = buildTenantMigration()
+    const transport = encodeStageTenantMigrationTransport(binaryEnvelope)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/tenant-migration/dry-run',
+      headers: {
+        ...transport.headers,
+        'content-type': STAGE_TENANT_BINARY_CONTENT_TYPE,
+        'x-fit-tenant-migration-passphrase': 'p'.repeat(32),
+      },
+      payload: transport.body,
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(run).toHaveBeenCalledWith(
+      binaryEnvelope,
+      'p'.repeat(32),
+      false,
+      false,
+    )
+  })
+
+  it('rejects binary artifacts with missing envelope metadata', async () => {
+    const { app, run } = buildTenantMigration()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/tenant-migration/dry-run',
+      headers: {
+        'content-type': STAGE_TENANT_BINARY_CONTENT_TYPE,
+        'x-fit-tenant-migration-passphrase': 'p'.repeat(32),
+      },
+      payload: Buffer.from('encrypted-payload'),
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(run).not.toHaveBeenCalled()
   })
 
   it('requires an independent exact confirmation before apply', async () => {
@@ -675,7 +988,7 @@ describe('stage tenant migration', () => {
       method: 'POST',
       url: '/stage/tenant-migration/dry-run',
       headers: { 'x-fit-tenant-migration-passphrase': 'p'.repeat(32) },
-      payload: { ciphertext: 'x'.repeat(3 * 1024 * 1024) },
+      payload: { ciphertext: 'x'.repeat(3_400_000) },
     })
     expect(oversized.statusCode).toBe(413)
     expect(run).not.toHaveBeenCalled()

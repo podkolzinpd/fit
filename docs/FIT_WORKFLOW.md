@@ -74,6 +74,9 @@ default project исчерпан, расширяйте существующий 
 Не читать целиком всю документацию «на всякий случай»:
 
 - `ARCHITECTURE.md` — когда меняются границы слоёв, состояние, БД или realtime;
+- `docs/YANDEX_CUTOVER_PLAYBOOK.md` — до окончания cutover для auth, БД,
+  repositories/queries, media, Assistant, SpeechKit, push, backend routing и
+  переносимых продуктовых данных;
 - `docs/PRODUCT_WIKI.md` — только раздел затронутого сценария;
 - `FEATURE_PARITY.md` — только для parity-задачи;
 - `docs/design/` — только файл, связанный с тикетом;

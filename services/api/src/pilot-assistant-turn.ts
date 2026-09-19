@@ -6,6 +6,7 @@ import {
   assistantSmallTalkFallback,
   isAssistantCapabilityQuestion,
   isTurnIdReuse,
+  matchingSummaryClients,
   recordWorkoutTurn,
   validateAssistantTurnResponse,
   type AssistantTurnResponse,
@@ -13,8 +14,14 @@ import {
 import {
   AssistantStateError,
   appendAssistantUserMessage,
+  cancelAssistantAction,
   persistAssistantResponse,
 } from './assistant-state.js'
+import { generateProgramOnce, programGenerationKey, type ProgramGenerationJobState, type ProgramGenerationJobStore } from './assistant-orchestrator/program/job.js'
+import { isProgramEnabled } from './assistant-orchestrator/program/model.js'
+import { loadDatabaseProgramContext } from './assistant-orchestrator/program/source.js'
+import { extractProgramBrief, invokeProgramGenerator, programPilotTurn } from './assistant-orchestrator/program/turn.js'
+import { latestActiveAssistantTool, routedAssistantTurn } from './assistant-orchestrator/router.js'
 import {
   type AssistantTurnRequest,
 } from './assistant-state-request.js'
@@ -49,7 +56,18 @@ interface HistoryRow extends QueryResultRow {
 }
 
 interface ActorRoleRow extends QueryResultRow {
+  id: string
   account_role: 'trainer' | 'client'
+  timezone: string
+}
+
+interface ActionLifecycleRow extends QueryResultRow {
+  status: string
+  version: string
+}
+
+interface JsonValueRow extends QueryResultRow {
+  result: unknown
 }
 
 export interface PilotAssistantTurnRunner {
@@ -150,15 +168,17 @@ async function readClients(client: DatabaseClient) {
   return rows.map(clientContext)
 }
 
-async function readActorRole(client: DatabaseClient): Promise<'trainer' | 'client'> {
+async function readActor(client: DatabaseClient): Promise<ActorRoleRow> {
   const rows = await client.query<ActorRoleRow>(`
-    select account_role
+    select id, account_role, timezone
     from public.profiles
     where id = auth.uid()
   `)
-  const role = rows[0]?.account_role
-  if (role !== 'trainer' && role !== 'client') throw new AssistantStateError('forbidden')
-  return role
+  const actor = rows[0]
+  if (actor === undefined || (actor.account_role !== 'trainer' && actor.account_role !== 'client')) {
+    throw new AssistantStateError('forbidden')
+  }
+  return actor
 }
 
 async function readRecentHistory(
@@ -202,7 +222,7 @@ export async function runNativePilotAssistantTurn(
     )
   }
 
-  const role = await readActorRole(client)
+  const role = (await readActor(client)).account_role
   const clients = await readClients(client)
   const history = await readRecentHistory(client, command.conversationId)
   const latestAssistantAction = history.find((row) => row.author === 'assistant')?.action
@@ -232,11 +252,144 @@ export async function runNativePilotAssistantTurn(
 export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunner {
   constructor(private readonly pool: DatabasePool) {}
 
-  runTurn(
+  async runTurn(
     session: YandexActorSessionInput,
     command: AssistantTurnRequest,
   ): Promise<AssistantTurnResponse> {
+    const turnId = command.turnId ?? randomUUID()
+    const prepared = await withYandexActorSession(this.pool, session, async (client) => {
+      const stored = await readStoredAssistantResponse(client, command, turnId)
+      if (stored !== undefined) return { stored } as const
+      await appendAssistantUserMessage(client, command.conversationId, turnId, command.message)
+      const actor = await readActor(client)
+      const clients = await readClients(client)
+      const history = await readRecentHistory(client, command.conversationId)
+      let active = latestActiveAssistantTool(history)
+      if (active?.id) {
+        const lifecycle = await client.query<ActionLifecycleRow>(`
+          select status, version
+          from public.assistant_actions
+          where id = $1
+        `, [active.id])
+        if (lifecycle[0] === undefined) throw new AssistantStateError('not_found')
+        if (lifecycle[0].status === 'applied' || lifecycle[0].status === 'cancelled') active = null
+      }
+      return { actor, clients, history, active } as const
+    })
+    if ('stored' in prepared) return prepared.stored
+
+    const { actor, clients, history, active } = prepared
+    const today = new Date().toLocaleDateString('en-CA', {
+      timeZone: actor.timezone || 'Europe/Moscow',
+    })
+    const programEnabled = isProgramEnabled(actor.id)
+    let response: AssistantTurnResponse
+    if (isAssistantCapabilityQuestion(command.message)) {
+      response = {
+        reply: assistantCapabilitiesReply() + (programEnabled
+          ? '\nТакже могу составить рекомендованный черновик программы на четыре недели: уточню цель и условия, учту доступную историю и покажу результат перед добавлением в расписание.'
+          : ''),
+        action: null,
+      }
+    } else if (programEnabled) {
+      response = await routedAssistantTurn({
+        message: command.message,
+        history: [...history].reverse().map(({ author, content }) => ({ author, content })),
+        active,
+        operationId: turnId,
+      }, {
+        record: (previous) => recordWorkoutTurn(
+          command.message,
+          clients,
+          previous,
+          true,
+          actor.account_role === 'client',
+        ),
+        cancel: async (action) => {
+          const actionId = action.id
+          if (!actionId) return
+          await withYandexActorSession(this.pool, session, async (client) => {
+            const lifecycle = await client.query<ActionLifecycleRow>(`
+              select status, version
+              from public.assistant_actions
+              where id = $1
+            `, [actionId])
+            const current = lifecycle[0]
+            if (current === undefined || !['proposed', 'failed'].includes(current.status)) {
+              throw new AssistantStateError('conflict')
+            }
+            await cancelAssistantAction(client, actionId, Number(current.version))
+          })
+        },
+        program: (previous) => actor.account_role === 'client' && clients.length === 0
+          ? Promise.resolve({ reply: 'Сначала заполните свою карточку в разделе «Кабинет», затем вернитесь к составлению программы.', action: null })
+          : programPilotTurn(command.message, clients, previous, {
+            actorId: actor.id,
+            turnId,
+            today,
+            duplicateTurn: false,
+            matchClients: (message) => {
+              const matches = matchingSummaryClients(message, clients)
+              return actor.account_role === 'client' && matches.length === 0 && clients.length === 1
+                ? clients
+                : matches
+            },
+            loadContext: (selected) => withYandexActorSession(this.pool, session, (client) =>
+              loadDatabaseProgramContext(client, selected, today)),
+            extract: (brief, message, answerContext) =>
+              extractProgramBrief(brief, message, today, turnId, answerContext),
+            generate: (brief, context, clientId) => {
+              const key = programGenerationKey(actor.id, clientId, brief, context.fingerprint)
+              return generateProgramOnce(
+                databaseProgramGenerationJobs(this.pool, session),
+                key,
+                clientId,
+                () => invokeProgramGenerator(actor.id, key, today, brief, context),
+              )
+            },
+          }, true),
+      })
+    } else {
+      const workoutDraft = recordWorkoutTurn(
+        command.message,
+        clients,
+        history.find((row) => row.author === 'assistant')?.action,
+        false,
+        actor.account_role === 'client',
+      )
+      response = workoutDraft ?? {
+        reply: assistantSmallTalkFallback(command.message),
+        action: null,
+      }
+    }
+
     return withYandexActorSession(this.pool, session, (client) =>
-      runNativePilotAssistantTurn(client, command))
+      persistTurnResponse(client, command, turnId, response, randomUUID))
+  }
+}
+
+function databaseProgramGenerationJobs(
+  pool: DatabasePool,
+  session: YandexActorSessionInput,
+): ProgramGenerationJobStore {
+  return {
+    run: (args) => withYandexActorSession(pool, session, async (client) => {
+      const rows = await client.query<JsonValueRow>(`
+        select public.assistant_program_generation_job($1, $2, $3, $4::jsonb) result
+      `, [args.id, args.clientId, args.leaseId,
+        args.result === undefined ? null : JSON.stringify(args.result)])
+      const value = rows[0]?.result
+      if (typeof value !== 'object' || value === null || !('status' in value)
+        || !['claimed', 'busy', 'complete'].includes(String(value.status))) {
+        throw new Error('program_job_unavailable')
+      }
+      return value as ProgramGenerationJobState
+    }),
+    release: (args) => withYandexActorSession(pool, session, async (client) => {
+      await client.query(
+        'select public.release_assistant_program_generation_job($1, $2, $3)',
+        [args.id, args.clientId, args.leaseId],
+      )
+    }),
   }
 }

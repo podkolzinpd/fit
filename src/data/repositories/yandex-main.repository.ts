@@ -9,6 +9,7 @@ import type {
   ChatThread,
   ExerciseProgressPage,
   ExerciseSnapshot,
+  FavoriteWorkoutTemplate,
   ProgressDraft,
   ProgressEntry,
   PublishedTrainingSummary,
@@ -22,6 +23,7 @@ import type {
   TrainerProfileDraft,
   Workout,
   WorkoutDraft,
+  WorkoutExerciseDraft,
   WorkoutPersonalRecord,
   WorkoutSetDraft,
   WorkoutSummary,
@@ -45,7 +47,11 @@ import {
 } from './training-summaries.repository'
 import { trainingSummaryGenerationError } from './training-summary-errors'
 import { yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pilot.repository'
-import { trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
+import { trainerCatalogPageSchema, trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
+import {
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+} from '../../shared/legal'
 
 const uuid = z.uuid()
 const chatThreadSchema = z.object({
@@ -66,6 +72,7 @@ const chatMessageSchema = z.object({
 })
 const clientSchema = z.object({
   id: uuid,
+  canArchive: z.boolean(),
   hasAccount: z.boolean(),
   fullName: z.string(),
   canonicalFullName: z.string(),
@@ -97,9 +104,47 @@ const invitationSchema = z.object({
   expiresAt: z.iso.datetime(),
   createdAt: z.iso.datetime(),
 })
+const invitationShareSchema = z.object({
+  id: uuid,
+  clientId: uuid,
+  targetRole: z.enum(['client', 'trainer']),
+  code: z.string().length(12),
+  token: z.string().regex(/^[A-F0-9]{12}\.[0-9a-f]{64}$/),
+  expiresAt: z.iso.datetime(),
+})
 const connectionsSchema = z.object({
   memberships: z.array(membershipSchema),
   invitations: z.array(invitationSchema),
+})
+const legalAcceptanceStatusSchema = z.object({
+  applicable: z.literal(true),
+  accepted: z.boolean(),
+  acceptedAt: z.iso.datetime().nullable(),
+})
+const accountDeletionRequestSchema = z.object({
+  id: uuid,
+  status: z.enum(['requested', 'cancelled', 'completed']),
+  requestedAt: z.iso.datetime(),
+})
+const accountDeletionStatusSchema = z.object({
+  supported: z.literal(true),
+  request: accountDeletionRequestSchema.nullable(),
+})
+const customExerciseMutationSchema = z.object({
+  exercise: z.object({
+    id: uuid,
+    name: z.string(),
+    muscleGroup: z.enum([
+      'legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core',
+      'cardio', 'other',
+    ]),
+    inputKind: z.enum(['strength', 'distance', 'reps', 'duration']),
+    primaryMuscleDetail: z.string().nullable().optional(),
+    equipment: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+    archivedAt: z.iso.datetime().nullable(),
+    version: z.number().int().positive(),
+  }),
 })
 const customMetricSchema = z.object({
   id: uuid,
@@ -328,11 +373,13 @@ function customExercise(value: YandexPilotTrainingData['customExercises'][number
     name: value.name,
     muscleGroup: value.muscleGroup,
     inputKind: value.inputKind,
+    primaryMuscleDetail: value.primaryMuscleDetail ?? undefined,
+    equipment: value.equipment ?? undefined,
+    description: value.description ?? undefined,
     createdBy: value.createdBy ?? '',
     archivedAt: value.archivedAt,
     version: value.version,
-    // Мышца/оборудование/описание/обложка (YAFIT-521) — пока только на
-    // Supabase-бэкенде, см. FEATURE_PARITY.md.
+    // Фото (YAFIT-521) пока поддерживается только Supabase-бэкендом.
     imagePath: null,
   }
 }
@@ -344,6 +391,8 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
     clientId: value.clientId,
     clientName: value.clientName,
     createdBy: value.createdBy,
+    startedBy: value.startedBy,
+    completedBy: value.completedBy,
     workoutDate: localDate(value.workoutDate),
     startTime: value.startTime,
     endTime: value.endTime,
@@ -409,6 +458,37 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
   }
 }
 
+function workoutExerciseDraftsPayload(exercises: readonly WorkoutExerciseDraft[]): Record<string, unknown>[] {
+  return exercises.map((exercise) => ({
+    sourceExerciseId: exercise.sourceExerciseId ?? null,
+    position: exercise.position,
+    source: exercise.source,
+    ref: exercise.ref,
+    customExerciseId: exercise.customExerciseId ?? null,
+    name: exercise.name,
+    muscleGroup: exercise.muscleGroup,
+    inputKind: exercise.inputKind,
+    blockId: exercise.blockId ?? crypto.randomUUID(),
+    blockType: exercise.blockType ?? 'single',
+    blockPreset: exercise.blockPreset ?? 'set',
+    blockRounds: exercise.blockRounds ?? 1,
+    restBetweenExercisesSec: exercise.restBetweenExercisesSec ?? 0,
+    restBetweenRoundsSec: exercise.restBetweenRoundsSec ?? 0,
+    restBetweenSetsSec: exercise.restBetweenSetsSec ?? 0,
+    trainerComment: exercise.trainerComment ?? null,
+    sets: exercise.sets.map((set) => ({
+      sourceSetId: set.sourceSetId ?? null,
+      position: set.position,
+      weightKg: set.weightKg ?? null,
+      reps: set.reps ?? null,
+      durationMin: set.durationMin ?? null,
+      durationSec: set.durationSec ?? null,
+      distanceKm: set.distanceKm ?? null,
+      rpe: set.rpe ?? null,
+    })),
+  }))
+}
+
 function workoutDraft(draft: WorkoutDraft): Record<string, unknown> {
   return {
     clientId: draft.clientId,
@@ -419,32 +499,77 @@ function workoutDraft(draft: WorkoutDraft): Record<string, unknown> {
     notes: draft.notes ?? null,
     stageId: draft.stageId ?? null,
     ...(draft.id === undefined ? {} : { expectedVersion: draft.version }),
-    exercises: draft.exercises.map((exercise) => ({
-      sourceExerciseId: exercise.sourceExerciseId ?? null,
+    exercises: workoutExerciseDraftsPayload(draft.exercises),
+  }
+}
+
+const favoriteWorkoutExerciseSchema = z.object({
+  sourceExerciseId: uuid.nullable().optional(),
+  position: z.number(),
+  source: z.enum(['system', 'custom']),
+  ref: z.string(),
+  customExerciseId: uuid.nullable(),
+  name: z.string(),
+  muscleGroup: z.enum(['legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'other']),
+  inputKind: z.enum(['strength', 'distance', 'reps', 'duration']),
+  blockId: z.string(),
+  blockType: z.enum(['single', 'group']),
+  blockPreset: z.enum(['set', 'circuit', 'interval']),
+  blockRounds: z.number(),
+  restBetweenExercisesSec: z.number(),
+  restBetweenRoundsSec: z.number(),
+  restBetweenSetsSec: z.number(),
+  trainerComment: z.string().nullable(),
+  sets: z.array(z.object({
+    sourceSetId: uuid.nullable().optional(),
+    position: z.number(),
+    weightKg: z.number().nullable(),
+    reps: z.number().nullable(),
+    durationMin: z.number().nullable(),
+    durationSec: z.number().nullable(),
+    distanceKm: z.number().nullable(),
+    rpe: z.number().nullable(),
+  })),
+})
+const favoriteWorkoutSchema = z.object({
+  id: uuid,
+  title: z.string(),
+  createdAt: z.iso.datetime({ offset: true }),
+  exercises: z.array(favoriteWorkoutExerciseSchema),
+})
+const favoriteWorkoutsListSchema = z.object({ favorites: z.array(favoriteWorkoutSchema) })
+
+function favoriteWorkout(payload: z.infer<typeof favoriteWorkoutSchema>): FavoriteWorkoutTemplate {
+  return {
+    id: payload.id,
+    title: payload.title,
+    createdAt: payload.createdAt,
+    exercises: payload.exercises.map((exercise) => ({
+      ...(exercise.sourceExerciseId ? { sourceExerciseId: exercise.sourceExerciseId } : {}),
       position: exercise.position,
       source: exercise.source,
       ref: exercise.ref,
-      customExerciseId: exercise.customExerciseId ?? null,
+      customExerciseId: exercise.customExerciseId ?? undefined,
       name: exercise.name,
       muscleGroup: exercise.muscleGroup,
       inputKind: exercise.inputKind,
-      blockId: exercise.blockId ?? crypto.randomUUID(),
-      blockType: exercise.blockType ?? 'single',
-      blockPreset: exercise.blockPreset ?? 'set',
-      blockRounds: exercise.blockRounds ?? 1,
-      restBetweenExercisesSec: exercise.restBetweenExercisesSec ?? 0,
-      restBetweenRoundsSec: exercise.restBetweenRoundsSec ?? 0,
-      restBetweenSetsSec: exercise.restBetweenSetsSec ?? 0,
-      trainerComment: exercise.trainerComment ?? null,
+      blockId: exercise.blockId,
+      blockType: exercise.blockType,
+      blockPreset: exercise.blockPreset,
+      blockRounds: exercise.blockRounds,
+      restBetweenExercisesSec: exercise.restBetweenExercisesSec,
+      restBetweenRoundsSec: exercise.restBetweenRoundsSec,
+      restBetweenSetsSec: exercise.restBetweenSetsSec,
+      trainerComment: exercise.trainerComment ?? undefined,
       sets: exercise.sets.map((set) => ({
-        sourceSetId: set.sourceSetId ?? null,
+        ...(set.sourceSetId ? { sourceSetId: set.sourceSetId } : {}),
         position: set.position,
-        weightKg: set.weightKg ?? null,
-        reps: set.reps ?? null,
-        durationMin: set.durationMin ?? null,
-        durationSec: set.durationSec ?? null,
-        distanceKm: set.distanceKm ?? null,
-        rpe: set.rpe ?? null,
+        weightKg: set.weightKg ?? undefined,
+        reps: set.reps ?? undefined,
+        durationMin: set.durationMin ?? undefined,
+        durationSec: set.durationSec ?? undefined,
+        distanceKm: set.distanceKm ?? undefined,
+        rpe: set.rpe ?? undefined,
       })),
     })),
   }
@@ -554,11 +679,13 @@ export function createYandexMainRepository(
 ): DataBackend {
   const queries = createYandexMainQueries(apiBaseUrl, sessionToken)
   let trainingDataPromise: Promise<YandexPilotTrainingData> | null = null
-  let clientsPromise: Promise<Client[]> | null = null
+  let activeClientsPromise: Promise<Client[]> | null = null
+  let archivedClientsPromise: Promise<Client[]> | null = null
   let connectionsPromise: Promise<z.infer<typeof connectionsSchema>> | null = null
   const invalidate = () => {
     trainingDataPromise = null
-    clientsPromise = null
+    activeClientsPromise = null
+    archivedClientsPromise = null
     connectionsPromise = null
   }
   const trainingData = async () => {
@@ -574,10 +701,14 @@ export function createYandexMainRepository(
     })()
     return trainingDataPromise
   }
-  const clients = async () => {
-    clientsPromise ??= readJson(queries, '/v1/clients', clientsSchema)
+  const clients = async (archived = false) => {
+    const path = archived ? '/v1/clients?archived=true' : '/v1/clients'
+    const promise = archived ? archivedClientsPromise : activeClientsPromise
+    const nextPromise = promise ?? readJson(queries, path, clientsSchema)
       .then((payload) => payload.clients.map(client))
-    return clientsPromise
+    if (archived) archivedClientsPromise = nextPromise
+    else activeClientsPromise = nextPromise
+    return nextPromise
   }
   const connections = async () => {
     connectionsPromise ??= readJson(queries, '/v1/connections', connectionsSchema)
@@ -608,6 +739,41 @@ export function createYandexMainRepository(
 
   return {
     source: 'yandex',
+    legal: {
+      async getAcceptanceStatus() {
+        return readJson(queries, '/v1/legal/acceptance', legalAcceptanceStatusSchema)
+      },
+      async acceptCurrent(source = 'existing_user') {
+        const payload = await writeJson(
+          queries,
+          '/v1/legal/acceptance',
+          'PUT',
+          {
+            termsVersion: TERMS_VERSION,
+            privacyVersion: PRIVACY_VERSION,
+            source,
+          },
+          z.object({ acceptedAt: z.iso.datetime() }),
+        )
+        return payload.acceptedAt
+      },
+      async getAccountDeletionStatus() {
+        return readJson(queries, '/v1/account-deletion-request', accountDeletionStatusSchema)
+      },
+      async requestAccountDeletion() {
+        const payload = await writeJson(
+          queries,
+          '/v1/account-deletion-request',
+          'POST',
+          undefined,
+          z.object({ requestId: uuid }),
+        )
+        return payload.requestId
+      },
+      async cancelAccountDeletionRequest() {
+        await writeEmpty(queries, '/v1/account-deletion-request', 'DELETE')
+      },
+    },
     trainerProfiles: {
       async getOwn() {
         return readJson(queries, '/v1/trainer-profile', trainerProfessionalProfileSchema.nullable())
@@ -627,19 +793,16 @@ export function createYandexMainRepository(
       async listCatalog(filters: TrainerCatalogFilters, page) {
         const params = new URLSearchParams()
         if (filters.query) params.set('query', filters.query)
-        if (filters.specialty) params.set('specialty', filters.specialty)
+        for (const specialty of filters.specialties) params.append('specialty', specialty)
         if (filters.city) params.set('city', filters.city)
         for (const stationId of filters.metroStationIds) params.append('metro', stationId)
         if (filters.mode) params.set('mode', filters.mode)
         if (filters.acceptingClients !== null) params.set('accepting', String(filters.acceptingClients))
+        if (filters.brandTrainerOnly) params.set('brand', 'true')
         params.set('offset', String(page.offset))
         params.set('limit', String(page.limit))
         const suffix = params.size > 0 ? `?${params.toString()}` : ''
-        return readJson(queries, `/v1/trainers/catalog${suffix}`, z.object({
-          items: z.array(trainerProfessionalProfileSchema),
-          totalCount: z.number().int().nonnegative(),
-          nextOffset: z.number().int().nonnegative().nullable(),
-        }))
+        return readJson(queries, `/v1/trainers/catalog${suffix}`, trainerCatalogPageSchema)
       },
     },
     trainerDiscovery: {
@@ -652,6 +815,23 @@ export function createYandexMainRepository(
           .then(parseTrainerDiscoveryPrompt)
       },
     },
+    favoriteWorkouts: {
+      async list() {
+        const payload = await readJson(queries, '/v1/favorite-workouts', favoriteWorkoutsListSchema)
+        return payload.favorites.map(favoriteWorkout)
+      },
+      async save(title: string, exercises: WorkoutExerciseDraft[]) {
+        const payload = await writeJson(
+          queries, '/v1/favorite-workouts', 'POST',
+          { title, exercises: workoutExerciseDraftsPayload(exercises) },
+          favoriteWorkoutSchema,
+        )
+        return favoriteWorkout(payload)
+      },
+      async remove(id: string) {
+        await writeEmpty(queries, `/v1/favorite-workouts/${id}`, 'DELETE')
+      },
+    },
     clients: {
       async getMine() {
         if (actor.kind !== 'client') return null
@@ -659,10 +839,12 @@ export function createYandexMainRepository(
       },
       async resolveId(id) {
         if ((await clients()).some((item) => item.id === id)) return id
+        if ((await clients(true)).some((item) => item.id === id)) return id
         throw new Error('Карточка клиента не найдена')
       },
       async list(includeArchived = false) {
-        return (await clients()).filter((item) => includeArchived || item.archivedAt === null)
+        const active = await clients()
+        return includeArchived ? [...active, ...await clients(true)] : active
       },
       async listAttentionPreferences() {
         const data = await trainingData()
@@ -673,6 +855,7 @@ export function createYandexMainRepository(
       },
       async get(id) {
         const result = (await clients()).find((item) => item.id === id)
+          ?? (await clients(true)).find((item) => item.id === id)
         if (!result) throw new Error('Карточка клиента не найдена')
         return result
       },
@@ -702,19 +885,25 @@ export function createYandexMainRepository(
         return this.create(input)
       },
       async update(input) {
-        await writeJson(queries, `/v1/clients/${input.id}`, 'PUT', {
-          draft: { fullName: input.fullName, gender: input.gender, ageYears: input.ageYears,
-            ageUpdatedAt: input.ageUpdatedAt, heightCm: input.heightCm, goal: input.goal ?? null },
-          expectedVersion: input.version,
-        }, z.object({ client: z.object({ id: uuid, version: z.number().int().positive() }) }))
-        invalidate()
+        try {
+          await writeJson(queries, `/v1/clients/${input.id}`, 'PUT', {
+            draft: { fullName: input.fullName, gender: input.gender, ageYears: input.ageYears,
+              ageUpdatedAt: input.ageUpdatedAt, heightCm: input.heightCm, goal: input.goal ?? null },
+            expectedVersion: input.version,
+          }, z.object({ client: z.object({ id: uuid, version: z.number().int().positive() }) }))
+        } finally {
+          invalidate()
+        }
       },
       async updateOwn(input) { await this.update(input) },
       async updatePreferences(input) {
-        await writeJson(queries, `/v1/clients/${input.clientId}/preferences`, 'PUT', {
-          alias: input.alias, note: input.note ?? null, expectedVersion: input.version,
-        }, z.object({ client: z.object({ membershipVersion: z.number().int().positive() }) }))
-        invalidate()
+        try {
+          await writeJson(queries, `/v1/clients/${input.clientId}/preferences`, 'PUT', {
+            alias: input.alias, note: input.note ?? null, expectedVersion: input.version,
+          }, z.object({ client: z.object({ membershipVersion: z.number().int().positive() }) }))
+        } finally {
+          invalidate()
+        }
       },
       async setArchived(item, archived) {
         const payload = await writeJson(queries, `/v1/clients/${item.id}/archive`, 'PUT', {
@@ -760,26 +949,22 @@ export function createYandexMainRepository(
       },
       async list() { return (await trainingData()).customExercises.map(customExercise) },
       async create(_partitionOwnerId, _actorId, value) {
-        // Разметка (мышца/оборудование/описание) и фото на обложку
-        // (YAFIT-521) пока не реализованы на Yandex-бэкенде — value
-        // передаётся как есть, лишние поля сервер молча игнорирует; фото
-        // не отправляется вовсе. См. FEATURE_PARITY.md.
         const payload = await writeJson(queries, '/v1/custom-exercises', 'POST', value,
-          z.object({ exercise: z.object({ id: uuid, name: z.string(), muscleGroup: z.enum(['legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'other']), inputKind: z.enum(['strength', 'distance', 'reps', 'duration']), archivedAt: z.iso.datetime().nullable(), version: z.number().int().positive() }) }))
+          customExerciseMutationSchema)
         invalidate()
         return customExercise({ ...payload.exercise, createdBy: actor.userId })
       },
       async update(item, value) {
         const payload = await writeJson(queries, `/v1/custom-exercises/${item.id}`, 'PUT', {
           draft: value, expectedVersion: item.version,
-        }, z.object({ exercise: z.object({ id: uuid, name: z.string(), muscleGroup: z.enum(['legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'other']), inputKind: z.enum(['strength', 'distance', 'reps', 'duration']), archivedAt: z.iso.datetime().nullable(), version: z.number().int().positive() }) }))
+        }, customExerciseMutationSchema)
         invalidate()
         return customExercise({ ...payload.exercise, createdBy: item.createdBy })
       },
       async setArchived(item, archived) {
         const payload = await writeJson(queries, `/v1/custom-exercises/${item.id}/archive`, 'PUT', {
           archived, expectedVersion: item.version,
-        }, z.object({ exercise: z.object({ id: uuid, name: z.string(), muscleGroup: z.enum(['legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'other']), inputKind: z.enum(['strength', 'distance', 'reps', 'duration']), archivedAt: z.iso.datetime().nullable(), version: z.number().int().positive() }) }))
+        }, customExerciseMutationSchema)
         invalidate()
         return customExercise({ ...payload.exercise, createdBy: item.createdBy })
       },
@@ -982,6 +1167,17 @@ export function createYandexMainRepository(
         const payload = await writeJson(queries, '/v1/invitations', 'POST', { clientId, targetRole }, z.object({ invitation: z.object({ code: z.string() }) }))
         invalidate(); return payload.invitation.code
       },
+      async createShare(clientId, targetRole) {
+        const payload = await writeJson(queries, '/v1/invitation-links', 'POST', { clientId, targetRole }, z.object({ invitation: invitationShareSchema }))
+        invalidate(); return payload.invitation
+      },
+      previewLink() {
+        throw new Error('Публичный предпросмотр приглашения выполняется без сессии.')
+      },
+      async claimLink(token) {
+        const payload = await writeJson(queries, '/v1/invitation-links/claim', 'POST', { token }, z.object({ clientId: uuid }))
+        invalidate(); return payload.clientId
+      },
       async claim(code) {
         const payload = await writeJson(queries, '/v1/invitations/claim', 'POST', { code: code.trim().toUpperCase() }, z.object({ clientId: uuid }))
         invalidate(); return payload.clientId
@@ -1140,8 +1336,12 @@ export function createYandexMainRepository(
     },
     realtime: {
       subscribeToClientChanges(_clientId, onChange, onReady) {
+        invalidate()
         onReady?.()
-        const interval = window.setInterval(() => onChange({ table: 'clients', eventType: 'UPDATE', new: {}, old: {} }), 15_000)
+        const interval = window.setInterval(() => {
+          invalidate()
+          onChange({ table: 'clients', eventType: 'UPDATE', new: {}, old: {} })
+        }, 15_000)
         return () => window.clearInterval(interval)
       },
     },

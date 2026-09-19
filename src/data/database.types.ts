@@ -1,4 +1,4 @@
-// schema-sha256: 31d2a431dfa328d0371d9f51de004e8a2cec18f1804aca27c1c223b70b9ca265
+// schema-sha256: 3508d3db1fd619f04a86e3b5baf0a26df210bbb318d6bd38fcb06f04d5cbd048
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -22,7 +22,7 @@ type WorkoutListExerciseRow = {
   sets: WorkoutListSetRow[]
 }
 export type WorkoutListRow = {
-  id: string; client_id: string; trainer_id: string; client_name: string; created_by: string | null; workout_date: string; start_time: string | null; end_time: string | null
+  id: string; client_id: string; trainer_id: string; client_name: string; created_by: string | null; started_by: string | null; completed_by: string | null; workout_date: string; start_time: string | null; end_time: string | null
   started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; trainer_reaction: string | null; trainer_review_author_id: string | null; trainer_reviewed_at: string | null; client_comment: string | null
   session_rpe: number | null; wellbeing: string | null; discomfort: boolean | null; has_pr: boolean
   stage_id: string | null; stage_title: string | null; version: number; total_count: number; exercises: WorkoutListExerciseRow[]
@@ -547,6 +547,7 @@ export type Database = {
           created_by: string
           expires_at: string
           id: string
+          link_token_hash: string | null
           revoked_at: string | null
           target_role: string
         }
@@ -559,6 +560,7 @@ export type Database = {
           created_by: string
           expires_at: string
           id?: string
+          link_token_hash?: string | null
           revoked_at?: string | null
           target_role: string
         }
@@ -571,6 +573,7 @@ export type Database = {
           created_by?: string
           expires_at?: string
           id?: string
+          link_token_hash?: string | null
           revoked_at?: string | null
           target_role?: string
         }
@@ -1856,6 +1859,7 @@ export type Database = {
           client_question_asked_at: string | null
           client_question_resolved_at: string | null
           completed_at: string | null
+          completed_by: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
@@ -1868,6 +1872,7 @@ export type Database = {
           stage_id: string | null
           start_time: string | null
           started_at: string | null
+          started_by: string | null
           status: string
           trainer_id: string
           trainer_reaction: string | null
@@ -1887,6 +1892,7 @@ export type Database = {
           client_question_asked_at?: string | null
           client_question_resolved_at?: string | null
           completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -1899,6 +1905,7 @@ export type Database = {
           stage_id?: string | null
           start_time?: string | null
           started_at?: string | null
+          started_by?: string | null
           status?: string
           trainer_id: string
           trainer_reaction?: string | null
@@ -1918,6 +1925,7 @@ export type Database = {
           client_question_asked_at?: string | null
           client_question_resolved_at?: string | null
           completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -1930,6 +1938,7 @@ export type Database = {
           stage_id?: string | null
           start_time?: string | null
           started_at?: string | null
+          started_by?: string | null
           status?: string
           trainer_id?: string
           trainer_reaction?: string | null
@@ -1943,6 +1952,13 @@ export type Database = {
           workout_date?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "workouts_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "workouts_client_fk"
             columns: ["client_id", "trainer_id"]
@@ -1962,6 +1978,13 @@ export type Database = {
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "goal_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workouts_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -2065,6 +2088,10 @@ export type Database = {
         Returns: number
       }
       claim_client_invitation: { Args: { p_code: string }; Returns: string }
+      claim_client_invitation_link: {
+        Args: { p_token: string }
+        Returns: string
+      }
       claim_training_summary_generation: {
         Args: {
           p_client_id: string
@@ -2121,6 +2148,15 @@ export type Database = {
         Args: { p_client_id: string; p_target_role: string }
         Returns: string
       }
+      create_client_invitation_share: {
+        Args: { p_client_id: string; p_target_role: string }
+        Returns: {
+          expires_at: string
+          invitation_code: string
+          invitation_id: string
+          invitation_token: string
+        }[]
+      }
       create_own_client: { Args: { p_client: Json }; Returns: string }
       create_quick_client: { Args: { p_full_name: string }; Returns: string }
       create_quick_own_client: {
@@ -2135,6 +2171,7 @@ export type Database = {
         Args: { p_body: string; p_conversation_id: string; p_message_id: string }
         Returns: Database["public"]["Tables"]["chat_messages"]["Row"][]
       }
+      delete_favorite_workout: { Args: { p_id: string }; Returns: undefined }
       delete_goal_stage: { Args: { p_stage_id: string }; Returns: undefined }
       disconnect_client_trainer: {
         Args: { p_client_id: string }
@@ -2155,6 +2192,15 @@ export type Database = {
       finish_workout: {
         Args: { p_expected_version: number; p_workout_id: string }
         Returns: number
+      }
+      get_client_invitation_preview: {
+        Args: { p_token: string }
+        Returns: {
+          expires_at: string
+          invitation_status: string
+          inviter_name: string
+          target_role: string
+        }[]
       }
       get_client_goal: { Args: { p_client_id: string }; Returns: Json }
       get_chat_message_window: {
@@ -2342,6 +2388,7 @@ export type Database = {
           age_updated_at: string
           age_years: number
           archived_at: string
+          can_archive: boolean
           canonical_full_name: string
           current_weight_kg: number
           full_name: string
@@ -2388,6 +2435,7 @@ export type Database = {
           workout_id: string
         }[]
       }
+      list_favorite_workouts: { Args: never; Returns: Json }
       list_latest_exercise_results: {
         Args: { p_client_id: string; p_exercise_refs: string[] }
         Returns: {
@@ -2409,13 +2457,14 @@ export type Database = {
       list_public_trainer_profiles_page: {
         Args: {
           p_accepting_clients?: boolean
+          p_brand_trainer_only?: boolean
           p_city?: string
           p_limit?: number
           p_metro_station_ids?: string[]
           p_mode?: string
           p_offset?: number
           p_query?: string
-          p_specialty?: string
+          p_specialties?: string[]
         }
         Returns: Json
       }
@@ -2483,6 +2532,7 @@ export type Database = {
           client_id: string
           client_name: string
           completed_at: string
+          completed_by: string
           created_by: string
           discomfort: boolean
           end_time: string
@@ -2495,6 +2545,7 @@ export type Database = {
           stage_title: string
           start_time: string
           started_at: string
+          started_by: string
           status: string
           total_count: number
           trainer_id: string
@@ -2624,6 +2675,10 @@ export type Database = {
       save_completed_workout: {
         Args: { p_expected_version?: number | null; p_workout: Json }
         Returns: string
+      }
+      save_favorite_workout: {
+        Args: { p_exercises: Json; p_title: string }
+        Returns: Json
       }
       save_goal_stage: {
         Args: { p_expected_version?: number; p_stage: Json }

@@ -24,6 +24,35 @@ async function login(page: import('@playwright/test').Page, email: string) {
   await expect(page).toHaveURL(/\/me$/)
 }
 
+test('trainer invitation name stays inside the visible iPhone viewport above the keyboard', async ({ page }) => {
+  await loginAsTrainer(page)
+  await page.goto('/clients')
+  await page.getByRole('button', { name: 'Пригласить спортсмена' }).click()
+  await page.getByLabel('Имя спортсмена').focus()
+  await page.evaluate(() => {
+    document.documentElement.style.setProperty('--app-visible-height', '420px')
+    document.documentElement.style.setProperty('--app-viewport-offset-top', '0px')
+  })
+
+  const geometry = await page.locator('.invitation-name-overlay').evaluate((overlay) => {
+    const overlayBox = overlay.getBoundingClientRect()
+    const dialogBox = overlay.querySelector('.invitation-name-dialog')!.getBoundingClientRect()
+    const inputBox = overlay.querySelector('input')!.getBoundingClientRect()
+    return {
+      overlayHeight: overlayBox.height,
+      overlayBottom: overlayBox.bottom,
+      dialogTop: dialogBox.top,
+      dialogBottom: dialogBox.bottom,
+      inputBottom: inputBox.bottom,
+    }
+  })
+
+  expect(geometry.overlayHeight).toBe(420)
+  expect(geometry.dialogTop).toBeGreaterThanOrEqual(0)
+  expect(geometry.dialogBottom).toBeLessThanOrEqual(geometry.overlayBottom)
+  expect(geometry.inputBottom).toBeLessThanOrEqual(geometry.overlayBottom)
+})
+
 test('chat entry and conversation list fit the iPhone shell', async ({ page }) => {
   await login(page, 'client@fit.local')
   const entry = page.getByRole('link', { name: /Сообщения/ })
@@ -132,6 +161,50 @@ test('trainer opens client chat from the list and returns to the same search and
   await expect(page).toHaveURL(/\/clients\?q=%D0%A1%D0%BF%D0%BE%D1%80%D1%82%D1%81%D0%BC%D0%B5%D0%BD$/)
   await expect(page.getByRole('searchbox', { name: 'Поиск клиента' })).toHaveValue('Спортсмен')
   await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBe(scrollBefore)
+})
+
+test('trainer client archive action opens with a browser-generated drag without stealing a vertical gesture', async ({ page }) => {
+  const clientId = 'b9300000-0000-4000-8000-000000000001'
+  await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([{
+      id: clientId, can_archive: true, has_account: false,
+      full_name: 'Анна Смирнова', canonical_full_name: 'Анна Смирнова',
+      gender: null, age_years: 30, age_updated_at: '2026-08-01', height_cm: 170,
+      goal: null, note: null, current_weight_kg: 65,
+      last_activity_at: '2026-09-18T10:00:00.000Z', archived_at: null,
+      version: 1, membership_version: 1,
+    }]),
+  }))
+  await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await loginAsTrainer(page)
+  await page.goto('/clients')
+
+  const surface = page.locator('.client-swipe-surface')
+  const rail = page.locator('.client-swipe-actions')
+  await expect(surface).toBeVisible()
+  const box = await surface.boundingBox()
+  expect(box).not.toBeNull()
+  const centerX = box!.x + box!.width * 0.72
+  const centerY = box!.y + box!.height / 2
+
+  await page.mouse.move(centerX, centerY)
+  await page.mouse.down()
+  await page.mouse.move(centerX - 4, centerY + 70, { steps: 5 })
+  await page.mouse.up()
+  await expect(rail).toHaveAttribute('aria-hidden', 'true')
+
+  await page.mouse.move(centerX, centerY)
+  await page.mouse.down()
+  await page.mouse.move(centerX - 96, centerY + 2, { steps: 8 })
+  await page.mouse.up()
+  await expect(rail).toHaveAttribute('aria-hidden', 'false')
+  await expect(page.getByRole('button', { name: 'В архив' })).toBeVisible()
+  await expect(surface).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -112, 0)')
+
+  await page.getByRole('link', { name: /Анна Смирнова/ }).click()
+  await expect(page).toHaveURL(/\/clients$/)
+  await expect(rail).toHaveAttribute('aria-hidden', 'true')
 })
 
 async function mockAutomaticSummaryGeneration(page: Page) {
@@ -1237,8 +1310,11 @@ for (const viewport of mobileViewports) {
         await expect(page.locator('.client-detail-overview')).toHaveCount(0)
       }
       if (screen === '/schedule') {
-        await expect(page.locator('.schedule-selected-date')).toBeHidden()
-        await expectActionTextVerticallyCentered(page.getByRole('link', { name: 'Запланировать', exact: true }))
+        await expect(page.locator('.schedule-week-day')).toHaveCount(7)
+        await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toHaveCount(0)
+        const firstPairHeights = await page.locator('.schedule-week-day').evaluateAll((days) => days.slice(0, 2).map((day) => day.getBoundingClientRect().height))
+        expect(firstPairHeights[0]).toBe(firstPairHeights[1])
+        expect(firstPairHeights[0]).toBeGreaterThanOrEqual(148)
       }
       await expectNoHorizontalOverflow(page)
     }

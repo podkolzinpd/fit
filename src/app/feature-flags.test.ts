@@ -3,6 +3,7 @@ import {
   getYandexIdPilotConfig,
   getYandexAppSessionEntryConfig,
   getYandexNativeRegistrationConfig,
+  getYandexOnlyAuthConfig,
   getYandexSessionLinkingConfig,
   isAssistantNavPilotEnabled,
   isTodayGreetingPilotEnabled,
@@ -11,7 +12,9 @@ import {
   isWearablesPilotEnabled,
   isYandexAssistantRoutingPilotEnabled,
   isYandexAppSessionEnabled,
+  isYandexAccountLinkRequired,
   isYandexMainRoutingEnabled,
+  isYandexOnlyAuthEnabled,
   isYandexSessionLinkingEnabled,
   trainerHomePath,
 } from './feature-flags'
@@ -256,6 +259,19 @@ describe('Yandex session linking global flag', () => {
   })
 })
 
+describe('required Yandex account link gate', () => {
+  it('is default-off and requires the exact value "true"', () => {
+    vi.stubEnv('VITE_YANDEX_ACCOUNT_LINK_REQUIRED', '')
+    expect(isYandexAccountLinkRequired()).toBe(false)
+    vi.stubEnv('VITE_YANDEX_ACCOUNT_LINK_REQUIRED', 'TRUE')
+    expect(isYandexAccountLinkRequired()).toBe(false)
+    vi.stubEnv('VITE_YANDEX_ACCOUNT_LINK_REQUIRED', '1')
+    expect(isYandexAccountLinkRequired()).toBe(false)
+    vi.stubEnv('VITE_YANDEX_ACCOUNT_LINK_REQUIRED', 'true')
+    expect(isYandexAccountLinkRequired()).toBe(true)
+  })
+})
+
 describe('Yandex app session flag', () => {
   it('is disabled unless the enabled flag is exactly "true"', () => {
     vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', '')
@@ -309,6 +325,31 @@ describe('Yandex native registration flag', () => {
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'TRUE')
     expect(getYandexNativeRegistrationConfig()).toBeNull()
+  })
+})
+
+describe('Yandex-only authentication flag', () => {
+  it('is default-off and requires every cutover dependency', () => {
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
+    vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', '')
+    expect(getYandexOnlyAuthConfig()).toBeNull()
+    expect(isYandexOnlyAuthEnabled()).toBe(false)
+
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    expect(getYandexOnlyAuthConfig()).toEqual({
+      apiBaseUrl: 'https://stage.example.test',
+      clientId: 'public-client-id',
+    })
+    expect(isYandexOnlyAuthEnabled()).toBe(true)
+  })
+
+  it('rejects a malformed enabled value', () => {
+    vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'TRUE')
+    expect(isYandexOnlyAuthEnabled()).toBe(false)
   })
 })
 

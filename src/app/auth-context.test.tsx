@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -85,6 +85,15 @@ function YandexActorKindProbe() {
   return <p>{loading ? 'loading' : actor ? `${actor.kind}:${actor.role}` : error ?? 'anonymous'}</p>
 }
 
+function PendingYandexQueryProbe({ load }: { load: () => Promise<{ accepted: boolean }> }) {
+  const status = useQuery({
+    queryKey: ['legal-acceptance', 'yandex', 'trainer-1'],
+    queryFn: load,
+    retry: false,
+  })
+  return <p>{status.data?.accepted ? 'accepted' : 'checking'}</p>
+}
+
 function SignOutProbe() {
   const state = useAuth()
   return <><p>{state.actor?.email ?? 'anonymous'}</p><button onClick={() => void state.signOut().catch(() => undefined)}>Выйти</button></>
@@ -153,6 +162,50 @@ describe('AuthProvider', () => {
     screen.getByRole('button', { name: 'Выйти' }).click()
     await waitFor(() => expect(signOut).toHaveBeenCalledOnce())
     expect(auth.signOut).toHaveBeenCalled()
+  })
+
+  it('keeps an active Yandex request alive when the legacy Supabase session retires', async () => {
+    let resolveStatus: ((value: { accepted: boolean }) => void) | undefined
+    const load = vi.fn(() => new Promise<{ accepted: boolean }>((resolve) => {
+      resolveStatus = resolve
+    }))
+    yandex.state = {
+      session: {
+        accessMode: 'read_write',
+        profile: { id: 'trainer-1', firstName: 'Яна', lastName: null, timezone: 'Europe/Moscow', accountRole: 'trainer' },
+        session: { token: 'a'.repeat(43), expiresAt: '2099-01-01T00:00:00.000Z' },
+      },
+      loading: false,
+      error: null,
+      retry: vi.fn().mockResolvedValue(undefined),
+      signOut: vi.fn().mockResolvedValue(undefined),
+    }
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+
+    renderAuth(<PendingYandexQueryProbe load={load} />)
+    expect(await screen.findByText('checking')).toBeVisible()
+    await waitFor(() => expect(load).toHaveBeenCalledOnce())
+
+    authCallback()('SIGNED_OUT', null)
+    resolveStatus?.({ accepted: true })
+
+    expect(await screen.findByText('accepted')).toBeVisible()
+  })
+
+  it('does not reopen the Supabase backend from a stale browser session after Yandex-only cutover', async () => {
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
+
+    renderAuth(<AuthProbe />)
+    authCallback()('INITIAL_SESSION', { user })
+
+    await waitFor(() => expect(auth.initialize).toHaveBeenCalledWith(user))
+    expect(screen.getByText('anonymous')).toBeVisible()
+    expect(screen.queryByText(user.email)).not.toBeInTheDocument()
   })
 
   it('opens client onboarding before the native account has a client card', async () => {

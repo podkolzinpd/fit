@@ -8,7 +8,8 @@ import type { TrainerCertificate, TrainerProfileDraft, TrainerTrainingMode } fro
 import { copyText } from '../../shared/clipboard'
 import { ChevronDownIcon } from '../../shared/icons'
 import { prepareProfileImage } from '../../shared/profile-image'
-import { emptyTrainerProfileDraft, trainerProfileDraftSchema, TRAINER_SPECIALTIES, TRAINER_SPECIALTIES_MAX, validatePublishableTrainerProfile } from '../../shared/trainer-profile'
+import { emptyTrainerProfileDraft, trainerProfileDraftSchema, TRAINER_SPECIALTIES_MAX, validatePublishableTrainerProfile } from '../../shared/trainer-profile'
+import { SpecialtyChecklist } from './SpecialtyChecklist'
 import { AsyncView, Field, SaveStatus, Switch, useConfirm } from '../../shared/ui'
 import { MetroStationPicker } from './MetroStationPicker'
 import { TrainerProfileCard } from './TrainerProfileCard'
@@ -250,16 +251,7 @@ export function TrainerProfessionalProfileSection() {
           <Field label="О себе"><textarea value={draft.bio} maxLength={1200} placeholder="Опыт, подход и кому вы помогаете" onChange={(event) => set('bio', event.target.value)} /></Field>
           <details className="trainer-profile-form-disclosure">
             <summary><span>Направления · {draft.specialties.length}/{TRAINER_SPECIALTIES_MAX}</span><ChevronDownIcon /></summary>
-            {draft.specialties.length >= TRAINER_SPECIALTIES_MAX && <p className="trainer-specialties-limit-note" role="status">Выбрано максимум направлений ({TRAINER_SPECIALTIES_MAX}). Уберите одно, чтобы выбрать другое.</p>}
-            <div className="trainer-specialties-options" role="group" aria-label="Направления">
-              {TRAINER_SPECIALTIES.map((specialty) => {
-                const checked = draft.specialties.includes(specialty)
-                return <label key={specialty} className={`trainer-specialty-option${!checked && draft.specialties.length >= TRAINER_SPECIALTIES_MAX ? ' disabled' : ''}`}>
-                  <input type="checkbox" checked={checked} disabled={!checked && draft.specialties.length >= TRAINER_SPECIALTIES_MAX} onChange={(event) => toggleSpecialty(specialty, event.target.checked)} />
-                  <span>{specialty}</span>
-                </label>
-              })}
-            </div>
+            <SpecialtyChecklist selected={draft.specialties} onToggle={toggleSpecialty} max={TRAINER_SPECIALTIES_MAX} />
           </details>
         </div>
         <div className="trainer-profile-form-section">

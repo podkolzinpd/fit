@@ -55,6 +55,8 @@ env:
   TF_VAR_deployer_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   TF_VAR_migration_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   TF_VAR_yandex_oauth_client_id: ${{ vars.YC_YANDEX_OAUTH_CLIENT_ID }}
+  TF_VAR_yandex_native_registration_enabled: ${{ vars.YC_STAGE_YANDEX_NATIVE_REGISTRATION_ENABLED || 'false' }}
+  TF_VAR_yandex_only_auth_enabled: ${{ vars.YC_STAGE_YANDEX_ONLY_AUTH_ENABLED || 'false' }}
   TF_VAR_api_cors_allowed_origins: '["http://localhost:5173","capacitor://localhost","https://fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects.vercel.app","https://fit-drab.vercel.app"]'
   TF_VAR_api_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
   YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
@@ -476,6 +478,8 @@ jobs:
             and (.session.clientId | test("^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"; "i"))
             and (.clientSession.token | test("^[A-Za-z0-9_-]{43}$"))
             and (.clientSession.expiresAt | type == "string")
+            and (.mediaSession.token | test("^[A-Za-z0-9_-]{43}$"))
+            and (.mediaSession.expiresAt | type == "string")
           ' stage-workout-fixture-response.json >/dev/null
           jq -r '"Prepared synthetic fixtures for " + (.seededTrainerCount | tostring) + " stage trainer(s)."' \
             stage-workout-fixture-response.json

@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { yandexPilotRepository } from './yandex-pilot.repository'
+import {
+  YandexAccountSetupRequiredError,
+  yandexPilotRepository,
+} from './yandex-pilot.repository'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 
 const queries = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   exchangeCodeForAppSession: vi.fn(),
   registerYandexAccount: vi.fn(),
+  recoverYandexAccount: vi.fn(),
+  completeYandexRegistration: vi.fn(),
   getAppSession: vi.fn(),
   revokeAppSession: vi.fn(),
   linkYandexAccount: vi.fn(),
@@ -61,6 +66,7 @@ const clients = {
   accessMode: 'read_only',
   clients: [{
     id: CLIENT_ID,
+    canArchive: true,
     hasAccount: false,
     fullName: 'Анна Смирнова',
     canonicalFullName: 'Анна Смирнова',
@@ -111,6 +117,9 @@ const trainingData = {
     name: 'Тестовая тяга Yandex stage',
     muscleGroup: 'back',
     inputKind: 'strength',
+    primaryMuscleDetail: 'Широчайшие',
+    equipment: 'Блочный тренажёр',
+    description: 'Задержитесь в конечной точке.',
     archivedAt: null,
     version: 1,
   }],
@@ -120,6 +129,8 @@ const trainingData = {
     clientId: CLIENT_ID,
     clientName: 'Анна Смирнова',
     createdBy: session.profile.id,
+    startedBy: session.profile.id,
+    completedBy: session.profile.id,
     workoutDate: '2026-08-20',
     startTime: null,
     endTime: null,
@@ -191,6 +202,8 @@ describe('yandexPilotRepository', () => {
     queries.exchangeCodeForSession.mockReset()
     queries.exchangeCodeForAppSession.mockReset()
     queries.registerYandexAccount.mockReset()
+    queries.recoverYandexAccount.mockReset()
+    queries.completeYandexRegistration.mockReset()
     queries.getAppSession.mockReset()
     queries.revokeAppSession.mockReset()
     queries.linkYandexAccount.mockReset()
@@ -336,6 +349,52 @@ describe('yandexPilotRepository', () => {
       'https://stage.example.test',
       'code',
       'verifier',
+    )).resolves.toEqual(appSession)
+  })
+
+  it('returns a validated setup handoff without exposing the Yandex subject', async () => {
+    queries.exchangeCodeForAppSession.mockResolvedValue(
+      new Response(JSON.stringify({
+        error: 'yandex_identity_unlinked',
+        handoff: {
+          token: 'h'.repeat(43),
+          expiresAt: '2099-09-19T12:10:00.000Z',
+        },
+      }), { status: 409 }),
+    )
+
+    const result = yandexPilotRepository.exchangeCodeForAppSession(
+      'https://stage.example.test',
+      'code',
+      'verifier',
+    )
+    await expect(result).rejects.toBeInstanceOf(YandexAccountSetupRequiredError)
+    await expect(result).rejects.toMatchObject({
+      handoff: {
+        token: 'h'.repeat(43),
+        expiresAt: '2099-09-19T12:10:00.000Z',
+      },
+    })
+  })
+
+  it('validates recovered and newly registered app sessions', async () => {
+    queries.recoverYandexAccount.mockResolvedValue(
+      new Response(JSON.stringify(appSession), { status: 200 }),
+    )
+    queries.completeYandexRegistration.mockResolvedValue(
+      new Response(JSON.stringify(appSession), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.recoverYandexAccount(
+      'https://stage.example.test',
+      { handoffToken: 'h'.repeat(43), email: 'person@example.test', password: 'secret-password' },
+    )).resolves.toEqual(appSession)
+    await expect(yandexPilotRepository.completeYandexRegistration(
+      'https://stage.example.test',
+      {
+        handoffToken: 'h'.repeat(43), accountRole: 'trainer', firstName: 'Ирина',
+        timezone: 'Europe/Moscow', termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION,
+      },
     )).resolves.toEqual(appSession)
   })
 
@@ -586,6 +645,63 @@ describe('yandexPilotRepository', () => {
       attention: trainingData.attention,
       attentionPreferences: trainingData.attentionPreferences,
       hasMoreWorkouts: false,
+    })
+  })
+
+  it('accepts trainer attention comments up to the workout comment contract', async () => {
+    const longClientComment = 'Комментарий клиента '.repeat(80)
+    const data = {
+      ...trainingData,
+      attention: [{
+        workoutId: trainingData.workouts[0]!.id,
+        clientId: CLIENT_ID,
+        clientName: 'Анна Смирнова',
+        workoutDate: '2026-08-20',
+        clientQuestion: null,
+        clientQuestionAskedAt: null,
+        discomfort: true,
+        clientComment: longClientComment,
+        feedbackSubmittedAt: '2026-08-20T13:01:00.000Z',
+        version: 1,
+      }],
+    }
+    queries.listTrainingData.mockResolvedValue(
+      new Response(JSON.stringify(data), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.listTrainingData(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )).resolves.toMatchObject({
+      attention: [{ clientComment: longClientComment }],
+    })
+  })
+
+  it('accepts trainer attention questions without discomfort feedback', async () => {
+    const data = {
+      ...trainingData,
+      attention: [{
+        workoutId: trainingData.workouts[0]!.id,
+        clientId: CLIENT_ID,
+        clientName: 'Анна Смирнова',
+        workoutDate: '2026-08-20',
+        clientQuestion: 'Можно заменить упражнение?',
+        clientQuestionAskedAt: '2026-08-20T13:01:00.000Z',
+        discomfort: null,
+        clientComment: null,
+        feedbackSubmittedAt: '2026-08-20T13:01:00.000Z',
+        version: 1,
+      }],
+    }
+    queries.listTrainingData.mockResolvedValue(
+      new Response(JSON.stringify(data), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.listTrainingData(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )).resolves.toMatchObject({
+      attention: [{ clientQuestion: 'Можно заменить упражнение?', discomfort: null }],
     })
   })
 

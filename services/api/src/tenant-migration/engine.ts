@@ -62,6 +62,10 @@ interface FullCohortSourcePreflightRow extends QueryResultRow {
   cohort_exists: boolean
 }
 
+interface FullCohortTargetPreflightRow extends QueryResultRow {
+  has_native_identity: boolean
+}
+
 export class TenantMigrationError extends Error {
   constructor(readonly code: string) {
     super(code)
@@ -321,9 +325,20 @@ async function validateTargetInTransaction(
   const reports: TenantMigrationTableReport[] = []
   for (const spec of getMigrationManifest(bundle)) {
     const expected = getBundleTable(bundle, spec.name)
-    const actual = bundle.format === 'fit-full-cohort-bundle-v1'
-      ? await readFullCohortTargetTable(target, spec, expected)
-      : await readTable(target, spec, root.profileId, false)
+    let actual: TenantMigrationTable
+    try {
+      actual = bundle.format === 'fit-full-cohort-bundle-v1'
+        ? await readFullCohortTargetTable(target, spec, expected)
+        : await readTable(target, spec, root.profileId, false)
+    } catch (error) {
+      if (
+        error instanceof TenantMigrationError
+        && error.code === 'database_contract_mismatch'
+      ) {
+        throw new TenantMigrationError(`target_validation_failed:${spec.name}`)
+      }
+      throw error
+    }
     if (
       actual.rowCount !== expected.rowCount
       || checksumRows(actual.rows) !== expected.checksum
@@ -355,23 +370,12 @@ async function readFullCohortTargetTable(
   spec: TenantMigrationTableSpec,
   expected: TenantMigrationTable,
 ): Promise<TenantMigrationTable> {
-  if (expected.rows.length === 0) {
-    return buildMigrationTable(spec.name, [])
-  }
   const keyColumns = spec.keyColumns ?? ['id']
-  const keyPredicate = keyColumns
-    .map((column) => `existing.${column} = expected.${column}`)
-    .join(' and ')
   let rows: readonly JsonDatabaseRow[]
   try {
     rows = await target.query<JsonDatabaseRow>(
       `select to_jsonb(existing) as row
-       from ${spec.targetRecord} existing
-       join jsonb_populate_recordset(
-         null::${spec.targetRecord},
-         $1::jsonb
-       ) expected on ${keyPredicate}`,
-      [JSON.stringify(expected.rows)],
+       from ${spec.targetRecord} existing`,
     )
   } catch {
     throw new TenantMigrationError(`target_read_failed:${spec.name}`)
@@ -380,13 +384,14 @@ async function readFullCohortTargetTable(
   const expectedByKey = new Map(
     expected.rows.map((row) => [migrationRowKey(row, keyColumns), row]),
   )
+  const expectedColumns = Object.keys(expected.rows[0] ?? {})
   const projectedRows = readJsonRows(rows).map((row) => {
     const expectedRow = expectedByKey.get(migrationRowKey(row, keyColumns))
-    if (expectedRow === undefined) {
-      throw new TenantMigrationError('database_contract_mismatch')
-    }
+    const columns = expectedRow === undefined
+      ? expectedColumns
+      : Object.keys(expectedRow)
     const projected: JsonObject = {}
-    for (const column of Object.keys(expectedRow)) {
+    for (const column of columns) {
       if (!(column in row)) {
         throw new TenantMigrationError('database_contract_mismatch')
       }
@@ -397,9 +402,128 @@ async function readFullCohortTargetTable(
   return buildMigrationTable(spec.name, projectedRows)
 }
 
+async function inspectFullCohortTarget(
+  target: DatabaseClient,
+): Promise<void> {
+  const result = requireSingleRow(
+    await target.query<FullCohortTargetPreflightRow>(
+      `select exists (
+         select 1
+         from app_private.auth_identities identity
+         where identity.identity_origin = 'native'
+       ) as has_native_identity`,
+    ),
+  )
+  if (result.has_native_identity) {
+    throw new TenantMigrationError('full_cohort_target_has_native_identity')
+  }
+}
+
+async function clearFullCohortTarget(
+  target: DatabaseClient,
+  bundle: TenantMigrationBundle,
+  manifest: readonly TenantMigrationTableSpec[],
+): Promise<void> {
+  const lockedTables = [
+    ...manifest.map((spec) => spec.targetRecord),
+    'app_private.auth_identities',
+    'app_private.profile_rollout_assignments',
+    'app_private.yandex_app_sessions',
+    'app_private.yandex_pilot_sessions',
+  ]
+  await target.query(
+    `lock table ${lockedTables.join(', ')} in access exclusive mode`,
+  )
+  await inspectFullCohortTarget(target)
+
+  const profiles = getBundleTable(bundle, 'public.profiles')
+  await target.query(
+    `create temporary table expected_full_cohort_profiles
+       on commit drop as
+     select expected.id
+     from jsonb_populate_recordset(
+       null::public.profiles,
+       $1::jsonb
+     ) expected`,
+    [JSON.stringify(profiles.rows)],
+  )
+
+  await target.query(
+    `create temporary table preserved_auth_identities
+       on commit drop as
+     select identity.*
+     from app_private.auth_identities identity
+     join expected_full_cohort_profiles expected
+       on expected.id = identity.profile_id`,
+  )
+  await target.query(
+    `create temporary table preserved_profile_rollout_assignments
+       on commit drop as
+     select assignment.*
+     from app_private.profile_rollout_assignments assignment
+     join expected_full_cohort_profiles expected
+       on expected.id = assignment.profile_id`,
+  )
+  await target.query(
+    `create temporary table preserved_yandex_app_sessions
+       on commit drop as
+     select session.*
+     from app_private.yandex_app_sessions session
+     join expected_full_cohort_profiles expected
+       on expected.id = session.profile_id`,
+  )
+  await target.query(
+    `create temporary table preserved_yandex_pilot_sessions
+       on commit drop as
+     select session.*
+     from app_private.yandex_pilot_sessions session
+     join expected_full_cohort_profiles expected
+       on expected.id = session.profile_id`,
+  )
+  await target.query('delete from app_private.yandex_app_sessions')
+  await target.query('delete from app_private.yandex_pilot_sessions')
+  await target.query('delete from app_private.profile_rollout_assignments')
+  await target.query('delete from app_private.auth_identities')
+
+  for (const spec of [...manifest].reverse()) {
+    try {
+      await target.query(`delete from ${spec.targetRecord}`)
+    } catch {
+      throw new TenantMigrationError(`target_replace_failed:${spec.name}`)
+    }
+  }
+}
+
+async function restoreFullCohortTargetAnchors(
+  target: DatabaseClient,
+): Promise<void> {
+  await target.query(
+    `insert into app_private.auth_identities
+     select * from preserved_auth_identities`,
+  )
+  await target.query(
+    `insert into app_private.profile_rollout_assignments
+     select * from preserved_profile_rollout_assignments`,
+  )
+  await target.query(
+    `insert into app_private.yandex_app_sessions
+     select * from preserved_yandex_app_sessions`,
+  )
+  await target.query(
+    `insert into app_private.yandex_pilot_sessions
+     select * from preserved_yandex_pilot_sessions`,
+  )
+}
+
 async function beginTargetTransaction(target: DatabaseClient): Promise<void> {
   await target.query('begin isolation level serializable')
   await configureMigrationTransaction(target)
+  // Replaying historical child rows must not advance derived parent
+  // timestamps. The value is transaction-local and is consumed only by
+  // migration-aware database triggers.
+  await target.query(
+    "select set_config('fit.tenant_migration_restore', 'on', true)",
+  )
 }
 
 async function lockTenant(
@@ -432,8 +556,16 @@ export async function importTenant(
   try {
     await lockTenant(target, root.kind, root.profileId)
     const insertedRows = new Map<string, number>()
+    const replacesFullCohort = bundle.format === 'fit-full-cohort-bundle-v1'
+    if (replacesFullCohort) {
+      await clearFullCohortTarget(target, bundle, manifest)
+    }
     for (const spec of manifest) {
       const table = getBundleTable(bundle, spec.name)
+      if (table.rows.length === 0) {
+        insertedRows.set(spec.name, 0)
+        continue
+      }
       const keyColumns = spec.keyColumns ?? ['id']
       const keyPredicate = keyColumns
         .map((column) => `existing.${column} = record.${column}`)
@@ -447,11 +579,11 @@ export async function importTenant(
              null::${spec.targetRecord},
              $1::jsonb
            ) record
-           where not exists (
+           ${replacesFullCohort ? '' : `where not exists (
              select 1
              from ${spec.targetRecord} existing
              where ${keyPredicate}
-           )
+           )`}
            returning true as inserted`,
           [JSON.stringify(table.rows)],
         )
@@ -459,6 +591,9 @@ export async function importTenant(
         throw new TenantMigrationError(`target_import_failed:${spec.name}`)
       }
       insertedRows.set(spec.name, inserted.length)
+    }
+    if (replacesFullCohort) {
+      await restoreFullCohortTargetAnchors(target)
     }
     const tables = await validateTargetInTransaction(target, bundle, insertedRows)
     await target.query(apply ? 'commit' : 'rollback')

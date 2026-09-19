@@ -3,7 +3,8 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { TrainerCatalogFilters, TrainerProfessionalProfile } from '../../shared/domain'
+import type { TrainerCatalogFilters, TrainerCatalogItem } from '../../shared/domain'
+import { TRAINER_SPECIALTIES } from '../../shared/trainer-profile'
 import { TrainerCatalogPage } from './TrainerCatalogPage'
 
 const listCatalog = vi.hoisted(() => vi.fn())
@@ -11,20 +12,13 @@ vi.mock('../../app/data-backend-context', () => ({
   useDataBackend: () => ({ trainerProfiles: { listCatalog } }),
 }))
 
-const profile: TrainerProfessionalProfile = {
+const profile: TrainerCatalogItem = {
   publicId: '11111111-1111-4111-8111-111111111111',
-  draft: {
+  profile: {
     displayName: 'Анна Иванова', bio: 'Помогаю начать заниматься и спокойно двигаться к результату.',
     specialties: ['Силовые'], city: 'Москва', metroStationIds: ['msk-dinamo'], customLocations: ['World Class Динамо', 'Лужники'], trainingModes: ['online', 'in_person'], experienceStartYear: 2020,
     education: '', formats: '', price: 'от 3 000 ₽', acceptingClients: true, avatarDataUrl: null, certificates: [],
   },
-  published: {
-    displayName: 'Анна Иванова', bio: 'Помогаю начать заниматься и спокойно двигаться к результату.',
-    specialties: ['Силовые'], city: 'Москва', metroStationIds: ['msk-dinamo'], customLocations: ['World Class Динамо', 'Лужники'], trainingModes: ['online', 'in_person'], experienceStartYear: 2020,
-    education: '', formats: '', price: 'от 3 000 ₽', acceptingClients: true, avatarDataUrl: null, certificates: [],
-  },
-  listedInCatalog: true,
-  publishedAt: '2026-09-10T09:00:00.000Z', updatedAt: '2026-09-10T09:00:00.000Z', version: 2,
   isBrandTrainer: false,
 }
 
@@ -80,7 +74,8 @@ describe('TrainerCatalogPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Фильтры' }))
     const dialog = screen.getByRole('dialog', { name: 'Фильтры тренеров' })
-    await user.type(within(dialog).getByLabelText('Направление'), 'Бег')
+    await user.click(within(dialog).getByText('Направления · Все направления'))
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Похудение и коррекция фигуры' }))
     await user.type(within(dialog).getByLabelText('Город'), 'Москва')
     await user.type(within(dialog).getByRole('combobox', { name: 'Метро Москвы' }), 'Динамо')
     await user.click(await within(dialog).findByRole('option', { name: /Динамо/ }))
@@ -89,8 +84,8 @@ describe('TrainerCatalogPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Показать тренеров' }))
 
     await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith({
-      query: '', specialty: 'Бег', city: 'Москва', metroStationIds: ['msk-dinamo'], mode: 'online', acceptingClients: true,
-    }, { offset: 0, limit: 20 }))
+      query: '', specialties: ['Похудение и коррекция фигуры'], city: 'Москва', metroStationIds: ['msk-dinamo'], mode: 'online', acceptingClients: true, brandTrainerOnly: false,
+    }, { offset: 0, limit: 3 }))
     expect(screen.getByRole('button', { name: 'Фильтры · 5' })).toBeVisible()
     expect(screen.queryByRole('dialog', { name: 'Фильтры тренеров' })).not.toBeInTheDocument()
   })
@@ -126,11 +121,11 @@ describe('TrainerCatalogPage', () => {
 
     renderPage()
     expect(screen.getByLabelText('Имя тренера')).toHaveValue('Анна')
-    await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith(expect.objectContaining({ query: 'Анна' }), { offset: 0, limit: 20 }))
+    await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith(expect.objectContaining({ query: 'Анна' }), { offset: 0, limit: 3 }))
     await waitFor(() => expect(document.querySelector<HTMLElement>('.content')?.scrollTop).toBe(420))
   })
 
-  it('opens a catalog view saved before metro filters existed', async () => {
+  it('opens a catalog view saved before metro and specialty filters existed', async () => {
     const legacyFilters = { query: 'Анна', specialty: '', city: 'Москва', mode: '', acceptingClients: null }
     window.sessionStorage.setItem('fit.trainer-catalog.view.v1', JSON.stringify({
       draft: legacyFilters,
@@ -142,16 +137,15 @@ describe('TrainerCatalogPage', () => {
 
     expect(await screen.findByText('Анна Иванова')).toBeVisible()
     await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith({
-      ...legacyFilters,
-      metroStationIds: [],
-    }, { offset: 0, limit: 20 }))
+      query: 'Анна', city: 'Москва', mode: '', acceptingClients: null,
+      metroStationIds: [], specialties: [], brandTrainerOnly: false,
+    }, { offset: 0, limit: 3 }))
     expect(screen.getByRole('button', { name: 'Фильтры · 1' })).toBeVisible()
   })
 
   it('shows the full result count and loads the next page without replacing the first', async () => {
     const second = { ...profile, publicId: '22222222-2222-4222-8222-222222222222',
-      draft: { ...profile.draft, displayName: 'Мария Петрова' },
-      published: { ...profile.published!, displayName: 'Мария Петрова' } }
+      profile: { ...profile.profile, displayName: 'Мария Петрова' } }
     listCatalog.mockImplementation((_filters: TrainerCatalogFilters, page: { offset: number }) =>
       Promise.resolve(page.offset === 0 ? catalogPage([profile], 2, 1) : catalogPage([second], 2)))
     const user = userEvent.setup()
@@ -162,7 +156,7 @@ describe('TrainerCatalogPage', () => {
 
     expect(await screen.findByText('Мария Петрова')).toBeVisible()
     expect(screen.getByText('Анна Иванова')).toBeVisible()
-    expect(listCatalog).toHaveBeenLastCalledWith({ query: '', specialty: '', city: '', metroStationIds: [], mode: '', acceptingClients: null }, { offset: 1, limit: 20 })
+    expect(listCatalog).toHaveBeenLastCalledWith({ query: '', specialties: [], city: '', metroStationIds: [], mode: '', acceptingClients: null, brandTrainerOnly: false }, { offset: 1, limit: 3 })
     expect(screen.queryByRole('button', { name: 'Показать ещё' })).not.toBeInTheDocument()
   })
 
@@ -186,5 +180,66 @@ describe('TrainerCatalogPage', () => {
 
     await waitFor(() => expect(secondPageAttempts).toBe(2))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('lets a client select every specialty without a limit', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByText('Анна Иванова')
+
+    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
+    const dialog = screen.getByRole('dialog', { name: 'Фильтры тренеров' })
+    await user.click(within(dialog).getByText('Направления · Все направления'))
+    for (const specialty of TRAINER_SPECIALTIES) {
+      await user.click(within(dialog).getByRole('checkbox', { name: specialty }))
+    }
+    expect(within(dialog).getAllByRole('checkbox', { checked: true })).toHaveLength(TRAINER_SPECIALTIES.length)
+    await user.click(within(dialog).getByRole('button', { name: 'Показать тренеров' }))
+
+    await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith(
+      expect.objectContaining({ specialties: [...TRAINER_SPECIALTIES] }),
+      { offset: 0, limit: 3 },
+    ))
+  })
+
+  it('lets a client return to "all specialties" after narrowing the filter', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByText('Анна Иванова')
+
+    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
+    const dialog = screen.getByRole('dialog', { name: 'Фильтры тренеров' })
+    await user.click(within(dialog).getByText('Направления · Все направления'))
+    expect(within(dialog).getByRole('checkbox', { name: 'Все направления' })).toBeChecked()
+
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Похудение и коррекция фигуры' }))
+    expect(within(dialog).getByRole('checkbox', { name: 'Все направления' })).not.toBeChecked()
+
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Все направления' }))
+    expect(within(dialog).getByRole('checkbox', { name: 'Все направления' })).toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: 'Похудение и коррекция фигуры' })).not.toBeChecked()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Показать тренеров' }))
+    await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith(
+      expect.objectContaining({ specialties: [] }),
+      { offset: 0, limit: 3 },
+    ))
+  })
+
+  it('filters to only brand trainers via the dedicated switch', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByText('Анна Иванова')
+
+    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
+    const dialog = screen.getByRole('dialog', { name: 'Фильтры тренеров' })
+    await user.click(within(dialog).getByRole('switch', { name: 'Только бренд-тренеры' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Показать тренеров' }))
+
+    await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith(
+      expect.objectContaining({ brandTrainerOnly: true }),
+      { offset: 0, limit: 3 },
+    ))
+    expect(screen.getByRole('button', { name: 'Фильтры · 1' })).toBeVisible()
   })
 })

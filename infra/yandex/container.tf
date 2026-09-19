@@ -46,7 +46,10 @@ resource "yandex_serverless_container" "api" {
         DATABASE_SSL_ROOT_CERT              = "/app/certs/yandex-cloud-ca.pem"
         YANDEX_CLOUD_FOLDER_ID              = var.folder_id
         YANDEX_CLOUD_USE_METADATA_IAM_TOKEN = "true"
+        ASSISTANT_PROGRAM_ENABLED           = "true"
         YANDEX_MEDIA_BUCKET                 = local.media_bucket_name
+        YANDEX_NATIVE_REGISTRATION_ENABLED  = var.yandex_native_registration_enabled ? "true" : "false"
+        YANDEX_ONLY_AUTH_ENABLED            = var.yandex_only_auth_enabled ? "true" : "false"
       },
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id
@@ -164,6 +167,8 @@ resource "yandex_serverless_container" "migration" {
         STAGE_RUNTIME_DATABASE_PREFLIGHT_ENABLED = var.environment == "stage" ? "true" : "false"
         STAGE_TENANT_MIGRATION_ENABLED           = var.environment == "stage" ? "true" : "false"
         STAGE_ROLLOUT_ASSIGNMENTS_ENABLED        = var.environment == "stage" ? "true" : "false"
+        STAGE_YANDEX_IDENTITY_UNLINK_ENABLED     = var.environment == "stage" ? "true" : "false"
+        STAGE_VITAL_MEDIA_DEPLOYMENT_ENABLED     = var.environment == "stage" ? "true" : "false"
         YANDEX_MEDIA_BUCKET                      = local.media_bucket_name
       },
       var.yandex_oauth_client_id == null ? {} : {

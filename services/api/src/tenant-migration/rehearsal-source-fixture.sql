@@ -2,6 +2,7 @@ begin;
 
 -- This fixture enriches only the committed local Supabase demo cohort. All
 -- identifiers and values are synthetic, deterministic and safe to reapply.
+
 insert into public.trainer_professional_profiles (
   trainer_id,
   public_id,
@@ -708,6 +709,81 @@ values (
   timestamptz '2026-08-06 08:00:00+00'
 )
 on conflict do nothing;
+
+insert into public.favorite_workouts (
+  id,
+  client_id,
+  title,
+  exercises,
+  created_at
+)
+values
+  (
+    'a2000000-0000-4000-8000-000000000001',
+    '92000000-0000-4000-8000-000000000029',
+    'Тренировка связанного клиента',
+    '[{"exerciseId":"push-ups","sets":[{"reps":12}]}]'::jsonb,
+    timestamptz '2026-08-06 08:10:00+00'
+  ),
+  (
+    'a2000000-0000-4000-8000-000000000002',
+    'a1000000-0000-4000-8000-000000000001',
+    'Самостоятельная тренировка',
+    '[{"exerciseId":"squats","sets":[{"reps":15}]}]'::jsonb,
+    timestamptz '2026-08-06 08:11:00+00'
+  )
+on conflict do nothing;
+
+insert into public.user_legal_acceptances (
+  id,
+  user_id,
+  terms_version,
+  privacy_version,
+  source,
+  accepted_at
+)
+values
+  (
+    '96000000-0000-4000-8000-000000000001',
+    '90000000-0000-4000-8000-000000000009',
+    '2026-09-01',
+    '2026-09-01',
+    'existing_user',
+    timestamptz '2026-09-01 08:00:00+00'
+  ),
+  (
+    '96000000-0000-4000-8000-000000000002',
+    'a1000000-0000-4000-8000-000000000001',
+    '2026-09-01',
+    '2026-09-01',
+    'existing_user',
+    timestamptz '2026-09-01 08:01:00+00'
+  )
+on conflict (id) do nothing;
+
+insert into public.account_deletion_requests (
+  id,
+  user_id,
+  status,
+  requested_at,
+  cancelled_at
+)
+values
+  (
+    '96000000-0000-4000-8000-000000000003',
+    '90000000-0000-4000-8000-000000000009',
+    'cancelled',
+    timestamptz '2026-09-02 08:00:00+00',
+    timestamptz '2026-09-02 09:00:00+00'
+  ),
+  (
+    '96000000-0000-4000-8000-000000000004',
+    'a1000000-0000-4000-8000-000000000001',
+    'cancelled',
+    timestamptz '2026-09-02 08:01:00+00',
+    timestamptz '2026-09-02 09:01:00+00'
+  )
+on conflict (id) do nothing;
 
 insert into public.trainer_discovery_prompt_preferences (
   user_id,

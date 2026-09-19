@@ -45,6 +45,29 @@ test('global rollout gives a new client the My Workouts identity', async ({ page
   await expect(page.locator('html')).toHaveClass(/ui-identity/)
 })
 
+test('client always has a preset workout tab on My Workouts, before and after their first workout', async ({ page }, testInfo) => {
+  await createClientAccount(page, `workouts-preset-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+  await page.goto('/me/workouts')
+
+  await expect(page.getByRole('tab', { name: 'Актуальное' })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('tab', { name: 'Готовые тренировки' }).click()
+  await expect(page).toHaveURL(/\/me\/workouts\?tab=presets$/)
+  await page.getByRole('article').filter({ hasText: 'Всё тело без инвентаря' }).getByRole('button', { name: 'Выбрать' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+  await expect(page.getByText('Распознано: 5')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Далее' }).click()
+  await page.getByRole('button', { name: 'Записать выполненную' }).click()
+  await page.getByRole('button', { name: 'Записать тренировку' }).click()
+  await expect(page.getByText('Завершена', { exact: true })).toBeVisible()
+
+  await page.goto('/me/workouts')
+  await expect(page.getByRole('heading', { name: 'История' })).toBeVisible()
+  await page.getByRole('tab', { name: 'Готовые тренировки' }).click()
+  await expect(page.getByText('Всё тело без инвентаря')).toBeVisible()
+})
+
 test('client switches workout history to a month calendar and returns to the selected date', async ({ page }, testInfo) => {
   await page.clock.install({ time: new Date('2026-08-30T18:00:00+03:00') })
   await createClientAccount(page, `workout-calendar-${testInfo.workerIndex}-${Date.now()}@fit.local`)

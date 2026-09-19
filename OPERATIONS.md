@@ -43,17 +43,27 @@ npm run tenant:rehearse:local
 Команда работает только с loopback-портами локального Podman, дополняет
 исключительно синтетический demo cohort production-like данными, дважды создаёт
 чистую временную PostgreSQL 17 базу и для каждой выполняет export, dry-run,
-проверку rollback, apply, повторный apply с `inserted=0` и validate всех 28
-таблиц. Зашифрованные artifacts и обе временные базы удаляются после прогона.
+проверку rollback, apply, повторный apply и validate всех 35 таблиц.
+Для isolated trainer/client повторный apply остаётся insert-only и показывает
+`inserted=0`; full-cohort повторно пересобирает переносимый слой и доказывает
+идемпотентность совпадением полного checksum snapshot-а. Зашифрованные
+artifacts и обе временные базы удаляются после прогона.
 Подключить этой командой stage или production нельзя. Она проверяет данные,
 чистую цепочку миграций и идемпотентность, но не заменяет отдельную проверку
 сетевого доступа, IAM, remote credentials и согласованного окна переноса.
 
 Первый `import` — обязательный dry-run: он открывает транзакцию, проверяет все
 FK/unique/check constraints и checksums, затем делает rollback. `--apply`
-фиксирует данные только после полной проверки. Повторный apply безопасен и
-должен показать `inserted=0`. Существующие отличающиеся строки не
-перезаписываются: операция завершается ошибкой и целиком откатывается.
+фиксирует данные только после полной проверки. Isolated trainer/client import
+не перезаписывает существующие отличающиеся строки. Full-cohort import работает
+иначе: под exclusive lock он временно сохраняет Yandex identity, app/pilot
+sessions и rollout assignments, очищает 35 переносимых таблиц, загружает
+свежий snapshot и возвращает Yandex-привязки только для профилей из этого
+snapshot. Устаревшие linked identity/session/rollout строки профилей, которых
+уже нет в source, удаляются вместе с ними. Любая ошибка откатывает всю
+транзакцию. Операция заранее отказывается работать, если в target есть хотя бы
+один нативный Yandex-профиль; поэтому этот режим предназначен только для
+pre-cutover окна.
 
 Артефакт зашифрован AES-256-GCM, создаётся с правами `0600` и не
 перезаписывается. Он всё равно считается чувствительным backup-файлом: хранить
@@ -164,7 +174,8 @@ GitHub OIDC → Yandex IAM token.
   fingerprint и `APPLY_TENANT_TO_YANDEX_STAGE`. Для живого source используйте
   `APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE` с пустым fingerprint: workflow
   экспортирует один `REPEATABLE READ` snapshot и тем же encrypted envelope
-  выполняет target dry-run, commit и повторный apply с нулём вставок. Эта фраза
+  выполняет target dry-run, commit и повторную полную пересборку с тем же
+  checksum. Эта фраза
   принимается только для `full-cohort`; автоматические и configured selections
   не получают ослабления fingerprint/selection guard. Режим не переносит
   `auth.users`, OAuth credentials, Yandex sessions/rollout assignments, весь
@@ -180,11 +191,13 @@ fingerprint фиксирует точное содержимое всего по
 Режимы выполняются последовательно:
 
 - `audit` — одна `REPEATABLE READ READ ONLY` транзакция в Supabase; показывает
-  только fingerprint, таблицы, количества строк и размер encrypted envelope;
+  только fingerprint, таблицы, количества строк и размер encrypted wire body;
 - `dry-run` — повторяет audit, передаёт envelope только в памяти private runner
   и откатывает полную target-транзакцию после constraints/checksum validation;
 - `apply` — сначала выполняет dry-run, затем commit и обязательный повторный
-  apply того же encrypted envelope, который должен вставить ноль строк. Pinned
+  apply того же encrypted envelope. Для isolated cohort он должен вставить ноль
+  строк; для full-cohort он снова атомарно пересобирает переносимые таблицы и
+  должен получить тот же checksum. Pinned
   путь требует `APPLY_TENANT_TO_YANDEX_STAGE`; current-snapshot путь требует
   `APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE`, `full-cohort` и пустой внешний
   fingerprint.
@@ -194,11 +207,80 @@ fingerprint фиксирует точное содержимое всего по
 тело ответа, значения строк и database error message в Actions logs не попадают.
 
 Artifact не записывается в GitHub Artifacts, workspace или Object Storage.
-Размер запроса ограничен 3 МиБ; превышение останавливает workflow после
-read-only audit. Workflow не меняет sticky routing, Yandex ID assignment,
+Envelope v3 передаётся как raw encrypted binary body; format, salt, IV и auth
+tag находятся в проверяемых служебных заголовках. Это убирает Base64/JSON
+накладные расходы, не меняя шифрование, единый snapshot или атомарную target-
+транзакцию. Размер binary body ограничен 3 400 000 байт: это оставляет запас
+относительно неизменяемого
+[лимита Yandex Serverless Containers](https://yandex.cloud/ru/docs/serverless-containers/concepts/limits)
+3,5 МБ на весь HTTP-запрос вместе с заголовками. Превышение останавливает
+workflow после read-only audit;
+дальнейший рост требует chunk/Object Storage transport, а не повышения этого
+предела. Workflow не меняет sticky routing, Yandex ID assignment,
 production frontend или Supabase. Перенос на stage оплачивает только фактические
 холодные вызовы уже существующего Serverless Container; новый постоянно
 работающий или provisioned ресурс не создаётся.
+
+## Окно технических работ
+
+Глобальный build-time switch остаётся default-off:
+
+```text
+VITE_MAINTENANCE_MODE=false
+```
+
+Только точное `true` заменяет любой маршрут отдельным экраном технических
+работ до монтирования auth, query и data providers. Поэтому новая сборка не
+восстанавливает сессии, не читает продуктовые данные и не запускает product
+mutations; это не визуальный overlay поверх работающего приложения. Единственное
+действие экрана — перезагрузить страницу и повторно проверить значение флага.
+
+Frontend-флаг меняется только после прямой команды владельца продукта и требует нового
+Vercel deployment. Уже открытая вкладка со старым JS bundle не узнает о новом
+build-time значении до reload, поэтому перед финальным snapshot обязателен
+короткий drain: дождаться распространения deployment, обновить контролируемые
+клиенты и подтвердить отсутствие незавершённых source mutations.
+
+Старые вкладки, RPC и фоновые writers блокирует отдельный source-side gate в
+Supabase. Он default-off и защищает одним statement trigger все 37 product и
+background-write таблиц, включая source-only program jobs, summary guard,
+private details и push outbox. Reads и полный snapshot продолжают работать.
+Переключатель не опубликован через Data API и управляется только ручным
+workflow `Manage Supabase cutover write gate`, сериализованным с tenant
+migration:
+
+```text
+action=inspect
+action=enable  confirmation=PAUSE_SUPABASE_PRODUCT_WRITES_FOR_CUTOVER
+action=disable confirmation=RESUME_SUPABASE_PRODUCT_WRITES_BEFORE_YANDEX_WRITES
+```
+
+`disable` допустим только до первой пользовательской записи в Yandex. После
+успешного переключения source gate остаётся включённым до decommission
+Supabase. `enable` берёт краткие `SHARE` locks на защищённые таблицы: команда
+дожидается завершения уже начатых DML, не пропускает новую запись между fence и
+фиксацией gate и только после этого возвращает успех. Перед `enable` всё равно
+остановите producers и дайте dispatcher опустошить текущий push outbox: после
+включения gate любые новые и фоновые DML получают
+`source_product_writes_paused`.
+
+Порядок включения после отдельной команды:
+
+1. Установить `VITE_MAINTENANCE_MODE=true`, выполнить production deployment и
+   проверить прямые `/auth`, `/clients` и `/workouts/<id>/live` на 390/430 px.
+2. Дождаться drain уже открытых клиентов, остановить producers, опустошить
+   push outbox и проверить `action=inspect`; не включать Yandex routing.
+3. Выполнить `action=enable`, подтвердить отказ контрольной source mutation и
+   только затем снять свежий snapshot.
+4. Выполнить `full-cohort` dry-run/apply/repeat/validate с одинаковой
+   media policy и проверить 35 таблиц, counts и checksums.
+5. Включить `linked-ready` assignments, провести smoke обеих ролей и только
+   затем включать app-session/main-routing/native-registration switches.
+6. После успешного smoke установить `VITE_MAINTENANCE_MODE=false` и выполнить
+   ещё один production deployment.
+
+Выключение окна до успешного smoke не означает безопасный rollback после первой
+Yandex-записи: обратный перенос всё равно нужен отдельно.
 
 ## Первый запуск Yandex push pipeline
 
@@ -215,6 +297,15 @@ OIDC и идемпотентно синхронизирует deletion-protected
 более раннем сбое — вместе с одноразовым runner-ом); payload не попадает в
 GitHub outputs/env, логи или Terraform state. Dispatcher получает
 `lockbox.payloadViewer` только на stage-копию.
+
+Мульти-device контракт использует отдельную subscription UUID и уникальность
+`(user_id, endpoint)`. Producer сразу создаёт по одной outbox-строке на каждую
+активную подписку и включает `subscription_id` в dedupe key. Dispatcher
+claim/finalize работает с точной подпиской; terminal Web Push response 404/410
+удаляет только этот endpoint. Actor-authenticated API принимает endpoint только
+в body, а tenant export/import переносит подписки по `id`. Любое изменение
+producer, subscription schema или migration catalog обязано сохранять этот
+контракт в Supabase и Yandex.
 
 После merge первый автоматический `Deploy Yandex stage` ожидаемо остановится на
 проверке Terraform plan. Запустите workflow вручную с `plan_only=true` и
@@ -380,6 +471,7 @@ VITE_TODAY_GREETING_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 VITE_YANDEX_OAUTH_CLIENT_ID=<public Yandex OAuth client id>
 VITE_YANDEX_API_BASE_URL=<https Yandex stage API base URL>
 VITE_YANDEX_SESSION_LINKING_ENABLED=true
+VITE_YANDEX_ACCOUNT_LINK_REQUIRED=true
 ```
 
 При точном значении `true` блок показывается всем непривязанным авторизованным
@@ -401,6 +493,20 @@ Yandex DB и затем связывает Yandex subject. Эта операци
 assignment, не переносит клиентов/тренировки и не разрешает Yandex-сессию до
 отдельного `yandex/read_write` назначения.
 
+Отдельный `VITE_YANDEX_ACCOUNT_LINK_REQUIRED=true` превращает существующую
+привязку в обязательный шаг для всех пользователей с Supabase-сессией. Gate
+проверяется до любого защищённого продуктового маршрута: связанный профиль и
+пользователь с действующей Yandex app-session проходят без дополнительного
+действия, непривязанный видит только PKCE-привязку, юридические документы и
+выход. Ошибка проверки не открывает приложение автоматически и показывает
+`Повторить`; отсутствие полной публичной linking-конфигурации также закрывает
+доступ с явной ошибкой. Реализация остаётся default-off, но в Vercel Production
+Environment глобально включены оба linking-флага: персонального allowlist нет,
+а Preview и локальная разработка не затронуты. Gate не создаёт rollout
+assignment, не включает Yandex app-session и не меняет выбранный data backend.
+Для аварийного возврата необязательной привязки нужен новый deployment со
+значением `false`.
+
 Stage API CORS allowlist обязан содержать как production web origin, так и
 точный `capacitor://localhost` origin нативной iOS-оболочки. Произвольные
 `capacitor://` origins не разрешаются. Изменение выполняется через
@@ -414,6 +520,36 @@ switch:
 ```text
 VITE_YANDEX_APP_SESSION_ENABLED=true
 ```
+
+Финальный единый вход доставляется отдельным default-off набором:
+
+```text
+# Yandex API container (Terraform repository variables)
+YC_STAGE_YANDEX_NATIVE_REGISTRATION_ENABLED=true
+YC_STAGE_YANDEX_ONLY_AUTH_ENABLED=true
+
+# Vercel Production Environment
+VITE_YANDEX_APP_SESSION_ENABLED=true
+VITE_YANDEX_MAIN_ROUTING_ENABLED=true
+VITE_YANDEX_NATIVE_REGISTRATION_ENABLED=true
+VITE_YANDEX_ONLY_AUTH_ENABLED=true
+```
+
+`VITE_YANDEX_ONLY_AUTH_ENABLED` эффективен только при всех трёх frontend
+зависимостях и валидных OAuth/API settings. Серверные recovery/registration
+handoff endpoints скрыты с `404`, пока `YANDEX_ONLY_AUTH_ENABLED` не равен
+точному `true`; создание нового профиля дополнительно требует
+`YANDEX_NATIVE_REGISTRATION_ENABLED=true`. Обычный merge/deploy не включает ни
+один из этих switches: stage Terraform читает отсутствующие repository
+variables как `false`.
+
+Не включайте frontend раньше server revision. Порядок cutover: maintenance →
+fresh 35-table apply → repeat checksum → linked-ready assignments → server
+variables и успешный stage deploy → smoke linked/recovery/native/invite →
+frontend variables и production deployment → снять maintenance. При неверных
+старых credentials пользователь должен получить retry, а не автоматический
+пустой профиль. После первой Yandex mutation rollback выполняется по playbook,
+а не простым возвратом Supabase UI.
 
 Без точного `true` вход через Yandex ID выключен. Публичного UUID allowlist для
 app-session больше нет: настоящая персональная граница — связанная строка
@@ -628,7 +764,9 @@ A model draft that fails validation is rejected.
 Program access (trainers and clients):
 
 - `ASSISTANT_PROGRAM_ENABLED=true` enables the authenticated program flow and
-  private generator. A missing/false flag disables new quiz/generator calls.
+  private generator. The Yandex API container sets it for backend parity; user
+  access remains controlled by the existing frontend Assistant flag and Yandex
+  routing assignment. A missing/false flag disables new quiz/generator calls.
 - `VITE_ASSISTANT_PROGRAM_ENABLED=true` in `vercel.json` enables existing chat
   controls for both signed-in product roles. Trainers can select only connected
   clients; a client is bound to their own active card. The server checks

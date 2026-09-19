@@ -107,6 +107,12 @@ export function repositoryError(error: unknown): RepositoryError {
   if (code === 'PT422' && /(?:^|\W)invalid_goal(?:$|\W)/.test(normalizedMessage)) {
     return new RepositoryError('invalid_goal', 'Проверьте цель: название должно содержать не более 200 символов.')
   }
+  if (code === 'PT422' && normalizedMessage.includes('favorite_workout_limit_reached')) {
+    return new RepositoryError(
+      'favorite_workout_limit_reached',
+      'Можно сохранить не больше 10 тренировок в избранном. Удалите одну, чтобы добавить новую.',
+    )
+  }
   if (code === 'PT422') {
     return new RepositoryError(code, 'Операцию нельзя выполнить с текущими данными.')
   }

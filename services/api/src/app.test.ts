@@ -33,6 +33,7 @@ import type { PilotAssistantState } from './pilot-assistant-state.js'
 import type { PilotAssistantTurnRunner } from './pilot-assistant-turn.js'
 import type { PilotConnectionsReader } from './pilot-connections-reader.js'
 import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
+import type { PilotLegal } from './pilot-legal.js'
 import { PilotConnectionCommandError } from './connection-commands.js'
 import { PilotDomainCommandError } from './domain-commands.js'
 import type {
@@ -53,9 +54,11 @@ import {
   ExistingActorUnavailableError,
   YandexAccountLinkError,
   type ExistingActor,
+  type ExistingCredentialsProvider,
   type ExistingActorProvider,
   type YandexAccountLinker,
 } from './yandex-account-linking.js'
+import type { YandexAuthHandoffService } from './yandex-auth-handoff.js'
 import {
   YandexNativeRegistrationError,
   type YandexNativeRegistrar,
@@ -79,11 +82,118 @@ import type { ChatMediaStore } from './chat-media.js'
 import type { PilotTrainerProfiles, TrainerProfileDraft } from './trainer-profile.js'
 import { ChatCommandError, type PilotChat } from './pilot-chat.js'
 import { TrainerDiscoveryError, type PilotTrainerDiscovery } from './trainer-discovery.js'
+import { FavoriteWorkoutsError, type FavoriteWorkoutTemplate, type PilotFavoriteWorkouts } from './favorite-workouts.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()))
+})
+
+describe('legal and account lifecycle API', () => {
+  const sessionToken = 'l'.repeat(43)
+  const session = { accessMode: 'read_write', token: sessionToken }
+  const requestId = '8fc45130-9bcf-4b77-9ff7-f0872a354034'
+
+  function legal() {
+    const acceptance = vi.fn<PilotLegal['acceptance']>()
+      .mockResolvedValue({ accepted: false, acceptedAt: null })
+    const accept = vi.fn<PilotLegal['accept']>()
+      .mockResolvedValue('2026-09-19T10:00:00.000Z')
+    const deletionRequest = vi.fn<PilotLegal['deletionRequest']>().mockResolvedValue({
+        id: requestId,
+        status: 'requested',
+        requestedAt: '2026-09-19T11:00:00.000Z',
+      })
+    const requestDeletion = vi.fn<PilotLegal['requestDeletion']>().mockResolvedValue(requestId)
+    const cancelDeletion = vi.fn<PilotLegal['cancelDeletion']>().mockResolvedValue(undefined)
+    const pilotLegal: PilotLegal = {
+      acceptance,
+      accept,
+      deletionRequest,
+      requestDeletion,
+      cancelDeletion,
+    }
+    return { pilotLegal, acceptance, accept, deletionRequest, requestDeletion, cancelDeletion }
+  }
+
+  it('serves the complete legal and deletion lifecycle for a writable Yandex session', async () => {
+    const { pilotLegal, acceptance: readAcceptance, accept, deletionRequest,
+      requestDeletion, cancelDeletion } = legal()
+    const app = buildApp({ pilotLegal, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': sessionToken }
+
+    const acceptance = await app.inject({ method: 'GET', url: '/v1/legal/acceptance', headers })
+    const accepted = await app.inject({
+      method: 'PUT',
+      url: '/v1/legal/acceptance',
+      headers,
+      payload: {
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+        source: 'existing_user',
+      },
+    })
+    const deletion = await app.inject({ method: 'GET', url: '/v1/account-deletion-request', headers })
+    const requested = await app.inject({ method: 'POST', url: '/v1/account-deletion-request', headers })
+    const cancelled = await app.inject({ method: 'DELETE', url: '/v1/account-deletion-request', headers })
+
+    expect(acceptance.statusCode).toBe(200)
+    expect(acceptance.headers['cache-control']).toBe('no-store')
+    expect(acceptance.json()).toEqual({ applicable: true, accepted: false, acceptedAt: null })
+    expect(accepted.json()).toEqual({ acceptedAt: '2026-09-19T10:00:00.000Z' })
+    expect(deletion.json()).toEqual({
+      supported: true,
+      request: {
+        id: requestId,
+        status: 'requested',
+        requestedAt: '2026-09-19T11:00:00.000Z',
+      },
+    })
+    expect(requested.json()).toEqual({ requestId })
+    expect(cancelled.statusCode).toBe(204)
+    expect(readAcceptance).toHaveBeenCalledWith(
+      session,
+      CURRENT_TERMS_VERSION,
+      CURRENT_PRIVACY_VERSION,
+    )
+    expect(accept).toHaveBeenCalledWith(
+      session,
+      CURRENT_TERMS_VERSION,
+      CURRENT_PRIVACY_VERSION,
+      'existing_user',
+    )
+    expect(deletionRequest).toHaveBeenCalledWith(session)
+    expect(requestDeletion).toHaveBeenCalledWith(session)
+    expect(cancelDeletion).toHaveBeenCalledWith(session)
+  })
+
+  it('rejects unauthenticated, read-only and stale legal mutations before storage', async () => {
+    const { pilotLegal, accept, requestDeletion } = legal()
+    const app = buildApp({ pilotLegal, logger: false }); apps.push(app)
+    const unauthenticated = await app.inject({ method: 'GET', url: '/v1/legal/acceptance' })
+    const readOnly = await app.inject({
+      method: 'POST',
+      url: '/v1/account-deletion-request',
+      headers: { 'x-fit-pilot-session': sessionToken },
+    })
+    const stale = await app.inject({
+      method: 'PUT',
+      url: '/v1/legal/acceptance',
+      headers: { 'x-fit-session': sessionToken },
+      payload: {
+        termsVersion: 'sha256:stale',
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+        source: 'existing_user',
+      },
+    })
+
+    expect(unauthenticated.statusCode).toBe(401)
+    expect(readOnly.statusCode).toBe(403)
+    expect(stale.statusCode).toBe(412)
+    expect(accept).not.toHaveBeenCalled()
+    expect(requestDeletion).not.toHaveBeenCalled()
+  })
 })
 
 describe('reliable chat API', () => {
@@ -288,7 +398,9 @@ describe('trainer professional profile', () => {
     publicId: '11111111-1111-4111-8111-111111111111', draft, published: draft,
     listedInCatalog: false,
     publishedAt: '2026-09-10T09:00:00.000Z', updatedAt: '2026-09-10T09:00:00.000Z', version: 2,
+    isBrandTrainer: false,
   }
+  const catalogItem = { publicId: value.publicId, profile: draft, isBrandTrainer: false }
 
   function profiles(): PilotTrainerProfiles {
     return {
@@ -298,7 +410,7 @@ describe('trainer professional profile', () => {
       unpublish: vi.fn().mockResolvedValue({ ...value, published: null, publishedAt: null }),
       setCatalogListing: vi.fn().mockResolvedValue({ ...value, listedInCatalog: true }),
       getPublic: vi.fn().mockResolvedValue(value),
-      listPublic: vi.fn().mockResolvedValue({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null }),
+      listPublic: vi.fn().mockResolvedValue({ items: [catalogItem], totalCount: 1, nextOffset: null }),
     }
   }
 
@@ -324,19 +436,48 @@ describe('trainer professional profile', () => {
 
   it('lists published catalog profiles with validated filters', async () => {
     const pilotTrainerProfiles = profiles()
-    const listPublic = vi.fn().mockResolvedValue({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null })
+    const listPublic = vi.fn().mockResolvedValue({ items: [catalogItem], totalCount: 1, nextOffset: null })
     pilotTrainerProfiles.listPublic = listPublic
     const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
     const response = await app.inject({
       method: 'GET',
-      url: '/v1/trainers/catalog?query=%D0%90%D0%BD%D0%BD%D0%B0&specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&metro=msk-dinamo&metro=msk-aeroport&mode=online&accepting=true&offset=20&limit=10',
+      url: '/v1/trainers/catalog?query=%D0%90%D0%BD%D0%BD%D0%B0&specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&metro=msk-dinamo&metro=msk-aeroport&mode=online&accepting=true&brand=true&offset=20&limit=10',
     })
 
     expect(response.statusCode).toBe(200)
     expect(listPublic).toHaveBeenCalledWith({
-      query: 'Анна', specialty: 'Силовые', city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-aeroport'], mode: 'online', acceptingClients: true,
-    }, { offset: 20, limit: 10 })
-    expect(response.json()).toEqual({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null })
+      query: 'Анна', specialties: ['Силовые'], city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-aeroport'], mode: 'online', acceptingClients: true, brandTrainerOnly: true,
+    }, { offset: 20, limit: 3 })
+    expect(response.json()).toEqual({ items: [catalogItem], totalCount: 1, nextOffset: null })
+  })
+
+  it('accepts repeated specialty filters', async () => {
+    const pilotTrainerProfiles = profiles()
+    const listPublic = vi.fn().mockResolvedValue({ items: [], totalCount: 0, nextOffset: null })
+    pilotTrainerProfiles.listPublic = listPublic
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/trainers/catalog?specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&specialty=%D0%91%D0%B5%D0%B3',
+    })
+    expect(response.statusCode).toBe(200)
+    expect(listPublic).toHaveBeenCalledWith(
+      expect.objectContaining({ specialties: ['Силовые', 'Бег'] }),
+      { offset: 0, limit: 3 },
+    )
+  })
+
+  it('accepts the brand-trainer filter toggle', async () => {
+    const pilotTrainerProfiles = profiles()
+    const listPublic = vi.fn().mockResolvedValue({ items: [], totalCount: 0, nextOffset: null })
+    pilotTrainerProfiles.listPublic = listPublic
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'GET', url: '/v1/trainers/catalog?brand=true' })
+    expect(response.statusCode).toBe(200)
+    expect(listPublic).toHaveBeenCalledWith(
+      expect.objectContaining({ brandTrainerOnly: true }),
+      { offset: 0, limit: 3 },
+    )
   })
 
   it('rejects invalid catalog pagination', async () => {
@@ -344,9 +485,14 @@ describe('trainer professional profile', () => {
     expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?offset=-1' })).statusCode).toBe(400)
     expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?limit=51' })).statusCode).toBe(400)
     expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?metro=' })).statusCode).toBe(400)
+    expect((await app.inject({ method: 'GET', url: '/v1/trainers/catalog?brand=maybe' })).statusCode).toBe(400)
     expect((await app.inject({
       method: 'GET',
       url: `/v1/trainers/catalog?${Array.from({ length: 21 }, (_, index) => `metro=msk-${index}`).join('&')}`,
+    })).statusCode).toBe(400)
+    expect((await app.inject({
+      method: 'GET',
+      url: `/v1/trainers/catalog?${Array.from({ length: 21 }, (_, index) => `specialty=s${index}`).join('&')}`,
     })).statusCode).toBe(400)
   })
 
@@ -425,6 +571,111 @@ describe('trainer discovery prompt', () => {
 
     expect(response.statusCode).toBe(403)
     expect(response.json()).toEqual({ error: 'action_not_allowed' })
+  })
+})
+
+describe('favorite workouts', () => {
+  const session = { accessMode: 'read_write' as const, token: 'e'.repeat(43) }
+  const exercise = {
+    position: 0, source: 'system' as const, ref: 'squat', customExerciseId: null,
+    name: 'Присед', muscleGroup: 'legs' as const, inputKind: 'strength' as const,
+    blockId: '8ffdb87b-078c-42d4-b6db-af8bc60f80f2', blockType: 'single' as const, blockPreset: 'set' as const, blockRounds: 1,
+    restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, trainerComment: null,
+    sets: [{ position: 0, weightKg: 60, reps: 5, durationMin: null, durationSec: null, distanceKm: null, rpe: null }],
+  }
+  const favorite: FavoriteWorkoutTemplate = {
+    id: '12acc6d6-7ca8-43cd-b124-b4224c917fae', title: 'Ноги и кор', createdAt: '2026-09-19T09:00:00.000Z', exercises: [exercise],
+  }
+
+  function favorites() {
+    const list = vi.fn<PilotFavoriteWorkouts['list']>().mockResolvedValue([favorite])
+    const save = vi.fn<PilotFavoriteWorkouts['save']>().mockResolvedValue(favorite)
+    const remove = vi.fn<PilotFavoriteWorkouts['remove']>().mockResolvedValue(undefined)
+    return { service: { list, save, remove } satisfies PilotFavoriteWorkouts, list, save, remove }
+  }
+
+  it('lists favorites for any valid session', async () => {
+    const { service: pilotFavoriteWorkouts, list } = favorites()
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'GET', url: '/v1/favorite-workouts', headers: { 'x-fit-session': session.token } })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ favorites: [favorite] })
+    expect(list).toHaveBeenCalledWith(session)
+  })
+
+  it('saves a favorite through a read-write session', async () => {
+    const { service: pilotFavoriteWorkouts, save } = favorites()
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    const response = await app.inject({
+      method: 'POST', url: '/v1/favorite-workouts', headers: { 'x-fit-session': session.token },
+      payload: { title: 'Ноги и кор', exercises: [exercise] },
+    })
+
+    expect(response.statusCode).toBe(201)
+    expect(response.json()).toEqual(favorite)
+    expect(save).toHaveBeenCalledWith(session, 'Ноги и кор', [exercise])
+  })
+
+  it('rejects a save with a malformed body or a read-only session', async () => {
+    const { service: pilotFavoriteWorkouts, save } = favorites()
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    const missingExercises = await app.inject({
+      method: 'POST', url: '/v1/favorite-workouts', headers: { 'x-fit-session': session.token },
+      payload: { title: 'Ноги и кор', exercises: [] },
+    })
+    const readOnly = await app.inject({
+      method: 'POST', url: '/v1/favorite-workouts', headers: { 'x-fit-pilot-session': session.token },
+      payload: { title: 'Ноги и кор', exercises: [exercise] },
+    })
+
+    expect(missingExercises.statusCode).toBe(400)
+    expect(readOnly.statusCode).toBe(403)
+    expect(save).not.toHaveBeenCalled()
+  })
+
+  it('removes a favorite by id through a read-write session', async () => {
+    const { service: pilotFavoriteWorkouts, remove } = favorites()
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    const response = await app.inject({
+      method: 'DELETE', url: `/v1/favorite-workouts/${favorite.id}`, headers: { 'x-fit-session': session.token },
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(remove).toHaveBeenCalledWith(session, favorite.id)
+  })
+
+  it('rejects a delete with an invalid id or a read-only session', async () => {
+    const { service: pilotFavoriteWorkouts, remove } = favorites()
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    const invalidId = await app.inject({
+      method: 'DELETE', url: '/v1/favorite-workouts/not-a-uuid', headers: { 'x-fit-session': session.token },
+    })
+    const readOnly = await app.inject({
+      method: 'DELETE', url: `/v1/favorite-workouts/${favorite.id}`, headers: { 'x-fit-pilot-session': session.token },
+    })
+
+    expect(invalidId.statusCode).toBe(400)
+    expect(readOnly.statusCode).toBe(403)
+    expect(remove).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['forbidden', 403, { error: 'action_not_allowed' }],
+    ['not_found', 404, { error: 'resource_not_found' }],
+    ['limit_reached', 422, { error: 'favorite_workout_limit_reached' }],
+    ['invalid', 422, { error: 'invalid_favorite_workout' }],
+  ] as const)('maps a %s failure to %i', async (failure, status, body) => {
+    const { service: pilotFavoriteWorkouts, save } = favorites()
+    save.mockRejectedValue(new FavoriteWorkoutsError(failure))
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    const response = await app.inject({
+      method: 'POST', url: '/v1/favorite-workouts', headers: { 'x-fit-session': session.token },
+      payload: { title: 'Ноги и кор', exercises: [exercise] },
+    })
+
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual(body)
   })
 })
 
@@ -1309,6 +1560,7 @@ const CLIENTS_RESPONSE: PilotClientsResponse = {
   accessMode: 'read_only',
   clients: [{
     id: '1a0c5295-0a0f-4ccb-a39a-e58090967245',
+    canArchive: true,
     hasAccount: false,
     fullName: 'Тестовый клиент',
     canonicalFullName: 'Тестовый клиент',
@@ -1359,6 +1611,9 @@ const TRAINING_DATA_RESPONSE: PilotTrainingDataResponse = {
     name: 'Тяга саней',
     muscleGroup: 'legs',
     inputKind: 'strength',
+    primaryMuscleDetail: 'Квадрицепс',
+    equipment: 'Сани',
+    description: 'Держите корпус устойчиво.',
     archivedAt: null,
     version: 1,
   }],
@@ -1368,6 +1623,8 @@ const TRAINING_DATA_RESPONSE: PilotTrainingDataResponse = {
     clientId: CLIENTS_RESPONSE.clients[0]!.id,
     clientName: 'Тестовый клиент',
     createdBy: PROFILE_ID,
+    startedBy: null,
+    completedBy: null,
     workoutDate: '2026-08-20',
     startTime: '10:00:00',
     endTime: null,
@@ -1518,6 +1775,51 @@ function buildExistingActorProvider(
       : Promise.resolve(result ?? undefined),
   )
   return { existingActorProvider: { resolveActor }, resolveActor }
+}
+
+function buildExistingCredentialsProvider(
+  result: ExistingActor | null | Error = EXISTING_ACTOR,
+): {
+  existingCredentialsProvider: ExistingCredentialsProvider
+  resolveCredentials: ReturnType<typeof vi.fn>
+} {
+  const resolveCredentials = vi.fn(() =>
+    result instanceof Error
+      ? Promise.reject(result)
+      : Promise.resolve(result ?? undefined),
+  )
+  return { existingCredentialsProvider: { resolveCredentials }, resolveCredentials }
+}
+
+function buildYandexAuthHandoffService(options: {
+  issue?: Exclude<Awaited<ReturnType<YandexAuthHandoffService['issue']>>, undefined> | null | Error
+  link?: Awaited<ReturnType<YandexAuthHandoffService['linkExisting']>> | Error
+  register?: Awaited<ReturnType<YandexAuthHandoffService['register']>> | Error
+} = {}) {
+  const issueResult = options.issue === undefined ? {
+    token: 'h'.repeat(43),
+    expiresAt: '2026-09-19T12:10:00.000Z',
+  } : options.issue
+  const completed = { profileId: PROFILE_ID, subjectHash: SUBJECT_HASH }
+  const issue = vi.fn(() => issueResult instanceof Error
+    ? Promise.reject(issueResult)
+    : Promise.resolve(issueResult ?? undefined))
+  const linkExisting = vi.fn(() => options.link instanceof Error
+    ? Promise.reject(options.link)
+    : Promise.resolve(options.link ?? completed))
+  const register = vi.fn(() => options.register instanceof Error
+    ? Promise.reject(options.register)
+    : Promise.resolve(options.register ?? completed))
+  const recordRecoveryAttempt = vi.fn().mockResolvedValue(undefined)
+  return {
+    yandexAuthHandoffService: {
+      issue, recordRecoveryAttempt, linkExisting, register,
+    } satisfies YandexAuthHandoffService,
+    issue,
+    recordRecoveryAttempt,
+    linkExisting,
+    register,
+  }
 }
 
 function buildYandexAccountLinker(
@@ -1761,6 +2063,9 @@ function buildDomainWriter(error?: Error): {
     name: 'Тяга саней',
     muscleGroup: 'legs' as const,
     inputKind: 'strength' as const,
+    primaryMuscleDetail: 'Квадрицепс',
+    equipment: 'Сани',
+    description: 'Держите корпус устойчиво.',
     archivedAt: null,
     version: 1,
   }
@@ -2338,6 +2643,176 @@ describe('Yandex ID app session and account linking endpoints', () => {
 
     expect(response.statusCode).toBe(403)
     expect(response.json()).toEqual({ error: 'yandex_session_denied' })
+  })
+
+  it('returns a short-lived one-time handoff for an unlinked Yandex identity only when cutover is enabled', async () => {
+    const handoff = buildYandexAuthHandoffService()
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      yandexAppSessionIssuer: buildYandexAppSessionIssuer(
+        new YandexAppSessionDeniedError(),
+      ).yandexAppSessionIssuer,
+      yandexAuthHandoffService: handoff.yandexAuthHandoffService,
+      yandexOnlyAuthEnabled: true,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(409)
+    expect(response.json()).toEqual({
+      error: 'yandex_identity_unlinked',
+      handoff: {
+        token: 'h'.repeat(43),
+        expiresAt: '2026-09-19T12:10:00.000Z',
+      },
+    })
+    expect(response.body).not.toContain(SUBJECT_HASH)
+    expect(handoff.issue).toHaveBeenCalledWith(SUBJECT_HASH)
+  })
+
+  it('fails closed when the identity is linked but its migrated profile is not rollout-ready', async () => {
+    const handoff = buildYandexAuthHandoffService({ issue: null })
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: buildIdentityProvider().identityProvider,
+      yandexAppSessionIssuer: buildYandexAppSessionIssuer(
+        new YandexAppSessionDeniedError(),
+      ).yandexAppSessionIssuer,
+      yandexAuthHandoffService: handoff.yandexAuthHandoffService,
+      yandexOnlyAuthEnabled: true,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(403)
+    expect(response.json()).toEqual({ error: 'yandex_profile_not_ready' })
+  })
+
+  it('links verified legacy credentials and returns only the Yandex app session', async () => {
+    const credentials = buildExistingCredentialsProvider()
+    const handoff = buildYandexAuthHandoffService()
+    const session = buildYandexAppSessionIssuer()
+    const app = buildApp({
+      existingCredentialsProvider: credentials.existingCredentialsProvider,
+      yandexAuthHandoffService: handoff.yandexAuthHandoffService,
+      yandexAppSessionIssuer: session.yandexAppSessionIssuer,
+      yandexOnlyAuthEnabled: true,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/recover',
+      payload: {
+        handoffToken: 'h'.repeat(43),
+        email: 'person@example.test',
+        password: 'secret-password',
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(APP_SESSION_RESPONSE)
+    expect(response.body).not.toContain('person@example.test')
+    expect(response.body).not.toContain('secret-password')
+    expect(credentials.resolveCredentials).toHaveBeenCalledWith(
+      'person@example.test',
+      'secret-password',
+    )
+    expect(handoff.recordRecoveryAttempt).toHaveBeenCalledWith('h'.repeat(43))
+    expect(handoff.linkExisting).toHaveBeenCalledWith('h'.repeat(43), EXISTING_ACTOR)
+    expect(session.issue).toHaveBeenCalledWith(SUBJECT_HASH)
+  })
+
+  it('does not turn invalid old-account credentials into a new empty profile', async () => {
+    const credentials = buildExistingCredentialsProvider(null)
+    const handoff = buildYandexAuthHandoffService()
+    const app = buildApp({
+      existingCredentialsProvider: credentials.existingCredentialsProvider,
+      yandexAuthHandoffService: handoff.yandexAuthHandoffService,
+      yandexAppSessionIssuer: buildYandexAppSessionIssuer().yandexAppSessionIssuer,
+      yandexOnlyAuthEnabled: true,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/recover',
+      payload: {
+        handoffToken: 'h'.repeat(43),
+        email: 'person@example.test',
+        password: 'wrong-password',
+      },
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json()).toEqual({ error: 'legacy_credentials_invalid' })
+    expect(handoff.linkExisting).not.toHaveBeenCalled()
+    expect(handoff.register).not.toHaveBeenCalled()
+  })
+
+  it('creates a new Yandex account from the verified handoff only behind the server flag', async () => {
+    const handoff = buildYandexAuthHandoffService()
+    const session = buildYandexAppSessionIssuer()
+    const registrar = buildYandexNativeRegistrar()
+    const app = buildApp({
+      yandexAuthHandoffService: handoff.yandexAuthHandoffService,
+      yandexAppSessionIssuer: session.yandexAppSessionIssuer,
+      yandexNativeRegistrar: registrar.yandexNativeRegistrar,
+      yandexOnlyAuthEnabled: true,
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/complete-registration',
+      payload: {
+        handoffToken: 'h'.repeat(43),
+        firstName: ' Ирина ',
+        timezone: 'Europe/Moscow',
+        accountRole: 'client',
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(APP_SESSION_RESPONSE)
+    expect(handoff.register).toHaveBeenCalledWith('h'.repeat(43), {
+      accountRole: 'client', firstName: 'Ирина', timezone: 'Europe/Moscow',
+    })
+    expect(session.issue).toHaveBeenCalledWith(SUBJECT_HASH)
+
+    const disabled = buildApp({ logger: false })
+    apps.push(disabled)
+    const hidden = await disabled.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/complete-registration',
+      payload: {
+        handoffToken: 'h'.repeat(43),
+        firstName: 'Ирина',
+        timezone: 'Europe/Moscow',
+        accountRole: 'client',
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+      },
+    })
+    expect(hidden.statusCode).toBe(404)
   })
 
   it('restores and revokes an opaque read-write app session', async () => {
@@ -3367,6 +3842,9 @@ describe('pilot client and custom exercise domain commands', () => {
     name: 'Тяга саней',
     muscleGroup: 'legs',
     inputKind: 'strength',
+    primaryMuscleDetail: 'Квадрицепс',
+    equipment: 'Сани',
+    description: 'Держите корпус устойчиво.',
   }
 
   it('creates, updates and archives a client with separate private preferences', async () => {
@@ -3446,6 +3924,13 @@ describe('pilot client and custom exercise domain commands', () => {
 
     expect([created.statusCode, updated.statusCode, archived.statusCode, restored.statusCode])
       .toEqual([201, 200, 200, 200])
+    expect(created.json()).toMatchObject({
+      exercise: {
+        primaryMuscleDetail: exerciseDraft.primaryMuscleDetail,
+        equipment: exerciseDraft.equipment,
+        description: exerciseDraft.description,
+      },
+    })
     expect(writer.createCustomExercise).toHaveBeenCalledWith(sessionToken, exerciseDraft)
     expect(writer.updateCustomExercise).toHaveBeenCalledWith(
       sessionToken, exerciseId, exerciseDraft, 1,
@@ -3473,8 +3958,14 @@ describe('pilot client and custom exercise domain commands', () => {
       headers: { 'x-fit-pilot-session': sessionToken },
       payload: { draft: exerciseDraft, expectedVersion: 1 },
     })
+    const exerciseDescription = await app.inject({
+      method: 'POST', url: '/v1/custom-exercises',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { ...exerciseDraft, description: 'а'.repeat(2_001) },
+    })
 
-    expect([client.statusCode, exercise.statusCode]).toEqual([400, 400])
+    expect([client.statusCode, exercise.statusCode, exerciseDescription.statusCode])
+      .toEqual([400, 400, 400])
     expect(writer.createClient).not.toHaveBeenCalled()
     expect(writer.updateCustomExercise).not.toHaveBeenCalled()
   })

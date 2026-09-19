@@ -125,8 +125,28 @@ export interface ClientInvitation {
   createdAt: string
 }
 
+export type InvitationLinkSource = 'supabase' | 'yandex'
+
+export interface InvitationLinkPreview {
+  targetRole: AccountRole
+  inviterName: string
+  expiresAt: string
+  status: 'active' | 'claimed' | 'revoked' | 'expired'
+}
+
+export interface InvitationShare {
+  id: UUID
+  clientId: UUID
+  targetRole: AccountRole
+  code: string
+  token: string
+  expiresAt: string
+}
+
 export interface Client {
   id: UUID
+  /** Only the root trainer may archive or restore this client. */
+  canArchive?: boolean
   hasAccount: boolean | null
   fullName: string
   canonicalFullName: string
@@ -379,6 +399,14 @@ export interface WorkoutDraft {
   version?: number
 }
 
+/** Личный шаблон, сохранённый клиентом из своей тренировки для повторного планирования без похода в историю. */
+export interface FavoriteWorkoutTemplate {
+  id: UUID
+  title: string
+  createdAt: string
+  exercises: WorkoutExerciseDraft[]
+}
+
 export interface LiveSetDraft {
   weightKg?: number
   /** Повторы; для гребного тренажёра — фактическая частота гребков в минуту. */
@@ -427,6 +455,8 @@ export interface Workout {
   trainerId?: UUID
   clientName: string
   createdBy?: UUID | null
+  startedBy?: UUID | null
+  completedBy?: UUID | null
   workoutDate: LocalDate
   startTime: string | null
   endTime: string | null
@@ -460,7 +490,7 @@ export interface TrainerAttentionWorkout {
   workoutDate: LocalDate
   clientQuestion?: string
   clientQuestionAskedAt?: string
-  discomfort: boolean
+  discomfort: boolean | null
   clientComment?: string
   feedbackSubmittedAt?: string
   version: number
@@ -706,15 +736,22 @@ export interface TrainerProfessionalProfile {
 
 export interface TrainerCatalogFilters {
   query: string
-  specialty: string
+  specialties: string[]
   city: string
   metroStationIds: string[]
   mode: TrainerTrainingMode | ''
   acceptingClients: boolean | null
+  brandTrainerOnly: boolean
+}
+
+export interface TrainerCatalogItem {
+  publicId: UUID
+  profile: TrainerProfileDraft
+  isBrandTrainer: boolean
 }
 
 export interface TrainerCatalogPage {
-  items: TrainerProfessionalProfile[]
+  items: TrainerCatalogItem[]
   totalCount: number
   nextOffset: number | null
 }

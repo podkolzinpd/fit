@@ -41,6 +41,14 @@ const appSessionSchema = z.object({
 
 const appSessionProfileSchema = appSessionSchema.omit({ session: true })
 
+const authHandoffSchema = z.object({
+  error: z.literal('yandex_identity_unlinked'),
+  handoff: z.object({
+    token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+    expiresAt: z.iso.datetime(),
+  }),
+})
+
 const linkedYandexIdentitySchema = z.object({
   profileId: z.uuid(),
   appSession: appSessionSchema.optional(),
@@ -52,6 +60,7 @@ const yandexIdentityLinkStatusSchema = z.object({
 
 const clientSchema = z.object({
   id: z.uuid(),
+  canArchive: z.boolean(),
   hasAccount: z.boolean(),
   fullName: z.string().min(1),
   canonicalFullName: z.string().min(1),
@@ -149,6 +158,8 @@ const workoutSchema = z.object({
   clientId: z.uuid(),
   clientName: z.string().min(1),
   createdBy: z.uuid().nullable(),
+  startedBy: z.uuid().nullable(),
+  completedBy: z.uuid().nullable(),
   workoutDate: z.iso.date(),
   startTime: z.string().regex(/^\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/).nullable(),
   endTime: z.string().regex(/^\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/).nullable(),
@@ -179,6 +190,9 @@ const customExerciseSchema = z.object({
   name: z.string().min(1),
   muscleGroup: workoutExerciseSchema.shape.muscleGroup,
   inputKind: workoutExerciseSchema.shape.inputKind,
+  primaryMuscleDetail: z.string().nullable().optional(),
+  equipment: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
   archivedAt: z.iso.datetime().nullable(),
   version: z.number().int().positive(),
   createdBy: z.uuid().optional(),
@@ -194,8 +208,8 @@ const trainingDataSchema = z.object({
     workoutDate: z.iso.date(),
     clientQuestion: z.string().max(500).nullable(),
     clientQuestionAskedAt: z.iso.datetime().nullable(),
-    discomfort: z.boolean(),
-    clientComment: z.string().max(500).nullable(),
+    discomfort: z.boolean().nullable(),
+    clientComment: z.string().max(5_000).nullable(),
     feedbackSubmittedAt: z.iso.datetime(),
     version: z.number().int().positive(),
   })),
@@ -310,6 +324,39 @@ function appSessionResponseError(status: number): Error {
   }
   if (status === 503) return new Error('Yandex Cloud вход временно недоступен. Попробуйте позднее.')
   return new Error('Не удалось открыть сессию через Yandex ID.')
+}
+
+export class YandexAccountSetupRequiredError extends Error {
+  constructor(readonly handoff: { token: string; expiresAt: string }) {
+    super('Нужно связать прежний профиль FIT или создать новый аккаунт.')
+    this.name = 'YandexAccountSetupRequiredError'
+  }
+}
+
+export class YandexAuthHandoffRefreshRequiredError extends Error {
+  constructor(message = 'Подтверждение Yandex ID истекло. Начните вход заново.') {
+    super(message)
+    this.name = 'YandexAuthHandoffRefreshRequiredError'
+  }
+}
+
+function recoveryResponseError(status: number): Error {
+  if (status === 401) return new Error('Email или пароль не подошли. Проверьте данные старого аккаунта.')
+  if (status === 403) return new Error('Данные профиля ещё не готовы к переключению. Попробуйте позднее.')
+  if (status === 404) return new Error('Перенесённый профиль не найден. Проверьте данные или создайте новый аккаунт.')
+  if (status === 409) return new Error('Этот Yandex ID или FIT-профиль уже связан с другим аккаунтом.')
+  if (status === 400) return new Error('Проверьте введённые данные.')
+  if (status === 503) return new Error('Проверка старого аккаунта временно недоступна. Попробуйте позднее.')
+  return new Error('Не удалось связать старый аккаунт.')
+}
+
+function handoffRegistrationResponseError(status: number): Error {
+  if (status === 401) return new YandexAuthHandoffRefreshRequiredError()
+  if (status === 412) return new YandexNativeRegistrationRefreshRequiredError()
+  if (status === 409) return new Error('Этот Yandex ID уже связан с другим FIT-профилем.')
+  if (status === 400) return new Error('Проверьте имя, роль и часовой пояс.')
+  if (status === 503) return new Error('Регистрация временно недоступна. Попробуйте позднее.')
+  return new Error('Не удалось создать аккаунт через Yandex ID.')
 }
 
 export class YandexNativeRegistrationRefreshRequiredError extends Error {
@@ -463,6 +510,10 @@ export const yandexPilotRepository = {
     } catch (caught) {
       throw yandexAuthConnectionError(caught)
     }
+    if (response.status === 409) {
+      const result = authHandoffSchema.safeParse(await response.json())
+      if (result.success) throw new YandexAccountSetupRequiredError(result.data.handoff)
+    }
     if (!response.ok) throw appSessionResponseError(response.status)
     const result = appSessionSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат Yandex ID сессии.')
@@ -496,6 +547,51 @@ export const yandexPilotRepository = {
     if (!result.success) {
       throw new Error('Stage вернул неподдерживаемый формат регистрации Yandex ID.')
     }
+    return result.data
+  },
+  async recoverYandexAccount(
+    apiBaseUrl: string,
+    input: { handoffToken: string; email: string; password: string },
+  ): Promise<YandexAppSession> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.recoverYandexAccount(apiBaseUrl, input)
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
+    }
+    if (!response.ok) {
+      if (response.status === 401) {
+        const body = await response.clone().json().catch(() => null) as { error?: unknown } | null
+        if (body?.error === 'yandex_auth_handoff_expired') {
+          throw new YandexAuthHandoffRefreshRequiredError()
+        }
+      }
+      throw recoveryResponseError(response.status)
+    }
+    const result = appSessionSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Сервер вернул неподдерживаемый формат Yandex ID сессии.')
+    return result.data
+  },
+  async completeYandexRegistration(
+    apiBaseUrl: string,
+    input: {
+      handoffToken: string
+      accountRole: 'trainer' | 'client'
+      firstName: string
+      timezone: string
+      termsVersion: string
+      privacyVersion: string
+    },
+  ): Promise<YandexAppSession> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.completeYandexRegistration(apiBaseUrl, input)
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
+    }
+    if (!response.ok) throw handoffRegistrationResponseError(response.status)
+    const result = appSessionSchema.safeParse(await response.json())
+    if (!result.success) throw new Error('Сервер вернул неподдерживаемый формат регистрации.')
     return result.data
   },
   async getAppSession(

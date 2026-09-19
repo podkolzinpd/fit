@@ -3,7 +3,7 @@ import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, 
 import type { SessionActor } from '../shared/domain'
 import { authRepository } from '../data/repositories/auth.repository'
 import { yandexPilotRepository } from '../data/repositories/yandex-pilot.repository'
-import { isYandexMainRoutingEnabled } from './feature-flags'
+import { isYandexMainRoutingEnabled, isYandexOnlyAuthEnabled } from './feature-flags'
 import { useOptionalYandexAppSession } from './yandex-app-session-context'
 
 interface AuthUser {
@@ -26,6 +26,10 @@ const AuthContext = createContext<AuthState | null>(null)
 export function AuthProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient()
   const yandexSession = useOptionalYandexAppSession()
+  const yandexRoutingEnabled = yandexSession?.session !== null
+    && yandexSession?.session !== undefined
+    && isYandexMainRoutingEnabled()
+  const yandexRoutingEnabledRef = useRef(yandexRoutingEnabled)
   const [supabaseActor, setSupabaseActor] = useState<SessionActor | null>(null)
   const [supabaseLoading, setSupabaseLoading] = useState(true)
   const [supabaseError, setSupabaseError] = useState<string | null>(null)
@@ -47,6 +51,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const applyUser = useCallback(async (user: AuthUser | null, force = false) => {
     const revision = ++sessionRevisionRef.current
+    // Supabase emits SIGNED_OUT while a restored Yandex session retires the
+    // browser's legacy credential. That event must only clear legacy auth
+    // state: clearing the shared QueryClient here removes active Yandex
+    // requests and leaves their observers permanently pending.
+    if (yandexRoutingEnabledRef.current) {
+      actorRef.current = null
+      initializationRef.current = null
+      setSupabaseActor(null)
+      setSupabaseError(null)
+      setSupabaseLoading(false)
+      return
+    }
     if (!user) {
       // TanStack Query живёт выше AuthProvider. Без явной очистки следующий
       // пользователь на общем устройстве может увидеть прошлый server state
@@ -79,6 +95,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (revision === sessionRevisionRef.current && !force) setSupabaseLoading(false)
     }
   }, [initializeUser, queryClient])
+
+  useEffect(() => {
+    yandexRoutingEnabledRef.current = yandexRoutingEnabled
+  }, [yandexRoutingEnabled])
 
   const refreshSupabase = useCallback(async () => {
     try {
@@ -132,14 +152,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
       fullName: profile.client.fullName,
     }
   }, [yandexSession?.session])
-  const yandexRoutingEnabled = yandexSession?.session !== null
-    && yandexSession?.session !== undefined
-    && isYandexMainRoutingEnabled()
-  const actor = yandexRoutingEnabled ? yandexActor : supabaseActor
-  const loading = yandexRoutingEnabled
+  const yandexOnlyAuthEnabled = isYandexOnlyAuthEnabled()
+  const actor = yandexOnlyAuthEnabled
+    ? yandexActor
+    : yandexRoutingEnabled ? yandexActor : supabaseActor
+  const loading = yandexOnlyAuthEnabled
+    ? yandexSession?.loading ?? false
+    : yandexRoutingEnabled
     ? yandexSession.loading
     : Boolean(yandexSession?.loading && import.meta.env.VITE_YANDEX_MAIN_ROUTING_ENABLED === 'true') || supabaseLoading
-  const error = yandexRoutingEnabled
+  const error = yandexOnlyAuthEnabled
+    ? yandexActor === null
+      && yandexSession?.session !== null
+      && yandexSession?.session !== undefined
+      ? 'Yandex ID профиль не содержит данных выбранной роли.'
+      : yandexSession?.error ?? null
+    : yandexRoutingEnabled
     ? yandexActor === null ? 'Yandex ID профиль не содержит данных выбранной роли.' : yandexSession.error
     : supabaseError
 

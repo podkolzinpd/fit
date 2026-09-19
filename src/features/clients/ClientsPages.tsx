@@ -16,9 +16,10 @@ import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, KeyboardIcon, ScheduleIcon } from '../../shared/icons'
-import { InvitationCodeCard } from '../../shared/invitation-code-card'
+import { InvitationShareButton } from '../auth/InvitationShareActions'
 import { ChatStartButton } from '../chat'
 import { YandexAccountLinkingCard } from '../auth'
+import { isRepositoryConflict } from '../../data/repositories/error'
 
 export function MyClientPage() {
   const { clients: clientsRepository } = useDataBackend()
@@ -134,10 +135,11 @@ function ClientForm({
 }) {
   const { clients: clientsRepository, progress: progressRepository } = useDataBackend()
   const { actor } = useAuth()
+  const queryClient = useQueryClient()
   const today = todayInTimeZone(actor?.timezone)
   const showInitialWeight = !existing || canRecordInitialWeight
   const form = useForm<ClientProfileValues>({ resolver: zodResolver(clientProfileSchema), defaultValues: existing ? {
-    fullName: existing.fullName, gender: existing.gender ?? undefined, ageYears: existing.ageYears ?? undefined, heightCm: existing.heightCm ?? undefined,
+    fullName: existing.canonicalFullName, gender: existing.gender ?? undefined, ageYears: existing.ageYears ?? undefined, heightCm: existing.heightCm ?? undefined,
     goal: existing.goal ?? '', note: existing.note ?? '', alias: existing.fullName, privateNote: existing.note ?? '',
   } : { fullName: initialFullName, gender: undefined, ageYears: undefined, heightCm: undefined, alias: '', privateNote: '' } })
   const mutation = useMutation({ mutationFn: async (values: ClientProfileValues) => {
@@ -153,10 +155,22 @@ function ClientForm({
         }
       }
       else {
-        await clientsRepository.update(input)
         const alias = values.alias.trim() === existing.fullName && existing.fullName === existing.canonicalFullName
           ? parsed.fullName : values.alias.trim()
-        await clientsRepository.updatePreferences({ clientId: existing.id, alias, note: values.privateNote.trim() || undefined, version: existing.membershipVersion ?? 1 })
+        const note = values.privateNote.trim() || undefined
+        const profileChanged = parsed.fullName !== existing.canonicalFullName
+          || (parsed.gender ?? null) !== existing.gender
+          || (parsed.ageYears ?? null) !== existing.ageYears
+          || (parsed.heightCm ?? null) !== existing.heightCm
+          || (parsed.goal?.trim() || undefined) !== (existing.goal?.trim() || undefined)
+          || (parsed.note?.trim() || undefined) !== (existing.note?.trim() || undefined)
+        const preferencesChanged = alias !== existing.fullName
+          || note !== (existing.note?.trim() || undefined)
+
+        if (profileChanged) await clientsRepository.update(input)
+        if (preferencesChanged) {
+          await clientsRepository.updatePreferences({ clientId: existing.id, alias, note, version: existing.membershipVersion ?? 1 })
+        }
       }
       return existing.id
     }
@@ -165,7 +179,13 @@ function ClientForm({
       goal: parsed.goal, note: parsed.note, initialWeightKg: parsed.initialWeightKg,
       initialWeightRecordedOn: today }
     return createMode === 'self' ? clientsRepository.createOwn(input) : clientsRepository.create(input)
-  }, onSuccess: (id) => onSaved(id) })
+  }, onSuccess: (id) => onSaved(id), onError: async (error) => {
+    if (!existing || !isRepositoryConflict(error)) return
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['clients'] }),
+      queryClient.invalidateQueries({ queryKey: ['client', existing.id] }),
+    ])
+  } })
   const contents = <form className="stack client-profile-form" onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}>
       <section className="client-form-section">
         <div className="client-form-section-head">
@@ -317,7 +337,6 @@ export function ClientDetailPage() {
   const upcoming = workouts.data ? splitClientWorkouts(workouts.data, today).upcoming : []
   const archive = useMutation({ mutationFn: (client: Client) => clientsRepository.setArchived(client, !client.archivedAt), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); await query.refetch() } })
   const invitations = useQuery({ queryKey: ['client-invitations', clientId], queryFn: () => invitationsRepository.list(clientId) })
-  const invite = useMutation({ mutationFn: () => invitationsRepository.create(clientId, 'client'), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] }) })
   const revoke = useMutation({ mutationFn: (invitationId: string) => invitationsRepository.revoke(invitationId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] }) })
   const trainers = useQuery({ queryKey: ['client-trainers', clientId], queryFn: () => invitationsRepository.listTrainers(clientId) })
   const currentMembership = trainers.data?.find((trainer) => trainer.trainerId === actor?.userId)
@@ -358,10 +377,8 @@ export function ClientDetailPage() {
       {upcoming.length > 0 && <section className="client-detail-upcoming"><h2>Предстоит</h2><div className="cards">{upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</strong><WorkoutExercisesSummary workout={workout} />{workout.stageTitle && <p className="stage-tag">🎯 {workout.stageTitle}</p>}</div><span className={`badge ${workout.status}`}>{workout.status === 'in_progress' ? 'Идёт' : 'План'}</span></Link>)}</div></section>}
       <ClientNoteBlock client={query.data} />
       <div className="page-actions">
-        {query.data.hasAccount === false && <button className="secondary wide" disabled={invite.isPending} aria-busy={invite.isPending} onClick={() => invite.mutate()}>{invite.isPending ? 'Создаём приглашение…' : 'Пригласить клиента'}</button>}
-        {invite.data && <InvitationCodeCard code={invite.data} label="Код клиента" description="Передайте код клиенту. Он действует 7 дней и используется один раз." />}
-        {invitations.data?.map((item) => <article className="card" key={item.id}><div><strong>Активное приглашение клиента</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU', { timeZone: normalizeTimeZone(actor?.timezone) })}</p></div><button className="link danger" disabled={revoke.isPending} aria-busy={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Код больше нельзя будет использовать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>{revoke.isPending ? 'Отзываем…' : 'Отозвать'}</button></article>)}
-        {invite.error && <p className="error">{invite.error.message}</p>}
+        {query.data.hasAccount === false && <InvitationShareButton clientId={clientId} targetRole="client" label="Пригласить клиента" className="secondary wide" />}
+        {invitations.data?.map((item) => <article className="card" key={item.id}><div><strong>Активное приглашение клиента</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU', { timeZone: normalizeTimeZone(actor?.timezone) })}</p></div><button className="link danger" disabled={revoke.isPending} aria-busy={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Ссылка, QR-код и код больше не будут работать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>{revoke.isPending ? 'Отзываем…' : 'Отозвать'}</button></article>)}
         {revoke.error && <p className="error">{revoke.error.message}</p>}
         {currentMembership && !currentMembership.isRoot && <button className="danger secondary wide" disabled={leave.isPending} aria-busy={leave.isPending} onClick={async () => { if (await confirm({ message: 'Покинуть пространство клиента? Доступ к тренировкам и прогрессу будет закрыт.', confirmLabel: 'Покинуть', danger: true })) leave.mutate() }}>{leave.isPending ? 'Покидаем пространство…' : 'Покинуть пространство клиента'}</button>}
         {leave.error && <p className="error">{leave.error.message}</p>}

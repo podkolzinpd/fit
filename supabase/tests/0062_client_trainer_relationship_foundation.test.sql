@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(20);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('62000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'relationship-trainer-a@example.test', ''),
@@ -73,6 +73,17 @@ select is(
   '62000000-0000-4000-8000-000000000002'::uuid,
   'a new trainer can become active after the previous relationship is closed'
 );
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '62000000-0000-4000-8000-000000000002', true);
+select is(
+  public.update_client(
+    '{"id":"62000000-0000-4000-8000-000000000010","fullName":"Клиент активного тренера","gender":null,"ageYears":null,"ageUpdatedAt":null,"heightCm":null,"goal":null,"note":null}'::jsonb,
+    1
+  ),
+  2::bigint,
+  'the active connected trainer can edit the client profile'
+);
+reset role;
 select is(
   (select count(*)::int from public.client_trainer_relationships where client_id = '62000000-0000-4000-8000-000000000010'),
   2,

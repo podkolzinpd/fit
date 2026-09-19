@@ -108,10 +108,19 @@ import {
 import {
   DatabaseYandexNativeRegistrar,
 } from '../yandex-native-registration.js'
+import { loadDatabaseProgramContext } from '../assistant-orchestrator/program/source.js'
+import { DatabaseYandexAuthHandoffService } from '../yandex-auth-handoff.js'
 import {
   CURRENT_PRIVACY_VERSION,
   CURRENT_TERMS_VERSION,
 } from '../legal-document-versions.js'
+import {
+  acceptLegalDocuments,
+  cancelAccountDeletionRequest,
+  readAccountDeletionRequest,
+  readLegalAcceptance,
+  requestAccountDeletion,
+} from '../legal.js'
 import {
   DatabaseYandexAppSessionIssuer,
   DatabaseYandexAppSessionRevoker,
@@ -155,6 +164,9 @@ const CLIENT_ASSISTANT_FORBIDDEN_ACTION_ID = 'ec691fd5-86ee-4740-838c-b37166df7e
 const CLIENT_ASSISTANT_WORKOUT_REQUEST_ID = 'ed691fd5-86ee-4740-838c-b37166df7e71'
 const CLIENT_ASSISTANT_PROGRAM_TURN_ID = 'a46c6f9e-86ee-4740-838c-b37166df7e71'
 const CLIENT_ASSISTANT_PROGRAM_ACTION_ID = 'ee691fd5-86ee-4740-838c-b37166df7e71'
+const CLIENT_PROGRAM_JOB_ID = 'f1691fd5-86ee-4740-838c-b37166df7e71'
+const CLIENT_PROGRAM_JOB_LEASE_ID = 'f2691fd5-86ee-4740-838c-b37166df7e71'
+const CLIENT_PROGRAM_JOB_OTHER_LEASE_ID = 'f3691fd5-86ee-4740-838c-b37166df7e71'
 const PROGRESS_WORKOUT_EXERCISE_ID = '736e9f0c-634a-42e0-a13b-2c5b070fe5ef'
 const PROGRESS_WORKOUT_SET_ID = '9a15f723-44cb-4cf1-9bcf-4659c43cc764'
 const ROOT_WORKOUT_EXERCISE_ID = 'd40b742b-5d5b-41ab-91df-ed464414d034'
@@ -287,6 +299,11 @@ interface WorkoutAuditRow extends QueryResultRow {
   notes: string | null
   updated_by: string | null
   version: string
+}
+
+interface WorkoutExecutionAuditRow extends QueryResultRow {
+  started_by: string | null
+  completed_by: string | null
 }
 
 interface ChildAuditRow extends QueryResultRow {
@@ -883,6 +900,89 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(await readActor(runtimePool)).toBeNull()
     })
 
+    it('keeps legal acceptance and deletion requests idempotent and actor-scoped', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      await ownerPool.query(
+        'delete from public.account_deletion_requests where user_id = any($1::uuid[])',
+        [[ACTOR_ID, OTHER_ACTOR_ID]],
+      )
+      await ownerPool.query(
+        'delete from public.user_legal_acceptances where user_id = any($1::uuid[])',
+        [[ACTOR_ID, OTHER_ACTOR_ID]],
+      )
+
+      try {
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          readLegalAcceptance(client, CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION)))
+          .resolves.toEqual({ accepted: false, acceptedAt: null })
+
+        const acceptedAt = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          acceptLegalDocuments(
+            client,
+            CURRENT_TERMS_VERSION,
+            CURRENT_PRIVACY_VERSION,
+            'existing_user',
+          ))
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          acceptLegalDocuments(
+            client,
+            CURRENT_TERMS_VERSION,
+            CURRENT_PRIVACY_VERSION,
+            'existing_user',
+          ))).resolves.toBe(acceptedAt)
+
+        const acceptanceCount = await ownerPool.query<CountRow>(
+          `select count(*)::integer count
+           from public.user_legal_acceptances
+           where user_id = $1 and terms_version = $2 and privacy_version = $3`,
+          [ACTOR_ID, CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION],
+        )
+        expect(acceptanceCount.rows[0]?.count).toBe(1)
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+          readLegalAcceptance(client, CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION)))
+          .resolves.toEqual({ accepted: false, acceptedAt: null })
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+          client.query(
+            `insert into public.user_legal_acceptances (
+               user_id, terms_version, privacy_version, source
+             ) values ($1, $2, $3, 'existing_user')`,
+            [ACTOR_ID, CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION],
+          ))).rejects.toMatchObject({ code: '42501' })
+
+        const deletionRequestId = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          requestAccountDeletion,
+        )
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, requestAccountDeletion))
+          .resolves.toBe(deletionRequestId)
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, readAccountDeletionRequest))
+          .resolves.toMatchObject({ id: deletionRequestId, status: 'requested' })
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID, readAccountDeletionRequest))
+          .resolves.toBeNull()
+
+        await withActorTransaction(runtimePool, ACTOR_ID, cancelAccountDeletionRequest)
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, readAccountDeletionRequest))
+          .resolves.toBeNull()
+        const cancelled = await ownerPool.query<{ status: string } & QueryResultRow>(
+          'select status from public.account_deletion_requests where id = $1',
+          [deletionRequestId],
+        )
+        expect(cancelled.rows).toEqual([{ status: 'cancelled' }])
+      } finally {
+        await ownerPool.query(
+          'delete from public.account_deletion_requests where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
+        await ownerPool.query(
+          'delete from public.user_legal_acceptances where user_id = any($1::uuid[])',
+          [[ACTOR_ID, OTHER_ACTOR_ID]],
+        )
+      }
+    })
+
     it('maps only an allowlisted Yandex identity to the internal actor', async () => {
       if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
 
@@ -1199,6 +1299,87 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           'update app_private.profile_rollout_assignments set enabled = true where profile_id = $1',
           [APP_ACTOR_ID],
         )
+      }
+    })
+
+    it('uses an opaque one-time handoff to link only a migrated rollout-ready profile', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      const migratedProfileId = 'd05d1bb4-4da0-4846-a8c7-e3f1dd1ee821'
+      const subjectHash = 'd'.repeat(64)
+      const handoff = new DatabaseYandexAuthHandoffService(runtimePool)
+      await ownerPool.query('delete from public.trainers where profile_id = $1', [migratedProfileId])
+      await ownerPool.query('delete from public.profiles where id = $1', [migratedProfileId])
+      await ownerPool.query(
+        `insert into public.profiles (id, first_name, timezone, account_role)
+         values ($1, 'Перенесённый тренер', 'Europe/Moscow', 'trainer')`,
+        [migratedProfileId],
+      )
+      await ownerPool.query(
+        'insert into public.trainers (profile_id) values ($1)',
+        [migratedProfileId],
+      )
+      await ownerPool.query(
+        `insert into app_private.profile_rollout_assignments (
+           profile_id, target_backend, access_mode, enabled
+         ) values ($1, 'yandex', 'read_write', true)`,
+        [migratedProfileId],
+      )
+
+      try {
+        const issued = await handoff.issue(subjectHash)
+        expect(issued?.token).toMatch(/^[A-Za-z0-9_-]{43}$/)
+        const stored = await ownerPool.query<{ token_sha256: string } & QueryResultRow>(
+          `select token_sha256 from app_private.yandex_auth_handoffs
+           where subject_sha256 = $1`,
+          [subjectHash],
+        )
+        expect(stored.rows).toHaveLength(1)
+        expect(stored.rows[0]?.token_sha256).not.toBe(issued?.token)
+        await handoff.recordRecoveryAttempt(issued?.token ?? '')
+        const attempts = await ownerPool.query<{ recovery_attempt_count: number } & QueryResultRow>(
+          `select recovery_attempt_count from app_private.yandex_auth_handoffs
+           where subject_sha256 = $1`,
+          [subjectHash],
+        )
+        expect(attempts.rows).toEqual([{ recovery_attempt_count: 1 }])
+
+        await expect(handoff.linkExisting(issued?.token ?? '', {
+          profile: {
+            id: migratedProfileId,
+            firstName: 'Перенесённый тренер',
+            lastName: null,
+            timezone: 'Europe/Moscow',
+            accountRole: 'trainer',
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+          trainer: {
+            profileId: migratedProfileId,
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+        })).resolves.toEqual({ profileId: migratedProfileId, subjectHash })
+        await expect(handoff.linkExisting(issued?.token ?? '', {
+          profile: {
+            id: migratedProfileId,
+            firstName: 'Перенесённый тренер',
+            lastName: null,
+            timezone: 'Europe/Moscow',
+            accountRole: 'trainer',
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+          trainer: {
+            profileId: migratedProfileId,
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+        })).rejects.toMatchObject({ failure: 'expired' })
+      } finally {
+        await ownerPool.query('delete from public.trainers where profile_id = $1', [migratedProfileId])
+        await ownerPool.query('delete from public.profiles where id = $1', [migratedProfileId])
       }
     })
 
@@ -1958,6 +2139,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             name: 'Тестовая тяга Yandex stage',
             muscleGroup: 'back',
             inputKind: 'strength',
+            primaryMuscleDetail: 'Широчайшие',
+            equipment: 'Сани',
+            description: 'Сохраняйте нейтральное положение спины.',
             archivedAt: null,
             version: 1,
             createdBy: STAGE_SMOKE_PROFILE_ID,
@@ -1970,6 +2154,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             clientId: smokeIds.clientId,
             clientName: 'Тестовый клиент Yandex stage',
             createdBy: STAGE_SMOKE_PROFILE_ID,
+            startedBy: null,
+            completedBy: null,
             workoutDate: '2026-08-22',
             startTime: '10:00:00',
             endTime: '11:00:00',
@@ -3245,7 +3431,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           set
             status = 'planned',
             started_at = null,
+            started_by = null,
             completed_at = null,
+            completed_by = null,
             updated_by = null,
             version = 1
           where client_id = $1 and status = 'in_progress'
@@ -3258,7 +3446,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           set
             status = 'planned',
             started_at = null,
+            started_by = null,
             completed_at = null,
+            completed_by = null,
             updated_by = null,
             version = 1
           where id in ($1, $2)
@@ -3295,6 +3485,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           ),
         )
         expect(started).toEqual({ version: 2, replayed: false })
+
+        const startedActors = await ownerPool.query<WorkoutExecutionAuditRow>(
+          'select started_by, completed_by from public.workouts where id = $1',
+          [ROOT_WORKOUT_ID],
+        )
+        expect(startedActors.rows).toEqual([{
+          started_by: OTHER_ACTOR_ID,
+          completed_by: null,
+        }])
 
         await expect(withActorTransaction(
           runtimePool,
@@ -3452,6 +3651,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           (workout) => workout.id === ROOT_WORKOUT_ID,
         )).toMatchObject({
           status: 'done',
+          startedBy: OTHER_ACTOR_ID,
+          completedBy: OTHER_ACTOR_ID,
           version: 3,
           exercises: [{
             sets: [{
@@ -3460,6 +3661,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             }],
           }],
         })
+
+        const completedActors = await ownerPool.query<WorkoutExecutionAuditRow>(
+          'select started_by, completed_by from public.workouts where id = $1',
+          [ROOT_WORKOUT_ID],
+        )
+        expect(completedActors.rows).toEqual([{
+          started_by: OTHER_ACTOR_ID,
+          completed_by: OTHER_ACTOR_ID,
+        }])
 
         const operationRows = await ownerPool.query<LiveOperationAuditRow>(
           `
@@ -3495,7 +3705,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             set
               status = 'planned',
               started_at = null,
+              started_by = null,
               completed_at = null,
+              completed_by = null,
               updated_by = null,
               version = 1
             where id in ($1, $2)
@@ -4753,6 +4965,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         name: 'Контрактная тяга саней',
         muscleGroup: 'legs' as const,
         inputKind: 'strength' as const,
+        primaryMuscleDetail: 'Квадрицепс',
+        equipment: 'Сани',
+        description: 'Толкайте сани с устойчивым корпусом.',
       }
       const created = await withActorTransaction(
         runtimePool,
@@ -4773,7 +4988,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           runtimePool,
           MEMBER_TRAINER_ID,
           (client) => updateClientCard(client, created.id, draft, 1),
-        )).rejects.toMatchObject({ failure: 'forbidden' })
+        )).resolves.toBe(2)
 
         const membershipVersion = await withActorTransaction(
           runtimePool,
@@ -4795,36 +5010,36 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             client,
             created.id,
             { ...draft, fullName: 'Обновлённый клиент' },
-            1,
+            2,
           ),
         )
-        expect(updatedVersion).toBe(2)
+        expect(updatedVersion).toBe(3)
         await expect(withActorTransaction(
           runtimePool,
           ACTOR_ID,
-          (client) => updateClientCard(client, created.id, draft, 1),
+          (client) => updateClientCard(client, created.id, draft, 2),
         )).rejects.toMatchObject({ failure: 'conflict' })
 
         const archivedVersion = await withActorTransaction(
           runtimePool,
           ACTOR_ID,
-          (client) => setClientArchived(client, created.id, true, 2),
+          (client) => setClientArchived(client, created.id, true, 3),
         )
-        expect(archivedVersion).toBe(3)
+        expect(archivedVersion).toBe(4)
         const archivedClients = await withActorTransaction(
           runtimePool,
           ACTOR_ID,
           (client) => readAccessibleClients(client, true),
         )
         expect(archivedClients.clients).toEqual(expect.arrayContaining([
-          expect.objectContaining({ id: created.id, version: 3 }),
+          expect.objectContaining({ id: created.id, version: 4, canArchive: true }),
         ]))
         const restoredVersion = await withActorTransaction(
           runtimePool,
           ACTOR_ID,
-          (client) => setClientArchived(client, created.id, false, 3),
+          (client) => setClientArchived(client, created.id, false, 4),
         )
-        expect(restoredVersion).toBe(4)
+        expect(restoredVersion).toBe(5)
 
         const preferences = await ownerPool.query<{
           alias: string | null
@@ -4850,6 +5065,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         exerciseId = exercise.id
         expect(exercise).toMatchObject({ ...exerciseDraft, version: 1 })
 
+        const catalogAfterCreate = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          readAccessibleTrainingData,
+        )
+        expect(catalogAfterCreate.customExercises).toEqual(expect.arrayContaining([
+          expect.objectContaining({ id: exercise.id, ...exerciseDraft }),
+        ]))
+
         await expect(withActorTransaction(
           runtimePool,
           OUTSIDE_TRAINER_ID,
@@ -4862,12 +5086,20 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           (client) => updateCustomExercise(
             client,
             exercise.id,
-            { ...exerciseDraft, name: 'Обновлённая тяга саней' },
+            {
+              ...exerciseDraft,
+              name: 'Обновлённая тяга саней',
+              equipment: 'Нагруженные сани',
+              description: 'Сохраняйте нейтральное положение спины.',
+            },
             1,
           ),
         )
         expect(updatedExercise).toMatchObject({
           name: 'Обновлённая тяга саней',
+          primaryMuscleDetail: 'Квадрицепс',
+          equipment: 'Нагруженные сани',
+          description: 'Сохраняйте нейтральное положение спины.',
           version: 2,
         })
         await expect(withActorTransaction(
@@ -5123,6 +5355,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         (client) => readAccessibleClients(client),
       )
       expect(memberOverview.clients.find((client) => client.id === CLIENT_ID)).toMatchObject({
+        canArchive: false,
         currentWeightKg: 70,
         activity: {
           doneCount: 1,
@@ -5559,6 +5792,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         workoutDate: `2026-09-${21 + index * 3}`,
         notes: 'Клиентская программа из Assistant',
       }))
+      // PostgreSQL and the Node test process can differ by a few milliseconds.
+      // Keep the synthetic capture safely after the committed workout above.
+      const programSourceCapturedAt = new Date(Date.now() + 1_000).toISOString()
       await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
         appendAssistantUserMessage(
           client,
@@ -5581,7 +5817,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             payload: {
               schemaVersion: 'program-v1',
               clientId: CLIENT_ID,
-              sourceCapturedAt: new Date().toISOString(),
+              sourceCapturedAt: programSourceCapturedAt,
               canonicalWorkouts: programWorkouts,
               step: 'confirm',
             },
@@ -5659,6 +5895,112 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         [OTHER_ACTOR_ID],
       )
       await ownerPool.query('delete from public.assistant_conversations where id = $1', [conversation.id])
+    })
+
+    it('loads client program context and scopes generation leases to the actor', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      await ownerPool.query(
+        'delete from private.assistant_program_generations where id = $1',
+        [CLIENT_PROGRAM_JOB_ID],
+      )
+
+      const context = await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+        loadDatabaseProgramContext(client, {
+          id: CLIENT_ID,
+          ageYears: 30,
+          goal: null,
+        }, '2026-09-19'))
+      expect(context.context.periodEnd).toBe('2026-09-19')
+      expect(context.fingerprint).toMatch(/^[0-9a-f]{64}$/u)
+
+      const claim = await withActorTransaction(runtimePool, OTHER_ACTOR_ID, async (client) => {
+        const rows = await client.query<{ result: Record<string, unknown> } & QueryResultRow>(
+          'select public.assistant_program_generation_job($1, $2, $3, null) result',
+          [CLIENT_PROGRAM_JOB_ID, CLIENT_ID, CLIENT_PROGRAM_JOB_LEASE_ID],
+        )
+        return rows[0]?.result
+      })
+      expect(claim).toEqual({ status: 'claimed' })
+
+      const busy = await withActorTransaction(runtimePool, OTHER_ACTOR_ID, async (client) => {
+        const rows = await client.query<{ result: Record<string, unknown> } & QueryResultRow>(
+          'select public.assistant_program_generation_job($1, $2, $3, null) result',
+          [CLIENT_PROGRAM_JOB_ID, CLIENT_ID, CLIENT_PROGRAM_JOB_OTHER_LEASE_ID],
+        )
+        return rows[0]?.result
+      })
+      expect(busy).toEqual({ status: 'busy' })
+
+      await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+        client.query(
+          'select public.assistant_program_generation_job($1, $2, $3, null)',
+          [CLIENT_PROGRAM_JOB_ID, CLIENT_ID, CLIENT_PROGRAM_JOB_OTHER_LEASE_ID],
+        ))).rejects.toMatchObject({ code: 'PT403' })
+
+      const complete = await withActorTransaction(runtimePool, OTHER_ACTOR_ID, async (client) => {
+        const rows = await client.query<{ result: Record<string, unknown> } & QueryResultRow>(
+          'select public.assistant_program_generation_job($1, $2, $3, $4::jsonb) result',
+          [CLIENT_PROGRAM_JOB_ID, CLIENT_ID, CLIENT_PROGRAM_JOB_LEASE_ID, JSON.stringify({ template: { sessions: [] } })],
+        )
+        return rows[0]?.result
+      })
+      expect(complete).toEqual({ status: 'complete', result: { template: { sessions: [] } } })
+
+      await ownerPool.query(
+        'delete from private.assistant_program_generations where id = $1',
+        [CLIENT_PROGRAM_JOB_ID],
+      )
+    })
+
+    it('preserves client source timestamps only during a tenant migration restore', async () => {
+      if (ownerPool === undefined) throw new Error('Database pool is not ready')
+      const connection = await ownerPool.connect()
+      const migrationClientId = 'fe000000-0000-4000-8000-000000000077'
+      try {
+        await connection.query('begin')
+        await connection.query(
+          `insert into public.clients (
+             id, trainer_id, full_name, updated_at
+           ) values ($1, $2, 'Migration fixture', timestamptz '2026-01-01 00:00:00+00')`,
+          [migrationClientId, ACTOR_ID],
+        )
+        await connection.query(
+          "select set_config('fit.tenant_migration_restore', 'on', true)",
+        )
+        await connection.query(
+          `insert into public.client_progress (
+             trainer_id, client_id, created_by, recorded_on, weight_kg
+           ) values ($1, $2, $1, date '2026-01-01', 70)`,
+          [ACTOR_ID, migrationClientId],
+        )
+        const preserved = await connection.query<{ preserved: boolean } & QueryResultRow>(
+          `select updated_at = timestamptz '2026-01-01 00:00:00+00' preserved
+           from public.clients where id = $1`,
+          [migrationClientId],
+        )
+        expect(preserved.rows[0]?.preserved).toBe(true)
+
+        await connection.query(
+          "select set_config('fit.tenant_migration_restore', 'off', true)",
+        )
+        await connection.query(
+          `insert into public.client_progress (
+             trainer_id, client_id, created_by, recorded_on, weight_kg
+           ) values ($1, $2, $1, date '2026-01-02', 69)`,
+          [ACTOR_ID, migrationClientId],
+        )
+        const advanced = await connection.query<{ advanced: boolean } & QueryResultRow>(
+          `select updated_at > timestamptz '2026-01-01 00:00:00+00' advanced
+           from public.clients where id = $1`,
+          [migrationClientId],
+        )
+        expect(advanced.rows[0]?.advanced).toBe(true)
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
     })
 
     it('manages linked domain-ready rollout assignments as one private batch', async () => {

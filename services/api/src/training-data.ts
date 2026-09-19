@@ -28,6 +28,9 @@ interface CustomExerciseRow extends QueryResultRow {
   name: string
   muscle_group: MuscleGroup
   input_kind: InputKind
+  primary_muscle_detail: string | null
+  equipment: string | null
+  description: string | null
   archived_at: Date | null
   version: string
   trainer_id: string
@@ -39,6 +42,8 @@ interface WorkoutRow extends QueryResultRow {
   client_id: string
   client_name: string
   created_by: string | null
+  started_by: string | null
+  completed_by: string | null
   workout_date: string
   start_time: string | null
   end_time: string | null
@@ -72,7 +77,7 @@ interface AttentionRow extends QueryResultRow {
   workout_date: string
   client_question: string | null
   client_question_asked_at: Date | null
-  discomfort: boolean
+  discomfort: boolean | null
   client_comment: string | null
   feedback_submitted_at: Date
   version: string
@@ -129,6 +134,9 @@ export interface PilotCustomExercise {
   name: string
   muscleGroup: MuscleGroup
   inputKind: InputKind
+  primaryMuscleDetail: string | null
+  equipment: string | null
+  description: string | null
   archivedAt: string | null
   version: number
   createdBy?: string
@@ -184,6 +192,8 @@ export interface PilotWorkout {
   clientId: string
   clientName: string
   createdBy: string | null
+  startedBy: string | null
+  completedBy: string | null
   workoutDate: string
   startTime: string | null
   endTime: string | null
@@ -217,7 +227,7 @@ export interface PilotTrainerAttentionWorkout {
   workoutDate: string
   clientQuestion: string | null
   clientQuestionAskedAt: string | null
-  discomfort: boolean
+  discomfort: boolean | null
   clientComment: string | null
   feedbackSubmittedAt: string
   version: number
@@ -259,7 +269,8 @@ export async function readAccessibleTrainingData(
 ): Promise<PilotTrainingDataResponse> {
   const [customExerciseRows, workoutLookahead, attentionRows, preferenceRows] = await Promise.all([
     client.query<CustomExerciseRow>(`
-      select id, created_by, name, muscle_group, input_kind, archived_at, version
+      select id, created_by, name, muscle_group, input_kind,
+        primary_muscle_detail, equipment, description, archived_at, version
       from public.custom_exercises
       order by archived_at nulls first, lower(name), id
     `),
@@ -270,6 +281,8 @@ export async function readAccessibleTrainingData(
         workout.client_id,
         client.full_name as client_name,
         workout.created_by,
+        workout.started_by,
+        workout.completed_by,
         workout.workout_date::text as workout_date,
         workout.start_time,
         workout.end_time,
@@ -409,6 +422,9 @@ export async function readAccessibleTrainingData(
       name: row.name,
       muscleGroup: row.muscle_group,
       inputKind: row.input_kind,
+      primaryMuscleDetail: row.primary_muscle_detail,
+      equipment: row.equipment,
+      description: row.description,
       archivedAt: row.archived_at?.toISOString() ?? null,
       version: safeInteger(row.version, 'custom exercise version'),
       createdBy: row.created_by,
@@ -419,6 +435,8 @@ export async function readAccessibleTrainingData(
       clientId: row.client_id,
       clientName: row.client_name,
       createdBy: row.created_by,
+      startedBy: row.started_by,
+      completedBy: row.completed_by,
       workoutDate: row.workout_date,
       startTime: row.start_time,
       endTime: row.end_time,

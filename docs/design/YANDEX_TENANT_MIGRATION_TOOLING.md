@@ -65,12 +65,16 @@ isolated-tenant checks or silently dropping a merge target.
     `allow_missing_media` operator policy may defer only object existence
     validation while preserving the original paths and media metadata.
 15. The full-cohort fingerprint is derived from every table name, row count and
-    checksum. An apply therefore requires the exact snapshot fingerprint from
-    a successful dry-run and fails before target access if source data changed.
-16. Target validation for a full cohort reads only the primary/composite keys
-    present in the encrypted bundle. Existing unrelated stage fixture rows do
-    not create false conflicts; an existing row with the same key and different
-    application fields still aborts the complete transaction.
+    checksum. A pinned apply requires the exact snapshot fingerprint from a
+    successful dry-run; current-snapshot apply uses one repeatable-read export
+    for dry-run and both replacement passes.
+16. Full-cohort target import takes exclusive locks, preserves Yandex identity,
+    app/pilot sessions and rollout assignments for profiles present in the
+    source snapshot in transaction-local tables, clears all transferable
+    tables, loads the snapshot and restores those anchors. Linked anchors for
+    profiles absent from the source snapshot are pruned. Validation reads the
+    complete target tables, so changed and stale rows cannot survive. A native
+    Yandex identity rejects the operation before the first delete.
 17. Media migration is a separate idempotent gate. It copies the two private
     source buckets to namespace-isolated keys in one private, versioned Yandex
     bucket and verifies source SHA-256 metadata plus byte length. Reports expose
@@ -160,13 +164,16 @@ identity and invokes the private `fit-stage-migration` container. The encrypted
 envelope and a random one-run passphrase exist only in memory; the workflow
 does not upload an artifact. Envelope v3 Brotli-compresses the canonical JSON
 before AES-256-GCM encryption and keeps v1/v2 decryption support for existing
-local gzip artifacts. This preserves the single-request, single-transaction
-import for the complete cohort instead of creating partially staged batches.
-The runner still accepts at most 3 MiB on the wire, caps decompressed data at
-64 MiB, exposes neither row contents nor identifiers, and is registered only when
-`APP_ENV=stage`. Dry-run rolls back after full import validation. Apply requires
-the independent `APPLY_TENANT_TO_YANDEX_STAGE` confirmation and immediately
-repeats the import, requiring zero inserted rows.
+local gzip artifacts. Remote v3 transport sends the ciphertext as a raw binary
+body and puts only bounded format, salt, IV and authentication-tag metadata in
+headers. Removing Base64/JSON wire overhead preserves the single-request,
+single-transaction import for the complete cohort instead of creating partially
+staged batches. The runner accepts at most 3,400,000 binary body bytes, leaving
+room for headers under the immutable 3.5 MB platform request limit, caps
+decompressed data at 64 MiB, exposes neither row contents nor identifiers, and
+is registered only when `APP_ENV=stage`. Dry-run rolls back after full import
+validation. Apply requires the independent `APPLY_TENANT_TO_YANDEX_STAGE`
+confirmation and immediately repeats the import, requiring zero inserted rows.
 
 This stage workflow still does not change routing or provision a rollout
 assignment. It adds no always-on resource: only the invoked execution time of
@@ -208,7 +215,7 @@ trainer-owned rows.
 
 Standalone artifacts use the distinct
 `fit-standalone-client-bundle-v1` format and fingerprint namespace while
-retaining the same ordered 32-table manifest. Client-scoped tables follow the
+retaining the same ordered 35-table manifest. Client-scoped tables follow the
 canonical card and its reverse merge closure. Custom exercises include both
 client-authored rows and exact custom rows referenced by those workouts.
 Account-scoped Assistant, feedback, push preferences/subscriptions and workout
@@ -219,6 +226,8 @@ Full application snapshots use `fit-full-cohort-bundle-v1`. Identity mappings,
 hashed app sessions, rollout assignments, sent push outbox history and Live
 operation receipts remain outside this format. The format copies application
 profiles, not Supabase `auth.users`, passwords or provider credentials.
+Legal acceptance history and account deletion requests are transferable
+application data and are included in the manifest.
 
 ## Acceptance checklist
 
@@ -260,9 +269,20 @@ profiles, not Supabase `auth.users`, passwords or provider credentials.
 - [x] Run the real full-cohort source `audit`. The 2026-09-14 run exported all
   32 tables and 12 876 rows with a content-derived fingerprint; no source
   contract or table-parity mismatch remained.
-- [ ] Repeat the real full-cohort stage `dry-run` with compressed envelope v3,
-  then use its exact fingerprint for pinned `apply` and repeated zero-insert
-  validation.
+- [x] Replace full-cohort insert-only import with an atomic 35-table rebuild,
+  preserve current-snapshot Yandex auth/session/rollout anchors, prune stale
+  linked anchors and reject native-only target profiles before deletion. Local
+  PostgreSQL 17 rehearsal on 2026-09-19 applies, repeats and validates 88
+  synthetic rows across the then-current 34 tables while removing an extra
+  stale profile;
+  the 2026-09-19 rerun after adding `favorite_workouts` validated 69 full-cohort
+  rows twice with the same checksum.
+- [x] Repeat the real full-cohort stage `dry-run` with compressed envelope v3.
+  Run `35466016700` exported and transactionally validated all 16,192 rows
+  across the 35-table manifest, then rolled the target transaction back.
+- [x] Apply the exact reviewed current snapshot and repeat the full-cohort
+  rebuild. Run `35466744381` performed dry-run, apply and repeated apply for all
+  16,192 rows across 35 tables with the same content fingerprint.
 - [ ] Run one real unlinked client through remote stage dry-run and pinned apply
   before enabling that profile's Yandex ID session or sticky routing.
 - [ ] Freeze writes, validate the selected real cohort and change its sticky

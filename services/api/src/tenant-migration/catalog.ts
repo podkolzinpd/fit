@@ -88,6 +88,10 @@ with recursive scope_clients as (
     where criterion.client_id in (select id from scope_clients)
   union select workout.created_by from public.workouts workout
     where workout.client_id in (select id from scope_clients)
+  union select workout.started_by from public.workouts workout
+    where workout.client_id in (select id from scope_clients)
+  union select workout.completed_by from public.workouts workout
+    where workout.client_id in (select id from scope_clients)
   union select workout.updated_by from public.workouts workout
     where workout.client_id in (select id from scope_clients)
   union select workout.trainer_review_author_id from public.workouts workout
@@ -114,6 +118,42 @@ export const TENANT_MIGRATION_TABLES: readonly TenantMigrationTableSpec[] = [
     sourceSql: publicRows('profiles', 'row.id in (select id from scope_users)'),
     targetSql: publicRows('profiles', 'row.id in (select id from scope_users)'),
     targetRecord: 'public.profiles',
+  },
+  {
+    name: 'public.favorite_workouts',
+    sourceSql: publicRows(
+      'favorite_workouts',
+      'row.client_id in (select id from scope_users)',
+    ),
+    targetSql: publicRows(
+      'favorite_workouts',
+      'row.client_id in (select id from scope_users)',
+    ),
+    targetRecord: 'public.favorite_workouts',
+  },
+  {
+    name: 'public.user_legal_acceptances',
+    sourceSql: publicRows(
+      'user_legal_acceptances',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetSql: publicRows(
+      'user_legal_acceptances',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetRecord: 'public.user_legal_acceptances',
+  },
+  {
+    name: 'public.account_deletion_requests',
+    sourceSql: publicRows(
+      'account_deletion_requests',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetSql: publicRows(
+      'account_deletion_requests',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetRecord: 'public.account_deletion_requests',
   },
   {
     name: 'public.trainers',
@@ -499,6 +539,36 @@ readonly TenantMigrationTableSpec[] = [
     sourceSql: standalonePublicRows('profiles', 'row.id in (select id from scope_users)'),
     targetSql: standalonePublicRows('profiles', 'row.id in (select id from scope_users)'),
     targetRecord: 'public.profiles',
+  },
+  {
+    name: 'public.favorite_workouts',
+    sourceSql: standalonePublicRows('favorite_workouts', 'row.client_id = $1'),
+    targetSql: standalonePublicRows('favorite_workouts', 'row.client_id = $1'),
+    targetRecord: 'public.favorite_workouts',
+  },
+  {
+    name: 'public.user_legal_acceptances',
+    sourceSql: standalonePublicRows(
+      'user_legal_acceptances',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetSql: standalonePublicRows(
+      'user_legal_acceptances',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetRecord: 'public.user_legal_acceptances',
+  },
+  {
+    name: 'public.account_deletion_requests',
+    sourceSql: standalonePublicRows(
+      'account_deletion_requests',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetSql: standalonePublicRows(
+      'account_deletion_requests',
+      'row.user_id in (select id from scope_users)',
+    ),
+    targetRecord: 'public.account_deletion_requests',
   },
   {
     name: 'public.trainers',
@@ -948,6 +1018,14 @@ export const SOURCE_PREFLIGHT_SQL = `${scopeCte}, actor_references as (
   where criterion.client_id in (select id from scope_clients)
   union all
   select workout.created_by
+  from public.workouts workout
+  where workout.client_id in (select id from scope_clients)
+  union all
+  select workout.started_by
+  from public.workouts workout
+  where workout.client_id in (select id from scope_clients)
+  union all
+  select workout.completed_by
   from public.workouts workout
   where workout.client_id in (select id from scope_clients)
   union all

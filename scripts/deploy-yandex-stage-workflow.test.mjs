@@ -58,6 +58,16 @@ const rolloutWorkflow = readFileSync(
   ),
   'utf8',
 )
+const identityUnlinkWorkflow = readFileSync(
+  join(
+    import.meta.dirname,
+    '..',
+    '.github',
+    'workflows',
+    'manage-yandex-stage-identity-unlink.yml',
+  ),
+  'utf8',
+)
 const containerTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'container.tf'),
   'utf8',
@@ -609,6 +619,26 @@ test('manages the migrated tenant rollout only through an explicit private run',
     rolloutWorkflow,
     /FIT_TENANT_TRAINER_ID|profileId/,
   )
+})
+
+test('unlinks a Yandex identity only through an explicit private run', () => {
+  assert.match(identityUnlinkWorkflow, /^  workflow_dispatch:$/m)
+  assert.doesNotMatch(identityUnlinkWorkflow, /^  (?:push|pull_request):$/m)
+  assert.match(identityUnlinkWorkflow, /^  id-token: write$/m)
+  assert.match(identityUnlinkWorkflow, /^  group: yandex-stage$/m)
+  assert.match(identityUnlinkWorkflow, /scripts\/yandex-github-oidc\.sh/)
+  assert.match(identityUnlinkWorkflow, /GITHUB_REF.*refs\/heads\/main/)
+  assert.match(identityUnlinkWorkflow, /UNLINK_YANDEX_IDENTITY_FROM_TEST_PROFILE/)
+  assert.match(identityUnlinkWorkflow, /\[\[ "\$TENANT_FINGERPRINT" =~ \^\[0-9a-f\]\{16\}\$ \]\]/)
+  assert.match(identityUnlinkWorkflow, /Authorization: Bearer \$YC_TOKEN/)
+  assert.match(identityUnlinkWorkflow, /\/stage\/yandex-identity\/unlink/)
+  assert.match(identityUnlinkWorkflow, /tenantFingerprint: \$tenantFingerprint/)
+  assert.match(identityUnlinkWorkflow, /yandex_identity_unlinked/)
+  assert.match(identityUnlinkWorkflow, /identityDeleted/)
+  assert.match(identityUnlinkWorkflow, /sessionsRevoked/)
+  assert.doesNotMatch(identityUnlinkWorkflow, /terraform apply/)
+  assert.doesNotMatch(identityUnlinkWorkflow, /^    environment:/m)
+  assert.doesNotMatch(identityUnlinkWorkflow, /profileId|profile_id/)
 })
 
 test('supports a plan-only stage diagnostic that cannot deploy resources', () => {

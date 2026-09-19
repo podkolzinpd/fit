@@ -4,8 +4,10 @@ import type {
   SessionActor,
   Workout,
   WorkoutDraft,
+  WorkoutExerciseDraft,
 } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
+import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 import { createYandexMainRepository } from './yandex-main.repository'
 
 const pilot = vi.hoisted(() => ({ listTrainingData: vi.fn(), parseWorkout: vi.fn() }))
@@ -77,6 +79,60 @@ describe('Yandex main repository', () => {
     push.unsubscribe.mockReset()
   })
 
+  it('uses the Yandex API for legal acceptance and account deletion lifecycle', async () => {
+    const requestId = '8fc45130-9bcf-4b77-9ff7-f0872a354034'
+    const acceptedAt = '2026-09-19T10:00:00.000Z'
+    const requestedAt = '2026-09-19T11:00:00.000Z'
+    const fetchMock = vi.fn(
+      (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+        void input
+        void init
+        return Promise.resolve(new Response(null, { status: 500 }))
+      },
+    )
+      .mockResolvedValueOnce(jsonResponse({ applicable: true, accepted: false, acceptedAt: null }))
+      .mockResolvedValueOnce(jsonResponse({ acceptedAt }))
+      .mockResolvedValueOnce(jsonResponse({
+        supported: true,
+        request: { id: requestId, status: 'requested', requestedAt },
+      }))
+      .mockResolvedValueOnce(jsonResponse({ requestId }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.legal.getAcceptanceStatus()).resolves.toEqual({
+      applicable: true,
+      accepted: false,
+      acceptedAt: null,
+    })
+    await expect(repository.legal.acceptCurrent('existing_user')).resolves.toBe(acceptedAt)
+    await expect(repository.legal.getAccountDeletionStatus()).resolves.toEqual({
+      supported: true,
+      request: { id: requestId, status: 'requested', requestedAt },
+    })
+    await expect(repository.legal.requestAccountDeletion()).resolves.toBe(requestId)
+    await expect(repository.legal.cancelAccountDeletionRequest()).resolves.toBeUndefined()
+
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      `${apiBaseUrl}/v1/legal/acceptance`,
+      `${apiBaseUrl}/v1/legal/acceptance`,
+      `${apiBaseUrl}/v1/account-deletion-request`,
+      `${apiBaseUrl}/v1/account-deletion-request`,
+      `${apiBaseUrl}/v1/account-deletion-request`,
+    ])
+    const acceptanceRequest = fetchMock.mock.calls[1]?.[1]
+    expect(acceptanceRequest?.method).toBe('PUT')
+    expect(new Headers(acceptanceRequest?.headers).get('x-fit-session')).toBe(sessionToken)
+    expect(acceptanceRequest?.body).toBe(JSON.stringify({
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+      source: 'existing_user',
+    }))
+    expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({ method: 'POST' })
+    expect(fetchMock.mock.calls[4]?.[1]).toMatchObject({ method: 'DELETE' })
+  })
+
   it('reads and updates the trainer discovery prompt', async () => {
     const visible = { state: 'visible', remindAt: null, updatedAt: null }
     const snoozed = {
@@ -99,6 +155,48 @@ describe('Yandex main repository', () => {
     })
   })
 
+  it('lists, saves, and removes favorite workouts', async () => {
+    const wireExercise = {
+      sourceExerciseId: null, position: 0, source: 'system', ref: 'squat', customExerciseId: null,
+      name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', blockId: 'b1', blockType: 'single',
+      blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90,
+      trainerComment: null,
+      sets: [{ sourceSetId: null, position: 0, weightKg: 60, reps: 5, durationMin: null, durationSec: null, distanceKm: null, rpe: null }],
+    }
+    const wireFavorite = {
+      // Postgres jsonb_build_object serializes timestamptz with a numeric
+      // offset ("+00:00"), never a literal "Z" — the schema must accept this
+      // native shape, not just a hand-typed "Z" fixture.
+      id: '12acc6d6-7ca8-43cd-b124-b4224c917fae', title: 'Ноги и кор',
+      createdAt: '2026-09-19T09:00:00.000000+00:00', exercises: [wireExercise],
+    }
+    const domainExercise: WorkoutExerciseDraft = {
+      position: 0, source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength',
+      blockId: 'b1', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90,
+      sets: [{ position: 0, weightKg: 60, reps: 5 }],
+    }
+    const domainFavorite = { id: wireFavorite.id, title: wireFavorite.title, createdAt: wireFavorite.createdAt, exercises: [domainExercise] }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ favorites: [wireFavorite] }))
+      .mockResolvedValueOnce(jsonResponse(wireFavorite))
+      .mockResolvedValueOnce(jsonResponse({}))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.favoriteWorkouts.list()).resolves.toEqual([domainFavorite])
+    await expect(repository.favoriteWorkouts.save('Ноги и кор', [domainExercise])).resolves.toEqual(domainFavorite)
+    await expect(repository.favoriteWorkouts.remove(wireFavorite.id)).resolves.toBeUndefined()
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${apiBaseUrl}/v1/favorite-workouts`)
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      method: 'POST',
+      body: JSON.stringify({ title: 'Ноги и кор', exercises: [wireExercise] }),
+    })
+    expect(fetchMock.mock.calls[2]?.[0]).toBe(`${apiBaseUrl}/v1/favorite-workouts/${wireFavorite.id}`)
+    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({ method: 'DELETE' })
+  })
+
   it('requests and validates a page of public trainers', async () => {
     const draft = {
       displayName: 'Анна', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [], trainingModes: [],
@@ -106,21 +204,20 @@ describe('Yandex main repository', () => {
       avatarDataUrl: null, certificates: [],
     }
     const profile = {
-      publicId: publicProfileId, draft, published: draft, listedInCatalog: true,
-      publishedAt: '2026-09-13T01:00:00.000Z', updatedAt: '2026-09-13T01:00:00.000Z', version: 1,
+      publicId: publicProfileId, profile: draft,
       isBrandTrainer: false,
     }
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [profile], totalCount: 21, nextOffset: 20 }))
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [profile], totalCount: 21, nextOffset: 3 }))
     vi.stubGlobal('fetch', fetchMock)
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
 
     await expect(repository.trainerProfiles.listCatalog({
-      query: 'Анна', specialty: '', city: '', metroStationIds: ['msk-dinamo', 'msk-aeroport'], mode: 'online', acceptingClients: true,
-    }, { offset: 0, limit: 20 })).resolves.toEqual({ items: [profile], totalCount: 21, nextOffset: 20 })
+      query: 'Анна', specialties: [], city: '', metroStationIds: ['msk-dinamo', 'msk-aeroport'], mode: 'online', acceptingClients: true, brandTrainerOnly: true,
+    }, { offset: 0, limit: 3 })).resolves.toEqual({ items: [profile], totalCount: 21, nextOffset: 3 })
     const requested = new URL(String(fetchMock.mock.calls[0]?.[0]))
     expect(requested.pathname).toBe('/v1/trainers/catalog')
     expect(requested.searchParams.getAll('metro')).toEqual(['msk-dinamo', 'msk-aeroport'])
-    expect(Object.fromEntries(requested.searchParams)).toEqual({ query: 'Анна', metro: 'msk-aeroport', mode: 'online', accepting: 'true', offset: '0', limit: '20' })
+    expect(Object.fromEntries(requested.searchParams)).toEqual({ query: 'Анна', metro: 'msk-aeroport', mode: 'online', accepting: 'true', brand: 'true', offset: '0', limit: '3' })
   })
 
   it('creates a quick client without fabricating profile measurements', async () => {
@@ -142,6 +239,40 @@ describe('Yandex main repository', () => {
       ageUpdatedAt: null, heightCm: null, goal: null, note: null,
       initialWeightKg: null, initialWeightRecordedOn: null,
     })
+  })
+
+  it('drops a stale client snapshot after a conflict and on realtime refresh', async () => {
+    vi.useFakeTimers()
+    let version = 1
+    const clientPayload = () => ({ clients: [{
+      id: clientId, canArchive: true, hasAccount: true, fullName: 'Клиент', canonicalFullName: 'Клиент',
+      gender: 'female', ageYears: 30, ageUpdatedAt: '2026-08-01', heightCm: 170,
+      goal: null, note: null, currentWeightKg: null, lastActivityAt: '2026-09-18T10:00:00.000Z',
+      archivedAt: null, version, membershipVersion: 1,
+    }] })
+    const fetchMock = vi.fn((input: string | URL | Request, init?: RequestInit) => {
+      const path = new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url).pathname
+      if (path === '/v1/clients' && (init?.method ?? 'GET') === 'GET') return Promise.resolve(jsonResponse(clientPayload()))
+      if (path === `/v1/clients/${clientId}` && init?.method === 'PUT') {
+        return Promise.resolve(jsonResponse({ error: 'client_conflict' }, 409))
+      }
+      return Promise.resolve(new Response(null, { status: 204 }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    expect((await repository.clients.get(clientId)).version).toBe(1)
+    version = 2
+    await expect(repository.clients.update({
+      id: clientId, version: 1, fullName: 'Клиент', gender: 'female', ageYears: 30,
+      ageUpdatedAt: localDate('2026-08-01'), heightCm: 170,
+    })).rejects.toMatchObject({ code: 'PT409' })
+    expect((await repository.clients.get(clientId)).version).toBe(2)
+
+    version = 3
+    const unsubscribe = repository.realtime.subscribeToClientChanges(clientId, vi.fn())
+    expect((await repository.clients.get(clientId)).version).toBe(3)
+    unsubscribe()
   })
 
   it('requests a private Vital media URL through the authenticated Yandex backend', async () => {
@@ -273,9 +404,16 @@ describe('Yandex main repository', () => {
       criteria: [], needsInput: [], unsupportedReason: null,
     })
     const custom = (await repository.exercises.list())[0]!
-    expect(custom.createdBy).toBe(actor.userId)
+    expect(custom).toMatchObject({
+      createdBy: actor.userId,
+      primaryMuscleDetail: 'Широчайшие',
+      equipment: 'Сани',
+      description: 'Сохраняйте нейтральное положение спины.',
+    })
     const created = await repository.exercises.create(actor.userId, actor.userId, customExerciseDraft())
+    expect(created).toMatchObject(customExerciseDraft())
     const updated = await repository.exercises.update(created, customExerciseDraft())
+    expect(updated).toMatchObject(customExerciseDraft())
     await repository.exercises.setArchived(updated, true)
 
     expect(await repository.progress.regularity(clientId)).toHaveLength(1)
@@ -526,6 +664,8 @@ function installTrainingData() {
   pilot.listTrainingData.mockResolvedValue({
     customExercises: [{
       id: customExerciseId, name: 'Тяга', muscleGroup: 'back', inputKind: 'strength',
+      primaryMuscleDetail: 'Широчайшие', equipment: 'Сани',
+      description: 'Сохраняйте нейтральное положение спины.',
       archivedAt: null, version: 1, createdBy: actor.userId,
     }],
     workouts: [workoutPayload(plannedWorkoutId, 'in_progress', '2026-08-21'), workoutPayload(workoutId, 'done', '2026-08-20')],
@@ -580,7 +720,14 @@ function clientUpdate() {
 }
 
 function customExerciseDraft() {
-  return { name: 'Тяга', muscleGroup: 'back' as const, inputKind: 'strength' as const }
+  return {
+    name: 'Тяга',
+    muscleGroup: 'back' as const,
+    inputKind: 'strength' as const,
+    primaryMuscleDetail: 'Широчайшие',
+    equipment: 'Сани',
+    description: 'Сохраняйте нейтральное положение спины.',
+  }
 }
 
 function progressDraft() {
@@ -635,9 +782,10 @@ function installContractFetch() {
     const url = new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url)
     const method = init?.method ?? 'GET'
     const path = url.pathname
-    if (method === 'GET' && path === '/v1/clients') return jsonResponse({ clients: [
-      { id: clientId, hasAccount: true, fullName: 'Клиент', canonicalFullName: 'Клиент', gender: 'male', ageYears: 30, ageUpdatedAt: '2026-08-01', heightCm: 180, goal: 'Сила', note: null, currentWeightKg: 80, lastActivityAt: '2026-08-20T10:00:00.000Z', archivedAt: null, version: 1, membershipVersion: 1 },
-      { id: archivedClientId, hasAccount: false, fullName: 'Архив', canonicalFullName: 'Архив', gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null, currentWeightKg: null, archivedAt: '2026-08-01T00:00:00.000Z', version: 1, membershipVersion: null },
+    if (method === 'GET' && path === '/v1/clients') return jsonResponse({ clients: url.searchParams.get('archived') === 'true' ? [
+      { id: archivedClientId, canArchive: true, hasAccount: false, fullName: 'Архив', canonicalFullName: 'Архив', gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null, currentWeightKg: null, lastActivityAt: '2026-08-01T00:00:00.000Z', archivedAt: '2026-08-01T00:00:00.000Z', version: 1, membershipVersion: 1 },
+    ] : [
+      { id: clientId, canArchive: true, hasAccount: true, fullName: 'Клиент', canonicalFullName: 'Клиент', gender: 'male', ageYears: 30, ageUpdatedAt: '2026-08-01', heightCm: 180, goal: 'Сила', note: null, currentWeightKg: 80, lastActivityAt: '2026-08-20T10:00:00.000Z', archivedAt: null, version: 1, membershipVersion: 1 },
     ] })
     if (method === 'GET' && path === '/v1/connections') return jsonResponse({
       memberships: [{ clientId, trainerId: actor.userId, firstName: 'Ирина', lastName: null, joinedAt: '2026-08-01T00:00:00.000Z', isRoot: true }],
@@ -668,7 +816,7 @@ function installContractFetch() {
     if (path === '/v1/invitations' && method === 'POST') return jsonResponse({ invitation: { code: 'ABCDEF123456' } }, 201)
     if (path === '/v1/invitations/claim') return jsonResponse({ clientId })
     if (path === '/v1/app-feedback') return jsonResponse({ feedback: { id: progressId } }, 201)
-    if (path === '/v1/custom-exercises' || path.includes('/custom-exercises/')) return jsonResponse({ exercise: { id: customExerciseId, name: 'Тяга', muscleGroup: 'back', inputKind: 'strength', archivedAt: path.endsWith('/archive') ? '2026-09-01T00:00:00.000Z' : null, version: 2 } })
+    if (path === '/v1/custom-exercises' || path.includes('/custom-exercises/')) return jsonResponse({ exercise: { id: customExerciseId, ...customExerciseDraft(), archivedAt: path.endsWith('/archive') ? '2026-09-01T00:00:00.000Z' : null, version: 2 } })
     if (path === '/v1/progress' || path.startsWith('/v1/progress/')) return jsonResponse({ progress: { id: progressId, version: 2 } })
     if (path === '/v1/progress-metrics' || path.startsWith('/v1/progress-metrics/')) return jsonResponse({ metric: { id: metricId, archivedAt: path.endsWith('/archive') ? '2026-09-01T00:00:00.000Z' : null, version: 2 } })
     if (path === '/v1/goals' || path.startsWith('/v1/goals/')) return jsonResponse({ goal: { id: goalId, version: 2 } })

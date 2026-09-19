@@ -9,6 +9,7 @@ import { inspectRuntimeDomainReadiness } from './db/runtime-domain-readiness.js'
 import { DatabaseStageDatabaseReaderAccessManager } from './db/stage-database-reader-access.js'
 import { DatabaseStageRolloutAssignmentManager } from './db/stage-rollout-assignment.js'
 import { DatabaseStageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
+import { DatabaseYandexIdentityUnlinkManager } from './db/yandex-identity-unlink.js'
 import { DatabasePilotEnroller } from './db/yandex-pilot-enrollment.js'
 import { buildMigrationApp } from './migration-app.js'
 import {
@@ -21,6 +22,7 @@ import { DatabasePilotTrainingDataReader } from './pilot-training-data-reader.js
 import { DatabasePilotProgressData } from './progress-data.js'
 import { DatabaseStageTenantMigrationRunner } from './tenant-migration/stage-runner.js'
 import { ObjectStorageTenantMigrationMediaVerifier } from './tenant-migration/media-verifier.js'
+import { YandexVitalMediaDeployment } from './vital-media-deployment.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -74,11 +76,22 @@ const stageRolloutAssignmentsEnabled =
 if (stageRolloutAssignmentsEnabled && process.env.APP_ENV !== 'stage') {
   throw new Error('Stage rollout assignments can be enabled only in stage')
 }
+const yandexIdentityUnlinkEnabled =
+  process.env.STAGE_YANDEX_IDENTITY_UNLINK_ENABLED === 'true'
+if (yandexIdentityUnlinkEnabled && process.env.APP_ENV !== 'stage') {
+  throw new Error('Yandex identity unlink can be enabled only in stage')
+}
+const vitalMediaDeploymentEnabled =
+  process.env.STAGE_VITAL_MEDIA_DEPLOYMENT_ENABLED === 'true'
+if (vitalMediaDeploymentEnabled && process.env.APP_ENV !== 'stage') {
+  throw new Error('Vital media deployment can be enabled only in stage')
+}
 const privateFeaturePool = pilotEnrollmentEnabled
   || stageWorkoutFixtureEnabled
   || stageDatabaseAccessEnabled
   || stageTenantMigrationEnabled
   || stageRolloutAssignmentsEnabled
+  || yandexIdentityUnlinkEnabled
   ? new PgDatabasePool(databaseConfig)
   : undefined
 const runtimeDatabaseConfig = stageRuntimeDatabasePreflightEnabled
@@ -113,6 +126,10 @@ const mediaStorage = mediaStorageConfig === undefined
 const tenantMediaVerifier = mediaStorage === undefined
   ? undefined
   : new ObjectStorageTenantMigrationMediaVerifier(mediaStorage)
+const vitalMediaDeployment = mediaStorageConfig === undefined
+  || !vitalMediaDeploymentEnabled
+  ? undefined
+  : new YandexVitalMediaDeployment(mediaStorageConfig)
 
 const app = buildMigrationApp({
   ...(privateFeaturePool === undefined || !stageTenantMigrationEnabled
@@ -136,6 +153,12 @@ const app = buildMigrationApp({
         rolloutAssignment:
           new DatabaseStageRolloutAssignmentManager(privateFeaturePool),
       }),
+  ...(privateFeaturePool === undefined || !yandexIdentityUnlinkEnabled
+    ? {}
+    : {
+        yandexIdentityUnlink:
+          new DatabaseYandexIdentityUnlinkManager(privateFeaturePool),
+      }),
   ...(privateFeaturePool === undefined || yandexClientId === undefined
     ? {}
     : {
@@ -153,6 +176,7 @@ const app = buildMigrationApp({
           privateFeaturePool,
         ),
       }),
+  ...(vitalMediaDeployment === undefined ? {} : { vitalMediaDeployment }),
   ...(runtimeClientsReader === undefined
     || runtimeConnectionsReader === undefined
     || runtimeTrainingDataReader === undefined

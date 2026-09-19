@@ -53,7 +53,7 @@ describe('standalone client tenant migration', () => {
       clientProfileId: CLIENT_PROFILE_ID,
       createdAt: '2026-09-11T12:00:00.000Z',
     })
-    expect(bundle.tables).toHaveLength(32)
+    expect(bundle.tables).toHaveLength(35)
     expect(source.query).toHaveBeenCalledWith('commit')
   })
 
@@ -81,9 +81,12 @@ describe('standalone client tenant migration', () => {
     const report = await importTenant(target, bundle, false)
 
     expect(report.mode).toBe('dry-run')
-    expect(report.tables).toHaveLength(32)
+    expect(report.tables).toHaveLength(35)
     expect(query).toHaveBeenCalledWith(
       expect.stringContaining("hashtextextended('fit-tenant:migration', 0)"),
+    )
+    expect(query).toHaveBeenCalledWith(
+      "select set_config('fit.tenant_migration_restore', 'on', true)",
     )
     expect(query).toHaveBeenCalledWith(
       expect.stringContaining("'fit-tenant:' || $1 || ':' || $2"),
@@ -123,7 +126,7 @@ describe('full application cohort migration', () => {
       format: 'fit-full-cohort-bundle-v1',
       createdAt: '2026-09-14T10:00:00.000Z',
     })
-    expect(bundle.tables).toHaveLength(32)
+    expect(bundle.tables).toHaveLength(35)
     expect(source.query).not.toHaveBeenCalledWith(
       expect.stringContaining('has_cross_boundary_merge'),
       expect.anything(),
@@ -145,7 +148,7 @@ describe('full application cohort migration', () => {
     expect(source.query).toHaveBeenCalledWith('rollback')
   })
 
-  it('validates only imported keys and rejects a changed existing row', async () => {
+  function fullCohortBundleWithProfile() {
     const sourceQuery = vi.fn((sql: string) => {
       if (sql.includes('as cohort_exists')) {
         return Promise.resolve([{
@@ -159,10 +162,21 @@ describe('full application cohort migration', () => {
       }
       return Promise.resolve([])
     }) as unknown as DatabaseClient['query']
-    const bundle = await exportFullCohort({ query: sourceQuery })
+    return exportFullCohort({ query: sourceQuery })
+  }
 
-    const matchingTargetQuery = vi.fn((sql: string) => {
-      if (sql.includes('select to_jsonb(existing)')) {
+  it('atomically replaces a complete cohort and overwrites changed rows', async () => {
+    const bundle = await fullCohortBundleWithProfile()
+    const targetQuery = vi.fn((sql: string) => {
+      if (sql.includes('as has_native_identity')) {
+        return Promise.resolve([{
+          has_native_identity: false,
+        }])
+      }
+      if (
+        sql.includes('select to_jsonb(existing)')
+        && sql.includes('from public.profiles existing')
+      ) {
         return Promise.resolve([{
           row: {
             id: CLIENT_PROFILE_ID,
@@ -173,20 +187,76 @@ describe('full application cohort migration', () => {
       }
       return Promise.resolve([])
     }) as unknown as DatabaseClient['query']
-    await expect(importTenant({ query: matchingTargetQuery }, bundle, false))
+    await expect(importTenant({ query: targetQuery }, bundle, false))
       .resolves.toMatchObject({ mode: 'dry-run' })
+    expect(targetQuery).toHaveBeenCalledWith(
+      expect.stringContaining('delete from public.trainer_professional_profiles'),
+    )
+    expect(targetQuery).toHaveBeenCalledWith(
+      expect.stringContaining('insert into public.profiles'),
+      [JSON.stringify(bundle.tables[0]?.rows)],
+    )
+    expect(targetQuery).toHaveBeenCalledWith(
+      expect.stringContaining('insert into app_private.auth_identities'),
+    )
+    expect(targetQuery).toHaveBeenCalledWith(
+      expect.stringContaining('create temporary table expected_full_cohort_profiles'),
+      [JSON.stringify(bundle.tables[0]?.rows)],
+    )
+    expect(targetQuery).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /create temporary table preserved_auth_identities[\s\S]*join expected_full_cohort_profiles/u,
+      ),
+    )
+    expect(targetQuery).toHaveBeenCalledWith('rollback')
+  })
 
-    const conflictingTargetQuery = vi.fn((sql: string) => {
-      if (sql.includes('select to_jsonb(existing)')) {
+  it('validates the exact rebuilt cohort and rejects extra target rows', async () => {
+    const bundle = await fullCohortBundleWithProfile()
+    const targetQuery = vi.fn((sql: string) => {
+      if (sql.includes('as has_native_identity')) {
         return Promise.resolve([{
-          row: { id: CLIENT_PROFILE_ID, timezone: 'UTC' },
+          has_native_identity: false,
+        }])
+      }
+      if (
+        sql.includes('select to_jsonb(existing)')
+        && sql.includes('from public.profiles existing')
+      ) {
+        return Promise.resolve([{
+          row: { id: CLIENT_PROFILE_ID, timezone: 'Europe/Moscow' },
+        }, {
+          row: {
+            id: '40000000-0000-4000-8000-000000000004',
+            timezone: 'UTC',
+          },
         }])
       }
       return Promise.resolve([])
     }) as unknown as DatabaseClient['query']
-    await expect(importTenant({ query: conflictingTargetQuery }, bundle, false))
+    await expect(importTenant({ query: targetQuery }, bundle, false))
       .rejects.toEqual(
         new TenantMigrationError('target_validation_failed:public.profiles'),
       )
+    expect(targetQuery).toHaveBeenCalledWith('rollback')
+  })
+
+  it('refuses a native-identity target before deleting rows', async () => {
+    const bundle = await fullCohortBundleWithProfile()
+    const targetQuery = vi.fn((sql: string) => {
+      if (sql.includes('as has_native_identity')) {
+        return Promise.resolve([{ has_native_identity: true }])
+      }
+      return Promise.resolve([])
+    }) as unknown as DatabaseClient['query']
+
+    await expect(importTenant({ query: targetQuery }, bundle, true))
+      .rejects.toEqual(
+        new TenantMigrationError('full_cohort_target_has_native_identity'),
+      )
+    expect(targetQuery).not.toHaveBeenCalledWith(
+      expect.stringMatching(/^delete from /u),
+    )
+    expect(targetQuery).toHaveBeenCalledWith('rollback')
   })
 })

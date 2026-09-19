@@ -37,13 +37,13 @@ export function TrainerProfileSettingsPage() {
   const showRpe = useRpeDisplay(actor?.userId)
   const showExerciseRest = useExercisePlanRestDisplay(actor?.userId)
   const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
-  const [showArchived, setShowArchived] = useState(() => localStorage.getItem('fit.showArchivedClients') === 'true')
+  const [showArchived, setShowArchived] = useState(() => window.localStorage?.getItem('fit.showArchivedClients') === 'true')
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [installOpen, setInstallOpen] = useState(false)
 
   function toggleShowArchived(checked: boolean) {
     setShowArchived(checked)
-    localStorage.setItem('fit.showArchivedClients', String(checked))
+    window.localStorage?.setItem('fit.showArchivedClients', String(checked))
   }
 
   if (!actor || actor.role !== 'trainer') return null
