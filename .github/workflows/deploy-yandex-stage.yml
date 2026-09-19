@@ -478,6 +478,8 @@ jobs:
             and (.session.clientId | test("^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"; "i"))
             and (.clientSession.token | test("^[A-Za-z0-9_-]{43}$"))
             and (.clientSession.expiresAt | type == "string")
+            and (.mediaSession.token | test("^[A-Za-z0-9_-]{43}$"))
+            and (.mediaSession.expiresAt | type == "string")
           ' stage-workout-fixture-response.json >/dev/null
           jq -r '"Prepared synthetic fixtures for " + (.seededTrainerCount | tostring) + " stage trainer(s)."' \
             stage-workout-fixture-response.json
