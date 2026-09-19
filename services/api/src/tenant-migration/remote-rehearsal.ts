@@ -17,6 +17,7 @@ import type {
   TenantMigrationEnvelope,
   TenantMigrationTableReport,
 } from './types.js'
+import { STAGE_TENANT_ARTIFACT_LIMIT_BYTES } from './transport-limits.js'
 
 type Environment = Readonly<Record<string, string | undefined>>
 export type RemoteTenantRehearsalMode = 'audit' | 'dry-run' | 'apply'
@@ -66,7 +67,6 @@ const STAGE_CONTAINER_HOST_PATTERN =
 const STAGE_APPLY_CONFIRMATION = 'APPLY_TENANT_TO_YANDEX_STAGE'
 const CURRENT_FULL_COHORT_APPLY_CONFIRMATION =
   'APPLY_CURRENT_FULL_COHORT_TO_YANDEX_STAGE'
-const STAGE_ARTIFACT_LIMIT_BYTES = 3 * 1024 * 1024
 const RESPONSE_LIMIT_BYTES = 1024 * 1024
 const AUTO_CANDIDATE_LIMIT = 1_000
 const AUTO_STAGE_CONFLICT_LIMIT = 100
@@ -636,7 +636,7 @@ export async function runRemoteTenantRehearsal(
             const passphrase = randomBytes(48).toString('base64url')
             const envelope = await encryptMigrationBundle(candidate, passphrase)
             const encryptedBytes = Buffer.byteLength(JSON.stringify(envelope))
-            if (encryptedBytes > STAGE_ARTIFACT_LIMIT_BYTES) {
+            if (encryptedBytes > STAGE_TENANT_ARTIFACT_LIMIT_BYTES) {
               throw new RemoteTenantRehearsalError(
                 'artifact_too_large_for_stage',
               )
@@ -703,7 +703,7 @@ export async function runRemoteTenantRehearsal(
     process.stdout.write('media_validation: allow-missing\n')
   }
   if (settings.mode === 'audit') return
-  if (encryptedBytes > STAGE_ARTIFACT_LIMIT_BYTES) {
+  if (encryptedBytes > STAGE_TENANT_ARTIFACT_LIMIT_BYTES) {
     throw new RemoteTenantRehearsalError('artifact_too_large_for_stage')
   }
 

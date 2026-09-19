@@ -675,7 +675,7 @@ describe('stage tenant migration', () => {
       method: 'POST',
       url: '/stage/tenant-migration/dry-run',
       headers: { 'x-fit-tenant-migration-passphrase': 'p'.repeat(32) },
-      payload: { ciphertext: 'x'.repeat(3 * 1024 * 1024) },
+      payload: { ciphertext: 'x'.repeat(3_400_000) },
     })
     expect(oversized.statusCode).toBe(413)
     expect(run).not.toHaveBeenCalled()

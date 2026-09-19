@@ -1,3 +1,10 @@
+// Cutover maintenance is a global build-time stop. When enabled, the root does
+// not mount auth, query or data providers, so protected routes and product
+// mutations are unavailable rather than merely covered by a visual overlay.
+export function isMaintenanceModeEnabled(): boolean {
+  return import.meta.env.VITE_MAINTENANCE_MODE === 'true'
+}
+
 // Флаг позволяет включать новый стартовый путь постепенно и мгновенно
 // возвращать прежнее поведение без изменения роутинга. По умолчанию новый
 // экран включён; для отката в окружении сборки задаётся "false".
