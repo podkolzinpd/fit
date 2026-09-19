@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
   readExpectedVersion,
+  readFavoriteWorkoutExercises,
+  readFavoriteWorkoutTitle,
   readSavePlannedWorkoutRequest,
 } from './planned-workout-request.js'
 
@@ -120,5 +122,39 @@ describe('planned workout request', () => {
       ...validRequest(),
       ...patch,
     }, null)).toBeUndefined()
+  })
+})
+
+describe('favorite workout title', () => {
+  it('accepts a trimmed non-empty title within the length limit', () => {
+    expect(readFavoriteWorkoutTitle(' Ноги и кор ')).toBe('Ноги и кор')
+  })
+
+  it.each([undefined, null, 123, '', '   ', 'a'.repeat(121)])('rejects %p', (value) => {
+    expect(readFavoriteWorkoutTitle(value)).toBeUndefined()
+  })
+})
+
+describe('favorite workout exercises', () => {
+  it('accepts a valid, position-unique exercise list', () => {
+    expect(readFavoriteWorkoutExercises(validRequest().exercises)).toEqual(validRequest().exercises)
+  })
+
+  it.each([undefined, null, 'not-an-array', []])('rejects %p', (value) => {
+    expect(readFavoriteWorkoutExercises(value)).toBeUndefined()
+  })
+
+  it('rejects more than 60 exercises', () => {
+    const exercises = Array.from({ length: 61 }, (_, index) => ({ ...validRequest().exercises[0], position: index }))
+    expect(readFavoriteWorkoutExercises(exercises)).toBeUndefined()
+  })
+
+  it('rejects a malformed exercise the same way the workout request does', () => {
+    expect(readFavoriteWorkoutExercises([{ ...validRequest().exercises[0], source: 'custom' }])).toBeUndefined()
+  })
+
+  it('rejects duplicate positions', () => {
+    const exercise = validRequest().exercises[0]!
+    expect(readFavoriteWorkoutExercises([exercise, { ...exercise, blockId: WORKOUT_ID }])).toBeUndefined()
   })
 })

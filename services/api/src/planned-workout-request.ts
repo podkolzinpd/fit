@@ -184,7 +184,7 @@ function readSet(value: unknown): PlannedWorkoutSetDraft | undefined {
   }
 }
 
-function readExercise(value: unknown): PlannedWorkoutExerciseDraft | undefined {
+export function readExercise(value: unknown): PlannedWorkoutExerciseDraft | undefined {
   const input = record(value)
   if (input === undefined || !Array.isArray(input.sets)) return undefined
   const position = integer(input.position, 0, 32_767)
@@ -262,6 +262,20 @@ function readExercise(value: unknown): PlannedWorkoutExerciseDraft | undefined {
     trainerComment,
     sets: sets as PlannedWorkoutSetDraft[],
   }
+}
+
+export function readFavoriteWorkoutTitle(value: unknown): string | undefined {
+  return text(value, { max: 120 })
+}
+
+export function readFavoriteWorkoutExercises(value: unknown): PlannedWorkoutExerciseDraft[] | undefined {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 60) return undefined
+  const exercises = value.map(readExercise)
+  if (
+    exercises.some((exercise) => exercise === undefined)
+    || new Set(exercises.map((exercise) => exercise?.position)).size !== exercises.length
+  ) return undefined
+  return exercises as PlannedWorkoutExerciseDraft[]
 }
 
 export function readSavePlannedWorkoutRequest(
