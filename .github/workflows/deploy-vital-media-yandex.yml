@@ -1,0 +1,118 @@
+name: Deploy Vital media to Yandex
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Read-only audit or confirmed idempotent deployment'
+        required: true
+        type: choice
+        default: audit
+        options:
+          - audit
+          - apply
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: yandex-vital-media-deployment
+  cancel-in-progress: false
+
+env:
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  FIT_VITAL_MEDIA_DEPLOYMENT_MODE: ${{ inputs.mode }}
+
+jobs:
+  deploy:
+    name: ${{ inputs.mode == 'apply' && 'Deploy and verify reviewed Vital media' || 'Audit reviewed Vital media' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.0
+          cache: npm
+      - run: npm ci
+      - name: Verify the pinned stage media configuration
+        env:
+          MEDIA_BUCKET_OVERRIDE: ${{ vars.YC_STAGE_MEDIA_BUCKET }}
+          MEDIA_CREDENTIALS_OVERRIDE: ${{ vars.YC_STAGE_MEDIA_S3_CREDENTIALS }}
+        run: |
+          set -euo pipefail
+          bucket="${MEDIA_BUCKET_OVERRIDE:-fit-stage-media-${YC_FOLDER_ID:0:8}}"
+          [[ "$bucket" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]
+          if test -n "$MEDIA_BUCKET_OVERRIDE"; then
+            jq -e '
+              (.secret_id | test("^[a-z0-9]{20}$"))
+              and (.version_id | test("^[a-z0-9]{20}$"))
+            ' <<<"$MEDIA_CREDENTIALS_OVERRIDE" >/dev/null
+          fi
+          echo "FIT_YANDEX_MEDIA_BUCKET=$bucket" >> "$GITHUB_ENV"
+      - name: Decrypt and verify the reviewed package
+        env:
+          VITAL_MEDIA_KEY: ${{ secrets.VITAL_MEDIA_KEY }}
+        run: node scripts/prepare-vital-media.mjs
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh \
+            --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - name: Exchange GitHub OIDC for the bounded deploy identity
+        run: scripts/yandex-github-oidc.sh
+      - name: Resolve the private stage runtimes
+        run: |
+          set -euo pipefail
+          migration_url=$(yc serverless container get \
+            --name fit-stage-migration --folder-id "$YC_FOLDER_ID" \
+            --format json | jq -er '.url')
+          api_url=$(yc serverless container get \
+            --name fit-stage-api --folder-id "$YC_FOLDER_ID" \
+            --format json | jq -er '.url')
+          [[ "$migration_url" == https://* ]]
+          [[ "$api_url" == https://* ]]
+          echo "FIT_YANDEX_MIGRATION_URL=$migration_url" >> "$GITHUB_ENV"
+          echo "FIT_YANDEX_API_URL=$api_url" >> "$GITHUB_ENV"
+      - name: Audit or deploy without exposing object paths
+        run: |
+          set -euo pipefail
+          report=$(mktemp)
+          trap 'rm -f "$report"' EXIT
+          node scripts/deploy-vital-media-yandex.mjs > "$report"
+          jq -e '
+            (.mode == "audit" or .mode == "apply")
+            and .objects == 2010
+            and .bytes == 71514430
+            and (.verified | type == "number")
+            and (.missing | type == "number")
+            and (.mismatched | type == "number")
+            and (.unexpected | type == "number")
+            and (.fingerprint | test("^[a-f0-9]{16}$"))
+            and (.mode != "apply" or (
+              .verified == 2010
+              and .missing == 0
+              and .mismatched == 0
+              and .unexpected == 0
+              and .uploaded + .skipped == 2010
+              and .signedUrlSmoke == true
+            ))
+          ' "$report" >/dev/null
+          jq -r '
+            "Mode: " + .mode,
+            "Objects: " + (.objects | tostring),
+            "Bytes: " + (.bytes | tostring),
+            "Verified: " + (.verified | tostring),
+            "Missing: " + (.missing | tostring),
+            "Mismatched: " + (.mismatched | tostring),
+            "Unexpected: " + (.unexpected | tostring),
+            "Uploaded: " + ((.uploaded // 0) | tostring),
+            "Skipped: " + ((.skipped // 0) | tostring),
+            "Fingerprint: " + .fingerprint,
+            "Signed URL smoke: " + ((.signedUrlSmoke // false) | tostring)
+          ' "$report" >> "$GITHUB_STEP_SUMMARY"

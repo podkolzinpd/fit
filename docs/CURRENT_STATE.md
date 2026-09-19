@@ -93,6 +93,11 @@ Supabase/Yandex adapters без dual-write. Координация, потоки
 - Yandex Web Push producer, recoverable lease/retry, multi-device subscriptions
   и минутный private dispatcher развёрнуты. Финальный end-to-end smoke входит в
   cutover gate.
+- Для 670 проверенных упражнений Vital Gym Pro подготовлен отдельный ручной
+  перенос 2 010 объектов в закрытый Yandex bucket через private migration-runner:
+  GitHub использует только OIDC, а путь/размер/SHA-256 сверяются с точным
+  `ref → JPG + end JPG + MP4` contract. Код и workflow проходят проверку в PR;
+  удалённые audit/apply/readback и signed-URL smoke ещё не запускались.
 - Production parser работает через Yandex Cloud Function. Summary live smoke
   ранее получил HTTP 400 из-за формата тестового запроса; нужен повторный
   authenticated smoke текущего контракта.
