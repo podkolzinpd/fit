@@ -26,6 +26,7 @@ test('requires the reviewed package contract, full readback and signed URL smoke
   assert.match(script, /enumeration !== 'manifest_only'/)
   assert.match(service, /vital_media_object_version_missing/)
   assert.match(service, /put\.VersionId/)
+  assert.doesNotMatch(service, /HeadObjectCommand/)
   assert.doesNotMatch(service, /DeleteObjectCommand|_migration-probes/)
   assert.doesNotMatch(service, /ListObjectsV2Command/)
   assert.match(script, /verified !== 2_010/)

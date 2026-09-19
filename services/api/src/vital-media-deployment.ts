@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto'
 
 import {
   GetObjectCommand,
-  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3'
@@ -81,6 +80,10 @@ function missing(error: unknown): boolean {
   return statusCode(error) === 404
     || (typeof error === 'object' && error !== null && 'name' in error
       && (error.name === 'NoSuchKey' || error.name === 'NotFound'))
+}
+
+function versioned(versionId: string | undefined): versionId is string {
+  return typeof versionId === 'string' && versionId !== '' && versionId !== 'null'
 }
 
 function fingerprint(files: readonly VitalMediaManifestFile[]): string {
@@ -188,23 +191,16 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
 
     const objectKey = key(file.path)
     const expectedType = contentType(file.path)
-    let head
-    try {
-      head = await this.client.send(new HeadObjectCommand({
-        Bucket: this.config.bucket,
-        Key: objectKey,
-      }))
-    } catch (error) {
-      if (!missing(error)) throw new VitalMediaDeploymentError('vital_media_target_inspection_failed')
+    const existing = await this.readObject(file).catch((error: unknown) => {
+      if (
+        error instanceof VitalMediaDeploymentError
+        && error.code === 'vital_media_object_missing'
+      ) return undefined
+      throw error
+    })
+    if (existing?.matches && versioned(existing.versionId)) {
+      return { outcome: 'skipped', versioning: 'verified' }
     }
-    if (
-      head?.ContentLength === file.bytes
-      && head.Metadata?.['source-sha256'] === file.sha256
-      && head.ContentType === expectedType
-      && typeof head.VersionId === 'string'
-      && head.VersionId !== ''
-      && head.VersionId !== 'null'
-    ) return { outcome: 'skipped', versioning: 'verified' }
 
     const put = await this.client.send(new PutObjectCommand({
       Body: body,
@@ -217,14 +213,16 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
     })).catch(() => {
       throw new VitalMediaDeploymentError('vital_media_upload_failed')
     })
-    if (
-      typeof put.VersionId !== 'string'
-      || put.VersionId === ''
-      || put.VersionId === 'null'
-    ) throw new VitalMediaDeploymentError('vital_media_object_version_missing')
+    if (!versioned(put.VersionId)) {
+      throw new VitalMediaDeploymentError('vital_media_object_version_missing')
+    }
 
     const stored = await this.readObject(file).catch(() => undefined)
-    if (stored === undefined || !stored.matches) {
+    if (
+      stored === undefined
+      || !stored.matches
+      || stored.versionId !== put.VersionId
+    ) {
       throw new VitalMediaDeploymentError('vital_media_upload_verification_failed')
     }
     return { outcome: 'uploaded', versioning: 'verified' }
@@ -260,18 +258,21 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
     }
   }
 
-  private async readObject(file: VitalMediaManifestFile): Promise<{ matches: boolean }> {
+  private async readObject(
+    file: VitalMediaManifestFile,
+  ): Promise<{ matches: boolean; versionId: string | undefined }> {
     try {
       const response = await this.client.send(new GetObjectCommand({
         Bucket: this.config.bucket,
         Key: key(file.path),
       }))
       const body = await response.Body?.transformToByteArray()
-      if (body === undefined) return { matches: false }
+      if (body === undefined) return { matches: false, versionId: response.VersionId }
       return {
         matches: body.byteLength === file.bytes
           && createHash('sha256').update(body).digest('hex') === file.sha256
           && response.ContentType === contentType(file.path),
+        versionId: response.VersionId,
       }
     } catch (error) {
       if (missing(error)) throw new VitalMediaDeploymentError('vital_media_object_missing')

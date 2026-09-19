@@ -57,6 +57,7 @@ describe('Vital media deployment contract', () => {
       .mockResolvedValueOnce({
         Body: { transformToByteArray: () => Promise.resolve(body) },
         ContentType: 'image/jpeg',
+        VersionId: 'version-1',
       })
     const deployment = new YandexVitalMediaDeployment({
       accessKeyId: 'access-key',
@@ -98,9 +99,8 @@ describe('Vital media deployment contract', () => {
     const body = Buffer.from('reviewed-image')
     const sha256 = createHash('sha256').update(body).digest('hex')
     const send = vi.fn().mockResolvedValue({
-      ContentLength: body.byteLength,
+      Body: { transformToByteArray: () => Promise.resolve(body) },
       ContentType: 'image/jpeg',
-      Metadata: { 'source-sha256': sha256 },
       VersionId: 'version-1',
     })
     const deployment = new YandexVitalMediaDeployment({
@@ -116,5 +116,34 @@ describe('Vital media deployment contract', () => {
       sha256,
     }, body)).resolves.toEqual({ outcome: 'skipped', versioning: 'verified' })
     expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not skip an exact unversioned object', async () => {
+    const body = Buffer.from('reviewed-image')
+    const sha256 = createHash('sha256').update(body).digest('hex')
+    const send = vi.fn()
+      .mockResolvedValueOnce({
+        Body: { transformToByteArray: () => Promise.resolve(body) },
+        ContentType: 'image/jpeg',
+      })
+      .mockResolvedValueOnce({ VersionId: 'version-1' })
+      .mockResolvedValueOnce({
+        Body: { transformToByteArray: () => Promise.resolve(body) },
+        ContentType: 'image/jpeg',
+        VersionId: 'version-1',
+      })
+    const deployment = new YandexVitalMediaDeployment({
+      accessKeyId: 'access-key',
+      bucket: 'private-bucket',
+      secretAccessKey: 'secret-key',
+    })
+    ;(deployment as unknown as { client: { send: typeof send } }).client = { send }
+
+    await expect(deployment.upload({
+      bytes: body.byteLength,
+      path: 'reviewed-image.jpg',
+      sha256,
+    }, body)).resolves.toEqual({ outcome: 'uploaded', versioning: 'verified' })
+    expect(send).toHaveBeenCalledTimes(3)
   })
 })
