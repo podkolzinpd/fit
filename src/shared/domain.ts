@@ -490,7 +490,7 @@ export interface TrainerAttentionWorkout {
   workoutDate: LocalDate
   clientQuestion?: string
   clientQuestionAskedAt?: string
-  discomfort: boolean
+  discomfort: boolean | null
   clientComment?: string
   feedbackSubmittedAt?: string
   version: number

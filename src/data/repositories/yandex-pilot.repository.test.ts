@@ -677,6 +677,34 @@ describe('yandexPilotRepository', () => {
     })
   })
 
+  it('accepts trainer attention questions without discomfort feedback', async () => {
+    const data = {
+      ...trainingData,
+      attention: [{
+        workoutId: trainingData.workouts[0]!.id,
+        clientId: CLIENT_ID,
+        clientName: 'Анна Смирнова',
+        workoutDate: '2026-08-20',
+        clientQuestion: 'Можно заменить упражнение?',
+        clientQuestionAskedAt: '2026-08-20T13:01:00.000Z',
+        discomfort: null,
+        clientComment: null,
+        feedbackSubmittedAt: '2026-08-20T13:01:00.000Z',
+        version: 1,
+      }],
+    }
+    queries.listTrainingData.mockResolvedValue(
+      new Response(JSON.stringify(data), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.listTrainingData(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )).resolves.toMatchObject({
+      attention: [{ clientQuestion: 'Можно заменить упражнение?', discomfort: null }],
+    })
+  })
+
   it('rejects malformed workout data instead of rendering a partial aggregate', async () => {
     queries.listTrainingData.mockResolvedValue(new Response(JSON.stringify({
       ...trainingData,
