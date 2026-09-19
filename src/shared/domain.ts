@@ -399,6 +399,14 @@ export interface WorkoutDraft {
   version?: number
 }
 
+/** Личный шаблон, сохранённый клиентом из своей тренировки для повторного планирования без похода в историю. */
+export interface FavoriteWorkoutTemplate {
+  id: UUID
+  title: string
+  createdAt: string
+  exercises: WorkoutExerciseDraft[]
+}
+
 export interface LiveSetDraft {
   weightKg?: number
   /** Повторы; для гребного тренажёра — фактическая частота гребков в минуту. */
