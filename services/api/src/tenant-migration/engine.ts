@@ -518,6 +518,12 @@ async function restoreFullCohortTargetAnchors(
 async function beginTargetTransaction(target: DatabaseClient): Promise<void> {
   await target.query('begin isolation level serializable')
   await configureMigrationTransaction(target)
+  // Replaying historical child rows must not advance derived parent
+  // timestamps. The value is transaction-local and is consumed only by
+  // migration-aware database triggers.
+  await target.query(
+    "select set_config('fit.tenant_migration_restore', 'on', true)",
+  )
 }
 
 async function lockTenant(
