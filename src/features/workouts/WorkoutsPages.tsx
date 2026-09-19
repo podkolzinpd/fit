@@ -7,7 +7,7 @@ import { currentStage, orderedStages } from '../../shared/goal-rules'
 import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { readLiveRestOverrides, restDeadline, restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
-import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, exerciseSummary, factLine, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
+import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, exerciseSummary, factLine, favoriteTemplateToWorkoutDraft, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutFocusTitle, workoutStatusPresentation, workoutDurationLabel, workoutToFavoriteTemplate, workoutTonnage, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { LiveRestTimer } from './LiveRestTimer'
 import { cancelNativeRestTimerNotification, scheduleNativeRestTimerNotification } from './rest-timer-notification'
@@ -438,7 +438,7 @@ export function ClientWorkoutsPage() {
 }
 
 export function WorkoutFormPage() {
-  const { clients: clientsRepository, exercises: exercisesRepository, goals: goalsRepository, workouts: workoutsRepository } = useDataBackend()
+  const { clients: clientsRepository, exercises: exercisesRepository, favoriteWorkouts: favoriteWorkoutsRepository, goals: goalsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId } = useParams()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
@@ -452,9 +452,13 @@ export function WorkoutFormPage() {
   const [confirmLeave, confirmLeaveDialog] = useConfirm()
   const sourceId = workoutId ?? params.get('copy') ?? undefined
   const copiedWorkout = params.has('copy')
+  const favoriteId = params.get('favorite') ?? undefined
   const recordPlannedResult = Boolean(workoutId && params.get('result') === '1')
   const routeClientId = params.get('client') ?? ''
   const source = useQuery({ queryKey: ['workout', sourceId], queryFn: () => workoutsRepository.get(sourceId ?? ''), enabled: Boolean(sourceId) })
+  const favorites = useQuery({ queryKey: ['favorite-workouts'], queryFn: () => favoriteWorkoutsRepository.list(), enabled: Boolean(favoriteId) })
+  const favorite = favorites.data?.find((item) => item.id === favoriteId)
+  const plannedFromFavorite = Boolean(favoriteId)
   const clientMode = actor?.role === 'client'
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false), enabled: !clientMode })
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientMode })
@@ -480,9 +484,11 @@ export function WorkoutFormPage() {
   const parsedExerciseSelection = useRef<((exercise: ExerciseSnapshot) => void) | null>(null)
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
-  const initial = source.data ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today, { refreshCatalogNames: true })) : undefined
+  const initial = source.data
+    ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today, { refreshCatalogNames: true }))
+    : favorite ? favoriteTemplateToWorkoutDraft(favorite.exercises, mine.data?.id ?? '', today) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
-  const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`)
+  const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? (favoriteId ? `favorite-${favoriteId}` : `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`))
   useEffect(() => { setPickerSelectionDraft([]) }, [draftKey])
   // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
   const defaultClientId = clientMode ? (mine.data?.id ?? '') : (initial?.clientId ?? routeClientId)
@@ -502,7 +508,7 @@ export function WorkoutFormPage() {
   // переключить в «Завершённую».
   const completedMode = recordCompleted || recordPlannedResult || Boolean(workoutId && source.data?.status === 'done')
   useEffect(() => {
-    if (!actor || source.isLoading || (clientMode && mine.isLoading) || formDraftReady) return
+    if (!actor || source.isLoading || (clientMode && mine.isLoading) || (plannedFromFavorite && favorites.isLoading) || formDraftReady) return
     // Only creation persists drafts. An unfinished copy must never populate an edit.
     const saved = workoutId ? null : readWorkoutFormDraft(draftKey)
     if (saved) {
@@ -514,7 +520,7 @@ export function WorkoutFormPage() {
       setNotes(saved.notes)
       setStageId(saved.stageId)
       setRecordCompleted(saved.recordCompleted)
-      setDraftExercises(copiedWorkout
+      setDraftExercises(copiedWorkout || plannedFromFavorite
         ? saved.exercises.map((exercise) => ({ ...exercise, name: copiedExerciseName(exercise) }))
         : saved.exercises)
     } else if (initial) {
@@ -528,7 +534,7 @@ export function WorkoutFormPage() {
       setStageId(initial.stageId ?? '')
     }
     setFormDraftReady(true)
-  }, [actor, clientMode, draftKey, formDraftReady, initial, mine.isLoading, routeClientId, source.data?.status, source.isLoading])
+  }, [actor, clientMode, draftKey, favorites.isLoading, formDraftReady, initial, mine.isLoading, plannedFromFavorite, routeClientId, source.data?.status, source.isLoading])
 
   useEffect(() => {
     if (!formDraftReady || workoutId) return
@@ -691,7 +697,7 @@ export function WorkoutFormPage() {
   const pageTitle = recordPlannedResult ? 'Записать результат' : workoutId ? 'Редактировать тренировку' : 'Новая тренировка'
   const documentTitle = recordPlannedResult ? 'Запись результата' : workoutId ? 'Редактирование тренировки' : params.has('copy') ? 'Копирование тренировки' : 'Создание тренировки'
   const exerciseMeta = exercises.length > 0 ? `${exercises.length} ${exerciseCountLabel(exercises.length)}` : 'Сначала добавьте упражнения'
-  const headerMeta = [copiedWorkout ? 'Скопировано' : '', selectedClientName, exerciseMeta].filter(Boolean).join(' · ')
+  const headerMeta = [copiedWorkout ? 'Скопировано' : plannedFromFavorite ? 'Из избранного' : '', selectedClientName, exerciseMeta].filter(Boolean).join(' · ')
   const hasMeaningfulDraft = exercises.length > 0 || Boolean(notes.trim() || startTime || endTime || selectedClientId || recordCompleted || entryDate !== localDate(params.get('date') ?? today))
   async function leaveForm() {
     if (!workoutId && hasMeaningfulDraft) {
@@ -736,7 +742,7 @@ export function WorkoutFormPage() {
         <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }}
           canOpenTechnique={(exercise) => hasExerciseTechnique(catalogExerciseFor(catalog.exercises, exercise))}
           onOpenTechnique={(exercise) => { const meta = catalogExerciseFor(catalog.exercises, exercise); if (hasExerciseTechnique(meta)) setTechniqueExercise(meta) }}
-          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout} initialExercisesReady={formDraftReady} />
+          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite} initialExercisesReady={formDraftReady} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
@@ -748,8 +754,35 @@ export function WorkoutFormPage() {
   </Page>
 }
 
+function SaveFavoriteWorkoutSheet({ exercises, pending, error, onSave, onClose }: {
+  exercises: readonly WorkoutExerciseModel[]
+  pending: boolean
+  error: Error | null
+  onSave: (title: string) => void
+  onClose: () => void
+}) {
+  const [title, setTitle] = useState('')
+  // Пустое поле — не значит «без названия»: подсказка уже показывает то же
+  // имя, что клиент видит заголовком завершённой тренировки, и станет
+  // реальным названием, если он ничего не введёт сам.
+  const placeholder = workoutFocusTitle(muscleGroupLabels(exercises))
+  return <div className="sheet-overlay" onClick={() => !pending && onClose()}>
+    <section className="workout-decision-sheet" role="dialog" aria-modal="true" aria-label="Сохранить в избранное" onClick={(event) => event.stopPropagation()}>
+      <header className="picker-header"><h2>Сохранить в избранное</h2><button type="button" className="picker-close" aria-label="Закрыть" disabled={pending} onClick={onClose}><CloseIcon /></button></header>
+      <form className="stack compact" onSubmit={(event) => { event.preventDefault(); onSave(title.trim() || placeholder) }}>
+        <Field label="Название"><input value={title} maxLength={120} placeholder={placeholder} autoFocus onChange={(event) => setTitle(event.target.value)} /></Field>
+        {error && <p className="error" role="alert">{error.message}</p>}
+        <div className="actions workout-action-row">
+          <WorkoutCta type="button" variant="tertiary" disabled={pending} onClick={onClose}>Отмена</WorkoutCta>
+          <WorkoutCta type="submit" pending={pending} pendingLabel="Сохраняем…">Сохранить</WorkoutCta>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
 export function WorkoutDetailPage() {
-  const { goals: goalsRepository, invitations: invitationsRepository, workouts: workoutsRepository } = useDataBackend()
+  const { favoriteWorkouts: favoriteWorkoutsRepository, goals: goalsRepository, invitations: invitationsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams(); const navigate = useNavigate(); const location = useLocation(); const queryClient = useQueryClient()
   const navigationState = location.state as WorkoutNavigationState | null
   const { actor } = useAuth()
@@ -757,6 +790,7 @@ export function WorkoutDetailPage() {
   const [confirm, confirmDialog] = useConfirm()
   const [askActiveWorkoutRecovery, activeWorkoutRecoveryDialog] = useConfirm()
   const [decisionSheet, setDecisionSheet] = useState<'actions' | 'reschedule' | null>(null)
+  const [favoriteSheetOpen, setFavoriteSheetOpen] = useState(false)
   const [rescheduleDate, setRescheduleDate] = useState<LocalDate>(() => todayInTimeZone(actor?.timezone))
   const [rescheduleTime, setRescheduleTime] = useState('')
   const [firstPlanInviteCode, setFirstPlanInviteCode] = useState<string | null>(null)
@@ -837,6 +871,13 @@ export function WorkoutDetailPage() {
     mutationFn: () => workoutsRepository.reschedule(query.data!, rescheduleDate, rescheduleTime || null),
     onSuccess: async () => { setDecisionSheet(null); await invalidateWorkoutSurfaces() },
   })
+  const saveFavorite = useMutation({
+    mutationFn: (title: string) => favoriteWorkoutsRepository.save(title, workoutToFavoriteTemplate(query.data!)),
+    onSuccess: async () => {
+      setFavoriteSheetOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ['favorite-workouts'] })
+    },
+  })
   const remove = useMutation({ mutationFn: () => workoutsRepository.remove(query.data!), onSuccess: async () => {
     if (actor?.userId) clearWorkoutInactivityReminder(actor.userId, workoutId)
     await Promise.all([invalidateWorkoutResults(queryClient), queryClient.invalidateQueries({ queryKey: ['clients'] })])
@@ -872,7 +913,7 @@ export function WorkoutDetailPage() {
   const workout = query.data
   const done = workout?.status === 'done'
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt) : null
-  const groups = workout ? muscleGroupLabels(workout) : []
+  const groups = workout ? muscleGroupLabels(workout.exercises) : []
   const tonnage = workout ? workoutTonnage(workout) : 0
   const sets = workout?.exercises.flatMap((exercise) => exercise.sets) ?? []
   const completedSets = sets.filter((set) => set.confirmedAt).length
@@ -942,6 +983,7 @@ export function WorkoutDetailPage() {
   }
   const manageMenuInHeader = Boolean(clientMode && canManage && workout && !done)
   const workoutManageItems = [
+    ...(clientMode ? [{ label: 'В избранное', onClick: () => setFavoriteSheetOpen(true) }] : []),
     { label: 'Копировать тренировку', onClick: () => navigate(`/workouts/new?copy=${workoutId}`, { state: childNavigationState }) },
     { label: 'Удалить тренировку', danger: true, disabled: remove.isPending, onClick: () => { void requestWorkoutRemoval() } },
   ]
@@ -1070,6 +1112,8 @@ export function WorkoutDetailPage() {
           </form>}
         </section>
       </div>}
+      {favoriteSheetOpen && workout && <SaveFavoriteWorkoutSheet exercises={workout.exercises} pending={saveFavorite.isPending} error={saveFavorite.error}
+        onSave={(title) => saveFavorite.mutate(title)} onClose={() => { saveFavorite.reset(); setFavoriteSheetOpen(false) }} />}
       {confirmDialog}{activeWorkoutRecoveryDialog}
     </>}</AsyncView>
   </Page>
@@ -1079,13 +1123,6 @@ const wellbeingLabels: Record<WorkoutWellbeing, string> = {
   good: 'Хорошо',
   normal: 'Нормально',
   hard: 'Плохо',
-}
-
-function workoutFocusTitle(groups: readonly string[]): string {
-  if (groups.length === 0) return 'Тренировка'
-  if (groups.length === 1) return groups[0]!
-  if (groups.length === 2) return `${groups[0]} и ${groups[1]}`
-  return `${groups[0]}, ${groups[1]} и ${groups[2]}`
 }
 
 const trainerReactionLabels: Record<TrainerReaction, string> = {

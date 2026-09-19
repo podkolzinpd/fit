@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, createRunningFormatDrafts, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutStatusPresentation, workoutDurationLabel, workoutTonnage } from './workout-rules'
+import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, createRunningFormatDrafts, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, favoriteTemplateToWorkoutDraft, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutFocusTitle, workoutStatusPresentation, workoutDurationLabel, workoutToFavoriteTemplate, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 import { SYSTEM_EXERCISE_LEGACY_CATALOG, SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 
@@ -443,7 +443,7 @@ describe('muscleGroupLabels', () => {
         { id: 'e3', source: 'system', ref: 'lunge', name: 'Выпад', muscleGroup: 'legs', inputKind: 'strength', position: 2, blockId: 'b3', blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, sets: [] },
       ],
     }
-    expect(muscleGroupLabels(workout)).toEqual(['Ноги', 'Грудь'])
+    expect(muscleGroupLabels(workout.exercises)).toEqual(['Ноги', 'Грудь'])
   })
 })
 
@@ -579,6 +579,54 @@ describe('copyWorkout blocks', () => {
     // оба упражнения блока получили один и тот же новый blockId
     expect(draft.exercises[0]?.blockId).toBe(draft.exercises[1]?.blockId)
     expect(draft.exercises[0]?.blockId).not.toBe('b1')
+  })
+})
+
+describe('workoutToFavoriteTemplate', () => {
+  it('снимает снэпшот по факту завершённой тренировки, как copyWorkout', () => {
+    const source: Workout = {
+      ...workoutWithExercises([
+        exercise('a', 0, 'b1', 'single', [{ id: 'x', position: 0, weightKg: 50, reps: 5, fact: { weightKg: 55, reps: 6 }, confirmedAt: 't', version: 1 }]),
+      ]),
+      status: 'done',
+    }
+    const exercises = workoutToFavoriteTemplate(source)
+    expect(exercises).toHaveLength(1)
+    expect(exercises[0]?.sets[0]).toMatchObject({ weightKg: 55, reps: 6 })
+  })
+})
+
+describe('workoutFocusTitle', () => {
+  it('возвращает «Тренировка» для пустого списка групп', () => {
+    expect(workoutFocusTitle([])).toBe('Тренировка')
+  })
+
+  it('соединяет 2 и 3 группы союзом «и», не показывая четвёртую', () => {
+    expect(workoutFocusTitle(['Ноги'])).toBe('Ноги')
+    expect(workoutFocusTitle(['Ноги', 'Кор'])).toBe('Ноги и Кор')
+    expect(workoutFocusTitle(['Ноги', 'Кор', 'Спина', 'Грудь'])).toBe('Ноги, Кор и Спина')
+  })
+})
+
+describe('favoriteTemplateToWorkoutDraft', () => {
+  it('назначает клиента и дату, выдаёт сгруппированным упражнениям общий свежий blockId', () => {
+    const template: WorkoutExerciseDraft[] = [
+      draft('a', 'b1', 'group'),
+      draft('b', 'b1', 'group'),
+      draft('c', 'b2', 'single'),
+    ]
+    const result = favoriteTemplateToWorkoutDraft(template, 'client-1', localDate('2026-09-25'))
+    expect(result.clientId).toBe('client-1')
+    expect(result.workoutDate).toBe(localDate('2026-09-25'))
+    expect(result.exercises[0]?.blockId).toBe(result.exercises[1]?.blockId)
+    expect(result.exercises[0]?.blockId).not.toBe('b1')
+    expect(result.exercises[2]?.blockId).not.toBe(result.exercises[0]?.blockId)
+    expect(result.exercises.map((item) => item.position)).toEqual([0, 1, 2])
+  })
+
+  it('назначает одиночному упражнению без blockId свежий id', () => {
+    const result = favoriteTemplateToWorkoutDraft([draft('a')], 'client-1', localDate('2026-09-25'))
+    expect(result.exercises[0]?.blockId).toBeTruthy()
   })
 })
 

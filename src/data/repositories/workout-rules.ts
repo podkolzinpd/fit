@@ -1,4 +1,4 @@
-import type { BlockPreset, BlockType, ClientStats, ExerciseSnapshot, InputKind, Workout, WorkoutDraft, WorkoutExercise, WorkoutExerciseDraft, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
+import type { BlockPreset, BlockType, ClientStats, ExerciseSnapshot, InputKind, MuscleGroup, UUID, Workout, WorkoutDraft, WorkoutExercise, WorkoutExerciseDraft, WorkoutSet, WorkoutSetDraft, WorkoutSummary } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 import type { RunningFormat } from '../../shared/running-formats'
 import { runningFormatExerciseName } from '../../shared/running-formats'
@@ -744,15 +744,25 @@ export function previousResultLine(sets: readonly WorkoutSetDraft[], exerciseRef
   return null
 }
 
-// Ordered, de-duplicated muscle-group labels for a workout's exercises.
-export function muscleGroupLabels(workout: Workout): string[] {
+// Ordered, de-duplicated muscle-group labels for a set of exercises.
+export function muscleGroupLabels(exercises: readonly { muscleGroup: MuscleGroup }[]): string[] {
   const seen = new Set<string>()
   const labels: string[] = []
-  for (const exercise of workout.exercises) {
+  for (const exercise of exercises) {
     const label = MUSCLE_GROUP_LABELS[exercise.muscleGroup]
     if (!seen.has(label)) { seen.add(label); labels.push(label) }
   }
   return labels
+}
+
+// Короткий заголовок по фокусу тренировки («Ноги и кор») — уже показывается
+// клиенту как заголовок завершённой тренировки, переиспользуется как имя по
+// умолчанию для избранного, чтобы не заводить второй способ назвать то же.
+export function workoutFocusTitle(groups: readonly string[]): string {
+  if (groups.length === 0) return 'Тренировка'
+  if (groups.length === 1) return groups[0]!
+  if (groups.length === 2) return `${groups[0]} и ${groups[1]}`
+  return `${groups[0]}, ${groups[1]} и ${groups[2]}`
 }
 
 // Основные группы на карточке завершённой тренировки считаются только по
@@ -933,6 +943,38 @@ export function completedWorkoutDraft(source: Workout): WorkoutDraft {
           rpe: fact?.rpe ?? set.rpe,
         }
       }),
+    })),
+  }
+}
+
+// Снэпшот для избранного — та же структура, что уже даёт copyWorkout() при
+// копировании из истории (блоки, сеты, отдых, факт завершённой тренировки как
+// исходный план), без даты/клиента — они known только в момент планирования.
+export function workoutToFavoriteTemplate(source: Workout): WorkoutExerciseDraft[] {
+  return copyWorkout(source).exercises
+}
+
+// Планирование избранного — как copyWorkout(), блокам нужны свежие ID, чтобы
+// не конфликтовать при повторном использовании одного и того же шаблона.
+export function favoriteTemplateToWorkoutDraft(exercises: WorkoutExerciseDraft[], clientId: UUID, workoutDate: LocalDate): WorkoutDraft {
+  const blockIdMap = new Map<string, string>()
+  const nextBlockId = (sourceBlockId: string): string => {
+    const existing = blockIdMap.get(sourceBlockId)
+    if (existing) return existing
+    const fresh = crypto.randomUUID()
+    blockIdMap.set(sourceBlockId, fresh)
+    return fresh
+  }
+  return {
+    clientId, workoutDate,
+    exercises: exercises.map((exercise, position) => ({
+      ...exercise,
+      // Избранное переиспользуют не сразу — название системного упражнения
+      // в каталоге могло с тех пор смениться.
+      name: copiedExerciseName(exercise),
+      position,
+      blockId: exercise.blockId ? nextBlockId(exercise.blockId) : crypto.randomUUID(),
+      sourceExerciseId: undefined,
     })),
   }
 }

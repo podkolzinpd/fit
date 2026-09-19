@@ -113,6 +113,8 @@ import {
 } from './live-workout-request.js'
 import {
   readExpectedVersion,
+  readFavoriteWorkoutExercises,
+  readFavoriteWorkoutTitle,
   readSavePlannedWorkoutRequest,
 } from './planned-workout-request.js'
 import {
@@ -141,6 +143,10 @@ import {
   TrainerDiscoveryError,
   type PilotTrainerDiscovery,
 } from './trainer-discovery.js'
+import {
+  FavoriteWorkoutsError,
+  type PilotFavoriteWorkouts,
+} from './favorite-workouts.js'
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
@@ -194,6 +200,7 @@ interface BuildAppOptions {
   vitalMediaSigner?: VitalMediaSigner
   pilotTrainerProfiles?: PilotTrainerProfiles
   pilotTrainerDiscovery?: PilotTrainerDiscovery
+  pilotFavoriteWorkouts?: PilotFavoriteWorkouts
   logger?: boolean
   releaseId?: string
 }
@@ -1035,6 +1042,48 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     )
   })
 
+  app.get('/v1/favorite-workouts', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (options.pilotFavoriteWorkouts === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => options.pilotFavoriteWorkouts!.list(session),
+      (favorites) => reply.header('cache-control', 'no-store').send({ favorites }),
+    )
+  })
+
+  app.post('/v1/favorite-workouts', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const body = request.body
+    const input = typeof body === 'object' && body !== null ? body as Record<string, unknown> : undefined
+    const title = input ? readFavoriteWorkoutTitle(input.title) : undefined
+    const exercises = input ? readFavoriteWorkoutExercises(input.exercises) : undefined
+    if (title === undefined || exercises === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotFavoriteWorkouts === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => options.pilotFavoriteWorkouts!.save(session, title, exercises),
+      (favorite) => reply.header('cache-control', 'no-store').code(201).send(favorite),
+    )
+  })
+
+  app.delete('/v1/favorite-workouts/:id', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const { id } = request.params as { id?: unknown }
+    if (typeof id !== 'string' || !uuidPattern.test(id)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotFavoriteWorkouts === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => options.pilotFavoriteWorkouts!.remove(session, id),
+      () => reply.header('cache-control', 'no-store').code(204).send(),
+    )
+  })
+
   app.post('/v1/auth/yandex/pilot', async (request, reply) => {
     const body = request.body
     if (typeof body !== 'object' || body === null || !('code' in body) || !('codeVerifier' in body)) {
@@ -1732,6 +1781,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       }
       if (error instanceof TrainerDiscoveryError) {
         return reply.code(403).send({ error: 'action_not_allowed' })
+      }
+      if (error instanceof FavoriteWorkoutsError) {
+        if (error.failure === 'forbidden') return reply.code(403).send({ error: 'action_not_allowed' })
+        if (error.failure === 'not_found') return reply.code(404).send({ error: 'resource_not_found' })
+        if (error.failure === 'limit_reached') return reply.code(422).send({ error: 'favorite_workout_limit_reached' })
+        return reply.code(422).send({ error: 'invalid_favorite_workout' })
       }
       if (error instanceof AssistantStateError) {
         if (error.failure === 'forbidden') {

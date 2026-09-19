@@ -81,6 +81,7 @@ import type { ChatMediaStore } from './chat-media.js'
 import type { PilotTrainerProfiles, TrainerProfileDraft } from './trainer-profile.js'
 import { ChatCommandError, type PilotChat } from './pilot-chat.js'
 import { TrainerDiscoveryError, type PilotTrainerDiscovery } from './trainer-discovery.js'
+import { FavoriteWorkoutsError, type FavoriteWorkoutTemplate, type PilotFavoriteWorkouts } from './favorite-workouts.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -461,6 +462,111 @@ describe('trainer discovery prompt', () => {
 
     expect(response.statusCode).toBe(403)
     expect(response.json()).toEqual({ error: 'action_not_allowed' })
+  })
+})
+
+describe('favorite workouts', () => {
+  const session = { accessMode: 'read_write' as const, token: 'e'.repeat(43) }
+  const exercise = {
+    position: 0, source: 'system' as const, ref: 'squat', customExerciseId: null,
+    name: 'Присед', muscleGroup: 'legs' as const, inputKind: 'strength' as const,
+    blockId: '8ffdb87b-078c-42d4-b6db-af8bc60f80f2', blockType: 'single' as const, blockPreset: 'set' as const, blockRounds: 1,
+    restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, trainerComment: null,
+    sets: [{ position: 0, weightKg: 60, reps: 5, durationMin: null, durationSec: null, distanceKm: null, rpe: null }],
+  }
+  const favorite: FavoriteWorkoutTemplate = {
+    id: '12acc6d6-7ca8-43cd-b124-b4224c917fae', title: 'Ноги и кор', createdAt: '2026-09-19T09:00:00.000Z', exercises: [exercise],
+  }
+
+  function favorites() {
+    const list = vi.fn<PilotFavoriteWorkouts['list']>().mockResolvedValue([favorite])
+    const save = vi.fn<PilotFavoriteWorkouts['save']>().mockResolvedValue(favorite)
+    const remove = vi.fn<PilotFavoriteWorkouts['remove']>().mockResolvedValue(undefined)
+    return { service: { list, save, remove } satisfies PilotFavoriteWorkouts, list, save, remove }
+  }
+
+  it('lists favorites for any valid session', async () => {
+    const { service: pilotFavoriteWorkouts, list } = favorites()
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'GET', url: '/v1/favorite-workouts', headers: { 'x-fit-session': session.token } })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ favorites: [favorite] })
+    expect(list).toHaveBeenCalledWith(session)
+  })
+
+  it('saves a favorite through a read-write session', async () => {
+    const { service: pilotFavoriteWorkouts, save } = favorites()
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    const response = await app.inject({
+      method: 'POST', url: '/v1/favorite-workouts', headers: { 'x-fit-session': session.token },
+      payload: { title: 'Ноги и кор', exercises: [exercise] },
+    })
+
+    expect(response.statusCode).toBe(201)
+    expect(response.json()).toEqual(favorite)
+    expect(save).toHaveBeenCalledWith(session, 'Ноги и кор', [exercise])
+  })
+
+  it('rejects a save with a malformed body or a read-only session', async () => {
+    const { service: pilotFavoriteWorkouts, save } = favorites()
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    const missingExercises = await app.inject({
+      method: 'POST', url: '/v1/favorite-workouts', headers: { 'x-fit-session': session.token },
+      payload: { title: 'Ноги и кор', exercises: [] },
+    })
+    const readOnly = await app.inject({
+      method: 'POST', url: '/v1/favorite-workouts', headers: { 'x-fit-pilot-session': session.token },
+      payload: { title: 'Ноги и кор', exercises: [exercise] },
+    })
+
+    expect(missingExercises.statusCode).toBe(400)
+    expect(readOnly.statusCode).toBe(403)
+    expect(save).not.toHaveBeenCalled()
+  })
+
+  it('removes a favorite by id through a read-write session', async () => {
+    const { service: pilotFavoriteWorkouts, remove } = favorites()
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    const response = await app.inject({
+      method: 'DELETE', url: `/v1/favorite-workouts/${favorite.id}`, headers: { 'x-fit-session': session.token },
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(remove).toHaveBeenCalledWith(session, favorite.id)
+  })
+
+  it('rejects a delete with an invalid id or a read-only session', async () => {
+    const { service: pilotFavoriteWorkouts, remove } = favorites()
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    const invalidId = await app.inject({
+      method: 'DELETE', url: '/v1/favorite-workouts/not-a-uuid', headers: { 'x-fit-session': session.token },
+    })
+    const readOnly = await app.inject({
+      method: 'DELETE', url: `/v1/favorite-workouts/${favorite.id}`, headers: { 'x-fit-pilot-session': session.token },
+    })
+
+    expect(invalidId.statusCode).toBe(400)
+    expect(readOnly.statusCode).toBe(403)
+    expect(remove).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['forbidden', 403, { error: 'action_not_allowed' }],
+    ['not_found', 404, { error: 'resource_not_found' }],
+    ['limit_reached', 422, { error: 'favorite_workout_limit_reached' }],
+    ['invalid', 422, { error: 'invalid_favorite_workout' }],
+  ] as const)('maps a %s failure to %i', async (failure, status, body) => {
+    const { service: pilotFavoriteWorkouts, save } = favorites()
+    save.mockRejectedValue(new FavoriteWorkoutsError(failure))
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    const response = await app.inject({
+      method: 'POST', url: '/v1/favorite-workouts', headers: { 'x-fit-session': session.token },
+      payload: { title: 'Ноги и кор', exercises: [exercise] },
+    })
+
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual(body)
   })
 })
 

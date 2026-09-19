@@ -4,6 +4,7 @@ import type {
   SessionActor,
   Workout,
   WorkoutDraft,
+  WorkoutExerciseDraft,
 } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { createYandexMainRepository } from './yandex-main.repository'
@@ -97,6 +98,45 @@ describe('Yandex main repository', () => {
       method: 'PUT',
       body: JSON.stringify({ action: 'snooze' }),
     })
+  })
+
+  it('lists, saves, and removes favorite workouts', async () => {
+    const wireExercise = {
+      sourceExerciseId: null, position: 0, source: 'system', ref: 'squat', customExerciseId: null,
+      name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', blockId: 'b1', blockType: 'single',
+      blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90,
+      trainerComment: null,
+      sets: [{ sourceSetId: null, position: 0, weightKg: 60, reps: 5, durationMin: null, durationSec: null, distanceKm: null, rpe: null }],
+    }
+    const wireFavorite = {
+      id: '12acc6d6-7ca8-43cd-b124-b4224c917fae', title: 'Ноги и кор',
+      createdAt: '2026-09-19T09:00:00.000Z', exercises: [wireExercise],
+    }
+    const domainExercise: WorkoutExerciseDraft = {
+      position: 0, source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength',
+      blockId: 'b1', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90,
+      sets: [{ position: 0, weightKg: 60, reps: 5 }],
+    }
+    const domainFavorite = { id: wireFavorite.id, title: wireFavorite.title, createdAt: wireFavorite.createdAt, exercises: [domainExercise] }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ favorites: [wireFavorite] }))
+      .mockResolvedValueOnce(jsonResponse(wireFavorite))
+      .mockResolvedValueOnce(jsonResponse({}))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.favoriteWorkouts.list()).resolves.toEqual([domainFavorite])
+    await expect(repository.favoriteWorkouts.save('Ноги и кор', [domainExercise])).resolves.toEqual(domainFavorite)
+    await expect(repository.favoriteWorkouts.remove(wireFavorite.id)).resolves.toBeUndefined()
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${apiBaseUrl}/v1/favorite-workouts`)
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      method: 'POST',
+      body: JSON.stringify({ title: 'Ноги и кор', exercises: [wireExercise] }),
+    })
+    expect(fetchMock.mock.calls[2]?.[0]).toBe(`${apiBaseUrl}/v1/favorite-workouts/${wireFavorite.id}`)
+    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({ method: 'DELETE' })
   })
 
   it('requests and validates a page of public trainers', async () => {

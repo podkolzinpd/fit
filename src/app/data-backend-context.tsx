@@ -3,6 +3,7 @@ import { appFeedbackRepository } from '../data/repositories/app-feedback.reposit
 import { clientsRepository } from '../data/repositories/clients.repository'
 import { chatRepository } from '../data/repositories/chat.repository'
 import { exercisesRepository } from '../data/repositories/exercises.repository'
+import { favoriteWorkoutsRepository } from '../data/repositories/favorite-workouts.repository'
 import { goalsRepository } from '../data/repositories/goals.repository'
 import { invitationsRepository } from '../data/repositories/invitations.repository'
 import { progressRepository } from '../data/repositories/progress.repository'
@@ -26,6 +27,7 @@ export interface DataBackend {
   invitations: typeof invitationsRepository
   progress: typeof progressRepository
   workouts: typeof workoutsRepository
+  favoriteWorkouts: typeof favoriteWorkoutsRepository
   trainingSummaries: typeof trainingSummariesRepository
   trainerProfiles: typeof trainerProfilesRepository
   trainerDiscovery: typeof trainerDiscoveryRepository
@@ -43,6 +45,7 @@ const supabaseDataBackend: DataBackend = {
   invitations: invitationsRepository,
   progress: progressRepository,
   workouts: workoutsRepository,
+  favoriteWorkouts: favoriteWorkoutsRepository,
   trainingSummaries: trainingSummariesRepository,
   trainerProfiles: trainerProfilesRepository,
   trainerDiscovery: trainerDiscoveryRepository,

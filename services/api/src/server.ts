@@ -51,6 +51,7 @@ import { buildYandexAiAuthorization } from './yandex-ai-authorization.js'
 import { SupabaseVitalMediaSigner } from './vital-media.js'
 import { DatabasePilotTrainerProfiles } from './trainer-profile.js'
 import { DatabasePilotTrainerDiscovery } from './trainer-discovery.js'
+import { DatabasePilotFavoriteWorkouts } from './favorite-workouts.js'
 import { parseAllowedOrigins } from './cors-origins.js'
 
 function parsePort(value: string | undefined): number {
@@ -157,6 +158,9 @@ const pilotTrainerProfiles = databasePool === undefined
 const pilotTrainerDiscovery = databasePool === undefined
   ? undefined
   : new DatabasePilotTrainerDiscovery(databasePool)
+const pilotFavoriteWorkouts = databasePool === undefined
+  ? undefined
+  : new DatabasePilotFavoriteWorkouts(databasePool)
 const pilotWorkoutsWriter =
   databasePool === undefined
     ? undefined
@@ -273,6 +277,7 @@ const app = buildApp(
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
     ...(pilotTrainerProfiles === undefined ? {} : { pilotTrainerProfiles }),
     ...(pilotTrainerDiscovery === undefined ? {} : { pilotTrainerDiscovery }),
+    ...(pilotFavoriteWorkouts === undefined ? {} : { pilotFavoriteWorkouts }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
     ...(pilotProgressData === undefined ? {} : { pilotProgressData }),
     ...(pilotWorkoutParser === undefined ? {} : { pilotWorkoutParser }),
