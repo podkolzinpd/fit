@@ -1,7 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-20. База изменений: `5a356e13` (#1066). Frontend остаётся
+Обновлено: 2026-09-20. База изменений: `58c7a74e` (#1067). Frontend остаётся
 на Vercel, а production data plane — принятый Yandex Cloud stage stack. Yandex
 ID является единственным production-входом; app-session, main routing и native
 registration включены глобально.
