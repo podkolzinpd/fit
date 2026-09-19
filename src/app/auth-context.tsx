@@ -26,6 +26,10 @@ const AuthContext = createContext<AuthState | null>(null)
 export function AuthProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient()
   const yandexSession = useOptionalYandexAppSession()
+  const yandexRoutingEnabled = yandexSession?.session !== null
+    && yandexSession?.session !== undefined
+    && isYandexMainRoutingEnabled()
+  const yandexRoutingEnabledRef = useRef(yandexRoutingEnabled)
   const [supabaseActor, setSupabaseActor] = useState<SessionActor | null>(null)
   const [supabaseLoading, setSupabaseLoading] = useState(true)
   const [supabaseError, setSupabaseError] = useState<string | null>(null)
@@ -47,6 +51,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const applyUser = useCallback(async (user: AuthUser | null, force = false) => {
     const revision = ++sessionRevisionRef.current
+    // Supabase emits SIGNED_OUT while a restored Yandex session retires the
+    // browser's legacy credential. That event must only clear legacy auth
+    // state: clearing the shared QueryClient here removes active Yandex
+    // requests and leaves their observers permanently pending.
+    if (yandexRoutingEnabledRef.current) {
+      actorRef.current = null
+      initializationRef.current = null
+      setSupabaseActor(null)
+      setSupabaseError(null)
+      setSupabaseLoading(false)
+      return
+    }
     if (!user) {
       // TanStack Query живёт выше AuthProvider. Без явной очистки следующий
       // пользователь на общем устройстве может увидеть прошлый server state
@@ -79,6 +95,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (revision === sessionRevisionRef.current && !force) setSupabaseLoading(false)
     }
   }, [initializeUser, queryClient])
+
+  useEffect(() => {
+    yandexRoutingEnabledRef.current = yandexRoutingEnabled
+  }, [yandexRoutingEnabled])
 
   const refreshSupabase = useCallback(async () => {
     try {
@@ -132,9 +152,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       fullName: profile.client.fullName,
     }
   }, [yandexSession?.session])
-  const yandexRoutingEnabled = yandexSession?.session !== null
-    && yandexSession?.session !== undefined
-    && isYandexMainRoutingEnabled()
   const yandexOnlyAuthEnabled = isYandexOnlyAuthEnabled()
   const actor = yandexOnlyAuthEnabled
     ? yandexActor
