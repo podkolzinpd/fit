@@ -10,6 +10,9 @@ const script = readFileSync(join(root, 'scripts/deploy-vital-media-yandex.mjs'),
 test('deploys Vital media through the private OIDC migration runtime', () => {
   assert.match(workflow, /id-token: write/)
   assert.match(workflow, /scripts\/yandex-github-oidc\.sh/)
+  assert.match(workflow, /yc storage bucket get/)
+  assert.match(workflow, /VERSIONING_ENABLED/)
+  assert.match(workflow, /anonymous_access_flags/)
   assert.match(workflow, /fit-stage-migration/)
   assert.match(workflow, /YC_STAGE_MEDIA_BUCKET/)
   assert.match(workflow, /YC_STAGE_MEDIA_S3_CREDENTIALS/)
@@ -19,6 +22,7 @@ test('deploys Vital media through the private OIDC migration runtime', () => {
 
 test('requires the reviewed package contract, full readback and signed URL smoke', () => {
   assert.match(script, /validateVitalGymProMediaManifest/)
+  assert.match(script, /x-fit-vital-media-bucket-confirmation/)
   assert.match(script, /verified !== 2_010/)
   assert.match(script, /JSON\.stringify\(after\) !== JSON\.stringify\(repeated\)/)
   assert.match(script, /x-fit-session/)
