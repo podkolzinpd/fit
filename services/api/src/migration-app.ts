@@ -26,7 +26,11 @@ import {
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
 import type { StageTenantMigrationRunner } from './tenant-migration/stage-runner.js'
-import { STAGE_TENANT_ARTIFACT_LIMIT_BYTES } from './tenant-migration/transport-limits.js'
+import {
+  decodeStageTenantMigrationTransport,
+  STAGE_TENANT_ARTIFACT_LIMIT_BYTES,
+  STAGE_TENANT_BINARY_CONTENT_TYPE,
+} from './tenant-migration/transport.js'
 
 interface PilotEnrollmentOptions {
   enroller: PilotEnroller
@@ -315,6 +319,11 @@ export function buildMigrationApp(
 
   if (options.stageTenantMigration !== undefined) {
     const tenantMigration = options.stageTenantMigration
+    app.addContentTypeParser(
+      STAGE_TENANT_BINARY_CONTENT_TYPE,
+      { parseAs: 'buffer' },
+      (_request, body, done) => done(null, body),
+    )
     const registerTenantMigrationRoute = (
       path: '/stage/tenant-migration/dry-run' | '/stage/tenant-migration/apply',
       apply: boolean,
@@ -346,8 +355,17 @@ export function buildMigrationApp(
           }
 
           try {
+            const migrationEnvelope = Buffer.isBuffer(request.body)
+              ? decodeStageTenantMigrationTransport(
+                  request.body,
+                  request.headers,
+                )
+              : request.body
+            if (migrationEnvelope === undefined) {
+              return reply.code(400).send({ status: 'invalid_request' })
+            }
             const report = await tenantMigration.run(
-              request.body,
+              migrationEnvelope,
               passphrase,
               apply,
               mediaPolicy === 'allow-missing',
