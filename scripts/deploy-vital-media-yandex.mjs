@@ -84,10 +84,10 @@ async function audit(migrationUrl, token, manifest) {
     report.status !== 'vital_media_audited'
     || report.objects !== 2_010
     || report.bytes !== 71_514_430
+    || report.enumeration !== 'manifest_only'
     || typeof report.verified !== 'number'
     || typeof report.missing !== 'number'
     || typeof report.mismatched !== 'number'
-    || typeof report.unexpected !== 'number'
     || typeof report.fingerprint !== 'string'
     || !/^[a-f0-9]{16}$/.test(report.fingerprint)
   ) throw new Error('vital_media_remote_audit_invalid')
@@ -188,7 +188,6 @@ async function main() {
   ) throw new Error('vital_media_preflight_mismatch')
 
   const before = await audit(migrationUrl, token, manifest)
-  if (before.unexpected !== 0) throw new Error('vital_media_target_has_unexpected_objects')
   if (deploymentMode === 'audit') {
     process.stdout.write(`${JSON.stringify({ mode: deploymentMode, ...before })}\n`)
     return
@@ -226,7 +225,6 @@ async function main() {
     after.verified !== 2_010
     || after.missing !== 0
     || after.mismatched !== 0
-    || after.unexpected !== 0
   ) throw new Error('vital_media_post_upload_audit_failed')
   const repeated = await audit(migrationUrl, token, manifest)
   if (JSON.stringify(after) !== JSON.stringify(repeated)) {
