@@ -644,7 +644,7 @@ export function createYandexMainRepository(
       async listCatalog(filters: TrainerCatalogFilters, page) {
         const params = new URLSearchParams()
         if (filters.query) params.set('query', filters.query)
-        if (filters.specialty) params.set('specialty', filters.specialty)
+        for (const specialty of filters.specialties) params.append('specialty', specialty)
         if (filters.city) params.set('city', filters.city)
         for (const stationId of filters.metroStationIds) params.append('metro', stationId)
         if (filters.mode) params.set('mode', filters.mode)

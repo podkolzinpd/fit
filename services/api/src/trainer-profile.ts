@@ -21,7 +21,7 @@ export type TrainerProfileDraft = {
 
 export type TrainerCatalogFilters = {
   query: string
-  specialty: string
+  specialties: string[]
   city: string
   metroStationIds: string[]
   mode: 'online' | 'in_person' | ''
@@ -217,9 +217,9 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
       return `$${values.length}`
     }
     if (filters.query) clauses.push(`published_data->>'displayName' ilike '%' || ${add(filters.query)} || '%'`)
-    if (filters.specialty) clauses.push(`exists (
+    if (filters.specialties.length > 0) clauses.push(`exists (
       select 1 from jsonb_array_elements_text(coalesce(published_data->'specialties', '[]'::jsonb)) item
-      where item ilike '%' || ${add(filters.specialty)} || '%'
+      where item = any(${add(filters.specialties)}::text[])
     )`)
     if (filters.city) clauses.push(`published_data->>'city' ilike '%' || ${add(filters.city)} || '%'`)
     if (filters.metroStationIds.length > 0) clauses.push(`exists (

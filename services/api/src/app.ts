@@ -864,6 +864,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
     const metroStationIds = metroValues.length <= 20 && metroValues.every((value) => metroStation(value) !== undefined)
       ? metroValues.map((value) => metroStation(value)!) : undefined
+    const specialtyValues = query.specialty === undefined ? []
+      : Array.isArray(query.specialty) ? query.specialty : [query.specialty]
+    const specialtyFilter = (value: unknown) => {
+      const parsed = textFilter(value, 60)
+      return parsed !== undefined && parsed.length > 0 ? parsed : undefined
+    }
+    const specialties = specialtyValues.length <= 20 && specialtyValues.every((value) => specialtyFilter(value) !== undefined)
+      ? specialtyValues.map((value) => specialtyFilter(value)!) : undefined
     const readInteger = (value: unknown, fallback: number, min: number, max: number) => {
       if (value === undefined) return fallback
       if (typeof value !== 'string' || !/^\d+$/.test(value)) return undefined
@@ -874,16 +882,15 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const limit = readInteger(query.limit, 20, 1, 50)
     const filters: TrainerCatalogFilters = {
       query: textFilter(query.query, 100) ?? '',
-      specialty: textFilter(query.specialty, 60) ?? '',
+      specialties: specialties ?? [],
       city: textFilter(query.city, 100) ?? '',
       metroStationIds: metroStationIds ?? [],
       mode: mode ?? '',
       acceptingClients: accepting ?? null,
     }
     if ((query.query !== undefined && textFilter(query.query, 100) === undefined)
-      || (query.specialty !== undefined && textFilter(query.specialty, 60) === undefined)
       || (query.city !== undefined && textFilter(query.city, 100) === undefined)
-      || metroStationIds === undefined || mode === undefined || accepting === undefined || offset === undefined || limit === undefined) {
+      || specialties === undefined || metroStationIds === undefined || mode === undefined || accepting === undefined || offset === undefined || limit === undefined) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
