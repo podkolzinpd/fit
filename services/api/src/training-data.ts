@@ -77,7 +77,7 @@ interface AttentionRow extends QueryResultRow {
   workout_date: string
   client_question: string | null
   client_question_asked_at: Date | null
-  discomfort: boolean
+  discomfort: boolean | null
   client_comment: string | null
   feedback_submitted_at: Date
   version: string
@@ -227,7 +227,7 @@ export interface PilotTrainerAttentionWorkout {
   workoutDate: string
   clientQuestion: string | null
   clientQuestionAskedAt: string | null
-  discomfort: boolean
+  discomfort: boolean | null
   clientComment: string | null
   feedbackSubmittedAt: string
   version: number
