@@ -4,14 +4,15 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { TrainerCatalogFilters, TrainerProfessionalProfile } from '../../shared/domain'
-import { CloseIcon } from '../../shared/icons'
+import { ChevronDownIcon, CloseIcon } from '../../shared/icons'
 import { moscowMetroStationById } from '../../shared/moscow-metro'
 import { AsyncView, Field, Page } from '../../shared/ui'
 import { MetroStationPicker } from './MetroStationPicker'
+import { SpecialtyChecklist } from './SpecialtyChecklist'
 
 const emptyFilters: TrainerCatalogFilters = {
   query: '',
-  specialty: '',
+  specialties: [],
   city: '',
   metroStationIds: [],
   mode: '',
@@ -32,7 +33,9 @@ function readStoredFilters(value: unknown): TrainerCatalogFilters | null {
   const candidate = value as Partial<TrainerCatalogFilters>
   return {
     query: typeof candidate.query === 'string' ? candidate.query : '',
-    specialty: typeof candidate.specialty === 'string' ? candidate.specialty : '',
+    specialties: Array.isArray(candidate.specialties)
+      ? candidate.specialties.filter((item): item is string => typeof item === 'string')
+      : [],
     city: typeof candidate.city === 'string' ? candidate.city : '',
     metroStationIds: Array.isArray(candidate.metroStationIds)
       ? candidate.metroStationIds.filter((item): item is string => typeof item === 'string').slice(0, 20)
@@ -68,7 +71,7 @@ function normalized(filters: TrainerCatalogFilters): TrainerCatalogFilters {
   return {
     ...filters,
     query: filters.query.trim(),
-    specialty: filters.specialty.trim(),
+    specialties: [...new Set(filters.specialties)],
     city: filters.city.trim(),
     metroStationIds: [...new Set(filters.metroStationIds)].slice(0, 20),
   }
@@ -151,7 +154,15 @@ function CatalogFiltersSheet({ draft, setDraft, onApply, onReset, onClose, retur
     <section ref={dialog} className="trainer-catalog-filter-sheet" role="dialog" aria-modal="true" aria-label="Фильтры тренеров">
       <header className="picker-header"><h2>Фильтры</h2><button type="button" className="picker-close" aria-label="Закрыть фильтры" onClick={onClose}><CloseIcon /></button></header>
       <div className="trainer-catalog-filters">
-        <Field label="Направление"><input value={draft.specialty} maxLength={60} placeholder="Силовые, бег" onChange={(event) => setDraft((value) => ({ ...value, specialty: event.target.value }))} /></Field>
+        <div className="trainer-catalog-specialty-filter">
+          <details className="trainer-catalog-specialty-disclosure">
+            <summary><span>{draft.specialties.length ? `Направления · Выбрано: ${draft.specialties.length}` : 'Направления · Все направления'}</span><ChevronDownIcon /></summary>
+            <SpecialtyChecklist selected={draft.specialties} onToggle={(specialty, checked) => setDraft((value) => ({
+              ...value,
+              specialties: checked ? [...new Set([...value.specialties, specialty])] : value.specialties.filter((item) => item !== specialty),
+            }))} />
+          </details>
+        </div>
         <Field label="Город"><input value={draft.city} maxLength={100} onChange={(event) => setDraft((value) => ({ ...value, city: event.target.value }))} /></Field>
         <div className="trainer-catalog-metro-filter"><MetroStationPicker selectedIds={draft.metroStationIds} onChange={(stationIds) => setDraft((value) => ({ ...value, metroStationIds: stationIds }))} /></div>
         <Field label="Формат"><select value={draft.mode} onChange={(event) => setDraft((value) => ({ ...value, mode: event.target.value as TrainerCatalogFilters['mode'] }))}>
@@ -232,7 +243,7 @@ export function TrainerCatalogPage() {
     })
   }
 
-  const appliedExtraFilters = [filters.specialty, filters.city, filters.metroStationIds.length ? 'metro' : '', filters.mode,
+  const appliedExtraFilters = [filters.specialties.length ? 'specialty' : '', filters.city, filters.metroStationIds.length ? 'metro' : '', filters.mode,
     filters.acceptingClients === null ? '' : String(filters.acceptingClients)].filter(Boolean).length
 
   return <Page title="Тренеры" back="/me/profile" center className="trainer-catalog-page ui-identity">

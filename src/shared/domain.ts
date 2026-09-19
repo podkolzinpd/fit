@@ -728,7 +728,7 @@ export interface TrainerProfessionalProfile {
 
 export interface TrainerCatalogFilters {
   query: string
-  specialty: string
+  specialties: string[]
   city: string
   metroStationIds: string[]
   mode: TrainerTrainingMode | ''

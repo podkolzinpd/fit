@@ -336,9 +336,25 @@ describe('trainer professional profile', () => {
 
     expect(response.statusCode).toBe(200)
     expect(listPublic).toHaveBeenCalledWith({
-      query: 'Анна', specialty: 'Силовые', city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-aeroport'], mode: 'online', acceptingClients: true,
+      query: 'Анна', specialties: ['Силовые'], city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-aeroport'], mode: 'online', acceptingClients: true,
     }, { offset: 20, limit: 10 })
     expect(response.json()).toEqual({ items: [{ ...value, listedInCatalog: true }], totalCount: 1, nextOffset: null })
+  })
+
+  it('accepts repeated specialty filters', async () => {
+    const pilotTrainerProfiles = profiles()
+    const listPublic = vi.fn().mockResolvedValue({ items: [], totalCount: 0, nextOffset: null })
+    pilotTrainerProfiles.listPublic = listPublic
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/trainers/catalog?specialty=%D0%A1%D0%B8%D0%BB%D0%BE%D0%B2%D1%8B%D0%B5&specialty=%D0%91%D0%B5%D0%B3',
+    })
+    expect(response.statusCode).toBe(200)
+    expect(listPublic).toHaveBeenCalledWith(
+      expect.objectContaining({ specialties: ['Силовые', 'Бег'] }),
+      { offset: 0, limit: 20 },
+    )
   })
 
   it('rejects invalid catalog pagination', async () => {
@@ -349,6 +365,10 @@ describe('trainer professional profile', () => {
     expect((await app.inject({
       method: 'GET',
       url: `/v1/trainers/catalog?${Array.from({ length: 21 }, (_, index) => `metro=msk-${index}`).join('&')}`,
+    })).statusCode).toBe(400)
+    expect((await app.inject({
+      method: 'GET',
+      url: `/v1/trainers/catalog?${Array.from({ length: 21 }, (_, index) => `specialty=s${index}`).join('&')}`,
     })).statusCode).toBe(400)
   })
 
