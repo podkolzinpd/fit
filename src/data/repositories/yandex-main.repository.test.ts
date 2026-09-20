@@ -81,8 +81,8 @@ describe('Yandex main repository', () => {
 
   it('uses the Yandex API for legal acceptance and account deletion lifecycle', async () => {
     const requestId = '8fc45130-9bcf-4b77-9ff7-f0872a354034'
-    const acceptedAt = '2026-09-19T10:00:00.000Z'
-    const requestedAt = '2026-09-19T11:00:00.000Z'
+    const acceptedAt = '2026-09-19T10:00:00.000000+00:00'
+    const requestedAt = '2026-09-19T11:00:00.000000+00:00'
     const fetchMock = vi.fn(
       (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
         void input
@@ -137,8 +137,8 @@ describe('Yandex main repository', () => {
     const visible = { state: 'visible', remindAt: null, updatedAt: null }
     const snoozed = {
       state: 'snoozed',
-      remindAt: '2026-10-12T09:00:00.000Z',
-      updatedAt: '2026-09-12T09:00:00.000Z',
+      remindAt: '2026-10-12T09:00:00.000000+00:00',
+      updatedAt: '2026-09-12T09:00:00.000000+00:00',
     }
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse(visible))
@@ -485,7 +485,7 @@ describe('Yandex main repository', () => {
     expect(await repository.workouts.personalRecords(workoutId)).toHaveLength(3)
     expect((await repository.workouts.latestExerciseResults(clientId, ['push-up'])).get('push-up')?.sets).toHaveLength(1)
     expect((await repository.workouts.exerciseProgressPage(clientId, 'push-up', {
-      completedAt: '2026-08-20T10:00:00.000Z', workoutId,
+      completedAt: '2026-08-20T10:00:00.000000+00:00', workoutId,
     })).totalCount).toBe(1)
 
     const draft = workoutDraft()
@@ -703,8 +703,8 @@ function installTrainingData() {
     workouts: [workoutPayload(plannedWorkoutId, 'in_progress', '2026-08-21'), workoutPayload(workoutId, 'done', '2026-08-20')],
     attention: [{
       workoutId, clientId, clientName: 'Клиент', workoutDate: '2026-08-20',
-      clientQuestion: 'Что дальше?', clientQuestionAskedAt: '2026-08-20T10:00:00.000Z',
-      discomfort: false, clientComment: 'Хорошо', feedbackSubmittedAt: '2026-08-20T10:00:00.000Z', version: 1,
+      clientQuestion: 'Что дальше?', clientQuestionAskedAt: '2026-08-20T10:00:00.000000+00:00',
+      discomfort: false, clientComment: 'Хорошо', feedbackSubmittedAt: '2026-08-20T10:00:00.000000+00:00', version: 1,
     }],
     attentionPreferences: [{ clientId, snoozedUntil: null }],
     hasMoreWorkouts: false,
@@ -720,7 +720,7 @@ function workoutPayload(id: string, status: 'done' | 'in_progress', date: string
     feedbackSubmittedAt: null, trainerReaction: null, trainerReview: null,
     trainerReviewAuthorId: null, trainerReviewedAt: null, clientQuestion: null,
     clientQuestionAskedAt: null, clientQuestionResolvedAt: null,
-    startedAt: '2026-08-20T09:00:00.000Z', completedAt: status === 'done' ? '2026-08-20T10:00:00.000Z' : null,
+    startedAt: '2026-08-20T09:00:00.000Z', completedAt: status === 'done' ? '2026-08-20T10:00:00.000000+00:00' : null,
     stageId, stageTitle: 'Этап', hasPr: status === 'done', version: 1,
     exercises: [{
       id: exerciseId, position: 0, source: 'system' as const, ref: 'push-up', customExerciseId: null,
@@ -732,7 +732,7 @@ function workoutPayload(id: string, status: 'done' | 'in_progress', date: string
         id: setId, position: 0,
         plan: { weightKg: 20, reps: 10, durationMin: null, durationSec: null, distanceKm: null, rpe: 7 },
         fact: { weightKg: 22, reps: 10, durationMin: null, durationSec: null, distanceKm: null, rpe: 8 },
-        confirmedAt: status === 'done' ? '2026-08-20T10:00:00.000Z' : null, version: 1,
+        confirmedAt: status === 'done' ? '2026-08-20T10:00:00.000000+00:00' : null, version: 1,
       }],
     }],
   }
@@ -815,17 +815,17 @@ function installContractFetch() {
     const method = init?.method ?? 'GET'
     const path = url.pathname
     if (method === 'GET' && path === '/v1/clients') return jsonResponse({ clients: url.searchParams.get('archived') === 'true' ? [
-      { id: archivedClientId, canArchive: true, hasAccount: false, fullName: 'Архив', canonicalFullName: 'Архив', gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null, currentWeightKg: null, lastActivityAt: '2026-08-01T00:00:00.000Z', archivedAt: '2026-08-01T00:00:00.000Z', version: 1, membershipVersion: 1 },
+      { id: archivedClientId, canArchive: true, hasAccount: false, fullName: 'Архив', canonicalFullName: 'Архив', gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null, currentWeightKg: null, lastActivityAt: '2026-08-01T00:00:00.000000+00:00', archivedAt: '2026-08-01T00:00:00.000000+00:00', version: 1, membershipVersion: 1 },
     ] : [
-      { id: clientId, canArchive: true, hasAccount: true, fullName: 'Клиент', canonicalFullName: 'Клиент', gender: 'male', ageYears: 30, ageUpdatedAt: '2026-08-01', heightCm: 180, goal: 'Сила', note: null, currentWeightKg: 80, lastActivityAt: '2026-08-20T10:00:00.000Z', archivedAt: null, version: 1, membershipVersion: 1 },
+      { id: clientId, canArchive: true, hasAccount: true, fullName: 'Клиент', canonicalFullName: 'Клиент', gender: 'male', ageYears: 30, ageUpdatedAt: '2026-08-01', heightCm: 180, goal: 'Сила', note: null, currentWeightKg: 80, lastActivityAt: '2026-08-20T10:00:00.000000+00:00', archivedAt: null, version: 1, membershipVersion: 1 },
     ] })
     if (method === 'GET' && path === '/v1/connections') return jsonResponse({
-      memberships: [{ clientId, trainerId: actor.userId, firstName: 'Ирина', lastName: null, joinedAt: '2026-08-01T00:00:00.000Z', isRoot: true }],
-      invitations: [{ id: invitationId, clientId, targetRole: 'trainer', expiresAt: '2099-01-01T00:00:00.000Z', createdAt: '2026-08-01T00:00:00.000Z' }],
+      memberships: [{ clientId, trainerId: actor.userId, firstName: 'Ирина', lastName: null, joinedAt: '2026-08-01T00:00:00.000000+00:00', isRoot: true }],
+      invitations: [{ id: invitationId, clientId, targetRole: 'trainer', expiresAt: '2099-01-01T00:00:00.000000+00:00', createdAt: '2026-08-01T00:00:00.000000+00:00' }],
     })
     if (method === 'GET' && path.endsWith('/progress/regularity')) return jsonResponse({ regularity: [{ period: 'week', periodStart: '2026-08-17', periodEnd: '2026-08-23', plannedCount: 1, completedCount: 1, completedPlannedCount: 1, partialCount: 0, skippedCount: 0, completionPercent: 100 }] })
     if (method === 'GET' && path.endsWith('/progress/running')) return jsonResponse({ sessions: [{ workoutId, workoutDate: '2026-08-20', format: 'easy', distanceKm: 5, durationSec: 1800, paceSecPerKm: 360, rpe: 7 }] })
-    if (method === 'GET' && path.includes('/progress/exercises/')) return jsonResponse({ items: [{ workoutId, workoutDate: '2026-08-20', completedAt: '2026-08-20T10:00:00.000Z', exerciseName: 'Отжимания', inputKind: 'strength', confirmedSetCount: 1, primaryValue: 22, previousPrimaryValue: 20, primaryChange: 2, allTimePrimaryValue: 22, bestWeightKg: 22, repsAtBestWeight: 10, bestWeightReps: 220, allTimeBestWeightKg: 22, allTimeBestWeightReps: 220, isPrimaryPr: true, isWeightPr: true, isWeightRepsPr: true, trainerComment: null, sets: [{ weightKg: 22, reps: 10, durationSec: null, distanceKm: null, rpe: 8 }] }], nextCursor: null, totalCount: 1 })
+    if (method === 'GET' && path.includes('/progress/exercises/')) return jsonResponse({ items: [{ workoutId, workoutDate: '2026-08-20', completedAt: '2026-08-20T10:00:00.000000+00:00', exerciseName: 'Отжимания', inputKind: 'strength', confirmedSetCount: 1, primaryValue: 22, previousPrimaryValue: 20, primaryChange: 2, allTimePrimaryValue: 22, bestWeightKg: 22, repsAtBestWeight: 10, bestWeightReps: 220, allTimeBestWeightKg: 22, allTimeBestWeightReps: 220, isPrimaryPr: true, isWeightPr: true, isWeightRepsPr: true, trainerComment: null, sets: [{ weightKg: 22, reps: 10, durationSec: null, distanceKm: null, rpe: 8 }] }], nextCursor: null, totalCount: 1 })
     if (method === 'GET' && path.endsWith('/progress')) return jsonResponse({
       entries: [{ id: progressId, clientId, createdBy: actor.userId, recordedOn: '2026-08-01', weightKg: 80, chestCm: null, waistCm: null, hipCm: null, notes: 'Старт', customMetrics: [{ metricId, value: 60 }], version: 1 }],
       customMetrics: [{ id: metricId, clientId, name: 'Пульс', unit: 'уд/мин', archivedAt: null, version: 1 }],
@@ -834,26 +834,26 @@ function installContractFetch() {
     if (method === 'GET' && path.endsWith('/training-summaries')) {
       const metrics = { completed_workouts: 1, workouts_per_week: 1, active_weeks: 1, longest_gap_days: 0, progress_facts: [] }
       return summaryMode === 'published'
-        ? jsonResponse({ summaries: [{ id: publishedSummaryId, source_summary_id: summaryId, client_id: clientId, period_start: '2026-08-01', period_end: '2026-08-31', summary: clientSummary, display_metrics: metrics, generated_at: '2026-09-01T00:00:00.000Z', published_at: '2026-09-02T00:00:00.000Z' }] })
-        : jsonResponse({ summaries: [{ id: summaryId, client_id: clientId, period_start: '2026-08-01', period_end: '2026-08-31', trainer_summary: { headline: 'Итог', progress: ['Рост'], consistency: 'Стабильно', attention: [] }, client_summary: clientSummary, display_metrics: metrics, generated_at: '2026-09-01T00:00:00.000Z', version: 1, published: false }] })
+        ? jsonResponse({ summaries: [{ id: publishedSummaryId, source_summary_id: summaryId, client_id: clientId, period_start: '2026-08-01', period_end: '2026-08-31', summary: clientSummary, display_metrics: metrics, generated_at: '2026-09-01T00:00:00.000000+00:00', published_at: '2026-09-02T00:00:00.000000+00:00' }] })
+        : jsonResponse({ summaries: [{ id: summaryId, client_id: clientId, period_start: '2026-08-01', period_end: '2026-08-31', trainer_summary: { headline: 'Итог', progress: ['Рост'], consistency: 'Стабильно', attention: [] }, client_summary: clientSummary, display_metrics: metrics, generated_at: '2026-09-01T00:00:00.000000+00:00', version: 1, published: false }] })
     }
     if (method === 'GET' && path === '/v1/push-notifications/status') return jsonResponse({ status: { subscribed: true, preferences: { workout_reminder: true, workout_scheduled: false, chat_message: true } } })
     if (method === 'POST' && path === `/v1/trainers/${publicProfileId}/chat`) return jsonResponse({ conversationId })
     if (method === 'GET' && path === `/v1/chat/conversations/${conversationId}/connection`) return jsonResponse({ state: { activeConnection: false, invitationPending: false, invitedAt: null, canInvite: true, canAccept: false, trainerSwitchRequired: false } })
-    if (method === 'POST' && path === `/v1/chat/conversations/${conversationId}/connection/invite`) return jsonResponse({ state: { activeConnection: false, invitationPending: true, invitedAt: '2026-09-12T10:00:00.000Z', canInvite: true, canAccept: false, trainerSwitchRequired: false } })
-    if (method === 'POST' && path === `/v1/chat/conversations/${conversationId}/connection/accept`) return jsonResponse({ state: { activeConnection: true, invitationPending: false, invitedAt: '2026-09-12T10:00:00.000Z', canInvite: false, canAccept: false, trainerSwitchRequired: false } })
+    if (method === 'POST' && path === `/v1/chat/conversations/${conversationId}/connection/invite`) return jsonResponse({ state: { activeConnection: false, invitationPending: true, invitedAt: '2026-09-12T10:00:00.000000+00:00', canInvite: true, canAccept: false, trainerSwitchRequired: false } })
+    if (method === 'POST' && path === `/v1/chat/conversations/${conversationId}/connection/accept`) return jsonResponse({ state: { activeConnection: true, invitationPending: false, invitedAt: '2026-09-12T10:00:00.000000+00:00', canInvite: false, canAccept: false, trainerSwitchRequired: false } })
     if (method === 'POST' && path === '/v1/push-notifications/subscription/status') return jsonResponse({ subscribed: true })
     if (path === '/v1/assistant/yandex/suggest-goal-criteria') return jsonResponse({ criteria: [], needsInput: [], unsupportedReason: null })
-    if (path.endsWith('/training-summaries/generate')) return jsonResponse({ data: { generated_at: '2026-09-01T00:00:00.000Z' }, cached: false })
+    if (path.endsWith('/training-summaries/generate')) return jsonResponse({ data: { generated_at: '2026-09-01T00:00:00.000000+00:00' }, cached: false })
     if (path === '/v1/invitations' && method === 'POST') return jsonResponse({ invitation: { code: 'ABCDEF123456' } }, 201)
     if (path === '/v1/invitations/claim') return jsonResponse({ clientId })
     if (path === '/v1/app-feedback') return jsonResponse({ feedback: { id: progressId } }, 201)
-    if (path === '/v1/custom-exercises' || path.includes('/custom-exercises/')) return jsonResponse({ exercise: { id: customExerciseId, ...customExerciseDraft(), archivedAt: path.endsWith('/archive') ? '2026-09-01T00:00:00.000Z' : null, version: 2 } })
+    if (path === '/v1/custom-exercises' || path.includes('/custom-exercises/')) return jsonResponse({ exercise: { id: customExerciseId, ...customExerciseDraft(), archivedAt: path.endsWith('/archive') ? '2026-09-01T00:00:00.000000+00:00' : null, version: 2 } })
     if (path === '/v1/progress' || path.startsWith('/v1/progress/')) return jsonResponse({ progress: { id: progressId, version: 2 } })
-    if (path === '/v1/progress-metrics' || path.startsWith('/v1/progress-metrics/')) return jsonResponse({ metric: { id: metricId, archivedAt: path.endsWith('/archive') ? '2026-09-01T00:00:00.000Z' : null, version: 2 } })
+    if (path === '/v1/progress-metrics' || path.startsWith('/v1/progress-metrics/')) return jsonResponse({ metric: { id: metricId, archivedAt: path.endsWith('/archive') ? '2026-09-01T00:00:00.000000+00:00' : null, version: 2 } })
     if (path === '/v1/goals' || path.startsWith('/v1/goals/')) return jsonResponse({ goal: { id: goalId, version: 2 } })
     if (path === '/v1/goal-stages' || path.startsWith('/v1/goal-stages/')) return method === 'DELETE' ? emptyResponse() : jsonResponse({ stage: { id: stageId } })
-    if (path.includes('/attention/snooze')) return jsonResponse({ client: { snoozedUntil: '2026-09-15T00:00:00.000Z' } })
+    if (path.includes('/attention/snooze')) return jsonResponse({ client: { snoozedUntil: '2026-09-15T00:00:00.000000+00:00' } })
     if (path.includes('/workout-sets/')) return jsonResponse({ set: { version: 2 } })
     if (path.includes('/workout-exercises/') && path.endsWith('/sets')) return jsonResponse({ set: { version: 2 } }, 201)
     if (path.includes('/workout-exercises/') && path.endsWith('/comment')) return jsonResponse({ exercise: { version: 2 } })
