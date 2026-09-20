@@ -291,10 +291,22 @@ function errorForStatus(status: number, code?: string): RepositoryError {
   if (status === 403) return new RepositoryError('PT403', 'Недостаточно прав для этого действия.')
   if (status === 404) return new RepositoryError('PT404', 'Запись не найдена или больше недоступна.')
   if (status === 409) {
-    return new RepositoryError(code === 'active_workout_exists' ? code : 'PT409',
-      code === 'active_workout_exists'
-        ? 'У клиента уже идёт другая тренировка. Откройте её и продолжите.'
-        : 'Данные уже изменились. Обновите страницу и повторите.')
+    if (code === 'active_workout_exists') {
+      return new RepositoryError(code, 'У клиента уже идёт другая тренировка. Откройте её и продолжите.')
+    }
+    if (code === 'trainer_disconnect_required' || code === 'trainer_switch_required') {
+      return new RepositoryError(
+        code,
+        'Сначала отключите текущего тренера в профиле. Тренировки и результаты сохранятся.',
+      )
+    }
+    if (code === 'client_merge_conflict') {
+      return new RepositoryError(
+        code,
+        'Не удалось безопасно объединить данные. Ничего не изменено — обратитесь в поддержку.',
+      )
+    }
+    return new RepositoryError('PT409', 'Данные уже изменились. Обновите страницу и повторите.')
   }
   if (status === 422) return new RepositoryError('PT422', 'Операцию нельзя выполнить с текущими данными.')
   if (status >= 500) return new RepositoryError('service_unavailable', 'Yandex Cloud временно недоступен. Попробуйте позднее.')
@@ -1169,6 +1181,17 @@ export function createYandexMainRepository(
       async remove(item) { await writeJson(queries, `/v1/workouts/${item.id}`, 'DELETE', { expectedVersion: item.version }, z.object({ workout: z.object({ version: z.number().int().positive() }) })); invalidate() },
     },
     invitations: {
+      async createShareForNewClient(fullName, operationId) {
+        const payload = await writeJson(
+          queries,
+          '/v1/invitation-links/new-client',
+          'POST',
+          { fullName, operationId },
+          z.object({ clientId: uuid, share: invitationShareSchema }),
+        )
+        invalidate()
+        return payload
+      },
       async create(clientId, targetRole) {
         const payload = await writeJson(queries, '/v1/invitations', 'POST', { clientId, targetRole }, z.object({ invitation: z.object({ code: z.string() }) }))
         invalidate(); return payload.invitation.code

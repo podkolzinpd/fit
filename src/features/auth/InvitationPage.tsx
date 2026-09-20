@@ -7,7 +7,6 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { useYandexAppSession } from '../../app/yandex-app-session-context'
 import { authRepository } from '../../data/repositories/auth.repository'
 import { RepositoryError } from '../../data/repositories/error'
-import { invitationsRepository } from '../../data/repositories/invitations.repository'
 import { publicInvitationLinksRepository } from '../../data/repositories/public-invitation-links.repository'
 import { StatePanel } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
@@ -74,11 +73,8 @@ export function InvitationPage() {
   const claim = useMutation({
     mutationFn: async () => {
       if (pending === null) throw new Error('Ссылка приглашения не найдена.')
-      if (pending.source === backend.source) {
+      if (backend.source === 'yandex' || pending.source === backend.source) {
         return backend.invitations.claimLink(pending.token)
-      }
-      if (pending.source === 'supabase') {
-        return invitationsRepository.claimLink(pending.token)
       }
       throw new Error('Завершите вход через Yandex ID и откройте ссылку снова.')
     },

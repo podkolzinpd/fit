@@ -1,5 +1,6 @@
 import { invitationQueries } from '../queries/invitations.queries'
 import { repositoryError } from './error'
+import { clientsRepository } from './clients.repository'
 import type { ClientInvitation, InvitationLinkPreview, InvitationShare, TrainerMembership } from '../../shared/domain'
 
 export interface DisconnectTrainerResult {
@@ -20,6 +21,12 @@ function disconnectTrainerResult(value: unknown): DisconnectTrainerResult {
 }
 
 export const invitationsRepository = {
+  async createShareForNewClient(fullName: string, operationId: string): Promise<{ clientId: string; share: InvitationShare }> {
+    void operationId
+    const clientId = await clientsRepository.createQuick(fullName)
+    const share = await invitationsRepository.createShare(clientId, 'client')
+    return { clientId, share }
+  },
   async create(clientId: string, targetRole: 'client' | 'trainer'): Promise<string> {
     const result = await invitationQueries.create(clientId, targetRole)
     if (result.error) throw repositoryError(result.error)
