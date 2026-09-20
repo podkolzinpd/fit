@@ -427,6 +427,48 @@ describe('trainer professional profile', () => {
     expect(saveDraft).toHaveBeenCalledWith({ accessMode: 'read_write', token: 'a'.repeat(43) }, draft)
   })
 
+  it('accepts every fixed catalog specialty and its full 6-choice selection, including the longest label', async () => {
+    // Regression for a real save failure: the client schema allows any of the
+    // 14 catalog specialties (up to 80 chars) and up to 6 selected, but the
+    // server used to cap at 12 items / 60 chars - silently rejecting anyone
+    // who picked "Реабилитация и адаптивная физкультура (после травм,
+    // ограничения по здоровью)" (76 chars), even well under the 6-item limit.
+    const pilotTrainerProfiles = profiles()
+    const saveDraft = vi.fn().mockResolvedValue(value)
+    pilotTrainerProfiles.saveDraft = saveDraft
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': 'a'.repeat(43) }
+    const longestSpecialty = 'Реабилитация и адаптивная физкультура (после травм, ограничения по здоровью)'
+    const selection = {
+      ...draft,
+      specialties: [
+        longestSpecialty, 'Йога / пилатес / стретчинг', 'Кроссфит',
+        'Детский фитнес', 'Другое', 'Функциональный тренинг',
+      ],
+    }
+    const response = await app.inject({ method: 'PUT', url: '/v1/trainer-profile', headers, payload: selection })
+    expect(response.statusCode).toBe(200)
+    expect(saveDraft).toHaveBeenCalledWith({ accessMode: 'read_write', token: 'a'.repeat(43) }, selection)
+  })
+
+  it('still rejects a specialties payload past the raised limits', async () => {
+    const pilotTrainerProfiles = profiles()
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': 'a'.repeat(43) }
+    const tooManySpecialties = await app.inject({
+      method: 'PUT', url: '/v1/trainer-profile', headers,
+      payload: { ...draft, specialties: Array.from({ length: 21 }, (_, index) => `Направление ${index}`) },
+    })
+    const tooLongSpecialty = await app.inject({
+      method: 'PUT', url: '/v1/trainer-profile', headers,
+      payload: { ...draft, specialties: ['А'.repeat(101)] },
+    })
+    expect(tooManySpecialties.statusCode).toBe(400)
+    expect(tooManySpecialties.json()).toEqual({ error: 'invalid_request' })
+    expect(tooLongSpecialty.statusCode).toBe(400)
+    expect(tooLongSpecialty.json()).toEqual({ error: 'invalid_request' })
+  })
+
   it('serves only the public profile without a session', async () => {
     const app = buildApp({ pilotTrainerProfiles: profiles(), logger: false }); apps.push(app)
     const response = await app.inject({ method: 'GET', url: `/v1/trainers/${value.publicId}/public-profile` })
