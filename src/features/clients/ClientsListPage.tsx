@@ -6,7 +6,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { bmiLabel } from '../../data/repositories/workouts.repository'
 import type { Client } from '../../shared/domain'
 import { AsyncView, Page } from '../../shared/ui'
-import { CloseIcon, MoreIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
+import { ChevronRightIcon, CloseIcon, MoreIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
 import { ChatStartButton } from '../chat'
 import { useChatThreads } from '../chat/use-chat-threads'
 import { InviteAthleteButton } from '../auth/InvitationShareActions'
@@ -16,6 +16,7 @@ import { InviteAthleteButton } from '../auth/InvitationShareActions'
 // тремя-четырьмя спортсменами искать нечего.
 const CLIENTS_SEARCH_MIN = 6
 const CLIENTS_SCROLL_KEY = 'fit.clientsListScroll'
+const CLIENTS_ARCHIVE_SCROLL_KEY = 'fit.clientsArchiveListScroll'
 const CLIENT_SWIPE_WIDTH = 112
 
 interface ClientSwipeCardProps {
@@ -120,7 +121,6 @@ function ClientSwipeCard({
       <Link className="client-card-main" to={`/clients/${client.id}`} draggable={false} onClick={onBeforeOpen}>
         <span className="client-avatar" aria-hidden="true"><ProfileIcon /></span>
         <span className="client-card-copy"><strong>{client.fullName}</strong><span>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</span></span>
-        {client.archivedAt && <span className="badge">Архив</span>}
       </Link>
       {canOpenChat && <ChatStartButton clientId={client.id} trainerId={trainerId}
         conversationId={conversationId} partnerName={client.fullName} unreadCount={unreadCount}
@@ -131,7 +131,11 @@ function ClientSwipeCard({
   </div>
 }
 
-export function ClientsPage() {
+interface ClientsListPageProps {
+  archivedOnly: boolean
+}
+
+function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
   const { actor } = useAuth()
   const { clients: clientsRepository } = useDataBackend()
   const queryClient = useQueryClient()
@@ -140,10 +144,17 @@ export function ClientsPage() {
   const pageRef = useRef<HTMLDivElement>(null)
   const [openClientId, setOpenClientId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ client: Client; message: string; canUndo: boolean } | null>(null)
-  const showArchived = window.localStorage?.getItem('fit.showArchivedClients') === 'true'
+  const scrollKey = archivedOnly ? CLIENTS_ARCHIVE_SCROLL_KEY : CLIENTS_SCROLL_KEY
   // Список — рабочая очередь тренера, поэтому при каждом входе показываем
   // актуальную активность, а не данные из короткого SPA-кэша.
-  const query = useQuery({ queryKey: ['clients', showArchived], queryFn: () => clientsRepository.list(showArchived), refetchOnMount: 'always' })
+  const query = useQuery({
+    queryKey: ['clients', archivedOnly ? 'archived' : 'active'],
+    queryFn: async () => {
+      const items = await clientsRepository.list(archivedOnly)
+      return items.filter((client) => archivedOnly ? client.archivedAt !== null : client.archivedAt === null)
+    },
+    refetchOnMount: 'always',
+  })
   const threads = useChatThreads()
   const search = searchParams.get('q') ?? ''
   const threadByClientId = useMemo(() => new Map((threads.data ?? []).map((thread) => [thread.clientId, thread])), [threads.data])
@@ -179,15 +190,15 @@ export function ClientsPage() {
   const rememberListPosition = () => {
     const viewport = pageRef.current?.closest<HTMLElement>('.content')
     if (!viewport || !window.sessionStorage) return
-    window.sessionStorage.setItem(CLIENTS_SCROLL_KEY, JSON.stringify({ path: `${location.pathname}${location.search}`, top: viewport.scrollTop }))
+    window.sessionStorage.setItem(scrollKey, JSON.stringify({ path: `${location.pathname}${location.search}`, top: viewport.scrollTop }))
   }
   useEffect(() => {
     if (!query.isSuccess || !window.sessionStorage) return
     let stored: { path?: string; top?: number } | null = null
-    try { stored = JSON.parse(window.sessionStorage.getItem(CLIENTS_SCROLL_KEY) ?? 'null') as { path?: string; top?: number } | null } catch { stored = null }
+    try { stored = JSON.parse(window.sessionStorage.getItem(scrollKey) ?? 'null') as { path?: string; top?: number } | null } catch { stored = null }
     if (!stored) return
     if (stored.path !== `${location.pathname}${location.search}` || typeof stored.top !== 'number') {
-      window.sessionStorage.removeItem(CLIENTS_SCROLL_KEY)
+      window.sessionStorage.removeItem(scrollKey)
       return
     }
     let frame = 0
@@ -198,16 +209,16 @@ export function ClientsPage() {
       viewport?.scrollTo(0, target)
       attempts += 1
       if (viewport && (Math.abs(viewport.scrollTop - target) <= 1 || attempts >= 12)) {
-        window.sessionStorage.removeItem(CLIENTS_SCROLL_KEY)
+        window.sessionStorage.removeItem(scrollKey)
         return
       }
       frame = window.requestAnimationFrame(restore)
     }
     frame = window.requestAnimationFrame(restore)
     return () => window.cancelAnimationFrame(frame)
-  }, [location.pathname, location.search, query.isSuccess])
+  }, [location.pathname, location.search, query.isSuccess, scrollKey])
 
-  const pageActions = <div className="clients-page-header-actions">
+  const pageActions = !archivedOnly && <div className="clients-page-header-actions">
     <Link className="button secondary" to="/clients/new">Добавить</Link>
     <InviteAthleteButton className="button" label="Пригласить" />
   </div>
@@ -216,7 +227,8 @@ export function ClientsPage() {
     if (!openClientId) return
     const row = (event.target as Element).closest<HTMLElement>('[data-client-swipe-id]')
     if (row?.dataset.clientSwipeId !== openClientId) setOpenClientId(null)
-  }}><Page title="Клиенты" className="clients-page" action={pageActions}>
+  }}><Page title={archivedOnly ? 'Архив' : 'Клиенты'} className={`clients-page${archivedOnly ? ' clients-archive-page' : ''}`}
+    back={archivedOnly ? '/clients' : undefined} swipeBack={archivedOnly} action={pageActions}>
     {feedback && <div className="clients-archive-feedback" role="status">
       <span>{feedback.message}</span>
       {feedback.canUndo && <button type="button" className="link" disabled={archive.isPending}
@@ -225,9 +237,9 @@ export function ClientsPage() {
     </div>}
     {archive.error && <p className="error clients-archive-error" role="alert">{archive.error.message}</p>}
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}
-      emptyTitle="Клиентов пока нет"
-      emptyDescription="Пригласите первого спортсмена или создайте его профиль вручную."
-      emptyAction={<Link className="button secondary" to="/clients/new">Создать профиль вручную</Link>}>
+      emptyTitle={archivedOnly ? 'Архив пуст' : 'Клиентов пока нет'}
+      emptyDescription={archivedOnly ? 'Здесь появятся карточки, которые вы отправите в архив.' : 'Пригласите первого спортсмена или создайте его профиль вручную.'}
+      emptyAction={archivedOnly ? undefined : <Link className="button secondary" to="/clients/new">Создать профиль вручную</Link>}>
       {showSearch && <div className="clients-search">
           <SearchIcon aria-hidden="true" />
           <input type="search" aria-label="Поиск клиента" value={search} onChange={(event) => updateSearch(event.target.value)} placeholder="Поиск по имени" autoComplete="off" />
@@ -240,7 +252,6 @@ export function ClientsPage() {
             <Link className="client-card-main" to={`/clients/${client.id}`} onClick={rememberListPosition}>
               <span className="client-avatar" aria-hidden="true"><ProfileIcon /></span>
               <span className="client-card-copy"><strong>{client.fullName}</strong><span>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</span></span>
-              {client.archivedAt && <span className="badge">Архив</span>}
             </Link>
             {canOpenChat && <ChatStartButton clientId={client.id} trainerId={thread?.trainerId ?? actor!.userId}
               conversationId={thread?.conversationId} partnerName={client.fullName} unreadCount={thread?.unreadCount ?? 0}
@@ -254,6 +265,17 @@ export function ClientsPage() {
           onBeforeOpen={rememberListPosition} />
       })}</div> : <p className="clients-search-empty">По этому имени клиентов не найдено.</p>}
     </AsyncView>
-    <Link className="clients-code-fallback" aria-label="Ввести код" to="/join">Ввести код приглашения</Link>
+    {!archivedOnly && <Link className="clients-archive-link" to="/clients/archive" onClick={rememberListPosition}>
+      <span>Архив</span><ChevronRightIcon />
+    </Link>}
+    {!archivedOnly && <Link className="clients-code-fallback" aria-label="Ввести код" to="/join">Ввести код приглашения</Link>}
   </Page></div>
+}
+
+export function ClientsPage() {
+  return <ClientsListPage archivedOnly={false} />
+}
+
+export function ArchivedClientsPage() {
+  return <ClientsListPage archivedOnly />
 }

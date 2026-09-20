@@ -1,4 +1,4 @@
-export { ClientsPage } from './ClientsListPage'
+export { ArchivedClientsPage, ClientsPage } from './ClientsListPage'
 export { ClientFormPage, ClientDetailPage, MyClientEditPage, MyClientPage } from './ClientsPages'
 export { ClientProfilePage, ClientProfileSettingsPage } from './ClientProfilePage'
 export { clientWorkoutAuthorLabel } from './workout-author'

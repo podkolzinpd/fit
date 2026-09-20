@@ -32,8 +32,8 @@ export function AppLayout() {
   const monochromeWorkoutCreateEdit = workoutForm || todayStep
   const monochromeWorkoutDetailHistory = workoutDetail || exerciseHistory
   const monochromeTrainerToday = Boolean(actor?.role === 'trainer' && pathname === '/today' && !todayStep)
-  const monochromeTrainerClients = Boolean(actor?.role === 'trainer' && pathname === '/clients')
-  const monochromeTrainerClientDetail = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+$/.test(pathname) && pathname !== '/clients/new')
+  const monochromeTrainerClients = Boolean(actor?.role === 'trainer' && (pathname === '/clients' || pathname === '/clients/archive'))
+  const monochromeTrainerClientDetail = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+$/.test(pathname) && !['/clients/new', '/clients/archive'].includes(pathname))
   const monochromeTrainerClientForm = Boolean(actor?.role === 'trainer' && (pathname === '/clients/new' || /^\/clients\/[^/]+\/edit$/.test(pathname)))
   const monochromeTrainerClientGoal = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+\/goal$/.test(pathname))
   const monochromeTrainerSchedule = Boolean(actor?.role === 'trainer' && pathname === '/schedule')
@@ -65,7 +65,9 @@ export function AppLayout() {
     // Route content can grow again while its draft is restored. Reset on the
     // next frame so iOS scroll anchoring cannot reopen Today below its primary
     // action after a longer form or review screen.
-    if (pathname === '/clients' && window.sessionStorage?.getItem('fit.clientsListScroll')) return
+    const clientsScrollKey = pathname === '/clients' ? 'fit.clientsListScroll'
+      : pathname === '/clients/archive' ? 'fit.clientsArchiveListScroll' : null
+    if (clientsScrollKey && window.sessionStorage?.getItem(clientsScrollKey)) return
     const frame = window.requestAnimationFrame(() => contentRef.current?.scrollTo(0, 0))
     return () => window.cancelAnimationFrame(frame)
   }, [pathname, routeStep])
