@@ -476,6 +476,7 @@ describe('Yandex main repository', () => {
     installTrainingData()
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
     const item = await repository.workouts.get(workoutId)
+    expect(item.activeCaloriesKcal).toBe(315)
     expect(item.stageId).toBe(stageId)
     await expect(repository.workouts.get('555b5163-cd40-4c96-b0d1-ce1a250d25df')).rejects.toMatchObject({ code: 'PT404' })
     expect((await repository.workouts.listPage(undefined, undefined, clientId, 0, 1)).nextOffset).toBe(1)
@@ -721,6 +722,7 @@ function workoutPayload(id: string, status: 'done' | 'in_progress', date: string
     trainerReviewAuthorId: null, trainerReviewedAt: null, clientQuestion: null,
     clientQuestionAskedAt: null, clientQuestionResolvedAt: null,
     startedAt: '2026-08-20T09:00:00.000Z', completedAt: status === 'done' ? '2026-08-20T10:00:00.000000+00:00' : null,
+    activeCaloriesKcal: status === 'done' ? 315 : null,
     stageId, stageTitle: 'Этап', hasPr: status === 'done', version: 1,
     exercises: [{
       id: exerciseId, position: 0, source: 'system' as const, ref: 'push-up', customExerciseId: null,
