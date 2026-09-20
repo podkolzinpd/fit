@@ -118,7 +118,6 @@ resource "yandex_serverless_container" "api" {
     yandex_lockbox_secret_iam_member.api_connection_secret_reader,
     yandex_lockbox_secret_iam_member.api_media_credentials_reader,
     yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader,
-    yandex_lockbox_secret_iam_member.llm_gateway_reader,
   ]
 }
 

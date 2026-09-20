@@ -133,12 +133,6 @@ resource "yandex_lockbox_secret_iam_member" "api_connection_secret_reader" {
   member    = "serviceAccount:${yandex_iam_service_account.api.id}"
 }
 
-resource "yandex_lockbox_secret_iam_member" "llm_gateway_reader" {
-  secret_id = var.llm_gateway_lockbox_secret_id
-  role      = "lockbox.payloadViewer"
-  member    = "serviceAccount:${yandex_iam_service_account.api.id}"
-}
-
 resource "yandex_lockbox_secret_iam_member" "migration_api_connection_secret_reader" {
   count = var.migration_invoker_member == null ? 0 : 1
 
