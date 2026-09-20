@@ -18,6 +18,7 @@ export function hasExerciseTechnique(exercise?: ExerciseSnapshot): exercise is E
     || exercise.fallbackImageUrl
     || exercise.motionImageUrl
     || exercise.techniqueVideoUrl
+    || exercise.imagePath
     || exercise.instructions?.length
   ))
 }

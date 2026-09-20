@@ -1232,6 +1232,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .planned-exercise .set-add-row > .secondary { width:auto; min-height:var(--control-height-standard); padding:6px 0; border:0; background:transparent; color:var(--accent-strong); box-shadow:none; font-size:15px }
 .planned-exercise .set-add-row > .secondary:hover { background:transparent; color:var(--accent-label) }
 .compact-editor-exercise-head { display:flex; align-items:center; gap:var(--space-2) }
+.compact-editor-exercise-head > .exercise-thumbnail { align-self:center }
 .compact-editor-exercise-toggle { min-width:0; min-height:64px; flex:1 1 auto; display:grid; align-content:center; gap:2px; padding:var(--space-2) 0; border:0; border-radius:0; background:transparent; color:var(--fg); text-align:left; box-shadow:none}
 .compact-editor-exercise-toggle:hover { background:transparent }
 .compact-editor-exercise-toggle:focus-visible { outline:3px solid var(--accent-ring); outline-offset:2px; border-radius:var(--radius-sm) }
@@ -1281,6 +1282,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .theme-light .coachmark-bubble { background: var(--surface-elevated) }
 .live-exercise-head { display: flex; align-items: center; justify-content: space-between; gap: 10px }
 .live-exercise-head h2, .live-exercise-head h3 { margin: 0; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere }
+.workout-exercise-header-main { min-width:0; flex:1 1 auto; display:flex; align-items:center; gap:10px }
+.workout-exercise-header-main > h2,
+.workout-exercise-header-main > h3,
+.workout-exercise-header-main > strong { min-width:0; flex:1 1 auto; overflow-wrap:anywhere }
+.workout-exercise-header-main > .exercise-technique-trigger { flex:1 1 auto }
 .exercise-technique-trigger { min-width:0; min-height:44px; flex:1 1 auto; display:grid; align-content:center; justify-items:start; gap:3px; padding:4px 0; border:0; border-radius:var(--radius-sm); background:transparent; color:var(--fg); text-align:left; box-shadow:none }
 .exercise-technique-trigger:hover { background:transparent }
 .exercise-technique-trigger:focus-visible { outline:3px solid var(--accent-ring); outline-offset:2px }
@@ -1362,7 +1368,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Форма блока по кругам: список упражнений блока + группы-круги. */
 .block-exercises { display: flex; flex-direction: column; gap: 4px }
 .block-exercise-row { display: flex; flex-direction: column; gap: 6px; padding: 6px 2px }
-.block-exercise-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 10px; flex-wrap: wrap }
+.block-exercise-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 10px; flex-wrap: nowrap }
 .block-exercise-head strong { flex: 1 1 auto; min-width: 0 }
 /* Больше воздуха в live: отступ под «＋ Подход» и до комментария. Секция live —
    это <section> с .live-exercise-head; целимся в его кнопку добавления и коммент. */
@@ -1380,7 +1386,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .planned-round-exercise { margin-bottom: 6px }
 .planned-round-exercise:last-child { margin-bottom: 0 }
 .planned-round-exercise-name { display: block; font-size: 13px; font-weight: 600; margin-bottom: 3px }
-.workout-detail-exercise-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:var(--space-2); min-width:0 }
+.workout-detail-exercise-row { display:grid; grid-template-columns:48px minmax(0,1fr) auto; align-items:start; gap:var(--space-2); min-width:0 }
 .workout-detail-exercise-actions { display:flex; align-items:flex-start; flex:0 0 auto }
 .workout-detail-exercise-actions .overflow-trigger { min-width:44px; min-height:44px }
 .completed-exercise .exercise-comment-note { margin-right:88px }
@@ -1486,7 +1492,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .planned-exercise-details > summary::-webkit-details-marker, .completed-exercise-details > summary::-webkit-details-marker { display:none }
 .planned-exercise-details > summary:focus-visible, .completed-exercise-details > summary:focus-visible { outline:3px solid var(--accent-ring); outline-offset:3px; border-radius:var(--radius-sm) }
 .workout-detail-exercise-heading { min-width:0; display:flex; align-items:center; gap:var(--space-2) }
-.workout-detail-exercise-heading strong { min-width:0; overflow-wrap:anywhere; color:var(--fg-strong); font-size:var(--type-body-size); font-weight:var(--weight-medium); line-height:var(--leading-snug) }
+.workout-detail-exercise-heading strong { min-width:0; display:-webkit-box; overflow:hidden; overflow-wrap:anywhere; color:var(--fg-strong); font-size:var(--type-body-size); font-weight:var(--weight-medium); line-height:var(--leading-snug); -webkit-box-orient:vertical; -webkit-line-clamp:2 }
 .exercise-details-chevron { width:8px; height:8px; display:block; flex:0 0 auto; margin:-3px 2px 0 0; border-right:1.8px solid currentColor; border-bottom:1.8px solid currentColor; color:var(--secondary-label-fg); transform:rotate(45deg); transition:transform var(--motion-fast) var(--ease) }
 .planned-exercise-details[open] .exercise-details-chevron, .completed-exercise-details[open] .exercise-details-chevron { margin-top:3px; transform:rotate(225deg) }
 .planned-set-summary, .completed-set-summary { overflow-wrap:anywhere }
@@ -2545,6 +2551,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 @media (prefers-reduced-motion: reduce) { .exercise-image-motion .exercise-image-frame-end { animation:none; opacity:0 } }
 .exercise-image svg { width:45%; height:45% }
 .exercise-image-thumbnail { width:48px }
+.exercise-thumbnail { position:relative; width:48px; height:48px; min-width:48px; flex:0 0 48px; display:grid; place-items:center; overflow:visible }
+.exercise-thumbnail-action { min-width:48px; min-height:48px; padding:0; border:0; border-radius:var(--radius-md); background:transparent; color:var(--fg); box-shadow:none }
+.exercise-thumbnail-action:hover { background:transparent }
+.exercise-thumbnail-action:focus-visible { outline:3px solid var(--accent-ring); outline-offset:2px }
+.exercise-thumbnail-play { position:absolute; right:-3px; bottom:-3px; width:20px; height:20px; display:grid; place-items:center; border:2px solid var(--surface-raised); border-radius:50%; background:var(--fg); color:var(--bg) }
+.exercise-thumbnail-play svg { width:11px; height:11px }
 .exercise-image-preview { width:48px }
 .exercise-image-picker { width:62px }
 .picker-item.playing .exercise-image-picker { width:116px }
@@ -2904,6 +2916,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-actions > .button { min-height:var(--control-height-standard); display:inline-flex; align-items:center; justify-content:center }
 .workout-detail-actions > .overflow-menu { flex:0 0 auto }
 .workout-exercise-compact { width:100%; min-height:64px; display:flex; align-items:center; gap:var(--space-3); margin:var(--space-3) 0; padding:var(--space-3) 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; color:var(--fg); text-align:left; box-shadow:none}
+.workout-exercise-compact > .exercise-thumbnail { align-self:center }
 .workout-exercise-compact-mark { flex:0 0 auto; width:28px; height:28px; display:grid; place-items:center; border-radius:50%; background:var(--surface-sunken); color:var(--muted); font-weight:var(--weight-bold) }
 .workout-exercise-compact.workout-exercise-completed .workout-exercise-compact-mark { background:var(--success-mark-surface); color:var(--success-fg) }
 .workout-exercise-compact-copy { flex:1 1 auto; min-width:0; display:grid; gap:2px }
@@ -4479,7 +4492,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-detail-history-identity .workout-completion-recorded > .completed-exercise-list > .completed-exercise { margin:0; padding:15px 0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none }
 .workout-detail-history-identity .workout-completion-recorded > .completed-exercise-list > :last-child { border-bottom:0 }
 .workout-detail-history-identity .workout-completion-recorded .completed-exercise-block { padding-left:8px; border-left:2px solid var(--border) }
-.workout-detail-history-identity .workout-completion-edit { width:auto; min-height:48px; margin:8px 14px 14px }
+.workout-detail-history-identity .workout-completion-edit { width:auto; min-height:48px; display:flex; align-items:center; justify-content:center; margin:8px 14px 14px }
 .workout-detail-history-identity .workout-completion-recorded:not([open]) > :not(summary) { display:none }
 .workout-detail-history-identity .workout-completion-actions { display:grid; gap:8px; margin-top:2px }
 .workout-detail-history-identity .workout-completion-actions .button { width:100%; min-height:48px }

@@ -35,6 +35,7 @@ describe('ExerciseTechniqueSheet', () => {
 
   it('does not expose a dead entry point for an exercise without technique content', () => {
     expect(hasExerciseTechnique({ ...squat, imageUrl: undefined, techniqueVideoUrl: undefined, instructions: undefined })).toBe(false)
+    expect(hasExerciseTechnique({ ...squat, imageUrl: undefined, techniqueVideoUrl: undefined, instructions: undefined, imagePath: 'custom/photo.jpg' })).toBe(true)
   })
 
   it('shows no media block when an exercise has no new animation', () => {
