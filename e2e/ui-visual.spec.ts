@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { comparisonWorkoutRow, mockResultsHistory, verifyResultsSources } from './progress-results-fixture'
 import { expectMonochromeAccessibility } from './accessibility-helpers'
 
@@ -814,6 +815,39 @@ test('trainer catalog stays compact and aligned across supported widths', async 
   expect(sheetBox).not.toBeNull()
   expect(sheetBox!.y + sheetBox!.height).toBeLessThanOrEqual(await page.evaluate(() => window.innerHeight))
   await page.screenshot({ path: testInfo.outputPath(`trainer-catalog-${testInfo.project.name}.png`), fullPage: true })
+})
+
+test('public trainer photo fills supported mobile widths in both themes', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'The public trainer photo viewer is a mobile acceptance case')
+  const publicId = '91000000-0000-4000-8000-000000000003'
+  const avatar = `data:image/jpeg;base64,${readFileSync(new URL('../public/exercises/vital/smith-seated-military-press.jpg', import.meta.url)).toString('base64')}`
+  const published = { displayName: 'Анна Иванова', bio: '', specialties: ['Силовые тренировки'], city: 'Москва', metroStationIds: [], customLocations: [], trainingModes: ['online'], experienceStartYear: 2018,
+    education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: avatar, certificates: [] }
+  await page.route('**/rest/v1/rpc/get_public_trainer_profile', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+    publicId, draft: published, published, listedInCatalog: true, publishedAt: '2026-09-20T10:00:00Z', updatedAt: '2026-09-20T10:00:00Z', version: 1, isBrandTrainer: false,
+  }) }))
+  await page.goto(`/trainers/${publicId}`)
+  await expect(page.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
+
+  const openPhoto = page.getByRole('button', { name: 'Открыть фото тренера Анна Иванова' })
+  await openPhoto.click()
+  const viewer = page.getByRole('dialog', { name: 'Фото тренера' })
+  await expect(viewer).toBeVisible()
+  await expect(viewer.evaluate((element) => {
+    const box = element.getBoundingClientRect()
+    return box.left === 0 && box.top === 0 && box.right === window.innerWidth && box.bottom === window.innerHeight
+  })).resolves.toBe(true)
+  await page.screenshot({ path: testInfo.outputPath(`trainer-photo-viewer-light-${testInfo.project.name}.png`) })
+  await viewer.getByRole('button', { name: 'Закрыть фото' }).click()
+  await expect(viewer).toHaveCount(0)
+
+  await page.evaluate(() => {
+    localStorage.setItem('fit.appTheme', 'dark')
+    window.dispatchEvent(new Event('fit-theme-change'))
+  })
+  await openPhoto.click()
+  await expect(viewer).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath(`trainer-photo-viewer-dark-${testInfo.project.name}.png`) })
 })
 
 test('trainer Today keeps its mobile visual baselines', async ({ page }, testInfo) => {

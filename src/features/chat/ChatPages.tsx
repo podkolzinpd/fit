@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type TouchEvent as ReactTouchEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { copyText } from '../../shared/clipboard'
 import type { ChatImageDraft, ChatMessage } from '../../shared/domain'
+import { FullscreenImageViewer } from '../../shared/FullscreenImageViewer'
 import { CloseIcon, MessageIcon, PhotoIcon, SearchIcon } from '../../shared/icons'
 import { AsyncView, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { prepareChatImage } from './chat-image'
@@ -111,66 +112,6 @@ function ChatActionSheet({ message, own, local, busy, error, onClose, onReply, o
       <button type="button" className="chat-sheet-cancel" onClick={close}>Отмена</button>
     </section>
   </div>, document.body)
-}
-
-function ChatPhotoViewer({ message, onClose }: { message: ChatMessage; onClose: () => void }) {
-  const [zoom, setZoom] = useState(1)
-  const [offset, setOffset] = useState({ x: 0, y: 0 })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(false)
-  const gesture = useRef<{ x: number; y: number; distance: number | null } | null>(null)
-  useChatLayer(true, onClose)
-  const close = () => window.history.back()
-  async function save() {
-    if (!message.image?.url || saving) return
-    setSaving(true); setError(false)
-    try {
-      const blob = await (await fetch(message.image.url)).blob()
-      const file = new File([blob], `fit-${message.id}.jpg`, { type: 'image/jpeg' })
-      if (navigator.share && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file] })
-      else {
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a'); link.href = url; link.download = file.name; link.click()
-        window.setTimeout(() => URL.revokeObjectURL(url), 1_000)
-      }
-    } catch { setError(true) } finally { setSaving(false) }
-  }
-  function distance(event: ReactTouchEvent) {
-    const first = event.touches[0]; const second = event.touches[1]
-    return first && second ? Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY) : null
-  }
-  function beginGesture(event: ReactTouchEvent) {
-    const touch = event.touches[0]
-    if (touch) gesture.current = { x: touch.clientX, y: touch.clientY, distance: distance(event) }
-  }
-  function moveGesture(event: ReactTouchEvent) {
-    const start = gesture.current; const touch = event.touches[0]
-    if (!start || !touch) return
-    const nextDistance = distance(event)
-    if (nextDistance !== null && start.distance !== null) {
-      const startDistance = start.distance
-      setZoom((value) => Math.min(3, Math.max(1, value * nextDistance / startDistance)))
-      gesture.current = { x: touch.clientX, y: touch.clientY, distance: nextDistance }; return
-    }
-    if (zoom > 1) {
-      setOffset((value) => ({ x: value.x + touch.clientX - start.x, y: value.y + touch.clientY - start.y }))
-      gesture.current = { x: touch.clientX, y: touch.clientY, distance: null }
-    }
-  }
-  function endGesture(event: ReactTouchEvent) {
-    const start = gesture.current; const touch = event.changedTouches[0]
-    gesture.current = null
-    if (zoom === 1 && start && touch && touch.clientY - start.y > 90 && Math.abs(touch.clientX - start.x) < 60) close()
-  }
-  function changeZoom(next: number) { setZoom(next); if (next === 1) setOffset({ x: 0, y: 0 }) }
-  return createPortal(<section className="chat-photo-viewer" role="dialog" aria-modal="true" aria-label="Просмотр фото">
-    <header><button type="button" aria-label="Закрыть фото" onClick={close}><CloseIcon /></button><button type="button" onClick={() => void save()} disabled={saving}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></header>
-    <div className="chat-photo-stage" onDoubleClick={() => changeZoom(zoom === 1 ? 2 : 1)} onTouchStart={beginGesture} onTouchMove={moveGesture} onTouchEnd={endGesture}>
-      <img src={message.image?.url ?? ''} alt="Фото в сообщении" style={{ transform: `translate(${offset.x}px,${offset.y}px) scale(${zoom})` }} />
-    </div>
-    <div className="chat-photo-controls" aria-label="Масштаб"><button type="button" aria-label="Уменьшить" disabled={zoom <= 1} onClick={() => changeZoom(Math.max(1, zoom - .5))}>−</button><span>{Math.round(zoom * 100)}%</span><button type="button" aria-label="Увеличить" disabled={zoom >= 3} onClick={() => changeZoom(Math.min(3, zoom + .5))}>+</button></div>
-    {error && <p role="alert">Не удалось сохранить фото</p>}
-  </section>, document.body)
 }
 
 export function ChatConversationPage() {
@@ -427,7 +368,8 @@ export function ChatConversationPage() {
   </Page>
   {actionMessage && <ChatActionSheet message={actionMessage} own={actionMessage.senderId === actor?.userId} local={pending.some((item) => item.id === actionMessage.id)} busy={deletingMessageId === actionMessage.id} error={deleteErrorMessageId === actionMessage.id}
     onClose={() => setActionMessage(null)} onReply={() => { setReplyingTo(actionMessage); setEditing(null); messageInputRef.current?.focus() }} onCopy={() => void copyMessage(actionMessage)} onEdit={() => startEdit(actionMessage)} onDelete={() => void removeMessage(actionMessage, pending.find((item) => item.id === actionMessage.id))} onOpenPhoto={() => setPhotoMessage(actionMessage)} />}
-  {photoMessage && <ChatPhotoViewer message={photoMessage} onClose={() => setPhotoMessage(null)} />}
+  {photoMessage?.image?.url && <FullscreenImageViewer src={photoMessage.image.url} alt="Фото в сообщении" label="Просмотр фото"
+    saveFileName={`fit-${photoMessage.id}.jpg`} onClose={() => setPhotoMessage(null)} />}
   {notice && <div className="chat-notice" role="status">{notice}</div>}
   {confirmDialog}</>
 }
