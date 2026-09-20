@@ -1099,6 +1099,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .schedule-month-row, .schedule-selected-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3) }
 .schedule-month-row > strong { font-size: var(--type-section-size); line-height: var(--leading-tight) }
 .schedule-month-actions { display: flex; align-items: center; gap: var(--space-2) }
+.schedule-range-toggle { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:2px; padding:3px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken) }
+.schedule-range-toggle button { min-height:44px; padding:0 var(--space-3); border:0; border-radius:var(--radius-sm); color:var(--secondary-label-fg); background:transparent; font-size:var(--text-ui); font-weight:var(--weight-medium); box-shadow:none }
+.schedule-range-toggle button[aria-pressed="true"] { color:var(--fg); background:var(--surface-raised); box-shadow:inset 0 0 0 1px var(--border) }
 .schedule-today { min-height: var(--control-height-compact); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-pill); color: var(--fg); background: var(--surface-sunken); font-size: var(--text-ui); font-weight: var(--weight-semibold) }
 .schedule-today:disabled { color: var(--muted); opacity: .72 }
 .schedule-jump { position: relative; width: var(--control-height-compact); height: var(--control-height-compact); display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: var(--radius-pill); color: var(--muted); background: var(--surface-raised); cursor: pointer }
@@ -1126,6 +1129,20 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .schedule-week-workout-time { color: var(--secondary-label-fg); font-variant-numeric: tabular-nums; white-space: nowrap }
 .schedule-week-workout-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--weight-medium) }
 .schedule-week-empty { color: var(--secondary-label-fg); font-size: var(--type-caption-size); line-height: var(--leading-snug) }
+.schedule-fortnight { min-width:0; display:grid; gap:4px }
+.schedule-fortnight-weekdays,
+.schedule-fortnight-grid { min-width:0; display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:3px }
+.schedule-fortnight-weekdays > span { min-width:0; padding:2px 0; color:var(--secondary-label-fg); font-size:var(--type-caption-size); font-weight:var(--weight-medium); line-height:var(--leading-snug); text-align:center }
+.schedule-fortnight-day { min-width:0; min-height:148px; display:flex; flex-direction:column; align-items:stretch; gap:5px; padding:7px 4px; border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--fg); background:var(--surface-raised); text-align:left; box-shadow:none }
+.schedule-fortnight-day.is-today { border-color:var(--fg) }
+.schedule-fortnight-date { min-height:20px; display:grid; place-items:center; color:var(--fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold); line-height:1; font-variant-numeric:tabular-nums }
+.schedule-fortnight-workouts { min-width:0; display:grid; align-content:start; gap:2px }
+.schedule-fortnight-workout { min-width:0; overflow:hidden; padding:2px 3px; border-radius:4px; color:var(--fg); background:var(--surface-sunken); font-size:var(--type-caption-size); font-weight:var(--weight-medium); line-height:1.2; font-variant-numeric:tabular-nums; white-space:nowrap; text-overflow:ellipsis }
+.schedule-fortnight-workout-compact,
+.schedule-fortnight-empty-compact { display:none }
+.schedule-fortnight-workout-full,
+.schedule-fortnight-empty-full { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.schedule-fortnight-empty { min-width:0; padding-top:3px; color:var(--secondary-label-fg); font-size:var(--type-caption-size); font-weight:var(--weight-medium); line-height:var(--leading-snug); text-align:center }
 .schedule-week-view .coachmark-anchor { width: 100% }
 .week-strip { min-width: 0; flex: 1; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-sunken) }
 .week-day { position: relative; min-width: 0; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 1px; border: 0; border-radius: calc(var(--radius-lg) - 4px); color: var(--fg); background: transparent }
@@ -1184,8 +1201,20 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .schedule-week-day { min-height: 148px; padding: 10px }
   .schedule-week-day.schedule-week-sunday { min-height: 76px }
   .schedule-week-workout { grid-template-columns: 38px minmax(0, 1fr); gap: 5px }
+  .schedule-fortnight-weekdays,
+  .schedule-fortnight-grid { gap:1px }
+  .schedule-fortnight-day { padding:6px 1px }
+  .schedule-fortnight-workout { padding-inline:1px }
   .schedule-selected-row { align-items: flex-start; flex-direction: column }
   .schedule-selected-actions { width: 100%; justify-content: space-between }
+}
+
+@media (max-width: 480px) {
+  .schedule-fortnight-workout { font-size:11px }
+  .schedule-fortnight-workout-compact,
+  .schedule-fortnight-empty-compact { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  .schedule-fortnight-workout-full,
+  .schedule-fortnight-empty-full { display:none }
 }
 .exercise { border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin: 10px 0; background: var(--surface-raised) }
 .cards > .exercise { margin: 0 }

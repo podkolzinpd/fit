@@ -160,6 +160,9 @@ a second primitive family.
 - Operational screens prioritize scanning and direct action.
 - Clients, schedule and progress reuse the same typography, surfaces,
   navigation and controls.
+- Schedule keeps its existing week overview and adds the same neutral segmented
+  pattern for a 14-day, Monday-first grid; dense mobile labels never hide whole
+  workouts and the detailed day remains the only planning workspace.
 - Forms use explicit labels and a single primary save action.
 - Client detail composes goals, notes, workouts, progress and connection state
   without changing authorship or access rules.
