@@ -9,7 +9,7 @@ import { isValidRpe } from '../../shared/rpe'
 import type { RunningFormat } from '../../shared/running-formats'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { OverflowMenu, Page } from '../../shared/ui'
-import { ExercisePicker, recentExercisesForClient, useExerciseCatalog } from '../exercises'
+import { ExercisePicker, ExerciseThumbnail, findCatalogExercise, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { ClientPicker, type ClientPickerSelection } from '../clients'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
@@ -725,7 +725,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           <button type="button" className="reorder-btn" aria-label={`Переместить блок «${item.exercise.name}» вниз`} disabled={blockIndex === reviewBlocks.length - 1} onClick={() => moveReviewBlock(index, 1)}><ArrowDownIcon /></button>
         </span> : undefined
         return <WorkoutExercise state="planned" className="today-exercise planned-exercise" key={`${item.exercise.ref}-${index}`}>
-          <WorkoutExerciseHeader as="header" titleAs="strong" className="today-exercise-title" name={item.exercise.name} actions={reordering ? reorderActions : <OverflowMenu label={`Настройки упражнения «${item.exercise.name}»`} items={[
+          <WorkoutExerciseHeader as="header" titleAs="strong" className="today-exercise-title" name={item.exercise.name}
+            leading={<ExerciseThumbnail exercise={findCatalogExercise(catalog.exercises, item.exercise) ?? item.exercise} />}
+            actions={reordering ? reorderActions : <OverflowMenu label={`Настройки упражнения «${item.exercise.name}»`} items={[
             { label: showRest ? 'Скрыть отдых' : 'Показать отдых', onClick: () => toggleRest(index) },
             { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(index) },
             { label: 'Заменить', onClick: () => { setReplaceIndex(index); setPickerOpen(true) } },

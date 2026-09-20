@@ -42,6 +42,13 @@ describe('workout surface contract', () => {
     expect(onClick).toHaveBeenCalledTimes(1)
   })
 
+  it('accepts a static exercise visual instead of the generic compact mark', () => {
+    const { container } = render(<WorkoutExerciseCompact state="upcoming" title="Планка" meta="3 подхода" leading={<span data-testid="thumbnail" />} />)
+
+    expect(screen.getByTestId('thumbnail')).toBeInTheDocument()
+    expect(container.querySelector('.workout-exercise-compact-mark')).not.toBeInTheDocument()
+  })
+
   it.each([
     ['primary', 'primary'],
     ['secondary', 'secondary'],

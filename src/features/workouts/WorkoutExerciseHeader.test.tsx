@@ -17,6 +17,15 @@ describe('WorkoutExerciseHeader', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Планка' })).toBeInTheDocument()
   })
 
+  it('keeps a compact leading visual separate from the title and actions', () => {
+    render(<WorkoutExerciseHeader as="header" titleAs="strong" className="planned-exercise-head" name="Присед"
+      leading={<span data-testid="thumbnail" />} actions={<button type="button">Меню</button>} />)
+
+    expect(screen.getByTestId('thumbnail').parentElement).toHaveClass('workout-exercise-header-main')
+    expect(screen.getByText('Присед')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Меню' })).toBeInTheDocument()
+  })
+
   it('can hide the redundant technique label while keeping the title actionable', () => {
     render(<WorkoutExerciseHeader className="live-exercise-head" name="Планка" onTitleClick={() => undefined} showTechniqueLabel={false} />)
 

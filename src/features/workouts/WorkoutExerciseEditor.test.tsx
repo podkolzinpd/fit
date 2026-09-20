@@ -255,7 +255,7 @@ describe('workout exercise editor rules', () => {
 
   it('keeps merging with the next exercise available from the menu', async () => {
     const user = userEvent.setup()
-    render(<ReorderEditorHarness />)
+    const { container } = render(<ReorderEditorHarness />)
 
     expect(screen.queryByRole('button', { name: '⛓ Добавить следующее в круговую' })).not.toBeInTheDocument()
     await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
@@ -263,5 +263,7 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByLabelText('Тип блока')).toBeInTheDocument()
     expect(screen.getByLabelText('Тип блока')).toHaveValue('circuit')
     expect(screen.getByText('Настройки блока').closest('details')).not.toHaveAttribute('open')
+    expect(container.querySelectorAll('.block-exercise-head .exercise-thumbnail')).toHaveLength(2)
+    expect(container.querySelectorAll('.planned-round .exercise-thumbnail')).toHaveLength(0)
   })
 })

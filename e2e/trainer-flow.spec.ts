@@ -563,8 +563,12 @@ test('live: порядок упражнений меняется в отдель
     await page.getByLabel('Вес, подход 1').nth(index).fill(index === 0 ? '70' : '50')
     await page.getByLabel('Повторы, подход 1').nth(index).fill(index === 0 ? '8' : '10')
   }
+  await expect(page.locator('.planned-exercise .exercise-thumbnail')).toHaveCount(2)
+  await expect(page.locator('.planned-exercise .exercise-thumbnail video')).toHaveCount(0)
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
+  await expect(page.locator('.planned-detail-exercise .exercise-thumbnail')).toHaveCount(2)
+  await expect(page.locator('.planned-detail-exercise .exercise-thumbnail video')).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
@@ -573,6 +577,7 @@ test('live: порядок упражнений меняется в отдель
   const currentTechnique = page.getByRole('region', { name: /Техника текущего упражнения: Присед/ })
   await expect(currentTechnique).toBeVisible()
   await expect(currentTechnique.locator('video')).toHaveCount(1)
+  await expect(page.locator('.live-exercise.current > .live-exercise-head .exercise-thumbnail')).toHaveCount(0)
   await expect(currentTechnique.getByText('Анимация')).toHaveCount(0)
   await expect(page.getByText('Техника', { exact: true })).toHaveCount(0)
   const mediaBottom = await currentTechnique.locator('video').evaluate((element) => element.getBoundingClientRect().bottom)
@@ -590,6 +595,8 @@ test('live: порядок упражнений меняется в отдель
   await expect(upcomingExercise).toContainText('1 подход')
   await expect(upcomingExercise).toContainText('План: 50 кг × 10 повт.')
   await expect(upcomingExercise.locator('.workout-set-table')).toHaveCount(0)
+  await expect(upcomingExercise.locator('.exercise-thumbnail')).toHaveCount(1)
+  await expect(upcomingExercise.locator('.exercise-thumbnail video')).toHaveCount(0)
   // В обычном live стрелок нет; включаем отдельный режим в меню упражнения.
   await expect(page.getByRole('button', { name: 'Вверх' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()
@@ -604,8 +611,11 @@ test('live: порядок упражнений меняется в отдель
   // автоматически становится текущим и остаётся доступно для ручной перестановки.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.locator('.live-exercise-collapsed')).toHaveCount(1)
+  await expect(page.locator('.live-exercise-collapsed .exercise-thumbnail')).toHaveCount(1)
+  await expect(page.locator('.live-exercise-collapsed .exercise-thumbnail video')).toHaveCount(0)
   await expect(page.locator('.live-exercise.current .workout-set-table')).toHaveCount(1)
   await expect(page.getByRole('region', { name: /Техника текущего упражнения: Жим/ })).toBeVisible()
+  await expect(page.locator('.live-exercise.current > .live-exercise-head .exercise-thumbnail')).toHaveCount(0)
   await page.locator('.live-exercise.current').getByRole('button', { name: 'Вверх' }).click()
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Жим штанги лёжа')
 })

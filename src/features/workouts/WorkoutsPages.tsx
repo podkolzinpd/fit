@@ -16,7 +16,7 @@ import {
   type LocalDate,
 } from '../../shared/local-date'
 import { AsyncView, Coachmark, EmptyState, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
-import { ExerciseImage, ExercisePicker, ExerciseTechniqueSheet, hasExerciseAnimation, hasExerciseTechnique, recentExercisesForClient, useExerciseCatalog } from '../exercises'
+import { ExerciseImage, ExercisePicker, ExerciseTechniqueSheet, ExerciseThumbnail, findCatalogExercise, hasExerciseAnimation, hasExerciseMedia, hasExerciseTechnique, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { clientWorkoutAuthorLabel, ClientPicker, ClientWorkoutHistoryCalendar, useWorkoutHistoryCalendar, type ClientPickerSelection } from '../clients'
 import { hasWorkoutBackEntry, safeWorkoutReturnTo, useWorkoutBack, workoutListFallback, type WorkoutNavigationState } from './workout-navigation'
 import { VoiceNoteField } from '../voice-input'
@@ -87,11 +87,6 @@ function keepLiveSetFieldVisible(target: HTMLElement) {
     - contentRect.top
     - Math.max(LIVE_SET_KEYBOARD_GUTTER, (content.clientHeight - rowRect.height) / 2)
   content.scrollTo({ top: Math.max(0, centeredTop), behavior: 'auto' })
-}
-
-function catalogExerciseFor(exercises: readonly ExerciseSnapshot[], exercise: { ref: string; source?: 'system' | 'custom' }) {
-  return exercises.find((candidate) => candidate.ref === exercise.ref && (!exercise.source || candidate.source === exercise.source))
-    ?? exercises.find((candidate) => candidate.ref === exercise.ref)
 }
 
 function minutesOf(time: string): number {
@@ -788,8 +783,9 @@ export function WorkoutFormPage() {
         <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={(parsed) => void addQuickEntry(parsed)} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search, onSelect) => { parsedExerciseSelection.current = onSelect ?? null; setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} />
         {exercises.length === 0 && <p className="workout-empty-hint" role="status">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
         <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }}
-          canOpenTechnique={(exercise) => hasExerciseTechnique(catalogExerciseFor(catalog.exercises, exercise))}
-          onOpenTechnique={(exercise) => { const meta = catalogExerciseFor(catalog.exercises, exercise); if (hasExerciseTechnique(meta)) setTechniqueExercise(meta) }}
+          exerciseCatalog={catalog.exercises}
+          canOpenTechnique={(exercise) => hasExerciseTechnique(findCatalogExercise(catalog.exercises, exercise))}
+          onOpenTechnique={(exercise) => { const meta = findCatalogExercise(catalog.exercises, exercise); if (hasExerciseTechnique(meta)) setTechniqueExercise(meta) }}
           showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite} initialExercisesReady={formDraftReady} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
@@ -834,6 +830,7 @@ export function WorkoutDetailPage() {
   const { workoutId = '' } = useParams(); const navigate = useNavigate(); const location = useLocation(); const queryClient = useQueryClient()
   const navigationState = location.state as WorkoutNavigationState | null
   const { actor } = useAuth()
+  const catalog = useExerciseCatalog()
   const showRpe = useRpeDisplay(actor?.userId)
   const [confirm, confirmDialog] = useConfirm()
   const [askActiveWorkoutRecovery, activeWorkoutRecoveryDialog] = useConfirm()
@@ -1032,8 +1029,10 @@ export function WorkoutDetailPage() {
   const exerciseCards = <div className={`cards ${done ? 'completed-exercise-list' : 'planned-exercise-list'}`}>{groupIntoBlocks(workout?.exercises ?? []).map((block) => {
     const articles = block.exercises.map((exercise) => {
       const detailSummary = compactExerciseDetailSummary(exercise.inputKind, exercise.sets, done ? 'completed' : 'planned', showRpe, exercise.ref)
+      const exerciseMeta = findCatalogExercise(catalog.exercises, exercise) ?? exercise
       return <WorkoutExercise state={done ? 'history' : 'planned'} className={`exercise ${done ? 'completed-exercise' : 'planned-detail-exercise'}`} key={exercise.id}>
         <div className="workout-detail-exercise-row">
+          <ExerciseThumbnail exercise={exerciseMeta} />
           <details className={done ? 'completed-exercise-details' : 'planned-exercise-details'}>
             <summary className={done ? 'completed-set-summary' : 'planned-set-summary'}>
               <span className="workout-detail-exercise-heading"><strong>{exercise.name}</strong><span className="exercise-details-chevron" aria-hidden="true" /></span>
@@ -1771,13 +1770,21 @@ export function LiveWorkoutPage() {
     // Regular saves, timer ticks and realtime refreshes never move the page.
     content.scrollTop += card.getBoundingClientRect().top - pinned.getBoundingClientRect().bottom - 12
   }, [query.data])
+  function exerciseMetaFor(exercise: WorkoutExerciseModel) {
+    return findCatalogExercise(catalog.exercises, exercise) ?? exercise
+  }
   function techniqueActionFor(exercise: WorkoutExerciseModel) {
-    const meta = catalogExerciseFor(catalog.exercises, exercise)
+    const meta = exerciseMetaFor(exercise)
     return hasExerciseTechnique(meta) ? () => setTechniqueExercise(meta) : undefined
+  }
+  function liveHeaderThumbnail(exercise: WorkoutExerciseModel, active = false) {
+    const meta = exerciseMetaFor(exercise)
+    if (active && showLiveExerciseAnimation && hasExerciseMedia(meta)) return undefined
+    return <ExerciseThumbnail exercise={meta} />
   }
   function liveTechniqueFor(exercise: WorkoutExerciseModel, active: boolean) {
     if (!showLiveExerciseAnimation || !active) return null
-    const meta = catalogExerciseFor(catalog.exercises, exercise)
+    const meta = exerciseMetaFor(exercise)
     if (!meta || !hasExerciseTechnique(meta)) return null
     const key = `${exercise.id}:${exercise.source}:${exercise.ref}`
     return <LiveExerciseTechnique
@@ -2386,6 +2393,7 @@ export function LiveWorkoutPage() {
               const doneCount = exercise.sets.length
               const best = exercise.sets.map((set) => factLine(set, true, exercise.ref)).filter(Boolean).slice(-1)[0] ?? null
               return <WorkoutExerciseCompact key={exercise.id} state="completed" className="live-exercise-collapsed" title={exercise.name}
+                leading={liveHeaderThumbnail(exercise)}
                 meta={`${doneCount} ${doneCount === 1 ? 'подход' : doneCount < 5 ? 'подхода' : 'подходов'}${best ? ` · ${best}` : ''}`}
                 onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))} />
             }
@@ -2393,12 +2401,12 @@ export function LiveWorkoutPage() {
               const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set, exercise.ref)).find(Boolean)
               const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
               return <WorkoutExercise key={exercise.id} state="upcoming" className="live-exercise-upcoming">
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={liveHeaderThumbnail(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
                 <p className="live-upcoming-summary"><span>{exercise.sets.length} {countLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>
               </WorkoutExercise>
             }
             return <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
-              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={liveHeaderThumbnail(exercise, blockStatus === 'current')} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
               {liveTechniqueFor(exercise, blockStatus === 'current')}
               {clientMode && exercise.trainerComment && <p className="live-trainer-cue">Тренер: {exercise.trainerComment}</p>}
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
@@ -2430,7 +2438,9 @@ export function LiveWorkoutPage() {
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
             <div className="circuit-round-label">Круг {round.round}</div>
             {round.items.map(({ exercise, set }) => <section key={set.id}>
-              <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={exercise.name} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={roundIndex === 0 ? exerciseMenu(exercise) : undefined} />
+              <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={exercise.name}
+                leading={roundIndex === 0 ? liveHeaderThumbnail(exercise) : undefined}
+                onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={roundIndex === 0 ? exerciseMenu(exercise) : undefined} />
               {liveTechniqueFor(exercise, set.id === activeCircuitSetId)}
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
             </section>)}
