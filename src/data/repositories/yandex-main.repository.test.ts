@@ -197,6 +197,38 @@ describe('Yandex main repository', () => {
     expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({ method: 'DELETE' })
   })
 
+  it('lists favorites carried over from Supabase, whose exercises omit unset optional keys entirely', async () => {
+    // Supabase's toJson() serializes via JSON.stringify, which drops keys
+    // whose value is undefined — unlike the Yandex write path, which always
+    // sends an explicit null. A favorite saved on Supabase (directly, or
+    // migrated into Yandex through the tenant snapshot) carries this shape.
+    const wireFavorite = {
+      id: '20d4ab64-df6a-4cf4-a46f-16359b1eb541', title: 'Доброе утро',
+      createdAt: '2026-09-19T21:24:48.813954+03:00',
+      exercises: [{
+        ref: 'crunches', name: 'Скручивания', source: 'system',
+        blockId: '9f82cfad-2119-48e4-895d-a6dce5095597', position: 1,
+        blockType: 'single', inputKind: 'reps', blockPreset: 'set', blockRounds: 1,
+        muscleGroup: 'core', restBetweenSetsSec: 90, restBetweenRoundsSec: 0, restBetweenExercisesSec: 0,
+        sets: [{ rpe: 7, reps: 15, position: 0 }, { rpe: 7, reps: 15, position: 1 }],
+      }],
+    }
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ favorites: [wireFavorite] }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.favoriteWorkouts.list()).resolves.toEqual([{
+      id: wireFavorite.id, title: wireFavorite.title, createdAt: wireFavorite.createdAt,
+      exercises: [{
+        ref: 'crunches', name: 'Скручивания', source: 'system',
+        blockId: '9f82cfad-2119-48e4-895d-a6dce5095597', position: 1,
+        blockType: 'single', inputKind: 'reps', blockPreset: 'set', blockRounds: 1,
+        muscleGroup: 'core', restBetweenSetsSec: 90, restBetweenRoundsSec: 0, restBetweenExercisesSec: 0,
+        sets: [{ rpe: 7, reps: 15, position: 0 }, { rpe: 7, reps: 15, position: 1 }],
+      }],
+    }])
+  })
+
   it('requests and validates a page of public trainers', async () => {
     const draft = {
       displayName: 'Анна', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [], trainingModes: [],
