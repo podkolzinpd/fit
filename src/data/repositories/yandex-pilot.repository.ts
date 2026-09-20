@@ -4,6 +4,8 @@ import {
   yandexPilotQueries,
 } from '../queries/yandex-pilot.queries'
 import type { YandexApiAccessMode } from '../queries/yandex-pilot.queries'
+import { diagnosticsForResponse } from '../queries/request-diagnostics'
+import { attachRequestDiagnostics, getRequestDiagnostics } from '../../shared/request-diagnostics'
 
 const profilePayloadSchema = z.object({
   id: z.uuid(),
@@ -397,7 +399,18 @@ function yandexAuthConnectionError(caught: unknown): Error {
   if (caught instanceof Error && caught.message === YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE) {
     return caught
   }
-  return new Error('Не удалось подключиться к Yandex Cloud stage.')
+  return attachRequestDiagnostics(
+    new Error('Не удалось подключиться к Yandex Cloud stage.'),
+    getRequestDiagnostics(caught) ?? undefined,
+  )
+}
+
+function responseFailure(response: Response, error: Error): Error {
+  return attachRequestDiagnostics(error, diagnosticsForResponse(response))
+}
+
+function connectionFailure(caught: unknown, message = 'Не удалось подключиться к Yandex Cloud stage.'): Error {
+  return attachRequestDiagnostics(new Error(message), getRequestDiagnostics(caught) ?? undefined)
 }
 
 function linkResponseError(status: number): Error {
@@ -449,10 +462,10 @@ async function commandResponse(request: () => Promise<Response>): Promise<Respon
   let response: Response
   try {
     response = await request()
-  } catch {
-    throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+  } catch (caught) {
+    throw connectionFailure(caught)
   }
-  if (!response.ok) throw commandResponseError(response.status)
+  if (!response.ok) throw responseFailure(response, commandResponseError(response.status))
   return response
 }
 
@@ -460,32 +473,32 @@ async function aiResponse(request: () => Promise<Response>): Promise<Response> {
   let response: Response
   try {
     response = await request()
-  } catch {
-    throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+  } catch (caught) {
+    throw connectionFailure(caught)
   }
   if (response.ok) return response
   if (response.status === 401) {
-    throw new Error('Сессия пилота истекла. Начните вход через Yandex ID заново.')
+    throw responseFailure(response, new Error('Сессия пилота истекла. Начните вход через Yandex ID заново.'))
   }
   if (response.status === 403 || response.status === 404) {
-    throw new Error('Нет доступа к данным этого клиента.')
+    throw responseFailure(response, new Error('Нет доступа к данным этого клиента.'))
   }
-  if (response.status === 400) throw new Error('Запрос ИИ имеет некорректный формат.')
-  if (response.status === 422) throw new Error('Для выбранного периода нет завершённых тренировок.')
+  if (response.status === 400) throw responseFailure(response, new Error('Запрос ИИ имеет некорректный формат.'))
+  if (response.status === 422) throw responseFailure(response, new Error('Для выбранного периода нет завершённых тренировок.'))
   if (response.status === 502 || response.status === 503 || response.status === 504) {
-    throw new Error('ИИ временно недоступен. Попробуйте позднее.')
+    throw responseFailure(response, new Error('ИИ временно недоступен. Попробуйте позднее.'))
   }
-  throw new Error('Не удалось выполнить запрос ИИ.')
+  throw responseFailure(response, new Error('Не удалось выполнить запрос ИИ.'))
 }
 
 async function assistantTurnResponse(request: () => Promise<Response>): Promise<Response> {
   let response: Response
   try {
     response = await request()
-  } catch {
-    throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+  } catch (caught) {
+    throw connectionFailure(caught)
   }
-  if (!response.ok) throw assistantTurnResponseError(response.status)
+  if (!response.ok) throw responseFailure(response, assistantTurnResponseError(response.status))
   return response
 }
 
@@ -497,7 +510,7 @@ export const yandexPilotRepository = {
     } catch (caught) {
       throw yandexAuthConnectionError(caught)
     }
-    if (!response.ok) throw responseError(response.status)
+    if (!response.ok) throw responseFailure(response, responseError(response.status))
     const result = sessionSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат сессии.')
     return result.data
@@ -517,7 +530,7 @@ export const yandexPilotRepository = {
       const result = authHandoffSchema.safeParse(await response.json())
       if (result.success) throw new YandexAccountSetupRequiredError(result.data.handoff)
     }
-    if (!response.ok) throw appSessionResponseError(response.status)
+    if (!response.ok) throw responseFailure(response, appSessionResponseError(response.status))
     const result = appSessionSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат Yandex ID сессии.')
     return result.data
@@ -545,7 +558,7 @@ export const yandexPilotRepository = {
     } catch (caught) {
       throw yandexAuthConnectionError(caught)
     }
-    if (!response.ok) throw nativeRegistrationResponseError(response.status)
+    if (!response.ok) throw responseFailure(response, nativeRegistrationResponseError(response.status))
     const result = appSessionSchema.safeParse(await response.json())
     if (!result.success) {
       throw new Error('Stage вернул неподдерживаемый формат регистрации Yandex ID.')
@@ -569,7 +582,7 @@ export const yandexPilotRepository = {
           throw new YandexAuthHandoffRefreshRequiredError()
         }
       }
-      throw recoveryResponseError(response.status)
+      throw responseFailure(response, recoveryResponseError(response.status))
     }
     const result = appSessionSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Сервер вернул неподдерживаемый формат Yandex ID сессии.')
@@ -592,7 +605,7 @@ export const yandexPilotRepository = {
     } catch (caught) {
       throw yandexAuthConnectionError(caught)
     }
-    if (!response.ok) throw handoffRegistrationResponseError(response.status)
+    if (!response.ok) throw responseFailure(response, handoffRegistrationResponseError(response.status))
     const result = appSessionSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Сервер вернул неподдерживаемый формат регистрации.')
     return result.data
@@ -607,7 +620,7 @@ export const yandexPilotRepository = {
     } catch (caught) {
       throw yandexAuthConnectionError(caught)
     }
-    if (!response.ok) throw appSessionRestoreError(response.status)
+    if (!response.ok) throw responseFailure(response, appSessionRestoreError(response.status))
     const result = appSessionProfileSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат Yandex ID сессии.')
     return result.data
@@ -619,7 +632,7 @@ export const yandexPilotRepository = {
     } catch (caught) {
       throw yandexAuthConnectionError(caught)
     }
-    if (!response.ok) throw appSessionRestoreError(response.status)
+    if (!response.ok) throw responseFailure(response, appSessionRestoreError(response.status))
   },
   async updateProfile(
     apiBaseUrl: string,
@@ -652,7 +665,7 @@ export const yandexPilotRepository = {
     } catch (caught) {
       throw yandexAuthConnectionError(caught)
     }
-    if (!response.ok) throw linkResponseError(response.status)
+    if (!response.ok) throw responseFailure(response, linkResponseError(response.status))
     const result = linkedYandexIdentitySchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый результат связывания.')
     return result.data
@@ -670,7 +683,7 @@ export const yandexPilotRepository = {
     } catch (caught) {
       throw yandexAuthConnectionError(caught)
     }
-    if (!response.ok) throw linkStatusResponseError(response.status)
+    if (!response.ok) throw responseFailure(response, linkStatusResponseError(response.status))
     const result = yandexIdentityLinkStatusSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый статус Yandex ID.')
     return result.data
@@ -683,10 +696,10 @@ export const yandexPilotRepository = {
     let response: Response
     try {
       response = await yandexPilotQueries.listClients(apiBaseUrl, sessionToken, accessMode)
-    } catch {
-      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    } catch (caught) {
+      throw connectionFailure(caught)
     }
-    if (!response.ok) throw clientsResponseError(response.status)
+    if (!response.ok) throw responseFailure(response, clientsResponseError(response.status))
     const result = clientsSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат клиентов.')
     return result.data.clients
@@ -699,10 +712,10 @@ export const yandexPilotRepository = {
     let response: Response
     try {
       response = await yandexPilotQueries.listConnections(apiBaseUrl, sessionToken, accessMode)
-    } catch {
-      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    } catch (caught) {
+      throw connectionFailure(caught)
     }
-    if (!response.ok) throw clientsResponseError(response.status)
+    if (!response.ok) throw responseFailure(response, clientsResponseError(response.status))
     const result = connectionsSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат связей.')
     return {
@@ -724,10 +737,10 @@ export const yandexPilotRepository = {
         accessMode,
         page,
       )
-    } catch {
-      throw new Error('Не удалось подключиться к Yandex Cloud stage.')
+    } catch (caught) {
+      throw connectionFailure(caught)
     }
-    if (!response.ok) throw clientsResponseError(response.status)
+    if (!response.ok) throw responseFailure(response, clientsResponseError(response.status))
     const result = trainingDataSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат тренировок.')
     return {

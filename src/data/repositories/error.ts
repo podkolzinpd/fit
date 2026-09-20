@@ -1,3 +1,6 @@
+import { getResponseDiagnostics } from '../queries/request-diagnostics'
+import { attachRequestDiagnostics, getRequestDiagnostics, type RequestDiagnostics } from '../../shared/request-diagnostics'
+
 export class RepositoryError extends Error {
   constructor(public readonly code: string, message: string, options?: ErrorOptions) {
     super(message, options)
@@ -13,7 +16,7 @@ export function isRepositoryNetworkError(error: unknown): error is RepositoryErr
   return error instanceof RepositoryError && error.code === 'network_unavailable'
 }
 
-export function repositoryError(error: unknown): RepositoryError {
+function mapRepositoryError(error: unknown): RepositoryError {
   if (!error || typeof error !== 'object') {
     return new RepositoryError('unknown', 'Не удалось выполнить действие. Попробуйте ещё раз.')
   }
@@ -137,4 +140,18 @@ export function repositoryError(error: unknown): RepositoryError {
     return new RepositoryError('network_unavailable', 'Не удалось подключиться к серверу. Проверьте интернет и повторите попытку.')
   }
   return new RepositoryError(code, 'Не удалось выполнить действие. Попробуйте ещё раз.')
+}
+
+function requestDiagnostics(error: unknown): RequestDiagnostics | undefined {
+  const direct = getRequestDiagnostics(error)
+  if (direct !== null) return direct
+  if (!error || typeof error !== 'object') return undefined
+  const context = (error as { context?: unknown }).context
+  return typeof Response !== 'undefined' && context instanceof Response
+    ? getResponseDiagnostics(context)
+    : undefined
+}
+
+export function repositoryError(error: unknown): RepositoryError {
+  return attachRequestDiagnostics(mapRepositoryError(error), requestDiagnostics(error))
 }

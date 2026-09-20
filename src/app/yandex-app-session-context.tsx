@@ -29,6 +29,7 @@ interface YandexAppSessionState {
   session: YandexAppSession | null
   loading: boolean
   error: string | null
+  errorDetails: Error | null
   establish: (session: YandexAppSession) => void
   retry: () => Promise<void>
   reset: () => void
@@ -70,6 +71,7 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<YandexAppSession | null>(null)
   const [loading, setLoading] = useState(config !== null)
   const [error, setError] = useState<string | null>(null)
+  const [errorDetails, setErrorDetails] = useState<Error | null>(null)
   const revisionRef = useRef(0)
 
   const clearLocalSession = useCallback(() => {
@@ -85,6 +87,7 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
       setSession(null)
       setLoading(false)
       setError(null)
+      setErrorDetails(null)
       return
     }
 
@@ -94,11 +97,13 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
       setSession(null)
       setLoading(false)
       setError(null)
+      setErrorDetails(null)
       return
     }
 
     setLoading(true)
     setError(null)
+    setErrorDetails(null)
     try {
       const restored = await yandexPilotRepository.getAppSession(config.apiBaseUrl, stored.token)
       if (revision !== revisionRef.current) return
@@ -108,6 +113,7 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
       setSession(null)
       if (caught instanceof YandexAppSessionExpiredError) clearStoredSession(window.localStorage)
       setError(caught instanceof Error ? caught.message : 'Не удалось восстановить сессию Yandex ID.')
+      setErrorDetails(caught instanceof Error ? caught : null)
     } finally {
       if (revision === revisionRef.current) setLoading(false)
     }
@@ -119,12 +125,14 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
     persistSession(window.localStorage, nextSession)
     setSession(nextSession)
     setError(null)
+    setErrorDetails(null)
     setLoading(false)
   }, [config])
 
   const reset = useCallback(() => {
     clearLocalSession()
     setError(null)
+    setErrorDetails(null)
   }, [clearLocalSession])
 
   const signOut = useCallback(async () => {
@@ -138,12 +146,14 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
     })()
     clearLocalSession()
     setError(null)
+    setErrorDetails(null)
     if (config === null || current === null) return
     try {
       await yandexPilotRepository.revokeAppSession(config.apiBaseUrl, current.session.token)
     } catch (caught) {
       if (caught instanceof YandexAppSessionExpiredError) return
       setError('Сессия удалена с этого устройства, но сервер не подтвердил выход. Она автоматически истечёт не позднее указанного срока.')
+      setErrorDetails(caught instanceof Error ? caught : null)
     }
   }, [clearLocalSession, config, session])
 
@@ -174,11 +184,12 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
     session,
     loading,
     error,
+    errorDetails,
     establish,
     retry: restore,
     reset,
     signOut,
-  }), [session, loading, error, establish, restore, reset, signOut])
+  }), [session, loading, error, errorDetails, establish, restore, reset, signOut])
 
   return <YandexAppSessionContext value={value}>{children}</YandexAppSessionContext>
 }

@@ -31,12 +31,14 @@ import type {
 } from '../../shared/domain'
 import { parseTrainerDiscoveryPrompt } from './trainer-discovery.repository'
 import { localDate } from '../../shared/local-date'
+import { attachRequestDiagnostics, getRequestDiagnostics } from '../../shared/request-diagnostics'
 import { validateGoalCriteriaSuggestion } from '../../shared/goal-criteria-suggestions'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retirement'
 import { subscribeToPush, unsubscribeFromPush } from '../../features/notifications/push-subscription'
 import { reconcilePushSubscription } from '../../features/notifications/reconcile-push-subscription'
 import { createYandexMainQueries, type YandexMainQueries } from '../queries/yandex-main.queries'
+import { diagnosticsForResponse } from '../queries/request-diagnostics'
 import { toJson } from '../queries/json'
 import { currentAppFeedbackContext } from './app-feedback.repository'
 import type { CustomExercise } from './exercises.repository'
@@ -327,7 +329,10 @@ async function response(
 ): Promise<Response> {
   let result: Response
   try { result = await work() } catch (error) {
-    throw new RepositoryError('network_unavailable', 'Не удалось подключиться к серверу. Проверьте интернет и повторите попытку.', { cause: error })
+    throw attachRequestDiagnostics(
+      new RepositoryError('network_unavailable', 'Не удалось подключиться к серверу. Проверьте интернет и повторите попытку.', { cause: error }),
+      getRequestDiagnostics(error) ?? undefined,
+    )
   }
   if (result.ok) return result
   let code: string | undefined
@@ -337,7 +342,10 @@ async function response(
   } catch {
     code = undefined
   }
-  throw errorFactory(result.status, code)
+  throw attachRequestDiagnostics(
+    errorFactory(result.status, code),
+    diagnosticsForResponse(result, 'api', code),
+  )
 }
 
 async function readJson<Schema extends z.ZodType>(
@@ -346,7 +354,14 @@ async function readJson<Schema extends z.ZodType>(
   schema: Schema,
 ): Promise<z.output<Schema>> {
   const result = await response(() => queries.read(path))
-  return schema.parse(await result.json())
+  try {
+    return schema.parse(await result.json())
+  } catch (error) {
+    throw attachRequestDiagnostics(
+      new RepositoryError('invalid_response', 'Сервер вернул некорректные данные. Попробуйте ещё раз.', { cause: error }),
+      diagnosticsForResponse(result, 'response'),
+    )
+  }
 }
 
 async function writeJson<Schema extends z.ZodType>(
@@ -358,7 +373,14 @@ async function writeJson<Schema extends z.ZodType>(
   errorFactory?: ResponseErrorFactory,
 ): Promise<z.output<Schema>> {
   const result = await response(() => queries.write(path, method, body), errorFactory)
-  return schema.parse(await result.json())
+  try {
+    return schema.parse(await result.json())
+  } catch (error) {
+    throw attachRequestDiagnostics(
+      new RepositoryError('invalid_response', 'Сервер вернул некорректные данные. Попробуйте ещё раз.', { cause: error }),
+      diagnosticsForResponse(result, 'response'),
+    )
+  }
 }
 
 async function writeEmpty(
