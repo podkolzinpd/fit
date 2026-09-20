@@ -2480,6 +2480,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             status: 'done',
             startedAt: '2026-08-22T07:00:00.000Z',
             completedAt: '2026-08-22T08:00:00.000Z',
+            activeCaloriesKcal: null,
             version: 1,
             stageId: null,
             stageTitle: null,

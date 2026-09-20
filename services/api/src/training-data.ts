@@ -63,6 +63,7 @@ interface WorkoutRow extends QueryResultRow {
   client_question_resolved_at: Date | null
   started_at: Date | null
   completed_at: Date | null
+  active_calories_kcal: number | null
   version: string
   stage_id: string | null
   stage_title: string | null
@@ -213,6 +214,7 @@ export interface PilotWorkout {
   clientQuestionResolvedAt: string | null
   startedAt: string | null
   completedAt: string | null
+  activeCaloriesKcal?: number | null
   version: number
   stageId?: string | null
   stageTitle?: string | null
@@ -302,6 +304,7 @@ export async function readAccessibleTrainingData(
         workout.client_question_resolved_at,
         workout.started_at,
         workout.completed_at,
+        workout.active_calories_kcal,
         workout.version,
         workout.stage_id,
         stage.title stage_title,
@@ -456,6 +459,7 @@ export async function readAccessibleTrainingData(
       clientQuestionResolvedAt: row.client_question_resolved_at?.toISOString() ?? null,
       startedAt: row.started_at?.toISOString() ?? null,
       completedAt: row.completed_at?.toISOString() ?? null,
+      activeCaloriesKcal: row.active_calories_kcal,
       version: safeInteger(row.version, 'workout version'),
       stageId: row.stage_id,
       stageTitle: row.stage_title,

@@ -411,6 +411,7 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
     endTime: value.endTime,
     startedAt: value.startedAt,
     completedAt: value.completedAt,
+    activeCaloriesKcal: value.activeCaloriesKcal ?? null,
     status: value.status,
     notes: value.notes,
     trainerReview: value.trainerReview ?? undefined,

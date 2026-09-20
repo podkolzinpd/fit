@@ -181,6 +181,7 @@ const workoutSchema = z.object({
   clientQuestionResolvedAt: yandexDateTimeSchema.nullable(),
   startedAt: yandexDateTimeSchema.nullable(),
   completedAt: yandexDateTimeSchema.nullable(),
+  activeCaloriesKcal: z.number().int().positive().nullable().optional(),
   stageId: z.uuid().nullable().optional(),
   stageTitle: z.string().nullable().optional(),
   hasPr: z.boolean().optional(),

@@ -90,7 +90,7 @@ export function WorkoutCompletionReport({
   const metrics: WorkoutShareMetric[] = [
     ...(duration ? [{ label: 'Время', value: duration }] : []),
     ...(tonnage ? [{ label: 'Тоннаж', value: tonnage }] : []),
-    ...(caloriesKcal ? [{ label: 'С устройства', value: `${caloriesKcal} ккал` }] : []),
+    ...(caloriesKcal ? [{ label: 'Оценка ФИТ', value: `≈ ${caloriesKcal} ккал` }] : []),
     ...(percent !== null ? [{ label: 'План', value: `${percent}%` }] : []),
   ]
   const recordAchievement = personalResult?.state === 'record' ? personalResult : undefined

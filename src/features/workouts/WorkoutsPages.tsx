@@ -39,7 +39,6 @@ import { useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { useRpeDisplay } from '../../app/rpe-display'
 import { useClientRealtime } from '../../app/use-client-realtime'
-import { isWearablesPilotEnabled } from '../../app/feature-flags'
 import { prepareGong } from '../../shared/gong'
 import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
 import { plannedWorkoutActionLabels } from './workout-entry-rules'
@@ -65,7 +64,6 @@ import { clearWorkoutInactivityReminder } from './workout-inactivity-reminder'
 import { useWorkoutInactivityReminder } from './use-workout-inactivity-reminder'
 import { LiveExerciseTechnique } from './LiveExerciseTechnique'
 import { useAppViewport } from '../../app/app-viewport'
-import { loadWorkoutActiveEnergy } from '../wearables'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -379,7 +377,11 @@ export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyL
   const done = workout.status === 'done'
   const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
   const tonnage = workoutTonnage(workout)
-  const meta = done ? [duration, tonnage > 0 ? tonnageLabel(tonnage) : null].filter(Boolean) : []
+  const meta = done ? [
+    duration,
+    tonnage > 0 ? tonnageLabel(tonnage) : null,
+    workout.activeCaloriesKcal ? `≈ ${workout.activeCaloriesKcal} ккал` : null,
+  ].filter(Boolean) : []
   const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined
   const exercisePreview = chronicleExercisePreview(workout.exercises)
   const musclePreview = chronicleExercisePreview(historyListActions && done ? performedMuscleGroupLabels(workout) : [], 3)
@@ -974,12 +976,6 @@ export function WorkoutDetailPage() {
   ))
   const trainers = useQuery({ queryKey: ['client-trainers', workout?.clientId], queryFn: () => invitationsRepository.listTrainers(workout!.clientId), enabled: clientMode && Boolean(workout?.clientId) })
   const hasActiveTrainer = Boolean(trainers.data?.length)
-  const workoutActiveEnergy = useQuery({
-    queryKey: ['workout-active-energy', workoutId, workout?.startedAt, workout?.completedAt],
-    queryFn: () => loadWorkoutActiveEnergy(workout!.startedAt!, workout!.completedAt!),
-    enabled: Boolean(clientCompletionReport && actor?.userId && isWearablesPilotEnabled(actor.userId) && workout?.startedAt && workout?.completedAt),
-    retry: false,
-  })
   const completionPersonalResult = useMemo(
     () => latestWorkoutFact(completionHistory.data ?? [], workoutId).result,
     [completionHistory.data, workoutId],
@@ -1079,7 +1075,7 @@ export function WorkoutDetailPage() {
         incompleteExercises={incompleteExercises}
         duration={duration && duration !== '0 мин' ? duration : null}
         tonnage={tonnage > 0 ? tonnageLabel(tonnage) : null}
-        caloriesKcal={workoutActiveEnergy.data?.activeCaloriesKcal}
+        caloriesKcal={workout.activeCaloriesKcal}
         muscleGroups={groups}
         personalResult={completionPersonalResult}
         resultLoading={completionHistory.isLoading}
@@ -1107,9 +1103,10 @@ export function WorkoutDetailPage() {
         event.preventDefault()
         openLive(workoutId)
       }}>Продолжить тренировку</Link>}
-      {done && !clientCompletionReport && <section className="workout-fact-summary" aria-label="Сводка тренировки">
+      {done && !clientCompletionReport && <section className={`workout-fact-summary${workout.activeCaloriesKcal ? ' has-calories' : ''}`} aria-label="Сводка тренировки">
         <p><span>Время</span><strong>{duration && duration !== '0 мин' ? duration : '—'}</strong></p>
         <p><span>Тоннаж</span><strong>{tonnage > 0 ? tonnageLabel(tonnage) : '—'}</strong></p>
+        {workout.activeCaloriesKcal && <p><span>Оценка ФИТ</span><strong>≈ {workout.activeCaloriesKcal} ккал</strong></p>}
         <p><span>Подходы</span><strong>{completedSets}</strong></p>
         {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
         {clientMode && workout.hasPr && <p className="workout-fact-summary-record"><RecordIcon /><span>Личный рекорд</span><strong>Лучший результат тренировки</strong></p>}
