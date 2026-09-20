@@ -54,6 +54,9 @@ resource "yandex_serverless_container" "api" {
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id
       },
+      {
+        YANDEX_LLM_FUNCTION_URL = "https://functions.yandexcloud.net/${var.llm_function_id}"
+      },
       length(var.api_cors_allowed_origins) == 0 ? {} : {
         CORS_ALLOWED_ORIGINS = join(",", var.api_cors_allowed_origins)
       },
@@ -96,6 +99,13 @@ resource "yandex_serverless_container" "api" {
     }
   }
 
+  secrets {
+    id                   = var.llm_gateway_lockbox_secret_id
+    version_id           = var.llm_gateway_lockbox_secret_version_id
+    key                  = "YANDEX_LLM_GATEWAY_PRIVATE_KEY"
+    environment_variable = "YANDEX_LLM_GATEWAY_PRIVATE_KEY"
+  }
+
   log_options {
     folder_id = var.folder_id
     min_level = "INFO"
@@ -108,6 +118,7 @@ resource "yandex_serverless_container" "api" {
     yandex_lockbox_secret_iam_member.api_connection_secret_reader,
     yandex_lockbox_secret_iam_member.api_media_credentials_reader,
     yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader,
+    yandex_lockbox_secret_iam_member.llm_gateway_reader,
   ]
 }
 

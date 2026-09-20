@@ -12,6 +12,7 @@ import {
   type WorkoutParseResponse,
   type WorkoutParserExercise,
 } from './legacy-workout-parser/extracted-workout.js'
+import { invokeYandexLlmCompletion } from './yandex-llm-function-client.js'
 
 export type { WorkoutParseResponse, WorkoutParserExercise } from './legacy-workout-parser/extracted-workout.js'
 
@@ -103,7 +104,11 @@ export class YandexWorkoutParser {
     const startedAt = Date.now()
     let response: Response
     try {
-      response = await this.request(completionUrl, { method: 'POST', headers: { 'content-type': 'application/json', authorization: await this.authorization.authorizationHeader() }, body: JSON.stringify({ modelUri: `gpt://${this.yandexFolderId}/${this.modelId}/latest`, completionOptions: { stream: false, temperature: 0, maxTokens: '1200' }, jsonSchema: { schema: workoutExtractionSchema }, messages: [{ role: 'user', text: prompt }] }) })
+      const requestBody = { modelUri: `gpt://${this.yandexFolderId}/${this.modelId}/latest`, completionOptions: { stream: false, temperature: 0, maxTokens: '1200' }, jsonSchema: { schema: workoutExtractionSchema }, messages: [{ role: 'user', text: prompt }] }
+      if (process.env.YANDEX_LLM_FUNCTION_URL && process.env.YANDEX_LLM_GATEWAY_PRIVATE_KEY) {
+        const result = await invokeYandexLlmCompletion(requestBody, 90_000, this.request)
+        response = new Response(JSON.stringify(result.payload), { status: 200, headers: { 'x-request-id': result.requestId ?? '' } })
+      } else response = await this.request(completionUrl, { method: 'POST', headers: { 'content-type': 'application/json', authorization: await this.authorization.authorizationHeader() }, body: JSON.stringify(requestBody) })
     } catch {
       console.error(JSON.stringify({ event: 'workout_parse_llm_network_error', modelCallCount: 1, catalogCount: catalog.length, promptBytes: Buffer.byteLength(prompt) }))
       throw new WorkoutParseError(502, 'llm_unavailable')
@@ -145,7 +150,10 @@ export class YandexWorkoutParser {
     ].join('\n')
     for (let attempt = 1; attempt <= 2; attempt += 1) {
       try {
-        const response = await this.request(completionUrl, { method: 'POST', headers: { 'content-type': 'application/json', authorization: await this.authorization.authorizationHeader() }, body: JSON.stringify({ modelUri: `gpt://${this.yandexFolderId}/${this.modelId}/latest`, completionOptions: { stream: false, temperature: 0, maxTokens: '2000' }, jsonSchema: { schema: goalOutputSchema }, messages: [{ role: 'user', text: prompt }] }) })
+        const requestBody = { modelUri: `gpt://${this.yandexFolderId}/${this.modelId}/latest`, completionOptions: { stream: false, temperature: 0, maxTokens: '2000' }, jsonSchema: { schema: goalOutputSchema }, messages: [{ role: 'user', text: prompt }] }
+        const response = process.env.YANDEX_LLM_FUNCTION_URL && process.env.YANDEX_LLM_GATEWAY_PRIVATE_KEY
+          ? new Response(JSON.stringify((await invokeYandexLlmCompletion(requestBody, 90_000, this.request)).payload), { status: 200 })
+          : await this.request(completionUrl, { method: 'POST', headers: { 'content-type': 'application/json', authorization: await this.authorization.authorizationHeader() }, body: JSON.stringify(requestBody) })
         if (!response.ok) {
           if (response.status >= 500 && attempt < 2) continue
           throw new WorkoutParseError(502, 'llm_unavailable')
