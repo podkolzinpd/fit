@@ -2,7 +2,7 @@ const CAPACITOR_IOS_ORIGIN = 'capacitor://localhost'
 
 export function parseAllowedOrigins(value: string | undefined): string[] {
   if (value === undefined || value.trim() === '') return []
-  return value.split(',').map((candidate) => {
+  return value.split(/[;,]/).map((candidate) => {
     const origin = candidate.trim()
     if (origin === CAPACITOR_IOS_ORIGIN) return origin
 
