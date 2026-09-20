@@ -192,10 +192,13 @@ left join public.client_private_details details
   on details.client_id = membership.client_id
   and details.trainer_id = membership.trainer_id
 where membership.client_id in (select id from scope_clients)`,
-    targetSql: publicRows(
-      'client_trainers',
-      'row.client_id in (select id from scope_clients)',
-    ),
+    // updated_at exists only on the Yandex side (added for analytics
+    // last_client_notes_at) - stripped so it doesn't appear as a spurious
+    // diff against the Supabase source row, which never has it.
+    targetSql: `${scopeCte}
+select to_jsonb(row) - 'updated_at' as row
+from public.client_trainers row
+where row.client_id in (select id from scope_clients)`,
     targetRecord: 'public.client_trainers',
     keyColumns: ['client_id', 'trainer_id'],
   },
@@ -607,10 +610,13 @@ left join public.client_private_details details
   on details.client_id = membership.client_id
   and details.trainer_id = membership.trainer_id
 where membership.client_id in (select id from scope_clients)`,
-    targetSql: standalonePublicRows(
-      'client_trainers',
-      'row.client_id in (select id from scope_clients)',
-    ),
+    // updated_at exists only on the Yandex side (added for analytics
+    // last_client_notes_at) - stripped so it doesn't appear as a spurious
+    // diff against the Supabase source row, which never has it.
+    targetSql: `${standaloneScopeCte}
+select to_jsonb(row) - 'updated_at' as row
+from public.client_trainers row
+where row.client_id in (select id from scope_clients)`,
     targetRecord: 'public.client_trainers',
     keyColumns: ['client_id', 'trainer_id'],
   },
