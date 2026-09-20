@@ -24,7 +24,7 @@ jobs:
         env:
           MIGRATION_BASE: ${{ github.event.pull_request.base.sha }}
 
-  app:
+  app-quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,12 +35,41 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm run test:coverage
       - run: npm run infra:policy:test
       - run: npm run build
         env:
           VITE_SUPABASE_URL: http://127.0.0.1:54321
           VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+
+  app-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:coverage
+
+  # Keep the required `app` check stable while quality/build and coverage run
+  # concurrently. A failure or cancellation in either lane still blocks merge.
+  app:
+    needs: [app-quality, app-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify app checks
+        env:
+          QUALITY_RESULT: ${{ needs.app-quality.result }}
+          TESTS_RESULT: ${{ needs.app-tests.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$QUALITY_RESULT" != "success" || "$TESTS_RESULT" != "success" ]]; then
+            echo "App checks failed: quality=$QUALITY_RESULT tests=$TESTS_RESULT"
+            exit 1
+          fi
+          echo "All app checks passed"
 
   api:
     runs-on: ubuntu-latest
@@ -124,15 +153,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: 6
       matrix:
         project: [visual-client-390, visual-client-430, visual-trainer-1440]
+        shard: [1/2, 2/2]
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:54321
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
       # The version must match @playwright/test in package-lock.json. The
       # official image already contains Chromium, WebKit and their OS deps.
       PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.61.1-noble
+      PLAYWRIGHT_SHARD: ${{ matrix.shard }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -150,25 +181,27 @@ jobs:
       - run: node scripts/wait-for-local-auth.mjs
       - name: Pull pinned Playwright runtime
         run: docker pull "$PLAYWRIGHT_IMAGE"
-      # Every viewport owns a runner and a clean local database. This preserves
-      # deterministic baselines while removing the former sequential bottleneck.
-      - name: Run isolated visual baseline
+      # Every viewport shard owns a runner and a clean local database. This
+      # preserves deterministic baselines while shortening the longest visual
+      # lane without allowing tests to mutate one shared fixture concurrently.
+      - name: Run isolated visual baseline shard
         run: |
           docker run --rm --init --ipc=host --network host \
             --env CI=true \
             --env VITE_SUPABASE_URL \
             --env VITE_SUPABASE_PUBLISHABLE_KEY \
             --env PLAYWRIGHT_PROJECT="${{ matrix.project }}" \
+            --env PLAYWRIGHT_SHARD \
             --volume "${{ github.workspace }}:/work" \
             --volume "/usr/share/fonts:/usr/share/fonts:ro" \
             --workdir /work \
             "$PLAYWRIGHT_IMAGE" \
-            bash -lc 'fc-cache -f >/dev/null && exec npx playwright test --project="$PLAYWRIGHT_PROJECT" --workers=1'
+            bash -lc 'fc-cache -f >/dev/null && exec npx playwright test --project="$PLAYWRIGHT_PROJECT" --workers=1 --shard="$PLAYWRIGHT_SHARD"'
       - name: Upload Playwright diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-diagnostics-visual-${{ matrix.project }}
+          name: playwright-diagnostics-visual-${{ matrix.project }}-${{ strategy.job-index }}
           path: |
             playwright-report/
             test-results/
@@ -219,7 +252,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  # Each lane owns a local Supabase instance. The two lanes run concurrently,
+  # Each lane owns a local Supabase instance. The four lanes run concurrently,
   # while short-lived browser processes keep WebKit engine failures isolated.
   e2e-webkit:
     needs: e2e-scope
@@ -227,9 +260,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 4
       matrix:
-        lane: [1, 2]
+        lane: [1, 2, 3, 4]
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:54321
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
@@ -269,7 +302,7 @@ jobs:
                 --shard="${shard}/8"
           }
 
-          for shard in $(seq "${{ matrix.lane }}" 2 8); do
+          for shard in $(seq "${{ matrix.lane }}" 4 8); do
             if ! run_webkit_shard "$shard"; then
               echo "::warning::WebKit shard ${shard}/8 crashed; retrying once in a fresh container"
               run_webkit_shard "$shard"

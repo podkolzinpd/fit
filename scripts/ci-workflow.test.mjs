@@ -10,12 +10,12 @@ const workflow = readFileSync(
 
 const supportedSupabaseCliVersion = '2.116.0'
 
-test('runs isolated WebKit shards in two parallel lanes and retries only a failed shard', () => {
+test('runs isolated WebKit shards in four parallel lanes and retries only a failed shard', () => {
   assert.match(workflow, /e2e-webkit:/)
-  assert.match(workflow, /max-parallel: 2/)
-  assert.match(workflow, /lane: \[1, 2\]/)
+  assert.match(workflow, /max-parallel: 4/)
+  assert.match(workflow, /lane: \[1, 2, 3, 4\]/)
   assert.match(workflow, /Run iPhone behavior scenarios in isolated parallel lanes/)
-  assert.match(workflow, /for shard in \$\(seq "\$\{\{ matrix\.lane \}\}" 2 8\)/)
+  assert.match(workflow, /for shard in \$\(seq "\$\{\{ matrix\.lane \}\}" 4 8\)/)
   assert.match(workflow, /--shard="\$\{shard\}\/8"/)
   assert.match(workflow, /if ! run_webkit_shard "\$shard"/)
   assert.match(workflow, /retrying once in a fresh container/)
@@ -37,12 +37,23 @@ test('keeps one required E2E result while skipping heavy jobs only for a safe sc
   assert.match(workflow, /E2E skipped: changes do not affect the browser runtime/)
 })
 
-test('runs visual viewport profiles in parallel with an isolated database each', () => {
-  assert.match(workflow, /e2e-visual:[\s\S]*max-parallel: 3/)
+test('runs visual viewport shards in parallel with an isolated database each', () => {
+  assert.match(workflow, /e2e-visual:[\s\S]*max-parallel: 6/)
   assert.match(workflow, /project: \[visual-client-390, visual-client-430, visual-trainer-1440\]/)
+  assert.match(workflow, /shard: \[1\/2, 2\/2\]/)
   assert.match(workflow, /--env PLAYWRIGHT_PROJECT="\$\{\{ matrix\.project \}\}"/)
-  assert.match(workflow, /--project="\$PLAYWRIGHT_PROJECT" --workers=1/)
+  assert.match(workflow, /--env PLAYWRIGHT_SHARD/)
+  assert.match(workflow, /--project="\$PLAYWRIGHT_PROJECT" --workers=1 --shard="\$PLAYWRIGHT_SHARD"/)
   assert.doesNotMatch(workflow, /for project in visual-client-390/)
+})
+
+test('keeps the required app check stable while quality and coverage run in parallel', () => {
+  assert.match(workflow, /app-quality:[\s\S]*- run: npm run lint[\s\S]*- run: npm run build/)
+  assert.match(workflow, /app-tests:[\s\S]*- run: npm run test:coverage/)
+  assert.match(workflow, /app:\n    needs: \[app-quality, app-tests\]/)
+  assert.match(workflow, /QUALITY_RESULT: \$\{\{ needs\.app-quality\.result \}\}/)
+  assert.match(workflow, /TESTS_RESULT: \$\{\{ needs\.app-tests\.result \}\}/)
+  assert.match(workflow, /App checks failed: quality=\$QUALITY_RESULT tests=\$TESTS_RESULT/)
 })
 
 test('waits for local auth readiness before auth-dependent E2E jobs', () => {
