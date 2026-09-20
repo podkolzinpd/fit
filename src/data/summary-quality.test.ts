@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   assessSummaryQuality,
+  repairSummaryQuality,
+  summaryQualityIssueCodes,
   summaryQualityIssues,
 } from '../../supabase/functions/summarize-client-training/summary-quality'
 
@@ -25,6 +27,44 @@ const trainingData = {
 }
 
 describe('summaryQualityIssues', () => {
+  it('repairs unsupported claims locally without adding exercise facts', () => {
+    const base = validCoachingSummary('Снизить нагрузку на следующей неделе.')
+    const summary = {
+      trainer: {
+        ...base.trainer,
+        headline: 'В жиме лёжа улучшилась техника выполнения движения.',
+        attention: ['Проверить усталость и боль в локте.'],
+      },
+      client: {
+        ...base.client,
+        headline: 'Недосып привёл к снижению результатов.',
+        achievements: ['Нагрузка: рабочий вес вырос на 99 кг.'],
+        consistency: 'Регулярность хорошая.',
+        analysisVersion: 'old-version',
+      },
+    }
+
+    const repaired = repairSummaryQuality(summary, trainingData)
+    const quality = assessSummaryQuality(repaired, trainingData)
+
+    expect(quality.blockingIssues).toEqual([])
+    expect(repaired.client.analysisVersion).toBe('trainer-summary-v3')
+    expect(repaired.client.achievements).toEqual([
+      'Ритм: в анализ включены завершённые тренировки выбранного периода.',
+    ])
+    expect(repaired.client.nextSteps).toEqual([
+      'Следующая точка контроля — после следующей завершённой тренировки.',
+    ])
+    expect(JSON.stringify(repaired)).not.toMatch(/99|недосып|улучшилась техника|усталость|боль в локте/iu)
+  })
+
+  it('uses stable diagnostic codes instead of storing model text', () => {
+    expect(summaryQualityIssueCodes([
+      'Нельзя оценивать изменение техники: во входных данных нет наблюдений за выполнением движения.',
+      'Числа в client.achievements должны присутствовать во входных данных.',
+    ])).toEqual(['unsupported_technique_claim', 'ungrounded_numbers'])
+  })
+
   it('accepts a safe dual-audience summary with Russian word forms', () => {
     const quality = assessSummaryQuality({
       trainer: {

@@ -446,17 +446,22 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
   ): Promise<void> {
     const code = error instanceof Error ? error.message : 'summary_generation_failed'
     const usage = error instanceof HttpError ? error.tokenUsage : fallbackUsage
+    const qualityIssueCodes = error instanceof HttpError ? error.qualityIssueCodes : []
+    const storedCode = qualityIssueCodes.length > 0
+      ? `${code}:${qualityIssueCodes.join(',')}`.slice(0, 120)
+      : code
     try {
       console.warn('summary model request failed', {
         request_id: requestId,
         fingerprint_prefix: inputFingerprint.slice(0, 12),
         code,
+        quality_issue_codes: qualityIssueCodes,
         total_tokens: usage.totalTokens ?? null,
       })
       await withYandexActorSession(this.pool, session, async (client) => {
         await client.query(`select public.fail_training_summary_generation($1, $2, $3, $4, $5, $6, $7::jsonb)`, [
           request.clientId, request.periodStart, request.periodEnd, inputFingerprint,
-          requestId, code, JSON.stringify(usage),
+          requestId, storedCode, JSON.stringify(usage),
         ])
       })
     } catch (guardError) {
