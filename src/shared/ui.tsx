@@ -2,7 +2,9 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { isCoachmarkSeen, markCoachmarkSeen } from './coachmarks'
-import { AddIcon, AlertIcon, BackIcon, CheckIcon, InfoIcon, MoreIcon, PendingIcon } from './icons'
+import { copyText } from './clipboard'
+import { AddIcon, AlertIcon, BackIcon, CheckIcon, CopyIcon, InfoIcon, MoreIcon, PendingIcon } from './icons'
+import { formatRequestDiagnostics, getRequestDiagnostics, requestSupportCode } from './request-diagnostics'
 
 export function Page({ title, subtitle, action, back, onBack, swipeBack = false, center, hideTitle, className, children }: PropsWithChildren<{
   title: string; subtitle?: string; action?: ReactNode; back?: string | number; onBack?: () => void; swipeBack?: boolean; center?: boolean; hideTitle?: boolean; className?: string
@@ -53,8 +55,8 @@ export function Skeleton({ rows = 3 }: { rows?: number }) {
 
 type StatePanelTone = 'empty' | 'error' | 'info'
 
-export function StatePanel({ tone, title, description, action, compact = false }: {
-  tone: StatePanelTone; title: string; description: string; action?: ReactNode; compact?: boolean
+export function StatePanel({ tone, title, description, details, action, compact = false }: {
+  tone: StatePanelTone; title: string; description: string; details?: ReactNode; action?: ReactNode; compact?: boolean
 }) {
   const role = tone === 'error' ? 'alert' : 'status'
   const icon = tone === 'empty' ? <AddIcon /> : tone === 'error' ? <AlertIcon /> : <InfoIcon />
@@ -63,8 +65,32 @@ export function StatePanel({ tone, title, description, action, compact = false }
     <span className="state-panel-mark" aria-hidden="true">{icon}</span>
     <Heading>{title}</Heading>
     <p>{description}</p>
+    {details}
     {action && <div className="state-panel-action">{action}</div>}
   </section>
+}
+
+export function RequestDiagnosticDetails({ error }: { error: Error }) {
+  const diagnostics = getRequestDiagnostics(error)
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+  if (diagnostics === null) return null
+  const copy = async () => {
+    try {
+      await copyText(formatRequestDiagnostics(diagnostics))
+      setCopyStatus('copied')
+    } catch {
+      setCopyStatus('failed')
+    }
+  }
+  return <div className="request-diagnostic">
+    <span className="request-diagnostic-code">Код для поддержки: <strong>{requestSupportCode(diagnostics.requestId)}</strong></span>
+    <button type="button" className="request-diagnostic-copy secondary" onClick={() => void copy()}>
+      <CopyIcon /> Скопировать диагностику
+    </button>
+    <span className="request-diagnostic-status" role="status" aria-live="polite">
+      {copyStatus === 'copied' ? 'Скопировано' : copyStatus === 'failed' ? 'Не удалось скопировать' : ''}
+    </span>
+  </div>
 }
 
 export function EmptyState({ title = 'Пока ничего нет', description = 'Здесь появятся новые данные.', action, compact }: {
@@ -90,6 +116,7 @@ export function AsyncView({ loading, error, empty, onRetry, emptyTitle, emptyDes
 }>) {
   if (loading) return <Skeleton />
   if (error) return <StatePanel tone="error" title="Не удалось загрузить данные" description={error.message}
+    details={<RequestDiagnosticDetails error={error} />}
     action={onRetry && <button type="button" onClick={onRetry}>Повторить</button>} />
   if (empty) return <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
   return children

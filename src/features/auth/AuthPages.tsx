@@ -26,7 +26,7 @@ import {
 import { useYandexAppSession } from '../../app/yandex-app-session-context'
 import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from '../../app/theme'
 import { ProfileIcon } from '../../shared/icons'
-import { AsyncView, Field, StatePanel } from '../../shared/ui'
+import { AsyncView, Field, RequestDiagnosticDetails, StatePanel } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
 import { LEGAL_PATHS, PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 import { systemTimeZone } from '../../shared/local-date'
@@ -551,7 +551,7 @@ function YandexAppSessionCallbackPage() {
 export function YandexAppSessionPage() {
   const navigate = useNavigate()
   const { actor, loading: authLoading } = useAuth()
-  const { session, loading, error, retry, reset, signOut } = useYandexAppSession()
+  const { session, loading, error, errorDetails, retry, reset, signOut } = useYandexAppSession()
   const [signingOut, setSigningOut] = useState(false)
   const config = getYandexAppSessionEntryConfig()
 
@@ -567,6 +567,7 @@ export function YandexAppSessionPage() {
       tone="error"
       title="Не удалось восстановить сессию"
       description={error}
+      details={errorDetails ? <RequestDiagnosticDetails error={errorDetails} /> : undefined}
       action={<div className="stack">
         <button className="primary" type="button" onClick={() => void retry()}>Повторить</button>
         <button className="secondary" type="button" onClick={reset}>Сбросить сессию Yandex ID</button>
@@ -813,7 +814,7 @@ function YandexAccountLinkingCallbackPage() {
   const apiBaseUrl = config?.apiBaseUrl ?? null
   const clientId = config?.clientId ?? null
   const [linked, setLinked] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<Error | null>(null)
   const [restartBusy, setRestartBusy] = useState(false)
   const linkRequest = useRef<Promise<void> | null>(null)
   const homePath = actor?.role === 'client' ? '/me' : trainerHomePath()
@@ -828,7 +829,7 @@ function YandexAccountLinkingCallbackPage() {
       const url = await createYandexAuthorizationUrl(clientId, redirectUri, sessionStorage, 'link')
       window.location.assign(url)
     } catch {
-      setError('Не удалось начать привязку Yandex ID. Попробуйте ещё раз с главной.')
+      setError(new Error('Не удалось начать привязку Yandex ID. Попробуйте ещё раз с главной.'))
       setRestartBusy(false)
     }
   }
@@ -882,7 +883,7 @@ function YandexAccountLinkingCallbackPage() {
           setLinked(true)
         }
       } catch (caught) {
-        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Не удалось привязать Yandex ID.')
+        if (!cancelled) setError(caught instanceof Error ? caught : new Error('Не удалось привязать Yandex ID.'))
       }
     }
 
@@ -899,7 +900,7 @@ function YandexAccountLinkingCallbackPage() {
         ? linkRequired
           ? 'Yandex ID связан с текущим FIT-профилем. Теперь можно продолжить работу.'
           : 'Теперь этот Yandex ID связан с текущим FIT-профилем. Основной вход пока остаётся прежним.'
-        : error ?? 'Проверяем текущую FIT-сессию и подтверждение от Yandex ID…'}</p>
+        : error?.message ?? 'Проверяем текущую FIT-сессию и подтверждение от Yandex ID…'}</p>
     </header>
     {linked && <section className="compact stack yandex-pilot-profile yandex-link-result" aria-label="Результат привязки">
       <div><span>Статус</span><strong>Готово</strong></div>
@@ -911,7 +912,8 @@ function YandexAccountLinkingCallbackPage() {
     {error && <StatePanel
       tone="error"
       title="Привязка не завершена"
-      description={error}
+      description={error.message}
+      details={<RequestDiagnosticDetails error={error} />}
       action={clientId === null
         ? <Link className="button secondary" to={actor ? homePath : '/auth'}>{actor ? 'Вернуться на главную' : 'Вернуться ко входу'}</Link>
         : <button type="button" className="secondary" aria-busy={restartBusy} disabled={restartBusy} onClick={() => void restartLinking()}>

@@ -6437,3 +6437,10 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
   .trainer-profile-identity .trainer-profile-form-grid { grid-template-columns:1fr; }
   .chat-list-page, .chat-conversation-page { padding-inline:16px; }
 }
+
+.state-panel .request-diagnostic { width:min(100%,310px); display:grid; justify-items:center; gap:8px; margin-top:8px; padding-top:12px; border-top:1px solid var(--danger-border); color:var(--muted); }
+.state-panel .request-diagnostic-code { font-size:12px; line-height:1.4; }
+.state-panel .request-diagnostic-code strong { color:var(--fg); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; letter-spacing:.02em; }
+.state-panel .request-diagnostic-copy { min-height:36px; display:inline-flex; align-items:center; gap:7px; margin:0; padding:7px 10px; border:1px solid var(--border); border-radius:10px; background:var(--surface-raised); color:var(--fg); font-size:12px; font-weight:500; box-shadow:none; }
+.state-panel .request-diagnostic-copy svg { width:16px; height:16px; }
+.state-panel .request-diagnostic-status { min-height:17px; color:var(--muted); font-size:12px; }

@@ -5,6 +5,7 @@ import {
   yandexPilotRepository,
 } from './yandex-pilot.repository'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
+import { attachRequestDiagnostics, getRequestDiagnostics } from '../../shared/request-diagnostics'
 
 const queries = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
@@ -526,6 +527,34 @@ describe('yandexPilotRepository', () => {
       'code',
       'verifier',
     )).rejects.toThrow('уже связан')
+  })
+
+  it('preserves correlation metadata when Yandex ID linking cannot reach the API', async () => {
+    queries.linkYandexAccount.mockRejectedValue(attachRequestDiagnostics(
+      new Error('Load failed'),
+      {
+        requestId: '18940d82-9075-48d2-a847-8feee301b4d7',
+        occurredAt: '2026-09-20T10:15:30.000Z',
+        backend: 'yandex',
+        operation: 'POST /v1/auth/yandex/link',
+        stage: 'network',
+      },
+    ))
+
+    let caught: unknown
+    try {
+      await yandexPilotRepository.linkYandexAccount(
+        'https://stage.example.test',
+        'supabase-session',
+        'code',
+        'verifier',
+      )
+    } catch (error) {
+      caught = error
+    }
+
+    expect(caught).toMatchObject({ message: 'Не удалось подключиться к Yandex Cloud stage.' })
+    expect(getRequestDiagnostics(caught)?.requestId).toBe('18940d82-9075-48d2-a847-8feee301b4d7')
   })
 
   it('validates the current profile Yandex ID link status', async () => {

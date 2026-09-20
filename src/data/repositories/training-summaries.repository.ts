@@ -13,8 +13,10 @@ import type {
 } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { trainingSummaryQueries } from '../queries/training-summaries.queries'
+import { getResponseDiagnostics } from '../queries/request-diagnostics'
 import { repositoryError } from './error'
 import { trainingSummaryGenerationError } from './training-summary-errors'
+import { attachRequestDiagnostics, getRequestDiagnostics, type RequestDiagnostics } from '../../shared/request-diagnostics'
 
 type InternalRows = NonNullable<
   Awaited<ReturnType<typeof trainingSummaryQueries.listInternal>>['data']
@@ -235,7 +237,7 @@ export const trainingSummariesRepository = {
   },
 }
 
-async function summaryGenerationError(error: unknown): Promise<Error> {
+async function mapSummaryGenerationError(error: unknown): Promise<Error> {
   if (error instanceof Error && error.message === 'authentication_required') {
     return trainingSummaryGenerationError('authentication_required')
   }
@@ -274,4 +276,21 @@ async function summaryGenerationError(error: unknown): Promise<Error> {
     }
   }
   return repositoryError(error)
+}
+
+function summaryRequestDiagnostics(error: unknown): RequestDiagnostics | undefined {
+  const direct = getRequestDiagnostics(error)
+  if (direct !== null) return direct
+  if (!error || typeof error !== 'object') return undefined
+  const context = (error as { context?: unknown }).context
+  return typeof Response !== 'undefined' && context instanceof Response
+    ? getResponseDiagnostics(context)
+    : undefined
+}
+
+async function summaryGenerationError(error: unknown): Promise<Error> {
+  return attachRequestDiagnostics(
+    await mapSummaryGenerationError(error),
+    summaryRequestDiagnostics(error),
+  )
 }

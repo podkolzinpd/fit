@@ -385,6 +385,32 @@ describe('Yandex app session auth flow', () => {
     expect(window.location.search).toBe('')
   })
 
+  it('explains when Yandex rejects authorization for the current account', async () => {
+    await createYandexAuthorizationUrl(
+      'public-client-id',
+      'http://localhost/auth/yandex/callback',
+      sessionStorage,
+      'app',
+    )
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/yandex/callback?error=unauthorized_client&error_description=provider-copy',
+    )
+    render(<MemoryRouter initialEntries={['/auth/yandex/callback']}>
+      <Routes>
+        <Route path="/auth/yandex/callback" element={<YandexPilotCallbackPage />} />
+      </Routes>
+    </MemoryRouter>)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Yandex ID не разрешил вход для этого аккаунта. Попробуйте другой аккаунт Yandex ID или повторите позже.',
+    )
+    expect(screen.getByRole('link', { name: 'Вернуться ко входу' })).toHaveAttribute('href', '/auth')
+    expect(repository.exchangeCodeForAppSession).not.toHaveBeenCalled()
+    expect(window.location.search).toBe('')
+  })
+
   it('links an existing profile from the one-time Yandex handoff', async () => {
     vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE,
@@ -7,9 +7,16 @@ import {
 } from './yandex-pilot.queries'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 
+const REQUEST_ID = '18940d82-9075-48d2-a847-8feee301b4d7'
+
+beforeEach(() => {
+  vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(REQUEST_ID)
+})
+
 afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 describe('yandexPilotQueries', () => {
@@ -27,7 +34,7 @@ describe('yandexPilotQueries', () => {
       expect.objectContaining({
         method: 'POST',
         cache: 'no-store',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'x-fit-request-id': REQUEST_ID },
         body: JSON.stringify({ code, codeVerifier }),
       }),
     )
@@ -44,7 +51,7 @@ describe('yandexPilotQueries', () => {
       expect.objectContaining({
         method: 'POST',
         cache: 'no-store',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'x-fit-request-id': REQUEST_ID },
         body: JSON.stringify({
           handoffToken: 'h'.repeat(43),
           email: 'person@example.test',
@@ -80,7 +87,7 @@ describe('yandexPilotQueries', () => {
       expect.objectContaining({
         method: 'POST',
         cache: 'no-store',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', 'x-fit-request-id': REQUEST_ID },
         body: JSON.stringify({
           code,
           codeVerifier,
@@ -100,7 +107,7 @@ describe('yandexPilotQueries', () => {
       `${baseUrl}/v1/auth/yandex/session`,
       expect.objectContaining({
         cache: 'no-store',
-        headers: { 'x-fit-session': 'a'.repeat(43) },
+        headers: { 'x-fit-request-id': REQUEST_ID, 'x-fit-session': 'a'.repeat(43) },
       }),
     )
 
@@ -110,7 +117,7 @@ describe('yandexPilotQueries', () => {
       expect.objectContaining({
         method: 'DELETE',
         cache: 'no-store',
-        headers: { 'x-fit-session': 'a'.repeat(43) },
+        headers: { 'x-fit-request-id': REQUEST_ID, 'x-fit-session': 'a'.repeat(43) },
       }),
     )
 
@@ -127,6 +134,7 @@ describe('yandexPilotQueries', () => {
         cache: 'no-store',
         headers: {
           'content-type': 'application/json',
+          'x-fit-request-id': REQUEST_ID,
           'x-supabase-authorization': 'Bearer supabase-session',
         },
         body: JSON.stringify({ code, codeVerifier }),
@@ -144,6 +152,7 @@ describe('yandexPilotQueries', () => {
       expect.objectContaining({
         cache: 'no-store',
         headers: {
+          'x-fit-request-id': REQUEST_ID,
           'x-supabase-authorization': 'Bearer supabase-session',
         },
       }),
@@ -187,7 +196,7 @@ describe('yandexPilotQueries', () => {
       'https://stage.example.test/v1/clients',
       {
         cache: 'no-store',
-        headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+        headers: { 'x-fit-pilot-session': 's'.repeat(43), 'x-fit-request-id': REQUEST_ID },
       },
     )
     const requestInit = fetchMock.mock.calls[0]?.[1]
@@ -202,7 +211,7 @@ describe('yandexPilotQueries', () => {
       'https://stage.example.test/v1/clients',
       {
         cache: 'no-store',
-        headers: { 'x-fit-session': 's'.repeat(43) },
+        headers: { 'x-fit-request-id': REQUEST_ID, 'x-fit-session': 's'.repeat(43) },
       },
     )
 
@@ -214,7 +223,7 @@ describe('yandexPilotQueries', () => {
       'https://stage.example.test/v1/connections',
       {
         cache: 'no-store',
-        headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+        headers: { 'x-fit-pilot-session': 's'.repeat(43), 'x-fit-request-id': REQUEST_ID },
       },
     )
 
@@ -226,7 +235,7 @@ describe('yandexPilotQueries', () => {
       'https://stage.example.test/v1/training-data',
       {
         cache: 'no-store',
-        headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+        headers: { 'x-fit-pilot-session': 's'.repeat(43), 'x-fit-request-id': REQUEST_ID },
       },
     )
 
@@ -245,6 +254,7 @@ describe('yandexPilotQueries', () => {
     const summaryRequest = fetchMock.mock.calls.at(-1)?.[1]
     expect(summaryRequest?.headers).toEqual({
       'content-type': 'application/json',
+      'x-fit-request-id': REQUEST_ID,
       'x-fit-pilot-session': 's'.repeat(43),
     })
   })
@@ -299,7 +309,7 @@ describe('yandexPilotQueries', () => {
       'https://stage.example.test/v1/push-notifications/status',
       {
         cache: 'no-store',
-        headers: { 'x-fit-pilot-session': token },
+        headers: { 'x-fit-pilot-session': token, 'x-fit-request-id': REQUEST_ID },
       },
     )
 
@@ -319,6 +329,7 @@ describe('yandexPilotQueries', () => {
         cache: 'no-store',
         headers: {
           'content-type': 'application/json',
+          'x-fit-request-id': REQUEST_ID,
           'x-fit-pilot-session': token,
         },
         body: JSON.stringify({
@@ -342,6 +353,7 @@ describe('yandexPilotQueries', () => {
         cache: 'no-store',
         headers: {
           'content-type': 'application/json',
+          'x-fit-request-id': REQUEST_ID,
           'x-fit-pilot-session': token,
         },
         body: JSON.stringify({ endpoint: 'https://push.example/subscription' }),
@@ -396,7 +408,7 @@ describe('yandexPilotQueries', () => {
       `${baseUrl}/v1/assistant/conversations/${id}/messages`,
       {
         cache: 'no-store',
-        headers: { 'x-fit-pilot-session': token },
+        headers: { 'x-fit-pilot-session': token, 'x-fit-request-id': REQUEST_ID },
       },
     )
 
@@ -414,6 +426,7 @@ describe('yandexPilotQueries', () => {
         cache: 'no-store',
         headers: {
           'content-type': 'application/json',
+          'x-fit-request-id': REQUEST_ID,
           'x-fit-pilot-session': token,
         },
         body: JSON.stringify({
@@ -443,6 +456,7 @@ describe('yandexPilotQueries', () => {
     const request = fetchMock.mock.calls.at(-1)?.[1]
     expect(request?.headers).toEqual({
       'content-type': 'application/json',
+      'x-fit-request-id': REQUEST_ID,
       'x-fit-pilot-session': token,
     })
     expect(request?.headers).not.toHaveProperty('authorization')

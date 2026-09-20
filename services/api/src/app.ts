@@ -152,6 +152,9 @@ import {
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 function readCompatibleYandexActorSession(
   headers: Parameters<typeof readYandexActorSession>[0],
 ) {
@@ -211,6 +214,12 @@ interface BuildAppOptions {
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const app = Fastify({
     logger: options.logger ?? true,
+    genReqId: (request) => {
+      const supplied = request.headers['x-fit-request-id']
+      return typeof supplied === 'string' && uuidPattern.test(supplied)
+        ? supplied
+        : crypto.randomUUID()
+    },
   })
   const allowedOrigins = new Set(options.allowedOrigins ?? [])
   const publicChatMessage = async (message: ChatMessage) => {
@@ -222,6 +231,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   }
 
   app.addHook('onRequest', async (request, reply) => {
+    reply.header('x-fit-request-id', request.id)
     if (options.releaseId !== undefined) {
       reply.header('x-fit-release-id', options.releaseId)
     }
@@ -312,10 +322,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.post('/v1/legacy/summarize-client-training', async (request, reply) => {
-    const externalRequestId = typeof request.headers['x-fit-request-id'] === 'string' && uuidPattern.test(request.headers['x-fit-request-id'])
-      ? request.headers['x-fit-request-id']
-      : crypto.randomUUID()
-    reply.header('x-fit-request-id', externalRequestId)
+    const externalRequestId = request.id
     const authorization = request.headers['x-supabase-authorization']
     if (typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) {
       request.log.warn({ externalRequestId, stage: 'authorization', errorCode: 'authentication_required' }, 'summary pre-model request rejected')
@@ -500,7 +507,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.post('/v1/clients/:clientId/training-summaries/diagnostic', async (request, reply) => {
-    const requestId = crypto.randomUUID()
+    const requestId = request.id
     reply.header('x-fit-request-id', requestId).header('cache-control', 'no-store')
     const session = readYandexActorSession(request.headers)
     const { clientId } = request.params as { clientId?: unknown }
@@ -1854,8 +1861,6 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       (result) => reply.header('cache-control', 'no-store').send(result))
   })
 
-  const uuidPattern =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   const codeVerifierPattern = /^[A-Za-z0-9._~-]{43,128}$/
   const datePattern = /^\d{4}-\d{2}-\d{2}$/
   const validDate = (value: unknown): value is string => {

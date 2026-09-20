@@ -3,6 +3,7 @@ import type { ExerciseSnapshot } from '../../shared/domain'
 import type { CustomMetric } from '../../shared/domain'
 import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retirement'
 import { yandexAppSessionTransport } from '../yandex-app-session-transport'
+import { fetchWithRequestDiagnostics } from './request-diagnostics'
 
 export type WorkoutParseResponse = {
   items: Array<{ sourceText: string; exerciseRef: string; confidence: number; sets: Array<{ weightKg?: number; reps?: number; durationMin?: number; distanceKm?: number }>; position?: number }>
@@ -22,7 +23,7 @@ const isLocalSupabase = typeof import.meta.env.VITE_SUPABASE_URL === 'string'
 export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnapshot[]) => {
   const appSession = yandexAppSessionTransport()
   if (appSession) {
-    return fetch(`${appSession.apiBaseUrl}/v1/assistant/yandex/parse-workout`, {
+    return fetchWithRequestDiagnostics(globalThis.fetch, `${appSession.apiBaseUrl}/v1/assistant/yandex/parse-workout`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-fit-session': appSession.sessionToken },
       body: JSON.stringify({ text, systemCatalog }),
@@ -54,7 +55,7 @@ export const suggestGoalCriteria = (text: string, catalog: readonly ExerciseSnap
   const body = { kind: 'goal_criteria', text, systemCatalog: catalog.filter((item) => item.source === 'system' && isActiveCatalogExercise(item)), customMetrics: metrics }
   const appSession = yandexAppSessionTransport()
   if (appSession) {
-    return fetch(`${appSession.apiBaseUrl}/v1/assistant/yandex/parse-workout`, {
+    return fetchWithRequestDiagnostics(globalThis.fetch, `${appSession.apiBaseUrl}/v1/assistant/yandex/parse-workout`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-fit-session': appSession.sessionToken },
       body: JSON.stringify(body),

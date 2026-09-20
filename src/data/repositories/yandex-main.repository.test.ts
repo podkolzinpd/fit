@@ -8,6 +8,7 @@ import type {
 } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
+import { getRequestDiagnostics } from '../../shared/request-diagnostics'
 import { createYandexMainRepository } from './yandex-main.repository'
 
 const pilot = vi.hoisted(() => ({ listTrainingData: vi.fn(), parseWorkout: vi.fn() }))
@@ -131,6 +132,44 @@ describe('Yandex main repository', () => {
     }))
     expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({ method: 'POST' })
     expect(fetchMock.mock.calls[4]?.[1]).toMatchObject({ method: 'DELETE' })
+  })
+
+  it('keeps correlation metadata when an API request fails', async () => {
+    const requestId = '18940d82-9075-48d2-a847-8feee301b4d7'
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ error: 'service_unavailable' }),
+      {
+        status: 503,
+        headers: {
+          'content-type': 'application/json',
+          'x-fit-request-id': requestId,
+          'x-fit-error-code': 'database_unavailable',
+          'x-fit-release-id': 'release-42',
+        },
+      },
+    )))
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    let caught: unknown
+    try {
+      await repository.legal.getAcceptanceStatus()
+    } catch (error) {
+      caught = error
+    }
+
+    expect(caught).toMatchObject({ code: 'service_unavailable' })
+    const diagnostics = getRequestDiagnostics(caught)
+    expect(diagnostics?.occurredAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    expect(diagnostics).toEqual({
+      requestId,
+      occurredAt: diagnostics?.occurredAt,
+      backend: 'yandex',
+      operation: 'GET /v1/legal/acceptance',
+      stage: 'api',
+      status: 503,
+      errorCode: 'service_unavailable',
+      releaseId: 'release-42',
+    })
   })
 
   it('reads and updates the trainer discovery prompt', async () => {
