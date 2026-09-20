@@ -127,8 +127,14 @@ export function readTrainerProfileDraft(value: unknown): TrainerProfileDraft | u
     || !text(draft.city, 100) || !text(draft.education, 800)
     || !text(draft.formats, 800) || !text(draft.price, 120)
     || typeof draft.acceptingClients !== 'boolean'
-    || !Array.isArray(specialties) || specialties.length > 12
-    || specialties.some((item) => !text(item, 60, 1))
+    // 20/100 match metroStationIds/customLocations below, not the client's
+    // narrower 14-item/80-char ceiling (src/shared/trainer-profile.ts) - the
+    // server check drifting tighter than the client silently rejected valid
+    // saves (e.g. "Реабилитация и адаптивная физкультура (после травм,
+    // ограничения по здоровью)" at 76 chars). Give this one headroom so a
+    // small client-side bump doesn't reopen the same gap.
+    || !Array.isArray(specialties) || specialties.length > 20
+    || specialties.some((item) => !text(item, 100, 1))
     || !Array.isArray(modes) || modes.length > 2
     || modes.some((item) => item !== 'online' && item !== 'in_person')
     || !Array.isArray(metroStationIds) || metroStationIds.length > 20
