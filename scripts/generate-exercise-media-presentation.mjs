@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
+import { createHash } from 'node:crypto'
 import { spawn } from 'node:child_process'
-import { mkdir, readdir, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 
 const projectRoot = resolve(import.meta.dirname, '..')
@@ -47,7 +48,7 @@ function parsePpm(buffer) {
   const width = Number(token())
   const height = Number(token())
   const max = Number(token())
-  while (cursor < buffer.length && /\s/u.test(String.fromCharCode(buffer[cursor]))) cursor += 1
+  if (cursor < buffer.length && /\s/u.test(String.fromCharCode(buffer[cursor]))) cursor += 1
   if (!Number.isInteger(width) || !Number.isInteger(height) || max !== 255) {
     throw new Error('Invalid PPM header')
   }
@@ -153,9 +154,12 @@ function roundPercent(pixels, dimension) {
 }
 
 async function analyze(file) {
-  const ppm = await run('ffmpeg', [
-    '-hide_banner', '-loglevel', 'error', '-i', file.path,
-    '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'ppm', 'pipe:1',
+  const [source, ppm] = await Promise.all([
+    readFile(file.path),
+    run('ffmpeg', [
+      '-hide_banner', '-loglevel', 'error', '-i', file.path,
+      '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'ppm', 'pipe:1',
+    ]),
   ])
   const frame = parsePpm(ppm)
   const mostlyPaleCanvas = paleCanvasFraction(frame) >= 0.55
@@ -171,6 +175,7 @@ async function analyze(file) {
       roundPercent(left, frame.width),
     ],
     backdrop: `rgb(${luminance} ${luminance} ${luminance})`,
+    sha256: createHash('sha256').update(source).digest('hex'),
   }]
 }
 
