@@ -36,6 +36,10 @@ Supabase из эксплуатации. До закрытия rollback-окна 
   reload legacy `SIGNED_OUT` от Supabase больше не очищает активные Yandex
   requests, поэтому legal gate завершает проверку вместо бесконечного
   «Проверяем документы…».
+- Frontend Yandex API schemas принимают Postgres-native ISO timestamps с
+  numeric offset (`+00:00`) для training-data/app-session дат; карточка
+  «Последняя тренировка» больше не должна падать из-за валидного `completedAt`
+  или `confirmedAt`, отличающегося от literal `Z`.
 - `VITE_MAINTENANCE_MODE` выключен после выпуска и production-проверки
   обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
   `paused`: он блокирует DML старых вкладок, RPC и background writers на 38
