@@ -1,3 +1,5 @@
+import { yandexAppSessionTransport } from '../../data/yandex-app-session-transport'
+
 const DEFAULT_RELAY_URL = 'wss://89-169-132-80.sslip.io/stt'
 const SOCKET_CONNECT_TIMEOUT_MS = 5_000
 
@@ -53,7 +55,11 @@ export class SpeechKitStreamingSession implements StreamingSpeechSession {
         settled = true
         if (timeout !== null) window.clearTimeout(timeout)
         if (result === 'open') {
-          socket.send(JSON.stringify({ type: 'config' }))
+          const appSession = yandexAppSessionTransport()
+          socket.send(JSON.stringify({
+            type: 'config',
+            ...(appSession === null ? {} : { sessionToken: appSession.sessionToken }),
+          }))
           resolve()
           return
         }
