@@ -89,6 +89,23 @@ describe('PublicTrainerProfilePage', () => {
     expect(await screen.findByText('Бренд-тренер', { exact: false })).toBeVisible()
   })
 
+  it('opens the published trainer photo fullscreen and closes it with Escape', async () => {
+    mocks.getPublicTrainerProfile.mockResolvedValue({
+      ...fullProfile,
+      published: { ...fullProfile.draft, avatarDataUrl: 'data:image/png;base64,AA==' },
+    })
+    renderPage()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Открыть фото тренера Анна Иванова' }))
+    const dialog = screen.getByRole('dialog', { name: 'Фото тренера' })
+    expect(dialog).toBeVisible()
+    expect(screen.getByAltText('Фото тренера Анна Иванова')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Увеличить' }))
+    expect(screen.getByText('150%')).toBeVisible()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Фото тренера' })).not.toBeInTheDocument())
+  })
+
   it('explains that contact is unavailable without rendering a dead action', async () => {
     mocks.getPublicTrainerProfile.mockResolvedValue({
       ...fullProfile,

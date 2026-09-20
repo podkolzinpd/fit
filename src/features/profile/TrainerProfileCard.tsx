@@ -31,7 +31,7 @@ function Locations({ metroStationIds, customLocations }: { metroStationIds: stri
   </div>
 }
 
-export function TrainerProfileCard({ profile, isBrandTrainer = false, publicView = false, compact = false, action, primaryAction, footer }: {
+export function TrainerProfileCard({ profile, isBrandTrainer = false, publicView = false, compact = false, action, primaryAction, footer, onAvatarClick }: {
   profile: TrainerProfileDraft
   isBrandTrainer?: boolean
   publicView?: boolean
@@ -39,6 +39,7 @@ export function TrainerProfileCard({ profile, isBrandTrainer = false, publicView
   action?: ReactNode
   primaryAction?: ReactNode
   footer?: ReactNode
+  onAvatarClick?: () => void
 }) {
   const experience = experienceLabel(profile.experienceStartYear)
   const certificateCount = profile.certificates.length
@@ -47,7 +48,11 @@ export function TrainerProfileCard({ profile, isBrandTrainer = false, publicView
   return <article className={`trainer-card${publicView ? ' trainer-card-public' : ''}${compact ? ' trainer-card-compact' : ''}`}>
     <header className="trainer-card-head">
       {profile.avatarDataUrl
-        ? <img src={profile.avatarDataUrl} alt="" className="trainer-card-avatar" />
+        ? onAvatarClick
+          ? <button type="button" className="trainer-card-avatar-button" aria-label={`Открыть фото тренера ${profile.displayName}`} onClick={onAvatarClick}>
+            <img src={profile.avatarDataUrl} alt="" className="trainer-card-avatar" />
+          </button>
+          : <img src={profile.avatarDataUrl} alt="" className="trainer-card-avatar" />
         : <span className="trainer-card-avatar trainer-card-avatar-placeholder" aria-hidden="true">{profile.displayName.slice(0, 1).toUpperCase() || 'Ф'}</span>}
       <div className="trainer-card-identity"><h2>{profile.displayName || 'Имя тренера'}</h2>
         <p>{profile.acceptingClients ? 'Берёт новых клиентов' : 'Сейчас без новых клиентов'}</p>
