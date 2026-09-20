@@ -193,6 +193,19 @@ describe('yandexPilotQueries', () => {
     const requestInit = fetchMock.mock.calls[0]?.[1]
     expect(requestInit?.headers).not.toHaveProperty('authorization')
 
+    await yandexPilotQueries.listClients(
+      'https://stage.example.test',
+      's'.repeat(43),
+      'read_write',
+    )
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/clients',
+      {
+        cache: 'no-store',
+        headers: { 'x-fit-session': 's'.repeat(43) },
+      },
+    )
+
     await yandexPilotQueries.listConnections(
       'https://stage.example.test',
       's'.repeat(43),

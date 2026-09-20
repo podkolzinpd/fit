@@ -130,13 +130,21 @@ export const yandexPilotQueries = {
       'x-supabase-authorization': `Bearer ${supabaseAccessToken}`,
     },
   }),
-  listClients: (apiBaseUrl: string, sessionToken: string) => fetch(`${apiBaseUrl}/v1/clients`, {
+  listClients: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    accessMode: YandexApiAccessMode = 'read_only',
+  ) => fetch(`${apiBaseUrl}/v1/clients`, {
     cache: 'no-store',
-    headers: { 'x-fit-pilot-session': sessionToken },
+    headers: sessionHeaders(sessionToken, accessMode),
   }),
-  listConnections: (apiBaseUrl: string, sessionToken: string) => fetch(`${apiBaseUrl}/v1/connections`, {
+  listConnections: (
+    apiBaseUrl: string,
+    sessionToken: string,
+    accessMode: YandexApiAccessMode = 'read_only',
+  ) => fetch(`${apiBaseUrl}/v1/connections`, {
     cache: 'no-store',
-    headers: { 'x-fit-pilot-session': sessionToken },
+    headers: sessionHeaders(sessionToken, accessMode),
   }),
   listTrainingData: (
     apiBaseUrl: string,
