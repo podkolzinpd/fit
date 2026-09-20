@@ -557,14 +557,15 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
       where goal.client_id = $1 and goal.status = 'active'
     `, [request.clientId])
     const firstRows = await client.query<FirstWorkoutRow>(`
-      select workout.workout_date
+      select workout.workout_date::text as workout_date
       from public.workouts workout
       where workout.client_id = $1 and workout.status = 'done'
         and workout.deleted_at is null and workout.workout_date <= $2
       order by workout.workout_date, workout.id limit 1
     `, [request.clientId, request.periodEnd])
     const allWorkoutRows = await client.query<WorkoutRow>(`
-      select workout.id, workout.workout_date, workout.status, workout.deleted_at,
+      select workout.id, workout.workout_date::text as workout_date,
+        workout.status, workout.deleted_at,
         workout.session_rpe, workout.wellbeing, workout.discomfort, workout.client_comment
       from public.workouts workout
       where workout.client_id = $1 and workout.status = 'done'
@@ -622,7 +623,8 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
       fact_rpe: asNumber(row.fact_rpe),
     }))
     const measurementRows = await client.query<ProgressRow>(`
-      select progress.recorded_on, progress.weight_kg, progress.chest_cm,
+      select progress.recorded_on::text as recorded_on,
+        progress.weight_kg, progress.chest_cm,
         progress.waist_cm, progress.hip_cm
       from public.client_progress progress
       where progress.client_id = $1 and progress.deleted_at is null
