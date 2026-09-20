@@ -1,4 +1,4 @@
-// schema-sha256: 3508d3db1fd619f04a86e3b5baf0a26df210bbb318d6bd38fcb06f04d5cbd048
+// schema-sha256: 9320de0ec2a21fc099e75ac0cadc5cb44455961458abda591ccf847a513cbaa8
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -24,7 +24,7 @@ type WorkoutListExerciseRow = {
 export type WorkoutListRow = {
   id: string; client_id: string; trainer_id: string; client_name: string; created_by: string | null; started_by: string | null; completed_by: string | null; workout_date: string; start_time: string | null; end_time: string | null
   started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; trainer_reaction: string | null; trainer_review_author_id: string | null; trainer_reviewed_at: string | null; client_comment: string | null
-  session_rpe: number | null; wellbeing: string | null; discomfort: boolean | null; has_pr: boolean
+  session_rpe: number | null; wellbeing: string | null; discomfort: boolean | null; active_calories_kcal: number | null; has_pr: boolean
   stage_id: string | null; stage_title: string | null; version: number; total_count: number; exercises: WorkoutListExerciseRow[]
 }
 
@@ -1853,6 +1853,11 @@ export type Database = {
       }
       workouts: {
         Row: {
+          active_calories_kcal: number | null
+          calorie_estimate_duration_min: number | null
+          calorie_estimate_version: number | null
+          calorie_estimate_weight_kg: number | null
+          calorie_estimated_at: string | null
           client_comment: string | null
           client_id: string
           client_question: string | null
@@ -1886,6 +1891,11 @@ export type Database = {
           workout_date: string
         }
         Insert: {
+          active_calories_kcal?: number | null
+          calorie_estimate_duration_min?: number | null
+          calorie_estimate_version?: number | null
+          calorie_estimate_weight_kg?: number | null
+          calorie_estimated_at?: string | null
           client_comment?: string | null
           client_id: string
           client_question?: string | null
@@ -1919,6 +1929,11 @@ export type Database = {
           workout_date: string
         }
         Update: {
+          active_calories_kcal?: number | null
+          calorie_estimate_duration_min?: number | null
+          calorie_estimate_version?: number | null
+          calorie_estimate_weight_kg?: number | null
+          calorie_estimated_at?: string | null
           client_comment?: string | null
           client_id?: string
           client_question?: string | null
@@ -2528,6 +2543,7 @@ export type Database = {
           p_to?: string | null
         }
         Returns: {
+          active_calories_kcal: number
           client_comment: string
           client_id: string
           client_name: string

@@ -462,6 +462,7 @@ export interface Workout {
   endTime: string | null
   startedAt: string | null
   completedAt: string | null
+  activeCaloriesKcal?: number | null
   status: WorkoutStatus
   notes: string | null
   trainerReview?: string
