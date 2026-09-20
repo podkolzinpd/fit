@@ -1,10 +1,7 @@
 # Fit — текущее состояние проекта
-> Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
-> merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-20. База изменений: `fb18a88e` (#1083). Frontend остаётся
-на Vercel, а production data plane — принятый Yandex Cloud stage stack. Yandex
-ID является единственным production-входом; app-session, main routing и native
-registration включены глобально.
+> Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
+Обновлено: 2026-09-20. База изменений: `0a27d06b` (#1084). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
+Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 
 ## Активная цель
 
@@ -27,9 +24,11 @@ Supabase из эксплуатации. До закрытия rollback-окна 
   email/password/reset routes возвращаются на единый вход. Связанный профиль с
   `yandex/read_write` assignment получает Yandex app-session и весь основной UI
   выбирает Yandex API без request-level fallback. Неизвестный Yandex ID получает
-  recovery/new-account handoff. Recovery domain-ready профиля атомарно создаёт
-  identity и `yandex/read_write`; неверные credentials, неполный role root или
-  конфликт ничего не включают. Reload не сбрасывает активные Yandex requests.
+  recovery/new-account handoff. Recovery domain-ready профиля одной транзакцией
+  создаёт identity, `yandex/read_write` и первую app-session; при любой ошибке
+  всё откатывается. Reload не сбрасывает активные Yandex requests.
+- Frontend Yandex API принимает Postgres-native ISO timestamps с numeric offset (`+00:00`);
+  карточка «Последняя тренировка» больше не падает из-за отличия от literal `Z`.
 - `VITE_MAINTENANCE_MODE` выключен после выпуска и production-проверки
   обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
   `paused`: он блокирует DML старых вкладок, RPC и background writers на 38
@@ -123,7 +122,4 @@ Supabase из эксплуатации. До закрытия rollback-окна 
    Storage/Edge Functions, удалить fallback-код и production secrets.
 
 ## Отложено
-
-- DataLens и доставка `app_feedback` в Telegram/Tracker — до отдельного решения.
-- HA replica — только по требованиям SLA; один host остаётся принятым риском.
-- APNs и Android/FCM не входят в Web Push cutover.
+- DataLens/Telegram/Tracker отложены; HA replica нужна только по SLA; APNs и Android/FCM не входят в Web Push cutover.
