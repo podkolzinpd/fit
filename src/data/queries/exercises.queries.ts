@@ -2,6 +2,7 @@ import { supabase } from './client'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import type { CustomMetric } from '../../shared/domain'
 import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retirement'
+import { yandexAppSessionTransport } from '../yandex-app-session-transport'
 
 export type WorkoutParseResponse = {
   items: Array<{ sourceText: string; exerciseRef: string; confidence: number; sets: Array<{ weightKg?: number; reps?: number; durationMin?: number; distanceKm?: number }>; position?: number }>
@@ -19,6 +20,17 @@ const isLocalSupabase = typeof import.meta.env.VITE_SUPABASE_URL === 'string'
   && import.meta.env.VITE_SUPABASE_URL.includes('127.0.0.1:54321')
 
 export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnapshot[]) => {
+  const appSession = yandexAppSessionTransport()
+  if (appSession) {
+    return fetch(`${appSession.apiBaseUrl}/v1/assistant/yandex/parse-workout`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-fit-session': appSession.sessionToken },
+      body: JSON.stringify({ text, systemCatalog }),
+    }).then(async (response) => response.ok
+      ? { data: await response.json() as WorkoutParseResponse, error: null }
+      : { data: null, error: { context: response } })
+      .catch((error) => ({ data: null, error: error instanceof Error ? error : new Error('parse_workout_request_failed') }))
+  }
   if (isLocalSupabase) {
     return supabase.functions.invoke<WorkoutParseResponse>('parse-workout', { body: { text, systemCatalog } })
   }
@@ -40,6 +52,17 @@ export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnaps
 
 export const suggestGoalCriteria = (text: string, catalog: readonly ExerciseSnapshot[], metrics: readonly CustomMetric[]) => {
   const body = { kind: 'goal_criteria', text, systemCatalog: catalog.filter((item) => item.source === 'system' && isActiveCatalogExercise(item)), customMetrics: metrics }
+  const appSession = yandexAppSessionTransport()
+  if (appSession) {
+    return fetch(`${appSession.apiBaseUrl}/v1/assistant/yandex/parse-workout`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-fit-session': appSession.sessionToken },
+      body: JSON.stringify(body),
+    }).then(async (response) => response.ok
+      ? { data: await response.json() as GoalCriteriaSuggestionResponse, error: null }
+      : { data: null, error: { context: response } })
+      .catch((error) => ({ data: null, error: error instanceof Error ? error : new Error('goal_suggestion_request_failed') }))
+  }
   if (isLocalSupabase) return supabase.functions.invoke<GoalCriteriaSuggestionResponse>('parse-workout', { body })
   return supabase.auth.getSession().then(async ({ data: { session } }) => {
     if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
