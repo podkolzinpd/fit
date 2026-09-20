@@ -766,23 +766,21 @@ test('trainer catalog stays compact and aligned across supported widths', async 
     city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-tsska'], customLocations: ['World Class Динамо'], trainingModes: ['online', 'in_person'], experienceStartYear: 2018,
     education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: null, certificates: [],
   }
-  const minimal = {
-    displayName: 'Ирина', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [], trainingModes: [], experienceStartYear: null,
-    education: '', formats: '', price: '', acceptingClients: false, avatarDataUrl: null, certificates: [],
-  }
-  await page.route('**/rest/v1/rpc/list_public_trainer_profiles_page', (route) => route.fulfill({
-    contentType: 'application/json', body: JSON.stringify({ items: [
-      { publicId: '91000000-0000-4000-8000-000000000001', draft, published: draft, listedInCatalog: true, publishedAt: '2026-09-12T10:00:00Z', updatedAt: '2026-09-12T10:00:00Z', version: 2, isBrandTrainer: false },
-      { publicId: '91000000-0000-4000-8000-000000000002', draft: minimal, published: minimal, listedInCatalog: true, publishedAt: '2026-09-11T10:00:00Z', updatedAt: '2026-09-11T10:00:00Z', version: 1, isBrandTrainer: false },
-    ], totalCount: 2, nextOffset: null }),
-  }))
+  await page.route('**/rest/v1/rpc/list_public_trainer_profiles_page', (route) => {
+    expect(route.request().postDataJSON()).toEqual(expect.objectContaining({ p_accepting_clients: true }))
+    return route.fulfill({
+      contentType: 'application/json', body: JSON.stringify({ items: [
+        { publicId: '91000000-0000-4000-8000-000000000001', draft, published: draft, listedInCatalog: true, publishedAt: '2026-09-12T10:00:00Z', updatedAt: '2026-09-12T10:00:00Z', version: 2, isBrandTrainer: false },
+      ], totalCount: 1, nextOffset: null }),
+    })
+  })
   await signIn(page, 'client@fit.local', /\/me$/)
   await page.evaluate(() => sessionStorage.removeItem('fit.trainer-catalog.view.v1'))
   await gotoStable(page, '/me/trainers')
 
   await expect(page.getByRole('heading', { level: 1, name: 'Тренеры' })).toBeVisible()
   await expect(page.getByRole('heading', { name: draft.displayName })).toBeVisible()
-  await expect(page.getByRole('heading', { name: minimal.displayName })).toBeVisible()
+  await expect(page.getByText('Найдено: 1')).toBeVisible()
   const geometry = await page.evaluate(() => {
     const pageBox = document.querySelector('.trainer-catalog-page')!.getBoundingClientRect()
     const title = document.querySelector('.trainer-catalog-page > .page-header h1')!.getBoundingClientRect()
@@ -811,6 +809,7 @@ test('trainer catalog stays compact and aligned across supported widths', async 
   await page.getByRole('button', { name: 'Фильтры' }).click()
   const sheet = page.getByRole('dialog', { name: 'Фильтры тренеров' })
   await expect(sheet).toBeVisible()
+  await expect(sheet.getByLabel('Новые клиенты')).toHaveCount(0)
   const sheetBox = await sheet.boundingBox()
   expect(sheetBox).not.toBeNull()
   expect(sheetBox!.y + sheetBox!.height).toBeLessThanOrEqual(await page.evaluate(() => window.innerHeight))

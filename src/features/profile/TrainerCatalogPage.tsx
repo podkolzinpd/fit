@@ -16,7 +16,7 @@ const emptyFilters: TrainerCatalogFilters = {
   city: '',
   metroStationIds: [],
   mode: '',
-  acceptingClients: null,
+  acceptingClients: true,
   brandTrainerOnly: false,
 }
 
@@ -42,7 +42,7 @@ function readStoredFilters(value: unknown): TrainerCatalogFilters | null {
       ? candidate.metroStationIds.filter((item): item is string => typeof item === 'string').slice(0, 20)
       : [],
     mode: candidate.mode === 'online' || candidate.mode === 'in_person' ? candidate.mode : '',
-    acceptingClients: typeof candidate.acceptingClients === 'boolean' ? candidate.acceptingClients : null,
+    acceptingClients: true,
     brandTrainerOnly: typeof candidate.brandTrainerOnly === 'boolean' ? candidate.brandTrainerOnly : false,
   }
 }
@@ -76,6 +76,7 @@ function normalized(filters: TrainerCatalogFilters): TrainerCatalogFilters {
     specialties: [...new Set(filters.specialties)],
     city: filters.city.trim(),
     metroStationIds: [...new Set(filters.metroStationIds)].slice(0, 20),
+    acceptingClients: true,
   }
 }
 
@@ -169,9 +170,6 @@ function CatalogFiltersSheet({ draft, setDraft, onApply, onReset, onClose, retur
         <Field label="Формат"><select value={draft.mode} onChange={(event) => setDraft((value) => ({ ...value, mode: event.target.value as TrainerCatalogFilters['mode'] }))}>
           <option value="">Любой</option><option value="online">Онлайн</option><option value="in_person">Лично</option>
         </select></Field>
-        <Field label="Новые клиенты"><select value={draft.acceptingClients === null ? '' : String(draft.acceptingClients)} onChange={(event) => setDraft((value) => ({ ...value, acceptingClients: event.target.value === '' ? null : event.target.value === 'true' }))}>
-          <option value="">Неважно</option><option value="true">Берёт клиентов</option><option value="false">Сейчас не берёт</option>
-        </select></Field>
         <div className="trainer-catalog-brand-filter">
           <Switch label="Только бренд-тренеры" checked={draft.brandTrainerOnly}
             onChange={(checked) => setDraft((value) => ({ ...value, brandTrainerOnly: checked }))} />
@@ -249,7 +247,7 @@ export function TrainerCatalogPage() {
   }
 
   const appliedExtraFilters = [filters.specialties.length ? 'specialty' : '', filters.city, filters.metroStationIds.length ? 'metro' : '', filters.mode,
-    filters.acceptingClients === null ? '' : String(filters.acceptingClients), filters.brandTrainerOnly ? 'brand' : ''].filter(Boolean).length
+    filters.brandTrainerOnly ? 'brand' : ''].filter(Boolean).length
 
   return <Page title="Тренеры" back="/me/profile" center className="trainer-catalog-page ui-identity">
     <p className="trainer-catalog-intro">Найдите своего тренера.</p>
