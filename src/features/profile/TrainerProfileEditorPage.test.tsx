@@ -10,6 +10,9 @@ import { TrainerProfessionalProfileSection } from './TrainerProfileEditorPage'
 const repository = vi.hoisted(() => ({
   getOwn: vi.fn(),
   saveDraft: vi.fn(),
+  uploadPhoto: vi.fn(),
+  reorderPhotos: vi.fn(),
+  deletePhoto: vi.fn(),
   publish: vi.fn(),
   unpublish: vi.fn(),
   setCatalogListing: vi.fn(),
@@ -65,6 +68,9 @@ describe('TrainerProfessionalProfileSection', () => {
   beforeEach(() => {
     repository.getOwn.mockReset().mockResolvedValue(profile)
     repository.saveDraft.mockReset().mockResolvedValue(profile)
+    repository.uploadPhoto.mockReset()
+    repository.reorderPhotos.mockReset()
+    repository.deletePhoto.mockReset()
     repository.publish.mockReset().mockResolvedValue({ ...profile, published: empty, listedInCatalog: true, publishedAt: '2026-09-13T09:01:00.000Z', version: 2 })
     repository.unpublish.mockReset()
     repository.setCatalogListing.mockReset()
@@ -234,5 +240,40 @@ describe('TrainerProfessionalProfileSection', () => {
 
     expect(await screen.findByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
     expect(repository.saveDraft).not.toHaveBeenCalled()
+  })
+
+  it('changes the gallery cover and deletes a photo without losing the draft', async () => {
+    const photos = [0, 1].map((index) => ({
+      id: `11111111-1111-4111-8111-11111111111${index}`,
+      url: `https://storage.example/full-${index}.jpg`,
+      thumbnailUrl: `https://storage.example/thumb-${index}.jpg`,
+      mimeType: 'image/jpeg' as const,
+      width: 1200,
+      height: 1600,
+    }))
+    const galleryDraft = { ...completeDraft, photos }
+    const galleryProfile = { ...publishedProfile, draft: galleryDraft, published: galleryDraft }
+    repository.getOwn.mockResolvedValue(galleryProfile)
+    repository.saveDraft.mockResolvedValue(galleryProfile)
+    repository.reorderPhotos.mockResolvedValue({
+      ...galleryProfile,
+      draft: { ...galleryDraft, photos: [photos[1]!, photos[0]!] },
+    })
+    repository.deletePhoto.mockResolvedValue({
+      ...galleryProfile,
+      draft: { ...galleryDraft, photos: [photos[0]!] },
+    })
+    const user = userEvent.setup()
+    renderSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Редактировать' }))
+    expect(screen.getByText('2/3')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'На обложку' }))
+    await waitFor(() => expect(repository.reorderPhotos).toHaveBeenCalledWith([photos[1]!.id, photos[0]!.id]))
+
+    await user.click(screen.getAllByRole('button', { name: 'Удалить' })[0]!)
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: /^Удалить$/ }))
+    await waitFor(() => expect(repository.deletePhoto).toHaveBeenCalledWith(photos[1]!.id))
+    expect(repository.saveDraft).toHaveBeenCalledWith(expect.objectContaining({ displayName: completeDraft.displayName }))
   })
 })

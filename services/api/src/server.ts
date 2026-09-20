@@ -156,9 +156,6 @@ const pilotTrainingDataReader =
   databasePool === undefined
     ? undefined
     : new DatabasePilotTrainingDataReader(databasePool)
-const pilotTrainerProfiles = databasePool === undefined
-  ? undefined
-  : new DatabasePilotTrainerProfiles(databasePool)
 const pilotTrainerDiscovery = databasePool === undefined
   ? undefined
   : new DatabasePilotTrainerDiscovery(databasePool)
@@ -202,6 +199,9 @@ const yandexMediaStorageConfig = readYandexMediaStorageConfig()
 const yandexMediaStorage = yandexMediaStorageConfig === undefined
   ? undefined
   : new YandexMediaObjectStorage(yandexMediaStorageConfig)
+const pilotTrainerProfiles = databasePool === undefined
+  ? undefined
+  : new DatabasePilotTrainerProfiles(databasePool, yandexMediaStorage)
 const chatMediaStore = yandexMediaStorage !== undefined
   ? new YandexChatMediaStore(yandexMediaStorage)
   : supabaseBridgeConfig === undefined

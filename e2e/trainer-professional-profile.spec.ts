@@ -55,7 +55,7 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
     await editor.getByRole('option', { name: /Динамо/ }).click()
   }
   await editor.getByLabel('Клуб, район или адрес').fill('World Class Динамо')
-  await editor.getByRole('button', { name: 'Добавить' }).click()
+  await editor.getByRole('button', { name: 'Добавить', exact: true }).click()
   await editor.getByLabel('Как проходят занятия').fill('Созваниваемся раз в неделю и корректируем план.')
   await editor.locator('input[type="file"]').setInputFiles({
     name: 'avatar.png',

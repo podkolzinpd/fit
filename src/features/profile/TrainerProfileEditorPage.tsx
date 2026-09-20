@@ -4,10 +4,10 @@ import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { forgetPublicTrainerProfile } from '../../data/repositories/trainer-profiles.repository'
-import type { TrainerCertificate, TrainerProfileDraft, TrainerTrainingMode } from '../../shared/domain'
+import type { TrainerCertificate, TrainerProfileDraft, TrainerProfilePhotoUpload, TrainerTrainingMode } from '../../shared/domain'
 import { copyText } from '../../shared/clipboard'
 import { ChevronDownIcon } from '../../shared/icons'
-import { prepareProfileImage } from '../../shared/profile-image'
+import { fileFromImageDataUrl, prepareTrainerProfilePhoto } from '../../shared/profile-image'
 import { emptyTrainerProfileDraft, trainerProfileDraftSchema, TRAINER_SPECIALTIES_MAX, validatePublishableTrainerProfile } from '../../shared/trainer-profile'
 import { SpecialtyChecklist } from './SpecialtyChecklist'
 import { AsyncView, Field, SaveStatus, Switch, useConfirm } from '../../shared/ui'
@@ -16,9 +16,14 @@ import { TrainerProfileCard } from './TrainerProfileCard'
 
 const key = ['trainer-professional-profile'] as const
 
+function profilePhotos(draft: TrainerProfileDraft) {
+  return draft.photos ?? []
+}
+
 function hasProfileContent(draft: TrainerProfileDraft): boolean {
   return Boolean(
     draft.avatarDataUrl
+    || profilePhotos(draft).length
     || draft.bio.trim()
     || draft.specialties.length
     || draft.city.trim()
@@ -49,6 +54,8 @@ function profilesMatch(first: TrainerProfileDraft | null | undefined, second: Tr
     && first.price === second.price
     && first.acceptingClients === second.acceptingClients
     && first.avatarDataUrl === second.avatarDataUrl
+    && profilePhotos(first).length === profilePhotos(second).length
+    && profilePhotos(first).every((value, index) => value.id === profilePhotos(second)[index]?.id)
     && first.specialties.length === second.specialties.length
     && first.specialties.every((value, index) => value === second.specialties[index])
     && first.trainingModes.length === second.trainingModes.length
@@ -122,6 +129,46 @@ export function TrainerProfessionalProfileSection() {
     onSuccess: (value) => { queryClient.setQueryData(key, value); setStatus('saved'); setLocalError(null) },
     onError: (error) => { setStatus('error'); setLocalError(error.message) },
   })
+  const uploadPhoto = useMutation({
+    mutationFn: ({ value, photo, replaceLegacy = false }: {
+      value: TrainerProfileDraft
+      photo: TrainerProfilePhotoUpload
+      replaceLegacy?: boolean
+    }) => trainerProfiles.uploadPhoto(value, photo, replaceLegacy),
+    onSuccess: (value) => {
+      queryClient.setQueryData(key, value)
+      setDraft(value.draft)
+      setStatus('saved')
+      setLocalError(null)
+    },
+    onError: (error) => { setStatus('error'); setLocalError(error.message) },
+  })
+  const reorderPhotos = useMutation({
+    mutationFn: async ({ value, photoIds }: { value: TrainerProfileDraft; photoIds: string[] }) => {
+      await trainerProfiles.saveDraft(value)
+      return trainerProfiles.reorderPhotos(photoIds)
+    },
+    onSuccess: (value) => {
+      queryClient.setQueryData(key, value)
+      setDraft(value.draft)
+      setStatus('saved')
+      setLocalError(null)
+    },
+    onError: (error) => { setStatus('error'); setLocalError(error.message) },
+  })
+  const deletePhoto = useMutation({
+    mutationFn: async ({ value, photoId }: { value: TrainerProfileDraft; photoId: string }) => {
+      await trainerProfiles.saveDraft(value)
+      return trainerProfiles.deletePhoto(photoId)
+    },
+    onSuccess: (value) => {
+      queryClient.setQueryData(key, value)
+      setDraft(value.draft)
+      setStatus('saved')
+      setLocalError(null)
+    },
+    onError: (error) => { setStatus('error'); setLocalError(error.message) },
+  })
 
   const publishedMatchesDraft = useMemo(
     () => profilesMatch(draft, profile.data?.published),
@@ -129,6 +176,7 @@ export function TrainerProfessionalProfileSection() {
   )
   const publishValidation = useMemo(() => draft ? validatePublishableTrainerProfile(draft) : null, [draft])
   const pending = save.isPending || publish.isPending || unpublish.isPending || catalogListing.isPending
+    || uploadPhoto.isPending || reorderPhotos.isPending || deletePhoto.isPending
   const showPublishAction = !profile.data?.published || !publishedMatchesDraft
 
   function set<K extends keyof TrainerProfileDraft>(field: K, value: TrainerProfileDraft[K]) {
@@ -148,10 +196,50 @@ export function TrainerProfessionalProfileSection() {
   async function imageChanged(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
-    setLocalError(null)
-    try { set('avatarDataUrl', await prepareProfileImage(file)) }
-    catch (error) { setLocalError(error instanceof Error ? error.message : 'Не удалось подготовить фото.') }
     event.target.value = ''
+    const value = prepareDraft()
+    if (!value) return
+    if (profilePhotos(value).length >= 3) {
+      setLocalError('Можно добавить не больше трёх фотографий.')
+      return
+    }
+    setLocalError(null)
+    try {
+      let current = value
+      if (current.avatarDataUrl && profilePhotos(current).length === 0) {
+        const legacyPhoto = await prepareTrainerProfilePhoto(fileFromImageDataUrl(current.avatarDataUrl))
+        current = (await uploadPhoto.mutateAsync({ value: current, photo: legacyPhoto, replaceLegacy: true })).draft
+      }
+      if (profilePhotos(current).length >= 3) {
+        setLocalError('Можно добавить не больше трёх фотографий.')
+        return
+      }
+      const photo = await prepareTrainerProfilePhoto(file)
+      await uploadPhoto.mutateAsync({ value: current, photo })
+    } catch (error) {
+      if (!uploadPhoto.isError) setLocalError(error instanceof Error ? error.message : 'Не удалось добавить фото.')
+    }
+  }
+  async function movePhoto(photoId: string, targetIndex: number) {
+    const value = prepareDraft()
+    if (!value) return
+    const photos = profilePhotos(value)
+    const currentIndex = photos.findIndex((photo) => photo.id === photoId)
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= photos.length || currentIndex === targetIndex) return
+    const ordered = [...photos]
+    const [photo] = ordered.splice(currentIndex, 1)
+    if (!photo) return
+    ordered.splice(targetIndex, 0, photo)
+    try { await reorderPhotos.mutateAsync({ value, photoIds: ordered.map((item) => item.id) }) }
+    catch { /* the mutation exposes the user-facing error */ }
+  }
+  async function requestDeletePhoto(photoId: string) {
+    const value = prepareDraft()
+    if (!value) return
+    const accepted = await confirm({ message: 'Удалить эту фотографию из анкеты?', confirmLabel: 'Удалить', danger: true })
+    if (!accepted) return
+    try { await deletePhoto.mutateAsync({ value, photoId }) }
+    catch { /* the mutation exposes the user-facing error */ }
   }
   function updateCertificate(index: number, value: TrainerCertificate) {
     if (!draft) return
@@ -215,7 +303,7 @@ export function TrainerProfessionalProfileSection() {
   }
 
   const publicationControls = <>
-    <SaveStatus status={pending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message} />
+    <SaveStatus status={pending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message ?? uploadPhoto.error?.message ?? reorderPhotos.error?.message ?? deletePhoto.error?.message} />
     {showPublishAction && <div className="trainer-profile-publish-cta">
       {localError && <p className="error" role="alert">{localError}</p>}
       <button type="button" className="primary wide" onClick={publishNow} disabled={pending} aria-busy={publish.isPending}>
@@ -241,10 +329,25 @@ export function TrainerProfessionalProfileSection() {
     <AsyncView loading={profile.isLoading} error={profile.error} onRetry={() => void profile.refetch()}>
       {draft && editing && <form className="trainer-profile-form trainer-profile-edit-card card" onSubmit={submit} aria-label="Редактирование анкеты тренера">
         <header className="trainer-profile-edit-head"><div><p className="eyebrow">АНКЕТА ТРЕНЕРА</p><h2>Редактирование</h2></div></header>
-        <div className="trainer-avatar-editor">
-          {draft.avatarDataUrl ? <img src={draft.avatarDataUrl} alt="Фото тренера" /> : <span aria-hidden="true">{draft.displayName.slice(0, 1).toUpperCase() || 'Ф'}</span>}
-          <div><label className="button secondary trainer-photo-button">Выбрать фото<input type="file" accept="image/*" onChange={(event) => void imageChanged(event)} /></label>
-            {draft.avatarDataUrl && <button type="button" className="link" onClick={() => set('avatarDataUrl', null)}>Удалить фото</button>}</div>
+        <div className="trainer-photo-editor" aria-labelledby="trainer-photos-title">
+          <div className="trainer-photo-editor-head"><div><strong id="trainer-photos-title">Фотографии</strong><span>{profilePhotos(draft).length || (draft.avatarDataUrl ? 1 : 0)}/3</span></div>
+            <label className={`button secondary trainer-photo-button${profilePhotos(draft).length >= 3 ? ' disabled' : ''}`}>Добавить фото<input type="file" accept="image/*" disabled={pending || profilePhotos(draft).length >= 3} onChange={(event) => void imageChanged(event)} /></label>
+          </div>
+          {profilePhotos(draft).length > 0 ? <ol className="trainer-photo-list">
+            {profilePhotos(draft).map((photo, index) => <li key={photo.id}>
+              <img src={photo.thumbnailUrl} alt={`Фото ${index + 1}`} />
+              <span>{index === 0 ? 'Обложка' : `Фото ${index + 1}`}</span>
+              <div className="trainer-photo-item-actions">
+                {index > 0 && <button type="button" className="link" disabled={pending} onClick={() => void movePhoto(photo.id, 0)}>На обложку</button>}
+                {index > 1 && <button type="button" className="link" aria-label={`Переместить фото ${index + 1} влево`} disabled={pending} onClick={() => void movePhoto(photo.id, index - 1)}>←</button>}
+                {index < profilePhotos(draft).length - 1 && index > 0 && <button type="button" className="link" aria-label={`Переместить фото ${index + 1} вправо`} disabled={pending} onClick={() => void movePhoto(photo.id, index + 1)}>→</button>}
+                <button type="button" className="link danger" disabled={pending} onClick={() => void requestDeletePhoto(photo.id)}>Удалить</button>
+              </div>
+            </li>)}
+          </ol> : draft.avatarDataUrl ? <div className="trainer-photo-legacy">
+            <img src={draft.avatarDataUrl} alt="Фото тренера" /><span>Обложка</span>
+            <button type="button" className="link danger" disabled={pending} onClick={() => set('avatarDataUrl', null)}>Удалить</button>
+          </div> : <p>Добавьте до трёх фотографий. Первая будет обложкой.</p>}
         </div>
         <div className="trainer-profile-form-section">
           <Field label="Имя в анкете"><input value={draft.displayName} maxLength={120} onChange={(event) => set('displayName', event.target.value)} /></Field>
@@ -296,7 +399,7 @@ export function TrainerProfessionalProfileSection() {
           </div>
         </details>
         {localError && <p className="error" role="alert">{localError}</p>}
-        <SaveStatus status={pending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message} />
+        <SaveStatus status={pending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message ?? uploadPhoto.error?.message ?? reorderPhotos.error?.message ?? deletePhoto.error?.message} />
         <div className="trainer-profile-actions">
           <button type="button" className="secondary" onClick={cancelEditing} disabled={pending}>Отмена</button>
           <button type="submit" className="primary" disabled={pending} aria-busy={save.isPending}>{save.isPending ? 'Сохраняем…' : 'Сохранить'}</button>
