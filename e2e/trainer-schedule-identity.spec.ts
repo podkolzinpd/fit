@@ -26,6 +26,8 @@ test('trainer Schedule preview keeps real date controls usable and compact', asy
 
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-schedule-identity/)
   await expect(page.locator('.schedule-week-day')).toHaveCount(7)
+  const scheduleCoachmark = page.getByRole('button', { name: 'Понятно' })
+  if (await scheduleCoachmark.isVisible()) await scheduleCoachmark.click()
   await expect(page.getByRole('button', { name: 'Неделя', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('button', { name: '2 недели', exact: true })).toHaveAttribute('aria-pressed', 'false')
   const firstDayBefore = await page.locator('.schedule-week-day-heading > span').first().innerText()
