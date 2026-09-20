@@ -1915,6 +1915,15 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         if (error.failure === 'conflict') {
           return reply.code(409).send({ error: 'conflict' })
         }
+        if (error.failure === 'trainer_disconnect_required') {
+          return reply.code(409).send({ error: 'trainer_disconnect_required' })
+        }
+        if (error.failure === 'trainer_switch_required') {
+          return reply.code(409).send({ error: 'trainer_switch_required' })
+        }
+        if (error.failure === 'client_merge_conflict') {
+          return reply.code(409).send({ error: 'client_merge_conflict' })
+        }
         return reply.code(422).send({ error: 'action_not_allowed' })
       }
       if (error instanceof PilotDomainCommandError) {
@@ -3681,6 +3690,34 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       reply,
       () => invitationLinks.create(sessionToken, clientId, targetRole),
       (invitation) => reply.header('cache-control', 'no-store').code(201).send({ invitation }),
+    )
+  })
+
+  app.post('/v1/invitation-links/new-client', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const body = request.body
+    if (sessionToken === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (
+      typeof body !== 'object'
+      || body === null
+      || !('fullName' in body)
+      || !('operationId' in body)
+      || typeof body.fullName !== 'string'
+      || typeof body.operationId !== 'string'
+      || !uuidPattern.test(body.operationId)
+      || body.fullName.trim().length < 2
+      || body.fullName.trim().length > 120
+    ) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const invitationLinks = options.pilotInvitationLinks
+    if (invitationLinks === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    const fullName = body.fullName.trim()
+    const operationId = body.operationId
+    return sendPilotCommand(
+      reply,
+      () => invitationLinks.createForNewClient(sessionToken, fullName, operationId),
+      (result) => reply.header('cache-control', 'no-store').code(201).send(result),
     )
   })
 

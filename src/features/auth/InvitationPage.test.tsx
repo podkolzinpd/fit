@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const state = vi.hoisted(() => ({
   actor: null as null | { userId: string; email: string; role: 'client' | 'trainer' },
+  backendSource: 'supabase' as 'supabase' | 'yandex',
 }))
 const claimLink = vi.hoisted(() => vi.fn())
 const preview = vi.hoisted(() => vi.fn())
@@ -17,7 +18,7 @@ vi.mock('../../app/auth-context', () => ({
   useAuth: () => ({ actor: state.actor, loading: false, error: null }),
 }))
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ source: 'supabase', invitations: { claimLink } }),
+  useDataBackend: () => ({ source: state.backendSource, invitations: { claimLink } }),
 }))
 vi.mock('../../app/yandex-app-session-context', () => ({
   useYandexAppSession: () => ({ signOut: signOutYandex }),
@@ -71,6 +72,7 @@ function renderPage() {
 describe('InvitationPage', () => {
   beforeEach(() => {
     state.actor = null
+    state.backendSource = 'supabase'
     claimLink.mockReset()
     preview.mockReset()
     signOut.mockReset().mockResolvedValue(undefined)
@@ -123,5 +125,18 @@ describe('InvitationPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Открыть карточку' }))
     expect(screen.getByRole('status')).toHaveTextContent('/clients/52500000-0000-4000-8000-000000000010')
+  })
+
+  it('claims a migrated legacy-source link through the Yandex backend', async () => {
+    const user = userEvent.setup()
+    state.backendSource = 'yandex'
+    state.actor = { userId: 'trainer-1', email: 'trainer@example.test', role: 'trainer' }
+    claimLink.mockResolvedValue('52500000-0000-4000-8000-000000000010')
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Стать тренером' }))
+
+    expect(await screen.findByRole('heading', { name: 'Спортсмен подключён' })).toBeVisible()
+    expect(claimLink).toHaveBeenCalledWith(token)
   })
 })

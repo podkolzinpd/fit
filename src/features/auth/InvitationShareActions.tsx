@@ -61,14 +61,9 @@ export function InviteAthleteButton({ className, label = 'Пригласить �
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [fullName, setFullName] = useState('')
-  const [clientId, setClientId] = useState<string | null>(null)
+  const [operationId, setOperationId] = useState(() => crypto.randomUUID())
   const invitation = useMutation({
-    mutationFn: async () => {
-      const id = clientId ?? await backend.clients.createQuick(fullName.trim())
-      if (clientId === null) setClientId(id)
-      const share = await backend.invitations.createShare(id, 'client')
-      return { clientId: id, share }
-    },
+    mutationFn: () => backend.invitations.createShareForNewClient(fullName.trim(), operationId),
     onSuccess: async () => {
       trackGoal('invitation_created')
       await Promise.all([
@@ -82,7 +77,7 @@ export function InviteAthleteButton({ className, label = 'Пригласить �
   function close(): void {
     setOpen(false)
     setFullName('')
-    setClientId(null)
+    setOperationId(crypto.randomUUID())
     invitation.reset()
   }
 

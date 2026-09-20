@@ -12,15 +12,22 @@ interface InvitationShareCommandRow extends InvitationCommandRow {
   invitation_token: string
 }
 
+interface NewClientInvitationShareCommandRow extends InvitationShareCommandRow {
+  client_id: string
+}
+
 interface ClaimedInvitationRow extends QueryResultRow {
   client_id: string
 }
 
 export type PilotConnectionCommandFailure =
   | 'conflict'
+  | 'client_merge_conflict'
   | 'forbidden'
   | 'invalid'
   | 'not_found'
+  | 'trainer_disconnect_required'
+  | 'trainer_switch_required'
 
 export class PilotConnectionCommandError extends Error {
   constructor(readonly failure: PilotConnectionCommandFailure) {
@@ -60,6 +67,15 @@ function commandError(error: unknown): PilotConnectionCommandError | undefined {
     || message === 'membership_not_found'
   ) {
     return new PilotConnectionCommandError('not_found')
+  }
+  if (message === 'trainer_disconnect_required') {
+    return new PilotConnectionCommandError('trainer_disconnect_required')
+  }
+  if (message === 'trainer_switch_required') {
+    return new PilotConnectionCommandError('trainer_switch_required')
+  }
+  if (message.startsWith('client_merge_') && message.endsWith('_conflict')) {
+    return new PilotConnectionCommandError('client_merge_conflict')
   }
   if (message === 'client_already_linked') {
     return new PilotConnectionCommandError('conflict')
@@ -129,6 +145,35 @@ export function createClientInvitationShare(
       code: invitation.invitation_code,
       token: invitation.invitation_token,
       expiresAt: invitation.expires_at.toISOString(),
+    }
+  })
+}
+
+export function createNewClientInvitationShare(
+  client: DatabaseClient,
+  fullName: string,
+  operationId: string,
+): Promise<{ clientId: string; share: CreatedPilotInvitationShare }> {
+  return runCommand(async () => {
+    const rows = await client.query<NewClientInvitationShareCommandRow>(
+      `
+        select client_id, invitation_id, invitation_code, invitation_token, expires_at
+        from public.create_new_client_invitation_share($1, $2)
+      `,
+      [fullName, operationId],
+    )
+    const invitation = rows[0]
+    if (invitation === undefined) throw new Error('New client invitation share was not created')
+    return {
+      clientId: invitation.client_id,
+      share: {
+        id: invitation.invitation_id,
+        clientId: invitation.client_id,
+        targetRole: 'client',
+        code: invitation.invitation_code,
+        token: invitation.invitation_token,
+        expiresAt: invitation.expires_at.toISOString(),
+      },
     }
   })
 }

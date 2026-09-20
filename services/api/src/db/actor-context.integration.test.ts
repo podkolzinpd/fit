@@ -35,7 +35,9 @@ import { readAccessibleClients } from '../clients.js'
 import { readAccessibleConnections } from '../connections.js'
 import {
   claimClientInvitation,
+  claimClientInvitationLink,
   createClientInvitation,
+  createNewClientInvitationShare,
   leaveClientSpace,
   removeClientTrainer,
   revokeClientInvitation,
@@ -149,6 +151,13 @@ const REVOKED_INVITATION_ID = '01587b1f-70ee-4541-b974-2e7a2b9344bb'
 const CLAIMED_INVITATION_ID = 'f1ce4a50-6863-499c-afde-2e124eb11e2f'
 const LIFECYCLE_CLIENT_ID = 'e94770f7-369f-4c0d-a9ad-e18466469483'
 const LIFECYCLE_CLIENT_ACTOR_ID = '0237c0bf-5dc5-46cd-ab26-951ddfb49949'
+const LINK_MERGE_CLIENT_ACTOR_ID = '1237c0bf-5dc5-46cd-ab26-951ddfb49949'
+const LINK_CONFLICT_CLIENT_ACTOR_ID = '2237c0bf-5dc5-46cd-ab26-951ddfb49949'
+const LINK_MERGE_CANONICAL_CLIENT_ID = '3237c0bf-5dc5-46cd-ab26-951ddfb49949'
+const LINK_CONFLICT_CANONICAL_CLIENT_ID = '4237c0bf-5dc5-46cd-ab26-951ddfb49949'
+const LINK_MERGE_WORKOUT_ID = '5237c0bf-5dc5-46cd-ab26-951ddfb49949'
+const LINK_MERGE_OPERATION_ID = '6237c0bf-5dc5-46cd-ab26-951ddfb49949'
+const LINK_CONFLICT_OPERATION_ID = '7237c0bf-5dc5-46cd-ab26-951ddfb49949'
 const ROOT_CUSTOM_EXERCISE_ID = 'b27d65d0-6221-47cb-91a0-8dfcc0a2ceba'
 const MEMBER_CUSTOM_EXERCISE_ID = '3127663e-4395-4100-8dd1-7b784d90917a'
 const ROOT_WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
@@ -2112,6 +2121,214 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         (client) => client.query('select id from public.clients where id = $1', [LIFECYCLE_CLIENT_ID]),
       )
       expect(outsideAccess).toEqual([])
+    })
+
+    it('creates and claims a client link atomically through the Yandex database', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      await ownerPool.query(
+        `
+          insert into public.profiles (id, first_name, account_role)
+          values ($1, 'Link merge client', 'client')
+          on conflict (id) do update set account_role = excluded.account_role
+        `,
+        [LINK_MERGE_CLIENT_ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.clients (id, trainer_id, auth_user_id, full_name)
+          values ($1, $2, $2, 'Canonical link client')
+          on conflict (id) do update set
+            trainer_id = excluded.trainer_id,
+            auth_user_id = excluded.auth_user_id,
+            archived_at = null,
+            merged_into_client_id = null
+        `,
+        [LINK_MERGE_CANONICAL_CLIENT_ID, LINK_MERGE_CLIENT_ACTOR_ID],
+      )
+
+      let sourceClientId: string | undefined
+      try {
+        const created = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => createNewClientInvitationShare(
+            client,
+            'Карточка от тренера',
+            LINK_MERGE_OPERATION_ID,
+          ),
+        )
+        sourceClientId = created.clientId
+
+        await expect(withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => createNewClientInvitationShare(
+            client,
+            'Карточка от тренера',
+            LINK_MERGE_OPERATION_ID,
+          ),
+        )).resolves.toEqual(created)
+
+        const cardAndInvitation = await ownerPool.query<{
+          card_count: string
+          invitation_count: string
+        }>(
+          `
+            select
+              (select count(*) from public.clients where id = $1)::text as card_count,
+              (select count(*) from public.client_invitations
+               where client_id = $1 and link_token_hash is not null)::text as invitation_count
+          `,
+          [sourceClientId],
+        )
+        expect(cardAndInvitation.rows[0]).toEqual({ card_count: '1', invitation_count: '1' })
+
+        await ownerPool.query(
+          `
+            insert into public.workouts (
+              id, trainer_id, client_id, created_by, workout_date, status
+            ) values ($1, $2, $3, $2, date '2026-10-01', 'planned')
+          `,
+          [LINK_MERGE_WORKOUT_ID, ACTOR_ID, sourceClientId],
+        )
+
+        await expect(withActorTransaction(
+          runtimePool,
+          LINK_MERGE_CLIENT_ACTOR_ID,
+          (client) => claimClientInvitationLink(client, created.share.token),
+        )).resolves.toBe(LINK_MERGE_CANONICAL_CLIENT_ID)
+        await expect(withActorTransaction(
+          runtimePool,
+          LINK_MERGE_CLIENT_ACTOR_ID,
+          (client) => claimClientInvitationLink(client, created.share.token),
+        )).resolves.toBe(LINK_MERGE_CANONICAL_CLIENT_ID)
+
+        const merged = await ownerPool.query<{
+          archived_at: Date | null
+          merged_into_client_id: string | null
+        }>('select archived_at, merged_into_client_id from public.clients where id = $1', [sourceClientId])
+        expect(merged.rows[0]?.archived_at).not.toBeNull()
+        expect(merged.rows[0]?.merged_into_client_id).toBe(LINK_MERGE_CANONICAL_CLIENT_ID)
+
+        const workout = await ownerPool.query<{ client_id: string }>(
+          'select client_id from public.workouts where id = $1',
+          [LINK_MERGE_WORKOUT_ID],
+        )
+        expect(workout.rows[0]?.client_id).toBe(LINK_MERGE_CANONICAL_CLIENT_ID)
+      } finally {
+        await ownerPool.query('delete from public.workouts where id = $1', [LINK_MERGE_WORKOUT_ID])
+        await ownerPool.query(
+          'delete from public.client_merge_operations where actor_id = $1',
+          [LINK_MERGE_CLIENT_ACTOR_ID],
+        )
+        await ownerPool.query(
+          'delete from public.client_trainer_relationships where client_id = $1',
+          [LINK_MERGE_CANONICAL_CLIENT_ID],
+        )
+        await ownerPool.query(
+          'delete from public.client_trainers where client_id = any($1::uuid[])',
+          [[LINK_MERGE_CANONICAL_CLIENT_ID, sourceClientId].filter(Boolean)],
+        )
+        if (sourceClientId !== undefined) {
+          await ownerPool.query('delete from public.clients where id = $1', [sourceClientId])
+        }
+        await ownerPool.query(
+          'delete from public.clients where id = $1',
+          [LINK_MERGE_CANONICAL_CLIENT_ID],
+        )
+        await ownerPool.query(
+          'delete from public.profiles where id = $1',
+          [LINK_MERGE_CLIENT_ACTOR_ID],
+        )
+      }
+    })
+
+    it('keeps the link untouched when the client must disconnect a trainer first', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      await ownerPool.query(
+        `
+          insert into public.profiles (id, first_name, account_role)
+          values ($1, 'Link conflict client', 'client')
+          on conflict (id) do update set account_role = excluded.account_role
+        `,
+        [LINK_CONFLICT_CLIENT_ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.clients (id, trainer_id, auth_user_id, full_name)
+          values ($1, $2, $2, 'Conflict link client')
+          on conflict (id) do update set
+            trainer_id = excluded.trainer_id,
+            auth_user_id = excluded.auth_user_id,
+            archived_at = null,
+            merged_into_client_id = null
+        `,
+        [LINK_CONFLICT_CANONICAL_CLIENT_ID, LINK_CONFLICT_CLIENT_ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.client_trainer_relationships (
+            client_id, trainer_id, connected_by
+          ) values ($1, $2, $3)
+        `,
+        [LINK_CONFLICT_CANONICAL_CLIENT_ID, OUTSIDE_TRAINER_ID, LINK_CONFLICT_CLIENT_ACTOR_ID],
+      )
+
+      let sourceClientId: string | undefined
+      try {
+        const created = await withActorTransaction(
+          runtimePool,
+          ACTOR_ID,
+          (client) => createNewClientInvitationShare(
+            client,
+            'Новая карточка без потерь',
+            LINK_CONFLICT_OPERATION_ID,
+          ),
+        )
+        sourceClientId = created.clientId
+
+        await expect(withActorTransaction(
+          runtimePool,
+          LINK_CONFLICT_CLIENT_ACTOR_ID,
+          (client) => claimClientInvitationLink(client, created.share.token),
+        )).rejects.toMatchObject({ failure: 'trainer_disconnect_required' })
+
+        const unchanged = await ownerPool.query<{
+          archived_at: Date | null
+          claimed_at: Date | null
+        }>(
+          `
+            select client.archived_at, invitation.claimed_at
+            from public.clients client
+            join public.client_invitations invitation on invitation.client_id = client.id
+            where client.id = $1 and invitation.id = $2
+          `,
+          [sourceClientId, created.share.id],
+        )
+        expect(unchanged.rows[0]).toEqual({ archived_at: null, claimed_at: null })
+      } finally {
+        await ownerPool.query(
+          'delete from public.client_trainer_relationships where client_id = $1',
+          [LINK_CONFLICT_CANONICAL_CLIENT_ID],
+        )
+        if (sourceClientId !== undefined) {
+          await ownerPool.query('delete from public.clients where id = $1', [sourceClientId])
+        }
+        await ownerPool.query(
+          'delete from public.clients where id = $1',
+          [LINK_CONFLICT_CANONICAL_CLIENT_ID],
+        )
+        await ownerPool.query(
+          'delete from public.profiles where id = $1',
+          [LINK_CONFLICT_CLIENT_ACTOR_ID],
+        )
+      }
     })
 
     it('enforces relationship foreign keys and keeps runtime writes closed', async () => {
