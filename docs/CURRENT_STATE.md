@@ -1,7 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-20. База изменений: `b31b4d69` (#1074). Frontend остаётся
+Обновлено: 2026-09-20. База изменений: `80fc3de4` (#1078). Frontend остаётся
 на Vercel, а production data plane — принятый Yandex Cloud stage stack. Yandex
 ID является единственным production-входом; app-session, main routing и native
 registration включены глобально.
@@ -14,28 +14,22 @@ Supabase из эксплуатации. До закрытия rollback-окна 
 
 ## Последняя проверенная продуктовая точка
 
-- Assistant доступен тренеру и клиенту через общий экран; клиент работает
-  только со своей карточкой. Программы остаются за общим kill switch.
+- Assistant доступен обеим ролям; клиент работает только со своей карточкой, программы остаются за общим kill switch.
 - Клиентская генерация четырёхнедельной программы работает через выбранный
   backend. Yandex API читает actor-scoped историю, цель, замеры и будущие
   занятия из PostgreSQL, использует короткие idempotent generation leases и
   вызывает тот же валидируемый YandexGPT generator вне DB-транзакции.
-- Свои упражнения поддерживают мышцы, оборудование, описание и private JPEG до
-  2 МБ. Yandex API и repository читают, создают и обновляют текстовую разметку
-  с тем же provider-neutral контрактом; изменение фото всё ещё отклоняется, а
-  объекты custom exercise media не входят в подтверждённый перенос.
-- Публичные условия и политика показывают утверждённый текст. Общий legal
-  contract сохраняет versioned acceptance и отменяемые account deletion
-  requests через выбранный Supabase или Yandex backend. Yandex API использует
-  actor-scoped RLS/RPC; UI не ветвится по имени провайдера.
+- Свои упражнения поддерживают текстовые metadata в обоих backend; изменение
+  private JPEG всё ещё отклоняется, объекты не входят в подтверждённый перенос.
+- Legal acceptance и отменяемые deletion requests работают через выбранный
+  backend с actor-scoped Yandex RLS/RPC и provider-neutral UI.
 - Production auth показывает только действие «Продолжить с Yandex ID»; старые
   email/password/reset routes возвращаются на единый вход. Связанный профиль с
   `yandex/read_write` assignment получает Yandex app-session и весь основной UI
   выбирает Yandex API без request-level fallback. Неизвестный Yandex ID получает
-  recovery/new-account handoff. При восстановлении Yandex app-session после
-  reload legacy `SIGNED_OUT` от Supabase больше не очищает активные Yandex
-  requests, поэтому legal gate завершает проверку вместо бесконечного
-  «Проверяем документы…».
+  recovery/new-account handoff. Recovery domain-ready профиля атомарно создаёт
+  identity и `yandex/read_write`; неверные credentials, неполный role root или
+  конфликт ничего не включают. Reload не сбрасывает активные Yandex requests.
 - `VITE_MAINTENANCE_MODE` выключен после выпуска и production-проверки
   обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
   `paused`: он блокирует DML старых вкладок, RPC и background writers на 38

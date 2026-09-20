@@ -153,8 +153,10 @@ environment contract. Их изменение заранее отмечаетс�
 1. Остановить записи на согласованное окно.
 2. Дождаться или безопасно остановить незавершённые producer/outbox операции.
 3. Создать и применить свежий snapshot и media delta; выполнить validate.
-4. Включить server-side assignments, Yandex app-session/routing и native
-   registration в согласованном порядке.
+4. Включить server-side assignments уже связанным профилям, затем Yandex
+   app-session/routing и native registration; recovery непривязанного
+   domain-ready профиля создаёт его assignment атомарно после проверки старых
+   credentials.
 5. Выполнить smoke клиента и тренера, затем открыть записи.
 6. Зафиксировать commit, deployment, aggregate evidence и начало окна
    стабилизации в `docs/CURRENT_STATE.md`.
