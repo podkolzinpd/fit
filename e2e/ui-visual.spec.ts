@@ -557,7 +557,7 @@ async function createStandaloneClient(
   await page.getByRole('button', { name: 'Скрыть' }).click()
 }
 
-async function openPreviewLiveWorkout(page: import('@playwright/test').Page, fresh = false) {
+async function openPreviewLiveWorkout(page: import('@playwright/test').Page, fresh = false, beforeStart?: () => Promise<void>) {
   if (fresh) await createStandaloneClient(page, 'live-notes', 'Live клиент')
   else await signIn(page, 'client@fit.local', /\/me$/)
   // Авторизация использует реальное время JWT; фиксируем часы уже после входа,
@@ -587,6 +587,7 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page, fre
   await page.getByLabel('Вес, подход 2').fill('40')
   await page.getByLabel('Повторы, подход 2').fill('10')
   await page.getByRole('button', { name: 'Сохранить' }).click()
+  await beforeStart?.()
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
@@ -1559,9 +1560,9 @@ test('workout save dark keeps its visual baseline', async ({ page }, testInfo) =
   await expectVisualBaseline(page, `workout-save-dark-${process.platform}.png`, [], false, '#1d1e21')
 })
 
-async function openWorkoutForDetailReview(page: import('@playwright/test').Page, trainer: boolean, resume = false) {
+async function openWorkoutForDetailReview(page: import('@playwright/test').Page, trainer: boolean, resume = false, beforeStart?: () => Promise<void>) {
   if (!trainer) {
-    await openPreviewLiveWorkout(page, true)
+    await openPreviewLiveWorkout(page, true, beforeStart)
     return
   }
   await signIn(page, 'trainer@fit.local', /\/today$/)
@@ -1574,6 +1575,7 @@ async function openWorkoutForDetailReview(page: import('@playwright/test').Page,
   await page.getByLabel('Повторы, подход 1').fill('10')
   await page.getByRole('button', { name: '＋ Подход' }).click()
   await page.getByRole('button', { name: /^Сохранить(?: план)?$/ }).click()
+  await beforeStart?.()
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
   if (resume) {
     const resumeAction = page.getByRole('button', { name: 'Открыть незавершённую' })
@@ -1610,7 +1612,10 @@ test('workout detail, completion and exercise history keep their visual baseline
       metric: 'weight_reps', primary_value: 382.5, reps: 9, weight_kg: 42.5,
     }]),
   }))
-  await openWorkoutForDetailReview(page, trainer)
+  await openWorkoutForDetailReview(page, trainer, false, async () => {
+    await expect(page.getByRole('button', { name: 'Начать тренировку' })).toBeVisible()
+    await expectVisualBaseline(page, `workout-detail-planned-${process.platform}.png`)
+  })
   await page.getByLabel('Фактический вес').first().fill('42.5')
   await page.getByLabel('Фактические повторы').first().fill('9')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
@@ -1649,6 +1654,17 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `workout-detail-completion-${process.platform}.png`, [], false, '#f8f5ef', 0.005)
   if (!trainer) {
+    const recordedResult = page.locator('.workout-completion-recorded')
+    await recordedResult.locator('> summary').click()
+    await expect(recordedResult).toHaveAttribute('open', '')
+    await recordedResult.scrollIntoViewIfNeeded()
+    await expect(recordedResult).toHaveScreenshot(`workout-completion-recorded-${process.platform}.png`, {
+      animations: 'disabled',
+      caret: 'hide',
+      maxDiffPixelRatio: 0.005,
+    })
+    await recordedResult.locator('> summary').click()
+    await expect(recordedResult).not.toHaveAttribute('open', '')
     await page.locator('.content').evaluate((element) => { element.scrollTop = element.scrollHeight })
     await expectVisualBaseline(page, `workout-completion-report-actions-${process.platform}.png`)
     await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })

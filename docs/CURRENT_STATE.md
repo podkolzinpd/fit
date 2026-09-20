@@ -1,6 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-20. База изменений: `14af12d8` (#1103). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
+Обновлено: 2026-09-20. База изменений: `98616b93` (#1104). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 
 ## Активная цель
@@ -11,7 +11,7 @@ Yandex ID является единственным production-входом; app
 
 - Assistant доступен обеим ролям; клиент работает только со своей карточкой, программы остаются за общим kill switch.
 - Клиентская генерация четырёхнедельной программы работает через выбранный backend. Yandex API читает actor-scoped историю, цель, замеры и будущие занятия из PostgreSQL, использует короткие idempotent generation leases и вызывает тот же валидируемый YandexGPT generator вне DB-транзакции.
-- Свои упражнения поддерживают текстовые metadata в обоих backend; изменение private JPEG всё ещё отклоняется, объекты не входят в подтверждённый перенос.
+- Свои упражнения поддерживают текстовые metadata в обоих backend; изменение private JPEG всё ещё отклоняется, объекты не входят в подтверждённый перенос. Планирование, подробный план, результат и Live используют единые статичные миниатюры упражнений 48×48 с точным первым кадром или нейтральным fallback; крупная анимация остаётся только у текущего упражнения Live и в явном просмотре техники.
 - Legal acceptance и отменяемые deletion requests работают через выбранный backend с actor-scoped Yandex RLS/RPC и provider-neutral UI.
 - Production auth показывает только действие «Продолжить с Yandex ID»; старые
   email/password/reset routes возвращаются на единый вход. Связанный профиль с

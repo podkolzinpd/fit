@@ -61,16 +61,17 @@ export function WorkoutExercise({ state, className = '', children }: PropsWithCh
   return <article className={`workout-exercise-contract workout-exercise-${state} ${className}`.trim()} data-state={state}>{children}</article>
 }
 
-export function WorkoutExerciseCompact({ title, meta, state, onClick, action, className = '' }: {
+export function WorkoutExerciseCompact({ title, meta, state, leading, onClick, action, className = '' }: {
   title: string
   meta: ReactNode
+  leading?: ReactNode
   state: Extract<WorkoutUiState, 'completed' | 'upcoming'>
   onClick?: () => void
   action?: ReactNode
   className?: string
 }) {
   const content = <>
-    <span className="workout-exercise-compact-mark" aria-hidden="true">{state === 'completed' ? '✓' : '•'}</span>
+    {leading ?? <span className="workout-exercise-compact-mark" aria-hidden="true">{state === 'completed' ? '✓' : '•'}</span>}
     <span className="workout-exercise-compact-copy"><strong>{title}</strong><span>{meta}</span></span>
     {action ?? <WorkoutStatus state={state} />}
   </>

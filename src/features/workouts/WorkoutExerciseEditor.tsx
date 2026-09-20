@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import type { BlockPreset, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
+import type { BlockPreset, ExerciseSnapshot, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
 import { formatLocalDate } from '../../shared/local-date'
 import { RPE_OPTIONS } from '../../shared/rpe'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, compactExerciseDetailSummary, groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, previousResultLine, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 import { OverflowMenu, useConfirm } from '../../shared/ui'
-import { ArrowDownIcon, ArrowUpIcon, CloseIcon, PlayIcon } from '../../shared/icons'
+import { ArrowDownIcon, ArrowUpIcon, CloseIcon } from '../../shared/icons'
 import { isRowingExerciseRef } from '../../shared/run-metrics'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
 import { WorkoutExercise, WorkoutSetRow } from './WorkoutSurface'
+import { ExerciseThumbnail, findCatalogExercise } from '../exercises'
 
 // Числовое поле, которое МОЖНО очистить курсором. Контролируемый input с value
 // снаружи «возвращал» старое число при пустом вводе (стереть можно было только
@@ -85,6 +86,7 @@ interface WorkoutExerciseEditorProps {
   onReplaceExercise: (index: number) => void
   onOpenTechnique?: (exercise: WorkoutExerciseDraft) => void
   canOpenTechnique?: (exercise: WorkoutExerciseDraft) => boolean
+  exerciseCatalog?: readonly ExerciseSnapshot[]
   showTrainerComments?: boolean
   entryMode?: 'plan' | 'fact'
   /** Верхний вход в каталог уже есть у родительской формы. */
@@ -106,7 +108,7 @@ function draftExerciseKey(exercise: WorkoutExerciseDraft, index: number) {
   return exercise.blockId ?? `${exercise.source}:${exercise.ref}:${index}`
 }
 
-export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true }: WorkoutExerciseEditorProps) {
+export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
   const [expandedExercises, setExpandedExercises] = useState<Set<string>>(() => new Set())
@@ -177,6 +179,11 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       if (next.has(key)) next.delete(key); else next.add(key)
       return next
     })
+  }
+  function exerciseThumbnail(exercise: WorkoutExerciseDraft) {
+    const resolved = findCatalogExercise(exerciseCatalog, exercise) ?? exercise
+    const canOpen = Boolean(onOpenTechnique && (canOpenTechnique?.(exercise) ?? true))
+    return <ExerciseThumbnail exercise={resolved} onOpenTechnique={canOpen ? () => onOpenTechnique?.(exercise) : undefined} />
   }
   function updateComment(exerciseIndex: number, comment: string) {
     commitExercises(latestExercises.current.map((exercise, current) => current === exerciseIndex ? { ...exercise, trainerComment: comment || undefined } : exercise))
@@ -272,12 +279,13 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     const compactSummary = compactExerciseDetailSummary(exercise.inputKind, exercise.sets, 'planned', showRpe, exercise.ref)
     return <WorkoutExercise state="planned" className="exercise planned-exercise" key={`${exercise.ref}-${exerciseIndex}`}>
       <header className="planned-exercise-head compact-editor-exercise-head">
+        {exerciseThumbnail(exercise)}
         <button type="button" className="compact-editor-exercise-toggle" aria-expanded={expanded} onClick={() => toggleExercise(exercise, exerciseIndex)}>
           <span className="compact-editor-exercise-title"><strong>{exercise.name}</strong><span className="compact-editor-chevron" aria-hidden="true" /></span>
           <span className="compact-editor-exercise-summary">{compactSummary}</span>
           {detailsHint && <span className="compact-editor-exercise-options">{detailsHint}</span>}
         </button>
-        <span className="exercise-head-actions">{onOpenTechnique && (canOpenTechnique?.(exercise) ?? true) && <button type="button" className="planned-technique-button" aria-label={`Посмотреть технику: ${exercise.name}`} onClick={() => onOpenTechnique(exercise)}><PlayIcon /></button>}{reorder}<OverflowMenu items={[
+        <span className="exercise-head-actions">{reorder}<OverflowMenu items={[
         ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
         { label: 'Настройки упражнения', onClick: () => setSettingsExerciseIndex(exerciseIndex) },
         { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exerciseIndex) },
@@ -359,7 +367,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
           </div>
         </OptionalDetails>
         {/* Список упражнений блока с удалением (значения — ниже по кругам). */}
-        <div className="block-exercises">{block.items.map(({ exercise, index }) => <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><div className="block-exercise-head"><strong>{exercise.name}</strong><span className="exercise-head-actions">{onOpenTechnique && (canOpenTechnique?.(exercise) ?? true) && <button type="button" className="planned-technique-button" aria-label={`Посмотреть технику: ${exercise.name}`} onClick={() => onOpenTechnique(exercise)}><PlayIcon /></button>}<OverflowMenu items={[
+        <div className="block-exercises">{block.items.map(({ exercise, index }) => <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><div className="block-exercise-head">{exerciseThumbnail(exercise)}<strong>{exercise.name}</strong><span className="exercise-head-actions"><OverflowMenu items={[
           { label: 'Заменить', onClick: () => onReplaceExercise(index) },
           { label: 'Удалить', danger: true, onClick: () => removeExercise(index) },
         ]} /></span></div>{showTrainerComments && <OptionalDetails className="exercise-comment-options" summary="Комментарий" initialOpen={Boolean(exercise.trainerComment)}>
