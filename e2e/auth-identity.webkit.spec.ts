@@ -202,7 +202,7 @@ test('Yandex ID app session restores and logs out in mobile WebKit', async ({ pa
   await expect(page.evaluate(() => window.localStorage.getItem('fit.yandexAppSession.v1'))).resolves.toBeNull()
 })
 
-test('Yandex ID restore failure leaves loading and allows a local reset in mobile WebKit', async ({ page }) => {
+test('Yandex ID restore failure leaves loading, exposes diagnostics and allows a local reset in mobile WebKit', async ({ page }, testInfo) => {
   test.skip(
     process.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true',
     'Run with the Yandex app-session switch to verify the default-off route.',
@@ -220,9 +220,12 @@ test('Yandex ID restore failure leaves loading and allows a local reset in mobil
   await page.goto('/auth/yandex/session')
 
   await expect(page.getByRole('alert')).toContainText('Не удалось подключиться к Yandex Cloud stage.')
+  await expect(page.getByRole('alert')).toContainText(/FIT-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}/)
+  await expect(page.getByRole('button', { name: 'Скопировать диагностику' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Повторить' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Сбросить сессию Yandex ID' })).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('yandex-session-error-diagnostics-390.png'), fullPage: true })
 
   await page.getByRole('button', { name: 'Сбросить сессию Yandex ID' }).click()
   await expect(page).toHaveURL(/\/auth$/)

@@ -5,6 +5,7 @@ import { invokeLegacyCloudFunction } from './legacy-cloud-functions'
 import type { TrainingSummaryTriggerReason } from '../../shared/domain'
 import { verifiedSupabaseAccessToken } from './verified-supabase-session'
 import { yandexAppSessionTransport } from '../yandex-app-session-transport'
+import { fetchWithRequestDiagnostics } from './request-diagnostics'
 
 const summaryFunctionUrl = 'https://functions.yandexcloud.net/d4eq75uad5lps1chbidk'
 
@@ -40,7 +41,7 @@ export const trainingSummaryQueries = {
     const appSession = yandexAppSessionTransport()
     if (appSession) {
       try {
-        const response = await fetch(`${appSession.apiBaseUrl}/v1/clients/${clientId}/training-summaries/generate`, {
+        const response = await fetchWithRequestDiagnostics(globalThis.fetch, `${appSession.apiBaseUrl}/v1/clients/${clientId}/training-summaries/generate`, {
           method: 'POST',
           headers: { 'content-type': 'application/json', 'x-fit-session': appSession.sessionToken },
           body: JSON.stringify({ client_id: clientId, period_start: periodStart, period_end: periodEnd, force, trigger_reason: triggerReason }),

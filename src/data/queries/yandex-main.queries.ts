@@ -1,4 +1,5 @@
 import { LIVE_WORKOUT_REQUEST_TIMEOUT_MS } from './auth-fetch'
+import { fetchWithRequestDiagnostics } from './request-diagnostics'
 import { fetchWithTimeout } from './request-timeout'
 
 export type YandexMainHttpMethod = 'DELETE' | 'PATCH' | 'POST' | 'PUT'
@@ -22,8 +23,13 @@ export function createYandexMainQueries(
   sessionToken: string,
 ): YandexMainQueries {
   const sessionHeaders = { 'x-fit-session': sessionToken }
+  const request = (path: string, init?: RequestInit) => fetchWithRequestDiagnostics(
+    globalThis.fetch,
+    endpoint(apiBaseUrl, path),
+    init,
+  )
   return {
-    read: (path) => fetch(endpoint(apiBaseUrl, path), {
+    read: (path) => request(path, {
       cache: 'no-store',
       headers: sessionHeaders,
     }),
@@ -36,9 +42,15 @@ export function createYandexMainQueries(
           : { ...sessionHeaders, 'content-type': 'application/json' },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       }
-      return isLiveWorkoutWrite(path)
-        ? fetchWithTimeout(fetch, endpoint(apiBaseUrl, path), init, LIVE_WORKOUT_REQUEST_TIMEOUT_MS, 'Live workout request timed out')
-        : fetch(endpoint(apiBaseUrl, path), init)
+      if (!isLiveWorkoutWrite(path)) return request(path, init)
+      const timedFetch: typeof fetch = (input, requestInit) => fetchWithTimeout(
+        globalThis.fetch,
+        input,
+        requestInit,
+        LIVE_WORKOUT_REQUEST_TIMEOUT_MS,
+        'Live workout request timed out',
+      )
+      return fetchWithRequestDiagnostics(timedFetch, endpoint(apiBaseUrl, path), init)
     },
   }
 }

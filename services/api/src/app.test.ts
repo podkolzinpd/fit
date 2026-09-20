@@ -1491,6 +1491,27 @@ describe('browser pilot CORS', () => {
     })
     expect(crossSiteRequest.statusCode).toBe(403)
   })
+
+  it('echoes a valid correlation ID and replaces an invalid one', async () => {
+    const app = buildApp({ logger: false })
+    apps.push(app)
+    const requestId = '18940d82-9075-48d2-a847-8feee301b4d7'
+
+    const correlated = await app.inject({
+      method: 'GET',
+      url: '/health',
+      headers: { 'x-fit-request-id': requestId },
+    })
+    expect(correlated.headers['x-fit-request-id']).toBe(requestId)
+
+    const generated = await app.inject({
+      method: 'GET',
+      url: '/health',
+      headers: { 'x-fit-request-id': 'user@example.com' },
+    })
+    expect(generated.headers['x-fit-request-id']).toMatch(/^[0-9a-f-]{36}$/)
+    expect(generated.headers['x-fit-request-id']).not.toBe('user@example.com')
+  })
 })
 
 function buildDatabasePool(options: { connectError?: Error } = {}): {
