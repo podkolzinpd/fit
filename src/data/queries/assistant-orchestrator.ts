@@ -1,4 +1,5 @@
 import { supabase } from './client'
+import { yandexAppSessionTransport } from '../yandex-app-session-transport'
 
 // Public endpoint of the authenticated Cloud Function. The endpoint accepts
 // only a Supabase JWT. Production deliberately does not use a Vercel runtime
@@ -41,6 +42,16 @@ export function assistantOrchestratorUrl(): string | undefined {
 }
 
 export async function sendAssistantTurn(conversationId: string, turnId: string, message: string): Promise<AssistantOrchestratorReply> {
+  const appSession = yandexAppSessionTransport()
+  if (appSession) {
+    const response = await fetch(`${appSession.apiBaseUrl}/v1/assistant/turn`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-fit-session': appSession.sessionToken },
+      body: JSON.stringify({ conversation_id: conversationId, turn_id: turnId, message }),
+    })
+    if (!response.ok) throw new Error('assistant_request_failed')
+    return await response.json() as AssistantOrchestratorReply
+  }
   const url = assistantOrchestratorUrl()
   if (url === undefined) throw new Error('assistant_unavailable')
   const { data: { session } } = await supabase.auth.getSession()

@@ -4,6 +4,7 @@ import { toJson } from './json'
 import { invokeLegacyCloudFunction } from './legacy-cloud-functions'
 import type { TrainingSummaryTriggerReason } from '../../shared/domain'
 import { verifiedSupabaseAccessToken } from './verified-supabase-session'
+import { yandexAppSessionTransport } from '../yandex-app-session-transport'
 
 const summaryFunctionUrl = 'https://functions.yandexcloud.net/d4eq75uad5lps1chbidk'
 
@@ -36,6 +37,20 @@ export const trainingSummaryQueries = {
     force: boolean,
     triggerReason: TrainingSummaryTriggerReason,
   ) => {
+    const appSession = yandexAppSessionTransport()
+    if (appSession) {
+      try {
+        const response = await fetch(`${appSession.apiBaseUrl}/v1/clients/${clientId}/training-summaries/generate`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-fit-session': appSession.sessionToken },
+          body: JSON.stringify({ client_id: clientId, period_start: periodStart, period_end: periodEnd, force, trigger_reason: triggerReason }),
+        })
+        if (!response.ok) return { data: null, error: { context: response } }
+        return { data: await response.json() as { error?: string; cached?: boolean; data?: { generated_at?: string } }, error: null }
+      } catch (error) {
+        return { data: null, error: error instanceof Error ? error : new Error('summary_function_request_failed') }
+      }
+    }
     const bridged = await invokeLegacyCloudFunction<{
       error?: string
       cached?: boolean

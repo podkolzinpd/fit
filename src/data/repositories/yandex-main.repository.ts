@@ -503,12 +503,17 @@ function workoutDraft(draft: WorkoutDraft): Record<string, unknown> {
   }
 }
 
+// Избранное, перенесённое из Supabase (напрямую созданное там или через
+// снэпшот тенант-миграции), хранит exercises как есть: toJson() на
+// Supabase-стороне сериализует через JSON.stringify, который отбрасывает
+// ключи со значением undefined — там, где Yandex-сторона всегда пишет явный
+// null. Опциональные поля поэтому принимают и null, и отсутствие ключа.
 const favoriteWorkoutExerciseSchema = z.object({
   sourceExerciseId: uuid.nullable().optional(),
   position: z.number(),
   source: z.enum(['system', 'custom']),
   ref: z.string(),
-  customExerciseId: uuid.nullable(),
+  customExerciseId: uuid.nullable().optional(),
   name: z.string(),
   muscleGroup: z.enum(['legs', 'glutes', 'chest', 'back', 'shoulders', 'arms', 'core', 'cardio', 'other']),
   inputKind: z.enum(['strength', 'distance', 'reps', 'duration']),
@@ -519,16 +524,16 @@ const favoriteWorkoutExerciseSchema = z.object({
   restBetweenExercisesSec: z.number(),
   restBetweenRoundsSec: z.number(),
   restBetweenSetsSec: z.number(),
-  trainerComment: z.string().nullable(),
+  trainerComment: z.string().nullable().optional(),
   sets: z.array(z.object({
     sourceSetId: uuid.nullable().optional(),
     position: z.number(),
-    weightKg: z.number().nullable(),
-    reps: z.number().nullable(),
-    durationMin: z.number().nullable(),
-    durationSec: z.number().nullable(),
-    distanceKm: z.number().nullable(),
-    rpe: z.number().nullable(),
+    weightKg: z.number().nullable().optional(),
+    reps: z.number().nullable().optional(),
+    durationMin: z.number().nullable().optional(),
+    durationSec: z.number().nullable().optional(),
+    distanceKm: z.number().nullable().optional(),
+    rpe: z.number().nullable().optional(),
   })),
 })
 const favoriteWorkoutSchema = z.object({
