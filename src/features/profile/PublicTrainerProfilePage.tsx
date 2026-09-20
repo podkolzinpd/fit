@@ -47,6 +47,7 @@ export function PublicTrainerProfilePage() {
         : <p className="trainer-contact-unavailable">Тренер временно не принимает новых клиентов</p>} />}
     </AsyncView>
     {photoIndex !== null && photoItems[0] && <FullscreenImageViewer src={photoItems[0].src}
-      alt={photoItems[0].alt} images={photoItems} initialIndex={photoIndex} label="Фотографии тренера" onClose={() => setPhotoIndex(null)} />}
+      alt={photoItems[0].alt} images={photoItems} initialIndex={photoIndex}
+      label={photoItems.length > 1 ? 'Фотографии тренера' : 'Фото тренера'} onClose={() => setPhotoIndex(null)} />}
   </Page>
 }

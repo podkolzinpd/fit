@@ -97,13 +97,13 @@ describe('PublicTrainerProfilePage', () => {
     renderPage()
 
     fireEvent.click(await screen.findByRole('button', { name: 'Открыть фото тренера Анна Иванова' }))
-    const dialog = screen.getByRole('dialog', { name: 'Фотографии тренера' })
+    const dialog = screen.getByRole('dialog', { name: 'Фото тренера' })
     expect(dialog).toBeVisible()
     expect(screen.getByAltText('Фото тренера Анна Иванова')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Увеличить' }))
     expect(screen.getByText('150%')).toBeVisible()
     fireEvent.keyDown(window, { key: 'Escape' })
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Фотографии тренера' })).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Фото тренера' })).not.toBeInTheDocument())
   })
 
   it('opens the selected gallery photo and moves to the next one', async () => {

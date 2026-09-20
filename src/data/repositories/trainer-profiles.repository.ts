@@ -32,8 +32,14 @@ export const trainerProfilesRepository: TrainerProfilesRepository = {
     if (result.error) throw repositoryError(result.error)
     return parseTrainerProfile(result.data)
   },
-  uploadPhoto() {
-    return Promise.reject(new RepositoryError('service_unavailable', 'Галерея временно недоступна. Попробуйте позднее.'))
+  async uploadPhoto(draft, photo) {
+    // Local/Supabase development keeps its existing single-photo contract.
+    // Production uses the Yandex repository and the three-photo gallery.
+    const result = await supabase.rpc('save_trainer_profile_draft', {
+      p_draft: toJson({ ...draft, avatarDataUrl: photo.image.dataUrl, photos: [] }),
+    })
+    if (result.error) throw repositoryError(result.error)
+    return parseTrainerProfile(result.data)
   },
   reorderPhotos() {
     return Promise.reject(new RepositoryError('service_unavailable', 'Галерея временно недоступна. Попробуйте позднее.'))

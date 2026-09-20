@@ -52,6 +52,20 @@ describe('public trainer profile backend selection', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  it('keeps the existing single-photo path in local Supabase development', async () => {
+    mocks.rpc.mockResolvedValue({ data: profile, error: null })
+    const image = {
+      dataUrl: 'data:image/jpeg;base64,/9j/', mimeType: 'image/jpeg' as const,
+      width: 1, height: 1, sizeBytes: 3,
+    }
+
+    await trainerProfilesRepository.uploadPhoto(profile.draft, { image, thumbnail: image })
+
+    expect(mocks.rpc).toHaveBeenCalledWith('save_trainer_profile_draft', {
+      p_draft: { ...profile.draft, avatarDataUrl: image.dataUrl, photos: [] },
+    })
+  })
+
   it('reads only Yandex when main routing is enabled', async () => {
     mocks.config = { apiBaseUrl: 'https://api.example.test', clientId: 'client-id' }
     const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(profile), {
