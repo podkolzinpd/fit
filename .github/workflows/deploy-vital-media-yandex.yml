@@ -57,6 +57,23 @@ jobs:
         env:
           VITAL_MEDIA_KEY: ${{ secrets.VITAL_MEDIA_KEY }}
         run: node scripts/prepare-vital-media.mjs
+      - name: Install media analysis dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ffmpeg
+      - name: Analyze safe media canvas bounds
+        run: |
+          mkdir -p artifacts/exercise-media-presentation
+          node scripts/generate-exercise-media-presentation.mjs \
+            --require-private \
+            --output artifacts/exercise-media-presentation/exercise-media-presentation.generated.json
+      - name: Preserve media presentation metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: exercise-media-presentation
+          path: artifacts/exercise-media-presentation/exercise-media-presentation.generated.json
+          if-no-files-found: error
+          retention-days: 3
       - name: Install Yandex Cloud CLI
         run: |
           curl --fail --silent --show-error --location \
