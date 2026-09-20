@@ -1315,6 +1315,13 @@ for (const viewport of mobileViewports) {
         const firstPairHeights = await page.locator('.schedule-week-day').evaluateAll((days) => days.slice(0, 2).map((day) => day.getBoundingClientRect().height))
         expect(firstPairHeights[0]).toBe(firstPairHeights[1])
         expect(firstPairHeights[0]).toBeGreaterThanOrEqual(148)
+        const scheduleHint = page.getByRole('button', { name: 'Понятно' })
+        if (await scheduleHint.isVisible()) await scheduleHint.click()
+        await page.getByRole('button', { name: '2 недели', exact: true }).click()
+        await expect(page.locator('.schedule-fortnight-day')).toHaveCount(14)
+        const firstWeekHeights = await page.locator('.schedule-fortnight-day').evaluateAll((days) => days.slice(0, 7).map((day) => day.getBoundingClientRect().height))
+        expect(new Set(firstWeekHeights.map(Math.round)).size).toBe(1)
+        expect(firstWeekHeights[0]).toBeGreaterThanOrEqual(148)
       }
       await expectNoHorizontalOverflow(page)
     }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
-import { formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes } from './schedule-presentation'
+import { compactScheduleClientName, compactScheduleEventLabel, compactScheduleTime, formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes } from './schedule-presentation'
 
 function workout(overrides: Partial<Workout> = {}): Workout {
   return {
@@ -31,6 +31,16 @@ describe('schedule presentation', () => {
 
   it('formats the selected date as an explicit day context', () => {
     expect(formatScheduleDateLabel(localDate('2026-08-26'))).toBe('Среда, 26 августа')
+  })
+
+  it('keeps time and a short client name readable in a seven-column calendar', () => {
+    expect(compactScheduleTime('08:00:00')).toBe('8')
+    expect(compactScheduleTime('18:30:00')).toBe('18:30')
+    expect(compactScheduleTime(null)).toBe('—')
+    expect(compactScheduleClientName('Анна Смирнова')).toBe('Ан')
+    expect(compactScheduleClientName('Ян')).toBe('Ян')
+    expect(compactScheduleEventLabel('08:00:00', 'Анна Смирнова')).toBe('8\u2009Ан')
+    expect(compactScheduleEventLabel('18:30:00', 'Анна Смирнова')).toBe('18:30\u2009А')
   })
 
   it('keeps two exercises and reports the remaining count', () => {
