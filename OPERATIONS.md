@@ -555,9 +555,9 @@ Batch `linked-ready` заранее включает уже связанные �
 domain-ready профилю без Yandex identity assignment заранее не нужен: после
 успешной проверки прежних credentials функция recovery в одной транзакции
 проверяет role-specific root, связывает Yandex identity, создаёт включённый
-`yandex/read_write` assignment и расходует handoff. Неверные credentials не
-вызывают эту транзакцию; отсутствующий root и identity/profile conflict
-откатывают её целиком.
+`yandex/read_write` assignment, первую app-session и расходует handoff.
+Неверные credentials не вызывают эту транзакцию; отсутствующий root,
+identity/profile conflict или ошибка сессии откатывают её целиком.
 
 Без точного `true` вход через Yandex ID выключен. Публичного UUID allowlist для
 app-session больше нет: настоящая персональная граница — связанная строка

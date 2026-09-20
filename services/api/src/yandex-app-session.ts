@@ -9,7 +9,7 @@ import {
   withYandexAppSessionTransaction,
 } from './db/yandex-app-transaction.js'
 
-const APP_SESSION_TTL_MS = 14 * 24 * 60 * 60 * 1_000
+export const YANDEX_APP_SESSION_TTL_MS = 14 * 24 * 60 * 60 * 1_000
 
 interface RevokedRow extends QueryResultRow {
   revoked: boolean
@@ -43,7 +43,7 @@ export class DatabaseYandexAppSessionIssuer implements YandexAppSessionIssuer {
 
   issue(subjectHash: string): Promise<YandexAppSessionResponse | undefined> {
     const sessionToken = createPilotSessionToken()
-    const expiresAt = new Date(this.now().getTime() + APP_SESSION_TTL_MS)
+    const expiresAt = new Date(this.now().getTime() + YANDEX_APP_SESSION_TTL_MS)
 
     return withIssuedYandexAppSessionTransaction(
       this.pool,
