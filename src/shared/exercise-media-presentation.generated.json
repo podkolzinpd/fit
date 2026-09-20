@@ -1,0 +1,7215 @@
+{
+  "version": 1,
+  "items": {
+    "/exercises/reference/close-grip-lat-pulldown.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(96 96 96)",
+      "sha256": "fb9296bc0adba543a709d6f85930bcb0735776a3bd19ef4cdc7caf9fe5e9768c"
+    },
+    "/exercises/vital-pro/vital-45-degree-hyperextension-machine-ex181.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "147985e2392a3d0cabef84d4018ed857139e73a154c6a8f23a5f9f994931ea3b"
+    },
+    "/exercises/vital-pro/vital-90-90-rotation-ex639.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "6bd5585b3fe1c63c30bf39b3d9648c035034b37e9383dcbe1aea19f13ab7d338"
+    },
+    "/exercises/vital-pro/vital-ab-wheel-rollout-ex286.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "496d2ff8f877c843116a26763b6069fae16c6207c8032e30ef8926077cb2f5fc"
+    },
+    "/exercises/vital-pro/vital-air-bike-sprint-ex052.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "688438e4ead76a06ef80e26684c7abb8037408858508f4fcd5d8050a84fc62b3"
+    },
+    "/exercises/vital-pro/vital-alternating-dumbbell-curl-ex127.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "21fff07fd066e9a7a69aa15b2489b3cd5881cf13830bffe4294d1daa206dcd43"
+    },
+    "/exercises/vital-pro/vital-archer-pushup-ex128.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "28c4f0fda7fcb692c486538ec72ee22c65afd48a4b0c7fc71fd868205721e196"
+    },
+    "/exercises/vital-pro/vital-arnold-press-dumbbell-ex085.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "c9d417201ab5fa268099d08d15314e32ba26f3937f8b3094127130b873dde837"
+    },
+    "/exercises/vital-pro/vital-assisted-pistol-squat-ex729.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "c62f3ba3834a42346624aa43826eddd6a871812b1fc47759b3d1eaae70658f9e"
+    },
+    "/exercises/vital-pro/vital-assisted-pullup-ex100.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "7a21db6c18bf473a7ec336c79223680a29d56380fe1d6623f0c06d13f2af5319"
+    },
+    "/exercises/vital-pro/vital-assisted-pullup-ex763.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "7a21db6c18bf473a7ec336c79223680a29d56380fe1d6623f0c06d13f2af5319"
+    },
+    "/exercises/vital-pro/vital-band-lunge-ex562.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "3bea6bf9a8a9731c558ede36cf1354af1ca1f1cef95c6c949da06c4d29f56664"
+    },
+    "/exercises/vital-pro/vital-band-pushup-ex008.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "1b3070e5e5ab66409f20eab87a44c1b448ebb12bb753e72dbacfb478b17ab51e"
+    },
+    "/exercises/vital-pro/vital-banded-front-squat-ex567.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "120639c42125ad6c299531edd4ff867956808829d13cc4911333fd88bd44c96b"
+    },
+    "/exercises/vital-pro/vital-banded-glute-kick-ex568.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "a74016825870ab905302bc48a51a00720d5827d1c780111ec9ba212e77e46bc1"
+    },
+    "/exercises/vital-pro/vital-banded-lateral-raise-ex272.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "96315de706abf7ac66fb072052f0868e5a8ec73046e98ad2b518c7c9a700a528"
+    },
+    "/exercises/vital-pro/vital-banded-one-arm-row-ex571.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "a5cf1db3e6117e2331898f2c03ff2b2d6b08e1ea10d4c298d116829c9d6b230d"
+    },
+    "/exercises/vital-pro/vital-banded-overhead-press-ex182.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(129 129 129)",
+      "sha256": "581c60d1f4d314213ba20baf6e11ab0d4e2f50bf5a8fe9320cbbb50719c851be"
+    },
+    "/exercises/vital-pro/vital-banded-pull-apart-ex183.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "b67e7e3e10b3f1e0d0de1c50c51dbee70e5573a8ad741f07ec03732a2fc3943d"
+    },
+    "/exercises/vital-pro/vital-banded-seated-abduction-ex239.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "d3e0c03e33b64e2e429f3c38f6e5901a0d88dde372f7c548bc9859018ded0e3c"
+    },
+    "/exercises/vital-pro/vital-banded-seated-row-ex184.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(141 141 141)",
+      "sha256": "2ae457149f1b9fcd3130901bbbd5dd8fa882173223421484dfd35612cfb56b0d"
+    },
+    "/exercises/vital-pro/vital-barbell-bench-press-flat-ex041.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "aa8714d8366aafc977c1fef3e2b7ac34b61109c200b43e0f89b64f2b8b04d8ac"
+    },
+    "/exercises/vital-pro/vital-barbell-bench-wide-grip-press-ex405.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "b00e37c21c4ae3920b355c60053b39faa533906ef36f72cbb5749b1ca30cf241"
+    },
+    "/exercises/vital-pro/vital-barbell-bodyweight-squat-ex053.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "5a8a7660eee041269a617264e87297f4ff9a500ba4153f2af86cad6e4c419228"
+    },
+    "/exercises/vital-pro/vital-barbell-bulgarian-split-squat-ex054.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "123005b2ec5c4ce8204b7d1dbd06f62e0a0e81c9d9e29d44eb1db023d44f10db"
+    },
+    "/exercises/vital-pro/vital-barbell-curl-standard-ex009.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "3ac1a2686906492d3a9ac3699c6829d0f000916c5e625e820b35ae07231f12c3"
+    },
+    "/exercises/vital-pro/vital-barbell-deadlift-ex032.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b065ef5b341c0dadf816730f602c9af5919a739b4f38d13dc6bde4f34b82b245"
+    },
+    "/exercises/vital-pro/vital-barbell-front-squat-ex055.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "029bc3f8873818d061f516fbef94e1aaeec6cf78433b994cb080d3fd195e7eb7"
+    },
+    "/exercises/vital-pro/vital-barbell-glute-bridge-ex533.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "c90afad94f67f01d456f95875705dea4deeeb3691db0598186ef51c2338b7ed3"
+    },
+    "/exercises/vital-pro/vital-barbell-hip-thrust-ex056.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "35b242c6416a1ef00c268e8b1f47ca44df7d7b2cfa1387e0b51df5b88415db63"
+    },
+    "/exercises/vital-pro/vital-barbell-hold-ex010.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "be2869710df634952dc56f6342888be886845f8f85cf987869f0a3b6af2878b9"
+    },
+    "/exercises/vital-pro/vital-barbell-lunge-ex577.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "aa72c1a7051937157871c62ee495de76dc01a55738b0da6752b74866f7c56acd"
+    },
+    "/exercises/vital-pro/vital-barbell-overhead-press-standing-ex086.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "39225c0889e8a6422bdd159017f9f8df360dee7a2321e8f7783728459d6686ac"
+    },
+    "/exercises/vital-pro/vital-barbell-rdl-ex059.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d624405a0782e51e4bc0deb7bc1a7e1bfb4842aa91e4a2cefb538ee61ed75838"
+    },
+    "/exercises/vital-pro/vital-barbell-reverse-lunge-ex058.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "432a1e4760bff27931bb6a82aaf2f46a3efc2f157e174d4fc42a89cd1aeada00"
+    },
+    "/exercises/vital-pro/vital-barbell-row-ex644.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "2917a70bff9e3ed41cfdf819eeacb5bf97417cc7b54a762d720c610e71488e00"
+    },
+    "/exercises/vital-pro/vital-barbell-shrug-ex029.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "2e8f83bfb1a0888d30be415584fdd81ca4efcfdde585dd8b821d20c3933e88da"
+    },
+    "/exercises/vital-pro/vital-barbell-skull-crusher-ex746.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "81ef3bd92f8a1575864c13459b5c8433a55012e6d2d0155e45d2140f9237ce5c"
+    },
+    "/exercises/vital-pro/vital-barbell-standing-calf-raise-ex240.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "4a18bdde9bd0275fdf4b137fa53133165892a3d2f1df0338e2bc5ddff7db98b0"
+    },
+    "/exercises/vital-pro/vital-barbell-static-lunge-ex578.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "44641b0b3b33b69af37c9f372a7d0719e7c7d6e3eb92912fc6a79a7e8d84a79a"
+    },
+    "/exercises/vital-pro/vital-barbell-stiff-deadlift-ex579.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "b2105dc277ea5938f48a67ffb8d48d105ed0ccb66f4c3220300a75e5214a778e"
+    },
+    "/exercises/vital-pro/vital-barbell-upright-row-ex087.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "2eae5d69d5ab4bf0d6e2576e101c0259d7821e3b7f5d074836c31fee6d5779d2"
+    },
+    "/exercises/vital-pro/vital-bear-crawl-ex206.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "b0eddb32aae5c4e766f616dcee9649d7e05b3c2eef8d24b74e7b4fcbcad227b7"
+    },
+    "/exercises/vital-pro/vital-bear-hold-ex646.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "627d31fc30771f22a6b48b63eb7a7389e119392c9e5858ba5e703c77f046a866"
+    },
+    "/exercises/vital-pro/vital-bench-abs-crunch-ex580.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "f2e7dbb55de8746dd4dd4055ad5d0c613e12d7641a26c9d0f1912ecb46dbb0b7"
+    },
+    "/exercises/vital-pro/vital-bent-over-dumbbell-row-ex186.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "2fba0b639fe2108b30e6959432cb1d11c8f5292b88adb145600ea3b540139feb"
+    },
+    "/exercises/vital-pro/vital-biceps-curl-ex131.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "372f0fb98a2c3ef41d654daa26b9b112e0d398173cbd59a68e1ac5ead120bfbe"
+    },
+    "/exercises/vital-pro/vital-bicycle-crunch-ex132.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "4352fb07aa48780dac14500e9800035487adbcef2becc0bdefc0914a1e40f363"
+    },
+    "/exercises/vital-pro/vital-bird-dog-ex343.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "09903bd0ceeb537368d08ea0d14dbf119f406d1164df6d5ab06ecf5719b1dd92"
+    },
+    "/exercises/vital-pro/vital-bodyweight-squat-ex290.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(140 140 140)",
+      "sha256": "89dc18317536ba3082aca02e608078a7d6af7799b15bd94dff431333bbfa80d7"
+    },
+    "/exercises/vital-pro/vital-box-jump-ex207.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "5248b7cc7ee50d25b7892ea65be476ff1b6113a380fe9752411827f87a1a23c4"
+    },
+    "/exercises/vital-pro/vital-bulgarian-split-squat-ex242.jpg": {
+      "crop": [
+        0,
+        16.4815,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "0024e2c323740208e1aa54a1686cbbec2f896e4f544e3645c0c17081f84022e0"
+    },
+    "/exercises/vital-pro/vital-burpees-ex292.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d4746580e1676f33fbce049f3d24294968c4d8b6752825ef5296331cf0371b78"
+    },
+    "/exercises/vital-pro/vital-butt-kick-ex347.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "a97b3b40308f1810efcf6d7ff1cfc91ca3bf17e7b9e0f9f0247ad1f75921d3e3"
+    },
+    "/exercises/vital-pro/vital-cable-crossover-ex650.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "d6c36ed4977cc87b20273ca87c8206a27891767c739f113cffc0d8fac7a038f7"
+    },
+    "/exercises/vital-pro/vital-cable-crunch-ex101.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "6824f88399ee796ad8656a77179e94cdfd3c518a423fae35d82c736154006d41"
+    },
+    "/exercises/vital-pro/vital-cable-curl-straight-bar-ex011.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d7b462fdcc1e6e967ecd0b8fc9f4c57d134a5f54231dd7163debde271d44f23a"
+    },
+    "/exercises/vital-pro/vital-cable-face-pull-ex030.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "14b49acd392d1c9f411387630ad753f546f8a99fb07c4b48418d4ac6317015b6"
+    },
+    "/exercises/vital-pro/vital-cable-hip-abduction-ex243.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "7ca7c05d083b98cba66301bd530cb8e7d78a49bb99635ea42628a5fc127ff260"
+    },
+    "/exercises/vital-pro/vital-cable-lateral-raise-ex134.jpg": {
+      "crop": [
+        0,
+        12.2222,
+        0,
+        11.4815
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "5ba732accc552e44cf1b1266fcbe0ab4683b59c1c75403c70954618feb79aa93"
+    },
+    "/exercises/vital-pro/vital-cable-leg-kickback-ex060.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "197d78a993193033f933c0be703b131dd7b5cf67f5ee648781a2e56074a956eb"
+    },
+    "/exercises/vital-pro/vital-cable-low-to-high-ex770.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "fe348af319b0d94b4a17b8785eddf28747632a8e0c7a28b5f4a6e627a4f65203"
+    },
+    "/exercises/vital-pro/vital-cable-overhead-triceps-extension-ex137.jpg": {
+      "crop": [
+        0,
+        21.8519,
+        0,
+        21.8519
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "e501d0c6d3619e09485958bf1daaeae364d1ee7af59e10e9b775d09f6b9fbdba"
+    },
+    "/exercises/vital-pro/vital-cable-rear-delt-fly-ex771.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "69addc4c5b9d8d5cb33d00cdaa6c7f3aa60c412fb62db6b772031d3a5d190114"
+    },
+    "/exercises/vital-pro/vital-cable-standing-chest-press-ex734.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "978783f44d7bffe1a554240610c20f8772d0b56c2d84fa3623c6e9bcf908ce08"
+    },
+    "/exercises/vital-pro/vital-cable-straight-arm-pulldown-ex751.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "e293839aabddd14f81d8af82d127a9b882f2d07dbb8409f668d7bb1393c3a766"
+    },
+    "/exercises/vital-pro/vital-cable-tricep-kickback-ex733.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "87beb1d33e20a5da76617e5a6f4e178e2abd46cb4f102e08bcc94f21c15c9a97"
+    },
+    "/exercises/vital-pro/vital-cable-upright-row-ex274.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "15b448d544ababd3feb7a3a842849fe960bb11e9caef34924d31a663a34cfa9f"
+    },
+    "/exercises/vital-pro/vital-cable-wood-chop-ex012.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "dcab0b1c8498700151ee0dac9b8bbfb78a2a446c1c93d55121e4256a267b04ed"
+    },
+    "/exercises/vital-pro/vital-calf-raise-leg-press-ex587.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "10d6ccc3a3d4296988e09d24e74a33fbee00e1bfb5fda7c8267f3a9003585771"
+    },
+    "/exercises/vital-pro/vital-captain-s-chair-leg-raise-ex003.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "a1669409fbcbd77551b8eb20bb63678a06f98f3c2d4b9c184307b2b27e2f4ed4"
+    },
+    "/exercises/vital-pro/vital-cat-cow-back-stretch-ex187.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.6667
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "53d6b5fcee480d0d0bf5a8562167e17b0ff9ccaa6b4e99b9a7fc05e8cffd3cd1"
+    },
+    "/exercises/vital-pro/vital-chest-press-in-smith-ex588.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "ca0721ac7030c6d3aa3bd08c5e2043d81bf1cbb0d6a52ca58af0b278263d9b7d"
+    },
+    "/exercises/vital-pro/vital-chest-supported-dumbbell-row-ex715.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "22d8f4f4f82ad7b9e1de088d602dee1fdcedfb93c0d566b141ef6d716793b496"
+    },
+    "/exercises/vital-pro/vital-child-pose-ex350.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "f1b6ed4b29f6e9e976db1a169f328f0ae30f67cecee8ccca63a2320b2ef01ff2"
+    },
+    "/exercises/vital-pro/vital-chin-up-leg-folded-ex031.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "e37ccc691723e01ef035206593ed9258e3de38296df8a8af19148cd908d08d86"
+    },
+    "/exercises/vital-pro/vital-clap-pushup-ex219.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "aaf09d12764b7fe9f041cb9f68e42b8cfd2359cbceb32d373a435dd46c2b6bf8"
+    },
+    "/exercises/vital-pro/vital-concentration-curl-ex139.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "50f32f9e654f4d9735ff49dcdbc54d9bb1af89cff10bfb721da79eeb0dd189d0"
+    },
+    "/exercises/vital-pro/vital-concentration-curl-seated-dumbbell-ex014.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "50f32f9e654f4d9735ff49dcdbc54d9bb1af89cff10bfb721da79eeb0dd189d0"
+    },
+    "/exercises/vital-pro/vital-cossack-squat-ex757.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "f1653770a91361f7e523c673413d97ac448fc98cfe82b6daabb77873b00d45fc"
+    },
+    "/exercises/vital-pro/vital-crab-walk-ex773.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "df31b4096d96f824de8e7462a70e5bffe45e582ba21e88dc1b4e5c42c1a6c840"
+    },
+    "/exercises/vital-pro/vital-cross-body-crunch-ex298.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "c4d246c94db0f8b3b14df14ce42e62f5b961caf69af010b520b46ae4f834a48b"
+    },
+    "/exercises/vital-pro/vital-cross-body-hammer-curl-ex140.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "88153dfa51712b236f9784cf4aca69af088efa11f855e78c923adf3aa64b60f1"
+    },
+    "/exercises/vital-pro/vital-cross-body-mountain-climbers-ex102.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(136 136 136)",
+      "sha256": "bb1d3e5f1940bd3f23d01454c76b01ae0c5ce6c57cd793c40acd1f20bec23676"
+    },
+    "/exercises/vital-pro/vital-crossbody-arm-swing-ex713.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "f67b0799a2998250a77d0ebf8eda3353c6a59dff06c32042590ae166450a0237"
+    },
+    "/exercises/vital-pro/vital-curtsy-lunge-ex244.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "03f19d774dface17affa32b94eab6ff8d7b23a0267b0cb69606d699cf0cae1f9"
+    },
+    "/exercises/vital-pro/vital-cycling-ex061.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "f581fa904f39fd2907ae92ce9b70dadd6f27ddd0025f90913a45ff0060c46172"
+    },
+    "/exercises/vital-pro/vital-dead-bug-ex103.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(138 138 138)",
+      "sha256": "9338fb5a2db5ea0a0fbea9f36b0a25deed5eb19b3fb27519a2f7981ab0d81937"
+    },
+    "/exercises/vital-pro/vital-deadlift-sumo-barbell-ex033.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b829cf242e267351e0528345ee123b6cf5fa1d0d8f79ff540c4e61cec32820d8"
+    },
+    "/exercises/vital-pro/vital-decline-bench-crunch-ex104.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "67e28cd2fbe5f3df23e928e30d073df94e61a69ec586f130b8aede98413ce34d"
+    },
+    "/exercises/vital-pro/vital-decline-elbow-plank-ex105.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "69ebcde6e995149d9531ab1333cb4d3a0f394a5729b2537f8d5cc1696c23cb7c"
+    },
+    "/exercises/vital-pro/vital-decline-pushup-ex221.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "2b5b3d466b0eecc6579d6c98cfa5c4be9740eddcd3b4d7af03cc5ea0d4d3020b"
+    },
+    "/exercises/vital-pro/vital-depth-jump-ex359.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "db51025b989c03ec637ef61d2613c21e62c979efb7c22b5342f09b063558eef1"
+    },
+    "/exercises/vital-pro/vital-diamond-pushup-ex141.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d24f02661b706828d45533528388c0cefe74dffbb8fad10eeb9147733c371950"
+    },
+    "/exercises/vital-pro/vital-dips-chest-focus-leaning-forward-ex044.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "7411345a94e90846cab879cce83a367c5e56a267cce92fc1a1401fb69049905d"
+    },
+    "/exercises/vital-pro/vital-dips-ex142.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "e4330f79e864137cfd01744d9c467960617527d88fe5ad94ed1078b3cdde9f06"
+    },
+    "/exercises/vital-pro/vital-donkey-kicks-ex301.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "e5a6f1731d4eacd87f0c365a8c2647bd28d274c31fc7bbb00385a44c0698b7d9"
+    },
+    "/exercises/vital-pro/vital-downward-dog-hold-ex362.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "002bf71e82a977776fdd337b03098cfec73193f851a0be9516537fe718d11921"
+    },
+    "/exercises/vital-pro/vital-dragon-flags-core-mastery-ex363.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "438c8fe114ff578b5b1e168a66c63d85a7754cbdf7ea347def25bd6cb18c3e5a"
+    },
+    "/exercises/vital-pro/vital-dumbbell-bench-press-decline-ex046.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d0ce8426d4ba2f0ee4ae7207d98718bb9e1ecac5e52de8be9575a1cece314881"
+    },
+    "/exercises/vital-pro/vital-dumbbell-bench-press-ex717.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "e346b635bcb354a8667300c098e71b0e33539da8c056a48e827a23bc5fddd7ab"
+    },
+    "/exercises/vital-pro/vital-dumbbell-bulgarian-split-squat-ex062.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "52ab1da030067b8af26588c58680deaeeaa7d4b70719f064ffbd7a6783e489a8"
+    },
+    "/exercises/vital-pro/vital-dumbbell-calf-raise-ex246.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "fc436cfd136e497f8bd505f367886dab2290d25cc96f27a954626af3c799544b"
+    },
+    "/exercises/vital-pro/vital-dumbbell-chopper-ex106.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "859bd02a612d524a89567b32f68316b4e2f27a58bfbac45092ebe2eb187fa293"
+    },
+    "/exercises/vital-pro/vital-dumbbell-cursty-lunge-ex593.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "adaa66bf5144baff67789739c9a3d94760c5378f3855ec08d77baf884ab211d6"
+    },
+    "/exercises/vital-pro/vital-dumbbell-drag-ex107.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(127 127 127)",
+      "sha256": "e83a4ad40d8fa7fd4927c5dd3acb71e42ae622e15eb2ffc2c84342e39680647d"
+    },
+    "/exercises/vital-pro/vital-dumbbell-farmer-carry-ex721.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "6385aff9ff4178a00da9b8d930d2a88f30d7cda252bf32325ea7db560c25a79c"
+    },
+    "/exercises/vital-pro/vital-dumbbell-flys-flat-ex048.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "4583f75c91d17e9b6c4f25adad9a9b846001652152c36026cf6fb28ce4f9556a"
+    },
+    "/exercises/vital-pro/vital-dumbbell-flys-incline-ex049.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "92860d1776a8875dceb82c3ff14a71abae49262b98a80eb00f23dd106a00455b"
+    },
+    "/exercises/vital-pro/vital-dumbbell-forearms-curl-ex145.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "2daaf18bbbe26be49f5b1c36f07505df7bd6bc3acd6880f1266c641bd42f92a0"
+    },
+    "/exercises/vital-pro/vital-dumbbell-goblet-squat-ex063.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "49c66cd2ce8d26f087d329c4729597ba147dbb501e4e87a1a31282f0d0a6853e"
+    },
+    "/exercises/vital-pro/vital-dumbbell-hip-hinge-ex064.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "f6991d12c05f67aa2267ecee0c807b42b0ee4b38b6e17718e80a3b0821f037e1"
+    },
+    "/exercises/vital-pro/vital-dumbbell-jump-squat-ex065.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b8fad74ab2380ad52d9cfb087b3fe37628a4df456714d08b268065609c869b93"
+    },
+    "/exercises/vital-pro/vital-dumbbell-leg-curl-ex596.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "7cdea0272cfc2e3fa30a9e4a91e9710fa93655e21dbaa8ad428afad0cbbea6c1"
+    },
+    "/exercises/vital-pro/vital-dumbbell-overhead-standard-ex088.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "2ed6b4da4e8473f6b8f424ae34997e1ab88c53275d57320667d8f87021b7001e"
+    },
+    "/exercises/vital-pro/vital-dumbbell-pullover-ex780.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "ca1bfdc2d59ed816d0637764d2dbdb9deffcfd7c9c13e0b0d6cf39c8d8f2938b"
+    },
+    "/exercises/vital-pro/vital-dumbbell-rdl-ex248.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "6c467d548d6f3c6c400d2091e3e60cae5e60cd65669aea73257b6d34f057eaaf"
+    },
+    "/exercises/vital-pro/vital-dumbbell-rear-delt-fly-ex039.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "4d7c88f4bbfbe65e2d7a2ca5a4400a5f104043b757bdca90647f18bcde2a577a"
+    },
+    "/exercises/vital-pro/vital-dumbbell-shrug-ex034.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "97e191c4a566eb06c0b255d6acb0954b854c9284c2f862c2947de1d67ad7ce5e"
+    },
+    "/exercises/vital-pro/vital-dumbbell-single-leg-stepup-ex759.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "fb8542656cb7865f17fab8c2aa911fa869f6142e7404ae579dcb70b00ccad688"
+    },
+    "/exercises/vital-pro/vital-dumbbell-skull-crusher-ex147.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "0fc3b16a105674ac103402eb651c66863ba7cc2fec7cc6a3aacfd3e44a83d08c"
+    },
+    "/exercises/vital-pro/vital-dumbbell-spider-curl-ex018.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "1c2b3309599cfea266c68f962e6e229fd9a522408847a42f8252a17507c663be"
+    },
+    "/exercises/vital-pro/vital-dumbbell-sumo-deadlift-ex250.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "0bb5c5960027bfeb611e03814c99b0024f86bdd304127f82ebdea819f72e2b61"
+    },
+    "/exercises/vital-pro/vital-dumbbell-thruster-ex251.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "098a974793607574545f4478f54b7cf6db1bbff30550275159ea32559f91156e"
+    },
+    "/exercises/vital-pro/vital-dumbbell-triceps-kickback-ex143.jpg": {
+      "crop": [
+        0,
+        21.8519,
+        0,
+        21.8519
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "64cd04e3c68652afdcbb3334de13ec35636195a2fc601e9cc82b4b41b8b7f8d5"
+    },
+    "/exercises/vital-pro/vital-dumbbell-upright-row-ex089.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "91008b0de0daeeee345e1b85076ade49766ef89d2f6bf58c4547cab0a36c444e"
+    },
+    "/exercises/vital-pro/vital-dumbbell-walking-lunge-ex727.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "8eefd90649a161dd2dfd3661ba39cd8d6940037cf7a167d492d7ad6f3d4e36b5"
+    },
+    "/exercises/vital-pro/vital-dumbbell-windmill-ex443.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "ce3712974f0683557bd6f19160d0c8d126c64d295b960ef04fd2d72c7d6e1f66"
+    },
+    "/exercises/vital-pro/vital-dumbbell-y-raise-ex276.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.6667
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "35a1497437e2539d49fa2b12c27ae8acf1eaad1d29ba6bb8ce1945bd7c82f7b9"
+    },
+    "/exercises/vital-pro/vital-elbow-wall-plank-ex658.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "d8c18b84141dfb921597e1e41f4eec3b8c85554e7b93f2483d275b77e8121857"
+    },
+    "/exercises/vital-pro/vital-elevated-plank-ex598.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "844ba2b6e5c83d4b1d22ab281487e972b99b9b3d58b2c1e0ada17681702152c5"
+    },
+    "/exercises/vital-pro/vital-elliptical-hiit-machine-ex066.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "4961fca4e70b13e2f70818c2bde1bc1039d4786594fd2ef25d8e2531c7749608"
+    },
+    "/exercises/vital-pro/vital-ez-bar-curl-ex152.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "af72890ef5567e09c74582c022efaa1c8bfa99b0cdabe5f1c239ba84423fc131"
+    },
+    "/exercises/vital-pro/vital-fire-hydrant-ex252.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "7b3e0275f93066d160b8823f8f6f899b4df187efaa80bd338219e42ea106cd31"
+    },
+    "/exercises/vital-pro/vital-flutter-kick-ex108.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "81ed649a46da1247799741eb5e3148729914b428309485c4b46cc9a2b4a326ff"
+    },
+    "/exercises/vital-pro/vital-frog-pumps-ex661.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "841d648451d6e8f7a5775d1aed73464c826b2a3e35293e2ad1601aa92025842b"
+    },
+    "/exercises/vital-pro/vital-front-raise-dumbbell-ex090.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "999720b7ffea4cbb0c6ec7318b96335d812558c95d42bc45efd01c0a3c59a8d4"
+    },
+    "/exercises/vital-pro/vital-front-raise-weighted-plate-ex091.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "fa1880278976fc46254e7b989b4d8aef141de0d94b72fb5ddf65db96505c2aa5"
+    },
+    "/exercises/vital-pro/vital-glute-bridge-ex109.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "febb2d1cb15889f1d14a45c1812978d93d0d7763ad9a7316d396904a0188f718"
+    },
+    "/exercises/vital-pro/vital-glute-bridge-march-ex534.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "9c2de1a2d4799c9831dc384c5ab501518c704d3148b090c99d859df9d0ea856c"
+    },
+    "/exercises/vital-pro/vital-glute-drive-machine-ex663.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "7aa5d815af8d7f75f80778fbd5a1578dbf1579c0220c003e364aab135464c2ea"
+    },
+    "/exercises/vital-pro/vital-good-morning-barbell-ex035.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "074ac0795049a5f343363a557b06b9edb72a59df765be6801771ccce8834424f"
+    },
+    "/exercises/vital-pro/vital-gorilla-row-ex190.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(129 129 129)",
+      "sha256": "f3b9a8034987f8a60c23f67e5f5edfa7c074549b19d38b2ac0e5df81b77c1891"
+    },
+    "/exercises/vital-pro/vital-gym-pro-0112.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "83ab1bbacb41d4cbca00ee7c7a7d08b9921b0e292a264705303ce829e5a1967f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-0113.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "e89c993e8a5ff5fe1daf261acbda4f9b03af28f1dfb24155f1e7b22e2033c248"
+    },
+    "/exercises/vital-pro/vital-gym-pro-0168.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "0a8d95fd3eb4c7591dafc34d6fe17b7aab8031b8493dc47df2fcaba528d51add"
+    },
+    "/exercises/vital-pro/vital-gym-pro-0215.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.4815
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "668cfa3906ff0ebbc9816a5a77d9428aeba2fecc5b1a1153f9804c22778fb332"
+    },
+    "/exercises/vital-pro/vital-gym-pro-0226.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(137 137 137)",
+      "sha256": "eca529ad64776571dae92935475379efac73bfc1717a8a54fb083136fc5b9e51"
+    },
+    "/exercises/vital-pro/vital-gym-pro-0234.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "c99b12bfc4b25b2945273c817819360507b142953a9e934c551df3ae8f2605b8"
+    },
+    "/exercises/vital-pro/vital-gym-pro-0291.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "14efc295388d92d6e2dc4fd470ddcffbe617d0c12dfefe2661efd00f0322461e"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1108.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "da35a79542834dc16152a02089d3a2a6ab7c4d95df247a3976a4356a2662c538"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1109.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "11ab6748cd0e121e50f99f9ac4deca7d2fe443906489353d273ce251ed0eb694"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1110.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "af5e444f39545c37caab6e560ea172a96a4ba9e64f696d33d5f6fef11e6b05e2"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1117.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "edde22c511b8b729cb7bb1f073481ba8e3b3f166c58877863924db02639769fd"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1122.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "19c53c196e9a1e4fc5e71a25edaf94b4c0bfdccbff8ddcd0f3205b9b81a912e0"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1125.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "de5378693e91514e9d90a36f785f91749ee01a785ba7ccf9bd42bef1b4a745c4"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1129.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "59561b23d7fde6046732f1c34c553bf7f0ee894a758a90d86f0754b7a093fa3b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1133.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "6bf4708c21f8800e375e37bf8d4bb1ebc2aa34803bfdcc3e75a48d119494e484"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1134.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "389ff84a3b1dd135bb6b8a51d76cdc9c3a6be1c670894cc97210de8abdef313e"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1135.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "6e2a5b6d2f200430ebc52bdd09f6abbb7e6587651f5a563d6765073163d2670c"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1137.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "82b4837ae62a9ba22672b17d0b49f83c479251b220e2062ec51883b0acc7fb51"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1141.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "e001944acb5b7876c0f8032ad74510426638ae43d187b972558cdfc75a94f27f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1143.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "815c4f25a445192ddcc3e866ae39923438fcb24a75d6686c6f4da6d2369df836"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1148.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "5b7007b8c695a9f427d09c369a3266edf3a6c0abf08b88bf7b24e8ecd7a3c3c8"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1154.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "acae9285c7fdf961f7b3430867ca43190d3fe26a8baebd9108251e1e97de5ebb"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1156.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "5632f056ba6dcbeb0565e4f0efa4e683c30b9993feb5a72c98614945fb362cb2"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1157.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "7fe6e6ea2f127bf63a471a36ffa562a8f3211db93e770262ad2bb42432ca3abe"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1159.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "ec9e1f3bb7d8951f6c5a8dcc1e29eea34fdacf7ac1422e9bb8a17f21bb8d6e09"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1160.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "42240b4bc1a1e6308db06d6bd7d4560a67a5c6829b2b2f22817dcf78aba7a311"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1161.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "6b8e8a6148f6ec54c71ddafad83010e77f31038239d6f0421a7a3963f441c6b8"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1163.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "75d39fad35fc6ef7492087e69ffd819420edf031c8cd5c5ef3a0185ff3c9b36b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1167.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "07b2b4bca9dd146af57870044af0b8c4940a2e5068b677eb8e9f50f57f07f8ae"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1168.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "5591981c5839e00c5fe028d2be1df24fb98cd9eb670b68c244d8924e8e43cf15"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1171.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d7212961c91370c4ea6d067f3210bb1d1e5475227d8d2b5b10480b2a146b6118"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1180.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "a00a8a0bed90aabae14c8faca033e499be7ac7a407d37722cd358604ce1ceb80"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1181.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "f9e5b2524f9dd63e986b25545896b10b95456fac756e44bcd3d92df79c862a62"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1182.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "c0b150b1399f003943a253af91c08cda3b7e45034123c21e741ca243d877f8d1"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1183.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "3e29c1cbcd7c57e62e2cdfeea1a9f8e66970fdb90c7d3015e7a95a9a41759d9c"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1189.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "7a4e1b405d7e4c8802a5c233c06424cc61224cac760d00316d5a659af21ef8ca"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1194.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "18621019d172b9477a9368c2c695fdd3f149a1a1b3a4d73569bff448b754141b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1198.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "484e690f000b1239e820766dd9daf74b0bbadb4b1bd6edc3ddeeaf1de7579f9c"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1199.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "cfe4859e7eea547171a73536c4ccf2ba71c0c44bd7a792e7ae93bf678b7f3afe"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1200.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "58dbc3960f4150fdefd45afd04a88dc346fe35c415958ae7b00925a6f5500723"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1202.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "f4399b6d16992922b8e62e8680bcb67fea412ffc0ea69d26e78f54ee36db75e2"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1203.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "513d8cde815ade34b68b4da42a0cff70f343033ec072b2f06285ee6d5c476435"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1204.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "0f158d14a808c0b09948327adf5e4273ee593fb485fd5c63083965ea37f88b53"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1205.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "e71689e167e9ca6c88d3f911c06ea9e2e2aef8dcde9fafa2744674cb92a8fe4b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1206.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "854609ec82144985d144ba64af4d7a5e45efea9aa6f6a0388edade5bab90e9e7"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1207.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "9911d208dd953295f6aa200a7dac74ee63def8417dc7f2f64f6c4313d07967e0"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1243.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "3be67b58932ef62ffe3213cf5c9bb0c3f76440c429041a7386faf10e6e6f69fe"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1269.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "5cb189ea9230db6fccce43a0caeaad0410de7607597c0635a0c81ca2c0e66fa6"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1272.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "c9ec505052cb442f98cf7c147f0544b6e3d5e3bff227f231445cb135830dd26e"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1278.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "eff4f290b27515dabfc228f6601bf4b4029402a37b6208fca6ea20a76d0dee65"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1288.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "61edabaa3f22c244f62fb8deffb5d3ed4fe8e40c764c782e0897c1f1109b370c"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1296.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "e8fe8c152d4d56ef04fd485c37a043b358faa825f737b48f833032619db56e83"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1320.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "3813fcf505482df39660c917f1c1f22c403b890acfd086f77169b2c3dca5ac2f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1321.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "1261139b5d65ccb081e73e6f3125ddcc47127340f7c2fe430d7cbff26d9c3fef"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1325.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "7b29bc0c973f0661cacbd16f45cc55c2f3778e9f9481e5831815e68b6368aeaa"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1327.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "37c2debc161a6ae4fed41e8c5ef1293de24d176dbeac82db303beb42f8e2c993"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1344.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "4b5e29520002b013ca01aa020bb18491746e76def67f9a079bfe378b515a63c8"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1369.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "cd9231f81c6b36e1a3d796f2386aa8374f45e362d4997fec3fd3a68a44acdbfb"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1393.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "ee9107529333bc215844f205513055ed2598c3e78675fb3e76b340cc75eafb29"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1399.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "eb60975bf5321fefb6c3db287ec43789a9db39bd41f2ef1477becbf366f54556"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1400.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "b32f9631d406d90c65a825fdfbe6809b7b9f72dbcf10d3ecf53ce5a3d1f6e532"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1410.jpg": {
+      "crop": [
+        0,
+        1.1111,
+        0,
+        0.7407
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "70631c7c58693326ad1a8e4146c3acbecbcd480c85a9f88d8e4ee1a0c816ad2a"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1415.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "bf7fc3d4ea25744dc400bbb27538efc7585c290752a042a4b0c51b25d3ad85fe"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1421.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "7fa5a4b355c474ffb5faeb23967a6443ef44d48dadef8dde82efee7b84d00b4b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1432.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "12e51d20e6059cdc7f19632026349a2205a463db1f74c2301877fcdbad70953d"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1433.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "46e255c6dc44bc209feded42dcf0550ce78d76956c5a5c58b211686579d929c0"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1434.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "12a3d9c853fbf74fa4e727aef2b2c567190031b4ccdd11d511c218deae59674f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1436.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "ad536f997a19fdf139a106526ad7b549a729237d45feff27b9ecf8b2ad295932"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1496.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "bfc794a777bab2648e41162cc2aa014583ef0551cdb9d3e386937f538738c6a1"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1517.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "0a105d881f929373ed830aae1839f46f19375bb63a9107ffd93c19cea808ebe7"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1540.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "c4747b6ceaeb267bbb42d553307c9c1108c8e519828c947ecd55739ecabea2a2"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1541.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "f7101f5bb3bc1a3e1f31cea9e2cfc15091bb2670cffa5a02f2adeed25b292e5f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1542.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "d309f1ac1ba1dc7750011d48973ae9eafa8f8c5b1e8b7894bc7b89ed815bae0f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1543.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(248 248 248)",
+      "sha256": "c538715793a12c31c66bd0a747ddde5edf83eeadaa62c5a248912f877e9f9e64"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1572.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "40ca3534f0e621fb6772eb3e9730e64cc5d9000632edb4fb1449a2c2291bfc84"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1596.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "54d6e4477df65faeaffe1f994e5ec6a5b995d24cd2949a2ecde83402d5443cc9"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1598.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "009a69842235d0fbc938910353d51a7bada2e40b8836f94b31c780145ab30726"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1607.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(247 247 247)",
+      "sha256": "f2ac288e89ef426fcdc89f405d2f00ebe0d8fdaec76da69a6faa6a3d9f531161"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1611.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "be3c06292ccb8e146a94a3656b5934f878356889d0ded24fa54c1192957ee363"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1627.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(248 248 248)",
+      "sha256": "e1a7ea6da386e4179ad36ea9407c5662f5c3e86ed3b1d8c286fc25962a841d29"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1631.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "e0cbceca4882867be5567567916885438b23365ceccf56ff32f8b812fbf8dea6"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1633.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(247 247 247)",
+      "sha256": "54c9ef2bd92322b47e390e80acc4f9414b5d810972abc05c0a5c61bd108d60d3"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1637.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "3200b2a03ea7d85aafa8725e5ca85efa87e4780cd4010b4dd242ee32efad4cb4"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1701.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "f4e3c695e158a9c4456ad29c8553a9711a25ec9dc266f318d1208855dc94b331"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1709.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "d743ade82187a23d0d33999681b0a459ba80062c1d649eccc9e3cad145c6d3be"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1715.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "b54f248f8b074f7c23299a2965cc93217ce8031ca6545842e45d28018c4d3eb4"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1724.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "78e6ab0bfc3806bc2927f3f930ee464044d8a2a3303e2486a1df4ee00eb42e1e"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1731.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "f7f09cf6e18c8bf7619fa3503aa40ed864139585cc7e2366c4791b1ce4e178db"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1738.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "83b697f22d099283227111dcfb59ab77a6fd6fb1578c5091b284ee14e441b4e4"
+    },
+    "/exercises/vital-pro/vital-gym-pro-1749.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "22dad92cf0f6294449a1ea7f35cc9162275112525d12c4a28ccb2a23b1be6742"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r001-0001.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "171a0525c4ec050e9a5caa175ce8a78f4c968857518970496a5448b67e932eea"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r002-0005.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "3862d958aabc6670941c58a888e82dbd80ba911c3fa73624b0d7057f0edc3ff3"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r003-0006.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "3eb830f63837a9e3fc067b04889b407168fc9852c5bb317b1ffaaf8ffbc4a08d"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r004-0007.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "99bb6c1411eadc498c775789a309708ed1946d7f12580ab683049e5ed2281293"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r005-0013.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "942621bdb0b5e802a464230eb43b252bf2d7f23e606f79dee10711c25b00adad"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r007-0017.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "c517bb62b9ad2f96bcd49817ee4d3caa0206b3c5aa97a27c8118ae36556579bd"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r008-0023.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "0913b4a4b59b3f06803d34abe7b87b699c21e8e85c81e57f952f017c111c94e5"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r009-0025.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "dc9f4c7f09cdfe9cb00ca09f04b3e8f462147ca4f8334afb3c325ac1665c7b03"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r010-0027.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b7b068225636d9fc6150c43206a6d630b2224d4e3371c0adfb603632f9eeba63"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r012-0044.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(249 249 249)",
+      "sha256": "474737720002ccd675531146cef6b61751548e8faa935c73e53b6067b931dc25"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r013-0058.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "a33ae6e6df145b0b8a907fbada48385e5768455cbbd8067194dc010147d3c44f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r014-0071.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "f7eaab3b78a7ae0881929958fa0868039c803751e3e77417af94caba770d1a09"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r016-0095.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b2711702d632b1276ab273ed1509b41de7da26d539b84c8122e1a1ae574ed79d"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r017-1112.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "faa0de880c09b3da739ad68c66a92b50d45bad9090376298aee4fb1f9f80ccab"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r019-1116.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "6f7c94753e951a9163fb0f0cce2ad623d8880ccaf0092f21d53833652cde7111"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r020-1120.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "a94af35f0ccf8ae21f541830da2c8e959cc6883a5f8364bd4d16456c82f8778c"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r021-1121.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b7d94ec1040e09025f50c1869b1ff05682c56f794a4f802a100c39eae7681350"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r022-1123.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "2baec9270a36f108ecb739ac9d9e1b8c5e08147ec2fc615a1dc5c7ee96a326e5"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r023-1124.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "54465bbdbb58147952f564c903ee953b294ed599389967fe9151e66cb9dbec52"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r024-1132.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d06634901576d0b499aa0a9f9b928a770684c4c0f7ce76d51796c5b809ec6665"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r025-1138.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "122f9cb22a948dfcf04b0ab2beb5fa7b53825a7645945c51fc9abbf5a36dd27d"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r026-1140.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d0ca24dfa82eb73d541a9a2d39a8eaf115577dc61a86e83181005ee6c420b115"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r027-1142.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "3c4395444f4af992e106f84dab7078ee7e0b6d8cddee1cba6df975d3a60a5928"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r028-1147.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "c7827a6d01ce4057c68a0e1eb817cbc96fbe4e46c10e10f3022ccc56e30db274"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r029-1150.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d827472f02ac87f5199b767ab8054bcfaa3117469bf08cd5d06263d9c74c055d"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r030-1165.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "3792c49fb0585e0d64726e96096386583ddab028839a173ac08d7b97260ab57d"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r031-1170.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "56f9679bf5822bdba5d37044ab49f763ba83b99411f23ad7356d69bca01350eb"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r032-1174.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "5ad1a9bed1ef336751b632352b59e4c4eafcf57884e6dcf43bd67f05b8188f00"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r033-1177.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d4eed193f2f9fcda8af469d4d54dc6b4e8e0be51e22b0ed60e481760469b5083"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r036-1184.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "97c1779f70db0beca704597aa89e90e3d39110cd407c3cc2ef3e678a35918587"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r037-1187.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "3c1e3db1d4ca725aa19ab9650fc2c5d4ee2203a4f97b486e4a6cbf2bd3e08f99"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r038-1190.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "47142121d318e06d564ef0906e7c7fa864ffb58744eed57c5f8d944ff620c8b2"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r039-1191.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "0a03eabd08c94e4b579e4521ff80e8721399c27b4cf49769c344393e9c24b177"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r040-1193.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "f5469082f06643fe0927c73545db9cfde3c8ce74d64394487beba41a082f2fe6"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r041-1195.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "a5887a5358e45fa14db342fd7f796565ec68081acb23a8a69f23269e7a0ecd4b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r042-1208.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "78163e290f9c75863dfaf141f6ac6fc0f1d858cc561be8b1e4089d49026a95ad"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r043-0101.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "5fe05227b5af82f78d68670ebef67c78dbced81d3fde7efc79b8e9e204686ecb"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r051-0121.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(137 137 137)",
+      "sha256": "ed53e0a9f09ce9b67d3ffa351cb5fcb9662e649bdf9b06829e5053e0a0954082"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r053-0131.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(136 136 136)",
+      "sha256": "170ad62eca593833b3102388a00a2cb7f68fc2f46a3489bfd8b1cf20c713f0ca"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r054-0132.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "75d80c8993fccd7a20c60798975537fbfee7142d3ea326278550d88a1a00eb90"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r057-0138.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "2dff30aabf730408c379d639408848a0c1388d8b42b28cc32b85d6b08d70fa0d"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r058-0139.jpg": {
+      "crop": [
+        0,
+        21.8519,
+        0,
+        21.8519
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "0cf40f370bd700b3325947d71f7e784b0bcf562acf01fe5c576fd6c887632bba"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r062-0147.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "2c9a35ec3d79483fd3a7416095eb420e0e50f9d590cad11f42dc4a28a4d7b8fe"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r064-0151.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.6667
+      ],
+      "backdrop": "rgb(137 137 137)",
+      "sha256": "c8ad827024451408c483a1577bfc9c48dd9cf80a04e61c687a75e8825225f9ab"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r065-0152.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(128 128 128)",
+      "sha256": "d7113d269358da47c25935152d831a12c9bf0d4bb60419e87a04350980193a5e"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r066-0153.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "5d900c4e7024d57adf01311b244c9f5d53d74a46ad6a1c42e035bb461d057a55"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r067-0154.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "bfebd6f4afd293abb3a8e772c49ce91448600e9a48af23d1be5fc8c3a3a79124"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r069-0171.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(136 136 136)",
+      "sha256": "318278588b312d247de4dd5d4127c273c6a614de522feec5b686bbc9d384e3e0"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r070-0174.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "c762a1b7866fee7207766acb24bc0977138cfed85354c657177fac2f52f3da27"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r071-0175.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(131 131 131)",
+      "sha256": "aa431c8c52fb91ab36e151d752292f29154fc9ab60db21c914704c61c2eab2fd"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r072-0177.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "7383e575d00eba804347ba16a8d5f22dfc1ae1754b296c63994c3036e496be92"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r073-0178.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "431a2bf3cafc18b2077f54f1390f12a454281bfa90157ff3f9fc13aa6329dc71"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r074-0180.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "385671712dc694336690c74322065bc8ee17209c1a7123613ebca8f4446458f8"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r075-0181.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(169 169 169)",
+      "sha256": "abe3e4596719291e5eab6fb4ff593f9f2ef3700af2316c2096674d3da6dfa266"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r076-0182.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "8aa157ee7ab4dc32a56db6050892dd7ff3c6f19a66e1887e083d3dfb7976fa23"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r078-0191.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "c9c13d45ec2511a55d225a2ff0ab46975cf5499c7df53c5751a6540a9e1a8037"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r083-0208.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(136 136 136)",
+      "sha256": "5bd4ec3d859ab06c9bd84111f5af8bce8d9f19cf978f9cd0f93872d7fb885c23"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r086-0212.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "754a4eca95f76c754fbc473938d819dd9e6cb5635d6e2f8d775020ed7d769e84"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r087-0213.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "54bc7483a7da4481773a30acaeb54e11adff96adf2801b4bcc6c2b4d084e6fdb"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r088-0218.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(136 136 136)",
+      "sha256": "3867f0d825f739823bc692c12b4e2ebbf37e6fdfe113f6b1695a81bb438381fc"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r089-0219.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(137 137 137)",
+      "sha256": "ef03222716f97f4e7160892d9d45cc674514ea407dd877cd6442f0d332bcbdfd"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r091-0223.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(136 136 136)",
+      "sha256": "48e85eb66d6d4850c4d4e0cb0350012eb2aae9f57f8292ff6c690c24c19bff38"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r093-0225.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(137 137 137)",
+      "sha256": "8b11108b460b2b18b4a05a4698e1ed18976a8f4f49397195ef1a4f053b4d7f76"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r106-0246.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "06e1cfc8a6b2d5f3ca78ef66254b32cf9f2e327984877bcbe8e0830649b95479"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r109-0255.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(129 129 129)",
+      "sha256": "3fafb44629b9079e4902855b90c33d0779221bc72a9a41b000c9eff3e46ea846"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r112-0262.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.6667
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "288f46b4b9a42fb19eddbff800536e329babd744a4bec69aad38c70797c68574"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r114-0266.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "608df7223ba7d1212f0c02da93ecdd6635f0aad9fa7a540c0e0099fd158e0429"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r120-0272.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(136 136 136)",
+      "sha256": "ed7236df7c0daa1525ade77dd7057b695a36322ad5f5b7317107be42c6fad099"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r121-0276.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(128 128 128)",
+      "sha256": "b631151f01ecacee546f5df30301932f62e4c1b8646d5d90431e4160756a7387"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r124-0286.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "9aab83da6b6c5f48fbdb3e4b7715c112ccba3df81fc4bda9391cc3db6a39e51b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r125-0288.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "6a933c2824550c87356f065bb408d45879d3d6b20e4f9297069a00e18a24a03f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r128-0296.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "f373f2a5588a912c94a5ad1d08b4cf7fac5e5e1497a6e01e0614acbc75aadfc1"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r129-0297.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "6912cf406c1fcd9ddab70ee9c9c29d2f635b7a1b8bdf9301018b01911feeb534"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r132-1244.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "f90741427fad9289d7cd172eea22cb6c7fdab4ccdd0e949bd8552d6b39c9ce32"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r133-1245.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "1b8f875d23eb6fbe8984a897b481074fe52f9c62e6e7be0b4183a5f4dbebd6e2"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r134-1247.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "630d274e4fbab63d8a4ffefdeff9c5bad4d89bfd31b2a56bc1b58e120926f130"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r135-1248.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "a34a268f0b18db90202e38fca6943aecbcb55262213f064a20b43c9d1b6e5193"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r137-1250.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "ea5b2cf2ab8de932aeb1b484ee8b0cf67b3f9a5d760300b69c9003f8256748c6"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r138-1251.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "7f0f113b8a38620bb69a1c0d0f763ea24cd0ea1465d100d3bffdbe4dfd58c0e5"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r139-1254.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "72f5c12df58d97c54ab805ab4b54aecbe6d767533cd7cb0ce74afaab04c66636"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r140-1255.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "4f03ad7fcc1d37862e9d8b377d1d6c754dec94101bdd59d2fe8a7888e5926460"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r141-1257.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "6a87370bc30b0eddf348f6e4a29a65e6716c9b931c76a60da191717cea5e7baa"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r142-1258.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "30c54fdd9372442315a41dc276c5dbee529df78271f211880c371256371f3089"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r145-1262.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "84cb54805cbf47c9e644062f52ddce09a89ceb0d909f31642c6f930581f81d6e"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r146-1263.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "dee5ab8cb79f5933a4c82c2046562ba6ce20288445b91ed48368bf5e8028f52c"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r147-1268.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "bac55a3b613940c3c2de58de0e7c6642ded8a58c5eb877827aaca41052b85800"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r148-1270.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "aa1acb945294ceced53ee698002b0d4161af28d5cfca1c56e90e46a2c5a75f53"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r149-1271.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "453a5a405579ab54cd5858ec74c2e559c70480624a07a0b6943ff6ef12141880"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r150-1273.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "78e79262dc4829ed24dd74594b8da97b56fd5e116ebefd4237c0345bebd3a16c"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r151-1276.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "ce4352c059572789e64a23416e02b75d371c19846b2d5176a65fb04d6cfe11e8"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r152-1277.jpg": {
+      "crop": [
+        0,
+        2.963,
+        0,
+        2.2222
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "13b5608e4f4f563df93499392d357e9df78bdfc6078da93675bb500d44361b9e"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r155-1282.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "54ab2171a13a6ee3c06812a99d04ff2ae4d3c0108e193a30074e872177ce9129"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r156-1284.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "dd2a2273fe0cafbe740b7ce84b67699ca8beaf80a656d9012769962a9c75e954"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r157-1286.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "aa42abecb0d95666883d2c72481b79634e40744815c9a4edac5ebf0779cfb834"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r158-1287.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "9be886081649763e0ec56cefa48948eda3e6fb5ce9decfa38c7669edfe570ee2"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r160-1291.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "508d2ae356b6cab1fc6a2aee139e572c99e6900f1293a01ea80f957066bc4722"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r161-1292.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "5cd940483a424e58901da8b65c50d170df83ff31d89c71a5348a2b2d20304c9f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r163-1295.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "be697cd4aacf4b0a9b3df0243a4533ecb68f86b82386c19080423f5107db1efc"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r166-1300.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "fb92d53dfa18985d185b8f089f7b69a2b30b7ccf11d050f8375814df1e7762c4"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r167-1302.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "0c4db9519adade5b031cda7dea947cf5614812043d02aa4cd7a88145921fdabb"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r169-1304.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "64b280683ed85225142329ddbc95f6efc09281caeab39236dc76f36b99a634e8"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r170-1305.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "3fbf2e9978c0938c64d58ba9104abfff05e32d6e6fb1351cc6cac495fd46c12b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r172-1307.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "2cdc48095cfc4fc4e2f0bb1938bbbfc70c9e6c305d79773da6cf0f093aa9c809"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r174-1310.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "22a114261cf1c701accbf180a219eb9ed17681fd5fe1c621763f3b43e88d425a"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r175-1311.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "7d8fdc5ccc600062651f031af87ab60d3bbfea1091472f3f2191852dd627618e"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r176-1312.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "4e338d116214b3f051bc3f8b3cbae5b30f61332175f814a7357418ef304becd0"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r177-1313.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "3de202b454a46e7855af032095d5568a2c63924d215ab9a0fd8003493c2d14fd"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r178-1314.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "b5330e7aff724c76b2cdfea97e9339c6461f60e22a9b6938e09c053b657da3ef"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r179-1315.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "b80f201558e40bfaf187d6ed4d86bb467c94080ff9f6f10dca68e1dc7e388714"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r180-1316.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "2e3e1a159a94990dedf237bed4a5e47185e0b4ed9705f846a8c83294e6eca078"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r182-1318.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "de744a3ff7087756187ceab3d6ab9ad4b1f6d15db0c6db90b40be9e1423a23a3"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r183-1319.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "2e47aec639a5c2451d19efea7fdc18235bad0f5092120999abdf825407ea7a6e"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r185-1323.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "46cb3ffdd9f7e8593391556c89193e5ce25448882ddc5b7fcc6567fe57e41064"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r188-1330.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "47c3f841b9bea523a1e7e7e60c63fe5ce1019364760c99a515ba699ea504b70f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r189-1331.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "5c97fa0cc25a3c88fdc6a8450808618b03dc1438ac769873af1849c828c366fa"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r190-1332.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "bc71440571a7df62ad4decbd1c40642c658a75aa4316adcea17b5573e4a84c83"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r191-1333.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "98f6ffdc89d7703a45bc5ffae8bb737b7b63fe1de1abb85bac4f46908ad7dfbe"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r192-1335.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "27031199562e789497b11e690678b0168aee0cbcae28deebe0024d0200b1a3c3"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r193-1336.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "348700cb8c41bdc6a9ae3273395d462a057e80250d32c1e676477cd1b840a681"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r194-1338.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "0834ca0e42df7113d3ce5ed85964bb3ad509e5c1327ca8134afdac0319101a75"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r197-1341.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "d967dc6d3862d59a9e4d48cae16d10a5c0db85c59df5fa04ba466616a5008294"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r198-1342.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "155a6a2078f062b2711d5ed4b8d9b1db6394b6a76a9334b8308ff6037fdd9c26"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r199-1518.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "6cd330ea30d3c5d4e2b21063143b8ddd58b4a32821327599dff71f955123468d"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r200-1519.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "8f892f182e00a54f5f2846679936b272cb32c0de106f723a556dce123170c87b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r201-1520.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "919e0cb1261102a7052ab60f0b2f57546f4cbc99ea6ecaf0987c76eb7737a045"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r203-1523.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "21142b86ca6e8b3e9f3b8af954957b197958f4d7f2313cdc3c603c380454c0bf"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r204-1524.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "4d2fb6c4611a794d9b47335fe3669ef2e31676ddf0d99c81a08356a5c4fe5a04"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r205-1525.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "6f600b999e0765992d9f77a341025b40b644402c02182da3939b01ed3d320033"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r206-1526.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "97b92aabb58d61e39eae3926bb7a98fc5b591d36ea6eb7a6628bf42765fcf04d"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r207-1527.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "290c6ff188735cf90c05e24c46388bafe192e805a604a83c2f53faf39a71558b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r208-1528.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "2ce17837d6a7a7d82545ff9f7f8e9fe31fae799796bb533a5415dd1c4c3fe7cb"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r209-1529.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "6caf3fa2a9605d3b36322a3c6c9bf05bb2df6862980cba91f38be26f6677bccb"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r210-1530.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)",
+      "sha256": "74c216df8110ff98dd9aaa107f4b6337cb14d387df013fa953fecee281c1486c"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r211-1531.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "1aa57c87b2b8cbd2af7ba2732429004afc0b15c71992e776426408767ecba2a2"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r212-1532.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "da60ad625480805b125ff9c0826062dfbfbecf7a8c3f8d847cbc81c9119fcb20"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r213-1533.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "bed956894fd369cd0fce4669ed2c66176d049df9fc359d2858e39483ff8f64bb"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r214-1534.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "e118933f6c5ef8abb540f549b832f02784040f88fb0f01f40b38e5893242c8af"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r215-1535.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "73553154ab1754e913b0cf90d9e61ad1157368801f51bc8ea02864e7ce301a4f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r216-1536.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "4e0c1691de7b884613faea20ab6070168a8b14d25eb636f3e6126e5681acb059"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r217-1537.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(249 249 249)",
+      "sha256": "2e210b06c881a599d3322bdb6a2a75462fc29d2d4f8bc219898c8ebd0bc109d4"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r218-1538.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(248 248 248)",
+      "sha256": "7985cb279260ec3d65eca9a2cdccb115f7e758a99dde965a14e0b7af3b07ca06"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r219-1539.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "f6de287df7929f03581b202832f47e689be9ed9980171f4a3e5d468d7a75b6a2"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r220-1544.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)",
+      "sha256": "5e734497480cf7125ac77fefdb1a43418c45cc8baf43078e85b094490e833dfa"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r221-1545.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "333700cd3b7d6f8f4fa579b5788425fb2fcc2b7112fc803ffcaaab64976221f5"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r222-1546.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(249 249 249)",
+      "sha256": "ec1ef7b11cd9b4d5ef13dd8596c6f5a4398d7d940519553332d0133bd61c3cad"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r223-1547.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "7cf9145d640f3c393565090d31bba3a60819fa5e33d67ce5eb3654ac06017d42"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r224-1548.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(249 249 249)",
+      "sha256": "7df0c09fc553a1779528dbb5ea1934e0d57deedac4ba69e158e9f22e1243f784"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r225-1549.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(249 249 249)",
+      "sha256": "b7b6ed84abf352250fc8555815444c8f0e302c02111be6fce8d061b1ed3e75d7"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r226-1550.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(251 251 251)",
+      "sha256": "6ae4fdb27026acd018c086405492b31ea1f703bc65b7f14dee2dd564f74754b7"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r227-1551.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "f6725596080d7930c222d41197e386386a5dcf882ea4552fb51b29c11ebe2cf0"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r228-1552.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "92a57da112207490ab95573ac18b99d6149b99c4c71b565cf65200c84e1c246b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r229-1553.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "567395901500d9246e09d98c03fd96b0d9a3359aadd44251ab6d06ec904243f1"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r230-1554.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "055821c816823ebbdbdc7303c6bb1f772dda30f4c69c112075b985f5a35889cd"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r231-1555.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "66edaceb19e162f77cc82442d33516ae2f574712aeeac550a2c9b345ea44dc55"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r232-1556.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "3d6026ab684e3ea8baea3280f9527d2ce4bcf84e8b7e3ef569475c6a4b7226e5"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r233-1557.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(248 248 248)",
+      "sha256": "6c1cd9809c56fd362c9564520b6fc2b56aed2f79cb58f2f34d8fdc740d91f47f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r235-1559.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "596475690d974524cc994be619446e44b4498a61994a851d04ba0805c65623ae"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r236-1561.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "fec1e67148657238e02fab145b9db1b1b7ff8bf7ddd9f75f814ba896b6d7ebb1"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r237-1562.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "56ea8bcfa944c6bf12183f52d2d654db0ccf9ac9d528ebb77dca93491257b90b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r238-1563.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "0feb238d21f3f33ac2e9982499723c55e2ceb5653364dfb4ac6f76b1e36e414d"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r239-1564.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(249 249 249)",
+      "sha256": "77725b5a753f3d21261e6aac45571df91a1342ddf592fd822f480d2d196e8e49"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r240-1565.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(247 247 247)",
+      "sha256": "6b4873469704a10a76d02915707c9c6b71a682796b9e81403e12ede61a8490de"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r241-1566.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "58e14eeb193d253ab6344334b3739ed33f20cbca66f71ea43cf994eadc50f639"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r242-1567.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "f6e08247f8f7763ab696820e6a64ef20a2eefc7abbb89053f9fe7e13e2c0dd8a"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r243-1568.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(247 247 247)",
+      "sha256": "f7ac22666e948655a858b7e2f672b83f1d1f9e5d01754cdf1c14fea673a7a29f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r244-1569.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "465d7afbf1f819612347b103a25c3eda44eab75a1ad7212c053f94aa46b461d9"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r245-1570.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "5af33d2e6a4e598c9af51e4364353254ab6fbfeb8c6ea95786213bf9365ddd00"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r247-1573.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "a39cea6072e04c0ec663f34fe363ff8ccb8ca0b09dbc7123af9be9bd6e35817a"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r248-1574.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "edad94b1e9c1483cea7e3f853c59306abffa8ddd9099987ccbe27a7fbefe4284"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r249-1575.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "c10a47a2bda4a0a64d60c7cdf36f3f51ce145edb40cae13674d19d1a478542f8"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r250-1576.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(252 252 252)",
+      "sha256": "c221650edcb91363129e5e4f7c9cffcfca975d582834576a69b8d74415a6ba97"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r251-1577.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(251 251 251)",
+      "sha256": "3213c5d725252a35a1a565121ce7417ce7c11ef379db3de9f051cd361545d7ea"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r252-1578.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(248 248 248)",
+      "sha256": "feadfcc2410630d87f2ab2fd8f08c2226246dbe7636d4baa61784b3fe43d2570"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r253-1579.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "c8cc0c92c0a87c532c2e78f2cd03e8f5e2a9b295b0f37fde54b6f16f06f8e16f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r254-1580.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "11df549e5662d96a9fea6941297749321cd1a681b8b74c51a251751307fc1439"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r255-1581.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "a5f5a263c5b912a33c68749fe2a67fc57181a79c17851fec67edfd4e8541dfdf"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r256-1582.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "6fbff988d6595bf0a637176ed3c2fc47438b9f7f6fc875c4862998e9a1a9bb42"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r257-1583.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)",
+      "sha256": "9be6e698515718300a9bf6c5be5b2b84052a47e70d31f140f2a53159aa571af4"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r258-1584.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "4db0d53a9471266df764418b95625a55a6eafe3297850e23c3aff18355d6ca64"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r260-1586.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "d85933ce1261367c224e18838c9f4acf24ac8d2a05908d4fecf35b1b224ff5a4"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r261-1589.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "1c2608b77769aa4a0e5b7dc176e96b7cd0381168d9b9571d434c2a29fd7666ae"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r262-1590.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "1f04bfb2a60cb8b00358b61e2309ee8c308960b5b34a71bc5fca317c9d40a6cd"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r263-1591.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "e9664c6cee11e7f074a4c9a3e8b33ecd32c1ccd5adb594ada219addb5e70b706"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r264-1592.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "ab8c5afe9e6344033143c1346dac4bd42d987a9a579d2988dd72015b39970ffb"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r265-1593.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "f9b416638c9346812c7feca846937c10d2971e31883bef851c5da8fcee38a9f8"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r266-1594.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "b22d62bcbab845b02d675cd98dbc8998de9bad78dfec979bbb12b8780e1883ed"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r267-1595.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "b3a255ce46a0b249863efa07015bb7e03174b30c5174b7a994314f2867410f07"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r268-1597.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)",
+      "sha256": "35e146169bd7a3a808302fca685b60ac03deadb1968ec1e5ed3fee60c8df71e1"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r269-1599.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(249 249 249)",
+      "sha256": "b5ca2e211461415163e59c0fdd8e939d8a2912bf305b81e9df1da397b387bd07"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r270-1600.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "afbec03e60d70919a367ceecbfa8bc1c8bdbc3794f9dddc3780757d9d55d7848"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r271-1601.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "c43cdc80213c97d703c85398af8efdcfb838bb86d09f7dd2398affc971761766"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r272-1602.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "6a0a279ddfb4b5c71ee9d1f3fcbd1b9a95da84c67c81fe6746d64f1f4934f454"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r273-1603.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "ca8c0419bd89d6c719d17254143dc6ccf5a73b278863a97fae02a47cd863d8ad"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r274-1604.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "6db888c8fba008f955fef5866041f96a52b5fb329efbfaf0845995e17b0e2425"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r275-1605.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "fe58ed1746fed05761bd259f2535265f2c603bb7c5443891d6e091d3c855f13d"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r276-1606.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "949d24143e0c5fba61b6e16ccadf06fb777f6ef28e77d5d3293259b7b63d57b7"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r277-1608.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "e900c557ea649f3d46f0979d1c27f1c7f62974cc70b4efa70f388836af873cdc"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r278-1609.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(252 252 252)",
+      "sha256": "42bf53227604ba1e7c1510739a578f035bb9b502691841423aae5f27b0e941a6"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r279-1613.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(252 252 252)",
+      "sha256": "92c51707382e258bc1da453a212f42598f09d61e75cf4b7f5060c1e89f6f7750"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r280-1614.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b97399d88c3f1b5c8d980612c8583233c33f53823350a091514f44e588c01481"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r282-1617.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "48a09b028498d4399fb1d57343e88854cd2485232fd713b420f0a10ecc79eb40"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r283-1618.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "a2fa60e664dfc7c6517241ba43fa76f84fa3b6e4656d61ef1d8116e28f050ecd"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r284-1619.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b0c19c046530c3229ca05d467ee34369b990711898211baed15817db0bf3e00d"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r287-1622.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(247 247 247)",
+      "sha256": "2eee21d51fa02c8e9b785e4c9579039088bcd8854ad72b209c1c6a68a8026ecb"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r288-1624.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)",
+      "sha256": "9267bc9e0b9f8106885f45ac5d1f69651caf58ef8b7438255f2c10867dfb328a"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r289-1625.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d2a1acc6661dae8e798dc9b9d47d18ef38f813e8fd20420e9e25cfea4234eb89"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r290-1626.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "a15714b64cf663479764095600a31411854cf5e68171c67599c8db2a4ddd116c"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r291-1628.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "92ca5b7f203ca0e1dcf54b6ae281efabe60669eaf2411a21c249103db180360e"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r292-1629.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)",
+      "sha256": "66de0ff8ed3b7b4ae578adf6e6c64ceeb56563de7fd63b97e40790d6f9717852"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r293-1632.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "e4266a1b2635e444a6ce5b5d7b3476dff0488ec076f1b860b0f5da51a4c6f4fc"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r294-1635.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(252 252 252)",
+      "sha256": "6c90820bf326442b6c2e25455cb12ec3a29205759e985afa5b4d31c3d57567bc"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r295-1636.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "3d50cb94132eb97c655071e5bb91ea21e04f5172430239b98bd90801a90f915b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r296-1638.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "805cbc98668d0fcd01a6010d2cdb15700dfd64ff18256282774cbe1f6457b6d9"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r297-1639.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(252 252 252)",
+      "sha256": "3e36c07a825d18e992528e435bfb8f57f17d5fde7fa1778fd568242372035f26"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r298-1640.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "f58970bf314f13d5efc1cd8013533c0320701349e7ac9a20163a8452579ee149"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r299-1641.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(249 249 249)",
+      "sha256": "e4e17ff2ef27bc817479d163127b8db7e3bb01d296730923eac7e8fa7cee43af"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r300-1642.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(246 246 246)",
+      "sha256": "8b60cc3b8a49a440bf10b825c0e5b1e7c022a944d6c74f763bbc3d7488acc464"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r301-1643.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "f157510c6002f8085dc4f607c02ffb6fab15f3f6431380cb3e1ef448b6224d3f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r302-1644.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "53f382ed1edcd83353a75ba6a5e150d80ac60bcd7cbe262a877661500688bdc7"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r303-1645.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(252 252 252)",
+      "sha256": "40f95488719fb2d580e1d70dcf404669827a46d7e536190064d98592273afe6e"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r310-1350.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "146ba64f8a8efdd7cf64bdfe5515bdf1b99f7f79f1f77719fb10a125916426ff"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r315-1357.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "2e0bf1bc6c42cb26ffdef480e73047e9e2b465bb73314f048f968e7a421383de"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r317-1359.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "a3375808de2a4ca08871223e568e419698344901848892a9cd640b5e9a268a14"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r320-1362.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "5b71e83719f3611c7cd1ee6943a46699f5555d3a2105c2153538f21ddc698c70"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r321-1363.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "046ffd76f5435dbfbdceb2a6ea2a32183849fb21cec5902695a6a9b1bddff4e3"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r322-1365.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "13c4819031f68f1147a85b877e19086f214f9b17ee59c5a69ca4f5ca43e1b27b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r323-1366.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "39ae011eb5070edc14657de7fa60d6a7e691a6e2df39f5fb6f152ee3e356b609"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r325-1370.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "22f8f3497b45d5b8fadea76d440966c77ed9fb7372187b31896e9c510857a2dc"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r328-1374.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "aa472da4856f1862cce42436392c93400295b5184ad84ff814d0be5179c2fc5d"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r343-1403.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "ce17b37d8b0dce55a3ddc1e162e6a5beabe51fc188e15da26b2ad2e81747bc32"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r351-1422.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "d66aaedf49364aa0de5ef8c7a26c8f5296d28b3b9de00b728375f61daf220fea"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r353-1425.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "cdbd5c863a90a8c423a4f7bdf730144375455ddf1d9a0e5d75de6c157ac36e08"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r354-1426.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "f8e1a096c5f7cc80a9f6879bed02d7822c2ab30301bdf69002b94884b40e6521"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r355-1427.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "2657fb86c049cb0c113164aaf3f4d3dba148fac2f105d4ac1075d76e352d8966"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r365-1443.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "652222f153ad750b780bb1d675a71b35c8c7bf386f748ed20c5de25658fac6d9"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r368-1448.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "922eaa5ba88e81feea3bff98663011b2880ce76aea05473ff096da9c3620a53f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r370-1450.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "a08b2ac05f7ba87b3eab9633b641e9c0bd22d4840acb9af96ac0c6b0e423c722"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r374-1460.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "823885089932ab74c91cbaaeb388be76439c7a5577abdd54e13ea6f268c34195"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r379-1467.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "256d29bae9977aa2ce17db1a9906ab6c434104f564674ccd9b393cf68fe4431e"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r381-1469.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "7ebcb5bab39e2335d8755a513945dd05a4f8c418e72b8d4093278670f941da58"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r385-1473.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "b852eff69286d87ba6fd105adfb82de18b4c29ed09a0a2c0159c8135ad754e61"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r387-1476.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "25b725371e3be5f70258ad70129e95934a3935b275d7a7c3b7e44d0ec9e7f662"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r389-1480.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "b9f6a300186ab5a24fee2670eaa317c6f7309f79e51003c4c047355ec6dff6e9"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r390-1481.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "a7e2087f79cc0726fe92840d7649ecead0c4008002680e064f4e72963e7585e9"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r391-1482.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "e91bf66b68e1ddc2fb41e9c0e4ec0bf604a4001203875edb425bd53a5b5c5bdc"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r393-1497.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "88f547d6e342940ce806557f6965c0b4d0d46cd04c0a9e6f42304e0b860297c6"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r395-1502.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "960c37bbca0b7ff80673f4d39a8c64082b5d443fefec49fbabecd5a17df78b5e"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r396-1511.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "6776740d72e64b482009c3ed225f654e8914cd3895a6864e13ba5705d0958651"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r397-1516.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "d34ad6be3473e7bcf5be09380ea2e7d871078687e92bcef2ed2930a807c22b07"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r400-1704.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "d97b56e43471dbda7c71a824470915d0bb474ab963c81fd9b190fdcb587b71eb"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r405-1710.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "fed5c1467bf459ce3d3628bfc232ddab1d9bdafb2c52e6bfd34f77850d5fd374"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r407-1713.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "490419dcdd180ce9169baadc750396442796d26b0014527283819a7ed6d996ae"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r409-1717.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "60402e024c5961645eb829ec91f8aefce89914476cdedd136c956672bf26bfd3"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r410-1718.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "30b9ddb7b55ac8c0d4e350cd1ab4bf8c5d48db0988c86e4183740392f89fa602"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r415-1725.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "9d5c56224c2f767918b4f67c83a747a63ec1e1ea839375c65ae62a8388fb9f34"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r418-1730.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "6fa71da40c5d02f3af7d0a4fa95711c311609f91bc03bf9372939c3f4cdd6e08"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r420-1733.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "8fcbdb0a574a2a23ad8a3926d70b52fd08962fc16e4e2e227475caca7b8dd2a3"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r424-1737.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "6958ba994555a26c9c97d2479d504d4069e210172e43a2b2222c798598a2fb3f"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r425-1739.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "a7882dcfa04e4ca7134ba9076c04c83bbf339c4ee7ee5f38596cc61dae32cccd"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r426-1741.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "2adf95811fb7bccdb654d30b643389285f22708c8219b17ae0980d50136ee3df"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r427-1742.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "91c096be7c5e1923c9043c3816a602667616d6da3218c2e8fb4264335f027721"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r429-1744.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "5fa11d8058a724e01c7593f76ef36819f340ce8766e4fc2a65ed35e73f4f644b"
+    },
+    "/exercises/vital-pro/vital-gym-pro-r431-1748.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "1d465d6a27aca6d42120b6356b88e88af5a6fe41f1084526e00b5e9061a70792"
+    },
+    "/exercises/vital-pro/vital-hack-squat-machine-ex067.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "2a2557cc76498a242c4ee20079324d4e74380f382bb4e1fac3d803b958cd49fd"
+    },
+    "/exercises/vital-pro/vital-hammer-dumbbell-biceps-curl-ex016.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b78f1c9e194f30d5e123558fcd4df9d7c62d70df04fe487f528c8a91b71dc32d"
+    },
+    "/exercises/vital-pro/vital-hamstring-stretch-ex254.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(136 136 136)",
+      "sha256": "a0353c1a7465a1c96c7060f6714376096985398c91c19281728a2aa407dae57d"
+    },
+    "/exercises/vital-pro/vital-handstand-pushup-ex225.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(137 137 137)",
+      "sha256": "608a5de9151a84e8d802d7ef4214fd4a9f549373e401d29f2dd0aa7be6d148f4"
+    },
+    "/exercises/vital-pro/vital-hanging-knee-raise-captain-s-chair-ex112.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "bf592123ab0f7a99f4f0796640f3af54974f9837724b705da02234b18e491548"
+    },
+    "/exercises/vital-pro/vital-hanging-leg-raise-ex004.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "2bd4b77535867dd92340fa606c7c96d23cd4255058939bd67700ab37882788f6"
+    },
+    "/exercises/vital-pro/vital-hanging-windshield-wipers-ex752.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "6b5f1620b4d4230277af176b3343cda381c7e22da702030698885eb252c323bd"
+    },
+    "/exercises/vital-pro/vital-heel-slides-ex667.jpg": {
+      "crop": [
+        0,
+        1.1111,
+        0,
+        1.1111
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "3574d00cc54cae3eea645962ce0358c99dd8a1a12bdf1b7dad164faeea5a3d1c"
+    },
+    "/exercises/vital-pro/vital-heel-tap-ex668.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "476cbdcde21ae944ddf4b38350aa9287e66fe315e3bc761b61ee6a1aae4f6352"
+    },
+    "/exercises/vital-pro/vital-high-knee-cardio-ex210.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "04f2c656386fd5a35c90029a6267aebe7d3fe0488d1613d5af1241261df89b61"
+    },
+    "/exercises/vital-pro/vital-high-plank-ex153.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "324cd99edcbbb8b3613df0b6815d4aafb77c8b376509f3e6ec3e65af2740ea10"
+    },
+    "/exercises/vital-pro/vital-hip-abduction-ex603.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "71ea3a58d17e8868036d87f77dd775a2a096e5b03aa41c048d711747b065f0e6"
+    },
+    "/exercises/vital-pro/vital-hip-abduction-machine-ex068.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "71ea3a58d17e8868036d87f77dd775a2a096e5b03aa41c048d711747b065f0e6"
+    },
+    "/exercises/vital-pro/vital-hip-adduction-ex604.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "0bcc66a8774808fbe5243116130fa04fc94f96d89df7aaf6f1d9d7a7e0433563"
+    },
+    "/exercises/vital-pro/vital-hip-adduction-machine-ex670.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "f972453f0696b7f6fe80db4a2f3e426963bd7191052455dc2b1eaefb51e3be91"
+    },
+    "/exercises/vital-pro/vital-hip-circle-ex308.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "e7b64437ef8e3330077fe052ef60906645a734698a34b9dc6d9a06ae26b371c5"
+    },
+    "/exercises/vital-pro/vital-hip-flexor-stretch-kneeling-ex376.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "4adab0910ecaae5555e37c2f305a683b434d46bb9cd5ff79d23d15d824d2c0c6"
+    },
+    "/exercises/vital-pro/vital-hollow-body-hold-ex378.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "bb911e3103434c23c56d057f8dd25cea621c68ca74e8c3d5458e39beed2867dc"
+    },
+    "/exercises/vital-pro/vital-hyperextensions-back-extension-ex036.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "fa1ff61daa1e6df79dfb62a04f3a2d6baad0b98746d8fb2812b6d6357e888685"
+    },
+    "/exercises/vital-pro/vital-inch-worm-ex309.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "1d7b1ff6cdc2f3794655d823121fb9302b2658c598635b54282add2b0ec597a4"
+    },
+    "/exercises/vital-pro/vital-incline-barbell-bench-press-ex042.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d42b8711fb1717f306f3621fc62d54fda1295e5d377c47289adc1016dfb24bba"
+    },
+    "/exercises/vital-pro/vital-incline-bench-rear-delt-fly-ex278.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "f14128556b35c42ab59addb172c2282732cf41a5055004a6f5343aa6ce163de0"
+    },
+    "/exercises/vital-pro/vital-incline-dumbbell-bench-press-ex227.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "616ea6d123dd3e737d191a06caa54a9a9c0e65a3eb2a843e6b101e7de8c4c981"
+    },
+    "/exercises/vital-pro/vital-incline-dumbbell-curl-ex019.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "0ec0c7aaf326ef2b5ac00df2958796c660eb3101e5db94dedddc0fe334f70fe8"
+    },
+    "/exercises/vital-pro/vital-incline-pushup-ex228.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "18c539e30024f0d81ad1f586f9a5f5e87abc049d6d4d74f3c4962157a107a934"
+    },
+    "/exercises/vital-pro/vital-incline-treadmill-walking-ex544.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "0c93124b05729438f9d136385149638a23580d84db68fdf03edd2b536ba084b0"
+    },
+    "/exercises/vital-pro/vital-inverted-row-ex191.jpg": {
+      "crop": [
+        0,
+        16.4815,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "de8a0df59915e5fceb6495c667cfa5eb14d5a1e9a08fe5e7d1d55faafaf254a1"
+    },
+    "/exercises/vital-pro/vital-jefferson-squat-ex255.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "2d831f6e68d3f78d3e42d71ae7c33a94df94890f7b090fbd824a36c04464b04f"
+    },
+    "/exercises/vital-pro/vital-jump-rope-ex211.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(139 139 139)",
+      "sha256": "c9fab14f19b2c28521fd14bda08013a94e6fad627f6f3d698bf334f35d361f47"
+    },
+    "/exercises/vital-pro/vital-jump-squat-ex256.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "f25f92b031070abaac926c5e0ebf4eb606fd2b145e781d3c910da88268779dbc"
+    },
+    "/exercises/vital-pro/vital-jumping-jack-ex115.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "3d75c8df684da8bbe057c32da64ebdd78c8272328438836395f88f032affae7d"
+    },
+    "/exercises/vital-pro/vital-jumping-lunge-ex311.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "304343b4d15758399b330a3f6b2557c8ddae75c2f11a3b8eda92b4876378abc3"
+    },
+    "/exercises/vital-pro/vital-kettlebell-deep-squat-ex783.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "c25700c7519ffc4c2f3aec55b0fb0ed50dea0997eb7ed8d2cd0fd2aa2887e3a7"
+    },
+    "/exercises/vital-pro/vital-kettlebell-hold-march-ex069.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "c73ac7df35c8d5bbdbab13b5ab12a79da382148e7a1ef38bf11476a2e0b3273d"
+    },
+    "/exercises/vital-pro/vital-kettlebell-overhead-press-ex092.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "1cc199e6fcf83b2038ecb7df70a7d5a3f12171c8ecee773a3570e195d42fbd21"
+    },
+    "/exercises/vital-pro/vital-kettlebell-reverse-lunge-ex784.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "e820914b8b407d2cafab81ef851c72fe8194b9910ed28732b4ddacd45e7af85a"
+    },
+    "/exercises/vital-pro/vital-kettlebell-swing-ex071.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "fc37f6831f2fff23b8d6c2dbcbfe083dc483fccb61b251391dcf98f416af6c8d"
+    },
+    "/exercises/vital-pro/vital-knee-lift-crunch-ex606.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "7df8309c2432e564690ab8ae9bdcd987fe1ab1fdfa047c063715df9f0a197ef2"
+    },
+    "/exercises/vital-pro/vital-knee-pushup-ex312.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "91f5d242a168f2599851928511a6d30a27a726ef5c1a0804db9805c35529010d"
+    },
+    "/exercises/vital-pro/vital-kneeling-landmine-oblique-twist-ex470.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(248 248 248)",
+      "sha256": "1401bfa082effee4686604c82a0117b0ca4465012455f4b5d3b4b7510aa75b63"
+    },
+    "/exercises/vital-pro/vital-kneeling-quad-extension-ex471.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "96d04b60ad81eacd974db2bc948842d69a02e2f2431d9c10092a945d145cbec9"
+    },
+    "/exercises/vital-pro/vital-l-sit-hold-ex385.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "08ce665597c26653bc078a34ec8fd35a2efb10234a7ceee173fc1f7819a305d0"
+    },
+    "/exercises/vital-pro/vital-landmine-barbell-deadlift-ex608.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "37f3770d1b2cebac8ae46514bf9b9cc2885bec540d4fffac99444cd54562dee8"
+    },
+    "/exercises/vital-pro/vital-landmine-press-single-arm-ex020.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "6b448539c26179dad3525ca54de98c3696791989c710977acb9862840830b275"
+    },
+    "/exercises/vital-pro/vital-lat-pulldown-ex531.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "3647e376ff1f9ed0e76342e52ec37e9a0fcc01775aeb3c94b25678e6a0628bf8"
+    },
+    "/exercises/vital-pro/vital-lateral-raise-dumbbell-ex094.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "1eac7af87e4df94f69fe1eb28d458dd95f33ff637d16edf933ac5b6144f4a7c7"
+    },
+    "/exercises/vital-pro/vital-lateral-raise-machine-ex095.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "0b5069d7a7003fccfe1410422ff80416e13242c3910ba266b74c0a9858bf7d4b"
+    },
+    "/exercises/vital-pro/vital-leg-extension-machine-ex072.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "f40fdebd5db5c348c4a74795f3fe9394d9d3b12b296844764da8ed3517f47033"
+    },
+    "/exercises/vital-pro/vital-leg-press-machine-ex073.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b7eb7aae0fd18141bf6176c77511d06456bcb62db48eff40ab507bb6cb5d5514"
+    },
+    "/exercises/vital-pro/vital-leg-swing-front-to-back-ex388.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "3a56ea14df66883eb2aeb0826eb29d390ee8a0c025c011db4dcd018c37337070"
+    },
+    "/exercises/vital-pro/vital-leg-swing-side-to-side-ex390.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "966058c14de328622df3bc23409efdc06d59de54364f90c4f7747f56f453dfe2"
+    },
+    "/exercises/vital-pro/vital-lunge-forward-ex314.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "1435b9807c42d9505c645f9c41be403a09ac8e7c8e0b2177148de2b834deeb03"
+    },
+    "/exercises/vital-pro/vital-lying-leg-curl-machine-ex074.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "7a24eae96d698cae8878052bc45d63b8c7a826beae90d3b898aff931efe00a91"
+    },
+    "/exercises/vital-pro/vital-lying-leg-raise-ex260.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(137 137 137)",
+      "sha256": "1822754b016b313ded2bcd12bbd541a05ca03ec6f21f4a481b81a5456462aba3"
+    },
+    "/exercises/vital-pro/vital-meadows-row-ex155.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "0fef42c81d05bc86c8f39be1630eec16c66c6ceb3096a6dd8a7c57bbd953704a"
+    },
+    "/exercises/vital-pro/vital-med-ball-situp-ex539.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "8062e93cbcc6befb330127a1b859c352c5925ec3fb69eed366d9b92d35bc82f9"
+    },
+    "/exercises/vital-pro/vital-medicine-ball-abs-crunch-ex614.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "fe85b09a4dfa22a3ff825945e293fa70177ef4fb9119f93bd469173404a0d2e0"
+    },
+    "/exercises/vital-pro/vital-medicine-ball-slam-ex214.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "bd8b7531cdcd936c727f55e9b99326add8bc4029acb475c5d1f23bd43842107a"
+    },
+    "/exercises/vital-pro/vital-military-press-seated-smith-machine-ex096.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "00ed37c7b37756c6a1529df07154063719538022459fbc16ab82b18bbda28c1f"
+    },
+    "/exercises/vital-pro/vital-mountain-climber-ex117.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "e9a9a71bd7b5f81059b6f3158adfb1f4081d90cdb708e5fb9015a3378d8774e8"
+    },
+    "/exercises/vital-pro/vital-negative-pullup-ex391.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "c378d59f5b012e843121403ef522392917553627f8f5a237c324939bc8d24a09"
+    },
+    "/exercises/vital-pro/vital-nordic-curl-ex549.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "a350d28b9b2d5948f570da4522c3f212f1413ee571f9e37cd4f57f0dc0be53bf"
+    },
+    "/exercises/vital-pro/vital-one-hand-pushup-ex230.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "61c1fcd9b22a636ca5f56e3beced69b61d046660991741e8efba0507954c090b"
+    },
+    "/exercises/vital-pro/vital-overhead-triceps-extension-dumbbell-ex021.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "0d2c3480fe65ca8977997778d12ea27aae685b1f69214b286e14dae1034f5cff"
+    },
+    "/exercises/vital-pro/vital-pec-deck-machine-fly-ex050.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "a87fb694f69e328feb4b07dab9129ed37e5d0c01b4d6ec84988730e55b6c6a7b"
+    },
+    "/exercises/vital-pro/vital-pelvic-tilt-ex679.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "0c17fd63d9aec19254b962cd1d5cfaf30ae6112e7867cfe6c05b53eff23b7919"
+    },
+    "/exercises/vital-pro/vital-penddlay-row-ex192.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "0459baf8baf284cd0e0affbc35d435e74b7a6da6ca14a3872c285128a3dbdd66"
+    },
+    "/exercises/vital-pro/vital-pendulum-squat-ex680.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "ca655e6297e6d8b18e5de66c6a8e974255f89e8da4dd5fd4236a23fd63235c39"
+    },
+    "/exercises/vital-pro/vital-pike-pushup-ex317.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "05a7e711d9663fa0bc1bf111192070e5fc7fe05f8d7c714bf8dfc8e2729bc381"
+    },
+    "/exercises/vital-pro/vital-pistol-squat-ex393.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "da0416aa29c105a0491b5e406aace10aac0c848ca07919cd3bf77276a9830254"
+    },
+    "/exercises/vital-pro/vital-place-jog-cardio-ex215.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "edf20e13934ead4e7b6909218d501b6aefb67ccca4a898d64261161e05c1caa5"
+    },
+    "/exercises/vital-pro/vital-plank-ex681.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "efbc88790133ecfac0b698bdb1be6928647e05524629eb6b73a232004e33d709"
+    },
+    "/exercises/vital-pro/vital-plank-hip-dip-ex118.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(137 137 137)",
+      "sha256": "823800d488fcdeedc37c789002d6fe9b66773cf61d25a91dd001f0d6cae003c5"
+    },
+    "/exercises/vital-pro/vital-plank-jack-advanced-ex395.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "42e225129ebc4073bd39e95582f99c80f03d833367572ca4a50e11d7896f454f"
+    },
+    "/exercises/vital-pro/vital-plank-t-twist-ex493.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(248 248 248)",
+      "sha256": "636759c99a19018229050e806559e09648890159158a9539d78da3f73fa16c84"
+    },
+    "/exercises/vital-pro/vital-plank-to-downward-dog-ex193.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(140 140 140)",
+      "sha256": "4d186862031ff701f7c8a0c69caed46e8bbeec9f2904eb46f5633051b08fafae"
+    },
+    "/exercises/vital-pro/vital-plank-with-reach-ex730.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "e4e3748ea9cb323953952f7ae5498aa0d906571b54e87aac3cc02fcc7f723ffb"
+    },
+    "/exercises/vital-pro/vital-plyometric-pushup-ex495.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "735145fc983492028d5270d441a8f2722e06f1425e6db1ff2a62705a5cdea8f7"
+    },
+    "/exercises/vital-pro/vital-preacher-curl-ez-bar-ex022.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "34d714973903c39c65d04ecbc0692fa7f4c960f9728150c061a0fdd0a17fc33c"
+    },
+    "/exercises/vital-pro/vital-preacher-curl-machine-ex156.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(128 128 128)",
+      "sha256": "a5c385eaf12cc4481d7318e354f24943f135bb47ca99258214e8048ab1773d0b"
+    },
+    "/exercises/vital-pro/vital-prone-back-extension-ex194.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(143 143 143)",
+      "sha256": "4e0803f9b9af3313f2c0ebcce2a81127776531abc043cf9890bbf8a71f1f133c"
+    },
+    "/exercises/vital-pro/vital-pullup-ex038.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "14c50a6189f2387637328399061ee82eab2c9b2df94da3d97d9119a985c11a2b"
+    },
+    "/exercises/vital-pro/vital-pushup-arm-lift-ex157.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "83ba0c8aa3c9652c7d4817a2c63246600d43a14a43b3ea7e964daef1650bed49"
+    },
+    "/exercises/vital-pro/vital-quad-stretch-ex320.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "89addb7670f1555bd77dc7d29996dc6881f00105ac62571264666c8fa00c7f6a"
+    },
+    "/exercises/vital-pro/vital-rear-delt-fly-reverse-pec-deck-ex097.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "ccd4ec54cd24318dafc1ad316d8231c850d97eae5a685265e3e317dce2f9e641"
+    },
+    "/exercises/vital-pro/vital-renegade-row-ex196.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "9782b1701dc4dff942a35f88ad31a1b458f8eb6a92afeecb1b835bd660103cd1"
+    },
+    "/exercises/vital-pro/vital-resistance-band-biceps-curl-ex158.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "6e6300e542d25d1ec024a7b3aa2e9e5e9db9b327c7a45d84a23545c81d0b2c61"
+    },
+    "/exercises/vital-pro/vital-resistance-band-chest-press-ex232.jpg": {
+      "crop": [
+        0,
+        12.5926,
+        0,
+        12.2222
+      ],
+      "backdrop": "rgb(139 139 139)",
+      "sha256": "069230f73615d5b9741cfa4da13a3e258132ee7f83637ef643fcf78e081e7e54"
+    },
+    "/exercises/vital-pro/vital-resistance-band-deadlift-ex197.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "477cc0d742cda87646a70b453d65285593e24c9133cdf530ddc4f155156f4527"
+    },
+    "/exercises/vital-pro/vital-resistance-band-good-morning-ex261.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(140 140 140)",
+      "sha256": "3f666e79a4d5b23265343a7517d44abc323ffef3506e039143240425e12464f1"
+    },
+    "/exercises/vital-pro/vital-resistance-band-high-side-pull-ex279.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "26c7e15ee5eb69fd1bc185dece9fb243c4b4277a4dd0117463ed8363cfc1859d"
+    },
+    "/exercises/vital-pro/vital-resistance-band-kneeling-crunch-ex498.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "566c306c1712f4ffe5b2e3fe62cf749001348bf79de01b4a80f81bca01386869"
+    },
+    "/exercises/vital-pro/vital-resistance-band-lat-pulldown-ex198.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "ea9dee3b176ed1cafb37668b7f39e36750e8e1237ea009a4cca1afe8b4d25cbd"
+    },
+    "/exercises/vital-pro/vital-resistance-band-monster-walk-ex262.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(129 129 129)",
+      "sha256": "89d1ab4317ca82d0a5d6bc56cb5d61993bc356a5fa93238cd9a754d108243964"
+    },
+    "/exercises/vital-pro/vital-resistance-band-overhead-triceps-extension-ex159.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(136 136 136)",
+      "sha256": "ecbd9776c1cf8338eb4435ad668cb4a978402afd9fde1588d4e7784892ddf7bd"
+    },
+    "/exercises/vital-pro/vital-resistance-band-shoulder-roll-ex280.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "8143965d1a65331479a58840668d231f728c69a2b3d18d33ad01497a5ae968f5"
+    },
+    "/exercises/vital-pro/vital-resistance-band-squat-ex264.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "8f801333f1729c2c74e614ed1db0fb4ec8169e7691ffc28d8ce64d7a04149465"
+    },
+    "/exercises/vital-pro/vital-resistance-band-w-raise-ex199.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "f51fe52e3edc16c9c482633250ab89bf9d3d84e3b8dd9706c8f7d81bf8b8676c"
+    },
+    "/exercises/vital-pro/vital-reverse-crunch-ex321.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "981533ce8f576fa0719688b7eb26aeccf49838cc6bac709c4146506763a0b2fd"
+    },
+    "/exercises/vital-pro/vital-reverse-hack-squat-ex685.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "24b2bd1b15606565fe62abd74640c7a1f53c07f2760b69eddc9e63a8ba81ea9c"
+    },
+    "/exercises/vital-pro/vital-reverse-lunge-ex322.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "5b64c076e1b10bcecc1e0a8bcbc4db503cca26bdefd61299073c7b99979dc2cc"
+    },
+    "/exercises/vital-pro/vital-rope-wave-ex075.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "957d59f52263b874e77fe4fa0c09d4df0f102b515083f59bf5e519a939a633a1"
+    },
+    "/exercises/vital-pro/vital-rowing-machine-ex076.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "736bd1831c050591a0cb8ea972e0c174ac4cbee377db29b61c27ce44b4c569db"
+    },
+    "/exercises/vital-pro/vital-run-ex217.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "eed59cbfc1371679931038069832d245059dc44a73b4cf7d0ead179dd77ad469"
+    },
+    "/exercises/vital-pro/vital-russian-twist-ex120.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "3cc9663a9088b7bcf3b2804d6433dcb9757196b866217f9e918c0d15f1d95ae3"
+    },
+    "/exercises/vital-pro/vital-scissor-kick-ex121.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "d748df202a2ba45bfac4cdde15de0090b82c6d9d3b3a3c65063a9a41ce665e65"
+    },
+    "/exercises/vital-pro/vital-seated-cable-row-ex160.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "12c6174bceebaae4680e0c9ac6bddac56fe7c7062a8f31fc0a4b3ec5355d18d3"
+    },
+    "/exercises/vital-pro/vital-seated-calf-raise-ex689.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "3a1df49d95a6e970a44ea05bce5d4044433eaa8ec2454c8db3a7929cfea3b3c5"
+    },
+    "/exercises/vital-pro/vital-seated-chest-supported-machine-t-bar-row-ex040.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "558e6f068470dfb148c3a515e58684378452ee37a7e4afd461713d0c89946cf3"
+    },
+    "/exercises/vital-pro/vital-seated-forward-bend-ex323.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "45cb4d3ebe24143a9ff6f202deb0f9a297b9c1ac5e8b33485c8523e3bbdb95cc"
+    },
+    "/exercises/vital-pro/vital-seated-knee-tucks-ex750.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "f4e6e5b2934acce0d2b6b228df2fb5dd02447fa582d3ac31e57bce35c03b0b49"
+    },
+    "/exercises/vital-pro/vital-seated-lateral-raise-ex161.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "f1d53244a39b6a51c93bd535fc9e27c13c074c5cc58e14cbb2882412121ebae8"
+    },
+    "/exercises/vital-pro/vital-seated-leg-curl-machine-ex078.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d23eca5f8e98a28845c6513085a352795691732b35fb922fa7925cb71ed7d79e"
+    },
+    "/exercises/vital-pro/vital-seated-machine-chest-press-ex234.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "04b195d4323af9db9ce4f94c79a7fd0a59669c953f929d3dc0158b7fd898c569"
+    },
+    "/exercises/vital-pro/vital-seated-machine-row-ex532.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "3e0bcd9fb91dfa37237da8abdf48315d13338e2c8f388eb77f399874ae58f5af"
+    },
+    "/exercises/vital-pro/vital-seated-overhead-dumbbell-extension-ex162.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "54c9ab767eb989f59a3f52b6f9730bed91addd0c77af8c85a5fb3f83a4e1700a"
+    },
+    "/exercises/vital-pro/vital-seated-overhead-press-ex079.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "a4f9edf90675d3fa7afc541fd7e056d0e904eea6a538668f3eff62a962e78f46"
+    },
+    "/exercises/vital-pro/vital-seated-shoulder-press-machine-ex163.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "c0c113b3c7cb7023d9ea2e9c25be54da9b2135fda5f037e42dd8affc3ec1e142"
+    },
+    "/exercises/vital-pro/vital-seated-triceps-dip-machine-ex164.jpg": {
+      "crop": [
+        0,
+        21.8519,
+        0,
+        21.8519
+      ],
+      "backdrop": "rgb(116 116 116)",
+      "sha256": "d1f1161c4108beaa866e88228f318706c05bfbc1186e3e993124c0e3e4cb381b"
+    },
+    "/exercises/vital-pro/vital-shoulder-landmine-press-ex283.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "bdfde72c5c51debda2e6833e9cc9f1f1b69f173fafa6e6871fc7d0e30db32c47"
+    },
+    "/exercises/vital-pro/vital-shoulder-stretch-ex324.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "983f1be437de6da7e493bb7db2215e02386c7381889e4354e0c1d77743e1a9cd"
+    },
+    "/exercises/vital-pro/vital-side-lunge-ex325.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(139 139 139)",
+      "sha256": "21d20313087e80dfed4f6f522c0e9ece13b0eca7bb586b76543e5dc74470bc05"
+    },
+    "/exercises/vital-pro/vital-side-plank-ex326.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "eefeafcf476238d2572dea6d2dcfbca0c9d98cfa256dad9661abaedd07f8baa2"
+    },
+    "/exercises/vital-pro/vital-side-to-side-crunch-ex630.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "1e5856dfcaa5aef4504542da6f1e424a0fbf11f293566456a521897f98548c8c"
+    },
+    "/exercises/vital-pro/vital-single-arm-dumbbell-row-ex200.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "030df69f0bdaddc91ad23ebd8663ce8e806e9f604f4fd0063c25658b38f558d1"
+    },
+    "/exercises/vital-pro/vital-single-arm-high-cable-curl-ex166.jpg": {
+      "crop": [
+        0,
+        21.8519,
+        0,
+        21.8519
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "03387bee6341a0903c7ecae151c2d1065ed8afeee78e8f8252b8a947dfb9f692"
+    },
+    "/exercises/vital-pro/vital-single-arm-lat-pulldown-ex556.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "841ed9df1b45102d69fdb8d9e58392f65c8aedaf78ae6943398058623b82c2eb"
+    },
+    "/exercises/vital-pro/vital-single-leg-box-jump-ex506.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "237fc25bcdfb22338b5ff12ef1d15823ea7b15bc83b7598cc0b5ca3d6508e81f"
+    },
+    "/exercises/vital-pro/vital-single-leg-deadlift-ex201.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "5c0b2481fcae16723a56dbd48743fd619ece6f5b07c8faee6225e03a24010693"
+    },
+    "/exercises/vital-pro/vital-single-leg-glute-bridge-ex122.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "9c26cd54f6fbfdbc3aeeebdc704c84b359321515f49407f9e739c736e7da6647"
+    },
+    "/exercises/vital-pro/vital-single-leg-hip-thrust-ex693.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "cedca66af18e8b6f4ba78958c8dbc0971386d8d36f85e3a7641d20e61e92e4c9"
+    },
+    "/exercises/vital-pro/vital-single-leg-leg-press-ex551.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "feafed75cb6ba7a7fa19e7f558e28e6e281afae191ff1481ba5f7e72e91d1a35"
+    },
+    "/exercises/vital-pro/vital-situp-ex328.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "9726b6a63c48ff041bd6eb07af706672c5ca03c0fe675d961b2b4d593d0c7559"
+    },
+    "/exercises/vital-pro/vital-skater-hops-ex265.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "4849ddedd2dfd1ca51468b9f5b58a0cb12051d888cced260fac22f6497590a1c"
+    },
+    "/exercises/vital-pro/vital-skull-crushers-ez-bar-ex024.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d66f5e7afb58ba66c37feef971fb589c7c7d0ebc3e1442109f4b056438935182"
+    },
+    "/exercises/vital-pro/vital-sled-drag-ex513.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(247 247 247)",
+      "sha256": "ceec71598452db122ddf46bd1a99fd3fd7f7399e0afa5cb35c6189f84a3042f9"
+    },
+    "/exercises/vital-pro/vital-smith-machine-reverse-lunge-ex795.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "1cbed38114a80f81c592e63195f526e3c49b49737c5d3bba8de6d50ac7c37e94"
+    },
+    "/exercises/vital-pro/vital-smith-machine-split-squat-ex796.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "2181fb4bcf5d4662b1874362f4a44655243fc07aa21daf700699cc6c7a280cd3"
+    },
+    "/exercises/vital-pro/vital-smith-machine-squat-ex266.jpg": {
+      "crop": [
+        0,
+        21.8519,
+        0,
+        21.8519
+      ],
+      "backdrop": "rgb(116 116 116)",
+      "sha256": "4798d1007ef7e2af71cf5aa40b5ec3ffcf5a4169a3a55ca410447647096e588e"
+    },
+    "/exercises/vital-pro/vital-squat-machine-ex267.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(120 120 120)",
+      "sha256": "99292ccae958c13610f72e38f1b719f9a7967f94e68dbe567aec8b399333e48f"
+    },
+    "/exercises/vital-pro/vital-stability-ball-deadbug-ex517.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "e408bf6567f9c84644db7fba67f465420de8a61e43c3a9c05e64453c4bd7d2b0"
+    },
+    "/exercises/vital-pro/vital-standard-crunch-ex123.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "51c8deea2368fac21d5ebfbd08ea781ee2e337cd8a4d9ce5150da4c93990d158"
+    },
+    "/exercises/vital-pro/vital-standard-pushup-ex235.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d02eb23b1066257e6be82151f1ffe816521da9159bbc21c9c25e6687cad99000"
+    },
+    "/exercises/vital-pro/vital-standing-barbell-extension-ex167.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(134 134 134)",
+      "sha256": "a91dfcaab7f8b34401235923379abe755faa45f4c8101989e6e5fddc139f8f0f"
+    },
+    "/exercises/vital-pro/vital-standing-cable-concentration-curl-ex169.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(124 124 124)",
+      "sha256": "560d3938ff1a7655a45256ffcf2c1a99e7c622706ad3cc51efe56aa8befc6b4e"
+    },
+    "/exercises/vital-pro/vital-standing-cable-row-ex633.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "5048e7907e8187fdc8a82aa91a1d4a9747c9258128a87f29f76d2fda56d52e69"
+    },
+    "/exercises/vital-pro/vital-standing-calf-raise-ex268.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "e34c5123ebc4e48ef942cde2784b4787c20bb609c2ec5e87af75b7e0458b7b96"
+    },
+    "/exercises/vital-pro/vital-standing-pallof-press-ex697.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "125281ccedd34f7eb7c04cbb768f3eb3e7382985d31493c1308cbe90e8488e16"
+    },
+    "/exercises/vital-pro/vital-standing-single-arm-overhead-extension-ex170.jpg": {
+      "crop": [
+        0,
+        16.2963,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(129 129 129)",
+      "sha256": "beadd735ebdc3af355e11868451b168ddcba74efcf807ecc0f3af6b91bf4881d"
+    },
+    "/exercises/vital-pro/vital-stepmill-machine-ex081.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "1f43e8d90db6158093d0a5cc5cb7d5183519b7a08787d1c85aa9dc169bda2a74"
+    },
+    "/exercises/vital-pro/vital-stepup-ex332.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "e84bc74ce9a2db7919c259f44d4a4adfe38e612c3d9e28ec3142a7830bd09b3b"
+    },
+    "/exercises/vital-pro/vital-stepup-weighted-ex080.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "fcb83edc4e02ce9ea27e43b18824f3427106d7d38a5f90e91f67ecf0ce55feec"
+    },
+    "/exercises/vital-pro/vital-stiff-leg-deadlift-machine-ex082.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "0af341a8e3fdeaccfb0d90659645b6c1c9e7dfbc8e69bb964c249b095e0a0128"
+    },
+    "/exercises/vital-pro/vital-suitcase-carry-ex699.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "d039ed5350cdb0ba985b4ec7dedacd447ded49258145ae1dd31a1290a93112c6"
+    },
+    "/exercises/vital-pro/vital-sumo-squat-ex269.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "aae0e489f98d2585b03f25f5cd92acdfd1b7c30310f59309bebaf43d13bcd1a1"
+    },
+    "/exercises/vital-pro/vital-superman-hold-ex202.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(133 133 133)",
+      "sha256": "caaccf6094570e28d99a9089984740f8ec3b6c8d97f7e39352622a86284324b5"
+    },
+    "/exercises/vital-pro/vital-svend-press-chest-ex051.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "4c113f78935fd3cd591e2c816f786e3577f116b082a49dc3e1f020aa33bc90e0"
+    },
+    "/exercises/vital-pro/vital-t-bar-row-landmine-ex203.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "40c1343e226787ea54b0cdc8521b2dfed0d6519992831bcb1ac16e57866e39c2"
+    },
+    "/exercises/vital-pro/vital-t-spine-rotation-ex702.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "e1d3b3fc987a64643edc49787dc68b44ff81d4ebaaab3fcf7c70b17fca8fcb54"
+    },
+    "/exercises/vital-pro/vital-tate-press-ex173.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "341e2478ef265c7938fd874e722f6ccf01225e00229fa2998dbaaeaae584332a"
+    },
+    "/exercises/vital-pro/vital-toe-tap-ex540.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "24b75c7acf7b58ce66ddd733d254b6985e14857609cb28aa7e7215b3e1687df1"
+    },
+    "/exercises/vital-pro/vital-toe-touch-crunch-ex125.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(132 132 132)",
+      "sha256": "b6e7b019f802049f661770c72baaca70f28591b0ad2eb487f5322e33b3e8e993"
+    },
+    "/exercises/vital-pro/vital-trap-bar-deadlift-ex744.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "cee6f913e428bd6cf5b663a1090fb847ad3ce3b05c789a1d3ab580b5865b801d"
+    },
+    "/exercises/vital-pro/vital-treadmill-running-ex077.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d556f6033674bf6e94fc276f62de2a4483bf52eb722ec85164d428ea400adf89"
+    },
+    "/exercises/vital-pro/vital-treadmill-walking-ex084.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "979a88c22780e4bf7973934d1646dff114e42832beadd3cd91be64323543d839"
+    },
+    "/exercises/vital-pro/vital-triceps-bench-dip-ex176.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "525bc3f095c6c889abe29af5b3e57f07063a540e8eba264ee5f1da407d4bae99"
+    },
+    "/exercises/vital-pro/vital-triceps-pushdown-cable-rope-ex083.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "081dd0d2e9314dda21852701fd66997ec7608ef5ae1e968d4ca3367574e2c023"
+    },
+    "/exercises/vital-pro/vital-tuck-jump-ex218.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(135 135 135)",
+      "sha256": "e85edc9643b2dd4a7e98202328dc2ef1c739b1cd153d98fa55669702c76e71d0"
+    },
+    "/exercises/vital-pro/vital-v-up-jackknife-ex126.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(129 129 129)",
+      "sha256": "27f9b973972632a04643a0f330c9a312351515f650305a0f98b2f552d6112438"
+    },
+    "/exercises/vital-pro/vital-walking-lunge-ex270.jpg": {
+      "crop": [
+        0,
+        16.6667,
+        0,
+        16.2963
+      ],
+      "backdrop": "rgb(136 136 136)",
+      "sha256": "3c775d2a1a48aa6139b705830986a9405cdf5f64ce0a19c2aa242229f65a451f"
+    },
+    "/exercises/vital-pro/vital-wall-ball-squat-ex799.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "9b8a09bb544cc83ebef0732f927df83b3c80b3cc60dac3247a87d650a73ae82d"
+    },
+    "/exercises/vital-pro/vital-wall-sit-ex336.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "88a4cf684b3f7dd5b50740399c7943a28ff736005b6ec7b86357c58a7e4b6019"
+    },
+    "/exercises/vital-pro/vital-weighted-pushup-ex026.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d83a6169f4f852e4f832e8073605c6a345655004a342957b9dcc72e79f197b00"
+    },
+    "/exercises/vital-pro/vital-zercher-squat-ex801.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(178 178 178)",
+      "sha256": "d468b47e1e1a0fc6bfd8a62d3f2bdf076120911f3193606ca94c9f2b73f1cbf2"
+    },
+    "/exercises/vital-pro/vital-zottman-curl-ex180.jpg": {
+      "crop": [
+        0,
+        17.4074,
+        0,
+        17.037
+      ],
+      "backdrop": "rgb(130 130 130)",
+      "sha256": "3612d5cf3927414edf1884bc1774a3a4bdf2af192fdebef13ab1f7f4bf56e561"
+    },
+    "/exercises/vital/air-bike-sprint.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "da24d579b9d10a52a639a95c5aca6ad35c21c90d3cd8f6c0547152b99e7481ed"
+    },
+    "/exercises/vital/arnold-press-dumbbell.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "9bbfe4e93106f621be52cd40cc0b2779085a8a21b7178e64e49912cc1acb30e7"
+    },
+    "/exercises/vital/barbell-bulgarian-split-squat.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "247f4a311300b0f5a39581a09fe8f67027d48603a71d75bc53f8de19a2bbdf74"
+    },
+    "/exercises/vital/barbell-front-squat.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "07196118af4c3cc8b36c2a83de1f3ce78b49d3e4054cc40ada5547a96518fe22"
+    },
+    "/exercises/vital/barbell-hip-thrust.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "7a1d3cc73bb95c35fe919eda470478ad34c77c613198a23d93fc5acc4616d500"
+    },
+    "/exercises/vital/barbell-march.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "28fa7360c679cab0e330a88067fa6be6776c28c8c76e6aa3d13e170cdd10ec84"
+    },
+    "/exercises/vital/barbell-overhead-press.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "c297143d7428436322bffca3cbf216d8d40fed37459a263340552ab6e90ca65c"
+    },
+    "/exercises/vital/barbell-reverse-lunge.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b7b8aaeb982c48d7490702cb1d5ffec78a5a213e80ec2d9429806ad4a719b910"
+    },
+    "/exercises/vital/barbell-squat.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "0758803894ea29432eefa947fc99ff2373a825de4a04da966b92b1c42bf2efc1"
+    },
+    "/exercises/vital/barbell-upright-row.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "84f344bca65ec9ff205a309e238b096872c91353a1c17a4a9cacab48a65295b6"
+    },
+    "/exercises/vital/battle-rope-waves.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "228abdd140f83d2b1faa38be58badfaf5388e12c8e4eb4500e991c002d114d1a"
+    },
+    "/exercises/vital/cable-cross-lateral-raise.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "85dd2f234e9b86edd744f19968dcd97ade67648f2578b7b9c356c24a20806b7b"
+    },
+    "/exercises/vital/cable-leg-kickback.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "370a3bed2eb5ed03c6acc1008893842e6dd81497de6eee583d9cf67ab57b09ae"
+    },
+    "/exercises/vital/cable-rear-delt-fly.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "600367bb8573b5d630fe823274f3dfaecf283d2b0ba568416f78a5bea0fc3101"
+    },
+    "/exercises/vital/diagonal-kettlebell-lift.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "d966b4815564521b52c8d3a0e6501017a7575268a2983318fb63843a5001615d"
+    },
+    "/exercises/vital/dumbbell-bulgarian-split-squat.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "bfb2015bd9603733616f006d187d953ee8ef47396e0e1fd371eb8128144f7479"
+    },
+    "/exercises/vital/dumbbell-front-raise.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "1dd8a22359a071bdbfa1716aad433be7a4ffb45b2d76773f5ef15c6279aefca3"
+    },
+    "/exercises/vital/dumbbell-goblet-squat.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "ae3d4bd1f4da904ac8184394437d8523b2b54822fb983c055637e0eefb5235b8"
+    },
+    "/exercises/vital/dumbbell-hip-hinge.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "bc17a4b3b410cd5ef631305fb9c215a22d7a4a070c8ae5d22eb41e44b7552d25"
+    },
+    "/exercises/vital/dumbbell-jump-squat.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "7001a07da96eee5a3741de7221865122872308de01d35c4713aebf9ccd7cba85"
+    },
+    "/exercises/vital/dumbbell-step-ups.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "aa772a96db26e51b27fc4c7ea0767f0bc3f55098141bbcfe4755333ab4ea9992"
+    },
+    "/exercises/vital/dumbbell-upright-row.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "14dd47a0d1d0c28850b4f8dbdf89954c216967ac2c211fa59278526dbacb877f"
+    },
+    "/exercises/vital/elliptical.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "089a4e34ae848195d0729793478638289ee3e94a7f9608a583aa3d266221aecf"
+    },
+    "/exercises/vital/hack-squat-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "399a94d37f292ef830a363bb00fe9045dbfc4291d2f4c8778a573691d2c6df1f"
+    },
+    "/exercises/vital/hip-abduction-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "5aa6bd5e94407632dea5c883b314236e0c420d2e5d9b86e19dfc6e92b4cc1de6"
+    },
+    "/exercises/vital/kettlebell-march.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "e9039c990f06ea2d431f746399a6745fcc1254d7c472cda493c922ad661e12d1"
+    },
+    "/exercises/vital/kettlebell-swing.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b231fa5d44345a37d1c514f958a09b057bbef6dee1adabc7223f4bac80707358"
+    },
+    "/exercises/vital/lateral-raise.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b2e4cd079b9d4653faf53de12f064512fafa59c3a8df21459031ccbfe35e3600"
+    },
+    "/exercises/vital/leg-extension-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "2959fde43605780d6f815c664875b931e2fa32a525ec301132a4ef7a2da4a4bd"
+    },
+    "/exercises/vital/leg-press-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "9c4bc9ec8e89b57a7b26684a033ecd145cb43c53182f616290b7aa84b788aa25"
+    },
+    "/exercises/vital/lying-leg-curl-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "2dcd99cd4a82473983ad97a23d62ca1ded9453429d88350830ec14129755b20d"
+    },
+    "/exercises/vital/machine-lateral-raise.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "ddc41efbf8433c87e2021333b3c094d87cf38b12a7c7deb0d23c52f7cffa1faa"
+    },
+    "/exercises/vital/machine-shoulder-press.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "0f504a05337b43fb5c5f0e4b277211fba619f9847812d3d6de6f66db9e8ce44d"
+    },
+    "/exercises/vital/pec-deck.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(252 252 252)",
+      "sha256": "b1d41e1962c97ceda0aea70a474690bc2677a7999b72efb3ffd921d91085f9ca"
+    },
+    "/exercises/vital/plate-front-raise.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "565c163a435247ad9b683b982c98b90832ea2dd7192e3c523c505ea7e27da3b1"
+    },
+    "/exercises/vital/reverse-pec-deck.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "6dd829ad92584dbb0c5931efd2f9b354e845a8be0f184d13631aef6f410508d6"
+    },
+    "/exercises/vital/romanian-deadlift.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "23bfad73693add0ef0d3ae9b1fc1d13c2ab004923e8f22ac74272d35414b4f59"
+    },
+    "/exercises/vital/rowing-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "b6623df5759de63e85d7f5984ea83df7c3bf2dd2711a0c745e799581d66cdcba"
+    },
+    "/exercises/vital/seated-leg-curl-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "bc751de3b18709151d09d2645a2e0931a34ea54fdd512c671824718d6bf66654"
+    },
+    "/exercises/vital/single-arm-kettlebell-press.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "3549dcad93bb312a6356b2ad0c929c46e3ab6b835224b2a9f85972010f086159"
+    },
+    "/exercises/vital/smith-seated-military-press.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "a062e81192f9091faa6890b19e644358768503374f1d62d6c808443a5fcf8e07"
+    },
+    "/exercises/vital/smith-stiff-leg-deadlift.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "5a668b61547907b89e1794ef127af5a209fadb8cb31f7d17367611c2f2ea06ea"
+    },
+    "/exercises/vital/stair-climber.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "cab930d3dc670a2c794cd597df5050f3450bdfa75c23c217aad97387aa87be4d"
+    },
+    "/exercises/vital/standing-dumbbell-press.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(254 254 254)",
+      "sha256": "ca6f28f614bf2db4582e77eaa067652656273ad3c848cdfd5d812b58a733fc26"
+    },
+    "/exercises/vital/stationary-bike.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "4c76e8a50e96acc29a65e85676339ac5c5dac031c123d79fd3a42290c527e73a"
+    },
+    "/exercises/vital/stepper-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "467872016f553dfe1abe2c419fc548250ed477d087c7a555b0146c41b8660b45"
+    },
+    "/exercises/vital/svend-press.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "de9b921b223dc674212266458f3c848613cb771c5b22a0e2f2138c212779f7bf"
+    },
+    "/exercises/vital/treadmill-running.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(253 253 253)",
+      "sha256": "ff1940f1f0fc6f32550889da4fbec3fc09b2817b4010de53c6a9b7d474d09558"
+    },
+    "/exercises/vital/treadmill-walking.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "ae42aa36ebe5fc48fd7c682400cc5bd0f9ba912b8874795ec7eab9ffab3bf346"
+    },
+    "/exercises/vital/triceps-pushdown.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(255 255 255)",
+      "sha256": "5d6fe621f1450887985793ce2f48ce2e6b8a98cb0658856fd6c7774d44155bdd"
+    }
+  }
+}

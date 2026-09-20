@@ -719,6 +719,7 @@ test('карточка упражнения: шапка с оборудован�
   await expect(page.getByRole('heading', { name: 'Упражнение' })).toBeVisible()
   // Шапка: оборудование и группы мышц из каталога.
   const detailExerciseImage = page.locator('.exercise-image-detail')
+  await expect(detailExerciseImage).toHaveClass(/exercise-image-studio/)
   await expect(detailExerciseImage.locator('img')).toHaveCSS('object-fit', 'contain')
   const detailExerciseImageBox = await detailExerciseImage.boundingBox()
   if (detailExerciseImageBox === null) throw new Error('Exercise image is not visible')
@@ -738,6 +739,9 @@ test('карточка упражнения: шапка с оборудован�
   await expect(techniqueImage.locator('video')).toHaveCount(1)
   await expect(techniqueImage.locator('img').first()).toHaveCSS('position', 'absolute')
   await expect(techniqueImage.locator('img').first()).toHaveCSS('object-fit', 'contain')
+  const techniqueCanvasBox = await techniqueImage.locator('.exercise-image-media-canvas').boundingBox()
+  if (techniqueCanvasBox === null) throw new Error('Technique media canvas is not visible')
+  expect(Math.abs(techniqueCanvasBox.width - techniqueCanvasBox.height)).toBeLessThan(0.02)
   await expect(techniqueImage.locator('img')).not.toHaveAttribute('src', /\/exercises\/(?:fedb-|base-)/)
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await expect(page.getByRole('button', { name: /Запустить анимацию/ })).toBeVisible()
