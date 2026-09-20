@@ -55,7 +55,7 @@ import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
-import { formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes } from './schedule-presentation'
+import { compactScheduleEventLabel, formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes } from './schedule-presentation'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { latestWorkoutFact } from '../../shared/workout-results'
@@ -114,28 +114,39 @@ export function SchedulePage() {
   const today = todayInTimeZone(actor?.timezone)
   const dateParam = params.get('date')
   const weekParam = params.get('week')
+  const scheduleRange = params.get('range') === '2w' ? '2w' : 'week'
+  const isTwoWeekView = scheduleRange === '2w'
   const isDayView = Boolean(dateParam)
   const selected = dateParam ? localDate(dateParam) : weekParam ? localDate(weekParam) : today
-  const weekStart = mondayWeekStart(selected)
-  const weekEnd = addDays(weekStart, 6)
+  const periodAnchor = isDayView && weekParam ? localDate(weekParam) : selected
+  const weekStart = mondayWeekStart(periodAnchor)
+  const overviewDayCount = isTwoWeekView ? 14 : 7
+  const periodEnd = addDays(weekStart, overviewDayCount - 1)
   const todayWeekStart = mondayWeekStart(today)
-  const weekDays = HOURS.slice(0, 7).map((offset) => addDays(weekStart, offset))
+  const overviewDays = Array.from({ length: overviewDayCount }, (_, offset) => addDays(weekStart, offset))
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  function openDay(date: LocalDate) { setParams({ date }) }
-  function showWeek(date: LocalDate) {
-    const start = mondayWeekStart(date)
-    setParams(start === todayWeekStart ? {} : { week: start })
+  function openDay(date: LocalDate, preservePeriodStart?: LocalDate) {
+    setParams(isTwoWeekView
+      ? { date, range: '2w', week: preservePeriodStart ?? mondayWeekStart(date) }
+      : { date })
   }
-  function shiftWeek(direction: -1 | 1) { showWeek(addDays(weekStart, direction * 7)) }
+  function showOverview(date: LocalDate, range: 'week' | '2w' = scheduleRange) {
+    const start = mondayWeekStart(date)
+    const next: Record<string, string> = {}
+    if (start !== todayWeekStart) next.week = start
+    if (range === '2w') next.range = '2w'
+    setParams(next)
+  }
+  function shiftOverview(direction: -1 | 1) { showOverview(addDays(weekStart, direction * overviewDayCount)) }
 
   const query = useQuery({
-    queryKey: ['workouts', 'schedule-week', weekStart, weekEnd],
-    queryFn: () => workoutsRepository.list(weekStart, weekEnd),
+    queryKey: ['workouts', 'schedule-overview', weekStart, periodEnd],
+    queryFn: () => workoutsRepository.list(weekStart, periodEnd),
   })
   const items = query.data ?? []
   const itemsByDay = new Map<LocalDate, Workout[]>()
-  for (const day of weekDays) itemsByDay.set(day, [])
+  for (const day of overviewDays) itemsByDay.set(day, [])
   for (const workout of items) itemsByDay.get(workout.workoutDate)?.push(workout)
   for (const workouts of itemsByDay.values()) {
     workouts.sort((left, right) => {
@@ -165,12 +176,12 @@ export function SchedulePage() {
       <div className="schedule-month-row">
         <strong>{formatMonth(selected)}</strong>
         <div className="schedule-month-actions">
-          <button type="button" className="schedule-today" disabled={todayDisabled} onClick={() => showWeek(today)}>Сегодня</button>
+          <button type="button" className="schedule-today" disabled={todayDisabled} onClick={() => showOverview(today)}>Сегодня</button>
           <label className="schedule-jump" aria-label="Выбрать дату"><ScheduleIcon /><input type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label>
         </div>
       </div>
       {isDayView ? <div className="schedule-selected-row">
-        <button type="button" className="schedule-week-back" onClick={() => showWeek(weekStart)}><BackIcon />К неделе</button>
+        <button type="button" className="schedule-week-back" onClick={() => showOverview(weekStart)}><BackIcon />{isTwoWeekView ? 'К 2 неделям' : 'К неделе'}</button>
         <div className="schedule-selected-actions">
           <div className="schedule-selected-date">
             <strong>{formatScheduleDateLabel(selected)}</strong>
@@ -178,19 +189,54 @@ export function SchedulePage() {
           </div>
           <Link className="button secondary schedule-plan" to={`/workouts/new?date=${selected}`}>Запланировать</Link>
         </div>
-      </div> : <div className="week-nav schedule-week-navigation">
-        <strong>{formatWeekRange(weekStart, weekEnd)}</strong>
-        <span className="schedule-week-arrows">
-          <button type="button" className="week-arrow" aria-label="Предыдущая неделя" onClick={() => shiftWeek(-1)}><BackIcon /></button>
-          <button type="button" className="week-arrow" aria-label="Следующая неделя" onClick={() => shiftWeek(1)}><ChevronRightIcon /></button>
-        </span>
-      </div>}
+      </div> : <>
+        <div className="schedule-range-toggle" role="group" aria-label="Период расписания">
+          <button type="button" aria-pressed={!isTwoWeekView} onClick={() => showOverview(weekStart, 'week')}>Неделя</button>
+          <button type="button" aria-pressed={isTwoWeekView} onClick={() => showOverview(weekStart, '2w')}>2 недели</button>
+        </div>
+        <div className="week-nav schedule-week-navigation">
+          <strong>{formatWeekRange(weekStart, periodEnd)}</strong>
+          <span className="schedule-week-arrows">
+            <button type="button" className="week-arrow" aria-label={isTwoWeekView ? 'Предыдущие 2 недели' : 'Предыдущая неделя'} onClick={() => shiftOverview(-1)}><BackIcon /></button>
+            <button type="button" className="week-arrow" aria-label={isTwoWeekView ? 'Следующие 2 недели' : 'Следующая неделя'} onClick={() => shiftOverview(1)}><ChevronRightIcon /></button>
+          </span>
+        </div>
+      </>}
     </div>
   }>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
-      {!isDayView ? <Coachmark id="trainer-schedule-week-overview-2026-09" userId={actor?.userId} title="Неделя теперь целиком" description="Все тренировки недели видны сразу. Нажмите на день, чтобы открыть подробное расписание.">
-        <section className="schedule-week-grid" aria-label={`Расписание на неделю: ${formatWeekRange(weekStart, weekEnd)}`}>
-          {weekDays.map((day, index) => {
+      {!isDayView ? <Coachmark id="trainer-schedule-week-overview-2026-09" userId={actor?.userId} title="Расписание целиком" description="Все тренировки выбранного периода видны сразу. Нажмите на день, чтобы открыть подробное расписание.">
+        {isTwoWeekView ? <section className="schedule-fortnight" aria-label={`Расписание на две недели: ${formatWeekRange(weekStart, periodEnd)}`}>
+          <div className="schedule-fortnight-weekdays" aria-hidden="true">
+            {overviewDays.slice(0, 7).map((day) => <span key={day}>{weekdayShort(day)}</span>)}
+          </div>
+          <div className="schedule-fortnight-grid">
+            {overviewDays.map((day) => {
+              const workouts = itemsByDay.get(day) ?? []
+              return <button
+                key={day}
+                type="button"
+                className={`schedule-fortnight-day${day === today ? ' is-today' : ''}`}
+                aria-label={`${formatScheduleDateLabel(day)}, ${workoutCountLabel(workouts.length)}`}
+                onClick={() => openDay(day, weekStart)}
+              >
+                <span className="schedule-fortnight-date">{dayOfMonth(day)}</span>
+                <span className="schedule-fortnight-workouts">
+                  {workouts.length > 0 ? workouts.map((workout) => {
+                    const status = scheduleEventStatus(workout, today)
+                    const fullTime = workout.startTime?.slice(0, 5) ?? '—'
+                    return <span key={workout.id} className="schedule-fortnight-workout" title={`${eventTime(workout) || 'Без времени'} · ${workout.clientName} · ${status.label}`}>
+                      <span className="schedule-fortnight-workout-compact" aria-hidden="true">{compactScheduleEventLabel(workout.startTime, workout.clientName)}</span>
+                      <span className="schedule-fortnight-workout-full" aria-hidden="true">{fullTime} {workout.clientName}</span>
+                      <span className="sr-only">{fullTime}, {workout.clientName}, {status.label}</span>
+                    </span>
+                  }) : <span className="schedule-fortnight-empty"><span className="schedule-fortnight-empty-compact">Нет</span><span className="schedule-fortnight-empty-full">Нет тренировок</span></span>}
+                </span>
+              </button>
+            })}
+          </div>
+        </section> : <section className="schedule-week-grid" aria-label={`Расписание на неделю: ${formatWeekRange(weekStart, periodEnd)}`}>
+          {overviewDays.map((day, index) => {
             const workouts = itemsByDay.get(day) ?? []
             return <button
               key={day}
@@ -215,7 +261,7 @@ export function SchedulePage() {
               </span>
             </button>
           })}
-        </section>
+        </section>}
       </Coachmark> : <>
       {untimed.length > 0 && <section className="schedule-untimed-section" aria-labelledby="schedule-untimed-title">
         <div className="schedule-untimed-heading">
