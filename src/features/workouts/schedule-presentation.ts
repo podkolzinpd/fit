@@ -21,6 +21,26 @@ export function formatScheduleDateLabel(value: LocalDate, locale = 'ru-RU'): str
   return `${label.charAt(0).toUpperCase()}${label.slice(1)}`
 }
 
+export function compactScheduleTime(value?: string | null): string {
+  if (!value) return '—'
+  const [hours = '', minutes = ''] = value.slice(0, 5).split(':')
+  const numericHours = Number(hours)
+  if (!Number.isInteger(numericHours) || minutes.length !== 2) return value.slice(0, 5)
+  return minutes === '00' ? String(numericHours) : `${numericHours}:${minutes}`
+}
+
+export function compactScheduleClientName(value: string): string {
+  const firstName = value.trim().split(/\s+/)[0] ?? ''
+  return firstName.length <= 2 ? firstName : firstName.slice(0, 2)
+}
+
+export function compactScheduleEventLabel(time: string | null | undefined, clientName: string): string {
+  const shortTime = compactScheduleTime(time)
+  const shortName = compactScheduleClientName(clientName)
+  const visibleName = shortTime.includes(':') ? shortName.slice(0, 1) : shortName
+  return `${shortTime}\u2009${visibleName}`
+}
+
 export function scheduleEventStatus(workout: Workout, today: LocalDate): ScheduleEventStatus {
   const status = workoutStatusPresentation(workout, today)
   const assignmentAuthor = workout.createdBy ?? workout.trainerId
