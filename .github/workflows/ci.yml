@@ -94,7 +94,7 @@ jobs:
           version: 2.116.0
       # Database tests do not exercise the local mail inbox. Skipping Mailpit
       # avoids its fixed 54324 port colliding with a hosted runner process.
-      - run: supabase start --exclude mailpit
+      - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
       - run: supabase db reset --local
       - run: supabase test db --local
       - name: Check generated database types
@@ -153,10 +153,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 6
+      max-parallel: 5
       matrix:
-        project: [visual-client-390, visual-client-430, visual-trainer-1440]
-        shard: [1/2, 2/2]
+        include:
+          - project: visual-client-390
+            shard: 1/2
+          - project: visual-client-390
+            shard: 2/2
+          - project: visual-client-430
+            shard: 1/2
+          - project: visual-client-430
+            shard: 2/2
+          - project: visual-trainer-1440
+            shard: 1/1
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:54321
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
@@ -176,7 +185,7 @@ jobs:
           version: 2.116.0
       # E2E authenticates through the local API; it does not inspect emails.
       # Keep the CI container set minimal and avoid Mailpit's fixed port.
-      - run: supabase start --exclude mailpit
+      - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
       - run: supabase db reset --local
       - run: node scripts/wait-for-local-auth.mjs
       - name: Pull pinned Playwright runtime
@@ -232,7 +241,7 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
-      - run: supabase start --exclude mailpit
+      - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
       - run: supabase db reset --local
       - run: node scripts/wait-for-local-auth.mjs
       - name: Pull pinned Playwright runtime
@@ -269,7 +278,15 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        lane: [1, 2, 3, 4]
+        include:
+          - lane: 1
+            shards: '1 7'
+          - lane: 2
+            shards: '2 5'
+          - lane: 3
+            shards: '3 6'
+          - lane: 4
+            shards: '4 8'
     env:
       VITE_SUPABASE_URL: http://127.0.0.1:54321
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
@@ -284,7 +301,7 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
-      - run: supabase start --exclude mailpit
+      - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
       - run: supabase db reset --local
       - run: node scripts/wait-for-local-auth.mjs
       - name: Pull pinned Playwright runtime
@@ -309,7 +326,7 @@ jobs:
                 --shard="${shard}/8"
           }
 
-          for shard in $(seq "${{ matrix.lane }}" 4 8); do
+          for shard in ${{ matrix.shards }}; do
             if ! run_webkit_shard "$shard"; then
               echo "::warning::WebKit shard ${shard}/8 crashed; retrying once in a fresh container"
               run_webkit_shard "$shard"

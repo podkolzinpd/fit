@@ -13,9 +13,12 @@ const supportedSupabaseCliVersion = '2.116.0'
 test('runs isolated WebKit shards in four parallel lanes and retries only a failed shard', () => {
   assert.match(workflow, /e2e-webkit:/)
   assert.match(workflow, /max-parallel: 4/)
-  assert.match(workflow, /lane: \[1, 2, 3, 4\]/)
+  assert.match(workflow, /lane: 1\n\s+shards: '1 7'/)
+  assert.match(workflow, /lane: 2\n\s+shards: '2 5'/)
+  assert.match(workflow, /lane: 3\n\s+shards: '3 6'/)
+  assert.match(workflow, /lane: 4\n\s+shards: '4 8'/)
   assert.match(workflow, /Run iPhone behavior scenarios in isolated parallel lanes/)
-  assert.match(workflow, /for shard in \$\(seq "\$\{\{ matrix\.lane \}\}" 4 8\)/)
+  assert.match(workflow, /for shard in \$\{\{ matrix\.shards \}\}/)
   assert.match(workflow, /--shard="\$\{shard\}\/8"/)
   assert.match(workflow, /if ! run_webkit_shard "\$shard"/)
   assert.match(workflow, /retrying once in a fresh container/)
@@ -37,10 +40,13 @@ test('keeps one required E2E result while skipping heavy jobs only for a safe sc
   assert.match(workflow, /E2E skipped: changes do not affect the browser runtime/)
 })
 
-test('runs visual viewport shards in parallel with an isolated database each', () => {
-  assert.match(workflow, /e2e-visual:[\s\S]*max-parallel: 6/)
-  assert.match(workflow, /project: \[visual-client-390, visual-client-430, visual-trainer-1440\]/)
-  assert.match(workflow, /shard: \[1\/2, 2\/2\]/)
+test('runs client visual shards and one trainer visual job with isolated databases', () => {
+  assert.match(workflow, /e2e-visual:[\s\S]*max-parallel: 5/)
+  assert.match(workflow, /project: visual-client-390\n\s+shard: 1\/2/)
+  assert.match(workflow, /project: visual-client-390\n\s+shard: 2\/2/)
+  assert.match(workflow, /project: visual-client-430\n\s+shard: 1\/2/)
+  assert.match(workflow, /project: visual-client-430\n\s+shard: 2\/2/)
+  assert.match(workflow, /project: visual-trainer-1440\n\s+shard: 1\/1/)
   assert.match(workflow, /--env PLAYWRIGHT_PROJECT="\$\{\{ matrix\.project \}\}"/)
   assert.match(workflow, /--env PLAYWRIGHT_SHARD/)
   assert.match(workflow, /--project="\$PLAYWRIGHT_PROJECT" --workers=1 --shard="\$PLAYWRIGHT_SHARD"/)
@@ -75,6 +81,14 @@ test('waits for local auth readiness before auth-dependent E2E jobs', () => {
   assert.match(
     workflow,
     /e2e-webkit:[\s\S]*- run: supabase db reset --local\n\s+- run: node scripts\/wait-for-local-auth\.mjs/,
+  )
+})
+
+test('does not start Supabase services that CI scenarios do not use', () => {
+  assert.doesNotMatch(workflow, /supabase start --exclude mailpit(?:\s|$)/)
+  assert.match(
+    workflow,
+    /supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector/,
   )
 })
 
