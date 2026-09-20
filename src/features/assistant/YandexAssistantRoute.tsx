@@ -3,6 +3,7 @@ import { useAuth } from '../../app/auth-context'
 import {
   getYandexAppSessionEntryConfig,
   isYandexAssistantRoutingPilotEnabled,
+  isYandexAppSessionEnabled,
   isYandexMainRoutingEnabled,
 } from '../../app/feature-flags'
 import { useYandexAppSession } from '../../app/yandex-app-session-context'
@@ -18,7 +19,8 @@ export function YandexAssistantRoute() {
   const config = getYandexAppSessionEntryConfig()
   const routedToYandex = actor !== null
     && (isYandexAssistantRoutingPilotEnabled(actor.userId)
-      || isYandexMainRoutingEnabled())
+      || isYandexMainRoutingEnabled()
+      || (isYandexAppSessionEnabled() && session !== null))
   const backend = useMemo(() => !routedToYandex || config === null
     || session === null || actor === null
     || session.profile.id !== actor.userId
