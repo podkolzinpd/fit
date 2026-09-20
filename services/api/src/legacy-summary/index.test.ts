@@ -353,7 +353,7 @@ describe('summarizeClientTraining cloud handler', () => {
     expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
-  it('does not publish an unsafe answer and does not spend on a repair', async () => {
+  it('removes an unsafe claim locally and does not spend on a second model call', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
@@ -372,11 +372,14 @@ describe('summarizeClientTraining cloud handler', () => {
       },
     })))
 
-    await expect(requestYandexSummary({ change_percent: 25 }, '2026-08-01', '2026-08-25', {
+    const result = await requestYandexSummary({ change_percent: 25 }, '2026-08-01', '2026-08-25', {
       fetchImpl: fetchImpl as unknown as typeof fetch,
       requestId: 'request-quality',
       sleep: () => Promise.resolve(),
-    })).rejects.toThrow('yandex_cloud_quality_check_failed')
+    })
+
+    expect(result.summary.client.headline).toBe(validSummary.client.achievements[0])
+    expect(JSON.stringify(result.summary)).not.toContain('улучшилась техника')
     expect(fetchImpl).toHaveBeenCalledOnce()
   })
 

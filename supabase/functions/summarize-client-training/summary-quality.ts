@@ -60,6 +60,188 @@ export type SummaryQualityAssessment = {
   advisories: string[]
 }
 
+type RepairableSummary = {
+  trainer: {
+    headline: string
+    progress: string[]
+    consistency: string
+    attention: string[]
+  }
+  client: {
+    headline: string
+    achievements: string[]
+    consistency: string
+    encouragement: string
+    goalAlignment: string
+    nextSteps: string[]
+    missingContext: string[]
+    analysisVersion: string
+  }
+}
+
+function isRepairableSummary(value: unknown): value is RepairableSummary {
+  if (!isRecord(value) || !isRecord(value.trainer) || !isRecord(value.client)) return false
+  const trainer = value.trainer
+  const client = value.client
+  return typeof trainer.headline === "string" && Array.isArray(trainer.progress) &&
+    typeof trainer.consistency === "string" && Array.isArray(trainer.attention) &&
+    typeof client.headline === "string" && Array.isArray(client.achievements) &&
+    typeof client.consistency === "string" && typeof client.encouragement === "string" &&
+    typeof client.goalAlignment === "string" && Array.isArray(client.nextSteps) &&
+    Array.isArray(client.missingContext) && typeof client.analysisVersion === "string"
+}
+
+function formattedNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(".", ",")
+}
+
+function numericMetric(value: unknown): number {
+  if (typeof value === "number") return value
+  if (typeof value === "string" && value.trim()) return Number(value)
+  return Number.NaN
+}
+
+function factualConsistency(trainingData: unknown): string {
+  const consistency = isRecord(trainingData) && isRecord(trainingData.consistency)
+    ? trainingData.consistency
+    : {}
+  const workouts = numericMetric(consistency.completed_workouts)
+  const perWeek = numericMetric(consistency.workouts_per_week)
+  if (Number.isFinite(workouts) && Number.isFinite(perWeek)) {
+    return `За период завершено ${formattedNumber(workouts)} тренировок; средний ритм — ${formattedNumber(perWeek)} в неделю.`
+  }
+  if (Number.isFinite(workouts)) {
+    return `За период завершено ${formattedNumber(workouts)} тренировок.`
+  }
+  return "В разбор включены завершённые тренировки выбранного периода."
+}
+
+function unsupportedText(value: string, trainingData: unknown, clientText: boolean): boolean {
+  const consistency = isRecord(trainingData) && isRecord(trainingData.consistency)
+    ? trainingData.consistency
+    : {}
+  const longestGapDays = numericMetric(consistency.longest_gap_days)
+  const recoverySupported = hasRepeatedDecline(trainingData) && hasRecoverySignal(trainingData)
+  const sourceText = JSON.stringify(trainingData)
+  return technicalLanguage.test(value) || techniqueAssessment.test(value) ||
+    (!recoverySupported && /облегч|разгруз|снизить нагруз|снижени[ея] нагруз|уменьшить (?:вес|нагруз)/iu.test(value)) ||
+    (clientText && causalClaim.test(value)) ||
+    (clientText && /сон|недосып|спал/iu.test(value) && !/сон|недосып|спал/iu.test(sourceText)) ||
+    (clientText && /локт|колен|плечев.{0,8}(?:боль|сустав)|травм|болит/iu.test(value) && !hasRecoverySignal(trainingData)) ||
+    (clientText && Number.isFinite(longestGapDays) && longestGapDays < 7 && gapConcern.test(value))
+}
+
+function safeList(values: string[], trainingData: unknown, clientText: boolean): string[] {
+  return values.filter((item) => !unsupportedText(item, trainingData, clientText))
+}
+
+/**
+ * Removes only claims that the deterministic validator cannot substantiate.
+ * It never asks the model for a second answer and never invents exercise facts.
+ * The caller must run assessSummaryQuality again and reject the result if any
+ * blocking issue remains.
+ */
+export function repairSummaryQuality<T>(summary: T, trainingData: unknown): T {
+  if (!isRepairableSummary(summary)) return summary
+
+  const repaired: RepairableSummary = {
+    trainer: {
+      headline: summary.trainer.headline,
+      progress: [...summary.trainer.progress],
+      consistency: summary.trainer.consistency,
+      attention: [...summary.trainer.attention],
+    },
+    client: {
+      headline: summary.client.headline,
+      achievements: [...summary.client.achievements],
+      consistency: summary.client.consistency,
+      encouragement: summary.client.encouragement,
+      goalAlignment: summary.client.goalAlignment,
+      nextSteps: [...summary.client.nextSteps],
+      missingContext: [...summary.client.missingContext],
+      analysisVersion: CURRENT_ANALYSIS_VERSION,
+    },
+  }
+
+  const consistency = isRecord(trainingData) && isRecord(trainingData.consistency)
+    ? trainingData.consistency
+    : {}
+  const workoutsPerWeek = numericMetric(consistency.workouts_per_week)
+  const longestGapDays = numericMetric(consistency.longest_gap_days)
+  const consistencyIsUnsupported = (value: string) =>
+    unsupportedText(value, trainingData, true) ||
+    ((workoutsPerWeek < 1 || longestGapDays >= 21) && /(?:хорош|регулярн)/iu.test(value))
+  const consistencyFallback = factualConsistency(trainingData)
+
+  repaired.trainer.progress = safeList(repaired.trainer.progress, trainingData, false)
+  repaired.trainer.attention = safeList(repaired.trainer.attention, trainingData, false)
+    .filter((item) => !(/устал|перенапряж|травм|боль|самочув/iu.test(item) && !hasRecoverySignal(trainingData)))
+  if (Number.isFinite(longestGapDays) && longestGapDays < 7) {
+    repaired.trainer.attention = repaired.trainer.attention.filter((item) =>
+      !/(?:перерыв|без тренировок|стабильност(?:ь|и)\s+(?:трениров|ритма|посещ))/iu.test(item))
+  }
+  if (unsupportedText(repaired.trainer.headline, trainingData, false)) {
+    repaired.trainer.headline = repaired.trainer.progress[0] ?? consistencyFallback
+  }
+  if (consistencyIsUnsupported(repaired.trainer.consistency)) {
+    repaired.trainer.consistency = consistencyFallback
+  }
+  if (repaired.trainer.progress.length === 0) {
+    repaired.trainer.progress = [repaired.trainer.consistency]
+  }
+
+  repaired.client.achievements = safeList(repaired.client.achievements, trainingData, true)
+    .filter((item) => groundedEvidence(item, trainingData))
+  repaired.client.nextSteps = safeList(repaired.client.nextSteps, trainingData, true)
+  repaired.client.missingContext = safeList(repaired.client.missingContext, trainingData, true).slice(0, 1)
+  if (consistencyIsUnsupported(repaired.client.consistency)) {
+    repaired.client.consistency = consistencyFallback
+  }
+  if (repaired.client.achievements.length === 0) {
+    repaired.client.achievements = ["Ритм: в анализ включены завершённые тренировки выбранного периода."]
+  }
+  if (unsupportedText(repaired.client.headline, trainingData, true)) {
+    repaired.client.headline = repaired.client.achievements[0] ?? consistencyFallback
+  }
+  if (unsupportedText(repaired.client.encouragement, trainingData, true)) {
+    repaired.client.encouragement = "Разбор опирается только на подтверждённые записи этого периода."
+  }
+  if (repaired.client.nextSteps.length === 0) {
+    repaired.client.nextSteps = ["Следующая точка контроля — после следующей завершённой тренировки."]
+  }
+
+  const goal = isRecord(trainingData) ? trainingData.goal : null
+  if (!isRecord(goal)) {
+    repaired.client.goalAlignment = ""
+  } else if (!repaired.client.goalAlignment.trim() || unsupportedText(repaired.client.goalAlignment, trainingData, true)) {
+    repaired.client.goalAlignment = "Связь результатов с целью пока нельзя подтвердить по данным этого периода."
+  }
+
+  return repaired as T
+}
+
+export function summaryQualityIssueCodes(issues: string[]): string[] {
+  const codes = issues.map((issue) => {
+    if (issue.includes("analysisVersion")) return "analysis_version"
+    if (issue.includes("missingContext")) return "missing_context_count"
+    if (issue.includes("технические идентификаторы")) return "technical_language"
+    if (issue.includes("trainer.attention")) return "unsupported_trainer_attention"
+    if (issue.includes("Регулярность нельзя")) return "unsupported_consistency"
+    if (issue.includes("goalAlignment")) return "goal_alignment"
+    if (issue.includes("nextSteps")) return "next_steps_count"
+    if (issue.includes("achievements должен")) return "achievements_count"
+    if (issue.includes("Числа в client.achievements")) return "ungrounded_numbers"
+    if (issue.includes("корреляцию")) return "causal_claim"
+    if (issue.includes("Совет снизить нагрузку")) return "unsupported_load_reduction"
+    if (issue.includes("выводы о сне")) return "unsupported_sleep_claim"
+    if (issue.includes("выводы о боли")) return "unsupported_injury_claim"
+    if (issue.includes("изменение техники")) return "unsupported_technique_claim"
+    if (issue.includes("короткий обычный перерыв")) return "unsupported_gap_concern"
+    return "unknown_quality_issue"
+  })
+  return [...new Set(codes)]
+}
+
 export function assessSummaryQuality(
   summary: unknown,
   trainingData: unknown,
