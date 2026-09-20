@@ -4,6 +4,7 @@ const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/
 export type YandexAppSessionTransport = {
   apiBaseUrl: string
   sessionToken: string
+  accessMode: 'read_write'
 }
 
 /** Read the browser app-session issued by the Yandex API. */
@@ -20,7 +21,7 @@ export function yandexAppSessionTransport(): YandexAppSessionTransport | null {
     const value = JSON.parse(raw) as { token?: unknown; expiresAt?: unknown }
     if (typeof value.token !== 'string' || !SESSION_TOKEN_PATTERN.test(value.token)) return null
     if (typeof value.expiresAt !== 'string' || Date.parse(value.expiresAt) <= Date.now()) return null
-    return { apiBaseUrl, sessionToken: value.token }
+    return { apiBaseUrl, sessionToken: value.token, accessMode: 'read_write' }
   } catch {
     return null
   }
