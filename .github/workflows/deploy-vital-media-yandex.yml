@@ -103,7 +103,7 @@ jobs:
               and .versioning == "verified_by_manifest_objects"
             ))
           ' "$report" >/dev/null
-          jq -r '
+          safe_summary=$(jq -r '
             "Mode: " + .mode,
             "Objects: " + (.objects | tostring),
             "Bytes: " + (.bytes | tostring),
@@ -116,4 +116,6 @@ jobs:
             "Fingerprint: " + .fingerprint,
             "Signed URL smoke: " + ((.signedUrlSmoke // false) | tostring),
             "Versioning: " + (.versioning // "not_applicable")
-          ' "$report" >> "$GITHUB_STEP_SUMMARY"
+          ' "$report")
+          printf '%s\n' "$safe_summary"
+          printf '%s\n' "$safe_summary" >> "$GITHUB_STEP_SUMMARY"
