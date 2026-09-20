@@ -47,6 +47,13 @@ test('runs visual viewport shards in parallel with an isolated database each', (
   assert.doesNotMatch(workflow, /for project in visual-client-390/)
 })
 
+test('runs Chromium behavior scenarios in two isolated shards', () => {
+  assert.match(workflow, /e2e-chromium:[\s\S]*max-parallel: 2/)
+  assert.match(workflow, /e2e-chromium:[\s\S]*shard: \[1\/2, 2\/2\]/)
+  assert.match(workflow, /--project=mobile-chromium --shard="\$PLAYWRIGHT_SHARD"/)
+  assert.match(workflow, /playwright-diagnostics-chromium-\$\{\{ strategy\.job-index \}\}/)
+})
+
 test('keeps the required app check stable while quality and coverage run in parallel', () => {
   assert.match(workflow, /app-quality:[\s\S]*- run: npm run lint[\s\S]*- run: npm run build/)
   assert.match(workflow, /app-tests:[\s\S]*- run: npm run test:coverage/)
