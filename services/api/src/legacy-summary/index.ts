@@ -10,7 +10,12 @@ import {
   SUMMARY_JSON_SCHEMA,
   SUMMARY_SYSTEM_PROMPT,
 } from "./summary-contract.js"
-import { assessSummaryQuality, type SummaryQualityAssessment } from "./summary-quality.js"
+import {
+  assessSummaryQuality,
+  repairSummaryQuality,
+  summaryQualityIssueCodes,
+  type SummaryQualityAssessment,
+} from "./summary-quality.js"
 import { buildTrainingGoalContext } from "./summary-goal.js"
 import {
   authorizeSummaryActor,
@@ -165,6 +170,7 @@ export class HttpError extends Error {
     readonly status: number,
     message: string,
     readonly tokenUsage: Record<string, string> = {},
+    readonly qualityIssueCodes: string[] = [],
   ) {
     super(message)
   }
@@ -820,6 +826,7 @@ type StructuredYandexConfig<T> = {
   maxTokens: string
   parse: (text: string) => T
   qualityAssessment?: (value: T) => SummaryQualityAssessment
+  qualityRepair?: (value: T) => T
 }
 
 function structuredRetryLog(
@@ -1052,8 +1059,21 @@ async function requestStructuredYandex<T>(
       }
       throw new HttpError(502, code, usage)
     }
-    const quality = config.qualityAssessment?.(value) ?? { blockingIssues: [], advisories: [] }
-    const issues = quality.blockingIssues
+    let quality = config.qualityAssessment?.(value) ?? { blockingIssues: [], advisories: [] }
+    let issues = quality.blockingIssues
+    if (issues.length > 0 && config.qualityRepair && config.qualityAssessment) {
+      const repairedValue = config.qualityRepair(value)
+      const repairedQuality = config.qualityAssessment(repairedValue)
+      console.info("summary deterministic quality repair", {
+        request_id: options.requestId ?? null,
+        stage: options.stage ?? 'direct',
+        repaired_issue_codes: summaryQualityIssueCodes(issues),
+        remaining_issue_codes: summaryQualityIssueCodes(repairedQuality.blockingIssues),
+      })
+      value = repairedValue
+      quality = repairedQuality
+      issues = repairedQuality.blockingIssues
+    }
     if (issues.length === 0 && (quality.advisories.length === 0 || contentRepairAttempted || attempt === maxAttempts)) {
       return { value, modelUri, modelVersion, usage }
     }
@@ -1080,7 +1100,12 @@ async function requestStructuredYandex<T>(
       issues,
     })
     if (attempt === maxAttempts || contentRepairAttempted) {
-      throw new HttpError(502, "yandex_cloud_quality_check_failed", usage)
+      throw new HttpError(
+        502,
+        "yandex_cloud_quality_check_failed",
+        usage,
+        summaryQualityIssueCodes(issues),
+      )
     }
     setTargetedRepair(text, issues)
   }
@@ -1115,6 +1140,7 @@ async function requestFinalYandexSummary(
     maxTokens: "1000",
     parse: parseGeneratedSummary,
     qualityAssessment: (summary) => assessSummaryQuality(summary, options.qualityData ?? trainingData),
+    qualityRepair: (summary) => repairSummaryQuality(summary, options.qualityData ?? trainingData),
   }, options)
   return {
     summary: result.value,
@@ -1651,6 +1677,10 @@ export const summarizeClientTraining = async (
       const recordGenerationFailure = async (error: unknown, fallbackUsage: Record<string, string> = {}) => {
         const code = error instanceof Error ? error.message : 'summary_generation_failed'
         const usage = error instanceof HttpError ? error.tokenUsage : fallbackUsage
+        const qualityIssueCodes = error instanceof HttpError ? error.qualityIssueCodes : []
+        const storedCode = qualityIssueCodes.length > 0
+          ? `${code}:${qualityIssueCodes.join(',')}`.slice(0, 120)
+          : code
         const { error: guardError } = await generationGuardStore.rpc(
           'fail_training_summary_generation',
           {
@@ -1659,10 +1689,15 @@ export const summarizeClientTraining = async (
             p_period_end: input.period_end,
             p_input_fingerprint: inputFingerprint,
             p_request_id: requestId,
-            p_failure_code: code,
+            p_failure_code: storedCode,
             p_token_usage: usage,
           },
         )
+        console.warn('summary generation failed', {
+          request_id: requestId,
+          code,
+          quality_issue_codes: qualityIssueCodes,
+        })
         if (guardError) console.error('summary generation failure record failed', { request_id: requestId })
       }
 
