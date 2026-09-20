@@ -23,10 +23,12 @@ const profileSchema = z.object({
   profile: profilePayloadSchema,
 })
 
+const yandexDateTimeSchema = z.iso.datetime({ offset: true })
+
 const sessionSchema = profileSchema.extend({
   session: z.object({
     token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
-    expiresAt: z.iso.datetime(),
+    expiresAt: yandexDateTimeSchema,
   }),
 })
 
@@ -35,7 +37,7 @@ const appSessionSchema = z.object({
   profile: profilePayloadSchema,
   session: z.object({
     token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
-    expiresAt: z.iso.datetime(),
+    expiresAt: yandexDateTimeSchema,
   }),
 })
 
@@ -45,7 +47,7 @@ const authHandoffSchema = z.object({
   error: z.literal('yandex_identity_unlinked'),
   handoff: z.object({
     token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
-    expiresAt: z.iso.datetime(),
+    expiresAt: yandexDateTimeSchema,
   }),
 })
 
@@ -71,8 +73,8 @@ const clientSchema = z.object({
   goal: z.string().nullable(),
   note: z.string().nullable(),
   currentWeightKg: z.number().positive().nullable(),
-  lastActivityAt: z.iso.datetime(),
-  archivedAt: z.iso.datetime().nullable(),
+  lastActivityAt: yandexDateTimeSchema,
+  archivedAt: yandexDateTimeSchema.nullable(),
   version: z.number().int().positive(),
   membershipVersion: z.number().int().positive(),
   activity: z.object({
@@ -94,7 +96,7 @@ const membershipSchema = z.object({
   trainerId: z.uuid(),
   firstName: z.string().nullable(),
   lastName: z.string().nullable(),
-  joinedAt: z.iso.datetime(),
+  joinedAt: yandexDateTimeSchema,
   isRoot: z.boolean(),
 })
 
@@ -102,8 +104,8 @@ const invitationSchema = z.object({
   id: z.uuid(),
   clientId: z.uuid(),
   targetRole: z.enum(['trainer', 'client']),
-  expiresAt: z.iso.datetime(),
-  createdAt: z.iso.datetime(),
+  expiresAt: yandexDateTimeSchema,
+  createdAt: yandexDateTimeSchema,
 })
 
 const connectionsSchema = z.object({
@@ -126,7 +128,7 @@ const workoutSetSchema = z.object({
   position: z.number().int().nonnegative(),
   plan: workoutSetValuesSchema,
   fact: workoutSetValuesSchema,
-  confirmedAt: z.iso.datetime().nullable(),
+  confirmedAt: yandexDateTimeSchema.nullable(),
   version: z.number().int().positive(),
 })
 const workoutExerciseSchema = z.object({
@@ -169,16 +171,16 @@ const workoutSchema = z.object({
   sessionRpe: z.number().int().min(1).max(10).nullable(),
   wellbeing: z.enum(['good', 'normal', 'hard']).nullable(),
   discomfort: z.boolean().nullable(),
-  feedbackSubmittedAt: z.iso.datetime().nullable(),
+  feedbackSubmittedAt: yandexDateTimeSchema.nullable(),
   trainerReaction: z.enum(['thumbs_up', 'fire', 'strong']).nullable(),
   trainerReview: z.string().max(500).nullable(),
   trainerReviewAuthorId: z.uuid().nullable(),
-  trainerReviewedAt: z.iso.datetime().nullable(),
+  trainerReviewedAt: yandexDateTimeSchema.nullable(),
   clientQuestion: z.string().max(500).nullable(),
-  clientQuestionAskedAt: z.iso.datetime().nullable(),
-  clientQuestionResolvedAt: z.iso.datetime().nullable(),
-  startedAt: z.iso.datetime().nullable(),
-  completedAt: z.iso.datetime().nullable(),
+  clientQuestionAskedAt: yandexDateTimeSchema.nullable(),
+  clientQuestionResolvedAt: yandexDateTimeSchema.nullable(),
+  startedAt: yandexDateTimeSchema.nullable(),
+  completedAt: yandexDateTimeSchema.nullable(),
   stageId: z.uuid().nullable().optional(),
   stageTitle: z.string().nullable().optional(),
   hasPr: z.boolean().optional(),
@@ -193,7 +195,7 @@ const customExerciseSchema = z.object({
   primaryMuscleDetail: z.string().nullable().optional(),
   equipment: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
-  archivedAt: z.iso.datetime().nullable(),
+  archivedAt: yandexDateTimeSchema.nullable(),
   version: z.number().int().positive(),
   createdBy: z.uuid().optional(),
 })
@@ -207,15 +209,15 @@ const trainingDataSchema = z.object({
     clientName: z.string().min(1),
     workoutDate: z.iso.date(),
     clientQuestion: z.string().max(500).nullable(),
-    clientQuestionAskedAt: z.iso.datetime().nullable(),
+    clientQuestionAskedAt: yandexDateTimeSchema.nullable(),
     discomfort: z.boolean().nullable(),
     clientComment: z.string().max(5_000).nullable(),
-    feedbackSubmittedAt: z.iso.datetime(),
+    feedbackSubmittedAt: yandexDateTimeSchema,
     version: z.number().int().positive(),
   })),
   attentionPreferences: z.array(z.object({
     clientId: z.uuid(),
-    snoozedUntil: z.iso.datetime().nullable(),
+    snoozedUntil: yandexDateTimeSchema.nullable(),
   })),
   hasMoreWorkouts: z.boolean(),
   totalWorkouts: z.number().int().nonnegative().optional(),
@@ -286,7 +288,7 @@ const storedSummarySchema = z.object({
   period_start: z.iso.date(),
   period_end: z.iso.date(),
   display_metrics: z.record(z.string(), z.unknown()),
-  generated_at: z.iso.datetime(),
+  generated_at: yandexDateTimeSchema,
 }).passthrough()
 const summaryListSchema = z.object({ summaries: z.array(storedSummarySchema) })
 const generatedSummarySchema = z.object({
