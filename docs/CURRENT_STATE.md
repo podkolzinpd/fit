@@ -1,7 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
 > merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-20. База изменений: `80fc3de4` (#1078). Frontend остаётся
+Обновлено: 2026-09-20. База изменений: `fb18a88e` (#1083). Frontend остаётся
 на Vercel, а production data plane — принятый Yandex Cloud stage stack. Yandex
 ID является единственным production-входом; app-session, main routing и native
 registration включены глобально.
@@ -34,6 +34,11 @@ Supabase из эксплуатации. До закрытия rollback-окна 
   обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
   `paused`: он блокирует DML старых вкладок, RPC и background writers на 38
   source-таблицах.
+- `analytics.trainer_overview`/`client_overview` на Yandex приведены к
+  parity с Supabase (000079_analytics_overview_parity) после дрифта, который
+  ломал DataLens при смене подключения. `is_test_account` всегда `false`
+  (email на Yandex не хранится), `last_sign_in_at` — приближение по
+  session-таблицам, а не настоящий auth-лог.
 
 ## Yandex Cloud — подтверждённая база
 
