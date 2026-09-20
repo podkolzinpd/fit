@@ -1347,7 +1347,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         )
         expect(attempts.rows).toEqual([{ recovery_attempt_count: 1 }])
 
-        await expect(handoff.linkExisting(issued?.token ?? '', {
+        const session = await handoff.recoverExisting(issued?.token ?? '', {
           profile: {
             id: migratedProfileId,
             firstName: 'Перенесённый тренер',
@@ -1362,7 +1362,11 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             createdAt: '2026-09-01T00:00:00.000Z',
             updatedAt: '2026-09-01T00:00:00.000Z',
           },
-        })).resolves.toEqual({ profileId: migratedProfileId, subjectHash })
+        })
+        expect(session.profile.id).toBe(migratedProfileId)
+        expect(session.profile.accountRole).toBe('trainer')
+        expect(session.accessMode).toBe('read_write')
+        expect(session.session.token).toMatch(/^[A-Za-z0-9_-]{43}$/)
         const rolloutAfter = await ownerPool.query<{
           access_mode: string
           enabled: boolean
@@ -1378,7 +1382,16 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           access_mode: 'read_write',
           enabled: true,
         }])
-        await expect(handoff.linkExisting(issued?.token ?? '', {
+        const storedSessionHash = hashPilotSessionToken(session.session.token)
+        expect(storedSessionHash).toMatch(/^[0-9a-f]{64}$/)
+        const storedSession = await ownerPool.query<CountRow>(
+          `select count(*)::int as count
+           from app_private.yandex_app_sessions
+           where token_sha256 = $1 and profile_id = $2`,
+          [storedSessionHash, migratedProfileId],
+        )
+        expect(storedSession.rows).toEqual([{ count: 1 }])
+        await expect(handoff.recoverExisting(issued?.token ?? '', {
           profile: {
             id: migratedProfileId,
             firstName: 'Перенесённый тренер',
@@ -1416,7 +1429,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
       try {
         const issued = await handoff.issue(subjectHash)
-        await expect(handoff.linkExisting(issued?.token ?? '', {
+        await expect(handoff.recoverExisting(issued?.token ?? '', {
           profile: {
             id: migratedProfileId,
             firstName: 'Неполный перенос',
@@ -1440,8 +1453,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
              and provider_subject_sha256 = $1`,
           [subjectHash],
         )
+        const sessions = await ownerPool.query<CountRow>(
+          `select count(*)::int as count
+           from app_private.yandex_app_sessions
+           where profile_id = $1`,
+          [migratedProfileId],
+        )
         expect(rollout.rows).toEqual([{ count: 0 }])
         expect(identity.rows).toEqual([{ count: 0 }])
+        expect(sessions.rows).toEqual([{ count: 0 }])
       } finally {
         await ownerPool.query(
           'delete from app_private.yandex_auth_handoffs where subject_sha256 = $1',
