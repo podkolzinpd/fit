@@ -551,6 +551,14 @@ frontend variables и production deployment → снять maintenance. При �
 пустой профиль. После первой Yandex mutation rollback выполняется по playbook,
 а не простым возвратом Supabase UI.
 
+Batch `linked-ready` заранее включает уже связанные профили. Старому
+domain-ready профилю без Yandex identity assignment заранее не нужен: после
+успешной проверки прежних credentials функция recovery в одной транзакции
+проверяет role-specific root, связывает Yandex identity, создаёт включённый
+`yandex/read_write` assignment, первую app-session и расходует handoff.
+Неверные credentials не вызывают эту транзакцию; отсутствующий root,
+identity/profile conflict или ошибка сессии откатывают её целиком.
+
 Без точного `true` вход через Yandex ID выключен. Публичного UUID allowlist для
 app-session больше нет: настоящая персональная граница — связанная строка
 `auth_identities` и включённый `profile_rollout_assignments` со значениями
@@ -670,6 +678,11 @@ domain root и связанная Yandex identity:
 Batch workflow не доказывает полноту данных сам по себе: перед `enable`
 обязательны успешные full-cohort validation и apply. Ни UUID, ни Yandex subject
 в ответ и GitHub summary не выводятся.
+
+`linked-ready` batch не обязан включать ещё не связанные старые аккаунты.
+Первый успешный recovery создаёт их assignment атомарно после proof-of-control;
+поэтому domain-ready count может быть больше linked/read-write count до входа
+таких пользователей и это само по себе не является drift.
 
 Светлая и тёмная палитры Foundation UI Identity v1 доступны всем пользователям
 и выбираются обычной настройкой темы в профиле. Отдельных Figma/dark pilot

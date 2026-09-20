@@ -664,6 +664,64 @@ describe('yandexPilotRepository', () => {
     })
   })
 
+  it('accepts Postgres-native offset timestamps in training data', async () => {
+    const workout = trainingData.workouts[0]!
+    const exercise = workout.exercises[0]!
+    const set = exercise.sets[0]!
+    const data = {
+      ...trainingData,
+      workouts: [{
+        ...workout,
+        feedbackSubmittedAt: '2026-08-20T13:01:00.000000+00:00',
+        trainerReviewedAt: '2026-08-20T13:05:00.000000+00:00',
+        clientQuestion: 'Можно заменить упражнение?',
+        clientQuestionAskedAt: '2026-08-20T13:06:00.000000+00:00',
+        clientQuestionResolvedAt: '2026-08-20T13:07:00.000000+00:00',
+        startedAt: '2026-08-20T12:00:00.000000+00:00',
+        completedAt: '2026-08-20T13:00:00.000000+00:00',
+        exercises: [{
+          ...exercise,
+          sets: [{
+            ...set,
+            confirmedAt: '2026-08-20T12:30:00.000000+00:00',
+          }],
+        }],
+      }],
+      attention: [{
+        workoutId: workout.id,
+        clientId: CLIENT_ID,
+        clientName: 'Анна Смирнова',
+        workoutDate: '2026-08-20',
+        clientQuestion: 'Можно заменить упражнение?',
+        clientQuestionAskedAt: '2026-08-20T13:06:00.000000+00:00',
+        discomfort: null,
+        clientComment: null,
+        feedbackSubmittedAt: '2026-08-20T13:01:00.000000+00:00',
+        version: 1,
+      }],
+      attentionPreferences: [{
+        clientId: CLIENT_ID,
+        snoozedUntil: '2026-08-21T13:01:00.000000+00:00',
+      }],
+    }
+
+    queries.listTrainingData.mockResolvedValue(
+      new Response(JSON.stringify(data), { status: 200 }),
+    )
+
+    await expect(yandexPilotRepository.listTrainingData(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )).resolves.toMatchObject({
+      workouts: [{
+        completedAt: '2026-08-20T13:00:00.000000+00:00',
+        exercises: [{ sets: [{ confirmedAt: '2026-08-20T12:30:00.000000+00:00' }] }],
+      }],
+      attention: [{ feedbackSubmittedAt: '2026-08-20T13:01:00.000000+00:00' }],
+      attentionPreferences: [{ snoozedUntil: '2026-08-21T13:01:00.000000+00:00' }],
+    })
+  })
+
   it('accepts trainer attention comments up to the workout comment contract', async () => {
     const longClientComment = 'Комментарий клиента '.repeat(80)
     const data = {

@@ -1311,7 +1311,6 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (
       options.existingCredentialsProvider === undefined
       || options.yandexAuthHandoffService === undefined
-      || options.yandexAppSessionIssuer === undefined
     ) return reply.code(503).send({ error: 'service_unavailable' })
 
     try {
@@ -1324,14 +1323,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         request.log.warn({ failure: 'legacy_credentials_invalid' }, 'Yandex auth recovery rejected')
         return reply.code(401).send({ error: 'legacy_credentials_invalid' })
       }
-      const completed = await options.yandexAuthHandoffService.linkExisting(
+      const session = await options.yandexAuthHandoffService.recoverExisting(
         command.handoffToken,
         actor,
       )
-      const session = await options.yandexAppSessionIssuer.issue(completed.subjectHash)
-      if (session === undefined || session.profile.id !== completed.profileId) {
-        return reply.code(503).send({ error: 'service_unavailable' })
-      }
       request.log.info({ accountRole: actor.profile.accountRole }, 'Yandex auth recovery completed')
       return reply.header('cache-control', 'no-store').send(session)
     } catch (error) {

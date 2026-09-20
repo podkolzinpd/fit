@@ -1302,7 +1302,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
-    it('uses an opaque one-time handoff to link only a migrated rollout-ready profile', async () => {
+    it('atomically links and enables a migrated domain-ready profile after recovery', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
       }
@@ -1320,14 +1320,16 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         'insert into public.trainers (profile_id) values ($1)',
         [migratedProfileId],
       )
-      await ownerPool.query(
-        `insert into app_private.profile_rollout_assignments (
-           profile_id, target_backend, access_mode, enabled
-         ) values ($1, 'yandex', 'read_write', true)`,
-        [migratedProfileId],
-      )
 
       try {
+        const rolloutBefore = await ownerPool.query<CountRow>(
+          `select count(*)::int as count
+           from app_private.profile_rollout_assignments
+           where profile_id = $1`,
+          [migratedProfileId],
+        )
+        expect(rolloutBefore.rows).toEqual([{ count: 0 }])
+
         const issued = await handoff.issue(subjectHash)
         expect(issued?.token).toMatch(/^[A-Za-z0-9_-]{43}$/)
         const stored = await ownerPool.query<{ token_sha256: string } & QueryResultRow>(
@@ -1345,7 +1347,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         )
         expect(attempts.rows).toEqual([{ recovery_attempt_count: 1 }])
 
-        await expect(handoff.linkExisting(issued?.token ?? '', {
+        const session = await handoff.recoverExisting(issued?.token ?? '', {
           profile: {
             id: migratedProfileId,
             firstName: 'Перенесённый тренер',
@@ -1360,8 +1362,36 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             createdAt: '2026-09-01T00:00:00.000Z',
             updatedAt: '2026-09-01T00:00:00.000Z',
           },
-        })).resolves.toEqual({ profileId: migratedProfileId, subjectHash })
-        await expect(handoff.linkExisting(issued?.token ?? '', {
+        })
+        expect(session.profile.id).toBe(migratedProfileId)
+        expect(session.profile.accountRole).toBe('trainer')
+        expect(session.accessMode).toBe('read_write')
+        expect(session.session.token).toMatch(/^[A-Za-z0-9_-]{43}$/)
+        const rolloutAfter = await ownerPool.query<{
+          access_mode: string
+          enabled: boolean
+          target_backend: string
+        } & QueryResultRow>(
+          `select target_backend, access_mode, enabled
+           from app_private.profile_rollout_assignments
+           where profile_id = $1`,
+          [migratedProfileId],
+        )
+        expect(rolloutAfter.rows).toEqual([{
+          target_backend: 'yandex',
+          access_mode: 'read_write',
+          enabled: true,
+        }])
+        const storedSessionHash = hashPilotSessionToken(session.session.token)
+        expect(storedSessionHash).toMatch(/^[0-9a-f]{64}$/)
+        const storedSession = await ownerPool.query<CountRow>(
+          `select count(*)::int as count
+           from app_private.yandex_app_sessions
+           where token_sha256 = $1 and profile_id = $2`,
+          [storedSessionHash, migratedProfileId],
+        )
+        expect(storedSession.rows).toEqual([{ count: 1 }])
+        await expect(handoff.recoverExisting(issued?.token ?? '', {
           profile: {
             id: migratedProfileId,
             firstName: 'Перенесённый тренер',
@@ -1379,6 +1409,64 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         })).rejects.toMatchObject({ failure: 'expired' })
       } finally {
         await ownerPool.query('delete from public.trainers where profile_id = $1', [migratedProfileId])
+        await ownerPool.query('delete from public.profiles where id = $1', [migratedProfileId])
+      }
+    })
+
+    it('does not enable recovery for an incomplete migrated role root', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      const migratedProfileId = 'd05d1bb4-4da0-4846-a8c7-e3f1dd1ee822'
+      const subjectHash = 'a'.repeat(64)
+      const handoff = new DatabaseYandexAuthHandoffService(runtimePool)
+      await ownerPool.query('delete from public.profiles where id = $1', [migratedProfileId])
+      await ownerPool.query(
+        `insert into public.profiles (id, first_name, timezone, account_role)
+         values ($1, 'Неполный перенос', 'Europe/Moscow', 'client')`,
+        [migratedProfileId],
+      )
+
+      try {
+        const issued = await handoff.issue(subjectHash)
+        await expect(handoff.recoverExisting(issued?.token ?? '', {
+          profile: {
+            id: migratedProfileId,
+            firstName: 'Неполный перенос',
+            lastName: null,
+            timezone: 'Europe/Moscow',
+            accountRole: 'client',
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+        })).rejects.toMatchObject({ failure: 'conflict' })
+        const rollout = await ownerPool.query<CountRow>(
+          `select count(*)::int as count
+           from app_private.profile_rollout_assignments
+           where profile_id = $1`,
+          [migratedProfileId],
+        )
+        const identity = await ownerPool.query<CountRow>(
+          `select count(*)::int as count
+           from app_private.auth_identities
+           where provider = 'yandex'
+             and provider_subject_sha256 = $1`,
+          [subjectHash],
+        )
+        const sessions = await ownerPool.query<CountRow>(
+          `select count(*)::int as count
+           from app_private.yandex_app_sessions
+           where profile_id = $1`,
+          [migratedProfileId],
+        )
+        expect(rollout.rows).toEqual([{ count: 0 }])
+        expect(identity.rows).toEqual([{ count: 0 }])
+        expect(sessions.rows).toEqual([{ count: 0 }])
+      } finally {
+        await ownerPool.query(
+          'delete from app_private.yandex_auth_handoffs where subject_sha256 = $1',
+          [subjectHash],
+        )
         await ownerPool.query('delete from public.profiles where id = $1', [migratedProfileId])
       }
     })
