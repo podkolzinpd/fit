@@ -48,7 +48,10 @@ registry and dispatcher bindings without folder-wide roles or configuration drif
 The same dispatcher optionally mounts the immutable stage-local
 `fit-stage-app-feedback-integrations` Lockbox version. When the secret is
 absent, Telegram/Tracker delivery is disabled without preventing ordinary API
-or migration delivery. Migration `000036` prepares narrow `analytics` views.
+or migration delivery. Telegram requires the bot token and chat ID;
+`APP_FEEDBACK_TELEGRAM_MESSAGE_THREAD_ID` is optional and routes messages into
+a forum topic. Tracker credentials remain optional for Telegram-only delivery.
+Migration `000036` prepares narrow `analytics` views.
 The cluster keeps the existing Yandex-managed DataLens access path enabled so
 Terraform does not remove a live setting, but no dedicated database user,
 connection or dashboard migration is managed here; PostgreSQL remains private.

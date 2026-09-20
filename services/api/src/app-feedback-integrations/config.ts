@@ -11,9 +11,19 @@ export function readAppFeedbackIntegrationsConfig(
   environment: Readonly<Record<string, string | undefined>>,
 ): AppFeedbackIntegrationsConfig | undefined {
   const values = SECRET_NAMES.map((name) => environment[name]?.trim() ?? '')
-  if (values.every((value) => value === '')) return undefined
-  if (values.some((value) => value === '')) {
-    throw new Error('App feedback integration secrets must be configured together')
+  if (values[0] === '' && values[1] === '' && values[2] === '' && values[3] === '') return undefined
+  if (values[0] === '' || values[1] === '') {
+    throw new Error('Telegram feedback integration secrets must be configured together')
+  }
+  if ((values[2] === '') !== (values[3] === '')) {
+    throw new Error('Tracker feedback integration secrets must be configured together')
+  }
+
+  const rawThreadId = environment.APP_FEEDBACK_TELEGRAM_MESSAGE_THREAD_ID?.trim() ?? ''
+  const telegramMessageThreadId = rawThreadId === '' ? undefined : Number(rawThreadId)
+  if (telegramMessageThreadId !== undefined
+    && (!Number.isSafeInteger(telegramMessageThreadId) || telegramMessageThreadId < 1)) {
+    throw new Error('APP_FEEDBACK_TELEGRAM_MESSAGE_THREAD_ID is invalid')
   }
 
   const organizationHeader = environment.APP_FEEDBACK_TRACKER_ORG_HEADER?.trim()
@@ -25,8 +35,11 @@ export function readAppFeedbackIntegrationsConfig(
   return {
     telegramBotToken: values[0]!,
     telegramChatId: values[1]!,
-    trackerToken: values[2]!,
-    trackerOrganizationId: values[3]!,
+    ...(telegramMessageThreadId === undefined ? {} : { telegramMessageThreadId }),
+    ...(values[2] === '' ? {} : {
+      trackerToken: values[2]!,
+      trackerOrganizationId: values[3]!,
+    }),
     trackerOrganizationHeader: organizationHeader,
     trackerQueue: environment.APP_FEEDBACK_TRACKER_QUEUE?.trim() || 'YAFIT',
   }

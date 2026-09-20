@@ -341,12 +341,13 @@ key: после подтверждённого ответа повтора не 
 `Код сообщения` позволяет его однозначно распознать.
 
 Создайте в каталоге stage один Lockbox secret с именем
-`fit-stage-app-feedback-integrations` и одной версией, содержащей ровно:
+`fit-stage-app-feedback-integrations` и одной версией, содержащей Telegram-ключи:
 
 - `APP_FEEDBACK_TELEGRAM_BOT_TOKEN`;
 - `APP_FEEDBACK_TELEGRAM_CHAT_ID`;
-- `APP_FEEDBACK_TRACKER_TOKEN`;
-- `APP_FEEDBACK_TRACKER_ORG_ID`.
+- `APP_FEEDBACK_TELEGRAM_MESSAGE_THREAD_ID` (optional Telegram forum topic);
+- `APP_FEEDBACK_TRACKER_TOKEN` (optional);
+- `APP_FEEDBACK_TRACKER_ORG_ID` (optional).
 
 Workflow сам находит текущую immutable-версию по имени и монтирует значения
 только в private dispatcher. При отсутствующем секрете deployment остаётся
