@@ -57,6 +57,20 @@ export interface YandexAuthorizationCode {
   intent: YandexAuthorizationIntent
 }
 
+function yandexAuthorizationErrorMessage(errorCode: string): string {
+  switch (errorCode) {
+    case 'access_denied':
+      return 'Вход через Yandex ID был отменён.'
+    case 'unauthorized_client':
+      return 'Yandex ID не разрешил вход для этого аккаунта. Попробуйте другой аккаунт Yandex ID или повторите позже.'
+    case 'temporarily_unavailable':
+    case 'server_error':
+      return 'Yandex ID временно недоступен. Попробуйте войти ещё раз позже.'
+    default:
+      return 'Yandex ID отклонил вход. Попробуйте войти ещё раз.'
+  }
+}
+
 export function peekPendingYandexAuthorizationIntent(
   storage: Pick<Storage, 'getItem'> = sessionStorage,
 ): YandexAuthorizationIntent {
@@ -140,7 +154,8 @@ export function consumeYandexAuthorizationCallback(
   const intent = peekPendingYandexAuthorizationIntent(storage)
   clearPendingYandexAuthorization(storage)
 
-  if (params.get('error') !== null) throw new Error('Вход через Yandex ID был отменён или отклонён.')
+  const errorCode = params.get('error')
+  if (errorCode !== null) throw new Error(yandexAuthorizationErrorMessage(errorCode))
   const returnedState = params.get('state')
   if (expectedState === null || returnedState === null || returnedState !== expectedState) {
     throw new Error('Не удалось безопасно подтвердить вход. Начните заново.')

@@ -149,6 +149,18 @@ describe('Yandex ID pilot OAuth', () => {
     expect(() => consumeYandexAuthorizationCallback(
       '?error=access_denied&state=ignored',
       storageAdapter,
-    )).toThrow('Вход через Yandex ID был отменён')
+    )).toThrow('Вход через Yandex ID был отменён.')
+
+    await createYandexAuthorizationUrl('public-client-id', 'http://localhost/callback', storageAdapter)
+    expect(() => consumeYandexAuthorizationCallback(
+      '?error=unauthorized_client&error_description=untrusted-provider-copy',
+      storageAdapter,
+    )).toThrow('Yandex ID не разрешил вход для этого аккаунта. Попробуйте другой аккаунт Yandex ID или повторите позже.')
+
+    await createYandexAuthorizationUrl('public-client-id', 'http://localhost/callback', storageAdapter)
+    expect(() => consumeYandexAuthorizationCallback(
+      '?error=temporarily_unavailable',
+      storageAdapter,
+    )).toThrow('Yandex ID временно недоступен. Попробуйте войти ещё раз позже.')
   })
 })
