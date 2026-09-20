@@ -61,4 +61,3 @@ test('removes the known pale canvas around the selected dumbbell RDL reference',
   assert.ok(item.crop[3] > 10)
   assert.match(item.backdrop, /^rgb\(1[01234567]\d 1[01234567]\d 1[01234567]\d\)$/u)
 })
-
