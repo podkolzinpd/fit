@@ -3,6 +3,7 @@ import type { QueryResultRow } from 'pg'
 import {
   claimClientInvitationLink,
   createClientInvitationShare,
+  createNewClientInvitationShare,
   type CreatedPilotInvitationShare,
 } from './connection-commands.js'
 import type { DatabasePool } from './db/types.js'
@@ -32,6 +33,11 @@ export interface PilotInvitationLinks {
     clientId: string,
     targetRole: 'client' | 'trainer',
   ): Promise<CreatedPilotInvitationShare>
+  createForNewClient(
+    session: YandexActorSessionInput,
+    fullName: string,
+    operationId: string,
+  ): Promise<{ clientId: string; share: CreatedPilotInvitationShare }>
   claim(session: YandexActorSessionInput, token: string): Promise<string>
 }
 
@@ -45,6 +51,15 @@ export class DatabasePilotInvitationLinks implements PilotInvitationLinks {
   ): Promise<CreatedPilotInvitationShare> {
     return withYandexActorSession(this.pool, session, (client) =>
       createClientInvitationShare(client, clientId, targetRole))
+  }
+
+  createForNewClient(
+    session: YandexActorSessionInput,
+    fullName: string,
+    operationId: string,
+  ): Promise<{ clientId: string; share: CreatedPilotInvitationShare }> {
+    return withYandexActorSession(this.pool, session, (client) =>
+      createNewClientInvitationShare(client, fullName, operationId))
   }
 
   claim(session: YandexActorSessionInput, token: string): Promise<string> {
