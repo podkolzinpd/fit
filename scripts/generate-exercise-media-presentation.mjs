@@ -115,7 +115,7 @@ function paleCanvasLuminance(frame) {
       samples.push(Math.round((red * 299 + green * 587 + blue * 114) / 1000))
     }
   }
-  return Math.max(232, Math.min(250, median(samples) ?? 246))
+  return Math.max(232, Math.min(255, median(samples) ?? 246))
 }
 
 function backdropLuminance(frame, crop) {

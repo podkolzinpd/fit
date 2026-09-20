@@ -29,11 +29,22 @@ describe('ExerciseImage', () => {
     const { container, rerender } = render(<ExerciseImage src="/exercises/vital/romanian-deadlift.jpg" alt="Тяга" variant="technique" />)
     expect(container.firstElementChild).toHaveClass('exercise-image-studio')
     expect(container.querySelector('.exercise-image-media-canvas')).toBeInTheDocument()
-    expect(container.firstElementChild).toHaveStyle({ '--exercise-media-backdrop': 'rgb(250 250 250)' })
+    expect(container.firstElementChild).toHaveStyle({ '--exercise-media-backdrop': 'rgb(255 255 255)' })
 
     rerender(<ExerciseImage src="/custom/photo.jpg" alt="Фото" variant="technique" />)
     expect(container.firstElementChild).not.toHaveClass('exercise-image-studio')
-    expect(container.firstElementChild).not.toHaveStyle({ '--exercise-media-backdrop': 'rgb(250 250 250)' })
+    expect(container.firstElementChild).not.toHaveStyle({ '--exercise-media-backdrop': 'rgb(255 255 255)' })
+  })
+
+  it('does not crop a custom photo when a normalized fallback also exists', () => {
+    const { container } = render(<ExerciseImage
+      src="/custom/photo.jpg"
+      fallbackSrc="/exercises/vital/romanian-deadlift.jpg"
+      alt="Фото"
+      variant="technique"
+    />)
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-studio')
+    expect(screen.getByRole('img', { name: 'Фото' })).toHaveAttribute('src', '/custom/photo.jpg')
   })
 
   it('never renders removed legacy exercise photos even if stale metadata passes one', () => {

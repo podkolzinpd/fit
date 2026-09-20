@@ -110,11 +110,6 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, customPho
     }
   }
 
-  const normalizedMediaKey = [safeSrc, safeFallbackSrc, safeMotionSrc, videoSrc]
-    .map(exerciseMediaPresentationKey)
-    .find(Boolean)
-  const presentation = normalizedMediaKey ? EXERCISE_MEDIA_PRESENTATION[normalizedMediaKey] : undefined
-  const className = `exercise-image exercise-image-${variant}${normalizedMediaKey ? ' exercise-image-studio' : ''}`
   const primaryAvailable = Boolean(resolvedSrc) && !primaryFailed
   const stillFallbackAvailable = !privateVitalMedia && Boolean(safeFallbackSrc) && !fallbackFailed
   const motionFallbackAvailable = !privateVitalMedia && Boolean(resolvedMotionSrc) && !motionFailed
@@ -122,6 +117,18 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, customPho
   // A compact picker video is opt-in: the picker activates exactly one card
   // after an explicit tap. Scrolling or visibility never starts playback.
   const videoAvailable = wantsVideo && Boolean(resolvedVideoSrc) && !videoFailed
+  const presentedSource = primaryAvailable
+    ? safeSrc
+    : stillFallbackAvailable
+      ? safeFallbackSrc
+      : motionFallbackAvailable
+        ? safeMotionSrc
+        : videoAvailable
+          ? videoSrc
+          : [safeSrc, safeFallbackSrc, safeMotionSrc, videoSrc].find(exerciseMediaPresentationKey)
+  const normalizedMediaKey = exerciseMediaPresentationKey(presentedSource)
+  const presentation = normalizedMediaKey ? EXERCISE_MEDIA_PRESENTATION[normalizedMediaKey] : undefined
+  const className = `exercise-image exercise-image-${variant}${normalizedMediaKey ? ' exercise-image-studio' : ''}`
   if (!primaryAvailable && !stillFallbackAvailable && !motionFallbackAvailable && !videoAvailable) {
     return <span className={`${className} exercise-image-empty${(privateVitalMedia || customPhotoLoading) ? ' exercise-image-loading' : ''}`} aria-hidden="true"><ExerciseIcon /></span>
   }
