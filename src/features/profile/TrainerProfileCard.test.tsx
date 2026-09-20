@@ -83,4 +83,24 @@ describe('TrainerProfileCard', () => {
     await user.click(screen.getByRole('button', { name: 'Открыть фото тренера Анна Иванова' }))
     expect(onAvatarClick).toHaveBeenCalledOnce()
   })
+
+  it('uses the Yandex gallery cover and opens any published photo', async () => {
+    const user = userEvent.setup()
+    const onAvatarClick = vi.fn()
+    const photos = [0, 1, 2].map((index) => ({
+      id: `11111111-1111-4111-8111-11111111111${index}`,
+      url: `https://storage.example/full-${index}.jpg`,
+      thumbnailUrl: `https://storage.example/thumb-${index}.jpg`,
+      mimeType: 'image/jpeg' as const,
+      width: 1200,
+      height: 1600,
+    }))
+
+    render(<TrainerProfileCard profile={{ ...completeProfile, photos }} publicView onAvatarClick={onAvatarClick} />)
+
+    expect(screen.getByRole('button', { name: 'Открыть фото тренера Анна Иванова' }).querySelector('img'))
+      .toHaveAttribute('src', photos[0]?.url)
+    await user.click(screen.getByRole('button', { name: 'Открыть фото 3 из 3' }))
+    expect(onAvatarClick).toHaveBeenCalledWith(2)
+  })
 })

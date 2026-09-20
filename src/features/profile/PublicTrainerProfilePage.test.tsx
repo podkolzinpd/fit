@@ -97,13 +97,35 @@ describe('PublicTrainerProfilePage', () => {
     renderPage()
 
     fireEvent.click(await screen.findByRole('button', { name: 'Открыть фото тренера Анна Иванова' }))
-    const dialog = screen.getByRole('dialog', { name: 'Фото тренера' })
+    const dialog = screen.getByRole('dialog', { name: 'Фотографии тренера' })
     expect(dialog).toBeVisible()
     expect(screen.getByAltText('Фото тренера Анна Иванова')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Увеличить' }))
     expect(screen.getByText('150%')).toBeVisible()
     fireEvent.keyDown(window, { key: 'Escape' })
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Фото тренера' })).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Фотографии тренера' })).not.toBeInTheDocument())
+  })
+
+  it('opens the selected gallery photo and moves to the next one', async () => {
+    const photos = [0, 1].map((index) => ({
+      id: `11111111-1111-4111-8111-11111111111${index}`,
+      url: `https://storage.example/full-${index}.jpg`,
+      thumbnailUrl: `https://storage.example/thumb-${index}.jpg`,
+      mimeType: 'image/jpeg' as const,
+      width: 1200,
+      height: 1600,
+    }))
+    mocks.getPublicTrainerProfile.mockResolvedValue({
+      ...fullProfile,
+      published: { ...fullProfile.draft, photos },
+    })
+    renderPage()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Открыть фото 2 из 2' }))
+    expect(screen.getByAltText('Фото 2 тренера Анна Иванова')).toBeVisible()
+    expect(screen.getByText('2 из 2')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Следующее фото' }))
+    expect(screen.getByAltText('Фото 1 тренера Анна Иванова')).toBeVisible()
   })
 
   it('explains that contact is unavailable without rendering a dead action', async () => {

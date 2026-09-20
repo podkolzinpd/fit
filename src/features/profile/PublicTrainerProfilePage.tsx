@@ -17,7 +17,7 @@ export function PublicTrainerProfilePage() {
   const [profile, setProfile] = useState<TrainerProfessionalProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const [photoOpen, setPhotoOpen] = useState(false)
+  const [photoIndex, setPhotoIndex] = useState<number | null>(null)
   useEffect(() => {
     let active = true
     setLoading(true); setError(null)
@@ -28,16 +28,25 @@ export function PublicTrainerProfilePage() {
     })
     return () => { active = false }
   }, [publicId])
+  const published = profile?.published
+  const photoItems = published
+    ? (published.photos?.length
+        ? published.photos.map((photo, index) => ({
+          src: photo.url ?? photo.thumbnailUrl,
+          alt: `Фото ${index + 1} тренера ${published.displayName}`,
+        }))
+        : published.avatarDataUrl ? [{ src: published.avatarDataUrl, alt: `Фото тренера ${published.displayName}` }] : [])
+    : []
   return <Page title="Тренер Fit" back={back} swipeBack className="public-trainer-page ui-identity">
     <AsyncView loading={loading} error={error} empty={!profile?.published}
       emptyTitle="Анкета недоступна" emptyDescription="Тренер снял её с публикации или ссылка устарела."
       emptyAction={<Link className="button secondary" to="/auth">Открыть Fit</Link>} onRetry={() => { setLoading(true); setError(null); void getPublicTrainerProfile(publicId).then((value) => { setProfile(value); setLoading(false) }, (caught: unknown) => { setError(caught instanceof Error ? caught : new Error('Не удалось открыть анкету.')); setLoading(false) }) }}>
-      {profile?.published && <TrainerProfileCard profile={profile.published} isBrandTrainer={profile.isBrandTrainer} publicView
-        onAvatarClick={profile.published.avatarDataUrl ? () => setPhotoOpen(true) : undefined} primaryAction={profile.published.acceptingClients
+      {published && <TrainerProfileCard profile={published} isBrandTrainer={profile.isBrandTrainer} publicView
+        onAvatarClick={photoItems.length ? (index) => setPhotoIndex(index) : undefined} primaryAction={published.acceptingClients
         ? <PublicTrainerChatButton publicProfileId={publicId} />
         : <p className="trainer-contact-unavailable">Тренер временно не принимает новых клиентов</p>} />}
     </AsyncView>
-    {photoOpen && profile?.published?.avatarDataUrl && <FullscreenImageViewer src={profile.published.avatarDataUrl}
-      alt={`Фото тренера ${profile.published.displayName}`} label="Фото тренера" onClose={() => setPhotoOpen(false)} />}
+    {photoIndex !== null && photoItems[0] && <FullscreenImageViewer src={photoItems[0].src}
+      alt={photoItems[0].alt} images={photoItems} initialIndex={photoIndex} label="Фотографии тренера" onClose={() => setPhotoIndex(null)} />}
   </Page>
 }

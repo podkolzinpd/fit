@@ -98,8 +98,8 @@ function CatalogCard({ profile, onOpen }: { profile: TrainerCatalogItem; onOpen:
     : []
   return <article className="trainer-catalog-card card">
     <div className="trainer-catalog-card-head">
-      {published.avatarDataUrl
-        ? <img src={published.avatarDataUrl} alt="" className="trainer-card-avatar" />
+      {(published.photos?.[0]?.thumbnailUrl ?? published.avatarDataUrl)
+        ? <img src={published.photos?.[0]?.thumbnailUrl ?? published.avatarDataUrl ?? undefined} alt="" className="trainer-card-avatar" />
         : <span className="trainer-card-avatar trainer-card-avatar-placeholder" aria-hidden="true">{published.displayName.slice(0, 1).toUpperCase()}</span>}
       <div><h2>{published.displayName}</h2><p>{published.acceptingClients ? 'Берёт новых клиентов' : 'Сейчас без новых клиентов'}</p>
         {profile.isBrandTrainer && <span className="trainer-brand-badge">👑 Бренд-тренер</span>}</div>

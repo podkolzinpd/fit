@@ -39,26 +39,33 @@ export function TrainerProfileCard({ profile, isBrandTrainer = false, publicView
   action?: ReactNode
   primaryAction?: ReactNode
   footer?: ReactNode
-  onAvatarClick?: () => void
+  onAvatarClick?: (index: number) => void
 }) {
   const experience = experienceLabel(profile.experienceStartYear)
   const certificateCount = profile.certificates.length
   const metroStationIds = profile.metroStationIds.filter((id) => moscowMetroStationById(id) !== undefined)
   const locationCount = profile.trainingModes.includes('in_person') ? metroStationIds.length + profile.customLocations.length : 0
+  const photos = profile.photos ?? []
+  const coverUrl = photos[0]?.url ?? photos[0]?.thumbnailUrl ?? profile.avatarDataUrl
   return <article className={`trainer-card${publicView ? ' trainer-card-public' : ''}${compact ? ' trainer-card-compact' : ''}`}>
     <header className="trainer-card-head">
-      {profile.avatarDataUrl
+      {coverUrl
         ? onAvatarClick
-          ? <button type="button" className="trainer-card-avatar-button" aria-label={`Открыть фото тренера ${profile.displayName}`} onClick={onAvatarClick}>
-            <img src={profile.avatarDataUrl} alt="" className="trainer-card-avatar" />
+          ? <button type="button" className="trainer-card-avatar-button" aria-label={`Открыть фото тренера ${profile.displayName}`} onClick={() => onAvatarClick(0)}>
+            <img src={coverUrl} alt="" className="trainer-card-avatar" />
           </button>
-          : <img src={profile.avatarDataUrl} alt="" className="trainer-card-avatar" />
+          : <img src={coverUrl} alt="" className="trainer-card-avatar" />
         : <span className="trainer-card-avatar trainer-card-avatar-placeholder" aria-hidden="true">{profile.displayName.slice(0, 1).toUpperCase() || 'Ф'}</span>}
       <div className="trainer-card-identity"><h2>{profile.displayName || 'Имя тренера'}</h2>
         <p>{profile.acceptingClients ? 'Берёт новых клиентов' : 'Сейчас без новых клиентов'}</p>
         {isBrandTrainer && <span className="trainer-brand-badge">👑 Бренд-тренер</span>}</div>
       {action && <div className="trainer-card-action">{action}</div>}
     </header>
+    {publicView && photos.length > 1 && onAvatarClick && <div className="trainer-photo-strip" aria-label="Фотографии тренера">
+      {photos.map((photo, index) => <button type="button" key={photo.id} aria-label={`Открыть фото ${index + 1} из ${photos.length}`} onClick={() => onAvatarClick(index)}>
+        <img src={photo.thumbnailUrl} alt="" />
+      </button>)}
+    </div>}
     {profile.specialties.length > 0 && <ul className="trainer-specialties" aria-label="Направления">
       {profile.specialties.map((item) => <li key={item}>{item}</li>)}
     </ul>}
