@@ -1,10 +1,7 @@
 # Fit — текущее состояние проекта
-> Rolling snapshot для продолжения между сессиями, максимум 120 строк. После
-> merge сведения заменяются; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-20. База изменений: `8c32adea` (#1082). Frontend остаётся
-на Vercel, а production data plane — принятый Yandex Cloud stage stack. Yandex
-ID является единственным production-входом; app-session, main routing и native
-registration включены глобально.
+> Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
+Обновлено: 2026-09-20. База изменений: `b50d5183` (#1085). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
+Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 
 ## Активная цель
 
@@ -83,14 +80,18 @@ Supabase из эксплуатации. До закрытия rollback-окна 
 - Yandex API покрывает основные read-write сценарии без fallback; каталог тренеров отдаёт только опубликованные данные по три карточки, а Supabase adapter приводит legacy RPC к тому же компактному DTO.
 - Yandex Web Push pipeline и production parser развёрнуты; нужны authenticated
   end-to-end smoke push и текущего summary-контракта.
-- Для 670 упражнений Vital Gym Pro подготовлен OIDC/private-runner перенос 2 010
-  объектов по exact manifest. Код слит в #1065; remote audit/apply/readback и
-  signed-URL smoke ещё не запускались.
+- Для 670 упражнений Vital Gym Pro завершён OIDC/private-runner перенос 2 010
+  объектов (71 514 430 байт) по exact manifest. Первый apply загрузил и
+  проверил все 2 010 объектов; повторный apply ничего не перезаписал
+  (`uploaded=0`, `skipped=2010`). Финальный read-only audit подтвердил
+  `verified=2010`, `missing=0`, `mismatched=0` и fingerprint
+  `3f47c2c64d7d3a50`; signed-URL smoke и версионирование прошли. Main routing
+  не включён, проверенные копии в Supabase сохранены.
 
 ## Открытые post-cutover задачи и риски
 
-1. Выполнить успешный media migration без `allow-missing` для chat,
-   exercise и custom-exercise objects; подтвердить upload/sign/read/delete.
+1. Выполнить успешный media migration без `allow-missing` для оставшихся chat
+   и custom-exercise objects; Vital Gym Pro уже перенесён и полностью проверен.
 2. Добавить Yandex custom-exercise photo adapter.
 3. Убрать обязательность Supabase env и legacy bridge из production composition.
    Публичная анкета уже выбирает Supabase либо Yandex вместе с main routing без
@@ -115,6 +116,4 @@ Supabase из эксплуатации. До закрытия rollback-окна 
 
 ## Отложено
 
-- DataLens и доставка `app_feedback` в Telegram/Tracker — до отдельного решения.
-- HA replica — только по требованиям SLA; один host остаётся принятым риском.
-- APNs и Android/FCM не входят в Web Push cutover.
+- DataLens/Telegram/Tracker отложены; HA replica нужна только по SLA; APNs и Android/FCM не входят в Web Push cutover.
