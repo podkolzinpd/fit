@@ -43,4 +43,10 @@ describe('TrainerProfileSettingsPage', () => {
     expect(screen.getByRole('link', { name: 'Поддержка в Telegram' })).toHaveAttribute('target', '_blank')
     expect(screen.getByRole('link', { name: 'Поддержка в Telegram' })).toHaveAttribute('rel', 'noopener noreferrer')
   })
+
+  it('does not keep archive visibility in settings', () => {
+    render(<TrainerProfileSettingsPage />, { wrapper: wrapper() })
+
+    expect(screen.queryByRole('checkbox', { name: 'Показывать архив клиентов' })).not.toBeInTheDocument()
+  })
 })

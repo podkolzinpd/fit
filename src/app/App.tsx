@@ -6,7 +6,7 @@ import { AppLayout } from './AppLayout'
 import { AppViewportProvider } from './app-viewport'
 import { isAssistantNavPilotEnabled, trainerHomePath } from './feature-flags'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, InvitationPage, JoinPage, ResetPasswordPage, YandexAccountLinkRequiredGate, YandexAppSessionPage, YandexPilotCallbackPage } from '../features/auth'
-import { ClientDetailPage, ClientFormPage, ClientProfilePage, ClientProfileSettingsPage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
+import { ArchivedClientsPage, ClientDetailPage, ClientFormPage, ClientProfilePage, ClientProfileSettingsPage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
 import { ProfilePage, PublicTrainerProfilePage, TrainerCatalogPage, TrainerProfileEditorPage, TrainerProfileSettingsPage } from '../features/profile'
@@ -98,6 +98,7 @@ const router = createBrowserRouter([
     { element: <TrainerOnly />, children: [
       { path: '/today', element: <TodayPage /> },
       { path: '/clients', element: <ClientsPage /> },
+      { path: '/clients/archive', element: <ArchivedClientsPage /> },
       { path: '/clients/new', element: <ClientFormPage /> },
       { element: <CanonicalClientParamRoute />, children: [
         { path: '/clients/:clientId', element: <ClientDetailPage /> },

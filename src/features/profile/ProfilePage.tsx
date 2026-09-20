@@ -37,14 +37,8 @@ export function TrainerProfileSettingsPage() {
   const showRpe = useRpeDisplay(actor?.userId)
   const showExerciseRest = useExercisePlanRestDisplay(actor?.userId)
   const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
-  const [showArchived, setShowArchived] = useState(() => window.localStorage?.getItem('fit.showArchivedClients') === 'true')
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [installOpen, setInstallOpen] = useState(false)
-
-  function toggleShowArchived(checked: boolean) {
-    setShowArchived(checked)
-    window.localStorage?.setItem('fit.showArchivedClients', String(checked))
-  }
 
   if (!actor || actor.role !== 'trainer') return null
 
@@ -58,7 +52,6 @@ export function TrainerProfileSettingsPage() {
         <Switch label="Анимация упражнения" checked={showLiveExerciseAnimation} onChange={(checked) => setLiveExerciseAnimation(actor.userId, checked)} />
         <Switch label="Показывать отдых" checked={showExerciseRest} onChange={(checked) => setExercisePlanRestDisplay(actor.userId, checked)} />
         <Switch label="Показывать RPE" checked={showRpe} onChange={(checked) => setRpeDisplay(actor.userId, checked)} />
-        <Switch label="Показывать архив клиентов" checked={showArchived} onChange={toggleShowArchived} />
       </div>
     </SettingsSection>
 

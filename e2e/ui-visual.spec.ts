@@ -229,9 +229,8 @@ async function mockRoleHomeWorkoutState(page: VisualPage) {
 
 async function mockTrainerClients(page: VisualPage) {
   const names = ['Александра Константинопольская-Романова', 'Борис Иванов', 'Вера Кузнецова', 'Глеб Орлов', 'Дарья Ершова', 'Егор Панов']
-  await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify(names.map((fullName, index) => ({
+  const archivedNames = ['Мария Соколова', 'Николай Васильев', 'Ольга Морозова']
+  const row = (fullName: string, index: number, archived: boolean) => ({
       id: index === 0 ? demoClientId : `71000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
       can_archive: true,
       has_account: index === 0,
@@ -245,11 +244,19 @@ async function mockTrainerClients(page: VisualPage) {
       note: null,
       current_weight_kg: 65 + index,
       last_activity_at: `2026-08-${String(16 - index).padStart(2, '0')}T10:00:00Z`,
-      archived_at: null,
+      archived_at: archived ? `2026-08-${String(10 - index).padStart(2, '0')}T10:00:00Z` : null,
       version: 1,
       membership_version: 1,
-    }))),
-  }))
+    })
+  await page.route('**/rest/v1/rpc/list_clients', (route) => {
+    const payload = route.request().postDataJSON() as { p_include_archived?: boolean } | null
+    const active = names.map((fullName, index) => row(fullName, index, false))
+    const archived = archivedNames.map((fullName, index) => row(fullName, index + names.length, true))
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify(payload?.p_include_archived ? [...active, ...archived] : active),
+    })
+  })
   await page.route('**/rest/v1/rpc/list_chat_threads', (route) => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify([{
@@ -2022,11 +2029,23 @@ test('trainer Clients list keeps its desktop visual baselines', async ({ page },
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
   await expectVisualBaseline(page, `trainer-clients-${process.platform}.png`, [], true)
 
+  const desktopArchiveEntry = page.getByRole('link', { name: 'Архив' })
+  await desktopArchiveEntry.scrollIntoViewIfNeeded()
+  await expectVisualBaseline(page, `trainer-clients-archive-entry-${process.platform}.png`, [], true)
+  await desktopArchiveEntry.click()
+  await expect(page).toHaveURL(/\/clients\/archive$/)
+  await expect(page.getByRole('link', { name: /Мария Соколова/ })).toBeVisible()
+  await expect(page.getByText('Александра Константинопольская-Романова')).toHaveCount(0)
+  await expectVisualBaseline(page, `trainer-clients-archive-${process.platform}.png`, [], true)
+
   await gotoStable(page, '/profile/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/clients')
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-clients-identity/)
   await expectVisualBaseline(page, `trainer-clients-dark-${process.platform}.png`, [], true, '#1d1e21')
+  await page.getByRole('link', { name: 'Архив' }).click()
+  await expect(page.getByRole('link', { name: /Мария Соколова/ })).toBeVisible()
+  await expectVisualBaseline(page, `trainer-clients-archive-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
 
 test('trainer Clients list keeps its mobile visual baselines', async ({ page }, testInfo) => {
@@ -2059,6 +2078,14 @@ test('trainer Clients list keeps its mobile visual baselines', async ({ page }, 
   await expect(search).toBeFocused()
   await expect(page).toHaveScreenshot(`trainer-clients-mobile-search-focus-${process.platform}.png`, { animations: 'disabled', caret: 'hide', fullPage: true, maxDiffPixelRatio: 0.03 })
 
+  const mobileArchiveEntry = page.getByRole('link', { name: 'Архив' })
+  await mobileArchiveEntry.scrollIntoViewIfNeeded()
+  await expectVisualBaseline(page, `trainer-clients-archive-entry-mobile-${process.platform}.png`, [], true)
+  await mobileArchiveEntry.click()
+  await expect(page).toHaveURL(/\/clients\/archive$/)
+  await expect(page.getByRole('link', { name: /Мария Соколова/ })).toBeVisible()
+  await expectVisualBaseline(page, `trainer-clients-archive-mobile-${process.platform}.png`, [], true)
+
   await gotoStable(page, '/profile/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/clients')
@@ -2069,6 +2096,9 @@ test('trainer Clients list keeps its mobile visual baselines', async ({ page }, 
   await darkSearch.focus()
   await expect(darkSearch).toBeFocused()
   await expect(page).toHaveScreenshot(`trainer-clients-mobile-search-focus-dark-${process.platform}.png`, { animations: 'disabled', caret: 'hide', fullPage: true, maxDiffPixelRatio: 0.03 })
+  await page.getByRole('link', { name: 'Архив' }).click()
+  await expect(page.getByRole('link', { name: /Мария Соколова/ })).toBeVisible()
+  await expectVisualBaseline(page, `trainer-clients-archive-mobile-dark-${process.platform}.png`, [], true, '#1d1e21')
 })
 
 test('exercise picker keeps search, filters and technique readable', async ({ page }, testInfo) => {
