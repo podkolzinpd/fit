@@ -2,7 +2,12 @@ import type { QueryResultRow } from 'pg'
 
 import { createPilotSessionToken, hashPilotSessionToken } from './auth/pilot-session-token.js'
 import type { DatabasePool } from './db/types.js'
+import { readOwnProfile } from './profile.js'
 import type { ExistingActor } from './yandex-account-linking.js'
+import {
+  YANDEX_APP_SESSION_TTL_MS,
+  type YandexAppSessionResponse,
+} from './yandex-app-session.js'
 import {
   CURRENT_PRIVACY_VERSION,
   CURRENT_TERMS_VERSION,
@@ -41,7 +46,7 @@ export class YandexAuthHandoffError extends Error {
 export interface YandexAuthHandoffService {
   issue(subjectHash: string): Promise<YandexAuthHandoffToken | undefined>
   recordRecoveryAttempt(token: string): Promise<void>
-  linkExisting(token: string, actor: ExistingActor): Promise<CompletedYandexAuthHandoff>
+  recoverExisting(token: string, actor: ExistingActor): Promise<YandexAppSessionResponse>
   register(
     token: string,
     input: YandexNativeRegistrationInput,
@@ -109,17 +114,60 @@ export class DatabaseYandexAuthHandoffService implements YandexAuthHandoffServic
     }
   }
 
-  async linkExisting(token: string, actor: ExistingActor): Promise<CompletedYandexAuthHandoff> {
+  async recoverExisting(token: string, actor: ExistingActor): Promise<YandexAppSessionResponse> {
     const tokenHash = hashPilotSessionToken(token)
     if (tokenHash === undefined) throw new YandexAuthHandoffError('invalid')
+    const sessionToken = createPilotSessionToken()
+    const expiresAt = new Date(this.now().getTime() + YANDEX_APP_SESSION_TTL_MS)
     const connection = await this.pool.connect()
+    let transactionStarted = false
+
     try {
-      return readCompleted(await connection.query<CompletedRow>(
+      await connection.query('begin')
+      transactionStarted = true
+      const completed = readCompleted(await connection.query<CompletedRow>(
         `select profile_id, subject_sha256
-         from app_private.link_migrated_yandex_account($1, $2, $3)`,
-        [tokenHash, actor.profile.id, actor.profile.accountRole],
+         from app_private.recover_migrated_yandex_account($1, $2, $3, $4, $5)`,
+        [
+          tokenHash,
+          actor.profile.id,
+          actor.profile.accountRole,
+          sessionToken.sha256,
+          expiresAt.toISOString(),
+        ],
       ))
+      if (completed.profileId !== actor.profile.id) {
+        throw new YandexAuthHandoffError('invalid')
+      }
+
+      await connection.query(
+        "select set_config('request.jwt.claim.sub', $1, true)",
+        [completed.profileId],
+      )
+      const profile = await readOwnProfile(connection, 'read_write')
+      if (profile === undefined) throw new YandexAuthHandoffError('invalid')
+
+      await connection.query('commit')
+      return {
+        ...profile,
+        accessMode: 'read_write',
+        session: {
+          token: sessionToken.raw,
+          expiresAt: expiresAt.toISOString(),
+        },
+      }
     } catch (error) {
+      if (transactionStarted) {
+        try {
+          await connection.query('rollback')
+        } catch (rollbackError) {
+          throw new AggregateError(
+            [error, rollbackError],
+            'Yandex recovery and rollback both failed',
+            { cause: rollbackError },
+          )
+        }
+      }
       throw mapHandoffError(error) ?? error
     } finally {
       connection.release()
