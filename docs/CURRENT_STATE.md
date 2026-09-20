@@ -1,25 +1,18 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-20. База изменений: `0a27d06b` (#1084). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
+Обновлено: 2026-09-20. База изменений: `920979b8` (#1099). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 
 ## Активная цель
 
-Стабилизировать Yandex-only production после переключения и затем вывести
-Supabase из эксплуатации. До закрытия rollback-окна сохраняется общий доменный
-контракт без dual-write; гейты описаны в `docs/YANDEX_CUTOVER_PLAYBOOK.md`.
+Стабилизировать Yandex-only production после переключения и затем вывести Supabase из эксплуатации. До закрытия rollback-окна сохраняется общий доменный контракт без dual-write; гейты описаны в `docs/YANDEX_CUTOVER_PLAYBOOK.md`.
 
 ## Последняя проверенная продуктовая точка
 
 - Assistant доступен обеим ролям; клиент работает только со своей карточкой, программы остаются за общим kill switch.
-- Клиентская генерация четырёхнедельной программы работает через выбранный
-  backend. Yandex API читает actor-scoped историю, цель, замеры и будущие
-  занятия из PostgreSQL, использует короткие idempotent generation leases и
-  вызывает тот же валидируемый YandexGPT generator вне DB-транзакции.
-- Свои упражнения поддерживают текстовые metadata в обоих backend; изменение
-  private JPEG всё ещё отклоняется, объекты не входят в подтверждённый перенос.
-- Legal acceptance и отменяемые deletion requests работают через выбранный
-  backend с actor-scoped Yandex RLS/RPC и provider-neutral UI.
+- Клиентская генерация четырёхнедельной программы работает через выбранный backend. Yandex API читает actor-scoped историю, цель, замеры и будущие занятия из PostgreSQL, использует короткие idempotent generation leases и вызывает тот же валидируемый YandexGPT generator вне DB-транзакции.
+- Свои упражнения поддерживают текстовые metadata в обоих backend; изменение private JPEG всё ещё отклоняется, объекты не входят в подтверждённый перенос.
+- Legal acceptance и отменяемые deletion requests работают через выбранный backend с actor-scoped Yandex RLS/RPC и provider-neutral UI.
 - Production auth показывает только действие «Продолжить с Yandex ID»; старые
   email/password/reset routes возвращаются на единый вход. Связанный профиль с
   `yandex/read_write` assignment получает Yandex app-session и весь основной UI
@@ -27,8 +20,7 @@ Supabase из эксплуатации. До закрытия rollback-окна 
   recovery/new-account handoff. Recovery domain-ready профиля одной транзакцией
   создаёт identity, `yandex/read_write` и первую app-session; при любой ошибке
   всё откатывается. Reload не сбрасывает активные Yandex requests.
-- Frontend Yandex API принимает Postgres-native ISO timestamps с numeric offset (`+00:00`);
-  карточка «Последняя тренировка» больше не падает из-за отличия от literal `Z`.
+- Frontend Yandex API принимает Postgres-native ISO timestamps с numeric offset (`+00:00`); карточка «Последняя тренировка» больше не падает из-за отличия от literal `Z`.
 - `VITE_MAINTENANCE_MODE` выключен после выпуска и production-проверки
   обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
   `paused`: он блокирует DML старых вкладок, RPC и background writers на 38
@@ -87,7 +79,7 @@ Supabase из эксплуатации. До закрытия rollback-окна 
   Production OAuth smoke подтвердил PKCE-переход на `oauth.yandex.ru`, а
   защищённый маршрут и старый password-recovery route возвращаются на единый
   Yandex ID экран без email/password формы.
-- Yandex API покрывает основные read-write сценарии без fallback; каталог тренеров отдаёт только опубликованные данные по три карточки, а Supabase adapter приводит legacy RPC к тому же компактному DTO.
+- Yandex API покрывает основные read-write сценарии без fallback; каталог тренеров отдаёт только опубликованные данные по три карточки, а Supabase adapter приводит legacy RPC к тому же компактному DTO. Рабочий список тренера содержит только активных клиентов, архив открывается отдельным последним пунктом и сохраняет карточку, историю, чат и восстановление.
 - Yandex Web Push pipeline и production parser развёрнуты; нужны authenticated
   end-to-end smoke push и текущего summary-контракта.
 - Для 670 упражнений Vital Gym Pro завершён OIDC/private-runner перенос 2 010

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChatThread, Client } from '../../shared/domain'
-import { ClientsPage } from './ClientsListPage'
+import { ArchivedClientsPage, ClientsPage } from './ClientsListPage'
 
 const backend = vi.hoisted(() => ({ list: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn() }))
 vi.mock('../../app/data-backend-context', () => ({
@@ -32,11 +32,12 @@ const thread = (clientId: string, unreadCount = 0, activeConnection = true): Cha
 
 const NAMES = ['Анна Смирнова', 'Борис Иванов', 'Вера Кузнецова', 'Глеб Орлов', 'Дарья Ершова', 'Егор Панов']
 
-function renderPage(clients: Client[], initialEntry = '/clients') {
-  backend.list.mockResolvedValue(clients)
+function renderPage(clients: Client[] | undefined, initialEntry = '/clients') {
+  if (clients) backend.list.mockResolvedValue(clients)
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(<MemoryRouter initialEntries={[initialEntry]}><QueryClientProvider client={queryClient}><Routes>
     <Route path="/clients" element={<ClientsPage />} />
+    <Route path="/clients/archive" element={<ArchivedClientsPage />} />
     <Route path="/clients/:clientId" element={<p>Профиль открыт</p>} />
     <Route path="/chat/:conversationId" element={<p>Чат открыт</p>} />
   </Routes></QueryClientProvider></MemoryRouter>)
@@ -52,6 +53,62 @@ beforeEach(() => {
 })
 
 describe('ClientsPage archive actions', () => {
+  it('keeps archived clients out of the working list and always shows the archive entry last', async () => {
+    renderPage([
+      client('active', 'Анна Смирнова'),
+      client('archived', 'Архивный спортсмен', false, '2026-09-01T00:00:00.000Z'),
+    ])
+
+    expect(await screen.findByText('Анна Смирнова')).toBeVisible()
+    expect(screen.queryByText('Архивный спортсмен')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Архив' })).toHaveAttribute('href', '/clients/archive')
+    expect(backend.list).toHaveBeenCalledWith(false)
+  })
+
+  it('opens a separate archive with only archived clients', async () => {
+    renderPage([
+      client('active', 'Анна Смирнова'),
+      client('archived', 'Архивный спортсмен', false, '2026-09-01T00:00:00.000Z'),
+    ], '/clients/archive')
+
+    expect(await screen.findByText('Архивный спортсмен')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Архив' })).toBeVisible()
+    expect(screen.queryByText('Анна Смирнова')).not.toBeInTheDocument()
+    expect(backend.list).toHaveBeenCalledWith(true)
+    expect(screen.getByRole('link', { name: /Архивный спортсмен/ })).toHaveAttribute('href', '/clients/archived')
+  })
+
+  it('explains when the archive is empty', async () => {
+    renderPage([], '/clients/archive')
+
+    expect(await screen.findByRole('heading', { name: 'Архив пуст' })).toBeVisible()
+    expect(screen.getByText('Здесь появятся карточки, которые вы отправите в архив.')).toBeVisible()
+    expect(screen.queryByRole('link', { name: 'Архив' })).not.toBeInTheDocument()
+  })
+
+  it('supports search inside a longer archive', async () => {
+    const user = userEvent.setup()
+    const archived = NAMES.map((name, index) => client(`archived-${index}`, name, false, '2026-09-01T00:00:00.000Z'))
+    renderPage(archived, '/clients/archive?q=кузнец')
+
+    expect(await screen.findByText('Вера Кузнецова')).toBeVisible()
+    expect(screen.queryByText('Анна Смирнова')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Очистить поиск' }))
+    expect(screen.getByText('Анна Смирнова')).toBeVisible()
+  })
+
+  it('retries an archive loading error and returns to the clients list', async () => {
+    const user = userEvent.setup()
+    backend.list.mockRejectedValueOnce(new Error('Архив временно недоступен')).mockResolvedValue([])
+    renderPage(undefined, '/clients/archive')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Архив временно недоступен')
+    await user.click(screen.getByRole('button', { name: 'Повторить' }))
+    expect(await screen.findByRole('heading', { name: 'Архив пуст' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Назад' }))
+    expect(await screen.findByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  })
+
   it('shows archive controls only to the root trainer and keeps one action rail open', async () => {
     const user = userEvent.setup()
     renderPage([
@@ -97,7 +154,7 @@ describe('ClientsPage archive actions', () => {
     const user = userEvent.setup()
     const archived = { ...client('archived-root', 'Архивный спортсмен', false, '2026-09-01T00:00:00.000Z'), canArchive: true }
     backend.setArchived.mockResolvedValue({ ...archived, archivedAt: null, version: 2 })
-    renderPage([archived])
+    renderPage([archived], '/clients/archive')
 
     await user.click(await screen.findByRole('button', { name: 'Действия с клиентом Архивный спортсмен' }))
     await user.click(screen.getByRole('button', { name: 'Восстановить' }))
@@ -192,13 +249,9 @@ describe('ClientsPage chat actions', () => {
 
   it('keeps history available for an archived client and hides chat without account or history', async () => {
     backend.listThreads.mockResolvedValue([thread('archived', 0, false)])
-    renderPage([
-      client('archived', 'Архивный спортсмен', true, '2026-09-01T00:00:00.000Z'),
-      client('offline', 'Без аккаунта'),
-    ])
+    renderPage([client('archived', 'Архивный спортсмен', true, '2026-09-01T00:00:00.000Z')], '/clients/archive')
 
     expect(await screen.findByRole('button', { name: 'Сообщения с Архивный спортсмен' })).toBeVisible()
-    expect(screen.queryByRole('button', { name: 'Сообщения с Без аккаунта' })).not.toBeInTheDocument()
   })
 
   it('shows a local retry state without blocking the client profile', async () => {

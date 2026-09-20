@@ -4685,6 +4685,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-clients-identity .clients-search-clear { width:44px; height:44px; min-height:44px; color:var(--secondary-label-fg) }
 .trainer-clients-identity .clients-search-clear:focus-visible { outline:2px solid var(--fg); outline-offset:-2px }
 .trainer-clients-identity .clients-list { gap:8px }
+.trainer-clients-identity .clients-archive-link { display:flex; min-height:56px; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; padding:0 16px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg); font-size:14px; font-weight:500; text-decoration:none }
+.trainer-clients-identity .clients-archive-link svg { width:20px; height:20px; color:var(--secondary-label-fg) }
+.trainer-clients-identity .clients-archive-link:hover { border-color:var(--fg) }
+.trainer-clients-identity .clients-archive-link:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
 .trainer-clients-identity .client-swipe-row { position:relative; min-width:0; overflow:hidden; border-radius:18px; background:var(--surface-raised) }
 .trainer-clients-identity .client-swipe-actions { position:absolute; inset:0 0 0 auto; width:112px; display:grid; place-items:stretch; opacity:0; background:var(--danger) }
 .trainer-clients-identity .client-swipe-row.is-revealing .client-swipe-actions { opacity:1 }

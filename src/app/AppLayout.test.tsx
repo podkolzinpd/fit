@@ -72,6 +72,7 @@ describe('AppLayout: единственная UI Identity', () => {
     ['client', '/me/goal', 'client-goal-identity'],
     ['trainer', '/today', 'trainer-today-identity'],
     ['trainer', '/clients', 'trainer-clients-identity'],
+    ['trainer', '/clients/archive', 'trainer-clients-identity'],
     ['trainer', '/clients/client-1', 'trainer-client-detail-identity'],
     ['trainer', '/clients/new', 'trainer-client-form-identity'],
     ['trainer', '/clients/client-1/edit', 'trainer-client-form-identity'],
