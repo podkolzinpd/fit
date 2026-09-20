@@ -1553,6 +1553,7 @@ async function openWorkoutForDetailReview(page: import('@playwright/test').Page,
 
 test('workout detail, completion and exercise history keep their visual baselines', async ({ page }, testInfo) => {
   test.setTimeout(120_000)
+  await page.clock.setFixedTime(new Date('2026-09-18T07:00:00.000Z'))
   const trainer = testInfo.project.name === 'visual-trainer-1440'
   let exposeCompletionComparison = false
   await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
