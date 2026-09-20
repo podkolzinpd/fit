@@ -706,6 +706,29 @@ export interface TrainerCertificate {
   year: number | null
 }
 
+export interface TrainerProfilePhoto {
+  id: UUID
+  /** Full-size signed URL. Catalog responses intentionally omit it. */
+  url: string | null
+  thumbnailUrl: string
+  mimeType: 'image/jpeg'
+  width: number
+  height: number
+}
+
+export interface TrainerProfilePhotoUploadPart {
+  dataUrl: string
+  mimeType: 'image/jpeg'
+  width: number
+  height: number
+  sizeBytes: number
+}
+
+export interface TrainerProfilePhotoUpload {
+  image: TrainerProfilePhotoUploadPart
+  thumbnail: TrainerProfilePhotoUploadPart
+}
+
 export interface TrainerProfileDraft {
   displayName: string
   bio: string
@@ -720,6 +743,8 @@ export interface TrainerProfileDraft {
   price: string
   acceptingClients: boolean
   avatarDataUrl: string | null
+  /** Missing only on legacy payloads saved before the gallery rollout. */
+  photos?: TrainerProfilePhoto[]
   certificates: TrainerCertificate[]
 }
 

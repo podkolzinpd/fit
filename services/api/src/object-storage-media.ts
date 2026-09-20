@@ -16,6 +16,7 @@ const OBJECT_STORAGE_ENDPOINT = 'https://storage.yandexcloud.net'
 const OBJECT_STORAGE_REGION = 'ru-central1'
 const CHAT_MEDIA_PREFIX = 'chat-media'
 const VITAL_MEDIA_PREFIX = 'fit-exercise-media'
+const TRAINER_PROFILE_MEDIA_PREFIX = 'trainer-profile-media'
 const SAFE_OBJECT_PATH = /^[A-Za-z0-9][A-Za-z0-9/_.-]{0,511}$/
 
 export interface YandexMediaStorageConfig {
@@ -43,7 +44,7 @@ export interface MediaObjectStorage {
   ): Promise<void>
 }
 
-export type MediaNamespace = 'chat-media' | 'fit-exercise-media'
+export type MediaNamespace = 'chat-media' | 'fit-exercise-media' | 'trainer-profile-media'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -66,7 +67,9 @@ function isExistingObject(error: unknown): boolean {
 }
 
 function namespacePrefix(namespace: MediaNamespace): string {
-  return namespace === 'chat-media' ? CHAT_MEDIA_PREFIX : VITAL_MEDIA_PREFIX
+  if (namespace === 'chat-media') return CHAT_MEDIA_PREFIX
+  if (namespace === 'trainer-profile-media') return TRAINER_PROFILE_MEDIA_PREFIX
+  return VITAL_MEDIA_PREFIX
 }
 
 export function mediaObjectKey(namespace: MediaNamespace, path: string): string {

@@ -821,9 +821,14 @@ test('trainer catalog stays compact and aligned across supported widths', async 
 test('public trainer photo fills supported mobile widths in both themes', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'The public trainer photo viewer is a mobile acceptance case')
   const publicId = '91000000-0000-4000-8000-000000000003'
-  const avatar = `data:image/jpeg;base64,${readFileSync(new URL('../public/exercises/vital/smith-seated-military-press.jpg', import.meta.url)).toString('base64')}`
+  const photoBytes = readFileSync(new URL('../public/exercises/vital/smith-seated-military-press.jpg', import.meta.url))
+  await page.route('https://storage.example/trainer-gallery/**', (route) => route.fulfill({ body: photoBytes, contentType: 'image/jpeg' }))
+  const photos = [0, 1, 2].map((index) => ({ id: `91000000-0000-4000-8000-00000000002${index}`,
+    url: `https://storage.example/trainer-gallery/full-${index}.jpg`,
+    thumbnailUrl: `https://storage.example/trainer-gallery/thumb-${index}.jpg`,
+    mimeType: 'image/jpeg', width: 960, height: 960 }))
   const published = { displayName: 'Анна Иванова', bio: '', specialties: ['Силовые тренировки'], city: 'Москва', metroStationIds: [], customLocations: [], trainingModes: ['online'], experienceStartYear: 2018,
-    education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: avatar, certificates: [] }
+    education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: null, photos, certificates: [] }
   await page.route('**/rest/v1/rpc/get_public_trainer_profile', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
     publicId, draft: published, published, listedInCatalog: true, publishedAt: '2026-09-20T10:00:00Z', updatedAt: '2026-09-20T10:00:00Z', version: 1, isBrandTrainer: false,
   }) }))
@@ -832,8 +837,9 @@ test('public trainer photo fills supported mobile widths in both themes', async 
 
   const openPhoto = page.getByRole('button', { name: 'Открыть фото тренера Анна Иванова' })
   await openPhoto.click()
-  const viewer = page.getByRole('dialog', { name: 'Фото тренера' })
+  const viewer = page.getByRole('dialog', { name: 'Фотографии тренера' })
   await expect(viewer).toBeVisible()
+  await expect(viewer.getByText('1 из 3')).toBeVisible()
   await expect(viewer.evaluate((element) => {
     const box = element.getBoundingClientRect()
     return box.left === 0 && box.top === 0 && box.right === window.innerWidth && box.bottom === window.innerHeight

@@ -92,6 +92,7 @@ describe('trainer profile', () => {
     const legacy: Record<string, unknown> = { ...current }
     delete legacy.metroStationIds
     delete legacy.customLocations
+    delete legacy.photos
     const profile = parseTrainerProfile({
       publicId: '9190a86f-a191-42d8-912e-a7e0ea0f331d',
       draft: legacy,
@@ -103,7 +104,7 @@ describe('trainer profile', () => {
       isBrandTrainer: false,
     })
 
-    expect(profile.published).toEqual({ ...legacy, metroStationIds: [], customLocations: [] })
+    expect(profile.published).toEqual({ ...legacy, metroStationIds: [], customLocations: [], photos: [] })
     expect(profile.listedInCatalog).toBe(true)
   })
 

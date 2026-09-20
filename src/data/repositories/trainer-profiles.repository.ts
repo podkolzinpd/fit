@@ -1,4 +1,4 @@
-import type { TrainerCatalogFilters, TrainerCatalogPage, TrainerCatalogPageOptions, TrainerProfileDraft, TrainerProfessionalProfile } from '../../shared/domain'
+import type { TrainerCatalogFilters, TrainerCatalogPage, TrainerCatalogPageOptions, TrainerProfileDraft, TrainerProfilePhotoUpload, TrainerProfessionalProfile } from '../../shared/domain'
 import { parseLegacyTrainerCatalogPage, parseTrainerProfile } from '../../shared/trainer-profile'
 import { getYandexMainRoutingConfig } from '../../app/feature-flags'
 import { supabase } from '../queries/client'
@@ -8,6 +8,9 @@ import { RepositoryError, repositoryError } from './error'
 export interface TrainerProfilesRepository {
   getOwn(): Promise<TrainerProfessionalProfile | null>
   saveDraft(draft: TrainerProfileDraft): Promise<TrainerProfessionalProfile>
+  uploadPhoto(draft: TrainerProfileDraft, photo: TrainerProfilePhotoUpload, replaceLegacy?: boolean): Promise<TrainerProfessionalProfile>
+  reorderPhotos(photoIds: string[]): Promise<TrainerProfessionalProfile>
+  deletePhoto(photoId: string): Promise<TrainerProfessionalProfile>
   publish(): Promise<TrainerProfessionalProfile>
   unpublish(): Promise<TrainerProfessionalProfile>
   setCatalogListing(listed: boolean): Promise<TrainerProfessionalProfile>
@@ -28,6 +31,21 @@ export const trainerProfilesRepository: TrainerProfilesRepository = {
     const result = await supabase.rpc('save_trainer_profile_draft', { p_draft: toJson(draft) })
     if (result.error) throw repositoryError(result.error)
     return parseTrainerProfile(result.data)
+  },
+  async uploadPhoto(draft, photo) {
+    // Local/Supabase development keeps its existing single-photo contract.
+    // Production uses the Yandex repository and the three-photo gallery.
+    const result = await supabase.rpc('save_trainer_profile_draft', {
+      p_draft: toJson({ ...draft, avatarDataUrl: photo.image.dataUrl, photos: [] }),
+    })
+    if (result.error) throw repositoryError(result.error)
+    return parseTrainerProfile(result.data)
+  },
+  reorderPhotos() {
+    return Promise.reject(new RepositoryError('service_unavailable', 'Галерея временно недоступна. Попробуйте позднее.'))
+  },
+  deletePhoto() {
+    return Promise.reject(new RepositoryError('service_unavailable', 'Галерея временно недоступна. Попробуйте позднее.'))
   },
   async publish() {
     const result = await supabase.rpc('publish_trainer_profile')
@@ -84,7 +102,11 @@ async function readYandexPublicProfile(publicId: string, apiBaseUrl: string): Pr
   }
 }
 
-const publicProfileRequests = new Map<string, Promise<TrainerProfessionalProfile | null>>()
+const PUBLIC_PROFILE_CACHE_TTL_MS = 45 * 60 * 1_000
+const publicProfileRequests = new Map<string, {
+  expiresAt: number
+  request: Promise<TrainerProfessionalProfile | null>
+}>()
 
 export function forgetPublicTrainerProfile(publicId: string) {
   publicProfileRequests.delete(publicId)
@@ -101,11 +123,12 @@ async function loadPublicTrainerProfile(publicId: string): Promise<TrainerProfes
 
 export function getPublicTrainerProfile(publicId: string): Promise<TrainerProfessionalProfile | null> {
   const existing = publicProfileRequests.get(publicId)
-  if (existing) return existing
+  if (existing && existing.expiresAt > Date.now()) return existing.request
+  if (existing) publicProfileRequests.delete(publicId)
   const request = loadPublicTrainerProfile(publicId).catch((error: unknown) => {
     publicProfileRequests.delete(publicId)
     throw error
   })
-  publicProfileRequests.set(publicId, request)
+  publicProfileRequests.set(publicId, { expiresAt: Date.now() + PUBLIC_PROFILE_CACHE_TTL_MS, request })
   return request
 }

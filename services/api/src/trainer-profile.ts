@@ -1,8 +1,11 @@
+import { randomUUID } from 'node:crypto'
 import type { QueryResultRow } from 'pg'
 import type { DatabasePool, DatabaseClient } from './db/types.js'
+import type { MediaObjectStorage } from './object-storage-media.js'
+import type { TrainerPhotoUpload } from './trainer-profile-media.js'
 import { withYandexActorSession, type YandexActorSessionInput } from './yandex-actor-session.js'
 
-export type TrainerProfileDraft = {
+type TrainerProfileCore = {
   displayName: string
   bio: string
   specialties: string[]
@@ -17,6 +20,36 @@ export type TrainerProfileDraft = {
   acceptingClients: boolean
   avatarDataUrl: string | null
   certificates: Array<{ title: string; organization: string; year: number | null }>
+}
+
+export type TrainerProfilePhoto = {
+  id: string
+  url: string | null
+  thumbnailUrl: string
+  mimeType: 'image/jpeg'
+  width: number
+  height: number
+}
+
+export type TrainerProfileDraft = TrainerProfileCore & {
+  photos: TrainerProfilePhoto[]
+}
+
+type StoredTrainerProfilePhoto = {
+  id: string
+  path: string
+  thumbnailPath: string
+  mimeType: 'image/jpeg'
+  width: number
+  height: number
+  sizeBytes: number
+  thumbnailWidth: number
+  thumbnailHeight: number
+  thumbnailSizeBytes: number
+}
+
+type StoredTrainerProfileDraft = TrainerProfileCore & {
+  photos?: StoredTrainerProfilePhoto[]
 }
 
 export type TrainerCatalogFilters = {
@@ -44,8 +77,8 @@ export type TrainerCatalogPage = {
 
 interface TrainerProfileRow extends QueryResultRow {
   public_id: string
-  draft_data: TrainerProfileDraft
-  published_data: TrainerProfileDraft | null
+  draft_data: StoredTrainerProfileDraft
+  published_data: StoredTrainerProfileDraft | null
   listed_in_catalog: boolean
   published_at: string | null
   updated_at: string
@@ -55,7 +88,7 @@ interface TrainerProfileRow extends QueryResultRow {
 
 interface PublicTrainerProfileRow extends QueryResultRow {
   public_id: string
-  published_data: TrainerProfileDraft
+  published_data: StoredTrainerProfileDraft
   listed_in_catalog: boolean
   published_at: string | null
   updated_at: string
@@ -65,22 +98,55 @@ interface PublicTrainerProfileRow extends QueryResultRow {
 
 interface TrainerCatalogRow extends QueryResultRow {
   public_id: string
-  published_data: TrainerProfileDraft
+  published_data: StoredTrainerProfileDraft
   is_brand_trainer: boolean
 }
 
 export class TrainerProfileError extends Error {
-  constructor(public readonly failure: 'forbidden' | 'not_found' | 'invalid') {
+  constructor(public readonly failure: 'forbidden' | 'not_found' | 'invalid' | 'limit_reached' | 'media_unavailable') {
     super(failure)
     this.name = 'TrainerProfileError'
   }
 }
 
-function response(row: TrainerProfileRow) {
+export type TrainerProfessionalProfileResponse = {
+  publicId: string
+  draft: TrainerProfileDraft
+  published: TrainerProfileDraft | null
+  listedInCatalog: boolean
+  publishedAt: string | null
+  updatedAt: string
+  version: number
+  isBrandTrainer: boolean
+}
+
+function storedPhotos(draft: StoredTrainerProfileDraft | null): StoredTrainerProfilePhoto[] {
+  if (!draft || !Array.isArray(draft.photos)) return []
+  return draft.photos.filter((photo) => photo && typeof photo === 'object'
+    && typeof photo.id === 'string' && typeof photo.path === 'string'
+    && typeof photo.thumbnailPath === 'string' && photo.mimeType === 'image/jpeg'
+    && Number.isInteger(photo.width) && Number.isInteger(photo.height)
+    && Number.isInteger(photo.sizeBytes) && Number.isInteger(photo.thumbnailWidth)
+    && Number.isInteger(photo.thumbnailHeight) && Number.isInteger(photo.thumbnailSizeBytes)).slice(0, 3)
+}
+
+function withoutStoredPhotos(draft: StoredTrainerProfileDraft): TrainerProfileCore {
+  const { photos: _photos, ...core } = draft
+  void _photos
+  return core
+}
+
+function storedDraft(input: TrainerProfileDraft, photos: StoredTrainerProfilePhoto[]): StoredTrainerProfileDraft {
+  const { photos: _photos, ...core } = input
+  void _photos
+  return { ...core, photos }
+}
+
+function rowResponse(row: TrainerProfileRow, draft: TrainerProfileDraft, published: TrainerProfileDraft | null): TrainerProfessionalProfileResponse {
   return {
     publicId: row.public_id,
-    draft: row.draft_data,
-    published: row.published_data,
+    draft,
+    published,
     listedInCatalog: row.listed_in_catalog,
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
@@ -89,11 +155,11 @@ function response(row: TrainerProfileRow) {
   }
 }
 
-function publicResponse(row: PublicTrainerProfileRow) {
+function publicResponse(row: PublicTrainerProfileRow, profile: TrainerProfileDraft): TrainerProfessionalProfileResponse {
   return {
     publicId: row.public_id,
-    draft: row.published_data,
-    published: row.published_data,
+    draft: profile,
+    published: profile,
     listedInCatalog: row.listed_in_catalog,
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
@@ -102,10 +168,10 @@ function publicResponse(row: PublicTrainerProfileRow) {
   }
 }
 
-function catalogResponse(row: TrainerCatalogRow): TrainerCatalogItem {
+function catalogResponse(row: TrainerCatalogRow, profile: TrainerProfileDraft): TrainerCatalogItem {
   return {
     publicId: row.public_id,
-    profile: row.published_data,
+    profile,
     isBrandTrainer: row.is_brand_trainer,
   }
 }
@@ -122,6 +188,7 @@ export function readTrainerProfileDraft(value: unknown): TrainerProfileDraft | u
   const certificates = draft.certificates
   const metroStationIds = draft.metroStationIds ?? []
   const customLocations = draft.customLocations ?? []
+  const photos = draft.photos ?? []
   const year = draft.experienceStartYear
   if (!text(draft.displayName, 120, 2) || !text(draft.bio, 1200)
     || !text(draft.city, 100) || !text(draft.education, 800)
@@ -144,6 +211,9 @@ export function readTrainerProfileDraft(value: unknown): TrainerProfileDraft | u
     || (year !== null && (!Number.isInteger(year) || Number(year) < 1950 || Number(year) > new Date().getFullYear()))
     || (draft.avatarDataUrl !== null && (typeof draft.avatarDataUrl !== 'string'
       || draft.avatarDataUrl.length > 900_000 || !/^data:image\/(?:jpeg|png|webp);base64,/.test(draft.avatarDataUrl)))
+    || !Array.isArray(photos) || photos.length > 3
+    || photos.some((item) => typeof item !== 'object' || item === null || Array.isArray(item)
+      || !text((item as Record<string, unknown>).id, 64, 1))
     || !Array.isArray(certificates) || certificates.length > 10
     || certificates.some((item) => {
       if (typeof item !== 'object' || item === null || Array.isArray(item)) return true
@@ -153,9 +223,11 @@ export function readTrainerProfileDraft(value: unknown): TrainerProfileDraft | u
           || Number(certificate.year) < 1950 || Number(certificate.year) > new Date().getFullYear()))
     })) return undefined
   return {
-    ...(value as Omit<TrainerProfileDraft, 'metroStationIds' | 'customLocations'>),
+    ...(value as Omit<TrainerProfileDraft, 'metroStationIds' | 'customLocations' | 'photos'>),
     metroStationIds: metroStationIds.map((item) => String(item)),
     customLocations: customLocations.map((item) => String(item)),
+    // Signed URLs are response-only. saveDraft preserves trusted server metadata.
+    photos: [],
   }
 }
 
@@ -165,74 +237,248 @@ async function ensureTrainer(client: DatabaseClient) {
 }
 
 export interface PilotTrainerProfiles {
-  getOwn(session: YandexActorSessionInput): Promise<ReturnType<typeof response> | null>
-  saveDraft(session: YandexActorSessionInput, draft: TrainerProfileDraft): Promise<ReturnType<typeof response>>
-  publish(session: YandexActorSessionInput): Promise<ReturnType<typeof response>>
-  unpublish(session: YandexActorSessionInput): Promise<ReturnType<typeof response>>
-  setCatalogListing(session: YandexActorSessionInput, listed: boolean): Promise<ReturnType<typeof response>>
-  getPublic(publicId: string): Promise<ReturnType<typeof publicResponse> | null>
+  getOwn(session: YandexActorSessionInput): Promise<TrainerProfessionalProfileResponse | null>
+  saveDraft(session: YandexActorSessionInput, draft: TrainerProfileDraft): Promise<TrainerProfessionalProfileResponse>
+  uploadPhoto: (session: YandexActorSessionInput, draft: TrainerProfileDraft, upload: TrainerPhotoUpload, replaceLegacy: boolean) => Promise<TrainerProfessionalProfileResponse>
+  reorderPhotos: (session: YandexActorSessionInput, photoIds: string[]) => Promise<TrainerProfessionalProfileResponse>
+  deletePhoto: (session: YandexActorSessionInput, photoId: string) => Promise<TrainerProfessionalProfileResponse>
+  publish(session: YandexActorSessionInput): Promise<TrainerProfessionalProfileResponse>
+  unpublish(session: YandexActorSessionInput): Promise<TrainerProfessionalProfileResponse>
+  setCatalogListing(session: YandexActorSessionInput, listed: boolean): Promise<TrainerProfessionalProfileResponse>
+  getPublic(publicId: string): Promise<TrainerProfessionalProfileResponse | null>
   listPublic(filters: TrainerCatalogFilters, page: TrainerCatalogPageOptions): Promise<TrainerCatalogPage>
 }
 
 export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
-  constructor(private readonly pool: DatabasePool) {}
+  constructor(
+    private readonly pool: DatabasePool,
+    private readonly media?: MediaObjectStorage,
+  ) {}
 
   private withSession<Result>(session: YandexActorSessionInput, work: (client: DatabaseClient) => Promise<Result>) {
     return withYandexActorSession(this.pool, session, work)
   }
 
-  getOwn(session: YandexActorSessionInput) {
-    return this.withSession(session, async (client) => {
-      await ensureTrainer(client)
-      const rows = await client.query<TrainerProfileRow>('select * from public.trainer_professional_profiles where trainer_id = auth.uid()')
-      return rows[0] === undefined ? null : response(rows[0])
-    })
+  private async exposeDraft(draft: StoredTrainerProfileDraft, includeFull: boolean): Promise<TrainerProfileDraft> {
+    const records = storedPhotos(draft)
+    if (records.length > 0 && this.media === undefined) throw new TrainerProfileError('media_unavailable')
+    const photos = await Promise.all(records.map(async (photo): Promise<TrainerProfilePhoto> => ({
+      id: photo.id,
+      url: includeFull ? await this.media!.sign('trainer-profile-media', photo.path) : null,
+      thumbnailUrl: await this.media!.sign('trainer-profile-media', photo.thumbnailPath),
+      mimeType: photo.mimeType,
+      width: photo.width,
+      height: photo.height,
+    })))
+    return { ...withoutStoredPhotos(draft), photos }
   }
 
-  saveDraft(session: YandexActorSessionInput, draft: TrainerProfileDraft) {
-    return this.withSession(session, async (client) => {
+  private async exposeRow(row: TrainerProfileRow): Promise<TrainerProfessionalProfileResponse> {
+    const [draft, published] = await Promise.all([
+      this.exposeDraft(row.draft_data, true),
+      row.published_data === null ? Promise.resolve(null) : this.exposeDraft(row.published_data, true),
+    ])
+    return rowResponse(row, draft, published)
+  }
+
+  private async removePhotos(records: StoredTrainerProfilePhoto[]) {
+    if (!this.media) return
+    await Promise.allSettled(records.flatMap((photo) => [
+      this.media!.remove('trainer-profile-media', photo.path),
+      this.media!.remove('trainer-profile-media', photo.thumbnailPath),
+    ]))
+  }
+
+  async getOwn(session: YandexActorSessionInput) {
+    const row = await this.withSession(session, async (client) => {
       await ensureTrainer(client)
+      const rows = await client.query<TrainerProfileRow>('select * from public.trainer_professional_profiles where trainer_id = auth.uid()')
+      return rows[0] ?? null
+    })
+    return row === null ? null : this.exposeRow(row)
+  }
+
+  async saveDraft(session: YandexActorSessionInput, draft: TrainerProfileDraft) {
+    const row = await this.withSession(session, async (client) => {
+      await ensureTrainer(client)
+      const current = await client.query<TrainerProfileRow>(
+        'select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update',
+      )
+      const photos = storedPhotos(current[0]?.draft_data ?? null)
+      const nextDraft = storedDraft({ ...draft, avatarDataUrl: photos.length > 0 ? null : draft.avatarDataUrl }, photos)
       const rows = await client.query<TrainerProfileRow>(`
         insert into public.trainer_professional_profiles (trainer_id, draft_data)
         values (auth.uid(), $1::jsonb)
         on conflict (trainer_id) do update set draft_data = excluded.draft_data,
           version = public.trainer_professional_profiles.version + 1
         returning *
-      `, [JSON.stringify(draft)])
-      return response(rows[0]!)
+      `, [JSON.stringify(nextDraft)])
+      return rows[0]!
     })
+    return this.exposeRow(row)
   }
 
-  publish(session: YandexActorSessionInput) {
-    return this.withSession(session, async (client) => {
+  async uploadPhoto(
+    session: YandexActorSessionInput,
+    draft: TrainerProfileDraft,
+    upload: TrainerPhotoUpload,
+    replaceLegacy: boolean,
+  ) {
+    if (!this.media) throw new TrainerProfileError('media_unavailable')
+    const actor = await this.withSession(session, async (client) => {
+      await ensureTrainer(client)
+      const actorRows = await client.query<{ actor_id: string }>('select auth.uid()::text actor_id')
+      const rows = await client.query<TrainerProfileRow>(
+        'select * from public.trainer_professional_profiles where trainer_id = auth.uid()',
+      )
+      if (storedPhotos(rows[0]?.draft_data ?? null).length >= 3) throw new TrainerProfileError('limit_reached')
+      return actorRows[0]?.actor_id
+    })
+    if (!actor) throw new TrainerProfileError('forbidden')
+    const id = randomUUID()
+    const path = `${actor}/${id}/full.jpg`
+    const thumbnailPath = `${actor}/${id}/thumbnail.jpg`
+    let row: TrainerProfileRow
+    try {
+      await this.media.write('trainer-profile-media', path, upload.image.bytes, upload.image.mimeType, false)
+      await this.media.write('trainer-profile-media', thumbnailPath, upload.thumbnail.bytes, upload.thumbnail.mimeType, false)
+      row = await this.withSession(session, async (client) => {
+        await ensureTrainer(client)
+        const current = await client.query<TrainerProfileRow>(
+          'select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update',
+        )
+        const photos = storedPhotos(current[0]?.draft_data ?? null)
+        if (photos.length >= 3) throw new TrainerProfileError('limit_reached')
+        const photo: StoredTrainerProfilePhoto = {
+          id,
+          path,
+          thumbnailPath,
+          mimeType: 'image/jpeg',
+          width: upload.image.width,
+          height: upload.image.height,
+          sizeBytes: upload.image.sizeBytes,
+          thumbnailWidth: upload.thumbnail.width,
+          thumbnailHeight: upload.thumbnail.height,
+          thumbnailSizeBytes: upload.thumbnail.sizeBytes,
+        }
+        const nextDraft = storedDraft({
+          ...draft,
+          avatarDataUrl: replaceLegacy || photos.length > 0 ? null : draft.avatarDataUrl,
+        }, [...photos, photo])
+        const rows = await client.query<TrainerProfileRow>(`
+          insert into public.trainer_professional_profiles (trainer_id, draft_data)
+          values (auth.uid(), $1::jsonb)
+          on conflict (trainer_id) do update set draft_data = excluded.draft_data,
+            version = public.trainer_professional_profiles.version + 1
+          returning *
+        `, [JSON.stringify(nextDraft)])
+        return rows[0]!
+      })
+    } catch (error) {
+      await this.removePhotos([{
+        id, path, thumbnailPath, mimeType: 'image/jpeg',
+        width: upload.image.width, height: upload.image.height, sizeBytes: upload.image.sizeBytes,
+        thumbnailWidth: upload.thumbnail.width, thumbnailHeight: upload.thumbnail.height,
+        thumbnailSizeBytes: upload.thumbnail.sizeBytes,
+      }])
+      throw error
+    }
+    // Signing is intentionally outside the rollback block: once PostgreSQL has
+    // committed the metadata, a transient signing failure must not delete files
+    // still referenced by the saved profile.
+    return this.exposeRow(row)
+  }
+
+  async reorderPhotos(session: YandexActorSessionInput, photoIds: string[]) {
+    const row = await this.withSession(session, async (client) => {
+      const current = await client.query<TrainerProfileRow>(
+        'select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update',
+      )
+      const profile = current[0]
+      if (!profile) throw new TrainerProfileError('not_found')
+      const photos = storedPhotos(profile.draft_data)
+      if (photoIds.length !== photos.length || new Set(photoIds).size !== photos.length
+        || photos.some((photo) => !photoIds.includes(photo.id))) throw new TrainerProfileError('invalid')
+      const byId = new Map(photos.map((photo) => [photo.id, photo]))
+      const ordered = photoIds.map((id) => byId.get(id)!)
+      const rows = await client.query<TrainerProfileRow>(`
+        update public.trainer_professional_profiles set draft_data = $1::jsonb,
+          version = version + 1 where trainer_id = auth.uid() returning *
+      `, [JSON.stringify({ ...profile.draft_data, photos: ordered })])
+      return rows[0]!
+    })
+    return this.exposeRow(row)
+  }
+
+  async deletePhoto(session: YandexActorSessionInput, photoId: string) {
+    const result = await this.withSession(session, async (client) => {
+      const current = await client.query<TrainerProfileRow>(
+        'select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update',
+      )
+      const profile = current[0]
+      if (!profile) throw new TrainerProfileError('not_found')
+      const photos = storedPhotos(profile.draft_data)
+      const deleted = photos.find((photo) => photo.id === photoId)
+      if (!deleted) throw new TrainerProfileError('not_found')
+      const rows = await client.query<TrainerProfileRow>(`
+        update public.trainer_professional_profiles set draft_data = $1::jsonb,
+          version = version + 1 where trainer_id = auth.uid() returning *
+      `, [JSON.stringify({ ...profile.draft_data, photos: photos.filter((photo) => photo.id !== photoId) })])
+      const publishedPaths = new Set(storedPhotos(profile.published_data).flatMap((photo) => [photo.path, photo.thumbnailPath]))
+      const removable = publishedPaths.has(deleted.path) || publishedPaths.has(deleted.thumbnailPath) ? [] : [deleted]
+      return { row: rows[0]!, removable }
+    })
+    // A published snapshot owns its referenced objects until it is replaced or
+    // unpublished; an unpublished draft can release deleted photos immediately.
+    await this.removePhotos(result.removable)
+    return this.exposeRow(result.row)
+  }
+
+  async publish(session: YandexActorSessionInput) {
+    const result = await this.withSession(session, async (client) => {
       const current = await client.query<TrainerProfileRow>('select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update')
       const row = current[0]
       if (row === undefined) throw new TrainerProfileError('not_found')
       if (row.draft_data.displayName.trim().length < 2) throw new TrainerProfileError('invalid')
+      const activePaths = new Set(storedPhotos(row.draft_data).flatMap((photo) => [photo.path, photo.thumbnailPath]))
+      const orphaned = storedPhotos(row.published_data).filter((photo) =>
+        !activePaths.has(photo.path) && !activePaths.has(photo.thumbnailPath))
       const rows = await client.query<TrainerProfileRow>(`
         update public.trainer_professional_profiles set published_data = draft_data,
           listed_in_catalog = case when published_data is null then true else listed_in_catalog end,
           published_at = now(), version = version + 1
         where trainer_id = auth.uid() returning *
       `)
-      return response(rows[0]!)
+      return { row: rows[0]!, orphaned }
     })
+    await this.removePhotos(result.orphaned)
+    return this.exposeRow(result.row)
   }
 
-  unpublish(session: YandexActorSessionInput) {
-    return this.withSession(session, async (client) => {
+  async unpublish(session: YandexActorSessionInput) {
+    const result = await this.withSession(session, async (client) => {
+      const current = await client.query<TrainerProfileRow>(
+        'select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update',
+      )
+      const profile = current[0]
+      if (!profile) throw new TrainerProfileError('not_found')
+      const activePaths = new Set(storedPhotos(profile.draft_data).flatMap((photo) => [photo.path, photo.thumbnailPath]))
+      const orphaned = storedPhotos(profile.published_data).filter((photo) =>
+        !activePaths.has(photo.path) && !activePaths.has(photo.thumbnailPath))
       const rows = await client.query<TrainerProfileRow>(`
         update public.trainer_professional_profiles set published_data = null,
           published_at = null, listed_in_catalog = false, version = version + 1
         where trainer_id = auth.uid() returning *
       `)
       if (rows[0] === undefined) throw new TrainerProfileError('not_found')
-      return response(rows[0])
+      return { row: rows[0], orphaned }
     })
+    await this.removePhotos(result.orphaned)
+    return this.exposeRow(result.row)
   }
 
-  setCatalogListing(session: YandexActorSessionInput, listed: boolean) {
-    return this.withSession(session, async (client) => {
+  async setCatalogListing(session: YandexActorSessionInput, listed: boolean) {
+    const row = await this.withSession(session, async (client) => {
       const rows = await client.query<TrainerProfileRow>(`
         update public.trainer_professional_profiles
         set listed_in_catalog = $1, version = version + 1
@@ -241,8 +487,9 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
         returning *
       `, [listed])
       if (rows[0] === undefined) throw new TrainerProfileError('invalid')
-      return response(rows[0])
+      return rows[0]
     })
+    return this.exposeRow(row)
   }
 
   async getPublic(publicId: string) {
@@ -254,7 +501,8 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
         from public.trainer_professional_profiles
         where public_id = $1 and published_data is not null
       `, [publicId])
-      return rows[0] === undefined ? null : publicResponse(rows[0])
+      if (rows[0] === undefined) return null
+      return publicResponse(rows[0], await this.exposeDraft(rows[0].published_data, true))
     } finally {
       connection.release()
     }
@@ -302,7 +550,9 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
       `, values)
       const totalCount = Number(countRows[0]?.total ?? 0)
       const next = page.offset + rows.length
-      return { items: rows.map(catalogResponse), totalCount, nextOffset: next < totalCount ? next : null }
+      const items = await Promise.all(rows.map(async (row) =>
+        catalogResponse(row, await this.exposeDraft(row.published_data, false))))
+      return { items, totalCount, nextOffset: next < totalCount ? next : null }
     } finally {
       connection.release()
     }
