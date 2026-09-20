@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { getPublicTrainerProfile } from '../../data/repositories/trainer-profiles.repository'
 import type { TrainerProfessionalProfile } from '../../shared/domain'
+import { FullscreenImageViewer } from '../../shared/FullscreenImageViewer'
 import { AsyncView, Page } from '../../shared/ui'
 import { TrainerProfileCard } from './TrainerProfileCard'
 import { PublicTrainerChatButton } from '../chat/ChatEntry'
@@ -16,6 +17,7 @@ export function PublicTrainerProfilePage() {
   const [profile, setProfile] = useState<TrainerProfessionalProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const [photoOpen, setPhotoOpen] = useState(false)
   useEffect(() => {
     let active = true
     setLoading(true); setError(null)
@@ -30,9 +32,12 @@ export function PublicTrainerProfilePage() {
     <AsyncView loading={loading} error={error} empty={!profile?.published}
       emptyTitle="Анкета недоступна" emptyDescription="Тренер снял её с публикации или ссылка устарела."
       emptyAction={<Link className="button secondary" to="/auth">Открыть Fit</Link>} onRetry={() => { setLoading(true); setError(null); void getPublicTrainerProfile(publicId).then((value) => { setProfile(value); setLoading(false) }, (caught: unknown) => { setError(caught instanceof Error ? caught : new Error('Не удалось открыть анкету.')); setLoading(false) }) }}>
-      {profile?.published && <TrainerProfileCard profile={profile.published} isBrandTrainer={profile.isBrandTrainer} publicView primaryAction={profile.published.acceptingClients
+      {profile?.published && <TrainerProfileCard profile={profile.published} isBrandTrainer={profile.isBrandTrainer} publicView
+        onAvatarClick={profile.published.avatarDataUrl ? () => setPhotoOpen(true) : undefined} primaryAction={profile.published.acceptingClients
         ? <PublicTrainerChatButton publicProfileId={publicId} />
         : <p className="trainer-contact-unavailable">Тренер временно не принимает новых клиентов</p>} />}
     </AsyncView>
+    {photoOpen && profile?.published?.avatarDataUrl && <FullscreenImageViewer src={profile.published.avatarDataUrl}
+      alt={`Фото тренера ${profile.published.displayName}`} label="Фото тренера" onClose={() => setPhotoOpen(false)} />}
   </Page>
 }

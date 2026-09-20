@@ -94,6 +94,12 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   await expect(page.getByRole('heading', { name: 'Анна Иванова' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Где тренирует' })).toBeVisible()
   await expect(page.getByRole('list', { name: 'Станции метро' })).toContainText('Динамо')
+  await page.getByRole('button', { name: 'Открыть фото тренера Анна Иванова' }).click()
+  await expect(page.getByRole('dialog', { name: 'Фото тренера' })).toBeVisible()
+  await page.getByRole('button', { name: 'Увеличить' }).click()
+  await expect(page.getByText('150%')).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть фото' }).click()
+  await expect(page.getByRole('dialog', { name: 'Фото тренера' })).toHaveCount(0)
   await expect(page.getByText('Спортсмены видят последнюю опубликованную версию.')).toHaveCount(0)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 

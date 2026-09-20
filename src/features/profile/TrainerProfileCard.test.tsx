@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { TrainerProfileDraft } from '../../shared/domain'
 import { TrainerProfileCard } from './TrainerProfileCard'
@@ -70,5 +71,16 @@ describe('TrainerProfileCard', () => {
     expect(screen.getByText('Меньше года')).toBeVisible()
     rerender(<TrainerProfileCard profile={{ ...completeProfile, experienceStartYear: new Date().getFullYear() - 1 }} />)
     expect(screen.getByText('1 год')).toBeVisible()
+  })
+
+  it('exposes a clear photo action only when the caller enables it', async () => {
+    const user = userEvent.setup()
+    const onAvatarClick = vi.fn()
+    const { rerender } = render(<TrainerProfileCard profile={completeProfile} publicView />)
+    expect(screen.queryByRole('button', { name: 'Открыть фото тренера Анна Иванова' })).not.toBeInTheDocument()
+
+    rerender(<TrainerProfileCard profile={completeProfile} publicView onAvatarClick={onAvatarClick} />)
+    await user.click(screen.getByRole('button', { name: 'Открыть фото тренера Анна Иванова' }))
+    expect(onAvatarClick).toHaveBeenCalledOnce()
   })
 })
