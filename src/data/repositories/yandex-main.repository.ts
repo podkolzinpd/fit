@@ -54,19 +54,20 @@ import {
 } from '../../shared/legal'
 
 const uuid = z.uuid()
+const yandexDateTimeSchema = z.iso.datetime({ offset: true })
 const chatThreadSchema = z.object({
   conversationId: uuid.nullable(), clientId: uuid, trainerId: uuid, partnerUserId: uuid,
   partnerName: z.string(), activeConnection: z.boolean(), lastMessageBody: z.string().nullable(),
-  lastMessageAt: z.iso.datetime().nullable(), lastMessageSenderId: uuid.nullable(), unreadCount: z.number().int().nonnegative(),
+  lastMessageAt: yandexDateTimeSchema.nullable(), lastMessageSenderId: uuid.nullable(), unreadCount: z.number().int().nonnegative(),
   canMessage: z.boolean(), blockedByMe: z.boolean(), blockedByPartner: z.boolean(),
 })
 const chatConnectionSchema = z.object({
-  activeConnection: z.boolean(), invitationPending: z.boolean(), invitedAt: z.iso.datetime().nullable(),
+  activeConnection: z.boolean(), invitationPending: z.boolean(), invitedAt: yandexDateTimeSchema.nullable(),
   canInvite: z.boolean(), canAccept: z.boolean(), trainerSwitchRequired: z.boolean(),
 })
 const chatMessageSchema = z.object({
-  id: uuid, conversationId: uuid, senderId: uuid, body: z.string(), createdAt: z.iso.datetime(),
-  editedAt: z.iso.datetime().nullable(),
+  id: uuid, conversationId: uuid, senderId: uuid, body: z.string(), createdAt: yandexDateTimeSchema,
+  editedAt: yandexDateTimeSchema.nullable(),
   replyTo: z.object({ messageId: uuid, senderId: uuid.nullable(), body: z.string().nullable(), hasImage: z.boolean(), deleted: z.boolean() }).nullable(),
   image: z.object({ url: z.url().nullable(), mimeType: z.literal('image/jpeg'), width: z.number().int().positive(), height: z.number().int().positive(), sizeBytes: z.number().int().positive() }).nullable(),
 })
@@ -83,8 +84,8 @@ const clientSchema = z.object({
   goal: z.string().nullable(),
   note: z.string().nullable(),
   currentWeightKg: z.number().nullable(),
-  lastActivityAt: z.iso.datetime().optional(),
-  archivedAt: z.iso.datetime().nullable(),
+  lastActivityAt: yandexDateTimeSchema.optional(),
+  archivedAt: yandexDateTimeSchema.nullable(),
   version: z.number().int().positive(),
   membershipVersion: z.number().int().positive().nullable(),
 })
@@ -94,15 +95,15 @@ const membershipSchema = z.object({
   trainerId: uuid,
   firstName: z.string().nullable(),
   lastName: z.string().nullable(),
-  joinedAt: z.iso.datetime(),
+  joinedAt: yandexDateTimeSchema,
   isRoot: z.boolean(),
 })
 const invitationSchema = z.object({
   id: uuid,
   clientId: uuid,
   targetRole: z.enum(['client', 'trainer']),
-  expiresAt: z.iso.datetime(),
-  createdAt: z.iso.datetime(),
+  expiresAt: yandexDateTimeSchema,
+  createdAt: yandexDateTimeSchema,
 })
 const invitationShareSchema = z.object({
   id: uuid,
@@ -110,7 +111,7 @@ const invitationShareSchema = z.object({
   targetRole: z.enum(['client', 'trainer']),
   code: z.string().length(12),
   token: z.string().regex(/^[A-F0-9]{12}\.[0-9a-f]{64}$/),
-  expiresAt: z.iso.datetime(),
+  expiresAt: yandexDateTimeSchema,
 })
 const connectionsSchema = z.object({
   memberships: z.array(membershipSchema),
@@ -119,12 +120,12 @@ const connectionsSchema = z.object({
 const legalAcceptanceStatusSchema = z.object({
   applicable: z.literal(true),
   accepted: z.boolean(),
-  acceptedAt: z.iso.datetime().nullable(),
+  acceptedAt: yandexDateTimeSchema.nullable(),
 })
 const accountDeletionRequestSchema = z.object({
   id: uuid,
   status: z.enum(['requested', 'cancelled', 'completed']),
-  requestedAt: z.iso.datetime(),
+  requestedAt: yandexDateTimeSchema,
 })
 const accountDeletionStatusSchema = z.object({
   supported: z.literal(true),
@@ -142,7 +143,7 @@ const customExerciseMutationSchema = z.object({
     primaryMuscleDetail: z.string().nullable().optional(),
     equipment: z.string().nullable().optional(),
     description: z.string().nullable().optional(),
-    archivedAt: z.iso.datetime().nullable(),
+    archivedAt: yandexDateTimeSchema.nullable(),
     version: z.number().int().positive(),
   }),
 })
@@ -151,7 +152,7 @@ const customMetricSchema = z.object({
   clientId: uuid,
   name: z.string(),
   unit: z.string().nullable(),
-  archivedAt: z.iso.datetime().nullable(),
+  archivedAt: yandexDateTimeSchema.nullable(),
   version: z.number().int().positive(),
 })
 const progressEntrySchema = z.object({
@@ -239,7 +240,7 @@ const exerciseProgressSchema = z.object({
   items: z.array(z.object({
     workoutId: uuid,
     workoutDate: z.iso.date(),
-    completedAt: z.iso.datetime(),
+    completedAt: yandexDateTimeSchema,
     exerciseName: z.string(),
     inputKind: z.enum(['strength', 'distance', 'reps', 'duration']),
     confirmedSetCount: z.number().int().nonnegative(),
@@ -264,7 +265,7 @@ const exerciseProgressSchema = z.object({
       rpe: z.number().nullable().optional(),
     })),
   })),
-  nextCursor: z.object({ completedAt: z.iso.datetime(), workoutId: uuid }).nullable(),
+  nextCursor: z.object({ completedAt: yandexDateTimeSchema, workoutId: uuid }).nullable(),
   totalCount: z.number().int().nonnegative(),
 })
 const internalSummarySchema = z.object({
@@ -272,7 +273,7 @@ const internalSummarySchema = z.object({
   trainer_summary: z.record(z.string(), z.unknown()),
   client_summary: z.record(z.string(), z.unknown()),
   display_metrics: z.record(z.string(), z.unknown()),
-  generated_at: z.iso.datetime(), version: z.number().int().positive(),
+  generated_at: yandexDateTimeSchema, version: z.number().int().positive(),
   published: z.boolean().optional(),
 })
 const publishedSummarySchema = z.object({
@@ -280,7 +281,7 @@ const publishedSummarySchema = z.object({
   period_start: z.iso.date(), period_end: z.iso.date(),
   summary: z.record(z.string(), z.unknown()),
   display_metrics: z.record(z.string(), z.unknown()),
-  generated_at: z.iso.datetime(), published_at: z.iso.datetime(),
+  generated_at: yandexDateTimeSchema, published_at: yandexDateTimeSchema,
 })
 
 type ResponseErrorFactory = (status: number, code?: string) => Error
@@ -539,7 +540,7 @@ const favoriteWorkoutExerciseSchema = z.object({
 const favoriteWorkoutSchema = z.object({
   id: uuid,
   title: z.string(),
-  createdAt: z.iso.datetime({ offset: true }),
+  createdAt: yandexDateTimeSchema,
   exercises: z.array(favoriteWorkoutExerciseSchema),
 })
 const favoriteWorkoutsListSchema = z.object({ favorites: z.array(favoriteWorkoutSchema) })
@@ -758,7 +759,7 @@ export function createYandexMainRepository(
             privacyVersion: PRIVACY_VERSION,
             source,
           },
-          z.object({ acceptedAt: z.iso.datetime() }),
+          z.object({ acceptedAt: yandexDateTimeSchema }),
         )
         return payload.acceptedAt
       },
@@ -1014,14 +1015,14 @@ export function createYandexMainRepository(
       async createMetric(clientId, name, unit) {
         const payload = await writeJson(queries, '/v1/progress-metrics', 'POST', {
           draft: { id: null, clientId, name, unit }, expectedVersion: null,
-        }, z.object({ metric: z.object({ id: uuid, archivedAt: z.iso.datetime().nullable(), version: z.number().int().positive() }) }))
+        }, z.object({ metric: z.object({ id: uuid, archivedAt: yandexDateTimeSchema.nullable(), version: z.number().int().positive() }) }))
         invalidate()
         return { id: payload.metric.id, clientId, name, unit, archivedAt: payload.metric.archivedAt, version: payload.metric.version }
       },
       async setMetricArchived(metric, archived) {
         const payload = await writeJson(queries, `/v1/progress-metrics/${metric.id}/archive`, 'PUT', {
           archived, expectedVersion: metric.version,
-        }, z.object({ metric: z.object({ archivedAt: z.iso.datetime().nullable(), version: z.number().int().positive() }) }))
+        }, z.object({ metric: z.object({ archivedAt: yandexDateTimeSchema.nullable(), version: z.number().int().positive() }) }))
         invalidate()
         return { ...metric, archivedAt: payload.metric.archivedAt, version: payload.metric.version }
       },
@@ -1160,7 +1161,7 @@ export function createYandexMainRepository(
         return (await trainingData()).attention.map((item) => ({ workoutId: item.workoutId, clientId: item.clientId, clientName: item.clientName, workoutDate: localDate(item.workoutDate), clientQuestion: item.clientQuestion ?? undefined, clientQuestionAskedAt: item.clientQuestionAskedAt ?? undefined, discomfort: item.discomfort, clientComment: item.clientComment ?? undefined, feedbackSubmittedAt: item.feedbackSubmittedAt, version: item.version }))
       },
       async snoozeClientAttention(clientId) {
-        const payload = await writeJson(queries, `/v1/clients/${clientId}/attention/snooze`, 'POST', {}, z.object({ client: z.object({ snoozedUntil: z.iso.datetime() }) }))
+        const payload = await writeJson(queries, `/v1/clients/${clientId}/attention/snooze`, 'POST', {}, z.object({ client: z.object({ snoozedUntil: yandexDateTimeSchema }) }))
         invalidate(); return payload.client.snoozedUntil
       },
       async replaceLiveExercise(item, exerciseId, exercise) { return liveCommand(`/v1/workouts/${item.id}/exercises/${exerciseId}`, 'PUT', item.version, { exercise: { source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId ?? null, name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind } }) },
@@ -1219,7 +1220,7 @@ export function createYandexMainRepository(
         return payload.summaries.map((item) => publishedTrainingSummaryFromRow({ id: item.id, source_summary_id: item.source_summary_id, client_id: item.client_id, period_start: item.period_start, period_end: item.period_end, summary: toJson(item.summary), display_metrics: toJson(item.display_metrics), generated_at: item.generated_at, published_at: item.published_at }))
       },
       async generate(clientId, periodStart, periodEnd, force = false, triggerReason = 'manual_refresh') {
-        const payload = await writeJson(queries, `/v1/clients/${clientId}/training-summaries/generate`, 'POST', { client_id: clientId, period_start: periodStart, period_end: periodEnd, force, trigger_reason: triggerReason }, z.object({ data: z.object({ generated_at: z.iso.datetime() }), cached: z.boolean() }), trainingSummaryErrorForStatus)
+        const payload = await writeJson(queries, `/v1/clients/${clientId}/training-summaries/generate`, 'POST', { client_id: clientId, period_start: periodStart, period_end: periodEnd, force, trigger_reason: triggerReason }, z.object({ data: z.object({ generated_at: yandexDateTimeSchema }), cached: z.boolean() }), trainingSummaryErrorForStatus)
         return { generatedAt: payload.data.generated_at, cached: payload.cached }
       },
       async publish(summary, clientCopy) { await writeEmpty(queries, `/v1/training-summaries/${summary.id}/publish`, 'POST', { clientSummary: feedbackPayload(clientCopy), expectedVersion: summary.version }) },
@@ -1256,7 +1257,7 @@ export function createYandexMainRepository(
       async listMessages(conversationId, cursor): Promise<ChatMessagePage> {
         const params = new URLSearchParams({ limit: '50' })
         if (cursor) { params.set('beforeCreatedAt', cursor.createdAt); params.set('beforeId', cursor.id) }
-        return readJson(queries, `/v1/chat/conversations/${conversationId}/messages?${params}`, z.object({ messages: z.array(chatMessageSchema), nextCursor: z.object({ createdAt: z.iso.datetime(), id: uuid }).nullable() }))
+        return readJson(queries, `/v1/chat/conversations/${conversationId}/messages?${params}`, z.object({ messages: z.array(chatMessageSchema), nextCursor: z.object({ createdAt: yandexDateTimeSchema, id: uuid }).nullable() }))
       },
       async send(conversationId, messageId, body, image, replyToMessageId): Promise<ChatMessage> {
         return (await writeJson(queries, `/v1/chat/conversations/${conversationId}/messages`, 'POST', { id: messageId, body, image, replyToMessageId }, z.object({ message: chatMessageSchema }))).message
@@ -1268,7 +1269,7 @@ export function createYandexMainRepository(
         await writeEmpty(queries, `/v1/chat/conversations/${conversationId}/messages/${messageId}`, 'DELETE')
       },
       async unreadState(conversationId) {
-        return (await readJson(queries, `/v1/chat/conversations/${conversationId}/unread`, z.object({ unread: z.object({ firstMessageId: uuid.nullable(), firstCreatedAt: z.iso.datetime().nullable(), unreadCount: z.number().int().nonnegative() }) }))).unread
+        return (await readJson(queries, `/v1/chat/conversations/${conversationId}/unread`, z.object({ unread: z.object({ firstMessageId: uuid.nullable(), firstCreatedAt: yandexDateTimeSchema.nullable(), unreadCount: z.number().int().nonnegative() }) }))).unread
       },
       async markRead(conversationId, throughMessageId): Promise<void> {
         await writeEmpty(queries, `/v1/chat/conversations/${conversationId}/read`, 'PUT', { throughMessageId })
