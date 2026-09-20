@@ -20,7 +20,7 @@ export function YandexAssistantRoute() {
   const routedToYandex = actor !== null
     && (isYandexAssistantRoutingPilotEnabled(actor.userId)
       || isYandexMainRoutingEnabled()
-      || (isYandexAppSessionEnabled() && session !== null))
+      || isYandexAppSessionEnabled())
   const backend = useMemo(() => !routedToYandex || config === null
     || session === null || actor === null
     || session.profile.id !== actor.userId

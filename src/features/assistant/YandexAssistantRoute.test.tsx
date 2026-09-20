@@ -92,12 +92,12 @@ describe('YandexAssistantRoute', () => {
     vi.unstubAllEnvs()
   })
 
-  it('keeps every non-pilot user on the unchanged Supabase Assistant', () => {
+  it('does not fall back to the legacy Assistant when Yandex app-session is enabled', () => {
     vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS', OTHER_PROFILE_ID)
 
     render(<YandexAssistantRoute />)
 
-    expect(screen.getByText('supabase assistant')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Подтвердите Yandex ID' })).toBeVisible()
     expect(createBackend).not.toHaveBeenCalled()
   })
 
