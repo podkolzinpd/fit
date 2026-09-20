@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { ExerciseIcon } from '../../shared/icons'
+import exerciseMediaPresentation from '../../shared/exercise-media-presentation.generated.json'
 import { useCustomExercisePhotoUrl } from './custom-exercise-photo'
 import { shouldUsePrivateVitalStorage, useVitalMediaUrl } from './vitalMedia'
 
@@ -7,6 +8,31 @@ export type ExerciseImageVariant = 'thumbnail' | 'preview' | 'picker' | 'detail'
 
 export function reviewedExerciseImageSource(source: string | undefined) {
   return source && !/^\/exercises\/(?:fedb-|base-)/.test(source) ? source : undefined
+}
+
+type ExerciseMediaPresentation = {
+  crop: number[]
+  backdrop: string
+}
+
+const EXERCISE_MEDIA_PRESENTATION = exerciseMediaPresentation.items as Record<string, ExerciseMediaPresentation>
+const NORMALIZED_MEDIA = /^\/exercises\/(vital|vital-pro|reference)\/(.+?)(?:-end)?\.(?:jpg|mp4)$/
+
+export function exerciseMediaPresentationKey(source: string | undefined) {
+  const match = source?.match(NORMALIZED_MEDIA)
+  return match ? `/exercises/${match[1]}/${match[2]}.jpg` : undefined
+}
+
+function mediaPresentationStyle(presentation: ExerciseMediaPresentation | undefined): CSSProperties | undefined {
+  if (!presentation) return undefined
+  const [top, right, bottom, left] = presentation.crop
+  return {
+    '--exercise-media-backdrop': presentation.backdrop,
+    '--exercise-media-crop-top': `${top}%`,
+    '--exercise-media-crop-right': `${right}%`,
+    '--exercise-media-crop-bottom': `${bottom}%`,
+    '--exercise-media-crop-left': `${left}%`,
+  } as CSSProperties
 }
 
 function usePrefersReducedMotion() {
@@ -84,7 +110,11 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, customPho
     }
   }
 
-  const className = `exercise-image exercise-image-${variant}`
+  const normalizedMediaKey = [safeSrc, safeFallbackSrc, safeMotionSrc, videoSrc]
+    .map(exerciseMediaPresentationKey)
+    .find(Boolean)
+  const presentation = normalizedMediaKey ? EXERCISE_MEDIA_PRESENTATION[normalizedMediaKey] : undefined
+  const className = `exercise-image exercise-image-${variant}${normalizedMediaKey ? ' exercise-image-studio' : ''}`
   const primaryAvailable = Boolean(resolvedSrc) && !primaryFailed
   const stillFallbackAvailable = !privateVitalMedia && Boolean(safeFallbackSrc) && !fallbackFailed
   const motionFallbackAvailable = !privateVitalMedia && Boolean(resolvedMotionSrc) && !motionFailed
@@ -100,10 +130,12 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, customPho
   // broken start frame so the picker does not collapse to an empty placeholder.
   const displayedStillSrc = primaryAvailable ? resolvedSrc : stillFallbackAvailable ? safeFallbackSrc : motionFallbackAvailable ? resolvedMotionSrc : undefined
   const animated = !videoAvailable && (primaryAvailable || stillFallbackAvailable) && motionAvailable
-  return <span className={`${className}${animated ? ' exercise-image-motion' : ''}`}>
-    {displayedStillSrc && <img className="exercise-image-frame exercise-image-frame-start" src={displayedStillSrc} alt={alt} loading="lazy" decoding="async" onError={() => primaryAvailable ? setPrimaryFailed(true) : stillFallbackAvailable ? setFallbackFailed(true) : setMotionFailed(true)} />}
-    {animated && <img className="exercise-image-frame exercise-image-frame-end" src={resolvedMotionSrc} alt="" aria-hidden="true" loading="lazy" decoding="async" onError={() => setMotionFailed(true)} />}
-    {videoAvailable && <video ref={videoRef} className={`exercise-image-video${videoPlaying ? ' playing' : ''}`} src={resolvedVideoSrc} poster={displayedStillSrc} autoPlay={!reducedMotion} loop muted playsInline preload={variant === 'technique' ? 'auto' : 'metadata'} aria-label={`Техника: ${alt || 'упражнение'}`} disablePictureInPicture disableRemotePlayback onCanPlay={(event) => { if (!reducedMotion && !videoPlaying) void startVideo(event.currentTarget) }} onPlaying={() => { setVideoPlaying(true); setManualPlay(false) }} onError={() => setVideoFailed(true)} />}
+  return <span className={`${className}${animated ? ' exercise-image-motion' : ''}`} style={mediaPresentationStyle(presentation)}>
+    <span className="exercise-image-media-canvas">
+      {displayedStillSrc && <img className="exercise-image-frame exercise-image-frame-start" src={displayedStillSrc} alt={alt} loading="lazy" decoding="async" onError={() => primaryAvailable ? setPrimaryFailed(true) : stillFallbackAvailable ? setFallbackFailed(true) : setMotionFailed(true)} />}
+      {animated && <img className="exercise-image-frame exercise-image-frame-end" src={resolvedMotionSrc} alt="" aria-hidden="true" loading="lazy" decoding="async" onError={() => setMotionFailed(true)} />}
+      {videoAvailable && <video ref={videoRef} className={`exercise-image-video${videoPlaying ? ' playing' : ''}`} src={resolvedVideoSrc} poster={displayedStillSrc} autoPlay={!reducedMotion} loop muted playsInline preload={variant === 'technique' ? 'auto' : 'metadata'} aria-label={`Техника: ${alt || 'упражнение'}`} disablePictureInPicture disableRemotePlayback onCanPlay={(event) => { if (!reducedMotion && !videoPlaying) void startVideo(event.currentTarget) }} onPlaying={() => { setVideoPlaying(true); setManualPlay(false) }} onError={() => setVideoFailed(true)} />}
+    </span>
     {variant === 'technique' && videoAvailable && manualPlay && <button type="button" className="exercise-video-play" aria-label={`Запустить анимацию: ${alt || 'упражнение'}`} onClick={() => { if (videoRef.current) void startVideo(videoRef.current) }}>▶</button>}
   </span>
 }

@@ -2540,10 +2540,15 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .picker-select-mark svg { width:17px; height:17px }
 .picker-load-more { flex:0 0 auto; min-height:44px; border:1px solid var(--border); border-radius:13px; background:var(--surface-sunken); color:var(--fg); font-size:14px; font-weight:650; box-shadow:none }
 .exercise-image { position:relative; box-sizing:border-box; flex:0 0 auto; display:grid; place-items:center; aspect-ratio:1; overflow:hidden; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken); color:var(--secondary-label-fg) }
+.exercise-image-media-canvas { position:absolute; inset:0; display:block }
 .exercise-image img { position:absolute; inset:0; display:block; width:100%; min-width:0; height:100%; min-height:0; box-sizing:border-box; padding:3px; object-fit:contain; object-position:center; background:var(--surface-raised) }
 .exercise-image-video { position:absolute; z-index:1; inset:0; display:block; width:100%; height:100%; object-fit:contain; object-position:center; background:transparent; opacity:0; transition:opacity 160ms ease }
 .exercise-image-video.playing { opacity:1 }
 .exercise-video-play { position:absolute; z-index:2; left:50%; top:50%; width:52px; height:52px; translate:-50% -50%; display:grid; place-items:center; padding:0 0 0 3px; border:1px solid color-mix(in srgb, var(--fg) 20%, transparent); border-radius:50%; background:color-mix(in srgb, var(--fg) 88%, transparent); color:var(--bg); font-size:20px; box-shadow:none }
+.exercise-image-studio { background:var(--exercise-media-backdrop, color-mix(in srgb, var(--fg) 47%, var(--surface-raised))) }
+.exercise-image-studio .exercise-image-media-canvas { inset:auto; top:50%; left:50%; width:auto; height:100%; max-width:100%; max-height:100%; aspect-ratio:1; translate:-50% -50% }
+.exercise-image-studio .exercise-image-frame { clip-path:inset(calc(var(--exercise-media-crop-top, 0%) + 3px) calc(var(--exercise-media-crop-right, 0%) + 3px) calc(var(--exercise-media-crop-bottom, 0%) + 3px) calc(var(--exercise-media-crop-left, 0%) + 3px)); background:transparent }
+.exercise-image-studio .exercise-image-video { clip-path:inset(var(--exercise-media-crop-top, 0%) var(--exercise-media-crop-right, 0%) var(--exercise-media-crop-bottom, 0%) var(--exercise-media-crop-left, 0%)) }
 .exercise-image img[src*="/vital-pro/"], .exercise-image-video[src*="/vital-pro/"], .exercise-image img[src*="/exercises/reference/"] { filter:grayscale(1) }
 .exercise-image-frame-end { position:absolute; inset:0; opacity:0 }
 .exercise-image-motion .exercise-image-frame-end { animation:exercise-image-two-frame 3.2s steps(1, end) infinite }

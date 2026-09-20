@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
-import { ExerciseImage } from './ExerciseImage'
+import { ExerciseImage, exerciseMediaPresentationKey } from './ExerciseImage'
 
 describe('ExerciseImage', () => {
   afterEach(() => {
@@ -16,6 +16,24 @@ describe('ExerciseImage', () => {
     expect(image).toHaveAttribute('loading', 'lazy')
     expect(image).toHaveAttribute('decoding', 'async')
     expect(container.firstElementChild).toHaveClass('exercise-image-detail')
+  })
+
+  it('uses one reviewed canvas presentation for poster, end frame, and video paths', () => {
+    expect(exerciseMediaPresentationKey('/exercises/vital/romanian-deadlift.jpg')).toBe('/exercises/vital/romanian-deadlift.jpg')
+    expect(exerciseMediaPresentationKey('/exercises/vital/romanian-deadlift-end.jpg')).toBe('/exercises/vital/romanian-deadlift.jpg')
+    expect(exerciseMediaPresentationKey('/exercises/vital/romanian-deadlift.mp4')).toBe('/exercises/vital/romanian-deadlift.jpg')
+    expect(exerciseMediaPresentationKey('/custom/photo.jpg')).toBeUndefined()
+  })
+
+  it('applies the reviewed backdrop only to normalized exercise media', () => {
+    const { container, rerender } = render(<ExerciseImage src="/exercises/vital/romanian-deadlift.jpg" alt="Тяга" variant="technique" />)
+    expect(container.firstElementChild).toHaveClass('exercise-image-studio')
+    expect(container.querySelector('.exercise-image-media-canvas')).toBeInTheDocument()
+    expect(container.firstElementChild).toHaveStyle({ '--exercise-media-backdrop': 'rgb(250 250 250)' })
+
+    rerender(<ExerciseImage src="/custom/photo.jpg" alt="Фото" variant="technique" />)
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-studio')
+    expect(container.firstElementChild).not.toHaveStyle({ '--exercise-media-backdrop': 'rgb(250 250 250)' })
   })
 
   it('never renders removed legacy exercise photos even if stale metadata passes one', () => {

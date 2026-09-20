@@ -1,0 +1,464 @@
+{
+  "version": 1,
+  "items": {
+    "/exercises/reference/close-grip-lat-pulldown.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(96 96 96)"
+    },
+    "/exercises/vital/air-bike-sprint.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/arnold-press-dumbbell.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/barbell-bulgarian-split-squat.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/barbell-front-squat.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/barbell-hip-thrust.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/barbell-march.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/barbell-overhead-press.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/barbell-reverse-lunge.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/barbell-squat.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/barbell-upright-row.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/battle-rope-waves.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/cable-cross-lateral-raise.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/cable-leg-kickback.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/cable-rear-delt-fly.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/diagonal-kettlebell-lift.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/dumbbell-bulgarian-split-squat.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/dumbbell-front-raise.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/dumbbell-goblet-squat.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/dumbbell-hip-hinge.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/dumbbell-jump-squat.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/dumbbell-step-ups.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/dumbbell-upright-row.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/elliptical.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/hack-squat-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/hip-abduction-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/kettlebell-march.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/kettlebell-swing.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/lateral-raise.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/leg-extension-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/leg-press-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/lying-leg-curl-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/machine-lateral-raise.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/machine-shoulder-press.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/pec-deck.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/plate-front-raise.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/reverse-pec-deck.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/romanian-deadlift.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/rowing-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/seated-leg-curl-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/single-arm-kettlebell-press.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/smith-seated-military-press.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/smith-stiff-leg-deadlift.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/stair-climber.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/standing-dumbbell-press.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/stationary-bike.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/stepper-machine.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/svend-press.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/treadmill-running.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/treadmill-walking.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    },
+    "/exercises/vital/triceps-pushdown.jpg": {
+      "crop": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "backdrop": "rgb(250 250 250)"
+    }
+  }
+}
