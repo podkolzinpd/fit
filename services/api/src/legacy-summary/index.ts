@@ -28,6 +28,7 @@ import {
 import { resolveSupabasePublicKey } from "./supabase-public-key.js"
 import { diagnosticAllowed, PrivateSummaryDiagnostic } from './private-diagnostic.js'
 import { aiStudioUsage, reportAiStudioMetric } from "../ai-studio-usage-metrics.js"
+import { invokeYandexLlmCompletion } from "../yandex-llm-function-client.js"
 
 const YANDEX_COMPLETION_URL =
   "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
@@ -901,27 +902,29 @@ async function requestStructuredYandex<T>(
     const timeout = setTimeout(() => controller.abort(), 30_000)
     let response: Response
     try {
-      const authorization = options.authorization === undefined
-        ? `Api-Key ${apiKey}`
-        : await options.authorization.authorizationHeader()
-      response = await fetchImpl(YANDEX_COMPLETION_URL, {
+      const requestBody = {
+        modelUri,
+        completionOptions: { stream: false, temperature: attempt === 1 ? 0.2 : 0, maxTokens: config.maxTokens },
+        jsonSchema: { schema: config.schema },
+        messages: repairMessages ?? messages,
+      }
+      if (process.env.YANDEX_LLM_FUNCTION_URL && process.env.YANDEX_LLM_GATEWAY_PRIVATE_KEY) {
+        const result = await invokeYandexLlmCompletion(requestBody, 30_000, fetchImpl)
+        response = new Response(JSON.stringify(result.payload), { status: 200, headers: { 'x-request-id': result.requestId ?? '' } })
+      } else {
+        const authorization = options.authorization === undefined
+          ? `Api-Key ${apiKey}`
+          : await options.authorization.authorizationHeader()
+        response = await fetchImpl(YANDEX_COMPLETION_URL, {
         method: "POST",
         headers: {
           "Authorization": authorization,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          modelUri,
-          completionOptions: {
-            stream: false,
-            temperature: attempt === 1 ? 0.2 : 0,
-            maxTokens: config.maxTokens,
-          },
-          jsonSchema: { schema: config.schema },
-          messages: repairMessages ?? messages,
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal,
-      })
+        })
+      }
     } catch (error) {
       const failure = error instanceof Error && error.name === "AbortError"
         ? new HttpError(504, "yandex_cloud_timeout")

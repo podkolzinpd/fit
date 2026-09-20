@@ -167,6 +167,24 @@ variable "api_image_tag" {
   default     = "foundation"
 }
 
+variable "llm_function_id" {
+  description = "Existing Cloud Function that owns the YandexGPT role for AI requests."
+  type        = string
+  default     = "d4emhmr9v0qist9dbcml"
+}
+
+variable "llm_gateway_lockbox_secret_id" {
+  description = "Existing Lockbox secret containing the API-to-LLM gateway private key."
+  type        = string
+  default     = "e6qa8cbilfjfv7irufqb"
+}
+
+variable "llm_gateway_lockbox_secret_version_id" {
+  description = "Immutable version of the API-to-LLM gateway Lockbox secret."
+  type        = string
+  default     = "e6qg5dh0tc0h0qelttk4"
+}
+
 variable "migration_image_tag" {
   description = "Candidate image tag deployed to the migration runner before the API revision."
   type        = string
