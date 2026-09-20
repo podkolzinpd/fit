@@ -77,9 +77,12 @@ Supabase из эксплуатации. До закрытия rollback-окна 
   `app_private.auth_identities` provider `yandex` и отзывает активные
   `app_private.yandex_app_sessions` в одной транзакции без вывода raw UUID или
   provider subject в логи.
-- Защищённый `/invite#token=…&source=…` показывает публичный Supabase/Yandex
-  preview, хранит bearer-token только в browser session и возвращает связанный
-  либо новый аккаунт на явный claim; legacy `/join?code=…` теперь также
+- Защищённый `/invite#token=…&source=…` в production читает и принимает новые
+  и перенесённые legacy-ссылки только через Yandex API. Создание карточки
+  спортсмена со ссылкой атомарно и идемпотентно по operation ID; client claim
+  объединяет существующую самостоятельную карточку с данными тренера одной
+  транзакцией, повтор безопасен, а активная связь требует явного отключения.
+  Bearer-token хранится только в browser session; legacy `/join?code=…` также
   переживает Yandex OAuth.
   Production OAuth smoke подтвердил PKCE-переход на `oauth.yandex.ru`, а
   защищённый маршрут и старый password-recovery route возвращаются на единый

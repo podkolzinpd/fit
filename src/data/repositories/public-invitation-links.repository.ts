@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { getYandexMainRoutingConfig } from '../../app/feature-flags'
+import { getYandexMainRoutingConfig, isYandexMainRoutingEnabled } from '../../app/feature-flags'
 import type { InvitationLinkPreview, InvitationLinkSource } from '../../shared/domain'
 import { invitationsRepository } from './invitations.repository'
 
@@ -29,7 +29,7 @@ async function previewYandexInvitation(token: string): Promise<InvitationLinkPre
 
 export const publicInvitationLinksRepository = {
   preview(source: InvitationLinkSource, token: string): Promise<InvitationLinkPreview | null> {
-    return source === 'yandex'
+    return source === 'yandex' || isYandexMainRoutingEnabled()
       ? previewYandexInvitation(token)
       : invitationsRepository.previewLink(token)
   },

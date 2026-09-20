@@ -9,6 +9,7 @@ const clientId = '52500000-0000-4000-8000-000000000010'
 const invitationId = '52500000-0000-4000-8000-000000000020'
 const token = `ABCDEF123456.${'a'.repeat(64)}`
 const sessionToken = 's'.repeat(43)
+const operationId = '52500000-0000-4000-8000-000000000030'
 
 const apps: FastifyInstance[] = []
 
@@ -31,6 +32,17 @@ function links(overrides: Partial<PilotInvitationLinks> = {}) {
       code: 'ABCDEF123456',
       token,
       expiresAt: '2026-09-25T12:00:00.000Z',
+    })),
+    createForNewClient: vi.fn(() => Promise.resolve({
+      clientId,
+      share: {
+        id: invitationId,
+        clientId,
+        targetRole: 'client' as const,
+        code: 'ABCDEF123456',
+        token,
+        expiresAt: '2026-09-25T12:00:00.000Z',
+      },
     })),
     claim: vi.fn(() => Promise.resolve(clientId)),
     ...overrides,
@@ -87,6 +99,27 @@ describe('invitation link API', () => {
     expect(invitationLinks.claim).toHaveBeenCalledWith(sessionToken, token)
   })
 
+  it('creates a new athlete and invitation atomically', async () => {
+    const invitationLinks = links()
+    const app = buildApp({ pilotInvitationLinks: invitationLinks, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/invitation-links/new-client',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { fullName: '  Иван Петров  ', operationId },
+    })
+
+    expect(response.statusCode).toBe(201)
+    expect(response.json()).toMatchObject({ clientId, share: { id: invitationId, token } })
+    expect(invitationLinks.createForNewClient).toHaveBeenCalledWith(
+      sessionToken,
+      'Иван Петров',
+      operationId,
+    )
+  })
+
   it('rejects malformed tokens before touching the database contract', async () => {
     const invitationLinks = links()
     const app = buildApp({ pilotInvitationLinks: invitationLinks, logger: false })
@@ -126,5 +159,23 @@ describe('invitation link API', () => {
     expect(preview.json()).toEqual({ error: 'resource_not_found' })
     expect(claim.statusCode).toBe(403)
     expect(claim.json()).toEqual({ error: 'action_not_allowed' })
+  })
+
+  it('preserves actionable invitation conflicts', async () => {
+    const invitationLinks = links({
+      claim: vi.fn(() => Promise.reject(
+        new PilotConnectionCommandError('trainer_disconnect_required'),
+      )),
+    })
+    const app = buildApp({ pilotInvitationLinks: invitationLinks, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST', url: '/v1/invitation-links/claim',
+      headers: { 'x-fit-pilot-session': sessionToken }, payload: { token },
+    })
+
+    expect(response.statusCode).toBe(409)
+    expect(response.json()).toEqual({ error: 'trainer_disconnect_required' })
   })
 })

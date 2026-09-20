@@ -4,8 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const backend = vi.hoisted(() => ({
-  createQuick: vi.fn(),
-  createShare: vi.fn(),
+  createShareForNewClient: vi.fn(),
   revoke: vi.fn(),
 }))
 vi.mock('../../app/auth-context', () => ({
@@ -14,8 +13,10 @@ vi.mock('../../app/auth-context', () => ({
 vi.mock('../../app/data-backend-context', () => ({
   useDataBackend: () => ({
     source: 'supabase',
-    clients: { createQuick: backend.createQuick },
-    invitations: { createShare: backend.createShare, revoke: backend.revoke },
+    invitations: {
+      createShareForNewClient: backend.createShareForNewClient,
+      revoke: backend.revoke,
+    },
   }),
 }))
 
@@ -28,11 +29,13 @@ function renderButton() {
 
 describe('InviteAthleteButton', () => {
   beforeEach(() => {
-    backend.createQuick.mockReset().mockResolvedValue('client-1')
-    backend.createShare.mockReset().mockResolvedValue({
-      id: 'invite-1', clientId: 'client-1', targetRole: 'client',
-      code: 'ABC123DEF456', token: `ABC123DEF456.${'a'.repeat(64)}`,
-      expiresAt: '2026-09-25T12:00:00.000Z',
+    backend.createShareForNewClient.mockReset().mockResolvedValue({
+      clientId: 'client-1',
+      share: {
+        id: 'invite-1', clientId: 'client-1', targetRole: 'client',
+        code: 'ABC123DEF456', token: `ABC123DEF456.${'a'.repeat(64)}`,
+        expiresAt: '2026-09-25T12:00:00.000Z',
+      },
     })
     backend.revoke.mockReset().mockResolvedValue(undefined)
   })
@@ -48,13 +51,15 @@ describe('InviteAthleteButton', () => {
 
     expect(await screen.findByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
     expect(screen.getByText('Анастасия приглашает вас тренироваться вместе в Fit.')).toBeVisible()
-    expect(backend.createQuick).toHaveBeenCalledWith('Иван Петров')
-    expect(backend.createShare).toHaveBeenCalledWith('client-1', 'client')
+    expect(backend.createShareForNewClient).toHaveBeenCalledWith(
+      'Иван Петров',
+      expect.stringMatching(/^[0-9a-f-]{36}$/),
+    )
   })
 
-  it('reuses the created client if link generation is retried', async () => {
+  it('retries the atomic command without a second client-side creation step', async () => {
     const user = userEvent.setup()
-    backend.createShare.mockRejectedValueOnce(new Error('Сеть недоступна'))
+    backend.createShareForNewClient.mockRejectedValueOnce(new Error('Сеть недоступна'))
     renderButton()
 
     await user.click(screen.getByRole('button', { name: 'Пригласить спортсмена' }))
@@ -64,7 +69,9 @@ describe('InviteAthleteButton', () => {
 
     await user.click(screen.getByRole('button', { name: 'Создать приглашение' }))
     expect(await screen.findByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
-    expect(backend.createQuick).toHaveBeenCalledTimes(1)
-    expect(backend.createShare).toHaveBeenCalledTimes(2)
+    expect(backend.createShareForNewClient).toHaveBeenCalledTimes(2)
+    expect(backend.createShareForNewClient.mock.calls[0]?.[1]).toBe(
+      backend.createShareForNewClient.mock.calls[1]?.[1],
+    )
   })
 })
