@@ -85,6 +85,26 @@ describe('HttpAppFeedbackSender', () => {
     expect(requestUrl(call[0])).toContain('api.telegram.org')
   })
 
+  it('sends feedback into the configured Telegram forum topic', async () => {
+    const fetch_: typeof fetch = vi.fn(() => Promise.resolve(
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    ))
+    const sender = new HttpAppFeedbackSender({
+      ...config,
+      telegramMessageThreadId: 1,
+    }, fetch_)
+
+    await sender.send([{ ...delivery, sendTracker: false }])
+    const call = vi.mocked(fetch_).mock.calls[0]
+    if (call === undefined) throw new Error('Expected a Telegram request')
+    const body = call[1]?.body
+    if (typeof body !== 'string') throw new Error('Expected Telegram JSON body')
+    expect(JSON.parse(body)).toEqual(expect.objectContaining({
+      chat_id: 'telegram-chat',
+      message_thread_id: 1,
+    }))
+  })
+
   it('treats Tracker unique conflicts as delivered and sanitizes failures', async () => {
     const fetch_: typeof fetch = vi.fn((input: Parameters<typeof fetch>[0]) => Promise.resolve(
       requestUrl(input).includes('tracker')
