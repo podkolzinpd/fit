@@ -577,7 +577,7 @@ describe('yandexPilotRepository', () => {
     )).rejects.toThrow('Stage вернул неподдерживаемый формат сессии')
   })
 
-  it('reads clients with the app session and validates the domain shape', async () => {
+  it('reads clients with the pilot session and validates the domain shape', async () => {
     queries.listClients.mockResolvedValue(
       new Response(JSON.stringify(clients), { status: 200 }),
     )
@@ -589,6 +589,22 @@ describe('yandexPilotRepository', () => {
     expect(queries.listClients).toHaveBeenCalledWith(
       'https://stage.example.test',
       's'.repeat(43),
+      'read_only',
+    )
+  })
+
+  it('passes the app-session access mode through client queries', async () => {
+    queries.listClients.mockResolvedValue(new Response(JSON.stringify(clients), { status: 200 }))
+
+    await expect(yandexPilotRepository.listClients(
+      'https://stage.example.test',
+      's'.repeat(43),
+      'read_write',
+    )).resolves.toEqual(clients.clients)
+    expect(queries.listClients).toHaveBeenCalledWith(
+      'https://stage.example.test',
+      's'.repeat(43),
+      'read_write',
     )
   })
 

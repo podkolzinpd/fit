@@ -674,10 +674,14 @@ export const yandexPilotRepository = {
     if (!result.success) throw new Error('Stage вернул неподдерживаемый статус Yandex ID.')
     return result.data
   },
-  async listClients(apiBaseUrl: string, sessionToken: string): Promise<YandexPilotClient[]> {
+  async listClients(
+    apiBaseUrl: string,
+    sessionToken: string,
+    accessMode: YandexApiAccessMode = 'read_only',
+  ): Promise<YandexPilotClient[]> {
     let response: Response
     try {
-      response = await yandexPilotQueries.listClients(apiBaseUrl, sessionToken)
+      response = await yandexPilotQueries.listClients(apiBaseUrl, sessionToken, accessMode)
     } catch {
       throw new Error('Не удалось подключиться к Yandex Cloud stage.')
     }
@@ -686,10 +690,14 @@ export const yandexPilotRepository = {
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат клиентов.')
     return result.data.clients
   },
-  async listConnections(apiBaseUrl: string, sessionToken: string): Promise<YandexPilotConnections> {
+  async listConnections(
+    apiBaseUrl: string,
+    sessionToken: string,
+    accessMode: YandexApiAccessMode = 'read_only',
+  ): Promise<YandexPilotConnections> {
     let response: Response
     try {
-      response = await yandexPilotQueries.listConnections(apiBaseUrl, sessionToken)
+      response = await yandexPilotQueries.listConnections(apiBaseUrl, sessionToken, accessMode)
     } catch {
       throw new Error('Не удалось подключиться к Yandex Cloud stage.')
     }
