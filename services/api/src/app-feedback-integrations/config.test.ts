@@ -28,10 +28,29 @@ describe('readAppFeedbackIntegrationsConfig', () => {
   it('rejects partial secrets and unsupported organization headers', () => {
     expect(() => readAppFeedbackIntegrationsConfig({
       APP_FEEDBACK_TELEGRAM_BOT_TOKEN: 'telegram-token',
-    })).toThrow('configured together')
+    })).toThrow('Telegram')
     expect(() => readAppFeedbackIntegrationsConfig({
       ...completeEnvironment,
       APP_FEEDBACK_TRACKER_ORG_HEADER: 'Authorization',
     })).toThrow('ORG_HEADER')
+  })
+
+  it('allows Telegram delivery without Tracker credentials', () => {
+    expect(readAppFeedbackIntegrationsConfig({
+      APP_FEEDBACK_TELEGRAM_BOT_TOKEN: 'telegram-token',
+      APP_FEEDBACK_TELEGRAM_CHAT_ID: 'telegram-chat',
+    })).toEqual({
+      telegramBotToken: 'telegram-token',
+      telegramChatId: 'telegram-chat',
+      trackerOrganizationHeader: 'X-Org-ID',
+      trackerQueue: 'YAFIT',
+    })
+  })
+
+  it('reads an optional Telegram forum topic id', () => {
+    expect(readAppFeedbackIntegrationsConfig({
+      ...completeEnvironment,
+      APP_FEEDBACK_TELEGRAM_MESSAGE_THREAD_ID: '1',
+    })?.telegramMessageThreadId).toBe(1)
   })
 })

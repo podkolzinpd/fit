@@ -297,7 +297,7 @@ test('reuses the private dispatcher and preserves the existing DataLens access p
   assert.doesNotMatch(workflow, /-target=yandex_mdb_postgresql_user\.datalens/)
   assert.match(
     containerTerraform,
-    /dynamic "secrets"[\s\S]*?APP_FEEDBACK_TELEGRAM_BOT_TOKEN[\s\S]*?APP_FEEDBACK_TRACKER_TOKEN/,
+    /dynamic "secrets"[\s\S]*?APP_FEEDBACK_TELEGRAM_BOT_TOKEN[\s\S]*?APP_FEEDBACK_TELEGRAM_MESSAGE_THREAD_ID/,
   )
   assert.match(
     databaseTerraform,

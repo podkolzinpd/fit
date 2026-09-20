@@ -34,8 +34,9 @@ type Fetch = typeof fetch
 export interface AppFeedbackIntegrationsConfig {
   telegramBotToken: string
   telegramChatId: string
-  trackerToken: string
-  trackerOrganizationId: string
+  telegramMessageThreadId?: number
+  trackerToken?: string
+  trackerOrganizationId?: string
   trackerOrganizationHeader: 'X-Org-ID' | 'X-Cloud-Org-ID'
   trackerQueue: string
 }
@@ -105,10 +106,10 @@ export class HttpAppFeedbackSender implements AppFeedbackSender {
     if (config.telegramChatId.trim() === '') {
       throw new Error('APP_FEEDBACK_TELEGRAM_CHAT_ID is required')
     }
-    if (config.trackerToken.trim().length < 10) {
+    if (config.trackerToken !== undefined && config.trackerToken.trim().length < 10) {
       throw new Error('APP_FEEDBACK_TRACKER_TOKEN is invalid')
     }
-    if (config.trackerOrganizationId.trim() === '') {
+    if (config.trackerOrganizationId !== undefined && config.trackerOrganizationId.trim() === '') {
       throw new Error('APP_FEEDBACK_TRACKER_ORG_ID is required')
     }
     if (!/^[A-Z][A-Z0-9_]{1,19}$/u.test(config.trackerQueue)) {
@@ -119,6 +120,9 @@ export class HttpAppFeedbackSender implements AppFeedbackSender {
   private async sendTracker(
     delivery: AppFeedbackDeliveryInput,
   ): Promise<AppFeedbackProviderResult> {
+    if (this.config.trackerToken === undefined || this.config.trackerOrganizationId === undefined) {
+      return { ok: false, error: 'tracker_unavailable' }
+    }
     try {
       const response = await this.fetch_(TRACKER_URL, {
         method: 'POST',
@@ -170,6 +174,9 @@ export class HttpAppFeedbackSender implements AppFeedbackSender {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             chat_id: this.config.telegramChatId,
+            ...(this.config.telegramMessageThreadId === undefined
+              ? {}
+              : { message_thread_id: this.config.telegramMessageThreadId }),
             text: formatTelegramMessage(delivery),
             disable_web_page_preview: true,
           }),
