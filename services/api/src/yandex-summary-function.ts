@@ -1,4 +1,3 @@
-import { readAssistantProgressRequest } from './assistant-progress-request.js'
 import { actorSession } from './yandex-db-function-runtime.js'
 import { proxyToYandexApi } from './yandex-api-function-proxy.js'
 

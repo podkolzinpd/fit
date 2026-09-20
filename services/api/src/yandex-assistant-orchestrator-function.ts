@@ -52,7 +52,8 @@ export async function handler(event: Event): Promise<Result> {
       const token = await programIamToken()
       const response = await fetch('https://llm.api.cloud.yandex.net/foundationModels/v1/completion', { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, signal: AbortSignal.timeout(90_000), body: JSON.stringify(requestBody) })
       if (!response.ok) return { statusCode: 502, headers, body: JSON.stringify({ error: `llm_http_${response.status}` }) }
-      return { statusCode: 200, headers: { ...headers, 'content-type': 'application/json; charset=utf-8' }, body: JSON.stringify({ payload: await response.json(), requestId: response.headers.get('x-request-id') }) }
+      const payload: unknown = await response.json()
+      return { statusCode: 200, headers: { ...headers, 'content-type': 'application/json; charset=utf-8' }, body: JSON.stringify({ payload, requestId: response.headers.get('x-request-id') }) }
     }
   } catch {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'invalid_request' }) }
