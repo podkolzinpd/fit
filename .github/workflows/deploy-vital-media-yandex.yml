@@ -57,6 +57,10 @@ jobs:
         env:
           VITAL_MEDIA_KEY: ${{ secrets.VITAL_MEDIA_KEY }}
         run: node scripts/prepare-vital-media.mjs
+      - name: Install media analysis dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ffmpeg
       - name: Analyze safe media canvas bounds
         run: |
           mkdir -p artifacts/exercise-media-presentation
