@@ -1036,7 +1036,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const query = request.query as Record<string, unknown>
     const textFilter = (value: unknown, max: number) =>
       typeof value === 'string' && value.trim().length <= max ? value.trim() : undefined
-    const accepting = query.accepting === undefined ? null
+    const accepting = query.accepting === undefined ? true
       : query.accepting === 'true' ? true
         : query.accepting === 'false' ? false : undefined
     const brandTrainerOnly = query.brand === undefined ? false
@@ -1074,7 +1074,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       city: textFilter(query.city, 100) ?? '',
       metroStationIds: metroStationIds ?? [],
       mode: mode ?? '',
-      acceptingClients: accepting ?? null,
+      acceptingClients: accepting ?? true,
       brandTrainerOnly: brandTrainerOnly ?? false,
     }
     if ((query.query !== undefined && textFilter(query.query, 100) === undefined)

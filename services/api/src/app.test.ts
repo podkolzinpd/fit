@@ -504,7 +504,7 @@ describe('trainer professional profile', () => {
     })
     expect(response.statusCode).toBe(200)
     expect(listPublic).toHaveBeenCalledWith(
-      expect.objectContaining({ specialties: ['Силовые', 'Бег'] }),
+      expect.objectContaining({ specialties: ['Силовые', 'Бег'], acceptingClients: true }),
       { offset: 0, limit: 3 },
     )
   })
@@ -517,7 +517,7 @@ describe('trainer professional profile', () => {
     const response = await app.inject({ method: 'GET', url: '/v1/trainers/catalog?brand=true' })
     expect(response.statusCode).toBe(200)
     expect(listPublic).toHaveBeenCalledWith(
-      expect.objectContaining({ brandTrainerOnly: true }),
+      expect.objectContaining({ brandTrainerOnly: true, acceptingClients: true }),
       { offset: 0, limit: 3 },
     )
   })
