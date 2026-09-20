@@ -20,12 +20,12 @@ const profile = {
   draft: {
     displayName: 'Анна Иванова', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [],
     trainingModes: [], experienceStartYear: null, education: '', formats: '', price: '', acceptingClients: true,
-    avatarDataUrl: null, certificates: [],
+    avatarDataUrl: null, photos: [], certificates: [],
   },
   published: {
     displayName: 'Анна Иванова', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [],
     trainingModes: [], experienceStartYear: null, education: '', formats: '', price: '', acceptingClients: true,
-    avatarDataUrl: null, certificates: [],
+    avatarDataUrl: null, photos: [], certificates: [],
   },
   listedInCatalog: true,
   publishedAt: '2026-09-19T10:00:00.000Z',
@@ -52,6 +52,20 @@ describe('public trainer profile backend selection', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  it('keeps the existing single-photo path in local Supabase development', async () => {
+    mocks.rpc.mockResolvedValue({ data: profile, error: null })
+    const image = {
+      dataUrl: 'data:image/jpeg;base64,/9j/', mimeType: 'image/jpeg' as const,
+      width: 1, height: 1, sizeBytes: 3,
+    }
+
+    await trainerProfilesRepository.uploadPhoto(profile.draft, { image, thumbnail: image })
+
+    expect(mocks.rpc).toHaveBeenCalledWith('save_trainer_profile_draft', {
+      p_draft: { ...profile.draft, avatarDataUrl: image.dataUrl, photos: [] },
+    })
+  })
+
   it('reads only Yandex when main routing is enabled', async () => {
     mocks.config = { apiBaseUrl: 'https://api.example.test', clientId: 'client-id' }
     const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(profile), {
@@ -63,6 +77,29 @@ describe('public trainer profile backend selection', () => {
     await expect(getPublicTrainerProfile(publicId)).resolves.toEqual(profile)
     expect(fetch).toHaveBeenCalledWith(`https://api.example.test/v1/trainers/${publicId}/public-profile`)
     expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('refreshes Yandex signed photo links before their one-hour expiry', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-20T10:00:00.000Z'))
+    try {
+      mocks.config = { apiBaseUrl: 'https://api.example.test', clientId: 'client-id' }
+      const fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify(profile), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })))
+      vi.stubGlobal('fetch', fetch)
+
+      await getPublicTrainerProfile(publicId)
+      await getPublicTrainerProfile(publicId)
+      expect(fetch).toHaveBeenCalledOnce()
+
+      vi.advanceTimersByTime(46 * 60 * 1_000)
+      await getPublicTrainerProfile(publicId)
+      expect(fetch).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('returns an unavailable profile from Yandex without falling back to Supabase', async () => {

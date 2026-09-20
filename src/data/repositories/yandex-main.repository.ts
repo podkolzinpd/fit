@@ -21,6 +21,7 @@ import type {
   TrainerCatalogFilters,
   TrainerDiscoveryPromptAction,
   TrainerProfileDraft,
+  TrainerProfilePhotoUpload,
   Workout,
   WorkoutDraft,
   WorkoutExerciseDraft,
@@ -799,6 +800,17 @@ export function createYandexMainRepository(
       },
       async saveDraft(draft: TrainerProfileDraft) {
         return writeJson(queries, '/v1/trainer-profile', 'PUT', draft, trainerProfessionalProfileSchema)
+      },
+      async uploadPhoto(draft: TrainerProfileDraft, photo: TrainerProfilePhotoUpload, replaceLegacy = false) {
+        return writeJson(queries, '/v1/trainer-profile/photos', 'POST', {
+          draft, photo, replaceLegacy,
+        }, trainerProfessionalProfileSchema)
+      },
+      async reorderPhotos(photoIds: string[]) {
+        return writeJson(queries, '/v1/trainer-profile/photos/order', 'PATCH', { photoIds }, trainerProfessionalProfileSchema)
+      },
+      async deletePhoto(photoId: string) {
+        return writeJson(queries, `/v1/trainer-profile/photos/${encodeURIComponent(photoId)}`, 'DELETE', undefined, trainerProfessionalProfileSchema)
       },
       async publish() {
         return writeJson(queries, '/v1/trainer-profile/publish', 'POST', {}, trainerProfessionalProfileSchema)

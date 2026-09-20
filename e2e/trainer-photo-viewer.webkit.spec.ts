@@ -2,22 +2,31 @@ import { expect, test } from '@playwright/test'
 
 const publicId = '91000000-0000-4000-8000-000000000001'
 const avatar = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+const photos = [0, 1, 2].map((index) => ({
+  id: `91000000-0000-4000-8000-00000000001${index}`,
+  url: avatar,
+  thumbnailUrl: avatar,
+  mimeType: 'image/jpeg', width: 100, height: 100,
+}))
 
 test('athlete opens and closes a trainer photo inside the iPhone viewport', async ({ page }) => {
   const profile = {
     publicId,
     draft: { displayName: 'Анна Иванова', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [], trainingModes: [], experienceStartYear: null,
-      education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: avatar, certificates: [] },
+      education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: null, photos, certificates: [] },
     published: { displayName: 'Анна Иванова', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [], trainingModes: [], experienceStartYear: null,
-      education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: avatar, certificates: [] },
+      education: '', formats: '', price: '', acceptingClients: true, avatarDataUrl: null, photos, certificates: [] },
     listedInCatalog: true, publishedAt: '2026-09-20T10:00:00.000Z', updatedAt: '2026-09-20T10:00:00.000Z', version: 1, isBrandTrainer: false,
   }
   await page.route('**/rest/v1/rpc/get_public_trainer_profile', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(profile) }))
   await page.goto(`/trainers/${publicId}`)
 
   await page.getByRole('button', { name: 'Открыть фото тренера Анна Иванова' }).click()
-  const viewer = page.getByRole('dialog', { name: 'Фото тренера' })
+  const viewer = page.getByRole('dialog', { name: 'Фотографии тренера' })
   await expect(viewer).toBeVisible()
+  await expect(viewer.getByText('1 из 3')).toBeVisible()
+  await viewer.getByRole('button', { name: 'Следующее фото' }).click()
+  await expect(viewer.getByText('2 из 3')).toBeVisible()
   const geometry = await viewer.evaluate((element) => {
     const box = element.getBoundingClientRect()
     return { top: box.top, left: box.left, right: box.right, bottom: box.bottom, width: window.innerWidth, height: window.innerHeight }

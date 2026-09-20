@@ -31,6 +31,15 @@ const certificateSchema = z.object({
   year: z.number().int().min(1950).max(new Date().getFullYear()).nullable(),
 })
 
+export const trainerProfilePhotoSchema = z.object({
+  id: z.uuid(),
+  url: z.url().max(4_096).nullable(),
+  thumbnailUrl: z.url().max(4_096),
+  mimeType: z.literal('image/jpeg'),
+  width: z.number().int().min(1).max(4_096),
+  height: z.number().int().min(1).max(4_096),
+})
+
 function removeEmptyCertificates(value: unknown): unknown {
   if (!Array.isArray(value)) return value
   return value.filter((item) => {
@@ -64,6 +73,7 @@ export const trainerProfileDraftSchema = z.object({
   price: z.string().trim().max(120),
   acceptingClients: z.boolean(),
   avatarDataUrl: z.string().max(900_000).regex(/^data:image\/(?:jpeg|png|webp);base64,/).nullable(),
+  photos: z.array(trainerProfilePhotoSchema).max(3).default([]),
   certificates: z.preprocess(removeEmptyCertificates, z.array(certificateSchema).max(10)),
 })
 
@@ -113,6 +123,7 @@ export function emptyTrainerProfileDraft(displayName = ''): TrainerProfileDraft 
     price: '',
     acceptingClients: false,
     avatarDataUrl: null,
+    photos: [],
     certificates: [],
   }
 }

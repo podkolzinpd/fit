@@ -51,6 +51,8 @@ describe('mediaObjectKey', () => {
       .toBe('chat-media/conversation/message.jpg')
     expect(mediaObjectKey('fit-exercise-media', 'vital-pro/squat.mp4'))
       .toBe('fit-exercise-media/vital-pro/squat.mp4')
+    expect(mediaObjectKey('trainer-profile-media', 'trainer/photo/full.jpg'))
+      .toBe('trainer-profile-media/trainer/photo/full.jpg')
   })
 
   it('rejects traversal, absolute and empty paths', () => {

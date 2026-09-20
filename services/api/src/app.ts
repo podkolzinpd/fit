@@ -140,6 +140,7 @@ import {
 } from './progress-request.js'
 import { readVitalMediaRequest, type VitalMediaSigner } from './vital-media.js'
 import { MAX_TRAINER_CATALOG_PAGE_SIZE, readTrainerProfileDraft, TrainerProfileError, type PilotTrainerProfiles, type TrainerCatalogFilters } from './trainer-profile.js'
+import { readTrainerPhotoUpload } from './trainer-profile-media.js'
 import {
   TrainerDiscoveryError,
   type PilotTrainerDiscovery,
@@ -997,6 +998,48 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (draft === undefined) return reply.code(400).send({ error: 'invalid_request' })
     if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.saveDraft(session, draft),
+      (profile) => reply.header('cache-control', 'no-store').send(profile))
+  })
+
+  app.post('/v1/trainer-profile/photos', { bodyLimit: 2 * 1024 * 1024 }, async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const body = request.body as { draft?: unknown; photo?: unknown; replaceLegacy?: unknown } | null
+    const draft = readTrainerProfileDraft(body?.draft)
+    const photo = readTrainerPhotoUpload(body?.photo)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (draft === undefined || photo === undefined
+      || (body?.replaceLegacy !== undefined && typeof body.replaceLegacy !== 'boolean')) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotTrainerProfiles!.uploadPhoto(session, draft, photo, body?.replaceLegacy === true),
+      (profile) => reply.header('cache-control', 'no-store').code(201).send(profile))
+  })
+
+  app.patch('/v1/trainer-profile/photos/order', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const body = request.body as { photoIds?: unknown } | null
+    const photoIds = Array.isArray(body?.photoIds) && body.photoIds.length <= 3
+      && body.photoIds.every((id) => typeof id === 'string' && uuidPattern.test(id))
+      ? body.photoIds as string[] : undefined
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (photoIds === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.reorderPhotos(session, photoIds),
+      (profile) => reply.header('cache-control', 'no-store').send(profile))
+  })
+
+  app.delete('/v1/trainer-profile/photos/:photoId', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { photoId } = request.params as { photoId?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof photoId !== 'string' || !uuidPattern.test(photoId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotTrainerProfiles === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotTrainerProfiles!.deletePhoto(session, photoId),
       (profile) => reply.header('cache-control', 'no-store').send(profile))
   })
 
@@ -1866,6 +1909,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       if (error instanceof TrainerProfileError) {
         if (error.failure === 'forbidden') return reply.code(403).send({ error: 'action_not_allowed' })
         if (error.failure === 'not_found') return reply.code(404).send({ error: 'resource_not_found' })
+        if (error.failure === 'media_unavailable') return reply.code(503).send({ error: 'service_unavailable' })
+        if (error.failure === 'limit_reached') return reply.code(422).send({ error: 'trainer_photo_limit_reached' })
         return reply.code(422).send({ error: 'invalid_trainer_profile' })
       }
       if (error instanceof TrainerDiscoveryError) {

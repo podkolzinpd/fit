@@ -233,7 +233,7 @@ describe('Yandex main repository', () => {
     const draft = {
       displayName: 'Анна', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [], trainingModes: [],
       experienceStartYear: null, education: '', formats: '', price: '', acceptingClients: true,
-      avatarDataUrl: null, certificates: [],
+      avatarDataUrl: null, photos: [], certificates: [],
     }
     const profile = {
       publicId: publicProfileId, profile: draft,
@@ -250,6 +250,42 @@ describe('Yandex main repository', () => {
     expect(requested.pathname).toBe('/v1/trainers/catalog')
     expect(requested.searchParams.getAll('metro')).toEqual(['msk-dinamo', 'msk-aeroport'])
     expect(Object.fromEntries(requested.searchParams)).toEqual({ query: 'Анна', metro: 'msk-aeroport', mode: 'online', accepting: 'true', brand: 'true', offset: '0', limit: '3' })
+  })
+
+  it('writes trainer gallery changes through the Yandex API', async () => {
+    const draft = {
+      displayName: 'Анна', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [], trainingModes: [],
+      experienceStartYear: null, education: '', formats: '', price: '', acceptingClients: true,
+      avatarDataUrl: null, photos: [], certificates: [],
+    }
+    const response = {
+      publicId: publicProfileId, draft, published: null, listedInCatalog: false,
+      publishedAt: null, updatedAt: '2026-09-20T10:00:00.000Z', version: 1, isBrandTrainer: false,
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(response, 201))
+      .mockResolvedValueOnce(jsonResponse(response))
+      .mockResolvedValueOnce(jsonResponse(response))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    const photoId = '22222222-2222-4222-8222-222222222222'
+    const part = {
+      dataUrl: 'data:image/jpeg;base64,/9j/4A==', mimeType: 'image/jpeg' as const,
+      width: 10, height: 10, sizeBytes: 4,
+    }
+
+    await repository.trainerProfiles.uploadPhoto(draft, { image: part, thumbnail: part }, true)
+    await repository.trainerProfiles.reorderPhotos([photoId])
+    await repository.trainerProfiles.deletePhoto(photoId)
+
+    expect(fetchMock.mock.calls.map((call) => [new URL(String(call[0])).pathname, (call[1] as RequestInit).method]))
+      .toEqual([
+        ['/v1/trainer-profile/photos', 'POST'],
+        ['/v1/trainer-profile/photos/order', 'PATCH'],
+        [`/v1/trainer-profile/photos/${photoId}`, 'DELETE'],
+      ])
+    expect(JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body)))
+      .toEqual({ draft, photo: { image: part, thumbnail: part }, replaceLegacy: true })
   })
 
   it('creates a quick client without fabricating profile measurements', async () => {

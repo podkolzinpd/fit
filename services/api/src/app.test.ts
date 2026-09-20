@@ -392,7 +392,7 @@ describe('trainer professional profile', () => {
     specialties: ['Силовые'], city: 'Москва', metroStationIds: ['msk-dinamo', 'msk-aeroport'],
     customLocations: ['Клуб'], trainingModes: ['online'],
     experienceStartYear: 2020, education: '', formats: '', price: '',
-    acceptingClients: true, avatarDataUrl: null, certificates: [],
+    acceptingClients: true, avatarDataUrl: null, photos: [], certificates: [],
   }
   const value = {
     publicId: '11111111-1111-4111-8111-111111111111', draft, published: draft,
@@ -406,6 +406,9 @@ describe('trainer professional profile', () => {
     return {
       getOwn: vi.fn().mockResolvedValue(value),
       saveDraft: vi.fn().mockResolvedValue(value),
+      uploadPhoto: vi.fn().mockResolvedValue(value),
+      reorderPhotos: vi.fn().mockResolvedValue(value),
+      deletePhoto: vi.fn().mockResolvedValue(value),
       publish: vi.fn().mockResolvedValue(value),
       unpublish: vi.fn().mockResolvedValue({ ...value, published: null, publishedAt: null }),
       setCatalogListing: vi.fn().mockResolvedValue({ ...value, listedInCatalog: true }),
@@ -425,6 +428,63 @@ describe('trainer professional profile', () => {
     expect(saved.statusCode).toBe(200)
     expect(published.statusCode).toBe(200)
     expect(saveDraft).toHaveBeenCalledWith({ accessMode: 'read_write', token: 'a'.repeat(43) }, draft)
+  })
+
+  it('uploads, reorders and deletes private Yandex gallery photos', async () => {
+    const pilotTrainerProfiles = profiles()
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const headers = { 'x-fit-session': 'a'.repeat(43) }
+    const bytes = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3])
+    const photo = {
+      dataUrl: `data:image/jpeg;base64,${bytes.toString('base64')}`,
+      mimeType: 'image/jpeg', width: 640, height: 480, sizeBytes: bytes.byteLength,
+    }
+    const photoId = '22222222-2222-4222-8222-222222222222'
+
+    const uploaded = await app.inject({
+      method: 'POST', url: '/v1/trainer-profile/photos', headers,
+      payload: { draft, photo: { image: photo, thumbnail: photo }, replaceLegacy: true },
+    })
+    const reordered = await app.inject({
+      method: 'PATCH', url: '/v1/trainer-profile/photos/order', headers,
+      payload: { photoIds: [photoId] },
+    })
+    const deleted = await app.inject({
+      method: 'DELETE', url: `/v1/trainer-profile/photos/${photoId}`, headers,
+    })
+
+    expect([uploaded.statusCode, reordered.statusCode, deleted.statusCode]).toEqual([201, 200, 200])
+    const uploadPhoto = vi.mocked(pilotTrainerProfiles.uploadPhoto)
+    const reorderPhotos = vi.mocked(pilotTrainerProfiles.reorderPhotos)
+    const deletePhoto = vi.mocked(pilotTrainerProfiles.deletePhoto)
+    expect(uploadPhoto).toHaveBeenCalledOnce()
+    expect(uploadPhoto.mock.calls[0]?.[0]).toEqual({ accessMode: 'read_write', token: 'a'.repeat(43) })
+    expect(uploadPhoto.mock.calls[0]?.[1]).toEqual(draft)
+    expect(uploadPhoto.mock.calls[0]?.[2].image.bytes).toBeInstanceOf(Uint8Array)
+    expect(uploadPhoto.mock.calls[0]?.[3]).toBe(true)
+    expect(reorderPhotos).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: 'a'.repeat(43) }, [photoId],
+    )
+    expect(deletePhoto).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: 'a'.repeat(43) }, photoId,
+    )
+  })
+
+  it('rejects a spoofed gallery image before storage', async () => {
+    const pilotTrainerProfiles = profiles()
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const bytes = Buffer.from([1, 2, 3])
+    const photo = {
+      dataUrl: `data:image/jpeg;base64,${bytes.toString('base64')}`,
+      mimeType: 'image/jpeg', width: 10, height: 10, sizeBytes: bytes.byteLength,
+    }
+    const response = await app.inject({
+      method: 'POST', url: '/v1/trainer-profile/photos', headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { draft, photo: { image: photo, thumbnail: photo } },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(vi.mocked(pilotTrainerProfiles.uploadPhoto)).not.toHaveBeenCalled()
   })
 
   it('accepts every fixed catalog specialty and its full 6-choice selection, including the longest label', async () => {
