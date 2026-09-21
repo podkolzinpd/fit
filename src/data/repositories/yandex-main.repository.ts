@@ -323,6 +323,19 @@ function trainingSummaryErrorForStatus(status: number, code?: string): Error {
   return errorForStatus(status, code)
 }
 
+function trainerPhotoErrorForStatus(status: number, code?: string): Error {
+  if (status === 413) {
+    return new RepositoryError('trainer_photo_too_large', 'Фото слишком большое. Выберите другое фото.')
+  }
+  if (status === 422 && code === 'trainer_photo_limit_reached') {
+    return new RepositoryError(code, 'Можно добавить не больше трёх фотографий.')
+  }
+  if (status >= 500) {
+    return new RepositoryError('service_unavailable', 'Не удалось загрузить фото. Попробуйте ещё раз.')
+  }
+  return errorForStatus(status, code)
+}
+
 async function response(
   work: () => Promise<Response>,
   errorFactory: ResponseErrorFactory = errorForStatus,
@@ -826,7 +839,7 @@ export function createYandexMainRepository(
       async uploadPhoto(draft: TrainerProfileDraft, photo: TrainerProfilePhotoUpload, replaceLegacy = false) {
         return writeJson(queries, '/v1/trainer-profile/photos', 'POST', {
           draft, photo, replaceLegacy,
-        }, trainerProfessionalProfileSchema)
+        }, trainerProfessionalProfileSchema, trainerPhotoErrorForStatus)
       },
       async reorderPhotos(photoIds: string[]) {
         return writeJson(queries, '/v1/trainer-profile/photos/order', 'PATCH', { photoIds }, trainerProfessionalProfileSchema)

@@ -402,6 +402,7 @@ test('probes the fit_api identity privately before changing the API revision', (
     'missed-workout-lifecycle',
     'assignment-results',
     'live-workout-lifecycle',
+    'trainer-profile-photo',
   ]) {
     assert.match(workflow, new RegExp(`stage_smoke_check=${check}`))
   }
@@ -447,6 +448,10 @@ test('loads synthetic fixtures and verifies every read model through the runtime
   )
   assert.match(workflow, /\/v1\/connections/)
   assert.match(workflow, /\.memberships \| any\(\.isRoot == true\)/)
+  assert.match(workflow, /trainerProfileSession\.token/)
+  assert.match(workflow, /X-Fit-Session: \$trainer_profile_fixture_token/)
+  assert.match(workflow, /\/v1\/trainer-profile\/photos/)
+  assert.match(workflow, /trainer-profile-photo-smoke\.jpg/)
   assert.match(workflow, /\/v1\/training-data/)
   assert.match(workflow, /\/v1\/clients\/\$client_id\/progress/)
   assert.match(workflow, /\/v1\/clients\/\$client_id\/workout-chronicle/)
