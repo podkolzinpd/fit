@@ -1,0 +1,118 @@
+name: Verify Yandex stage availability
+
+on:
+  workflow_dispatch:
+    inputs:
+      probe_count:
+        description: 'Sequential API health requests; every request is sent exactly once'
+        required: true
+        type: number
+        default: 1000
+      probe_interval_seconds:
+        description: 'Delay between requests; 3 seconds gives about 50 minutes for 1000 probes'
+        required: true
+        type: number
+        default: 3
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: yandex-stage
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-provider-cache
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+
+jobs:
+  availability:
+    name: Observe the active provisioned API without retries
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - uses: actions/cache@v4
+        with:
+          path: .terraform-provider-cache
+          key: terraform-yandex-${{ runner.os }}-${{ hashFiles('infra/yandex/.terraform.lock.hcl') }}
+      - name: Prepare Terraform provider cache
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - name: Exchange OIDC token for the stage deployment identity
+        run: scripts/yandex-github-oidc.sh
+      - name: Read the active API contract from remote state
+        id: active_api
+        working-directory: infra/yandex
+        run: |
+          set -euo pipefail
+          terraform init \
+            -backend-config=backend.hcl.example \
+            -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }} \
+            -backend-config=key=fit/stage/terraform.tfstate
+          state_file=$(mktemp)
+          trap 'rm -f "$state_file"' EXIT
+          terraform show -json >"$state_file"
+          api=$(jq -ec '
+            [.values.root_module.resources[]?
+              | select(.address == "yandex_serverless_container.api")
+              | .values][0]
+          ' "$state_file")
+          api_url=$(jq -er '.url' <<<"$api")
+          release_id=$(jq -er '.image[0].url' <<<"$api")
+          release_id=${release_id##*:}
+          min_instances=$(jq -er '.provision_policy[0].min_instances' <<<"$api")
+          [[ "$api_url" == https://* ]]
+          [[ "$release_id" =~ ^[0-9a-f]{40}$ ]]
+          if test "$min_instances" != 1; then
+            echo "The active API state has min_instances=$min_instances; expected 1." >&2
+            exit 1
+          fi
+          echo "url=$api_url" >>"$GITHUB_OUTPUT"
+          echo "release_id=$release_id" >>"$GITHUB_OUTPUT"
+          echo 'The active API state retains min_instances=1.'
+      - name: Observe the active API sequentially without retries
+        env:
+          API_URL: ${{ steps.active_api.outputs.url }}
+          EXPECTED_RELEASE_ID: ${{ steps.active_api.outputs.release_id }}
+          PROBE_COUNT: ${{ inputs.probe_count }}
+          PROBE_INTERVAL_SECONDS: ${{ inputs.probe_interval_seconds }}
+        run: |
+          node scripts/verify-yandex-api-availability.mjs \
+            --url "$API_URL" \
+            --expected-release-id "$EXPECTED_RELEASE_ID" \
+            --count "$PROBE_COUNT" \
+            --interval-ms "$(( PROBE_INTERVAL_SECONDS * 1000 ))" \
+            --timeout-ms 12000 \
+            --report yandex-stage-availability.json
+      - name: Publish the sanitized availability report
+        if: always()
+        run: |
+          if test -f yandex-stage-availability.json; then
+            jq -r '
+              "Availability: status=" + .status
+              + "; successful=" + (.successfulProbes | tostring)
+              + "/" + (.requestedProbes | tostring)
+              + "; interval_ms=" + (.intervalMs | tostring)
+              + "; failure_category=" + (.failureCategory // "none")
+            ' yandex-stage-availability.json >>"$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: yandex-stage-availability-${{ github.run_id }}
+          path: yandex-stage-availability.json
+          if-no-files-found: error
+          retention-days: 3

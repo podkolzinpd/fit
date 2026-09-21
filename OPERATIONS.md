@@ -35,12 +35,15 @@ request/response body или пользовательский текст. Диа
 после пятиминутного окна применения scaling policy, отдельный verifier выполняет
 последовательные запросы `/health` строго без retry.
 
-Обычный push в `main` выполняет 50 запросов. Для длительного наблюдения запустите
-workflow вручную со значениями:
+Обычный push в `main` выполняет 50 запросов. Для длительного наблюдения используйте
+отдельный ручной workflow `.github/workflows/verify-yandex-stage-availability.yml`.
+Он не выполняет `terraform plan/apply`, не создаёт новую ревизию и не меняет IAM:
+читает активный URL, release и `min_instances` из remote state, требует
+`min_instances=1`, а затем запускает verifier. Значения по умолчанию:
 
 ```text
-availability_probe_count=1000
-availability_probe_interval_seconds=3
+probe_count=1000
+probe_interval_seconds=3
 ```
 
 Такой запуск занимает около 50 минут и выполняет ровно 1 000 отдельных
