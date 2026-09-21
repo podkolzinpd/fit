@@ -214,6 +214,11 @@ interface BuildAppOptions {
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const app = Fastify({
     logger: options.logger ?? true,
+    // Provisioned Yandex Serverless Containers are suspended while idle and
+    // may lose network connections during that suspension. Fastify's 72 s
+    // default can otherwise leave the runtime with a stale upstream socket
+    // when the instance resumes after roughly 30 s of inactivity.
+    keepAliveTimeout: 5_000,
     genReqId: (request) => {
       const supplied = request.headers['x-fit-request-id']
       return typeof supplied === 'string' && uuidPattern.test(supplied)

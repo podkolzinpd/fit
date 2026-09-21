@@ -1,6 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-21. База изменений: `3dc15e0f` (#1125). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
+Обновлено: 2026-09-21. База изменений: `f3eea959` (#1127). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 
 ## Активная цель
@@ -21,6 +21,11 @@ Yandex ID является единственным production-входом; app
   проверяет её последовательными `/health` без retry. Application failure
   откатывает кандидата; platform failure без `x-fit-request-id` делает deploy
   красным, но не возвращает прошедший smoke API к непрогретой ревизии.
+- Причина platform-level `502` после простоя локализована на соединении runtime
+  с HTTP-процессом: provisioned instance приостанавливается и может потерять
+  сеть раньше Fastify default keep-alive 72 секунды. API явно закрывает idle
+  socket через 5 секунд; окончательный гейт — 1 000 последовательных `/health`
+  за 50 минут без retry и без единого `502`.
 - `VITE_MAINTENANCE_MODE` выключен после выпуска и production-проверки
   обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
   `paused`: он блокирует DML старых вкладок, RPC и background writers на 38
