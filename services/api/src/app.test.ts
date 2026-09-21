@@ -360,10 +360,11 @@ describe('reliable chat API', () => {
 })
 
 describe('health endpoint', () => {
-  it('closes idle runtime connections before a provisioned container is suspended', () => {
+  it('does not reuse runtime connections across provisioned-container invocations', () => {
     const app = buildApp({ logger: false })
     apps.push(app)
 
+    expect(app.server.maxRequestsPerSocket).toBe(1)
     expect(app.server.keepAliveTimeout).toBe(5_000)
   })
 
