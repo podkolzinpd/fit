@@ -1,19 +1,31 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LIVE_WORKOUT_REQUEST_TIMEOUT_MS } from './auth-fetch'
-import { getResponseDiagnostics } from './request-diagnostics'
+import {
+  getResponseDiagnostics,
+  resetYandexPlatformRequestStateForTests,
+} from './request-diagnostics'
 import { createYandexMainQueries } from './yandex-main.queries'
 
 describe('Yandex main query timeout', () => {
   afterEach(() => {
+    resetYandexPlatformRequestStateForTests()
     vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
   it('aborts a stalled Live write', async () => {
     vi.useFakeTimers()
-    vi.spyOn(globalThis, 'fetch').mockImplementation((_input, init) => new Promise<Response>((_resolve, reject) => {
-      init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
-    }))
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      if (String(input) === 'https://api.example/health') {
+        return Promise.resolve(new Response('{}', {
+          status: 200,
+          headers: { 'x-fit-request-id': 'health-request-id' },
+        }))
+      }
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+      })
+    })
     const queries = createYandexMainQueries('https://api.example', 'session')
     const request = queries.write('/v1/workout-sets/set-1/draft', 'PUT', {})
     const result = expect(request).rejects.toThrow('Live workout request timed out')
@@ -116,6 +128,67 @@ describe('Yandex main query timeout', () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Load failed'))
     await expect(queries.write('/v1/legal/acceptance', 'PUT', {})).rejects.toThrow('Load failed')
     expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
+  it('warms a stale runtime before sending a mutation exactly once', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 502 }))
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': 'health-request-id' },
+      }))
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 201,
+        headers: { 'x-fit-request-id': 'write-request-id' },
+      }))
+    const queries = createYandexMainQueries('https://stale-api.example', 'session')
+
+    const write = queries.write('/v1/clients', 'POST', {})
+    await vi.advanceTimersByTimeAsync(250)
+
+    await expect(write).resolves.toMatchObject({ status: 201 })
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
+      'https://stale-api.example/health',
+      'https://stale-api.example/health',
+      'https://stale-api.example/v1/clients',
+    ])
+  })
+
+  it('does not send a mutation when the runtime cannot be prepared', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 502 }))
+    const queries = createYandexMainQueries('https://unavailable-api.example', 'session')
+
+    const write = queries.write('/v1/clients', 'POST', {})
+    const result = expect(write).rejects.toThrow('Не удалось подготовить соединение с Yandex Cloud.')
+    await vi.advanceTimersByTimeAsync(5_500)
+
+    await result
+    expect(fetchMock).toHaveBeenCalledTimes(5)
+    expect(fetchMock.mock.calls.every(([input]) => String(input).endsWith('/health'))).toBe(true)
+  })
+
+  it('skips the mutation preflight after a recent request reached the API', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': 'read-request-id' },
+      }))
+      .mockResolvedValueOnce(new Response(null, {
+        status: 204,
+        headers: { 'x-fit-request-id': 'write-request-id' },
+      }))
+    const queries = createYandexMainQueries('https://active-api.example', 'session')
+
+    await queries.read('/v1/clients')
+    await queries.write('/v1/legal/acceptance', 'PUT', {})
+
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
+      'https://active-api.example/v1/clients',
+      'https://active-api.example/v1/legal/acceptance',
+    ])
   })
 
   it('shares one platform recovery probe across concurrent reads', async () => {

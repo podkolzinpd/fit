@@ -8,7 +8,10 @@ const responseDiagnostics = new WeakMap<Response, RequestDiagnostics>()
 const uuidSegment = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const platformRecoveryDelaysMs = [250, 750, 1_500, 3_000] as const
 const platformProbeTimeoutMs = 1_000
+const mutationPreflightFreshnessMs = 45_000
 const platformRecoveries = new Map<string, Promise<boolean>>()
+const mutationPreflights = new Map<string, Promise<boolean>>()
+const runtimeReachedAt = new Map<string, number>()
 
 function operationName(input: RequestInfo | URL, method: string): string {
   let pathname = '/v1'
@@ -83,12 +86,32 @@ async function probeHealth(fetchImplementation: typeof fetch, endpoint: string):
       cache: 'no-store',
       signal: controller.signal,
     })
-    return response.ok && response.headers.has('x-fit-request-id')
+    const reachedRuntime = response.ok && response.headers.has('x-fit-request-id')
+    if (reachedRuntime) runtimeReachedAt.set(endpoint, Date.now())
+    return reachedRuntime
   } catch {
     return false
   } finally {
     globalThis.clearTimeout(timeoutId)
   }
+}
+
+function startMutationPreflight(
+  fetchImplementation: typeof fetch,
+  endpoint: string,
+): Promise<boolean> {
+  const activePreflight = mutationPreflights.get(endpoint)
+  if (activePreflight !== undefined) return activePreflight
+
+  const preflight = (async () => {
+    if (await probeHealth(fetchImplementation, endpoint)) return true
+    return startPlatformRecovery(fetchImplementation, endpoint)
+  })()
+  mutationPreflights.set(endpoint, preflight)
+  void preflight.finally(() => {
+    if (mutationPreflights.get(endpoint) === preflight) mutationPreflights.delete(endpoint)
+  })
+  return preflight
 }
 
 function startPlatformRecovery(
@@ -148,6 +171,47 @@ async function recoverPlatformRead(
   return waitForRecovery(startPlatformRecovery(fetchImplementation, endpoint), requestSignal)
 }
 
+function isSafeMethod(method: string): boolean {
+  return ['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())
+}
+
+async function preflightPlatformMutation(
+  fetchImplementation: typeof fetch,
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  diagnostics: RequestDiagnostics,
+): Promise<void> {
+  const endpoint = healthEndpoint(input)
+  if (endpoint === undefined) return
+  const reachedAt = runtimeReachedAt.get(endpoint)
+  if (reachedAt !== undefined && Date.now() - reachedAt < mutationPreflightFreshnessMs) return
+
+  const requestSignal = init?.signal
+    ?? (typeof Request !== 'undefined' && input instanceof Request ? input.signal : undefined)
+  let ready = false
+  try {
+    ready = await waitForRecovery(
+      startMutationPreflight(fetchImplementation, endpoint),
+      requestSignal,
+    )
+  } catch (cause) {
+    if (requestSignal?.aborted) throw cause
+  }
+  if (ready) return
+
+  throw new RequestNetworkError(
+    'Не удалось подготовить соединение с Yandex Cloud.',
+    diagnostics,
+    new Error('Yandex Serverless Container did not pass the mutation preflight'),
+  )
+}
+
+export function resetYandexPlatformRequestStateForTests(): void {
+  platformRecoveries.clear()
+  mutationPreflights.clear()
+  runtimeReachedAt.clear()
+}
+
 export async function fetchWithRequestDiagnostics(
   fetchImplementation: typeof fetch,
   input: RequestInfo | URL,
@@ -161,9 +225,23 @@ export async function fetchWithRequestDiagnostics(
   headers.set('x-fit-request-id', requestId)
   const requestHeaders: Record<string, string> = {}
   headers.forEach((value, name) => { requestHeaders[name] = value })
+  const diagnostics: RequestDiagnostics = {
+    requestId,
+    occurredAt,
+    backend: 'yandex',
+    operation,
+    stage: 'network',
+  }
   try {
+    if (!isSafeMethod(method)) {
+      await preflightPlatformMutation(fetchImplementation, input, init, diagnostics)
+    }
     const response = await fetchImplementation(input, { ...init, headers: requestHeaders })
-    const diagnostics: RequestDiagnostics = {
+    const endpoint = healthEndpoint(input)
+    if (endpoint !== undefined && response.headers.has('x-fit-request-id')) {
+      runtimeReachedAt.set(endpoint, Date.now())
+    }
+    const responseDiagnostic: RequestDiagnostics = {
       requestId: header(response.headers, 'x-fit-request-id') ?? requestId,
       occurredAt,
       backend: 'yandex',
@@ -174,19 +252,14 @@ export async function fetchWithRequestDiagnostics(
       ...(header(response.headers, 'x-fit-error-category') ? { errorCategory: header(response.headers, 'x-fit-error-category') } : {}),
       ...(header(response.headers, 'x-fit-release-id') ? { releaseId: header(response.headers, 'x-fit-release-id') } : {}),
     }
-    responseDiagnostics.set(response, diagnostics)
+    responseDiagnostics.set(response, responseDiagnostic)
     return response
   } catch (cause) {
+    if (cause instanceof RequestNetworkError) throw cause
     const message = cause instanceof Error && cause.message.length > 0
       ? cause.message
       : 'Не удалось подключиться к Yandex Cloud.'
-    throw new RequestNetworkError(message, {
-      requestId,
-      occurredAt,
-      backend: 'yandex',
-      operation,
-      stage: 'network',
-    }, cause)
+    throw new RequestNetworkError(message, diagnostics, cause)
   }
 }
 

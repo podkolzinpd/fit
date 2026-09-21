@@ -96,6 +96,10 @@ const pushTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'push.tf'),
   'utf8',
 )
+const warmupTerraform = readFileSync(
+  join(import.meta.dirname, '..', 'infra', 'yandex', 'warmup.tf'),
+  'utf8',
+)
 const mediaTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'media.tf'),
   'utf8',
@@ -137,6 +141,21 @@ test('combines complete VPC zone coverage with one provisioned API instance', ()
   for (const zone of ['ru-central1-a', 'ru-central1-b', 'ru-central1-e']) {
     assert.match(networkTerraform, new RegExp(`"${zone}"\\s*=\\s*"10\\.42\\.`))
   }
+})
+
+test('keeps the provisioned API active with a bounded side-effect-free timer', () => {
+  assert.match(warmupTerraform, /cron_expression\s+= "\* \* \* \* \? \*"/)
+  assert.match(warmupTerraform, /path\s+= "\/internal\/warmup"/)
+  assert.match(warmupTerraform, /retry_attempts\s+= 2/)
+  assert.match(warmupTerraform, /retry_interval\s+= 10/)
+  assert.match(
+    workflow,
+    /-target=yandex_iam_service_account_iam_member\.api_warmer_deployer/,
+  )
+  assert.match(
+    workflow,
+    /--api-warmer-sa-id "\$\(terraform output -raw api_warmer_service_account_id\)"/,
+  )
 })
 
 test('hardens backups on the existing database without provisioning a second stack', () => {

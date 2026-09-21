@@ -411,6 +411,7 @@ jobs:
           -target=yandex_container_registry_iam_binding.api_image_puller
           -target=yandex_iam_service_account_iam_member.deployer_self_use
           -target=yandex_iam_service_account_iam_member.api_deployer
+          -target=yandex_iam_service_account_iam_member.api_warmer_deployer
           -target=yandex_iam_service_account_iam_member.migration_deployer
           -target=yandex_iam_service_account_iam_member.push_dispatcher_deployer
           -target=yandex_iam_service_account_iam_member.push_scheduler_deployer
@@ -439,6 +440,7 @@ jobs:
           node ../../scripts/verify-yandex-stage-access.mjs
           --deployer-sa-id "$YC_DEPLOY_SA_ID"
           --api-runtime-sa-id "$(terraform output -raw api_service_account_id)"
+          --api-warmer-sa-id "$(terraform output -raw api_warmer_service_account_id)"
           --migration-runtime-sa-id "$(terraform output -raw migration_service_account_id)"
           --push-dispatcher-sa-id "$(terraform output -raw push_dispatcher_service_account_id)"
           --push-scheduler-sa-id "$(terraform output -raw push_scheduler_service_account_id)"
