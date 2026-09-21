@@ -1,6 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-20. База изменений: `e2d18942` (#1106). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
+Обновлено: 2026-09-21. База изменений: `983b2f86` (#1124). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 
 ## Активная цель
@@ -13,24 +13,10 @@ Yandex ID является единственным production-входом; app
 - Клиентская генерация четырёхнедельной программы работает через выбранный backend. Yandex API читает actor-scoped историю, цель, замеры и будущие занятия из PostgreSQL, использует короткие idempotent generation leases и вызывает тот же валидируемый YandexGPT generator вне DB-транзакции.
 - Свои упражнения поддерживают текстовые metadata в обоих backend; изменение private JPEG всё ещё отклоняется, объекты не входят в подтверждённый перенос. Планирование, подробный план, результат и Live используют единые статичные миниатюры упражнений 48×48 с точным первым кадром или нейтральным fallback; крупная анимация остаётся только у текущего упражнения Live и в явном просмотре техники. Для всех 721 системных Vital, Vital Gym Pro и reference-анимаций заранее рассчитан безопасный canvas: 152 постера с однотонными полями продолжают фон карточки без растягивания или изменения масштаба фигуры; тот же контракт работает в миниатюрах и крупной технике.
 - Legal acceptance и отменяемые deletion requests работают через выбранный backend с actor-scoped Yandex RLS/RPC и provider-neutral UI.
-- Production auth показывает только действие «Продолжить с Yandex ID»; старые
-  email/password/reset routes возвращаются на единый вход. Связанный профиль с
-  `yandex/read_write` assignment получает Yandex app-session и весь основной UI
-  выбирает Yandex API без request-level fallback. Неизвестный Yandex ID получает
-  recovery/new-account handoff. Recovery domain-ready профиля одной транзакцией
-  создаёт identity, `yandex/read_write` и первую app-session; при любой ошибке
-  всё откатывается. Reload не сбрасывает активные Yandex requests.
+- Production auth показывает только действие «Продолжить с Yandex ID»; старые email/password/reset routes возвращаются на единый вход. Связанный профиль с `yandex/read_write` assignment получает Yandex app-session и весь основной UI выбирает Yandex API без request-level fallback. Неизвестный Yandex ID получает recovery/new-account handoff. Recovery domain-ready профиля одной транзакцией создаёт identity, `yandex/read_write` и первую app-session; при любой ошибке всё откатывается. Reload не сбрасывает активные Yandex requests.
 - Frontend Yandex API принимает Postgres-native ISO timestamps с numeric offset (`+00:00`); карточка «Последняя тренировка» больше не падает из-за отличия от literal `Z`.
-- Все запросы основного Yandex API и Yandex ID transport получают безопасный
-  client-generated request ID, который API возвращает в ответе и использует как
-  Fastify `reqId`. Штатные error-state, включая inline-ошибки загрузки на экране
-  «Сегодня», и callback привязки позволяют скопировать этот ID вместе с
-  release/status/operation без token, email, UUID профиля, request body и
-  пользовательского текста. Короткие platform-level `502`, при которых Fastify
-  ещё не вернул request ID, восстанавливаются только для безопасных `GET`: все
-  параллельные чтения ждут один общий `/health` probe и после восстановления
-  повторяются по одному разу. Записи и application-level ошибки автоматически
-  не повторяются.
+- Все запросы основного Yandex API и Yandex ID transport получают безопасный client-generated request ID, который API возвращает в ответе и использует как Fastify `reqId`. Штатные error-state позволяют скопировать этот ID вместе с release/status/operation без token, email, UUID профиля, request body и пользовательского текста.
+- Короткие platform-level `502`, при которых Fastify ещё не вернул request ID, восстанавливаются только для безопасных `GET`: параллельные чтения ждут один общий `/health` probe и после восстановления повторяются по одному разу. Перед единственной отправкой одноразового OAuth-кода вход, регистрация и привязка отдельно дожидаются успешного `/health`, поэтому временный сбой запуска API не расходует код. Записи и application-level ошибки автоматически не повторяются.
 - `VITE_MAINTENANCE_MODE` выключен после выпуска и production-проверки
   обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
   `paused`: он блокирует DML старых вкладок, RPC и background writers на 38
