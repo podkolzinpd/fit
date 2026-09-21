@@ -3580,6 +3580,348 @@ h3 {
   .nav, .slide-meta, .progress, .notes-panel { display: none !important; }
 }
 
+/* 09 · Platform growth — exact comparable snapshots, 14–20 Sep 2026. */
+.meeting-growth-slide {
+  background: var(--dark);
+  color: var(--paper);
+}
+
+.meeting-growth-slide .eyebrow { color: #8f9094; }
+
+.meeting-growth-title {
+  position: absolute;
+  left: 92px;
+  top: 116px;
+  width: 1040px;
+  margin: 0;
+  color: var(--paper);
+  font-size: 58px;
+  line-height: .98;
+  letter-spacing: -.052em;
+}
+
+.meeting-growth-date {
+  position: absolute;
+  right: 92px;
+  top: 132px;
+  width: 270px;
+  padding-top: 14px;
+  border-top: 1px solid #44464a;
+  color: #898a8e;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.meeting-growth-date strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--paper);
+  font-size: 20px;
+}
+
+.meeting-growth-grid {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 286px;
+  height: 398px;
+  display: grid;
+  grid-template-columns: 1.62fr .78fr;
+  gap: 24px;
+}
+
+.meeting-growth-accounts,
+.meeting-growth-workouts {
+  border: 1px solid #34363a;
+  background: #17181a;
+}
+
+.meeting-growth-accounts { padding: 28px 30px 26px; }
+
+.meeting-growth-kicker {
+  display: block;
+  color: #838489;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.meeting-growth-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  margin-top: 12px;
+}
+
+.meeting-growth-hero b {
+  color: var(--paper);
+  font-size: 76px;
+  line-height: .92;
+  letter-spacing: -.06em;
+}
+
+.meeting-growth-arrow { color: #77797d; font-size: 46px; font-weight: 400; }
+.meeting-growth-badge { margin-left: auto; color: #75ad8c; font-size: 22px; font-weight: 800; }
+
+.meeting-growth-bars { margin-top: 28px; display: grid; gap: 19px; }
+.meeting-growth-bar-row { display: grid; grid-template-columns: 105px 1fr; gap: 14px; align-items: center; }
+.meeting-growth-bar-label { color: #8d8e92; font-size: 13px; font-weight: 700; }
+.meeting-growth-bar-track { height: 54px; border: 1px solid #35373a; background: #202124; }
+.meeting-growth-bar { height: 100%; display: flex; }
+.meeting-growth-bar.is-after { width: 100%; }
+
+.meeting-growth-trainers,
+.meeting-growth-self,
+.meeting-growth-clients {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.meeting-growth-trainers { background: #477a61; color: #f6f2ea; }
+.meeting-growth-self { background: #d8b46b; color: #17181a; }
+.meeting-growth-clients { background: #66686d; color: #f6f2ea; }
+.meeting-growth-bar.is-before { width: 72%; }
+.meeting-growth-bar.is-before .meeting-growth-trainers { width: 21.3%; }
+.meeting-growth-bar.is-before .meeting-growth-self { width: 18.5%; }
+.meeting-growth-bar.is-before .meeting-growth-clients { width: 60.2%; }
+.meeting-growth-bar.is-after .meeting-growth-trainers { width: 22.5%; }
+.meeting-growth-bar.is-after .meeting-growth-self { width: 30.4%; }
+.meeting-growth-bar.is-after .meeting-growth-clients { width: 47.1%; }
+
+.meeting-growth-legend {
+  margin: 22px 0 0 119px;
+  display: flex;
+  gap: 26px;
+  color: #8d8e92;
+  font-size: 13px;
+}
+
+.meeting-growth-legend span { display: flex; align-items: center; gap: 8px; }
+.meeting-growth-legend i { width: 9px; height: 9px; border-radius: 50%; background: #477a61; }
+.meeting-growth-legend .is-self { background: #d8b46b; }
+.meeting-growth-legend .is-client { background: #66686d; }
+
+.meeting-growth-workouts { padding: 28px 30px; display: flex; flex-direction: column; }
+.meeting-growth-workout-values { margin-top: 25px; display: flex; align-items: baseline; gap: 13px; }
+.meeting-growth-workout-values b { color: var(--paper); font-size: 55px; line-height: .95; letter-spacing: -.055em; }
+.meeting-growth-workout-values span { color: #66686d; font-size: 34px; }
+.meeting-growth-workouts > strong { display: block; margin-top: 20px; color: #d8b46b; font-size: 58px; line-height: .9; letter-spacing: -.05em; }
+.meeting-growth-workouts > p { margin: 10px 0 0; color: #9a9b9f; font-size: 15px; line-height: 1.35; }
+
+.meeting-growth-workout-split {
+  margin-top: 18px;
+  padding-top: 13px;
+  border-top: 1px solid #34363a;
+  display: grid;
+  gap: 7px;
+  color: #a1a2a6;
+  font-size: 14px;
+}
+
+.meeting-growth-workout-split b { display: inline-block; min-width: 42px; color: var(--paper); font-size: 16px; }
+
+.meeting-growth-bottom {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  bottom: 58px;
+  display: grid;
+  grid-template-columns: 1.42fr .78fr;
+  gap: 40px;
+  padding-top: 17px;
+  border-top: 1px solid #3b3d40;
+}
+
+.meeting-growth-insight { display: grid; grid-template-columns: 185px 1fr; gap: 24px; }
+.meeting-growth-insight span,
+.meeting-growth-method span { color: #77787d; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.meeting-growth-insight strong { color: var(--paper); font-size: 21px; line-height: 1.22; }
+.meeting-growth-method p { margin: 8px 0 0; color: #8e8f93; font-size: 13px; line-height: 1.35; }
+
+/* 12 · Fit revenue model — four layers, ordered by product maturity. */
+.prefinal-revenue-model .revenue-row > strong { font-size: 23px; }
+.prefinal-revenue-model .revenue-row > div b { font-size: 24px; line-height: 1.08; }
+.prefinal-revenue-model .revenue-row > div small { font-size: 14px; }
+.prefinal-revenue-model .revenue-row--closest { background: var(--ink); color: var(--paper); }
+.prefinal-revenue-model .revenue-row--closest > strong small,
+.prefinal-revenue-model .revenue-row--closest > div small { color: #a7a7a4; }
+
+/* 13 · Financial model — one highlighted base case plus scenario range. */
+.prefinal-financial { background: var(--paper); color: var(--ink); }
+.prefinal-financial h2 {
+  position: absolute;
+  left: 92px;
+  top: 112px;
+  width: 1040px;
+  margin: 0;
+  font-size: 60px;
+  line-height: .97;
+  letter-spacing: -.048em;
+}
+
+.prefinal-financial .finance-status {
+  position: absolute;
+  right: 92px;
+  top: 126px;
+  width: 286px;
+  padding-top: 13px;
+  border-top: 1px solid var(--ink);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.prefinal-financial .finance-status strong { display: block; margin-bottom: 6px; color: var(--ink); font-size: 20px; }
+
+.finance-scenarios {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 294px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
+.finance-scenario { min-height: 310px; padding: 22px 28px 24px 0; }
+.finance-scenario + .finance-scenario { padding-left: 28px; border-left: 1px solid var(--line); }
+.finance-scenario.is-base { color: var(--paper); background: var(--ink); padding-right: 28px; }
+.finance-scenario > span { color: var(--muted); font-size: 13px; font-weight: 800; letter-spacing: .1em; }
+.finance-scenario.is-base > span { color: #aaa9a5; }
+.finance-scenario > strong { display: block; margin-top: 14px; font-size: 46px; line-height: .95; letter-spacing: -.045em; }
+.finance-scenario > small { display: block; margin-top: 7px; color: var(--muted); font-size: 15px; }
+.finance-scenario.is-base > small { color: #aaa9a5; }
+.finance-scenario dl { margin: 22px 0 0; display: grid; grid-template-columns: 1fr auto; gap: 9px 16px; font-size: 17px; }
+.finance-scenario dt { color: var(--muted); }
+.finance-scenario.is-base dt { color: #aaa9a5; }
+.finance-scenario dd { margin: 0; font-weight: 700; }
+.finance-scenario .positive { color: #75ad8c; }
+.finance-scenario .negative { color: #a05d59; }
+
+.finance-bottom {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  bottom: 58px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--ink);
+}
+
+.finance-bottom > div { padding: 20px 26px 0 0; }
+.finance-bottom > div + div { padding-left: 26px; border-left: 1px solid var(--line); }
+.finance-bottom span { display: block; color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .09em; }
+.finance-bottom strong { display: block; margin-top: 10px; font-size: 27px; line-height: 1.05; }
+.finance-bottom p { margin: 7px 0 0; color: var(--muted); font-size: 14px; line-height: 1.3; }
+
+/* 14 · Launch path — three stages, no speculative gates. */
+.prefinal-launch-roadmap { background: var(--dark); color: var(--paper); }
+.prefinal-launch-roadmap .eyebrow { color: #8f9094; }
+.prefinal-launch-roadmap h2 {
+  position: absolute;
+  left: 92px;
+  top: 112px;
+  width: 1040px;
+  margin: 0;
+  font-size: 62px;
+  line-height: .96;
+  letter-spacing: -.05em;
+}
+
+.launch-axis {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  top: 312px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid #4b4d51;
+}
+
+.launch-stage { position: relative; min-height: 350px; padding: 29px 34px 24px 0; }
+.launch-stage + .launch-stage { padding-left: 34px; border-left: 1px solid #34363a; }
+.launch-stage::before { content: ""; position: absolute; top: -6px; left: 0; width: 11px; height: 11px; border-radius: 50%; background: #77797d; }
+.launch-stage + .launch-stage::before { left: 34px; }
+.launch-stage.is-next::before { background: #d8b46b; }
+.launch-stage > span { color: #808186; font-size: 12px; font-weight: 800; letter-spacing: .1em; }
+.launch-stage h3 { margin: 16px 0 0; color: var(--paper); font-size: 30px; line-height: 1.05; }
+.launch-stage ul { margin: 23px 0 0; padding: 0; list-style: none; }
+.launch-stage li { padding: 13px 0; border-top: 1px solid #303236; color: #a7a8ab; font-size: 20px; line-height: 1.24; }
+.launch-stage li strong { color: var(--paper); font-weight: 650; }
+
+.launch-conclusion {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  bottom: 56px;
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 30px;
+  padding-top: 18px;
+  border-top: 1px solid #4b4d51;
+}
+
+.launch-conclusion span { color: #7e7f83; font-size: 12px; font-weight: 800; letter-spacing: .1em; }
+.launch-conclusion strong { color: var(--paper); font-size: 23px; line-height: 1.22; }
+
+/* 15 · Final ask — team, money and service ownership in one decision. */
+.prefinal-launch-ask { background: var(--paper); color: var(--ink); }
+.prefinal-launch-ask h2 {
+  position: absolute;
+  left: 92px;
+  top: 118px;
+  width: 610px;
+  margin: 0;
+  font-size: 78px;
+  line-height: .93;
+  letter-spacing: -.055em;
+}
+
+.launch-ask-budget {
+  position: absolute;
+  left: 96px;
+  top: 470px;
+  width: 505px;
+  padding-top: 18px;
+  border-top: 1px solid var(--ink);
+}
+
+.launch-ask-budget span { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .1em; }
+.launch-ask-budget strong { display: block; margin-top: 13px; font-size: 54px; line-height: .94; letter-spacing: -.045em; }
+.launch-ask-budget p { margin: 10px 0 0; color: var(--muted); font-size: 20px; line-height: 1.28; }
+
+.launch-ask-list {
+  position: absolute;
+  left: 760px;
+  right: 92px;
+  top: 118px;
+  border-top: 1px solid var(--ink);
+}
+
+.launch-ask-row { display: grid; grid-template-columns: 44px 210px 1fr; gap: 20px; padding: 25px 0 24px; border-bottom: 1px solid var(--line); }
+.launch-ask-row b { color: var(--muted); font-size: 13px; }
+.launch-ask-row strong { font-size: 23px; line-height: 1.1; }
+.launch-ask-row p { margin: 0; color: var(--muted); font-size: 20px; line-height: 1.24; }
+
+.launch-ask-final {
+  position: absolute;
+  left: 760px;
+  right: 92px;
+  bottom: 54px;
+  padding-top: 17px;
+  border-top: 1px solid var(--ink);
+  font-size: 25px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
 </style>
   <style>
 /* Fit full redesign · slides 1–19 only.
@@ -6298,6 +6640,20 @@ h3 {
 .rd-monetization .revenue-conclusion > span { color: var(--muted); font-size: 13px; font-weight: 800; letter-spacing: .10em; }
 .rd-monetization .revenue-conclusion strong { display: block; font-size: 21px; line-height: 1.24; }
 .rd-monetization .revenue-conclusion small { display: block; margin-top: 8px; color: var(--muted); font-size: 15px; line-height: 1.25; }
+
+/* Prefinal monetization: preserve contrast and keep long Russian labels separated. */
+.rd-monetization.prefinal-revenue-model .revenue-row {
+  grid-template-columns: 170px 1fr 1fr;
+  gap: 16px;
+}
+.rd-monetization.prefinal-revenue-model .revenue-row > strong { font-size: 22px; }
+.rd-monetization.prefinal-revenue-model .revenue-row > div b { font-size: 24px; line-height: 1.05; }
+.rd-monetization.prefinal-revenue-model .revenue-row--closest {
+  background: var(--ink);
+  color: var(--paper);
+}
+.rd-monetization.prefinal-revenue-model .revenue-row--closest > strong small,
+.rd-monetization.prefinal-revenue-model .revenue-row--closest > div small { color: #a7a7a4; }
 
 /* Visual QA pass 2: explicit resets against legacy layout and collision fixes. */
 .rd-hero .pilot-cover-logo {
@@ -9064,8 +9420,8 @@ Keep product: https://www.gotokeep.com/</aside>
 Расчёт: 74,1 млн × 78% ≈ 57,8 млн; 74,1 млн × 29% ≈ 21,5 млн. Показатели ВЦИОМ относятся ко всем взрослым и используются как ориентир. Это не TAM, не SAM, не достижимая аудитория и не прогноз активации.</aside>
     </section>
 
-    <section class="slide channel-slide acquisition-slide redesign-v2 rd-distribution review-distribution-v3" data-section="Дистрибуция" data-slide-type="feature-overview" data-golden="apple/08-apple-feature-overview.png">
-      <div class="eyebrow">07 · ДИСТРИБУЦИЯ</div>
+    <section class="slide channel-slide acquisition-slide redesign-v2 rd-distribution review-distribution-v3 prefinal-keep" data-section="Дистрибуция" data-slide-type="feature-overview" data-golden="apple/08-apple-feature-overview.png">
+      <div class="eyebrow">10 · ПРЕИМУЩЕСТВО ЯНДЕКСА</div>
       <h2>Fit появляется в момент готовности действовать</h2>
       <p class="distribution-lead">Контекст Яндекса, тренеры и социальные сигналы ведут сразу к первому полезному действию.</p>
 
@@ -9077,7 +9433,7 @@ Keep product: https://www.gotokeep.com/</aside>
         <div class="trigger-row"><b>СОЦИАЛЬНЫЙ СИГНАЛ</b><strong>Лента · авторы</strong><p>Вижу достижение → присоединиться к тренировке или челленджу</p></div>
       </div>
 
-      <div class="distribution-metric"><span>МЕТРИКА ПИЛОТА</span><strong>Дополнительный активный пользователь W4 относительно контрольной группы</strong></div>
+      <div class="distribution-metric"><span>КАК МАСШТАБИРУЕМ</span><strong>Каждый канал ведёт к первому полезному действию, а не просто к установке</strong></div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
 Показать не перечень сервисов, а конкретную систему дистрибуции: пользовательский сигнал, полезное действие в Fit и измеримый результат W4.
 
@@ -9221,8 +9577,70 @@ Goal Setting Interventions for Insufficiently Active Adults, systematic review a
 mHealth Continuance Intention, systematic review and meta-analysis, 58 исследований: https://www.nature.com/articles/s41746-022-00692-9</aside>
     </section>
 
-    <section class="slide value-slide redesign-v2 rd-value" data-section="Ценность Яндексу" data-slide-type="final-vision" data-golden="apple/09-apple-final-vision.png">
-      <div class="eyebrow">09 · ЦЕННОСТЬ ДЛЯ ЯНДЕКСА</div>
+    <section class="slide slide-dark meeting-growth-slide prefinal-keep" data-section="Рост платформы" data-slide-type="progress-trend" data-golden="whoop/11-whoop-progress-trend.png">
+      <div class="eyebrow">09 · РОСТ ПЛАТФОРМЫ</div>
+      <h2 class="meeting-growth-title">За шесть дней база Fit выросла на 39%.<br>Главный драйвер — самостоятельные клиенты</h2>
+      <div class="meeting-growth-date"><strong>14 → 20 сентября</strong>Два сопоставимых накопленных среза</div>
+
+      <div class="meeting-growth-grid">
+        <section class="meeting-growth-accounts" aria-label="Рост зарегистрированной базы Fit">
+          <span class="meeting-growth-kicker">Тренеры и клиентские профили</span>
+          <div class="meeting-growth-hero">
+            <b>211</b><span class="meeting-growth-arrow">→</span><b>293</b><span class="meeting-growth-badge">+82 · +39%</span>
+          </div>
+          <div class="meeting-growth-bars">
+            <div class="meeting-growth-bar-row">
+              <span class="meeting-growth-bar-label">14 сентября</span>
+              <div class="meeting-growth-bar-track">
+                <div class="meeting-growth-bar is-before"><span class="meeting-growth-trainers">45</span><span class="meeting-growth-self">39</span><span class="meeting-growth-clients">127</span></div>
+              </div>
+            </div>
+            <div class="meeting-growth-bar-row">
+              <span class="meeting-growth-bar-label">20 сентября</span>
+              <div class="meeting-growth-bar-track">
+                <div class="meeting-growth-bar is-after"><span class="meeting-growth-trainers">66</span><span class="meeting-growth-self">89</span><span class="meeting-growth-clients">138</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="meeting-growth-legend"><span><i></i>Тренеры: +21 · +47%</span><span><i class="is-self"></i>Сами: +50 · +128%</span><span><i class="is-client"></i>Через тренера: +11 · +9%</span></div>
+        </section>
+
+        <section class="meeting-growth-workouts" aria-label="Рост числа записей тренировок">
+          <span class="meeting-growth-kicker">Записи тренировок в базе</span>
+          <div class="meeting-growth-workout-values"><b>200</b><span>→</span><b>600</b></div>
+          <strong>×3</strong>
+          <p>+400 записей между двумя срезами. Это накопленный объём, а не число уникальных активных пользователей.</p>
+          <div class="meeting-growth-workout-split"><span><b>427</b> у клиентов через тренера</span><span><b>173</b> у самостоятельных клиентов</span></div>
+        </section>
+      </div>
+
+      <div class="meeting-growth-bottom">
+        <div class="meeting-growth-insight">
+          <span>Что изменилось</span>
+          <strong>50 из 61 нового клиента пришли самостоятельно — 82% клиентского прироста. Пик — 28 регистраций 18 сентября.</strong>
+        </div>
+        <div class="meeting-growth-method">
+          <span>Как считаем</span>
+          <p>Срезы на 14.09 и 20.09. Клиентов разделяем по способу регистрации; тренировки — все записи workout.</p>
+        </div>
+      </div>
+
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Показать фактический рост Fit за неделю на сопоставимых накопленных показателях, не выдавая регистрации за активность или удержание.
+
+ЧТО ГОВОРИМ
+На начало недели в Fit было 45 тренеров, 39 самостоятельно зарегистрированных клиентов и 127 клиентских профилей, созданных тренерами — 211 профилей по трём взаимоисключающим группам. На 20 сентября DataLens показывает 66 тренеров, 89 самостоятельных клиентов и 138 клиентов, созданных тренерами — 293 профиля. За шесть дней наблюдаемая база выросла на 82 профиля, или на 39%.
+
+Главный источник роста — самостоятельные клиенты: плюс 50 профилей. Всего клиентская база выросла на 61 профиль, поэтому самостоятельные регистрации дали 82% клиентского прироста. Их база выросла более чем вдвое — с 39 до 89. Тренеров стало на 21 больше, а клиентов, которых завели тренеры, — на 11. Пик самостоятельного притока пришёлся на 18 сентября — 28 регистраций.
+
+За тот же период число записей тренировок в базе выросло с 200 до 600 — на 400 записей, или в три раза. Текущий итог складывается из двух взаимоисключающих разрезов DataLens: 427 записей у клиентов, которых завёл тренер, и 173 у самостоятельно зарегистрированных клиентов. Это накопленный операционный объём. Он показывает, что платформа наполняется работой, но сам по себе не доказывает рост DAU или удержания.
+
+ИСТОЧНИКИ И ОГРАНИЧЕНИЯ
+Срез презентации Fit на 14.09.2026: 45 тренеров, 39 самостоятельно зарегистрированных клиентов, 127 клиентов, созданных тренерами, 200 созданных тренировок. DataLens «Сводные метрики приложения», обновление 20.09.2026 21:58: 66 тренеров; при is_self_registered=false — 138 клиентов и workouts_total 427; при is_self_registered=true — 89 клиентов и workouts_total 173. Группы взаимоисключающие. Сравниваются накопленные значения двух дат.</aside>
+    </section>
+
+    <section class="slide value-slide redesign-v2 rd-value prefinal-keep" data-section="Ценность Яндексу" data-slide-type="final-vision" data-golden="apple/09-apple-final-vision.png">
+      <div class="eyebrow">11 · ЦЕННОСТЬ ДЛЯ ЯНДЕКСА</div>
       <h2>Спорт становится регулярным сценарием Яндекса</h2>
       <div class="value-planes">
         <div class="value-plane direct"><span>01</span><h3>Создаёт новую привычку</h3><p>Fit связывает цель, план, тренировку, прогресс и следующий шаг. Пользователь получает повод регулярно возвращаться.</p></div>
@@ -9251,59 +9669,60 @@ Fit превращает разрозненный спортивный инте�
 Далее переводим потенциальную коммерческую ценность в юнит-экономику Fit, базовый P&amp;L и чувствительность к масштабу.</aside>
     </section>
 
-    <section class="slide monetization-proof-slide redesign-v2 rd-monetization" data-section="Доказанная монетизация" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
-      <div class="eyebrow">10 · ДОКАЗАННАЯ МОНЕТИЗАЦИЯ</div>
-      <h2>Подписка, товары и B2B уже приносят выручку</h2>
+    <section class="slide monetization-proof-slide redesign-v2 rd-monetization prefinal-revenue-model prefinal-keep" data-section="Монетизация" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
+      <div class="eyebrow">12 · КАК FIT ЗАРАБАТЫВАЕТ</div>
+      <h2>Монетизация растёт вместе с ценностью для пользователя</h2>
       <div class="revenue-ledger">
         <div class="revenue-head"><span>ПРОДУКТ</span><span>ПУБЛИЧНЫЙ ПОКАЗАТЕЛЬ ВЫРУЧКИ</span><span>МОНЕТИЗАЦИОННЫЙ СИГНАЛ</span><span>ОСНОВАНИЕ</span></div>
-        <div class="revenue-row">
-          <strong>Strava</strong>
-          <div><b>≈ $500 млн ARR</b><small>2025</small></div>
-          <div><b>$79,99 в год</b><small>цена подписки в США</small></div>
-          <p>Данные компании</p>
-        </div>
-        <div class="revenue-row">
-          <strong>Keep</strong>
-          <div><b>≈ $228 млн</b><small>выручка · 2025</small></div>
-          <div><b>47,5% выручки</b><small>дают спортивные товары</small></div>
-          <p>Аудированная отчётность</p>
-        </div>
         <div class="revenue-row revenue-row--closest">
-          <strong>Hevy<small>БЛИЖАЙШИЙ АНАЛОГ FIT</small></strong>
-          <div><b>≈ $9,6 млн</b><small>годовой темп iOS · 2026</small></div>
-          <div><b>$23,99 в год</b><small>цена Pro в США</small></div>
-          <p>Модель AppRank · не отчётность</p>
+          <strong>Premium AI<small>ПЕРВЫЙ СЛОЙ</small></strong>
+          <div><b>Пользователь</b><small>подписка на расширенные AI-возможности</small></div>
+          <div><b>После удержания</b><small>Strava и Hevy подтверждают подписную модель</small></div>
+          <p>Подписка</p>
         </div>
         <div class="revenue-row">
-          <strong>Trainerize</strong>
-          <div><b>$20 млн ARR</b><small>2022</small></div>
-          <div><b>$186 млн GMV</b><small>через Payments · 2024</small></div>
-          <p>Данные компании</p>
+          <strong>Тренерский рынок<small>ПЕРВЫЙ СЛОЙ</small></strong>
+          <div><b>Тренер и клиент</b><small>комиссия с программ, консультаций и занятий</small></div>
+          <div><b>С первых транзакций</b><small>Trainerize подтверждает B2B и платежный контур</small></div>
+          <p>Комиссия</p>
+        </div>
+        <div class="revenue-row">
+          <strong>Pro для тренера<small>СЛЕДУЮЩИЙ СЛОЙ</small></strong>
+          <div><b>Тренер</b><small>профессиональные функции и продвижение</small></div>
+          <div><b>После плотности рынка</b><small>когда платформа даёт поток клиентов и работу</small></div>
+          <p>Профессиональные функции</p>
+        </div>
+        <div class="revenue-row">
+          <strong>Коммерческий контур<small>ПОСЛЕ МАСШТАБА</small></strong>
+          <div><b>Бренды и B2B</b><small>товары, партнёрства и корпоративные программы</small></div>
+          <div><b>После атрибуции</b><small>Keep подтверждает связку digital + товары</small></div>
+          <p>Партнёрства</p>
         </div>
       </div>
       <div class="revenue-conclusion">
-        <span>ПОРЯДОК FIT</span>
-        <div><strong>После подтверждения W4 Fit последовательно подключает комиссии, продвижение, рекламу и B2B.</strong><small>Сначала товары, программы и онлайн-тренировки. Затем продвижение тренеров, авторов и брендов. Позже реклама, B2B и профессиональные функции.<br>Fitness Online включён в продуктовый анализ, но исключён из финансового сравнения: совокупная выручка публично не раскрывается.</small></div>
+        <span>ПОРЯДОК ЗАПУСКА</span>
+        <div><strong>Сначала подписка и транзакции тренеров. Остальные потоки подключаются только после появления удержанной аудитории.</strong><small>Публичные аналоги доказывают, что каждый слой работает на рынке. Конкретные конверсии, ARPPU и take rate Fit остаются параметрами финансовой модели.</small></div>
       </div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Показать, что рынок доказал не только пользовательский спрос, но и способность зарабатывать на цифровом сопровождении спорта.
+Показать, кто и за что платит в Fit, а также порядок подключения денежных потоков.
 
 ЧТО ГОВОРИМ
-Здесь важен не рейтинг компаний по ARPU, а наличие нескольких работающих моделей. Strava монетизирует массовую пользовательскую базу подпиской. Keep получает выручку и от цифровых сервисов, и от собственных спортивных товаров. Hevy показывает, что сфокусированный дневник силовых тренировок способен органически вырасти и стать заметным подписным продуктом. Trainerize доказывает B2B-модель вокруг тренера и его клиентской базы.
+Первый слой — Premium AI для пользователя: расширенная персонализация, адаптация программ и дополнительные возможности сопровождения. Strava и Hevy подтверждают, что пользователи платят подпиской за постоянную спортивную ценность.
 
-Сигналы имеют разный периметр. У Strava и Hevy показана цена потребительской подписки. У Keep — доля товарной выручки. У Trainerize — оборот продаж тренеров через платёжный контур. Показатель Hevy является моделью AppRank, а Keep переведён в доллары по среднему курсу ФРС за 2025 год.
+Второй слой — комиссия с программ, консультаций и занятий тренеров. Это ближайший к уже работающему продукту денежный поток. Trainerize подтверждает, что платформа вокруг тренера может сочетать B2B-подписку и платежный контур.
+
+Третий слой — профессиональные функции и продвижение для тренера. Он появляется тогда, когда Fit действительно даёт тренеру работу и поток клиентов.
+
+Четвёртый слой — товары, партнёрства, корпоративные программы и другие B2B-сценарии. Они подключаются после масштаба и только при измеримой атрибуции. Keep подтверждает жизнеспособность связки цифрового продукта и спортивной коммерции.
 
 ОБЯЗАТЕЛЬНАЯ ОГОВОРКА
-Эти показатели не переносятся напрямую в модель Fit. Они доказывают, что ценность уже оплачивается рынком. Конкретный revenue mix Fit и доход на активного пользователя должны проверяться пилотом.
+Публичные показатели аналогов не переносятся напрямую в Fit. Они доказывают жизнеспособность моделей. Конкретные конверсии, ARPPU, take rate и стоимость обслуживания остаются предварительными параметрами финансовой модели.
 
 ПОРЯДОК ДЛЯ FIT
-Монетизация не является первой задачей запуска. Продукт и growth параллельно строят ИИ, удержание и активное сообщество. После подтверждения W4 сначала подключаем комиссии с товаров, программ и онлайн-тренировок. Затем добавляем продвижение тренеров, авторов и спортивных брендов. Рекламу, B2B и профессиональные функции развиваем позже, когда аудитория и коммерческий спрос достигнут достаточного масштаба.
-
-ПОЧЕМУ НЕТ FITNESS ONLINE
-Fitness Online остаётся в анализе аудитории, продукта и конкурентного поля. В финансовую таблицу его не включаем, потому что надёжная публичная оценка совокупной выручки приложения отсутствует.
+Сначала подключаем подписку и транзакции тренеров — они ближе всего к основной пользовательской ценности. Pro для тренера и коммерческий контур добавляем после появления плотной удержанной аудитории.
 
 ПЕРЕХОД
-Теперь переводим подтверждённые рынком модели в предварительную юнит-экономику Fit.
+Теперь переводим эти потоки в предварительную финансовую модель Fit.
 
 [Sources]
 Strava, пресс-релиз 19.08.2025 — более 150 млн спортсменов и приближение к $500 млн ARR: https://press.strava.com/en-gb/articles/strava-finalizes-leadership-team-for-next-stage-of-growth
@@ -9314,6 +9733,124 @@ Hevy, AppRank, август 2026 — модель $800 тыс. iOS consumer spen
 Hevy Pricing — Pro $23,99 в год в США: https://www.hevyapp.com/pricing/
 ABC Trainerize, 24.05.2022 — достижение $20 млн ARR: https://www.trainerize.com/blog/vancouver-startup-trainerize-levels-up-its-leadership-sets-its-sights-on-50m-arr-usd/
 ABC Trainerize, итоги 2024 — $186 млн продаж через Payments: https://www.trainerize.com/blog/abc-trainerize-wrapped-2024/</aside>
+    </section>
+
+    <section class="slide prefinal-financial prefinal-keep" data-section="Финансовая модель" data-slide-type="metric-progress" data-golden="whoop/11-whoop-progress-trend.png">
+      <div class="eyebrow">13 · ФИНАНСОВАЯ МОДЕЛЬ</div>
+      <h2>В базовом сценарии годовой EBITDA становится положительным на третий год</h2>
+      <div class="finance-status"><strong>Рабочая модель · 2027–2029</strong>Предварительные допущения. Нужна калибровка Finance, ФОТ и внутренних трансферов.</div>
+
+      <div class="finance-scenarios" aria-label="Три сценария экономики Fit в 2029 году">
+        <div class="finance-scenario">
+          <span>КОНСЕРВАТИВНЫЙ · 2029</span>
+          <strong>0,6 млн</strong>
+          <small>средний W4 MAU</small>
+          <dl><dt>Выручка</dt><dd>0,42 млрд ₽</dd><dt>EBITDA</dt><dd class="negative">−0,88 млрд ₽</dd><dt>Payback</dt><dd>23,6 мес.</dd></dl>
+        </div>
+        <div class="finance-scenario is-base">
+          <span>БАЗОВЫЙ · 2029</span>
+          <strong>1,8 млн</strong>
+          <small>средний W4 MAU</small>
+          <dl><dt>Выручка</dt><dd>2,33 млрд ₽</dd><dt>EBITDA</dt><dd class="positive">+0,15 млрд ₽</dd><dt>Payback</dt><dd>6,6 мес.</dd></dl>
+        </div>
+        <div class="finance-scenario">
+          <span>АМБИЦИОЗНЫЙ · 2029</span>
+          <strong>4,0 млн</strong>
+          <small>средний W4 MAU</small>
+          <dl><dt>Выручка</dt><dd>9,03 млрд ₽</dd><dt>EBITDA</dt><dd class="positive">+5,24 млрд ₽</dd><dt>Payback</dt><dd>2,9 мес.</dd></dl>
+        </div>
+      </div>
+
+      <div class="finance-bottom">
+        <div><span>БАЗОВЫЙ EBITDA</span><strong>−0,43 → −0,64 → +0,15 млрд ₽</strong><p>2027 → 2028 → 2029. Рост требует авансировать привлечение и команду.</p></div>
+        <div><span>ГОДОВАЯ БЕЗУБЫТОЧНОСТЬ</span><strong>≈1,65 млн W4 MAU</strong><p>Главный драйвер — удерживаемая активная база, а не номинальные регистрации.</p></div>
+        <div><span>ПИК ФИНАНСИРОВАНИЯ</span><strong>≈1,08 млрд ₽</strong><p>Модельная потребность базового сценария до первого положительного года.</p></div>
+      </div>
+
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Показать не одну красивую цифру, а диапазон экономики и главный драйвер — масштаб удерживаемого W4 MAU.
+
+ЧТО ГОВОРИМ
+В консервативном сценарии 2029 года экономика не сходится: 0,6 млн среднего W4 MAU дают 0,42 млрд рублей выручки и минус 0,88 млрд EBITDA. Базовый сценарий предполагает 1,8 млн среднего W4 MAU, 2,33 млрд выручки и плюс 0,15 млрд годового EBITDA. Амбициозный сценарий — верхняя sensitivity, а не план.
+
+В базовом сценарии годовой EBITDA становится положительным на третий год, но накопленный результат за три года остаётся отрицательным. Пиковая модельная потребность в финансировании — около 1,08 млрд рублей. Годовая безубыточность достигается примерно при 1,65 млн среднего W4 MAU.
+
+ОГРАНИЧЕНИЕ
+Это предварительная продуктовая модель, а не утверждённый бюджет. В неё входят товары, сервисные бронирования, B2B/реклама, переменные расходы, полный CAC и фиксированный OPEX. Не включены налоги, CAPEX, оборотный капитал, внутренние трансферы и недоказанный эффект удержания Плюса. Перед принятием решения допущения должны быть откалиброваны Finance и владельцами сервисов.
+
+[Sources]
+Расчёты: Yandex_Fit_Financial_Model.json.
+Публичный якорь: 49,4 млн подписчиков Плюса на конец Q2 2026 — https://yandex.ru/company/news/29-07-2026</aside>
+    </section>
+
+    <section class="slide prefinal-launch-roadmap prefinal-keep" data-section="Запуск" data-slide-type="roadmap" data-golden="linear/04-linear-roadmap-timeline.png">
+      <div class="eyebrow">14 · ПУТЬ К ЗАПУСКУ</div>
+      <h2>До масштабного запуска нужен один связный контур продукта, данных и дистрибуции</h2>
+
+      <div class="launch-axis">
+        <section class="launch-stage">
+          <span>СЕЙЧАС · ГОТОВНОСТЬ</span>
+          <h3>Стабилизировать основу</h3>
+          <ul><li><strong>Переезд:</strong> завершить перенос на инструменты Яндекса</li><li><strong>Продукт:</strong> довести дизайн, бренд и AI-программы</li><li><strong>Данные:</strong> настроить роли, активность и удержание</li></ul>
+        </section>
+        <section class="launch-stage is-next">
+          <span>ПЕРВАЯ ВОЛНА</span>
+          <h3>Запустить управляемый контур</h3>
+          <ul><li><strong>Площадки:</strong> два зала и сотрудники Яндекса</li><li><strong>Предложение:</strong> около 30 внешних тренеров</li><li><strong>Эксплуатация:</strong> поддержка, legal и обратная связь</li></ul>
+        </section>
+        <section class="launch-stage">
+          <span>МАСШТАБ</span>
+          <h3>Подключать рост и выручку</h3>
+          <ul><li><strong>Каналы:</strong> доступные точки входа Яндекса</li><li><strong>Рынок:</strong> поиск тренеров и самостоятельный вход</li><li><strong>Доход:</strong> Premium AI и транзакции тренеров</li></ul>
+        </section>
+      </div>
+
+      <div class="launch-conclusion"><span>ПРИНЦИП ЗАПУСКА</span><strong>Не ждать идеального продукта: последовательно расширять уже работающий контур, сохраняя единый пользовательский профиль и измеримую активность.</strong></div>
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Собрать практический путь к запуску без отдельного слайда «что должен доказать пилот».
+
+ЧТО ГОВОРИМ
+Первая задача — стабилизировать основу: закончить инфраструктурный переезд, довести дизайн и бренд, перевести AI-программы на целевые инструменты и получить корректную аналитику активности по ролям.
+
+Вторая — запустить управляемую первую волну. Два зала дают локальный контур предложения; сотрудники Яндекса — понятный клиентский вход; около тридцати внешних тренеров помогают проверить работу платформы вне внутренней аудитории. Параллельно должны быть готовы поддержка, юридический контур и сбор обратной связи.
+
+Третья — масштабировать только работающие части: подключать доступные точки входа Яндекса, расширять самостоятельный вход и рынок тренеров, затем включать Premium AI и транзакционную монетизацию.
+
+Это дорожная карта исполнения. Она не вводит новые продуктовые гейты и не возвращает отдельный слайд о доказательстве стратегии.</aside>
+    </section>
+
+    <section class="slide prefinal-launch-ask prefinal-keep" data-section="Решение" data-slide-type="final-vision" data-golden="apple/09-apple-final-vision.png">
+      <div class="eyebrow">15 · ЧТО НУЖНО ДЛЯ ЗАПУСКА</div>
+      <h2>Один владелец.<br>Одна команда.<br>Один бюджет.</h2>
+
+      <div class="launch-ask-budget">
+        <span>РАБОЧАЯ ОЦЕНКА · 24 НЕДЕЛИ</span>
+        <strong>95 млн ₽*</strong>
+        <p>Диапазон 80–110 млн ₽. *Bottom-up оценка без калибровки внутренних ставок ФОТ и медиатрансферов.</p>
+      </div>
+
+      <div class="launch-ask-list">
+        <div class="launch-ask-row"><b>01</b><strong>Владелец Fit</strong><p>Единая ответственность за продукт, запуск, метрики и экономику.</p></div>
+        <div class="launch-ask-row"><b>02</b><strong>Основная команда</strong><p>Product, engineering, AI/data, дизайн, аналитика, growth и операции.</p></div>
+        <div class="launch-ask-row"><b>03</b><strong>Владельцы зависимостей</strong><p>Инфраструктура, сервисы Яндекса, бренд, legal и поддержка.</p></div>
+        <div class="launch-ask-row"><b>04</b><strong>Бюджетный контур</strong><p>Команда, интеграции, инфраструктура, площадки, привлечение и резерв.</p></div>
+      </div>
+
+      <div class="launch-ask-final">Нужно утвердить владельца, состав команды и совместную калибровку бюджета с Finance.</div>
+      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
+Закончить рассказ конкретным решением, а не ещё одной продуктовой идеей.
+
+ЧТО НУЖНО УТВЕРДИТЬ
+Первое — позицию единого владельца Fit, который отвечает одновременно за продукт, запуск, метрики и экономику.
+
+Второе — основной командный контур: product, engineering, AI и data, дизайн, аналитика, growth, партнёрства и операционная работа с тренерами.
+
+Третье — владельцев зависимостей со стороны инфраструктуры, сервисов Яндекса, бренда, legal и поддержки.
+
+Четвёртое — бюджетный контур. Рабочая bottom-up оценка 24-недельной фазы — 95 млн рублей, диапазон 80–110 млн. В ней 38 млн на продукт и команду, 22 млн на медиа и креативные тесты, 12 млн на интеграции, данные и инфраструктуру, 8 млн на тренеров и площадки, 6 млн на CRM-мотивацию и 9 млн на legal, исследования и резерв.
+
+ОГРАНИЧЕНИЕ
+Это не утверждённый бюджет: внутренние ставки ФОТ, медиатрансферы и стоимость инфраструктуры должны быть откалиброваны Finance и владельцами сервисов.</aside>
     </section>
 
     <section class="slide unit-model" data-section="Финансовая модель">
@@ -10365,6 +10902,27 @@ if (prefinalDemand && prefinalProblem) prefinalProblem.before(prefinalDemand)
 const monetizationSlide = document.querySelector('.monetization-proof-slide')
 const valueSlide = document.querySelector('.value-slide')
 if (monetizationSlide && valueSlide) valueSlide.after(monetizationSlide)
+;[
+  '.pilot-cover.prefinal-keep',
+  '.prefinal-path-map',
+  '.prefinal-audience-scale',
+  '.prefinal-digital-market',
+  '.review-demand-v2.prefinal-keep',
+  '.review-problem-v2.prefinal-keep',
+  '.review-story-v2.prefinal-keep',
+  '.review-product-flow-v4.prefinal-keep',
+  '.retention-answer-v3.prefinal-keep',
+  '.meeting-growth-slide.prefinal-keep',
+  '.review-distribution-v3.prefinal-keep',
+  '.rd-value.prefinal-keep',
+  '.prefinal-revenue-model.prefinal-keep',
+  '.prefinal-financial.prefinal-keep',
+  '.prefinal-launch-roadmap.prefinal-keep',
+  '.prefinal-launch-ask.prefinal-keep'
+].forEach(selector => {
+  const slide = document.querySelector(selector)
+  if (slide) deck.appendChild(slide)
+})
 document.querySelectorAll('.competitor-material-slide').forEach(slide => deck.appendChild(slide))
 document.querySelectorAll('.late-material-slide').forEach(slide => deck.appendChild(slide))
 document.querySelectorAll('.colleague-order-slide').forEach(slide => deck.appendChild(slide))
