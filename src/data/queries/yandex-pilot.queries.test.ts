@@ -259,6 +259,24 @@ describe('yandexPilotQueries', () => {
     })
   })
 
+  it('retries a platform-level 502 once for pilot reads', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 502 }))
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': REQUEST_ID },
+      }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const response = await yandexPilotQueries.listTrainingData(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )
+
+    expect(response.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('uses explicit JSON and destructive endpoints for connection commands', async () => {
     const fetchMock = vi.fn<typeof fetch>()
       .mockResolvedValue(new Response('{}', { status: 200 }))
