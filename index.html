@@ -8513,7 +8513,7 @@ h3 {
 
 .prefinal-digital-market .digital-market-strip {
   display: grid;
-  grid-template-columns: 52fr 21fr 16fr 11fr;
+  grid-template-columns: 52fr 11fr 10fr 16fr 11fr;
   height: 208px;
   border: 1px solid var(--ink);
 }
@@ -8540,6 +8540,13 @@ h3 {
   background: #4b4b4d;
 }
 
+.prefinal-digital-market .digital-market-segment--log {
+  color: var(--paper);
+  background: #858487;
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
 .prefinal-digital-market .digital-market-segment--food {
   color: var(--ink);
   background: #cbc8c2;
@@ -8551,7 +8558,8 @@ h3 {
 }
 
 .prefinal-digital-market .digital-market-segment--data span,
-.prefinal-digital-market .digital-market-segment--training span {
+.prefinal-digital-market .digital-market-segment--training span,
+.prefinal-digital-market .digital-market-segment--log span {
   color: rgba(247,244,238,.66);
 }
 
@@ -8568,6 +8576,13 @@ h3 {
   line-height: 1.1;
   letter-spacing: -.02em;
 }
+
+.prefinal-digital-market .digital-market-segment--training strong { font-size: 38px; }
+.prefinal-digital-market .digital-market-segment--training h3 { font-size: 20px; }
+.prefinal-digital-market .digital-market-segment--training p { font-size: 13px; }
+.prefinal-digital-market .digital-market-segment--log strong { font-size: 36px; }
+.prefinal-digital-market .digital-market-segment--log h3 { font-size: 20px; }
+.prefinal-digital-market .digital-market-segment--log p { font-size: 12px; line-height: 1.3; }
 
 .prefinal-digital-market .digital-market-segment p {
   margin: 0;
@@ -8860,7 +8875,7 @@ Fit остаётся отдельным приложением, потому ч�
       <div class="eyebrow">03 · ЦИФРОВОЙ РЫНОК</div>
       <div class="digital-market-fit">Fit</div>
       <h2>Цифровой спортивный рынок уже сложился</h2>
-      <p class="digital-market-lead">Основная активность — в данных и трекерах. Тренировки, питание и работа с тренером остаются отдельными сценариями.</p>
+      <p class="digital-market-lead">Основная активность — в данных и трекерах. Даже тренировочный сегмент разделён между готовыми занятиями и простыми дневниками.</p>
 
       <div class="digital-market-base">
         <span>БАЗА ЭКСТРАПОЛЯЦИИ</span>
@@ -8876,8 +8891,12 @@ Fit остаётся отдельным приложением, потому ч�
             <p>Mi Fitness · Huawei Health<br>Garmin · Strava · шагомеры</p>
           </div>
           <div class="digital-market-segment digital-market-segment--training">
-            <div><strong>≈21%</strong><h3>Тренировки</h3></div>
-            <p>FitStars · Home Workout<br>Fitness Online · Hevy</p>
+            <div><strong>≈11%</strong><h3>Готовые тренировки</h3></div>
+            <p>FitStars · Home Workout<br>Fitness Online</p>
+          </div>
+          <div class="digital-market-segment digital-market-segment--log">
+            <div><strong>≈10%</strong><h3>Дневник тренировки</h3></div>
+            <p>Hevy · Strong<br>JEFIT · FitNotes<br>и десятки аналогов</p>
           </div>
           <div class="digital-market-segment digital-market-segment--food">
             <div><strong>≈16%</strong><h3>Питание</h3></div>
@@ -8914,7 +8933,7 @@ Fit остаётся отдельным приложением, потому ч�
       <div class="digital-market-takeaway">
         <span>ВЫВОД</span>
         <strong>Fit может объединить разрозненные цифровые привычки в одном спортивном контексте.</strong>
-        <p class="digital-market-source">Аудитория: РОМИР, июль 2026. Структура сценариев — рабочая экстраполяция по данным Sensor Tower и МТС Геоэффект; требует валидации.</p>
+        <p class="digital-market-source">Аудитория: РОМИР, июль 2026. Структура сценариев — рабочая экстраполяция; доля дневников выделена внутри прежнего блока «Тренировки» и требует валидации.</p>
       </div>
 
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
@@ -8925,10 +8944,12 @@ Fit остаётся отдельным приложением, потому ч�
 
 Эти люди пользуются не одним типом продукта. Повседневную активность и показатели собирают приложения часов и трекеров; готовые занятия дают тренировочные сервисы; питание ведётся отдельно; клубы и тренеры используют собственные кабинеты и приложения.
 
-Полоса показывает рабочую оценку распределения по основному цифровому сценарию пользователя: около 52% активности приходится на данные, часы, шагомеры и маршруты; 21% — на тренировочные программы; 16% — на питание; 11% — на клубы и сопровождение тренера. Это не точная доля брендов и не сумма MAU отдельных приложений. Оценка нужна, чтобы показать относительный масштаб сценариев и будет уточняться на данных рынка.
+Отдельный заметный слой внутри тренировочного сценария — простые дневники силовых и фитнес-тренировок. Их базовая механика почти одинаковая: выбрать упражнение, записать подходы, повторения и вес, затем увидеть историю и прогресс. Hevy, Strong, JEFIT и FitNotes показывают, что это самостоятельная массовая потребность, вокруг которой существует множество однотипных приложений.
+
+Полоса показывает рабочую оценку распределения по основному цифровому сценарию пользователя: около 52% активности приходится на данные, часы, шагомеры и маршруты; 11% — на готовые тренировочные программы; 10% — на дневники тренировки; 16% — на питание; 11% — на клубы и сопровождение тренера. Сумма остаётся равной 100%: дневники не добавлены поверх рынка, а выделены из прежнего 21-процентного блока «Тренировки».
 
 ОГОВОРКА
-Это сценарная оценка, а не измеренный MAU российского рынка. РОМИР объединяет приложения и гаджеты и исследует взрослых жителей городов с населением более 10 тыс. человек. Аудитории отдельных приложений пересекаются; поэтому полоса построена по ведущему сценарию и не должна читаться как точная доля уникальных пользователей брендов.
+Это сценарная оценка, а не измеренный MAU российского рынка и не доля количества приложений в сторах. Публичного российского разреза уникальных пользователей по подтипу «дневник тренировки» нет. Доля около 10% — рабочая оценка: примерно половина тренировочного сценария отнесена к самостоятельному логированию на основании состава заметных продуктов и публичных рейтингов. РОМИР объединяет приложения и гаджеты; аудитории отдельных приложений пересекаются.
 
 ПЕРЕХОД
 Рынок уже существует, но спортивный контекст человека распределён между разными инструментами. Дальше показываем, что отдельные модели цифрового сопровождения уже подтвердили массовый спрос и измеримый эффект.
@@ -8936,7 +8957,11 @@ Fit остаётся отдельным приложением, потому ч�
 [Sources]
 РОМИР, «Здоровье вместо кубиков: как россияне относятся к спорту», 13 июля 2026: https://romir.ru/feed/zdorove-vmesto-kubikov-kak-rossiiane-otnosiatsia-k-sportu-i-za-kogo-boleiut-na-chm-2026
 МТС и Эвотор, исследование более 100 спортивных приложений на базе 33,1 млн пользователей, март 2025: https://moskva.mts.ru/about/media-centr/soobshheniya-kompanii/novosti-mts-v-rossii-i-mire/2025-03-27/issledovanie-mts-i-evotor-kazhdyj-tretij-zhitel-rossii-regulyarno-zanimaetsya-sportom
-Sensor Tower, Top Health and Fitness Apps in Russia, IV квартал 2025: https://sensortower.com/blog/2025-q4-unified-top-5-health-and-fitness-units-ru-600af518241bc16eb8dce802</aside>
+Sensor Tower, Top Health and Fitness Apps in Russia, IV квартал 2025: https://sensortower.com/blog/2025-q4-unified-top-5-health-and-fitness-units-ru-600af518241bc16eb8dce802
+Hevy, описание продукта и 16+ млн спортсменов: https://www.hevyapp.com/
+Strong, описание workout log и 5+ млн пользователей: https://www.strong.app/
+JEFIT, workout logging и 12+ млн пользователей: https://www.jefit.com/use-case/workout-logging-app
+FitNotes, простой дневник тренировок: https://www.fitnotesapp.com/</aside>
     </section>
 
     <section class="slide redesign-v2 review-story-v2 prefinal-keep" data-section="Идея" data-slide-type="product-story" data-golden="linear/03-linear-product-flow.png">
