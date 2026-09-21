@@ -93,6 +93,13 @@ export function RequestDiagnosticDetails({ error }: { error: Error }) {
   </div>
 }
 
+export function InlineRequestError({ error, message }: { error: Error; message?: string }) {
+  return <div className="request-error-inline" role="alert">
+    <p className="error">{message ?? error.message}</p>
+    <RequestDiagnosticDetails error={error} />
+  </div>
+}
+
 export function EmptyState({ title = 'Пока ничего нет', description = 'Здесь появятся новые данные.', action, compact }: {
   title?: string; description?: string; action?: ReactNode; compact?: boolean
 }) {
