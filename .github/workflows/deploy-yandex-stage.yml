@@ -393,6 +393,17 @@ jobs:
           -backend-config=backend.hcl.example
           -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
           -backend-config=key=fit/stage/terraform.tfstate
+      - name: Pin existing push runtime identities before IAM apply
+        working-directory: infra/yandex
+        run: |
+          if dispatcher_sa_id=$(terraform output -raw push_dispatcher_service_account_id 2>/dev/null) \
+            && test -n "$dispatcher_sa_id"; then
+            echo "TF_VAR_push_dispatcher_registry_service_account_id=$dispatcher_sa_id" >> "$GITHUB_ENV"
+          fi
+          if scheduler_sa_id=$(terraform output -raw push_scheduler_service_account_id 2>/dev/null) \
+            && test -n "$scheduler_sa_id"; then
+            echo "TF_VAR_push_scheduler_invoker_service_account_id=$scheduler_sa_id" >> "$GITHUB_ENV"
+          fi
       - name: Apply runtime identity attachment permissions
         working-directory: infra/yandex
         run: >-

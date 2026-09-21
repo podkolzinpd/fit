@@ -405,6 +405,25 @@ test('keeps a healthy provisioned revision on an upstream platform failure', () 
   )
 })
 
+test('pins existing push identities before the authoritative registry IAM apply', () => {
+  const pinIndex = workflow.lastIndexOf(
+    '- name: Pin existing push runtime identities before IAM apply',
+  )
+  const applyIndex = workflow.indexOf(
+    '- name: Apply runtime identity attachment permissions',
+  )
+  assert.ok(pinIndex > 0)
+  assert.ok(pinIndex < applyIndex)
+  assert.match(
+    workflow.slice(pinIndex, applyIndex),
+    /terraform output -raw push_dispatcher_service_account_id/,
+  )
+  assert.match(
+    workflow.slice(pinIndex, applyIndex),
+    /TF_VAR_push_dispatcher_registry_service_account_id=/,
+  )
+})
+
 test('probes the fit_api identity privately before changing the API revision', () => {
   const fixtureIndex = workflow.indexOf('- name: Prepare idempotent stage workout fixture')
   const preflightIndex = workflow.indexOf(
