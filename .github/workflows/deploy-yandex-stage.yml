@@ -10,6 +10,7 @@ on:
       - 'scripts/check-yandex-terraform-plan.mjs'
       - 'scripts/deploy-yandex-serverless-revision.mjs'
       - 'scripts/mirror-yandex-legacy-supabase-bridge.mjs'
+      - 'scripts/verify-yandex-api-availability.mjs'
       - 'scripts/verify-yandex-stage-access.mjs'
       - 'scripts/yandex-github-oidc.sh'
   workflow_dispatch:
@@ -29,6 +30,16 @@ on:
         required: true
         type: boolean
         default: false
+      availability_probe_count:
+        description: 'Sequential non-retried API health requests after provisioning'
+        required: true
+        type: number
+        default: 50
+      availability_probe_interval_seconds:
+        description: 'Delay between availability requests; use 3 with 1000 probes for a 50-minute observation'
+        required: true
+        type: number
+        default: 0
 
 permissions:
   contents: read
@@ -637,6 +648,16 @@ jobs:
             exit 1
           fi
           terraform apply -auto-approve stage-post-revision.tfplan
+          active_min_instances=$(terraform show -json | jq -er '
+            [.values.root_module.resources[]?
+              | select(.address == "yandex_serverless_container.api")
+              | .values.provision_policy[0].min_instances][0]
+          ')
+          if test "$active_min_instances" != "$TF_VAR_api_min_instances"; then
+            echo "The refreshed API revision has min_instances=$active_min_instances; expected $TF_VAR_api_min_instances." >&2
+            exit 1
+          fi
+          echo "The active API revision has min_instances=$active_min_instances."
       - name: Verify API health and readiness
         id: smoke
         continue-on-error: true
@@ -692,36 +713,6 @@ jobs:
               sleep "$remaining"
             else
               sleep 2
-            fi
-          done
-          # Yandex documents that provisioned-instance settings can take up to
-          # five minutes to become effective. A shorter delay caused healthy
-          # candidate revisions to be rolled back while the platform was still
-          # preparing them. Wait for the full guarantee window, then require 50
-          # clean, non-retried invocations across random availability zones.
-          sleep 300
-          for availability_probe in $(seq 1 50); do
-            : > api-health-response.json
-            : > api-health-headers.txt
-            health_status=$(curl --silent --show-error --max-time 12 \
-              --dump-header api-health-headers.txt \
-              --output api-health-response.json --write-out '%{http_code}' \
-              --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/health") \
-              || health_status=000
-            if test "$health_status" != 200 \
-              || ! jq -e --arg release_id "$API_IMAGE_TAG" \
-                '.status == "ok" and .releaseId == $release_id' \
-                api-health-response.json >/dev/null 2>&1; then
-              platform_request_id=$(awk '
-                tolower($1) == "x-request-id:" {gsub("\\r", "", $2); value=$2}
-                END {print value}
-              ' api-health-headers.txt)
-              fit_request_id=$(awk '
-                tolower($1) == "x-fit-request-id:" {gsub("\\r", "", $2); value=$2}
-                END {print value}
-              ' api-health-headers.txt)
-              echo "Availability probe $availability_probe/50 failed with HTTP $health_status; platform_request_id=${platform_request_id:-missing}; fit_request_id=${fit_request_id:-missing}." >&2
-              exit 1
             fi
           done
           fixture_token=$(jq -er '.session.token' stage-workout-fixture-response.json)
@@ -1901,6 +1892,59 @@ jobs:
             echo 'The candidate API failed readiness and the previous revision was restored.' >&2
           else
             echo 'The first API revision failed readiness; there was no previous image to restore.' >&2
+          fi
+          exit 1
+      - name: Verify provisioned API availability without retries
+        id: availability
+        continue-on-error: true
+        working-directory: infra/yandex
+        env:
+          AVAILABILITY_PROBE_COUNT: ${{ inputs.availability_probe_count || 50 }}
+          AVAILABILITY_PROBE_INTERVAL_SECONDS: ${{ inputs.availability_probe_interval_seconds || 0 }}
+        run: |
+          # Yandex documents that scaling settings may need five minutes to
+          # become effective. Product smoke above already proved the candidate;
+          # this separate gate measures the platform without hiding a failure
+          # behind curl retries.
+          sleep 300
+          api_url=$(terraform output -raw api_container_url)
+          availability_exit=0
+          node ../../scripts/verify-yandex-api-availability.mjs \
+            --url "$api_url" \
+            --expected-release-id "$API_IMAGE_TAG" \
+            --count "$AVAILABILITY_PROBE_COUNT" \
+            --interval-ms "$(( AVAILABILITY_PROBE_INTERVAL_SECONDS * 1000 ))" \
+            --timeout-ms 12000 \
+            --report api-availability-report.json \
+            || availability_exit=$?
+          failure_category=$(jq -r '.failureCategory // "none"' api-availability-report.json)
+          echo "failure_category=$failure_category" >>"$GITHUB_OUTPUT"
+          jq -r '
+            "Availability: status=" + .status
+            + "; successful=" + (.successfulProbes | tostring)
+            + "/" + (.requestedProbes | tostring)
+            + "; interval_ms=" + (.intervalMs | tostring)
+            + "; failure_category=" + (.failureCategory // "none")
+          ' api-availability-report.json >>"$GITHUB_STEP_SUMMARY"
+          exit "$availability_exit"
+      - name: Roll back when the availability failure reached the candidate application
+        if: >-
+          steps.availability.outcome == 'failure'
+          && steps.availability.outputs.failure_category == 'application'
+          && steps.previous.outputs.revision_id != ''
+        working-directory: infra/yandex
+        run: |
+          node ../../scripts/deploy-yandex-serverless-revision.mjs rollback \
+            --container-id '${{ steps.previous.outputs.container_id }}' \
+            --revision-id '${{ steps.previous.outputs.revision_id }}'
+          terraform apply -refresh-only -auto-approve
+      - name: Fail after availability verification
+        if: steps.availability.outcome == 'failure'
+        run: |
+          if test '${{ steps.availability.outputs.failure_category }}' = platform; then
+            echo 'The non-retried availability verification saw a Yandex platform failure. The already healthy candidate remains active because rolling it back cannot repair an upstream invocation failure.' >&2
+          else
+            echo 'The availability verification reached the candidate but its health contract failed; the previous revision was restored when available.' >&2
           fi
           exit 1
 
