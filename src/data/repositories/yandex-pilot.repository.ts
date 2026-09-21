@@ -322,10 +322,29 @@ function responseError(status: number): Error {
   return new Error('Не удалось проверить доступ к пилоту.')
 }
 
-function appSessionResponseError(status: number): Error {
+const apiErrorSchema = z.object({
+  error: z.string().min(1),
+})
+
+async function apiErrorCode(response: Response): Promise<string | undefined> {
+  try {
+    const result = apiErrorSchema.safeParse(await response.clone().json())
+    return result.success ? result.data.error : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function appSessionResponseError(status: number, errorCode?: string): Error {
   if (status === 401) return new YandexAppSessionExpiredError()
   if (status === 403) {
-    return new Error('Этот Yandex ID ещё не готов для входа в FIT. Войдите по email и паролю, затем привяжите Yandex ID на главной.')
+    if (errorCode === 'yandex_profile_not_ready') {
+      return new Error('Профиль FIT ещё не готов для входа через Yandex ID. Попробуйте снова позже. Если ошибка повторится, скопируйте код диагностики для поддержки.')
+    }
+    if (errorCode === 'yandex_session_denied') {
+      return new Error('Сервис входа через Yandex ID сейчас недоступен. Попробуйте снова позже.')
+    }
+    return new Error('Вход через Yandex ID сейчас недоступен. Попробуйте снова позже.')
   }
   if (status === 503) return new Error('Yandex Cloud вход временно недоступен. Попробуйте позднее.')
   return new Error('Не удалось открыть сессию через Yandex ID.')
@@ -405,8 +424,8 @@ function yandexAuthConnectionError(caught: unknown): Error {
   )
 }
 
-function responseFailure(response: Response, error: Error): Error {
-  return attachRequestDiagnostics(error, diagnosticsForResponse(response))
+function responseFailure(response: Response, error: Error, errorCode?: string): Error {
+  return attachRequestDiagnostics(error, diagnosticsForResponse(response, 'api', errorCode))
 }
 
 function connectionFailure(caught: unknown, message = 'Не удалось подключиться к Yandex Cloud stage.'): Error {
@@ -536,7 +555,14 @@ export const yandexPilotRepository = {
       const result = authHandoffSchema.safeParse(await response.json())
       if (result.success) throw new YandexAccountSetupRequiredError(result.data.handoff)
     }
-    if (!response.ok) throw responseFailure(response, appSessionResponseError(response.status))
+    if (!response.ok) {
+      const errorCode = await apiErrorCode(response)
+      throw responseFailure(
+        response,
+        appSessionResponseError(response.status, errorCode),
+        errorCode,
+      )
+    }
     const result = appSessionSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат Yandex ID сессии.')
     return result.data

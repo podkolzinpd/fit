@@ -391,7 +391,7 @@ function YandexAppSessionCallbackPage() {
   const { actor, loading: authLoading } = useAuth()
   const { establish } = useYandexAppSession()
   const config = useMemo(() => getYandexAppSessionEntryConfig(), [])
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<Error | null>(null)
   const [handoff, setHandoff] = useState<{ token: string; expiresAt: string } | null>(null)
   const [setupMode, setSetupMode] = useState<'choice' | 'existing' | 'new'>('choice')
   const [setupBusy, setSetupBusy] = useState(false)
@@ -440,7 +440,7 @@ function YandexAppSessionCallbackPage() {
             setHandoff(caught.handoff)
             setError(null)
           } else {
-            setError(caught instanceof Error ? caught.message : 'Не удалось открыть сессию Yandex ID.')
+            setError(caught instanceof Error ? caught : new Error('Не удалось открыть сессию Yandex ID.'))
           }
         }
       }
@@ -463,7 +463,7 @@ function YandexAppSessionCallbackPage() {
     } catch (caught) {
       if (caught instanceof YandexAuthHandoffRefreshRequiredError) {
         setHandoff(null)
-        setError(caught.message)
+        setError(caught)
       } else {
         setSetupError(caught instanceof Error ? caught.message : 'Не удалось завершить вход.')
       }
@@ -537,13 +537,14 @@ function YandexAppSessionCallbackPage() {
       <div className="brand" aria-hidden="true">FIT</div>
       <p className="eyebrow">YANDEX ID</p>
       <h1>{error ? 'Не удалось войти' : 'Проверяем вход'}</h1>
-      <p className="muted">{error ?? 'Подтверждаем профиль и создаём защищённую сессию FIT…'}</p>
+      <p className="muted">{error?.message ?? 'Подтверждаем профиль и создаём защищённую сессию FIT…'}</p>
     </header>
     {error && <StatePanel
       tone="error"
       title="Сессия не создана"
-      description={error}
-      action={<Link to="/auth">Вернуться ко входу</Link>}
+      description={error.message}
+      details={<RequestDiagnosticDetails error={error} />}
+      action={<Link to="/auth">Повторить вход</Link>}
     />}
   </AuthIdentityScreen>
 }

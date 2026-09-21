@@ -212,7 +212,6 @@ const APP_SUBJECT_HASH = 'f'.repeat(64)
 const LINK_ACTOR_ID = 'a6145f94-3889-47b3-8e63-b0f72df8f2ee'
 const LINK_SUBJECT_HASH = '6'.repeat(64)
 const OTHER_LINK_SUBJECT_HASH = '7'.repeat(64)
-const LINK_ACTOR_CLIENT_ID = 'a6145f94-3889-47b3-8e63-b0f72df8f2ef'
 const BOOTSTRAP_LINK_ACTOR_ID = 'f3f04352-32ac-4a8c-86d1-46cc8e8a6b13'
 const BOOTSTRAP_LINK_SUBJECT_HASH = '8'.repeat(64)
 const NATIVE_TRAINER_SUBJECT_HASH = '9'.repeat(64)
@@ -1164,9 +1163,16 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         [APP_ACTOR_ID],
       )
 
-      await expect(
-        issuer.issue(PILOT_SUBJECT_HASH),
-      ).rejects.toBeInstanceOf(YandexAppSessionDeniedError)
+      await expect(issuer.issue(PILOT_SUBJECT_HASH)).resolves.toMatchObject({
+        accessMode: 'read_write',
+        profile: { id: ACTOR_ID },
+      })
+      await ownerPool.query(
+        `update app_private.profile_rollout_assignments
+         set target_backend = 'yandex', access_mode = 'read_only', enabled = true
+         where profile_id = $1`,
+        [ACTOR_ID],
+      )
       expect(await readActor(runtimePool)).toBeNull()
     })
 
@@ -1543,7 +1549,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(await readActor(runtimePool)).toBeNull()
     })
 
-    it('repairs only a missing rollout for a linked domain-ready profile', async () => {
+    it('promotes a linked profile to read-write while issuing its session', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
       }
@@ -1562,17 +1568,6 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         'delete from app_private.profile_rollout_assignments where profile_id = $1',
         [LINK_ACTOR_ID],
       )
-      await expect(
-        issuer.issue(LINK_SUBJECT_HASH),
-      ).rejects.toBeInstanceOf(YandexAppSessionDeniedError)
-
-      await ownerPool.query(
-        `insert into public.clients (
-           id, trainer_id, auth_user_id, full_name
-         ) values ($1, $2, $3, 'Linked domain-ready client')`,
-        [LINK_ACTOR_CLIENT_ID, ACTOR_ID, LINK_ACTOR_ID],
-      )
-
       try {
         await expect(issuer.issue(LINK_SUBJECT_HASH)).resolves.toMatchObject({
           accessMode: 'read_write',
@@ -1602,7 +1597,6 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           'delete from app_private.profile_rollout_assignments where profile_id = $1',
           [LINK_ACTOR_ID],
         )
-        await ownerPool.query('delete from public.clients where id = $1', [LINK_ACTOR_CLIENT_ID])
       }
     })
 

@@ -1,6 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-21. База изменений: `fef978d5` (#1128). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
+Обновлено: 2026-09-21. База изменений: `495d3eae` (#1130). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 
 ## Активная цель
@@ -13,32 +13,14 @@ Yandex ID является единственным production-входом; app
 - Клиентская генерация четырёхнедельной программы работает через выбранный backend. Yandex API читает actor-scoped историю, цель, замеры и будущие занятия из PostgreSQL, использует короткие idempotent generation leases и вызывает тот же валидируемый YandexGPT generator вне DB-транзакции.
 - Свои упражнения поддерживают текстовые metadata в обоих backend; изменение private JPEG всё ещё отклоняется, объекты не входят в подтверждённый перенос. Планирование, подробный план, результат и Live используют единые статичные миниатюры упражнений 48×48 с точным первым кадром или нейтральным fallback; крупная анимация остаётся только у текущего упражнения Live и в явном просмотре техники. Для всех 721 системных Vital, Vital Gym Pro и reference-анимаций заранее рассчитан безопасный canvas: 152 постера с однотонными полями продолжают фон карточки без растягивания или изменения масштаба фигуры; тот же контракт работает в миниатюрах и крупной технике.
 - Legal acceptance и отменяемые deletion requests работают через выбранный backend с actor-scoped Yandex RLS/RPC и provider-neutral UI.
-- Production auth показывает только действие «Продолжить с Yandex ID»; старые email/password/reset routes возвращаются на единый вход. Связанный профиль с `yandex/read_write` assignment получает Yandex app-session и весь основной UI выбирает Yandex API без request-level fallback. Неизвестный Yandex ID получает recovery/new-account handoff. Recovery domain-ready профиля одной транзакцией создаёт identity, `yandex/read_write` и первую app-session; при любой ошибке всё откатывается. Ранее привязанному domain-ready профилю выдача сессии безопасно восстанавливает только отсутствующий legacy assignment, но не переопределяет отключённый или иначе настроенный rollout. Reload не сбрасывает активные Yandex requests.
+- Production auth показывает только действие «Продолжить с Yandex ID»; старые email/password/reset routes возвращаются на единый вход. Существующая связь Yandex ID с FIT-профилем при выдаче сессии атомарно создаёт отсутствующий `yandex/read_write` assignment или повышает прежний `yandex/read_only`; явный disabled/non-Yandex assignment остаётся административным запретом. Неизвестный Yandex ID получает recovery/new-account handoff. Recovery профиля одной транзакцией создаёт identity, `yandex/read_write` и первую app-session, а выбор нового аккаунта создаёт новый профиль; при любой ошибке всё откатывается. Callback различает незавершённую подготовку профиля и отключённый сервис сессий, не предлагает недоступный email-вход и показывает безопасную диагностику. Основной UI выбирает Yandex API без request-level fallback, а reload не сбрасывает активные Yandex requests.
 - Frontend Yandex API принимает Postgres-native ISO timestamps с numeric offset (`+00:00`); карточка «Последняя тренировка» больше не падает из-за отличия от literal `Z`.
 - Все запросы основного Yandex API и Yandex ID transport получают безопасный client-generated request ID, который API возвращает в ответе и использует как Fastify `reqId`. Штатные error-state позволяют скопировать этот ID вместе с release/status/operation без token, email, UUID профиля, request body и пользовательского текста.
 - Короткие platform-level `502`, при которых Fastify ещё не вернул request ID, восстанавливаются только для безопасных `GET`: параллельные чтения ждут один общий `/health` probe и после восстановления повторяются по одному разу. Перед единственной отправкой одноразового OAuth-кода вход, регистрация и привязка отдельно дожидаются успешного `/health`, поэтому временный сбой запуска API не расходует код. Записи и application-level ошибки автоматически не повторяются.
-- Stage delivery подтверждает `min_instances` активной revision и отдельно
-  проверяет её последовательными `/health` без retry. Application failure
-  откатывает кандидата; platform failure без `x-fit-request-id` делает deploy
-  красным, но не возвращает прошедший smoke API к непрогретой ревизии.
-- Причина platform-level `502` после простоя локализована на соединении runtime
-  с HTTP-процессом: provisioned instance приостанавливается и может потерять
-  сеть раньше исполнения Node idle-таймера. Один только Fastify timeout 5 секунд
-  оказался недостаточен: deploy `35619803040` сохранил `min_instances=1`, но
-  первый запрос после пяти минут получил platform `502` за 28,9 мс без входа в
-  приложение. API поэтому отдаёт не более одного ответа на socket и явно
-  закрывает его до приостановки; короткий timeout остаётся запасной защитой.
-  Окончательный гейт — 1 000 последовательных `/health` за 50 минут без retry и
-  без единого `502` на одной неизменной revision.
-- `VITE_MAINTENANCE_MODE` выключен после выпуска и production-проверки
-  обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
-  `paused`: он блокирует DML старых вкладок, RPC и background writers на 38
-  source-таблицах.
-- `analytics.trainer_overview`/`client_overview` на Yandex приведены к
-  parity с Supabase (000079_analytics_overview_parity) после дрифта, который
-  ломал DataLens при смене подключения. `is_test_account` всегда `false`
-  (email на Yandex не хранится), `last_sign_in_at` — приближение по
-  session-таблицам, а не настоящий auth-лог.
+- Stage delivery подтверждает `min_instances` активной revision и проверяет её `/health` без retry. Application failure откатывает кандидата; platform failure без `x-fit-request-id` делает deploy красным, но не возвращает прошедший smoke API к непрогретой ревизии.
+- Причина platform-level `502` после простоя локализована на соединении runtime с HTTP-процессом: provisioned instance может потерять сеть до Node idle-таймера. Deploy `35619803040` с `min_instances=1` получил после пяти минут platform `502` за 28,9 мс без входа в приложение. API явно закрывает socket после каждого ответа; окончательный гейт — 1 000 `/health` за 50 минут без retry и `502` на одной revision.
+- `VITE_MAINTENANCE_MODE` выключен. Owner-only Supabase write gate остаётся в `paused`: он блокирует DML старых вкладок, RPC и background writers на 38 source-таблицах.
+- `analytics.trainer_overview`/`client_overview` на Yandex приведены к parity с Supabase (000079_analytics_overview_parity). `is_test_account` всегда `false` (email на Yandex не хранится), `last_sign_in_at` — приближение по session-таблицам.
 
 ## Yandex Cloud — подтверждённая база
 
