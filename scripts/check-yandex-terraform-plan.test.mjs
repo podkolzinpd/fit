@@ -866,7 +866,7 @@ describe('Yandex Terraform plan policy', () => {
     assert.equal(result.status, 0)
   })
 
-  test('allows removing the disproven provisioned-instance workaround', () => {
+  test('blocks removing the required provisioned API instance automatically', () => {
     const result = runPolicy(
       [{
         address: 'yandex_serverless_container.api',
@@ -879,7 +879,7 @@ describe('Yandex Terraform plan policy', () => {
       { automaticStageUpdate: true },
     )
 
-    assert.equal(result.status, 0)
+    assert.notEqual(result.status, 0)
   })
 
   test('allows only the exact missing Serverless availability subnets', () => {
