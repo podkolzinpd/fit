@@ -360,6 +360,13 @@ describe('reliable chat API', () => {
 })
 
 describe('health endpoint', () => {
+  it('closes idle runtime connections before a provisioned container is suspended', () => {
+    const app = buildApp({ logger: false })
+    apps.push(app)
+
+    expect(app.server.keepAliveTimeout).toBe(5_000)
+  })
+
   it('reports that the API process is running', async () => {
     const app = buildApp({ logger: false })
     apps.push(app)
