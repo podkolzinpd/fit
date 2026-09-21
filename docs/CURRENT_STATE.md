@@ -26,7 +26,11 @@ Yandex ID является единственным production-входом; app
   Fastify `reqId`. Штатные error-state, включая inline-ошибки загрузки на экране
   «Сегодня», и callback привязки позволяют скопировать этот ID вместе с
   release/status/operation без token, email, UUID профиля, request body и
-  пользовательского текста.
+  пользовательского текста. Короткие platform-level `502`, при которых Fastify
+  ещё не вернул request ID, восстанавливаются только для безопасных `GET`: все
+  параллельные чтения ждут один общий `/health` probe и после восстановления
+  повторяются по одному разу. Записи и application-level ошибки автоматически
+  не повторяются.
 - `VITE_MAINTENANCE_MODE` выключен после выпуска и production-проверки
   обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
   `paused`: он блокирует DML старых вкладок, RPC и background writers на 38

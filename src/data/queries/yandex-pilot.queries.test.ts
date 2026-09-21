@@ -260,39 +260,53 @@ describe('yandexPilotQueries', () => {
   })
 
   it('retries a platform-level 502 once for pilot reads', async () => {
+    vi.useFakeTimers()
     const fetchMock = vi.fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(null, { status: 502 }))
       .mockResolvedValueOnce(new Response('{}', {
         status: 200,
-        headers: { 'x-fit-request-id': REQUEST_ID },
+        headers: { 'x-fit-request-id': 'health-request-id' },
       }))
-    vi.stubGlobal('fetch', fetchMock)
-
-    const response = await yandexPilotQueries.listTrainingData(
-      'https://stage.example.test',
-      's'.repeat(43),
-    )
-
-    expect(response.status).toBe(200)
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
-
-  it('retries one browser-hidden platform failure while restoring an app session', async () => {
-    const fetchMock = vi.fn<typeof fetch>()
-      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
       .mockResolvedValueOnce(new Response('{}', {
         status: 200,
         headers: { 'x-fit-request-id': REQUEST_ID },
       }))
     vi.stubGlobal('fetch', fetchMock)
 
-    const response = await yandexPilotQueries.getAppSession(
+    const responsePromise = yandexPilotQueries.listTrainingData(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )
+    await vi.advanceTimersByTimeAsync(250)
+    const response = await responsePromise
+
+    expect(response.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('retries one browser-hidden platform failure while restoring an app session', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': 'health-request-id' },
+      }))
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': REQUEST_ID },
+      }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const responsePromise = yandexPilotQueries.getAppSession(
       'https://stage.example.test',
       'a'.repeat(43),
     )
+    await vi.advanceTimersByTimeAsync(250)
+    const response = await responsePromise
 
     expect(response.status).toBe(200)
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
   it('uses explicit JSON and destructive endpoints for connection commands', async () => {
