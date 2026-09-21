@@ -9,6 +9,7 @@ import {
 } from './verify-yandex-stage-access.mjs'
 
 const deployerId = 'deployer-sa'
+const apiWarmerId = 'api-warmer-sa'
 const pushDispatcherId = 'push-dispatcher-sa'
 const pushSchedulerId = 'push-scheduler-sa'
 const runtimeBinding = {
@@ -59,6 +60,7 @@ test('reports self-use separately from runtime attachment grants', async () => {
   const missing = await findMissingRuntimeBindings({
     deployerServiceAccountId: deployerId,
     apiRuntimeServiceAccountId: 'api-sa',
+    apiWarmerServiceAccountId: apiWarmerId,
     migrationRuntimeServiceAccountId: 'migration-sa',
     pushDispatcherServiceAccountId: pushDispatcherId,
     pushSchedulerServiceAccountId: pushSchedulerId,
@@ -73,12 +75,13 @@ test('waits for IAM propagation and then succeeds', async () => {
   let calls = 0
   const fetchImpl = async () => {
     calls += 1
-    return response({ accessBindings: calls <= 5 ? [] : [runtimeBinding] })
+    return response({ accessBindings: calls <= 6 ? [] : [runtimeBinding] })
   }
 
   await waitForRuntimeBindings({
     deployerServiceAccountId: deployerId,
     apiRuntimeServiceAccountId: 'api-sa',
+    apiWarmerServiceAccountId: apiWarmerId,
     migrationRuntimeServiceAccountId: 'migration-sa',
     pushDispatcherServiceAccountId: pushDispatcherId,
     pushSchedulerServiceAccountId: pushSchedulerId,
@@ -89,7 +92,7 @@ test('waits for IAM propagation and then succeeds', async () => {
     sleep: async () => {},
   })
 
-  assert.equal(calls, 10)
+  assert.equal(calls, 12)
 })
 
 test('retries a transient network failure and then succeeds', async () => {
@@ -97,13 +100,14 @@ test('retries a transient network failure and then succeeds', async () => {
   let sleeps = 0
   const fetchImpl = async () => {
     calls += 1
-    if (calls <= 5) throw new TypeError('fetch failed')
+    if (calls <= 6) throw new TypeError('fetch failed')
     return response({ accessBindings: [runtimeBinding] })
   }
 
   await waitForRuntimeBindings({
     deployerServiceAccountId: deployerId,
     apiRuntimeServiceAccountId: 'api-sa',
+    apiWarmerServiceAccountId: apiWarmerId,
     migrationRuntimeServiceAccountId: 'migration-sa',
     pushDispatcherServiceAccountId: pushDispatcherId,
     pushSchedulerServiceAccountId: pushSchedulerId,
@@ -114,7 +118,7 @@ test('retries a transient network failure and then succeeds', async () => {
     sleep: async () => { sleeps += 1 },
   })
 
-  assert.equal(calls, 10)
+  assert.equal(calls, 12)
   assert.equal(sleeps, 1)
 })
 
@@ -122,7 +126,7 @@ test('retries a transient IAM API response and then succeeds', async () => {
   let calls = 0
   const fetchImpl = async () => {
     calls += 1
-    return calls <= 5
+    return calls <= 6
       ? response({ message: 'Service unavailable' }, 503)
       : response({ accessBindings: [runtimeBinding] })
   }
@@ -130,6 +134,7 @@ test('retries a transient IAM API response and then succeeds', async () => {
   await waitForRuntimeBindings({
     deployerServiceAccountId: deployerId,
     apiRuntimeServiceAccountId: 'api-sa',
+    apiWarmerServiceAccountId: apiWarmerId,
     migrationRuntimeServiceAccountId: 'migration-sa',
     pushDispatcherServiceAccountId: pushDispatcherId,
     pushSchedulerServiceAccountId: pushSchedulerId,
@@ -140,7 +145,7 @@ test('retries a transient IAM API response and then succeeds', async () => {
     sleep: async () => {},
   })
 
-  assert.equal(calls, 10)
+  assert.equal(calls, 12)
 })
 
 test('fails before image work when a required binding never appears', async () => {
@@ -148,6 +153,7 @@ test('fails before image work when a required binding never appears', async () =
     waitForRuntimeBindings({
       deployerServiceAccountId: deployerId,
       apiRuntimeServiceAccountId: 'api-sa',
+      apiWarmerServiceAccountId: apiWarmerId,
       migrationRuntimeServiceAccountId: 'migration-sa',
       pushDispatcherServiceAccountId: pushDispatcherId,
       pushSchedulerServiceAccountId: pushSchedulerId,
@@ -157,7 +163,7 @@ test('fails before image work when a required binding never appears', async () =
       fetchImpl: async () => response({ accessBindings: [] }),
       sleep: async () => {},
     }),
-    /Missing iam\.serviceAccounts\.user.*deployer itself.*API runtime.*migration runtime.*push dispatcher runtime.*push scheduler/u,
+    /Missing iam\.serviceAccounts\.user.*deployer itself.*API runtime.*API warmer.*migration runtime.*push dispatcher runtime.*push scheduler/u,
   )
 })
 
@@ -167,6 +173,7 @@ test('does not retry an IAM API authorization error', async () => {
     waitForRuntimeBindings({
       deployerServiceAccountId: deployerId,
       apiRuntimeServiceAccountId: 'api-sa',
+      apiWarmerServiceAccountId: apiWarmerId,
       migrationRuntimeServiceAccountId: 'migration-sa',
       pushDispatcherServiceAccountId: pushDispatcherId,
       pushSchedulerServiceAccountId: pushSchedulerId,
@@ -181,5 +188,5 @@ test('does not retry an IAM API authorization error', async () => {
     }),
     /Yandex IAM returned HTTP 403: Permission denied/u,
   )
-  assert.equal(calls, 5)
+  assert.equal(calls, 6)
 })

@@ -378,6 +378,16 @@ describe('health endpoint', () => {
     expect(response.json()).toEqual({ status: 'ok' })
   })
 
+  it('accepts a side-effect-free scheduler warmup', async () => {
+    const app = buildApp({ logger: false })
+    apps.push(app)
+
+    const response = await app.inject({ method: 'POST', url: '/internal/warmup' })
+
+    expect(response.statusCode).toBe(204)
+    expect(response.body).toBe('')
+  })
+
   it('reports the immutable release when the runtime provides it', async () => {
     const app = buildApp({ logger: false, releaseId: 'api-tree-hash' })
     apps.push(app)

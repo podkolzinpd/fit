@@ -102,6 +102,7 @@ export function hasServiceAccountUserBinding(bindings, deployerServiceAccountId)
 export async function findMissingRuntimeBindings({
   deployerServiceAccountId,
   apiRuntimeServiceAccountId,
+  apiWarmerServiceAccountId,
   migrationRuntimeServiceAccountId,
   pushDispatcherServiceAccountId,
   pushSchedulerServiceAccountId,
@@ -111,6 +112,7 @@ export async function findMissingRuntimeBindings({
   const accounts = [
     ['deployer itself', deployerServiceAccountId],
     ['API runtime', apiRuntimeServiceAccountId],
+    ['API warmer', apiWarmerServiceAccountId],
     ['migration runtime', migrationRuntimeServiceAccountId],
     ['push dispatcher runtime', pushDispatcherServiceAccountId],
     ['push scheduler', pushSchedulerServiceAccountId],
@@ -133,6 +135,7 @@ export async function findMissingRuntimeBindings({
 export async function waitForRuntimeBindings({
   deployerServiceAccountId,
   apiRuntimeServiceAccountId,
+  apiWarmerServiceAccountId,
   migrationRuntimeServiceAccountId,
   pushDispatcherServiceAccountId,
   pushSchedulerServiceAccountId,
@@ -150,6 +153,7 @@ export async function waitForRuntimeBindings({
       missing = await findMissingRuntimeBindings({
         deployerServiceAccountId,
         apiRuntimeServiceAccountId,
+        apiWarmerServiceAccountId,
         migrationRuntimeServiceAccountId,
         pushDispatcherServiceAccountId,
         pushSchedulerServiceAccountId,
@@ -188,6 +192,10 @@ async function main() {
     apiRuntimeServiceAccountId: requiredString(
       options.api_runtime_sa_id,
       '--api-runtime-sa-id',
+    ),
+    apiWarmerServiceAccountId: requiredString(
+      options.api_warmer_sa_id,
+      '--api-warmer-sa-id',
     ),
     migrationRuntimeServiceAccountId: requiredString(
       options.migration_runtime_sa_id,

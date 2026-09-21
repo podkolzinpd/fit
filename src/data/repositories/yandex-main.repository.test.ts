@@ -65,7 +65,10 @@ const publicProfileId = '0ee2e109-13e0-48ba-8664-7cc767128f0c'
 function jsonResponse(body: object, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'x-fit-request-id': 'repository-test-request-id',
+    },
   })
 }
 

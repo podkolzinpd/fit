@@ -126,6 +126,81 @@ describe('Yandex Terraform plan policy', () => {
     )
   })
 
+  test('accepts only the exact bounded API warmup bootstrap', () => {
+    const result = runPolicy(
+      [
+        {
+          address: 'yandex_iam_service_account.api_warmer',
+          change: {
+            actions: ['create'],
+            after: {
+              name: 'fit-stage-api-warmer',
+              description: 'Timer identity used only to keep the Fit API runtime responsive',
+            },
+          },
+        },
+        {
+          address: 'yandex_iam_service_account_iam_member.api_warmer_deployer[0]',
+          change: {
+            actions: ['create'],
+            after: {
+              member: 'serviceAccount:deployer',
+              role: 'iam.serviceAccounts.user',
+            },
+          },
+        },
+        {
+          address: 'yandex_function_trigger.api_warmup_timer',
+          change: {
+            actions: ['create'],
+            after: {
+              timer: [{
+                cron_expression: '* * * * ? *',
+                payload: 'fit-api-warmup',
+              }],
+              container: [{
+                path: '/internal/warmup',
+                retry_attempts: '2',
+                retry_interval: '10',
+              }],
+            },
+          },
+        },
+      ],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(result.status, 0)
+    assert.match(result.stdout, /43,200 side-effect-free API calls/)
+    assert.match(result.stdout, /No extra provisioned instance/)
+  })
+
+  test('rejects a broader API warmup schedule', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_function_trigger.api_warmup_timer',
+        change: {
+          actions: ['create'],
+          after: {
+            timer: [{
+              cron_expression: '* * * * ? *',
+              payload: 'fit-api-warmup',
+            }],
+            container: [{
+              path: '/v1/clients',
+              retry_attempts: '2',
+              retry_interval: '10',
+            }],
+          },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /new or cost-sensitive infrastructure changes/)
+  })
+
   test('accepts the stage API read grant for the legacy Supabase bridge Lockbox', () => {
     const result = runPolicy(
       [

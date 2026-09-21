@@ -4,6 +4,12 @@ resource "yandex_iam_service_account" "api" {
   description = "Runtime identity for the Fit Serverless Container"
 }
 
+resource "yandex_iam_service_account" "api_warmer" {
+  folder_id   = var.folder_id
+  name        = "${local.name_prefix}-api-warmer"
+  description = "Timer identity used only to keep the Fit API runtime responsive"
+}
+
 resource "yandex_iam_service_account" "migration" {
   folder_id   = var.folder_id
   name        = "${local.name_prefix}-migration"
@@ -34,6 +40,14 @@ resource "yandex_iam_service_account_iam_member" "api_deployer" {
   count = var.deployer_member == null ? 0 : 1
 
   service_account_id = yandex_iam_service_account.api.id
+  role               = "iam.serviceAccounts.user"
+  member             = var.deployer_member
+}
+
+resource "yandex_iam_service_account_iam_member" "api_warmer_deployer" {
+  count = var.deployer_member == null ? 0 : 1
+
+  service_account_id = yandex_iam_service_account.api_warmer.id
   role               = "iam.serviceAccounts.user"
   member             = var.deployer_member
 }

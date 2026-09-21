@@ -76,7 +76,13 @@ const legacyDataLensPublicCidrs = [
 ]
 const pushDispatcherAddress = 'yandex_serverless_container.push_dispatcher'
 const pushDispatcherTriggerAddress = 'yandex_function_trigger.push_dispatcher_timer'
+const apiWarmupTriggerAddress = 'yandex_function_trigger.api_warmup_timer'
 const apiImagePullerAddress = 'yandex_container_registry_iam_binding.api_image_puller'
+const apiWarmupBootstrapAddresses = new Set([
+  'yandex_iam_service_account.api_warmer',
+  'yandex_iam_service_account_iam_member.api_warmer_deployer[0]',
+  apiWarmupTriggerAddress,
+])
 const pushPipelineBootstrapAddresses = new Set([
   'yandex_iam_service_account.push_dispatcher',
   'yandex_iam_service_account.push_scheduler',
@@ -470,6 +476,30 @@ const isReviewedMediaStorageBootstrap = (resource) => {
     && isKnownOrComputedServiceAccountMember(resource)
 }
 
+const isExactApiWarmupBootstrap = (resource) => {
+  if (
+    !apiWarmupBootstrapAddresses.has(resource.address)
+    || resource.change.actions.join(',') !== 'create'
+  ) return false
+
+  const after = resource.change.after ?? {}
+  if (resource.address === 'yandex_iam_service_account.api_warmer') {
+    return /^fit-(stage|prod)-api-warmer$/u.test(after.name ?? '')
+      && after.description === 'Timer identity used only to keep the Fit API runtime responsive'
+  }
+  if (resource.address === 'yandex_iam_service_account_iam_member.api_warmer_deployer[0]') {
+    return after.role === 'iam.serviceAccounts.user'
+      && isServiceAccountMember(after.member)
+  }
+
+  const retryInterval = after.container?.[0]?.retry_interval
+  return after.timer?.[0]?.cron_expression === '* * * * ? *'
+    && after.timer?.[0]?.payload === 'fit-api-warmup'
+    && after.container?.[0]?.path === '/internal/warmup'
+    && Number(after.container?.[0]?.retry_attempts) === 2
+    && (Number(retryInterval) === 10 || retryInterval === '10s')
+}
+
 const changesContainerCostOrIdentity = (resource) =>
   costSensitiveContainerFields.some(
     (field) =>
@@ -482,6 +512,7 @@ const changesContainerCostOrIdentity = (resource) =>
 
 const isAutomaticStageChange = (resource) => {
   const actions = resource.change.actions.join(',')
+  if (isExactApiWarmupBootstrap(resource)) return true
   if (isReviewedPushPipelineBootstrap(resource)) return true
   if (isReviewedMediaStorageBootstrap(resource)) return true
   if (actions === 'create') {
@@ -540,6 +571,20 @@ const includesMediaStorageBootstrap = changes.some(
   (resource) => mediaStorageBootstrapAddresses.has(resource.address)
     && resource.change.actions.includes('create'),
 )
+const includesApiWarmupBootstrap = changes.some(
+  (resource) => apiWarmupBootstrapAddresses.has(resource.address)
+    && resource.change.actions.includes('create'),
+)
+const apiWarmupCostSummary = includesApiWarmupBootstrap
+  ? [
+      '### API warmup bootstrap usage estimate',
+      '',
+      '- Schedule: 43,200 side-effect-free API calls per 30-day month.',
+      '- No extra provisioned instance is created; the existing API container receives the timer calls.',
+      '- Invocation and processing usage share the existing Serverless Containers free tier.',
+      '',
+    ]
+  : []
 const pushPipelineCostSummary = includesPushPipelineBootstrap
   ? [
       '### Push pipeline bootstrap cost estimate',
@@ -577,6 +622,7 @@ const summary = [
     (resource) => `| \`${resource.address}\` | ${resource.change.actions.join(', ')} |`,
   ),
   '',
+  ...apiWarmupCostSummary,
   ...pushPipelineCostSummary,
   ...mediaStorageCostSummary,
 ].join('\n')
