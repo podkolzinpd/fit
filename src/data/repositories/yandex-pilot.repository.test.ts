@@ -489,14 +489,31 @@ describe('yandexPilotRepository', () => {
     )).rejects.toThrow('Stage вернул неподдерживаемый формат Yandex ID сессии')
   })
 
-  it('maps an unavailable Yandex app session to the email-linking recovery path', async () => {
-    queries.exchangeCodeForAppSession.mockResolvedValue(new Response('{}', { status: 403 }))
+  it('maps an incomplete Yandex profile without suggesting the disabled email login', async () => {
+    queries.exchangeCodeForAppSession.mockResolvedValue(new Response(JSON.stringify({
+      error: 'yandex_profile_not_ready',
+    }), { status: 403 }))
+
+    const result = yandexPilotRepository.exchangeCodeForAppSession(
+      'https://stage.example.test',
+      'code',
+      'verifier',
+    )
+
+    await expect(result).rejects.toThrow('Профиль FIT ещё не готов')
+    await expect(result).rejects.not.toThrow('email')
+  })
+
+  it('distinguishes a disabled Yandex session service from an incomplete profile', async () => {
+    queries.exchangeCodeForAppSession.mockResolvedValue(new Response(JSON.stringify({
+      error: 'yandex_session_denied',
+    }), { status: 403 }))
 
     await expect(yandexPilotRepository.exchangeCodeForAppSession(
       'https://stage.example.test',
       'code',
       'verifier',
-    )).rejects.toThrow('Войдите по email и паролю')
+    )).rejects.toThrow('Сервис входа через Yandex ID сейчас недоступен')
   })
 
   it('links Yandex ID to the existing FIT profile with a validated result', async () => {

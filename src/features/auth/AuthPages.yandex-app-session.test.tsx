@@ -17,6 +17,7 @@ import {
 } from './invitation-link-continuation'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 import { YandexAccountSetupRequiredError } from '../../data/repositories/yandex-pilot.repository'
+import { attachRequestDiagnostics } from '../../shared/request-diagnostics'
 
 const PROFILE_ID = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
 const session = {
@@ -406,9 +407,36 @@ describe('Yandex app session auth flow', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Yandex ID не разрешил вход для этого аккаунта. Попробуйте другой аккаунт Yandex ID или повторите позже.',
     )
-    expect(screen.getByRole('link', { name: 'Вернуться ко входу' })).toHaveAttribute('href', '/auth')
+    expect(screen.getByRole('link', { name: 'Повторить вход' })).toHaveAttribute('href', '/auth')
     expect(repository.exchangeCodeForAppSession).not.toHaveBeenCalled()
     expect(window.location.search).toBe('')
+  })
+
+  it('shows a support code for an incomplete Yandex profile without offering email login', async () => {
+    const requestId = 'bd1f7c5e-230b-48e0-8c93-57ec3d1e67cb'
+    repository.exchangeCodeForAppSession.mockRejectedValueOnce(attachRequestDiagnostics(
+      new Error('Профиль FIT ещё не готов для входа через Yandex ID. Попробуйте снова позже.'),
+      {
+        requestId,
+        occurredAt: '2026-09-21T09:58:49.526Z',
+        backend: 'yandex',
+        operation: 'POST /v1/auth/yandex/session',
+        stage: 'api',
+        status: 403,
+        errorCode: 'yandex_profile_not_ready',
+      },
+    ))
+    window.history.replaceState(null, '', `/auth/yandex/callback${await appCallbackSearch()}`)
+    render(<MemoryRouter initialEntries={['/auth/yandex/callback']}>
+      <Routes>
+        <Route path="/auth/yandex/callback" element={<YandexPilotCallbackPage />} />
+      </Routes>
+    </MemoryRouter>)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Профиль FIT ещё не готов')
+    expect(screen.getByText('Код для поддержки:', { exact: false })).toHaveTextContent('FIT-57EC-3D1E-67CB')
+    expect(screen.getByRole('link', { name: 'Повторить вход' })).toHaveAttribute('href', '/auth')
+    expect(screen.queryByText(/войдите по email/i)).not.toBeInTheDocument()
   })
 
   it('links an existing profile from the one-time Yandex handoff', async () => {
