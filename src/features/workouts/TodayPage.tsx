@@ -36,7 +36,7 @@ import { WorkoutCta, WorkoutExercise, WorkoutHeader, WorkoutSetRow } from './Wor
 import { trainerActionItems, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
 import { TrainerFirstPlanPrompt, TrainerFirstRun } from './FirstRunExperience'
 import { takeFirstWorkoutIntent } from './first-workout-intent'
-import { groupParsedWorkoutReviewBlocks, moveParsedWorkoutReviewBlock } from './today-review-order'
+import { groupParsedWorkoutReviewBlocks, hasUnresolvedWorkoutReviewItems, moveParsedWorkoutReviewBlock } from './today-review-order'
 import { AppInstallPrompt } from '../install'
 import { NotificationOnboarding } from '../notifications'
 import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, KeyboardIcon } from '../../shared/icons'
@@ -329,6 +329,10 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       const chosen = unmatched.flatMap((item) => choices[item.line] && !parsedItems.some((parsed) => parsed.line === item.line)
         ? [resolveWorkoutParseChoice(item, choices[item.line]!)]
         : [])
+      if (hasUnresolvedWorkoutReviewItems(parsedItems, unmatched, choices)) {
+        trackGoal('workout_parse_needs_clarification')
+        return false
+      }
       if (!parsedItems.length && !manualOnly.length && !chosen.length) {
         trackGoal('workout_parse_failed')
         setParseError('unrecognized')

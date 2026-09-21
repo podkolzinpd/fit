@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
+import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { formatLlmWorkoutText, mergeWorkoutParse, parsedWorkoutItems, parseWorkoutWithLlm, requireExerciseConfirmation } from './llm-workout-parser'
 
@@ -231,6 +232,18 @@ describe('formatLlmWorkoutText', () => {
     expect(formatLlmWorkoutText(result, localCatalog).split('\n').map((line) => line.split(' — ')[0])).toEqual([
       'Жим лёжа', 'Сгибание рук с гантелями', 'Присед со штангой',
     ])
+  })
+
+  it('полностью разбирает разговорную запись из трёх упражнений без вызова модели', async () => {
+    const remoteParser = vi.fn()
+    const result = await parseWorkoutWithLlm(`жим лежа 100 кг 15 раз три подхода
+гантели на бицепс 15 кг 15 раз 3 подхода
+планка 45 секунд`, SYSTEM_EXERCISE_CATALOG, { remoteParser })
+
+    expect(remoteParser).not.toHaveBeenCalled()
+    expect(result.unmatched).toEqual([])
+    expect(result.items.map((item) => item.exerciseRef)).toEqual(['bench-press', 'biceps-curl', 'plank'])
+    expect(result.items[1]?.sets).toEqual(Array.from({ length: 3 }, () => ({ weightKg: 15, reps: 15 })))
   })
 
   it('отправляет несколько спорных строк одним пакетным запросом без повтора при ошибке', async () => {

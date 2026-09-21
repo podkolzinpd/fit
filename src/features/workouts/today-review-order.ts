@@ -5,6 +5,16 @@ export interface ParsedWorkoutReviewBlock {
   items: Array<{ item: ParsedWorkoutExercise; index: number }>
 }
 
+/** Не даёт молча потерять строку, которую парсер попросил уточнить. */
+export function hasUnresolvedWorkoutReviewItems(
+  parsedItems: readonly Pick<ParsedWorkoutExercise, 'line'>[],
+  unmatched: readonly { line: string }[],
+  choices: Readonly<Record<string, unknown>>,
+): boolean {
+  const parsedLines = new Set(parsedItems.map((item) => item.line))
+  return unmatched.some((item) => !choices[item.line] && !parsedLines.has(item.line))
+}
+
 /**
  * Интервалы и объединённые упражнения имеют общий blockId и должны
  * перемещаться целиком. Обычное упражнение образует отдельный блок.
