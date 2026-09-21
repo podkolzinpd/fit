@@ -56,4 +56,30 @@ describe('Yandex main query timeout', () => {
       releaseId: 'release-42',
     })
   })
+
+  it('retries one platform-level 502 for a read without repeating writes or app errors', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 502 }))
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': '18940d82-9075-48d2-a847-8feee301b4d7' },
+      }))
+    const queries = createYandexMainQueries('https://api.example', 'session')
+
+    await expect(queries.read('/v1/clients')).resolves.toMatchObject({ status: 200 })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+
+    fetchMock.mockClear()
+    fetchMock.mockResolvedValueOnce(new Response(null, {
+      status: 502,
+      headers: { 'x-fit-request-id': '18940d82-9075-48d2-a847-8feee301b4d7' },
+    }))
+    await expect(queries.read('/v1/clients')).resolves.toMatchObject({ status: 502 })
+    expect(fetchMock).toHaveBeenCalledOnce()
+
+    fetchMock.mockClear()
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 502 }))
+    await expect(queries.write('/v1/clients', 'POST', {})).resolves.toMatchObject({ status: 502 })
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
 })

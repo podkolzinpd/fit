@@ -23,9 +23,10 @@ Yandex ID является единственным production-входом; app
 - Frontend Yandex API принимает Postgres-native ISO timestamps с numeric offset (`+00:00`); карточка «Последняя тренировка» больше не падает из-за отличия от literal `Z`.
 - Все запросы основного Yandex API и Yandex ID transport получают безопасный
   client-generated request ID, который API возвращает в ответе и использует как
-  Fastify `reqId`. Штатные error-state и callback привязки позволяют скопировать
-  этот ID вместе с release/status/operation без token, email, UUID профиля,
-  request body и пользовательского текста.
+  Fastify `reqId`. Штатные error-state, включая inline-ошибки загрузки на экране
+  «Сегодня», и callback привязки позволяют скопировать этот ID вместе с
+  release/status/operation без token, email, UUID профиля, request body и
+  пользовательского текста.
 - `VITE_MAINTENANCE_MODE` выключен после выпуска и production-проверки
   обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
   `paused`: он блокирует DML старых вкладок, RPC и background writers на 38

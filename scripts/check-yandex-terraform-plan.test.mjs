@@ -850,6 +850,94 @@ describe('Yandex Terraform plan policy', () => {
     assert.notEqual(result.status, 0)
   })
 
+  test('allows exactly one provisioned API instance for availability hardening', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_serverless_container.api',
+        change: {
+          actions: ['update'],
+          before: { provision_policy: [], image: [{ url: 'old' }] },
+          after: { provision_policy: [{ min_instances: 1 }], image: [{ url: 'new' }] },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(result.status, 0)
+  })
+
+  test('blocks removing the required provisioned API instance automatically', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_serverless_container.api',
+        change: {
+          actions: ['update'],
+          before: { provision_policy: [{ min_instances: 1 }] },
+          after: { provision_policy: [{ min_instances: 0 }] },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.notEqual(result.status, 0)
+  })
+
+  test('allows only the exact missing Serverless availability subnets', () => {
+    const subnet = (zone, cidr) => ({
+      address: `yandex_vpc_subnet.serverless["${zone}"]`,
+      change: {
+        actions: ['create'],
+        after: {
+          folder_id: 'folder-id',
+          name: `fit-stage-serverless-${zone}`,
+          description: 'Availability subnet required by Serverless Containers',
+          zone,
+          network_id: 'network-id',
+          v4_cidr_blocks: [cidr],
+          v6_cidr_blocks: [],
+          dhcp_options: [],
+          route_table_id: null,
+          labels: {
+            app: 'fit', environment: 'stage', managed_by: 'terraform',
+          },
+        },
+      },
+    })
+    const accepted = runPolicy([
+      subnet('ru-central1-a', '10.42.1.0/24'),
+      subnet('ru-central1-b', '10.42.2.0/24'),
+      subnet('ru-central1-e', '10.42.3.0/24'),
+    ], { automaticStageUpdate: true })
+    const wrongCidr = runPolicy(
+      [subnet('ru-central1-a', '0.0.0.0/0')],
+      { automaticStageUpdate: true },
+    )
+    const unexpectedZone = runPolicy(
+      [subnet('ru-central1-c', '10.42.4.0/24')],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(accepted.status, 0)
+    assert.notEqual(wrongCidr.status, 0)
+    assert.notEqual(unexpectedZone.status, 0)
+  })
+
+  test('blocks more than one provisioned API instance automatically', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_serverless_container.api',
+        change: {
+          actions: ['update'],
+          before: { provision_policy: [] },
+          after: { provision_policy: [{ min_instances: 2 }] },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.notEqual(result.status, 0)
+  })
+
   test('allows only the bounded API timeout needed by the summary retry contract', () => {
     const accepted = runPolicy([{
       address: 'yandex_serverless_container.api',

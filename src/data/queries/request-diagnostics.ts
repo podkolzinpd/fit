@@ -95,3 +95,26 @@ export async function fetchWithRequestDiagnostics(
     }, cause)
   }
 }
+
+export async function fetchWithYandexPlatformReadRetry(
+  fetchImplementation: typeof fetch,
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  const response = await fetchWithRequestDiagnostics(fetchImplementation, input, init)
+  const method = init?.method
+    ?? (typeof Request !== 'undefined' && input instanceof Request ? input.method : 'GET')
+
+  // A Yandex Serverless Containers invocation failure returns 502 before
+  // Fastify starts, so it cannot contain the request ID added by our
+  // onRequest hook. A second GET is safe and recovers when the next request
+  // reaches a healthy instance. Application 502 responses and every write
+  // remain visible and are never repeated here.
+  if (method.toUpperCase() !== 'GET'
+    || response.status !== 502
+    || response.headers.has('x-fit-request-id')) {
+    return response
+  }
+
+  return fetchWithRequestDiagnostics(fetchImplementation, input, init)
+}

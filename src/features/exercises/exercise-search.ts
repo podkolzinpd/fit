@@ -38,7 +38,7 @@ export const ORIGINAL_SEARCH_ALIASES: Readonly<Record<string, readonly string[]>
   'lateral-raise': ['махи в стороны', 'махи на среднюю дельту', 'отведения на среднюю дельту с гантелями', 'средняя дельта'],
   'rear-delt-fly': ['задняя дельта', 'махи в наклоне'],
   'upright-row': ['протяжка'],
-  'biceps-curl': ['бицепс', 'сгибания рук'],
+  'biceps-curl': ['бицепс', 'сгибания рук', 'гантели на бицепс'],
   'hammer-curl': ['молотки'],
   'barbell-curl': ['подъем на бицепс', 'пшнб'],
   'french-press': ['француз', 'френч пресс'],

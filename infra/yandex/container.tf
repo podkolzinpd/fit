@@ -28,6 +28,10 @@ resource "yandex_serverless_container" "api" {
     type = "http"
   }
 
+  provision_policy {
+    min_instances = var.api_min_instances
+  }
+
   connectivity {
     network_id = yandex_vpc_network.fit.id
   }

@@ -8,11 +8,15 @@ or Terraform state.
 
 ## Resources described
 
-- one VPC and private subnet in `ru-central1-d`;
+- one VPC with non-overlapping subnets in every regular cloud availability
+  zone (`ru-central1-a`, `ru-central1-b`, `ru-central1-d` and
+  `ru-central1-e`); the PostgreSQL host remains only in `ru-central1-d`;
 - one private Managed PostgreSQL 17 host with no public IP;
 - separate `fit_owner` migration and non-owner `fit_api` runtime users;
 - one `fit` database owned only by the migration user;
-- one Serverless Container with 1 GB RAM and no provisioned instances;
+- one Serverless Container with 1 GB RAM; the production-facing stage workflow
+  keeps exactly one provisioned API instance ready, while the reusable module
+  default remains zero;
 - one private 512 MB background dispatcher with no provisioned instances, plus
   a one-minute timer and separate least-privilege runtime/scheduler identities;
   it handles Web Push and optional app-feedback delivery to Telegram/Tracker;

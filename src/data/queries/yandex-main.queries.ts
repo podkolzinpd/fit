@@ -1,5 +1,8 @@
 import { LIVE_WORKOUT_REQUEST_TIMEOUT_MS } from './auth-fetch'
-import { fetchWithRequestDiagnostics } from './request-diagnostics'
+import {
+  fetchWithRequestDiagnostics,
+  fetchWithYandexPlatformReadRetry,
+} from './request-diagnostics'
 import { fetchWithTimeout } from './request-timeout'
 
 export type YandexMainHttpMethod = 'DELETE' | 'PATCH' | 'POST' | 'PUT'
@@ -23,7 +26,7 @@ export function createYandexMainQueries(
   sessionToken: string,
 ): YandexMainQueries {
   const sessionHeaders = { 'x-fit-session': sessionToken }
-  const request = (path: string, init?: RequestInit) => fetchWithRequestDiagnostics(
+  const request = (path: string, init?: RequestInit) => fetchWithYandexPlatformReadRetry(
     globalThis.fetch,
     endpoint(apiBaseUrl, path),
     init,
