@@ -11,6 +11,10 @@ const oidcExchangeScript = readFileSync(
   join(import.meta.dirname, 'yandex-github-oidc.sh'),
   'utf8',
 )
+const availabilityVerifier = readFileSync(
+  join(import.meta.dirname, 'verify-yandex-api-availability.mjs'),
+  'utf8',
+)
 
 test('configures a fresh ephemeral Yandex CLI profile after every OIDC exchange', () => {
   assert.match(oidcExchangeScript, /if command -v yc >\/dev\/null 2>&1/)
@@ -362,15 +366,42 @@ test('allows the API gateway and database readiness to settle before rollback', 
   )
 })
 
-test('waits for Yandex provisioning and requires a non-retried 50-call soak', () => {
-  assert.match(workflow, /sleep 300\n\s+for availability_probe/)
-  assert.match(workflow, /for availability_probe in \$\(seq 1 50\)/)
-  assert.match(workflow, /Availability probe \$availability_probe\/50 failed/)
-  assert.match(workflow, /platform_request_id=\$\{platform_request_id:-missing\}/)
-  assert.match(workflow, /fit_request_id=\$\{fit_request_id:-missing\}/)
+test('waits for Yandex provisioning and runs configurable non-retried probes', () => {
+  assert.match(workflow, /^      availability_probe_count:$/m)
+  assert.match(workflow, /^        default: 50$/m)
+  assert.match(workflow, /^      availability_probe_interval_seconds:$/m)
+  assert.match(workflow, /sleep 300\n\s+api_url=/)
+  assert.match(workflow, /verify-yandex-api-availability\.mjs/)
+  assert.match(workflow, /--count "\$AVAILABILITY_PROBE_COUNT"/)
+  assert.match(
+    workflow,
+    /--interval-ms "\$\(\( AVAILABILITY_PROBE_INTERVAL_SECONDS \* 1000 \)\)"/,
+  )
+  assert.match(availabilityVerifier, /for \(let probe = 1; probe <= requestedProbes/)
+  assert.doesNotMatch(availabilityVerifier, /retry/iu)
+})
+
+test('keeps a healthy provisioned revision on an upstream platform failure', () => {
+  assert.match(
+    workflow,
+    /active_min_instances=\$\(terraform show[\s\S]*?provision_policy\[0\]\.min_instances/,
+  )
+  assert.match(workflow, /active API revision has min_instances=/)
+  assert.match(
+    workflow,
+    /steps\.availability\.outputs\.failure_category == 'application'/,
+  )
   assert.doesNotMatch(
     workflow,
-    /for availability_probe in \$\(seq 1 50\)[\s\S]*?--retry[\s\S]*?fixture_token=/,
+    /steps\.availability\.outputs\.failure_category == 'platform'[\s\S]*?rollback/,
+  )
+  assert.match(
+    workflow,
+    /already healthy candidate remains active because rolling it back cannot repair an upstream invocation failure/,
+  )
+  assert.match(
+    availabilityVerifier,
+    /return safeHeader\(response, 'x-fit-request-id'\) \? 'application' : 'platform'/,
   )
 })
 
