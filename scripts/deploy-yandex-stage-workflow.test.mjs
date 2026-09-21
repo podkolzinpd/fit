@@ -402,11 +402,17 @@ test('probes the fit_api identity privately before changing the API revision', (
     'missed-workout-lifecycle',
     'assignment-results',
     'live-workout-lifecycle',
-    'trainer-profile-photo',
+    'trainer-profile-photo-profile',
+    'trainer-profile-photo-cleanup',
+    'trainer-profile-photo-upload',
+    'trainer-profile-photo-read',
+    'trainer-profile-photo-delete',
   ]) {
     assert.match(workflow, new RegExp(`stage_smoke_check=${check}`))
   }
   assert.match(workflow, /The API revision was not changed/)
+  assert.match(workflow, /x-fit-request-id:/)
+  assert.match(workflow, /HTTP=\$\{http_status:-000\}/)
   assert.match(
     workflow,
     /-target=yandex_lockbox_secret_iam_member\.migration_api_connection_secret_reader/,
@@ -452,6 +458,10 @@ test('loads synthetic fixtures and verifies every read model through the runtime
   assert.match(workflow, /X-Fit-Session: \$trainer_profile_fixture_token/)
   assert.match(workflow, /\/v1\/trainer-profile\/photos/)
   assert.match(workflow, /trainer-profile-photo-smoke\.jpg/)
+  assert.match(
+    workflow,
+    /stage_smoke_check=trainer-profile-photo-read[\s\S]*?--retry 8 --retry-all-errors --retry-delay 2/,
+  )
   assert.match(workflow, /\/v1\/training-data/)
   assert.match(workflow, /\/v1\/clients\/\$client_id\/progress/)
   assert.match(workflow, /\/v1\/clients\/\$client_id\/workout-chronicle/)
