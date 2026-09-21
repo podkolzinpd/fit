@@ -76,6 +76,10 @@ const variablesTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'variables.tf'),
   'utf8',
 )
+const networkTerraform = readFileSync(
+  join(import.meta.dirname, '..', 'infra', 'yandex', 'network.tf'),
+  'utf8',
+)
 const databaseTerraform = readFileSync(
   join(import.meta.dirname, '..', 'infra', 'yandex', 'database.tf'),
   'utf8',
@@ -118,14 +122,17 @@ test('keeps enough time for the bounded three-attempt summary contract', () => {
   assert.match(workflow, /^  TF_VAR_api_execution_timeout: '120s'$/m)
 })
 
-test('keeps one provisioned API instance without warming background containers', () => {
-  assert.match(workflow, /^  TF_VAR_api_min_instances: '1'$/m)
+test('uses complete VPC zone coverage instead of a provisioned-instance workaround', () => {
+  assert.match(workflow, /^  TF_VAR_api_min_instances: '0'$/m)
   assert.match(
     containerTerraform,
     /provision_policy \{\s+min_instances = var\.api_min_instances\s+\}/,
   )
   assert.match(variablesTerraform, /variable "api_min_instances"/)
   assert.doesNotMatch(pushTerraform, /provision_policy/)
+  for (const zone of ['ru-central1-a', 'ru-central1-b', 'ru-central1-e']) {
+    assert.match(networkTerraform, new RegExp(`"${zone}"\\s*=\\s*"10\\.42\\.`))
+  }
 })
 
 test('hardens backups on the existing database without provisioning a second stack', () => {
@@ -352,6 +359,15 @@ test('allows the API gateway and database readiness to settle before rollback', 
   assert.doesNotMatch(
     workflow,
     /health=\$\(curl[\s\S]*?--retry 8[\s\S]*?\/health"\)/,
+  )
+})
+
+test('requires a non-retried 50-call availability soak after network changes', () => {
+  assert.match(workflow, /for availability_probe in \$\(seq 1 50\)/)
+  assert.match(workflow, /Availability probe \$availability_probe\/50 failed/)
+  assert.doesNotMatch(
+    workflow,
+    /for availability_probe in \$\(seq 1 50\)[\s\S]*?--retry[\s\S]*?fixture_token=/,
   )
 })
 
