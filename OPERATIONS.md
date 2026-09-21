@@ -27,6 +27,16 @@ token, Authorization, email, имя, UUID профиля, URL/query с иден�
 request/response body или пользовательский текст. Диагностика копируется только
 по явному действию пользователя и не сохраняется в отдельной таблице.
 
+Для server-side расследования запустите ручной workflow `Diagnose Yandex stage`
+с `Request ID`, окном не более 30 минут и, если она известна вызывающей стороне,
+операцией вида `GET /health` без query. Отчёт явно показывает
+`serviceName=fit-stage-api`, `resourceType=serverless_container`, активные на
+момент диагностики revision/release и границу исполнения. Значения
+`executionLayer=platform_invocation` и `handler=not_started` означают, что
+Yandex runtime вернул ошибку до входа в Fastify: имени Edge Function или
+application handler у такого вызова нет. При наличии структурного Fastify-лога
+отчёт использует фактические method/path и показывает `handler=entered`.
+
 ## Проверка доступности Yandex API после deployment
 
 `.github/workflows/deploy-yandex-stage.yml` проверяет обновлённую ревизию в два
