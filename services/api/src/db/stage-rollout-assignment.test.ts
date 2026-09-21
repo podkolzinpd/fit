@@ -126,6 +126,26 @@ describe('DatabaseStageRolloutAssignmentManager', () => {
     expect(pool.connection.calls[4]?.text).toBe('rollback')
   })
 
+  it('rolls back an enable when any linked domain-ready profile stays disabled', async () => {
+    const pool = new RecordingPool()
+    pool.connection.results = [
+      [],
+      [],
+      [],
+      [{
+        domain_ready_profiles: 20,
+        linked_profiles: 12,
+        rollout_enabled_profiles: 11,
+      }],
+      [],
+    ]
+    const manager = new DatabaseStageRolloutAssignmentManager(pool)
+
+    await expect(manager.applyLinkedProfiles('enable'))
+      .rejects.toBeInstanceOf(StageRolloutProfileNotReadyError)
+    expect(pool.connection.calls[4]?.text).toBe('rollback')
+  })
+
   it('inspects an existing assignment without changing it', async () => {
     const pool = readyPool(true)
     pool.connection.results.push([{ rollout_enabled: true }], [])

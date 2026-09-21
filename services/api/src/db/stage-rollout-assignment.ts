@@ -270,6 +270,10 @@ implements StageRolloutAssignmentManager {
         || result.linkedProfiles < 0
         || result.rolloutEnabledProfiles < 0
         || (action === 'enable' && result.linkedProfiles === 0)
+        || (
+          action === 'enable'
+          && result.rolloutEnabledProfiles !== result.linkedProfiles
+        )
       ) throw new StageRolloutProfileNotReadyError()
 
       await connection.query('commit')

@@ -153,6 +153,10 @@ jobs:
                and (.linkedProfiles | type == "number")
                and (.rolloutEnabledProfiles | type == "number")' \
               rollout-response.json >/dev/null
+            if test "$ROLLOUT_ACTION" = enable; then
+              jq -e '.rolloutEnabledProfiles == .linkedProfiles' \
+                rollout-response.json >/dev/null
+            fi
             {
               echo '### Yandex stage linked-profile rollout'
               echo "- Operation: \`$ROLLOUT_ACTION\`"
