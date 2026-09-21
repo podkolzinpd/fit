@@ -277,6 +277,24 @@ describe('yandexPilotQueries', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it('retries one browser-hidden platform failure while restoring an app session', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': REQUEST_ID },
+      }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const response = await yandexPilotQueries.getAppSession(
+      'https://stage.example.test',
+      'a'.repeat(43),
+    )
+
+    expect(response.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('uses explicit JSON and destructive endpoints for connection commands', async () => {
     const fetchMock = vi.fn<typeof fetch>()
       .mockResolvedValue(new Response('{}', { status: 200 }))

@@ -101,9 +101,25 @@ export async function fetchWithYandexPlatformReadRetry(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
-  const response = await fetchWithRequestDiagnostics(fetchImplementation, input, init)
   const method = init?.method
     ?? (typeof Request !== 'undefined' && input instanceof Request ? input.method : 'GET')
+  let response: Response
+  try {
+    response = await fetchWithRequestDiagnostics(fetchImplementation, input, init)
+  } catch (error) {
+    // A platform-level 502 does not include our CORS headers because Fastify
+    // never starts. Browsers expose that response as a network failure rather
+    // than a readable 502, so cover both representations of the same incident.
+    // Reads are idempotent; writes and caller cancellations are never repeated.
+    const requestSignal = init?.signal
+      ?? (typeof Request !== 'undefined' && input instanceof Request ? input.signal : undefined)
+    if (method.toUpperCase() !== 'GET'
+      || !(error instanceof RequestNetworkError)
+      || requestSignal?.aborted) {
+      throw error
+    }
+    return fetchWithRequestDiagnostics(fetchImplementation, input, init)
+  }
 
   // A Yandex Serverless Containers invocation failure returns 502 before
   // Fastify starts, so it cannot contain the request ID added by our
