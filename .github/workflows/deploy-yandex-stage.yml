@@ -29,6 +29,18 @@ on:
         required: true
         type: boolean
         default: false
+      diagnose_request_id:
+        description: 'Optional Fit request ID for a read-only Cloud Logging incident lookup'
+        required: false
+        type: string
+      diagnose_since_utc:
+        description: 'Incident window start in RFC-3339 UTC'
+        required: false
+        type: string
+      diagnose_until_utc:
+        description: 'Incident window end in RFC-3339 UTC'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -71,6 +83,57 @@ env:
   MEDIA_STORAGE_PLAN_REVIEWED: ${{ (inputs.plan_only == true || inputs.approve_media_storage == true) && 'true' || 'false' }}
 
 jobs:
+  diagnose:
+    name: Diagnose Yandex API incident
+    if: inputs.diagnose_request_id != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate diagnostic inputs
+        env:
+          REQUEST_ID: ${{ inputs.diagnose_request_id }}
+          SINCE_UTC: ${{ inputs.diagnose_since_utc }}
+          UNTIL_UTC: ${{ inputs.diagnose_until_utc }}
+        run: node scripts/validate-yandex-incident-inputs.mjs
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh \
+            --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - name: Exchange OIDC token for the stage deployment identity
+        env:
+          YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+          YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+        run: scripts/yandex-github-oidc.sh
+      - name: Read and sanitize the incident window
+        env:
+          REQUEST_ID: ${{ inputs.diagnose_request_id }}
+          SINCE_UTC: ${{ inputs.diagnose_since_utc }}
+          UNTIL_UTC: ${{ inputs.diagnose_until_utc }}
+          YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+        run: |
+          set -euo pipefail
+          temporary_directory=$(mktemp -d)
+          trap 'rm -rf "$temporary_directory"' EXIT
+          container_id=$(yc serverless container get \
+            --name fit-stage-api \
+            --folder-id "$YC_FOLDER_ID" \
+            --format json | jq -er '.id')
+          yc logging read default \
+            --folder-id "$YC_FOLDER_ID" \
+            --resource-ids "$container_id" \
+            --since "$SINCE_UTC" \
+            --until "$UNTIL_UTC" \
+            --limit 1000 \
+            --format json > "$temporary_directory/logs.json"
+          node scripts/summarize-yandex-incident-logs.mjs \
+            "$temporary_directory/logs.json" "$REQUEST_ID"
+
   validate:
     name: Validate Terraform configuration
     runs-on: ubuntu-24.04
