@@ -438,6 +438,12 @@ function clientsResponseError(status: number): Error {
   return new Error('Не удалось загрузить клиентов из stage.')
 }
 
+function trainingDataResponseError(status: number): Error {
+  if (status === 401) return new Error('Сессия пилота истекла. Начните вход через Yandex ID заново.')
+  if (status === 503) return new Error('Пилот временно недоступен. Попробуйте позднее.')
+  return new Error('Не удалось загрузить данные тренировок из stage.')
+}
+
 function commandResponseError(status: number): Error {
   if (status === 401) return new Error('Сессия пилота истекла. Начните вход через Yandex ID заново.')
   if (status === 403) return new Error('Недостаточно прав для этого действия.')
@@ -740,7 +746,7 @@ export const yandexPilotRepository = {
     } catch (caught) {
       throw connectionFailure(caught)
     }
-    if (!response.ok) throw responseFailure(response, clientsResponseError(response.status))
+    if (!response.ok) throw responseFailure(response, trainingDataResponseError(response.status))
     const result = trainingDataSchema.safeParse(await response.json())
     if (!result.success) throw new Error('Stage вернул неподдерживаемый формат тренировок.')
     return {

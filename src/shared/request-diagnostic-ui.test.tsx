@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { attachRequestDiagnostics } from './request-diagnostics'
-import { AsyncView } from './ui'
+import { AsyncView, InlineRequestError } from './ui'
 
 const copyText = vi.hoisted(() => vi.fn())
 vi.mock('./clipboard', () => ({ copyText }))
@@ -34,5 +34,22 @@ describe('request diagnostic error state', () => {
     render(<AsyncView loading={false} error={new Error('Обычная ошибка')}>Контент</AsyncView>)
     expect(screen.getByRole('alert')).toHaveTextContent('Обычная ошибка')
     expect(screen.queryByText(/Код для поддержки/)).toBeNull()
+  })
+
+  it('shows diagnostics for an inline error while allowing a contextual message', () => {
+    const error = attachRequestDiagnostics(new Error('Исходная ошибка'), {
+      requestId: '18940d82-9075-48d2-a847-8feee301b4d7',
+      occurredAt: '2026-09-20T10:15:30.000Z',
+      backend: 'yandex',
+      operation: 'GET /v1/trainer-attention',
+      stage: 'api',
+      status: 500,
+    })
+
+    render(<InlineRequestError error={error} message="Не удалось загрузить задачи по клиентам." />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Не удалось загрузить задачи по клиентам.')
+    expect(screen.getByRole('alert')).toHaveTextContent('FIT-8FEE-E301-B4D7')
+    expect(screen.queryByText('Исходная ошибка')).toBeNull()
   })
 })
