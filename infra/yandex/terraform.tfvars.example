@@ -14,6 +14,9 @@ serverless_service_cidr = "198.19.0.0/16"
 # The tagged image must be pushed before apply.
 api_image_tag = "foundation"
 migration_image_tag = "foundation"
+# The shared module defaults to zero. The production-facing stage workflow
+# explicitly sets this to one and its plan policy rejects larger automatic changes.
+api_min_instances = 0
 
 # Existing transport metadata is resolved automatically by the GitHub workflow
 # from the separate Functions folder. These IDs are not secret values.

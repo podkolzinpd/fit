@@ -162,6 +162,18 @@ const hasBoundedApiExecutionTimeout = (resource) => {
     && Number(after[1]) <= 120
 }
 
+const provisionedInstances = (value) => {
+  if (!Array.isArray(value) || value.length === 0) return 0
+  if (value.length !== 1) return Number.NaN
+  return Number(value[0]?.min_instances)
+}
+
+const isExactApiAvailabilityHardening = (resource) =>
+  resource.address === 'yandex_serverless_container.api'
+  && resource.change.actions.join(',') === 'update'
+  && provisionedInstances(resource.change.before?.provision_policy) === 0
+  && provisionedInstances(resource.change.after?.provision_policy) === 1
+
 const pushDispatcherServiceAccountId = changes.find(
   (resource) => resource.address === pushDispatcherAddress,
 )?.change.after?.service_account_id
@@ -420,6 +432,7 @@ const changesContainerCostOrIdentity = (resource) =>
   costSensitiveContainerFields.some(
     (field) =>
       !(field === 'execution_timeout' && hasBoundedApiExecutionTimeout(resource))
+      && !(field === 'provision_policy' && isExactApiAvailabilityHardening(resource))
       &&
       JSON.stringify(resource.change.before?.[field])
       !== JSON.stringify(resource.change.after?.[field]),

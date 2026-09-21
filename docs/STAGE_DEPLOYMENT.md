@@ -61,6 +61,13 @@ After the one-time bootstrap, a release is performed only by
    through the exact reviewed Terraform resource; the migration runner never
    receives one.
 
+The stage API keeps exactly one provisioned instance. This removes the cold
+start from the baseline production-facing path after platform-level invocation
+failures were confirmed in Cloud Logging. The plan policy accepts only the
+bounded `0 -> 1` API change automatically; larger provisioned capacity and all
+other container cost changes remain blocked. Yandex Cloud can take up to five
+minutes to apply the scaling setting.
+
 The migration runner has no provisioned instances and costs nothing while
 idle. It stays private, has concurrency one and can be invoked only by the
 OIDC-backed deployment service account. Its runtime service account can read

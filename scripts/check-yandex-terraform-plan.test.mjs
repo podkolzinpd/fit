@@ -850,6 +850,38 @@ describe('Yandex Terraform plan policy', () => {
     assert.notEqual(result.status, 0)
   })
 
+  test('allows exactly one provisioned API instance for availability hardening', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_serverless_container.api',
+        change: {
+          actions: ['update'],
+          before: { provision_policy: [], image: [{ url: 'old' }] },
+          after: { provision_policy: [{ min_instances: 1 }], image: [{ url: 'new' }] },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.equal(result.status, 0)
+  })
+
+  test('blocks more than one provisioned API instance automatically', () => {
+    const result = runPolicy(
+      [{
+        address: 'yandex_serverless_container.api',
+        change: {
+          actions: ['update'],
+          before: { provision_policy: [] },
+          after: { provision_policy: [{ min_instances: 2 }] },
+        },
+      }],
+      { automaticStageUpdate: true },
+    )
+
+    assert.notEqual(result.status, 0)
+  })
+
   test('allows only the bounded API timeout needed by the summary retry contract', () => {
     const accepted = runPolicy([{
       address: 'yandex_serverless_container.api',
