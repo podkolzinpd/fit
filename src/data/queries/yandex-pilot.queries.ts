@@ -13,17 +13,19 @@ const fetch: typeof globalThis.fetch = (input, init) => fetchWithYandexPlatformR
 )
 
 function yandexAuthFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const timedFetch: typeof globalThis.fetch = (timedInput, timedInit) => fetchWithTimeout(
+  const retryingFetch: typeof globalThis.fetch = (retryInput, retryInit) => fetchWithYandexPlatformReadRetry(
     globalThis.fetch,
-    timedInput,
-    timedInit,
-    YANDEX_AUTH_REQUEST_TIMEOUT_MS,
-    YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE,
+    retryInput,
+    retryInit,
   )
-  return fetchWithYandexPlatformReadRetry(
-    timedFetch,
+  // Keep one deadline across both possible read attempts. A transient platform
+  // failure may be retried, but session restore still cannot exceed 12 seconds.
+  return fetchWithTimeout(
+    retryingFetch,
     input,
     init,
+    YANDEX_AUTH_REQUEST_TIMEOUT_MS,
+    YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE,
   )
 }
 

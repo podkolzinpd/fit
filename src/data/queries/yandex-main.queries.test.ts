@@ -82,4 +82,22 @@ describe('Yandex main query timeout', () => {
     await expect(queries.write('/v1/clients', 'POST', {})).resolves.toMatchObject({ status: 502 })
     expect(fetchMock).toHaveBeenCalledOnce()
   })
+
+  it('retries one browser-hidden platform failure for a read without repeating writes', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(new TypeError('Load failed'))
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': '18940d82-9075-48d2-a847-8feee301b4d7' },
+      }))
+    const queries = createYandexMainQueries('https://api.example', 'session')
+
+    await expect(queries.read('/v1/legal/acceptance')).resolves.toMatchObject({ status: 200 })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+
+    fetchMock.mockClear()
+    fetchMock.mockRejectedValueOnce(new TypeError('Load failed'))
+    await expect(queries.write('/v1/legal/acceptance', 'PUT', {})).rejects.toThrow('Load failed')
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
 })
