@@ -29,6 +29,36 @@ function yandexAuthFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
   )
 }
 
+function yandexOAuthCodeFetch(
+  apiBaseUrl: string,
+  input: RequestInfo | URL,
+  init: RequestInit,
+): Promise<Response> {
+  const readyFetch: typeof globalThis.fetch = async (requestInput, requestInit) => {
+    const readiness = await fetchWithYandexPlatformReadRetry(
+      globalThis.fetch,
+      `${apiBaseUrl}/health`,
+      {
+        cache: 'no-store',
+        signal: requestInit?.signal,
+      },
+    )
+    if (!readiness.ok) return readiness
+
+    // The OAuth code is one-time. Warm and verify the API with a safe GET, then
+    // submit it exactly once instead of blindly retrying an ambiguous POST.
+    return fetchWithYandexPlatformReadRetry(globalThis.fetch, requestInput, requestInit)
+  }
+
+  return fetchWithTimeout(
+    readyFetch,
+    input,
+    init,
+    YANDEX_AUTH_REQUEST_TIMEOUT_MS,
+    YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE,
+  )
+}
+
 function sessionHeaders(
   sessionToken: string,
   accessMode: YandexApiAccessMode,
@@ -39,7 +69,7 @@ function sessionHeaders(
 }
 
 export const yandexPilotQueries = {
-  exchangeCodeForSession: (apiBaseUrl: string, code: string, codeVerifier: string) => yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/pilot`, {
+  exchangeCodeForSession: (apiBaseUrl: string, code: string, codeVerifier: string) => yandexOAuthCodeFetch(apiBaseUrl, `${apiBaseUrl}/v1/auth/yandex/pilot`, {
     method: 'POST',
     cache: 'no-store',
     headers: { 'content-type': 'application/json' },
@@ -49,7 +79,7 @@ export const yandexPilotQueries = {
     apiBaseUrl: string,
     code: string,
     codeVerifier: string,
-  ) => yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/session`, {
+  ) => yandexOAuthCodeFetch(apiBaseUrl, `${apiBaseUrl}/v1/auth/yandex/session`, {
     method: 'POST',
     cache: 'no-store',
     headers: { 'content-type': 'application/json' },
@@ -66,7 +96,7 @@ export const yandexPilotQueries = {
       termsVersion: string
       privacyVersion: string
     },
-  ) => yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/register`, {
+  ) => yandexOAuthCodeFetch(apiBaseUrl, `${apiBaseUrl}/v1/auth/yandex/register`, {
     method: 'POST',
     cache: 'no-store',
     headers: { 'content-type': 'application/json' },
@@ -126,7 +156,7 @@ export const yandexPilotQueries = {
     supabaseAccessToken: string,
     code: string,
     codeVerifier: string,
-  ) => yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/link`, {
+  ) => yandexOAuthCodeFetch(apiBaseUrl, `${apiBaseUrl}/v1/auth/yandex/link`, {
     method: 'POST',
     cache: 'no-store',
     headers: {
