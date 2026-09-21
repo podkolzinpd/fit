@@ -54,6 +54,17 @@ const appFeedbackSecretAccessAddress =
 const legacySupabaseBridgeSecretAccessAddress =
   'yandex_lockbox_secret_iam_member.legacy_supabase_bridge_reader[0]'
 const postgresSecurityGroupAddress = 'yandex_vpc_security_group.postgres'
+const serverlessAvailabilitySubnets = new Map([
+  ['yandex_vpc_subnet.serverless["ru-central1-a"]', {
+    zone: 'ru-central1-a', cidr: '10.42.1.0/24',
+  }],
+  ['yandex_vpc_subnet.serverless["ru-central1-b"]', {
+    zone: 'ru-central1-b', cidr: '10.42.2.0/24',
+  }],
+  ['yandex_vpc_subnet.serverless["ru-central1-e"]', {
+    zone: 'ru-central1-e', cidr: '10.42.3.0/24',
+  }],
+])
 const legacyDataLensPublicCidrs = [
   '130.193.60.0/28',
   '178.154.242.128/28',
@@ -168,11 +179,50 @@ const provisionedInstances = (value) => {
   return Number(value[0]?.min_instances)
 }
 
-const isExactApiAvailabilityHardening = (resource) =>
+const isExactApiProvisioningChange = (resource) =>
   resource.address === 'yandex_serverless_container.api'
   && resource.change.actions.join(',') === 'update'
-  && provisionedInstances(resource.change.before?.provision_policy) === 0
-  && provisionedInstances(resource.change.after?.provision_policy) === 1
+  && (
+    (
+      provisionedInstances(resource.change.before?.provision_policy) === 0
+      && provisionedInstances(resource.change.after?.provision_policy) === 1
+    )
+    || (
+      provisionedInstances(resource.change.before?.provision_policy) === 1
+      && provisionedInstances(resource.change.after?.provision_policy) === 0
+    )
+  )
+
+const isExactServerlessAvailabilitySubnetCreate = (resource) => {
+  const expected = serverlessAvailabilitySubnets.get(resource.address)
+  if (expected === undefined || resource.change.actions.join(',') !== 'create') {
+    return false
+  }
+
+  const after = resource.change.after ?? {}
+  const labels = after.labels ?? {}
+  const networkIsBound = (
+    typeof after.network_id === 'string' && after.network_id.length > 0
+  ) || resource.change.after_unknown?.network_id === true
+  const folderIsBound = (
+    typeof after.folder_id === 'string' && after.folder_id.length > 0
+  ) || resource.change.after_unknown?.folder_id === true
+  const emptyOrMissing = (value) => value == null
+    || (Array.isArray(value) && value.length === 0)
+
+  return after.name === `fit-stage-serverless-${expected.zone}`
+    && after.description === 'Availability subnet required by Serverless Containers'
+    && after.zone === expected.zone
+    && isDeepStrictEqual(after.v4_cidr_blocks, [expected.cidr])
+    && networkIsBound
+    && folderIsBound
+    && emptyOrMissing(after.v6_cidr_blocks)
+    && emptyOrMissing(after.dhcp_options)
+    && after.route_table_id == null
+    && labels.app === 'fit'
+    && labels.environment === 'stage'
+    && labels.managed_by === 'terraform'
+}
 
 const pushDispatcherServiceAccountId = changes.find(
   (resource) => resource.address === pushDispatcherAddress,
@@ -432,7 +482,7 @@ const changesContainerCostOrIdentity = (resource) =>
   costSensitiveContainerFields.some(
     (field) =>
       !(field === 'execution_timeout' && hasBoundedApiExecutionTimeout(resource))
-      && !(field === 'provision_policy' && isExactApiAvailabilityHardening(resource))
+      && !(field === 'provision_policy' && isExactApiProvisioningChange(resource))
       &&
       JSON.stringify(resource.change.before?.[field])
       !== JSON.stringify(resource.change.after?.[field]),
@@ -443,7 +493,8 @@ const isAutomaticStageChange = (resource) => {
   if (isReviewedPushPipelineBootstrap(resource)) return true
   if (isReviewedMediaStorageBootstrap(resource)) return true
   if (actions === 'create') {
-    return isExactPublicApiBinding(resource)
+    return isExactServerlessAvailabilitySubnetCreate(resource)
+      || isExactPublicApiBinding(resource)
       || (
         resource.address === runtimePreflightSecretAccessAddress
         && resource.change.after?.role === 'lockbox.payloadViewer'
