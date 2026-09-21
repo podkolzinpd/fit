@@ -470,6 +470,33 @@ describe('trainer professional profile', () => {
     )
   })
 
+  it('accepts the bounded gallery payload while migrating a legacy photo', async () => {
+    const pilotTrainerProfiles = profiles()
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const jpeg = (size: number) => {
+      const bytes = Buffer.alloc(size)
+      bytes.set([0xff, 0xd8, 0xff, 0xe0])
+      return {
+        dataUrl: `data:image/jpeg;base64,${bytes.toString('base64')}`,
+        mimeType: 'image/jpeg', width: 1_600, height: 1_200, sizeBytes: bytes.byteLength,
+      }
+    }
+    const legacy = jpeg(630_000)
+    const payload = {
+      draft: { ...draft, avatarDataUrl: legacy.dataUrl },
+      photo: { image: jpeg(850_000), thumbnail: jpeg(160_000) },
+      replaceLegacy: true,
+    }
+
+    const response = await app.inject({
+      method: 'POST', url: '/v1/trainer-profile/photos',
+      headers: { 'x-fit-session': 'a'.repeat(43) }, payload,
+    })
+
+    expect(response.statusCode).toBe(201)
+    expect(vi.mocked(pilotTrainerProfiles.uploadPhoto)).toHaveBeenCalledOnce()
+  })
+
   it('rejects a spoofed gallery image before storage', async () => {
     const pilotTrainerProfiles = profiles()
     const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)

@@ -90,6 +90,7 @@ import { PgDatabasePool } from './pg-pool.js'
 import {
   DatabaseStageWorkoutFixtureLoader,
   STAGE_SMOKE_PROFILE_ID,
+  STAGE_TRAINER_PROFILE_SMOKE_PROFILE_ID,
   stageWorkoutFixtureIds,
 } from './stage-workout-fixture.js'
 import {
@@ -497,6 +498,14 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await ownerPool.query(
         'delete from public.profiles where id = $1',
         [STAGE_SMOKE_PROFILE_ID],
+      )
+      await ownerPool.query(
+        'delete from public.trainers where profile_id = $1',
+        [STAGE_TRAINER_PROFILE_SMOKE_PROFILE_ID],
+      )
+      await ownerPool.query(
+        'delete from public.profiles where id = $1',
+        [STAGE_TRAINER_PROFILE_SMOKE_PROFILE_ID],
       )
 
       // Keep the persistent local Podman database deterministic across reruns.
@@ -2422,6 +2431,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(first.sessionExpiresAt).toBe(expectedExpiry.toISOString())
       expect(first.clientSessionToken).toMatch(/^[A-Za-z0-9_-]{43}$/)
       expect(first.clientSessionExpiresAt).toBe(expectedExpiry.toISOString())
+      expect(first.trainerProfileSessionToken).toMatch(/^[A-Za-z0-9_-]{43}$/)
+      expect(first.trainerProfileSessionExpiresAt).toBe(expectedExpiry.toISOString())
 
       const smokeData = await reader.readTrainingData(first.sessionToken)
       const smokeIds = stageWorkoutFixtureIds(STAGE_SMOKE_PROFILE_ID)

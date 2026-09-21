@@ -40,6 +40,8 @@ export interface StageWorkoutFixtureResult {
   clientSessionExpiresAt: string
   mediaSessionToken: string
   mediaSessionExpiresAt: string
+  trainerProfileSessionToken: string
+  trainerProfileSessionExpiresAt: string
 }
 
 export interface StageWorkoutFixtureLoader {
@@ -63,6 +65,9 @@ function deterministicUuid(seed: string): string {
 
 export const STAGE_SMOKE_PROFILE_ID = deterministicUuid('smoke-profile')
 export const STAGE_MEDIA_SMOKE_PROFILE_ID = deterministicUuid('media-smoke-profile')
+export const STAGE_TRAINER_PROFILE_SMOKE_PROFILE_ID = deterministicUuid(
+  'trainer-profile-media-smoke-profile',
+)
 
 export function stageWorkoutFixtureIds(
   trainerId: string,
@@ -373,6 +378,7 @@ implements StageWorkoutFixtureLoader {
       const session = createPilotSessionToken()
       const clientSession = createPilotSessionToken()
       const mediaSession = createPilotSessionToken()
+      const trainerProfileSession = createPilotSessionToken()
       const expiresAt = new Date(this.now().getTime() + PILOT_SESSION_TTL_MS)
       const smokeIds = stageWorkoutFixtureIds(STAGE_SMOKE_PROFILE_ID)
       await connection.query(
@@ -433,6 +439,53 @@ implements StageWorkoutFixtureLoader {
         `,
         [mediaSession.sha256, STAGE_MEDIA_SMOKE_PROFILE_ID, expiresAt],
       )
+      await connection.query(
+        `
+          insert into public.profiles (id, first_name, account_role)
+          values ($1, 'Stage trainer photo smoke', 'trainer')
+          on conflict (id) do update set account_role = excluded.account_role
+        `,
+        [STAGE_TRAINER_PROFILE_SMOKE_PROFILE_ID],
+      )
+      await connection.query(
+        `
+          insert into public.trainers (profile_id)
+          values ($1)
+          on conflict (profile_id) do nothing
+        `,
+        [STAGE_TRAINER_PROFILE_SMOKE_PROFILE_ID],
+      )
+      await connection.query(
+        `
+          insert into app_private.profile_rollout_assignments (
+            profile_id, target_backend, access_mode, enabled
+          ) values ($1, 'yandex', 'read_write', true)
+          on conflict (profile_id) do update set
+            target_backend = excluded.target_backend,
+            access_mode = excluded.access_mode,
+            enabled = excluded.enabled
+        `,
+        [STAGE_TRAINER_PROFILE_SMOKE_PROFILE_ID],
+      )
+      await connection.query(
+        `
+          delete from app_private.yandex_app_sessions
+          where profile_id = $1 and (expires_at <= now() or revoked_at is not null)
+        `,
+        [STAGE_TRAINER_PROFILE_SMOKE_PROFILE_ID],
+      )
+      await connection.query(
+        `
+          insert into app_private.yandex_app_sessions (
+            token_sha256, profile_id, access_mode, expires_at
+          ) values ($1, $2, 'read_write', $3)
+        `,
+        [
+          trainerProfileSession.sha256,
+          STAGE_TRAINER_PROFILE_SMOKE_PROFILE_ID,
+          expiresAt,
+        ],
+      )
 
       await connection.query('commit')
       return {
@@ -444,6 +497,8 @@ implements StageWorkoutFixtureLoader {
         clientSessionExpiresAt: expiresAt.toISOString(),
         mediaSessionToken: mediaSession.raw,
         mediaSessionExpiresAt: expiresAt.toISOString(),
+        trainerProfileSessionToken: trainerProfileSession.raw,
+        trainerProfileSessionExpiresAt: expiresAt.toISOString(),
       }
     } catch (error) {
       if (transactionStarted) {

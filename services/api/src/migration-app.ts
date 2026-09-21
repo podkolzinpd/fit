@@ -607,6 +607,10 @@ export function buildMigrationApp(
             token: result.mediaSessionToken,
             expiresAt: result.mediaSessionExpiresAt,
           },
+          trainerProfileSession: {
+            token: result.trainerProfileSessionToken,
+            expiresAt: result.trainerProfileSessionExpiresAt,
+          },
         }
       } catch {
         return reply.code(500).send({ status: 'fixture_failed' })

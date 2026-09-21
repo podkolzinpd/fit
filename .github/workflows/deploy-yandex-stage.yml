@@ -480,6 +480,8 @@ jobs:
             and (.clientSession.expiresAt | type == "string")
             and (.mediaSession.token | test("^[A-Za-z0-9_-]{43}$"))
             and (.mediaSession.expiresAt | type == "string")
+            and (.trainerProfileSession.token | test("^[A-Za-z0-9_-]{43}$"))
+            and (.trainerProfileSession.expiresAt | type == "string")
           ' stage-workout-fixture-response.json >/dev/null
           jq -r '"Prepared synthetic fixtures for " + (.seededTrainerCount | tostring) + " stage trainer(s)."' \
             stage-workout-fixture-response.json
@@ -694,6 +696,7 @@ jobs:
           fixture_token=$(jq -er '.session.token' stage-workout-fixture-response.json)
           fixture_client_id=$(jq -er '.session.clientId' stage-workout-fixture-response.json)
           client_fixture_token=$(jq -er '.clientSession.token' stage-workout-fixture-response.json)
+          trainer_profile_fixture_token=$(jq -er '.trainerProfileSession.token' stage-workout-fixture-response.json)
           clients_curl_exit=0
           clients_status=$(curl --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --output clients-response.json --dump-header clients-response-headers.txt \
@@ -756,6 +759,62 @@ jobs:
             echo "Stage smoke failed: check=${stage_smoke_check:-unknown}; command_exit=$command_exit; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}; release=${observed_release:-proxy_or_unknown}; expected_release=$API_IMAGE_TAG." >&2
           }
           trap report_stage_smoke_failure ERR
+          stage_smoke_check=trainer-profile-photo
+          trainer_profile=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Session: $trainer_profile_fixture_token" \
+            "${api_url%/}/v1/trainer-profile")
+          if test "$trainer_profile" != null; then
+            while IFS= read -r photo_id; do
+              test -z "$photo_id" && continue
+              curl --fail --silent --show-error \
+                --request DELETE \
+                --header "Authorization: Bearer $YC_TOKEN" \
+                --header "X-Fit-Session: $trainer_profile_fixture_token" \
+                "${api_url%/}/v1/trainer-profile/photos/$photo_id" >/dev/null
+            done < <(jq -r '.draft.photos[]?.id' <<<"$trainer_profile")
+          fi
+          trainer_photo_base64=$(node -e \
+            "process.stdout.write(Buffer.from('ffd8ffe000104a4649460001ffd9', 'hex').toString('base64'))")
+          trainer_photo_payload=$(jq -n --arg data_url "data:image/jpeg;base64,$trainer_photo_base64" '
+            {
+              draft: {
+                displayName: "Stage photo smoke", bio: "", specialties: [], city: "",
+                metroStationIds: [], customLocations: [], trainingModes: [],
+                experienceStartYear: null, education: "", formats: "", price: "",
+                acceptingClients: false, avatarDataUrl: null, photos: [], certificates: []
+              },
+              photo: {
+                image: { dataUrl: $data_url, mimeType: "image/jpeg", width: 1, height: 1, sizeBytes: 14 },
+                thumbnail: { dataUrl: $data_url, mimeType: "image/jpeg", width: 1, height: 1, sizeBytes: 14 }
+              },
+              replaceLegacy: false
+            }
+          ')
+          trainer_photo_upload=$(curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Session: $trainer_profile_fixture_token" \
+            --header "Content-Type: application/json" \
+            --data "$trainer_photo_payload" \
+            "${api_url%/}/v1/trainer-profile/photos")
+          jq -e '
+            (.draft.photos | length) == 1
+            and (.draft.photos[0].id | test("^[0-9a-f-]{36}$"; "i"))
+            and (.draft.photos[0].url | startswith("https://"))
+            and (.draft.photos[0].thumbnailUrl | startswith("https://"))
+          ' <<<"$trainer_photo_upload" >/dev/null
+          trainer_photo_id=$(jq -er '.draft.photos[0].id' <<<"$trainer_photo_upload")
+          trainer_photo_url=$(jq -er '.draft.photos[0].url' <<<"$trainer_photo_upload")
+          command curl --fail --silent --show-error \
+            --output trainer-profile-photo-smoke.jpg "$trainer_photo_url"
+          test "$(wc -c < trainer-profile-photo-smoke.jpg | tr -d ' ')" = 14
+          trainer_photo_deleted=$(curl --fail --silent --show-error \
+            --request DELETE \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header "X-Fit-Session: $trainer_profile_fixture_token" \
+            "${api_url%/}/v1/trainer-profile/photos/$trainer_photo_id")
+          jq -e '(.draft.photos | length) == 0' <<<"$trainer_photo_deleted" >/dev/null
           training=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \

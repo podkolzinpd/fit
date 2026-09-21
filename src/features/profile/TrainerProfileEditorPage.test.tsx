@@ -17,12 +17,19 @@ const repository = vi.hoisted(() => ({
   unpublish: vi.fn(),
   setCatalogListing: vi.fn(),
 }))
+const imagePreparation = vi.hoisted(() => ({
+  prepare: vi.fn(),
+}))
 
 vi.mock('../../app/auth-context', () => ({
   useAuth: () => ({ actor: { userId: 'trainer-1', role: 'trainer', firstName: 'Анна', lastName: 'Иванова' } }),
 }))
 vi.mock('../../app/data-backend-context', () => ({
   useDataBackend: () => ({ trainerProfiles: repository }),
+}))
+vi.mock('../../shared/profile-image', () => ({
+  prepareTrainerProfilePhoto: imagePreparation.prepare,
+  fileFromImageDataUrl: (value: string) => new File([value], 'saved-photo.jpg', { type: 'image/jpeg' }),
 }))
 
 const empty = emptyTrainerProfileDraft('Анна Иванова')
@@ -74,6 +81,41 @@ describe('TrainerProfessionalProfileSection', () => {
     repository.publish.mockReset().mockResolvedValue({ ...profile, published: empty, listedInCatalog: true, publishedAt: '2026-09-13T09:01:00.000Z', version: 2 })
     repository.unpublish.mockReset()
     repository.setCatalogListing.mockReset()
+    imagePreparation.prepare.mockReset().mockResolvedValue({
+      image: { dataUrl: 'data:image/jpeg;base64,/9j/', mimeType: 'image/jpeg', width: 640, height: 480, sizeBytes: 3 },
+      thumbnail: { dataUrl: 'data:image/jpeg;base64,/9j/', mimeType: 'image/jpeg', width: 320, height: 240, sizeBytes: 3 },
+    })
+  })
+
+  it('shows photo upload errors next to the photo control', async () => {
+    repository.uploadPhoto.mockRejectedValue(new Error('Не удалось загрузить фото. Попробуйте ещё раз.'))
+    const user = userEvent.setup()
+    renderSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Заполнить анкету' }))
+    await user.upload(screen.getByLabelText('Выбрать фото'), new File(['photo'], 'coach.jpg', { type: 'image/jpeg' }))
+
+    const photos = screen.getByLabelText('Редактирование анкеты тренера').querySelector('.trainer-photo-editor')
+    expect(photos).not.toBeNull()
+    expect(await within(photos as HTMLElement).findByRole('alert')).toHaveTextContent('Не удалось загрузить фото. Попробуйте ещё раз.')
+  })
+
+  it('does not resend the legacy data URL while migrating an existing photo', async () => {
+    const legacyDraft = { ...empty, avatarDataUrl: 'data:image/jpeg;base64,/9j/' }
+    const legacyProfile = { ...profile, draft: legacyDraft }
+    repository.getOwn.mockResolvedValue(legacyProfile)
+    repository.uploadPhoto
+      .mockResolvedValueOnce({ ...legacyProfile, draft: { ...legacyDraft, avatarDataUrl: null, photos: [] } })
+      .mockResolvedValueOnce(legacyProfile)
+    const user = userEvent.setup()
+    renderSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Редактировать' }))
+    await user.upload(screen.getByLabelText('Выбрать фото'), new File(['photo'], 'new.jpg', { type: 'image/jpeg' }))
+
+    await waitFor(() => expect(repository.uploadPhoto).toHaveBeenCalledTimes(2))
+    expect(repository.uploadPhoto.mock.calls[0]?.[0]).toMatchObject({ avatarDataUrl: null })
+    expect(repository.uploadPhoto.mock.calls[0]?.[2]).toBe(true)
   })
 
   it('publishes a profile whose optional fields are all empty', async () => {
