@@ -1,14 +1,21 @@
 import type { TrainerProfilePhotoUpload } from './domain'
 import { prepareImage } from './image-prep'
 
-const MAX_SOURCE_BYTES = 10 * 1024 * 1024
+const MAX_SOURCE_BYTES = 20 * 1024 * 1024
 const LEGACY_PROFILE_IMAGE_MAX_BYTES = 630_000
 const PROFILE_IMAGE_MAX_BYTES = 850_000
 const PROFILE_THUMBNAIL_MAX_BYTES = 160_000
 
+const IMAGE_FILE_EXTENSION = /\.(?:heic|heif|jpe?g|png|webp)$/i
+
+export function isSupportedProfileImage(file: Pick<File, 'name' | 'type'>): boolean {
+  const mimeType = file.type.trim().toLowerCase()
+  return mimeType.startsWith('image/') || (mimeType === '' && IMAGE_FILE_EXTENSION.test(file.name))
+}
+
 function validateSource(file: File) {
-  if (!file.type.startsWith('image/')) throw new Error('Выберите изображение.')
-  if (file.size > MAX_SOURCE_BYTES) throw new Error('Фото должно быть меньше 10 МБ.')
+  if (!isSupportedProfileImage(file)) throw new Error('Выберите фотографию.')
+  if (file.size > MAX_SOURCE_BYTES) throw new Error('Фото должно быть меньше 20 МБ.')
 }
 
 export async function prepareProfileImage(file: File): Promise<string> {

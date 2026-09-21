@@ -742,6 +742,8 @@ describe('stage workout fixture', () => {
       clientSessionExpiresAt: '2026-08-22T12:15:00.000Z',
       mediaSessionToken: 'm'.repeat(43),
       mediaSessionExpiresAt: '2026-08-22T12:15:00.000Z',
+      trainerProfileSessionToken: 't'.repeat(43),
+      trainerProfileSessionExpiresAt: '2026-08-22T12:15:00.000Z',
     })
     const app = buildMigrationApp({
       logger: false,
@@ -770,6 +772,10 @@ describe('stage workout fixture', () => {
       },
       mediaSession: {
         token: 'm'.repeat(43),
+        expiresAt: '2026-08-22T12:15:00.000Z',
+      },
+      trainerProfileSession: {
+        token: 't'.repeat(43),
         expiresAt: '2026-08-22T12:15:00.000Z',
       },
     })

@@ -1008,7 +1008,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       (profile) => reply.header('cache-control', 'no-store').send(profile))
   })
 
-  app.post('/v1/trainer-profile/photos', { bodyLimit: 2 * 1024 * 1024 }, async (request, reply) => {
+  app.post('/v1/trainer-profile/photos', { bodyLimit: 3 * 1024 * 1024 }, async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     const body = request.body as { draft?: unknown; photo?: unknown; replaceLegacy?: unknown } | null
     const draft = readTrainerProfileDraft(body?.draft)

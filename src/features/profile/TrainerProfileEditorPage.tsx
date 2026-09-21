@@ -80,6 +80,8 @@ export function TrainerProfessionalProfileSection() {
   const [customLocationText, setCustomLocationText] = useState('')
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle')
   const [localError, setLocalError] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const [photoActivity, setPhotoActivity] = useState<'idle' | 'preparing' | 'uploading'>('idle')
   const [copied, setCopied] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
 
@@ -139,9 +141,9 @@ export function TrainerProfessionalProfileSection() {
       queryClient.setQueryData(key, value)
       setDraft(value.draft)
       setStatus('saved')
-      setLocalError(null)
+      setPhotoError(null)
     },
-    onError: (error) => { setStatus('error'); setLocalError(error.message) },
+    onError: (error) => setPhotoError(error.message),
   })
   const reorderPhotos = useMutation({
     mutationFn: async ({ value, photoIds }: { value: TrainerProfileDraft; photoIds: string[] }) => {
@@ -175,8 +177,9 @@ export function TrainerProfessionalProfileSection() {
     [draft, profile.data?.published],
   )
   const publishValidation = useMemo(() => draft ? validatePublishableTrainerProfile(draft) : null, [draft])
-  const pending = save.isPending || publish.isPending || unpublish.isPending || catalogListing.isPending
-    || uploadPhoto.isPending || reorderPhotos.isPending || deletePhoto.isPending
+  const profileChangePending = save.isPending || publish.isPending || unpublish.isPending
+    || catalogListing.isPending || reorderPhotos.isPending || deletePhoto.isPending
+  const pending = profileChangePending || uploadPhoto.isPending || photoActivity !== 'idle'
   const showPublishAction = !profile.data?.published || !publishedMatchesDraft
 
   function set<K extends keyof TrainerProfileDraft>(field: K, value: TrainerProfileDraft[K]) {
@@ -200,24 +203,35 @@ export function TrainerProfessionalProfileSection() {
     const value = prepareDraft()
     if (!value) return
     if (profilePhotos(value).length >= 3) {
-      setLocalError('Можно добавить не больше трёх фотографий.')
+      setPhotoError('Можно добавить не больше трёх фотографий.')
       return
     }
-    setLocalError(null)
+    setStatus('idle')
+    setPhotoError(null)
+    setPhotoActivity('preparing')
     try {
       let current = value
       if (current.avatarDataUrl && profilePhotos(current).length === 0) {
         const legacyPhoto = await prepareTrainerProfilePhoto(fileFromImageDataUrl(current.avatarDataUrl))
-        current = (await uploadPhoto.mutateAsync({ value: current, photo: legacyPhoto, replaceLegacy: true })).draft
+        setPhotoActivity('uploading')
+        current = (await uploadPhoto.mutateAsync({
+          value: { ...current, avatarDataUrl: null },
+          photo: legacyPhoto,
+          replaceLegacy: true,
+        })).draft
       }
       if (profilePhotos(current).length >= 3) {
-        setLocalError('Можно добавить не больше трёх фотографий.')
+        setPhotoError('Можно добавить не больше трёх фотографий.')
         return
       }
+      setPhotoActivity('preparing')
       const photo = await prepareTrainerProfilePhoto(file)
+      setPhotoActivity('uploading')
       await uploadPhoto.mutateAsync({ value: current, photo })
     } catch (error) {
-      if (!uploadPhoto.isError) setLocalError(error instanceof Error ? error.message : 'Не удалось добавить фото.')
+      setPhotoError(error instanceof Error ? error.message : 'Не удалось добавить фото.')
+    } finally {
+      setPhotoActivity('idle')
     }
   }
   async function movePhoto(photoId: string, targetIndex: number) {
@@ -278,6 +292,7 @@ export function TrainerProfessionalProfileSection() {
     setCustomLocationText('')
     setStatus('idle')
     setLocalError(null)
+    setPhotoError(null)
     setEditing(false)
   }
   function publishNow() {
@@ -303,7 +318,7 @@ export function TrainerProfessionalProfileSection() {
   }
 
   const publicationControls = <>
-    <SaveStatus status={pending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message ?? uploadPhoto.error?.message ?? reorderPhotos.error?.message ?? deletePhoto.error?.message} />
+    <SaveStatus status={profileChangePending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message ?? reorderPhotos.error?.message ?? deletePhoto.error?.message} />
     {showPublishAction && <div className="trainer-profile-publish-cta">
       {localError && <p className="error" role="alert">{localError}</p>}
       <button type="button" className="primary wide" onClick={publishNow} disabled={pending} aria-busy={publish.isPending}>
@@ -331,8 +346,13 @@ export function TrainerProfessionalProfileSection() {
         <header className="trainer-profile-edit-head"><div><p className="eyebrow">АНКЕТА ТРЕНЕРА</p><h2>Редактирование</h2></div></header>
         <div className="trainer-photo-editor" aria-labelledby="trainer-photos-title">
           <div className="trainer-photo-editor-head"><div><strong id="trainer-photos-title">Фотографии</strong><span>{profilePhotos(draft).length || (draft.avatarDataUrl ? 1 : 0)}/3</span></div>
-            <label className={`button secondary trainer-photo-button${profilePhotos(draft).length >= 3 ? ' disabled' : ''}`}>Добавить фото<input type="file" accept="image/*" disabled={pending || profilePhotos(draft).length >= 3} onChange={(event) => void imageChanged(event)} /></label>
+            <label className={`button secondary trainer-photo-button${profilePhotos(draft).length >= 3 ? ' disabled' : ''}`} aria-busy={photoActivity !== 'idle'}>
+              {photoActivity === 'preparing' ? 'Подготавливаем…' : photoActivity === 'uploading' ? 'Загружаем…' : 'Добавить фото'}
+              <input type="file" aria-label="Выбрать фото" accept="image/*,.heic,.heif" disabled={pending || profilePhotos(draft).length >= 3} onChange={(event) => void imageChanged(event)} />
+            </label>
           </div>
+          {photoActivity !== 'idle' && <p className="trainer-photo-feedback" role="status">{photoActivity === 'preparing' ? 'Подготавливаем фото…' : 'Загружаем фото…'}</p>}
+          {photoError && <p className="error trainer-photo-feedback" role="alert">{photoError}</p>}
           {profilePhotos(draft).length > 0 ? <ol className="trainer-photo-list">
             {profilePhotos(draft).map((photo, index) => <li key={photo.id}>
               <img src={photo.thumbnailUrl} alt={`Фото ${index + 1}`} />
@@ -399,7 +419,7 @@ export function TrainerProfessionalProfileSection() {
           </div>
         </details>
         {localError && <p className="error" role="alert">{localError}</p>}
-        <SaveStatus status={pending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message ?? uploadPhoto.error?.message ?? reorderPhotos.error?.message ?? deletePhoto.error?.message} />
+        <SaveStatus status={profileChangePending ? 'saving' : status} error={save.error?.message ?? publish.error?.message ?? unpublish.error?.message ?? catalogListing.error?.message ?? reorderPhotos.error?.message ?? deletePhoto.error?.message} />
         <div className="trainer-profile-actions">
           <button type="button" className="secondary" onClick={cancelEditing} disabled={pending}>Отмена</button>
           <button type="submit" className="primary" disabled={pending} aria-busy={save.isPending}>{save.isPending ? 'Сохраняем…' : 'Сохранить'}</button>

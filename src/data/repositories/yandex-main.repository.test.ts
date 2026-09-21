@@ -327,6 +327,30 @@ describe('Yandex main repository', () => {
       .toEqual({ draft, photo: { image: part, thumbnail: part }, replaceLegacy: true })
   })
 
+  it('explains an oversized trainer photo instead of showing a generic failure', async () => {
+    const draft = {
+      displayName: 'Анна', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [], trainingModes: [],
+      experienceStartYear: null, education: '', formats: '', price: '', acceptingClients: true,
+      avatarDataUrl: null, photos: [], certificates: [],
+    }
+    const part = {
+      dataUrl: 'data:image/jpeg;base64,/9j/4A==', mimeType: 'image/jpeg' as const,
+      width: 10, height: 10, sizeBytes: 4,
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      jsonResponse({ error: 'request_too_large' }, 413),
+    ))
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.trainerProfiles.uploadPhoto(
+      draft,
+      { image: part, thumbnail: part },
+    )).rejects.toMatchObject({
+      code: 'trainer_photo_too_large',
+      message: 'Фото слишком большое. Выберите другое фото.',
+    })
+  })
+
   it('creates a quick client without fabricating profile measurements', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
       client: { id: '1a0c5295-0a0f-4ccb-a39a-e58090967245' },
