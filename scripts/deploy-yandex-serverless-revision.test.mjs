@@ -28,6 +28,7 @@ const values = {
     },
   ],
   connectivity: [{ network_id: 'network-id' }],
+  provision_policy: [{ min_instances: 1 }],
   secrets: [
     {
       id: 'secret-id',
@@ -60,6 +61,7 @@ test('maps a Terraform container plan to the REST DeployRevision request', () =>
     },
     concurrency: '1',
     connectivity: { networkId: 'network-id' },
+    provisionPolicy: { minInstances: '1' },
     secrets: [
       {
         id: 'secret-id',
@@ -78,6 +80,7 @@ test('omits optional empty image overrides and supports task runtime', () => {
     ...values,
     image: [{ ...values.image[0], command: [], args: [], work_dir: '' }],
     connectivity: [],
+    provision_policy: [],
     secrets: [],
     log_options: [],
     runtime: [{ type: 'task' }],
@@ -85,6 +88,7 @@ test('omits optional empty image overrides and supports task runtime', () => {
   assert.equal(request.imageSpec.command, undefined)
   assert.equal(request.imageSpec.args, undefined)
   assert.equal(request.connectivity, undefined)
+  assert.equal(request.provisionPolicy, undefined)
   assert.equal(request.secrets, undefined)
   assert.equal(request.logOptions, undefined)
   assert.deepEqual(request.runtime, { task: {} })

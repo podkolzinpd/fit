@@ -118,6 +118,16 @@ test('keeps enough time for the bounded three-attempt summary contract', () => {
   assert.match(workflow, /^  TF_VAR_api_execution_timeout: '120s'$/m)
 })
 
+test('keeps one provisioned API instance without warming background containers', () => {
+  assert.match(workflow, /^  TF_VAR_api_min_instances: '1'$/m)
+  assert.match(
+    containerTerraform,
+    /provision_policy \{\s+min_instances = var\.api_min_instances\s+\}/,
+  )
+  assert.match(variablesTerraform, /variable "api_min_instances"/)
+  assert.doesNotMatch(pushTerraform, /provision_policy/)
+})
+
 test('hardens backups on the existing database without provisioning a second stack', () => {
   assert.match(
     workflow,

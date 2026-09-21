@@ -117,6 +117,7 @@ export function buildDeployRevisionRequest(values) {
 
   const connectivity = optionalBlock(values.connectivity, 'connectivity')
   const logOptions = optionalBlock(values.log_options, 'log_options')
+  const provisionPolicy = optionalBlock(values.provision_policy, 'provision policy')
   const runtime = optionalBlock(values.runtime, 'runtime')
   const command = Array.isArray(image.command) ? image.command : []
   const args = Array.isArray(image.args) ? image.args : []
@@ -147,6 +148,15 @@ export function buildDeployRevisionRequest(values) {
 
   if (connectivity?.network_id) {
     request.connectivity = { networkId: connectivity.network_id }
+  }
+
+  if (provisionPolicy) {
+    request.provisionPolicy = {
+      minInstances: String(requiredInteger(
+        provisionPolicy.min_instances,
+        'minimum provisioned instances',
+      )),
+    }
   }
 
   if (Array.isArray(values.secrets) && values.secrets.length > 0) {
