@@ -6655,6 +6655,167 @@ h3 {
 .rd-monetization.prefinal-revenue-model .revenue-row--closest > strong small,
 .rd-monetization.prefinal-revenue-model .revenue-row--closest > div small { color: #a7a7a4; }
 
+/* Prefinal monetization: two tilted 3D plates separate launch order without implying revenue share. */
+.rd-monetization.prefinal-revenue-model h2 {
+  top: 112px;
+  width: 1120px;
+  font-size: 62px;
+  line-height: .97;
+}
+
+.rd-monetization .monetization-orbits {
+  position: absolute;
+  top: 270px;
+  left: 92px;
+  right: 92px;
+  height: 500px;
+}
+
+.rd-monetization .monetization-orbit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 230px;
+}
+
+.rd-monetization .monetization-orbit--first { top: 0; }
+.rd-monetization .monetization-orbit--later { top: 238px; }
+
+.rd-monetization .monetization-orbit-meta {
+  position: absolute;
+  z-index: 4;
+  top: 57px;
+  left: 0;
+  width: 245px;
+}
+
+.rd-monetization .monetization-orbit-meta span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.rd-monetization .monetization-orbit-meta strong {
+  display: block;
+  margin-top: 12px;
+  font-size: 23px;
+  line-height: 1.12;
+}
+
+.rd-monetization .monetization-disc {
+  position: absolute;
+  z-index: 1;
+  top: 28px;
+  left: 280px;
+  width: 1050px;
+  height: 152px;
+  overflow: hidden;
+  border: 1px solid rgba(31,31,32,.4);
+  border-radius: 50%;
+  transform: rotate(-3.2deg);
+  box-shadow: 0 17px 0 #202022, 0 30px 34px rgba(31,31,32,.16);
+}
+
+.rd-monetization .monetization-disc::before {
+  content: "";
+  position: absolute;
+  inset: 14px 28px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 50%;
+}
+
+.rd-monetization .monetization-disc::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(255,255,255,.28);
+}
+
+.rd-monetization .monetization-orbit--first .monetization-disc {
+  background: linear-gradient(101deg, #111113 0 49.9%, #505156 50.1% 100%);
+}
+
+.rd-monetization .monetization-orbit--later .monetization-disc {
+  border-color: rgba(31,31,32,.2);
+  background: linear-gradient(101deg, #cbc8c2 0 49.9%, #ece9e3 50.1% 100%);
+  box-shadow: 0 17px 0 #aaa69f, 0 30px 34px rgba(31,31,32,.14);
+}
+
+.rd-monetization .monetization-orbit--later .monetization-disc::before {
+  border-color: rgba(31,31,32,.12);
+}
+
+.rd-monetization .monetization-orbit--later .monetization-disc::after {
+  background: rgba(31,31,32,.18);
+}
+
+.rd-monetization .monetization-orbit-block {
+  position: absolute;
+  z-index: 3;
+  top: 68px;
+  width: 355px;
+}
+
+.rd-monetization .monetization-orbit-block--left { left: 400px; }
+.rd-monetization .monetization-orbit-block--right { left: 850px; }
+
+.rd-monetization .monetization-orbit-block span {
+  display: block;
+  color: #aaa9a6;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.rd-monetization .monetization-orbit-block strong {
+  display: block;
+  margin-top: 6px;
+  color: #f7f3ec;
+  font-size: 24px;
+  line-height: 1.06;
+}
+
+.rd-monetization .monetization-orbit-block p {
+  max-width: 320px;
+  margin: 7px 0 0;
+  color: #c2c0bc;
+  font-size: 14px;
+  line-height: 1.22;
+}
+
+.rd-monetization .monetization-orbit--later .monetization-orbit-block span { color: #666662; }
+.rd-monetization .monetization-orbit--later .monetization-orbit-block strong { color: var(--ink); }
+.rd-monetization .monetization-orbit--later .monetization-orbit-block p { color: #666662; }
+
+.rd-monetization .monetization-orbit-index {
+  position: absolute;
+  z-index: 5;
+  right: 27px;
+  top: 44px;
+  color: rgba(255,255,255,.35);
+  font-size: 82px;
+  font-weight: 700;
+  letter-spacing: -.06em;
+}
+
+.rd-monetization .monetization-orbit--later .monetization-orbit-index {
+  color: rgba(31,31,32,.18);
+}
+
+.rd-monetization.prefinal-revenue-model .revenue-conclusion {
+  bottom: 42px;
+  grid-template-columns: 185px 1fr;
+  padding-top: 14px;
+}
+
+.rd-monetization.prefinal-revenue-model .revenue-conclusion strong { font-size: 20px; }
+.rd-monetization.prefinal-revenue-model .revenue-conclusion small { margin-top: 5px; font-size: 13px; }
+
 /* Visual QA pass 2: explicit resets against legacy layout and collision fixes. */
 .rd-hero .pilot-cover-logo {
   right: 12px;
@@ -9714,36 +9875,31 @@ Fit превращает разрозненный спортивный инте�
     <section class="slide monetization-proof-slide redesign-v2 rd-monetization prefinal-revenue-model prefinal-keep" data-section="Монетизация" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
       <div class="eyebrow">12 · КАК FIT ЗАРАБАТЫВАЕТ</div>
       <h2>Монетизация растёт вместе с ценностью для пользователя</h2>
-      <div class="revenue-ledger">
-        <div class="revenue-head"><span>ПРОДУКТ</span><span>ПУБЛИЧНЫЙ ПОКАЗАТЕЛЬ ВЫРУЧКИ</span><span>МОНЕТИЗАЦИОННЫЙ СИГНАЛ</span><span>ОСНОВАНИЕ</span></div>
-        <div class="revenue-row revenue-row--closest">
-          <strong>Premium AI<small>ПЕРВЫЙ СЛОЙ</small></strong>
-          <div><b>Пользователь</b><small>подписка на расширенные AI-возможности</small></div>
-          <div><b>После удержания</b><small>Strava и Hevy подтверждают подписную модель</small></div>
-          <p>Подписка</p>
-        </div>
-        <div class="revenue-row">
-          <strong>Тренерский рынок<small>ПЕРВЫЙ СЛОЙ</small></strong>
-          <div><b>Тренер и клиент</b><small>комиссия с программ, консультаций и занятий</small></div>
-          <div><b>С первых транзакций</b><small>Trainerize подтверждает B2B и платежный контур</small></div>
-          <p>Комиссия</p>
-        </div>
-        <div class="revenue-row">
-          <strong>Pro для тренера<small>СЛЕДУЮЩИЙ СЛОЙ</small></strong>
-          <div><b>Тренер</b><small>профессиональные функции и продвижение</small></div>
-          <div><b>После плотности рынка</b><small>когда платформа даёт поток клиентов и работу</small></div>
-          <p>Профессиональные функции</p>
-        </div>
-        <div class="revenue-row">
-          <strong>Коммерческий контур<small>ПОСЛЕ МАСШТАБА</small></strong>
-          <div><b>Бренды и B2B</b><small>товары, партнёрства и корпоративные программы</small></div>
-          <div><b>После атрибуции</b><small>Keep подтверждает связку digital + товары</small></div>
-          <p>Партнёрства</p>
-        </div>
+      <div class="monetization-orbits" aria-label="Два последовательных контура монетизации Fit">
+        <article class="monetization-orbit monetization-orbit--first">
+          <div class="monetization-orbit-meta"><span>01 · ПЕРВЫЙ КОНТУР</span><strong>Запускаем вместе<br>с основной ценностью</strong></div>
+          <div class="monetization-disc" aria-hidden="true"></div>
+          <div class="monetization-orbit-block monetization-orbit-block--left">
+            <span>ПОДПИСКА ПОЛЬЗОВАТЕЛЯ</span><strong>Premium AI</strong><p>Персонализация, адаптация программы и постоянное сопровождение</p>
+          </div>
+          <div class="monetization-orbit-block monetization-orbit-block--right">
+            <span>КОМИССИЯ</span><strong>Тренерские транзакции</strong><p>Программы, консультации и персональные занятия</p>
+          </div>
+        </article>
+        <article class="monetization-orbit monetization-orbit--later">
+          <div class="monetization-orbit-meta"><span>02 · ПОСЛЕ МАСШТАБА</span><strong>Подключаем к<br>удержанной аудитории</strong></div>
+          <div class="monetization-disc" aria-hidden="true"></div>
+          <div class="monetization-orbit-block monetization-orbit-block--left">
+            <span>ПОДПИСКА ТРЕНЕРА</span><strong>Pro для тренера</strong><p>Профессиональные функции, продвижение и поток клиентов</p>
+          </div>
+          <div class="monetization-orbit-block monetization-orbit-block--right">
+            <span>ПАРТНЁРСТВА</span><strong>Бренды и B2B</strong><p>Товары, корпоративные программы и коммерческие интеграции</p>
+          </div>
+        </article>
       </div>
       <div class="revenue-conclusion">
         <span>ПОРЯДОК ЗАПУСКА</span>
-        <div><strong>Сначала подписка и транзакции тренеров. Остальные потоки подключаются только после появления удержанной аудитории.</strong><small>Публичные аналоги доказывают, что каждый слой работает на рынке. Конкретные конверсии, ARPPU и take rate Fit остаются параметрами финансовой модели.</small></div>
+        <div><strong>Сначала подписка и транзакции тренеров. Pro и B2B подключаются после появления удержанной аудитории.</strong><small>Круги показывают состав и порядок денежных потоков, а не долю выручки. Конверсии, ARPPU и take rate задаёт финансовая модель.</small></div>
       </div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
 Показать, кто и за что платит в Fit, а также порядок подключения денежных потоков.
