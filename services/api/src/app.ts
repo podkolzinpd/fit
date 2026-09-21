@@ -215,9 +215,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const app = Fastify({
     logger: options.logger ?? true,
     // Provisioned Yandex Serverless Containers are suspended while idle and
-    // may lose network connections during that suspension. Fastify's 72 s
-    // default can otherwise leave the runtime with a stale upstream socket
-    // when the instance resumes after roughly 30 s of inactivity.
+    // may lose network connections during that suspension. Closing every
+    // response socket explicitly is deterministic even when the suspended CPU
+    // cannot run an idle timer; the shorter timeout remains a fallback.
+    maxRequestsPerSocket: 1,
     keepAliveTimeout: 5_000,
     genReqId: (request) => {
       const supplied = request.headers['x-fit-request-id']
