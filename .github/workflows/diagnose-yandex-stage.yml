@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       request_id:
-        description: 'Fit request ID'
+        description: 'FIT or Yandex platform Request ID'
         required: true
         type: string
       since_utc:
@@ -15,6 +15,11 @@ on:
         description: 'Incident window end in RFC-3339 UTC'
         required: true
         type: string
+      operation:
+        description: 'Known caller operation without query, for example GET /health'
+        required: false
+        type: string
+        default: unknown
 
 permissions:
   contents: read
@@ -40,6 +45,7 @@ jobs:
           REQUEST_ID: ${{ inputs.request_id }}
           SINCE_UTC: ${{ inputs.since_utc }}
           UNTIL_UTC: ${{ inputs.until_utc }}
+          OPERATION: ${{ inputs.operation }}
         run: node scripts/validate-yandex-incident-inputs.mjs
       - name: Install Yandex Cloud CLI
         run: |
@@ -55,14 +61,43 @@ jobs:
           REQUEST_ID: ${{ inputs.request_id }}
           SINCE_UTC: ${{ inputs.since_utc }}
           UNTIL_UTC: ${{ inputs.until_utc }}
+          OPERATION: ${{ inputs.operation }}
         run: |
           set -euo pipefail
           temporary_directory=$(mktemp -d)
           trap 'rm -rf "$temporary_directory"' EXIT
-          container_id=$(yc serverless container get \
+          container=$(yc serverless container get \
             --name fit-stage-api \
             --folder-id "$YC_FOLDER_ID" \
-            --format json | jq -er '.id')
+            --format json)
+          container_id=$(jq -er '.id' <<<"$container")
+          revisions=$(yc serverless container revision list \
+            --container-id "$container_id" \
+            --format json)
+          active_revision=$(jq -ec '
+            map(select((.status // "") == "ACTIVE"))
+            | sort_by(.created_at // .createdAt // "")
+            | last
+          ' <<<"$revisions")
+          revision_id=$(jq -er '.id' <<<"$active_revision")
+          image_url=$(jq -er '.image.image_url // .image.imageUrl' <<<"$active_revision")
+          release_id=${image_url##*:}
+          if ! [[ "$release_id" =~ ^[0-9a-f]{40}$ ]]; then
+            release_id=unknown
+          fi
+          jq -n \
+            --arg service_name fit-stage-api \
+            --arg resource_type serverless_container \
+            --arg revision_id "$revision_id" \
+            --arg release_id "$release_id" \
+            --arg operation "$OPERATION" \
+            '{
+              serviceName: $service_name,
+              resourceType: $resource_type,
+              activeRevisionAtDiagnosis: $revision_id,
+              activeReleaseAtDiagnosis: $release_id,
+              operation: $operation
+            }' > "$temporary_directory/context.json"
           yc logging read default \
             --folder-id "$YC_FOLDER_ID" \
             --resource-ids "$container_id" \
@@ -71,4 +106,6 @@ jobs:
             --limit 1000 \
             --format json > "$temporary_directory/logs.json"
           node scripts/summarize-yandex-incident-logs.mjs \
-            "$temporary_directory/logs.json" "$REQUEST_ID"
+            "$temporary_directory/logs.json" \
+            "$REQUEST_ID" \
+            "$temporary_directory/context.json"
