@@ -58,16 +58,26 @@ describe('Yandex main query timeout', () => {
   })
 
   it('retries one platform-level 502 for a read without repeating writes or app errors', async () => {
+    vi.useFakeTimers()
     const fetchMock = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(null, { status: 502 }))
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': 'health-request-id' },
+      }))
       .mockResolvedValueOnce(new Response('{}', {
         status: 200,
         headers: { 'x-fit-request-id': '18940d82-9075-48d2-a847-8feee301b4d7' },
       }))
     const queries = createYandexMainQueries('https://api.example', 'session')
 
-    await expect(queries.read('/v1/clients')).resolves.toMatchObject({ status: 200 })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const recoveredRead = queries.read('/v1/clients')
+    await vi.advanceTimersByTimeAsync(250)
+    await expect(recoveredRead).resolves.toMatchObject({ status: 200 })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('https://api.example/health')
+    expect(fetchMock.mock.calls[1]?.[1]).toEqual(expect.objectContaining({ cache: 'no-store' }))
+    expect(new Headers(fetchMock.mock.calls[1]?.[1]?.headers).has('x-fit-session')).toBe(false)
 
     fetchMock.mockClear()
     fetchMock.mockResolvedValueOnce(new Response(null, {
@@ -84,20 +94,75 @@ describe('Yandex main query timeout', () => {
   })
 
   it('retries one browser-hidden platform failure for a read without repeating writes', async () => {
+    vi.useFakeTimers()
     const fetchMock = vi.spyOn(globalThis, 'fetch')
       .mockRejectedValueOnce(new TypeError('Load failed'))
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': 'health-request-id' },
+      }))
       .mockResolvedValueOnce(new Response('{}', {
         status: 200,
         headers: { 'x-fit-request-id': '18940d82-9075-48d2-a847-8feee301b4d7' },
       }))
     const queries = createYandexMainQueries('https://api.example', 'session')
 
-    await expect(queries.read('/v1/legal/acceptance')).resolves.toMatchObject({ status: 200 })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const recoveredRead = queries.read('/v1/legal/acceptance')
+    await vi.advanceTimersByTimeAsync(250)
+    await expect(recoveredRead).resolves.toMatchObject({ status: 200 })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
 
     fetchMock.mockClear()
     fetchMock.mockRejectedValueOnce(new TypeError('Load failed'))
     await expect(queries.write('/v1/legal/acceptance', 'PUT', {})).rejects.toThrow('Load failed')
     expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
+  it('shares one platform recovery probe across concurrent reads', async () => {
+    vi.useFakeTimers()
+    let readAttempts = 0
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input) === 'https://api.example/health') {
+        return Promise.resolve(new Response('{}', {
+          status: 200,
+          headers: { 'x-fit-request-id': 'health-request-id' },
+        }))
+      }
+      readAttempts += 1
+      return Promise.resolve(readAttempts <= 2
+        ? new Response(null, { status: 502 })
+        : new Response('{}', {
+            status: 200,
+            headers: { 'x-fit-request-id': `read-request-${readAttempts}` },
+          }))
+    })
+    const queries = createYandexMainQueries('https://api.example', 'session')
+
+    const clients = queries.read('/v1/clients')
+    const connections = queries.read('/v1/connections')
+    await vi.advanceTimersByTimeAsync(250)
+
+    await expect(Promise.all([clients, connections])).resolves.toEqual([
+      expect.objectContaining({ status: 200 }),
+      expect.objectContaining({ status: 200 }),
+    ])
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith('/health'))).toHaveLength(1)
+    expect(fetchMock).toHaveBeenCalledTimes(5)
+  })
+
+  it('keeps the original response when the platform does not recover', async () => {
+    vi.useFakeTimers()
+    const originalResponse = new Response(null, { status: 502 })
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(originalResponse)
+      .mockResolvedValue(new Response(null, { status: 502 }))
+    const queries = createYandexMainQueries('https://api.example', 'session')
+
+    const unavailableRead = queries.read('/v1/clients')
+    await vi.advanceTimersByTimeAsync(5_500)
+
+    await expect(unavailableRead).resolves.toBe(originalResponse)
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith('/health'))).toHaveLength(4)
+    expect(fetchMock).toHaveBeenCalledTimes(5)
   })
 })
