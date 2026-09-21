@@ -1,0 +1,74 @@
+name: Diagnose Yandex stage
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: 'Fit request ID'
+        required: true
+        type: string
+      since_utc:
+        description: 'Incident window start in RFC-3339 UTC'
+        required: true
+        type: string
+      until_utc:
+        description: 'Incident window end in RFC-3339 UTC'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: diagnose-yandex-stage
+  cancel-in-progress: false
+
+env:
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+
+jobs:
+  diagnose:
+    name: Read sanitized API logs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate diagnostic inputs
+        env:
+          REQUEST_ID: ${{ inputs.request_id }}
+          SINCE_UTC: ${{ inputs.since_utc }}
+          UNTIL_UTC: ${{ inputs.until_utc }}
+        run: node scripts/validate-yandex-incident-inputs.mjs
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh \
+            --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - name: Exchange OIDC token for the stage deployment identity
+        run: scripts/yandex-github-oidc.sh
+      - name: Read and sanitize the incident window
+        env:
+          REQUEST_ID: ${{ inputs.request_id }}
+          SINCE_UTC: ${{ inputs.since_utc }}
+          UNTIL_UTC: ${{ inputs.until_utc }}
+        run: |
+          set -euo pipefail
+          temporary_directory=$(mktemp -d)
+          trap 'rm -rf "$temporary_directory"' EXIT
+          container_id=$(yc serverless container get \
+            --name fit-stage-api \
+            --folder-id "$YC_FOLDER_ID" \
+            --format json | jq -er '.id')
+          yc logging read default \
+            --folder-id "$YC_FOLDER_ID" \
+            --resource-ids "$container_id" \
+            --since "$SINCE_UTC" \
+            --until "$UNTIL_UTC" \
+            --limit 1000 \
+            --format json > "$temporary_directory/logs.json"
+          node scripts/summarize-yandex-incident-logs.mjs \
+            "$temporary_directory/logs.json" "$REQUEST_ID"

@@ -8,6 +8,18 @@ import test from 'node:test'
 const requestId = '3ea35ed0-4895-4893-b52a-98715ab1d5fa'
 const otherId = '129c90e9-8f58-4c93-8160-19d72f25f1bc'
 
+test('keeps incident diagnostics manual, read-only, bounded, and scoped to the API container', () => {
+  const workflow = fs.readFileSync('.github/workflows/diagnose-yandex-stage.yml', 'utf8')
+
+  assert.match(workflow, /^on:\n  workflow_dispatch:/m)
+  assert.match(workflow, /^  id-token: write$/m)
+  assert.match(workflow, /node scripts\/validate-yandex-incident-inputs\.mjs/)
+  assert.match(workflow, /--name fit-stage-api/)
+  assert.match(workflow, /yc logging read default/)
+  assert.match(workflow, /node scripts\/summarize-yandex-incident-logs\.mjs/)
+  assert.doesNotMatch(workflow, /terraform (?:apply|destroy)|deploy-yandex-serverless-revision/)
+})
+
 test('accepts a bounded RFC-3339 incident window', () => {
   const result = spawnSync(process.execPath, ['scripts/validate-yandex-incident-inputs.mjs'], {
     encoding: 'utf8',
