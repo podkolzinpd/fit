@@ -1,6 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-21. База изменений: `fef978d5` (#1128). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
+Обновлено: 2026-09-21. База изменений: `495d3eae` (#1130). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 
 ## Активная цель
@@ -17,28 +17,10 @@ Yandex ID является единственным production-входом; app
 - Frontend Yandex API принимает Postgres-native ISO timestamps с numeric offset (`+00:00`); карточка «Последняя тренировка» больше не падает из-за отличия от literal `Z`.
 - Все запросы основного Yandex API и Yandex ID transport получают безопасный client-generated request ID, который API возвращает в ответе и использует как Fastify `reqId`. Штатные error-state позволяют скопировать этот ID вместе с release/status/operation без token, email, UUID профиля, request body и пользовательского текста.
 - Короткие platform-level `502`, при которых Fastify ещё не вернул request ID, восстанавливаются только для безопасных `GET`: параллельные чтения ждут один общий `/health` probe и после восстановления повторяются по одному разу. Перед единственной отправкой одноразового OAuth-кода вход, регистрация и привязка отдельно дожидаются успешного `/health`, поэтому временный сбой запуска API не расходует код. Записи и application-level ошибки автоматически не повторяются.
-- Stage delivery подтверждает `min_instances` активной revision и отдельно
-  проверяет её последовательными `/health` без retry. Application failure
-  откатывает кандидата; platform failure без `x-fit-request-id` делает deploy
-  красным, но не возвращает прошедший smoke API к непрогретой ревизии.
-- Причина platform-level `502` после простоя локализована на соединении runtime
-  с HTTP-процессом: provisioned instance приостанавливается и может потерять
-  сеть раньше исполнения Node idle-таймера. Один только Fastify timeout 5 секунд
-  оказался недостаточен: deploy `35619803040` сохранил `min_instances=1`, но
-  первый запрос после пяти минут получил platform `502` за 28,9 мс без входа в
-  приложение. API поэтому отдаёт не более одного ответа на socket и явно
-  закрывает его до приостановки; короткий timeout остаётся запасной защитой.
-  Окончательный гейт — 1 000 последовательных `/health` за 50 минут без retry и
-  без единого `502` на одной неизменной revision.
-- `VITE_MAINTENANCE_MODE` выключен после выпуска и production-проверки
-  обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
-  `paused`: он блокирует DML старых вкладок, RPC и background writers на 38
-  source-таблицах.
-- `analytics.trainer_overview`/`client_overview` на Yandex приведены к
-  parity с Supabase (000079_analytics_overview_parity) после дрифта, который
-  ломал DataLens при смене подключения. `is_test_account` всегда `false`
-  (email на Yandex не хранится), `last_sign_in_at` — приближение по
-  session-таблицам, а не настоящий auth-лог.
+- Stage delivery подтверждает `min_instances` активной revision и проверяет её `/health` без retry. Application failure откатывает кандидата; platform failure без `x-fit-request-id` делает deploy красным, но не возвращает прошедший smoke API к непрогретой ревизии.
+- Причина platform-level `502` после простоя локализована на соединении runtime с HTTP-процессом: provisioned instance может потерять сеть до Node idle-таймера. Deploy `35619803040` с `min_instances=1` получил после пяти минут platform `502` за 28,9 мс без входа в приложение. API явно закрывает socket после каждого ответа; окончательный гейт — 1 000 `/health` за 50 минут без retry и `502` на одной revision.
+- `VITE_MAINTENANCE_MODE` выключен. Owner-only Supabase write gate остаётся в `paused`: он блокирует DML старых вкладок, RPC и background writers на 38 source-таблицах.
+- `analytics.trainer_overview`/`client_overview` на Yandex приведены к parity с Supabase (000079_analytics_overview_parity). `is_test_account` всегда `false` (email на Yandex не хранится), `last_sign_in_at` — приближение по session-таблицам.
 
 ## Yandex Cloud — подтверждённая база
 
