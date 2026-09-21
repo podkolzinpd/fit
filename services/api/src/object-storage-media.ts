@@ -14,6 +14,7 @@ import type { VitalMediaSigner } from './vital-media.js'
 
 const OBJECT_STORAGE_ENDPOINT = 'https://storage.yandexcloud.net'
 const OBJECT_STORAGE_REGION = 'ru-central1'
+const OBJECT_STORAGE_DELETE_TIMEOUT_MS = 5_000
 const CHAT_MEDIA_PREFIX = 'chat-media'
 const VITAL_MEDIA_PREFIX = 'fit-exercise-media'
 const TRAINER_PROFILE_MEDIA_PREFIX = 'trainer-profile-media'
@@ -107,7 +108,10 @@ export function readYandexMediaStorageConfig(
 export class YandexMediaObjectStorage implements MediaObjectStorage {
   private readonly client: S3Client
 
-  constructor(private readonly config: YandexMediaStorageConfig) {
+  constructor(
+    private readonly config: YandexMediaStorageConfig,
+    private readonly deleteTimeoutMs = OBJECT_STORAGE_DELETE_TIMEOUT_MS,
+  ) {
     this.client = new S3Client({
       credentials: {
         accessKeyId: config.accessKeyId,
@@ -198,7 +202,7 @@ export class YandexMediaObjectStorage implements MediaObjectStorage {
       await this.client.send(new DeleteObjectCommand({
         Bucket: this.config.bucket,
         Key: mediaObjectKey(namespace, path),
-      }))
+      }), { abortSignal: AbortSignal.timeout(this.deleteTimeoutMs) })
     } catch {
       throw new Error('media_object_delete_failed')
     }
