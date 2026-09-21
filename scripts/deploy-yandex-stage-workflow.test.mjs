@@ -705,6 +705,10 @@ test('manages the migrated tenant rollout only through an explicit private run',
   assert.match(rolloutWorkflow, /domainReadyProfiles/)
   assert.match(rolloutWorkflow, /linkedProfiles/)
   assert.match(rolloutWorkflow, /rolloutEnabledProfiles/)
+  assert.match(
+    rolloutWorkflow,
+    /\.rolloutEnabledProfiles == \.linkedProfiles/,
+  )
   assert.doesNotMatch(rolloutWorkflow, /terraform apply/)
   assert.doesNotMatch(rolloutWorkflow, /^    environment:/m)
   assert.match(rolloutWorkflow, /\[\[ "\$TENANT_FINGERPRINT" =~ \^\[0-9a-f\]\{16\}\$ \]\]/)

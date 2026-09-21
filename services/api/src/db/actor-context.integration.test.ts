@@ -212,6 +212,7 @@ const APP_SUBJECT_HASH = 'f'.repeat(64)
 const LINK_ACTOR_ID = 'a6145f94-3889-47b3-8e63-b0f72df8f2ee'
 const LINK_SUBJECT_HASH = '6'.repeat(64)
 const OTHER_LINK_SUBJECT_HASH = '7'.repeat(64)
+const LINK_ACTOR_CLIENT_ID = 'a6145f94-3889-47b3-8e63-b0f72df8f2ef'
 const BOOTSTRAP_LINK_ACTOR_ID = 'f3f04352-32ac-4a8c-86d1-46cc8e8a6b13'
 const BOOTSTRAP_LINK_SUBJECT_HASH = '8'.repeat(64)
 const NATIVE_TRAINER_SUBJECT_HASH = '9'.repeat(64)
@@ -1540,6 +1541,69 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         linker.linkActor(LINK_ACTOR, OTHER_LINK_SUBJECT_HASH),
       ).rejects.toBeInstanceOf(YandexAccountLinkError)
       expect(await readActor(runtimePool)).toBeNull()
+    })
+
+    it('repairs only a missing rollout for a linked domain-ready profile', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const issuer = new DatabaseYandexAppSessionIssuer(runtimePool)
+      await ownerPool.query(
+        `insert into app_private.auth_identities (
+           provider, provider_subject_sha256, profile_id, identity_origin
+         ) values ('yandex', $1, $2, 'linked')
+         on conflict (provider, provider_subject_sha256) do update set
+           profile_id = excluded.profile_id,
+           identity_origin = excluded.identity_origin`,
+        [LINK_SUBJECT_HASH, LINK_ACTOR_ID],
+      )
+      await ownerPool.query(
+        'delete from app_private.profile_rollout_assignments where profile_id = $1',
+        [LINK_ACTOR_ID],
+      )
+      await expect(
+        issuer.issue(LINK_SUBJECT_HASH),
+      ).rejects.toBeInstanceOf(YandexAppSessionDeniedError)
+
+      await ownerPool.query(
+        `insert into public.clients (
+           id, trainer_id, auth_user_id, full_name
+         ) values ($1, $2, $3, 'Linked domain-ready client')`,
+        [LINK_ACTOR_CLIENT_ID, ACTOR_ID, LINK_ACTOR_ID],
+      )
+
+      try {
+        await expect(issuer.issue(LINK_SUBJECT_HASH)).resolves.toMatchObject({
+          accessMode: 'read_write',
+          profile: { id: LINK_ACTOR_ID, accountRole: 'client' },
+        })
+        const rollout = await ownerPool.query<{
+          access_mode: string
+          enabled: boolean
+          target_backend: string
+        } & QueryResultRow>(
+          `select target_backend, access_mode, enabled
+           from app_private.profile_rollout_assignments
+           where profile_id = $1`,
+          [LINK_ACTOR_ID],
+        )
+        expect(rollout.rows).toEqual([{
+          access_mode: 'read_write',
+          enabled: true,
+          target_backend: 'yandex',
+        }])
+      } finally {
+        await ownerPool.query(
+          'delete from app_private.yandex_app_sessions where profile_id = $1',
+          [LINK_ACTOR_ID],
+        )
+        await ownerPool.query(
+          'delete from app_private.profile_rollout_assignments where profile_id = $1',
+          [LINK_ACTOR_ID],
+        )
+        await ownerPool.query('delete from public.clients where id = $1', [LINK_ACTOR_CLIENT_ID])
+      }
     })
 
     it('bootstraps the exact current FIT profile before linking Yandex ID', async () => {
