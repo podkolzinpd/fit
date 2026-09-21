@@ -309,6 +309,65 @@ describe('yandexPilotQueries', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
+  it('waits for API readiness before consuming a one-time OAuth code', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': 'health-probe-request-id' },
+      }))
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': 'health-request-id' },
+      }))
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': REQUEST_ID },
+      }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const responsePromise = yandexPilotQueries.exchangeCodeForAppSession(
+      'https://stage.example.test',
+      'one-time-code',
+      'v'.repeat(43),
+    )
+    await vi.advanceTimersByTimeAsync(250)
+    const response = await responsePromise
+
+    expect(response.status).toBe(200)
+    expect(fetchMock.mock.calls.map(([input, init]) => ({
+      input: String(input),
+      method: init?.method ?? 'GET',
+    }))).toEqual([
+      { input: 'https://stage.example.test/health', method: 'GET' },
+      { input: 'https://stage.example.test/health', method: 'GET' },
+      { input: 'https://stage.example.test/health', method: 'GET' },
+      { input: 'https://stage.example.test/v1/auth/yandex/session', method: 'POST' },
+    ])
+  })
+
+  it('does not consume a one-time OAuth code while the API is unavailable', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValue(new Response(null, { status: 502 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const responsePromise = yandexPilotQueries.exchangeCodeForAppSession(
+      'https://stage.example.test',
+      'one-time-code',
+      'v'.repeat(43),
+    )
+    await vi.advanceTimersByTimeAsync(5_500)
+    const response = await responsePromise
+
+    expect(response.status).toBe(502)
+    expect(fetchMock).toHaveBeenCalledTimes(5)
+    expect(fetchMock.mock.calls.every(([input]) => (
+      String(input) === 'https://stage.example.test/health'
+    ))).toBe(true)
+  })
+
   it('uses explicit JSON and destructive endpoints for connection commands', async () => {
     const fetchMock = vi.fn<typeof fetch>()
       .mockResolvedValue(new Response('{}', { status: 200 }))
