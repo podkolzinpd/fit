@@ -122,8 +122,8 @@ test('keeps enough time for the bounded three-attempt summary contract', () => {
   assert.match(workflow, /^  TF_VAR_api_execution_timeout: '120s'$/m)
 })
 
-test('uses complete VPC zone coverage instead of a provisioned-instance workaround', () => {
-  assert.match(workflow, /^  TF_VAR_api_min_instances: '0'$/m)
+test('combines complete VPC zone coverage with one provisioned API instance', () => {
+  assert.match(workflow, /^  TF_VAR_api_min_instances: '1'$/m)
   assert.match(
     containerTerraform,
     /provision_policy \{\s+min_instances = var\.api_min_instances\s+\}/,

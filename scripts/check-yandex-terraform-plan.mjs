@@ -179,19 +179,11 @@ const provisionedInstances = (value) => {
   return Number(value[0]?.min_instances)
 }
 
-const isExactApiProvisioningChange = (resource) =>
+const isExactApiAvailabilityHardening = (resource) =>
   resource.address === 'yandex_serverless_container.api'
   && resource.change.actions.join(',') === 'update'
-  && (
-    (
-      provisionedInstances(resource.change.before?.provision_policy) === 0
-      && provisionedInstances(resource.change.after?.provision_policy) === 1
-    )
-    || (
-      provisionedInstances(resource.change.before?.provision_policy) === 1
-      && provisionedInstances(resource.change.after?.provision_policy) === 0
-    )
-  )
+  && provisionedInstances(resource.change.before?.provision_policy) === 0
+  && provisionedInstances(resource.change.after?.provision_policy) === 1
 
 const isExactServerlessAvailabilitySubnetCreate = (resource) => {
   const expected = serverlessAvailabilitySubnets.get(resource.address)
@@ -482,7 +474,7 @@ const changesContainerCostOrIdentity = (resource) =>
   costSensitiveContainerFields.some(
     (field) =>
       !(field === 'execution_timeout' && hasBoundedApiExecutionTimeout(resource))
-      && !(field === 'provision_policy' && isExactApiProvisioningChange(resource))
+      && !(field === 'provision_policy' && isExactApiAvailabilityHardening(resource))
       &&
       JSON.stringify(resource.change.before?.[field])
       !== JSON.stringify(resource.change.after?.[field]),
