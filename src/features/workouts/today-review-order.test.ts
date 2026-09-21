@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
-import { groupParsedWorkoutReviewBlocks, moveParsedWorkoutReviewBlock } from './today-review-order'
+import { groupParsedWorkoutReviewBlocks, hasUnresolvedWorkoutReviewItems, moveParsedWorkoutReviewBlock } from './today-review-order'
 
 function item(ref: string, blockId?: string): ParsedWorkoutExercise {
   const exercise: ExerciseSnapshot = { source: 'system', ref, name: ref, muscleGroup: 'other', inputKind: 'strength' }
@@ -27,5 +27,14 @@ describe('today review order', () => {
     const items = [item('a'), item('b')]
     expect(moveParsedWorkoutReviewBlock(items, 0, -1).map(({ exercise }) => exercise.ref)).toEqual(['a', 'b'])
     expect(moveParsedWorkoutReviewBlock(items, 1, 1).map(({ exercise }) => exercise.ref)).toEqual(['a', 'b'])
+  })
+
+  it('не разрешает перейти к проверке, пока неоднозначная строка не выбрана', () => {
+    const parsed = [item('bench'), item('plank')]
+    const unmatched = [{ line: 'гантели на бицепс 15 кг 15 раз 3 подхода' }]
+
+    expect(hasUnresolvedWorkoutReviewItems(parsed, unmatched, {})).toBe(true)
+    expect(hasUnresolvedWorkoutReviewItems(parsed, unmatched, { [unmatched[0]!.line]: { ref: 'biceps-curl' } })).toBe(false)
+    expect(hasUnresolvedWorkoutReviewItems([...parsed, { ...item('biceps-curl'), line: unmatched[0]!.line }], unmatched, {})).toBe(false)
   })
 })
