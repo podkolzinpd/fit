@@ -14,8 +14,8 @@ serverless_service_cidr = "198.19.0.0/16"
 # The tagged image must be pushed before apply.
 api_image_tag = "foundation"
 migration_image_tag = "foundation"
-# Provisioned instances are optional and default to zero. Network availability
-# is provided by one subnet in every regular cloud availability zone.
+# The shared module defaults to zero. The production-facing stage workflow
+# explicitly sets this to one; complete VPC zone coverage is also required.
 api_min_instances = 0
 
 # Existing transport metadata is resolved automatically by the GitHub workflow
