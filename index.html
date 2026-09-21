@@ -8513,8 +8513,8 @@ h3 {
 
 .prefinal-digital-market .digital-market-strip {
   display: grid;
-  grid-template-columns: 52fr 11fr 10fr 16fr 11fr;
-  height: 208px;
+  grid-template-columns: 52fr 21fr 16fr 11fr;
+  height: 150px;
   border: 1px solid var(--ink);
 }
 
@@ -8523,7 +8523,7 @@ h3 {
   min-width: 0;
   flex-direction: column;
   justify-content: space-between;
-  padding: 20px 20px 18px;
+  padding: 16px 18px 14px;
 }
 
 .prefinal-digital-market .digital-market-segment + .digital-market-segment {
@@ -8540,13 +8540,6 @@ h3 {
   background: #4b4b4d;
 }
 
-.prefinal-digital-market .digital-market-segment--log {
-  color: var(--paper);
-  background: #858487;
-  padding-right: 12px;
-  padding-left: 12px;
-}
-
 .prefinal-digital-market .digital-market-segment--food {
   color: var(--ink);
   background: #cbc8c2;
@@ -8558,39 +8551,64 @@ h3 {
 }
 
 .prefinal-digital-market .digital-market-segment--data span,
-.prefinal-digital-market .digital-market-segment--training span,
-.prefinal-digital-market .digital-market-segment--log span {
+.prefinal-digital-market .digital-market-segment--training span {
   color: rgba(247,244,238,.66);
 }
 
 .prefinal-digital-market .digital-market-segment strong {
   display: block;
-  font-size: 42px;
+  font-size: 34px;
   line-height: 1;
   letter-spacing: -.055em;
 }
 
 .prefinal-digital-market .digital-market-segment h3 {
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   font-size: 20px;
   line-height: 1.1;
   letter-spacing: -.02em;
 }
 
-.prefinal-digital-market .digital-market-segment--training strong { font-size: 38px; }
-.prefinal-digital-market .digital-market-segment--training h3 { font-size: 20px; }
-.prefinal-digital-market .digital-market-segment--training p { font-size: 13px; }
-.prefinal-digital-market .digital-market-segment--log strong { font-size: 36px; }
-.prefinal-digital-market .digital-market-segment--log h3 { font-size: 20px; }
-.prefinal-digital-market .digital-market-segment--log p { font-size: 12px; line-height: 1.3; }
-
 .prefinal-digital-market .digital-market-segment p {
   margin: 0;
   color: inherit;
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.3;
   opacity: .78;
 }
+
+.prefinal-digital-market .digital-market-tail {
+  display: grid;
+  grid-template-columns: 10fr 90fr;
+  height: 58px;
+  border: 1px solid var(--ink);
+  border-top: 0;
+}
+
+.prefinal-digital-market .digital-market-tail-leaders {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 9px;
+  align-items: center;
+  padding: 8px 11px;
+  color: var(--paper);
+  background: var(--ink);
+}
+
+.prefinal-digital-market .digital-market-tail-leaders strong { font-size: 24px; line-height: 1; }
+.prefinal-digital-market .digital-market-tail-leaders span { font-size: 10px; line-height: 1.18; text-transform: uppercase; }
+
+.prefinal-digital-market .digital-market-tail-long {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 26px;
+  align-items: center;
+  padding: 8px 20px;
+  background: repeating-linear-gradient(90deg, #ece9e4 0, #ece9e4 38px, #f7f4ee 38px, #f7f4ee 39px);
+}
+
+.prefinal-digital-market .digital-market-tail-long strong { font-size: 20px; line-height: 1.08; }
+.prefinal-digital-market .digital-market-tail-long span { color: var(--muted); font-size: 13px; line-height: 1.25; }
 
 .prefinal-digital-market .digital-market-audience {
   position: absolute;
@@ -8875,7 +8893,7 @@ Fit остаётся отдельным приложением, потому ч�
       <div class="eyebrow">03 · ЦИФРОВОЙ РЫНОК</div>
       <div class="digital-market-fit">Fit</div>
       <h2>Цифровой спортивный рынок уже сложился</h2>
-      <p class="digital-market-lead">Основная активность — в данных и трекерах. Даже тренировочный сегмент разделён между готовыми занятиями и простыми дневниками.</p>
+      <p class="digital-market-lead">Основная активность — в данных и трекерах. За заметными сервисами стоит длинный хвост небольших приложений.</p>
 
       <div class="digital-market-base">
         <span>БАЗА ЭКСТРАПОЛЯЦИИ</span>
@@ -8891,12 +8909,8 @@ Fit остаётся отдельным приложением, потому ч�
             <p>Mi Fitness · Huawei Health<br>Garmin · Strava · шагомеры</p>
           </div>
           <div class="digital-market-segment digital-market-segment--training">
-            <div><strong>≈11%</strong><h3>Готовые тренировки</h3></div>
-            <p>FitStars · Home Workout<br>Fitness Online</p>
-          </div>
-          <div class="digital-market-segment digital-market-segment--log">
-            <div><strong>≈10%</strong><h3>Дневник тренировки</h3></div>
-            <p>Hevy · Strong<br>JEFIT · FitNotes<br>и десятки аналогов</p>
+            <div><strong>≈21%</strong><h3>Тренировки</h3></div>
+            <p>FitStars · Home Workout<br>Fitness Online · Hevy</p>
           </div>
           <div class="digital-market-segment digital-market-segment--food">
             <div><strong>≈16%</strong><h3>Питание</h3></div>
@@ -8906,6 +8920,10 @@ Fit остаётся отдельным приложением, потому ч�
             <div><strong>≈11%</strong><h3>Клуб и тренер</h3></div>
             <p>DDX · клубы<br>Trainerize</p>
           </div>
+        </div>
+        <div class="digital-market-tail" aria-label="Длинный хвост небольших спортивных приложений">
+          <div class="digital-market-tail-leaders"><strong>10%</strong><span>лидеров<br>92,6% выручки</span></div>
+          <div class="digital-market-tail-long"><strong>≈90% приложений — длинный хвост</strong><span>100+ спортивных приложений уже в российской выборке; остальные 90% делят 7,4% подписочной выручки категории</span></div>
         </div>
       </div>
 
@@ -8933,7 +8951,7 @@ Fit остаётся отдельным приложением, потому ч�
       <div class="digital-market-takeaway">
         <span>ВЫВОД</span>
         <strong>Fit может объединить разрозненные цифровые привычки в одном спортивном контексте.</strong>
-        <p class="digital-market-source">Аудитория: РОМИР, июль 2026. Структура сценариев — рабочая экстраполяция; доля дневников выделена внутри прежнего блока «Тренировки» и требует валидации.</p>
+        <p class="digital-market-source">Аудитория: РОМИР, июль 2026. Сценарии — рабочая экстраполяция. Длинный хвост: МТС, 100+ приложений; Adapty, глобальный subscription-бенчмарк 2026.</p>
       </div>
 
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
@@ -8944,12 +8962,14 @@ Fit остаётся отдельным приложением, потому ч�
 
 Эти люди пользуются не одним типом продукта. Повседневную активность и показатели собирают приложения часов и трекеров; готовые занятия дают тренировочные сервисы; питание ведётся отдельно; клубы и тренеры используют собственные кабинеты и приложения.
 
-Отдельный заметный слой внутри тренировочного сценария — простые дневники силовых и фитнес-тренировок. Их базовая механика почти одинаковая: выбрать упражнение, записать подходы, повторения и вес, затем увидеть историю и прогресс. Hevy, Strong, JEFIT и FitNotes показывают, что это самостоятельная массовая потребность, вокруг которой существует множество однотипных приложений.
+Важно, что примерами на полосе рынок не заканчивается. МТС Геоэффект анализировал более 100 спортивных приложений в России: беговые трекеры, фитнес-программы, workout-таймеры и другие инструменты. Значит, за несколькими заметными брендами существует длинный хвост небольших продуктов с узким сценарием и небольшой собственной базой.
 
-Полоса показывает рабочую оценку распределения по основному цифровому сценарию пользователя: около 52% активности приходится на данные, часы, шагомеры и маршруты; 11% — на готовые тренировочные программы; 10% — на дневники тренировки; 16% — на питание; 11% — на клубы и сопровождение тренера. Сумма остаётся равной 100%: дневники не добавлены поверх рынка, а выделены из прежнего 21-процентного блока «Тренировки».
+Верхняя полоса показывает рабочую оценку распределения по основному цифровому сценарию пользователя: около 52% активности приходится на данные, часы, шагомеры и маршруты; 21% — на тренировки; 16% — на питание; 11% — на клубы и сопровождение тренера.
+
+Нижняя полоса показывает уже не пользователей, а структуру предложения. Глобальный subscription-бенчмарк Adapty показывает высокую концентрацию: верхние 10% Health & Fitness приложений получают 92,6% подписочной выручки, остальные 90% делят 7,4%. Это хороший индикатор длинного хвоста: продуктов много, но масштаб каждого в среднем мал.
 
 ОГОВОРКА
-Это сценарная оценка, а не измеренный MAU российского рынка и не доля количества приложений в сторах. Публичного российского разреза уникальных пользователей по подтипу «дневник тренировки» нет. Доля около 10% — рабочая оценка: примерно половина тренировочного сценария отнесена к самостоятельному логированию на основании состава заметных продуктов и публичных рейтингов. РОМИР объединяет приложения и гаджеты; аудитории отдельных приложений пересекаются.
+Не смешиваем две метрики. 52/21/16/11 — рабочая оценка пользовательских сценариев в России. 10/90 и 92,6/7,4 — глобальное распределение количества приложений и подписочной выручки среди subscription-продуктов Health & Fitness. Выручка не равна аудитории, но позволяет показать концентрацию рынка и наличие большого числа небольших игроков без выдуманной оценки их российского MAU.
 
 ПЕРЕХОД
 Рынок уже существует, но спортивный контекст человека распределён между разными инструментами. Дальше показываем, что отдельные модели цифрового сопровождения уже подтвердили массовый спрос и измеримый эффект.
@@ -8958,10 +8978,7 @@ Fit остаётся отдельным приложением, потому ч�
 РОМИР, «Здоровье вместо кубиков: как россияне относятся к спорту», 13 июля 2026: https://romir.ru/feed/zdorove-vmesto-kubikov-kak-rossiiane-otnosiatsia-k-sportu-i-za-kogo-boleiut-na-chm-2026
 МТС и Эвотор, исследование более 100 спортивных приложений на базе 33,1 млн пользователей, март 2025: https://moskva.mts.ru/about/media-centr/soobshheniya-kompanii/novosti-mts-v-rossii-i-mire/2025-03-27/issledovanie-mts-i-evotor-kazhdyj-tretij-zhitel-rossii-regulyarno-zanimaetsya-sportom
 Sensor Tower, Top Health and Fitness Apps in Russia, IV квартал 2025: https://sensortower.com/blog/2025-q4-unified-top-5-health-and-fitness-units-ru-600af518241bc16eb8dce802
-Hevy, описание продукта и 16+ млн спортсменов: https://www.hevyapp.com/
-Strong, описание workout log и 5+ млн пользователей: https://www.strong.app/
-JEFIT, workout logging и 12+ млн пользователей: https://www.jefit.com/use-case/workout-logging-app
-FitNotes, простой дневник тренировок: https://www.fitnotesapp.com/</aside>
+Adapty, How much does a subscription app make?, 2026 — top 10% Health &amp; Fitness приложений получают 92,6% подписочной выручки: https://adapty.io/blog/how-much-does-a-subscription-app-make/</aside>
     </section>
 
     <section class="slide redesign-v2 review-story-v2 prefinal-keep" data-section="Идея" data-slide-type="product-story" data-golden="linear/03-linear-product-flow.png">
