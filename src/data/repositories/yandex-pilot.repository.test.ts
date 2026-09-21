@@ -693,6 +693,15 @@ describe('yandexPilotRepository', () => {
     })
   })
 
+  it('describes a training-data failure without calling it a client-list failure', async () => {
+    queries.listTrainingData.mockResolvedValue(new Response(null, { status: 500 }))
+
+    await expect(yandexPilotRepository.listTrainingData(
+      'https://stage.example.test',
+      's'.repeat(43),
+    )).rejects.toThrow('Не удалось загрузить данные тренировок из stage.')
+  })
+
   it('accepts Postgres-native offset timestamps in training data', async () => {
     const workout = trainingData.workouts[0]!
     const exercise = workout.exercises[0]!

@@ -6446,3 +6446,12 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .state-panel .request-diagnostic-copy { min-height:36px; display:inline-flex; align-items:center; gap:7px; margin:0; padding:7px 10px; border:1px solid var(--border); border-radius:10px; background:var(--surface-raised); color:var(--fg); font-size:12px; font-weight:500; box-shadow:none; }
 .state-panel .request-diagnostic-copy svg { width:16px; height:16px; }
 .state-panel .request-diagnostic-status { min-height:17px; color:var(--muted); font-size:12px; }
+.request-error-inline { display:grid; justify-items:start; gap:8px; }
+.request-error-inline > .error { margin:0; }
+.request-error-inline .request-diagnostic { display:grid; justify-items:start; gap:8px; color:var(--muted); }
+.request-error-inline .request-diagnostic-code { font-size:12px; line-height:1.4; }
+.request-error-inline .request-diagnostic-code strong { color:var(--fg); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; letter-spacing:.02em; }
+.request-error-inline .request-diagnostic-copy { min-height:36px; display:inline-flex; align-items:center; gap:7px; margin:0; padding:7px 10px; border:1px solid var(--border); border-radius:10px; background:var(--surface-raised); color:var(--fg); font-size:12px; font-weight:500; box-shadow:none; }
+.request-error-inline .request-diagnostic-copy svg { width:16px; height:16px; }
+.request-error-inline .request-diagnostic-status { min-height:17px; color:var(--muted); font-size:12px; }
+.today-start-page > .request-error-inline { margin-top:14px; }
