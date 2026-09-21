@@ -1,12 +1,12 @@
 import { fetchWithTimeout } from './request-timeout'
-import { fetchWithRequestDiagnostics } from './request-diagnostics'
+import { fetchWithYandexPlatformReadRetry } from './request-diagnostics'
 
 export type YandexApiAccessMode = 'read_only' | 'read_write'
 
 export const YANDEX_AUTH_REQUEST_TIMEOUT_MS = 12_000
 export const YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE = 'Проверка сессии Yandex ID заняла слишком много времени.'
 
-const fetch: typeof globalThis.fetch = (input, init) => fetchWithRequestDiagnostics(
+const fetch: typeof globalThis.fetch = (input, init) => fetchWithYandexPlatformReadRetry(
   globalThis.fetch,
   input,
   init,
@@ -20,7 +20,7 @@ function yandexAuthFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
     YANDEX_AUTH_REQUEST_TIMEOUT_MS,
     YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE,
   )
-  return fetchWithRequestDiagnostics(
+  return fetchWithYandexPlatformReadRetry(
     timedFetch,
     input,
     init,
