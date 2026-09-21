@@ -362,9 +362,12 @@ test('allows the API gateway and database readiness to settle before rollback', 
   )
 })
 
-test('requires a non-retried 50-call availability soak after network changes', () => {
+test('waits for Yandex provisioning and requires a non-retried 50-call soak', () => {
+  assert.match(workflow, /sleep 300\n\s+for availability_probe/)
   assert.match(workflow, /for availability_probe in \$\(seq 1 50\)/)
   assert.match(workflow, /Availability probe \$availability_probe\/50 failed/)
+  assert.match(workflow, /platform_request_id=\$\{platform_request_id:-missing\}/)
+  assert.match(workflow, /fit_request_id=\$\{fit_request_id:-missing\}/)
   assert.doesNotMatch(
     workflow,
     /for availability_probe in \$\(seq 1 50\)[\s\S]*?--retry[\s\S]*?fixture_token=/,
