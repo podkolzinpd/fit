@@ -1,12 +1,15 @@
 import fs from 'node:fs'
 
-const [logPath, requestId] = process.argv.slice(2)
-if (!logPath || !requestId) {
-  throw new Error('Usage: summarize-yandex-incident-logs.mjs <logs.json> <request-id>')
+const [logPath, requestId, contextPath] = process.argv.slice(2)
+if (!logPath || !requestId || !contextPath) {
+  throw new Error(
+    'Usage: summarize-yandex-incident-logs.mjs <logs.json> <request-id> <context.json>',
+  )
 }
 
 const document = JSON.parse(fs.readFileSync(logPath, 'utf8'))
 const entries = Array.isArray(document) ? document : document.entries ?? []
+const context = JSON.parse(fs.readFileSync(contextPath, 'utf8'))
 
 function redact(value) {
   if (typeof value !== 'string') return value
@@ -58,6 +61,32 @@ function safeEntry(entry) {
 }
 
 const matches = entries.filter(containsRequestId).map(safeEntry)
+const applicationEntry = matches.find((entry) => entry.method && entry.path)
+const platformInvocationFailed = matches.some((entry) => (
+  /Error during function invocation/i.test(entry.message ?? '')
+))
+const executionLayer = applicationEntry
+  ? 'application'
+  : platformInvocationFailed
+    ? 'platform_invocation'
+    : 'unknown'
+const handler = applicationEntry
+  ? 'entered'
+  : platformInvocationFailed
+    ? 'not_started'
+    : 'unknown'
+const inferredOperation = applicationEntry
+  ? `${applicationEntry.method} ${applicationEntry.path}`
+  : undefined
+const diagnosticContext = {
+  serviceName: redact(context.serviceName),
+  resourceType: redact(context.resourceType),
+  activeRevisionAtDiagnosis: redact(context.activeRevisionAtDiagnosis),
+  activeReleaseAtDiagnosis: redact(context.activeReleaseAtDiagnosis),
+  operation: redact(inferredOperation ?? context.operation ?? 'unknown'),
+  executionLayer,
+  handler,
+}
 const infrastructurePattern = /(?:error|failed|failure|timeout|terminated|crash|signal|unavailable|502|503|504|ECONN|ENET|database)/i
 const infrastructureEntries = entries
   .filter((entry) => {
@@ -73,6 +102,7 @@ const infrastructureEntries = entries
   }))
 
 process.stdout.write(`${JSON.stringify({
+  diagnosticContext,
   totalEntries: entries.length,
   requestMatches: matches,
   infrastructureEntries,

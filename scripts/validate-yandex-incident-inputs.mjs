@@ -1,11 +1,16 @@
 const requestId = process.env.REQUEST_ID ?? ''
 const sinceUtc = process.env.SINCE_UTC ?? ''
 const untilUtc = process.env.UNTIL_UTC ?? ''
+const operation = process.env.OPERATION ?? 'unknown'
 
 const requestIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 if (!requestIdPattern.test(requestId)) {
-  throw new Error('diagnose_request_id must be a UUID')
+  throw new Error('diagnostic request ID must be a UUID')
+}
+
+if (!/^(?:unknown|(?:GET|POST|PUT|PATCH|DELETE) \/[A-Za-z0-9/_{}:.-]*)$/.test(operation)) {
+  throw new Error('diagnostic operation must be a safe method and path without query values')
 }
 
 const since = Date.parse(sinceUtc)
