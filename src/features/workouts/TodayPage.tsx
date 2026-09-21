@@ -8,7 +8,7 @@ import { formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-
 import { isValidRpe } from '../../shared/rpe'
 import type { RunningFormat } from '../../shared/running-formats'
 import { trackGoal } from '../../shared/yandex-metrika'
-import { OverflowMenu, Page } from '../../shared/ui'
+import { InlineRequestError, OverflowMenu, Page } from '../../shared/ui'
 import { ExercisePicker, ExerciseThumbnail, findCatalogExercise, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { ClientPicker, type ClientPickerSelection } from '../clients'
 import { useAuth } from '../../app/auth-context'
@@ -639,6 +639,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
 
   const header = todayHeaderProps(clientMode, actor)
   const pageTitle = greetingHeaderPilotEnabled ? greeting : header.title
+  const supplementalLoadError = catalog.error ?? (!clientMode ? todayWorkouts.error : null)
   return <Page title={pageTitle} hideTitle={header.hideTitle} className="today-page today-start-page" action={<div className="today-header-actions"><ChatHeaderAction />{header.showProfileAvatar && <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}</div>}>
     {actor && screen === 'compose' && !textComposerOpen && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} role={clientMode ? 'client' : 'trainer'} /></>}
     {actor && screen === 'compose' && <YandexAccountLinkingCard actor={actor} />}
@@ -761,7 +762,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         <WorkoutCta type="button" className="wide" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!items.length || !effectiveClientId} onClick={() => save.mutate(recordMode)}>{recordMode === 'planned' ? 'Запланировать тренировку' : 'Записать тренировку'}</WorkoutCta>
       </section></section>}
     </section>}
-    {(catalog.error ?? (!clientMode ? todayWorkouts.error : null)) && <p className="error">{(catalog.error ?? (!clientMode ? todayWorkouts.error : null))?.message}</p>}
+    {supplementalLoadError && <InlineRequestError error={supplementalLoadError} />}
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} selectionDraft={replaceIndex === null ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
   </Page>
 }
@@ -776,7 +777,7 @@ function TrainerAttentionQueue({ actions, planning, loading, error, snoozingClie
   hideEyebrow?: boolean
 }) {
   if (loading) return <section className="trainer-attention trainer-attention-loading" aria-label="Задачи по клиентам"><span className="skeleton-line" /><span className="skeleton-line short" /></section>
-  if (error) return <p className="error">Не удалось загрузить задачи по клиентам.</p>
+  if (error) return <InlineRequestError error={error} message="Не удалось загрузить задачи по клиентам." />
   if (!actions.length && !planning.length) return <section className="trainer-attention trainer-attention-clear">{!hideEyebrow && <p className="eyebrow">ПО КЛИЕНТАМ</p>}<strong>Срочных действий нет</strong></section>
   return <section className="trainer-attention" aria-labelledby="trainer-attention-title">
     {actions.length > 0 && <><div className="trainer-attention-heading">{!hideEyebrow && <p className="eyebrow">ПО КЛИЕНТАМ</p>}<h2 id="trainer-attention-title">Требует действия</h2></div><div className="trainer-attention-list">{actions.map((item) => <Link className={`trainer-attention-row reason-${item.reason}`} key={item.clientId} to={`/workouts/${item.workoutId}${item.reason === 'question' ? '?reply=1' : ''}`}>
