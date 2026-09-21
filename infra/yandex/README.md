@@ -16,7 +16,8 @@ or Terraform state.
 - one `fit` database owned only by the migration user;
 - one Serverless Container with 1 GB RAM; the production-facing stage workflow
   keeps exactly one provisioned API instance ready, while the reusable module
-  default remains zero;
+  default remains zero; a dedicated least-privilege timer identity calls the
+  side-effect-free API warmup endpoint every minute with two bounded retries;
 - one private 512 MB background dispatcher with no provisioned instances, plus
   a one-minute timer and separate least-privilege runtime/scheduler identities;
   it handles Web Push and optional app-feedback delivery to Telegram/Tracker;
@@ -43,6 +44,13 @@ dispatcher receives `lockbox.payloadViewer` only on that stage-local secret.
 Terraform receives only the mirror ID and immutable version; the payload never
 enters GitHub outputs, environment files, logs or Terraform state. The source
 version ID in the mirror version description makes later rotations idempotent.
+The API warmup schedule adds about 43,200 invocations per 30-day month and no
+additional provisioned instance. Its `POST /internal/warmup` route returns `204`
+without database or external-network work. The frontend still performs a safe
+health preflight before a mutation after 45 seconds without a confirmed API
+response, because the timer is a stability mitigation rather than permission to
+retry a write with an unknown result.
+
 The provider cannot plan IAM binding lists containing service-account IDs that
 are still unknown on the first run. The read-only plan therefore omits only
 those free IAM members. After the bootstrap identity phase, the workflow pins
@@ -141,8 +149,8 @@ folder, as required by the documented Serverless Containers CI/CD setup. This
 bootstrap grant is deliberately not managed by this Terraform stack: the
 deployer must not be able to expand its own folder permissions. When
 `deployer_member` is set, Terraform additionally manages direct grants on the
-deployer itself and both runtime service accounts, and the workflow verifies
-those three least-privilege bindings before image work or migrations.
+deployer itself and each runtime or scheduler service account, and the workflow
+verifies those least-privilege bindings before image work or migrations.
 
 The exact bootstrap, migration and smoke-test sequence is documented in
 `docs/STAGE_DEPLOYMENT.md`.

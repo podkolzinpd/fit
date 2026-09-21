@@ -22,7 +22,10 @@ afterEach(() => {
 describe('yandexPilotQueries', () => {
   it('exchanges Yandex OAuth codes for app sessions and links accounts explicitly', async () => {
     const fetchMock = vi.fn<typeof fetch>()
-      .mockResolvedValue(new Response('{}', { status: 200 }))
+      .mockResolvedValue(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': REQUEST_ID },
+      }))
     vi.stubGlobal('fetch', fetchMock)
     const baseUrl = 'https://stage.example.test'
     const code = 'oauth-code'
@@ -184,7 +187,10 @@ describe('yandexPilotQueries', () => {
 
   it('sends the Fit pilot session outside the Yandex IAM Authorization header', async () => {
     const fetchMock = vi.fn<typeof fetch>()
-      .mockResolvedValue(new Response('{}', { status: 200 }))
+      .mockResolvedValue(new Response('{}', {
+        status: 200,
+        headers: { 'x-fit-request-id': REQUEST_ID },
+      }))
     vi.stubGlobal('fetch', fetchMock)
 
     await yandexPilotQueries.listClients(

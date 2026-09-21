@@ -126,13 +126,14 @@ resource "yandex_serverless_container" "api" {
 }
 
 resource "yandex_serverless_container_iam_binding" "api_invocation" {
-  count = var.allow_unauthenticated_api || var.api_invoker_member != null ? 1 : 0
+  count = 1
 
   container_id = yandex_serverless_container.api.id
   role         = "serverless.containers.invoker"
   members = concat(
     var.api_invoker_member == null ? [] : [var.api_invoker_member],
     var.allow_unauthenticated_api ? ["system:allUsers"] : [],
+    var.allow_unauthenticated_api ? [] : ["serviceAccount:${yandex_iam_service_account.api_warmer.id}"],
   )
 }
 

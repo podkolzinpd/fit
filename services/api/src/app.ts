@@ -272,6 +272,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     ...(options.releaseId === undefined ? {} : { releaseId: options.releaseId }),
   }))
 
+  // The Yandex timer calls this route once per minute so a provisioned
+  // Serverless Container does not sit idle long enough for its inbound
+  // connection to become stale. It deliberately performs no DB or network IO.
+  app.post('/internal/warmup', (_request, reply) => reply.code(204).send())
+
   app.post('/v1/exercise-media/sign', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     const command = readVitalMediaRequest(request.body)

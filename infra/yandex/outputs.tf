@@ -13,6 +13,11 @@ output "api_service_account_id" {
   value       = yandex_iam_service_account.api.id
 }
 
+output "api_warmer_service_account_id" {
+  description = "Timer identity attached only to the API warmup trigger."
+  value       = yandex_iam_service_account.api_warmer.id
+}
+
 output "media_bucket_name" {
   description = "Effective private bucket used for chat and exercise media."
   value       = local.media_bucket_name
