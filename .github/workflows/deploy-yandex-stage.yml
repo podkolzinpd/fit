@@ -694,14 +694,17 @@ jobs:
               sleep 2
             fi
           done
-          # A short healthy streak can miss an unavailable VPC zone. Let the
-          # network attachment settle, then require 50 clean, non-retried
-          # invocations so a platform 502 fails the rollout instead of being
-          # hidden by application-level retries.
-          sleep 30
+          # Yandex documents that provisioned-instance settings can take up to
+          # five minutes to become effective. A shorter delay caused healthy
+          # candidate revisions to be rolled back while the platform was still
+          # preparing them. Wait for the full guarantee window, then require 50
+          # clean, non-retried invocations across random availability zones.
+          sleep 300
           for availability_probe in $(seq 1 50); do
             : > api-health-response.json
+            : > api-health-headers.txt
             health_status=$(curl --silent --show-error --max-time 12 \
+              --dump-header api-health-headers.txt \
               --output api-health-response.json --write-out '%{http_code}' \
               --header "Authorization: Bearer $YC_TOKEN" "${api_url%/}/health") \
               || health_status=000
@@ -709,7 +712,15 @@ jobs:
               || ! jq -e --arg release_id "$API_IMAGE_TAG" \
                 '.status == "ok" and .releaseId == $release_id' \
                 api-health-response.json >/dev/null 2>&1; then
-              echo "Availability probe $availability_probe/50 failed with HTTP $health_status." >&2
+              platform_request_id=$(awk '
+                tolower($1) == "x-request-id:" {gsub("\\r", "", $2); value=$2}
+                END {print value}
+              ' api-health-headers.txt)
+              fit_request_id=$(awk '
+                tolower($1) == "x-fit-request-id:" {gsub("\\r", "", $2); value=$2}
+                END {print value}
+              ' api-health-headers.txt)
+              echo "Availability probe $availability_probe/50 failed with HTTP $health_status; platform_request_id=${platform_request_id:-missing}; fit_request_id=${fit_request_id:-missing}." >&2
               exit 1
             fi
           done
