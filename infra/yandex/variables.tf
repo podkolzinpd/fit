@@ -213,6 +213,17 @@ variable "api_concurrency" {
   }
 }
 
+variable "api_min_instances" {
+  description = "Minimum number of provisioned API instances kept ready by Serverless Containers."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.api_min_instances >= 0 && floor(var.api_min_instances) == var.api_min_instances
+    error_message = "api_min_instances must be a non-negative integer."
+  }
+}
+
 variable "api_execution_timeout" {
   description = "Maximum HTTP request duration for the API. AI summaries need time for the existing bounded YandexGPT retry policy."
   type        = string
