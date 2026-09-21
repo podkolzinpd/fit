@@ -97,8 +97,11 @@ For a media bucket in a different cloud, use a service account belonging to
 the bucket's cloud. An Allow bucket policy alone does not provide the base
 IAM/ACL permission, and Yandex rejects foreign-cloud principals in bucket
 IAM/ACL grants. Provision bucket READ/WRITE ACL and a prefix-scoped policy for
-the bucket-owned account, then store its static key in a separate protected
-stage Lockbox with `YANDEX_MEDIA_ACCESS_KEY_ID` and
+the bucket-owned account. The object rule must keep `GetObject`, `PutObject`
+and `DeleteObject` limited to `chat-media/*`, `fit-exercise-media/*` and
+`trainer-profile-media/*`; adding a new media namespace requires updating this
+list before the application starts writing it. Store the account's static key
+in a separate protected stage Lockbox with `YANDEX_MEDIA_ACCESS_KEY_ID` and
 `YANDEX_MEDIA_SECRET_ACCESS_KEY`. Grant only the API and migration runtime
 accounts `lockbox.payloadViewer` on that secret. Keep the original stage media
 secret/key intact. Set `YC_STAGE_MEDIA_BUCKET` and the non-secret GitHub variable

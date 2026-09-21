@@ -6,6 +6,7 @@ import {
   readYandexMediaStorageConfig,
   type MediaObjectStorage,
   YandexChatMediaStore,
+  YandexMediaObjectStorage,
   YandexVitalMediaSigner,
 } from './object-storage-media.js'
 
@@ -63,6 +64,23 @@ describe('mediaObjectKey', () => {
 })
 
 describe('Yandex media adapters', () => {
+  it('aborts a stalled object deletion before it can block the profile response', async () => {
+    const storage = new YandexMediaObjectStorage({
+      accessKeyId: `YC${'a'.repeat(23)}`,
+      bucket: 'fit-stage-media-example',
+      secretAccessKey: `YC${'b'.repeat(38)}`,
+    }, 10)
+    const send = vi.fn((_command: unknown, options?: { abortSignal?: AbortSignal }) =>
+      new Promise((_resolve, reject) => {
+        options?.abortSignal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true })
+      }))
+    Object.assign(storage, { client: { send } })
+
+    await expect(storage.remove('trainer-profile-media', 'trainer/photo/full.jpg'))
+      .rejects.toThrow('media_object_delete_failed')
+    expect(send).toHaveBeenCalledOnce()
+  })
+
   it('stores, signs and removes chat images in the chat namespace', async () => {
     const storage = buildStorage()
     const store = new YandexChatMediaStore(storage)
