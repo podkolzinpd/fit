@@ -1,6 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-21. База изменений: `983b2f86` (#1124). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
+Обновлено: 2026-09-21. База изменений: `3dc15e0f` (#1125). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 
 ## Активная цель
@@ -17,6 +17,10 @@ Yandex ID является единственным production-входом; app
 - Frontend Yandex API принимает Postgres-native ISO timestamps с numeric offset (`+00:00`); карточка «Последняя тренировка» больше не падает из-за отличия от literal `Z`.
 - Все запросы основного Yandex API и Yandex ID transport получают безопасный client-generated request ID, который API возвращает в ответе и использует как Fastify `reqId`. Штатные error-state позволяют скопировать этот ID вместе с release/status/operation без token, email, UUID профиля, request body и пользовательского текста.
 - Короткие platform-level `502`, при которых Fastify ещё не вернул request ID, восстанавливаются только для безопасных `GET`: параллельные чтения ждут один общий `/health` probe и после восстановления повторяются по одному разу. Перед единственной отправкой одноразового OAuth-кода вход, регистрация и привязка отдельно дожидаются успешного `/health`, поэтому временный сбой запуска API не расходует код. Записи и application-level ошибки автоматически не повторяются.
+- Stage delivery подтверждает `min_instances` активной revision и отдельно
+  проверяет её последовательными `/health` без retry. Application failure
+  откатывает кандидата; platform failure без `x-fit-request-id` делает deploy
+  красным, но не возвращает прошедший smoke API к непрогретой ревизии.
 - `VITE_MAINTENANCE_MODE` выключен после выпуска и production-проверки
   обновлённого Yandex ID экрана. Owner-only Supabase write gate остаётся в
   `paused`: он блокирует DML старых вкладок, RPC и background writers на 38
