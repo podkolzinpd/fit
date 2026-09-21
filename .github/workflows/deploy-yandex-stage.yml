@@ -753,13 +753,15 @@ jobs:
           }
           report_stage_smoke_failure() {
             command_exit=$?
+            http_status=$(awk 'toupper($1) ~ /^HTTP\// {value=$2} END {print value}' "$stage_smoke_headers")
+            request_id=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-request-id:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
             error_category=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
             error_code=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
             observed_release=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-release-id:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
-            echo "Stage smoke failed: check=${stage_smoke_check:-unknown}; command_exit=$command_exit; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}; release=${observed_release:-proxy_or_unknown}; expected_release=$API_IMAGE_TAG." >&2
+            echo "Stage smoke failed: check=${stage_smoke_check:-unknown}; HTTP=${http_status:-000}; command_exit=$command_exit; request_id=${request_id:-unknown}; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}; release=${observed_release:-proxy_or_unknown}; expected_release=$API_IMAGE_TAG." >&2
           }
           trap report_stage_smoke_failure ERR
-          stage_smoke_check=trainer-profile-photo
+          stage_smoke_check=trainer-profile-photo-profile
           trainer_profile=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Session: $trainer_profile_fixture_token" \
@@ -767,6 +769,7 @@ jobs:
           if test "$trainer_profile" != null; then
             while IFS= read -r photo_id; do
               test -z "$photo_id" && continue
+              stage_smoke_check=trainer-profile-photo-cleanup
               curl --fail --silent --show-error \
                 --request DELETE \
                 --header "Authorization: Bearer $YC_TOKEN" \
@@ -791,6 +794,7 @@ jobs:
               replaceLegacy: false
             }
           ')
+          stage_smoke_check=trainer-profile-photo-upload
           trainer_photo_upload=$(curl --fail --silent --show-error \
             --request POST \
             --header "Authorization: Bearer $YC_TOKEN" \
@@ -806,9 +810,11 @@ jobs:
           ' <<<"$trainer_photo_upload" >/dev/null
           trainer_photo_id=$(jq -er '.draft.photos[0].id' <<<"$trainer_photo_upload")
           trainer_photo_url=$(jq -er '.draft.photos[0].url' <<<"$trainer_photo_upload")
-          command curl --fail --silent --show-error \
+          stage_smoke_check=trainer-profile-photo-read
+          curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --output trainer-profile-photo-smoke.jpg "$trainer_photo_url"
           test "$(wc -c < trainer-profile-photo-smoke.jpg | tr -d ' ')" = 14
+          stage_smoke_check=trainer-profile-photo-delete
           trainer_photo_deleted=$(curl --fail --silent --show-error \
             --request DELETE \
             --header "Authorization: Bearer $YC_TOKEN" \
