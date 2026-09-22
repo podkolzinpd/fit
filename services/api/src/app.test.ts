@@ -1792,6 +1792,7 @@ const TRAINING_DATA_RESPONSE: PilotTrainingDataResponse = {
     clientName: 'Тестовый клиент',
     createdBy: PROFILE_ID,
     origin: 'manual',
+    favoriteTitle: null,
     startedBy: null,
     completedBy: null,
     workoutDate: '2026-08-20',
@@ -4219,13 +4220,13 @@ describe('pilot planned workout commands', () => {
     expect(writer.savePlanned).toHaveBeenNthCalledWith(
       1,
       sessionToken,
-      { ...draft, id: null, stageId: null } satisfies PlannedWorkoutDraft,
+      { ...draft, id: null, stageId: null, favoriteTitle: null } satisfies PlannedWorkoutDraft,
       null,
     )
     expect(writer.savePlanned).toHaveBeenNthCalledWith(
       2,
       sessionToken,
-      { ...draft, id: WORKOUT_ID, stageId: null, notes: 'Обновлённый план' } satisfies PlannedWorkoutDraft,
+      { ...draft, id: WORKOUT_ID, stageId: null, notes: 'Обновлённый план', favoriteTitle: null } satisfies PlannedWorkoutDraft,
       1,
     )
     expect(writer.deleteWorkout).toHaveBeenCalledWith(
@@ -4352,18 +4353,18 @@ describe('pilot completed workout lifecycle commands', () => {
     expect(writer.saveCompleted).toHaveBeenNthCalledWith(
       1,
       sessionToken,
-      { ...draft, id: null, stageId: null } satisfies PlannedWorkoutDraft,
+      { ...draft, id: null, stageId: null, favoriteTitle: null } satisfies PlannedWorkoutDraft,
       null,
     )
     expect(writer.saveCompleted).toHaveBeenNthCalledWith(
       2,
       sessionToken,
-      { ...draft, id: WORKOUT_ID, stageId: null } satisfies PlannedWorkoutDraft,
+      { ...draft, id: WORKOUT_ID, stageId: null, favoriteTitle: null } satisfies PlannedWorkoutDraft,
       2,
     )
     expect(writer.recordPlannedResult).toHaveBeenCalledWith(
       sessionToken,
-      { ...draft, id: WORKOUT_ID, stageId: null } satisfies PlannedWorkoutDraft,
+      { ...draft, id: WORKOUT_ID, stageId: null, favoriteTitle: null } satisfies PlannedWorkoutDraft,
       1,
     )
   })

@@ -956,7 +956,7 @@ export function workoutToFavoriteTemplate(source: Workout): WorkoutExerciseDraft
 
 // Планирование избранного — как copyWorkout(), блокам нужны свежие ID, чтобы
 // не конфликтовать при повторном использовании одного и того же шаблона.
-export function favoriteTemplateToWorkoutDraft(exercises: WorkoutExerciseDraft[], clientId: UUID, workoutDate: LocalDate): WorkoutDraft {
+export function favoriteTemplateToWorkoutDraft(exercises: WorkoutExerciseDraft[], clientId: UUID, workoutDate: LocalDate, favoriteTitle: string): WorkoutDraft {
   const blockIdMap = new Map<string, string>()
   const nextBlockId = (sourceBlockId: string): string => {
     const existing = blockIdMap.get(sourceBlockId)
@@ -966,7 +966,7 @@ export function favoriteTemplateToWorkoutDraft(exercises: WorkoutExerciseDraft[]
     return fresh
   }
   return {
-    clientId, workoutDate,
+    clientId, workoutDate, favoriteTitle,
     exercises: exercises.map((exercise, position) => ({
       ...exercise,
       // Избранное переиспользуют не сразу — название системного упражнения
@@ -977,6 +977,14 @@ export function favoriteTemplateToWorkoutDraft(exercises: WorkoutExerciseDraft[]
       sourceExerciseId: undefined,
     })),
   }
+}
+
+// Вариант C3: звёздочка + название в строке автора на карточке. Обрезаем
+// только сам заголовок — суффикс с автором не должен страдать от длинного
+// названия избранного.
+export function truncateFavoriteTitle(title: string, max = 24): string {
+  const trimmed = title.trim()
+  return trimmed.length <= max ? trimmed : `${trimmed.slice(0, Math.max(0, max - 1)).trimEnd()}…`
 }
 
 export function canTransition(from: Workout['status'], to: Workout['status']): boolean {
