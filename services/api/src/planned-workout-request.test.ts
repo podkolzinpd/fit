@@ -57,10 +57,24 @@ describe('planned workout request', () => {
         ...validRequest(),
         id: null,
         stageId: null,
+        favoriteTitle: null,
         notes: 'План на вторник',
       },
       expectedVersion: null,
     })
+  })
+
+  it('snapshots the favorite title only when planning from a favorite', () => {
+    expect(readSavePlannedWorkoutRequest({
+      ...validRequest(),
+      favoriteTitle: ' Ноги и спина ',
+    }, null)).toMatchObject({
+      draft: { favoriteTitle: 'Ноги и спина' },
+    })
+    expect(readSavePlannedWorkoutRequest({
+      ...validRequest(),
+      favoriteTitle: 'a'.repeat(121),
+    }, null)).toBeUndefined()
   })
 
   it('requires a positive expected version for an update and delete', () => {

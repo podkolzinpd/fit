@@ -6,7 +6,7 @@ import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
 import { EXERCISE_PROGRESS_PAGE_SIZE, exerciseProgressPageFromRows } from './exercise-progress-page'
-export { canTransition, copyWorkout, completedWorkoutDraft, computeClientStats, exerciseChartPoints, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, durationLabel, durationSeconds, formatFactVsPlan, factLine, enteredFactLine, previousResultLine, splitClientWorkouts, clientWorkoutStatusLabel, workoutStatusPresentation, workoutDurationLabel, muscleGroupLabels, performedMuscleGroupLabels, workoutFocusTitle, workoutToFavoriteTemplate, favoriteTemplateToWorkoutDraft, exerciseSummary, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, BLOCK_PRESET_LABELS, PRESET_REST_DEFAULTS, DEFAULT_REST_BETWEEN_SETS, restSecondsAfterSet, applyRunningIntervalPreset, applyRunningActiveRecoveryPreset, createRunningFormatDrafts, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockPreset, setBlockRest, syncBlockRounds, draftBlockRoundsView, moveBlock, replaceExercise } from './workout-rules'
+export { canTransition, copyWorkout, completedWorkoutDraft, computeClientStats, exerciseChartPoints, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, durationLabel, durationSeconds, formatFactVsPlan, factLine, enteredFactLine, previousResultLine, splitClientWorkouts, clientWorkoutStatusLabel, workoutStatusPresentation, workoutDurationLabel, muscleGroupLabels, performedMuscleGroupLabels, workoutFocusTitle, workoutToFavoriteTemplate, favoriteTemplateToWorkoutDraft, truncateFavoriteTitle, exerciseSummary, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, BLOCK_PRESET_LABELS, PRESET_REST_DEFAULTS, DEFAULT_REST_BETWEEN_SETS, restSecondsAfterSet, applyRunningIntervalPreset, applyRunningActiveRecoveryPreset, createRunningFormatDrafts, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockPreset, setBlockRest, syncBlockRounds, draftBlockRoundsView, moveBlock, replaceExercise } from './workout-rules'
 export type { ExerciseBlock, DraftBlock, DraftBlockRound, BlockRound, WorkoutStatusPresentation, WorkoutStatusTone } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
 
@@ -68,6 +68,7 @@ async function get(id: string): Promise<Workout> {
   return {
     id: root.data.id, trainerId: root.data.trainer_id, clientId: root.data.client_id, clientName: client.fullName, createdBy: root.data.created_by,
     origin: root.data.origin as Workout['origin'],
+    favoriteTitle: root.data.favorite_title,
     startedBy: root.data.started_by, completedBy: root.data.completed_by,
     workoutDate: localDate(root.data.workout_date), startTime: root.data.start_time,
     endTime: root.data.end_time, startedAt: root.data.started_at ?? null, completedAt: root.data.completed_at ?? null,
@@ -98,6 +99,7 @@ function mapWorkout(row: WorkoutListRow): Workout {
     clientName: row.client_name,
     createdBy: row.created_by,
     origin: row.origin as Workout['origin'],
+    favoriteTitle: row.favorite_title,
     startedBy: row.started_by,
     completedBy: row.completed_by,
     workoutDate: localDate(row.workout_date),

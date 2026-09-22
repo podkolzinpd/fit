@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(26);
 
 select has_index(
   'public',
@@ -92,6 +92,44 @@ select is(
   (select (item->>'block_rounds')::int from public.list_workouts(null, null, null), jsonb_array_elements(exercises) as item where id = '7c000000-0000-4000-8000-000000000001' limit 1),
   1,
   'list_workouts returns block_rounds (1 by default)'
+);
+-- Снэпшот названия избранного: пишется только при создании, никогда не обновляется.
+select save_workout(jsonb_build_object(
+  'clientId', '7a000000-0000-4000-8000-000000000001',
+  'workoutDate', '2026-07-29',
+  'favoriteTitle', ' Ноги и спина ',
+  'exercises', jsonb_build_array(
+    jsonb_build_object('position', 0, 'source', 'system', 'ref', 'squat', 'name', 'Присед', 'muscleGroup', 'legs', 'inputKind', 'strength', 'blockId', 'bbbbbbbb-0000-4000-8000-000000000001', 'blockType', 'single', 'blockRounds', 1, 'sets', jsonb_build_array(jsonb_build_object('position', 0, 'weightKg', 60, 'reps', 8)))
+  )
+));
+select is(
+  (select favorite_title from public.workouts where workout_date = '2026-07-29'),
+  'Ноги и спина',
+  'save_workout snapshots a trimmed favorite title on creation'
+);
+select is(
+  (select favorite_title from public.list_workouts('2026-07-29', '2026-07-29', '7a000000-0000-4000-8000-000000000001') limit 1),
+  'Ноги и спина',
+  'list_workouts returns the favorite title'
+);
+select is(
+  (select favorite_title from public.list_workouts('2026-07-20', '2026-07-20', '7a000000-0000-4000-8000-000000000001') limit 1),
+  null,
+  'a workout not planned from a favorite has no favorite title'
+);
+select save_workout(jsonb_build_object(
+  'id', (select id from public.workouts where workout_date = '2026-07-29'),
+  'clientId', '7a000000-0000-4000-8000-000000000001',
+  'workoutDate', '2026-07-29',
+  'favoriteTitle', 'Другое название',
+  'exercises', jsonb_build_array(
+    jsonb_build_object('position', 0, 'source', 'system', 'ref', 'squat', 'name', 'Присед', 'muscleGroup', 'legs', 'inputKind', 'strength', 'blockId', 'bbbbbbbb-0000-4000-8000-000000000001', 'blockType', 'single', 'blockRounds', 1, 'sets', jsonb_build_array(jsonb_build_object('position', 0, 'weightKg', 60, 'reps', 8)))
+  )
+), 1);
+select is(
+  (select favorite_title from public.workouts where workout_date = '2026-07-29'),
+  'Ноги и спина',
+  'editing an existing workout never touches its favorite title snapshot'
 );
 reset role;
 

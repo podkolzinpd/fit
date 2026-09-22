@@ -397,6 +397,8 @@ export interface WorkoutDraft {
   stageId?: UUID | null
   exercises: WorkoutExerciseDraft[]
   version?: number
+  /** Снэпшот названия избранного на момент планирования; пишется только при создании, никогда не обновляется. */
+  favoriteTitle?: string
 }
 
 /** Личный шаблон, сохранённый клиентом из своей тренировки для повторного планирования без похода в историю. */
@@ -457,6 +459,8 @@ export interface Workout {
   createdBy?: UUID | null
   /** Пишется один раз при создании, никогда не обновляется. Значима только когда тренировка создана клиентом (createdBy отсутствует или равен его userId) — тренерская ветка её не использует. */
   origin?: 'manual' | 'ai'
+  /** Снэпшот названия избранного на момент планирования (не живая ссылка на favorite_workouts.title); null для тренировок, не из избранного. */
+  favoriteTitle?: string | null
   startedBy?: UUID | null
   completedBy?: UUID | null
   workoutDate: LocalDate

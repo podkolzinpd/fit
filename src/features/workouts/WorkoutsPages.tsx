@@ -529,7 +529,7 @@ export function WorkoutFormPage() {
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const initial = source.data
     ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today, { refreshCatalogNames: true }))
-    : favorite ? favoriteTemplateToWorkoutDraft(favorite.exercises, mine.data?.id ?? '', today) : undefined
+    : favorite ? favoriteTemplateToWorkoutDraft(favorite.exercises, mine.data?.id ?? '', today, favorite.title) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
   const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? (favoriteId ? `favorite-${favoriteId}` : `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`))
   useEffect(() => { setPickerSelectionDraft([]) }, [draftKey])
@@ -729,7 +729,8 @@ export function WorkoutFormPage() {
     const stageId = String(form.get('stageId') || '') || null
     mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: submittedStartTime || undefined,
       endTime: submittedEndTime || undefined,
-      notes: notes || undefined, stageId: stageId || null, exercises, version: source.data?.version })
+      notes: notes || undefined, stageId: stageId || null, exercises, version: source.data?.version,
+      favoriteTitle: initial?.favoriteTitle })
   }
   const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data
   const selectedClientName = availableClients?.find((client) => client.id === clientId)?.fullName

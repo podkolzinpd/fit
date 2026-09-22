@@ -2714,6 +2714,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             clientName: 'Тестовый клиент Yandex stage',
             createdBy: STAGE_SMOKE_PROFILE_ID,
             origin: 'manual',
+            favoriteTitle: null,
             startedBy: null,
             completedBy: null,
             workoutDate: '2026-08-22',
@@ -3068,6 +3069,70 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         readAccessibleTrainingData,
       )
       expect(actorData.workouts.some((workout) => workout.id === created.id)).toBe(false)
+      await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+    })
+
+    it('snapshots a favorite title at creation and never touches it again', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      const draft: PlannedWorkoutDraft = {
+        id: null,
+        clientId: CLIENT_ID,
+        workoutDate: '2026-08-26',
+        startTime: null,
+        endTime: null,
+        notes: null,
+        favoriteTitle: ' Ноги и спина ',
+        exercises: [{
+          position: 0,
+          source: 'custom',
+          ref: `custom:${ROOT_CUSTOM_EXERCISE_ID}`,
+          customExerciseId: ROOT_CUSTOM_EXERCISE_ID,
+          name: 'Тяга саней',
+          muscleGroup: 'legs',
+          inputKind: 'strength',
+          blockId: 'bd2c5ddb-5dc8-4cdb-b463-8b0f03f8f2cc',
+          blockType: 'single',
+          blockPreset: 'set',
+          blockRounds: 1,
+          restBetweenExercisesSec: 0,
+          restBetweenRoundsSec: 90,
+          restBetweenSetsSec: 90,
+          trainerComment: null,
+          sets: [{
+            position: 0, weightKg: 40, reps: 10, durationMin: null, durationSec: null, distanceKm: null, rpe: 7,
+          }],
+        }],
+      }
+
+      const created = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => savePlannedWorkout(client, draft, null),
+      )
+
+      const afterCreate = await ownerPool.query<{ favorite_title: string | null } & QueryResultRow>(
+        'select favorite_title from public.workouts where id = $1',
+        [created.id],
+      )
+      expect(afterCreate.rows).toEqual([{ favorite_title: 'Ноги и спина' }])
+
+      // A later edit of the same workout must not change the snapshot - the
+      // request does not even carry favoriteTitle for an update.
+      const updated = await withActorTransaction(
+        runtimePool,
+        ACTOR_ID,
+        (client) => savePlannedWorkout(client, { ...draft, id: created.id, notes: 'Правка плана' }, created.version),
+      )
+      expect(updated.version).toBe(2)
+      const afterUpdate = await ownerPool.query<{ favorite_title: string | null } & QueryResultRow>(
+        'select favorite_title from public.workouts where id = $1',
+        [created.id],
+      )
+      expect(afterUpdate.rows).toEqual([{ favorite_title: 'Ноги и спина' }])
+
       await ownerPool.query('delete from public.workouts where id = $1', [created.id])
     })
 
