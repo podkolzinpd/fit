@@ -729,7 +729,8 @@ export function WorkoutFormPage() {
     const stageId = String(form.get('stageId') || '') || null
     mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: submittedStartTime || undefined,
       endTime: submittedEndTime || undefined,
-      notes: notes || undefined, stageId: stageId || null, exercises, version: source.data?.version })
+      notes: notes || undefined, stageId: stageId || null, exercises, version: source.data?.version,
+      favoriteTitle: initial?.favoriteTitle })
   }
   const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data
   const selectedClientName = availableClients?.find((client) => client.id === clientId)?.fullName
