@@ -151,7 +151,12 @@ jobs:
               '.status == $expected
                and (.domainReadyProfiles | type == "number")
                and (.linkedProfiles | type == "number")
-               and (.rolloutEnabledProfiles | type == "number")' \
+               and (.rolloutEnabledProfiles | type == "number")
+               and (.allLinkedProfiles | type == "number")
+               and (.sessionReadyProfiles | type == "number")
+               and (.disabledProfiles | type == "number")
+               and (.migrationDriftProfiles | type == "number")
+               and (.domainIncompleteProfiles | type == "number")' \
               rollout-response.json >/dev/null
             if test "$ROLLOUT_ACTION" = enable; then
               jq -e '.rolloutEnabledProfiles == .linkedProfiles' \
@@ -163,6 +168,11 @@ jobs:
               echo "- Domain-ready profiles: $(jq -r '.domainReadyProfiles' rollout-response.json)"
               echo "- Linked profiles: $(jq -r '.linkedProfiles' rollout-response.json)"
               echo "- Read-write enabled: $(jq -r '.rolloutEnabledProfiles' rollout-response.json)"
+              echo "- All linked identities: $(jq -r '.allLinkedProfiles' rollout-response.json)"
+              echo "- Session ready: $(jq -r '.sessionReadyProfiles' rollout-response.json)"
+              echo "- Explicitly disabled: $(jq -r '.disabledProfiles' rollout-response.json)"
+              echo "- Migration drift: $(jq -r '.migrationDriftProfiles' rollout-response.json)"
+              echo "- Missing role root: $(jq -r '.domainIncompleteProfiles' rollout-response.json)"
             } >> "$GITHUB_STEP_SUMMARY"
           else
             expected_status="rollout_${ROLLOUT_ACTION}d"

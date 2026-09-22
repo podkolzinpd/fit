@@ -338,6 +338,9 @@ async function apiErrorCode(response: Response): Promise<string | undefined> {
 function appSessionResponseError(status: number, errorCode?: string): Error {
   if (status === 401) return new YandexAppSessionExpiredError()
   if (status === 403) {
+    if (errorCode === 'yandex_access_disabled') {
+      return new Error('Доступ к этому профилю FIT отключён. Скопируйте код диагностики и обратитесь в поддержку.')
+    }
     if (errorCode === 'yandex_profile_not_ready') {
       return new Error('Профиль FIT ещё не готов для входа через Yandex ID. Попробуйте снова позже. Если ошибка повторится, скопируйте код диагностики для поддержки.')
     }
