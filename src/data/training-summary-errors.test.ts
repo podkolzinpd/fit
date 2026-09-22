@@ -8,7 +8,7 @@ import {
 describe('generationErrorMessage', () => {
   it('keeps source and model failures actionable instead of generic', () => {
     expect(generationErrorMessage('workouts_lookup_failed')).toContain('завершённые тренировки')
-    expect(generationErrorMessage('yandex_cloud_quality_check_failed')).toContain('через 30 минут')
+    expect(generationErrorMessage('yandex_cloud_quality_check_failed')).toContain('ещё раз')
     expect(generationErrorMessage('yandex_cloud_rate_limited')).toContain('через минуту')
     expect(generationErrorMessage('internal_error')).toContain('подготовить анализ')
   })
@@ -21,13 +21,14 @@ describe('generationErrorMessage', () => {
 
   it('explains token guards without inviting an immediate duplicate retry', () => {
     expect(generationErrorMessage('summary_generation_in_progress')).toContain('уже формируется')
-    expect(generationErrorMessage('summary_generation_cooldown')).toContain('не расходовать токены')
-    expect(generationErrorMessage('summary_generation_period_limit')).toContain('уже запускался сегодня')
-    expect(generationErrorMessage('summary_generation_daily_limit')).toContain('Лимит')
+    expect(generationErrorMessage('summary_generation_cooldown')).toContain('создать анализ')
+    expect(generationErrorMessage('summary_generation_period_limit')).toContain('Лимит генераций анализа')
+    expect(generationErrorMessage('summary_generation_daily_limit')).toContain('Лимит генераций анализа')
   })
 
-  it('does not offer an immediate retry after a spent quality failure or daily guard', () => {
-    expect(immediateSummaryRetryAllowed(trainingSummaryGenerationError('yandex_cloud_quality_check_failed'))).toBe(false)
+  it('allows retry after a failed generation but not after a successful daily guard', () => {
+    expect(immediateSummaryRetryAllowed(trainingSummaryGenerationError('yandex_cloud_quality_check_failed'))).toBe(true)
+    expect(immediateSummaryRetryAllowed(trainingSummaryGenerationError('summary_generation_cooldown'))).toBe(true)
     expect(immediateSummaryRetryAllowed(trainingSummaryGenerationError('summary_generation_period_limit'))).toBe(false)
     expect(immediateSummaryRetryAllowed(trainingSummaryGenerationError('yandex_cloud_timeout'))).toBe(true)
     expect(immediateSummaryRetryAllowed(new Error('Сетевая ошибка'))).toBe(true)
