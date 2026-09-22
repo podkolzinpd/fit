@@ -945,7 +945,11 @@ export function createYandexMainRepository(
         return payload.client.id
       },
       async createQuickOwn(fullName) {
-        return this.createQuick(fullName)
+        const payload = await writeJson(queries, '/v1/clients/me/quick', 'POST', {
+          fullName,
+        }, z.object({ client: z.object({ id: uuid }) }))
+        invalidate()
+        return payload.client.id
       },
       async createOwn(input) {
         return this.create(input)

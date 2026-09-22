@@ -22,6 +22,7 @@ Yandex ID является единственным production-входом; app
 - `PgDatabasePool` обрабатывает фоновые ошибки idle-соединений: драйвер удаляет повреждённый client, процесс сохраняется, следующий запрос может открыть соединение заново. Событие `database_pool_idle_error` содержит только безопасные категорию и код; автоматического повтора транзакций нет. Регрессионный DB-тест закрывает idle backend через `pg_terminate_backend` и проверяет новый запрос. Связь этого дефекта с конкретными production 502 пока не доказана.
 - `VITE_MAINTENANCE_MODE` выключен. Owner-only Supabase write gate остаётся в `paused`: он блокирует DML старых вкладок, RPC и background writers на 38 source-таблицах.
 - `analytics.trainer_overview`/`client_overview` на Yandex приведены к parity с Supabase (000079_analytics_overview_parity). `is_test_account` всегда `false` (email на Yandex не хранится), `last_sign_in_at` — приближение по session-таблицам.
+- Первое голосовое или текстовое действие клиента использует отдельную идемпотентную own-client команду. Она возвращает существующую карточку, восстанавливает архивную и исправляет перенесённый аккаунт, оставшийся на merged source, атомарной привязкой к активной канонической карточке; общий trainer create-контракт не меняется.
 
 ## Yandex Cloud — подтверждённая база
 
