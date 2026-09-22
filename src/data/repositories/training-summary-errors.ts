@@ -1,9 +1,10 @@
 export function generationErrorMessage(code: string): string {
   if (code === 'authentication_required') return 'Сессия входа истекла. Войдите в ФИТ заново и затем обновите анализ.'
   if (code === 'summary_generation_in_progress') return 'Анализ уже формируется. Повторный запрос не отправлен.'
-  if (code === 'summary_generation_cooldown') return 'Повторный платный запрос не отправлен, чтобы не расходовать токены. Попробуйте через 30 минут.'
-  if (code === 'summary_generation_period_limit') return 'Новый анализ для этого периода уже запускался сегодня.'
-  if (code === 'summary_generation_daily_limit') return 'Лимит новых ИИ-анализов на сегодня исчерпан.'
+  if (code === 'summary_generation_cooldown') return 'Не получилось создать анализ. Попробуйте ещё раз.'
+  if (code === 'summary_generation_period_limit' || code === 'summary_generation_daily_limit') {
+    return 'Лимит генераций анализа на сегодня исчерпан.'
+  }
   if (code === 'summary_generation_disabled') return 'Обновление ИИ-анализа временно отключено.'
   if (code === 'summary_model_input_too_large') return 'Данные анализа не удалось безопасно сократить. Выберите меньший период.'
   if (code === 'summary_generation_guard_failed') return 'Не удалось безопасно запустить анализ. Попробуйте позже.'
@@ -21,7 +22,7 @@ export function generationErrorMessage(code: string): string {
     return 'ИИ не успел завершить анализ. Попробуйте обновить его ещё раз.'
   }
   if (code === 'yandex_cloud_quality_check_failed') {
-    return 'Ответ не прошёл проверку и не сохранён. Новый анализ можно создать через 30 минут.'
+    return 'Ответ не прошёл проверку и не сохранён. Попробуйте создать анализ ещё раз.'
   }
   if (code === 'yandex_cloud_rate_limited' || code === 'yandex_cloud_unavailable' || code === 'yandex_cloud_timeout') {
     return 'Не получилось создать анализ. Попробуйте ещё раз через минуту.'
@@ -56,11 +57,9 @@ export function generationErrorMessage(code: string): string {
 const noImmediateRetryCodes = new Set([
   'authentication_required',
   'summary_generation_in_progress',
-  'summary_generation_cooldown',
   'summary_generation_period_limit',
   'summary_generation_daily_limit',
   'summary_generation_disabled',
-  'yandex_cloud_quality_check_failed',
 ])
 
 export class TrainingSummaryGenerationError extends Error {
