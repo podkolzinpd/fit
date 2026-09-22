@@ -455,6 +455,8 @@ export interface Workout {
   trainerId?: UUID
   clientName: string
   createdBy?: UUID | null
+  /** Пишется один раз при создании, никогда не обновляется. Значима только когда тренировка создана клиентом (createdBy отсутствует или равен его userId) — тренерская ветка её не использует. */
+  origin?: 'manual' | 'ai'
   startedBy?: UUID | null
   completedBy?: UUID | null
   workoutDate: LocalDate
