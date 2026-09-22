@@ -614,6 +614,29 @@ describe('trainer professional profile', () => {
     )
   })
 
+  it('accepts the pre-split legacy specialty that expandSpecialtiesForCatalogSearch adds to searches', async () => {
+    // Regression for a real incident: this filter used to cap specialty
+    // length at 60 chars, but the client now also sends the 76-char
+    // pre-split "Реабилитация и адаптивная физкультура (после травм,
+    // ограничения по здоровью)" whenever someone searches either half of
+    // the split (src/shared/trainer-profile.ts,
+    // expandSpecialtiesForCatalogSearch) - every such search 400ed.
+    const pilotTrainerProfiles = profiles()
+    const listPublic = vi.fn().mockResolvedValue({ items: [], totalCount: 0, nextOffset: null })
+    pilotTrainerProfiles.listPublic = listPublic
+    const app = buildApp({ pilotTrainerProfiles, logger: false }); apps.push(app)
+    const legacySpecialty = 'Реабилитация и адаптивная физкультура (после травм, ограничения по здоровью)'
+    const params = new URLSearchParams()
+    params.append('specialty', 'Реабилитация после травм и операций')
+    params.append('specialty', legacySpecialty)
+    const response = await app.inject({ method: 'GET', url: `/v1/trainers/catalog?${params.toString()}` })
+    expect(response.statusCode).toBe(200)
+    expect(listPublic).toHaveBeenCalledWith(
+      expect.objectContaining({ specialties: ['Реабилитация после травм и операций', legacySpecialty] }),
+      { offset: 0, limit: 3 },
+    )
+  })
+
   it('accepts the brand-trainer filter toggle', async () => {
     const pilotTrainerProfiles = profiles()
     const listPublic = vi.fn().mockResolvedValue({ items: [], totalCount: 0, nextOffset: null })
