@@ -529,7 +529,7 @@ export function WorkoutFormPage() {
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const initial = source.data
     ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today, { refreshCatalogNames: true }))
-    : favorite ? favoriteTemplateToWorkoutDraft(favorite.exercises, mine.data?.id ?? '', today) : undefined
+    : favorite ? favoriteTemplateToWorkoutDraft(favorite.exercises, mine.data?.id ?? '', today, favorite.title) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
   const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? (favoriteId ? `favorite-${favoriteId}` : `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`))
   useEffect(() => { setPickerSelectionDraft([]) }, [draftKey])

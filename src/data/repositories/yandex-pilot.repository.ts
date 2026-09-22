@@ -163,6 +163,7 @@ const workoutSchema = z.object({
   clientName: z.string().min(1),
   createdBy: z.uuid().nullable(),
   origin: z.enum(['manual', 'ai']).optional(),
+  favoriteTitle: z.string().nullable().optional(),
   startedBy: z.uuid().nullable(),
   completedBy: z.uuid().nullable(),
   workoutDate: z.iso.date(),

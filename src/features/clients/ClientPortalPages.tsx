@@ -13,7 +13,7 @@ import { ClientTrainingSummaryCard, groupMetricRows } from '../progress'
 import { MetricsManager } from '../progress/MetricsManager'
 import { measurementSummaryText } from '../progress/measurement-summary'
 import { LoadMoreButton, PastWorkoutPlanCard, PresetWorkoutList, WorkoutChronicleCard, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE, storeFirstWorkoutIntent } from '../workouts'
-import { clientWorkoutAuthorLabel } from './workout-author'
+import { clientWorkoutCardLabel } from './workout-author'
 import { ClientWorkoutHistoryCalendar } from './ClientWorkoutHistoryCalendar'
 import { useWorkoutHistoryCalendar } from './use-workout-history-calendar'
 
@@ -96,10 +96,10 @@ export function MyWorkoutsPage() {
       </div>
       <div id="workouts-current-panel" className="progress-view-panel" role="tabpanel" aria-labelledby="workouts-current-tab" hidden={workoutsView !== 'current'}>
         {hasWorkouts || calendarState.view === 'calendar' ? <div className="client-workouts-stack">
-          {upcomingItems.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div><div className="cards client-workout-cards">{upcomingItems.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p className="muted">{clientWorkoutAuthorLabel(workout.createdBy, workout.origin, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>)}</div></section>}
-          {pastItems.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{pastItems.needsDecision.map((workout) => <PastWorkoutPlanCard key={workout.id} workout={workout} contextLabel={clientWorkoutAuthorLabel(workout.createdBy, workout.origin, actor?.userId, trainers.data)} returnTo="/me/workouts" />)}</div></section>}
+          {upcomingItems.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div><div className="cards client-workout-cards">{upcomingItems.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p className="muted">{clientWorkoutCardLabel(workout, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>)}</div></section>}
+          {pastItems.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{pastItems.needsDecision.map((workout) => <PastWorkoutPlanCard key={workout.id} workout={workout} contextLabel={clientWorkoutCardLabel(workout, actor?.userId, trainers.data)} returnTo="/me/workouts" />)}</div></section>}
           {showHistorySection && <section className="client-workout-section client-history-section"><div className="client-workout-section-head client-history-section-head"><div><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div><div className="client-history-view-toggle" role="group" aria-label="Вид истории тренировок"><button type="button" aria-pressed={calendarState.view === 'list'} onClick={showHistoryList}>Список</button><button type="button" aria-pressed={calendarState.view === 'calendar'} onClick={showHistoryCalendar}><ScheduleIcon />Календарь</button></div></div>{calendarState.view === 'list'
-            ? <><div className="cards client-workout-cards workout-chronicle-list">{historyItems.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientWorkoutAuthorLabel(workout.createdBy, workout.origin, actor?.userId, trainers.data)} historyListActions />)}</div><LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} /></>
+            ? <><div className="cards client-workout-cards workout-chronicle-list">{historyItems.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientWorkoutCardLabel(workout, actor?.userId, trainers.data)} historyListActions />)}</div><LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} /></>
             : <ClientWorkoutHistoryCalendar
                 month={calendarState.month}
                 today={today}
@@ -108,7 +108,7 @@ export function MyWorkoutsPage() {
                 loading={calendarHistory.isLoading}
                 error={calendarHistory.error}
                 returnTo={calendarReturnTo}
-                contextLabel={(workout) => clientWorkoutAuthorLabel(workout.createdBy, workout.origin, actor?.userId, trainers.data)}
+                contextLabel={(workout) => clientWorkoutCardLabel(workout, actor?.userId, trainers.data)}
                 onRetry={() => void calendarHistory.refetch()}
                 onMonthChange={calendar.shiftMonth}
                 onDateSelect={calendar.selectDate}

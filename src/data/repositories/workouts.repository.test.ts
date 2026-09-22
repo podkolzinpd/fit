@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, createRunningFormatDrafts, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, favoriteTemplateToWorkoutDraft, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutFocusTitle, workoutStatusPresentation, workoutDurationLabel, workoutToFavoriteTemplate, workoutTonnage } from './workout-rules'
+import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, createRunningFormatDrafts, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, favoriteTemplateToWorkoutDraft, truncateFavoriteTitle, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutFocusTitle, workoutStatusPresentation, workoutDurationLabel, workoutToFavoriteTemplate, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 import { SYSTEM_EXERCISE_LEGACY_CATALOG, SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 
@@ -615,9 +615,10 @@ describe('favoriteTemplateToWorkoutDraft', () => {
       draft('b', 'b1', 'group'),
       draft('c', 'b2', 'single'),
     ]
-    const result = favoriteTemplateToWorkoutDraft(template, 'client-1', localDate('2026-09-25'))
+    const result = favoriteTemplateToWorkoutDraft(template, 'client-1', localDate('2026-09-25'), 'Ноги и спина')
     expect(result.clientId).toBe('client-1')
     expect(result.workoutDate).toBe(localDate('2026-09-25'))
+    expect(result.favoriteTitle).toBe('Ноги и спина')
     expect(result.exercises[0]?.blockId).toBe(result.exercises[1]?.blockId)
     expect(result.exercises[0]?.blockId).not.toBe('b1')
     expect(result.exercises[2]?.blockId).not.toBe(result.exercises[0]?.blockId)
@@ -625,8 +626,24 @@ describe('favoriteTemplateToWorkoutDraft', () => {
   })
 
   it('назначает одиночному упражнению без blockId свежий id', () => {
-    const result = favoriteTemplateToWorkoutDraft([draft('a')], 'client-1', localDate('2026-09-25'))
+    const result = favoriteTemplateToWorkoutDraft([draft('a')], 'client-1', localDate('2026-09-25'), 'Ноги')
     expect(result.exercises[0]?.blockId).toBeTruthy()
+  })
+})
+
+describe('truncateFavoriteTitle', () => {
+  it('оставляет короткое название без изменений', () => {
+    expect(truncateFavoriteTitle('Ноги и спина')).toBe('Ноги и спина')
+  })
+
+  it('обрезает длинное название по умолчанию до ~24 символов с многоточием', () => {
+    const long = 'Очень длинное название избранной тренировки'
+    const result = truncateFavoriteTitle(long)
+    expect(result).toBe('Очень длинное название…')
+  })
+
+  it('принимает произвольный лимит и не оставляет висящий пробел перед многоточием', () => {
+    expect(truncateFavoriteTitle('Ноги и спина', 5)).toBe('Ноги…')
   })
 })
 

@@ -48,10 +48,12 @@ test('client saves a workout to favorites, then plans a new one from it', async 
   ])
   expect(page.url()).not.toBe(sourceUrl)
 
-  // Новый план виден в «Актуальное» → «Предстоит».
+  // Новый план виден в «Актуальное» → «Предстоит» и несёт метку избранного
+  // (вариант C3: звёздочка + снэпшот названия в строке автора).
   await page.goto('/me/workouts')
   await expect(page.getByText('БЛИЖАЙШЕЕ')).toBeVisible()
   await expect(page.getByText('Предстоит')).toBeVisible()
+  await expect(page.getByText(`⭐ ${placeholder} · Создана вами`)).toBeVisible()
 
   // Удаление из избранного освобождает место в лимите на 10 тренировок.
   await page.goto('/me/workouts?tab=presets')

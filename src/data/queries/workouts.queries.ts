@@ -2,7 +2,7 @@ import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, WorkoutDra
 import { supabase } from './client'
 import { toJson } from './json'
 
-const rootColumns = 'id,trainer_id,client_id,created_by,origin,started_by,completed_by,workout_date,start_time,end_time,started_at,completed_at,active_calories_kcal,status,notes,trainer_review,trainer_reaction,trainer_review_author_id,trainer_reviewed_at,client_comment,session_rpe,wellbeing,discomfort,feedback_submitted_at,client_question,client_question_asked_at,client_question_resolved_at,version,stage_id'
+const rootColumns = 'id,trainer_id,client_id,created_by,origin,favorite_title,started_by,completed_by,workout_date,start_time,end_time,started_at,completed_at,active_calories_kcal,status,notes,trainer_review,trainer_reaction,trainer_review_author_id,trainer_reviewed_at,client_comment,session_rpe,wellbeing,discomfort,feedback_submitted_at,client_question,client_question_asked_at,client_question_resolved_at,version,stage_id'
 
 export type { WorkoutListRow } from '../database.types'
 
