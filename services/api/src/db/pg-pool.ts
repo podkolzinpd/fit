@@ -1,6 +1,7 @@
 import { Pool, type PoolClient, type PoolConfig, type QueryResultRow } from 'pg'
 
 import type { DatabaseConnection, DatabasePool } from './types.js'
+import { safeDatabaseErrorDiagnostics } from './database-readiness.js'
 
 class PgDatabaseConnection implements DatabaseConnection {
   constructor(private readonly client: PoolClient) {}
@@ -27,6 +28,17 @@ export class PgDatabasePool implements DatabasePool {
       idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 5_000,
       ...config,
+    })
+    // pg removes the failed idle client before emitting this event. Without a
+    // listener EventEmitter throws outside the request's query try/catch.
+    this.pool.on('error', (error: Error) => {
+      const diagnostics = safeDatabaseErrorDiagnostics(error)
+      console.warn(JSON.stringify({
+        level: 'WARN',
+        event: 'database_pool_idle_error',
+        databaseErrorCategory: diagnostics.category,
+        databaseErrorCode: diagnostics.code,
+      }))
     })
   }
 
