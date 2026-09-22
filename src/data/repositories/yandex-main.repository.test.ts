@@ -375,6 +375,26 @@ describe('Yandex main repository', () => {
     })
   })
 
+  it('uses the idempotent own-client endpoint for the first client action', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+      client: { id: clientId, version: 2, membershipVersion: 1 },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const clientActor: SessionActor = {
+      ...actor,
+      role: 'client',
+    }
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, clientActor)
+
+    await expect(repository.clients.createQuickOwn('Антон'))
+      .resolves.toBe(clientId)
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe(`${apiBaseUrl}/v1/clients/me/quick`)
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(String(init.body))).toEqual({ fullName: 'Антон' })
+  })
+
   it('drops a stale client snapshot after a conflict and on realtime refresh', async () => {
     vi.useFakeTimers()
     let version = 1
@@ -973,6 +993,7 @@ function installContractFetch() {
       return jsonResponse({ workout: { version: 2 } })
     }
     if (path === '/v1/clients' && method === 'POST') return jsonResponse({ client: { id: clientId } }, 201)
+    if (path === '/v1/clients/me/quick' && method === 'POST') return jsonResponse({ client: { id: clientId, version: 1, membershipVersion: 1 } })
     if (path.startsWith('/v1/clients/') && path.endsWith('/preferences')) return jsonResponse({ client: { membershipVersion: 2 } })
     if (path.startsWith('/v1/clients/')) return jsonResponse({ client: { id: clientId, version: 2 } })
     return emptyResponse()

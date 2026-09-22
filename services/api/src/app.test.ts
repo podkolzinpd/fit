@@ -2216,6 +2216,7 @@ function buildDomainWriter(error?: Error): {
   pilotDomainWriter: PilotDomainWriter
   updateProfile: ReturnType<typeof vi.fn>
   createClient: ReturnType<typeof vi.fn>
+  createQuickOwnClient: ReturnType<typeof vi.fn>
   createCustomExercise: ReturnType<typeof vi.fn>
   setClientArchived: ReturnType<typeof vi.fn>
   setCustomExerciseArchived: ReturnType<typeof vi.fn>
@@ -2242,6 +2243,11 @@ function buildDomainWriter(error?: Error): {
     version: 1,
     membershipVersion: 1,
   }))
+  const createQuickOwnClient = vi.fn(() => result({
+    id: CLIENTS_RESPONSE.clients[0]!.id,
+    version: 1,
+    membershipVersion: 1,
+  }))
   const updateClient = vi.fn(() => result(2))
   const updateProfile = vi.fn(() => result(undefined))
   const setClientArchived = vi.fn(() => result(3))
@@ -2257,6 +2263,7 @@ function buildDomainWriter(error?: Error): {
     pilotDomainWriter: {
       updateProfile,
       createClient,
+      createQuickOwnClient,
       createCustomExercise,
       setClientArchived,
       setCustomExerciseArchived,
@@ -2266,6 +2273,7 @@ function buildDomainWriter(error?: Error): {
     },
     updateProfile,
     createClient,
+    createQuickOwnClient,
     createCustomExercise,
     setClientArchived,
     setCustomExerciseArchived,
@@ -3574,7 +3582,6 @@ describe('pilot progress and goals endpoints', () => {
         customMetrics: [],
       } },
     })
-
     expect(read.statusCode).toBe(200)
     expect(read.json()).toEqual({ entries: [], customMetrics: [], goal: null })
     expect(progress.readBundle).toHaveBeenCalledWith(sessionToken, clientId)
@@ -4021,6 +4028,10 @@ describe('pilot client and custom exercise domain commands', () => {
       method: 'POST', url: '/v1/clients',
       headers: { 'x-fit-pilot-session': sessionToken }, payload: clientDraft,
     })
+    const ownClient = await app.inject({
+      method: 'POST', url: '/v1/clients/me/quick',
+      headers: { 'x-fit-pilot-session': sessionToken }, payload: { fullName: 'Лена' },
+    })
     const updated = await app.inject({
       method: 'PUT', url: `/v1/clients/${clientId}`,
       headers: { 'x-fit-pilot-session': sessionToken },
@@ -4043,15 +4054,16 @@ describe('pilot client and custom exercise domain commands', () => {
     })
 
     expect([
-      created.statusCode, updated.statusCode, preferences.statusCode,
+      created.statusCode, ownClient.statusCode, updated.statusCode, preferences.statusCode,
       archived.statusCode, restored.statusCode,
-    ]).toEqual([201, 200, 200, 200, 200])
+    ]).toEqual([201, 200, 200, 200, 200, 200])
     expect(created.headers['cache-control']).toBe('no-store')
     expect(writer.createClient).toHaveBeenCalledWith(sessionToken, {
       ...clientDraft,
       initialWeightKg: null,
       initialWeightRecordedOn: null,
     })
+    expect(writer.createQuickOwnClient).toHaveBeenCalledWith(sessionToken, 'Лена')
     expect(writer.updateClient).toHaveBeenCalledWith(
       sessionToken, clientId, clientCardDraft, 1,
     )

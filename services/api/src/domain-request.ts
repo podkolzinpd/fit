@@ -28,6 +28,10 @@ export interface CreateClientCardDraft extends ClientCardDraft {
   initialWeightRecordedOn?: string | null
 }
 
+export interface QuickOwnClientRequest {
+  fullName: string
+}
+
 export interface VersionedClientCardRequest {
   draft: ClientCardDraft
   expectedVersion: number
@@ -165,6 +169,14 @@ export function readCreateClientCardDraft(
     || ((initialWeightKg === null) !== (initialWeightRecordedOn === null))
     ? undefined
     : { ...draft, note, initialWeightKg, initialWeightRecordedOn }
+}
+
+export function readQuickOwnClientRequest(
+  body: unknown,
+): QuickOwnClientRequest | undefined {
+  const input = record(body)
+  const fullName = requiredText(input?.fullName, 2, 120)
+  return fullName === undefined ? undefined : { fullName }
 }
 
 export function readVersionedClientCardRequest(

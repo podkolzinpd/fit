@@ -1,5 +1,6 @@
 import {
   createClientCard,
+  createQuickOwnClientCard,
   createCustomExercise,
   setClientArchived,
   setCustomExerciseArchived,
@@ -30,6 +31,10 @@ export interface PilotDomainWriter {
   createClient(
     session: YandexActorSessionInput,
     draft: CreateClientCardDraft,
+  ): Promise<CreatedPilotClient>
+  createQuickOwnClient(
+    session: YandexActorSessionInput,
+    fullName: string,
   ): Promise<CreatedPilotClient>
   updateClient(
     session: YandexActorSessionInput,
@@ -84,6 +89,10 @@ export class DatabasePilotDomainWriter implements PilotDomainWriter {
 
   createClient(session: YandexActorSessionInput, draft: CreateClientCardDraft) {
     return this.withSession(session, (client) => createClientCard(client, draft))
+  }
+
+  createQuickOwnClient(session: YandexActorSessionInput, fullName: string) {
+    return this.withSession(session, (client) => createQuickOwnClientCard(client, fullName))
   }
 
   updateClient(
