@@ -247,6 +247,34 @@ describe('TrainerProfessionalProfileSection', () => {
     expect(saved.specialties).toEqual(['Кроссфит', 'Индивидуальный подход к каждому', 'Йога / пилатес / стретчинг'])
   })
 
+  it('flags the pre-split "Реабилитация и адаптивная физкультура" value as removable instead of dropping it silently', async () => {
+    const splitDraft: TrainerProfileDraft = {
+      ...completeDraft,
+      specialties: ['Кроссфит', 'Реабилитация и адаптивная физкультура (после травм, ограничения по здоровью)'],
+    }
+    const splitProfile = { ...publishedProfile, draft: splitDraft, published: splitDraft }
+    repository.getOwn.mockResolvedValue(splitProfile)
+    repository.saveDraft.mockImplementation((draft: TrainerProfileDraft) => Promise.resolve({ ...splitProfile, draft }))
+    const user = userEvent.setup()
+    renderSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Редактировать' }))
+    expect(screen.getByText('Направления · 2/6')).toBeInTheDocument()
+    expect(screen.getByText('Реабилитация и адаптивная физкультура (после травм, ограничения по здоровью)')).toBeInTheDocument()
+    const group = screen.getByRole('group', { name: 'Направления' })
+    expect(within(group).queryByText('Реабилитация и адаптивная физкультура (после травм, ограничения по здоровью)')).not.toBeInTheDocument()
+    expect(within(group).getByRole('checkbox', { name: 'Реабилитация после травм и операций' })).not.toBeChecked()
+
+    await user.click(screen.getByRole('button', { name: 'Убрать' }))
+    expect(screen.queryByText('Реабилитация и адаптивная физкультура (после травм, ограничения по здоровью)')).not.toBeInTheDocument()
+    await user.click(within(group).getByRole('checkbox', { name: 'Адаптивная физическая культура (для людей с особенностями здоровья)' }))
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+    await waitFor(() => expect(repository.saveDraft).toHaveBeenCalledTimes(1))
+    const saved = repository.saveDraft.mock.calls[0]?.[0] as TrainerProfileDraft
+    expect(saved.specialties).toEqual(['Кроссфит', 'Адаптивная физическая культура (для людей с особенностями здоровья)'])
+  })
+
   it('caps specialties at six, disables the rest and lets unchecking one free up a slot', async () => {
     const atLimit = [...TRAINER_SPECIALTIES].slice(0, TRAINER_SPECIALTIES_MAX)
     const limitDraft: TrainerProfileDraft = { ...completeDraft, specialties: atLimit }

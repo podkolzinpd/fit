@@ -1,5 +1,5 @@
 import type { TrainerCatalogFilters, TrainerCatalogPage, TrainerCatalogPageOptions, TrainerProfileDraft, TrainerProfilePhotoUpload, TrainerProfessionalProfile } from '../../shared/domain'
-import { parseLegacyTrainerCatalogPage, parseTrainerProfile } from '../../shared/trainer-profile'
+import { expandSpecialtiesForCatalogSearch, parseLegacyTrainerCatalogPage, parseTrainerProfile } from '../../shared/trainer-profile'
 import { getYandexMainRoutingConfig } from '../../app/feature-flags'
 import { supabase } from '../queries/client'
 import { toJson } from '../queries/json'
@@ -65,7 +65,7 @@ export const trainerProfilesRepository: TrainerProfilesRepository = {
   async listCatalog(filters, page) {
     const result = await supabase.rpc('list_public_trainer_profiles_page', {
       p_query: filters.query || undefined,
-      p_specialties: filters.specialties.length ? filters.specialties : undefined,
+      p_specialties: filters.specialties.length ? expandSpecialtiesForCatalogSearch(filters.specialties) : undefined,
       p_city: filters.city || undefined,
       p_metro_station_ids: filters.metroStationIds.length ? filters.metroStationIds : undefined,
       p_mode: filters.mode || undefined,
