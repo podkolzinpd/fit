@@ -32,10 +32,19 @@ request/response body или пользовательский текст. Диа
 операцией вида `GET /health` без query. Отчёт явно показывает
 `serviceName=fit-stage-api`, `resourceType=serverless_container`, активные на
 момент диагностики revision/release и границу исполнения. Значения
-`executionLayer=platform_invocation` и `handler=not_started` означают, что
-Yandex runtime вернул ошибку до входа в Fastify: имени Edge Function или
-application handler у такого вызова нет. При наличии структурного Fastify-лога
+`executionLayer=platform_invocation` означает наличие системной ошибки вызова.
+Без соответствующего прикладного лога `handler=unknown`: отсутствие записи
+не доказывает, что Fastify не запускался или что процесс не упал. Идентификаторы
+платформы и приложения могут различаться. При наличии структурного Fastify-лога
 отчёт использует фактические method/path и показывает `handler=entered`.
+
+Фоновая ошибка простаивающего PostgreSQL-соединения обрабатывается общим
+`PgDatabasePool`: драйвер удаляет повреждённое соединение, процесс продолжает
+работать, а последующий запрос может получить новое соединение. В stderr
+пишется `database_pool_idle_error` с безопасными категорией и кодом, без raw
+error/client, SQL, параметров, адреса БД и credentials. Запросы и транзакции
+автоматически не повторяются. `/health` и `/internal/warmup` не проверяют БД;
+успешный health soak не доказывает восстановление PostgreSQL после разрыва.
 
 ## Проверка доступности Yandex API после deployment
 

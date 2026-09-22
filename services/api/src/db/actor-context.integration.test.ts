@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url'
 
 import { runner } from 'node-pg-migrate'
 import { Pool, type QueryResultRow } from 'pg'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
 import { submitAppFeedback } from '../app-feedback-command.js'
@@ -812,6 +812,50 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await runtimePool?.end()
       await enrollmentPool?.end()
       await ownerPool?.end()
+    })
+
+    it('recovers after PostgreSQL terminates an idle pooled connection', async () => {
+      if (ownerPool === undefined) throw new Error('Database pool is not ready')
+      const pool = new PgDatabasePool({
+        connectionString: requireLocalTestDatabaseUrl(),
+        max: 1,
+        idleTimeoutMillis: 0,
+      })
+      let reportError: (message: string) => void = () => undefined
+      const idleError = new Promise<string>((resolve) => { reportError = resolve })
+      const warn = vi.spyOn(console, 'warn').mockImplementation((message: unknown) => {
+        if (typeof message === 'string') reportError(message)
+      })
+      try {
+        const connection = await pool.connect()
+        const rows = await connection.query<{ pid: number }>('select pg_backend_pid() as pid')
+        connection.release()
+        const pid = rows[0]?.pid
+        if (pid === undefined) throw new Error('Missing backend PID')
+
+        const terminated = await ownerPool.query<{ terminated: boolean }>(
+          'select pg_terminate_backend($1) as terminated', [pid],
+        )
+        expect(terminated.rows[0]?.terminated).toBe(true)
+        expect(JSON.parse(await idleError)).toMatchObject({
+          event: 'database_pool_idle_error',
+          databaseErrorCode: '57P01',
+        })
+
+        const recovered = await pool.connect()
+        try {
+          const result = await recovered.query<{ pid: number; value: number }>(
+            'select pg_backend_pid() as pid, 1 as value',
+          )
+          expect(result[0]?.value).toBe(1)
+          expect(result[0]?.pid).not.toBe(pid)
+        } finally {
+          recovered.release()
+        }
+      } finally {
+        warn.mockRestore()
+        await pool.end()
+      }
     })
 
     it('grants only curated operational views and revokes them idempotently', async () => {
