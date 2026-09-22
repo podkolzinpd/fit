@@ -668,7 +668,7 @@ describe('Training summary card states', () => {
     expect(screen.getByRole('region', { name: 'Лучшие результаты за период' })).toBeVisible()
   })
 
-  it('does not offer an immediate retry during the quality-failure cooldown', async () => {
+  it('offers an immediate retry after a quality failure', async () => {
     repositories.firstCompletedWorkoutDate.mockResolvedValue(localDate('2026-07-20'))
     repositories.listForClient.mockResolvedValue([publishedSummary])
     repositories.generate.mockRejectedValue(trainingSummaryGenerationError('yandex_cloud_quality_check_failed'))
@@ -679,8 +679,8 @@ describe('Training summary card states', () => {
     await userEvent.setup().click(within(dialog).getByRole('button', { name: 'Обновить анализ' }))
 
     const refreshError = await within(document.querySelector('.progress-analysis-preview') as HTMLElement).findByRole('alert')
-    expect(refreshError).toHaveTextContent('через 30 минут')
-    expect(within(refreshError).queryByRole('button', { name: 'Повторить' })).toBeNull()
+    expect(refreshError).toHaveTextContent('Попробуйте создать анализ ещё раз')
+    expect(within(refreshError).getByRole('button', { name: 'Повторить' })).toBeEnabled()
     expect(repositories.generate).toHaveBeenCalledOnce()
   })
 

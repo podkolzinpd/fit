@@ -486,7 +486,7 @@ describe('Yandex main repository', () => {
 
   it.each([
     [429, 'summary_generation_period_limit', false],
-    [502, 'yandex_cloud_quality_check_failed', false],
+    [502, 'yandex_cloud_quality_check_failed', true],
     [504, 'yandex_cloud_timeout', true],
   ])('preserves training summary error %s from the Yandex API', async (status, code, immediateRetryAllowed) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ error: code }, status)))
