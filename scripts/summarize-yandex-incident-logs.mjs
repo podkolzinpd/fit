@@ -72,9 +72,7 @@ const executionLayer = applicationEntry
     : 'unknown'
 const handler = applicationEntry
   ? 'entered'
-  : platformInvocationFailed
-    ? 'not_started'
-    : 'unknown'
+  : 'unknown'
 const inferredOperation = applicationEntry
   ? `${applicationEntry.method} ${applicationEntry.path}`
   : undefined

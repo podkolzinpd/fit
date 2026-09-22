@@ -122,7 +122,7 @@ test('reports the requested correlation while redacting unrelated identifiers an
   }
 })
 
-test('identifies a platform invocation failure before the application handler starts', () => {
+test('does not infer handler execution from a platform failure without application logs', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'fit-yandex-platform-'))
   const logPath = path.join(directory, 'logs.json')
   const contextPath = path.join(directory, 'context.json')
@@ -159,7 +159,7 @@ test('identifies a platform invocation failure before the application handler st
       activeReleaseAtDiagnosis: 'b'.repeat(40),
       operation: 'GET /health',
       executionLayer: 'platform_invocation',
-      handler: 'not_started',
+      handler: 'unknown',
     })
   } finally {
     fs.rmSync(directory, { recursive: true, force: true })
