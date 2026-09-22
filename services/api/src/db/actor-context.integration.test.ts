@@ -1632,6 +1632,32 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           enabled: true,
           target_backend: 'yandex',
         }])
+
+        await ownerPool.query(
+          `update app_private.profile_rollout_assignments
+           set target_backend = 'supabase', access_mode = 'read_only', enabled = true
+           where profile_id = $1`,
+          [LINK_ACTOR_ID],
+        )
+        await expect(issuer.issue(LINK_SUBJECT_HASH)).resolves.toMatchObject({
+          accessMode: 'read_write',
+          profile: { id: LINK_ACTOR_ID, accountRole: 'client' },
+        })
+        const repairedRollout = await ownerPool.query<{
+          access_mode: string
+          enabled: boolean
+          target_backend: string
+        } & QueryResultRow>(
+          `select target_backend, access_mode, enabled
+           from app_private.profile_rollout_assignments
+           where profile_id = $1`,
+          [LINK_ACTOR_ID],
+        )
+        expect(repairedRollout.rows).toEqual([{
+          access_mode: 'read_write',
+          enabled: true,
+          target_backend: 'yandex',
+        }])
       } finally {
         await ownerPool.query(
           'delete from app_private.yandex_app_sessions where profile_id = $1',

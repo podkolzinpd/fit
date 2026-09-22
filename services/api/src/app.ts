@@ -1334,7 +1334,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         }
         const handoff = await options.yandexAuthHandoffService.issue(subjectHash)
         return handoff === undefined
-          ? reply.code(403).send({ error: 'yandex_profile_not_ready' })
+          ? reply.code(403).send({ error: 'yandex_access_disabled' })
           : reply.header('cache-control', 'no-store').code(409).send({
               error: 'yandex_identity_unlinked',
               handoff,
@@ -1349,7 +1349,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         try {
           const handoff = await options.yandexAuthHandoffService.issue(subjectHash)
           return handoff === undefined
-            ? reply.code(403).send({ error: 'yandex_profile_not_ready' })
+            ? reply.code(403).send({ error: 'yandex_access_disabled' })
             : reply.header('cache-control', 'no-store').code(409).send({
                 error: 'yandex_identity_unlinked',
                 handoff,
