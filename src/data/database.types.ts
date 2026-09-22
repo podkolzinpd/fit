@@ -22,7 +22,7 @@ type WorkoutListExerciseRow = {
   sets: WorkoutListSetRow[]
 }
 export type WorkoutListRow = {
-  id: string; client_id: string; trainer_id: string; client_name: string; created_by: string | null; started_by: string | null; completed_by: string | null; workout_date: string; start_time: string | null; end_time: string | null
+  id: string; client_id: string; trainer_id: string; client_name: string; created_by: string | null; origin: string; started_by: string | null; completed_by: string | null; workout_date: string; start_time: string | null; end_time: string | null
   started_at: string | null; completed_at: string | null; status: string; notes: string | null; trainer_review: string | null; trainer_reaction: string | null; trainer_review_author_id: string | null; trainer_reviewed_at: string | null; client_comment: string | null
   session_rpe: number | null; wellbeing: string | null; discomfort: boolean | null; active_calories_kcal: number | null; has_pr: boolean
   stage_id: string | null; stage_title: string | null; version: number; total_count: number; exercises: WorkoutListExerciseRow[]
