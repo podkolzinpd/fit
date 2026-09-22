@@ -986,7 +986,7 @@ export function WorkoutDetailPage() {
     const missingSets = exercise.sets.filter((set) => !set.confirmedAt).length
     return missingSets > 0 ? [`${exercise.name} — ${missingSets} ${setCountLabel(missingSets)}`] : []
   }) ?? []
-  const authorLabel = workout ? clientWorkoutAuthorLabel(workout.createdBy, actor?.userId, trainers.data) : null
+  const authorLabel = workout ? clientWorkoutAuthorLabel(workout.createdBy, workout.origin, actor?.userId, trainers.data) : null
   const responseAuthor = trainers.data?.find((trainer) => trainer.trainerId === workout?.trainerReviewAuthorId)
   const responseAuthorName = responseAuthor ? [responseAuthor.firstName, responseAuthor.lastName].filter(Boolean).join(' ') : null
   const today = todayInTimeZone(actor?.timezone)
