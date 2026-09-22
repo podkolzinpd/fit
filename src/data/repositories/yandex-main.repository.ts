@@ -440,6 +440,7 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
     clientId: value.clientId,
     clientName: value.clientName,
     createdBy: value.createdBy,
+    origin: value.origin,
     startedBy: value.startedBy,
     completedBy: value.completedBy,
     workoutDate: localDate(value.workoutDate),

@@ -1,6 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-22. База изменений: `30905e81` (#1133). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
+Обновлено: 2026-09-22. База изменений: `577942c6` (#1136). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 
 ## Активная цель
@@ -23,6 +23,7 @@ Yandex ID является единственным production-входом; app
 - `VITE_MAINTENANCE_MODE` выключен. Owner-only Supabase write gate остаётся в `paused`: он блокирует DML старых вкладок, RPC и background writers на 38 source-таблицах.
 - `analytics.trainer_overview`/`client_overview` на Yandex приведены к parity с Supabase (000079_analytics_overview_parity). `is_test_account` всегда `false` (email на Yandex не хранится), `last_sign_in_at` — приближение по session-таблицам.
 - Первое голосовое или текстовое действие клиента использует отдельную идемпотентную own-client команду. Она возвращает существующую карточку, восстанавливает архивную и исправляет перенесённый аккаунт, оставшийся на merged source, атомарной привязкой к активной канонической карточке; общий trainer create-контракт не меняется.
+- Тренировки клиента получили третий статус «кем создана» — `workouts.origin` (`manual`/`ai`, пишется один раз при создании) на обоих backend; «Создана ИИ» ставится только для тренировок из сгенерированной ассистентом программы (`create_program_draft`/`schedule_program`), не для голосового/текстового логирования уже сделанной тренировки (`record_workout`). Тренерская ветка подписи не читает `origin`. Снэпшот названия избранного на карточке — отдельная, ещё не реализованная часть того же плана (`docs/design/workout-origin-and-favorite-title.md`).
 
 ## Yandex Cloud — подтверждённая база
 

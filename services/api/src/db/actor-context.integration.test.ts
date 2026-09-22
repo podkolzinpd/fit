@@ -2713,6 +2713,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             clientId: smokeIds.clientId,
             clientName: 'Тестовый клиент Yandex stage',
             createdBy: STAGE_SMOKE_PROFILE_ID,
+            origin: 'manual',
             startedBy: null,
             completedBy: null,
             workoutDate: '2026-08-22',
@@ -6345,6 +6346,13 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         client_id: CLIENT_ID,
         created_by: OTHER_ACTOR_ID,
       }])
+      const storedOrigin = await ownerPool.query<{ origin: string } & QueryResultRow>(
+        `select origin from public.workouts where id = $1`,
+        [applied.workoutId],
+      )
+      // record_workout dictates an already-done workout, not an AI-authored
+      // plan - origin stays manual (see design doc part 1).
+      expect(storedOrigin.rows).toEqual([{ origin: 'manual' }])
 
       const programWorkouts = Array.from({ length: 4 }, (_, index) => ({
         ...workout,
@@ -6413,6 +6421,11 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         [CLIENT_ID, OTHER_ACTOR_ID],
       )
       expect(storedProgram.rows[0]?.count).toBe(4)
+      const storedProgramOrigin = await ownerPool.query<CountRow>(
+        `select count(*)::integer count from public.workouts
+         where notes = 'Клиентская программа из Assistant' and origin = 'ai'`,
+      )
+      expect(storedProgramOrigin.rows[0]?.count).toBe(4)
 
       await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
         appendAssistantUserMessage(

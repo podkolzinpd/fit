@@ -42,6 +42,7 @@ interface WorkoutRow extends QueryResultRow {
   client_id: string
   client_name: string
   created_by: string | null
+  origin: 'manual' | 'ai'
   started_by: string | null
   completed_by: string | null
   workout_date: string
@@ -193,6 +194,7 @@ export interface PilotWorkout {
   clientId: string
   clientName: string
   createdBy: string | null
+  origin: 'manual' | 'ai'
   startedBy: string | null
   completedBy: string | null
   workoutDate: string
@@ -283,6 +285,7 @@ export async function readAccessibleTrainingData(
         workout.client_id,
         client.full_name as client_name,
         workout.created_by,
+        workout.origin,
         workout.started_by,
         workout.completed_by,
         workout.workout_date::text as workout_date,
@@ -438,6 +441,7 @@ export async function readAccessibleTrainingData(
       clientId: row.client_id,
       clientName: row.client_name,
       createdBy: row.created_by,
+      origin: row.origin,
       startedBy: row.started_by,
       completedBy: row.completed_by,
       workoutDate: row.workout_date,

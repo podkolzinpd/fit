@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(8);
+select plan(9);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('50000000-0000-4000-8000-000000000120', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'client-program@example.test', ''),
@@ -62,6 +62,7 @@ select is(
 );
 select is((select count(*) from public.workouts where notes = 'Client recommendation'), 4::bigint, 'client program creates four planned workouts');
 select is((select count(*) from public.workouts where notes = 'Client recommendation' and created_by = '50000000-0000-4000-8000-000000000120'), 4::bigint, 'client remains the program author');
+select is((select count(*) from public.workouts where notes = 'Client recommendation' and origin = 'ai'), 4::bigint, 'assistant-generated program workouts are marked origin=ai');
 select is(public.apply_assistant_action('e0000000-0000-4000-8000-000000000120', '{}'::jsonb, 2)->>'status', 'applied', 'client program retry is idempotent');
 select is((select count(*) from public.workouts where notes = 'Client recommendation'), 4::bigint, 'client program retry creates no duplicates');
 select throws_ok(
