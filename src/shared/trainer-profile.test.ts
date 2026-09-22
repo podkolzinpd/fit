@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emptyTrainerProfileDraft, parseLegacyTrainerCatalogPage, parseTrainerCatalogPage, parseTrainerProfile, TRAINER_SPECIALTIES, TRAINER_SPECIALTIES_MAX, validatePublishableTrainerProfile } from './trainer-profile'
+import { emptyTrainerProfileDraft, expandSpecialtiesForCatalogSearch, LEGACY_REHAB_ADAPTIVE_SPECIALTY, parseLegacyTrainerCatalogPage, parseTrainerCatalogPage, parseTrainerProfile, TRAINER_SPECIALTIES, TRAINER_SPECIALTIES_MAX, validatePublishableTrainerProfile } from './trainer-profile'
 
 describe('trainer profile', () => {
   it('allows a trainer to publish a profile with only the account name', () => {
@@ -125,6 +125,15 @@ describe('trainer profile', () => {
       specialties: [...TRAINER_SPECIALTIES].slice(0, TRAINER_SPECIALTIES_MAX + 1),
     }
     expect(validatePublishableTrainerProfile(draft)).toBe(`Оставьте не больше ${TRAINER_SPECIALTIES_MAX} направлений.`)
+  })
+
+  it('expands a catalog search for either new "reabilitation/adaptive PE" specialty to also match the pre-split legacy value', () => {
+    expect(expandSpecialtiesForCatalogSearch(['Реабилитация после травм и операций']))
+      .toEqual(['Реабилитация после травм и операций', LEGACY_REHAB_ADAPTIVE_SPECIALTY])
+    expect(expandSpecialtiesForCatalogSearch(['Адаптивная физическая культура (для людей с особенностями здоровья)']))
+      .toEqual(['Адаптивная физическая культура (для людей с особенностями здоровья)', LEGACY_REHAB_ADAPTIVE_SPECIALTY])
+    expect(expandSpecialtiesForCatalogSearch(['Кроссфит'])).toEqual(['Кроссфит'])
+    expect(expandSpecialtiesForCatalogSearch([])).toEqual([])
   })
 
   it('recovers a legacy draft with an entirely empty certificate row', () => {

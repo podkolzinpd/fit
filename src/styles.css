@@ -6148,6 +6148,11 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-mode-fields { overflow:hidden; border:1px solid var(--border); border-radius:14px; }
 .trainer-mode-fields .switch-row:first-child { border-top:0; }
 .trainer-specialties-limit-note { margin:6px 0 0; color:var(--warning-fg); font-size:13px; font-weight:700; }
+.trainer-specialties-legacy-note { margin:6px 0 0; padding:10px 12px; border:1px solid var(--warning-border); border-radius:14px; background:var(--warning-surface); }
+.trainer-specialties-legacy-note > p:first-child { margin:0 0 6px; color:var(--warning-fg); font-size:13px; font-weight:600; }
+.trainer-specialty-option-legacy { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0; padding:4px 0; font-size:14px; line-height:1.35; }
+.trainer-specialty-option-legacy + .trainer-specialty-option-legacy { border-top:1px solid var(--border); }
+.trainer-specialty-option-legacy button { flex:0 0 auto; min-height:32px; padding:0 12px; border:1px solid var(--border); border-radius:10px; background:var(--surface); color:var(--fg); font-size:13px; }
 .trainer-specialties-options { display:grid; gap:2px; margin-top:6px; overflow:hidden; border:1px solid var(--border); border-radius:14px; }
 .trainer-specialty-option { display:flex; align-items:center; gap:10px; min-height:44px; padding:6px 12px; }
 .trainer-specialty-option + .trainer-specialty-option { border-top:1px solid var(--border); }

@@ -137,4 +137,28 @@ describe('public trainer profile backend selection', () => {
       nextOffset: null,
     })
   })
+
+  it('also searches the pre-split legacy specialty so anketas that never re-selected still surface', async () => {
+    mocks.rpc.mockResolvedValue({ data: { items: [], totalCount: 0, nextOffset: null }, error: null })
+
+    await trainerProfilesRepository.listCatalog({
+      query: '', specialties: ['Реабилитация после травм и операций'], city: '', metroStationIds: [], mode: '', acceptingClients: null, brandTrainerOnly: false,
+    }, { offset: 0, limit: 3 })
+
+    expect(mocks.rpc).toHaveBeenCalledWith('list_public_trainer_profiles_page', expect.objectContaining({
+      p_specialties: ['Реабилитация после травм и операций', 'Реабилитация и адаптивная физкультура (после травм, ограничения по здоровью)'],
+    }))
+  })
+
+  it('does not add the legacy specialty when the search has nothing to do with the split', async () => {
+    mocks.rpc.mockResolvedValue({ data: { items: [], totalCount: 0, nextOffset: null }, error: null })
+
+    await trainerProfilesRepository.listCatalog({
+      query: '', specialties: ['Кроссфит'], city: '', metroStationIds: [], mode: '', acceptingClients: null, brandTrainerOnly: false,
+    }, { offset: 0, limit: 3 })
+
+    expect(mocks.rpc).toHaveBeenCalledWith('list_public_trainer_profiles_page', expect.objectContaining({
+      p_specialties: ['Кроссфит'],
+    }))
+  })
 })

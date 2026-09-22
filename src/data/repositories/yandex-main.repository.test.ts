@@ -294,6 +294,22 @@ describe('Yandex main repository', () => {
     expect(Object.fromEntries(requested.searchParams)).toEqual({ query: 'Анна', metro: 'msk-aeroport', mode: 'online', accepting: 'true', brand: 'true', offset: '0', limit: '3' })
   })
 
+  it('also searches the pre-split legacy specialty so anketas that never re-selected still surface', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [], totalCount: 0, nextOffset: null }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await repository.trainerProfiles.listCatalog({
+      query: '', specialties: ['Адаптивная физическая культура (для людей с особенностями здоровья)'], city: '', metroStationIds: [], mode: '', acceptingClients: null, brandTrainerOnly: false,
+    }, { offset: 0, limit: 3 })
+
+    const requested = new URL(String(fetchMock.mock.calls[0]?.[0]))
+    expect(requested.searchParams.getAll('specialty')).toEqual([
+      'Адаптивная физическая культура (для людей с особенностями здоровья)',
+      'Реабилитация и адаптивная физкультура (после травм, ограничения по здоровью)',
+    ])
+  })
+
   it('writes trainer gallery changes through the Yandex API', async () => {
     const draft = {
       displayName: 'Анна', bio: '', specialties: [], city: '', metroStationIds: [], customLocations: [], trainingModes: [],
