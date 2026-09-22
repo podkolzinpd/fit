@@ -61,18 +61,28 @@ describe('DatabaseStageRolloutAssignmentManager', () => {
       [],
       [],
       [{
+        all_linked_profiles: 13,
+        disabled_profiles: 1,
         domain_ready_profiles: 20,
+        domain_incomplete_profiles: 1,
         linked_profiles: 12,
+        migration_drift_profiles: 4,
         rollout_enabled_profiles: 8,
+        session_ready_profiles: 8,
       }],
       [],
     ]
     const manager = new DatabaseStageRolloutAssignmentManager(pool)
 
     await expect(manager.applyLinkedProfiles('inspect')).resolves.toEqual({
+      allLinkedProfiles: 13,
+      disabledProfiles: 1,
       domainReadyProfiles: 20,
+      domainIncompleteProfiles: 1,
       linkedProfiles: 12,
+      migrationDriftProfiles: 4,
       rolloutEnabledProfiles: 8,
+      sessionReadyProfiles: 8,
     })
     expect(pool.connection.calls.every(({ text }) => !text.includes('insert into')))
       .toBe(true)
@@ -89,18 +99,28 @@ describe('DatabaseStageRolloutAssignmentManager', () => {
       [],
       [],
       [{
+        all_linked_profiles: '13',
+        disabled_profiles: '1',
         domain_ready_profiles: '20',
+        domain_incomplete_profiles: '1',
         linked_profiles: '12',
+        migration_drift_profiles: action === 'enable' ? '0' : '12',
         rollout_enabled_profiles: String(enabled),
+        session_ready_profiles: String(enabled),
       }],
       [],
     ]
     const manager = new DatabaseStageRolloutAssignmentManager(pool)
 
     await expect(manager.applyLinkedProfiles(action)).resolves.toEqual({
+      allLinkedProfiles: 13,
+      disabledProfiles: 1,
       domainReadyProfiles: 20,
+      domainIncompleteProfiles: 1,
       linkedProfiles: 12,
+      migrationDriftProfiles: action === 'enable' ? 0 : 12,
       rolloutEnabledProfiles: enabled,
+      sessionReadyProfiles: enabled,
     })
     expect(pool.connection.calls[2]?.text).toContain(mutation)
     expect(pool.connection.calls[4]?.text).toBe('commit')
@@ -113,9 +133,14 @@ describe('DatabaseStageRolloutAssignmentManager', () => {
       [],
       [],
       [{
+        all_linked_profiles: 1,
+        disabled_profiles: 0,
         domain_ready_profiles: 20,
+        domain_incomplete_profiles: 1,
         linked_profiles: 0,
+        migration_drift_profiles: 1,
         rollout_enabled_profiles: 0,
+        session_ready_profiles: 0,
       }],
       [],
     ]
@@ -133,9 +158,14 @@ describe('DatabaseStageRolloutAssignmentManager', () => {
       [],
       [],
       [{
+        all_linked_profiles: 12,
+        disabled_profiles: 0,
         domain_ready_profiles: 20,
+        domain_incomplete_profiles: 0,
         linked_profiles: 12,
+        migration_drift_profiles: 1,
         rollout_enabled_profiles: 11,
+        session_ready_profiles: 11,
       }],
       [],
     ]

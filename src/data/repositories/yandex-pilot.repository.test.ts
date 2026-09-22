@@ -504,6 +504,18 @@ describe('yandexPilotRepository', () => {
     await expect(result).rejects.not.toThrow('email')
   })
 
+  it('explains an explicitly disabled Yandex profile without suggesting retries', async () => {
+    queries.exchangeCodeForAppSession.mockResolvedValue(new Response(JSON.stringify({
+      error: 'yandex_access_disabled',
+    }), { status: 403 }))
+
+    await expect(yandexPilotRepository.exchangeCodeForAppSession(
+      'https://stage.example.test',
+      'code',
+      'verifier',
+    )).rejects.toThrow('Доступ к этому профилю FIT отключён')
+  })
+
   it('distinguishes a disabled Yandex session service from an incomplete profile', async () => {
     queries.exchangeCodeForAppSession.mockResolvedValue(new Response(JSON.stringify({
       error: 'yandex_session_denied',

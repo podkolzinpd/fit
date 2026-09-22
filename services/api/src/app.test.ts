@@ -2845,7 +2845,7 @@ describe('Yandex ID app session and account linking endpoints', () => {
     expect(handoff.issue).toHaveBeenCalledWith(SUBJECT_HASH)
   })
 
-  it('fails closed when the identity is linked but its migrated profile is not rollout-ready', async () => {
+  it('reports an explicit access block when a linked identity stays disabled', async () => {
     const handoff = buildYandexAuthHandoffService({ issue: null })
     const app = buildApp({
       oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
@@ -2866,7 +2866,7 @@ describe('Yandex ID app session and account linking endpoints', () => {
     })
 
     expect(response.statusCode).toBe(403)
-    expect(response.json()).toEqual({ error: 'yandex_profile_not_ready' })
+    expect(response.json()).toEqual({ error: 'yandex_access_disabled' })
   })
 
   it('links verified legacy credentials and returns only the Yandex app session', async () => {

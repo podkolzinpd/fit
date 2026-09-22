@@ -724,6 +724,11 @@ test('manages the migrated tenant rollout only through an explicit private run',
   assert.match(rolloutWorkflow, /domainReadyProfiles/)
   assert.match(rolloutWorkflow, /linkedProfiles/)
   assert.match(rolloutWorkflow, /rolloutEnabledProfiles/)
+  assert.match(rolloutWorkflow, /allLinkedProfiles/)
+  assert.match(rolloutWorkflow, /sessionReadyProfiles/)
+  assert.match(rolloutWorkflow, /disabledProfiles/)
+  assert.match(rolloutWorkflow, /migrationDriftProfiles/)
+  assert.match(rolloutWorkflow, /domainIncompleteProfiles/)
   assert.match(
     rolloutWorkflow,
     /\.rolloutEnabledProfiles == \.linkedProfiles/,

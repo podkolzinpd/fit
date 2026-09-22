@@ -20,9 +20,14 @@ export interface StageRolloutAssignmentResult {
 }
 
 export interface StageRolloutBatchResult {
+  allLinkedProfiles: number
+  disabledProfiles: number
   domainReadyProfiles: number
+  domainIncompleteProfiles: number
   linkedProfiles: number
+  migrationDriftProfiles: number
   rolloutEnabledProfiles: number
+  sessionReadyProfiles: number
 }
 
 export interface StageRolloutAssignmentManager {
@@ -51,9 +56,14 @@ interface RolloutRow extends QueryResultRow {
 }
 
 interface BatchRolloutRow extends QueryResultRow {
+  all_linked_profiles: number | string
+  disabled_profiles: number | string
   domain_ready_profiles: number | string
+  domain_incomplete_profiles: number | string
   linked_profiles: number | string
+  migration_drift_profiles: number | string
   rollout_enabled_profiles: number | string
+  session_ready_profiles: number | string
 }
 
 export class StageRolloutProfileNotReadyError extends Error {
@@ -237,38 +247,76 @@ implements StageRolloutAssignmentManager {
             select 1 from public.clients client
             where client.auth_user_id = profile.id
           ))
-        ), linked_ready as (
-          select domain_ready.id
-          from domain_ready
+        ), linked_profiles as (
+          select
+            profile.id,
+            exists (
+              select 1 from domain_ready
+              where domain_ready.id = profile.id
+            ) as domain_ready
+          from public.profiles profile
           join app_private.auth_identities identity
-            on identity.profile_id = domain_ready.id
+            on identity.profile_id = profile.id
            and identity.provider = 'yandex'
+        ), linked_ready as (
+          select id from linked_profiles where domain_ready
         )
         select
           (select count(*)::integer from domain_ready) as domain_ready_profiles,
           (select count(*)::integer from linked_ready) as linked_profiles,
+          (select count(*)::integer from linked_profiles) as all_linked_profiles,
+          (select count(*)::integer from linked_profiles
+           where not domain_ready) as domain_incomplete_profiles,
           (select count(*)::integer
            from linked_ready
            join app_private.profile_rollout_assignments assignment
              on assignment.profile_id = linked_ready.id
             and assignment.target_backend = 'yandex'
             and assignment.access_mode = 'read_write'
-            and assignment.enabled) as rollout_enabled_profiles
+            and assignment.enabled) as rollout_enabled_profiles,
+          (select count(*)::integer
+           from linked_profiles
+           join app_private.profile_rollout_assignments assignment
+             on assignment.profile_id = linked_profiles.id
+            and assignment.target_backend = 'yandex'
+            and assignment.access_mode = 'read_write'
+            and assignment.enabled) as session_ready_profiles,
+          (select count(*)::integer
+           from linked_profiles
+           join app_private.profile_rollout_assignments assignment
+             on assignment.profile_id = linked_profiles.id
+           where not assignment.enabled) as disabled_profiles,
+          (select count(*)::integer
+           from linked_profiles
+           left join app_private.profile_rollout_assignments assignment
+             on assignment.profile_id = linked_profiles.id
+           where assignment.profile_id is null
+              or (assignment.enabled and not (
+                assignment.target_backend = 'yandex'
+                and assignment.access_mode = 'read_write'
+              ))) as migration_drift_profiles
       `)
       const row = counts[0]
       if (row === undefined) throw new StageRolloutProfileNotReadyError()
       const result = {
+        allLinkedProfiles: Number(row.all_linked_profiles),
+        disabledProfiles: Number(row.disabled_profiles),
         domainReadyProfiles: Number(row.domain_ready_profiles),
+        domainIncompleteProfiles: Number(row.domain_incomplete_profiles),
         linkedProfiles: Number(row.linked_profiles),
+        migrationDriftProfiles: Number(row.migration_drift_profiles),
         rolloutEnabledProfiles: Number(row.rollout_enabled_profiles),
+        sessionReadyProfiles: Number(row.session_ready_profiles),
       }
+      const countValues = Object.values(result)
       if (
-        !Number.isSafeInteger(result.domainReadyProfiles)
-        || !Number.isSafeInteger(result.linkedProfiles)
-        || !Number.isSafeInteger(result.rolloutEnabledProfiles)
-        || result.domainReadyProfiles < 0
-        || result.linkedProfiles < 0
-        || result.rolloutEnabledProfiles < 0
+        countValues.some((count) => !Number.isSafeInteger(count) || count < 0)
+        || result.linkedProfiles > result.allLinkedProfiles
+        || result.sessionReadyProfiles > result.allLinkedProfiles
+        || result.domainIncompleteProfiles > result.allLinkedProfiles
+        || result.disabledProfiles
+          + result.migrationDriftProfiles
+          + result.sessionReadyProfiles !== result.allLinkedProfiles
         || (action === 'enable' && result.linkedProfiles === 0)
         || (
           action === 'enable'

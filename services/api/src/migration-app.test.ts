@@ -449,9 +449,14 @@ describe('stage rollout assignment', () => {
       rolloutEnabled: true,
     }),
     applyLinkedProfiles: StageRolloutAssignmentManager['applyLinkedProfiles'] = () => Promise.resolve({
+      allLinkedProfiles: 13,
+      disabledProfiles: 0,
       domainReadyProfiles: 20,
+      domainIncompleteProfiles: 1,
       linkedProfiles: 12,
+      migrationDriftProfiles: 0,
       rolloutEnabledProfiles: 12,
+      sessionReadyProfiles: 13,
     }),
   ) {
     const rollout = vi.fn(apply)
@@ -527,9 +532,14 @@ describe('stage rollout assignment', () => {
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual({
       status,
+      allLinkedProfiles: 13,
+      disabledProfiles: 0,
       domainReadyProfiles: 20,
+      domainIncompleteProfiles: 1,
       linkedProfiles: 12,
+      migrationDriftProfiles: 0,
       rolloutEnabledProfiles: 12,
+      sessionReadyProfiles: 13,
     })
     expect(batchRollout).toHaveBeenCalledWith(action)
     expect(response.body).not.toMatch(/[0-9a-f]{8}-[0-9a-f-]{27,}/i)
