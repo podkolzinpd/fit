@@ -390,15 +390,15 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
     const samePeriod = guardRows.filter((row) => row.period_start === request.periodStart && row.period_end === request.periodEnd)
     const exactGuard = samePeriod.find((row) => row.input_fingerprint === inputFingerprint)
     const callsToday = guardRows
-      .filter((row) => row.model_calls_day === utcDay)
+      .filter((row) => row.model_calls_day === utcDay
+        && (row.status === 'succeeded'
+          || (row.status === 'pending'
+            && row.lease_until !== null && Date.parse(row.lease_until) > now)))
       .reduce((sum, row) => sum + Number(row.model_calls_today || 0), 0)
-    const activePeriodFailure = samePeriod.find((row) => row.status === 'failed'
-      && row.retry_after !== null && Date.parse(row.retry_after) > now)
     let guardDecision = 'available'
     if (exactGuard?.status === 'succeeded') guardDecision = cached === undefined ? 'stale_succeeded_guard' : 'cached'
     else if (exactGuard?.status === 'pending'
       && exactGuard.lease_until !== null && Date.parse(exactGuard.lease_until) > now) guardDecision = 'in_progress'
-    else if (activePeriodFailure !== undefined) guardDecision = 'cooldown'
     else if (callsToday >= 3) guardDecision = 'daily_limit'
     const generationEnabled = process.env.FIT_AI_SUMMARY_GENERATION_DISABLED !== 'true'
     const inputWithinLimit = modelInputChars <= MAX_SUMMARY_MODEL_INPUT_CHARS
@@ -431,7 +431,7 @@ export class DatabasePilotTrainingSummaries implements PilotTrainingSummaries {
         input_within_limit: inputWithinLimit,
         guard_decision: guardDecision,
         calls_today: callsToday,
-        last_failure_code: exactGuard?.failure_code ?? activePeriodFailure?.failure_code ?? null,
+        last_failure_code: exactGuard?.failure_code ?? null,
       },
     }
   }
