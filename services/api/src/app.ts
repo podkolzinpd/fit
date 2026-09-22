@@ -1117,7 +1117,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const specialtyValues = query.specialty === undefined ? []
       : Array.isArray(query.specialty) ? query.specialty : [query.specialty]
     const specialtyFilter = (value: unknown) => {
-      const parsed = textFilter(value, 60)
+      // 100, not 60: matches the profile-draft specialty ceiling
+      // (readTrainerProfileDraft) - expandSpecialtiesForCatalogSearch adds
+      // the pre-split 76-char legacy string to search filters whenever a
+      // client searches by either half of the split, so this must accept at
+      // least that length or every such search 400s (2026-09-22 incident).
+      const parsed = textFilter(value, 100)
       return parsed !== undefined && parsed.length > 0 ? parsed : undefined
     }
     const specialties = specialtyValues.length <= 20 && specialtyValues.every((value) => specialtyFilter(value) !== undefined)
