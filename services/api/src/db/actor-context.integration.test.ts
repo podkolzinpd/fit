@@ -44,6 +44,7 @@ import {
 } from '../connection-commands.js'
 import {
   createClientCard,
+  createQuickOwnClientCard,
   createCustomExercise,
   setClientArchived,
   setCustomExerciseArchived,
@@ -159,6 +160,9 @@ const LINK_CONFLICT_CANONICAL_CLIENT_ID = '4237c0bf-5dc5-46cd-ab26-951ddfb49949'
 const LINK_MERGE_WORKOUT_ID = '5237c0bf-5dc5-46cd-ab26-951ddfb49949'
 const LINK_MERGE_OPERATION_ID = '6237c0bf-5dc5-46cd-ab26-951ddfb49949'
 const LINK_CONFLICT_OPERATION_ID = '7237c0bf-5dc5-46cd-ab26-951ddfb49949'
+const QUICK_OWN_RECOVERY_ACTOR_ID = '8237c0bf-5dc5-46cd-ab26-951ddfb49949'
+const QUICK_OWN_RECOVERY_SOURCE_ID = '9237c0bf-5dc5-46cd-ab26-951ddfb49949'
+const QUICK_OWN_RECOVERY_CANONICAL_ID = 'a237c0bf-5dc5-46cd-ab26-951ddfb49949'
 const ROOT_CUSTOM_EXERCISE_ID = 'b27d65d0-6221-47cb-91a0-8dfcc0a2ceba'
 const MEMBER_CUSTOM_EXERCISE_ID = '3127663e-4395-4100-8dd1-7b784d90917a'
 const ROOT_WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
@@ -2258,6 +2262,117 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         (client) => client.query('select id from public.clients where id = $1', [LIFECYCLE_CLIENT_ID]),
       )
       expect(outsideAccess).toEqual([])
+    })
+
+    it('recovers the canonical own client instead of returning a create conflict', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+
+      await ownerPool.query(
+        `
+          insert into public.profiles (id, first_name, account_role)
+          values ($1, 'Quick own recovery', 'client')
+        `,
+        [QUICK_OWN_RECOVERY_ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.clients (id, trainer_id, full_name)
+          values ($1, $2, 'Canonical own client')
+        `,
+        [QUICK_OWN_RECOVERY_CANONICAL_ID, ACTOR_ID],
+      )
+      await ownerPool.query(
+        `
+          insert into public.clients (
+            id, trainer_id, auth_user_id, full_name, archived_at, merged_into_client_id
+          ) values ($1, $2, $2, 'Stale merged own client', now(), $3)
+        `,
+        [
+          QUICK_OWN_RECOVERY_SOURCE_ID,
+          QUICK_OWN_RECOVERY_ACTOR_ID,
+          QUICK_OWN_RECOVERY_CANONICAL_ID,
+        ],
+      )
+
+      try {
+        const recovered = await withActorTransaction(
+          runtimePool,
+          QUICK_OWN_RECOVERY_ACTOR_ID,
+          (client) => createQuickOwnClientCard(client, 'Quick own recovery'),
+        )
+        expect(recovered).toEqual({
+          id: QUICK_OWN_RECOVERY_CANONICAL_ID,
+          version: 2,
+          membershipVersion: 1,
+        })
+
+        await expect(withActorTransaction(
+          runtimePool,
+          QUICK_OWN_RECOVERY_ACTOR_ID,
+          (client) => createQuickOwnClientCard(client, 'Ignored retry name'),
+        )).resolves.toEqual(recovered)
+
+        const linked = await ownerPool.query<{
+          id: string
+          auth_user_id: string | null
+          archived_at: Date | null
+        }>(
+          `
+            select id, auth_user_id, archived_at
+            from public.clients
+            where id in ($1, $2)
+            order by id
+          `,
+          [QUICK_OWN_RECOVERY_SOURCE_ID, QUICK_OWN_RECOVERY_CANONICAL_ID],
+        )
+        expect(linked.rows).toEqual(expect.arrayContaining([
+          expect.objectContaining({
+            id: QUICK_OWN_RECOVERY_SOURCE_ID,
+            auth_user_id: null,
+          }),
+          expect.objectContaining({
+            id: QUICK_OWN_RECOVERY_CANONICAL_ID,
+            auth_user_id: QUICK_OWN_RECOVERY_ACTOR_ID,
+            archived_at: null,
+          }),
+        ]))
+
+        await ownerPool.query(
+          'update public.clients set archived_at = now() where id = $1',
+          [QUICK_OWN_RECOVERY_CANONICAL_ID],
+        )
+        await expect(withActorTransaction(
+          runtimePool,
+          QUICK_OWN_RECOVERY_ACTOR_ID,
+          (client) => createQuickOwnClientCard(client, 'Restore own client'),
+        )).resolves.toMatchObject({
+          id: QUICK_OWN_RECOVERY_CANONICAL_ID,
+          version: 3,
+        })
+
+        const accessible = await withActorTransaction(
+          runtimePool,
+          QUICK_OWN_RECOVERY_ACTOR_ID,
+          (client) => readAccessibleClients(client),
+        )
+        expect(accessible.clients.map((client) => client.id))
+          .toEqual([QUICK_OWN_RECOVERY_CANONICAL_ID])
+      } finally {
+        await ownerPool.query(
+          'delete from public.clients where id = $1',
+          [QUICK_OWN_RECOVERY_SOURCE_ID],
+        )
+        await ownerPool.query(
+          'delete from public.clients where id = $1',
+          [QUICK_OWN_RECOVERY_CANONICAL_ID],
+        )
+        await ownerPool.query(
+          'delete from public.profiles where id = $1',
+          [QUICK_OWN_RECOVERY_ACTOR_ID],
+        )
+      }
     })
 
     it('creates and claims a client link atomically through the Yandex database', async () => {

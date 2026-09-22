@@ -43,6 +43,7 @@ import {
   readClientPreferencesRequest,
   readCustomExerciseDraft,
   readProfileDraft,
+  readQuickOwnClientRequest,
   readVersionedClientCardRequest,
   readVersionedCustomExerciseRequest,
 } from './domain-request.js'
@@ -2531,6 +2532,22 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       reply,
       () => writer.createClient(sessionToken, draft),
       (client) => reply.header('cache-control', 'no-store').code(201).send({ client }),
+    )
+  })
+
+  app.post('/v1/clients/me/quick', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const command = readQuickOwnClientRequest(request.body)
+    if (sessionToken === undefined) {
+      return reply.code(401).send({ error: 'unauthorized' })
+    }
+    if (command === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    const writer = options.pilotDomainWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.createQuickOwnClient(sessionToken, command.fullName),
+      (client) => reply.header('cache-control', 'no-store').send({ client }),
     )
   })
 

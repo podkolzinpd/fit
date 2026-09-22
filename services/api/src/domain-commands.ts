@@ -135,6 +135,25 @@ export function createClientCard(
   })
 }
 
+export function createQuickOwnClientCard(
+  client: DatabaseClient,
+  fullName: string,
+): Promise<CreatedPilotClient> {
+  return runCommand(async () => {
+    const rows = await client.query<ClientCreatedRow>(
+      'select client_id, version, membership_version from public.create_quick_own_client_card($1)',
+      [fullName],
+    )
+    const created = rows[0]
+    if (created === undefined) throw new Error('Own client command returned no result')
+    return {
+      id: created.client_id,
+      version: safeVersion(created.version),
+      membershipVersion: safeVersion(created.membership_version),
+    }
+  })
+}
+
 export function updateClientCard(
   client: DatabaseClient,
   clientId: string,
