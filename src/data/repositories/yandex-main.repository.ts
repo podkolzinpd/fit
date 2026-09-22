@@ -50,7 +50,7 @@ import {
 } from './training-summaries.repository'
 import { trainingSummaryGenerationError } from './training-summary-errors'
 import { yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pilot.repository'
-import { trainerCatalogPageSchema, trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
+import { expandSpecialtiesForCatalogSearch, trainerCatalogPageSchema, trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
 import {
   PRIVACY_VERSION,
   TERMS_VERSION,
@@ -862,7 +862,7 @@ export function createYandexMainRepository(
       async listCatalog(filters: TrainerCatalogFilters, page) {
         const params = new URLSearchParams()
         if (filters.query) params.set('query', filters.query)
-        for (const specialty of filters.specialties) params.append('specialty', specialty)
+        for (const specialty of expandSpecialtiesForCatalogSearch(filters.specialties)) params.append('specialty', specialty)
         if (filters.city) params.set('city', filters.city)
         for (const stationId of filters.metroStationIds) params.append('metro', stationId)
         if (filters.mode) params.set('mode', filters.mode)

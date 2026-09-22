@@ -9,7 +9,20 @@ export function SpecialtyChecklist({ selected, onToggle, max, allowAll, onSelect
   onSelectAll?: () => void
 }) {
   const atMax = max !== undefined && selected.length >= max
+  // Каталог направлений иногда меняется (например, разделение одного пункта
+  // на два) - строка, выбранная до изменения, может больше не входить в
+  // TRAINER_SPECIALTIES. Такую строку не убираем молча (это потеря данных
+  // анкеты), но и не даём выбрать заново через чекбокс - показываем отдельно
+  // с явным способом убрать.
+  const legacy = selected.filter((specialty) => !(TRAINER_SPECIALTIES as readonly string[]).includes(specialty))
   return <>
+    {legacy.length > 0 && <div className="trainer-specialties-legacy-note" role="status">
+      <p>Эти направления больше не в списке и не учитываются в поиске клиента. Уберите и выберите актуальные:</p>
+      {legacy.map((specialty) => <p key={specialty} className="trainer-specialty-option-legacy">
+        <span>{specialty}</span>
+        <button type="button" onClick={() => onToggle(specialty, false)}>Убрать</button>
+      </p>)}
+    </div>}
     {atMax && <p className="trainer-specialties-limit-note" role="status">Выбрано максимум направлений ({max}). Уберите одно, чтобы выбрать другое.</p>}
     <div className="trainer-specialties-options" role="group" aria-label="Направления">
       {allowAll && <label className="trainer-specialty-option trainer-specialty-option-all">
