@@ -906,7 +906,7 @@ async function requestStructuredYandex<T>(
   }
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 30_000)
+    const timeout = setTimeout(() => controller.abort(), 90_000)
     let response: Response
     try {
       const requestBody = {
@@ -916,7 +916,7 @@ async function requestStructuredYandex<T>(
         messages: repairMessages ?? messages,
       }
       if (process.env.YANDEX_LLM_FUNCTION_URL && process.env.YANDEX_LLM_GATEWAY_PRIVATE_KEY) {
-        const result = await invokeYandexLlmCompletion(requestBody, 30_000, fetchImpl)
+        const result = await invokeYandexLlmCompletion(requestBody, 90_000, fetchImpl)
         response = new Response(JSON.stringify(result.payload), { status: 200, headers: { 'x-request-id': result.requestId ?? '' } })
       } else {
         const authorization = options.authorization === undefined
