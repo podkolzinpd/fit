@@ -41,8 +41,16 @@ function isTimerEvent(value: unknown): boolean {
 export function buildPushDispatcherApp(
   options: BuildPushDispatcherAppOptions,
 ): FastifyInstance {
+  const logger = options.logger === false
+    ? false
+    : {
+        ...(typeof options.logger === 'object' ? options.logger : {}),
+        // Cloud Logging accepts string severity; Pino's default numeric level
+        // is UNSPECIFIED and is filtered by the container's INFO minimum.
+        formatters: { level: (label: string) => ({ level: label.toUpperCase() }) },
+      }
   const app = Fastify({
-    logger: options.logger ?? true,
+    logger,
     // An idle serverless container can be suspended before its socket timer runs.
     // Never offer a socket from a previous invocation for reuse.
     maxRequestsPerSocket: 1,

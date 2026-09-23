@@ -73,10 +73,12 @@ describe('push dispatcher private container', () => {
     const records: unknown[] = logs.map((line) => JSON.parse(line) as unknown)
     expect(records).toEqual(expect.arrayContaining([
       expect.objectContaining({
+        level: 'INFO',
         request_id: 'd1d053a1-3207-4926-87d3-e65ff8e4a7d6',
         stage: 'received',
       }),
       expect.objectContaining({
+        level: 'INFO',
         request_id: 'd1d053a1-3207-4926-87d3-e65ff8e4a7d6',
         stage: 'completed',
       }),
@@ -106,7 +108,7 @@ describe('push dispatcher private container', () => {
     expect(run).not.toHaveBeenCalled()
     expect(logs.join('')).not.toContain('not-a-valid-request-id')
     expect(logs.map((line) => JSON.parse(line) as unknown)).toEqual(expect.arrayContaining([
-      expect.objectContaining({ stage: 'rejected' }),
+      expect.objectContaining({ level: 'WARN', stage: 'rejected' }),
     ]))
     await app.close()
   })
@@ -131,7 +133,7 @@ describe('push dispatcher private container', () => {
     expect(response.body).not.toContain('database secret')
     expect(logs.join('')).not.toContain('database secret')
     expect(logs.map((line) => JSON.parse(line) as unknown)).toEqual(expect.arrayContaining([
-      expect.objectContaining({ stage: 'failed', errorType: 'Error' }),
+      expect.objectContaining({ level: 'ERROR', stage: 'failed', errorType: 'Error' }),
     ]))
     await app.close()
   })
