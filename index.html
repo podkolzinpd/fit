@@ -9097,6 +9097,9 @@ body {
 .prefinal-path-map .path-trainer > p,
 .prefinal-path-map .path-trainer-fit small { color: #b5bcc8; }
 .prefinal-path-map .path-trainer-fit { border-color: #56606f; }
+/* Review 2.2: preserve the approved composition, restore the card's lower inset. */
+.prefinal-path-map.path-map-review-v2 .path-system { top: 350px; height: 398px; }
+.prefinal-path-map.path-map-review-v2 .path-stage { padding-bottom: 22px; }
 
 /* Audience */
 .prefinal-audience-scale .audience-scale-fit,
@@ -11899,6 +11902,30 @@ if (productFlowSource && colleagueProductFlow) {
   delete syncedProductFlow.dataset.slideFamily
   delete syncedProductFlow.dataset.version
   colleagueProductFlow.replaceWith(syncedProductFlow)
+}
+// Keep the current source slide beside its approved copy revision.
+const pathMapSource = document.querySelector('.prefinal-path-map')
+if (pathMapSource) {
+  pathMapSource.dataset.slideFamily = '2'
+  pathMapSource.dataset.version = '2.1'
+  const revisedPathMap = pathMapSource.cloneNode(true)
+  revisedPathMap.classList.add('path-map-review-v2')
+  revisedPathMap.dataset.version = '2.2'
+  revisedPathMap.querySelector('h2').innerHTML = 'Три сценария занятий —<br>одна платформа'
+  revisedPathMap.querySelector('.path-system').setAttribute('aria-label', 'Три сценария занятий и тренер как отдельная сторона платформы')
+  revisedPathMap.querySelector('.path-stage p').textContent = 'Нужно понять, с чего начать или как вернуться после перерыва.'
+  revisedPathMap.querySelector('.path-takeaway strong').textContent = 'План и история тренировок остаются с человеком — занимается он сам или с тренером.'
+  revisedPathMap.querySelector('.speaker-notes').textContent = `ЗАДАЧА СЛАЙДА
+Показать три сценария занятий и тренера как отдельную сторону платформы.
+
+ЧТО ГОВОРИМ
+Человек может начинать или возвращаться после перерыва, тренироваться самостоятельно либо заниматься с тренером. Это не обязательные последовательные этапы и не взаимоисключающие аудитории: начать можно и самостоятельно, и с тренером. Поэтому дальше мы не складываем эти сценарии как независимые группы.
+
+Fit сохраняет план и историю тренировок при смене сценария. Тренер — отдельный участник платформы: ведёт клиентов, программы и получает доступ к новой аудитории.
+
+ПЕРЕХОД
+Далее — размер аудитории и база финансовой модели.`
+  pathMapSource.after(revisedPathMap)
 }
 const slides = [...document.querySelectorAll('.slide:not(.legacy-competitor-slide):not(.legacy-behavior-slide)')]
 if (slides.length <= 1) document.querySelectorAll('.nav').forEach(button => { button.style.display = 'none' })
