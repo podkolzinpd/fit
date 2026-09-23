@@ -11903,7 +11903,7 @@ if (productFlowSource && colleagueProductFlow) {
   delete syncedProductFlow.dataset.version
   colleagueProductFlow.replaceWith(syncedProductFlow)
 }
-// Keep the current source slide beside its approved copy revision.
+// The user approved removing the source duplicate; keep revision 2.2 only.
 const pathMapSource = document.querySelector('.prefinal-path-map')
 if (pathMapSource) {
   pathMapSource.dataset.slideFamily = '2'
@@ -11925,7 +11925,7 @@ Fit сохраняет план и историю тренировок при с
 
 ПЕРЕХОД
 Далее — размер аудитории и база финансовой модели.`
-  pathMapSource.after(revisedPathMap)
+  pathMapSource.replaceWith(revisedPathMap)
 }
 const slides = [...document.querySelectorAll('.slide:not(.legacy-competitor-slide):not(.legacy-behavior-slide)')]
 if (slides.length <= 1) document.querySelectorAll('.nav').forEach(button => { button.style.display = 'none' })
