@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useDataBackend } from '../../app/data-backend-context'
 import { ExerciseIcon } from '../../shared/icons'
 import exerciseMediaPresentation from '../../shared/exercise-media-presentation.generated.json'
 import { useCustomExercisePhotoUrl } from './custom-exercise-photo'
@@ -75,11 +76,13 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, customPho
   const [manualPlay, setManualPlay] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const reducedMotion = usePrefersReducedMotion()
+  const { source: backendSource } = useDataBackend()
   const wantsVideo = variant === 'technique' || (variant === 'picker' && playVideo)
   const resolvedCustomPhoto = useCustomExercisePhotoUrl(customPhotoPath)
   const customPhotoLoading = Boolean(customPhotoPath) && !resolvedCustomPhoto
   const safeSrc = resolvedCustomPhoto ?? reviewedExerciseImageSource(src)
-  const privateVitalMedia = shouldUsePrivateVitalStorage(safeSrc) || shouldUsePrivateVitalStorage(videoSrc)
+  const privateVitalMedia = shouldUsePrivateVitalStorage(safeSrc, backendSource)
+    || shouldUsePrivateVitalStorage(videoSrc, backendSource)
   const resolvedSrc = useVitalMediaUrl(safeSrc)
   const resolvedMotionSrc = useVitalMediaUrl(safeMotionSrc, variant === 'technique' && !privateVitalMedia)
   const resolvedVideoSrc = useVitalMediaUrl(videoSrc, wantsVideo)

@@ -29,6 +29,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const yandexRoutingEnabled = yandexSession?.session !== null
     && yandexSession?.session !== undefined
     && isYandexMainRoutingEnabled()
+  const yandexOnlyAuthEnabled = isYandexOnlyAuthEnabled()
   const yandexRoutingEnabledRef = useRef(yandexRoutingEnabled)
   const [supabaseActor, setSupabaseActor] = useState<SessionActor | null>(null)
   const [supabaseLoading, setSupabaseLoading] = useState(true)
@@ -116,6 +117,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [applyUser, queryClient])
 
   useEffect(() => {
+    if (yandexOnlyAuthEnabled) return
     const { data } = authRepository.onAuthStateChange((_event, session) => {
       const user = session?.user
       queueMicrotask(() => void applyUser(user ? {
@@ -125,7 +127,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       } : null))
     })
     return () => data.subscription.unsubscribe()
-  }, [applyUser])
+  }, [applyUser, yandexOnlyAuthEnabled])
 
   const yandexActor = useMemo<SessionActor | null>(() => {
     const profile = yandexSession?.session?.profile
@@ -152,7 +154,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       fullName: profile.client.fullName,
     }
   }, [yandexSession?.session])
-  const yandexOnlyAuthEnabled = isYandexOnlyAuthEnabled()
   const actor = yandexOnlyAuthEnabled
     ? yandexActor
     : yandexRoutingEnabled ? yandexActor : supabaseActor
@@ -172,6 +173,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     : supabaseError
 
   useEffect(() => {
+    if (yandexOnlyAuthEnabled) return
     const token = yandexRoutingEnabled ? yandexSession?.session?.session.token : undefined
     if (token === undefined || retiredSupabaseForYandexRef.current === token) return
     retiredSupabaseForYandexRef.current = token
@@ -182,27 +184,29 @@ export function AuthProvider({ children }: PropsWithChildren) {
       actorRef.current = null
       setSupabaseActor(null)
     })
-  }, [yandexRoutingEnabled, yandexSession?.session?.session.token])
+  }, [yandexOnlyAuthEnabled, yandexRoutingEnabled, yandexSession?.session?.session.token])
 
   const refresh = useCallback(async () => {
-    if (yandexRoutingEnabled && yandexSession !== null) {
+    if (yandexOnlyAuthEnabled && yandexSession === null) throw new Error('Yandex ID сессия недоступна')
+    if ((yandexRoutingEnabled || yandexOnlyAuthEnabled) && yandexSession !== null) {
       await yandexSession.retry()
       return
     }
     await refreshSupabase()
-  }, [refreshSupabase, yandexRoutingEnabled, yandexSession])
+  }, [refreshSupabase, yandexOnlyAuthEnabled, yandexRoutingEnabled, yandexSession])
 
   const signOut = useCallback(async () => {
-    if (yandexRoutingEnabled && yandexSession !== null) {
+    if (yandexOnlyAuthEnabled && yandexSession === null) throw new Error('Yandex ID сессия недоступна')
+    if ((yandexRoutingEnabled || yandexOnlyAuthEnabled) && yandexSession !== null) {
       await yandexSession.signOut()
-      await authRepository.signOut()
+      if (!yandexOnlyAuthEnabled) await authRepository.signOut()
     } else {
       await authRepository.signOut()
     }
     // Если локальная сессия действительно осталась активной, repository
     // пробросит ошибку и данные текущего пользователя не исчезнут из UI.
     queryClient.clear()
-  }, [queryClient, yandexRoutingEnabled, yandexSession])
+  }, [queryClient, yandexOnlyAuthEnabled, yandexRoutingEnabled, yandexSession])
 
   const updateProfile = useCallback(async (input: { firstName: string | null; lastName: string | null; timezone: string }) => {
     if (yandexRoutingEnabled && yandexSession?.session !== null && yandexSession?.session !== undefined) {
@@ -215,9 +219,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       await yandexSession.retry()
       return
     }
-    if (supabaseActor?.kind !== 'trainer') throw new Error('Профиль тренера недоступен')
+    if (yandexOnlyAuthEnabled || supabaseActor?.kind !== 'trainer') throw new Error('Профиль тренера недоступен')
     await authRepository.updateProfile({ ...supabaseActor, ...input })
-  }, [supabaseActor, yandexRoutingEnabled, yandexSession])
+  }, [supabaseActor, yandexOnlyAuthEnabled, yandexRoutingEnabled, yandexSession])
 
   const value = useMemo(() => ({ actor, loading, error, refresh, signOut, updateProfile }), [actor, loading, error, refresh, signOut, updateProfile])
   return <AuthContext value={value}>{children}</AuthContext>

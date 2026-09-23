@@ -29,7 +29,7 @@ async function message(row: MessageRow): Promise<ChatMessage> {
   if (row.image_path) {
     const signed = await chatMediaBridgeQueries.sign(row.conversation_id, row.id)
     if (signed === undefined) {
-      const legacy = await chatMedia.createSignedUrl(row.image_path, 60 * 60)
+      const legacy = await chatMedia().createSignedUrl(row.image_path, 60 * 60)
       url = legacy.error ? null : legacy.data.signedUrl
     } else url = signed.error ? null : signed.data?.signedUrl ?? null
   }
@@ -101,7 +101,7 @@ export const chatRepository = {
       if (authorized.error) throw repositoryError(authorized.error)
       const uploaded = await chatMediaBridgeQueries.upload(conversationId, messageId, image)
       if (uploaded === undefined) {
-        const legacy = await chatMedia.upload(stored.path, blobFromDataUrl(image.dataUrl), { contentType: image.mimeType, upsert: false })
+        const legacy = await chatMedia().upload(stored.path, blobFromDataUrl(image.dataUrl), { contentType: image.mimeType, upsert: false })
         if (legacy.error && !/already exists|duplicate/i.test(legacy.error.message)) throw repositoryError(legacy.error)
       } else if (uploaded.error) throw repositoryError(uploaded.error)
     }
@@ -124,7 +124,7 @@ export const chatRepository = {
     if (result.data) {
       const removed = await chatMediaBridgeQueries.remove(conversationId, messageId)
       if (removed === undefined) {
-        const legacy = await chatMedia.remove([result.data])
+        const legacy = await chatMedia().remove([result.data])
         if (legacy.error && !/not found/i.test(legacy.error.message)) throw repositoryError(legacy.error)
       } else if (removed.error) throw repositoryError(removed.error)
     }

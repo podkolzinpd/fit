@@ -1,12 +1,12 @@
 import { legacyCloudApiBaseUrl } from './legacy-cloud-functions'
-import { supabase } from './client'
+import { getSupabaseClient } from './client'
 
 type ChatMediaBridgeError = Error | { context: Response }
 
 async function invoke<T>(action: 'upload' | 'sign' | 'remove', body: unknown): Promise<{ data: T | null; error: ChatMediaBridgeError | null } | undefined> {
   const baseUrl = legacyCloudApiBaseUrl()
   if (baseUrl === undefined) return undefined
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { session } } = await getSupabaseClient().auth.getSession()
   if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
   let response: Response
   try {

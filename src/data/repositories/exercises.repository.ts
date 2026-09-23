@@ -65,7 +65,7 @@ export const exercisesRepository = {
     const id = photo ? crypto.randomUUID() : undefined
     const imagePath = photo && id ? `${actorId}/${id}.jpg` : null
     if (photo && imagePath) {
-      const uploaded = await customExerciseMedia.upload(imagePath, blobFromDataUrl(photo.dataUrl), { contentType: photo.mimeType, upsert: false })
+      const uploaded = await customExerciseMedia().upload(imagePath, blobFromDataUrl(photo.dataUrl), { contentType: photo.mimeType, upsert: false })
       if (uploaded.error) throw repositoryError(uploaded.error)
     }
     const result = await exerciseQueries.create(partitionOwnerId, {

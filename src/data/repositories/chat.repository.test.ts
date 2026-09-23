@@ -4,7 +4,7 @@ const queries = vi.hoisted(() => ({
   listThreads: vi.fn(), open: vi.fn(), openPublicTrainer: vi.fn(), authorizeSend: vi.fn(), setBlocked: vi.fn(), connectionState: vi.fn(), inviteToConnect: vi.fn(), acceptConnection: vi.fn(), listMessages: vi.fn(), send: vi.fn(), edit: vi.fn(), remove: vi.fn(), unreadState: vi.fn(), markRead: vi.fn(), search: vi.fn(), window: vi.fn(), subscribe: vi.fn(),
 }))
 const media = vi.hoisted(() => ({ upload: vi.fn(), createSignedUrl: vi.fn(), remove: vi.fn() }))
-vi.mock('../queries/chat.queries', () => ({ chatQueries: queries, chatMedia: media }))
+vi.mock('../queries/chat.queries', () => ({ chatQueries: queries, chatMedia: () => media }))
 
 import { chatRepository } from './chat.repository'
 
