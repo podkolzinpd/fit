@@ -9379,6 +9379,128 @@ body {
 .launch-team-phased-final span { color: #aeb6c3; font-size: 12px; font-weight: 800; letter-spacing: .1em; }
 .launch-team-phased-final strong { color: #f5f3ef; font-size: 20px; line-height: 1.22; }
 
+/* 16.2 · Simplified launch decision. One ask, one trajectory, one budget. */
+.prefinal-launch-ask-simple h2 {
+  top: 132px;
+  left: 92px;
+  width: 1040px;
+  color: #f5f3ef;
+  font-size: 76px;
+  line-height: .96;
+}
+.launch-simple-lead {
+  position: absolute;
+  top: 232px;
+  left: 92px;
+  width: 790px;
+  margin: 0;
+  color: #b7bec9;
+  font-size: 24px;
+  line-height: 1.3;
+}
+.launch-simple-growth {
+  position: absolute;
+  top: 286px;
+  left: 92px;
+  width: 930px;
+  display: grid;
+  grid-template-columns: 1fr;
+  border-top: 1px solid #596271;
+  border-bottom: 1px solid #596271;
+}
+.launch-simple-stage {
+  min-height: 355px;
+  box-sizing: border-box;
+  padding: 34px 40px 30px;
+}
+.launch-simple-stage + .launch-simple-stage {
+  padding-left: 30px;
+  border-left: 1px solid #596271;
+}
+.launch-simple-stage span {
+  display: block;
+  color: #aeb6c3;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+.launch-simple-stage strong {
+  display: inline-block;
+  margin-top: 28px;
+  color: #f5f3ef;
+  font-size: 132px;
+  line-height: .82;
+  letter-spacing: -.06em;
+}
+.launch-simple-stage b {
+  margin-left: 10px;
+  color: #aeb6c3;
+  font-size: 15px;
+  letter-spacing: .08em;
+}
+.launch-simple-stage p {
+  width: 760px;
+  margin: 32px 0 0;
+  color: #d5d9e0;
+  font-size: 22px;
+  line-height: 1.2;
+}
+.launch-simple-stage.is-launch strong,
+.launch-simple-stage.is-launch p { color: #f5f3ef; }
+.launch-simple-stage.is-launch::before {
+  content: "";
+  display: block;
+  position: absolute;
+  top: -4px;
+  width: 84px;
+  height: 7px;
+  border-radius: 7px;
+  background: #b3c6f3;
+}
+.launch-simple-budget {
+  position: absolute;
+  top: 286px;
+  right: 92px;
+  width: 395px;
+  min-height: 355px;
+  box-sizing: border-box;
+  padding: 34px 34px 30px;
+  border-radius: 22px;
+  color: #15171d;
+  background: linear-gradient(180deg, #f5f3ef 0%, #e8e6e1 100%);
+  box-shadow: 0 24px 58px rgba(5, 8, 14, .22);
+}
+.launch-simple-budget > span {
+  color: #68707d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+.launch-simple-budget strong {
+  display: block;
+  margin-top: 32px;
+  font-size: 66px;
+  line-height: .9;
+  letter-spacing: -.055em;
+}
+.launch-simple-budget strong b { display: block; margin-top: 12px; color: #68707d; font-size: 21px; letter-spacing: 0; }
+.launch-simple-budget p { margin: 26px 0 0; color: #353b45 !important; font-size: 20px; line-height: 1.25; }
+.launch-simple-budget small { display: block; margin-top: 24px; padding-top: 18px; border-top: 1px solid #c8c8c4; color: #68707d; font-size: 14px; line-height: 1.3; }
+.launch-simple-final {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  bottom: 58px;
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 30px;
+  align-items: start;
+  padding-top: 20px;
+  border-top: 1px solid #596271;
+}
+.launch-simple-final span { color: #aeb6c3; font-size: 12px; font-weight: 800; letter-spacing: .1em; }
+.launch-simple-final strong { color: #f5f3ef; font-size: 25px; line-height: 1.2; }
+
 /* Navigation */
 .nav { border: 1px solid rgba(231, 235, 244, .10); background: rgba(10, 13, 18, .32); }
 .slide-meta { color: rgba(245, 243, 239, .65); }
@@ -10605,67 +10727,43 @@ Fit_рынок_РФ_поэтапная_команда_AI_роль.xlsx, вкла
 Это дорожная карта исполнения. Она не вводит новые продуктовые гейты и не возвращает отдельный слайд о доказательстве стратегии.</aside>
     </section>
 
-    <section class="slide prefinal-launch-ask prefinal-keep" data-section="Решение" data-slide-type="roadmap" data-golden="linear/04-linear-roadmap-timeline.png">
+    <section class="slide prefinal-launch-ask prefinal-launch-ask-simple prefinal-keep" data-section="Решение" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
       <div class="eyebrow">16 · ЧТО НУЖНО ДЛЯ ЗАПУСКА</div>
-      <h2 class="launch-team-title">12 человек запускают.<br>19 масштабируют.<br>29 — полный контур.</h2>
+      <h2>На запуск Fit нужны 12 человек</h2>
+      <p class="launch-simple-lead">Продукт, разработка, AI и запуск — в одной команде.</p>
 
-      <div class="launch-team-phased-card">
-        <span>МИНИМАЛЬНЫЙ КОНТУР · ПЕРВЫЕ 6 МЕСЯЦЕВ</span>
-        <div class="launch-team-phased-card-main"><strong>38,6</strong><b>млн ₽</b></div>
-        <div class="launch-team-phased-costs">
-          <div><strong>4,61 млн ₽</strong><span>команда в месяц<br>с начислениями</span></div>
-          <div><strong>27,7 млн ₽</strong><span>команда за первые<br>6 месяцев</span></div>
-        </div>
-        <p>Нижняя граница операционного cash-out и 4 млн ₽ capex. Часть расходов в модели ещё не оценена.</p>
-      </div>
-
-      <div class="launch-team-phases" aria-label="Поэтапная команда Fit по финансовой модели">
-        <section class="launch-team-phase is-launch">
-          <div class="launch-team-phase-head"><span>2027 · ЗАПУСК</span><strong>12</strong><b>FTE</b></div>
-          <p><strong>Leadership &amp; community</strong>CEO, Community Manager</p>
-          <p><strong>Product &amp; data</strong>Product Manager, Product Analyst, AI Product Engineer</p>
-          <p><strong>Engineering</strong>Backend ×2, Mobile ×2, DevOps</p>
-          <p><strong>Quality &amp; design</strong>UI/UX, QA</p>
-          <small>4,61 млн ₽ / месяц</small>
-        </section>
-        <section class="launch-team-phase">
-          <div class="launch-team-phase-head"><span>2028–2029 · МАСШТАБ</span><strong>19</strong><b>FTE</b></div>
-          <p><strong>Добавляем управление и рост</strong>Product Lead, SMM, Sales &amp; Partnerships</p>
-          <p><strong>Усиливаем продукт</strong>Backend +1, Mobile +1</p>
-          <p><strong>Усиливаем качество</strong>AI Product Engineer +1, QA +1</p>
-          <small>6,87 млн ₽ / месяц</small>
-        </section>
-        <section class="launch-team-phase">
-          <div class="launch-team-phase-head"><span>2030+ · ПОЛНЫЙ КОНТУР</span><strong>29</strong><b>FTE</b></div>
-          <p><strong>Leadership &amp; brand</strong>CTO, CMO, Art Director</p>
-          <p><strong>Operations</strong>Lawyer, Accountant</p>
-          <p><strong>Продукт и надёжность</strong>Backend +1, UI/UX +1, QA +1, DevOps +1, Analyst +1</p>
-          <small>11,33 млн ₽ / месяц</small>
+      <div class="launch-simple-growth" aria-label="Стартовая команда Fit">
+        <section class="launch-simple-stage is-launch">
+          <span>КОМАНДА ЗАПУСКА</span>
+          <strong>12</strong><b>FTE</b>
+          <p>CEO · Product · AI · Backend ×2 · Mobile ×2 · DevOps · UX · QA · Analyst · Community</p>
         </section>
       </div>
 
-      <div class="launch-team-phased-source">Источник: Team details и P&amp;L. CEO, CTO и CMO — отдельные роли; AI Product Engineer отвечает за LLM, агентов и evaluation.</div>
-      <div class="launch-team-phased-final"><span>РЕШЕНИЕ</span><strong>Утвердить 12 FTE на запуске; расширение до 19 и 29 — только по мере роста аудитории и транзакций.</strong></div>
+      <div class="launch-simple-budget">
+        <span>ПЕРВЫЕ 6 МЕСЯЦЕВ</span>
+        <strong>38,6<b>млн ₽</b></strong>
+        <p>Минимальный денежный контур запуска</p>
+        <small>27,7 млн ₽ — команда<br>4 млн ₽ — capex<br>часть расходов ещё не оценена</small>
+      </div>
+
+      <div class="launch-simple-final"><span>РЕШЕНИЕ</span><strong>Утвердить 12 FTE и минимальный бюджетный контур на первые шесть месяцев.</strong></div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Показать поэтапную команду, которая уже заложена в финансовую модель, и связать расширение штата с реальным ростом продукта.
+Дать один прямой ответ: что требуется сейчас для запуска Fit.
 
-ЗАПУСК · 2027
-12 FTE: CEO, Community Manager, Product Manager, Product Analyst, AI Product Engineer, два Backend Developer, два Mobile Developer, DevOps Engineer, UI/UX Designer и QA Engineer. Стоимость с начислениями — 4,6115 млн рублей в месяц.
-
-МАСШТАБ · 2028–2029
-19 FTE. Добавляются Product Lead, SMM Specialist, Sales &amp; Partnerships Manager, по одному Backend и Mobile Developer, второй AI Product Engineer и второй QA Engineer. Стоимость — 6,8655 млн рублей в месяц.
-
-ПОЛНЫЙ КОНТУР · 2030+
-29 FTE. Добавляются CTO, CMO, Designer / Art Director, IT / Product Lawyer, Accountant, а также ещё по одному Backend Developer, UI/UX Designer, QA Engineer, DevOps Engineer и Product Analyst. Стоимость — 11,3275 млн рублей в месяц.
+КОМАНДА ЗАПУСКА
+12 FTE: CEO, Community Manager, Product Manager, Product Analyst, AI Product Engineer, два Backend Developer, два Mobile Developer, DevOps Engineer, UI/UX Designer и QA Engineer.
 
 AI-РОЛЬ
-AI Product Engineer (LLM / agents / evaluation) отвечает не только за модель, но и за продуктовую интеграцию, качество ответов, агентов и evaluation. На запуске — один специалист, на масштабе — два.
+AI Product Engineer (LLM / agents / evaluation) отвечает за продуктовую интеграцию моделей, качество ответов, агентов и evaluation.
 
 СТОИМОСТЬ ЗАПУСКА
-Команда за первые шесть месяцев стоит 27,669 млн рублей. По заполненным статьям P&amp;L и с учётом 4 млн рублей cash capex нижняя граница шестимесячного cash-контура — около 38,6 млн рублей.
+Команда стоит 4,6115 млн рублей в месяц с начислениями и 27,669 млн рублей за первые шесть месяцев. По заполненным статьям P&amp;L и с учётом 4 млн рублей cash capex нижняя граница шестимесячного денежного контура — около 38,6 млн рублей.
 
 ОГРАНИЧЕНИЕ
 В P&amp;L ещё не оценены переменная мотивация продаж, внешние юридические и бухгалтерские услуги, прочее корпоративное ПО, административные и офисные расходы, финансовые расходы и налоги. Поэтому 38,6 млн рублей — нижняя граница, а не финальный бюджет.
+
+Следующие этапы найма намеренно не показаны: этот слайд отвечает только на вопрос о текущем решении для запуска.
 
 [Sources]
 Fit_рынок_РФ_поэтапная_команда_AI_роль.xlsx, вкладки Team details и P&amp;L, версия 23.09.2026.</aside>
