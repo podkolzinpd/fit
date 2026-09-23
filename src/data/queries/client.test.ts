@@ -47,7 +47,23 @@ describe('getSupabaseClient', () => {
     const { getSupabaseClient } = await import('./client')
 
     expect(createClient).not.toHaveBeenCalled()
-    expect(() => getSupabaseClient()).toThrow('Задайте VITE_SUPABASE_URL и VITE_SUPABASE_PUBLISHABLE_KEY')
+    expect(() => getSupabaseClient()).toThrow('Войдите через Yandex ID, чтобы продолжить.')
+    expect(createClient).not.toHaveBeenCalled()
+  })
+
+  it('blocks a legacy query even if production still has Supabase credentials', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://legacy.example.test')
+    vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', 'legacy-public-key')
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
+
+    const { getSupabaseClient } = await import('./client')
+
+    expect(() => getSupabaseClient()).toThrow('Войдите через Yandex ID, чтобы продолжить.')
     expect(createClient).not.toHaveBeenCalled()
   })
 })

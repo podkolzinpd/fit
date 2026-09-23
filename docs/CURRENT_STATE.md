@@ -91,10 +91,12 @@ Yandex ID является единственным production-входом; app
 2. Добавить Yandex custom-exercise photo adapter.
 3. Frontend больше не создаёт Supabase SDK при импорте и не подписывается на
    Supabase Auth при Yandex-only входе; production сборка не требует
-   `VITE_SUPABASE_*`. Legacy Supabase browser path остаётся ленивым для
-   локальной разработки и Preview. Серверный legacy bridge пока нужен для
-   восстановления старых аккаунтов и media; его secrets не удалять.
-   Публичная анкета уже выбирает Supabase либо Yandex вместе с main routing без
+   `VITE_SUPABASE_*`. В Yandex-only режиме даже сохранённая конфигурация
+   Supabase не разрешает создать browser client; отсутствие Yandex session у
+   авторизованного actor не выбирает Supabase. Удаление browser vars из Vercel
+   Production ждёт deployment и smoke. Legacy browser path остаётся для
+   локальной разработки и Preview; серверный bridge нужен для recovery и media,
+   его secrets не удалять. Публичная анкета выбирает источник вместе с routing без
    межпровайдерного fallback.
 4. Провести ручной E2E matrix с реальными тестовыми identities: linked trainer,
    linked client, recovery старого email-only профиля, новый Yandex-only аккаунт

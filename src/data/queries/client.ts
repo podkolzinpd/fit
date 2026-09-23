@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { isYandexOnlyAuthEnabled } from '../../app/feature-flags'
 import type { Database } from '../database.types'
 import { createAuthFetch } from './auth-fetch'
 import { assertSafeSupabaseUrl } from './supabase-environment'
@@ -6,6 +7,10 @@ import { assertSafeSupabaseUrl } from './supabase-environment'
 let client: SupabaseClient<Database> | null = null
 
 export function getSupabaseClient(): SupabaseClient<Database> {
+  // A configured legacy URL must never become a fallback in Yandex-only builds.
+  if (isYandexOnlyAuthEnabled()) {
+    throw new Error('Войдите через Yandex ID, чтобы продолжить.')
+  }
   if (client !== null) return client
 
   const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)
