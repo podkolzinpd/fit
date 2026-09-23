@@ -92,6 +92,24 @@ test('does not start Supabase services that CI scenarios do not use', () => {
   )
 })
 
+test('authenticates Supabase image pulls in every database-backed CI job', () => {
+  for (const job of ['database', 'e2e-visual', 'e2e-chromium', 'e2e-webkit']) {
+    const start = workflow.indexOf(`  ${job}:\n`)
+    assert.notEqual(start, -1, `${job} job is missing`)
+    const body = workflow.slice(start).split(/\n  [a-z][a-z0-9-]*:\n/, 1)[0]
+
+    assert.match(body, /permissions:\n\s+contents: read\n\s+packages: read/)
+    assert.match(
+      body,
+      /uses: docker\/login-action@v4\n\s+with:\n\s+registry: ghcr\.io\n\s+username: \$\{\{ github\.actor \}\}\n\s+password: \$\{\{ secrets\.GITHUB_TOKEN \}\}/,
+    )
+    assert.ok(
+      body.indexOf('uses: docker/login-action@v4') < body.indexOf('supabase start --exclude'),
+      `${job} must log in before pulling Supabase images`,
+    )
+  }
+})
+
 test('runs the complete Yandex API check independently from browser E2E', () => {
   assert.match(workflow, /api:[\s\S]*cache-dependency-path: services\/api\/package-lock\.json/)
   assert.match(workflow, /api:[\s\S]*- run: npm ci --prefix services\/api/)

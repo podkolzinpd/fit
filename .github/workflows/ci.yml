@@ -85,6 +85,9 @@ jobs:
 
   database:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
@@ -92,6 +95,12 @@ jobs:
           # Pin to the version used by package-lock.json. Resolving `latest`
           # hits GitHub's unauthenticated release API and can be rate-limited.
           version: 2.116.0
+      - name: Authenticate to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       # Database tests do not exercise the local mail inbox. Skipping Mailpit
       # avoids its fixed 54324 port colliding with a hosted runner process.
       - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
@@ -151,6 +160,9 @@ jobs:
     needs: e2e-scope
     if: needs.e2e-scope.outputs.required == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     strategy:
       fail-fast: false
       max-parallel: 5
@@ -183,6 +195,12 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
+      - name: Authenticate to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       # E2E authenticates through the local API; it does not inspect emails.
       # Keep the CI container set minimal and avoid Mailpit's fixed port.
       - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
@@ -221,6 +239,9 @@ jobs:
     needs: e2e-scope
     if: needs.e2e-scope.outputs.required == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -241,6 +262,12 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
+      - name: Authenticate to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
       - run: supabase db reset --local
       - run: node scripts/wait-for-local-auth.mjs
@@ -274,6 +301,9 @@ jobs:
     needs: e2e-scope
     if: needs.e2e-scope.outputs.required == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -301,6 +331,12 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
+      - name: Authenticate to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
       - run: supabase db reset --local
       - run: node scripts/wait-for-local-auth.mjs
