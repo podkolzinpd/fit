@@ -9582,6 +9582,49 @@ body {
 .slide-meta { color: rgba(245, 243, 239, .65); }
 
 </style>
+
+<style id="market-demand-combined-style">
+/* Approved local two-block mockup; all declarations scoped to this slide. */
+#market-demand-combined { padding: 0; --ink:#f5f3ef; --muted:#b5bcc8; --line:#56606f; color:var(--ink); font-family:"Onest",-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif; font-size:16px; font-weight:400; letter-spacing:normal; line-height:normal; }
+#market-demand-combined * { all:revert; box-sizing:border-box; }
+#market-demand-combined h1,#market-demand-combined h2,#market-demand-combined h3,#market-demand-combined p { margin: 0; }
+#market-demand-combined { position: absolute; top: 50%; left: 50%; width: 1600px; height: 900px; overflow: hidden; transform: translate(-50%,-50%) scale(var(--deck-scale)); transform-origin: center; background: radial-gradient(circle at 72% 18%, rgba(144,169,225,.17), transparent 34%), linear-gradient(145deg,#1f242d 0%,#292f3a 58%,#343b48 100%); }
+#market-demand-combined::before { content: ""; position: absolute; width: 760px; height: 760px; top: -360px; right: -330px; border: 1px solid rgba(195,207,235,.09); border-radius: 50%; box-shadow: 0 0 0 86px rgba(195,207,235,.025),0 0 0 172px rgba(195,207,235,.018); pointer-events: none; }
+#market-demand-combined > * { position: absolute; z-index: 1; }
+#market-demand-combined .eyebrow { left: 92px; top: 69px; font-size: 15px; line-height: 20px; font-weight: 700; letter-spacing: .13em; }
+#market-demand-combined .brand { right: 92px; top: 69px; color: var(--muted); font-size: 18px; font-weight: 700; }
+#market-demand-combined h2 { left: 92px; top: 126px; width: 1416px; font-size: 55px; line-height: 1.07; font-weight: 700; letter-spacing: -.04em; }
+#market-demand-combined .lead { top: 212px; left: 94px; font-size: 23px; line-height: 1.25; color: var(--muted); }
+#market-demand-combined .block-label { font-size: 14px; line-height: 20px; font-weight: 700; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
+#market-demand-combined .top-label { left: 92px; top: 292px; }
+#market-demand-combined .scope { right: 92px; top: 292px; font-size: 14px; line-height: 20px; color: var(--muted); }
+#market-demand-combined .market { left: 92px; top: 326px; width: 1416px; border: 1px solid #596271; border-radius: 21px; overflow: hidden; }
+#market-demand-combined .segments { display: grid; grid-template-columns: 52fr 21fr 16fr 11fr; height: 190px; }
+#market-demand-combined .segment { position: relative; padding: 21px 21px 18px; }
+#market-demand-combined .segment + .segment { border-left: 1px solid rgba(90,100,120,.45); }
+#market-demand-combined .data { background: #151a23; }
+#market-demand-combined .training { background: #6075aa; }
+#market-demand-combined .nutrition { background: #d0d2d5; color: #15171d; }
+#market-demand-combined .coach { background: #f2efe9; color: #15171d; }
+#market-demand-combined .segment strong { display: block; font-size: 46px; font-weight: 650; line-height: 1; letter-spacing: -.035em; }
+#market-demand-combined .segment h3 { margin-top: 12px; font-size: 21px; line-height: 1.1; font-weight: 650; letter-spacing: -.015em; }
+#market-demand-combined .segment p { position: absolute; left: 21px; bottom: 18px; right: 12px; font-size: 16px; line-height: 1.25; opacity: .84; }
+#market-demand-combined .long-tail { padding: 14px 21px; background: #e8e6e1; color: #15171d; font-size: 20px; line-height: 1.25; }
+#market-demand-combined .proof-label { left: 92px; top: 616px; }
+#market-demand-combined .proof-scope { right: 92px; top: 616px; font-size: 14px; line-height: 20px; color: var(--muted); }
+#market-demand-combined .proof { top: 650px; left: 92px; width: 1416px; display: grid; grid-template-columns: repeat(3,1fr); border-top: 1px solid var(--line); }
+#market-demand-combined .proof-item { padding: 20px 28px 0; }
+#market-demand-combined .proof-item:first-child { padding-left: 0; }
+#market-demand-combined .proof-item + .proof-item { border-left: 1px solid var(--line); }
+#market-demand-combined .proof-heading { display: flex; justify-content: space-between; align-items: baseline; }
+#market-demand-combined .proof-heading h3 { font-size: 21px; line-height: 1.2; font-weight: 650; }
+#market-demand-combined .proof-heading p { color: var(--muted); font-size: 16px; line-height: 1.2; }
+#market-demand-combined .proof-number { display: block; margin-top: 14px; font-size: 51px; line-height: 1.05; font-weight: 650; letter-spacing: -.035em; }
+#market-demand-combined .proof-number + p { margin-top: 7px; font-size: 20px; line-height: 1.2; color: var(--muted); }
+#market-demand-combined .source { left: 92px; right: 92px; top: 837px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.25; display: flex; justify-content: space-between; gap: 30px; }
+#market-demand-combined .speaker-notes { display: none; }
+#market-demand-combined::after { display:none; }
+</style>
 </head>
 <body>
   <div class="progress" aria-hidden="true"><span id="progressFill"></span></div>
@@ -9832,88 +9875,69 @@ Fit_рынок_РФ.xlsx, вкладка «Матрица»: население 
 Значит, продукт должен не просто записывать тренировки, а удерживать весь спортивный маршрут и всегда давать следующий шаг.</aside>
     </section>
 
-    <section class="slide redesign-v2 prefinal-keep prefinal-digital-market digital-market-review-v2" data-section="Рынок" data-slide-family="4" data-version="4.2" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
-      <div class="eyebrow">03 · ЦИФРОВОЙ РЫНОК</div>
-      <div class="digital-market-fit">Fit</div>
+    <section id="market-demand-combined" class="slide prefinal-keep prefinal-digital-market market-demand-combined" data-slide-family="5" data-version="5.3" data-section="Цифровой рынок" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
+      <div class="eyebrow">04 · ЦИФРОВОЙ РЫНОК</div>
+      <div class="brand">Fit</div>
       <h2>Цифровой спортивный рынок уже сложился</h2>
-      <p class="digital-market-lead">Основная активность — в данных и трекерах.</p>
+      <p class="lead">Пользователи уже здесь — но решают разные задачи в разных приложениях.</p>
 
-      <div class="digital-market-distribution" aria-label="Оценочная структура использования цифровых спортивных инструментов в России">
-        <span class="digital-market-label">СТРУКТУРА ИСПОЛЬЗОВАНИЯ · ОЦЕНКА</span>
-        <div class="digital-market-strip">
-          <div class="digital-market-segment digital-market-segment--data">
-            <div><strong>≈52%</strong><h3>Данные и активность</h3></div>
-            <p>Mi Fitness · Huawei Health</p>
-          </div>
-          <div class="digital-market-segment digital-market-segment--training">
-            <div><strong>≈21%</strong><h3>Тренировки</h3></div>
-            <p>FitStars · Hevy</p>
-          </div>
-          <div class="digital-market-segment digital-market-segment--food">
-            <div><strong>≈16%</strong><h3>Питание</h3></div>
-            <p>FatSecret · YAZIO</p>
-          </div>
-          <div class="digital-market-segment digital-market-segment--coach">
-            <div><strong>≈11%</strong><h3>Клуб и тренер</h3></div>
-            <p>DDX<br>Trainerize</p>
-          </div>
+      <div class="block-label top-label">ЧЕМ ПОЛЬЗУЮТСЯ</div>
+      <div class="scope">Россия · оценка структуры использования</div>
+      <div class="market">
+        <div class="segments">
+          <div class="segment data"><strong>≈52%</strong><h3>Данные и активность</h3><p>Mi Fitness · Huawei Health</p></div>
+          <div class="segment training"><strong>≈21%</strong><h3>Тренировки</h3><p>FitStars · Hevy</p></div>
+          <div class="segment nutrition"><strong>≈16%</strong><h3>Питание</h3><p>FatSecret · YAZIO</p></div>
+          <div class="segment coach"><strong>≈11%</strong><h3>Клуб и<br>тренер</h3><p>DDX · Trainerize</p></div>
         </div>
-        <div class="digital-market-tail" aria-label="Длинный хвост небольших спортивных приложений">
-          <p>Помимо лидеров — множество небольших спортивных приложений.</p>
-        </div>
+        <p class="long-tail">Помимо лидеров — множество небольших спортивных приложений.</p>
       </div>
 
-      <div class="digital-market-audience" aria-label="Оценка аудитории цифровых спортивных инструментов в России">
-        <span class="digital-market-audience-label">ИСПОЛЬЗОВАНИЕ ПРИЛОЖЕНИЙ ИЛИ ГАДЖЕТОВ</span>
-        <div class="digital-market-stats">
-          <div class="digital-market-stat">
-            <strong>8%</strong>
-            <p>регулярно</p>
-          </div>
-          <div class="digital-market-stat">
-            <strong>12%</strong>
-            <p>иногда</p>
-          </div>
-          <div class="digital-market-stat">
-            <strong>13%</strong>
-            <p>хотят попробовать</p>
-          </div>
+      <div class="block-label proof-label">ТАКИЕ ПРОДУКТЫ УЖЕ СОБИРАЮТ АУДИТОРИЮ</div>
+      <div class="proof-scope">Мировые примеры</div>
+      <div class="proof">
+        <div class="proof-item">
+          <div class="proof-heading"><h3>Strava</h3><p>Трекинг и сообщество</p></div>
+          <strong class="proof-number">195+ млн</strong><p>зарегистрированных спортсменов</p>
+        </div>
+        <div class="proof-item">
+          <div class="proof-heading"><h3>Hevy</h3><p>Дневник тренировок</p></div>
+          <strong class="proof-number">16+ млн</strong><p>пользователей</p>
+        </div>
+        <div class="proof-item">
+          <div class="proof-heading"><h3>Trainerize</h3><p>Тренер и клиент</p></div>
+          <strong class="proof-number">1,6 млн</strong><p>клиентов тренеров</p>
         </div>
       </div>
-
-      <div class="digital-market-takeaway">
-        <span>ВЫВОД</span>
-        <strong>Fit объединяет разрозненные спортивные привычки.</strong>
-        <p class="digital-market-source">Доли сценариев — рабочая оценка.<br>Опрос: РОМИР, июль 2026.</p>
-      </div>
-
+      <div class="source"><span>Доли — рабочая оценка из текущей презентации. Показатели аудитории имеют разные базы.</span><span>Источники аудитории: Strava · Hevy · ABC Trainerize</span></div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Показать масштаб российского цифрового спортивного рынка и доказать, что Fit не должен формировать поведение с нуля.
+    В одном слайде показать структуру цифровых спортивных сценариев и масштаб трёх существующих продуктов. Верхняя полоса — рабочая оценка структуры использования в России; нижний блок — мировые примеры аудитории.
 
-ЧТО ГОВОРИМ
-По опросу РОМИР среди взрослых жителей российских городов 8% регулярно используют фитнес-приложения и гаджеты, ещё 12% делают это время от времени. 13% пока не используют, но хотели бы попробовать.
+    ЧТО ГОВОРИМ
+    Люди уже используют разные приложения: для данных и активности, тренировок, питания, работы с клубом и тренером. Помимо лидеров существует множество небольших продуктов. Strava, Hevy и Trainerize иллюстрируют масштаб разных сценариев, а не единый рейтинг активной аудитории.
 
-На этом слайде сохраняем исходные доли исследования и не пересчитываем их в абсолютные значения. Возрастная и географическая база РОМИР отличается от рыночной базы финансовой модели, поэтому механическое умножение процентов на 85,9 миллиона создало бы ложную точность.
+    ГРАНИЦЫ ЦИФР
+    52/21/16/11 — сохранённая рабочая оценка, а не измеренные доли брендов и не результат опроса РОМИР. В текущих источниках нет воспроизводимого расчёта этой структуры; количественное основание требует отдельной верификации. Показатели аудитории Strava, Hevy и Trainerize имеют разные базы: зарегистрированные спортсмены, пользователи, клиенты тренеров. Они не складываются и не доказывают удержание или будущий успех Fit. Внешние значения перенесены из утверждённых исходных слайдов без нового пересчёта.
 
-Эти люди пользуются не одним типом продукта. Повседневную активность и показатели собирают приложения часов и трекеров; готовые занятия дают тренировочные сервисы; питание ведётся отдельно; клубы и тренеры используют собственные кабинеты и приложения.
+    ДОПОЛНИТЕЛЬНЫЙ КОНТЕКСТ — НЕ НА СЛАЙДЕ
+    В исходном опросе РОМИР среди взрослых жителей российских городов с населением свыше 10 тысяч человек 8% регулярно используют фитнес-приложения или гаджеты, 12% — иногда, 13% хотели бы попробовать. Это не готовность платить и не база финансовой модели.
+    Исследование Singh et al., 2024: 47 метаанализов, 507 RCT, 206 873 участника; оценка эффекта eHealth/mHealth-интервенций +1 329 шагов в день. Исследование эффективности не является доказательством спроса или эффективности Fit; на объединённом слайде его не показываем.
+    Остальные примеры исходного слайда: Keep — средний MAU 21,8 млн за 2025; Fitness Online — 5 млн+ установок Android. Они убраны из видимой части для сокращения повторов.
 
-Важно, что примерами на полосе рынок не заканчивается. МТС Геоэффект анализировал более 100 спортивных приложений в России: беговые трекеры, фитнес-программы, workout-таймеры и другие инструменты. Значит, за несколькими заметными брендами существует длинный хвост небольших продуктов с узким сценарием и небольшой собственной базой.
+    ПЕРЕХОД
+    Рынок существует. Далее — почему человеку всё ещё трудно начать и продолжать занятия.
 
-Основная полоса сохраняет ранее принятую рабочую оценку сценариев: 52% — данные и активность; 21% — тренировки; 16% — питание; 11% — клуб и тренер. Это не подтверждённые доли российского рынка: в приведённых источниках нет воспроизводимого расчёта именно такого распределения. При редакционном упрощении цифры не пересчитывались; их количественное основание требует отдельной верификации. Примеры приложений — иллюстрации категорий, не индивидуальные доли этих брендов.
-
-Для устного комментария, не на слайде: глобальный subscription-бенчмарк Adapty показывает концентрацию выручки в своей выборке — верхние 10% Health & Fitness приложений получают 92,6% подписочной выручки, остальные 90% делят 7,4%. Эти данные не измеряют долю российских приложений с маленькой пользовательской базой. Поэтому дополнительную диаграмму выручки убрали, а мысль о нишевых приложениях оставили одной строкой.
-
-ОГОВОРКА
-8/12/13 — исходные доли опроса РОМИР среди взрослых жителей городов с населением свыше 10 тыс. человек; это использование фитнес-приложений или гаджетов, не готовность платить. 52/21/16/11 — неподтверждённая рабочая оценка сценариев, а не результат опроса РОМИР. Эти два набора показателей не используются как знаменатель финансовой модели. Вывод про объединение привычек описывает продуктовую идею Fit, а не доказанный результат исследования.
-
-ПЕРЕХОД
-Рынок уже существует, но спортивный контекст человека распределён между разными инструментами. Дальше показываем, что отдельные модели цифрового сопровождения уже подтвердили массовый спрос и измеримый эффект.
-
-[Sources]
-РОМИР, «Здоровье вместо кубиков: как россияне относятся к спорту», 13 июля 2026: https://romir.ru/feed/zdorove-vmesto-kubikov-kak-rossiiane-otnosiatsia-k-sportu-i-za-kogo-boleiut-na-chm-2026
-МТС и Эвотор, исследование более 100 спортивных приложений на базе 33,1 млн пользователей, март 2025: https://moskva.mts.ru/about/media-centr/soobshheniya-kompanii/novosti-mts-v-rossii-i-mire/2025-03-27/issledovanie-mts-i-evotor-kazhdyj-tretij-zhitel-rossii-regulyarno-zanimaetsya-sportom
-Sensor Tower, Top Health and Fitness Apps in Russia, IV квартал 2025: https://sensortower.com/blog/2025-q4-unified-top-5-health-and-fitness-units-ru-600af518241bc16eb8dce802
-Adapty, How much does a subscription app make?, 2026 — top 10% Health &amp; Fitness приложений получают 92,6% подписочной выручки: https://adapty.io/blog/how-much-does-a-subscription-app-make/</aside>
+    [Sources]
+    РОМИР, «Здоровье вместо кубиков: как россияне относятся к спорту», 13 июля 2026: https://romir.ru/feed/zdorove-vmesto-kubikov-kak-rossiiane-otnosiatsia-k-sportu-i-za-kogo-boleiut-na-chm-2026
+    МТС и Эвотор, исследование более 100 спортивных приложений на базе 33,1 млн пользователей, март 2025: https://moskva.mts.ru/about/media-centr/soobshheniya-kompanii/novosti-mts-v-rossii-i-mire/2025-03-27/issledovanie-mts-i-evotor-kazhdyj-tretij-zhitel-rossii-regulyarno-zanimaetsya-sportom
+    Sensor Tower, Top Health and Fitness Apps in Russia, IV квартал 2025: https://sensortower.com/blog/2025-q4-unified-top-5-health-and-fitness-units-ru-600af518241bc16eb8dce802
+    Adapty, How much does a subscription app make?, 2026 — top 10% Health &amp; Fitness приложений получают 92,6% подписочной выручки: https://adapty.io/blog/how-much-does-a-subscription-app-make/
+    Strava, About — более 195 млн спортсменов: https://press.strava.com/about
+    Keep Inc., Annual Report 2025 — средний MAU 21,8 млн: https://manager.wisdomir.com/files/676/2026/0423/20260423171501_44046414_en.pdf
+    Hevy, Partners — 16+ млн пользователей и 112+ млн тренировок в 2025 году: https://www.hevyapp.com/partners/
+    Fitness Online, Google Play — 5 млн+ установок Android: https://play.google.com/store/apps/details?hl=ru&amp;id=fitness.online.app
+    ABC Trainerize, About — 1,6 млн клиентов: https://www.trainerize.com/about/
+    Singh et al., 2024 — 47 метаанализов, 507 RCT, 206 873 участника; +1 329 шагов в день: https://pmc.ncbi.nlm.nih.gov/articles/PMC11226451/</aside>
     </section>
 
     <section class="slide redesign-v2 review-story-v2 prefinal-keep" data-section="Идея" data-slide-type="product-story" data-golden="linear/03-linear-product-flow.png">
@@ -10008,65 +10032,7 @@ Adapty, How much does a subscription app make?, 2026 — top 10% Health &amp; Fi
 Продуктовые экраны: origin/main, commit 5996f3f; visual baselines client-home-future-plan, workout-detail-completion и client-body-map-female.</aside>
     </section>
 
-    <section class="slide demand-proof-slide combined-demand-slide redesign-v2 rd-demand review-demand-v2 prefinal-keep" data-section="Доказанный спрос" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
-      <div class="eyebrow">04 · ДОКАЗАННЫЙ СПРОС</div>
-      <h2>Цифровое спортивное сопровождение уже стало массовым</h2>
-      <div class="demand-category-kicker">РАЗНЫЕ МОДЕЛИ · ОДИН ПОДТВЕРЖДЁННЫЙ СПРОС</div>
-      <div class="demand-product-grid">
-        <div class="demand-product">
-          <span>STRAVA</span><strong>195+ млн</strong><b>зарегистрированных спортсменов</b><small>социальный трекинг</small>
-        </div>
-        <div class="demand-product">
-          <span>KEEP</span><strong>21,8 млн</strong><b>средний MAU · 2025</b><small>спорт и товары</small>
-        </div>
-        <div class="demand-product demand-product--closest">
-          <span class="demand-product-brand">HEVY<em>БЛИЖАЙШИЙ АНАЛОГ FIT</em></span><strong>16+ млн</strong><b>пользователей</b><small>112 млн тренировок · 2025</small>
-        </div>
-        <div class="demand-product">
-          <span>FITNESS ONLINE</span><strong>5 млн+</strong><b>установок Android</b><small>российский рынок</small>
-        </div>
-        <div class="demand-product">
-          <span>TRAINERIZE</span><strong>1,6 млн</strong><b>клиентов тренеров</b><small>связка тренер — клиент</small>
-        </div>
-      </div>
-      <div class="demand-metric-caveat">Показатели описывают разные базы и не сравниваются напрямую</div>
-      <div class="demand-research-band">
-        <div class="demand-research-summary">
-          <span>НЕЗАВИСИМОЕ ПОДТВЕРЖДЕНИЕ ЭФФЕКТА</span>
-          <strong>Обзор 47 метаанализов</strong>
-          <b>507 рандомизированных исследований · 206 873 участника</b>
-          <p><em>+1&nbsp;329</em><span>шагов в день благодаря<br>цифровому сопровождению</span></p>
-        </div>
-        <div class="demand-evidence-conclusion">
-          <strong>Категория и эффект доказаны. Не закрыт единый путь от первого действия до регулярной привычки.</strong>
-        </div>
-      </div>
-      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Доказать двумя независимыми способами, что категория существует: массовые продукты подтверждают использование, а исследования — измеримый эффект цифрового сопровождения.
 
-ЧТО ГОВОРИМ
-Мы не просим поверить, что люди внезапно захотят пользоваться цифровым спортивным помощником. Они уже это делают. Strava доказала массовый спрос на фиксацию прогресса и социальную мотивацию. Keep — на сочетание тренировочного контента, данных и товаров. Hevy — ближайший продуктовый аналог Fit: дневник силовых тренировок, аналитика прогресса и социальный контур выросли до 16 миллионов пользователей. Fitness Online подтверждает локальный спрос, Trainerize — спрос на постоянную цифровую связку тренера и клиента.
-
-Показатели справа имеют разную природу: спортсмены, MAU, пользователи, установки и клиенты. Их нельзя складывать или использовать как единую оценку рынка. Их функция на этом слайде — показать, что разные модели цифрового спортивного сопровождения уже достигают массового масштаба.
-
-Крупный обзор 47 метаанализов, включивший 507 рандомизированных исследований и более 206 тысяч участников, показал измеримое увеличение физической активности от eHealth- и mHealth-интервенций. В среднем это плюс 1 329 шагов в день, 44,8 минуты общей активности и 55,1 минуты активности средней и высокой интенсивности в неделю.
-
-На слайде сознательно не повторяем продуктовый цикл Fit: он уже раскрыт на продуктовых слайдах. Здесь фиксируем только доказанность категории и проверяемый риск — удержание именно Fit.
-
-ОБЯЗАТЕЛЬНАЯ ОГОВОРКА
-Масштаб аналогов и результаты исследований не гарантируют успех Fit. Они снимают риск отсутствия потребности; пилот проверяет, способен ли Яндекс собрать эти механики в цельный локальный продукт и получить удержание W4.
-
-ПЕРЕХОД
-Потребность и эффект цифрового сопровождения подтверждены. Но сегодня весь спортивный путь распределён между разными сервисами — здесь появляется возможность Яндекса.
-
-[Sources]
-Strava, About — более 195 млн спортсменов: https://press.strava.com/about
-Keep Inc., Annual Report 2025 — средний MAU 21,8 млн: https://manager.wisdomir.com/files/676/2026/0423/20260423171501_44046414_en.pdf
-Hevy, Partners — 16+ млн пользователей и 112+ млн тренировок в 2025 году: https://www.hevyapp.com/partners/
-Fitness Online, Google Play — 5 млн+ установок Android: https://play.google.com/store/apps/details?hl=ru&amp;id=fitness.online.app
-ABC Trainerize, About — 1,6 млн клиентов: https://www.trainerize.com/about/
-Singh et al., 2024 — 47 метаанализов, 507 RCT, 206 873 участника; +1 329 шагов в день: https://pmc.ncbi.nlm.nih.gov/articles/PMC11226451/</aside>
-    </section>
 
     <section class="slide redesign-v2 fragmentation-v2" data-section="Конкуренты" data-slide-type="product-story" data-golden="linear/03-linear-product-flow.png">
       <div class="eyebrow">05 · ФРАГМЕНТАЦИЯ РЫНКА</div>
@@ -11938,9 +11904,9 @@ deck.querySelectorAll('.slide:not(.prefinal-keep)').forEach(slide => slide.remov
 const prefinalMarket = document.querySelector('.prefinal-digital-market')
 const prefinalProblem = document.querySelector('.review-problem-v2.prefinal-keep')
 if (prefinalMarket && prefinalProblem) prefinalProblem.before(prefinalMarket)
-const prefinalDemand = document.querySelector('.review-demand-v2:not(.colleague-order-slide)')
+
 const prefinalStory = document.querySelector('.review-story-v2')
-if (prefinalDemand && prefinalProblem) prefinalProblem.before(prefinalDemand)
+
 const monetizationSlide = document.querySelector('.monetization-proof-slide')
 const valueSlide = document.querySelector('.value-slide')
 if (monetizationSlide && valueSlide) valueSlide.after(monetizationSlide)
@@ -11950,7 +11916,7 @@ if (monetizationSlide && valueSlide) valueSlide.after(monetizationSlide)
   '.prefinal-sports-market',
   '.prefinal-audience-scale',
   '.prefinal-digital-market',
-  '.review-demand-v2.prefinal-keep',
+
   '.review-problem-v2.prefinal-keep',
   '.review-story-v2.prefinal-keep',
   '.review-product-flow-v4.prefinal-keep',
