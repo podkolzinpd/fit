@@ -545,6 +545,7 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
         from public.trainer_professional_profiles
         where ${clauses.join(' and ')}
         order by ((published_data->>'acceptingClients')::boolean) desc,
+          is_brand_trainer desc,
           published_at desc, lower(published_data->>'displayName'), public_id
         offset ${offsetParam} limit ${limitParam}
       `, values)

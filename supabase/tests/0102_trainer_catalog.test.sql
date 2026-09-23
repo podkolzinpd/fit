@@ -1,19 +1,22 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(33);
+select plan(35);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('a3000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'catalog-one@example.test', ''),
   ('a3000000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'catalog-two@example.test', ''),
-  ('a3000000-0000-4000-8000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'catalog-three@example.test', '');
+  ('a3000000-0000-4000-8000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'catalog-three@example.test', ''),
+  ('a3000000-0000-4000-8000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'catalog-four@example.test', '');
 insert into public.profiles (id, account_role) values
   ('a3000000-0000-4000-8000-000000000001', 'trainer'),
   ('a3000000-0000-4000-8000-000000000002', 'trainer'),
-  ('a3000000-0000-4000-8000-000000000003', 'trainer');
+  ('a3000000-0000-4000-8000-000000000003', 'trainer'),
+  ('a3000000-0000-4000-8000-000000000004', 'trainer');
 insert into public.trainers (profile_id) values
   ('a3000000-0000-4000-8000-000000000001'),
   ('a3000000-0000-4000-8000-000000000002'),
-  ('a3000000-0000-4000-8000-000000000003');
+  ('a3000000-0000-4000-8000-000000000003'),
+  ('a3000000-0000-4000-8000-000000000004');
 
 select has_column('public', 'trainer_professional_profiles', 'listed_in_catalog', 'catalog choice is stored');
 select has_function('public', 'set_trainer_profile_catalog_listing', array['boolean'], 'catalog choice RPC exists');
@@ -57,8 +60,19 @@ values (
   true,
   now()
 );
+insert into public.trainer_professional_profiles (trainer_id, draft_data, published_data, listed_in_catalog, published_at)
+values (
+  'a3000000-0000-4000-8000-000000000004',
+  jsonb_build_object('displayName', 'Дарья Брендова'),
+  jsonb_build_object('displayName', 'Дарья Брендова', 'bio', '',
+    'specialties', '[]'::jsonb, 'city', '', 'trainingModes', '[]'::jsonb,
+    'experienceStartYear', null, 'education', '', 'formats', '', 'price', '',
+    'acceptingClients', true, 'avatarDataUrl', null, 'certificates', '[]'::jsonb),
+  true,
+  now()
+);
 update public.trainer_professional_profiles set is_brand_trainer = true
-  where trainer_id = 'a3000000-0000-4000-8000-000000000003';
+  where trainer_id in ('a3000000-0000-4000-8000-000000000003', 'a3000000-0000-4000-8000-000000000004');
 
 set local role anon;
 select is((select count(*)::integer from public.list_public_trainer_profiles('Анна Каталогова')), 1, 'catalog returns the automatically listed profile');
@@ -72,13 +86,18 @@ select is(
 );
 select is(
   ((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 1)->'items'->0->>'isBrandTrainer')::boolean),
-  false, 'paged catalog exposes the brand-trainer flag'
+  true, 'paged catalog exposes the brand-trainer flag (a brand trainer sorts first here)'
 );
 select is((select count(*)::integer from public.list_public_trainer_profiles('Каталогова')), 1, 'catalog searches by name');
 select is((select count(*)::integer from public.list_public_trainer_profiles(null, 'Тестовые силовые', 'Тестоград', 'online', true)), 1, 'catalog filters published fields');
 select is((select count(*)::integer from public.list_public_trainer_profiles(null, 'Тестовый бег', null, 'in_person', null)), 0, 'catalog hides a profile with listing disabled');
-select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 1)->'items'->0->'published'->>'displayName'), 'Анна Каталогова', 'catalog prioritizes trainers who accept new clients');
-select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 1)->>'totalCount')::integer, 2, 'paged catalog returns the full matching count');
+-- Порядок: сначала все принимающие клиентов (бренд среди них выше), потом
+-- непринимающие (даже если это бренд) - брендовость не должна выводить
+-- в топ тренера, к которому нельзя записаться.
+select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 3)->'items'->0->'published'->>'displayName'), 'Дарья Брендова', 'catalog ranks a brand trainer first among those accepting new clients');
+select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 3)->'items'->1->'published'->>'displayName'), 'Анна Каталогова', 'catalog ranks a non-brand trainer second among those accepting new clients');
+select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 3)->'items'->2->'published'->>'displayName'), 'Борис Новиков', 'catalog still ranks a non-accepting brand trainer behind everyone who accepts new clients');
+select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 1)->>'totalCount')::integer, 3, 'paged catalog returns the full matching count');
 select is(jsonb_array_length(public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 1)->'items'), 1, 'paged catalog respects the page size');
 select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 1)->>'nextOffset')::integer, 1, 'paged catalog returns the next offset');
 select isnt(
@@ -92,11 +111,11 @@ select is((public.list_public_trainer_profiles_page(null, array['Тестовы�
 select is((public.list_public_trainer_profiles_page(null, array['Тестовые силовые', 'Нет такого направления'], null, null, null, 0, 20)->>'totalCount')::integer, 1, 'catalog matches any of several selected specialties');
 select is((public.list_public_trainer_profiles_page(null, array['Нет такого направления'], null, null, null, 0, 20)->>'totalCount')::integer, 0, 'catalog excludes profiles without a selected specialty');
 select is((public.list_public_trainer_profiles_page(null, array['Тестовые'], null, null, null, 0, 20)->>'totalCount')::integer, 0, 'catalog specialty filter is an exact match, not a substring');
-select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 20)->>'totalCount')::integer, 2, 'catalog returns everyone when the brand toggle is off by default');
-select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 20, null, true)->>'totalCount')::integer, 1, 'catalog matches only brand trainers when the toggle is on');
+select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 20)->>'totalCount')::integer, 3, 'catalog returns everyone when the brand toggle is off by default');
+select is((public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 20, null, true)->>'totalCount')::integer, 2, 'catalog matches only brand trainers when the toggle is on');
 select is(
   (public.list_public_trainer_profiles_page(null, null, null, null, null, 0, 20, null, true)->'items'->0->'published'->>'displayName'),
-  'Борис Новиков', 'catalog returns the brand trainer profile when filtered'
+  'Дарья Брендова', 'catalog returns an accepting brand trainer before a non-accepting one when filtered'
 );
 
 reset role;
