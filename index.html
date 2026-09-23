@@ -9164,6 +9164,30 @@ body {
 .prefinal-digital-market .digital-market-tail-long span { color: #68707d; }
 .prefinal-digital-market .digital-market-stat + .digital-market-stat { border-color: #56606f; }
 
+/* Slide-by-slide review: simplify the current market slide, without a duplicate. */
+.prefinal-digital-market.digital-market-review-v2 h2 { width: 1416px; }
+.prefinal-digital-market.digital-market-review-v2 .digital-market-lead { top: 232px; }
+.prefinal-digital-market.digital-market-review-v2 .digital-market-distribution { top: 310px; }
+.prefinal-digital-market.digital-market-review-v2 .digital-market-strip { height: 200px; }
+.prefinal-digital-market.digital-market-review-v2 .digital-market-segment { padding-top: 23px; padding-bottom: 22px; }
+.prefinal-digital-market.digital-market-review-v2 .digital-market-segment strong { font-size: 44px; }
+.prefinal-digital-market.digital-market-review-v2 .digital-market-segment p { font-size: 16px; line-height: 1.35; }
+.prefinal-digital-market.digital-market-review-v2 .digital-market-tail {
+  display: flex;
+  align-items: center;
+  height: 54px;
+  padding: 0 20px;
+  color: #15171d;
+  background: #e8e6e1;
+}
+.prefinal-digital-market.digital-market-review-v2 .digital-market-tail p { margin: 0; font-size: 20px; line-height: 1.2; }
+.prefinal-digital-market.digital-market-review-v2 .digital-market-audience { top: 634px; }
+.prefinal-digital-market.digital-market-review-v2 .digital-market-stat { padding-top: 16px; padding-bottom: 14px; }
+.prefinal-digital-market.digital-market-review-v2 .digital-market-stat strong { margin-top: 0; }
+.prefinal-digital-market.digital-market-review-v2 .digital-market-stat p { font-size: 22px; }
+.prefinal-digital-market.digital-market-review-v2 .digital-market-takeaway { bottom: 65px; grid-template-columns: 100px 1fr 300px; align-items: center; }
+.prefinal-digital-market.digital-market-review-v2 .digital-market-takeaway strong { font-size: 24px; }
+
 /* Reusable light-slide labels and rules */
 .review-fit-label,
 .rd-fit-label,
@@ -9742,69 +9766,59 @@ Fit_рынок_РФ.xlsx, вкладка «Матрица»: население 
 Значит, продукт должен не просто записывать тренировки, а удерживать весь спортивный маршрут и всегда давать следующий шаг.</aside>
     </section>
 
-    <section class="slide redesign-v2 prefinal-keep prefinal-digital-market" data-section="Рынок" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
+    <section class="slide redesign-v2 prefinal-keep prefinal-digital-market digital-market-review-v2" data-section="Рынок" data-slide-family="4" data-version="4.2" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
       <div class="eyebrow">03 · ЦИФРОВОЙ РЫНОК</div>
       <div class="digital-market-fit">Fit</div>
       <h2>Цифровой спортивный рынок уже сложился</h2>
-      <p class="digital-market-lead">Основная активность — в данных и трекерах. За заметными сервисами стоит длинный хвост небольших приложений.</p>
-
-      <div class="digital-market-base">
-        <span>ОТДЕЛЬНОЕ ИССЛЕДОВАНИЕ</span>
-        <strong>РОМИР · 2026</strong>
-        <p>взрослые жители российских городов</p>
-      </div>
+      <p class="digital-market-lead">Основная активность — в данных и трекерах.</p>
 
       <div class="digital-market-distribution" aria-label="Оценочная структура использования цифровых спортивных инструментов в России">
-        <span class="digital-market-label">ОЦЕНОЧНАЯ СТРУКТУРА ИСПОЛЬЗОВАНИЯ · ОСНОВНОЙ СЦЕНАРИЙ ПОЛЬЗОВАТЕЛЯ</span>
+        <span class="digital-market-label">СТРУКТУРА ИСПОЛЬЗОВАНИЯ · ОЦЕНКА</span>
         <div class="digital-market-strip">
           <div class="digital-market-segment digital-market-segment--data">
             <div><strong>≈52%</strong><h3>Данные и активность</h3></div>
-            <p>Mi Fitness · Huawei Health<br>Garmin · Strava · шагомеры</p>
+            <p>Mi Fitness · Huawei Health</p>
           </div>
           <div class="digital-market-segment digital-market-segment--training">
             <div><strong>≈21%</strong><h3>Тренировки</h3></div>
-            <p>FitStars · Home Workout<br>Fitness Online · Hevy</p>
+            <p>FitStars · Hevy</p>
           </div>
           <div class="digital-market-segment digital-market-segment--food">
             <div><strong>≈16%</strong><h3>Питание</h3></div>
-            <p>FatSecret · YAZIO<br>MyFitnessPal</p>
+            <p>FatSecret · YAZIO</p>
           </div>
           <div class="digital-market-segment digital-market-segment--coach">
             <div><strong>≈11%</strong><h3>Клуб и тренер</h3></div>
-            <p>DDX · клубы<br>Trainerize</p>
+            <p>DDX<br>Trainerize</p>
           </div>
         </div>
         <div class="digital-market-tail" aria-label="Длинный хвост небольших спортивных приложений">
-          <div class="digital-market-tail-leaders"><strong>10%</strong><span>лидеров<br>92,6% выручки</span></div>
-          <div class="digital-market-tail-long"><strong>≈90% приложений — длинный хвост</strong><span>100+ спортивных приложений уже в российской выборке; остальные 90% делят 7,4% подписочной выручки категории</span></div>
+          <p>Помимо лидеров — множество небольших спортивных приложений.</p>
         </div>
       </div>
 
       <div class="digital-market-audience" aria-label="Оценка аудитории цифровых спортивных инструментов в России">
-        <span class="digital-market-audience-label">ЦИФРОВОЕ ПОВЕДЕНИЕ ПО ДАННЫМ ОПРОСА РОМИР</span>
+        <span class="digital-market-audience-label">ИСПОЛЬЗОВАНИЕ ПРИЛОЖЕНИЙ ИЛИ ГАДЖЕТОВ</span>
         <div class="digital-market-stats">
           <div class="digital-market-stat">
-            <span>РЕГУЛЯРНО</span>
             <strong>8%</strong>
-            <p>используют приложения или гаджеты регулярно</p>
+            <p>регулярно</p>
           </div>
           <div class="digital-market-stat">
-            <span>ВРЕМЯ ОТ ВРЕМЕНИ</span>
             <strong>12%</strong>
-            <p>возвращаются к цифровым инструментам периодически</p>
+            <p>иногда</p>
           </div>
           <div class="digital-market-stat">
-            <span>ГОТОВЫ ПОПРОБОВАТЬ</span>
             <strong>13%</strong>
-            <p>пока не используют, но уже проявляют интерес</p>
+            <p>хотят попробовать</p>
           </div>
         </div>
       </div>
 
       <div class="digital-market-takeaway">
         <span>ВЫВОД</span>
-        <strong>Fit может объединить разрозненные цифровые привычки в одном спортивном контексте.</strong>
-        <p class="digital-market-source">Аудитория: РОМИР, июль 2026. Сценарии — рабочая экстраполяция. Длинный хвост: МТС, 100+ приложений; Adapty, глобальный subscription-бенчмарк 2026.</p>
+        <strong>Fit объединяет разрозненные спортивные привычки.</strong>
+        <p class="digital-market-source">Доли сценариев — рабочая оценка.<br>Опрос: РОМИР, июль 2026.</p>
       </div>
 
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
@@ -9819,12 +9833,12 @@ Fit_рынок_РФ.xlsx, вкладка «Матрица»: население 
 
 Важно, что примерами на полосе рынок не заканчивается. МТС Геоэффект анализировал более 100 спортивных приложений в России: беговые трекеры, фитнес-программы, workout-таймеры и другие инструменты. Значит, за несколькими заметными брендами существует длинный хвост небольших продуктов с узким сценарием и небольшой собственной базой.
 
-Верхняя полоса показывает рабочую оценку распределения по основному цифровому сценарию пользователя: около 52% активности приходится на данные, часы, шагомеры и маршруты; 21% — на тренировки; 16% — на питание; 11% — на клубы и сопровождение тренера.
+Основная полоса сохраняет ранее принятую рабочую оценку сценариев: 52% — данные и активность; 21% — тренировки; 16% — питание; 11% — клуб и тренер. Это не подтверждённые доли российского рынка: в приведённых источниках нет воспроизводимого расчёта именно такого распределения. При редакционном упрощении цифры не пересчитывались; их количественное основание требует отдельной верификации. Примеры приложений — иллюстрации категорий, не индивидуальные доли этих брендов.
 
-Нижняя полоса показывает уже не пользователей, а структуру предложения. Глобальный subscription-бенчмарк Adapty показывает высокую концентрацию: верхние 10% Health & Fitness приложений получают 92,6% подписочной выручки, остальные 90% делят 7,4%. Это хороший индикатор длинного хвоста: продуктов много, но масштаб каждого в среднем мал.
+Для устного комментария, не на слайде: глобальный subscription-бенчмарк Adapty показывает концентрацию выручки в своей выборке — верхние 10% Health & Fitness приложений получают 92,6% подписочной выручки, остальные 90% делят 7,4%. Эти данные не измеряют долю российских приложений с маленькой пользовательской базой. Поэтому дополнительную диаграмму выручки убрали, а мысль о нишевых приложениях оставили одной строкой.
 
 ОГОВОРКА
-Не смешиваем три метрики. 8/12/13 — исходные доли опроса РОМИР. 52/21/16/11 — рабочая оценка пользовательских сценариев в России. 10/90 и 92,6/7,4 — глобальное распределение количества приложений и подписочной выручки среди subscription-продуктов Health & Fitness. Эти показатели доказывают сформированное цифровое поведение и структуру предложения, но не используются как знаменатель финансовой модели.
+8/12/13 — исходные доли опроса РОМИР среди взрослых жителей городов с населением свыше 10 тыс. человек; это использование фитнес-приложений или гаджетов, не готовность платить. 52/21/16/11 — неподтверждённая рабочая оценка сценариев, а не результат опроса РОМИР. Эти два набора показателей не используются как знаменатель финансовой модели. Вывод про объединение привычек описывает продуктовую идею Fit, а не доказанный результат исследования.
 
 ПЕРЕХОД
 Рынок уже существует, но спортивный контекст человека распределён между разными инструментами. Дальше показываем, что отдельные модели цифрового сопровождения уже подтвердили массовый спрос и измеримый эффект.
