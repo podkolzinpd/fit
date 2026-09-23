@@ -92,6 +92,10 @@ jobs:
           # Pin to the version used by package-lock.json. Resolving `latest`
           # hits GitHub's unauthenticated release API and can be rate-limited.
           version: 2.116.0
+      # GHCR throttles shared hosted runners even with an authenticated token.
+      # The official Docker Hub mirror uses the runner's preconfigured pull auth.
+      - name: Use Docker Hub for Supabase images
+        run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io' >> "$GITHUB_ENV"
       # Database tests do not exercise the local mail inbox. Skipping Mailpit
       # avoids its fixed 54324 port colliding with a hosted runner process.
       - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
@@ -183,6 +187,8 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
+      - name: Use Docker Hub for Supabase images
+        run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io' >> "$GITHUB_ENV"
       # E2E authenticates through the local API; it does not inspect emails.
       # Keep the CI container set minimal and avoid Mailpit's fixed port.
       - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
@@ -241,6 +247,8 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
+      - name: Use Docker Hub for Supabase images
+        run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io' >> "$GITHUB_ENV"
       - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
       - run: supabase db reset --local
       - run: node scripts/wait-for-local-auth.mjs
@@ -301,6 +309,8 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
+      - name: Use Docker Hub for Supabase images
+        run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io' >> "$GITHUB_ENV"
       - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
       - run: supabase db reset --local
       - run: node scripts/wait-for-local-auth.mjs
