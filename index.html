@@ -8429,7 +8429,8 @@ h3 {
 .prefinal-audience-scale .audience-base span,
 .prefinal-audience-scale .audience-scale-label,
 .prefinal-audience-scale .audience-contour-label,
-.prefinal-audience-scale .audience-cohort span {
+.prefinal-audience-scale .audience-cohort span,
+.prefinal-audience-scale .audience-funnel-step span {
   display: block;
   color: #96979b;
   font-size: 12px;
@@ -8467,7 +8468,7 @@ h3 {
 
 .prefinal-audience-scale .audience-bar {
   display: grid;
-  grid-template-columns: 29fr 49fr 22fr;
+  grid-template-columns: 58.8fr 41.2fr;
   height: 96px;
   border: 1px solid rgba(255,255,255,.28);
 }
@@ -8517,6 +8518,48 @@ h3 {
   top: 500px;
   left: 92px;
   right: 92px;
+}
+
+.prefinal-audience-scale .audience-funnel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.prefinal-audience-scale .audience-funnel-step {
+  position: relative;
+  min-width: 0;
+  padding: 24px 56px 0 0;
+}
+
+.prefinal-audience-scale .audience-funnel-step + .audience-funnel-step {
+  padding-left: 32px;
+  border-left: 1px solid rgba(255,255,255,.16);
+}
+
+.prefinal-audience-scale .audience-funnel-step:not(:last-child)::after {
+  content: "→";
+  position: absolute;
+  top: 48px;
+  right: 18px;
+  color: #7f8999;
+  font-size: 26px;
+  font-weight: 500;
+}
+
+.prefinal-audience-scale .audience-funnel-step strong {
+  display: block;
+  margin-top: 11px;
+  color: #f7f3ec;
+  font-size: 47px;
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+
+.prefinal-audience-scale .audience-funnel-step p {
+  margin-top: 12px;
+  color: #d7d5d0;
+  font-size: 20px;
+  line-height: 1.25;
 }
 
 .prefinal-audience-scale .audience-contour-head {
@@ -8938,12 +8981,15 @@ body {
 .prefinal-audience-scale .audience-scale-label,
 .prefinal-audience-scale .audience-contour-label,
 .prefinal-audience-scale .audience-cohort span,
+.prefinal-audience-scale .audience-funnel-step span,
 .prefinal-audience-scale .audience-caveat { color: #aeb6c3; }
 .prefinal-audience-scale h2,
 .prefinal-audience-scale .audience-base strong,
-.prefinal-audience-scale .audience-cohort strong { color: #f5f3ef; }
+.prefinal-audience-scale .audience-cohort strong,
+.prefinal-audience-scale .audience-funnel-step strong { color: #f5f3ef; }
 .prefinal-audience-scale .audience-base p,
 .prefinal-audience-scale .audience-cohort p,
+.prefinal-audience-scale .audience-funnel-step p,
 .prefinal-audience-scale .audience-contour-head strong { color: #d6d8dc; }
 .prefinal-audience-scale .audience-base,
 .prefinal-audience-scale .audience-contour-head,
@@ -8953,6 +8999,7 @@ body {
 .prefinal-audience-scale .audience-occasional { background: #64718a; }
 .prefinal-audience-scale .audience-inactive { background: #171c25; }
 .prefinal-audience-scale .audience-cohort + .audience-cohort { border-color: #56606f; }
+.prefinal-audience-scale .audience-funnel-step + .audience-funnel-step { border-color: #56606f; }
 
 /* Digital market */
 .prefinal-digital-market .digital-market-fit,
@@ -9169,68 +9216,66 @@ Fit остаётся отдельным приложением, потому ч�
     <section class="slide redesign-v2 prefinal-keep prefinal-audience-scale" data-section="Аудитория" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
       <div class="eyebrow">02 · МАСШТАБ АУДИТОРИИ</div>
       <div class="audience-scale-fit">Fit</div>
-      <h2>21,5 млн — верхняя граница.<br>Первый контур Fit уже</h2>
+      <h2>50,5 млн — активное ядро.<br>Первый контур Fit — 28,3 млн</h2>
 
       <div class="audience-base">
         <span>БАЗА ОЦЕНКИ</span>
-        <strong>≈74 млн</strong>
-        <p>россиян 18–55 лет</p>
+        <strong>≈85,9 млн</strong>
+        <p>россиян 15–59 лет</p>
       </div>
 
-      <div class="audience-partition" aria-label="Взаимоисключающее распределение россиян 18–55 лет по регулярности спортивной активности">
-        <span class="audience-scale-label">РОССИЯНЕ 18–55 ЛЕТ · ВЗАИМОИСКЛЮЧАЮЩИЙ РАЗРЕЗ</span>
+      <div class="audience-partition" aria-label="Взаимоисключающее распределение россиян 15–59 лет по регулярности спортивной активности">
+        <span class="audience-scale-label">РОССИЯНЕ 15–59 ЛЕТ · ВЗАИМОИСКЛЮЧАЮЩИЙ РАЗРЕЗ</span>
         <div class="audience-bar">
-          <div class="audience-regular"><strong>21,5 млн · 29%</strong><span>занимаются регулярно</span></div>
-          <div class="audience-occasional"><strong>36,3 млн · 49%</strong><span>время от времени или редко</span></div>
-          <div class="audience-inactive"><strong>16,2 млн · 22%</strong><span>не занимаются или не определились</span></div>
+          <div class="audience-regular"><strong>50,5 млн · 58,8%</strong><span>не реже 1–3 раз в месяц</span></div>
+          <div class="audience-inactive"><strong>35,4 млн · 41,2%</strong><span>занимаются реже или не занимаются</span></div>
         </div>
       </div>
 
       <div class="audience-first-contour">
         <div class="audience-contour-head">
-          <span class="audience-contour-label">ОЦЕНОЧНЫЙ МАСШТАБ ПЕРВОГО КОНТУРА</span>
-          <strong>внутри регулярно занимающихся</strong>
+          <span class="audience-contour-label">КАК МОДЕЛЬ СУЖАЕТ РЫНОК</span>
+          <strong>от спортивного ядра к первому продукту</strong>
         </div>
-        <div class="audience-cohorts">
-          <div class="audience-cohort">
-            <span>СИЛОВЫЕ И ФИТНЕС</span>
-            <strong>2,6–6,4 млн</strong>
-            <p>регулярно занимаются</p>
+        <div class="audience-funnel">
+          <div class="audience-funnel-step">
+            <span>АКТИВНОЕ ЯДРО</span>
+            <strong>50,5 млн</strong>
+            <p>занимаются не реже 1–3 раз в месяц</p>
           </div>
-          <div class="audience-cohort">
-            <span>БЕГ · ВЕЛОСИПЕД · ПЛАВАНИЕ</span>
-            <strong>2,6–6,9 млн</strong>
-            <p>занимаются с цифровой фиксацией</p>
+          <div class="audience-funnel-step">
+            <span>САМОСТОЯТЕЛЬНЫЙ ПОТОК</span>
+            <strong>42,5 млн</strong>
+            <p>после выделения 8,0 млн клиентов тренеров</p>
           </div>
-          <div class="audience-cohort">
-            <span>ТРЕНИРОВКИ С ТРЕНЕРОМ</span>
-            <strong>1,1–3,9 млн</strong>
-            <p>персональное сопровождение</p>
+          <div class="audience-funnel-step">
+            <span>ПЕРВЫЙ КОНТУР FIT</span>
+            <strong>28,3 млн</strong>
+            <p>силовые и фитнес, бег, велосипед и плавание</p>
           </div>
         </div>
       </div>
 
-      <p class="audience-caveat">Диапазоны пересекаются и не суммируются. 36,3 млн эпизодически активных — отдельный резерв; его распределение по поддерживаемым дисциплинам ещё не рассчитано.</p>
+      <p class="audience-caveat">28,3 млн — модельная оценка по частоте упоминания видов спорта, а не измеренная уникальная аудитория. Тренерский поток 8,0 млн моделируется отдельно.</p>
 
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Показать, что 21,5 миллиона регулярно занимающихся — это верхняя граница категории, а не готовое ядро Fit.
+Собрать единую рыночную воронку, которая использует те же определения, что и финансовая модель.
 
 ЧТО ГОВОРИМ
-В возрастном контуре 18–55 лет около 74 миллионов россиян. Взаимоисключающий разрез даёт 21,5 миллиона регулярно занимающихся, 36,3 миллиона эпизодически активных и 16,2 миллиона неактивных либо не определившихся.
+В принятой в модели возрастной базе 15–59 лет около 85,9 миллиона россиян. 45,4 миллиона занимаются не реже раза в неделю, ещё 5,1 миллиона — 1–3 раза в месяц. Вместе это 50,5 миллиона человек активного ядра. Ещё 4,3 миллиона занимаются несколько раз в год, 31,1 миллиона не занимаются или не дали определённого ответа.
 
-Но Fit не обслуживает все виды спорта одинаково глубоко. В первом контуре мы оцениваем силовые и фитнес в диапазоне 2,6–6,4 миллиона регулярно занимающихся; бег, велосипед и плавание с цифровой фиксацией — в диапазоне 2,6–6,9 миллиона; персональное сопровождение тренером — 1,1–3,9 миллиона.
+Из активного ядра около 8,0 миллиона отнесены к клиентам тренеров — это отдельный поток транзакционной и тренерской модели. Остаётся 42,5 миллиона условно самостоятельных спортсменов.
 
-Это сценарные диапазоны. Они пересекаются: один человек может заниматься силовыми, бегать и работать с тренером. Поэтому их нельзя складывать и выдавать за уникальную аудиторию Fit. Для единой оценки требуется устранить пересечения на данных исследования или опроса.
+Для первого подробного контура Fit берём продуктовый периметр из презентации: силовые тренировки и фитнес, бег, велосипед и плавание. При нормализации долей исследования по всем 19 категориям это даёт расчётные 28,3 миллиона внутри самостоятельного потока.
 
-36,3 миллиона эпизодически активных остаются потенциалом роста, но распределение этой группы по поддерживаемым дисциплинам пока не рассчитано.
+Это не измерение уникальных людей: исходный вопрос допускал выбор нескольких видов спорта. Поэтому 28,3 миллиона — рабочая модельная оценка адресуемого контура, а не подтверждённый SAM.
 
 ПЕРЕХОД
-Масштаб есть, но сегодня спортивный путь этой аудитории разорван между разными сервисами, устройствами и людьми.
+Следующий вопрос — насколько цифровое поведение уже сформировано и какие сценарии люди используют сегодня.
 
 [Sources]
-Возрастная база: Росстат, «Социальное положение и уровень жизни населения России. 2025» — оценочно около 74 млн россиян 18–55 лет.
-Распределение активности: ВЦИОМ, «ЗОЖ-2026». Для презентации используются взаимоисключающие категории: 29% регулярно; 49% время от времени или редко; 21% не занимаются; 1% затруднились ответить. Абсолютные значения рассчитаны от возрастной базы и округлены.
-Диапазоны первого контура: внутренняя сценарная модель когорт Fit. Это оценочные, пересекающиеся диапазоны, а не подтверждённые уникальные аудитории.</aside>
+Fit_рынок_РФ.xlsx, вкладка «Матрица»: население России 15–59 лет — 85 881 000; активное ядро — 50 489 080; клиенты тренеров — 8 012 295; условно самостоятельный поток — 42 476 785.
+Возрастная база: Росстат, население на 01.01.2024. Частота занятий и виды спорта: ВЦИОМ, 2023. Оценка первого контура рассчитана как доля упоминаний силовых тренировок, фитнеса, бега, велосипеда и плавания в сумме упоминаний всех 19 категорий исследования.</aside>
     </section>
 
     <section class="slide redesign-v2 review-problem-v2 prefinal-keep" data-section="Проблема" data-slide-type="problem" data-golden="linear/03-linear-product-flow.png">
@@ -9301,9 +9346,9 @@ Fit остаётся отдельным приложением, потому ч�
       <p class="digital-market-lead">Основная активность — в данных и трекерах. За заметными сервисами стоит длинный хвост небольших приложений.</p>
 
       <div class="digital-market-base">
-        <span>БАЗА ЭКСТРАПОЛЯЦИИ</span>
-        <strong>≈74 млн</strong>
-        <p>россиян 18–55 лет</p>
+        <span>ОТДЕЛЬНОЕ ИССЛЕДОВАНИЕ</span>
+        <strong>РОМИР · 2026</strong>
+        <p>взрослые жители российских городов</p>
       </div>
 
       <div class="digital-market-distribution" aria-label="Оценочная структура использования цифровых спортивных инструментов в России">
@@ -9333,22 +9378,22 @@ Fit остаётся отдельным приложением, потому ч�
       </div>
 
       <div class="digital-market-audience" aria-label="Оценка аудитории цифровых спортивных инструментов в России">
-        <span class="digital-market-audience-label">СКОЛЬКО ЛЮДЕЙ УЖЕ ПОЛЬЗУЮТСЯ — И ГОТОВЫ ПРИСОЕДИНИТЬСЯ</span>
+        <span class="digital-market-audience-label">ЦИФРОВОЕ ПОВЕДЕНИЕ ПО ДАННЫМ ОПРОСА РОМИР</span>
         <div class="digital-market-stats">
           <div class="digital-market-stat">
             <span>РЕГУЛЯРНО</span>
-            <strong>≈5,9 млн</strong>
-            <p>8% используют приложения или гаджеты регулярно</p>
+            <strong>8%</strong>
+            <p>используют приложения или гаджеты регулярно</p>
           </div>
           <div class="digital-market-stat">
             <span>ВРЕМЯ ОТ ВРЕМЕНИ</span>
-            <strong>≈8,9 млн</strong>
-            <p>12% возвращаются к цифровым инструментам периодически</p>
+            <strong>12%</strong>
+            <p>возвращаются к цифровым инструментам периодически</p>
           </div>
           <div class="digital-market-stat">
             <span>ГОТОВЫ ПОПРОБОВАТЬ</span>
-            <strong>≈9,6 млн</strong>
-            <p>13% пока не используют, но уже проявляют интерес</p>
+            <strong>13%</strong>
+            <p>пока не используют, но уже проявляют интерес</p>
           </div>
         </div>
       </div>
@@ -9363,7 +9408,9 @@ Fit остаётся отдельным приложением, потому ч�
 Показать масштаб российского цифрового спортивного рынка и доказать, что Fit не должен формировать поведение с нуля.
 
 ЧТО ГОВОРИМ
-По опросу РОМИР среди взрослых жителей российских городов 8% регулярно используют фитнес-приложения и гаджеты, ещё 12% делают это время от времени. Если сценарно перенести эти доли на принятую в презентации базу 74 млн россиян 18–55 лет, получаем около 14,8 млн существующих пользователей цифровых спортивных инструментов. Ещё 13%, или около 9,6 млн, хотели бы попробовать.
+По опросу РОМИР среди взрослых жителей российских городов 8% регулярно используют фитнес-приложения и гаджеты, ещё 12% делают это время от времени. 13% пока не используют, но хотели бы попробовать.
+
+На этом слайде сохраняем исходные доли исследования и не пересчитываем их в абсолютные значения. Возрастная и географическая база РОМИР отличается от рыночной базы финансовой модели, поэтому механическое умножение процентов на 85,9 миллиона создало бы ложную точность.
 
 Эти люди пользуются не одним типом продукта. Повседневную активность и показатели собирают приложения часов и трекеров; готовые занятия дают тренировочные сервисы; питание ведётся отдельно; клубы и тренеры используют собственные кабинеты и приложения.
 
@@ -9374,7 +9421,7 @@ Fit остаётся отдельным приложением, потому ч�
 Нижняя полоса показывает уже не пользователей, а структуру предложения. Глобальный subscription-бенчмарк Adapty показывает высокую концентрацию: верхние 10% Health & Fitness приложений получают 92,6% подписочной выручки, остальные 90% делят 7,4%. Это хороший индикатор длинного хвоста: продуктов много, но масштаб каждого в среднем мал.
 
 ОГОВОРКА
-Не смешиваем две метрики. 52/21/16/11 — рабочая оценка пользовательских сценариев в России. 10/90 и 92,6/7,4 — глобальное распределение количества приложений и подписочной выручки среди subscription-продуктов Health & Fitness. Выручка не равна аудитории, но позволяет показать концентрацию рынка и наличие большого числа небольших игроков без выдуманной оценки их российского MAU.
+Не смешиваем три метрики. 8/12/13 — исходные доли опроса РОМИР. 52/21/16/11 — рабочая оценка пользовательских сценариев в России. 10/90 и 92,6/7,4 — глобальное распределение количества приложений и подписочной выручки среди subscription-продуктов Health & Fitness. Эти показатели доказывают сформированное цифровое поведение и структуру предложения, но не используются как знаменатель финансовой модели.
 
 ПЕРЕХОД
 Рынок уже существует, но спортивный контекст человека распределён между разными инструментами. Дальше показываем, что отдельные модели цифрового сопровождения уже подтвердили массовый спрос и измеримый эффект.
