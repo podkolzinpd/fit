@@ -5,7 +5,7 @@ const queries = vi.hoisted(() => ({
   list: vi.fn(), create: vi.fn(), update: vi.fn(), setArchived: vi.fn(),
 }))
 const media = vi.hoisted(() => ({ upload: vi.fn() }))
-vi.mock('../queries/exercises.queries', () => ({ exerciseQueries: queries, customExerciseMedia: media }))
+vi.mock('../queries/exercises.queries', () => ({ exerciseQueries: queries, customExerciseMedia: () => media }))
 
 import { exercisesRepository } from './exercises.repository'
 

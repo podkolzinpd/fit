@@ -4,15 +4,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 const { createSignedUrl } = vi.hoisted(() => ({
   createSignedUrl: vi.fn(),
 }))
+const backend = vi.hoisted(() => ({ source: 'supabase' as 'supabase' | 'yandex' }))
 
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ exercises: { createVitalMediaUrl: createSignedUrl } }),
+  useDataBackend: () => ({ source: backend.source, exercises: { createVitalMediaUrl: createSignedUrl } }),
 }))
 
 import { useVitalMediaUrl } from './vitalMedia'
 
 describe('useVitalMediaUrl', () => {
   afterEach(() => {
+    backend.source = 'supabase'
     createSignedUrl.mockReset()
     vi.unstubAllEnvs()
   })
@@ -45,6 +47,34 @@ describe('useVitalMediaUrl', () => {
     const { result } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/squat.mp4'))
     await waitFor(() => expect(result.current).toBe('https://signed.example/squat'))
     expect(createSignedUrl).toHaveBeenCalledWith('vital-pro/squat.mp4', 3600)
+  })
+
+  it('signs Yandex Gym Pro media without Supabase environment variables', async () => {
+    vi.stubEnv('MODE', 'production')
+    vi.stubEnv('VITE_SUPABASE_URL', '')
+    backend.source = 'yandex'
+    createSignedUrl.mockResolvedValue('https://signed.example/yandex-squat')
+
+    const { result } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/yandex-squat.mp4'))
+
+    await waitFor(() => expect(result.current).toBe('https://signed.example/yandex-squat'))
+    expect(createSignedUrl).toHaveBeenCalledWith('vital-pro/yandex-squat.mp4', 3600)
+  })
+
+  it('does not reuse a Supabase signed URL after the backend changes', async () => {
+    vi.stubEnv('MODE', 'production')
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    createSignedUrl.mockResolvedValueOnce('https://signed.example/legacy')
+      .mockResolvedValueOnce('https://signed.example/yandex')
+
+    const { result, rerender } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/backend-switch.mp4'))
+    await waitFor(() => expect(result.current).toBe('https://signed.example/legacy'))
+
+    backend.source = 'yandex'
+    rerender()
+
+    await waitFor(() => expect(result.current).toBe('https://signed.example/yandex'))
+    expect(createSignedUrl).toHaveBeenCalledTimes(2)
   })
 
   it('falls back silently when signing fails', async () => {

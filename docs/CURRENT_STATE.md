@@ -1,6 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-22. База изменений: `577942c6` (#1136). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
+Обновлено: 2026-09-23. База изменений: `3c8c29ae` (#1143). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 
 ## Активная цель
@@ -89,7 +89,11 @@ Yandex ID является единственным production-входом; app
 1. Выполнить успешный media migration без `allow-missing` для оставшихся chat
    и custom-exercise objects; Vital Gym Pro уже перенесён и полностью проверен.
 2. Добавить Yandex custom-exercise photo adapter.
-3. Убрать обязательность Supabase env и legacy bridge из production composition.
+3. Frontend больше не создаёт Supabase SDK при импорте и не подписывается на
+   Supabase Auth при Yandex-only входе; production сборка не требует
+   `VITE_SUPABASE_*`. Legacy Supabase browser path остаётся ленивым для
+   локальной разработки и Preview. Серверный legacy bridge пока нужен для
+   восстановления старых аккаунтов и media; его secrets не удалять.
    Публичная анкета уже выбирает Supabase либо Yandex вместе с main routing без
    межпровайдерного fallback.
 4. Провести ручной E2E matrix с реальными тестовыми identities: linked trainer,

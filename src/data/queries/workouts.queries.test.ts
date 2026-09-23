@@ -12,7 +12,7 @@ const query = vi.hoisted(() => ({
 }))
 const from = vi.hoisted(() => vi.fn())
 
-vi.mock('./client', () => ({ supabase: { rpc, from } }))
+vi.mock('./client', () => ({ getSupabaseClient: () => ({ rpc, from }) }))
 
 import { workoutQueries } from './workouts.queries'
 

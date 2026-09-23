@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const { getSession } = vi.hoisted(() => ({ getSession: vi.fn() }))
-vi.mock('./client', () => ({ supabase: { auth: { getSession } } }))
+vi.mock('./client', () => ({ getSupabaseClient: () => ({ auth: { getSession } }) }))
 
 import { invokeAssistantProgressSummary } from './assistant-progress'
 
