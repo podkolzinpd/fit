@@ -646,6 +646,16 @@ handoff endpoints скрыты с `404`, пока `YANDEX_ONLY_AUTH_ENABLED` н�
 один из этих switches: stage Terraform читает отсутствующие repository
 variables как `false`.
 
+В эффективном Yandex-only режиме browser Supabase client не создаётся даже при
+наличии старых `VITE_SUPABASE_URL` и `VITE_SUPABASE_PUBLISHABLE_KEY`: legacy
+запрос завершается локальной ошибкой до сетевого вызова. Для авторизованного
+пользователя без подходящей Yandex app-session data backend тоже закрывается,
+а не переключается на Supabase. После deployment и проверки входа обеих ролей,
+публичной анкеты и приглашения эти две переменные можно удалить именно из
+Vercel Production Environment и сделать новый deployment. Серверные Supabase
+secrets не удалять: они ещё нужны для recovery старых аккаунтов и оставшегося
+media bridge. Локальная разработка и Preview сохраняют свои legacy настройки.
+
 Не включайте frontend раньше server revision. Порядок cutover: maintenance →
 fresh 35-table apply → repeat checksum → linked-ready assignments → server
 variables и успешный stage deploy → smoke linked/recovery/native/invite →

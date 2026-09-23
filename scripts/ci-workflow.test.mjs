@@ -92,6 +92,23 @@ test('does not start Supabase services that CI scenarios do not use', () => {
   )
 })
 
+test('uses the Docker Hub mirror before Supabase image pulls in every database-backed CI job', () => {
+  for (const job of ['database', 'e2e-visual', 'e2e-chromium', 'e2e-webkit']) {
+    const start = workflow.indexOf(`  ${job}:\n`)
+    assert.notEqual(start, -1, `${job} job is missing`)
+    const body = workflow.slice(start).split(/\n  [a-z][a-z0-9-]*:\n/, 1)[0]
+
+    assert.match(
+      body,
+      /name: Use Docker Hub for Supabase images\n\s+run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker\.io' >> "\$GITHUB_ENV"/,
+    )
+    assert.ok(
+      body.indexOf('Use Docker Hub for Supabase images') < body.indexOf('supabase start --exclude'),
+      `${job} must select the mirror before pulling Supabase images`,
+    )
+  }
+})
+
 test('runs the complete Yandex API check independently from browser E2E', () => {
   assert.match(workflow, /api:[\s\S]*cache-dependency-path: services\/api\/package-lock\.json/)
   assert.match(workflow, /api:[\s\S]*- run: npm ci --prefix services\/api/)
