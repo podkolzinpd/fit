@@ -4,8 +4,6 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
-import { useYandexAppSession } from '../../app/yandex-app-session-context'
-import { authRepository } from '../../data/repositories/auth.repository'
 import { RepositoryError } from '../../data/repositories/error'
 import { publicInvitationLinksRepository } from '../../data/repositories/public-invitation-links.repository'
 import { StatePanel } from '../../shared/ui'
@@ -41,9 +39,8 @@ function terminalCopy(status: 'claimed' | 'revoked' | 'expired'): { title: strin
 export function InvitationPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { actor, loading: authLoading } = useAuth()
+  const { actor, loading: authLoading, signOut } = useAuth()
   const backend = useDataBackend()
-  const yandexSession = useYandexAppSession()
   const [pending] = useState<PendingInvitationLink | null>(() =>
     captureInvitationLink(window.location.hash))
   const [signingOut, setSigningOut] = useState(false)
@@ -95,7 +92,7 @@ export function InvitationPage() {
 
   async function changeAccount(): Promise<void> {
     setSigningOut(true)
-    await Promise.allSettled([authRepository.signOut(), yandexSession.signOut()])
+    await Promise.allSettled([signOut()])
     navigate('/auth', {
       replace: true,
       state: { from: '/invite', inviteRole: invitation?.targetRole },

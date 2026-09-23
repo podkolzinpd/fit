@@ -12,19 +12,12 @@ const state = vi.hoisted(() => ({
 const claimLink = vi.hoisted(() => vi.fn())
 const preview = vi.hoisted(() => vi.fn())
 const signOut = vi.hoisted(() => vi.fn())
-const signOutYandex = vi.hoisted(() => vi.fn())
 
 vi.mock('../../app/auth-context', () => ({
-  useAuth: () => ({ actor: state.actor, loading: false, error: null }),
+  useAuth: () => ({ actor: state.actor, loading: false, error: null, signOut }),
 }))
 vi.mock('../../app/data-backend-context', () => ({
   useDataBackend: () => ({ source: state.backendSource, invitations: { claimLink } }),
-}))
-vi.mock('../../app/yandex-app-session-context', () => ({
-  useYandexAppSession: () => ({ signOut: signOutYandex }),
-}))
-vi.mock('../../data/repositories/auth.repository', () => ({
-  authRepository: { signOut },
 }))
 vi.mock('../../data/repositories/invitations.repository', () => ({
   invitationsRepository: { claimLink },
@@ -76,7 +69,6 @@ describe('InvitationPage', () => {
     claimLink.mockReset()
     preview.mockReset()
     signOut.mockReset().mockResolvedValue(undefined)
-    signOutYandex.mockReset().mockResolvedValue(undefined)
     Object.defineProperty(window, 'sessionStorage', { configurable: true, value: memoryStorage() })
     window.history.replaceState(null, '', `/invite#token=${token}&source=supabase`)
     preview.mockResolvedValue({
@@ -108,7 +100,6 @@ describe('InvitationPage', () => {
     await user.click(screen.getByRole('button', { name: 'Войти под другим аккаунтом' }))
 
     await waitFor(() => expect(signOut).toHaveBeenCalledOnce())
-    expect(signOutYandex).toHaveBeenCalledOnce()
     expect(screen.getByRole('status')).toHaveTextContent('"path":"/auth"')
   })
 

@@ -8,6 +8,11 @@ test('Yandex-only entry has one primary action at 390 and 430 px', async ({ page
       || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true',
     'Run with the complete default-off Yandex-only auth switches.',
   )
+  let legacyAuthRequests = 0
+  await page.route('**/auth/v1/**', (route) => {
+    legacyAuthRequests += 1
+    return route.abort('failed')
+  })
 
   for (const viewport of [
     { width: 390, height: 844 },
@@ -50,6 +55,7 @@ test('Yandex-only entry has one primary action at 390 and 430 px', async ({ page
     await page.goto('/auth/forgot')
     await expect(page).toHaveURL(/\/auth$/)
   }
+  expect(legacyAuthRequests).toBe(0)
 })
 
 test('restored Yandex session completes the legal check after reload', async ({ page }) => {
@@ -59,6 +65,11 @@ test('restored Yandex session completes the legal check after reload', async ({ 
       || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true',
     'Run with the complete Yandex-only session switches.',
   )
+  let legacyAuthRequests = 0
+  await page.route('**/auth/v1/**', (route) => {
+    legacyAuthRequests += 1
+    return route.abort('failed')
+  })
   const token = 'a'.repeat(43)
   let legalRequests = 0
   await page.route('https://stage.example.test/v1/auth/yandex/session', async (route) => {
@@ -100,4 +111,5 @@ test('restored Yandex session completes the legal check after reload', async ({ 
   await expect(page.getByRole('heading', { name: 'Условия обновились' })).toBeVisible()
   await expect(page.getByText('Проверяем документы…')).toHaveCount(0)
   expect(legalRequests).toBe(2)
+  expect(legacyAuthRequests).toBe(0)
 })

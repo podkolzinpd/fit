@@ -1,4 +1,4 @@
-import { supabase } from './client'
+import { getSupabaseClient } from './client'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import type { CustomMetric } from '../../shared/domain'
 import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retirement'
@@ -33,9 +33,9 @@ export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnaps
       .catch((error) => ({ data: null, error: error instanceof Error ? error : new Error('parse_workout_request_failed') }))
   }
   if (isLocalSupabase) {
-    return supabase.functions.invoke<WorkoutParseResponse>('parse-workout', { body: { text, systemCatalog } })
+    return getSupabaseClient().functions.invoke<WorkoutParseResponse>('parse-workout', { body: { text, systemCatalog } })
   }
-  return supabase.auth.getSession().then(async ({ data: { session } }) => {
+  return getSupabaseClient().auth.getSession().then(async ({ data: { session } }) => {
     if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
     try {
       const response = await fetch(parserUrl, {
@@ -64,8 +64,8 @@ export const suggestGoalCriteria = (text: string, catalog: readonly ExerciseSnap
       : { data: null, error: { context: response } })
       .catch((error) => ({ data: null, error: error instanceof Error ? error : new Error('goal_suggestion_request_failed') }))
   }
-  if (isLocalSupabase) return supabase.functions.invoke<GoalCriteriaSuggestionResponse>('parse-workout', { body })
-  return supabase.auth.getSession().then(async ({ data: { session } }) => {
+  if (isLocalSupabase) return getSupabaseClient().functions.invoke<GoalCriteriaSuggestionResponse>('parse-workout', { body })
+  return getSupabaseClient().auth.getSession().then(async ({ data: { session } }) => {
     if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
     try {
       const response = await fetch(parserUrl, { method: 'POST', headers: { 'content-type': 'application/json', 'x-supabase-authorization': `Bearer ${session.access_token}` }, body: JSON.stringify(body) })
@@ -94,23 +94,25 @@ export type CustomExerciseWriteValue = {
   image_size_bytes?: number | null
 }
 
-export const customExerciseMedia = supabase.storage.from('custom-exercise-media')
+export function customExerciseMedia() {
+  return getSupabaseClient().storage.from('custom-exercise-media')
+}
 
 export const exerciseQueries = {
   async createVitalMediaUrl(path: string, expiresIn: number) {
-    return supabase.storage.from('fit-exercise-media').createSignedUrl(path, expiresIn)
+    return getSupabaseClient().storage.from('fit-exercise-media').createSignedUrl(path, expiresIn)
   },
   async createCustomExercisePhotoUrl(path: string, expiresIn: number) {
-    return customExerciseMedia.createSignedUrl(path, expiresIn)
+    return customExerciseMedia().createSignedUrl(path, expiresIn)
   },
   parseWorkout,
   suggestGoalCriteria,
-  list: () => supabase.from('custom_exercises').select(columns).order('name'),
+  list: () => getSupabaseClient().from('custom_exercises').select(columns).order('name'),
   create: (trainerId: string, value: CustomExerciseWriteValue & { id?: string }) =>
-    supabase.from('custom_exercises').insert({ trainer_id: trainerId, ...value }).select(columns).single(),
+    getSupabaseClient().from('custom_exercises').insert({ trainer_id: trainerId, ...value }).select(columns).single(),
   update: (id: string, version: number, value: CustomExerciseWriteValue) =>
-    supabase.from('custom_exercises').update({ ...value, version: version + 1 }).eq('id', id).eq('version', version).select(columns).single(),
-  setArchived: (id: string, version: number, archived: boolean) => supabase.from('custom_exercises')
+    getSupabaseClient().from('custom_exercises').update({ ...value, version: version + 1 }).eq('id', id).eq('version', version).select(columns).single(),
+  setArchived: (id: string, version: number, archived: boolean) => getSupabaseClient().from('custom_exercises')
     .update({ archived_at: archived ? new Date().toISOString() : null, version: version + 1 })
     .eq('id', id).eq('version', version).select(columns).single(),
 }

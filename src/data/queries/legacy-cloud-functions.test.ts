@@ -5,7 +5,7 @@ const { getSession, verifiedAccessToken, refreshAccessToken } = vi.hoisted(() =>
   verifiedAccessToken: vi.fn(),
   refreshAccessToken: vi.fn(),
 }))
-vi.mock('./client', () => ({ supabase: { auth: { getSession } } }))
+vi.mock('./client', () => ({ getSupabaseClient: () => ({ auth: { getSession } }) }))
 vi.mock('./verified-supabase-session', () => ({
   verifiedSupabaseAccessToken: verifiedAccessToken,
   refreshSupabaseAccessToken: refreshAccessToken,

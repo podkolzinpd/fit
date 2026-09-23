@@ -1,4 +1,4 @@
-import { supabase } from './client'
+import { getSupabaseClient } from './client'
 import { refreshSupabaseAccessToken, verifiedSupabaseAccessToken } from './verified-supabase-session'
 
 type LegacyFunctionResult<T> = {
@@ -30,7 +30,7 @@ export async function invokeLegacyCloudFunction<T>(
   try {
     accessToken = name === 'summarize-client-training'
       ? await verifiedSupabaseAccessToken()
-      : (await supabase.auth.getSession()).data.session?.access_token ?? ''
+      : (await getSupabaseClient().auth.getSession()).data.session?.access_token ?? ''
   } catch (error) {
     return { data: null, error: error instanceof Error ? error : new Error('authentication_required') }
   }

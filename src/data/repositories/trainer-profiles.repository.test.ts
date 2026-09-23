@@ -9,7 +9,7 @@ vi.mock('../../app/feature-flags', () => ({
   getYandexMainRoutingConfig: () => mocks.config,
 }))
 vi.mock('../queries/client', () => ({
-  supabase: { rpc: mocks.rpc },
+  getSupabaseClient: () => ({ rpc: mocks.rpc }),
 }))
 
 import { forgetPublicTrainerProfile, getPublicTrainerProfile, trainerProfilesRepository } from './trainer-profiles.repository'

@@ -1,7 +1,7 @@
 import type { TrainerCatalogFilters, TrainerCatalogPage, TrainerCatalogPageOptions, TrainerProfileDraft, TrainerProfilePhotoUpload, TrainerProfessionalProfile } from '../../shared/domain'
 import { expandSpecialtiesForCatalogSearch, parseLegacyTrainerCatalogPage, parseTrainerProfile } from '../../shared/trainer-profile'
 import { getYandexMainRoutingConfig } from '../../app/feature-flags'
-import { supabase } from '../queries/client'
+import { getSupabaseClient } from '../queries/client'
 import { toJson } from '../queries/json'
 import { RepositoryError, repositoryError } from './error'
 
@@ -23,19 +23,19 @@ function parseNullable(value: unknown): TrainerProfessionalProfile | null {
 
 export const trainerProfilesRepository: TrainerProfilesRepository = {
   async getOwn() {
-    const result = await supabase.rpc('get_own_trainer_profile')
+    const result = await getSupabaseClient().rpc('get_own_trainer_profile')
     if (result.error) throw repositoryError(result.error)
     return parseNullable(result.data)
   },
   async saveDraft(draft) {
-    const result = await supabase.rpc('save_trainer_profile_draft', { p_draft: toJson(draft) })
+    const result = await getSupabaseClient().rpc('save_trainer_profile_draft', { p_draft: toJson(draft) })
     if (result.error) throw repositoryError(result.error)
     return parseTrainerProfile(result.data)
   },
   async uploadPhoto(draft, photo) {
     // Local/Supabase development keeps its existing single-photo contract.
     // Production uses the Yandex repository and the three-photo gallery.
-    const result = await supabase.rpc('save_trainer_profile_draft', {
+    const result = await getSupabaseClient().rpc('save_trainer_profile_draft', {
       p_draft: toJson({ ...draft, avatarDataUrl: photo.image.dataUrl, photos: [] }),
     })
     if (result.error) throw repositoryError(result.error)
@@ -48,22 +48,22 @@ export const trainerProfilesRepository: TrainerProfilesRepository = {
     return Promise.reject(new RepositoryError('service_unavailable', 'Галерея временно недоступна. Попробуйте позднее.'))
   },
   async publish() {
-    const result = await supabase.rpc('publish_trainer_profile')
+    const result = await getSupabaseClient().rpc('publish_trainer_profile')
     if (result.error) throw repositoryError(result.error)
     return parseTrainerProfile(result.data)
   },
   async unpublish() {
-    const result = await supabase.rpc('unpublish_trainer_profile')
+    const result = await getSupabaseClient().rpc('unpublish_trainer_profile')
     if (result.error) throw repositoryError(result.error)
     return parseTrainerProfile(result.data)
   },
   async setCatalogListing(listed) {
-    const result = await supabase.rpc('set_trainer_profile_catalog_listing', { p_listed: listed })
+    const result = await getSupabaseClient().rpc('set_trainer_profile_catalog_listing', { p_listed: listed })
     if (result.error) throw repositoryError(result.error)
     return parseTrainerProfile(result.data)
   },
   async listCatalog(filters, page) {
-    const result = await supabase.rpc('list_public_trainer_profiles_page', {
+    const result = await getSupabaseClient().rpc('list_public_trainer_profiles_page', {
       p_query: filters.query || undefined,
       p_specialties: filters.specialties.length ? expandSpecialtiesForCatalogSearch(filters.specialties) : undefined,
       p_city: filters.city || undefined,
@@ -116,7 +116,7 @@ async function loadPublicTrainerProfile(publicId: string): Promise<TrainerProfes
   const yandex = getYandexMainRoutingConfig()
   if (yandex !== null) return readYandexPublicProfile(publicId, yandex.apiBaseUrl)
 
-  const result = await supabase.rpc('get_public_trainer_profile', { p_public_id: publicId })
+  const result = await getSupabaseClient().rpc('get_public_trainer_profile', { p_public_id: publicId })
   if (result.error) throw repositoryError(result.error)
   return parseNullable(result.data)
 }

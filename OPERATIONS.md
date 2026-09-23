@@ -502,12 +502,21 @@ Production и PR previews разворачиваются в Vercel через Gi
 - build command: `npm run build`;
 - output directory: `dist`.
 
-В Vercel для Production и Preview задаются только публичные frontend-переменные:
+Для локальной разработки и legacy Preview с Supabase нужны публичные
+frontend-переменные:
 
 ```text
 VITE_SUPABASE_URL=https://xwfuzfkuhblswpdludbc.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key>
 ```
+
+Production с включённым Yandex-only auth и main routing не требует этих
+`VITE_SUPABASE_*` переменных для запуска frontend: Supabase SDK создаётся
+только при фактическом legacy-вызове, а Yandex-only вход не подписывается на
+Supabase Auth. Это **не** означает, что серверный Supabase bridge уже можно
+отключить: он пока нужен для восстановления старых FIT-аккаунтов и оставшихся
+legacy media. Не удаляйте его Lockbox secrets до закрытия этих сценариев и
+rollback-окна.
 
 `SUPABASE_DB_PASSWORD`, `SUPABASE_ACCESS_TOKEN`, service-role key и OAuth Client Secret в Vercel не добавляются. После первого production deploy его канонический URL фиксируется в Supabase Auth URL Configuration:
 

@@ -192,7 +192,7 @@ describe('AuthProvider', () => {
     expect(await screen.findByText('accepted')).toBeVisible()
   })
 
-  it('does not reopen the Supabase backend from a stale browser session after Yandex-only cutover', async () => {
+  it('does not initialize Supabase Auth from a stale browser session after Yandex-only cutover', () => {
     vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
     vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
@@ -201,11 +201,41 @@ describe('AuthProvider', () => {
     vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
 
     renderAuth(<AuthProbe />)
-    authCallback()('INITIAL_SESSION', { user })
 
-    await waitFor(() => expect(auth.initialize).toHaveBeenCalledWith(user))
     expect(screen.getByText('anonymous')).toBeVisible()
+    expect(auth.onAuthStateChange).not.toHaveBeenCalled()
+    expect(auth.initialize).not.toHaveBeenCalled()
     expect(screen.queryByText(user.email)).not.toBeInTheDocument()
+  })
+
+  it('uses Yandex-only session actions without opening Supabase Auth', async () => {
+    const retry = vi.fn().mockResolvedValue(undefined)
+    const signOut = vi.fn().mockResolvedValue(undefined)
+    yandex.state = {
+      session: {
+        accessMode: 'read_write',
+        profile: { id: 'trainer-1', firstName: 'Яна', lastName: null, timezone: 'Europe/Moscow', accountRole: 'trainer' },
+        session: { token: 'a'.repeat(43), expiresAt: '2099-01-01T00:00:00.000Z' },
+      },
+      loading: false, error: null, retry, signOut,
+    }
+    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
+    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
+    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
+
+    renderAuth(<YandexProbe />)
+    expect(screen.getByText('trainer-1')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Обновить' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Выйти' }))
+
+    await waitFor(() => expect(signOut).toHaveBeenCalledOnce())
+    expect(retry).toHaveBeenCalledOnce()
+    expect(auth.onAuthStateChange).not.toHaveBeenCalled()
+    expect(auth.signOut).not.toHaveBeenCalled()
+    expect(auth.getSession).not.toHaveBeenCalled()
   })
 
   it('opens client onboarding before the native account has a client card', async () => {
