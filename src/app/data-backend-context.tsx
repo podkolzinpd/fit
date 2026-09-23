@@ -15,7 +15,7 @@ import { trainerProfilesRepository } from '../data/repositories/trainer-profiles
 import { trainerDiscoveryRepository } from '../data/repositories/trainer-discovery.repository'
 import { workoutsRepository } from '../data/repositories/workouts.repository'
 import { createYandexMainRepository } from '../data/repositories/yandex-main.repository'
-import { getYandexAppSessionEntryConfig, getYandexMainRoutingConfig, isYandexMainRoutingEnabled } from './feature-flags'
+import { getYandexAppSessionEntryConfig, getYandexMainRoutingConfig, isYandexMainRoutingEnabled, isYandexOnlyAuthEnabled } from './feature-flags'
 import { useAuth } from './auth-context'
 import { useYandexAppSession } from './yandex-app-session-context'
 
@@ -57,7 +57,7 @@ const supabaseDataBackend: DataBackend = {
   realtime: realtimeRepository,
 }
 
-const DataBackendContext = createContext<DataBackend | null>(null)
+const DataBackendContext = createContext<DataBackend | 'yandex-session-unavailable' | null>(null)
 
 export function DataBackendProvider({ children }: PropsWithChildren) {
   const { actor } = useAuth()
@@ -67,6 +67,11 @@ export function DataBackendProvider({ children }: PropsWithChildren) {
     [],
   )
   const value = useMemo(() => {
+    if (actor !== null && isYandexOnlyAuthEnabled()
+      && (session === null || config === null || actor.userId !== session.profile.id
+        || session.accessMode !== 'read_write')) {
+      return 'yandex-session-unavailable'
+    }
     if (actor === null || session === null || config === null
       || actor.userId !== session.profile.id
       || (!isYandexMainRoutingEnabled() && session.accessMode !== 'read_write')) {
@@ -79,8 +84,12 @@ export function DataBackendProvider({ children }: PropsWithChildren) {
 }
 
 export function useDataBackend(): DataBackend {
+  const backend = use(DataBackendContext)
+  if (backend === 'yandex-session-unavailable') {
+    throw new Error('Сессия Yandex ID недоступна. Войдите снова.')
+  }
   // Keeping the Supabase backend as the test/default value preserves existing
   // isolated component harnesses. Production composition always installs the
   // provider and selects once from the authenticated session.
-  return use(DataBackendContext) ?? supabaseDataBackend
+  return backend ?? supabaseDataBackend
 }
