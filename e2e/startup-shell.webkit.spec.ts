@@ -27,3 +27,18 @@ test('убирает стартовый экран после успешного
 
   await expect(page.locator('#fit-startup-title')).toHaveCount(0)
 })
+
+test('не оставляет белый экран, если модуль запустился, а интерфейс не отрисовался', async ({ page }) => {
+  await page.route('**/src/main.tsx', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/javascript',
+    body: [
+      "document.getElementById('root').replaceChildren()",
+      'window.__fitMarkAppStarted?.()',
+    ].join(';'),
+  }))
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+
+  await expect(page.locator('#root')).toBeEmpty()
+  await expect(page.getByRole('heading', { name: 'Открываем Fit…' })).toBeVisible()
+})
