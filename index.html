@@ -19,6 +19,9 @@
       html, body, #root { min-height: 100%; }
       body { margin: 0; background: #fbfaf7; color: #202022; }
       .fit-startup-shell {
+        position: fixed;
+        z-index: 2147483647;
+        inset: 0;
         min-height: 100dvh;
         box-sizing: border-box;
         display: grid;
@@ -26,6 +29,7 @@
         justify-items: center;
         gap: 14px;
         padding: max(28px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom));
+        background: #fbfaf7;
         font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
         text-align: center;
       }
@@ -72,23 +76,27 @@
     </script>
   </head>
   <body>
-    <div id="root">
-      <main class="fit-startup-shell" aria-live="polite">
-        <span class="fit-startup-mark" aria-hidden="true">FIT</span>
-        <h1 id="fit-startup-title">Открываем Fit…</h1>
-        <p id="fit-startup-message">Загружаем приложение.</p>
-        <button id="fit-startup-reload" type="button" hidden>Обновить приложение</button>
-      </main>
-    </div>
+    <div id="root"></div>
+    <main id="fit-startup-shell" class="fit-startup-shell" aria-live="polite">
+      <span class="fit-startup-mark" aria-hidden="true">FIT</span>
+      <h1 id="fit-startup-title">Открываем Fit…</h1>
+      <p id="fit-startup-message">Загружаем приложение.</p>
+      <button id="fit-startup-reload" type="button" hidden>Обновить приложение</button>
+    </main>
     <script>
       (function () {
         var finished = false
+        var startRequested = false
+        var probeTimer = null
+        var shell = document.getElementById('fit-startup-shell')
+        var root = document.getElementById('root')
         var title = document.getElementById('fit-startup-title')
         var message = document.getElementById('fit-startup-message')
         var reload = document.getElementById('fit-startup-reload')
 
         function showStartupError() {
           if (finished) return
+          if (!title || !message || !reload) return
           title.textContent = 'Не удалось открыть Fit'
           message.textContent = 'Обновите приложение. Ваши данные и тренировки сохранены.'
           reload.hidden = false
@@ -103,16 +111,39 @@
         window.addEventListener('error', handleLoadError, true)
         window.addEventListener('unhandledrejection', showStartupError)
         window.addEventListener('fit:asset-load-error', showStartupError)
-        reload.addEventListener('click', function () { window.location.reload() })
+        reload.addEventListener('click', function () {
+          var url = new URL(window.location.href)
+          url.searchParams.set('fit-recover', String(Date.now()))
+          window.location.replace(url.toString())
+        })
 
-        window.__fitMarkAppStarted = function () {
+        function appIsVisible() {
+          if (!root || root.childElementCount === 0) return false
+          var bounds = root.getBoundingClientRect()
+          return bounds.width > 0 && bounds.height > 0
+        }
+
+        function finishStartupWhenVisible() {
+          if (finished || !startRequested) return
+          if (!appIsVisible()) {
+            probeTimer = window.setTimeout(finishStartupWhenVisible, 100)
+            return
+          }
           finished = true
           window.clearTimeout(timeout)
+          if (probeTimer !== null) window.clearTimeout(probeTimer)
           window.removeEventListener('error', handleLoadError, true)
           window.removeEventListener('unhandledrejection', showStartupError)
           window.removeEventListener('fit:asset-load-error', showStartupError)
-          document.getElementById('fit-startup-shell-styles')?.remove()
+          if (shell) shell.remove()
+          var styles = document.getElementById('fit-startup-shell-styles')
+          if (styles) styles.remove()
           delete window.__fitMarkAppStarted
+        }
+
+        window.__fitMarkAppStarted = function () {
+          startRequested = true
+          window.requestAnimationFrame(finishStartupWhenVisible)
         }
       })()
     </script>
