@@ -714,6 +714,10 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
   } else {
     await expect(page.locator('.phone-frame')).toHaveClass(/trainer-today-identity/)
     await expect(page.locator('.phone-frame')).not.toHaveClass(/client-home-identity/)
+    const compactActions = page.locator('.today-voice-hero-compact .voice-action-buttons')
+    await expect(compactActions).toBeVisible()
+    await expect(compactActions.getByRole('button', { name: 'Ввести текстом' })).toBeVisible()
+    await expect(page.locator('.today-text-toggle')).toHaveCount(0)
     await expect(page.locator('.trainer-attention-loading')).toHaveCount(0)
     await expect(page.locator('.trainer-attention')).toBeVisible()
   }
