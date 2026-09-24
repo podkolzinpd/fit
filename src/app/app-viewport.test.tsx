@@ -90,4 +90,12 @@ describe('AppViewportProvider', () => {
     expect(document.documentElement.style.getPropertyValue('--app-viewport-offset-top')).toBe('0px')
     expect(mobileViewport.scrollTo).toHaveBeenCalledWith(0, 0)
   })
+
+  it('не записывает нулевую высоту при временно пустой геометрии WebKit', () => {
+    installMobileViewport(0)
+    render(<AppViewportProvider><Probe /></AppViewportProvider>)
+
+    expect(document.documentElement.style.getPropertyValue('--app-viewport-height')).toBe('')
+    expect(document.documentElement.style.getPropertyValue('--app-visible-height')).toBe('')
+  })
 })
