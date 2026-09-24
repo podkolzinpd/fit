@@ -8,13 +8,14 @@ import test from 'node:test'
 const requestId = '3ea35ed0-4895-4893-b52a-98715ab1d5fa'
 const otherId = '129c90e9-8f58-4c93-8160-19d72f25f1bc'
 
-test('keeps incident diagnostics manual, read-only, bounded, and scoped to the API container', () => {
+test('keeps incident diagnostics manual, read-only, bounded, and scoped to approved containers', () => {
   const workflow = fs.readFileSync('.github/workflows/diagnose-yandex-stage.yml', 'utf8')
 
   assert.match(workflow, /^on:\n  workflow_dispatch:/m)
   assert.match(workflow, /^  id-token: write$/m)
   assert.match(workflow, /node scripts\/validate-yandex-incident-inputs\.mjs/)
-  assert.match(workflow, /--name fit-stage-api/)
+  assert.match(workflow, /fit-stage-api\|fit-stage-migration/)
+  assert.match(workflow, /--name "\$SERVICE_NAME"/)
   assert.match(workflow, /serverless container revision list/)
   assert.match(workflow, /activeRevisionAtDiagnosis/)
   assert.match(workflow, /activeReleaseAtDiagnosis/)
