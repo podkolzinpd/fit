@@ -45,6 +45,29 @@ test('global rollout gives a new client the My Workouts identity', async ({ page
   await expect(page.locator('html')).toHaveClass(/ui-identity/)
 })
 
+test('client opens the same compact workout entry from history as from home', async ({ page }, testInfo) => {
+  await createClientAccount(page, `workouts-compact-entry-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+  await page.goto('/me/workouts')
+
+  await expect(page.getByRole('link', { name: 'Добавить тренировку' })).toHaveAttribute('href', '/me?entry=workout')
+
+  await createCompletedWorkout(page)
+  await page.goto('/me/workouts')
+  const addWorkout = page.getByRole('link', { name: 'Добавить', exact: true })
+  await expect(addWorkout).toHaveAttribute('href', '/me?entry=workout')
+  await addWorkout.click()
+
+  await expect(page).toHaveURL(/\/me\?entry=workout$/)
+  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Разобрать тренировку' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Выбрать упражнения вручную' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Тип тренировки' })).toHaveCount(0)
+  await expect(page.getByLabel('Дата', { exact: true })).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Скрыть' }).click()
+  await expect(page).toHaveURL(/\/me$/)
+})
+
 test('client always has a preset workout tab on My Workouts, before and after their first workout', async ({ page }, testInfo) => {
   await createClientAccount(page, `workouts-preset-${testInfo.workerIndex}-${Date.now()}@fit.local`)
   await page.goto('/me/workouts')

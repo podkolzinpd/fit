@@ -24,6 +24,14 @@ async function login(page: import('@playwright/test').Page, email: string) {
   await expect(page).toHaveURL(/\/me$/)
 }
 
+async function saveCompactClientPlan(page: Page) {
+  await page.getByRole('button', { name: 'Далее' }).click()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Запланировать тренировку' }).click(),
+  ])
+}
+
 test('trainer invitation name stays inside the visible iPhone viewport above the keyboard', async ({ page }) => {
   await loginAsTrainer(page)
   await page.goto('/clients')
@@ -868,7 +876,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.getByLabel('Поиск упражнения').fill('Бег')
   await page.locator('[data-exercise-ref="running"]').click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await saveCompactClientPlan(page)
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
@@ -916,10 +924,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.getByLabel('Поиск упражнения').fill('Планка')
   await page.getByRole('button', { name: /^Выбрать: Планка/ }).first().click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
-  await Promise.all([
-    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
-    page.getByRole('button', { name: 'Сохранить' }).click(),
-  ])
+  await saveCompactClientPlan(page)
   const selectedPlanPath = new URL(page.url()).pathname
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
   const recovery = page.getByRole('alertdialog')

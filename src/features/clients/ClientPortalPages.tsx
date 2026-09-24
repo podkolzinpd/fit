@@ -87,7 +87,7 @@ export function MyWorkoutsPage() {
   const showHistoryList = calendar.showList
   const showHistoryCalendar = () => calendar.showCalendar(historyItems[0]?.workoutDate)
   const calendarReturnTo = `/me/workouts${calendar.search}`
-  return <><Page className="client-workouts-page" title="Мои тренировки" action={mine.data && hasWorkouts && <Link className="button" to="/workouts/new">Добавить</Link>}><AsyncView loading={mine.isLoading || upcoming.isLoading || history.isLoading || trainers.isLoading} error={mine.error ?? upcoming.error ?? history.error ?? trainers.error} empty={!mine.data} onRetry={() => { void mine.refetch(); void upcoming.refetch(); void history.refetch(); void trainers.refetch() }}
+  return <><Page className="client-workouts-page" title="Мои тренировки" action={mine.data && hasWorkouts && <Link className="button" to="/me?entry=workout">Добавить</Link>}><AsyncView loading={mine.isLoading || upcoming.isLoading || history.isLoading || trainers.isLoading} error={mine.error ?? upcoming.error ?? history.error ?? trainers.error} empty={!mine.data} onRetry={() => { void mine.refetch(); void upcoming.refetch(); void history.refetch(); void trainers.refetch() }}
     emptyTitle="Заполните профиль спортсмена" emptyDescription="Он нужен, чтобы добавлять самостоятельные тренировки и получать назначения тренера." emptyAction={<Link className="button primary" to="/me/edit">Заполнить профиль</Link>}>
     {mine.data && <>
       <div className="progress-view-tabs" role="tablist" aria-label="Режим тренировок">
@@ -116,7 +116,7 @@ export function MyWorkoutsPage() {
         </div> : <EmptyState
           title="Новая тренировка"
           description="Добавьте упражнения голосом, текстом или из каталога."
-          action={<Link className="button secondary" to="/workouts/new">Добавить тренировку</Link>}
+          action={<Link className="button secondary" to="/me?entry=workout">Добавить тренировку</Link>}
         />}
       </div>
       <div id="workouts-presets-panel" className="progress-view-panel" role="tabpanel" aria-labelledby="workouts-presets-tab" hidden={workoutsView !== 'presets'}>
