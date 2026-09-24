@@ -86,4 +86,17 @@ describe('useVitalMediaUrl', () => {
     await waitFor(() => expect(createSignedUrl).toHaveBeenCalled())
     expect(result.current).toBeUndefined()
   })
+
+  it('retries transient Yandex signing failures and keeps the recovered URL', async () => {
+    vi.stubEnv('MODE', 'production')
+    vi.stubEnv('VITE_SUPABASE_URL', '')
+    backend.source = 'yandex'
+    createSignedUrl.mockRejectedValueOnce(new Error('temporary'))
+      .mockResolvedValueOnce('https://signed.example/recovered')
+
+    const { result } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/recovered.jpg'))
+
+    await waitFor(() => expect(result.current).toBe('https://signed.example/recovered'))
+    expect(createSignedUrl).toHaveBeenCalledTimes(2)
+  })
 })

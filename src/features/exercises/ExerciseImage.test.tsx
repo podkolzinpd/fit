@@ -129,6 +129,39 @@ describe('ExerciseImage', () => {
     expect(createVitalMediaUrl).not.toHaveBeenCalledWith('vital-pro/fedb-dumbbell-lunge-end.jpg', expect.anything())
   })
 
+  it('signs private picker media only when its card approaches the viewport', async () => {
+    vi.stubEnv('MODE', 'production')
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    let intersectionCallback: IntersectionObserverCallback | undefined
+    const observe = vi.fn()
+    const disconnect = vi.fn()
+    vi.stubGlobal('IntersectionObserver', class {
+      constructor(callback: IntersectionObserverCallback) { intersectionCallback = callback }
+      observe = observe
+      disconnect = disconnect
+      unobserve = vi.fn()
+      takeRecords = vi.fn(() => [])
+      root = null
+      rootMargin = '320px 0px'
+      thresholds = [0]
+    })
+    const createVitalMediaUrl = vi.spyOn(exercisesRepository, 'createVitalMediaUrl')
+      .mockResolvedValue('https://signed.example/cycling.jpg')
+
+    render(<ExerciseImage
+      src="/exercises/vital-pro/vital-cycling-ex061.jpg"
+      alt="Велотренажёр"
+      variant="picker"
+    />)
+
+    expect(observe).toHaveBeenCalledOnce()
+    expect(createVitalMediaUrl).not.toHaveBeenCalled()
+    intersectionCallback?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver)
+    await waitFor(() => expect(screen.getByRole('img', { name: 'Велотренажёр' })).toHaveAttribute('src', 'https://signed.example/cycling.jpg'))
+    expect(createVitalMediaUrl).toHaveBeenCalledOnce()
+    expect(disconnect).toHaveBeenCalled()
+  })
+
   it('keeps the matching Gym Pro poster visible until its video is ready', async () => {
     vi.stubEnv('MODE', 'production')
     vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
