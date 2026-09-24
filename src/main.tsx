@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AppRoot } from './app/AppRoot'
 import { isMaintenanceModeEnabled } from './app/feature-flags'
@@ -18,8 +18,15 @@ declare global {
 applyAppTheme(getAppTheme())
 if (!isMaintenanceModeEnabled()) initializeWorkoutInactivityNotificationActions()
 
-createRoot(document.getElementById('root')!).render(<StrictMode><AppRoot /></StrictMode>)
-window.__fitMarkAppStarted?.()
+function AppStartedSignal() {
+  useEffect(() => window.__fitMarkAppStarted?.(), [])
+  return null
+}
+
+createRoot(document.getElementById('root')!).render(<StrictMode>
+  <AppRoot />
+  <AppStartedSignal />
+</StrictMode>)
 
 // Убираем технический параметр после автоматического восстановления старого
 // закэшированного entry-файла, не затрагивая остальные параметры маршрута.
