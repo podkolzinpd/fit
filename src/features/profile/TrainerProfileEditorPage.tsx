@@ -389,7 +389,7 @@ export function TrainerProfessionalProfileSection() {
           </div>
           {draft.trainingModes.includes('in_person') && <section className="trainer-locations-editor" aria-labelledby="trainer-locations-title">
             <div><h3 id="trainer-locations-title">Где вы тренируете лично</h3><p>Выберите метро или добавьте место.</p></div>
-            <MetroStationPicker selectedIds={draft.metroStationIds} onChange={(stationIds) => set('metroStationIds', stationIds)} />
+            <MetroStationPicker city={draft.city} selectedIds={draft.metroStationIds} onChange={(stationIds) => set('metroStationIds', stationIds)} />
             <Field label="Клуб, район или адрес"><span className="trainer-custom-location-input">
               <input value={customLocationText} maxLength={160} placeholder="Например, World Class Тверская" onChange={(event) => setCustomLocationText(event.target.value)} onKeyDown={(event) => {
                 if (event.key === 'Enter') { event.preventDefault(); addCustomLocation() }
