@@ -6,7 +6,7 @@ import { useAppViewport } from '../../app/app-viewport'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { TrainerCatalogFilters, TrainerCatalogItem } from '../../shared/domain'
 import { ChevronDownIcon, CloseIcon } from '../../shared/icons'
-import { moscowMetroStationById } from '../../shared/moscow-metro'
+import { metroStationById } from '../../shared/metro'
 import { AsyncView, Field, Page, Switch } from '../../shared/ui'
 import { MetroStationPicker } from './MetroStationPicker'
 import { SpecialtyChecklist } from './SpecialtyChecklist'
@@ -95,7 +95,7 @@ function CatalogCard({ profile, onOpen }: { profile: TrainerCatalogItem; onOpen:
     ? null
     : Math.max(0, currentYear - published.experienceStartYear)
   const locationNames = published.trainingModes.includes('in_person')
-    ? [...published.metroStationIds.map((id) => moscowMetroStationById(id)?.name).filter((name): name is string => name !== undefined), ...published.customLocations]
+    ? [...published.metroStationIds.map((id) => metroStationById(id)?.name).filter((name): name is string => name !== undefined), ...published.customLocations]
     : []
   return <article className="trainer-catalog-card card">
     <div className="trainer-catalog-card-head">
@@ -168,7 +168,7 @@ function CatalogFiltersSheet({ draft, setDraft, onApply, onReset, onClose, retur
           </details>
         </div>
         <Field label="Город"><input value={draft.city} maxLength={100} onChange={(event) => setDraft((value) => ({ ...value, city: event.target.value }))} /></Field>
-        <div className="trainer-catalog-metro-filter"><MetroStationPicker selectedIds={draft.metroStationIds} onChange={(stationIds) => setDraft((value) => ({ ...value, metroStationIds: stationIds }))} /></div>
+        <div className="trainer-catalog-metro-filter"><MetroStationPicker city={draft.city} selectedIds={draft.metroStationIds} onChange={(stationIds) => setDraft((value) => ({ ...value, metroStationIds: stationIds }))} /></div>
         <Field label="Формат"><select value={draft.mode} onChange={(event) => setDraft((value) => ({ ...value, mode: event.target.value as TrainerCatalogFilters['mode'] }))}>
           <option value="">Любой</option><option value="online">Онлайн</option><option value="in_person">Лично</option>
         </select></Field>

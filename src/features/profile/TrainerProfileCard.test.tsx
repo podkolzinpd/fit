@@ -66,6 +66,17 @@ describe('TrainerProfileCard', () => {
     expect(container.querySelector('img')).toBeNull()
   })
 
+  it('shows Saint Petersburg metro stations in the public profile', () => {
+    render(<TrainerProfileCard profile={{
+      ...completeProfile,
+      city: 'Санкт-Петербург',
+      metroStationIds: ['spb-gorny-institut', 'spb-putilovskaya'],
+      customLocations: [],
+    }} publicView />)
+
+    expect(screen.getByRole('list', { name: 'Станции метро' })).toHaveTextContent('Горный институтПутиловская')
+  })
+
   it('uses correct singular and first-year experience labels', () => {
     const { rerender } = render(<TrainerProfileCard profile={{ ...completeProfile, experienceStartYear: new Date().getFullYear() }} />)
     expect(screen.getByText('Меньше года')).toBeVisible()

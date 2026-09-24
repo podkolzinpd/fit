@@ -128,7 +128,7 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   await page.getByRole('button', { name: 'Фильтры' }).click()
   await page.locator('.trainer-catalog-specialty-disclosure summary').click()
   await page.getByRole('checkbox', { name: 'Похудение и коррекция фигуры' }).check()
-  await page.getByRole('combobox', { name: 'Метро Москвы' }).fill('Динамо')
+  await page.getByRole('combobox', { name: 'Метро' }).fill('Динамо')
   await page.getByRole('option', { name: /Динамо/ }).click()
   await page.getByRole('button', { name: 'Показать тренеров' }).click()
   await expect(page.getByRole('button', { name: 'Фильтры · 2' })).toBeVisible()

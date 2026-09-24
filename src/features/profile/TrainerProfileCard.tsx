@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { TrainerProfileDraft } from '../../shared/domain'
 import { ChevronDownIcon } from '../../shared/icons'
-import { moscowMetroStationById } from '../../shared/moscow-metro'
+import { metroStationById } from '../../shared/metro'
 import { MetroStationList } from './MetroStationPicker'
 
 function experienceLabel(startYear: number | null): string | null {
@@ -43,7 +43,7 @@ export function TrainerProfileCard({ profile, isBrandTrainer = false, publicView
 }) {
   const experience = experienceLabel(profile.experienceStartYear)
   const certificateCount = profile.certificates.length
-  const metroStationIds = profile.metroStationIds.filter((id) => moscowMetroStationById(id) !== undefined)
+  const metroStationIds = profile.metroStationIds.filter((id) => metroStationById(id) !== undefined)
   const locationCount = profile.trainingModes.includes('in_person') ? metroStationIds.length + profile.customLocations.length : 0
   const photos = profile.photos ?? []
   const coverUrl = photos[0]?.url ?? photos[0]?.thumbnailUrl ?? profile.avatarDataUrl

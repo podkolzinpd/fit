@@ -6243,10 +6243,14 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .metro-picker-results li { margin:0; }
 .metro-picker-results button { width:100%; min-height:44px; display:flex; align-items:center; gap:9px; padding:8px 10px; border:0; border-radius:10px; background:transparent; color:var(--fg); text-align:left; box-shadow:none; }
 .metro-picker-results button:hover, .metro-picker-results button:focus-visible { background:var(--surface-sunken); }
+.metro-picker-result-label { min-width:0; display:grid; gap:2px; }
+.metro-picker-result-label > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.metro-picker-result-label small { color:var(--secondary-label-fg); font-size:12px; font-weight:500; }
 .metro-picker-empty { margin:0; color:var(--secondary-label-fg); font-size:12px; }
 .metro-picker-selected { display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:0; list-style:none; }
 .metro-picker-selected li { min-height:36px; display:flex; align-items:center; gap:7px; max-width:100%; padding:5px 5px 5px 10px; border:1px solid var(--border); border-radius:var(--radius-pill); background:var(--surface-sunken); font-size:13px; }
 .metro-picker-selected li > span:nth-child(2) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.metro-picker-selected li > span:nth-child(2) small { color:var(--secondary-label-fg); font-size:12px; }
 .metro-picker-selected button { width:28px; height:28px; flex:0 0 28px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; background:transparent; color:var(--muted); box-shadow:none; }
 .metro-picker-selected button svg { width:16px; height:16px; }
 .metro-line-dots { display:flex; align-items:center; gap:3px; flex:0 0 auto; }
