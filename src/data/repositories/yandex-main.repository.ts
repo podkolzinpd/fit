@@ -22,6 +22,7 @@ import type {
   TrainerDiscoveryPromptAction,
   TrainerProfileDraft,
   TrainerProfilePhotoUpload,
+  TrainerWorkspace,
   Workout,
   WorkoutDraft,
   WorkoutExerciseDraft,
@@ -73,6 +74,22 @@ const chatMessageSchema = z.object({
   editedAt: yandexDateTimeSchema.nullable(),
   replyTo: z.object({ messageId: uuid, senderId: uuid.nullable(), body: z.string().nullable(), hasImage: z.boolean(), deleted: z.boolean() }).nullable(),
   image: z.object({ url: z.url().nullable(), mimeType: z.literal('image/jpeg'), width: z.number().int().positive(), height: z.number().int().positive(), sizeBytes: z.number().int().positive() }).nullable(),
+})
+const trainerWorkspaceSchema = z.object({
+  summary: z.object({
+    pendingActionCount: z.number().int().nonnegative(),
+    unresolvedQuestionCount: z.number().int().nonnegative(),
+    unreadChatMessageCount: z.number().int().nonnegative(),
+    inboxCount: z.number().int().nonnegative(),
+    updatedAt: yandexDateTimeSchema,
+  }),
+  questions: z.array(z.object({
+    workoutId: uuid,
+    clientId: uuid,
+    clientName: z.string().min(1),
+    question: z.string().min(1),
+    askedAt: yandexDateTimeSchema,
+  })),
 })
 const clientSchema = z.object({
   id: uuid,
@@ -797,6 +814,11 @@ export function createYandexMainRepository(
 
   return {
     source: 'yandex',
+    trainerWorkspace: {
+      async read(): Promise<TrainerWorkspace> {
+        return readJson(queries, '/v1/trainer-workspace', trainerWorkspaceSchema)
+      },
+    },
     legal: {
       async getAcceptanceStatus() {
         return readJson(queries, '/v1/legal/acceptance', legalAcceptanceStatusSchema)

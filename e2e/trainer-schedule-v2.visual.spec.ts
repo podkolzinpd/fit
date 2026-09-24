@@ -1,0 +1,138 @@
+import { expect, test, type Page } from '@playwright/test'
+
+const trainerId = '10000000-0000-4000-8000-000000000001'
+const clientId = '10000000-0000-4000-8000-000000000002'
+const workoutId = '10000000-0000-4000-8000-000000000003'
+const sessionToken = 's'.repeat(43)
+
+const workout = {
+  id: workoutId,
+  trainerId,
+  clientId,
+  clientName: 'Алексей Смирнов',
+  createdBy: trainerId,
+  startedBy: null,
+  completedBy: null,
+  workoutDate: '2026-09-24',
+  startTime: '10:00',
+  endTime: '11:00',
+  status: 'planned',
+  notes: null,
+  clientComment: null,
+  sessionRpe: null,
+  wellbeing: null,
+  discomfort: null,
+  feedbackSubmittedAt: null,
+  trainerReaction: null,
+  trainerReview: null,
+  trainerReviewAuthorId: null,
+  trainerReviewedAt: null,
+  clientQuestion: null,
+  clientQuestionAskedAt: null,
+  clientQuestionResolvedAt: null,
+  startedAt: null,
+  completedAt: null,
+  version: 1,
+  exercises: [],
+}
+
+async function mockPilot(page: Page) {
+  await page.addInitScript(({ token, profileId }) => {
+    localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({
+      token,
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    }))
+    localStorage.setItem(`fit.coachmarks-seen.${profileId}`, JSON.stringify([
+      'assistant-all-trainers-2026-09',
+    ]))
+  }, { token: sessionToken, profileId: trainerId })
+  await page.route('http://127.0.0.1:4100/v1/**', async (route) => {
+    const url = new URL(route.request().url())
+    let body: unknown
+    if (url.pathname === '/v1/auth/yandex/session') {
+      body = {
+        accessMode: 'read_write',
+        profile: {
+          id: trainerId,
+          firstName: 'Антон',
+          lastName: null,
+          timezone: 'Europe/Moscow',
+          accountRole: 'trainer',
+          experiments: { trainerScheduleV2: true },
+        },
+      }
+    } else if (url.pathname === '/v1/legal/acceptance') {
+      body = { applicable: true, accepted: true, acceptedAt: '2026-09-01T00:00:00.000Z' }
+    } else if (url.pathname === '/v1/training-data') {
+      body = {
+        accessMode: 'read_only',
+        customExercises: [],
+        workouts: [workout],
+        attention: [],
+        attentionPreferences: [],
+        hasMoreWorkouts: false,
+        totalWorkouts: 1,
+      }
+    } else if (url.pathname === '/v1/trainer-workspace') {
+      body = {
+        summary: {
+          pendingActionCount: 3,
+          unresolvedQuestionCount: 2,
+          unreadChatMessageCount: 4,
+          inboxCount: 6,
+          updatedAt: '2026-09-24T12:00:00.000Z',
+        },
+        questions: [{
+          workoutId,
+          clientId,
+          clientName: 'Алексей Смирнов',
+          question: 'Можно заменить приседания?',
+          askedAt: '2026-09-24T11:30:00.000Z',
+        }],
+      }
+    } else if (url.pathname === '/v1/chat/threads') {
+      body = { threads: [{
+        conversationId: '10000000-0000-4000-8000-000000000004',
+        clientId,
+        trainerId,
+        partnerUserId: clientId,
+        partnerName: 'Алексей Смирнов',
+        activeConnection: true,
+        lastMessageBody: 'Спасибо!',
+        lastMessageAt: '2026-09-24T11:45:00.000Z',
+        lastMessageSenderId: clientId,
+        unreadCount: 4,
+        canMessage: true,
+        blockedByMe: false,
+        blockedByPartner: false,
+      }] }
+    } else {
+      await route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
+      return
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
+  })
+}
+
+test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
+
+test('renders the single-trainer schedule and combines questions with messages', async ({ page }, testInfo) => {
+  await mockPilot(page)
+  await page.goto('/schedule?date=2026-09-24')
+
+  await expect(page.locator('.trainer-schedule-v2-shell')).toBeVisible()
+  await expect(page.getByRole('link', { name: /3 Незавершённые действия/ })).toHaveAttribute('href', '/today#trainer-attention')
+  await expect(page.getByRole('link', { name: /6 Вопросы и сообщения/ })).toHaveAttribute('href', '/chat')
+  await expect(page.getByText('Алексей Смирнов')).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toContainText('СегодняРасписаниеКлиентыАссистент')
+
+  const screenshotPath = testInfo.outputPath('trainer-schedule-v2.png')
+  await page.screenshot({ path: screenshotPath, fullPage: true })
+  await testInfo.attach('trainer-schedule-v2', { path: screenshotPath, contentType: 'image/png' })
+
+  await page.getByRole('link', { name: /6 Вопросы и сообщения/ }).click()
+  await expect(page).toHaveURL(/\/chat$/)
+  await expect(page.getByRole('heading', { name: 'Вопросы тренеру' })).toBeVisible()
+  await expect(page.getByText('Можно заменить приседания?')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Сообщения', level: 2 })).toBeVisible()
+})

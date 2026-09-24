@@ -68,6 +68,10 @@ import {
   CURRENT_TERMS_VERSION,
 } from './legal-document-versions.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
+import {
+  TrainerWorkspaceUnavailableError,
+  type PilotTrainerWorkspace,
+} from './pilot-trainer-workspace.js'
 import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
 import type { PlannedWorkoutDraft } from './planned-workout-request.js'
 import type { ProfileResponse } from './profile.js'
@@ -356,6 +360,60 @@ describe('reliable chat API', () => {
     const response = await app.inject({ method: 'POST', url: '/v1/chat/conversations', headers: { 'x-fit-pilot-session': sessionToken }, payload: { clientId, trainerId } })
     expect(response.statusCode).toBe(403)
     expect(open).not.toHaveBeenCalled()
+  })
+})
+
+describe('trainer workspace API', () => {
+  const sessionToken = 'w'.repeat(43)
+  const workspace = {
+    summary: {
+      pendingActionCount: 3,
+      unresolvedQuestionCount: 2,
+      unreadChatMessageCount: 4,
+      inboxCount: 6,
+      updatedAt: '2026-09-24T12:00:00.000Z',
+    },
+    questions: [],
+  }
+
+  it('returns the actor-scoped trainer summary without caching', async () => {
+    const read = vi.fn<PilotTrainerWorkspace['read']>().mockResolvedValue(workspace)
+    const app = buildApp({ pilotTrainerWorkspace: { read }, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/trainer-workspace',
+      headers: { 'x-fit-session': sessionToken },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toEqual(workspace)
+    expect(read).toHaveBeenCalledWith({ accessMode: 'read_write', token: sessionToken })
+  })
+
+  it('keeps the endpoint closed without a configured reader or a trainer actor', async () => {
+    const unavailableApp = buildApp({ logger: false })
+    const read = vi.fn<PilotTrainerWorkspace['read']>()
+      .mockRejectedValue(new TrainerWorkspaceUnavailableError())
+    const clientApp = buildApp({ pilotTrainerWorkspace: { read }, logger: false })
+    apps.push(unavailableApp, clientApp)
+
+    const unavailable = await unavailableApp.inject({
+      method: 'GET',
+      url: '/v1/trainer-workspace',
+      headers: { 'x-fit-session': sessionToken },
+    })
+    const forbidden = await clientApp.inject({
+      method: 'GET',
+      url: '/v1/trainer-workspace',
+      headers: { 'x-fit-session': sessionToken },
+    })
+
+    expect(unavailable.statusCode).toBe(503)
+    expect(forbidden.statusCode).toBe(403)
+    expect(forbidden.json()).toEqual({ error: 'action_not_allowed' })
   })
 })
 
@@ -1727,6 +1785,7 @@ const PROFILE_RESPONSE: ProfileResponse = {
     lastName: null,
     timezone: 'Europe/Moscow',
     accountRole: 'trainer',
+    experiments: { trainerScheduleV2: false },
   },
 }
 

@@ -96,6 +96,7 @@ import {
   CURRENT_TERMS_VERSION,
 } from './legal-document-versions.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
+import { TrainerWorkspaceUnavailableError, type PilotTrainerWorkspace } from './pilot-trainer-workspace.js'
 import type { PilotProgressData } from './progress-data.js'
 import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
 import type { PilotWorkoutParser } from './pilot-workout-parser.js'
@@ -186,6 +187,7 @@ interface BuildAppOptions {
   pilotProfileReader?: PilotProfileReader
   pilotSessionIssuer?: PilotSessionIssuer
   pilotTrainingDataReader?: PilotTrainingDataReader
+  pilotTrainerWorkspace?: PilotTrainerWorkspace
   pilotProgressData?: PilotProgressData
   pilotWorkoutsWriter?: PilotWorkoutsWriter
   pilotWorkoutParser?: PilotWorkoutParser
@@ -1921,6 +1923,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       if (error instanceof YandexAppSessionDeniedError) {
         return reply.code(403).send({ error: 'action_not_allowed' })
       }
+      if (error instanceof TrainerWorkspaceUnavailableError) {
+        return reply.code(403).send({ error: 'action_not_allowed' })
+      }
       if (error instanceof AppFeedbackCommandError) {
         return reply
           .code(error.failure === 'forbidden' ? 403 : 422)
@@ -2221,6 +2226,17 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     if (options.pilotChat === undefined) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(reply, () => options.pilotChat!.listThreads(session),
       (threads) => reply.header('cache-control','no-store').send({ threads }))
+  })
+
+  app.get('/v1/trainer-workspace', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (options.pilotTrainerWorkspace === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => options.pilotTrainerWorkspace!.read(session),
+      (workspace) => reply.header('cache-control', 'no-store').send(workspace),
+    )
   })
 
   app.post('/v1/chat/conversations', async (request, reply) => {

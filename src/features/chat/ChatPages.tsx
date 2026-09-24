@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { copyText } from '../../shared/clipboard'
@@ -11,6 +11,8 @@ import { CloseIcon, MessageIcon, PhotoIcon, SearchIcon } from '../../shared/icon
 import { AsyncView, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { prepareChatImage } from './chat-image'
 import { useChatThreads } from './use-chat-threads'
+import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
+import { useTrainerWorkspace } from '../workouts/use-trainer-workspace'
 
 function timeLabel(value: string) {
   return new Date(value).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
@@ -27,6 +29,9 @@ export function ChatListPage() {
   const homePath = actor?.role === 'trainer' ? '/today' : '/me'
   const exitChat = () => navigate(homePath, { replace: true })
   const query = useChatThreads()
+  const pilot = isTrainerScheduleV2Enabled(actor)
+  const workspace = useTrainerWorkspace(pilot)
+  const questions = workspace.data?.questions ?? []
   const [opening, setOpening] = useState(false)
   const [openError, setOpenError] = useState(false)
   async function openChat(item: { clientId: string; trainerId: string; conversationId: string | null }) {
@@ -39,7 +44,19 @@ export function ChatListPage() {
   }
   return <Page title="Сообщения" back={homePath} onBack={exitChat} swipeBack className="chat-list-page">
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}
-      empty={query.data?.length === 0} emptyTitle="Диалогов пока нет" emptyDescription="Подключите тренера или спортсмена, чтобы начать переписку.">
+      empty={query.data?.length === 0 && (!pilot || (!workspace.isLoading && questions.length === 0))} emptyTitle="Диалогов пока нет" emptyDescription="Подключите тренера или спортсмена, чтобы начать переписку.">
+      {pilot && <section className="trainer-inbox-questions" aria-labelledby="trainer-inbox-questions-title">
+        <div><h2 id="trainer-inbox-questions-title">Вопросы тренеру</h2><span>{workspace.isError ? '—' : workspace.isLoading ? '' : questions.length > 99 ? '99+' : questions.length}</span></div>
+        {workspace.isLoading && <div className="trainer-inbox-question-loading"><span className="skeleton-line" /><span className="skeleton-line short" /></div>}
+        {workspace.isError && <div className="trainer-inbox-question-error" role="alert"><span>Не удалось загрузить вопросы</span><button type="button" className="link" onClick={() => void workspace.refetch()}>Повторить</button></div>}
+        {!workspace.isLoading && !workspace.isError && questions.length === 0 && <p>Новых вопросов нет</p>}
+        {questions.map((item) => <Link key={item.workoutId} className="trainer-inbox-question" to={`/workouts/${item.workoutId}?reply=1`}>
+          <span className="chat-avatar" aria-hidden="true">{item.clientName.slice(0, 1).toUpperCase()}</span>
+          <span><strong>{item.clientName}</strong><small>{item.question}</small></span>
+          <time>{timeLabel(item.askedAt)}</time>
+        </Link>)}
+      </section>}
+      {pilot && <div className="chat-thread-section-title"><h2>Сообщения</h2><span>{query.data?.reduce((sum, item) => sum + item.unreadCount, 0) || ''}</span></div>}
       <div className="chat-thread-list">{query.data?.map((item) => <button type="button" className="chat-thread" key={`${item.clientId}:${item.trainerId}`}
         disabled={opening} onClick={() => void openChat(item)}>
         <span className="chat-avatar" aria-hidden="true">{item.partnerName.slice(0, 1).toUpperCase()}</span>
@@ -165,6 +182,7 @@ export function ChatConversationPage() {
     await Promise.all([
       connection.refetch(),
       queryClient.invalidateQueries({ queryKey: ['chat-threads'] }),
+      queryClient.invalidateQueries({ queryKey: ['trainer-workspace'] }),
       queryClient.invalidateQueries({ queryKey: ['client-trainers'] }),
     ])
   }
@@ -186,7 +204,7 @@ export function ChatConversationPage() {
     setPending((current) => current.some((item) => deliveredIds.has(item.id)) ? current.filter((item) => !deliveredIds.has(item.id)) : current)
   }, [messages.data])
   useEffect(() => chat.subscribe(conversationId, () => {
-    void messages.refetch(); void queryClient.invalidateQueries({ queryKey: ['chat-threads'] })
+    void messages.refetch(); void queryClient.invalidateQueries({ queryKey: ['chat-threads'] }); void queryClient.invalidateQueries({ queryKey: ['trainer-workspace'] })
   }), [chat, conversationId, messages.refetch, queryClient])
   useEffect(() => {
     const refresh = () => { if (document.visibilityState === 'visible') { void messages.refetch(); void threads.refetch() } }
@@ -226,6 +244,7 @@ export function ChatConversationPage() {
       }
       if (through) void chat.markRead(conversationId, through.id).then(() => {
         void queryClient.invalidateQueries({ queryKey: ['chat-threads'] })
+        void queryClient.invalidateQueries({ queryKey: ['trainer-workspace'] })
         void queryClient.invalidateQueries({ queryKey: ['chat-unread', conversationId] })
       })
     }, { root: surfaceRef.current, threshold: [.65] })
@@ -238,7 +257,7 @@ export function ChatConversationPage() {
     try {
       await chat.send(conversationId, item.id, item.body, item.upload, item.replyTo?.messageId)
       setPending((current) => current.filter((message) => message.id !== item.id))
-      await Promise.all([messages.refetch(), queryClient.invalidateQueries({ queryKey: ['chat-threads'] })])
+      await Promise.all([messages.refetch(), queryClient.invalidateQueries({ queryKey: ['chat-threads'] }), queryClient.invalidateQueries({ queryKey: ['trainer-workspace'] })])
     } catch { setPending((current) => current.map((message) => message.id === item.id ? { ...message, state: 'error' } : message)) }
   }
   async function submit() {
@@ -287,7 +306,7 @@ export function ChatConversationPage() {
     try {
       if (local) setPending((current) => current.filter((message) => message.id !== item.id)); else await chat.remove(conversationId, item.id)
       setHiddenMessageIds((current) => new Set(current).add(item.id)); setOlder((current) => current.filter((message) => message.id !== item.id))
-      await Promise.all([messages.refetch(), queryClient.invalidateQueries({ queryKey: ['chat-threads'] })])
+      await Promise.all([messages.refetch(), queryClient.invalidateQueries({ queryKey: ['chat-threads'] }), queryClient.invalidateQueries({ queryKey: ['trainer-workspace'] })])
     } catch { setDeleteErrorMessageId(item.id) } finally { setDeletingMessageId(null) }
   }
   async function copyMessage(item: ChatMessage) {

@@ -27,6 +27,11 @@ import type {
   YandexIdentityUnlinkTarget,
   YandexIdentityUnlinkManager,
 } from './db/yandex-identity-unlink.js'
+import {
+  TrainerScheduleV2PilotProfileNotReadyError,
+  type TrainerScheduleV2PilotAction,
+  type TrainerScheduleV2PilotManager,
+} from './db/trainer-schedule-v2-pilot.js'
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
 import type { StageTenantMigrationRunner } from './tenant-migration/stage-runner.js'
@@ -53,6 +58,7 @@ interface BuildMigrationAppOptions {
   logger?: boolean
   pilotEnrollment?: PilotEnrollmentOptions
   rolloutAssignment?: StageRolloutAssignmentManager
+  trainerScheduleV2Pilot?: TrainerScheduleV2PilotManager
   runMigrations: () => Promise<readonly string[]>
   runtimeDatabaseReadiness?: (
     sessionToken: string,
@@ -229,6 +235,20 @@ function readBatchRolloutAssignmentRequest(body: unknown): {
   if (action !== 'inspect' && action !== 'enable' && action !== 'disable') return undefined
   if (!('scope' in body) || body.scope !== 'linked-ready') return undefined
   return { action }
+}
+
+function readTrainerScheduleV2PilotRequest(body: unknown): {
+  action: TrainerScheduleV2PilotAction
+  profileId: string
+} | undefined {
+  if (typeof body !== 'object' || body === null) return undefined
+  if (!('action' in body) || !('profileId' in body)) return undefined
+  const action = body.action
+  const profileId = body.profileId
+  if ((action !== 'inspect' && action !== 'enable' && action !== 'disable')
+    || typeof profileId !== 'string'
+    || !UUID_PATTERN.test(profileId)) return undefined
+  return { action, profileId }
 }
 
 function readYandexIdentityUnlinkRequest(
@@ -455,6 +475,32 @@ export function buildMigrationApp(
           return reply.code(409).send({ status: 'profile_not_ready' })
         }
         return reply.code(500).send({ status: 'rollout_assignment_failed' })
+      }
+    })
+  }
+
+  if (options.trainerScheduleV2Pilot !== undefined) {
+    const pilot = options.trainerScheduleV2Pilot
+    app.post('/stage/experiments/trainer-schedule-v2', async (request, reply) => {
+      const command = readTrainerScheduleV2PilotRequest(request.body)
+      if (command === undefined) return reply.code(400).send({ status: 'invalid_request' })
+      try {
+        const result = await pilot.apply(command.action, command.profileId)
+        return {
+          status: command.action === 'inspect'
+            ? 'trainer_schedule_v2_inspected'
+            : command.action === 'enable'
+              ? 'trainer_schedule_v2_enabled'
+              : 'trainer_schedule_v2_disabled',
+          accountRole: result.accountRole,
+          enabled: result.enabled,
+          enabledAssignments: result.enabledAssignments,
+        }
+      } catch (error) {
+        if (error instanceof TrainerScheduleV2PilotProfileNotReadyError) {
+          return reply.code(409).send({ status: 'trainer_profile_not_ready' })
+        }
+        return reply.code(500).send({ status: 'trainer_schedule_v2_failed' })
       }
     })
   }

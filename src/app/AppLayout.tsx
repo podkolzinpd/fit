@@ -6,6 +6,7 @@ import { Coachmark } from '../shared/ui'
 import { applyAppTheme, applyMonochromeThemeColor, applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from './theme'
 import { isAssistantNavPilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
 import { useAppViewport } from './app-viewport'
+import { isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
 
 export { appViewportMetrics } from './app-viewport'
 
@@ -16,6 +17,8 @@ export function AppLayout() {
   const { pathname, search } = useLocation()
   const redesignedStart = isTodayStartRedesignEnabled()
   const { keyboardOpen } = useAppViewport()
+  const trainerScheduleV2 = isTrainerScheduleV2Enabled(actor)
+  const trainerScheduleV2Route = trainerScheduleV2 && pathname === '/schedule'
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
   const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
@@ -103,6 +106,7 @@ export function AppLayout() {
     monochromeTrainerClientForm ? 'trainer-client-form-identity' : '',
     monochromeTrainerClientGoal ? 'trainer-client-goal-identity' : '',
     monochromeTrainerSchedule ? 'trainer-schedule-identity' : '',
+    trainerScheduleV2Route ? 'trainer-schedule-v2-shell' : '',
     monochromeTrainerProgress ? 'trainer-progress-identity' : '',
     monochromeExerciseCatalog ? 'exercise-catalog-identity' : '',
     monochromeTrainerProfile ? 'trainer-profile-identity' : '',
@@ -127,7 +131,8 @@ export function AppLayout() {
   </nav>}</div>
   return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><TodayIcon />Сегодня</NavLink>
-    {redesignedStart && <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>}
+    {trainerScheduleV2Route && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
+    {(redesignedStart || trainerScheduleV2Route) && <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>}
     {actor?.role === 'trainer' && isAssistantNavPilotEnabled(actor.userId, actor.email) && <Coachmark
       id="assistant-all-trainers-2026-09"
       userId={actor.userId}
@@ -136,7 +141,7 @@ export function AppLayout() {
     >
       <NavLink to="/assistant"><AssistantIcon />Ассистент</NavLink>
     </Coachmark>}
-    <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>
-    {!redesignedStart && <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>}
+    {!trainerScheduleV2Route && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
+    {!redesignedStart && !trainerScheduleV2Route && <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>}
   </nav>}</div>
 }

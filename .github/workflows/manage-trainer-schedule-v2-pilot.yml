@@ -1,0 +1,151 @@
+name: Manage trainer Schedule V2 pilot
+
+run-name: ${{ inputs.pilot_action }} Schedule V2 for the single reviewed trainer
+
+on:
+  workflow_dispatch:
+    inputs:
+      pilot_action:
+        description: Inspect, enable, or disable the single-account pilot
+        required: true
+        type: choice
+        options:
+          - inspect
+          - enable
+          - disable
+      confirmation:
+        description: Exact confirmation required for enable or disable
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: yandex-stage
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-provider-cache
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
+
+jobs:
+  pilot:
+    name: Apply single-account Schedule V2 assignment
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate the bounded operation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          PILOT_ACTION: ${{ inputs.pilot_action }}
+          TARGET_EMAIL: ${{ secrets.FIT_TRAINER_SCHEDULE_V2_TARGET_EMAIL }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "$TARGET_EMAIL"
+          case "$PILOT_ACTION" in
+            inspect) test -z "$CONFIRMATION" ;;
+            enable) test "$CONFIRMATION" = ENABLE_ONE_TRAINER_SCHEDULE_V2 ;;
+            disable) test "$CONFIRMATION" = DISABLE_ONE_TRAINER_SCHEDULE_V2 ;;
+            *) exit 1 ;;
+          esac
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.116.0
+      - uses: actions/cache@v4
+        with:
+          path: .terraform-provider-cache
+          key: terraform-yandex-${{ runner.os }}-${{ hashFiles('infra/yandex/.terraform.lock.hcl') }}
+      - name: Prepare Terraform provider cache
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - name: Resolve the reviewed account to its immutable profile ID
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          TARGET_EMAIL: ${{ secrets.FIT_TRAINER_SCHEDULE_V2_TARGET_EMAIL }}
+        run: |
+          set -euo pipefail
+          umask 077
+          temporary_directory=$(mktemp -d)
+          trap 'rm -f "$temporary_directory/api-keys.json" "$temporary_directory/users-page.json"; rmdir "$temporary_directory" 2>/dev/null || true' EXIT
+          supabase projects api-keys --project-ref "$SUPABASE_PROJECT_ID" --output json > "$temporary_directory/api-keys.json"
+          service_role_key=$(jq -er '[.[] | select(.name == "service_role" or .name == "secret") | .api_key][0]' "$temporary_directory/api-keys.json")
+          echo "::add-mask::$service_role_key"
+          matches='[]'
+          page=1
+          while test "$page" -le 10000; do
+            curl --fail --silent --show-error \
+              --header "Authorization: Bearer $service_role_key" \
+              --header "apikey: $service_role_key" \
+              "https://${SUPABASE_PROJECT_ID}.supabase.co/auth/v1/admin/users?page=${page}&per_page=1000" \
+              --output "$temporary_directory/users-page.json"
+            page_matches=$(jq -c --arg email "$TARGET_EMAIL" \
+              '[.users[] | select((.email // "" | ascii_downcase) == ($email | ascii_downcase)) | .id]' \
+              "$temporary_directory/users-page.json")
+            matches=$(jq -cn --argjson left "$matches" --argjson right "$page_matches" '$left + $right')
+            page_size=$(jq -er '.users | length' "$temporary_directory/users-page.json")
+            test "$page_size" -lt 1000 && break
+            page=$((page + 1))
+          done
+          test "$page" -le 10000
+          profile_id=$(printf '%s' "$matches" | jq -er \
+            'if length == 1 then .[0] else error("target_account_not_unique") end')
+          [[ "$profile_id" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]]
+          echo "::add-mask::$profile_id"
+          echo "FIT_TRAINER_SCHEDULE_V2_PROFILE_ID=$profile_id" >> "$GITHUB_ENV"
+      - name: Exchange GitHub OIDC token for a short-lived IAM token
+        run: scripts/yandex-github-oidc.sh
+      - name: Read the private runner URL from remote state
+        working-directory: infra/yandex
+        run: >-
+          terraform init
+          -backend-config=backend.hcl.example
+          -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
+          -backend-config=key=fit/stage/terraform.tfstate
+      - name: Apply the single-account pilot operation
+        working-directory: infra/yandex
+        env:
+          PILOT_ACTION: ${{ inputs.pilot_action }}
+        run: |
+          set -euo pipefail
+          umask 077
+          migration_url=$(terraform output -raw migration_container_url)
+          jq -n --arg action "$PILOT_ACTION" --arg profileId "$FIT_TRAINER_SCHEDULE_V2_PROFILE_ID" \
+            '{action: $action, profileId: $profileId}' > pilot-request.json
+          status=$(curl --silent --show-error \
+            --output pilot-response.json --write-out '%{http_code}' \
+            --request POST \
+            --header "Authorization: Bearer $YC_TOKEN" \
+            --header 'Content-Type: application/json' \
+            --data-binary @pilot-request.json \
+            "${migration_url%/}/stage/experiments/trainer-schedule-v2")
+          test "$status" = 200
+          expected_status="trainer_schedule_v2_${PILOT_ACTION}d"
+          if test "$PILOT_ACTION" = inspect; then expected_status=trainer_schedule_v2_inspected; fi
+          jq -e --arg expected "$expected_status" \
+            '.status == $expected and .accountRole == "trainer"
+             and (.enabled | type == "boolean")
+             and (.enabledAssignments | type == "number")' \
+            pilot-response.json >/dev/null
+          if test "$PILOT_ACTION" = enable; then
+            jq -e '.enabled == true and .enabledAssignments == 1' pilot-response.json >/dev/null
+          fi
+          if test "$PILOT_ACTION" = disable; then
+            jq -e '.enabled == false and .enabledAssignments == 0' pilot-response.json >/dev/null
+          fi
+          echo '### Trainer Schedule V2 pilot' >> "$GITHUB_STEP_SUMMARY"
+          echo "- Operation: \`$PILOT_ACTION\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Enabled: \`$(jq -r '.enabled' pilot-response.json)\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Total enabled assignments: \`$(jq -r '.enabledAssignments' pilot-response.json)\`" >> "$GITHUB_STEP_SUMMARY"

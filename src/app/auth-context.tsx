@@ -136,6 +136,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return {
         kind: 'trainer', role: 'trainer', userId: profile.id, email: null,
         firstName: profile.firstName, lastName: profile.lastName, timezone: profile.timezone,
+        experiments: profile.experiments,
       }
     }
     if (profile.client === null || profile.client === undefined) {
@@ -145,11 +146,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return {
         kind: 'trainer', role: 'client', userId: profile.id, email: null,
         firstName: profile.firstName, lastName: profile.lastName, timezone: profile.timezone,
+        experiments: profile.experiments,
       }
     }
     return {
       kind: 'client', role: 'client', userId: profile.id, email: null,
       firstName: profile.firstName, lastName: profile.lastName, timezone: profile.timezone,
+      experiments: profile.experiments,
       clientId: profile.client.id, trainerId: profile.client.trainerId,
       fullName: profile.client.fullName,
     }

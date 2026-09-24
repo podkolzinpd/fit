@@ -8,6 +8,7 @@ import { PgDatabasePool } from './db/pg-pool.js'
 import { inspectRuntimeDomainReadiness } from './db/runtime-domain-readiness.js'
 import { DatabaseStageDatabaseReaderAccessManager } from './db/stage-database-reader-access.js'
 import { DatabaseStageRolloutAssignmentManager } from './db/stage-rollout-assignment.js'
+import { DatabaseTrainerScheduleV2PilotManager } from './db/trainer-schedule-v2-pilot.js'
 import { DatabaseStageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
 import { DatabaseYandexIdentityUnlinkManager } from './db/yandex-identity-unlink.js'
 import { DatabasePilotEnroller } from './db/yandex-pilot-enrollment.js'
@@ -152,6 +153,8 @@ const app = buildMigrationApp({
     : {
         rolloutAssignment:
           new DatabaseStageRolloutAssignmentManager(privateFeaturePool),
+        trainerScheduleV2Pilot:
+          new DatabaseTrainerScheduleV2PilotManager(privateFeaturePool),
       }),
   ...(privateFeaturePool === undefined || !yandexIdentityUnlinkEnabled
     ? {}
