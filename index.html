@@ -9737,6 +9737,13 @@ body {
   font-size: 20px; line-height: 1.25;
 }
 </style>
+<style id="financial-summary-review">
+/* Retain the five-year comparison and outcome emphasis (whoop/11-whoop-progress-trend.png).
+   Only simplify the two takeaways and raise negative-result contrast within Fit Dusk. */
+.financial-summary-v2 .finance-scenario .negative { color: #ef9b96 !important; }
+.financial-summary-v2 .finance-bottom { grid-template-columns: repeat(2, 1fr); }
+.financial-summary-v2 .finance-bottom > div:last-child strong { color: #f5f3ef; }
+</style>
 </head>
 <body>
   <div class="progress" aria-hidden="true"><span id="progressFill"></span></div>
@@ -10808,7 +10815,7 @@ Fit_рынок_РФ_стартовая_команда_C-level.xlsx, вкладк
 Fit_рынок_РФ_стартовая_команда_C-level.xlsx, Assumptions!B27, B31, B44, B71: платящие клиенты 264 402; целевой MAU 2 644 020; платящие тренеры 9 310; целевой объём тренировок 933 793 в месяц. Версия 23.09.2026.</aside>
     </section>
 
-    <section class="slide prefinal-financial prefinal-financial-pl prefinal-keep" data-section="Финансовая модель" data-slide-type="metric-progress" data-golden="whoop/11-whoop-progress-trend.png">
+    <section class="slide prefinal-financial prefinal-financial-pl financial-summary-v2 prefinal-keep" data-section="Финансовая модель" data-slide-type="metric-progress" data-golden="whoop/11-whoop-progress-trend.png">
       <div class="eyebrow">14 · ФИНАНСОВАЯ МОДЕЛЬ</div>
       <h2>Финансовый прогноз Fit:<br>2027–2031</h2>
       <div class="finance-status"><strong>Базовый сценарий</strong>По заполненным статьям P&amp;L.<br>Часть расходов ещё не оценена.</div>
@@ -10847,9 +10854,8 @@ Fit_рынок_РФ_стартовая_команда_C-level.xlsx, Assumptions!
       </div>
 
       <div class="finance-bottom">
-        <div><span>ПЕРВЫЙ МЕСЯЦ С EBITDA В ПЛЮСЕ</span><strong>август 2030</strong><p>Первые доходы в модели — октябрь 2027.</p></div>
-        <div><span>НАКОПЛЕННЫЙ EBITDA · 2027–2030</span><strong>−265,0 млн ₽</strong><p>Не равен потребности в финансировании.</p></div>
-        <div><span>ПЕРВЫЙ ГОД С EBITDA В ПЛЮСЕ</span><strong>2031</strong><p>+219,5 млн ₽ за год.</p></div>
+        <div><span>ПЕРВЫЙ МЕСЯЦ С EBITDA В ПЛЮСЕ</span><strong>август 2030</strong></div>
+        <div><span>НАКОПЛЕННАЯ EBITDA · 2027–2030</span><strong>−265,0 млн ₽</strong><p>Не равна потребности в финансировании.</p></div>
       </div>
 
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
