@@ -134,6 +134,10 @@ export function MessageIcon(props: IconProps) {
   return <Icon data-icon="message" {...props}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-5.5 4v-4.8A2.5 2.5 0 0 1 4 13.7V5.5Z" /><path d="M8 8.5h8M8 12h5" /></Icon>
 }
 
+export function BellIcon(props: IconProps) {
+  return <Icon data-icon="bell" {...props}><path d="M18 9.5a6 6 0 0 0-12 0c0 7-3 7-3 8.5h18c0-1.5-3-1.5-3-8.5Z" /><path d="M9.5 21h5" /></Icon>
+}
+
 export function PhotoIcon(props: IconProps) {
   return <Icon data-icon="photo" {...props}><rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="9" r="1.5" /><path d="m5.5 17 4.2-4.2 3.1 3.1 2.1-2.1 3.6 3.2" /></Icon>
 }

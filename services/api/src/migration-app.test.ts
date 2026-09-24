@@ -17,6 +17,10 @@ import {
   StageRolloutProfileNotReadyError,
   type StageRolloutAssignmentManager,
 } from './db/stage-rollout-assignment.js'
+import {
+  TrainerScheduleV2PilotProfileNotReadyError,
+  type TrainerScheduleV2PilotManager,
+} from './db/trainer-schedule-v2-pilot.js'
 import type {
   YandexIdentityUnlinkManager,
 } from './db/yandex-identity-unlink.js'
@@ -626,6 +630,103 @@ describe('stage rollout assignment', () => {
     expect(notReadyResponse.json()).toEqual({ status: 'profile_not_ready' })
     expect(failedResponse.statusCode).toBe(500)
     expect(failedResponse.json()).toEqual({ status: 'rollout_assignment_failed' })
+    expect(failedResponse.body).not.toContain('secret')
+  })
+})
+
+describe('trainer Schedule V2 pilot assignment', () => {
+  function buildPilot(
+    apply: TrainerScheduleV2PilotManager['apply'] = () => Promise.resolve({
+      accountRole: 'trainer',
+      enabled: true,
+      enabledAssignments: 1,
+    }),
+  ) {
+    const applyPilot = vi.fn(apply)
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      trainerScheduleV2Pilot: { apply: applyPilot },
+    })
+    apps.push(app)
+    return { app, applyPilot }
+  }
+
+  it('does not expose the route unless explicitly enabled', async () => {
+    const app = buildMigrationApp({ logger: false, runMigrations: () => Promise.resolve([]) })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/experiments/trainer-schedule-v2',
+      payload: { action: 'inspect', profileId: STAGE_CLIENT_ID },
+    })
+
+    expect(response.statusCode).toBe(404)
+  })
+
+  it.each([
+    ['inspect', false, 0, 'trainer_schedule_v2_inspected'],
+    ['enable', true, 1, 'trainer_schedule_v2_enabled'],
+    ['disable', false, 0, 'trainer_schedule_v2_disabled'],
+  ] as const)('applies a validated %s request without returning the profile identifier', async (
+    action,
+    enabled,
+    enabledAssignments,
+    status,
+  ) => {
+    const { app, applyPilot } = buildPilot(() => Promise.resolve({
+      accountRole: 'trainer',
+      enabled,
+      enabledAssignments,
+    }))
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/experiments/trainer-schedule-v2',
+      payload: { action, profileId: STAGE_CLIENT_ID },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ status, accountRole: 'trainer', enabled, enabledAssignments })
+    expect(applyPilot).toHaveBeenCalledWith(action, STAGE_CLIENT_ID)
+    expect(response.body).not.toContain(STAGE_CLIENT_ID)
+  })
+
+  it('rejects malformed identifiers before touching the database', async () => {
+    const { app, applyPilot } = buildPilot()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/experiments/trainer-schedule-v2',
+      payload: { action: 'enable', profileId: 'not-a-profile' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(applyPilot).not.toHaveBeenCalled()
+  })
+
+  it('keeps readiness and unexpected failures generic', async () => {
+    const notReady = buildPilot(() => Promise.reject(
+      new TrainerScheduleV2PilotProfileNotReadyError(),
+    )).app
+    const failed = buildPilot(() => Promise.reject(
+      new Error('postgresql://owner:secret@database'),
+    )).app
+    const request = {
+      method: 'POST' as const,
+      url: '/stage/experiments/trainer-schedule-v2',
+      payload: { action: 'enable', profileId: STAGE_CLIENT_ID },
+    }
+
+    const notReadyResponse = await notReady.inject(request)
+    const failedResponse = await failed.inject(request)
+
+    expect(notReadyResponse.statusCode).toBe(409)
+    expect(notReadyResponse.json()).toEqual({ status: 'trainer_profile_not_ready' })
+    expect(failedResponse.statusCode).toBe(500)
+    expect(failedResponse.json()).toEqual({ status: 'trainer_schedule_v2_failed' })
     expect(failedResponse.body).not.toContain('secret')
   })
 })

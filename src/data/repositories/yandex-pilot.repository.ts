@@ -13,6 +13,9 @@ const profilePayloadSchema = z.object({
   lastName: z.string().nullable(),
   timezone: z.string().min(1),
   accountRole: z.enum(['trainer', 'client']),
+  experiments: z.object({
+    trainerScheduleV2: z.boolean(),
+  }).optional(),
   client: z.object({
     id: z.uuid(),
     trainerId: z.uuid(),

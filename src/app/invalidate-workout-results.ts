@@ -4,5 +4,5 @@ import type { QueryClient } from '@tanstack/react-query'
 export async function invalidateWorkoutResults(client: QueryClient) {
   await Promise.all(['workouts', 'workout-personal-records', 'exercise-history', 'client-stats',
     'workout-regularity', 'client-progress-story-workouts', 'trainer-progress-story-workouts',
-    'training-summary-first-workout', 'training-summaries'].map((root) => client.invalidateQueries({ queryKey: [root] })))
+    'training-summary-first-workout', 'training-summaries', 'trainer-workspace'].map((root) => client.invalidateQueries({ queryKey: [root] })))
 }

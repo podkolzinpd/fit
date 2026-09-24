@@ -777,10 +777,10 @@ function TrainerAttentionQueue({ actions, planning, loading, error, snoozingClie
   onSnooze: (clientId: string) => void
   hideEyebrow?: boolean
 }) {
-  if (loading) return <section className="trainer-attention trainer-attention-loading" aria-label="Задачи по клиентам"><span className="skeleton-line" /><span className="skeleton-line short" /></section>
+  if (loading) return <section id="trainer-attention" className="trainer-attention trainer-attention-loading" aria-label="Задачи по клиентам"><span className="skeleton-line" /><span className="skeleton-line short" /></section>
   if (error) return <InlineRequestError error={error} message="Не удалось загрузить задачи по клиентам." />
-  if (!actions.length && !planning.length) return <section className="trainer-attention trainer-attention-clear">{!hideEyebrow && <p className="eyebrow">ПО КЛИЕНТАМ</p>}<strong>Срочных действий нет</strong></section>
-  return <section className="trainer-attention" aria-labelledby="trainer-attention-title">
+  if (!actions.length && !planning.length) return <section id="trainer-attention" className="trainer-attention trainer-attention-clear">{!hideEyebrow && <p className="eyebrow">ПО КЛИЕНТАМ</p>}<strong>Срочных действий нет</strong></section>
+  return <section id="trainer-attention" className="trainer-attention" aria-labelledby="trainer-attention-title">
     {actions.length > 0 && <><div className="trainer-attention-heading">{!hideEyebrow && <p className="eyebrow">ПО КЛИЕНТАМ</p>}<h2 id="trainer-attention-title">Требует действия</h2></div><div className="trainer-attention-list">{actions.map((item) => <Link className={`trainer-attention-row reason-${item.reason}`} key={item.clientId} to={`/workouts/${item.workoutId}${item.reason === 'question' ? '?reply=1' : ''}`}>
       <span><strong>{item.clientName}</strong><small>{item.title}</small><em>{item.reason === 'past_plan' ? formatLocalDate(localDate(item.detail)) : item.detail}</em></span><b>{item.actionLabel}</b>
     </Link>)}</div></>}

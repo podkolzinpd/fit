@@ -7,6 +7,16 @@ const workflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-yandex-stage.yml'),
   'utf8',
 )
+const trainerSchedulePilotWorkflow = readFileSync(
+  join(
+    import.meta.dirname,
+    '..',
+    '.github',
+    'workflows',
+    'manage-trainer-schedule-v2-pilot.yml',
+  ),
+  'utf8',
+)
 const oidcExchangeScript = readFileSync(
   join(import.meta.dirname, 'yandex-github-oidc.sh'),
   'utf8',
@@ -26,6 +36,21 @@ test('configures a fresh ephemeral Yandex CLI profile after every OIDC exchange'
   assert.match(oidcExchangeScript, /yc config set token "\$iam_token"/)
   assert.match(oidcExchangeScript, /yc config set folder-id "\$YC_FOLDER_ID"/)
   assert.doesNotMatch(workflow, /yc config profile create|yc config set token/)
+})
+
+test('keeps the trainer Schedule V2 rollout bounded to one secret-resolved profile', () => {
+  assert.match(trainerSchedulePilotWorkflow, /test "\$GITHUB_REF" = 'refs\/heads\/main'/)
+  assert.match(
+    trainerSchedulePilotWorkflow,
+    /TARGET_EMAIL: \$\{\{ secrets\.FIT_TRAINER_SCHEDULE_V2_TARGET_EMAIL \}\}/,
+  )
+  assert.match(trainerSchedulePilotWorkflow, /ENABLE_ONE_TRAINER_SCHEDULE_V2/)
+  assert.match(trainerSchedulePilotWorkflow, /DISABLE_ONE_TRAINER_SCHEDULE_V2/)
+  assert.match(trainerSchedulePilotWorkflow, /target_account_not_unique/)
+  assert.match(trainerSchedulePilotWorkflow, /\.enabled == true and \.enabledAssignments == 1/)
+  assert.match(trainerSchedulePilotWorkflow, /\.enabled == false and \.enabledAssignments == 0/)
+  assert.doesNotMatch(trainerSchedulePilotWorkflow, /knyaz187@/i)
+  assert.doesNotMatch(trainerSchedulePilotWorkflow, /echo.*TARGET_EMAIL/)
 })
 const previewSyncWorkflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'sync-yandex-stage-preview.yml'),

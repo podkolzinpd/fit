@@ -13,6 +13,7 @@ import { realtimeRepository } from '../data/repositories/realtime.repository'
 import { trainingSummariesRepository } from '../data/repositories/training-summaries.repository'
 import { trainerProfilesRepository } from '../data/repositories/trainer-profiles.repository'
 import { trainerDiscoveryRepository } from '../data/repositories/trainer-discovery.repository'
+import { trainerWorkspaceRepository } from '../data/repositories/trainer-workspace.repository'
 import { workoutsRepository } from '../data/repositories/workouts.repository'
 import { createYandexMainRepository } from '../data/repositories/yandex-main.repository'
 import { getYandexAppSessionEntryConfig, getYandexMainRoutingConfig, isYandexMainRoutingEnabled, isYandexOnlyAuthEnabled } from './feature-flags'
@@ -33,6 +34,7 @@ export interface DataBackend {
   trainingSummaries: typeof trainingSummariesRepository
   trainerProfiles: typeof trainerProfilesRepository
   trainerDiscovery: typeof trainerDiscoveryRepository
+  trainerWorkspace: typeof trainerWorkspaceRepository
   appFeedback: typeof appFeedbackRepository
   pushNotifications: typeof pushNotificationsRepository
   realtime: typeof realtimeRepository
@@ -52,6 +54,7 @@ const supabaseDataBackend: DataBackend = {
   trainingSummaries: trainingSummariesRepository,
   trainerProfiles: trainerProfilesRepository,
   trainerDiscovery: trainerDiscoveryRepository,
+  trainerWorkspace: trainerWorkspaceRepository,
   appFeedback: appFeedbackRepository,
   pushNotifications: pushNotificationsRepository,
   realtime: realtimeRepository,
