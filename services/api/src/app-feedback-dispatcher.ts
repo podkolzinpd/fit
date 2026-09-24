@@ -1,3 +1,4 @@
+import { dispatchStage } from './background-dispatch-error.js'
 import {
   claimAppFeedbackDeliveries,
   finalizeAppFeedbackDeliveries,
@@ -71,8 +72,8 @@ export class AppFeedbackDispatcher {
     if (!Number.isFinite(now.getTime())) {
       throw new Error('App feedback dispatch time is invalid')
     }
-    const batch = await withTransaction(this.pool, (client) =>
-      claimAppFeedbackDeliveries(client, now))
+    const batch = await dispatchStage('app_feedback', 'prepare', () =>
+      withTransaction(this.pool, (client) => claimAppFeedbackDeliveries(client, now)))
     if (batch === null) {
       return {
         claimed: 0,
@@ -91,13 +92,9 @@ export class AppFeedbackDispatcher {
     } catch {
       results = unavailableResults(batch.deliveries)
     }
-    const finalized = await withTransaction(this.pool, (client) =>
-      finalizeAppFeedbackDeliveries(
-        client,
-        batch.dispatchToken,
-        results,
-        now,
-      ))
+    const finalized = await dispatchStage('app_feedback', 'finalize', () =>
+      withTransaction(this.pool, (client) =>
+        finalizeAppFeedbackDeliveries(client, batch.dispatchToken, results, now)))
     return { claimed: batch.deliveries.length, ...finalized }
   }
 }

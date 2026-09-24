@@ -56,6 +56,21 @@ beforeEach(() => {
 })
 
 describe('AppFeedbackDispatcher', () => {
+  it.each(['prepare', 'finalize'] as const)('identifies the %s failure without resending', async (phase) => {
+    const pool = new TransactionPool()
+    const cause = Object.assign(new Error('private'), { code: '42501' })
+    commandMocks.claimAppFeedbackDeliveries.mockResolvedValue({ dispatchToken: 'test-token', deliveries: [delivery] })
+    if (phase === 'prepare') commandMocks.claimAppFeedbackDeliveries.mockRejectedValue(cause)
+    else commandMocks.finalizeAppFeedbackDeliveries.mockRejectedValue(cause)
+    const sender = { send: vi.fn().mockResolvedValue([]) }
+    await expect(new AppFeedbackDispatcher(pool, sender).run()).rejects.toMatchObject({
+      operation: 'app_feedback', phase, cause,
+    })
+    expect(sender.send).toHaveBeenCalledTimes(phase === 'prepare' ? 0 : 1)
+    expect(pool.connections.at(-1)?.queries).toEqual(['begin', 'rollback'])
+    expect(pool.connections.every((connection) => connection.released)).toBe(true)
+  })
+
   it('claims, sends and finalizes one batch in bounded transactions', async () => {
     const pool = new TransactionPool()
     const now = new Date('2026-09-04T12:01:00.000Z')

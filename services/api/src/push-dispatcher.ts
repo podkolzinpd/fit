@@ -1,3 +1,4 @@
+import { dispatchStage } from './background-dispatch-error.js'
 import type { DatabaseClient, DatabasePool } from './db/types.js'
 import {
   claimPushNotifications,
@@ -61,11 +62,12 @@ export class PushDispatcher {
   async run(now = new Date()): Promise<PushDispatchSummary> {
     if (!Number.isFinite(now.getTime())) throw new Error('Push dispatch time is invalid')
 
-    const prepared = await withTransaction(this.pool, async (client) => {
-      const remindersEnqueued = await enqueueWorkoutReminders(client, now)
-      const batch = await claimPushNotifications(client, now)
-      return { batch, remindersEnqueued }
-    })
+    const prepared = await dispatchStage('push', 'prepare', () =>
+      withTransaction(this.pool, async (client) => {
+        const remindersEnqueued = await enqueueWorkoutReminders(client, now)
+        const batch = await claimPushNotifications(client, now)
+        return { batch, remindersEnqueued }
+      }))
     if (prepared.batch === null) {
       return {
         claimed: 0,
@@ -86,13 +88,9 @@ export class PushDispatcher {
       )
     }
 
-    const finalized = await withTransaction(this.pool, (client) =>
-      finalizePushNotifications(
-        client,
-        batch.dispatchToken,
-        results,
-        now,
-      ))
+    const finalized = await dispatchStage('push', 'finalize', () =>
+      withTransaction(this.pool, (client) =>
+        finalizePushNotifications(client, batch.dispatchToken, results, now)))
     return {
       claimed: batch.notifications.length,
       remindersEnqueued: prepared.remindersEnqueued,
