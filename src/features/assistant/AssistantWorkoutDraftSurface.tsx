@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
+import { prepareZeroReplacement } from '../../shared/numeric-input'
 
 type MetricPatch = { setCount?: number; reps?: number | undefined; weightKg?: number | undefined }
 
@@ -49,10 +50,10 @@ function WorkoutMetricFields({ sourceText, setCount, reps, weightKg, onChange }:
     <label><input aria-label="Подходы" type="number" min="1" max="20" value={setCountValue}
       onChange={(event) => { const next = event.target.value; setSetCountValue(next); const value = Number(next); if (next !== '' && value >= 1 && value <= 20) onChange(sourceText, { setCount: value }) }}
       onBlur={() => { const value = Number(setCountValue); if (setCountValue === '' || value < 1 || value > 20) setSetCountValue(String(setCount)) }} /><small>подх.</small></label>
-    <label><input aria-label="Повторы" type="number" min="1" value={repsValue} placeholder="—"
+    <label><input aria-label="Повторы" type="number" min="1" value={repsValue} placeholder="—" onFocus={(event) => prepareZeroReplacement(event.currentTarget)}
       onChange={(event) => { const next = event.target.value; setRepsValue(next); const value = Number(next); if (next === '') onChange(sourceText, { reps: undefined }); else if (value > 0) onChange(sourceText, { reps: value }) }}
       onBlur={() => { if (repsValue !== '' && Number(repsValue) <= 0) setRepsValue(reps === undefined ? '' : String(reps)) }} /><small>повт.</small></label>
-    <label><input aria-label="Вес" type="number" min="0" step="0.5" value={weightValue} placeholder="—"
+    <label><input aria-label="Вес" type="number" min="0" step="0.5" value={weightValue} placeholder="—" onFocus={(event) => prepareZeroReplacement(event.currentTarget)}
       onChange={(event) => { const next = event.target.value; setWeightValue(next); const value = Number(next); if (next === '') onChange(sourceText, { weightKg: undefined }); else if (value >= 0) onChange(sourceText, { weightKg: value }) }}
       onBlur={() => { if (weightValue !== '' && Number(weightValue) < 0) setWeightValue(weightKg === undefined ? '' : String(weightKg)) }} /><small>кг</small></label>
   </div>

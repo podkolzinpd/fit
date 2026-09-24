@@ -64,6 +64,7 @@ import { clearWorkoutInactivityReminder } from './workout-inactivity-reminder'
 import { useWorkoutInactivityReminder } from './use-workout-inactivity-reminder'
 import { LiveExerciseTechnique } from './LiveExerciseTechnique'
 import { useAppViewport } from '../../app/app-viewport'
+import { prepareZeroReplacement } from '../../shared/numeric-input'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -1550,9 +1551,9 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet, exe
 // Одна ячейка факта в таблице подходов. В live основной сценарий — прямой
 // ввод: компактное число открывает цифровую клавиатуру и не разворачивает
 // строку в набор крупных степперов.
-function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, inputKey, decimal = false, planHint = false }: {
+function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, inputKey, decimal = false, planHint = false, selectZero = false }: {
   name: string; label: string; placeholder: string; defaultValue: number | undefined
-  step: number; disabled: boolean; inputKey: string; decimal?: boolean; planHint?: boolean
+  step: number; disabled: boolean; inputKey: string; decimal?: boolean; planHint?: boolean; selectZero?: boolean
 }) {
   return <input
     key={inputKey}
@@ -1566,6 +1567,7 @@ function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, 
     disabled={disabled}
     defaultValue={defaultValue}
     placeholder={placeholder}
+    onFocus={(event) => { if (selectZero) prepareZeroReplacement(event.currentTarget) }}
     onInput={(event) => event.currentTarget.classList.remove('plan-hint')}
   />
 }
@@ -1595,13 +1597,13 @@ function LiveSetFields({ inputKind, exerciseRef, set, editing = false, showRpe =
     {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
   </select> : null
   if (inputKind === 'strength') return <>
-    <LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step={2.5} disabled={locked} inputKey={`w-${k}-${carriedWeightKey}`} decimal />
-    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
+    <LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step={2.5} disabled={locked} inputKey={`w-${k}-${carriedWeightKey}`} decimal selectZero />
+    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero />
     {rpeField}
   </>
   if (inputKind === 'reps') return <>
     <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
-    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} />
+    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero />
     {rpeField}
   </>
   if (inputKind === 'duration') return <>
