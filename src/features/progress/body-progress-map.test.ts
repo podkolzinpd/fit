@@ -104,8 +104,9 @@ describe('body progress map', () => {
     expect(result.regions.map((region) => [region.group, region.percent])).toEqual([
       ['chest', 67], ['upper_back', 33],
     ])
-    expect(result.regions[0]?.metricLabel).toBe('Доля подходов')
-    expect(result.regions[0]?.primaryDetail).toBe('2 из 3 подходов')
+    expect(result.regions[0]?.metricLabel).toBe('Нагрузка зоны')
+    expect(result.regions[0]?.primaryDetail).toBe('Относительная нагрузка за период: 67%')
+    expect(result.regions[0]?.details).toEqual([])
   })
 
   it('ignores drafts and workouts outside the period and uses correct set plurals', () => {
@@ -123,7 +124,7 @@ describe('body progress map', () => {
     const result = loadBodyMap([planned, outside, done], '2026-08-01', '2026-08-25')
     expect(result.regions).toHaveLength(1)
     expect(result.regions[0]?.group).toBe('quadriceps')
-    expect(result.regions[0]?.details).toEqual(['Присед: 5 подходов'])
+    expect(result.regions[0]?.details).toEqual([])
   })
 
   it('keeps load-only zones out of progress and exposes them in load', () => {

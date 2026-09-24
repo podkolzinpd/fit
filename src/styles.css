@@ -5871,16 +5871,9 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-load-map-compact .body-progress-sides::before { inset:4px 0; }
 .workout-load-map-compact .body-progress-sides button { min-width:0; min-height:44px; margin:0; padding:4px 8px; font-size:11px; }
 .workout-load-map-compact .body-progress-sides button[aria-pressed='true']::before { inset:5px 1px; }
-.workout-load-map-compact .body-progress-visual { width:min(100%,112px); }
+.workout-load-map-compact .body-progress-visual { width:min(100%,168px); }
 .workout-load-map-compact .body-progress-region:not(.selected) .body-progress-region-fill { opacity:calc(.1 + var(--body-zone-intensity) * .18); }
-.workout-load-map-zones { display:grid; gap:6px; min-width:0; }
-.workout-load-map-zones button { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:44px; padding:8px; border:1px solid var(--border); border-radius:var(--radius-md); background:transparent; color:var(--fg); font-size:var(--type-caption-size); text-align:left; box-shadow:none; }
-.workout-load-map-zones button[aria-pressed='true'] { border-color:var(--fg); background:var(--surface-sunken); }
-.workout-load-map-zones button span { overflow-wrap:anywhere; }
-.workout-load-map-zones details button { margin-top:6px; }
-.workout-load-map-zones summary { min-height:44px; padding:10px 0; font-size:var(--type-caption-size); cursor:pointer; }
-.workout-load-map-selected { padding:8px 0; }
-.workout-load-map-selected ul { padding-left:18px; font-size:var(--type-caption-size); }
+.workout-load-map-compact .body-progress-detail { width:min(100%,220px); margin:8px auto 0; padding:10px 12px; }
 .workout-load-map > .link { display:inline-flex; align-items:center; min-height:44px; }
 .client-body-map-disclosure { display:block; min-width:0; }
 .client-body-map-disclosure > summary { min-height:44px; padding:10px 0; font-weight:var(--weight-semibold); cursor:pointer; }

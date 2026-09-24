@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { WorkoutLoadMap } from '../progress'
+import { PeriodLoadMap, summaryPeriodRange } from '../progress'
 import { PersonalWorkoutResult } from '../../shared/PersonalWorkoutResult'
 import { completedWorkoutOrder } from '../../shared/workout-results'
 import type { ReactNode } from 'react'
@@ -205,6 +205,7 @@ interface ClientHomeOverviewProps {
 
 export function ClientHomeOverview({ today, gender = null, workouts, regularity, goal, personalRecords = [], workoutsLoading, regularityLoading, error, onRetry, selfTraining, wearable, trainerDiscovery, showFirstRunConnection = true, presetPrompt }: ClientHomeOverviewProps) {
   const lastCompleted = useMemo(() => workouts?.filter((item) => item.status === 'done').sort(completedWorkoutOrder).at(-1), [workouts])
+  const loadPeriod = useMemo(() => summaryPeriodRange('1m', today), [today])
   const next = workouts ? clientHomeNextWorkout(workouts, today) : null
   const pastPlans = workouts ? clientHomePastPlans(workouts, today) : []
   const hasActiveOrTodayPlan = Boolean(next && (next.kind === 'active' || next.workout.workoutDate === today))
@@ -217,7 +218,7 @@ export function ClientHomeOverview({ today, gender = null, workouts, regularity,
     {!hasActiveOrTodayPlan && pastPlans.length > 0 && <PastPlanCard workouts={pastPlans} />}
     {next && <NextActionCard next={next} today={today} />}
     <PersonalWorkoutResult home workouts={workouts} loading={workoutsLoading} error={error} onRetry={onRetry}>
-      {lastCompleted && <WorkoutLoadMap workout={lastCompleted} gender={gender} compact />}
+      {lastCompleted && <PeriodLoadMap workouts={workouts ?? []} clientId={lastCompleted.clientId} periodStart={loadPeriod.start} periodEnd={loadPeriod.end} gender={gender} />}
     </PersonalWorkoutResult>
     <WeekCard week={week} loading={regularityLoading} />
     {highlight && highlight.kind !== 'record' && <HighlightCard highlight={highlight} today={today} />}
