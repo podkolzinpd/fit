@@ -8,8 +8,12 @@ import { TRAINER_SPECIALTIES } from '../../shared/trainer-profile'
 import { TrainerCatalogPage } from './TrainerCatalogPage'
 
 const listCatalog = vi.hoisted(() => vi.fn())
+const viewport = vi.hoisted(() => ({ keyboardOpen: false }))
 vi.mock('../../app/data-backend-context', () => ({
   useDataBackend: () => ({ trainerProfiles: { listCatalog } }),
+}))
+vi.mock('../../app/app-viewport', () => ({
+  useAppViewport: () => viewport,
 }))
 
 const profile: TrainerCatalogItem = {
@@ -33,6 +37,7 @@ function renderPage() {
 
 describe('TrainerCatalogPage', () => {
   beforeEach(() => {
+    viewport.keyboardOpen = false
     window.sessionStorage.clear()
     listCatalog.mockReset().mockResolvedValue(catalogPage())
     Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
@@ -41,6 +46,21 @@ describe('TrainerCatalogPage', () => {
         this.scrollTop = typeof options === 'number' ? (y ?? 0) : (options?.top ?? 0)
       },
     })
+  })
+
+  it('keeps the filter sheet inside the visible viewport while the keyboard is open', async () => {
+    viewport.keyboardOpen = true
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByText('Анна Иванова')
+
+    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
+
+    const dialog = screen.getByRole('dialog', { name: 'Фильтры тренеров' })
+    expect(dialog.closest('.trainer-catalog-filter-overlay')).toHaveClass('keyboard-open')
+    expect(within(dialog).getByLabelText('Город')).toBeVisible()
+    expect(within(dialog).getByRole('combobox', { name: 'Метро Москвы' })).toBeVisible()
+    expect(within(dialog).getByRole('button', { name: 'Показать тренеров' })).toBeVisible()
   })
 
   it('shows a compact trainer card and opens the full published profile', async () => {
