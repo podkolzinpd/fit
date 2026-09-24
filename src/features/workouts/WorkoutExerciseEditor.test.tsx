@@ -17,6 +17,14 @@ function EditorHarness({ onOpenPicker }: { onOpenPicker: () => void }) {
   return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={onOpenPicker} onReplaceExercise={vi.fn()} />
 }
 
+function ZeroValueEditorHarness() {
+  const [draft, setDraft] = useState<WorkoutExerciseDraft[]>([{
+    ...exercises[0]!,
+    sets: [{ position: 0, weightKg: 0, reps: 0 }],
+  }])
+  return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
+}
+
 function ReorderEditorHarness() {
   const [draft, setDraft] = useState<WorkoutExerciseDraft[]>([
     exercises[0]!,
@@ -43,6 +51,23 @@ describe('workout exercise editor rules', () => {
 
   it('clears values but preserves the set structure', () => {
     expect(clearWorkoutLoad(exercises)[0]?.sets).toEqual([{ position: 0 }, { position: 1 }])
+  })
+
+  it('replaces zero with the first entered weight and keeps it after an accidental focus', async () => {
+    const user = userEvent.setup()
+    render(<ZeroValueEditorHarness />)
+
+    const weight = screen.getByLabelText('Вес, подход 1')
+    await user.click(weight)
+    expect(weight).toHaveValue(null)
+    await user.type(weight, '60')
+    expect(weight).toHaveValue(60)
+
+    const reps = screen.getByLabelText('Повторы, подход 1')
+    await user.click(reps)
+    expect(reps).toHaveValue(null)
+    await user.tab()
+    expect(reps).toHaveValue(0)
   })
 
   it('edits, adds and removes sets and exercises', async () => {
