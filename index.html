@@ -15,6 +15,46 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <link rel="manifest" href="/site.webmanifest" />
     <title>Fit</title>
+    <style id="fit-startup-shell-styles">
+      html, body, #root { min-height: 100%; }
+      body { margin: 0; background: #fbfaf7; color: #202022; }
+      .fit-startup-shell {
+        min-height: 100dvh;
+        box-sizing: border-box;
+        display: grid;
+        align-content: center;
+        justify-items: center;
+        gap: 14px;
+        padding: max(28px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom));
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+        text-align: center;
+      }
+      .fit-startup-mark {
+        display: grid;
+        width: 64px;
+        height: 64px;
+        place-items: center;
+        border-radius: 18px;
+        background: #202022;
+        color: #fbfaf7;
+        font-size: 22px;
+        font-weight: 700;
+      }
+      .fit-startup-shell h1 { margin: 8px 0 0; font-size: 24px; line-height: 1.15; }
+      .fit-startup-shell p { max-width: 320px; margin: 0; color: #6e6e73; font-size: 15px; line-height: 1.45; }
+      .fit-startup-shell button {
+        min-width: 220px;
+        min-height: 50px;
+        margin-top: 10px;
+        padding: 0 20px;
+        border: 0;
+        border-radius: 14px;
+        background: #202022;
+        color: #fbfaf7;
+        font: inherit;
+        font-weight: 600;
+      }
+    </style>
     <!-- Yandex.Metrika counter -->
     <script type="text/javascript">
       const isFitProduction = window.location.hostname === 'fit-drab.vercel.app'
@@ -32,7 +72,50 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="root">
+      <main class="fit-startup-shell" aria-live="polite">
+        <span class="fit-startup-mark" aria-hidden="true">FIT</span>
+        <h1 id="fit-startup-title">Открываем Fit…</h1>
+        <p id="fit-startup-message">Загружаем приложение.</p>
+        <button id="fit-startup-reload" type="button" hidden>Обновить приложение</button>
+      </main>
+    </div>
+    <script>
+      (function () {
+        var finished = false
+        var title = document.getElementById('fit-startup-title')
+        var message = document.getElementById('fit-startup-message')
+        var reload = document.getElementById('fit-startup-reload')
+
+        function showStartupError() {
+          if (finished) return
+          title.textContent = 'Не удалось открыть Fit'
+          message.textContent = 'Обновите приложение. Ваши данные и тренировки сохранены.'
+          reload.hidden = false
+        }
+
+        function handleLoadError(event) {
+          var target = event && event.target
+          if (!target || target === window || target.id === 'fit-app-entry') showStartupError()
+        }
+
+        var timeout = window.setTimeout(showStartupError, 12000)
+        window.addEventListener('error', handleLoadError, true)
+        window.addEventListener('unhandledrejection', showStartupError)
+        window.addEventListener('fit:asset-load-error', showStartupError)
+        reload.addEventListener('click', function () { window.location.reload() })
+
+        window.__fitMarkAppStarted = function () {
+          finished = true
+          window.clearTimeout(timeout)
+          window.removeEventListener('error', handleLoadError, true)
+          window.removeEventListener('unhandledrejection', showStartupError)
+          window.removeEventListener('fit:asset-load-error', showStartupError)
+          document.getElementById('fit-startup-shell-styles')?.remove()
+          delete window.__fitMarkAppStarted
+        }
+      })()
+    </script>
+    <script id="fit-app-entry" type="module" src="/src/main.tsx"></script>
   </body>
 </html>
