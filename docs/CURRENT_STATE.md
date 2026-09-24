@@ -5,6 +5,11 @@ Yandex ID является единственным production-входом; app
 
 ## Активная цель
 
+Диагностика фонового dispatcher: `Background dispatch failed` теперь различает
+`push`/`app_feedback`, `prepare`/`finalize`, безопасный код и категорию ошибки,
+код rollback и release. Payload/SQL/stack не пишутся, повторы не добавлены.
+Это улучшение наблюдаемости; причина инцидента 24 сентября ещё не подтверждена.
+
 Стабилизировать Yandex-only production после переключения и затем вывести Supabase из эксплуатации. До закрытия rollback-окна сохраняется общий доменный контракт без dual-write; гейты описаны в `docs/YANDEX_CUTOVER_PLAYBOOK.md`.
 
 ## Последняя проверенная продуктовая точка

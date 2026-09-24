@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import Fastify, { type FastifyInstance, type FastifyLoggerOptions } from 'fastify'
 
 import type { BackgroundDispatchSummary } from './background-dispatcher.js'
+import { backgroundDispatchDiagnostics } from './background-dispatch-error.js'
 import type { PushDispatchSummary } from './push-dispatcher.js'
 
 interface PushDispatchRunner {
@@ -101,7 +102,8 @@ export function buildPushDispatcherApp(
           request_id: request.id,
           stage: 'failed',
           durationMs: Math.round(performance.now() - startedAt),
-          errorType: error instanceof Error ? error.name : 'unknown',
+          releaseId: options.releaseId,
+          ...backgroundDispatchDiagnostics(error),
         },
         'Background dispatch failed',
       )
