@@ -14,10 +14,21 @@
       "VITE_ASSISTANT_PROGRAM_ENABLED": "true"
     }
   },
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "handle": "filesystem"
+    },
+    {
+      "src": "/assets/.*\\.js",
+      "dest": "/asset-recovery.js"
+    },
+    {
+      "src": "/assets/.*",
+      "status": 404
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
