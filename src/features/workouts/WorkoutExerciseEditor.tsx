@@ -8,6 +8,7 @@ import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, compactEx
 import { OverflowMenu, useConfirm } from '../../shared/ui'
 import { ArrowDownIcon, ArrowUpIcon, CloseIcon } from '../../shared/icons'
 import { isRowingExerciseRef } from '../../shared/run-metrics'
+import { prepareZeroReplacement } from '../../shared/numeric-input'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
 import { WorkoutExercise, WorkoutSetRow } from './WorkoutSurface'
@@ -227,13 +228,13 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
     </select> : null
     if (exercise.inputKind === 'strength') return <>
-      <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактический вес' : 'Вес'}, подход ${setIndex + 1}`} type="number" inputMode="decimal" min="0" step="0.5" placeholder="кг" value={set.weightKg ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { weightKg: inputNumber(event.target.value) })} />
-      <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактические повторы' : 'Повторы'}, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
+      <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактический вес' : 'Вес'}, подход ${setIndex + 1}`} type="number" inputMode="decimal" min="0" step="0.5" placeholder="кг" value={set.weightKg ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { weightKg: inputNumber(event.target.value) })} />
+      <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактические повторы' : 'Повторы'}, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
       {rpeField}
     </>
     if (exercise.inputKind === 'reps') return <>
       <input className={inputClass} aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" step="1" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
-      <input className={inputClass} aria-label={`Повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
+      <input className={inputClass} aria-label={`Повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
       {rpeField}
     </>
     if (exercise.inputKind === 'duration') return <>
