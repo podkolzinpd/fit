@@ -3580,7 +3580,7 @@ h3 {
   .nav, .slide-meta, .progress, .notes-panel { display: none !important; }
 }
 
-/* 09 · Platform growth — exact comparable snapshots, 14–20 Sep 2026. */
+/* 09 · Platform growth — actual snapshots, 14 / 20 / 24 Sep 2026. */
 .meeting-growth-slide {
   background: var(--dark);
   color: var(--paper);
@@ -3624,7 +3624,7 @@ h3 {
   left: 92px;
   right: 92px;
   top: 286px;
-  height: 398px;
+  height: 420px;
   display: grid;
   grid-template-columns: 1.62fr .78fr;
   gap: 24px;
@@ -3664,12 +3664,13 @@ h3 {
 .meeting-growth-arrow { color: #77797d; font-size: 46px; font-weight: 400; }
 .meeting-growth-badge { margin-left: auto; color: #75ad8c; font-size: 22px; font-weight: 800; }
 
-.meeting-growth-bars { margin-top: 28px; display: grid; gap: 19px; }
+.meeting-growth-bars { margin-top: 24px; display: grid; gap: 12px; }
 .meeting-growth-bar-row { display: grid; grid-template-columns: 105px 1fr; gap: 14px; align-items: center; }
 .meeting-growth-bar-label { color: #8d8e92; font-size: 13px; font-weight: 700; }
-.meeting-growth-bar-track { height: 54px; border: 1px solid #35373a; background: #202124; }
-.meeting-growth-bar { height: 100%; display: flex; }
-.meeting-growth-bar.is-after { width: 100%; }
+.meeting-growth-bar-track { height: 46px; border: 1px solid #35373a; background: #202124; }
+.meeting-growth-bar { height: 100%; display: flex; width: calc(var(--total) / 324 * 100%); }
+.meeting-growth-bar-row.is-current .meeting-growth-bar-label { color: var(--paper); }
+.meeting-growth-bar-row.is-current .meeting-growth-bar-track { border-color: #a7bbdf; }
 
 .meeting-growth-trainers,
 .meeting-growth-self,
@@ -3681,18 +3682,12 @@ h3 {
   white-space: nowrap;
   font-size: 14px;
   font-weight: 750;
+  flex: 0 0 calc(var(--value) / var(--total) * 100%);
 }
 
 .meeting-growth-trainers { background: #477a61; color: #f6f2ea; }
 .meeting-growth-self { background: #d8b46b; color: #17181a; }
 .meeting-growth-clients { background: #66686d; color: #f6f2ea; }
-.meeting-growth-bar.is-before { width: 72%; }
-.meeting-growth-bar.is-before .meeting-growth-trainers { width: 21.3%; }
-.meeting-growth-bar.is-before .meeting-growth-self { width: 18.5%; }
-.meeting-growth-bar.is-before .meeting-growth-clients { width: 60.2%; }
-.meeting-growth-bar.is-after .meeting-growth-trainers { width: 22.5%; }
-.meeting-growth-bar.is-after .meeting-growth-self { width: 30.4%; }
-.meeting-growth-bar.is-after .meeting-growth-clients { width: 47.1%; }
 
 .meeting-growth-legend {
   margin: 22px 0 0 119px;
@@ -10529,64 +10524,74 @@ mHealth Continuance Intention, systematic review and meta-analysis, 58 иссл�
 
     <section class="slide slide-dark meeting-growth-slide prefinal-keep" data-section="Рост платформы" data-slide-type="progress-trend" data-golden="whoop/11-whoop-progress-trend.png">
       <div class="eyebrow">09 · РОСТ ПЛАТФОРМЫ</div>
-      <h2 class="meeting-growth-title">За шесть дней база Fit выросла на 39%.<br>Главный драйвер — самостоятельные клиенты</h2>
-      <div class="meeting-growth-date"><strong>14 → 20 сентября</strong>Два сопоставимых накопленных среза</div>
+      <h2 class="meeting-growth-title">База Fit продолжает расти:<br>+31 профиль с 20 сентября</h2>
+      <div class="meeting-growth-date"><strong>20 → 24 сентября</strong>Текущая неделя ещё не завершена</div>
 
       <div class="meeting-growth-grid">
         <section class="meeting-growth-accounts" aria-label="Рост зарегистрированной базы Fit">
           <span class="meeting-growth-kicker">Тренеры и клиентские профили</span>
           <div class="meeting-growth-hero">
-            <b>211</b><span class="meeting-growth-arrow">→</span><b>293</b><span class="meeting-growth-badge">+82 · +39%</span>
+            <b>293</b><span class="meeting-growth-arrow">→</span><b>324</b><span class="meeting-growth-badge">+31 · +10,6%</span>
           </div>
           <div class="meeting-growth-bars">
             <div class="meeting-growth-bar-row">
               <span class="meeting-growth-bar-label">14 сентября</span>
               <div class="meeting-growth-bar-track">
-                <div class="meeting-growth-bar is-before"><span class="meeting-growth-trainers">45</span><span class="meeting-growth-self">39</span><span class="meeting-growth-clients">127</span></div>
+                <div class="meeting-growth-bar" style="--total:211"><span class="meeting-growth-trainers" style="--value:45">45</span><span class="meeting-growth-self" style="--value:39">39</span><span class="meeting-growth-clients" style="--value:127">127</span></div>
               </div>
             </div>
             <div class="meeting-growth-bar-row">
               <span class="meeting-growth-bar-label">20 сентября</span>
               <div class="meeting-growth-bar-track">
-                <div class="meeting-growth-bar is-after"><span class="meeting-growth-trainers">66</span><span class="meeting-growth-self">89</span><span class="meeting-growth-clients">138</span></div>
+                <div class="meeting-growth-bar" style="--total:293"><span class="meeting-growth-trainers" style="--value:66">66</span><span class="meeting-growth-self" style="--value:89">89</span><span class="meeting-growth-clients" style="--value:138">138</span></div>
+              </div>
+            </div>
+            <div class="meeting-growth-bar-row is-current">
+              <span class="meeting-growth-bar-label">24 сентября</span>
+              <div class="meeting-growth-bar-track">
+                <div class="meeting-growth-bar" style="--total:324"><span class="meeting-growth-trainers" style="--value:74">74</span><span class="meeting-growth-self" style="--value:95">95</span><span class="meeting-growth-clients" style="--value:155">155</span></div>
               </div>
             </div>
           </div>
-          <div class="meeting-growth-legend"><span><i></i>Тренеры: +21 · +47%</span><span><i class="is-self"></i>Сами: +50 · +128%</span><span><i class="is-client"></i>Через тренера: +11 · +9%</span></div>
+          <div class="meeting-growth-legend"><span><i></i>Тренеры</span><span><i class="is-self"></i>Самостоятельно</span><span><i class="is-client"></i>Через тренера</span></div>
         </section>
 
         <section class="meeting-growth-workouts" aria-label="Рост числа записей тренировок">
           <span class="meeting-growth-kicker">Записи тренировок в базе</span>
-          <div class="meeting-growth-workout-values"><b>200</b><span>→</span><b>600</b></div>
-          <strong>×3</strong>
-          <p>+400 записей между двумя срезами. Это накопленный объём, а не число уникальных активных пользователей.</p>
-          <div class="meeting-growth-workout-split"><span><b>427</b> у клиентов через тренера</span><span><b>173</b> у самостоятельных клиентов</span></div>
+          <div class="meeting-growth-workout-values"><b>600</b><span>→</span><b>670</b></div>
+          <strong>+11,7%</strong>
+          <p>+70 записей с 20 сентября.<br>Все записи, включая запланированные.</p>
+          <div class="meeting-growth-workout-split"><span><b>451</b> у клиентов через тренера</span><span><b>219</b> у самостоятельных клиентов</span></div>
         </section>
       </div>
 
       <div class="meeting-growth-bottom">
         <div class="meeting-growth-insight">
           <span>Что изменилось</span>
-          <strong>50 из 61 нового клиента пришли самостоятельно — 82% клиентского прироста. Пик — 28 регистраций 18 сентября.</strong>
+          <strong>+8 тренеров, +6 самостоятельных клиентов и +17 профилей через тренера.</strong>
         </div>
         <div class="meeting-growth-method">
           <span>Как считаем</span>
-          <p>Срезы на 14.09 и 20.09. Клиентов разделяем по способу регистрации; тренировки — все записи workout.</p>
+          <p>DataLens · срез на 24.09.2026. Прирост — к 20.09. Считаем профили и записи, не активных пользователей.</p>
         </div>
       </div>
 
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Показать фактический рост Fit за неделю на сопоставимых накопленных показателях, не выдавая регистрации за активность или удержание.
+Показать фактический рост Fit на трёх накопленных срезах. Текущая неделя не завершена: последний срез 24 сентября, без прогноза до конца недели. Прирост в заголовке и числовых блоках — относительно 20 сентября. Не выдаём профили за уникальных активных пользователей или удержание.
 
 ЧТО ГОВОРИМ
-На начало недели в Fit было 45 тренеров, 39 самостоятельно зарегистрированных клиентов и 127 клиентских профилей, созданных тренерами — 211 профилей по трём взаимоисключающим группам. На 20 сентября DataLens показывает 66 тренеров, 89 самостоятельных клиентов и 138 клиентов, созданных тренерами — 293 профиля. За шесть дней наблюдаемая база выросла на 82 профиля, или на 39%.
+На 14 сентября в Fit было 45 тренеров, 39 самостоятельно зарегистрированных клиентов и 127 клиентских профилей, созданных тренерами — 211 профилей. На 20 сентября: 66 + 89 + 138 = 293 профиля. На 24 сентября: 74 + 95 + 155 = 324 профиля. Все полосы используют один масштаб и три неизменных категории; это снимки базы, не недельные регистрации.
 
-Главный источник роста — самостоятельные клиенты: плюс 50 профилей. Всего клиентская база выросла на 61 профиль, поэтому самостоятельные регистрации дали 82% клиентского прироста. Их база выросла более чем вдвое — с 39 до 89. Тренеров стало на 21 больше, а клиентов, которых завели тренеры, — на 11. Пик самостоятельного притока пришёлся на 18 сентября — 28 регистраций.
+За 20–24 сентября прирост составил 31 профиль, или 31 / 293 = 10,58%, округлено до 10,6%. В том числе +8 тренеров, +6 самостоятельных клиентов и +17 профилей через тренера. На этом интервале наибольший прирост профилей — через тренера, поэтому прежний вывод о самостоятельных клиентах не переносим на текущую неделю. Исторический результат 14–20 сентября сохраняется в первых двух полосах: +82 профиля, или +38,86%; самостоятельные клиенты дали 50 из 61 прироста клиентских профилей (82%), пик — 28 регистраций 18 сентября.
 
-За тот же период число записей тренировок в базе выросло с 200 до 600 — на 400 записей, или в три раза. Текущий итог складывается из двух взаимоисключающих разрезов DataLens: 427 записей у клиентов, которых завёл тренер, и 173 у самостоятельно зарегистрированных клиентов. Это накопленный операционный объём. Он показывает, что платформа наполняется работой, но сам по себе не доказывает рост DAU или удержания.
+Число записей тренировок: 200 на 14 сентября, 600 на 20 сентября, 670 на 24 сентября. Последний прирост — 70 / 600 = 11,67%, округлено до 11,7%. Текущий итог: 451 запись у клиентов, которых завёл тренер, и 219 у самостоятельно зарегистрированных. Сравниваем все записи workouts_total, включая запланированные, а не только завершённые тренировки. Это накопленный объём, не число уникальных активных пользователей и не доказательство удержания.
 
 ИСТОЧНИКИ И ОГРАНИЧЕНИЯ
-Срез презентации Fit на 14.09.2026: 45 тренеров, 39 самостоятельно зарегистрированных клиентов, 127 клиентов, созданных тренерами, 200 созданных тренировок. DataLens «Сводные метрики приложения», обновление 20.09.2026 21:58: 66 тренеров; при is_self_registered=false — 138 клиентов и workouts_total 427; при is_self_registered=true — 89 клиентов и workouts_total 173. Группы взаимоисключающие. Сравниваются накопленные значения двух дат.</aside>
+Срез презентации Fit на 14.09.2026: 45 тренеров, 39 самостоятельно зарегистрированных клиентов, 127 клиентов, созданных тренерами, 200 созданных тренировок. DataLens «Сводные метрики приложения», обновление 20.09.2026 21:58: 66 тренеров; при is_self_registered=false — 138 клиентов и workouts_total 427; при is_self_registered=true — 89 клиентов и workouts_total 173.
+
+Новый срез прочитан 24.09.2026 из того же дашборда: https://datalens.ru/wnvsw21o9r7af-svodnye-metriki-prilozheniya?tab=Y3. Отображаемое время обновления: 24.09.2026 14:25:24. Индикатор «Кол-во тренеров» = 74. В разделе «Клиент» при is_self_registered=false: «Кол-во клиентов» = 155 и «Clients — Кол-во тренировок всего» = 451; при true: 95 и 219. Две клиентские группы разделены по одному булевому признаку. Индикатор clients_total=193 из раздела тренеров для этой серии не используется: это другой показатель. Срезы получены просмотром дашборда, без изменения базы или приложения.
+
+Для обновления в конце недели заменить третий срез фактическими значениями и датой, пересчитать прирост к 20 сентября и масштаб полос. До этого третья полоса остаётся неполной неделей; прогнозные значения не добавляем.</aside>
     </section>
 
     <section class="slide value-slide redesign-v2 rd-value prefinal-keep" data-section="Ценность Яндексу" data-slide-type="final-vision" data-golden="apple/09-apple-final-vision.png">
