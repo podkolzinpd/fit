@@ -65,23 +65,18 @@ export function WorkoutLoadMap({ workout, gender = null, compact = false, zone, 
     data.coverage.cardioSets ? `Кардио: ${setCountLabel(data.coverage.cardioSets)}${cardioMetrics ? ` · ${cardioMetrics}` : ''}` : '',
     data.coverage.unknownSets ? `Без группы: ${setCountLabel(data.coverage.unknownSets)}` : '',
   ].filter(Boolean).join(' · ')
-  return <section className={`workout-load-map${compact ? ' workout-load-map-compact' : ''}`} aria-label="Распределение подходов">
-    <h3>Распределение подходов</h3>
-    <p className="muted">Всего {setCountLabel(compact ? data.coverage.totalSets : data.coverage.mappedSets)}</p>
-    {compact && data.regions.length > 0 && <p className="muted">По основной группе мышц</p>}
+  return <section className={`workout-load-map${compact ? ' workout-load-map-compact' : ''}`} aria-label={compact ? 'Нагрузка по телу' : 'Распределение подходов'}>
+    <h3>{compact ? 'Нагрузка по телу' : 'Распределение подходов'}</h3>
+    {!compact && <p className="muted">Всего {setCountLabel(data.coverage.mappedSets)}</p>}
     {zone && !data.regions.some((region) => region.group === zone) && <p role="status">Для этой зоны больше нет подходов.</p>}
     {data.regions.length > 0 && <div className="workout-load-map-layout">
-      <MapPanel data={data} selected={selected} insightCandidates={[]} variant={variant} side={side} discovering={false}
+      <MapPanel data={data} selected={compact ? undefined : selected} insightCandidates={[]} variant={variant} side={side} discovering={false}
         onSideChange={changeSide} onSelect={(region) => select(region.group)} onShowDetails={() => undefined} hideDetail decorative={compact} />
-      <div className="workout-load-map-zones" aria-label="Выбрать зону">
-        {(compact ? data.regions.slice(0, 3) : data.regions).map(zoneButton)}
-        {compact && data.regions.length > 3 && <details><summary>Показать все группы</summary>{data.regions.slice(3).map(zoneButton)}</details>}
-        {compact && coverageNotes && <p className="muted workout-load-map-coverage">{coverageNotes}</p>}
-      </div>
+      {!compact && <div className="workout-load-map-zones" aria-label="Выбрать зону">{data.regions.map(zoneButton)}</div>}
     </div>}
     {!compact && selectedDetails}
     {!data.coverage.totalSets ? <p className="muted">Нет выполненных подходов.</p> : (!compact || data.regions.length === 0) && coverageNotes && <p className="muted">{coverageNotes}</p>}
-    {compact ? <Link className="link" to={workoutMapLink(workout, selected?.group)}>Разбор нагрузки</Link>
+    {compact ? <Link className="link" to={workoutMapLink(workout)}>Открыть в прогрессе</Link>
       : <Link className="link" to={`/workouts/${workout.id}`} state={{ returnTo: location.pathname + location.search + '#body-map' }}>Открыть тренировку</Link>}
   </section>
 }
