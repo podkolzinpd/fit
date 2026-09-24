@@ -2,6 +2,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type Dispatch, type FormEvent, type RefObject, type SetStateAction } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
+import { useAppViewport } from '../../app/app-viewport'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { TrainerCatalogFilters, TrainerCatalogItem } from '../../shared/domain'
 import { ChevronDownIcon, CloseIcon } from '../../shared/icons'
@@ -127,6 +128,7 @@ function CatalogFiltersSheet({ draft, setDraft, onApply, onReset, onClose, retur
   onClose: () => void
   returnFocus: RefObject<HTMLButtonElement | null>
 }) {
+  const { keyboardOpen } = useAppViewport()
   const dialog = useRef<HTMLElement>(null)
   const closeRef = useRef(onClose)
   useEffect(() => { closeRef.current = onClose }, [onClose])
@@ -150,7 +152,7 @@ function CatalogFiltersSheet({ draft, setDraft, onApply, onReset, onClose, retur
   }, [returnFocus])
 
   const host = document.querySelector('.phone-frame') ?? document.body
-  return createPortal(<div className="sheet-overlay trainer-catalog-filter-overlay" onPointerDown={(event) => {
+  return createPortal(<div className={`sheet-overlay trainer-catalog-filter-overlay${keyboardOpen ? ' keyboard-open' : ''}`} onPointerDown={(event) => {
     if (event.target === event.currentTarget) onClose()
   }}>
     <section ref={dialog} className="trainer-catalog-filter-sheet" role="dialog" aria-modal="true" aria-label="Фильтры тренеров">
