@@ -1304,9 +1304,14 @@ for (const viewport of mobileViewports) {
 
     for (const screen of ['/today', '/clients', '/clients/11111111-1111-4111-8111-111111111111', '/schedule']) {
       await page.goto(screen)
+      await expect(page.locator('#fit-startup-shell')).toHaveCount(0)
       await expect(page.locator('main')).toBeVisible()
       if (screen === '/today') {
         await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
+        const compactActions = page.locator('.today-voice-hero-compact .voice-action-buttons')
+        await expect(compactActions).toBeVisible()
+        await expect(compactActions.getByRole('button', { name: 'Ввести текстом' })).toBeVisible()
+        await expect(page.locator('.today-text-toggle')).toHaveCount(0)
         await expect(page.getByRole('textbox', { name: 'Тренировка' })).toHaveCount(0)
       }
       if (screen.includes('11111111')) {
