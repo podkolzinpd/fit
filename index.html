@@ -9681,6 +9681,52 @@ body {
   margin-top: 10px; color: #68707d; font-size: 20px; line-height: 1.25;
 }
 </style>
+<style id="monetization-simple-review">
+/* Metric/progress: whoop/10-whoop-metric-hero.png informs numeral hierarchy only.
+   Preserve the approved Fit Dusk palette and four-source 2×2 composition. */
+.monetization-simple-v2 h2 {
+  position: absolute; left: 92px; top: 122px; width: 1300px; margin: 0;
+  color: var(--paper); font-size: 64px; line-height: 1.03; letter-spacing: -.045em;
+}
+.monetization-simple-v2 .revenue-period {
+  position: absolute; left: 92px; top: 277px; margin: 0;
+  color: #b5bcc8; font-size: 24px; line-height: 1.2;
+}
+.monetization-simple-v2 .revenue-summary-grid {
+  position: absolute; left: 92px; right: 92px; top: 348px;
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 216px 216px;
+  gap: 28px 44px;
+}
+.monetization-simple-v2 .revenue-stream {
+  min-width: 0; padding: 24px 28px; border-top: 1px solid #596271;
+  color: var(--paper);
+}
+.monetization-simple-v2 .revenue-stream-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 20px;
+}
+.monetization-simple-v2 .revenue-stream h3 {
+  margin: 0; color: inherit; font-size: 28px; line-height: 1.1; letter-spacing: -.03em;
+}
+.monetization-simple-v2 .revenue-share {
+  flex-shrink: 0; color: #b5bcc8; font-size: 20px; line-height: 1.2;
+}
+.monetization-simple-v2 .revenue-amount {
+  display: block; margin-top: 23px; color: inherit;
+  font-size: 62px; line-height: 1; letter-spacing: -.045em;
+}
+.monetization-simple-v2 .revenue-amount span {
+  font-size: 30px; font-weight: 500; letter-spacing: -.02em;
+}
+.monetization-simple-v2 .revenue-stream p {
+  margin: 15px 0 0; color: #b5bcc8; font-size: 20px; line-height: 1.25;
+}
+.monetization-simple-v2 .revenue-stream--primary {
+  border-color: transparent; border-radius: 18px; color: #15171d;
+  background: linear-gradient(180deg, #f5f3ef 0%, #e8e6e1 100%);
+}
+.monetization-simple-v2 .revenue-stream--primary .revenue-share,
+.monetization-simple-v2 .revenue-stream--primary p { color: #68707d; }
+</style>
 </head>
 <body>
   <div class="progress" aria-hidden="true"><span id="progressFill"></span></div>
@@ -10663,39 +10709,31 @@ mHealth Continuance Intention, systematic review and meta-analysis, 58 иссл�
 Для обновления в конце недели заменить третий срез фактическими значениями и датой, пересчитать прирост к 20 сентября и масштаб полос. До этого третья полоса остаётся неполной неделей; прогнозные значения не добавляем.</aside>
     </section>
 
-    <section class="slide monetization-proof-slide redesign-v2 rd-monetization prefinal-revenue-model prefinal-keep" data-section="Монетизация" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
+    <section class="slide monetization-proof-slide redesign-v2 rd-monetization prefinal-revenue-model monetization-simple-v2 prefinal-keep" data-section="Монетизация" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
       <div class="eyebrow">12 · КАК FIT ЗАРАБАТЫВАЕТ</div>
-      <h2>Подписка клиентов и комиссии — 77% выручки</h2>
-      <div class="revenue-ledger">
-        <div class="revenue-head"><span>ИСТОЧНИК</span><span>ВЫРУЧКА 2031</span><span>ОПЕРАЦИОННЫЙ ДРАЙВЕР</span><span>ДОЛЯ</span></div>
-        <div class="revenue-row revenue-row--closest">
-          <strong>Premium AI<small>ПОДПИСКА КЛИЕНТОВ · 44%</small></strong>
-          <div><b>489 млн ₽</b><small>персональные программы и AI-сопровождение</small></div>
-          <div><b>264 тыс.</b><small>платящих клиентов на конец 2031</small></div>
-          <p>44%</p>
+      <h2>Подписка клиентов и комиссии —<br>77% выручки</h2>
+      <p class="revenue-period">Базовый прогноз · 2031</p>
+      <div class="revenue-summary-grid" aria-label="Четыре источника годовой выручки Fit в 2031 году; доли округлены">
+        <div class="revenue-stream revenue-stream--primary">
+          <div class="revenue-stream-head"><h3>Premium AI</h3><span class="revenue-share">44% выручки</span></div>
+          <strong class="revenue-amount">489 <span>млн ₽</span></strong>
+          <p>Подписка клиентов на AI-план и сопровождение</p>
         </div>
-        <div class="revenue-row">
-          <strong>Тренировки<small>КОМИССИЯ FIT · 33%</small></strong>
-          <div><b>369 млн ₽</b><small>комиссия Fit с оплаченных занятий</small></div>
-          <div><b>934 тыс.</b><small>целевой объём тренировок в месяц</small></div>
-          <p>33%</p>
+        <div class="revenue-stream">
+          <div class="revenue-stream-head"><h3>Тренировки</h3><span class="revenue-share">33% выручки</span></div>
+          <strong class="revenue-amount">369 <span>млн ₽</span></strong>
+          <p>Комиссия Fit с оплаченных занятий</p>
         </div>
-        <div class="revenue-row">
-          <strong>Pro для тренера<small>ПОДПИСКА ТРЕНЕРОВ · 7%</small></strong>
-          <div><b>81 млн ₽</b><small>профессиональные функции и продвижение</small></div>
-          <div><b>9,3 тыс.</b><small>платящих тренеров на конец 2031</small></div>
-          <p>7%</p>
+        <div class="revenue-stream">
+          <div class="revenue-stream-head"><h3>Pro для тренера</h3><span class="revenue-share">7% выручки</span></div>
+          <strong class="revenue-amount">81 <span>млн ₽</span></strong>
+          <p>Подписка на инструменты и продвижение</p>
         </div>
-        <div class="revenue-row">
-          <strong>Реклама и товары<small>ПАРТНЁРЫ · 15%</small></strong>
-          <div><b>169 млн ₽</b><small>реклама и партнёрские товары</small></div>
-          <div><b>После масштаба</b><small>не основной источник ранней экономики</small></div>
-          <p>15%</p>
+        <div class="revenue-stream">
+          <div class="revenue-stream-head"><h3>Реклама и товары</h3><span class="revenue-share">15% выручки</span></div>
+          <strong class="revenue-amount">169 <span>млн ₽</span></strong>
+          <p>Реклама и партнёрские товары · после масштаба</p>
         </div>
-      </div>
-      <div class="revenue-conclusion">
-        <span>ЯДРО МОДЕЛИ</span>
-        <div><strong>Подписки и комиссия с тренировок — основа выручки Fit.</strong><small>Базовый прогноз на 2031 год. Доли округлены.</small></div>
       </div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
 Показать структуру выручки базового сценария и отделить ядро модели от поздних коммерческих потоков.
@@ -10704,6 +10742,11 @@ mHealth Continuance Intention, systematic review and meta-analysis, 58 иссл�
 В 2031 году модель даёт 1,11 млрд рублей выручки. 489 млн рублей, или 44%, формирует Premium AI для клиентов. 369 млн рублей, или 33%, — комиссия с тренировок. Вместе эти два потока дают 858,7 млн рублей, или 77% выручки.
 
 Подписка Pro для тренеров даёт 81 млн рублей, или 7%. Реклама и партнёрские товары — 169 млн рублей, или 15%, и подключаются после появления масштаба и измеримой атрибуции.
+
+КАК ЧИТАТЬ ЦИФРЫ
+Все суммы — годовая выручка базового прогноза на 2031 год. Доли округлены: сумма показанных процентов может отличаться от 100%. 33% у тренировок — доля в общей выручке Fit, не ставка комиссии с занятия.
+
+Операционные ориентиры вынесены на следующий слайд без изменения значений: 264 тыс. платящих клиентов и 9,3 тыс. платящих тренеров на конец 2031 года, около 934 тыс. тренировок в месяц. Здесь остаются только источники, суммы, доли и механика заработка.
 
 ОБЯЗАТЕЛЬНАЯ ОГОВОРКА
 Это расчётная структура выручки базового сценария, а не фактическая выручка. Конверсии, удержание, цена подписки, take rate и частота тренировок требуют подтверждения реальными когортами.
