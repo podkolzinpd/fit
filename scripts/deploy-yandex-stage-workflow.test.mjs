@@ -42,6 +42,11 @@ const prPreviewCleanupWorkflow = readFileSync(
 const vercelConfig = JSON.parse(
   readFileSync(join(import.meta.dirname, '..', 'vercel.json'), 'utf8'),
 )
+const startupHtml = readFileSync(join(import.meta.dirname, '..', 'index.html'), 'utf8')
+const assetRecoveryScript = readFileSync(
+  join(import.meta.dirname, '..', 'public', 'asset-recovery.js'),
+  'utf8',
+)
 const databaseAccessWorkflow = readFileSync(
   join(
     import.meta.dirname,
@@ -632,6 +637,21 @@ test('deploys Vercel only from main, stable stage, and explicit PR preview refs'
     'preview/**': true,
     '**': false,
   })
+})
+
+test('recovers stale frontend bundles without leaving a blank screen', () => {
+  assert.deepEqual(vercelConfig.routes, [
+    { handle: 'filesystem' },
+    { src: '/assets/.*\\.js', dest: '/asset-recovery.js' },
+    { src: '/assets/.*', status: 404 },
+    { src: '/(.*)', dest: '/index.html' },
+  ])
+  assert.match(startupHtml, /id="fit-startup-title">Открываем Fit/)
+  assert.match(startupHtml, /Не удалось открыть Fit/)
+  assert.match(startupHtml, /id="fit-app-entry" type="module"/)
+  assert.match(assetRecoveryScript, /searchParams\.set\('fit-recover'/)
+  assert.match(assetRecoveryScript, /window\.location\.replace/)
+  assert.match(assetRecoveryScript, /fit:asset-load-error/)
 })
 
 test('creates isolated Vercel previews only when a collaborator requests their own PR', () => {
