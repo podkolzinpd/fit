@@ -1,32 +1,38 @@
 import { useId, useMemo, useState } from 'react'
 import {
-  moscowMetroStationById,
-  searchMoscowMetroStations,
-  type MoscowMetroStation,
-} from '../../shared/moscow-metro'
+  METRO_CITY_LABELS,
+  metroCityFromName,
+  metroStationById,
+  searchMetroStations,
+  type MetroStation,
+} from '../../shared/metro'
 import { CloseIcon } from '../../shared/icons'
 
-function LineDots({ station }: { station: MoscowMetroStation }) {
+function LineDots({ station }: { station: MetroStation }) {
   return <span className="metro-line-dots" aria-label={station.lines.map((line) => line.name).join(', ')}>
     {station.lines.map((line) => <span key={line.code} title={line.name} style={{ backgroundColor: line.color }} />)}
   </span>
 }
 
-export function MetroStationPicker({ selectedIds, onChange }: {
+export function MetroStationPicker({ city = '', selectedIds, onChange }: {
+  city?: string
   selectedIds: string[]
   onChange: (stationIds: string[]) => void
 }) {
   const listId = useId()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
+  const metroCity = useMemo(() => metroCityFromName(city), [city])
   const selected = useMemo(
-    () => selectedIds.map(moscowMetroStationById).filter((station): station is MoscowMetroStation => station !== undefined),
+    () => selectedIds.map(metroStationById).filter((station): station is MetroStation => station !== undefined),
     [selectedIds],
   )
   const results = useMemo(
-    () => searchMoscowMetroStations(query).filter((station) => !selectedIds.includes(station.id)).slice(0, 8),
-    [query, selectedIds],
+    () => searchMetroStations(query, metroCity).filter((station) => !selectedIds.includes(station.id)).slice(0, 8),
+    [metroCity, query, selectedIds],
   )
+  const label = metroCity === 'moscow' ? 'Метро Москвы'
+    : metroCity === 'saint_petersburg' ? 'Метро Санкт-Петербурга' : 'Метро'
 
   function add(stationId: string) {
     if (selectedIds.length >= 20 || selectedIds.includes(stationId)) return
@@ -37,7 +43,7 @@ export function MetroStationPicker({ selectedIds, onChange }: {
 
   return <div className="metro-picker">
     <label className="field">
-      <span>Метро Москвы</span>
+      <span>{label}</span>
       <input
         role="combobox"
         aria-autocomplete="list"
@@ -61,14 +67,16 @@ export function MetroStationPicker({ selectedIds, onChange }: {
     {open && results.length > 0 && <ul id={listId} className="metro-picker-results" role="listbox">
       {results.map((station) => <li key={station.id} role="none">
         <button type="button" role="option" aria-selected="false" onPointerDown={(event) => event.preventDefault()} onClick={() => add(station.id)}>
-          <LineDots station={station} /><span>{station.name}</span>
+          <LineDots station={station} /><span className="metro-picker-result-label"><span>{station.name}</span>
+            {metroCity === null && <small>{METRO_CITY_LABELS[station.city]}</small>}
+          </span>
         </button>
       </li>)}
     </ul>}
     {open && query.trim() && results.length === 0 && <p className="metro-picker-empty">Станция не найдена</p>}
     {selected.length > 0 && <ul className="metro-picker-selected" aria-label="Выбранные станции метро">
       {selected.map((station) => <li key={station.id}>
-        <LineDots station={station} /><span>{station.name}</span>
+        <LineDots station={station} /><span>{station.name}{(metroCity === null || metroCity !== station.city) && <small> · {METRO_CITY_LABELS[station.city]}</small>}</span>
         <button type="button" aria-label={`Убрать станцию ${station.name}`} onClick={() => onChange(selectedIds.filter((id) => id !== station.id))}><CloseIcon /></button>
       </li>)}
     </ul>}
@@ -76,7 +84,7 @@ export function MetroStationPicker({ selectedIds, onChange }: {
 }
 
 export function MetroStationList({ stationIds }: { stationIds: string[] }) {
-  const stations = stationIds.map(moscowMetroStationById).filter((station): station is MoscowMetroStation => station !== undefined)
+  const stations = stationIds.map(metroStationById).filter((station): station is MetroStation => station !== undefined)
   if (stations.length === 0) return null
   return <ul className="trainer-location-list" aria-label="Станции метро">
     {stations.map((station) => <li key={station.id}><LineDots station={station} /><span>{station.name}</span></li>)}

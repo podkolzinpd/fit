@@ -59,7 +59,7 @@ describe('TrainerCatalogPage', () => {
     const dialog = screen.getByRole('dialog', { name: 'Фильтры тренеров' })
     expect(dialog.closest('.trainer-catalog-filter-overlay')).toHaveClass('keyboard-open')
     expect(within(dialog).getByLabelText('Город')).toBeVisible()
-    expect(within(dialog).getByRole('combobox', { name: 'Метро Москвы' })).toBeVisible()
+    expect(within(dialog).getByRole('combobox', { name: 'Метро' })).toBeVisible()
     expect(within(dialog).getByRole('button', { name: 'Показать тренеров' })).toBeVisible()
   })
 
@@ -109,6 +109,24 @@ describe('TrainerCatalogPage', () => {
     }, { offset: 0, limit: 3 }))
     expect(screen.getByRole('button', { name: 'Фильтры · 4' })).toBeVisible()
     expect(screen.queryByRole('dialog', { name: 'Фильтры тренеров' })).not.toBeInTheDocument()
+  })
+
+  it('filters the catalog by a Saint Petersburg metro station', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByText('Анна Иванова')
+
+    await user.click(screen.getByRole('button', { name: 'Фильтры' }))
+    const dialog = screen.getByRole('dialog', { name: 'Фильтры тренеров' })
+    await user.type(within(dialog).getByLabelText('Город'), 'Санкт-Петербург')
+    await user.type(within(dialog).getByRole('combobox', { name: 'Метро Санкт-Петербурга' }), 'Горный')
+    await user.click(await within(dialog).findByRole('option', { name: /Горный институт/ }))
+    await user.click(within(dialog).getByRole('button', { name: 'Показать тренеров' }))
+
+    await waitFor(() => expect(listCatalog).toHaveBeenLastCalledWith(expect.objectContaining({
+      city: 'Санкт-Петербург',
+      metroStationIds: ['spb-gorny-institut'],
+    }), { offset: 0, limit: 3 }))
   })
 
   it('clears the name immediately and resets an empty result', async () => {
