@@ -581,12 +581,17 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page, fre
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.locator('.today-exercise-editor summary').click()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
   await page.getByRole('button', { name: '＋ Подход' }).click()
   await page.getByLabel('Вес, подход 2').fill('40')
   await page.getByLabel('Повторы, подход 2').fill('10')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await page.getByRole('button', { name: 'Далее' }).click()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Запланировать тренировку' }).click(),
+  ])
   await beforeStart?.()
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
