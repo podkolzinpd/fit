@@ -2136,7 +2136,17 @@ export function LiveWorkoutPage() {
     },
   })
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => runLiveWorkoutMutation(`append-exercise:${exercise.ref}`, (workout) => workoutsRepository.appendLiveExercise(workout, exercise)), onSuccess: async () => { await query.refetch() } })
-  const reorderBlock = useMutation({ mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => runLiveWorkoutMutation(`reorder:${blockId}:${direction}`, (workout) => workoutsRepository.reorderLiveBlock(workout, blockId, direction)), onSuccess: async () => { await query.refetch() } })
+  const reorderBlock = useMutation({
+    mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => runLiveWorkoutMutation(`reorder:${blockId}:${direction}`, (workout) => workoutsRepository.reorderLiveBlock(workout, blockId, direction)),
+    onSuccess: async () => {
+      const refreshed = await query.refetch()
+      const nextExercise = refreshed.data?.exercises.find((exercise) => exercise.sets.some((set) => !set.confirmedAt))
+      const nextSet = nextExercise?.sets.find((set) => !set.confirmedAt)
+      nextExerciseAnchor.current = nextSet?.id ?? null
+      setExpandedSetId(nextSet?.id ?? null)
+      setActiveExerciseId(nextExercise?.id ?? null)
+    },
+  })
   const replaceLive = useMutation({
     mutationFn: async ({ exerciseId, exercise, discardedSetIds }: { exerciseId: string; exercise: ExerciseSnapshot; discardedSetIds: string[] }) => {
       // A blur-save may already be in flight when the picker opens. Let it
