@@ -59,6 +59,19 @@ beforeEach(() => {
 })
 
 describe('PushDispatcher', () => {
+  it('identifies finalization failure without resending', async () => {
+    const pool = new TransactionPool()
+    const cause = Object.assign(new Error('private'), { code: '42501' })
+    commandMocks.enqueueWorkoutReminders.mockResolvedValue(0)
+    commandMocks.claimPushNotifications.mockResolvedValue({ dispatchToken: 'test-token', notifications: [notification] })
+    commandMocks.finalizePushNotifications.mockRejectedValue(cause)
+    const sender = { send: vi.fn().mockResolvedValue([]) }
+    await expect(new PushDispatcher(pool, sender).run()).rejects.toMatchObject({ operation: 'push', phase: 'finalize', cause })
+    expect(sender.send).toHaveBeenCalledOnce()
+    expect(pool.connections.at(-1)?.queries).toEqual(['begin', 'rollback'])
+    expect(pool.connections.every((connection) => connection.released)).toBe(true)
+  })
+
   it('produces, claims, sends and finalizes one bounded batch', async () => {
     const pool = new TransactionPool()
     commandMocks.enqueueWorkoutReminders.mockResolvedValueOnce(2)
@@ -123,9 +136,9 @@ describe('PushDispatcher', () => {
     )
     const sender = { send: vi.fn() }
 
-    await expect(new PushDispatcher(pool, sender).run()).rejects.toThrow(
-      'producer failed',
-    )
+    await expect(new PushDispatcher(pool, sender).run()).rejects.toMatchObject({
+      operation: 'push', phase: 'prepare', cause: { message: 'producer failed' },
+    })
     expect(sender.send).not.toHaveBeenCalled()
     expect(pool.connections.map((connection) => connection.queries)).toEqual([
       ['begin', 'rollback'],

@@ -377,6 +377,19 @@ Yandex-записи: обратный перенос всё равно нуже�
 
 ## Первый запуск Yandex push pipeline
 
+`Background dispatch failed` означает перехваченную ошибку обработчика и HTTP
+500, а не доказанный platform-level 502. Запись содержит `request_id`,
+`releaseId`, `durationMs`, `dispatchOperation` (`push`/`app_feedback`) и
+`dispatchPhase` (`prepare`/`finalize`). `prepare` включает получение соединения,
+подготовку/claim и commit; `finalize` — транзакцию фиксации результата доставки.
+`errorCode` содержит безопасный SQLSTATE/сетевой код или `unknown`,
+`errorCategory` — классификацию существующего DB adapter. При двойном сбое
+транзакции и rollback исходный код сохраняется отдельно от `rollbackErrorCode`.
+Текст, stack, SQL, payload и произвольное имя ошибки не логируются.
+Общий параллельный запуск по-прежнему сообщает первый отказ: эта запись не
+означает, что вторая задача не выполнялась. Повторы отправки не добавлены.
+Причина инцидента 24 сентября по старому сообщению пока не установлена.
+
 Миграция `000030` сама не отправляет уведомления. Доставку включает только
 private Serverless Container `fit-stage-push-dispatcher`, вызываемый timer
 trigger раз в минуту. У контейнера нет `allUsers`, постоянно прогретых

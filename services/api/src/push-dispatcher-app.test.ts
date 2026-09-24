@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { buildPushDispatcherApp } from './push-dispatcher-app.js'
+import { BackgroundDispatchError } from './background-dispatch-error.js'
 
 const timerEvent = {
   messages: [{
@@ -12,6 +13,31 @@ const timerEvent = {
 }
 
 describe('push dispatcher private container', () => {
+  it.each(['push', 'app_feedback'] as const)('logs safe %s failure context', async (operation) => {
+    const logs: string[] = []
+    const cause = Object.assign(new Error('private payload'), { code: '42501', name: 'private name' })
+    const app = buildPushDispatcherApp({
+      dispatcher: { run: vi.fn().mockRejectedValue(new BackgroundDispatchError(operation, 'finalize', cause)) },
+      logger: { stream: { write: (message) => { logs.push(message) } } },
+      releaseId: 'release-1',
+    })
+    try {
+      const response = await app.inject({ method: 'POST', url: '/internal/push/dispatch', payload: timerEvent })
+      expect(response.statusCode).toBe(500)
+      expect(response.json()).toEqual({ status: 'dispatch_failed' })
+      expect(logs.map((line) => JSON.parse(line) as unknown)).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          level: 'ERROR', stage: 'failed', dispatchOperation: operation,
+          dispatchPhase: 'finalize', errorCode: '42501', errorCategory: 'permission',
+          releaseId: 'release-1',
+        }),
+      ]))
+      expect(logs.join('')).not.toContain('private')
+    } finally {
+      await app.close()
+    }
+  })
+
   it('closes response sockets instead of reusing them after container suspension', async () => {
     const app = buildPushDispatcherApp({
       dispatcher: { run: vi.fn() },
