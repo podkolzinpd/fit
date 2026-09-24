@@ -6,6 +6,7 @@ const LOCAL_PREFIX = '/exercises/vital-pro/'
 const STORAGE_FOLDER = 'vital-pro/'
 const SIGNED_URL_TTL_SECONDS = 60 * 60
 const CACHE_TTL_MS = 50 * 60 * 1_000
+const YANDEX_RETRY_DELAYS_MS = [250, 1_000] as const
 
 const signedUrlCache = createSignedUrlCache(CACHE_TTL_MS)
 
@@ -34,6 +35,7 @@ export function useVitalMediaUrl(source: string | undefined, enabled = true) {
 
   useEffect(() => {
     let active = true
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
     if (!source) {
       setResolved(undefined)
       return () => { active = false }
@@ -47,11 +49,21 @@ export function useVitalMediaUrl(source: string | undefined, enabled = true) {
       return () => { active = false }
     }
     setResolved(undefined)
-    void resolveVitalMedia(source, backendSource, (path, expiresIn) => exercises.createVitalMediaUrl(path, expiresIn)).then(
-      (url) => { if (active) setResolved(url) },
-      () => { if (active) setResolved(undefined) },
-    )
-    return () => { active = false }
+    const resolve = (attempt: number) => {
+      void resolveVitalMedia(source, backendSource, (path, expiresIn) => exercises.createVitalMediaUrl(path, expiresIn)).then(
+        (url) => { if (active) setResolved(url) },
+        () => {
+          const delay = backendSource === 'yandex' ? YANDEX_RETRY_DELAYS_MS[attempt] : undefined
+          if (!active || delay === undefined) return
+          retryTimer = setTimeout(() => resolve(attempt + 1), delay)
+        },
+      )
+    }
+    resolve(0)
+    return () => {
+      active = false
+      if (retryTimer !== undefined) clearTimeout(retryTimer)
+    }
   }, [backendSource, enabled, exercises, source])
 
   return resolved
