@@ -2394,7 +2394,7 @@ test('Home body map keeps its front and back switch aligned', async ({ page }, t
   await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
   await signIn(page, 'client@fit.local', /\/me$/)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
-  const map = page.getByRole('region', { name: 'Последняя тренировка' }).getByRole('region', { name: 'Распределение подходов' })
+  const map = page.getByRole('region', { name: 'Последняя тренировка' }).getByRole('region', { name: 'Нагрузка по телу' })
   const sides = map.locator('.body-progress-sides')
   await expect(sides).toBeVisible()
   const coachmark = page.getByRole('button', { name: 'Понятно' })
@@ -2407,7 +2407,6 @@ test('Home body map keeps its front and back switch aligned', async ({ page }, t
     const control = sideControl.getBoundingClientRect()
     const figure = visual.getBoundingClientRect()
     const mapRect = element.getBoundingClientRect()
-    const zones = element.querySelector<HTMLElement>('.workout-load-map-zones')!.getBoundingClientRect()
     const card = element.closest<HTMLElement>('.personal-workout-result')!
     const cardRect = card.getBoundingClientRect()
     const cardStyle = getComputedStyle(card)
@@ -2418,8 +2417,8 @@ test('Home body map keeps its front and back switch aligned', async ({ page }, t
       buttonTops: buttons.map((button) => button.top),
       gapToFigure: figure.top - control.bottom,
       centersDelta: Math.abs((figure.left + figure.right) / 2 - (control.left + control.right) / 2),
-      topDelta: Math.abs(figure.top - zones.top),
-      rightDelta: Math.abs(mapRect.right - zones.right),
+      mapCentersDelta: Math.abs((figure.left + figure.right) / 2 - (mapRect.left + mapRect.right) / 2),
+      figureWidth: figure.width,
       cardWidthDelta: Math.abs(mapRect.width - (cardRect.width - parseFloat(cardStyle.paddingLeft) - parseFloat(cardStyle.paddingRight) - 2)),
     }
   })
@@ -2429,23 +2428,21 @@ test('Home body map keeps its front and back switch aligned', async ({ page }, t
   expect(Math.abs(geometry.buttonTops[0]! - geometry.buttonTops[1]!)).toBeLessThanOrEqual(1)
   expect(geometry.gapToFigure).toBeGreaterThanOrEqual(8)
   expect(geometry.centersDelta).toBeLessThanOrEqual(1)
-  expect(geometry.topDelta).toBeLessThanOrEqual(1)
-  expect(geometry.rightDelta).toBeLessThanOrEqual(1)
+  expect(geometry.mapCentersDelta).toBeLessThanOrEqual(1)
+  expect(geometry.figureWidth).toBeGreaterThanOrEqual(108)
   expect(geometry.cardWidthDelta).toBeLessThanOrEqual(1)
   await expectBodyMapBaseline(page.getByRole('region', { name: 'Последняя тренировка' }), `home-result-alignment-${process.platform}.png`)
   await expectBodyMapBaseline(map, `home-body-map-side-switch-${process.platform}.png`)
-  await expect(map).toContainText('Всего 5 подходов')
-  await expect(map).toContainText('Кардио: 1 подход')
-  await map.getByText('Показать все группы', { exact: true }).click()
-  await expect(map.getByRole('button', { name: 'Передняя поверхность бедра: 1 подход' })).toBeVisible()
-  await expectBodyMapBaseline(map, `home-body-map-expanded-${process.platform}.png`)
+  await expect(map.getByRole('heading', { name: 'Нагрузка по телу' })).toBeVisible()
+  await expect(map).not.toContainText('По подтверждённым подходам')
+  await expect(map).not.toContainText('Всего 5 подходов')
+  await expect(map).not.toContainText('Показать все группы')
 
   await map.getByRole('button', { name: 'Сзади' }).click()
   await expect(map.getByRole('button', { name: 'Сзади' })).toHaveAttribute('aria-pressed', 'true')
-  await expect(map.getByRole('button', { name: 'Верх спины: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(map.locator('[data-body-zone="upper_back"]')).toBeVisible()
   await map.getByRole('button', { name: 'Спереди' }).click()
-  await expect(map.getByRole('button', { name: 'Грудь: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
-  await map.getByText('Показать все группы', { exact: true }).click()
+  await expect(map.locator('[data-body-zone="chest"]')).toBeVisible()
 
   await page.evaluate(() => {
     window.localStorage.setItem('fit.appTheme', 'dark')
@@ -2483,13 +2480,14 @@ test('personal workout result stays on Home and remains available in Progress hi
   await expect(result).toContainText('К прошлому результату')
   await expect(result.getByRole('link', { name: 'Сравнить' })).toHaveCount(0)
   await expect(result.getByRole('link', { name: 'Открыть тренировку' })).toHaveAttribute('href', '/workouts/b1000000-0000-4000-8000-000000000001')
-  const homeMap = result.getByRole('region', { name: 'Распределение подходов' })
-  await expect(homeMap.getByRole('button', { name: 'Грудь: 1 подход' })).toBeVisible()
+  const homeMap = result.getByRole('region', { name: 'Нагрузка по телу' })
+  await expect(homeMap.locator('[data-body-zone="chest"]')).toBeVisible()
   const mapCoachmark = page.getByRole('button', { name: 'Понятно' })
   if (await mapCoachmark.isVisible()) await mapCoachmark.click()
   await expectBodyMapBaseline(result, `personal-result-home-${process.platform}.png`)
-  await homeMap.getByRole('link', { name: 'Разбор нагрузки' }).click()
-  await expect(page).toHaveURL(/mapWorkout=b1000000-0000-4000-8000-000000000001.*mapMode=load.*mapFrom=2026-08-10.*mapTo=2026-08-10.*mapZone=chest/)
+  await homeMap.getByRole('link', { name: 'Открыть в прогрессе' }).click()
+  await expect(page).toHaveURL(/mapWorkout=b1000000-0000-4000-8000-000000000001.*mapMode=load.*mapFrom=2026-08-10.*mapTo=2026-08-10/)
+  expect(new URL(page.url()).searchParams.get('mapZone')).toBeNull()
   const disclosure = page.locator('.client-body-map-disclosure')
   await expect(disclosure).toHaveAttribute('open')
   await expect(disclosure).toContainText('10 августа 2026 г. · тренировка')

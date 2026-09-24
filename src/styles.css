@@ -5860,18 +5860,14 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-load-map h3 { margin:0 0 6px; font-size:var(--type-section-size); }
 .workout-load-map p { margin:6px 0; font-size:var(--type-caption-size); line-height:var(--leading-body); }
 .workout-load-map-layout { display:grid; gap:12px; margin:12px 0; align-items:start; }
-.workout-load-map-compact .workout-load-map-layout { grid-template-columns:136px minmax(0,1fr); gap:8px 12px; }
-.workout-load-map-compact .body-progress-figure-shell { display:contents; }
-.workout-load-map-compact .body-progress-visual { grid-column:1; grid-row:1; }
-.workout-load-map-compact .workout-load-map-zones { grid-column:2; grid-row:1; }
-.workout-load-map-compact .workout-load-map-layout:has(.body-progress-sides) .body-progress-visual,
-.workout-load-map-compact .workout-load-map-layout:has(.body-progress-sides) .workout-load-map-zones { grid-row:2; }
-.workout-load-map-compact .body-progress-sides { grid-column:1; grid-row:1; justify-self:center; }
+.workout-load-map-compact .workout-load-map-layout { display:block; margin:8px 0 4px; }
+.workout-load-map-compact .body-progress-figure-shell { gap:12px; }
 .workout-load-map-compact .body-progress-sides { width:136px; height:44px; }
 .workout-load-map-compact .body-progress-sides::before { inset:4px 0; }
 .workout-load-map-compact .body-progress-sides button { min-width:0; min-height:44px; margin:0; padding:4px 8px; font-size:11px; }
 .workout-load-map-compact .body-progress-sides button[aria-pressed='true']::before { inset:5px 1px; }
-.workout-load-map-compact .body-progress-visual { width:90px; }
+.workout-load-map-compact .body-progress-visual { width:min(100%,112px); }
+.workout-load-map-compact .body-progress-region:not(.selected) .body-progress-region-fill { opacity:calc(.1 + var(--body-zone-intensity) * .18); }
 .workout-load-map-zones { display:grid; gap:6px; min-width:0; }
 .workout-load-map-zones button { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:44px; padding:8px; border:1px solid var(--border); border-radius:var(--radius-md); background:transparent; color:var(--fg); font-size:var(--type-caption-size); text-align:left; box-shadow:none; }
 .workout-load-map-zones button[aria-pressed='true'] { border-color:var(--fg); background:var(--surface-sunken); }
