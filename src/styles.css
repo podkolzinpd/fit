@@ -6080,11 +6080,12 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-catalog-query-clear svg { width:20px; height:20px; }
 .trainer-catalog-search-actions { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; }
 .trainer-catalog-search-actions button { width:100%; min-height:48px; }
-.trainer-catalog-filter-overlay { z-index:50; padding-inline:max(0px,env(safe-area-inset-left)); }
-.trainer-catalog-filter-sheet { width:min(100%,560px); max-height:min(88%,680px); overflow-y:auto; display:grid; gap:16px; padding:18px 18px max(18px,calc(env(safe-area-inset-bottom) + 12px)); border:1px solid var(--border); border-bottom:0; border-radius:26px 26px 0 0; background:var(--surface-elevated); box-shadow:none; overscroll-behavior:contain; }
+.trainer-catalog-filter-overlay { z-index:50; top:var(--app-viewport-offset-top,0px); bottom:auto; height:min(var(--app-visible-height,100dvh),100dvh); min-height:0; padding-inline:max(0px,env(safe-area-inset-left)); }
+.trainer-catalog-filter-sheet { width:min(100%,560px); max-height:min(88%,680px); min-height:0; overflow:hidden; display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:16px; padding:18px 18px max(18px,calc(env(safe-area-inset-bottom) + 12px)); border:1px solid var(--border); border-bottom:0; border-radius:26px 26px 0 0; background:var(--surface-elevated); box-shadow:none; overscroll-behavior:contain; }
+.trainer-catalog-filter-overlay.keyboard-open .trainer-catalog-filter-sheet { height:100%; max-height:100%; padding-top:14px; padding-bottom:10px; border-radius:24px 24px 0 0; }
 .trainer-catalog-filter-sheet .picker-header h2 { margin:0; font-size:22px; }
 .trainer-catalog-filter-sheet .picker-close { width:44px; height:44px; }
-.trainer-catalog-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.trainer-catalog-filters { min-height:0; overflow-y:auto; overscroll-behavior:contain; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-content:start; gap:12px; padding:1px; scroll-padding-bottom:12px; }
 .trainer-catalog-filters input, .trainer-catalog-filters select { min-height:48px; }
 .trainer-catalog-metro-filter { grid-column:1 / -1; min-width:0; }
 .trainer-catalog-specialty-filter { grid-column:1 / -1; min-width:0; }
