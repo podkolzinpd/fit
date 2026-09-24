@@ -49,7 +49,7 @@ import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 import { WorkoutCompletionCard } from './WorkoutCompletionCard'
 import { WorkoutCompletionReport } from './WorkoutCompletionReport'
-import { ArrowDownIcon, ArrowUpIcon, BackIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
+import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, MessageIcon, RecordIcon, ScheduleIcon, SettingsIcon } from '../../shared/icons'
 import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
@@ -65,6 +65,8 @@ import { useWorkoutInactivityReminder } from './use-workout-inactivity-reminder'
 import { LiveExerciseTechnique } from './LiveExerciseTechnique'
 import { useAppViewport } from '../../app/app-viewport'
 import { prepareZeroReplacement } from '../../shared/numeric-input'
+import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
+import { useTrainerWorkspace } from './use-trainer-workspace'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -101,7 +103,7 @@ function eventTime(workout: Workout): string {
   return `${start}–${workout.endTime.slice(0, 5)}`
 }
 
-export function SchedulePage() {
+function useTrainerScheduleModel() {
   const { workouts: workoutsRepository } = useDataBackend()
   const [params, setParams] = useSearchParams()
   const { actor } = useAuth()
@@ -164,6 +166,26 @@ export function SchedulePage() {
   }, [actor?.timezone, isDayView, query.isLoading, selected, timed])
 
   const todayDisabled = isDayView ? selected === today : weekStart === todayWeekStart
+
+  return {
+    actor, selected, scheduleRange, isTwoWeekView, isDayView, weekStart,
+    overviewDayCount, periodEnd, overviewDays, today, scrollRef, openDay,
+    showOverview, shiftOverview, query, itemsByDay, dayItems, totalCount,
+    timed, untimed, todayDisabled,
+  }
+}
+
+export function SchedulePage() {
+  const { actor } = useAuth()
+  return isTrainerScheduleV2Enabled(actor) ? <TrainerScheduleV2 /> : <TrainerScheduleV1 />
+}
+
+function TrainerScheduleV1() {
+  const {
+    actor, selected, isTwoWeekView, isDayView, weekStart,
+    periodEnd, overviewDays, today, scrollRef, openDay, showOverview,
+    shiftOverview, query, itemsByDay, totalCount, timed, untimed, todayDisabled,
+  } = useTrainerScheduleModel()
 
   return <Page className={`schedule-page ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}`} title="Расписание" action={
     <div className="schedule-controls">
@@ -300,6 +322,113 @@ export function SchedulePage() {
        </div>
        </>}
      </AsyncView>
+  </Page>
+}
+
+function scheduleCount(value: number): string {
+  return value > 99 ? '99+' : String(value)
+}
+
+function clientInitials(name: string): string {
+  return name.trim().split(/\s+/).slice(0, 2).map((part) => part.slice(0, 1).toUpperCase()).join('') || 'К'
+}
+
+function TrainerScheduleV2() {
+  const {
+    actor, selected, isTwoWeekView, isDayView, weekStart, periodEnd,
+    overviewDays, today, scrollRef, openDay, showOverview, shiftOverview,
+    query, itemsByDay, totalCount, timed, untimed, todayDisabled,
+  } = useTrainerScheduleModel()
+  const workspace = useTrainerWorkspace(isDayView)
+  const dateInputRef = useRef<HTMLInputElement>(null)
+  const currentTime = currentTimeInTimeZone(actor?.timezone)
+  const currentMinutes = minutesOf(currentTime)
+
+  useEffect(() => {
+    trackGoal('schedule_v2_exposed')
+    trackGoal(isDayView ? 'schedule_v2_day_opened' : 'schedule_v2_week_opened')
+  }, [isDayView])
+
+  const summaryValue = (value: number | undefined) => workspace.isError
+    ? '—'
+    : value === undefined ? '…' : scheduleCount(value)
+  const openDatePicker = () => {
+    const input = dateInputRef.current
+    if (!input) return
+    if (typeof input.showPicker === 'function') input.showPicker()
+    else input.click()
+  }
+  const menuItems = [
+    { label: 'Сегодня', disabled: todayDisabled, onClick: () => isDayView ? openDay(today) : showOverview(today) },
+    { label: 'Выбрать дату', onClick: openDatePicker },
+    { label: 'Показать неделю', onClick: () => showOverview(selected, 'week') },
+    { label: 'Показать 2 недели', onClick: () => showOverview(selected, '2w') },
+  ]
+
+  return <Page
+    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}`}
+    title="Расписание"
+    action={<div className="schedule-v2-head-actions">
+      <label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label>
+      <OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} />
+    </div>}
+  >
+    <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+      {!isDayView ? <>
+        <section className="schedule-v2-period" aria-label="Навигация по расписанию">
+          <div><span>{isTwoWeekView ? 'Две недели' : 'Неделя'}</span><strong>{formatWeekRange(weekStart, periodEnd)}</strong></div>
+          <span><button type="button" aria-label="Предыдущий период" onClick={() => shiftOverview(-1)}><BackIcon /></button><button type="button" aria-label="Следующий период" onClick={() => shiftOverview(1)}><ChevronRightIcon /></button></span>
+        </section>
+        <div className="schedule-v2-weekdays" aria-label="Дни периода">
+          {overviewDays.map((day) => <button key={day} type="button" className={`${day === selected ? 'is-selected' : ''}${day === today ? ' is-today' : ''}`} onClick={() => openDay(day, weekStart)}><span>{weekdayShort(day)}</span><strong>{dayOfMonth(day)}</strong></button>)}
+        </div>
+        <section className="schedule-v2-card-grid" aria-label={`Расписание: ${formatWeekRange(weekStart, periodEnd)}`}>
+          {overviewDays.map((day) => {
+            const workouts = itemsByDay.get(day) ?? []
+            return <button key={day} type="button" className={`schedule-v2-day-card${day === today ? ' is-today' : ''}`} onClick={() => openDay(day, weekStart)}>
+              <span className="schedule-v2-day-title"><span>{weekdayShort(day)}</span><strong>{dayOfMonth(day)}</strong></span>
+              <span className="schedule-v2-day-events">{workouts.length > 0 ? workouts.slice(0, 4).map((workout) => <span key={workout.id}><time>{workout.startTime?.slice(0, 5) ?? '—'}</time><b>{workout.clientName}</b>{workout.status === 'done' && <CheckIcon />}</span>) : <em>Свободный день</em>}{workouts.length > 4 && <em>Ещё {workouts.length - 4}</em>}</span>
+            </button>
+          })}
+        </section>
+      </> : <>
+        <section className="schedule-v2-day-head">
+          <button type="button" aria-label="К обзору периода" onClick={() => showOverview(weekStart)}><BackIcon /></button>
+          <div><strong>{formatScheduleDateLabel(selected)}</strong><span>{workoutCountLabel(totalCount)}</span></div>
+          <span><button type="button" aria-label="Предыдущий день" onClick={() => openDay(addDays(selected, -1))}><BackIcon /></button><button type="button" aria-label="Следующий день" onClick={() => openDay(addDays(selected, 1))}><ChevronRightIcon /></button></span>
+        </section>
+        <section className="schedule-v2-summary" aria-label="Рабочая сводка">
+          <Link to="/today#trainer-attention" onClick={() => trackGoal('schedule_v2_action_tile_opened')}>
+            <span className="schedule-v2-summary-icon"><BellIcon /></span>
+            <span><strong>{summaryValue(workspace.data?.summary.pendingActionCount)}</strong><small>Незавершённые действия</small></span>
+          </Link>
+          <Link to="/chat" onClick={() => trackGoal('schedule_v2_inbox_tile_opened')}>
+            <span className="schedule-v2-summary-icon"><MessageIcon /></span>
+            <span><strong>{summaryValue(workspace.data?.summary.inboxCount)}</strong><small>Вопросы и сообщения</small></span>
+          </Link>
+        </section>
+        {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
+        <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
+          <div className="day-grid" style={{ height: HOURS.length * HOUR_HEIGHT }}>
+            {HOURS.map((hour) => <div key={hour} className="day-grid-hour" style={{ top: hour * HOUR_HEIGHT }}><span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span><div className="day-grid-hour-line" /></div>)}
+            {selected === today && <div className="schedule-v2-now" style={{ top: (currentMinutes / 60) * HOUR_HEIGHT }}><time>{currentTime}</time><span /></div>}
+            {timed.map((workout) => {
+              const startMin = minutesOf(workout.startTime!.slice(0, 5))
+              const endMin = workout.endTime ? minutesOf(workout.endTime.slice(0, 5)) : startMin + 60
+              const top = (startMin / 60) * HOUR_HEIGHT
+              const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 54)
+              const status = scheduleEventStatus(workout, today)
+              return <Link key={workout.id} className={`schedule-v2-event schedule-event-${status.tone}`} style={{ top, height }} to={`/workouts/${workout.id}`} onClick={() => trackGoal('schedule_v2_workout_opened')}>
+                <span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span>
+                <span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small><time>{eventTime(workout)}</time></span>
+                {workout.status === 'done' && <CheckIcon />}
+              </Link>
+            })}
+          </div>
+        </div>
+      </>}
+    </AsyncView>
+    <Link className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} to={`/workouts/new?date=${selected}`} onClick={() => trackGoal('schedule_v2_workout_create_started')}><AddIcon /></Link>
   </Page>
 }
 

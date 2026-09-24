@@ -94,6 +94,9 @@ interface SessionActorBase {
   firstName: string | null
   lastName: string | null
   timezone: string
+  experiments?: {
+    trainerScheduleV2: boolean
+  }
 }
 
 export interface TrainerActor extends SessionActorBase {
@@ -108,6 +111,27 @@ export interface ClientActor extends SessionActorBase {
 }
 
 export type SessionActor = TrainerActor | ClientActor
+
+export interface TrainerWorkspaceQuestion {
+  workoutId: UUID
+  clientId: UUID
+  clientName: string
+  question: string
+  askedAt: string
+}
+
+export interface TrainerWorkspaceSummary {
+  pendingActionCount: number
+  unresolvedQuestionCount: number
+  unreadChatMessageCount: number
+  inboxCount: number
+  updatedAt: string
+}
+
+export interface TrainerWorkspace {
+  summary: TrainerWorkspaceSummary
+  questions: TrainerWorkspaceQuestion[]
+}
 
 export interface TrainerMembership {
   trainerId: UUID

@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import type { ChatConnectionState, ChatMessage, ChatMessagePage, ChatThread } from '../../shared/domain'
+import type { ChatConnectionState, ChatMessage, ChatMessagePage, ChatThread, TrainerWorkspace } from '../../shared/domain'
 
 type MockChat = {
   listThreads: ReturnType<typeof vi.fn<() => Promise<ChatThread[]>>>
@@ -23,8 +23,9 @@ type MockChat = {
   window: ReturnType<typeof vi.fn<(conversationId: string, messageId: string) => Promise<ChatMessage[]>>>
   subscribe: ReturnType<typeof vi.fn<(conversationId: string, onChange: () => void) => () => void>>
 }
-type MockActor = { kind: 'client' | 'trainer'; role: 'client' | 'trainer'; userId: string; email: string; firstName: string; lastName: null; timezone: string; clientId: string; trainerId: string; fullName: string }
-const backend = vi.hoisted(() => vi.fn<() => { chat: MockChat }>())
+type MockActor = { kind: 'client' | 'trainer'; role: 'client' | 'trainer'; userId: string; email: string; firstName: string; lastName: null; timezone: string; clientId: string; trainerId: string; fullName: string; experiments?: { trainerScheduleV2: boolean } }
+type MockWorkspace = { read: ReturnType<typeof vi.fn<() => Promise<TrainerWorkspace>>> }
+const backend = vi.hoisted(() => vi.fn<() => { chat: MockChat; trainerWorkspace?: MockWorkspace }>())
 const auth = vi.hoisted(() => vi.fn<() => { actor: MockActor | null }>())
 const prepareChatImage = vi.hoisted(() => vi.fn())
 vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => backend() }))
@@ -64,9 +65,13 @@ function Location() {
   return <output aria-label="route">{useLocation().pathname}</output>
 }
 
-function renderAt(path: string | Array<string | { pathname: string; state?: unknown }>, chat = chatBackend()) {
+function renderAt(
+  path: string | Array<string | { pathname: string; state?: unknown }>,
+  chat = chatBackend(),
+  trainerWorkspace?: MockWorkspace,
+) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  backend.mockReturnValue({ chat })
+  backend.mockReturnValue({ chat, trainerWorkspace })
   const initialEntries = Array.isArray(path) ? path : [path]
   const view = render(<QueryClientProvider client={queryClient}><MemoryRouter initialEntries={initialEntries} initialIndex={initialEntries.length - 1}><Routes>
     <Route path="/chat" element={<><ChatListPage /><Location /></>} />
@@ -152,6 +157,42 @@ describe('reliable chat screens', () => {
 
     expect(await screen.findByText('Диалогов пока нет')).toBeVisible()
     expect(screen.getByText('Подключите тренера или спортсмена, чтобы начать переписку.')).toBeVisible()
+  })
+
+  it('adds unresolved workout questions above messages for the selected trainer pilot', async () => {
+    auth.mockReturnValue({ actor: {
+      ...actor,
+      kind: 'trainer',
+      role: 'trainer',
+      experiments: { trainerScheduleV2: true },
+    } })
+    const trainerWorkspace: MockWorkspace = { read: vi.fn().mockResolvedValue({
+      summary: {
+        pendingActionCount: 3,
+        unresolvedQuestionCount: 1,
+        unreadChatMessageCount: 2,
+        inboxCount: 3,
+        updatedAt: '2026-09-24T12:00:00.000Z',
+      },
+      questions: [{
+        workoutId: 'workout-question-1',
+        clientId: 'client-1',
+        clientName: 'Иван',
+        question: 'Можно заменить приседания?',
+        askedAt: '2026-09-24T11:00:00.000Z',
+      }],
+    }) }
+
+    renderAt('/chat', chatBackend(), trainerWorkspace)
+
+    expect(await screen.findByRole('heading', { name: 'Вопросы тренеру' })).toBeVisible()
+    expect(screen.getByText('Можно заменить приседания?')).toBeVisible()
+    expect(screen.getByRole('link', { name: /Можно заменить приседания/ })).toHaveAttribute(
+      'href',
+      '/workouts/workout-question-1?reply=1',
+    )
+    expect(screen.getByRole('heading', { name: 'Сообщения', level: 2 })).toBeVisible()
+    expect(trainerWorkspace.read).toHaveBeenCalledOnce()
   })
 
   it('lets a trainer invite the athlete inside an unconnected dialog', async () => {
