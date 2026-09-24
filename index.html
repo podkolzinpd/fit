@@ -9636,6 +9636,51 @@ body {
 .review-product-flow-v6 .pilot-proof-screen:nth-child(2)::before { top: 374.56px; }
 .review-product-flow-v6 .ai-loop-return-label { left: 1000px; }
 </style>
+<style id="ecosystem-combined-review">
+/* One Fit core: entry points → training context → expected ecosystem value.
+   Reference: linear/03-linear-product-flow.png; only grouping and reading direction borrowed. */
+.ecosystem-combined-slide h2 {
+  position: absolute; left: 92px; top: 126px; width: 1370px; margin: 0;
+  color: var(--paper); font-size: 66px; line-height: 1.02; letter-spacing: -.05em;
+}
+.ecosystem-combined-slide .ecosystem-flow {
+  position: absolute; left: 92px; right: 92px; top: 362px;
+  display: grid; grid-template-columns: 360px 76px 464px 76px 440px; align-items: center;
+}
+.ecosystem-combined-slide .ecosystem-side { min-width: 0; }
+.ecosystem-combined-slide .ecosystem-label {
+  display: block; margin-bottom: 30px; color: #b5bcc8; font-size: 20px; font-weight: 500;
+}
+.ecosystem-combined-slide .ecosystem-side ul { margin: 0; padding: 0; list-style: none; }
+.ecosystem-combined-slide .ecosystem-side li {
+  display: flex; align-items: center; min-height: 88px; padding: 16px 0;
+  border-top: 1px solid #56606f; color: var(--paper);
+  font-size: 29px; font-weight: 700; line-height: 1.13; letter-spacing: -.025em;
+}
+.ecosystem-combined-slide .ecosystem-arrow {
+  display: block; position: relative; margin: 48px 18px 0; height: 1px; background: #8995aa;
+}
+.ecosystem-combined-slide .ecosystem-arrow::after {
+  content: ""; position: absolute; right: 0; top: -4px; width: 8px; height: 8px;
+  border-top: 1px solid #8995aa; border-right: 1px solid #8995aa; transform: rotate(45deg);
+}
+.ecosystem-combined-slide .ecosystem-core {
+  height: 372px; border-radius: 22px; padding: 40px 28px; text-align: center;
+  color: #15171d; background: linear-gradient(180deg, #f5f3ef 0%, #e8e6e1 100%);
+}
+.ecosystem-combined-slide .ecosystem-core > strong {
+  display: block; margin-bottom: 25px; font-size: 86px; line-height: 1; letter-spacing: -.055em;
+}
+.ecosystem-combined-slide .ecosystem-steps {
+  font-size: 25px; line-height: 1.2; font-weight: 700; letter-spacing: -.03em; white-space: nowrap;
+}
+.ecosystem-combined-slide .ecosystem-context {
+  margin-top: 25px; padding-top: 24px; border-top: 1px solid #cfcec9; font-size: 23px; line-height: 1.25;
+}
+.ecosystem-combined-slide .ecosystem-mode {
+  margin-top: 10px; color: #68707d; font-size: 20px; line-height: 1.25;
+}
+</style>
 </head>
 <body>
   <div class="progress" aria-hidden="true"><span id="progressFill"></span></div>
@@ -10369,31 +10414,43 @@ Keep product: https://www.gotokeep.com/</aside>
 Расчёт: 74,1 млн × 78% ≈ 57,8 млн; 74,1 млн × 29% ≈ 21,5 млн. Показатели ВЦИОМ относятся ко всем взрослым и используются как ориентир. Это не TAM, не SAM, не достижимая аудитория и не прогноз активации.</aside>
     </section>
 
-    <section class="slide channel-slide acquisition-slide redesign-v2 rd-distribution review-distribution-v3 prefinal-keep" data-section="Дистрибуция" data-slide-type="feature-overview" data-golden="apple/08-apple-feature-overview.png">
-      <div class="eyebrow">10 · ПРЕИМУЩЕСТВО ЯНДЕКСА</div>
-      <h2>Fit появляется в момент готовности действовать</h2>
-      <p class="distribution-lead">Контекст Яндекса, тренеры и социальные сигналы ведут сразу к первому полезному действию.</p>
+    <section class="slide slide-dark ecosystem-combined-slide prefinal-keep" data-section="Fit и Яндекс" data-slide-type="product-story" data-golden="linear/03-linear-product-flow.png">
+      <div class="eyebrow">10 · FIT И ЯНДЕКС</div>
+      <h2>Fit — спортивный сценарий<br>экосистемы Яндекса</h2>
 
-      <div class="distribution-triggers">
-        <span class="route-label">ЧЕТЫРЕ ТОЧКИ ВХОДА В FIT</span>
-        <div class="trigger-row"><b>НАМЕРЕНИЕ</b><strong>Поиск · Карты</strong><p>Ищу зал, тренера или маршрут → открыть Fit</p></div>
-        <div class="trigger-row"><b>МОМЕНТ</b><strong>Музыка · Алиса</strong><p>Включаю тренировочный плейлист → начать запись</p></div>
-        <div class="trigger-row"><b>ДОВЕРИЕ</b><strong>Тренер</strong><p>Получаю готовую программу → начать её в Fit</p></div>
-        <div class="trigger-row"><b>СОЦИАЛЬНЫЙ СИГНАЛ</b><strong>Лента · авторы</strong><p>Вижу достижение → присоединиться к тренировке или челленджу</p></div>
+      <div class="ecosystem-flow" role="group" aria-label="Точки входа ведут в Fit; Fit создаёт потенциальную ценность для экосистемы">
+        <div class="ecosystem-side">
+          <span class="ecosystem-label">Точки входа</span>
+          <ul><li>Поиск · Карты</li><li>Музыка · Алиса</li><li>Тренеры · авторы</li></ul>
+        </div>
+        <span class="ecosystem-arrow" aria-hidden="true"></span>
+        <div class="ecosystem-core">
+          <strong>Fit</strong>
+          <p class="ecosystem-steps">План → тренировка → прогресс</p>
+          <p class="ecosystem-context">Один спортивный контекст</p>
+          <p class="ecosystem-mode">Самостоятельно или с тренером</p>
+        </div>
+        <span class="ecosystem-arrow" aria-hidden="true"></span>
+        <div class="ecosystem-side">
+          <span class="ecosystem-label">Ожидаемый эффект для Яндекса</span>
+          <ul><li>Повод регулярно возвращаться</li><li>Покупки в сервисах</li><li>Собственная выручка Fit</li></ul>
+        </div>
       </div>
 
-      <div class="distribution-metric"><span>КАК МАСШТАБИРУЕМ</span><strong>Каждый канал ведёт к первому полезному действию, а не просто к установке</strong></div>
       <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Показать не перечень сервисов, а конкретную систему дистрибуции: пользовательский сигнал, полезное действие в Fit и измеримый результат W4.
+Объединить две стороны одной идеи: как Яндекс, тренеры и авторы помогают Fit расти и какую пользу Fit может вернуть экосистеме. Схема заменяет прежние отдельные слайды «Преимущество Яндекса» и «Ценность для Яндекса». Строки слева и справа — независимые списки, а не попарная атрибуция каналов и эффектов.
 
 ЧТО ГОВОРИМ
-Fit появляется не случайно, а в момент уже выраженного спортивного намерения. В пилоте проверяем четыре типа сигналов.
+Предлагаем связывать вход в Fit с уже выраженным спортивным намерением. Внутри Fit человек получает план, выполняет тренировку и видит прогресс — самостоятельно или с тренером. План и история остаются в одном продукте. Это создаёт основу для регулярного сценария Яндекса, а не только ещё одной установки приложения.
+
+ПРИМЕРЫ ТОЧЕК ВХОДА
+На слайде сгруппированы три семейства каналов; для пилота сохраняем четыре типа сигналов.
 
 Первый — намерение. Пользователь ищет зал или тренера, либо строит достаточно длинный пеший маршрут. Поиск или Карты предлагают не абстрактную установку, а конкретный сценарий: открыть программу, подобрать специалиста или сохранить активность в Fit. Предложение для пешего маршрута тестируем только при достаточной длительности, явной спортивной цели или согласии пользователя, чтобы не превратить механику в спам.
 
 Второй — момент занятия. Пользователь включает тренировочный плейлист или обращается к Алисе во время подготовки к тренировке. Алиса предлагает открыть текущий план либо начать запись результата в Fit.
 
-Третий — доверие. Тренер приглашает клиента сразу в готовую программу. Бонус тренеру платим только за активного клиента на четвёртой неделе, поэтому ему выгодна не установка, а сформированная привычка.
+Третий — доверие. Тренер приглашает клиента сразу в готовую программу. В пилоте можно проверять бонус за активного клиента на четвёртой неделе, чтобы стимулировать не установку, а регулярное использование.
 
 Четвёртый — социальный сигнал. Друг, тренер или автор публикует достижение, тренировку или челлендж. Пользователь может присоединиться к действию, группе или сообществу одним переходом. Так собственная спортивная платформа создаёт органическую петлю распространения. Продвижение товаров и коммерческие витрины подключаются позже в монетизационном контуре и не смешиваются с задачей этого слайда.
 
@@ -10403,8 +10460,20 @@ Fit появляется не случайно, а в момент уже выр
 
 Это продуктовые гипотезы, а не согласованные интеграции. Для запуска тестов нужны решение руководства, владельцы со стороны сервисов, доступный инвентарь и согласованные правила использования контекста.
 
-ПЕРЕХОД
-Дистрибуция приводит человека к первому действию. Следующий вопрос — почему клиент и тренер продолжат возвращаться без постоянной покупки трафика.
+ОЖИДАЕМАЯ ЦЕННОСТЬ ДЛЯ ЯНДЕКСА
+Первое — повод регулярно возвращаться: цель, план, тренировка, прогресс и следующий шаг связаны в один сценарий.
+
+Второе — дополнительные покупки в сервисах. Спортивный контекст может вести к релевантным предложениям Плюса, Маркета, Еды, Go и других сервисов. Это потенциальный дополнительный эффект, а не уже измеренная выручка.
+
+Третье — собственная выручка Fit: подписка, комиссии с тренировок и другие потоки из финансовой модели. Не смешиваем её с оборотом или маржой остальных сервисов.
+
+Общественный результат измеряем отдельно: помогает ли Fit большему числу людей начать заниматься и сохранять регулярность. Не дублируем этот тезис отдельным выводом на слайде.
+
+АНАЛИТИЧЕСКИЕ ГРАНИЦЫ
+Интеграции и ожидаемые эффекты — гипотезы для проверки, не подтверждённые результаты. Собственную экономику Fit, дополнительную маржу сервисов, стратегический и общественный эффект считаем отдельно; не складываем их без причинной атрибуции.
+
+ПЕРЕХОД К МОНЕТИЗАЦИИ
+Далее — какие именно потоки формируют собственную выручку Fit, затем операционные драйверы и P&amp;L.
 
 [Sources]
 Продвижение приложений в Директе: https://b2b.yandex.ru/adv/products/reklama-mobilnyh-prilozhenij
@@ -10592,36 +10661,6 @@ mHealth Continuance Intention, systematic review and meta-analysis, 58 иссл�
 Новый срез прочитан 24.09.2026 из того же дашборда: https://datalens.ru/wnvsw21o9r7af-svodnye-metriki-prilozheniya?tab=Y3. Отображаемое время обновления: 24.09.2026 14:25:24. Индикатор «Кол-во тренеров» = 74. В разделе «Клиент» при is_self_registered=false: «Кол-во клиентов» = 155 и «Clients — Кол-во тренировок всего» = 451; при true: 95 и 219. Две клиентские группы разделены по одному булевому признаку. Индикатор clients_total=193 из раздела тренеров для этой серии не используется: это другой показатель. Срезы получены просмотром дашборда, без изменения базы или приложения.
 
 Для обновления в конце недели заменить третий срез фактическими значениями и датой, пересчитать прирост к 20 сентября и масштаб полос. До этого третья полоса остаётся неполной неделей; прогнозные значения не добавляем.</aside>
-    </section>
-
-    <section class="slide value-slide redesign-v2 rd-value prefinal-keep" data-section="Ценность Яндексу" data-slide-type="final-vision" data-golden="apple/09-apple-final-vision.png">
-      <div class="eyebrow">11 · ЦЕННОСТЬ ДЛЯ ЯНДЕКСА</div>
-      <h2>Спорт становится регулярным сценарием Яндекса</h2>
-      <div class="value-planes">
-        <div class="value-plane direct"><span>01</span><h3>Создаёт новую привычку</h3><p>Fit связывает цель, план, тренировку, прогресс и следующий шаг. Пользователь получает повод регулярно возвращаться.</p></div>
-        <div class="value-plane incremental"><span>02</span><h3>Соединяет сервисы Яндекса</h3><p>Поиск, Карты, Музыка, Алиса и тренеры приводят в Fit. Fit возвращает пользователя в Плюс, Маркет, Еду, Go и другие релевантные сценарии.</p></div>
-        <div class="value-plane strategic"><span>03</span><h3>Создаёт новый экономический контур</h3><p>Спортивный контекст формирует дополнительные транзакции сервисов. После появления удержанной аудитории Fit получает собственную выручку.</p></div>
-      </div>
-      <div class="public-impact"><span>ИТОГ</span><strong>Яндекс получает новый регулярный пользовательский сценарий, а общество — инструмент, который помогает начать заниматься и не бросить</strong></div>
-      <aside class="speaker-notes">ЗАДАЧА СЛАЙДА
-Завершить продуктовую часть и ответить, зачем Яндексу запускать Fit.
-
-ЧТО ГОВОРИМ
-Fit превращает разрозненный спортивный интерес пользователей в регулярный сценарий внутри экосистемы Яндекса.
-
-Первый эффект — новая привычка. Fit связывает цель, план, тренировку, подтверждённый результат и следующий шаг. У пользователя появляется практическая причина возвращаться каждую неделю.
-
-Второй эффект — связь между сервисами. Поиск, Карты, Музыка, Алиса и тренеры могут приводить пользователя в Fit в подходящий момент. Накопленный спортивный контекст помогает возвращать его в релевантные сценарии Плюса, Маркета, Еды, Go и других сервисов.
-
-Третий эффект — новый экономический контур. Спортивная активность создаёт дополнительный спрос на товары и услуги вокруг спорта. После формирования удержанной аудитории Fit также сможет получать собственную выручку от онлайн-тренировок, программ, продвижения тренеров и авторов, рекламы и B2B.
-
-Общественный результат измеряем отдельно: начинает ли больше людей заниматься и дольше ли они сохраняют регулярную физическую активность.
-
-АНАЛИТИЧЕСКОЕ ОГРАНИЧЕНИЕ
-Собственную экономику Fit, дополнительную маржу сервисов, стратегический эффект и общественный результат считаем отдельно. Не складываем их без доказанной причинности и атрибуции.
-
-ПЕРЕХОД К ФИНАНСОВОЙ МОДЕЛИ
-Далее переводим потенциальную коммерческую ценность в юнит-экономику Fit, базовый P&amp;L и чувствительность к масштабу.</aside>
     </section>
 
     <section class="slide monetization-proof-slide redesign-v2 rd-monetization prefinal-revenue-model prefinal-keep" data-section="Монетизация" data-slide-type="metric-progress" data-golden="whoop/10-whoop-metric-hero.png">
@@ -11919,9 +11958,6 @@ if (prefinalMarket && prefinalProblem) prefinalProblem.before(prefinalMarket)
 
 const prefinalStory = document.querySelector('.review-story-v2')
 
-const monetizationSlide = document.querySelector('.monetization-proof-slide')
-const valueSlide = document.querySelector('.value-slide')
-if (monetizationSlide && valueSlide) valueSlide.after(monetizationSlide)
 ;[
   '.pilot-cover.prefinal-keep',
   '.prefinal-path-map',
@@ -11934,8 +11970,7 @@ if (monetizationSlide && valueSlide) valueSlide.after(monetizationSlide)
   '.review-product-flow-v4.prefinal-keep',
   '.retention-answer-v3.prefinal-keep',
   '.meeting-growth-slide.prefinal-keep',
-  '.review-distribution-v3.prefinal-keep',
-  '.rd-value.prefinal-keep',
+  '.ecosystem-combined-slide.prefinal-keep',
   '.prefinal-revenue-model.prefinal-keep',
   '.prefinal-model-drivers.prefinal-keep',
   '.prefinal-financial.prefinal-keep',
