@@ -20,6 +20,14 @@ async function fillClientProfileDetails(page: import('@playwright/test').Page) {
   if (await introduction.isVisible()) await introduction.click()
 }
 
+async function saveCompactClientPlan(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'Далее' }).click()
+  await Promise.all([
+    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
+    page.getByRole('button', { name: 'Запланировать тренировку' }).click(),
+  ])
+}
+
 test('auth shell matches mobile baseline', async ({ page }) => {
   await page.goto('/auth')
   await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
@@ -160,12 +168,13 @@ test('client registers, starts without a profile questionnaire and creates an ow
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.locator('.today-exercise-editor summary').click()
   await page.getByLabel('Вес, подход 1').fill('40')
   await page.getByLabel('Повторы, подход 1').fill('10')
   await page.getByRole('button', { name: '＋ Подход' }).click()
   await page.getByLabel('Вес, подход 2').fill('40')
   await page.getByLabel('Повторы, подход 2').fill('10')
-  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await saveCompactClientPlan(page)
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
   await expect(page.locator('.planned-set-summary')).toHaveText(/2 × 40 кг × 10/)
   await page.getByRole('button', { name: 'Другие действия с тренировкой' }).click()
@@ -460,10 +469,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: 'Бег', exact: true }).click()
   await page.locator('[data-running-format="free"]').click()
-  await Promise.all([
-    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
-    page.getByRole('button', { name: 'Сохранить' }).click(),
-  ])
+  await saveCompactClientPlan(page)
   const preAttachWorkoutUrl = page.url()
   const preAttachWorkoutPath = new URL(preAttachWorkoutUrl).pathname
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
@@ -511,10 +517,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: 'Бег', exact: true }).click()
   await page.locator('[data-running-format="free"]').click()
-  await Promise.all([
-    page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
-    page.getByRole('button', { name: 'Сохранить' }).click(),
-  ])
+  await saveCompactClientPlan(page)
   const ownWorkoutUrl = page.url()
   const ownWorkoutPath = new URL(ownWorkoutUrl).pathname
   await page.getByRole('link', { name: 'Изменить' }).click()

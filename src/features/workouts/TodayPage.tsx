@@ -124,6 +124,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const regularity = useQuery({ queryKey: ['workout-regularity', mine.data?.id], queryFn: () => progressRepository.regularity(mine.data!.id), enabled: clientMode && Boolean(mine.data) })
   const catalog = useExerciseCatalog()
   const [firstWorkoutIntent] = useState(() => clientMode && actor ? takeFirstWorkoutIntent(actor.userId) : null)
+  const compactClientEntry = clientMode && new URLSearchParams(location.search).get('entry') === 'workout'
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
   const [items, setItems] = useState<ParsedWorkoutExercise[]>([])
@@ -148,7 +149,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [removedItem, setRemovedItem] = useState<{ item: ParsedWorkoutExercise; index: number } | null>(null)
   const [draftReady, setDraftReady] = useState(false)
   const [restoredDraftScreen, setRestoredDraftScreen] = useState<Screen | null>(null)
-  const [textComposerOpen, setTextComposerOpen] = useState(firstWorkoutIntent?.mode === 'text')
+  const [textComposerOpen, setTextComposerOpen] = useState(firstWorkoutIntent?.mode === 'text' || compactClientEntry)
   const [voicePhase, setVoicePhase] = useState<VoiceInputPhase>('idle')
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState<WorkoutParseErrorKind | null>(null)
@@ -203,6 +204,11 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       return
     }
     navigate(next === 'compose' ? todayPath : `${todayPath}?view=${next}`, { replace: next === 'compose', state: { fromTodayScreen: screen } })
+  }
+
+  function closeTextComposer() {
+    setTextComposerOpen(false)
+    if (compactClientEntry) navigate(todayPath, { replace: true })
   }
 
   useEffect(() => {
@@ -698,7 +704,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </div>}
       {!textComposerOpen && voicePhase === 'idle' && !greetingHeaderPilotEnabled && <button type="button" className="link today-text-toggle" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}>Ввести текстом</button>}
       {restoredDraftScreen && !textComposerOpen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
-      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>Новая тренировка</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={() => setTextComposerOpen(false)}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; reviewRequest.current += 1; setParsing(false); setText(value); setLastLlmText(null); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setPickerFromCompose(true); setPickerOpen(true) }}>Выбрать упражнения вручную</button>}>
+      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>Новая тренировка</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={closeTextComposer}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; reviewRequest.current += 1; setParsing(false); setText(value); setLastLlmText(null); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setPickerFromCompose(true); setPickerOpen(true) }}>Выбрать упражнения вручную</button>}>
       {voiceRefinement && voiceRefinement.state !== 'loading' && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {(resolved.length > 0 || clarification || displayedUnparsed.length > 0) && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">
