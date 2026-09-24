@@ -48,8 +48,12 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
     }
 
     const applyDimensions = (height: number, visibleHeight: number, offsetTop = 0) => {
-      root.style.setProperty('--app-viewport-height', `${height}px`)
-      root.style.setProperty('--app-visible-height', `${visibleHeight}px`)
+      // На старте standalone WebKit иногда кратко сообщает нулевую геометрию.
+      // Не записываем 0px: CSS fallback 100dvh оставляет приложение видимым.
+      if (height > 0) root.style.setProperty('--app-viewport-height', `${height}px`)
+      else root.style.removeProperty('--app-viewport-height')
+      if (visibleHeight > 0) root.style.setProperty('--app-visible-height', `${visibleHeight}px`)
+      else root.style.removeProperty('--app-visible-height')
       root.style.setProperty('--app-viewport-offset-top', `${offsetTop}px`)
     }
 

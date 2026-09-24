@@ -1933,8 +1933,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Будущее одиночное упражнение остаётся ориентиром, а не второй формой: имя,
    ближайший план, число подходов и меню без таблицы/RPE. */
 .live-exercise-upcoming { display:grid; gap:var(--space-1); margin:var(--space-3) 0; padding:var(--space-3) var(--card-padding); border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-raised); opacity:.72 }
+.live-exercise-upcoming.started { border-color:var(--warning-border); background:var(--warning-surface) }
+.live-upcoming-row { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-3) }
 .live-upcoming-summary { display:flex; flex-wrap:wrap; gap:4px 10px; margin:0; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-snug) }
 .live-upcoming-summary span + span::before { content:'·'; margin-right:10px; color:var(--muted) }
+.live-exercise-start { min-width:96px; min-height:40px; flex:0 0 auto; padding:6px 12px }
 /* Общий ритм всех редактируемых подходов. Контекст задаёт только число
    колонок и финальное действие; высоты, цифры и разделители не расходятся. */
 .workout-set-table { margin-top:8px; border-top:1px solid var(--border) }
@@ -3610,8 +3613,10 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .live-identity .exercise-comment { min-height:96px; border-color:var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; font-weight:400 }
 
 .live-identity .live-exercise-upcoming { margin:12px 0; padding:16px 18px; border-color:var(--border); border-radius:18px; background:transparent; opacity:1 }
+.live-identity .live-exercise-upcoming.started { border-color:var(--warning-border); background:var(--warning-surface) }
 .live-identity .live-exercise-upcoming .live-exercise-head h2 { font-size:16px }
 .live-identity .live-upcoming-summary { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.live-identity .live-exercise-start { min-height:44px; border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:14px; font-weight:500 }
 .live-identity .workout-exercise-compact { min-height:64px; margin:8px 0; padding:10px 0; border-color:var(--border); color:var(--fg) }
 .live-identity .workout-exercise-compact-mark { border-radius:10px; background:var(--surface-sunken); color:var(--success-fg); font-weight:500 }
 .live-identity .workout-exercise-compact-copy strong { font-size:14px; font-weight:600 }

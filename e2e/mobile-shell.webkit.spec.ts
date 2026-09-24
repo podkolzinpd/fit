@@ -878,7 +878,7 @@ test('iPhone: в live клиент видит те же действия с тр
 
   await expect(page.getByRole('button', { name: '＋ Подход' })).toBeInViewport()
   await expect(page.getByRole('button', { name: '＋ Ещё упражнение' })).toBeInViewport()
-  await expect(page.locator('.live-session-progress')).toContainText('Упражнение 1 из 1 · подход 1 из 1')
+  await expect(page.locator('.live-session-progress')).toContainText('Сейчас: Бег · подход 1 из 1')
   await expect(page.locator('.live-session-progress')).toContainText('Готово 0 из 1')
   await expect(page.getByRole('progressbar', { name: 'Выполненные подходы' })).toHaveAttribute('aria-valuenow', '0')
   const liveControls = page.locator('.live-set-input, .live-set-check')

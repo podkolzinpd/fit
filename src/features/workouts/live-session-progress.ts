@@ -1,4 +1,5 @@
 export interface LiveProgressExercise {
+  id?: string
   sets: Array<{ confirmedAt?: string | null }>
 }
 
@@ -13,10 +14,15 @@ export interface LiveSessionProgress {
   percent: number
 }
 
-export function liveSessionProgress(exercises: LiveProgressExercise[]): LiveSessionProgress {
+export function liveSessionProgress(exercises: LiveProgressExercise[], activeExerciseId?: string | null): LiveSessionProgress {
   const sets = exercises.flatMap((exercise) => exercise.sets)
   const completedSetCount = sets.filter((set) => Boolean(set.confirmedAt)).length
-  const activeExerciseIndex = exercises.findIndex((exercise) => exercise.sets.some((set) => !set.confirmedAt))
+  const selectedExerciseIndex = activeExerciseId
+    ? exercises.findIndex((exercise) => exercise.id === activeExerciseId && exercise.sets.some((set) => !set.confirmedAt))
+    : -1
+  const activeExerciseIndex = selectedExerciseIndex >= 0
+    ? selectedExerciseIndex
+    : exercises.findIndex((exercise) => exercise.sets.some((set) => !set.confirmedAt))
   const activeExercise = activeExerciseIndex >= 0 ? exercises[activeExerciseIndex] : exercises.at(-1)
   const activeSetIndex = activeExercise?.sets.findIndex((set) => !set.confirmedAt) ?? -1
   const complete = sets.length > 0 && completedSetCount === sets.length
