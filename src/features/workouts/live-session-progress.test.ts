@@ -32,6 +32,21 @@ describe('liveSessionProgress', () => {
     })
   })
 
+  it('считает выбранное упражнение активным без изменения порядка плана', () => {
+    expect(liveSessionProgress([
+      { id: 'first', sets: [pending, pending] },
+      { id: 'second', sets: [done, pending, pending] },
+      { id: 'third', sets: [pending] },
+    ], 'third')).toMatchObject({
+      activeExerciseNumber: 3,
+      activeSetNumber: 1,
+      activeExerciseSetCount: 1,
+      completedSetCount: 1,
+      setCount: 6,
+      complete: false,
+    })
+  })
+
   it('безопасно обрабатывает пустую тренировку', () => {
     expect(liveSessionProgress([])).toEqual({
       activeExerciseNumber: 0,
