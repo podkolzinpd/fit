@@ -597,6 +597,18 @@ test('live: порядок упражнений меняется в отдель
   await expect(upcomingExercise.locator('.workout-set-table')).toHaveCount(0)
   await expect(upcomingExercise.locator('.exercise-thumbnail')).toHaveCount(1)
   await expect(upcomingExercise.locator('.exercise-thumbnail video')).toHaveCount(0)
+  // Любое упражнение можно начать без перестановки плана. Жим становится
+  // активным, но визуальный и серверный порядок карточек не меняется.
+  await upcomingExercise.getByRole('button', { name: 'Начать упражнение «Жим штанги лёжа»' }).click()
+  await expect(page.locator('.live-exercise.current .live-exercise-head h2')).toContainText('Жим штанги лёжа')
+  await expect(page.locator('.live-session-progress')).toContainText('Сейчас: Жим штанги лёжа')
+  await expect(page.locator('.live-exercise-head h2').nth(0)).toContainText('Присед')
+  await expect(page.locator('.live-exercise-head h2').nth(1)).toContainText('Жим штанги лёжа')
+  // Возвращаемся к первому упражнению тем же способом; данные и порядок
+  // второго остаются нетронутыми.
+  await page.getByRole('button', { name: 'Начать упражнение «Присед со штангой»' }).click()
+  await expect(page.locator('.live-exercise.current .live-exercise-head h2')).toContainText('Присед')
+  await expect(page.locator('.live-session-progress')).toContainText('Сейчас: Присед со штангой')
   // В обычном live стрелок нет; включаем отдельный режим в меню упражнения.
   await expect(page.getByRole('button', { name: 'Вверх' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Ещё действия' }).first().click()

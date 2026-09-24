@@ -1874,6 +1874,17 @@ export function LiveWorkoutPage() {
   const [editingSets, setEditingSets] = useState<Set<string>>(() => new Set())
   // Выбранный подход определяет подсветку и адресные действия меню.
   const [expandedSetId, setExpandedSetId] = useState<string | null>(null)
+  // Активное упражнение относится только к текущему выполнению. Оно не меняет
+  // position плана: пользователь может временно перейти к любому упражнению и
+  // затем вернуться к частично выполненному.
+  const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!query.data) return
+    setActiveExerciseId((current) => {
+      if (current && query.data.exercises.some((exercise) => exercise.id === current && exercise.sets.some((set) => !set.confirmedAt))) return current
+      return query.data.exercises.find((exercise) => exercise.sets.some((set) => !set.confirmedAt))?.id ?? null
+    })
+  }, [query.data])
   // Realtime может принести устаревший снимок между вводом и ответом RPC.
   // Держим конкретный введённый факт до тех пор, пока серверная копия не станет
   // такой же — иначе при переходе к следующему подходу строка мигнёт пустой.
@@ -1901,7 +1912,7 @@ export function LiveWorkoutPage() {
     // Exactly one adjustment after the final set changes the active card.
     // Regular saves, timer ticks and realtime refreshes never move the page.
     content.scrollTop += card.getBoundingClientRect().top - pinned.getBoundingClientRect().bottom - 12
-  }, [query.data])
+  }, [activeExerciseId, query.data])
   function exerciseMetaFor(exercise: WorkoutExerciseModel) {
     return findCatalogExercise(catalog.exercises, exercise) ?? exercise
   }
@@ -2133,6 +2144,7 @@ export function LiveWorkoutPage() {
       if (owner && owner.blockType === 'single' && owner.sets.every((item) => item.id === set.id || item.confirmedAt)) {
         const next = before?.exercises.find((exercise) => exercise.id !== owner.id && exercise.sets.some((item) => !item.confirmedAt))
         nextExerciseAnchor.current = next?.sets.find((item) => !item.confirmedAt)?.id ?? null
+        setActiveExerciseId(next?.id ?? null)
       }
       queryClient.setQueryData<Workout>(['workout', workoutId], (workout) => workout
         ? applyLiveSetConfirmation(workout, set.id, draft, version, new Date().toISOString()) : workout)
@@ -2212,6 +2224,15 @@ export function LiveWorkoutPage() {
   function stopRest() {
     startRestUntil(null)
   }
+  function activateLiveExercise(exercise: WorkoutExerciseModel) {
+    const nextSet = exercise.sets.find((set) => !set.confirmedAt)
+    if (!nextSet) return
+    inactivityReminder.noteActivity(restEndsAt)
+    nextExerciseAnchor.current = nextSet.id
+    setExpandedSetId(nextSet.id)
+    setActiveExerciseId(exercise.id)
+    trackGoal('live_exercise_selected')
+  }
   function runLiveWorkoutMutation(operationKey: string, operation: (workout: Workout) => Promise<number>) {
     inactivityReminder.noteActivity(restEndsAt)
     const snapshot = query.data!
@@ -2244,7 +2265,17 @@ export function LiveWorkoutPage() {
     },
   })
   const appendExercise = useMutation({ mutationFn: (exercise: ExerciseSnapshot) => runLiveWorkoutMutation(`append-exercise:${exercise.ref}`, (workout) => workoutsRepository.appendLiveExercise(workout, exercise)), onSuccess: async () => { await query.refetch() } })
-  const reorderBlock = useMutation({ mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => runLiveWorkoutMutation(`reorder:${blockId}:${direction}`, (workout) => workoutsRepository.reorderLiveBlock(workout, blockId, direction)), onSuccess: async () => { await query.refetch() } })
+  const reorderBlock = useMutation({
+    mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => runLiveWorkoutMutation(`reorder:${blockId}:${direction}`, (workout) => workoutsRepository.reorderLiveBlock(workout, blockId, direction)),
+    onSuccess: async () => {
+      const refreshed = await query.refetch()
+      const nextExercise = refreshed.data?.exercises.find((exercise) => exercise.sets.some((set) => !set.confirmedAt))
+      const nextSet = nextExercise?.sets.find((set) => !set.confirmedAt)
+      nextExerciseAnchor.current = nextSet?.id ?? null
+      setExpandedSetId(nextSet?.id ?? null)
+      setActiveExerciseId(nextExercise?.id ?? null)
+    },
+  })
   const replaceLive = useMutation({
     mutationFn: async ({ exerciseId, exercise, discardedSetIds }: { exerciseId: string; exercise: ExerciseSnapshot; discardedSetIds: string[] }) => {
       // A blur-save may already be in flight when the picker opens. Let it
@@ -2442,9 +2473,11 @@ export function LiveWorkoutPage() {
       {showPlan && <small className="live-set-plan-caption">{planLine(exercise.inputKind, set, exercise.ref) ? `План · ${planLine(exercise.inputKind, set, exercise.ref)}` : 'Без плановых значений'}</small>}
     </form>
   }
-  const sessionProgress = liveSessionProgress(query.data?.exercises ?? [])
+  const activeLiveExercise = query.data?.exercises.find((exercise) => exercise.id === activeExerciseId && exercise.sets.some((set) => !set.confirmedAt))
+    ?? query.data?.exercises.find((exercise) => exercise.sets.some((set) => !set.confirmedAt))
+  const sessionProgress = liveSessionProgress(query.data?.exercises ?? [], activeLiveExercise?.id)
   const currentLiveBlock = groupIntoBlocks(query.data?.exercises ?? [])
-    .find((block) => block.exercises.some((exercise) => exercise.sets.some((set) => !set.confirmedAt)))
+    .find((block) => block.exercises.some((exercise) => exercise.id === activeLiveExercise?.id))
   const currentSingleExercise = currentLiveBlock && (currentLiveBlock.blockType === 'single' || currentLiveBlock.exercises.length === 1)
     ? currentLiveBlock.exercises.find((exercise) => exercise.sets.some((set) => !set.confirmedAt))
     : undefined
@@ -2463,7 +2496,7 @@ export function LiveWorkoutPage() {
   return <Page title="Live-тренировка" hideTitle className="live-workout-page workout-focused-page" back={`/workouts/${workoutId}`} onBack={goBack}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
       <WorkoutHeader eyebrow="LIVE" title={query.data.clientName} state="current" className="live-session-header" meta={<div className="live-session-progress">
-        <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : `Упражнение ${sessionProgress.activeExerciseNumber} из ${sessionProgress.exerciseCount} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}`}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
+        <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : activeLiveExercise ? `Сейчас: ${activeLiveExercise.name} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}` : 'Выберите упражнение'}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
         <span className="live-session-progress-track" role="progressbar" aria-label="Выполненные подходы" aria-valuemin={0} aria-valuemax={sessionProgress.setCount} aria-valuenow={sessionProgress.completedSetCount}><span style={{ width: `${sessionProgress.percent}%` }} /></span>
       </div>} />
       {inactivityReminder.visible && <section className="live-inactivity-reminder" role="alert" aria-labelledby="live-inactivity-reminder-title">
@@ -2478,9 +2511,14 @@ export function LiveWorkoutPage() {
         // её счётчик «Круг N из M» + точки закрепляем вместе с таймером, чтобы при
         // скролле по кругам всегда было видно, на каком круге сейчас.
         const liveBlocks = groupIntoBlocks(query.data.exercises)
-        const activeCircuit = liveBlocks.find((b) => b.exercises.length > 1 && b.exercises.some((ex) => ex.sets.some((s) => !s.confirmedAt)))
+        const activeCircuit = liveBlocks.find((block) => block.exercises.length > 1
+          && block.exercises.some((exercise) => exercise.id === activeLiveExercise?.id))
         const circuitRounds = activeCircuit ? blockRoundsView(activeCircuit) : null
-        const circuitCurrent = circuitRounds ? currentRoundIndex(circuitRounds) : 0
+        const activeCircuitSetId = activeLiveExercise?.sets.find((set) => !set.confirmedAt)?.id
+        const selectedCircuitRound = circuitRounds && activeCircuitSetId
+          ? circuitRounds.findIndex((round) => round.items.some(({ set }) => set.id === activeCircuitSetId))
+          : -1
+        const circuitCurrent = circuitRounds ? selectedCircuitRound >= 0 ? selectedCircuitRound : currentRoundIndex(circuitRounds) : 0
         return (
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <div className="live-pinned">
@@ -2498,15 +2536,13 @@ export function LiveWorkoutPage() {
       })()}
       {reordering && <div className="live-reorder-mode" role="status"><span>Изменение порядка</span><button type="button" className="secondary" onClick={() => setReordering(false)}>Готово</button></div>}
       {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises);
-        // Индекс первого блока с незавершёнными подходами = «текущий» блок.
-        // До него — завершённые, после — предстоящие. Даёт статус за секунду.
-        const currentBlockIndex = liveBlocks.findIndex((b) => b.exercises.some((ex) => ex.sets.some((s) => !s.confirmedAt)))
         return liveBlocks.map((block, blockIndex) => {
         // ↑/↓ показываем только когда блоков больше одного; двигать можно любые
         // блоки (в т.ч. с завершёнными подходами), кроме упора в границу.
         const canReorder = liveBlocks.length > 1
         const reorder = canReorder ? liveReorder(block.blockId, blockIndex === 0, blockIndex === liveBlocks.length - 1) : null
-        const blockStatus = currentBlockIndex === -1 ? 'done' : blockIndex < currentBlockIndex ? 'done' : blockIndex === currentBlockIndex ? 'current' : 'upcoming'
+        const blockDone = block.exercises.every((exercise) => exercise.sets.every((set) => set.confirmedAt))
+        const blockStatus = blockDone ? 'done' : block.exercises.some((exercise) => exercise.id === activeLiveExercise?.id) ? 'current' : 'upcoming'
         // Одиночное упражнение (или блок из одного) — как раньше, по подходам.
         // Текущий подход (первый неподтверждённый) подсвечивается серым.
         if (block.blockType === 'single' || block.exercises.length === 1) {
@@ -2531,10 +2567,14 @@ export function LiveWorkoutPage() {
             }
             if (blockStatus === 'upcoming') {
               const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set, exercise.ref)).find(Boolean)
+              const completedSets = exercise.sets.filter((set) => set.confirmedAt).length
               const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
-              return <WorkoutExercise key={exercise.id} state="upcoming" className="live-exercise-upcoming">
+              const progressLabel = completedSets > 0 ? `Выполнено ${completedSets} из ${exercise.sets.length}` : `${exercise.sets.length} ${countLabel}`
+              return <WorkoutExercise key={exercise.id} state="upcoming" className={`live-exercise-upcoming ${completedSets > 0 ? 'started' : ''}`}>
                 <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={liveHeaderThumbnail(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
-                <p className="live-upcoming-summary"><span>{exercise.sets.length} {countLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>
+                <div className="live-upcoming-row"><p className="live-upcoming-summary"><span>{progressLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>
+                  <button type="button" className="secondary live-exercise-start" disabled={rootMutationPending} aria-label={`${completedSets > 0 ? 'Продолжить' : 'Начать'} упражнение «${exercise.name}»`} onClick={() => activateLiveExercise(exercise)}>{completedSets > 0 ? 'Продолжить' : 'Начать'}</button>
+                </div>
               </WorkoutExercise>
             }
             return <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
