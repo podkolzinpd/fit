@@ -44,16 +44,18 @@ describe('Home and Progress workout map', () => {
     expect(loadBodyMap([workout], '2026-08-11', '2026-08-11').coverage.totalSets).toBe(0)
   })
 
-  it('keeps the selected workout, mode, zone and dates through Home → Progress → source → back without AI', async () => {
+  it('keeps the selected workout, load mode and dates through Home → Progress → source → back without AI', async () => {
     const user = userEvent.setup()
     renderRoute('/me')
-    const map = screen.getByRole('region', { name: 'Распределение подходов' })
-    await user.click(within(map).getByRole('button', { name: 'Грудь: 2 подхода' }))
+    const map = screen.getByRole('region', { name: 'Нагрузка по телу' })
+    expect(within(map).getByRole('heading', { name: 'Нагрузка по телу' })).toBeVisible()
+    expect(within(map).queryByText('По подтверждённым подходам')).toBeNull()
+    expect(within(map).queryByText(/Всего \d+ подход/)).toBeNull()
+    expect(within(map).queryByRole('button', { name: 'Грудь: 2 подхода' })).toBeNull()
     expect(within(map).queryByRole('button', { name: /Грудь\. Доля/ })).toBeNull()
-    expect(within(map).getByText('Всего 4 подхода')).toBeVisible()
-    expect(within(map).getByText(/Кардио: 1 подход/)).toHaveTextContent('5 км')
-    const link = screen.getByRole('link', { name: 'Разбор нагрузки' })
-    expect(link).toHaveAttribute('href', workoutMapLink(workout, 'chest'))
+    expect(map.querySelector('[data-body-zone="chest"]')).not.toBeNull()
+    const link = screen.getByRole('link', { name: 'Открыть в прогрессе' })
+    expect(link).toHaveAttribute('href', workoutMapLink(workout))
     await user.click(link)
     expect(document.querySelector('details')).toHaveAttribute('open')
     expect(screen.getByText(/10 августа 2026 г. · тренировка/)).toBeVisible()
@@ -101,18 +103,21 @@ describe('Home and Progress workout map', () => {
     expect(screen.getByText(/Кардио:/)).toHaveTextContent(/^Кардио: 2 подхода$/)
   })
 
-  it('keeps additional zones accessible and switches the selected zone with the side', async () => {
+  it('shows all load zones on the compact figure and switches sides without a muscle list', async () => {
     const user = userEvent.setup()
     const several = { ...workout, exercises: [workout.exercises[0]!, exercise('row', 'Тяга верхнего блока', 'back', 'strength', 1),
       exercise('curl', 'Молот с гантелями', 'arms', 'strength', 1), exercise('bridge', 'Ягодичный мост', 'glutes', 'strength', 1), exercise('squat', 'Присед', 'legs', 'strength', 1)] }
     render(<MemoryRouter><WorkoutLoadMap workout={several} gender="female" compact /></MemoryRouter>)
+    const map = screen.getByRole('region', { name: 'Нагрузка по телу' })
+    expect(map.querySelector('[data-body-zone="chest"]')).not.toBeNull()
+    expect(map.querySelector('.body-progress-region.selected')).toBeNull()
+    expect(within(map).queryByText('Показать все группы')).toBeNull()
+    expect(within(map).queryByRole('button', { name: /Грудь:/ })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Сзади' }))
-    expect(screen.getByRole('button', { name: 'Ягодицы: 1 подход' })).toHaveAttribute('aria-pressed', 'true')
-    await user.click(screen.getByText('Показать все группы'))
-    await user.click(screen.getByRole('button', { name: 'Верх спины: 1 подход' }))
-    expect(screen.getByRole('link', { name: 'Разбор нагрузки' })).toHaveAttribute('href', workoutMapLink(workout, 'upper_back'))
+    expect(map.querySelector('[data-body-zone="upper_back"]')).not.toBeNull()
+    expect(screen.getByRole('link', { name: 'Открыть в прогрессе' })).toHaveAttribute('href', workoutMapLink(workout))
     await user.click(screen.getByRole('button', { name: 'Спереди' }))
-    expect(screen.getByRole('button', { name: 'Грудь: 2 подхода' })).toHaveAttribute('aria-pressed', 'true')
+    expect(map.querySelector('[data-body-zone="chest"]')).not.toBeNull()
   })
 
   it('supports keyboard and swipe selection on the full map', () => {
