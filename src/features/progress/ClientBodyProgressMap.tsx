@@ -219,7 +219,13 @@ export function MapPanel({ data, selected, insightCandidates, variant, side, dis
       </div>
     </div>
     {data.regions.length === 0 && <p className="body-progress-empty">{data.emptyMessage}</p>}
-    {!hideDetail && selected && insight && <div
+    {!hideDetail && selected && data.mode === 'load' && <div className="body-progress-detail body-progress-load-value" role="status">
+      <div className="body-progress-detail-heading">
+        <strong>{selected.label}</strong>
+        <span>{selected.valueLabel}</span>
+      </div>
+    </div>}
+    {!hideDetail && selected && data.mode === 'progress' && insight && <div
       className="body-progress-detail"
       role="status"
       data-fact-id={insight.factId}
@@ -237,7 +243,7 @@ export function MapPanel({ data, selected, insightCandidates, variant, side, dis
   </>
 }
 
-export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCandidates, clientGender = null, loadLoading, loadError, onLoadRetry }: {
+export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCandidates, clientGender = null, loadLoading, loadError, onLoadRetry, initialMode }: {
   summary: BodyProgressSummary
   workouts: readonly Workout[]
   clientId: string
@@ -246,6 +252,7 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
   loadLoading: boolean
   loadError: Error | null
   onLoadRetry: () => void
+  initialMode?: BodyMapMode
 }) {
   const { actor } = useAuth()
   const displayMode = useBodyMapDisplayMode(actor?.userId, actor?.role, clientId, clientGender)
@@ -254,8 +261,8 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
   const summaryProgress = useMemo(() => progressBodyMap(summary), [summary])
   const progress = recordedProgress.regions.length > 0 ? recordedProgress : summaryProgress
   const load = useMemo(() => loadBodyMap(workouts, summary.periodStart, summary.periodEnd), [summary, workouts])
-  const initialMode: BodyMapMode = progress.regions.length > 0 ? 'progress' : 'load'
-  const [mode, setMode] = useState<BodyMapMode>(initialMode)
+  const defaultMode: BodyMapMode = initialMode ?? (progress.regions.length > 0 ? 'progress' : 'load')
+  const [mode, setMode] = useState<BodyMapMode>(defaultMode)
   const data = mode === 'progress' ? progress : load
   const [selectedGroup, setSelectedGroup] = useState<BodyMapZone | undefined>(data.regions[0]?.group)
   const [side, setSide] = useState<BodyFigureSide>(() => {
@@ -266,11 +273,11 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
   const [discovering, setDiscovering] = useState(true)
 
   useEffect(() => {
-    setMode(initialMode)
+    setMode(defaultMode)
     setDiscovering(true)
     const timer = window.setTimeout(() => setDiscovering(false), 900)
     return () => window.clearTimeout(timer)
-  }, [initialMode, summary.id])
+  }, [defaultMode, summary.id])
   useEffect(() => {
     setSelectedGroup((current) => data.regions.some((region) => region.group === current)
       ? current
@@ -316,11 +323,6 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
           onSelect={(region) => setSelectedGroup(region.group)}
           onShowDetails={() => setDetailsOpen(true)}
         />}
-    {mode === 'load' && !loadLoading && !loadError && load.coverage && <p className="body-progress-empty">
-      Показано {load.coverage.mappedSets} из {load.coverage.totalSets} подходов
-      {load.coverage.cardioSets > 0 && ` · Кардио: ${load.coverage.cardioSets}`}
-      {load.coverage.unknownSets > 0 && ` · Без группы: ${load.coverage.unknownSets}`}
-    </p>}
-    {detailsOpen && selected && <BodyDetailsSheet region={selected} onClose={() => setDetailsOpen(false)} />}
+    {detailsOpen && selected && mode === 'progress' && <BodyDetailsSheet region={selected} onClose={() => setDetailsOpen(false)} />}
   </section>
 }

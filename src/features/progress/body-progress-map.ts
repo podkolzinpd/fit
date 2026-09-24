@@ -330,18 +330,15 @@ export function loadBodyMap(workouts: readonly Workout[], periodStart: string, p
   const regions = [...counts.entries()]
     .map(([group, value]) => {
       const percent = coverage.mappedSets > 0 ? Math.max(1, Math.round(value.sets / coverage.mappedSets * 100)) : 0
-      const details = [...value.exercises.entries()]
-        .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-        .map(([name, sets]) => `${name}: ${setCountLabel(sets)}`)
       return {
         group,
         label: BODY_ZONE_LABELS[group],
         percent,
         setCount: value.sets,
         valueLabel: `${percent}%`,
-        metricLabel: 'Доля подходов',
-        primaryDetail: `${value.sets} из ${coverage.mappedSets} подходов`,
-        details,
+        metricLabel: 'Нагрузка зоны',
+        primaryDetail: `Относительная нагрузка за период: ${percent}%`,
+        details: [],
         intensity: Math.min(1, Math.max(.28, percent / 45)),
       }
     })
@@ -349,12 +346,11 @@ export function loadBodyMap(workouts: readonly Workout[], periodStart: string, p
 
   return {
     mode: 'load',
-    title: 'Распределение подходов',
-    description: 'Подходы по мышечным группам',
+    title: 'Нагрузка по телу',
     regions,
     coverage,
     emptyMessage: coverage.totalSets > 0
-      ? 'Нет данных по мышечным группам.'
-      : 'Здесь появится распределение после тренировки.',
+      ? 'Нет данных для карты нагрузки.'
+      : 'Здесь появится карта нагрузки после тренировки.',
   }
 }
