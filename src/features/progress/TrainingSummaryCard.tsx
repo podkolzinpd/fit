@@ -740,7 +740,7 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
   const requestedPeriod = params.get('period')
   const period: SummaryPeriod = requestedPeriod === '3m' || requestedPeriod === '6m' ? requestedPeriod : '1m'
   const measurementsTarget = location.hash === '#measurements'
-  const advancedTarget = params.get('resultsOpen') === '1' || Boolean(params.get('mapWorkout'))
+  const advancedTarget = params.get('resultsOpen') === '1' || params.get('mapMode') === 'load'
   const progressView: 'overview' | 'pro' = measurementsTarget ? 'overview' : params.get('view') === 'pro' || advancedTarget ? 'pro' : 'overview'
   const [detailsOpen, setDetailsOpen] = useState(false)
   const analysisTriggerRef = useRef<HTMLButtonElement>(null)
@@ -753,14 +753,14 @@ function ClientTrainingSummaryContent({ clientId, profileGoal, gender = null, me
   const firstDate = firstWorkout.data ?? allWorkouts.data?.filter((workout) => workout.status === 'done').map((workout) => workout.workoutDate).sort()[0]
   const historyLoaded = firstWorkout.isSuccess || allWorkouts.isSuccess
   const availablePeriods = historyLoaded ? availableSummaryPeriods(firstDate, today) : SUMMARY_PERIODS.map((item) => item.key)
-  const changePeriod = (nextPeriod: SummaryPeriod) => setParams((current) => { const next = new URLSearchParams(current); next.set('period', nextPeriod); ['mapWorkout', 'mapFrom', 'mapTo', 'mapMode', 'mapZone'].forEach((key) => next.delete(key)); return next }, { replace: true, preventScrollReset: true })
+  const changePeriod = (nextPeriod: SummaryPeriod) => setParams((current) => { const next = new URLSearchParams(current); next.set('period', nextPeriod); return next }, { replace: true, preventScrollReset: true })
   const changeProgressView = (nextView: 'overview' | 'pro') => {
     const next = new URLSearchParams(params)
     if (nextView === 'pro') next.set('view', 'pro')
     else {
       next.delete('view')
       next.delete('resultsOpen')
-      for (const key of ['mapWorkout', 'mapFrom', 'mapTo', 'mapMode', 'mapZone']) next.delete(key)
+      next.delete('mapMode')
     }
     void navigate({ pathname: location.pathname, search: next.size ? `?${next}` : '', hash: nextView === 'overview' || measurementsTarget ? '' : location.hash }, { replace: true, preventScrollReset: true })
   }
