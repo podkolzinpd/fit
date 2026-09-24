@@ -20,6 +20,14 @@ on:
         required: false
         type: string
         default: unknown
+      service_name:
+        description: 'Stage container whose logs should be inspected'
+        required: true
+        type: choice
+        default: fit-stage-api
+        options:
+          - fit-stage-api
+          - fit-stage-migration
 
 permissions:
   contents: read
@@ -46,7 +54,13 @@ jobs:
           SINCE_UTC: ${{ inputs.since_utc }}
           UNTIL_UTC: ${{ inputs.until_utc }}
           OPERATION: ${{ inputs.operation }}
-        run: node scripts/validate-yandex-incident-inputs.mjs
+          SERVICE_NAME: ${{ inputs.service_name }}
+        run: |
+          node scripts/validate-yandex-incident-inputs.mjs
+          case "$SERVICE_NAME" in
+            fit-stage-api|fit-stage-migration) ;;
+            *) exit 1 ;;
+          esac
       - name: Install Yandex Cloud CLI
         run: |
           curl --fail --silent --show-error --location \
@@ -62,12 +76,13 @@ jobs:
           SINCE_UTC: ${{ inputs.since_utc }}
           UNTIL_UTC: ${{ inputs.until_utc }}
           OPERATION: ${{ inputs.operation }}
+          SERVICE_NAME: ${{ inputs.service_name }}
         run: |
           set -euo pipefail
           temporary_directory=$(mktemp -d)
           trap 'rm -rf "$temporary_directory"' EXIT
           container=$(yc serverless container get \
-            --name fit-stage-api \
+            --name "$SERVICE_NAME" \
             --folder-id "$YC_FOLDER_ID" \
             --format json)
           container_id=$(jq -er '.id' <<<"$container")
@@ -86,7 +101,7 @@ jobs:
             release_id=unknown
           fi
           jq -n \
-            --arg service_name fit-stage-api \
+            --arg service_name "$SERVICE_NAME" \
             --arg resource_type serverless_container \
             --arg revision_id "$revision_id" \
             --arg release_id "$release_id" \
