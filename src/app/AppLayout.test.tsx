@@ -8,12 +8,14 @@ const authState = vi.hoisted(() => ({
   role: 'client' as 'client' | 'trainer',
   userId: 'user-1',
   theme: 'light' as 'light' | 'dark',
+  trainerScheduleV2: false,
 }))
 
 vi.mock('./auth-context', () => ({
   useAuth: () => ({ actor: {
     role: authState.role,
     userId: authState.userId,
+    experiments: { trainerScheduleV2: authState.trainerScheduleV2 },
   } }),
 }))
 
@@ -57,8 +59,10 @@ afterEach(() => {
   authState.role = 'client'
   authState.userId = 'user-1'
   authState.theme = 'light'
+  authState.trainerScheduleV2 = false
   vi.unstubAllEnvs()
   document.documentElement.className = ''
+  document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.remove()
 })
 
 describe('AppLayout: единственная UI Identity', () => {
@@ -135,6 +139,23 @@ describe('AppLayout: единственная UI Identity', () => {
     join.unmount()
     renderLayout('/assistant')
     expect(document.querySelectorAll('.auth-join-identity')).toHaveLength(0)
+  })
+
+  it('применяет тёмную системную область только к Schedule V2 пилотного тренера', () => {
+    const meta = document.createElement('meta')
+    meta.name = 'apple-mobile-web-app-status-bar-style'
+    meta.content = 'default'
+    document.head.append(meta)
+    authState.role = 'trainer'
+    authState.trainerScheduleV2 = true
+
+    const layout = renderLayout('/schedule')
+    expect(document.documentElement).toHaveClass('schedule-v2-document')
+    expect(meta).toHaveAttribute('content', 'black-translucent')
+
+    layout.unmount()
+    expect(document.documentElement).not.toHaveClass('schedule-v2-document')
+    expect(meta).toHaveAttribute('content', 'default')
   })
 })
 
