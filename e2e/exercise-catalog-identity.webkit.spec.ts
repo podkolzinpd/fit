@@ -68,7 +68,7 @@ test('narrow-grip pulldown keeps exact media separate from the wide-grip variant
   await page.getByLabel('Поиск упражнения').fill('тяга верхнего блока узким хватом')
   const narrowGrip = page.locator('.catalog-media-card').filter({ hasText: 'Тяга верхнего блока узким хватом' }).first()
   await expect(narrowGrip).toBeVisible()
-  await expect(narrowGrip.locator('img')).toHaveAttribute('src', '/exercises/vital-pro/vital-gym-pro-r407-1713.jpg')
+  await expect(narrowGrip.locator('img')).toHaveAttribute('src', '/exercises/vital-pro/vital-gym-pro-r407-1713-end.jpg')
   await expect(narrowGrip.locator('video')).toHaveCount(0)
   await page.screenshot({ path: testInfo.outputPath('narrow-grip-pulldown-search-mobile.png'), fullPage: true })
   await narrowGrip.click()
