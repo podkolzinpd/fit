@@ -1,14 +1,11 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-24. База изменений: `c45a1523` (#1156). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
+Обновлено: 2026-09-25. База изменений: `ea1a1ffc` (#1162). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 
 ## Активная цель
 
-Диагностика фонового dispatcher: `Background dispatch failed` теперь различает
-`push`/`app_feedback`, `prepare`/`finalize`, безопасный код и категорию ошибки,
-код rollback и release. Payload/SQL/stack не пишутся, повторы не добавлены.
-Это улучшение наблюдаемости; причина инцидента 24 сентября ещё не подтверждена.
+Диагностика фонового dispatcher: `Background dispatch failed` теперь различает `push`/`app_feedback`, `prepare`/`finalize`, безопасный код и категорию ошибки, код rollback и release. Payload/SQL/stack не пишутся, повторы не добавлены. Это улучшение наблюдаемости; причина инцидента 24 сентября ещё не подтверждена.
 
 Стабилизировать Yandex-only production после переключения и затем вывести Supabase из эксплуатации. До закрытия rollback-окна сохраняется общий доменный контракт без dual-write; гейты описаны в `docs/YANDEX_CUTOVER_PLAYBOOK.md`.
 
@@ -20,6 +17,7 @@ Yandex ID является единственным production-входом; app
 - Legal acceptance и отменяемые deletion requests работают через выбранный backend с actor-scoped Yandex RLS/RPC и provider-neutral UI.
 - Production auth показывает только действие «Продолжить с Yandex ID»; старые email/password/reset routes возвращаются на единый вход. Существующая связь Yandex ID с FIT-профилем при выдаче сессии атомарно создаёт отсутствующий `yandex/read_write` assignment или повышает прежний `yandex/read_only`; явный disabled/non-Yandex assignment остаётся административным запретом. Неизвестный Yandex ID получает recovery/new-account handoff. Recovery профиля одной транзакцией создаёт identity, `yandex/read_write` и первую app-session, а выбор нового аккаунта создаёт новый профиль; при любой ошибке всё откатывается. Callback различает незавершённую подготовку профиля и отключённый сервис сессий, не предлагает недоступный email-вход и показывает безопасную диагностику. Основной UI выбирает Yandex API без request-level fallback, а reload не сбрасывает активные Yandex requests.
 - Frontend Yandex API принимает Postgres-native ISO timestamps с numeric offset (`+00:00`); карточка «Последняя тренировка» больше не падает из-за отличия от literal `Z`.
+- Startup watchdog запускается в `<head>` до production JS/CSS: зависший или не загрузившийся asset через 12 секунд показывает восстановление вместо белого/чёрного экрана. Таймаут Yandex auth действует до полного получения ответа, а запрет browser storage завершает loading явной восстанавливаемой ошибкой.
 - Client Home показывает компактную карту «Нагрузка по телу» за текущий месячный период: выбор зоны выводит только её процент, без рейтинга, количества подходов и списка упражнений. «Открыть в прогрессе» раскрывает карту того же периода сразу в режиме нагрузки; exact-workout срез удалён (YAFIT-538).
 - Все запросы основного Yandex API и Yandex ID transport получают безопасный client-generated request ID, который API возвращает в ответе и использует как Fastify `reqId`. Штатные error-state позволяют скопировать этот ID вместе с release/status/operation без token, email, UUID профиля, request body и пользовательского текста.
 - Короткие platform-level `502`, при которых Fastify ещё не вернул request ID, восстанавливаются для безопасных `GET`: параллельные чтения ждут один общий `/health` probe и после восстановления повторяются по одному разу. Любая mutation после 45 секунд без подтверждённого ответа API сначала выполняет общий безопасный `/health` preflight и отправляется ровно один раз только после его успеха; сама запись и application-level ошибки автоматически не повторяются. Одноразовые OAuth-коды защищены тем же контрактом.
@@ -33,15 +31,8 @@ Yandex ID является единственным production-входом; app
 
 ## Yandex Cloud — подтверждённая база
 
-- Существующий Terraform stack `fit/stage` принят как production data plane:
-  Managed PostgreSQL 17, один private host, диск 10 GB, API/migration
-  containers, Lockbox и Object Storage. Backup retention — 14 дней, окно —
-  `00:30 UTC`; отдельный production cluster не создаётся.
-- Текущий full-cohort manifest расширен до 35 таблиц: в snapshot входят
-  `user_legal_acceptances`, `account_deletion_requests` и `favorite_workouts`.
-  Import атомарно пересобирает их из свежего snapshot, сохраняя актуальные
-  Yandex identity/session/rollout строки; устаревшие linked-привязки удаляются,
-  а наличие нативного Yandex-профиля блокирует destructive rebuild.
+- Существующий Terraform stack `fit/stage` принят как production data plane: Managed PostgreSQL 17, один private host, диск 10 GB, API/migration containers, Lockbox и Object Storage. Backup retention — 14 дней, окно — `00:30 UTC`; отдельный production cluster не создаётся.
+- Текущий full-cohort manifest расширен до 35 таблиц: в snapshot входят `user_legal_acceptances`, `account_deletion_requests` и `favorite_workouts`. Import атомарно пересобирает их из свежего snapshot, сохраняя актуальные Yandex identity/session/rollout строки; устаревшие linked-привязки удаляются, а наличие нативного Yandex-профиля блокирует destructive rebuild.
 - Локальная двухпроходная репетиция 35 таблиц снова зелёная. Tenant migration
   включает transaction-local restore mode, поэтому исторические progress/goal
   строки не обновляют `clients.updated_at`. Оба чистых прогона подтвердили

@@ -10,6 +10,7 @@
     "dev:frontend": "vite --port 5173",
     "prebuild": "node scripts/prepare-vital-media.mjs",
     "build": "tsc -b && vite build",
+    "postbuild": "node scripts/verify-startup-build.mjs",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
