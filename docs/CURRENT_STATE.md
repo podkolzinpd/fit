@@ -5,6 +5,7 @@ Yandex ID является единственным production-входом; app
 
 ## Активная цель
 
+Подготовлен первый offline-шаг Yandex frontend: отдельный default-off private bucket template, ручная сборка rehearsal без cloud credentials, manifest с SHA-256/MIME/cache и исходным routing-контрактом. Vercel/DNS/production не переключаются; публикация и HTTP/TLS parity ещё не реализованы. Гейты: `docs/design/YANDEX_FRONTEND_FOUNDATION.md`.
 Диагностика фонового dispatcher: `Background dispatch failed` теперь различает `push`/`app_feedback`, `prepare`/`finalize`, безопасный код и категорию ошибки, код rollback и release. Payload/SQL/stack не пишутся, повторы не добавлены. Это улучшение наблюдаемости; причина инцидента 24 сентября ещё не подтверждена.
 
 Стабилизировать Yandex-only production после переключения и затем вывести Supabase из эксплуатации. До закрытия rollback-окна сохраняется общий доменный контракт без dual-write; гейты описаны в `docs/YANDEX_CUTOVER_PLAYBOOK.md`.

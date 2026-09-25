@@ -36,10 +36,25 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run infra:policy:test
+      - run: node --test scripts/prepare-yandex-frontend.test.mjs
       - run: npm run build
         env:
           VITE_SUPABASE_URL: http://127.0.0.1:54321
           VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+
+  frontend-infrastructure:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+      - run: terraform fmt -check -recursive infra/yandex-frontend
+      - run: terraform -chdir=infra/yandex-frontend init -backend=false
+      - run: terraform -chdir=infra/yandex-frontend validate
+      - run: terraform -chdir=infra/yandex-frontend test
 
   app-tests:
     runs-on: ubuntu-latest
@@ -55,7 +70,7 @@ jobs:
   # Keep the required `app` check stable while quality/build and coverage run
   # concurrently. A failure or cancellation in either lane still blocks merge.
   app:
-    needs: [app-quality, app-tests]
+    needs: [app-quality, app-tests, frontend-infrastructure]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -63,10 +78,11 @@ jobs:
         env:
           QUALITY_RESULT: ${{ needs.app-quality.result }}
           TESTS_RESULT: ${{ needs.app-tests.result }}
+          INFRA_RESULT: ${{ needs.frontend-infrastructure.result }}
         run: |
           set -euo pipefail
-          if [[ "$QUALITY_RESULT" != "success" || "$TESTS_RESULT" != "success" ]]; then
-            echo "App checks failed: quality=$QUALITY_RESULT tests=$TESTS_RESULT"
+          if [[ "$QUALITY_RESULT" != "success" || "$TESTS_RESULT" != "success" || "$INFRA_RESULT" != "success" ]]; then
+            echo "App checks failed: quality=$QUALITY_RESULT tests=$TESTS_RESULT infrastructure=$INFRA_RESULT"
             exit 1
           fi
           echo "All app checks passed"
