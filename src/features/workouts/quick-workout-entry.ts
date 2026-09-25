@@ -127,7 +127,7 @@ export function formatWorkoutText(text: string, catalog: readonly ExerciseSnapsh
   if (!starts.length) return text.replace(/\n{2,}/g, '\n')
   const matches = starts.flatMap((phrase) => {
     const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')
-    return [...text.matchAll(new RegExp(`(?:^|\\s)${escaped}(?=\\s|$)`, 'giu'))]
+    return [...text.matchAll(new RegExp(`(?:^|\\s)${escaped}(?=\\s|[:—-]|$)`, 'giu'))]
       .map((match) => ({ index: (match.index ?? 0) + match[0].length - match[0].trimStart().length, length: phrase.length }))
   }).sort((left, right) => left.index - right.index || right.length - left.length)
   const startsAt = matches.reduce<number[]>((result, match) => result.some((index) => index === match.index) ? result : [...result, match.index], [])
@@ -234,6 +234,8 @@ function isImplicitRunningLine(line: string): boolean {
 
 export function quickWorkoutExerciseName(line: string): string {
   if (isImplicitRunningLine(line)) return 'Бег'
+  const labelled = /^\s*(.+?)\s*[:—-]\s*(?=(?:\d+(?:[.,]\d+)?|ноль|один|одна|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять)\b)/iu.exec(line)
+  if (labelled?.[1]) return labelled[1].trim()
   const leadingCount = new RegExp(`^\\s*${WORKOUT_NUMBER_SOURCE}\\s+([\\p{L}][\\p{L}\\s-]*)$`, 'iu').exec(line)
   if (leadingCount?.[1]) return leadingCount[1].trim()
   const metric = new RegExp(`${WORKOUT_NUMBER_SOURCE}\\s*(?:[xх×]|кг|kg|кило|килограмм(?:а|ов|ы)?|сек|мин|км|km|повт|раз\\b|на\\s*${WORKOUT_NUMBER_SOURCE}|(?:(?:подход(?:а|ов)?|сет(?:а|ов)?)(?:\\s+по)?|по)\\s*${WORKOUT_NUMBER_SOURCE})`, 'iu').exec(line)
@@ -332,6 +334,15 @@ function setDrafts(line: string, inputKind: ExerciseSnapshot['inputKind']): { se
         ...(distanceKm !== undefined ? { distanceKm } : {}),
         ...(validRpe !== undefined ? { rpe: validRpe } : {}),
       })),
+    }
+  }
+  const labelledValues = /[:—-]\s*([^\n]+?)\s*[.]?$/u.exec(line)?.[1]
+  const bareRepParts = inputKind === 'reps' && labelledValues ? labelledValues.split(',') : []
+  const bareReps = bareRepParts.map((value) => number(value.trim()))
+  if (bareReps.length >= 2 && bareReps.length <= 20 && bareReps.every((value) => value !== undefined && value > 0)) {
+    return {
+      hasValues: true,
+      sets: bareReps.map((reps, position) => ({ position, reps: reps!, ...(validRpe !== undefined ? { rpe: validRpe } : {}) })),
     }
   }
   // Отдельные пары веса и повторов — естественная запись факта после зала:
