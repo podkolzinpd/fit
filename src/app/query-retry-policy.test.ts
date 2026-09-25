@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { RepositoryError } from '../data/repositories/error'
+import { attachRequestDiagnostics } from '../shared/request-diagnostics'
 import { queryRetryDelay, shouldRetryQuery } from './query-retry-policy'
 
 describe('shouldRetryQuery', () => {
@@ -41,6 +42,23 @@ describe('shouldRetryQuery', () => {
     expect(shouldRetryQuery(1, { status })).toBe(false)
   })
 
+  it('retries a transient HTTP status preserved on a repository error', () => {
+    const error = attachRequestDiagnostics(
+      new RepositoryError('service_unavailable', 'temporarily unavailable'),
+      {
+        requestId: '18940d82-9075-48d2-a847-8feee301b4d7',
+        occurredAt: '2026-09-25T10:00:00.000Z',
+        backend: 'yandex',
+        operation: 'GET /v1/legal/acceptance',
+        stage: 'api',
+        status: 503,
+      },
+    )
+
+    expect(shouldRetryQuery(0, error)).toBe(true)
+    expect(shouldRetryQuery(1, error)).toBe(false)
+  })
+
   it('retries a fetch network error once', () => {
     const error = new TypeError('Failed to fetch')
 
@@ -69,4 +87,3 @@ describe('queryRetryDelay', () => {
     expect(queryRetryDelay(10)).toBe(5_000)
   })
 })
-
