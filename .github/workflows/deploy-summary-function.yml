@@ -1,12 +1,6 @@
 name: Deploy training summary function
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'supabase/functions/summarize-client-training/**'
-      - 'supabase/functions/_shared/**'
-      - '.github/workflows/deploy-summary-function.yml'
   workflow_dispatch:
 
 permissions:

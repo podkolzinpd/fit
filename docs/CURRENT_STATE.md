@@ -111,8 +111,8 @@ Yandex ID является единственным production-входом; app
    trainer/client accounts; при инциденте возвращать maintenance и делать
    forward-fix, а не включать Supabase UI поверх появившихся Yandex writes.
 2. Закрыть media/custom-photo и AI/push/backup задачи.
-3. После согласованного окна стабильности отключить Supabase Auth/Data API/
-   Storage/Edge Functions, удалить fallback-код и production secrets.
+3. По `docs/design/SUPABASE_DECOMMISSION_INVENTORY_2026-09-25.md` закрывать
+   зависимости по одной; после окна стабильности отключить Supabase и удалить secrets.
 
 ## Отложено
 - DataLens/Telegram/Tracker отложены; HA replica нужна только по SLA; APNs и Android/FCM не входят в Web Push cutover.
