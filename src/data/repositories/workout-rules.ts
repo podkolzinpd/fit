@@ -4,6 +4,7 @@ import type { RunningFormat } from '../../shared/running-formats'
 import { runningFormatExerciseName } from '../../shared/running-formats'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
+import { correctedExerciseInputKind } from '../../shared/exercise-metric-corrections'
 import { isRowingExerciseRef, rowingPaceLabel, runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
 
 export interface ExerciseBlock {
@@ -874,6 +875,14 @@ export function exerciseChartPoints(workouts: Workout[], exerciseRef: string): E
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
 }
 
+function normalizedPlanSet(set: WorkoutSetDraft, inputKind: InputKind): WorkoutSetDraft {
+  const base = { position: set.position, sourceSetId: set.sourceSetId, rpe: set.rpe }
+  if (inputKind === 'strength') return { ...base, weightKg: set.weightKg, reps: set.reps }
+  if (inputKind === 'distance') return { ...base, durationSec: set.durationSec, durationMin: set.durationMin, distanceKm: set.distanceKm, reps: set.reps }
+  if (inputKind === 'reps') return { ...base, reps: set.reps }
+  return { ...base, durationSec: set.durationSec, durationMin: set.durationMin }
+}
+
 export function copyWorkout(source: Workout, workoutDate = source.workoutDate, options: { refreshCatalogNames?: boolean } = {}): WorkoutDraft {
   // Копия сохраняет структуру блоков (тип), но получает свежие block_id,
   // чтобы не конфликтовать с исходной тренировкой.
@@ -888,24 +897,30 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate, o
   return {
     clientId: source.clientId, workoutDate, startTime: source.startTime ?? undefined,
     endTime: source.endTime ?? undefined, notes: source.notes ?? undefined,
-    exercises: source.exercises.map((exercise) => ({
-      source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId,
-      name: options.refreshCatalogNames ? copiedExerciseName(exercise) : exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind,
-      position: exercise.position,
-      blockId: nextBlockId(exercise.blockId), blockType: exercise.blockType, blockPreset: exercise.blockPreset, blockRounds: exercise.blockRounds,
-      restBetweenExercisesSec: exercise.restBetweenExercisesSec, restBetweenRoundsSec: exercise.restBetweenRoundsSec, restBetweenSetsSec: exercise.restBetweenSetsSec,
-      trainerComment: exercise.trainerComment,
-      // При копировании завершённой тренировки факт становится исходным
-      // планом новой. Иначе тренеру приходится заново набивать только что
-      // выполненные веса и повторы.
-      sets: exercise.sets.map((set) => ({ position: set.position,
-        weightKg: source.status === 'done' ? set.fact?.weightKg ?? set.weightKg : set.weightKg,
-        reps: source.status === 'done' ? set.fact?.reps ?? set.reps : set.reps,
-        durationSec: source.status === 'done' ? set.fact?.durationSec ?? set.durationSec : set.durationSec,
-        durationMin: source.status === 'done' ? set.fact?.durationMin ?? set.durationMin : set.durationMin,
-        distanceKm: source.status === 'done' ? set.fact?.distanceKm ?? set.distanceKm : set.distanceKm,
-        rpe: source.status === 'done' ? set.fact?.rpe ?? set.rpe : set.rpe })),
-    })),
+    exercises: source.exercises.map((exercise) => {
+      const inputKind = options.refreshCatalogNames ? correctedExerciseInputKind(exercise) : exercise.inputKind
+      return {
+        source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId,
+        name: options.refreshCatalogNames ? copiedExerciseName(exercise) : exercise.name, muscleGroup: exercise.muscleGroup, inputKind,
+        position: exercise.position,
+        blockId: nextBlockId(exercise.blockId), blockType: exercise.blockType, blockPreset: exercise.blockPreset, blockRounds: exercise.blockRounds,
+        restBetweenExercisesSec: exercise.restBetweenExercisesSec, restBetweenRoundsSec: exercise.restBetweenRoundsSec, restBetweenSetsSec: exercise.restBetweenSetsSec,
+        trainerComment: exercise.trainerComment,
+        // При копировании завершённой тренировки факт становится исходным
+        // планом новой. Иначе тренеру приходится заново набивать только что
+        // выполненные веса и повторы.
+        sets: exercise.sets.map((set) => {
+          const plan = { position: set.position,
+            weightKg: source.status === 'done' ? set.fact?.weightKg ?? set.weightKg : set.weightKg,
+            reps: source.status === 'done' ? set.fact?.reps ?? set.reps : set.reps,
+            durationSec: source.status === 'done' ? set.fact?.durationSec ?? set.durationSec : set.durationSec,
+            durationMin: source.status === 'done' ? set.fact?.durationMin ?? set.durationMin : set.durationMin,
+            distanceKm: source.status === 'done' ? set.fact?.distanceKm ?? set.distanceKm : set.distanceKm,
+            rpe: source.status === 'done' ? set.fact?.rpe ?? set.rpe : set.rpe }
+          return inputKind === exercise.inputKind ? plan : normalizedPlanSet(plan, inputKind)
+        }),
+      }
+    }),
   }
 }
 
@@ -967,15 +982,22 @@ export function favoriteTemplateToWorkoutDraft(exercises: WorkoutExerciseDraft[]
   }
   return {
     clientId, workoutDate, favoriteTitle,
-    exercises: exercises.map((exercise, position) => ({
-      ...exercise,
-      // Избранное переиспользуют не сразу — название системного упражнения
-      // в каталоге могло с тех пор смениться.
-      name: copiedExerciseName(exercise),
-      position,
-      blockId: exercise.blockId ? nextBlockId(exercise.blockId) : crypto.randomUUID(),
-      sourceExerciseId: undefined,
-    })),
+    exercises: exercises.map((exercise, position) => {
+      const inputKind = correctedExerciseInputKind(exercise)
+      return {
+        ...exercise,
+        // Избранное переиспользуют не сразу — название и поля системного
+        // упражнения в каталоге могли с тех пор смениться.
+        name: copiedExerciseName(exercise),
+        inputKind,
+        sets: inputKind === exercise.inputKind
+          ? exercise.sets
+          : exercise.sets.map((set) => normalizedPlanSet(set, inputKind)),
+        position,
+        blockId: exercise.blockId ? nextBlockId(exercise.blockId) : crypto.randomUUID(),
+        sourceExerciseId: undefined,
+      }
+    }),
   }
 }
 

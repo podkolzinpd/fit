@@ -3,6 +3,7 @@ import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
 import { SYSTEM_EXERCISES, SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISE_LEGACY_CATALOG } from './system-exercises'
 
 const byRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
+const legacyByRef = new Map(SYSTEM_EXERCISE_LEGACY_CATALOG.map((exercise) => [exercise.ref, exercise]))
 
 const normalizedName = (name: string) => name.trim().toLocaleLowerCase('ru-RU').replaceAll('ё', 'е').replace(/\s+/gu, ' ')
 const priorNamesByRef = new Map<string, Set<string>>()
@@ -16,7 +17,11 @@ for (const exercise of [...SYSTEM_EXERCISES, ...SYSTEM_EXERCISE_LEGACY_CATALOG])
 export function copiedExerciseName(exercise: ExerciseSnapshot): string {
   if (exercise.source !== 'system' || exercise.customExerciseId) return exercise.name
   const current = byRef.get(exercise.ref)
-  if (!current || current.inputKind !== exercise.inputKind) return exercise.name
+  const legacy = legacyByRef.get(exercise.ref)
+  // A completed workout may still carry the reviewed exercise's former metric.
+  // Accept that exact historical snapshot, but keep rejecting arbitrary field
+  // mismatches so an unrelated exercise is never renamed by ref alone.
+  if (!current || (current.inputKind !== exercise.inputKind && legacy?.inputKind !== exercise.inputKind)) return exercise.name
   // Preserve running formats and any trainer-authored or otherwise unknown label.
   return priorNamesByRef.get(exercise.ref)?.has(normalizedName(exercise.name)) ? current.name : exercise.name
 }
@@ -25,7 +30,9 @@ export function copiedExerciseName(exercise: ExerciseSnapshot): string {
 // data. Such aliases become explicit variants instead of silent replacements.
 export const COMPATIBLE_EXERCISE_REPLACEMENTS: Readonly<Record<string, string>> = Object.fromEntries(
   Object.entries(EXERCISE_CATALOG_DECISIONS).flatMap(([ref, decision]) =>
-    decision.action === 'duplicate' && decision.target && byRef.get(ref)?.inputKind === byRef.get(decision.target)?.inputKind
+    decision.action === 'duplicate' && decision.target
+      && legacyByRef.get(ref)?.inputKind === legacyByRef.get(decision.target)?.inputKind
+      && byRef.get(ref)?.inputKind === byRef.get(decision.target)?.inputKind
       ? [[ref, decision.target]] : []),
 )
 
