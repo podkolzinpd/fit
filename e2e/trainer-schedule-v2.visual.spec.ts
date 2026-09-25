@@ -117,6 +117,7 @@ async function mockPilot(page: Page) {
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
 test('renders the single-trainer schedule and combines questions with messages', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
   await mockPilot(page)
   await page.goto('/today?date=2026-09-24')
 
@@ -125,6 +126,13 @@ test('renders the single-trainer schedule and combines questions with messages',
   await expect(page.getByRole('button', { name: /6 Вопросы и сообщения/ })).toBeVisible()
   await expect(page.getByText('Алексей Смирнов')).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toContainText('СегодняРасписаниеКлиенты')
+  await expect(page.getByRole('link', { name: 'Запланировать тренировку на 2026-09-24' })).toHaveAttribute('href', '/workouts/new?date=2026-09-24')
+  const timelineScroll = await page.locator('.schedule-v2-timeline').evaluate((element) => element.scrollTop)
+  expect(timelineScroll).toBeGreaterThan(300)
+  expect(timelineScroll).toBeLessThan(500)
+  const fabBox = await page.getByRole('link', { name: 'Запланировать тренировку на 2026-09-24' }).boundingBox()
+  const navigationBox = await page.getByRole('navigation', { name: 'Основная навигация' }).boundingBox()
+  expect(fabBox && navigationBox && fabBox.y + fabBox.height < navigationBox.y).toBe(true)
 
   const screenshotPath = testInfo.outputPath('trainer-schedule-v2.png')
   await page.screenshot({ path: screenshotPath, fullPage: true })
@@ -139,9 +147,14 @@ test('renders the single-trainer schedule and combines questions with messages',
   const inboxScreenshotPath = testInfo.outputPath('trainer-schedule-v2-inbox.png')
   await page.screenshot({ path: inboxScreenshotPath, fullPage: true })
   await testInfo.attach('trainer-schedule-v2-inbox', { path: inboxScreenshotPath, contentType: 'image/png' })
+
+  await page.locator('.schedule-v2-timeline').evaluate((element) => { element.scrollTop = 0 })
+  await page.getByRole('button', { name: 'Закрыть входящие' }).click()
+  await expect.poll(() => page.locator('.schedule-v2-timeline').evaluate((element) => element.scrollTop)).toBe(0)
 })
 
 test('renders the weekly overview from the approved composition', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 430, height: 932 })
   await mockPilot(page)
   await page.goto('/schedule?week=2026-09-21')
 
@@ -150,6 +163,8 @@ test('renders the weekly overview from the approved composition', async ({ page 
   await expect(page.getByText('21 — 27 Сентября 2026 г.')).toBeVisible()
   await expect(page.getByText('1 тренировка · 1 клиент')).toBeVisible()
   await expect(page.getByText('Алексей Смирнов')).toBeVisible()
+  await expect(page.getByText('Свободный день')).toHaveCount(6)
+  await expect(page.locator('.schedule-event-decision')).toBeVisible()
 
   const screenshotPath = testInfo.outputPath('trainer-schedule-v2-week.png')
   await page.screenshot({ path: screenshotPath, fullPage: true })

@@ -85,3 +85,17 @@ export function scheduleFocusMinutes(workouts: readonly Workout[], currentTime: 
   })
   return minutesOfTime((nearest ?? timed[0]!).startTime!)
 }
+
+export function scheduleTimelineScrollTop(
+  focusMinutes: number,
+  viewportHeight: number,
+  hourHeight: number,
+): number {
+  const contextHeight = Math.min(hourHeight * 2.5, Math.max(hourHeight * 2, viewportHeight * 0.34))
+  return Math.max(0, (focusMinutes / 60) * hourHeight - contextHeight)
+}
+
+export function scheduleHourLabelCollidesWithNow(hour: number, currentMinutes: number): boolean {
+  const minute = currentMinutes % 60
+  return Math.floor(currentMinutes / 60) === hour && minute <= 10
+}

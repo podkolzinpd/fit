@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
-import { compactScheduleClientName, compactScheduleEventLabel, compactScheduleTime, formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes } from './schedule-presentation'
+import { compactScheduleClientName, compactScheduleEventLabel, compactScheduleTime, formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleTimelineScrollTop } from './schedule-presentation'
 
 function workout(overrides: Partial<Workout> = {}): Workout {
   return {
@@ -51,6 +51,7 @@ describe('schedule presentation', () => {
   it('uses explicit status labels instead of color alone', () => {
     const today = localDate('2026-08-26')
     expect(scheduleEventStatus(workout(), today)).toEqual({ label: 'План', tone: 'planned' })
+    expect(scheduleEventStatus(workout({ workoutDate: localDate('2026-08-25') }), today)).toEqual({ label: 'План', tone: 'decision' })
     expect(scheduleEventStatus(workout({ status: 'in_progress' }), today)).toEqual({ label: 'Идёт', tone: 'current' })
     expect(scheduleEventStatus(workout({ status: 'done' }), today)).toEqual({ label: 'Готово', tone: 'done' })
     expect(scheduleEventStatus(workout({ status: 'cancelled' }), today)).toEqual({ label: 'Пропущена', tone: 'skipped' })
@@ -77,5 +78,16 @@ describe('schedule presentation', () => {
     expect(scheduleFocusMinutes(workouts, '12:00')).toBe(18 * 60 + 30)
     expect(scheduleFocusMinutes(workouts, '21:00')).toBe(7 * 60 + 10)
     expect(scheduleFocusMinutes([], '14:25')).toBe(14 * 60 + 25)
+  })
+
+  it('keeps useful context above the focused time instead of pinning it to the top', () => {
+    expect(scheduleTimelineScrollTop(15 * 60 + 3, 400, 56)).toBeCloseTo(707, 0)
+    expect(scheduleTimelineScrollTop(60, 800, 56)).toBe(0)
+  })
+
+  it('hides an hourly label only when the live marker would overlap it', () => {
+    expect(scheduleHourLabelCollidesWithNow(15, 15 * 60 + 3)).toBe(true)
+    expect(scheduleHourLabelCollidesWithNow(15, 15 * 60 + 11)).toBe(false)
+    expect(scheduleHourLabelCollidesWithNow(14, 15 * 60 + 3)).toBe(false)
   })
 })
