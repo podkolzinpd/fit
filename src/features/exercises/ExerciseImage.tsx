@@ -3,7 +3,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { ExerciseIcon } from '../../shared/icons'
 import exerciseMediaPresentation from '../../shared/exercise-media-presentation.generated.json'
 import { useCustomExercisePhotoUrl } from './custom-exercise-photo'
-import { shouldUsePrivateVitalStorage, useVitalMediaState, useVitalMediaUrl } from './vitalMedia'
+import { shouldUsePrivateVitalStorage, useVitalMediaState } from './vitalMedia'
 
 export type ExerciseImageVariant = 'thumbnail' | 'preview' | 'picker' | 'detail' | 'technique'
 
@@ -110,12 +110,17 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, customPho
   const resolvedCustomPhoto = useCustomExercisePhotoUrl(customPhotoPath)
   const customPhotoLoading = Boolean(customPhotoPath) && !resolvedCustomPhoto
   const safeSrc = resolvedCustomPhoto ?? reviewedExerciseImageSource(src)
+  const compactPrefersMotionPoster = variant !== 'technique' && !resolvedCustomPhoto && Boolean(safeMotionSrc)
   const privateVitalMedia = shouldUsePrivateVitalStorage(safeSrc, backendSource)
+    || shouldUsePrivateVitalStorage(safeMotionSrc, backendSource)
     || shouldUsePrivateVitalStorage(videoSrc, backendSource)
   const deferredPickerMedia = variant === 'picker' && privateVitalMedia
   const { nearViewport, ref: containerRef } = useNearViewport(deferredPickerMedia)
   const requestPrivateMedia = !deferredPickerMedia || nearViewport || playVideo
-  const primaryMedia = useVitalMediaState(safeSrc, requestPrivateMedia)
+  const primaryMedia = useVitalMediaState(
+    safeSrc,
+    requestPrivateMedia && (!compactPrefersMotionPoster || motionFailed),
+  )
   const resolvedSrc = primaryMedia.url
   const videoMedia = useVitalMediaState(videoSrc, requestPrivateMedia && wantsVideo)
   const resolvedVideoSrc = videoMedia.url
@@ -125,14 +130,22 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, customPho
     || videoFailed
     || videoMedia.status === 'error'
   )
-  const resolvedMotionSrc = useVitalMediaUrl(
+  const motionMedia = useVitalMediaState(
     safeMotionSrc,
-    requestPrivateMedia && (variant === 'technique' && !privateVitalMedia || requestPrivateMotionFallback),
+    requestPrivateMedia && (
+      compactPrefersMotionPoster
+      || variant === 'technique' && !privateVitalMedia
+      || requestPrivateMotionFallback
+    ),
   )
+  const resolvedMotionSrc = motionMedia.url
 
   useEffect(() => setPrimaryFailed(false), [resolvedSrc])
   useEffect(() => setFallbackFailed(false), [safeFallbackSrc])
   useEffect(() => setMotionFailed(false), [resolvedMotionSrc])
+  useEffect(() => {
+    if (compactPrefersMotionPoster && motionMedia.status === 'error') setMotionFailed(true)
+  }, [compactPrefersMotionPoster, motionMedia.status])
   useEffect(() => {
     setVideoFailed(false)
     setVideoPlaying(false)
@@ -163,15 +176,19 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, customPho
   // A compact picker video is opt-in: the picker activates exactly one card
   // after an explicit tap. Scrolling or visibility never starts playback.
   const videoAvailable = wantsVideo && Boolean(resolvedVideoSrc) && !videoFailed
-  const presentedSource = primaryAvailable
-    ? safeSrc
-    : stillFallbackAvailable
-      ? safeFallbackSrc
-      : motionFallbackAvailable
-        ? safeMotionSrc
-        : videoAvailable
-          ? videoSrc
-          : [safeSrc, safeFallbackSrc, safeMotionSrc, videoSrc].find(exerciseMediaPresentationKey)
+  const displayedStillSource = compactPrefersMotionPoster && motionFallbackAvailable
+    ? safeMotionSrc
+    : primaryAvailable
+      ? safeSrc
+      : stillFallbackAvailable
+        ? safeFallbackSrc
+        : motionFallbackAvailable
+          ? safeMotionSrc
+          : undefined
+  const presentedSource = displayedStillSource
+    ?? (videoAvailable
+      ? videoSrc
+      : [safeSrc, safeFallbackSrc, safeMotionSrc, videoSrc].find(exerciseMediaPresentationKey))
   const normalizedMediaKey = exerciseMediaPresentationKey(presentedSource)
   const presentation = normalizedMediaKey ? EXERCISE_MEDIA_PRESENTATION[normalizedMediaKey] : undefined
   const className = `exercise-image exercise-image-${variant}${normalizedMediaKey ? ' exercise-image-studio' : ''}`
@@ -179,13 +196,23 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, customPho
     return <span ref={containerRef} className={`${className} exercise-image-empty${(privateVitalMedia || customPhotoLoading) ? ' exercise-image-loading' : ''}`} aria-hidden="true"><ExerciseIcon /></span>
   }
 
-  // Compact cards never animate, but the end frame still protects them from a
-  // broken start frame so the picker does not collapse to an empty placeholder.
-  const displayedStillSrc = primaryAvailable ? resolvedSrc : stillFallbackAvailable ? safeFallbackSrc : motionFallbackAvailable ? resolvedMotionSrc : undefined
+  // Compact cards stay static, but use the end frame as their cover. Some
+  // licensed animations start on an almost empty white canvas; the end frame
+  // shows the exercise without requiring video autoplay or a second request.
+  const displayedStillSrc = compactPrefersMotionPoster && motionFallbackAvailable
+    ? resolvedMotionSrc
+    : primaryAvailable
+      ? resolvedSrc
+      : stillFallbackAvailable
+        ? safeFallbackSrc
+        : motionFallbackAvailable
+          ? resolvedMotionSrc
+          : undefined
+  const displayedStillIsMotion = displayedStillSrc === resolvedMotionSrc && motionFallbackAvailable
   const animated = !videoAvailable && (primaryAvailable || stillFallbackAvailable) && motionAvailable
   return <span ref={containerRef} className={`${className}${animated ? ' exercise-image-motion' : ''}`} style={mediaPresentationStyle(presentation)}>
     <span className="exercise-image-media-canvas">
-      {displayedStillSrc && <img className="exercise-image-frame exercise-image-frame-start" src={displayedStillSrc} alt={alt} loading="lazy" decoding="async" onError={() => primaryAvailable ? setPrimaryFailed(true) : stillFallbackAvailable ? setFallbackFailed(true) : setMotionFailed(true)} />}
+      {displayedStillSrc && <img className="exercise-image-frame exercise-image-frame-start" src={displayedStillSrc} alt={alt} loading="lazy" decoding="async" onError={() => displayedStillIsMotion ? setMotionFailed(true) : primaryAvailable ? setPrimaryFailed(true) : setFallbackFailed(true)} />}
       {animated && <img className="exercise-image-frame exercise-image-frame-end" src={resolvedMotionSrc} alt="" aria-hidden="true" loading="lazy" decoding="async" onError={() => setMotionFailed(true)} />}
       {videoAvailable && <video ref={videoRef} className={`exercise-image-video${videoPlaying ? ' playing' : ''}`} src={resolvedVideoSrc} poster={displayedStillSrc} autoPlay={!reducedMotion} loop muted playsInline preload={variant === 'technique' ? 'auto' : 'metadata'} aria-label={`Техника: ${alt || 'упражнение'}`} disablePictureInPicture disableRemotePlayback onCanPlay={(event) => { if (!reducedMotion && !videoPlaying) void startVideo(event.currentTarget) }} onPlaying={() => { setVideoPlaying(true); setManualPlay(false) }} onError={() => setVideoFailed(true)} />}
     </span>
