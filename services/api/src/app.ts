@@ -4,6 +4,7 @@ import {
   readBearerToken,
   YandexIdentityRejectedError,
   type YandexIdentityProvider,
+  type VerifiedYandexIdentity,
   YandexIdentityUnavailableError,
 } from './auth/yandex-identity.js'
 import {
@@ -155,6 +156,7 @@ import {
   TrainerScheduleV2ClaimError,
   type TrainerScheduleV2Claimer,
 } from './trainer-schedule-v2-claim.js'
+import type { TrainerScheduleV2AutoActivator } from './trainer-schedule-v2-auto-activation.js'
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
@@ -215,6 +217,7 @@ interface BuildAppOptions {
   pilotTrainerDiscovery?: PilotTrainerDiscovery
   pilotFavoriteWorkouts?: PilotFavoriteWorkouts
   trainerScheduleV2Claimer?: TrainerScheduleV2Claimer
+  trainerScheduleV2AutoActivator?: TrainerScheduleV2AutoActivator
   logger?: boolean
   releaseId?: string
 }
@@ -879,7 +882,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return reply.code(400).send({ error: 'invalid_request' })
   }
 
-  async function readYandexSubjectHash(command: { code: string; codeVerifier: string }) {
+  async function readYandexIdentity(
+    command: { code: string; codeVerifier: string },
+  ): Promise<VerifiedYandexIdentity | undefined> {
     if (
       options.oauthCodeProvider === undefined ||
       options.identityProvider === undefined
@@ -892,7 +897,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       command.codeVerifier,
     )
     const identity = await options.identityProvider.verifyAccessToken(token)
-    return identity.subjectHash
+    return identity
+  }
+
+  async function readYandexSubjectHash(command: { code: string; codeVerifier: string }) {
+    return (await readYandexIdentity(command))?.subjectHash
   }
 
   function sendYandexOAuthFailure(reply: FastifyReply, error: unknown) {
@@ -1326,13 +1335,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.code(503).send({ error: 'service_unavailable' })
     }
 
-    let subjectHash: string
+    let identity: VerifiedYandexIdentity
     try {
-      const resolvedSubjectHash = await readYandexSubjectHash(command)
-      if (resolvedSubjectHash === undefined) {
+      const resolvedIdentity = await readYandexIdentity(command)
+      if (resolvedIdentity === undefined) {
         return reply.code(503).send({ error: 'service_unavailable' })
       }
-      subjectHash = resolvedSubjectHash
+      identity = resolvedIdentity
     } catch (error) {
       const response = sendYandexOAuthFailure(reply, error)
       if (response !== undefined) return response
@@ -1340,12 +1349,21 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
 
     try {
-      const session = await options.yandexAppSessionIssuer.issue(subjectHash)
+      if (
+        options.trainerScheduleV2AutoActivator !== undefined
+        && identity.loginHash !== undefined
+      ) {
+        await options.trainerScheduleV2AutoActivator.activate(
+          identity.subjectHash,
+          identity.loginHash,
+        )
+      }
+      const session = await options.yandexAppSessionIssuer.issue(identity.subjectHash)
       if (session === undefined) {
         if (!options.yandexOnlyAuthEnabled || options.yandexAuthHandoffService === undefined) {
           return reply.code(403).send({ error: 'yandex_session_denied' })
         }
-        const handoff = await options.yandexAuthHandoffService.issue(subjectHash)
+        const handoff = await options.yandexAuthHandoffService.issue(identity.subjectHash)
         return handoff === undefined
           ? reply.code(403).send({ error: 'yandex_access_disabled' })
           : reply.header('cache-control', 'no-store').code(409).send({
@@ -1360,7 +1378,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           return reply.code(403).send({ error: 'yandex_session_denied' })
         }
         try {
-          const handoff = await options.yandexAuthHandoffService.issue(subjectHash)
+          const handoff = await options.yandexAuthHandoffService.issue(identity.subjectHash)
           return handoff === undefined
             ? reply.code(403).send({ error: 'yandex_access_disabled' })
             : reply.header('cache-control', 'no-store').code(409).send({

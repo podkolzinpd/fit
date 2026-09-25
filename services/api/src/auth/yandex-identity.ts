@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 
 export interface VerifiedYandexIdentity {
   subjectHash: string
+  loginHash?: string
 }
 
 export interface YandexIdentityProvider {
@@ -39,6 +40,7 @@ function readRequiredString(
 function parseIdentityPayload(value: unknown): {
   clientId: string
   psuid: string
+  login: string
 } | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return undefined
@@ -48,11 +50,17 @@ function parseIdentityPayload(value: unknown): {
   const clientId = readRequiredString(payload, 'client_id')
   const psuid = readRequiredString(payload, 'psuid')
   const id = readRequiredString(payload, 'id')
-  if (clientId === undefined || psuid === undefined || id === undefined) {
+  const login = readRequiredString(payload, 'login')
+  if (
+    clientId === undefined
+    || psuid === undefined
+    || id === undefined
+    || login === undefined
+  ) {
     return undefined
   }
 
-  return { clientId, psuid }
+  return { clientId, psuid, login }
 }
 
 export class YandexIdentityClient implements YandexIdentityProvider {
@@ -110,6 +118,9 @@ export class YandexIdentityClient implements YandexIdentityProvider {
     return {
       subjectHash: createHash('sha256')
         .update(identity.psuid, 'utf8')
+        .digest('hex'),
+      loginHash: createHash('sha256')
+        .update(identity.login.trim().toLowerCase(), 'utf8')
         .digest('hex'),
     }
   }

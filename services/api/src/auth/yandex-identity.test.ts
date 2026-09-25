@@ -17,13 +17,13 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe('YandexIdentityClient', () => {
-  it('validates the OAuth app and hashes only the app-specific psuid', async () => {
+  it('validates the OAuth app and separately hashes the subject and normalized login', async () => {
     const fetchImplementation = vi.fn<typeof fetch>().mockResolvedValue(
       jsonResponse({
         id: 'provider-user-id',
         psuid: 'app-specific-subject',
         client_id: CLIENT_ID,
-        login: 'not-used',
+        login: ' Knyaz187@Mail.Ru ',
       }),
     )
     const client = new YandexIdentityClient({
@@ -34,6 +34,8 @@ describe('YandexIdentityClient', () => {
     await expect(client.verifyAccessToken('oauth-access-token')).resolves.toEqual({
       subjectHash:
         '4f10b35249b40fa95e6d9299e88d6a92990bc5bcf62ab0cb2b19f3a348145095',
+      loginHash:
+        '9efabf271d2433836f53f4efad98e31ae12e2283cae536eb9b1d800a2e734b71',
     })
     expect(fetchImplementation).toHaveBeenCalledWith(
       'https://login.yandex.ru/info?format=json',
@@ -56,6 +58,7 @@ describe('YandexIdentityClient', () => {
           id: 'provider-user-id',
           psuid: 'app-specific-subject',
           client_id: 'another-client',
+          login: 'person@example.test',
         }),
       ),
     })
