@@ -12,6 +12,7 @@ const queries = vi.hoisted(() => ({
   getTrainer: vi.fn(),
   initializeAccount: vi.fn(),
   getProfile: vi.fn(),
+  getTrainerScheduleV2Flag: vi.fn(),
   updateProfile: vi.fn(),
 }))
 
@@ -26,6 +27,7 @@ vi.mock('../queries/auth.queries', () => ({
     getTrainer: queries.getTrainer,
     initializeAccount: queries.initializeAccount,
     getProfile: queries.getProfile,
+    getTrainerScheduleV2Flag: queries.getTrainerScheduleV2Flag,
     updateProfile: queries.updateProfile,
   },
 }))
@@ -45,6 +47,7 @@ describe('authRepository.initialize', () => {
     queries.getTrainer.mockReset()
     queries.initializeAccount.mockReset()
     queries.getProfile.mockReset()
+    queries.getTrainerScheduleV2Flag.mockReset().mockResolvedValue({ data: null, error: null })
     queries.updateProfile.mockReset()
   })
 
@@ -283,6 +286,35 @@ describe('authRepository.initialize', () => {
 
     expect(actor.firstName).toBe('Новое имя')
     expect(queries.initializeAccount).not.toHaveBeenCalled()
+  })
+
+  it('adds the server-managed Schedule V2 experiment to a Supabase trainer', async () => {
+    queries.getLinkedClient.mockResolvedValue({ data: null, error: null })
+    queries.getTrainer.mockResolvedValue({ data: { profile_id: 'trainer-1' }, error: null })
+    queries.getProfile.mockResolvedValue({
+      data: {
+        account_role: 'trainer',
+        first_name: 'Ирина',
+        last_name: null,
+        timezone: 'Europe/Moscow',
+      },
+      error: null,
+    })
+    queries.getTrainerScheduleV2Flag.mockResolvedValue({
+      data: { trainer_schedule_v2: true },
+      error: null,
+    })
+
+    const actor = await authRepository.initialize({
+      id: 'trainer-1',
+      email: 'trainer@example.test',
+      user_metadata: {},
+    })
+
+    expect(actor).toMatchObject({
+      kind: 'trainer',
+      experiments: { trainerScheduleV2: true },
+    })
   })
 
   it('не сохраняет некорректный часовой пояс профиля', async () => {
