@@ -151,6 +151,10 @@ import {
   FavoriteWorkoutsError,
   type PilotFavoriteWorkouts,
 } from './favorite-workouts.js'
+import {
+  TrainerScheduleV2ClaimError,
+  type TrainerScheduleV2Claimer,
+} from './trainer-schedule-v2-claim.js'
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
@@ -210,6 +214,7 @@ interface BuildAppOptions {
   pilotTrainerProfiles?: PilotTrainerProfiles
   pilotTrainerDiscovery?: PilotTrainerDiscovery
   pilotFavoriteWorkouts?: PilotFavoriteWorkouts
+  trainerScheduleV2Claimer?: TrainerScheduleV2Claimer
   logger?: boolean
   releaseId?: string
 }
@@ -1561,6 +1566,39 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       if (error instanceof YandexAppSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })
       }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.post('/v1/experiments/trainer-schedule-v2/claim', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const token = (request.body as { token?: unknown } | null)?.token
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') {
+      return reply.code(403).send({ error: 'action_not_allowed' })
+    }
+    if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.trainerScheduleV2Claimer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+
+    try {
+      const result = await options.trainerScheduleV2Claimer.claim(session, token)
+      return reply.header('cache-control', 'no-store').send(result)
+    } catch (error) {
+      if (error instanceof YandexAppSessionInvalidError) {
+        return reply.code(401).send({ error: 'unauthorized' })
+      }
+      if (error instanceof TrainerScheduleV2ClaimError) {
+        return reply.code(error.failure === 'profile_not_ready' ? 403 : 410).send({
+          error: error.failure === 'profile_not_ready'
+            ? 'trainer_profile_not_ready'
+            : 'claim_unavailable',
+        })
+      }
+      request.log.error({ failure: 'unexpected' }, 'Trainer Schedule V2 claim failed')
       return reply.code(503).send({ error: 'service_unavailable' })
     }
   })
