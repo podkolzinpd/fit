@@ -90,6 +90,26 @@ describe('InvitationPage', () => {
     expect(screen.getByRole('status')).toHaveTextContent('"inviteRole":"trainer"')
   })
 
+  it('keeps the link reloadable and explains how to continue when storage is blocked', async () => {
+    const blockedStorage = memoryStorage()
+    blockedStorage.getItem = () => { throw new DOMException('Access is denied', 'SecurityError') }
+    blockedStorage.setItem = () => { throw new DOMException('Access is denied', 'SecurityError') }
+    Object.defineProperty(window, 'sessionStorage', { configurable: true, value: blockedStorage })
+
+    const firstRender = renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'Антон приглашает вас стать тренером' })).toBeVisible()
+    expect(screen.getByText('Откройте ссылку в Safari или Chrome')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Создать аккаунт' })).not.toBeInTheDocument()
+    expect(window.location.hash).toBe(`#token=${token}&source=supabase`)
+
+    firstRender.unmount()
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'Антон приглашает вас стать тренером' })).toBeVisible()
+    expect(window.location.hash).toBe(`#token=${token}&source=supabase`)
+  })
+
   it('does not let an account with the wrong role accept the invitation', async () => {
     const user = userEvent.setup()
     state.actor = { userId: 'client-1', email: 'client@example.test', role: 'client' }
