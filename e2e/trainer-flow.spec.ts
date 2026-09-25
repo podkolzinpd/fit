@@ -1121,11 +1121,9 @@ test('комментарий тренера к упражнению: план �
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   await page.getByLabel('Вес, подход 1').fill('90')
   await page.getByLabel('Повторы, подход 1').fill('8')
-  // Комментарий тренера к упражнению в форме плана.
-  await page.locator('.planned-exercise').getByRole('button', { name: 'Ещё действия' }).click()
-  await page.getByRole('menuitem', { name: 'Настройки упражнения' }).click()
+  // Заметка тренера доступна прямо в карточке упражнения, без скрытого меню.
+  await page.getByText('Заметка спортсмену').click()
   await page.getByLabel('Комментарий к упражнению').fill('Держи спину прямо')
-  await page.getByRole('button', { name: 'Готово' }).click()
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 

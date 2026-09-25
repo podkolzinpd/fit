@@ -169,16 +169,21 @@ describe('workout exercise editor rules', () => {
     expect(screen.getAllByText('Бег — восстановление').length).toBeGreaterThan(0)
   })
 
-  it('keeps rest and comment fields in the exercise settings sheet', async () => {
+  it('keeps the trainer note directly in the expanded exercise card', async () => {
     const user = userEvent.setup()
     render(<EditorHarness onOpenPicker={vi.fn()} />)
 
     expect(screen.queryByText('Дополнительно')).not.toBeInTheDocument()
+    expect(screen.getByText('Заметка спортсмену')).toBeVisible()
+    expect(screen.getByLabelText('Комментарий к упражнению')).not.toBeVisible()
+    await user.click(screen.getByText('Заметка спортсмену'))
+    await user.type(screen.getByLabelText('Комментарий к упражнению'), 'Держи спину прямо')
+    expect(screen.getByLabelText('Комментарий к упражнению')).toHaveValue('Держи спину прямо')
+
     await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
     await user.click(screen.getByRole('menuitem', { name: 'Настройки упражнения' }))
     expect(screen.getByRole('dialog', { name: 'Настройки упражнения «Присед»' })).toBeInTheDocument()
     expect(screen.getByLabelText('Отдых между подходами, с')).toBeInTheDocument()
-    expect(screen.getByLabelText('Комментарий к упражнению')).toBeInTheDocument()
   })
 
   it('shows saved optional details as a compact hint', async () => {
@@ -191,10 +196,12 @@ describe('workout exercise editor rules', () => {
     render(<WorkoutExerciseEditor exercises={withDetails} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
 
     expect(screen.getByText('Отдых 120 с · Есть заметка')).toBeInTheDocument()
+    expect(screen.getByText('Заметка спортсмену')).toBeVisible()
+    expect(screen.getByLabelText('Комментарий к упражнению')).toBeVisible()
+    expect(screen.getByLabelText('Комментарий к упражнению')).toHaveValue('Контролировать технику')
     await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
     await user.click(screen.getByRole('menuitem', { name: 'Настройки упражнения' }))
     expect(screen.getByLabelText('Отдых между подходами, с')).toHaveValue(120)
-    expect(screen.getByLabelText('Комментарий к упражнению')).toHaveValue('Контролировать технику')
   })
 
   it('opens a copied exercise from a compact summary', async () => {
