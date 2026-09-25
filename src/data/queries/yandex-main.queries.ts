@@ -7,6 +7,8 @@ import { fetchWithTimeout } from './request-timeout'
 
 export type YandexMainHttpMethod = 'DELETE' | 'PATCH' | 'POST' | 'PUT'
 
+export const YANDEX_MAIN_READ_TIMEOUT_MS = 15_000
+
 export interface YandexMainQueries {
   read(path: string): Promise<Response>
   write(path: string, method: YandexMainHttpMethod, body?: object): Promise<Response>
@@ -26,16 +28,22 @@ export function createYandexMainQueries(
   sessionToken: string,
 ): YandexMainQueries {
   const sessionHeaders = { 'x-fit-session': sessionToken }
-  const request = (path: string, init?: RequestInit) => fetchWithYandexPlatformReadRetry(
+  const request: typeof fetch = (input, init) => fetchWithYandexPlatformReadRetry(
     globalThis.fetch,
-    endpoint(apiBaseUrl, path),
+    input,
     init,
   )
   return {
-    read: (path) => request(path, {
-      cache: 'no-store',
-      headers: sessionHeaders,
-    }),
+    read: (path) => fetchWithTimeout(
+      request,
+      endpoint(apiBaseUrl, path),
+      {
+        cache: 'no-store',
+        headers: sessionHeaders,
+      },
+      YANDEX_MAIN_READ_TIMEOUT_MS,
+      'Yandex data request timed out',
+    ),
     write: (path, method, body) => {
       const init: RequestInit = {
         method,
@@ -45,7 +53,7 @@ export function createYandexMainQueries(
           : { ...sessionHeaders, 'content-type': 'application/json' },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       }
-      if (!isLiveWorkoutWrite(path)) return request(path, init)
+      if (!isLiveWorkoutWrite(path)) return request(endpoint(apiBaseUrl, path), init)
       const timedFetch: typeof fetch = (input, requestInit) => fetchWithTimeout(
         globalThis.fetch,
         input,

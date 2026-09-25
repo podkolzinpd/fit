@@ -1,4 +1,5 @@
 import { RepositoryError } from '../data/repositories/error'
+import { getRequestDiagnostics } from '../shared/request-diagnostics'
 
 const NON_RETRYABLE_CODES = new Set(['PGRST116', '42501'])
 const TRANSIENT_POSTGREST_CODES = new Set(['PGRST000', 'PGRST001', 'PGRST002', 'PGRST003'])
@@ -18,7 +19,7 @@ function errorStatus(error: unknown): number | undefined {
   if (typeof error === 'object' && error !== null && 'status' in error && typeof error.status === 'number') {
     return error.status
   }
-  return undefined
+  return getRequestDiagnostics(error)?.status
 }
 
 function isPermanentCode(code: string): boolean {
@@ -60,4 +61,3 @@ export function queryRetryDelay(attemptIndex: number): number {
   const jitter = 0.75 + Math.random() * 0.5
   return Math.round(exponentialDelay * jitter)
 }
-
