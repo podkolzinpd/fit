@@ -34,7 +34,7 @@ const CLAIM_TOKEN = 'c'.repeat(43)
 const PROFILE_ID = '10000000-0000-4000-8000-000000000001'
 
 describe('DatabaseTrainerScheduleV2Claimer', () => {
-  it('consumes the token and leaves exactly one enabled assignment', async () => {
+  it('consumes the token without disabling the other reviewed trainer', async () => {
     const pool = new Pool()
     pool.connection.results = [
       [],
@@ -42,11 +42,11 @@ describe('DatabaseTrainerScheduleV2Claimer', () => {
       [],
       [],
       [{ token_hash: 'valid' }],
-      [{ account_role: 'trainer', trainer_ready: true }],
+      [{ account_role: 'trainer', trainer_ready: true, pilot_allowed: true }],
       [],
       [],
       [],
-      [{ enabled_assignments: '1' }],
+      [{ enabled_assignments: '2' }],
       [],
     ]
 
@@ -76,7 +76,25 @@ describe('DatabaseTrainerScheduleV2Claimer', () => {
       [],
       [],
       [{ token_hash: 'valid' }],
-      [{ account_role: 'client', trainer_ready: false }],
+      [{ account_role: 'client', trainer_ready: false, pilot_allowed: false }],
+      [],
+    ]
+
+    await expect(new DatabaseTrainerScheduleV2Claimer(pool).claim(SESSION, CLAIM_TOKEN))
+      .rejects.toMatchObject({ failure: 'profile_not_ready' })
+    expect(pool.connection.calls.some(({ text }) => text.includes('consumed_by = auth.uid()'))).toBe(false)
+    expect(pool.connection.calls.at(-1)?.text).toBe('rollback')
+  })
+
+  it('does not allow a trainer outside the reviewed two-account allowlist', async () => {
+    const pool = new Pool()
+    pool.connection.results = [
+      [],
+      [{ profile_id: PROFILE_ID }],
+      [],
+      [],
+      [{ token_hash: 'valid' }],
+      [{ account_role: 'trainer', trainer_ready: true, pilot_allowed: false }],
       [],
     ]
 
