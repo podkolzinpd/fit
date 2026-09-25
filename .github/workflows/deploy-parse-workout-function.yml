@@ -1,12 +1,6 @@
 name: Deploy legacy workout parser function
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'supabase/functions/parse-workout/**'
-      - 'services/api/src/legacy-workout-parser/extracted-workout.ts'
-      - '.github/workflows/deploy-parse-workout-function.yml'
   workflow_dispatch:
 
 permissions:
