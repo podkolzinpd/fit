@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDataBackend } from '../../app/data-backend-context'
 import { createSignedUrlCache } from '../../shared/signed-media-cache'
 
@@ -9,6 +9,13 @@ const CACHE_TTL_MS = 50 * 60 * 1_000
 const YANDEX_RETRY_DELAYS_MS = [250, 1_000] as const
 
 const signedUrlCache = createSignedUrlCache(CACHE_TTL_MS)
+
+export type VitalMediaStatus = 'idle' | 'loading' | 'ready' | 'error'
+
+export type VitalMediaState = {
+  url: string | undefined
+  status: VitalMediaStatus
+}
 
 export function shouldUsePrivateVitalStorage(source: string | undefined, backendSource: 'supabase' | 'yandex') {
   if (!source) return false
@@ -29,32 +36,42 @@ function resolveVitalMedia(source: string, backendSource: 'supabase' | 'yandex',
   return signedUrlCache.resolve(`${backendSource}:${source}`, () => createVitalSignedUrl(source, signer))
 }
 
-export function useVitalMediaUrl(source: string | undefined, enabled = true) {
+export function useVitalMediaState(source: string | undefined, enabled = true): VitalMediaState {
   const { exercises, source: backendSource } = useDataBackend()
-  const [resolved, setResolved] = useState(() => source && !shouldUsePrivateVitalStorage(source, backendSource) ? source : undefined)
+  const exercisesRef = useRef(exercises)
+  useEffect(() => { exercisesRef.current = exercises }, [exercises])
+  const [media, setMedia] = useState<VitalMediaState>(() => source && !shouldUsePrivateVitalStorage(source, backendSource)
+    ? { url: source, status: 'ready' }
+    : { url: undefined, status: enabled && source ? 'loading' : 'idle' })
 
   useEffect(() => {
     let active = true
     let retryTimer: ReturnType<typeof setTimeout> | undefined
     if (!source) {
-      setResolved(undefined)
+      setMedia({ url: undefined, status: 'idle' })
       return () => { active = false }
     }
     if (!shouldUsePrivateVitalStorage(source, backendSource)) {
-      setResolved(source)
+      setMedia({ url: source, status: 'ready' })
       return () => { active = false }
     }
     if (!enabled) {
-      setResolved(undefined)
+      setMedia({ url: undefined, status: 'idle' })
       return () => { active = false }
     }
-    setResolved(undefined)
+    setMedia({ url: undefined, status: 'loading' })
     const resolve = (attempt: number) => {
-      void resolveVitalMedia(source, backendSource, (path, expiresIn) => exercises.createVitalMediaUrl(path, expiresIn)).then(
-        (url) => { if (active) setResolved(url) },
+      void resolveVitalMedia(source, backendSource, (path, expiresIn) => (
+        exercisesRef.current.createVitalMediaUrl(path, expiresIn)
+      )).then(
+        (url) => { if (active) setMedia({ url, status: 'ready' }) },
         () => {
           const delay = backendSource === 'yandex' ? YANDEX_RETRY_DELAYS_MS[attempt] : undefined
-          if (!active || delay === undefined) return
+          if (!active) return
+          if (delay === undefined) {
+            setMedia({ url: undefined, status: 'error' })
+            return
+          }
           retryTimer = setTimeout(() => resolve(attempt + 1), delay)
         },
       )
@@ -64,7 +81,11 @@ export function useVitalMediaUrl(source: string | undefined, enabled = true) {
       active = false
       if (retryTimer !== undefined) clearTimeout(retryTimer)
     }
-  }, [backendSource, enabled, exercises, source])
+  }, [backendSource, enabled, source])
 
-  return resolved
+  return media
+}
+
+export function useVitalMediaUrl(source: string | undefined, enabled = true) {
+  return useVitalMediaState(source, enabled).url
 }
