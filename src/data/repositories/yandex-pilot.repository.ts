@@ -674,6 +674,27 @@ export const yandexPilotRepository = {
     }
     if (!response.ok) throw responseFailure(response, appSessionRestoreError(response.status))
   },
+  async claimTrainerScheduleV2(
+    apiBaseUrl: string,
+    sessionToken: string,
+    token: string,
+  ): Promise<void> {
+    let response: Response
+    try {
+      response = await yandexPilotQueries.claimTrainerScheduleV2(apiBaseUrl, sessionToken, token)
+    } catch (caught) {
+      throw yandexAuthConnectionError(caught)
+    }
+    if (response.ok) return
+    if (response.status === 401) throw new YandexAppSessionExpiredError()
+    if (response.status === 403) {
+      throw new Error('Эта Yandex-учётка не является готовым профилем тренера FIT.')
+    }
+    if (response.status === 410) {
+      throw new Error('Ссылка активации уже использована или истекла.')
+    }
+    throw new Error('Не удалось включить новый дизайн. Попробуйте ещё раз.')
+  },
   async updateProfile(
     apiBaseUrl: string,
     sessionToken: string,

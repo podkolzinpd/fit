@@ -20,7 +20,7 @@ function Protected() {
   const { actor, loading, error } = useAuth(); const location = useLocation()
   const systemStateClass = 'state ui-identity system-state-identity'
   if (loading) return <main className={systemStateClass}>Восстанавливаем сессию…</main>
-  if (!actor) return <Navigate to="/auth" state={{ from: `${location.pathname}${location.search}` }} replace />
+  if (!actor) return <Navigate to="/auth" state={{ from: `${location.pathname}${location.search}${location.hash}` }} replace />
   if (error) return <main className={`${systemStateClass} error`}>{error}</main>
   return <LegalAcceptanceGate><YandexAccountLinkRequiredGate><Outlet /></YandexAccountLinkRequiredGate></LegalAcceptanceGate>
 }
