@@ -67,8 +67,11 @@ describe('catalog names in new copies only', () => {
     const copy = copyWorkout(source, TODAY, { refreshCatalogNames: true })
     expect(copy.exercises).toHaveLength(1165)
     expect(copy.exercises.map(({ ref, inputKind }) => ({ ref, inputKind })))
-      .toEqual(source.exercises.map(({ ref, inputKind }) => ({ ref, inputKind })))
+      .toEqual(SYSTEM_EXERCISE_CATALOG.map(({ ref, inputKind }) => ({ ref, inputKind })))
     expect(copy.exercises.map((exercise) => exercise.name)).toEqual(SYSTEM_EXERCISE_CATALOG.map((exercise) => exercise.name))
+    const corrected = copy.exercises.find((exercise) => exercise.ref === 'fedb-bench-press-with-bands')!
+    expect(corrected).toMatchObject({ inputKind: 'reps', sets: [{ position: 0, reps: 9 }] })
+    expect(corrected.sets[0]!.weightKg).toBeUndefined()
   })
 
   it('does not resurrect removed exercises or sets when a completed result is edited again', () => {
@@ -628,6 +631,18 @@ describe('favoriteTemplateToWorkoutDraft', () => {
   it('назначает одиночному упражнению без blockId свежий id', () => {
     const result = favoriteTemplateToWorkoutDraft([draft('a')], 'client-1', localDate('2026-09-25'), 'Ноги')
     expect(result.exercises[0]?.blockId).toBeTruthy()
+  })
+
+  it('обновляет ошибочный исторический тип поля при повторном использовании избранного', () => {
+    const legacy = SYSTEM_EXERCISE_LEGACY_CATALOG.find((exercise) => exercise.ref === 'fedb-bench-press-with-bands')!
+    const result = favoriteTemplateToWorkoutDraft([{
+      ...legacy,
+      position: 0,
+      sets: [{ position: 0, weightKg: 40, reps: 12 }],
+    }], 'client-1', localDate('2026-09-25'), 'Резина')
+
+    expect(result.exercises[0]).toMatchObject({ inputKind: 'reps', sets: [{ position: 0, reps: 12 }] })
+    expect(result.exercises[0]?.sets[0]?.weightKg).toBeUndefined()
   })
 })
 
