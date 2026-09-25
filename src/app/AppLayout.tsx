@@ -18,7 +18,8 @@ export function AppLayout() {
   const redesignedStart = isTodayStartRedesignEnabled()
   const { keyboardOpen } = useAppViewport()
   const trainerScheduleV2 = isTrainerScheduleV2Enabled(actor)
-  const trainerScheduleV2Route = trainerScheduleV2 && pathname === '/schedule'
+  const trainerScheduleV2Route = trainerScheduleV2 && (pathname === '/schedule'
+    || (pathname === '/today' && new URLSearchParams(search).get('classic') !== '1'))
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
   const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
@@ -59,10 +60,15 @@ export function AppLayout() {
     const root = document.documentElement
     root.classList.add('ui-identity')
     applyMonochromeThemeColor(theme)
+    root.classList.toggle('schedule-v2-document', trainerScheduleV2Route)
+    if (trainerScheduleV2Route) {
+      document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', '#080908')
+    }
     return () => {
+      root.classList.remove('schedule-v2-document')
       applyAppTheme(theme)
     }
-  }, [theme, themeVariant])
+  }, [theme, themeVariant, trainerScheduleV2Route])
 
   useEffect(() => {
     // Route content can grow again while its draft is restored. Reset on the
@@ -100,12 +106,12 @@ export function AppLayout() {
     monochromeClientCardEdit ? 'client-card-edit-identity' : '',
     monochromeWorkoutCreateEdit ? 'workout-create-edit-identity' : '',
     monochromeWorkoutDetailHistory ? 'workout-detail-history-identity' : '',
-    monochromeTrainerToday ? 'trainer-today-identity' : '',
+    monochromeTrainerToday && !trainerScheduleV2Route ? 'trainer-today-identity' : '',
     monochromeTrainerClients ? 'trainer-clients-identity' : '',
     monochromeTrainerClientDetail ? 'trainer-client-detail-identity' : '',
     monochromeTrainerClientForm ? 'trainer-client-form-identity' : '',
     monochromeTrainerClientGoal ? 'trainer-client-goal-identity' : '',
-    monochromeTrainerSchedule ? 'trainer-schedule-identity' : '',
+    monochromeTrainerSchedule && !trainerScheduleV2Route ? 'trainer-schedule-identity' : '',
     trainerScheduleV2Route ? 'trainer-schedule-v2-shell' : '',
     monochromeTrainerProgress ? 'trainer-progress-identity' : '',
     monochromeExerciseCatalog ? 'exercise-catalog-identity' : '',

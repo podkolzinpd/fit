@@ -118,21 +118,40 @@ test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot ha
 
 test('renders the single-trainer schedule and combines questions with messages', async ({ page }, testInfo) => {
   await mockPilot(page)
-  await page.goto('/schedule?date=2026-09-24')
+  await page.goto('/today?date=2026-09-24')
 
   await expect(page.locator('.trainer-schedule-v2-shell')).toBeVisible()
-  await expect(page.getByRole('link', { name: /3 Незавершённые действия/ })).toHaveAttribute('href', '/today#trainer-attention')
-  await expect(page.getByRole('link', { name: /6 Вопросы и сообщения/ })).toHaveAttribute('href', '/chat')
+  await expect(page.getByRole('link', { name: /3 Незавершённые действия/ })).toHaveAttribute('href', '/today?classic=1#trainer-attention')
+  await expect(page.getByRole('button', { name: /6 Вопросы и сообщения/ })).toBeVisible()
   await expect(page.getByText('Алексей Смирнов')).toBeVisible()
-  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toContainText('СегодняРасписаниеКлиентыАссистент')
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toContainText('СегодняРасписаниеКлиенты')
 
   const screenshotPath = testInfo.outputPath('trainer-schedule-v2.png')
   await page.screenshot({ path: screenshotPath, fullPage: true })
   await testInfo.attach('trainer-schedule-v2', { path: screenshotPath, contentType: 'image/png' })
 
-  await page.getByRole('link', { name: /6 Вопросы и сообщения/ }).click()
-  await expect(page).toHaveURL(/\/chat$/)
+  await page.getByRole('button', { name: /6 Вопросы и сообщения/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Входящие' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Вопросы тренеру' })).toBeVisible()
   await expect(page.getByText('Можно заменить приседания?')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Сообщения', level: 2 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Сообщения', level: 3 })).toBeVisible()
+  await expect(page.getByText('Спасибо!')).toBeVisible()
+  const inboxScreenshotPath = testInfo.outputPath('trainer-schedule-v2-inbox.png')
+  await page.screenshot({ path: inboxScreenshotPath, fullPage: true })
+  await testInfo.attach('trainer-schedule-v2-inbox', { path: inboxScreenshotPath, contentType: 'image/png' })
+})
+
+test('renders the weekly overview from the approved composition', async ({ page }, testInfo) => {
+  await mockPilot(page)
+  await page.goto('/schedule?week=2026-09-21')
+
+  await expect(page.locator('.trainer-schedule-v2-shell')).toBeVisible()
+  await expect(page.locator('.schedule-v2-topbar h1')).toHaveText('Расписание')
+  await expect(page.getByText('21 — 27 Сентября 2026 г.')).toBeVisible()
+  await expect(page.getByText('1 тренировка · 1 клиент')).toBeVisible()
+  await expect(page.getByText('Алексей Смирнов')).toBeVisible()
+
+  const screenshotPath = testInfo.outputPath('trainer-schedule-v2-week.png')
+  await page.screenshot({ path: screenshotPath, fullPage: true })
+  await testInfo.attach('trainer-schedule-v2-week', { path: screenshotPath, contentType: 'image/png' })
 })
