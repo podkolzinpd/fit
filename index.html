@@ -59,6 +59,134 @@
         font-weight: 600;
       }
     </style>
+    <script id="fit-startup-controller">
+      (function () {
+        var finished = false
+        var startRequested = false
+        var errorPending = false
+        var probeTimer = null
+        var emergencyShell = null
+        var configuredTimeout = Number(window.__fitStartupTimeoutMs)
+        var timeoutMs = window.location.hostname === '127.0.0.1'
+          && Number.isFinite(configuredTimeout)
+          && configuredTimeout >= 0
+          ? configuredTimeout
+          : 12000
+
+        function findShellElements() {
+          return {
+            shell: document.getElementById('fit-startup-shell'),
+            title: document.getElementById('fit-startup-title'),
+            message: document.getElementById('fit-startup-message'),
+            reload: document.getElementById('fit-startup-reload'),
+          }
+        }
+
+        function reloadApplication() {
+          var url = new URL(window.location.href)
+          url.searchParams.set('fit-recover', String(Date.now()))
+          window.location.replace(url.toString())
+        }
+
+        function bindReload(button) {
+          if (!button || button.dataset.fitReloadBound === 'true') return
+          button.dataset.fitReloadBound = 'true'
+          button.addEventListener('click', reloadApplication)
+        }
+
+        function createEmergencyShell() {
+          if (emergencyShell && emergencyShell.isConnected) return emergencyShell
+          emergencyShell = document.createElement('main')
+          emergencyShell.id = 'fit-startup-emergency'
+          emergencyShell.className = 'fit-startup-shell'
+          emergencyShell.setAttribute('aria-live', 'assertive')
+          emergencyShell.innerHTML = [
+            '<span class="fit-startup-mark" aria-hidden="true">FIT</span>',
+            '<h1>Не удалось открыть Fit</h1>',
+            '<p>Обновите приложение. Ваши данные и тренировки сохранены.</p>',
+            '<button type="button">Обновить приложение</button>',
+          ].join('')
+          bindReload(emergencyShell.querySelector('button'))
+          ;(document.body || document.documentElement).appendChild(emergencyShell)
+          return emergencyShell
+        }
+
+        function showStartupError() {
+          if (finished) return
+          errorPending = true
+          var elements = findShellElements()
+          if (!elements.title || !elements.message || !elements.reload) {
+            createEmergencyShell()
+            return
+          }
+          elements.title.textContent = 'Не удалось открыть Fit'
+          elements.message.textContent = 'Обновите приложение. Ваши данные и тренировки сохранены.'
+          elements.reload.hidden = false
+          elements.shell.setAttribute('aria-live', 'assertive')
+          bindReload(elements.reload)
+          if (emergencyShell) emergencyShell.remove()
+        }
+
+        function handleLoadError(event) {
+          var target = event && event.target
+          var tagName = target && target.tagName
+          var source = target && (target.src || target.href || '')
+          var isAppResource = target && (
+            target.id === 'fit-app-entry'
+            || (tagName === 'SCRIPT' && target.type === 'module')
+            || (tagName === 'SCRIPT' && source.indexOf('/assets/') !== -1)
+            || (tagName === 'LINK' && target.rel === 'stylesheet' && source.indexOf('/assets/') !== -1)
+          )
+          if (!target || target === window || isAppResource) showStartupError()
+        }
+
+        function attachStartupShell() {
+          var elements = findShellElements()
+          bindReload(elements.reload)
+          if (errorPending) showStartupError()
+        }
+
+        function appIsVisible() {
+          var root = document.getElementById('root')
+          if (!root || root.childElementCount === 0) return false
+          var bounds = root.getBoundingClientRect()
+          return bounds.width > 0 && bounds.height > 0
+        }
+
+        function finishStartupWhenVisible() {
+          if (finished || !startRequested) return
+          if (!appIsVisible()) {
+            probeTimer = window.setTimeout(finishStartupWhenVisible, 100)
+            return
+          }
+          finished = true
+          window.clearTimeout(timeout)
+          if (probeTimer !== null) window.clearTimeout(probeTimer)
+          window.removeEventListener('error', handleLoadError, true)
+          window.removeEventListener('unhandledrejection', showStartupError)
+          window.removeEventListener('fit:asset-load-error', showStartupError)
+          document.removeEventListener('DOMContentLoaded', attachStartupShell)
+          var shell = document.getElementById('fit-startup-shell')
+          if (shell) shell.remove()
+          if (emergencyShell) emergencyShell.remove()
+          var styles = document.getElementById('fit-startup-shell-styles')
+          if (styles) styles.remove()
+          delete window.__fitAttachStartupShell
+          delete window.__fitMarkAppStarted
+        }
+
+        var timeout = window.setTimeout(showStartupError, timeoutMs)
+        window.addEventListener('error', handleLoadError, true)
+        window.addEventListener('unhandledrejection', showStartupError)
+        window.addEventListener('fit:asset-load-error', showStartupError)
+        document.addEventListener('DOMContentLoaded', attachStartupShell)
+        window.__fitAttachStartupShell = attachStartupShell
+        window.__fitMarkAppStarted = function () {
+          startRequested = true
+          window.requestAnimationFrame(finishStartupWhenVisible)
+        }
+      })()
+    </script>
     <!-- Yandex.Metrika counter -->
     <script type="text/javascript">
       const isFitProduction = window.location.hostname === 'fit-drab.vercel.app'
@@ -84,68 +212,7 @@
       <button id="fit-startup-reload" type="button" hidden>Обновить приложение</button>
     </main>
     <script>
-      (function () {
-        var finished = false
-        var startRequested = false
-        var probeTimer = null
-        var shell = document.getElementById('fit-startup-shell')
-        var root = document.getElementById('root')
-        var title = document.getElementById('fit-startup-title')
-        var message = document.getElementById('fit-startup-message')
-        var reload = document.getElementById('fit-startup-reload')
-
-        function showStartupError() {
-          if (finished) return
-          if (!title || !message || !reload) return
-          title.textContent = 'Не удалось открыть Fit'
-          message.textContent = 'Обновите приложение. Ваши данные и тренировки сохранены.'
-          reload.hidden = false
-        }
-
-        function handleLoadError(event) {
-          var target = event && event.target
-          if (!target || target === window || target.id === 'fit-app-entry') showStartupError()
-        }
-
-        var timeout = window.setTimeout(showStartupError, 12000)
-        window.addEventListener('error', handleLoadError, true)
-        window.addEventListener('unhandledrejection', showStartupError)
-        window.addEventListener('fit:asset-load-error', showStartupError)
-        reload.addEventListener('click', function () {
-          var url = new URL(window.location.href)
-          url.searchParams.set('fit-recover', String(Date.now()))
-          window.location.replace(url.toString())
-        })
-
-        function appIsVisible() {
-          if (!root || root.childElementCount === 0) return false
-          var bounds = root.getBoundingClientRect()
-          return bounds.width > 0 && bounds.height > 0
-        }
-
-        function finishStartupWhenVisible() {
-          if (finished || !startRequested) return
-          if (!appIsVisible()) {
-            probeTimer = window.setTimeout(finishStartupWhenVisible, 100)
-            return
-          }
-          finished = true
-          window.clearTimeout(timeout)
-          if (probeTimer !== null) window.clearTimeout(probeTimer)
-          window.removeEventListener('error', handleLoadError, true)
-          window.removeEventListener('unhandledrejection', showStartupError)
-          window.removeEventListener('fit:asset-load-error', showStartupError)
-          if (shell) shell.remove()
-          var styles = document.getElementById('fit-startup-shell-styles')
-          if (styles) styles.remove()
-          delete window.__fitMarkAppStarted
-        }
-
-        window.__fitMarkAppStarted = function () {
-          startRequested = true
-          window.requestAnimationFrame(finishStartupWhenVisible)
-        }
-      })()
+      window.__fitAttachStartupShell?.()
     </script>
     <script id="fit-app-entry" type="module" src="/src/main.tsx"></script>
   </body>

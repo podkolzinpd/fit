@@ -19,6 +19,7 @@ import {
 
 const STORAGE_KEY = 'fit.yandexAppSession.v1'
 const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/
+const STORAGE_ACCESS_ERROR = 'Браузер запретил доступ к сохранённой сессии. Разрешите хранение данных для Fit и повторите проверку.'
 
 interface StoredYandexAppSession {
   token: string
@@ -66,6 +67,10 @@ function clearStoredSession(storage: Pick<Storage, 'removeItem'>): void {
   storage.removeItem(STORAGE_KEY)
 }
 
+function storageAccessError(caught: unknown): Error {
+  return caught instanceof Error ? caught : new Error(STORAGE_ACCESS_ERROR)
+}
+
 export function YandexAppSessionProvider({ children }: PropsWithChildren) {
   const config = useMemo(() => getYandexAppSessionEntryConfig(), [])
   const [session, setSession] = useState<YandexAppSession | null>(null)
@@ -74,11 +79,21 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
   const [errorDetails, setErrorDetails] = useState<Error | null>(null)
   const revisionRef = useRef(0)
 
-  const clearLocalSession = useCallback(() => {
+  const clearLocalSession = useCallback((): Error | null => {
     revisionRef.current += 1
-    clearStoredSession(window.localStorage)
+    let failure: Error | null = null
+    try {
+      clearStoredSession(window.localStorage)
+    } catch (caught) {
+      failure = storageAccessError(caught)
+    }
     setSession(null)
     setLoading(false)
+    if (failure !== null) {
+      setError(STORAGE_ACCESS_ERROR)
+      setErrorDetails(failure)
+    }
+    return failure
   }, [])
 
   const restore = useCallback(async () => {
@@ -91,9 +106,35 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
       return
     }
 
-    const stored = readStoredSession(window.localStorage)
-    if (stored === null || Date.parse(stored.expiresAt) <= Date.now()) {
-      clearStoredSession(window.localStorage)
+    let stored: StoredYandexAppSession | null
+    try {
+      stored = readStoredSession(window.localStorage)
+    } catch (caught) {
+      if (revision !== revisionRef.current) return
+      setSession(null)
+      setLoading(false)
+      setError(STORAGE_ACCESS_ERROR)
+      setErrorDetails(storageAccessError(caught))
+      return
+    }
+    if (stored === null) {
+      setSession(null)
+      setLoading(false)
+      setError(null)
+      setErrorDetails(null)
+      return
+    }
+    if (Date.parse(stored.expiresAt) <= Date.now()) {
+      try {
+        clearStoredSession(window.localStorage)
+      } catch (caught) {
+        if (revision !== revisionRef.current) return
+        setSession(null)
+        setLoading(false)
+        setError(STORAGE_ACCESS_ERROR)
+        setErrorDetails(storageAccessError(caught))
+        return
+      }
       setSession(null)
       setLoading(false)
       setError(null)
@@ -111,7 +152,15 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
     } catch (caught) {
       if (revision !== revisionRef.current) return
       setSession(null)
-      if (caught instanceof YandexAppSessionExpiredError) clearStoredSession(window.localStorage)
+      if (caught instanceof YandexAppSessionExpiredError) {
+        try {
+          clearStoredSession(window.localStorage)
+        } catch (storageCause) {
+          setError(STORAGE_ACCESS_ERROR)
+          setErrorDetails(storageAccessError(storageCause))
+          return
+        }
+      }
       setError(caught instanceof Error ? caught.message : 'Не удалось восстановить сессию Yandex ID.')
       setErrorDetails(caught instanceof Error ? caught : null)
     } finally {
@@ -130,23 +179,35 @@ export function YandexAppSessionProvider({ children }: PropsWithChildren) {
   }, [config])
 
   const reset = useCallback(() => {
-    clearLocalSession()
-    setError(null)
-    setErrorDetails(null)
+    if (clearLocalSession() === null) {
+      setError(null)
+      setErrorDetails(null)
+    }
   }, [clearLocalSession])
 
   const signOut = useCallback(async () => {
+    let storageFailure: Error | null = null
     const current = session ?? (() => {
-      const stored = readStoredSession(window.localStorage)
-      return stored === null ? null : {
-        accessMode: 'read_write' as const,
-        profile: null,
-        session: stored,
+      try {
+        const stored = readStoredSession(window.localStorage)
+        return stored === null ? null : {
+          accessMode: 'read_write' as const,
+          profile: null,
+          session: stored,
+        }
+      } catch (caught) {
+        storageFailure = storageAccessError(caught)
+        return null
       }
     })()
-    clearLocalSession()
-    setError(null)
-    setErrorDetails(null)
+    storageFailure = clearLocalSession() ?? storageFailure
+    if (storageFailure === null) {
+      setError(null)
+      setErrorDetails(null)
+    } else {
+      setError(STORAGE_ACCESS_ERROR)
+      setErrorDetails(storageFailure)
+    }
     if (config === null || current === null) return
     try {
       await yandexPilotRepository.revokeAppSession(config.apiBaseUrl, current.session.token)
