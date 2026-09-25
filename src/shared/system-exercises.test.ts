@@ -247,6 +247,28 @@ describe('system exercise catalog', () => {
     for (const decision of additions) expect(decision.name).not.toMatch(/[A-Za-z]/)
   })
 
+  it('не путает вес и время у проверенных упражнений Gym Pro', () => {
+    const expected = new Map([
+      ['vital-gym-pro-r385-1473', { inputKind: 'strength', equipment: 'Гантели и скамья' }],
+      ['vital-gym-pro-r218-1538', { inputKind: 'duration', equipment: 'БОСУ' }],
+    ])
+    const reviewedByRef = new Map(
+      vitalGymProRemainingReview.decisions
+        .filter((decision) => decision.status === 'add')
+        .map((decision) => [decision.ref, decision]),
+    )
+    const generatedByRef = new Map<string, (typeof VITAL_GYM_PRO_NEW_EXERCISES)[number]>(
+      VITAL_GYM_PRO_NEW_EXERCISES.map((exercise) => [exercise.ref, exercise]),
+    )
+
+    for (const [ref, semantics] of expected) {
+      expect(reviewedByRef.get(ref)).toMatchObject(semantics)
+      expect(generatedByRef.get(ref)).toMatchObject({ ref, ...semantics })
+      expect(SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === ref))
+        .toMatchObject({ ref, ...semantics })
+    }
+  })
+
   it('подключает все 50 видео бесплатного пака и разрешённые исторические дубли', () => {
     const expected = new Map<string, string>(VITAL_FREE_PACK_ASSETS.map((asset) => [asset.ref, `/exercises/vital/${asset.file}.mp4`]))
     expect(VITAL_FREE_PACK_ASSETS).toHaveLength(50)
