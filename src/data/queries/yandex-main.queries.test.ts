@@ -4,7 +4,7 @@ import {
   getResponseDiagnostics,
   resetYandexPlatformRequestStateForTests,
 } from './request-diagnostics'
-import { createYandexMainQueries } from './yandex-main.queries'
+import { createYandexMainQueries, YANDEX_MAIN_READ_TIMEOUT_MS } from './yandex-main.queries'
 
 describe('Yandex main query timeout', () => {
   afterEach(() => {
@@ -31,6 +31,27 @@ describe('Yandex main query timeout', () => {
     const result = expect(request).rejects.toThrow('Live workout request timed out')
     await vi.advanceTimersByTimeAsync(LIVE_WORKOUT_REQUEST_TIMEOUT_MS)
     await result
+  })
+
+  it('aborts a read whose response body stalls', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((_input, init) => Promise.resolve(new Response(
+      new ReadableStream({
+        start(controller) {
+          init?.signal?.addEventListener('abort', () => controller.error(new DOMException('Aborted', 'AbortError')), { once: true })
+        },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )))
+    const queries = createYandexMainQueries('https://api.example', 'session')
+
+    const request = queries.read('/v1/legal/acceptance')
+    const result = expect(request).rejects.toThrow('Yandex data request timed out')
+    await vi.advanceTimersByTimeAsync(YANDEX_MAIN_READ_TIMEOUT_MS)
+
+    await result
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal)
+    expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBe(true)
   })
 
   it('sends a correlation ID and keeps safe response diagnostics', async () => {
