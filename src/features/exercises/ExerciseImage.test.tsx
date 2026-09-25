@@ -61,7 +61,7 @@ describe('ExerciseImage', () => {
     expect(container.innerHTML).not.toContain('base-')
   })
 
-  it('cycles through start and end frames only in the technique variant', () => {
+  it('cycles through both frames in technique and uses the end frame as a static compact cover', () => {
     const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" alt="Жим лёжа" variant="technique" />)
     expect(container.firstElementChild).toHaveClass('exercise-image-motion')
     expect(container.querySelectorAll('img')).toHaveLength(2)
@@ -70,6 +70,7 @@ describe('ExerciseImage', () => {
     rerender(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" alt="Жим лёжа" />)
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
     expect(container.querySelectorAll('img')).toHaveLength(1)
+    expect(screen.getByRole('img', { name: 'Жим лёжа' })).toHaveAttribute('src', '/exercises/end.jpg')
   })
 
   it('keeps the start frame when the optional end frame fails', () => {
@@ -237,15 +238,16 @@ describe('ExerciseImage', () => {
     expect(container.querySelectorAll('video')).toHaveLength(1)
   })
 
-  it('uses the still end frame when a compact card start frame fails', () => {
+  it('falls back from the compact end-frame cover to the start frame', () => {
     const { container } = render(<ExerciseImage src="/exercises/broken.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Жим лёжа" variant="picker" />)
-    fireEvent.error(screen.getByRole('img', { name: 'Жим лёжа' }))
     expect(screen.getByRole('img', { name: 'Жим лёжа' })).toHaveAttribute('src', '/exercises/end.jpg')
+    fireEvent.error(screen.getByRole('img', { name: 'Жим лёжа' }))
+    expect(screen.getByRole('img', { name: 'Жим лёжа' })).toHaveAttribute('src', '/exercises/broken.jpg')
     expect(container.querySelector('video')).not.toBeInTheDocument()
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
   })
 
-  it('signs and shows the private end frame when a picker poster cannot be loaded', async () => {
+  it('signs only the private end-frame cover first and falls back to the start frame', async () => {
     vi.stubEnv('MODE', 'production')
     vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
     const createVitalMediaUrl = vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockImplementation((path) => Promise.resolve(
@@ -255,17 +257,19 @@ describe('ExerciseImage', () => {
     ))
 
     const { container } = render(<ExerciseImage
-      src="/exercises/vital-pro/vital-cycling-ex061.jpg"
-      motionSrc="/exercises/vital-pro/vital-cycling-ex061-end.jpg"
+      src="/exercises/vital-pro/vital-cycling-cover-test.jpg"
+      motionSrc="/exercises/vital-pro/vital-cycling-cover-test-end.jpg"
       alt="Велотренажёр"
       variant="picker"
     />)
 
-    await waitFor(() => expect(screen.getByRole('img', { name: 'Велотренажёр' })).toHaveAttribute('src', 'https://signed.example/cycling.jpg'))
-    fireEvent.error(screen.getByRole('img', { name: 'Велотренажёр' }))
     await waitFor(() => expect(screen.getByRole('img', { name: 'Велотренажёр' })).toHaveAttribute('src', 'https://signed.example/cycling-end.jpg'))
+    expect(createVitalMediaUrl).toHaveBeenCalledTimes(1)
+    expect(createVitalMediaUrl).toHaveBeenCalledWith('vital-pro/vital-cycling-cover-test-end.jpg', 3600)
+    fireEvent.error(screen.getByRole('img', { name: 'Велотренажёр' }))
+    await waitFor(() => expect(screen.getByRole('img', { name: 'Велотренажёр' })).toHaveAttribute('src', 'https://signed.example/cycling.jpg'))
     expect(container.firstElementChild).not.toHaveClass('exercise-image-empty')
-    expect(createVitalMediaUrl).toHaveBeenCalledWith('vital-pro/vital-cycling-ex061-end.jpg', 3600)
+    expect(createVitalMediaUrl).toHaveBeenCalledWith('vital-pro/vital-cycling-cover-test.jpg', 3600)
   })
 
   it('falls back to private start and end frames when a technique video cannot be loaded', async () => {
@@ -285,7 +289,7 @@ describe('ExerciseImage', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Техника: Жим ногами')).toBeInTheDocument())
     fireEvent.error(screen.getByLabelText('Техника: Жим ногами'))
-    await waitFor(() => expect(container.firstElementChild).toHaveClass('exercise-image-motion'))
+    await waitFor(() => expect(container.firstElementChild).toHaveClass('exercise-image-motion'), { timeout: 3_000 })
     expect(container.querySelectorAll('img')).toHaveLength(2)
     expect(container.querySelector('.exercise-image-frame-end')).toHaveAttribute('src', 'https://signed.example/vital-leg-press-machine-ex073-end.jpg')
   })

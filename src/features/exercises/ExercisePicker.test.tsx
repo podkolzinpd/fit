@@ -210,11 +210,12 @@ describe('ExercisePicker', () => {
     expect(screen.queryByText('Последние у клиента')).not.toBeInTheDocument()
   })
 
-  it('оставляет статичный запасной кадр в списке, если основной кадр не загрузился', () => {
+  it('оставляет начальный кадр запасным, если обложка из конечного кадра не загрузилась', () => {
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
     const squat = document.querySelector<HTMLElement>('[data-exercise-ref="a"]')!.closest('.picker-item')!
-    fireEvent.error(squat.querySelector('img')!)
     expect(squat.querySelector('img')).toHaveAttribute('src', '/squat-end.jpg')
+    fireEvent.error(squat.querySelector('img')!)
+    expect(squat.querySelector('img')).toHaveAttribute('src', '/squat.jpg')
     expect(squat.querySelector('video')).not.toBeInTheDocument()
     expect(squat.querySelector('.exercise-image-motion')).not.toBeInTheDocument()
   })
