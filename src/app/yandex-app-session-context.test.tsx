@@ -85,6 +85,25 @@ describe('YandexAppSessionProvider', () => {
     expect(window.localStorage.getItem('fit.yandexAppSession.v1')).toBeNull()
   })
 
+  it('leaves the loading state and shows a recoverable error when storage is blocked', async () => {
+    const blockedStorage = new DOMException('Access is denied', 'SecurityError')
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        clear: vi.fn(),
+        getItem: vi.fn(() => { throw blockedStorage }),
+        removeItem: vi.fn(() => { throw blockedStorage }),
+        setItem: vi.fn(() => { throw blockedStorage }),
+      },
+    })
+
+    render(<YandexAppSessionProvider><Probe /></YandexAppSessionProvider>)
+
+    expect(await screen.findByText(/Браузер запретил доступ к сохранённой сессии/)).toBeVisible()
+    expect(screen.queryByText('loading')).not.toBeInTheDocument()
+    expect(repository.getAppSession).not.toHaveBeenCalled()
+  })
+
   it('keeps a recoverable session for retry after a network error', async () => {
     repository.getAppSession
       .mockRejectedValueOnce(new Error('Yandex Cloud вход временно недоступен.'))

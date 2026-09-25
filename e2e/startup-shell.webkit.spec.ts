@@ -42,3 +42,16 @@ test('не оставляет белый экран, если модуль за�
   await expect(page.locator('#root')).toBeEmpty()
   await expect(page.getByRole('heading', { name: 'Открываем Fit…' })).toBeVisible()
 })
+
+test('показывает восстановление, если таблица стилей зависла до запуска приложения', async ({ page }) => {
+  await page.addInitScript(() => {
+    ;(window as Window & { __fitStartupTimeoutMs?: number }).__fitStartupTimeoutMs = 100
+  })
+  await page.route('**/src/styles.css*', () => undefined)
+
+  await page.goto('/', { waitUntil: 'commit' })
+
+  await expect(page.getByRole('heading', { name: 'Не удалось открыть Fit' })).toBeVisible()
+  await expect(page.getByText('Ваши данные и тренировки сохранены.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Обновить приложение' })).toBeVisible()
+})
