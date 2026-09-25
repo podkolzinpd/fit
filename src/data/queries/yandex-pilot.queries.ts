@@ -138,6 +138,16 @@ export const yandexPilotQueries = {
       cache: 'no-store',
       headers: { 'x-fit-session': sessionToken },
     }),
+  claimTrainerScheduleV2: (apiBaseUrl: string, sessionToken: string, token: string) =>
+    yandexAuthFetch(`${apiBaseUrl}/v1/experiments/trainer-schedule-v2/claim`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        'content-type': 'application/json',
+        'x-fit-session': sessionToken,
+      },
+      body: JSON.stringify({ token }),
+    }),
   updateProfile: (
     apiBaseUrl: string,
     sessionToken: string,

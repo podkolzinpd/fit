@@ -67,6 +67,9 @@ import { useAppViewport } from '../../app/app-viewport'
 import { prepareZeroReplacement } from '../../shared/numeric-input'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { useTrainerWorkspace } from './use-trainer-workspace'
+import { useYandexAppSession } from '../../app/yandex-app-session-context'
+import { getYandexAppSessionEntryConfig } from '../../app/feature-flags'
+import { yandexPilotRepository } from '../../data/repositories/yandex-pilot.repository'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -177,7 +180,45 @@ function useTrainerScheduleModel() {
 
 export function SchedulePage() {
   const { actor } = useAuth()
+  const [claimToken] = useState(() => {
+    const match = /^#trainer-schedule-v2=([A-Za-z0-9_-]{43})$/.exec(window.location.hash)
+    return match?.[1] ?? null
+  })
+  if (claimToken !== null && !isTrainerScheduleV2Enabled(actor)) {
+    return <TrainerScheduleV2Claim token={claimToken} />
+  }
   return isTrainerScheduleV2Enabled(actor) ? <TrainerScheduleV2 /> : <TrainerScheduleV1 />
+}
+
+function TrainerScheduleV2Claim({ token }: { token: string }) {
+  const { session, retry } = useYandexAppSession()
+  const config = getYandexAppSessionEntryConfig()
+  const [attempt, setAttempt] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (session === null || config === null) return
+    let cancelled = false
+    setError(null)
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`)
+    void yandexPilotRepository.claimTrainerScheduleV2(
+      config.apiBaseUrl,
+      session.session.token,
+      token,
+    ).then(() => retry()).catch((caught: unknown) => {
+      if (!cancelled) setError(caught instanceof Error ? caught.message : 'Не удалось включить новый дизайн.')
+    })
+    return () => { cancelled = true }
+  }, [attempt, config, retry, session, token])
+
+  return <Page title="Новый дизайн расписания">
+    <StatePanel
+      tone={error === null ? 'info' : 'error'}
+      title={error === null ? 'Подключаем дизайн' : 'Не удалось подключить'}
+      description={error ?? 'Проверяем учётку тренера и включаем интерфейс только для неё…'}
+      action={error === null ? undefined : <button type="button" className="primary" onClick={() => setAttempt((value) => value + 1)}>Повторить</button>}
+    />
+  </Page>
 }
 
 function TrainerScheduleV1() {

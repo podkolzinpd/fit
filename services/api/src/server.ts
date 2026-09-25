@@ -55,6 +55,7 @@ import { DatabasePilotTrainerProfiles } from './trainer-profile.js'
 import { DatabasePilotTrainerDiscovery } from './trainer-discovery.js'
 import { DatabasePilotFavoriteWorkouts } from './favorite-workouts.js'
 import { parseAllowedOrigins } from './cors-origins.js'
+import { DatabaseTrainerScheduleV2Claimer } from './trainer-schedule-v2-claim.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -99,6 +100,9 @@ const yandexAppSessionRevoker =
   databasePool === undefined
     ? undefined
     : new DatabaseYandexAppSessionRevoker(databasePool)
+const trainerScheduleV2Claimer = databasePool === undefined
+  ? undefined
+  : new DatabaseTrainerScheduleV2Claimer(databasePool)
 const yandexAccountLinker =
   databasePool === undefined
     ? undefined
@@ -276,6 +280,7 @@ const app = buildApp(
     ...(yandexAppSessionIssuer === undefined ? {} : { yandexAppSessionIssuer }),
     ...(yandexAppSessionReader === undefined ? {} : { yandexAppSessionReader }),
     ...(yandexAppSessionRevoker === undefined ? {} : { yandexAppSessionRevoker }),
+    ...(trainerScheduleV2Claimer === undefined ? {} : { trainerScheduleV2Claimer }),
     ...(vitalMediaSigner === undefined ? {} : { vitalMediaSigner }),
     ...(yandexAccountLinker === undefined ? {} : { yandexAccountLinker }),
     ...(yandexNativeRegistrar === undefined ? {} : { yandexNativeRegistrar }),

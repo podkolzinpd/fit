@@ -67,6 +67,7 @@ import {
   CURRENT_PRIVACY_VERSION,
   CURRENT_TERMS_VERSION,
 } from './legal-document-versions.js'
+import { TrainerScheduleV2ClaimError } from './trainer-schedule-v2-claim.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
 import {
   TrainerWorkspaceUnavailableError,
@@ -1566,6 +1567,64 @@ describe('native Yandex function contracts', () => {
       triggerReason: 'manual_refresh',
     })
     expect(generate).not.toHaveBeenCalled()
+  })
+})
+
+describe('trainer schedule v2 activation claim', () => {
+  it('binds a valid one-time claim to the signed-in Yandex trainer', async () => {
+    const claim = vi.fn().mockResolvedValue({ enabled: true as const })
+    const app = buildApp({ trainerScheduleV2Claimer: { claim }, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/experiments/trainer-schedule-v2/claim',
+      headers: { 'x-fit-session': 's'.repeat(43) },
+      payload: { token: 'c'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ enabled: true })
+    expect(claim).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: 's'.repeat(43) },
+      'c'.repeat(43),
+    )
+    expect(response.headers['cache-control']).toBe('no-store')
+  })
+
+  it('refuses read-only sessions and does not call the claimer', async () => {
+    const claim = vi.fn()
+    const app = buildApp({ trainerScheduleV2Claimer: { claim }, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/experiments/trainer-schedule-v2/claim',
+      headers: { 'x-fit-pilot-session': 's'.repeat(43) },
+      payload: { token: 'c'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(403)
+    expect(claim).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['invalid_token', 410, 'claim_unavailable'],
+    ['profile_not_ready', 403, 'trainer_profile_not_ready'],
+  ] as const)('maps %s without exposing account details', async (failure, status, code) => {
+    const claim = vi.fn().mockRejectedValue(new TrainerScheduleV2ClaimError(failure))
+    const app = buildApp({ trainerScheduleV2Claimer: { claim }, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/experiments/trainer-schedule-v2/claim',
+      headers: { 'x-fit-session': 's'.repeat(43) },
+      payload: { token: 'c'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual({ error: code })
   })
 })
 
