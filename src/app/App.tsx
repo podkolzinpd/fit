@@ -11,10 +11,11 @@ import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
 import { ProfilePage, PublicTrainerProfilePage, TrainerCatalogPage, TrainerProfileEditorPage, TrainerProfileSettingsPage } from '../features/profile'
 import { YandexAssistantRoute } from '../features/assistant'
-import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
+import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, TrainerScheduleTodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 import { AccountDeletionPage, LegalAcceptanceGate, PrivacyPage, TermsPage } from '../features/legal'
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 import { ChatConversationPage, ChatListPage } from '../features/chat'
+import { isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
 
 function Protected() {
   const { actor, loading, error } = useAuth(); const location = useLocation()
@@ -58,6 +59,13 @@ function AssistantPage() {
   return <YandexAssistantRoute />
 }
 
+function TrainerTodayPage() {
+  const { actor } = useAuth()
+  const location = useLocation()
+  const classic = new URLSearchParams(location.search).get('classic') === '1'
+  return isTrainerScheduleV2Enabled(actor) && !classic ? <TrainerScheduleTodayPage /> : <TodayPage />
+}
+
 const router = createBrowserRouter([
   { path: '/auth', element: <AuthPage /> },
   { path: '/auth/forgot', element: <ForgotPasswordPage /> },
@@ -96,7 +104,7 @@ const router = createBrowserRouter([
       { path: '/assistant', element: <AssistantPage /> },
     ] },
     { element: <TrainerOnly />, children: [
-      { path: '/today', element: <TodayPage /> },
+      { path: '/today', element: <TrainerTodayPage /> },
       { path: '/clients', element: <ClientsPage /> },
       { path: '/clients/archive', element: <ArchivedClientsPage /> },
       { path: '/clients/new', element: <ClientFormPage /> },
