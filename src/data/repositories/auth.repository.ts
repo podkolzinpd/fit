@@ -123,9 +123,10 @@ export const authRepository = {
     throw normalized
   },
   async initialize(user: { id: string; email?: string; user_metadata: Record<string, unknown> }): Promise<SessionActor> {
-    const [linkedClient, existing] = await Promise.all([
+    const [linkedClient, existing, trainerScheduleV2Flag] = await Promise.all([
       authQueries.getLinkedClient(user.id),
       authQueries.getProfile(user.id),
+      authQueries.getTrainerScheduleV2Flag(user.id),
     ])
     if (linkedClient.error) throw repositoryError(linkedClient.error)
     if (existing.error) throw repositoryError(existing.error)
@@ -182,6 +183,9 @@ export const authRepository = {
       firstName: profileData.first_name,
       lastName: profileData.last_name,
       timezone: normalizeTimeZone(profileData.timezone),
+      experiments: {
+        trainerScheduleV2: trainerScheduleV2Flag.data?.trainer_schedule_v2 === true,
+      },
     }
   },
   async updateProfile(actor: TrainerActor): Promise<TrainerActor> {
