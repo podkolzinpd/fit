@@ -16,6 +16,27 @@ describe('parseQuickWorkoutEntry', () => {
     expect(formatWorkoutText('Жим лёжа ', SYSTEM_EXERCISE_CATALOG)).toBe('Жим лёжа ')
   })
 
+  it('разделяет упражнения с двоеточием внутри одного абзаца и сохраняет все подходы', () => {
+    const text = 'Горизонтальный жим в тренажере: 50 кг на 15, 55 кг на 12, 60 кг на 12, 65 кг на 10. Сведение рук в тренажере «бабочка»: 50 кг на 12, 55 кг на 12, 60 кг на 12, 60 кг на 10, 60 кг на 10. Разгибание рук вверх на блоке: 45 кг на 15, 50 кг на 12, 55 кг на 12, 55 кг на 12, 55 кг на 12. Отжимания на брусьях: 12, 10, 10, 10. Скручивания на наклонной скамье: 15, 15.'
+    const result = parseQuickWorkoutEntry(text, SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed.map((item) => item.exercise.ref)).toEqual([
+      'fedb-machine-bench-press',
+      'pec-deck',
+      'fedb-cable-rope-overhead-triceps-extension',
+      'dips',
+      'fedb-decline-crunch',
+    ])
+    expect(result.parsed.map((item) => item.sets.map(({ weightKg, reps }) => ({ weightKg, reps })))).toEqual([
+      [{ weightKg: 50, reps: 15 }, { weightKg: 55, reps: 12 }, { weightKg: 60, reps: 12 }, { weightKg: 65, reps: 10 }],
+      [{ weightKg: 50, reps: 12 }, { weightKg: 55, reps: 12 }, { weightKg: 60, reps: 12 }, { weightKg: 60, reps: 10 }, { weightKg: 60, reps: 10 }],
+      [{ weightKg: 45, reps: 15 }, { weightKg: 50, reps: 12 }, { weightKg: 55, reps: 12 }, { weightKg: 55, reps: 12 }, { weightKg: 55, reps: 12 }],
+      [{ weightKg: undefined, reps: 12 }, { weightKg: undefined, reps: 10 }, { weightKg: undefined, reps: 10 }, { weightKg: undefined, reps: 10 }],
+      [{ weightKg: undefined, reps: 15 }, { weightKg: undefined, reps: 15 }],
+    ])
+  })
+
   it('понимает разговорное «гребля» как гребной тренажёр', () => {
     const result = parseQuickWorkoutEntry('Гребля 10 мин 2 км', SYSTEM_EXERCISE_CATALOG)
 
