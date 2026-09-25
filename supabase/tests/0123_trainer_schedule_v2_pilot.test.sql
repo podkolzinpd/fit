@@ -1,14 +1,18 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(13);
+select plan(20);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('c1230000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'pilot-one@example.test', ''),
-  ('c1230000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'pilot-two@example.test', '');
+  ('c1230000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'pilot-two@example.test', ''),
+  ('c1230000-0000-4000-8000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'pilot-incomplete@example.test', ''),
+  ('c1230000-0000-4000-8000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'pilot-client@example.test', '');
 
 insert into public.profiles (id, account_role, first_name) values
   ('c1230000-0000-4000-8000-000000000001', 'trainer', 'Первый'),
-  ('c1230000-0000-4000-8000-000000000002', 'trainer', 'Второй');
+  ('c1230000-0000-4000-8000-000000000002', 'trainer', 'Второй'),
+  ('c1230000-0000-4000-8000-000000000003', 'trainer', 'Незавершённый'),
+  ('c1230000-0000-4000-8000-000000000004', 'client', 'Клиент');
 
 insert into public.trainers (profile_id) values
   ('c1230000-0000-4000-8000-000000000001'),
@@ -71,6 +75,52 @@ select is(
   true,
   'replacement also preserves the paused gate'
 );
+
+set local role service_role;
+select lives_ok(
+  $$select public.manage_trainer_schedule_v2_pilot('c1230000-0000-4000-8000-000000000003', 'enable')$$,
+  'enable repairs an incomplete legacy trainer account'
+);
+reset role;
+
+select is(
+  (select count(*) from public.trainers where profile_id = 'c1230000-0000-4000-8000-000000000003'),
+  1::bigint,
+  'missing trainer root is created once'
+);
+select is(
+  (select trainer_schedule_v2 from public.user_feature_flags where user_id = 'c1230000-0000-4000-8000-000000000003'),
+  true,
+  'repaired trainer receives the pilot flag'
+);
+select is(
+  (select count(*) from public.user_feature_flags where trainer_schedule_v2),
+  1::bigint,
+  'repair still leaves exactly one enabled assignment'
+);
+select is(
+  (select writes_paused from private.source_cutover_write_gate where singleton),
+  true,
+  'repair restores the paused gate'
+);
+
+set local role service_role;
+select throws_ok(
+  $$select public.manage_trainer_schedule_v2_pilot('c1230000-0000-4000-8000-000000000004', 'enable')$$,
+  'PT409',
+  'trainer_schedule_v2_role_mismatch',
+  'client profile cannot be repaired or enrolled as a trainer'
+);
+reset role;
+
+set local role service_role;
+select throws_ok(
+  $$select public.manage_trainer_schedule_v2_pilot('c1230000-0000-4000-8000-000000000099', 'enable')$$,
+  'PT409',
+  'trainer_schedule_v2_profile_missing',
+  'missing profile cannot be created implicitly'
+);
+reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'c1230000-0000-4000-8000-000000000001', true);
