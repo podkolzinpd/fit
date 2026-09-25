@@ -16,6 +16,7 @@ export interface TrainerScheduleV2PilotManager {
 
 interface ProfileRow extends QueryResultRow {
   account_role: 'trainer' | 'client'
+  pilot_allowed: boolean
   trainer_ready: boolean
 }
 
@@ -54,20 +55,36 @@ export class DatabaseTrainerScheduleV2PilotManager implements TrainerScheduleV2P
           exists (
             select 1 from public.trainers trainer
             where trainer.profile_id = profile.id
-          ) as trainer_ready
+          ) as trainer_ready,
+          exists (
+            select 1
+            from app_private.trainer_schedule_v2_allowlist allowed
+            where allowed.profile_id = profile.id
+          ) as pilot_allowed
         from public.profiles profile
         where profile.id = $1
       `, [profileId])
       const profile = rows[0]
-      if (profile === undefined || profile.account_role !== 'trainer' || !profile.trainer_ready) {
+      if (
+        profile === undefined
+        || profile.account_role !== 'trainer'
+        || !profile.trainer_ready
+        || !profile.pilot_allowed
+      ) {
         throw new TrainerScheduleV2PilotProfileNotReadyError()
       }
 
       if (action !== 'inspect') {
         await connection.query(`
-          update app_private.user_experiment_assignments
+          update app_private.user_experiment_assignments assignment
           set enabled = false, updated_at = now()
-          where experiment_key = 'trainer_schedule_v2' and enabled = true
+          where assignment.experiment_key = 'trainer_schedule_v2'
+            and assignment.enabled = true
+            and not exists (
+              select 1
+              from app_private.trainer_schedule_v2_allowlist allowed
+              where allowed.profile_id = assignment.profile_id
+            )
         `)
         await connection.query(`
           insert into app_private.user_experiment_assignments (
@@ -91,9 +108,13 @@ export class DatabaseTrainerScheduleV2PilotManager implements TrainerScheduleV2P
       `)
       const enabled = assignment[0]?.enabled === true
       const enabledAssignments = Number(assignmentCount[0]?.enabled_assignments ?? 0)
-      const expectedAssignments = action === 'enable' ? 1 : action === 'disable' ? 0 : undefined
-      if (expectedAssignments !== undefined && enabledAssignments !== expectedAssignments) {
-        throw new Error('Trainer Schedule V2 single-account invariant failed')
+      if (
+        enabledAssignments < 0
+        || enabledAssignments > 2
+        || (action === 'enable' && (!enabled || enabledAssignments < 1))
+        || (action === 'disable' && enabled)
+      ) {
+        throw new Error('Trainer Schedule V2 two-account invariant failed')
       }
       await connection.query('commit')
       return { accountRole: 'trainer', enabled, enabledAssignments }
