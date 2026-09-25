@@ -16,7 +16,7 @@ run "private_storage_only" {
     bucket_name = "fit-frontend-test"
   }
   assert {
-    condition     = !yandex_storage_bucket.frontend[0].anonymous_access_flags[0].read && !yandex_storage_bucket.frontend[0].anonymous_access_flags[0].list && !yandex_storage_bucket.frontend[0].anonymous_access_flags[0].config_read
+    condition     = !one(yandex_storage_bucket.frontend[0].anonymous_access_flags).read && !one(yandex_storage_bucket.frontend[0].anonymous_access_flags).list && !one(yandex_storage_bucket.frontend[0].anonymous_access_flags).config_read
     error_message = "Preparation must not grant anonymous access."
   }
   assert {
