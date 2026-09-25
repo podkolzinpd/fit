@@ -15,7 +15,7 @@ describe('selectable exercise catalog', () => {
     const selectable = selectableExercises(SYSTEM_EXERCISE_CATALOG)
     expect(RETIRED_SYSTEM_EXERCISE_REFS.size).toBe(83)
     expect(SYSTEM_EXERCISE_CATALOG).toHaveLength(1165)
-    expect(selectable).toHaveLength(1165 - 16 - 83)
+    expect(selectable).toHaveLength(1165 - Object.keys(SYSTEM_EXERCISE_PICKER_REPLACEMENTS).length - 83)
     for (const ref of RETIRED_SYSTEM_EXERCISE_REFS) {
       const historic = SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === ref)!
       expect(historic, ref).toBeDefined()

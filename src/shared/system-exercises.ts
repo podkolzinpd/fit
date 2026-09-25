@@ -6,8 +6,9 @@ import { VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital
 import { VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF, VITAL_GYM_PRO_NEW_EXERCISES } from './vital-gym-pro.generated'
 import { REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF } from './exercise-media-similarity'
 import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
+import { EXERCISE_METRIC_CORRECTIONS } from './exercise-metric-corrections'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 13
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 14
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {
@@ -256,9 +257,11 @@ export const SYSTEM_EXERCISE_LEGACY_CATALOG: readonly ExerciseSnapshot[] = SYSTE
   }
 })
 
-// Rename display metadata only; persisted snapshots, units and historical refs
-// remain untouched. New additions absent from the approved list remain available.
+// Apply reviewed display names and recording metrics to new catalog selections.
+// Persisted completed workouts and historical refs remain untouched.
 export const SYSTEM_EXERCISE_CATALOG: readonly ExerciseSnapshot[] = SYSTEM_EXERCISE_LEGACY_CATALOG.map((exercise) => ({
   ...exercise,
   name: EXERCISE_CATALOG_DECISIONS[exercise.ref]?.name ?? exercise.name,
+  inputKind: EXERCISE_METRIC_CORRECTIONS[exercise.ref]?.inputKind ?? exercise.inputKind,
+  equipment: EXERCISE_METRIC_CORRECTIONS[exercise.ref]?.equipment ?? exercise.equipment,
 }))

@@ -5,6 +5,7 @@ import { SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISE_LEGACY_CATALOG } from './syste
 import { ORIGINAL_SEARCH_ALIASES, SEARCH_ALIASES, matchesExerciseSearch, normalizeExerciseSearch, resolveExerciseSearch } from '../features/exercises/exercise-search'
 import { selectableExercises } from '../features/exercises/selectable-exercises'
 import { RETIRED_SYSTEM_EXERCISE_REFS } from './exercise-catalog-retirement'
+import { EXERCISE_METRIC_CORRECTIONS } from './exercise-metric-corrections'
 
 const byRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
 const selectable = selectableExercises(SYSTEM_EXERCISE_CATALOG)
@@ -58,12 +59,17 @@ describe('approved catalog curation', () => {
     }
   })
 
-  it('preserves every historical identifier, field, media link and instruction', () => {
+  it('preserves every historical identifier, media link and instruction except reviewed metrics', () => {
     for (const original of SYSTEM_EXERCISE_LEGACY_CATALOG) {
       const current = byRef.get(original.ref)!
-      expect({ ...current, name: original.name }, original.ref).toEqual(original)
+      const correction = EXERCISE_METRIC_CORRECTIONS[original.ref]
+      expect({ ...current, name: original.name }, original.ref).toEqual({
+        ...original,
+        inputKind: correction?.inputKind ?? original.inputKind,
+        equipment: correction?.equipment ?? original.equipment,
+      })
     }
-    expect(Object.keys(COMPATIBLE_EXERCISE_REPLACEMENTS)).toHaveLength(16)
+    expect(Object.keys(COMPATIBLE_EXERCISE_REPLACEMENTS)).toHaveLength(15)
     for (const [ref, target] of Object.entries(COMPATIBLE_EXERCISE_REPLACEMENTS)) {
       expect(byRef.get(ref)!.inputKind).toBe(byRef.get(target)!.inputKind)
       expect(selectable.some((exercise) => exercise.ref === ref)).toBe(false)

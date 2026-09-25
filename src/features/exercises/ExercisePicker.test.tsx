@@ -103,7 +103,7 @@ describe('ExercisePicker', () => {
     expect(onPick).toHaveBeenCalledWith(variant)
   })
 
-  it('does not lose recording fields when two dip cards have different input kinds', async () => {
+  it('keeps the reviewed dip variant selectable with its corrected recording fields', async () => {
     const user = userEvent.setup()
     const onPick = vi.fn()
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialSearch="брусья" onPick={onPick} onClose={vi.fn()} />)
@@ -112,7 +112,7 @@ describe('ExercisePicker', () => {
     if (openPlaying) await user.click(openPlaying)
     await user.selectOptions(screen.getByLabelText('Вариант упражнения'), 'fedb-parallel-bar-dip')
     await user.click(screen.getByRole('button', { name: 'Добавить упражнение' }))
-    expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ ref: 'fedb-parallel-bar-dip', inputKind: 'strength' }))
+    expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ ref: 'fedb-parallel-bar-dip', inputKind: 'reps' }))
   })
 
   beforeEach(() => {
