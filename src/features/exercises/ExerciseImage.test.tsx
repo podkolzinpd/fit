@@ -245,6 +245,51 @@ describe('ExerciseImage', () => {
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
   })
 
+  it('signs and shows the private end frame when a picker poster cannot be loaded', async () => {
+    vi.stubEnv('MODE', 'production')
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    const createVitalMediaUrl = vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockImplementation((path) => Promise.resolve(
+      path.endsWith('-end.jpg')
+        ? 'https://signed.example/cycling-end.jpg'
+        : 'https://signed.example/cycling.jpg',
+    ))
+
+    const { container } = render(<ExerciseImage
+      src="/exercises/vital-pro/vital-cycling-ex061.jpg"
+      motionSrc="/exercises/vital-pro/vital-cycling-ex061-end.jpg"
+      alt="Велотренажёр"
+      variant="picker"
+    />)
+
+    await waitFor(() => expect(screen.getByRole('img', { name: 'Велотренажёр' })).toHaveAttribute('src', 'https://signed.example/cycling.jpg'))
+    fireEvent.error(screen.getByRole('img', { name: 'Велотренажёр' }))
+    await waitFor(() => expect(screen.getByRole('img', { name: 'Велотренажёр' })).toHaveAttribute('src', 'https://signed.example/cycling-end.jpg'))
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-empty')
+    expect(createVitalMediaUrl).toHaveBeenCalledWith('vital-pro/vital-cycling-ex061-end.jpg', 3600)
+  })
+
+  it('falls back to private start and end frames when a technique video cannot be loaded', async () => {
+    vi.stubEnv('MODE', 'production')
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockImplementation((path) => Promise.resolve(
+      `https://signed.example/${path.split('/').at(-1)}`,
+    ))
+
+    const { container } = render(<ExerciseImage
+      src="/exercises/vital-pro/vital-leg-press-machine-ex073.jpg"
+      motionSrc="/exercises/vital-pro/vital-leg-press-machine-ex073-end.jpg"
+      videoSrc="/exercises/vital-pro/vital-leg-press-machine-ex073.mp4"
+      alt="Жим ногами"
+      variant="technique"
+    />)
+
+    await waitFor(() => expect(screen.getByLabelText('Техника: Жим ногами')).toBeInTheDocument())
+    fireEvent.error(screen.getByLabelText('Техника: Жим ногами'))
+    await waitFor(() => expect(container.firstElementChild).toHaveClass('exercise-image-motion'))
+    expect(container.querySelectorAll('img')).toHaveLength(2)
+    expect(container.querySelector('.exercise-image-frame-end')).toHaveAttribute('src', 'https://signed.example/vital-leg-press-machine-ex073-end.jpg')
+  })
+
   it('uses the explicit public poster before falling back to the end frame', () => {
     const { container } = render(<ExerciseImage src="/licensed/start.jpg" fallbackSrc="/public/start.jpg" motionSrc="/public/end.jpg" alt="Тяга" variant="technique" />)
     fireEvent.error(screen.getByRole('img', { name: 'Тяга' }))

@@ -11,6 +11,12 @@ const APPLY_CONFIRMATION = 'APPLY_VITAL_MEDIA_TO_YANDEX_STAGE'
 const BINARY_CONTENT_TYPE = 'application/vnd.fit.vital-media'
 const TRANSFER_CONCURRENCY = 4
 const MAX_ATTEMPTS = 5
+const TARGETED_SMOKE_JPG_PATHS = [
+  'vital-cycling-ex061.jpg',
+  'vital-leg-press-machine-ex073.jpg',
+  'vital-dumbbell-rdl-ex248.jpg',
+  'vital-dumbbell-walking-lunge-ex727.jpg',
+]
 
 function required(name) {
   const value = process.env[name]?.trim()
@@ -20,7 +26,7 @@ function required(name) {
 
 function mode() {
   const value = process.env.FIT_VITAL_MEDIA_DEPLOYMENT_MODE?.trim()
-  if (value !== 'audit' && value !== 'apply') {
+  if (value !== 'audit' && value !== 'apply' && value !== 'smoke') {
     throw new Error('vital_media_deployment_mode_invalid')
   }
   return value
@@ -154,6 +160,47 @@ async function signedUrlSmoke(apiUrl, migrationUrl, token, manifest) {
   await request(unsignedUrl, { redirect: 'manual' }, [403])
 }
 
+async function targetedSignedUrlSmoke(apiUrl, migrationUrl, token, manifest) {
+  const fixture = await request(`${migrationUrl}/stage/fixtures/workout-read-model`, {
+    method: 'POST',
+    headers: privateHeaders(token),
+  }).then((response) => response.json())
+  const sessionToken = fixture?.mediaSession?.token
+  if (typeof sessionToken !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(sessionToken)) {
+    throw new Error('vital_media_smoke_session_invalid')
+  }
+
+  const filesByPath = new Map(manifest.files.map((file) => [file.path, file]))
+  const files = TARGETED_SMOKE_JPG_PATHS.map((path) => filesByPath.get(path))
+  if (files.some((file) => file === undefined)) throw new Error('vital_media_smoke_manifest_invalid')
+
+  for (const file of files) {
+    const signResponse = await request(`${apiUrl}/v1/exercise-media/sign`, {
+      method: 'POST',
+      headers: privateHeaders(token, {
+        'content-type': 'application/json',
+        'x-fit-session': sessionToken,
+      }),
+      body: JSON.stringify({ path: `vital-pro/${file.path}` }),
+    })
+    const signed = await signResponse.json()
+    if (typeof signed.signedUrl !== 'string' || !signed.signedUrl.startsWith('https://')) {
+      throw new Error('vital_media_signed_url_invalid')
+    }
+    const mediaResponse = await request(signed.signedUrl, { redirect: 'manual' })
+    if (mediaResponse.headers.get('content-type')?.split(';')[0] !== 'image/jpeg') {
+      throw new Error('vital_media_jpg_content_type_invalid')
+    }
+    const body = Buffer.from(await mediaResponse.arrayBuffer())
+    if (
+      body.byteLength !== file.bytes
+      || createHash('sha256').update(body).digest('hex') !== file.sha256
+    ) throw new Error('vital_media_jpg_signed_content_invalid')
+  }
+
+  return files.length
+}
+
 async function main() {
   const deploymentMode = mode()
   const token = required('YC_TOKEN')
@@ -186,6 +233,21 @@ async function main() {
     || preflight.private !== true
     || preflight.versioning !== expectedVersioning
   ) throw new Error('vital_media_preflight_mismatch')
+
+  if (deploymentMode === 'smoke') {
+    const checked = await targetedSignedUrlSmoke(
+      required('FIT_YANDEX_API_URL').replace(/\/$/, ''),
+      migrationUrl,
+      token,
+      manifest,
+    )
+    process.stdout.write(`${JSON.stringify({
+      mode: deploymentMode,
+      checked,
+      signedUrlSmoke: true,
+    })}\n`)
+    return
+  }
 
   const before = await audit(migrationUrl, token, manifest)
   if (deploymentMode === 'audit') {
