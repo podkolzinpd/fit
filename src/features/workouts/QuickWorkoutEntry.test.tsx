@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { QuickWorkoutEntry } from './QuickWorkoutEntry'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
+import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 
 const catalog: ExerciseSnapshot[] = [
   { source: 'system', ref: 'squat', name: 'Присед со штангой', muscleGroup: 'legs', inputKind: 'strength' },
@@ -136,5 +137,29 @@ describe('QuickWorkoutEntry circuit input', () => {
     expect(input).toHaveValue('Неизвестное упражнение абракадабра')
     expect(screen.getByRole('button', { name: 'Добавить в план' })).toBeDisabled()
     expect(remote).toHaveBeenCalledOnce()
+  })
+
+  it('показывает пять упражнений из записи одним абзацем и добавляет их без AI', async () => {
+    const onAdd = vi.fn<(exercises: ParsedWorkoutExercise[]) => void>()
+    const remote = vi.fn()
+    render(<QuickWorkoutEntry catalog={SYSTEM_EXERCISE_CATALOG} parseWorkout={remote} onAdd={onAdd} />)
+
+    fireEvent.change(screen.getByLabelText('Запись тренировки'), {
+      target: { value: 'Горизонтальный жим в тренажере: 50 кг на 15, 55 кг на 12, 60 кг на 12, 65 кг на 10. Сведение рук в тренажере «бабочка»: 50 кг на 12, 55 кг на 12, 60 кг на 12, 60 кг на 10, 60 кг на 10. Разгибание рук вверх на блоке: 45 кг на 15, 50 кг на 12, 55 кг на 12, 55 кг на 12, 55 кг на 12. Отжимания на брусьях: 12, 10, 10, 10. Скручивания на наклонной скамье: 15, 15.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Разобрать тренировку' }))
+
+    expect(await screen.findByText('Распознано: 5')).toBeInTheDocument()
+    expect(remote).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить в план (5)' }))
+
+    expect(onAdd).toHaveBeenCalledOnce()
+    expect(onAdd.mock.calls[0]?.[0].map((item) => item.exercise.ref)).toEqual([
+      'fedb-machine-bench-press',
+      'pec-deck',
+      'fedb-cable-rope-overhead-triceps-extension',
+      'dips',
+      'fedb-decline-crunch',
+    ])
   })
 })
