@@ -313,6 +313,9 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       <div className="set-add-row">
         <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
       </div>
+      {showTrainerComments && <OptionalDetails className="exercise-comment-options" summary="Заметка спортсмену" initialOpen={Boolean(exercise.trainerComment)}>
+        {commentField(exercise, exerciseIndex)}
+      </OptionalDetails>}
       </div>}
     </WorkoutExercise>
   }
@@ -394,7 +397,6 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
           <header className="picker-header"><div><p className="eyebrow">НАСТРОЙКИ УПРАЖНЕНИЯ</p><h2>{exercise.name}</h2></div><button type="button" className="picker-close" aria-label="Закрыть" onClick={() => setSettingsExerciseIndex(null)}><CloseIcon /></button></header>
           <div className="exercise-settings-fields">
             <label className="field">Отдых между подходами, сек.<ClampedNumberInput label="Отдых между подходами, с" value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) updateRestBetweenSets(exercise.blockId, next) }} /></label>
-            {showTrainerComments && <label className="field">Заметка спортсмену{commentField(exercise, settingsExerciseIndex)}</label>}
             {showRunningPresets && <div className="running-preset-actions">
               <span>Быстрые схемы</span>
               <button type="button" className="secondary" onClick={applyPassiveRunningPreset}>6 × 400 м · отдых 90 с</button>
