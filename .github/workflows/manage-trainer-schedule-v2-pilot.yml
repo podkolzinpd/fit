@@ -105,6 +105,56 @@ jobs:
           [[ "$profile_id" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]]
           echo "::add-mask::$profile_id"
           echo "FIT_TRAINER_SCHEDULE_V2_PROFILE_ID=$profile_id" >> "$GITHUB_ENV"
+      - name: Apply the single-account pilot in Supabase
+        env:
+          PILOT_ACTION: ${{ inputs.pilot_action }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          umask 077
+          temporary_directory=$(mktemp -d)
+          trap 'rm -f "$temporary_directory/api-keys.json" "$temporary_directory/pilot-request.json" "$temporary_directory/pilot-response.json"; rmdir "$temporary_directory" 2>/dev/null || true' EXIT
+          supabase projects api-keys --project-ref "$SUPABASE_PROJECT_ID" --output json > "$temporary_directory/api-keys.json"
+          service_role_key=$(jq -er '[.[] | select(.name == "service_role" or .name == "secret") | .api_key][0]' "$temporary_directory/api-keys.json")
+          echo "::add-mask::$service_role_key"
+          jq -n \
+            --arg action "$PILOT_ACTION" \
+            --arg profileId "$FIT_TRAINER_SCHEDULE_V2_PROFILE_ID" \
+            '{p_action: $action, p_profile_id: $profileId}' \
+            > "$temporary_directory/pilot-request.json"
+          status=$(curl --silent --show-error \
+            --output "$temporary_directory/pilot-response.json" --write-out '%{http_code}' \
+            --request POST \
+            --header "Authorization: Bearer $service_role_key" \
+            --header "apikey: $service_role_key" \
+            --header 'Content-Type: application/json' \
+            --data-binary @"$temporary_directory/pilot-request.json" \
+            "https://${SUPABASE_PROJECT_ID}.supabase.co/rest/v1/rpc/manage_trainer_schedule_v2_pilot")
+          if test "$status" != 200; then
+            echo "Supabase pilot manager returned HTTP $status." >&2
+            exit 1
+          fi
+          expected_status="trainer_schedule_v2_${PILOT_ACTION}d"
+          if test "$PILOT_ACTION" = inspect; then expected_status=trainer_schedule_v2_inspected; fi
+          jq -e --arg expected "$expected_status" \
+            '.status == $expected and .accountRole == "trainer"
+             and (.enabled | type == "boolean")
+             and (.enabledAssignments | type == "number")' \
+            "$temporary_directory/pilot-response.json" >/dev/null
+          if test "$PILOT_ACTION" = enable; then
+            jq -e '.enabled == true and .enabledAssignments == 1' \
+              "$temporary_directory/pilot-response.json" >/dev/null
+          elif test "$PILOT_ACTION" = disable; then
+            jq -e '.enabled == false and .enabledAssignments == 0' \
+              "$temporary_directory/pilot-response.json" >/dev/null
+          fi
+          {
+            echo '### Trainer Schedule V2 pilot — Supabase'
+            echo "- Operation: \`$PILOT_ACTION\`"
+            echo "- Enabled: \`$(jq -r '.enabled' "$temporary_directory/pilot-response.json")\`"
+            echo "- Total enabled assignments: \`$(jq -r '.enabledAssignments' "$temporary_directory/pilot-response.json")\`"
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Exchange GitHub OIDC token for a short-lived IAM token
         run: scripts/yandex-github-oidc.sh
       - name: Read the private runner URL from remote state
@@ -131,7 +181,17 @@ jobs:
             --header 'Content-Type: application/json' \
             --data-binary @pilot-request.json \
             "${migration_url%/}/stage/experiments/trainer-schedule-v2")
-          test "$status" = 200
+          if test "$status" = 409; then
+            {
+              echo '### Trainer Schedule V2 pilot — Yandex'
+              echo '- Assignment: not applicable; the reviewed profile is not migrated to this data plane.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if test "$status" != 200; then
+            echo "Yandex pilot manager returned HTTP $status." >&2
+            exit 1
+          fi
           expected_status="trainer_schedule_v2_${PILOT_ACTION}d"
           if test "$PILOT_ACTION" = inspect; then expected_status=trainer_schedule_v2_inspected; fi
           jq -e --arg expected "$expected_status" \
@@ -145,7 +205,7 @@ jobs:
           if test "$PILOT_ACTION" = disable; then
             jq -e '.enabled == false and .enabledAssignments == 0' pilot-response.json >/dev/null
           fi
-          echo '### Trainer Schedule V2 pilot' >> "$GITHUB_STEP_SUMMARY"
+          echo '### Trainer Schedule V2 pilot — Yandex' >> "$GITHUB_STEP_SUMMARY"
           echo "- Operation: \`$PILOT_ACTION\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Enabled: \`$(jq -r '.enabled' pilot-response.json)\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Total enabled assignments: \`$(jq -r '.enabledAssignments' pilot-response.json)\`" >> "$GITHUB_STEP_SUMMARY"

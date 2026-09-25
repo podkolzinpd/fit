@@ -48,6 +48,8 @@ export const authQueries = {
     .maybeSingle(),
   getProfile: (id: string) => getSupabaseClient().from('profiles')
     .select('id,account_role,first_name,last_name,timezone,created_at,updated_at').eq('id', id).maybeSingle(),
+  getTrainerScheduleV2Flag: (userId: string) => getSupabaseClient().from('user_feature_flags')
+    .select('trainer_schedule_v2').eq('user_id', userId).maybeSingle(),
   updateProfile: (id: string, values: { first_name: string | null; last_name: string | null; timezone: string }) =>
     getSupabaseClient().from('profiles').update(values).eq('id', id).select('id,account_role,first_name,last_name,timezone,created_at,updated_at').single(),
 }

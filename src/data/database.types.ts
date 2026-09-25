@@ -1,4 +1,4 @@
-// schema-sha256: 65ceadd9874e5ba40d676017cc2a17067c21736164f3e2d85fa0ddd4b89a6051
+// schema-sha256: 857c86836076d3733f162dcb0f4c34976e0fa627f64565c74a96273013a1b66c
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -1622,14 +1622,17 @@ export type Database = {
       user_feature_flags: {
         Row: {
           monochrome_preview: boolean
+          trainer_schedule_v2: boolean
           user_id: string
         }
         Insert: {
           monochrome_preview?: boolean
+          trainer_schedule_v2?: boolean
           user_id: string
         }
         Update: {
           monochrome_preview?: boolean
+          trainer_schedule_v2?: boolean
           user_id?: string
         }
         Relationships: []
@@ -2581,6 +2584,10 @@ export type Database = {
           wellbeing: string
           workout_date: string
         }[]
+      }
+      manage_trainer_schedule_v2_pilot: {
+        Args: { p_action: string; p_profile_id: string }
+        Returns: Json
       }
       mark_chat_read: {
         Args: { p_conversation_id: string }
