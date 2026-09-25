@@ -134,7 +134,7 @@ jobs:
           if test "$status" != 200; then
             error_message=$(jq -r '.message // empty' "$temporary_directory/pilot-response.json")
             case "$error_message" in
-              trainer_schedule_v2_profile_missing|trainer_schedule_v2_role_mismatch|trainer_schedule_v2_single_account_invariant_failed|source_product_writes_paused)
+              trainer_schedule_v2_profile_missing|trainer_schedule_v2_role_mismatch|trainer_schedule_v2_linked_client_account|trainer_schedule_v2_single_account_invariant_failed|source_product_writes_paused)
                 echo "Supabase pilot manager returned HTTP $status ($error_message)." >&2
                 ;;
               *)
