@@ -10,7 +10,7 @@ vi.mock('../../app/data-backend-context', () => ({
   useDataBackend: () => ({ source: backend.source, exercises: { createVitalMediaUrl: createSignedUrl } }),
 }))
 
-import { useVitalMediaUrl } from './vitalMedia'
+import { useVitalMediaState, useVitalMediaUrl } from './vitalMedia'
 
 describe('useVitalMediaUrl', () => {
   afterEach(() => {
@@ -98,5 +98,18 @@ describe('useVitalMediaUrl', () => {
 
     await waitFor(() => expect(result.current).toBe('https://signed.example/recovered'))
     expect(createSignedUrl).toHaveBeenCalledTimes(2)
+  })
+
+  it('exposes a terminal signing failure so the image can activate its fallback frame', async () => {
+    vi.stubEnv('MODE', 'production')
+    vi.stubEnv('VITE_SUPABASE_URL', '')
+    backend.source = 'yandex'
+    createSignedUrl.mockRejectedValue(new Error('temporary'))
+
+    const { result } = renderHook(() => useVitalMediaState('/exercises/vital-pro/missing.jpg'))
+
+    await waitFor(() => expect(result.current.status).toBe('error'), { timeout: 3_000 })
+    expect(result.current.url).toBeUndefined()
+    expect(createSignedUrl).toHaveBeenCalledTimes(3)
   })
 })

@@ -3,7 +3,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { ExerciseIcon } from '../../shared/icons'
 import exerciseMediaPresentation from '../../shared/exercise-media-presentation.generated.json'
 import { useCustomExercisePhotoUrl } from './custom-exercise-photo'
-import { shouldUsePrivateVitalStorage, useVitalMediaUrl } from './vitalMedia'
+import { shouldUsePrivateVitalStorage, useVitalMediaState, useVitalMediaUrl } from './vitalMedia'
 
 export type ExerciseImageVariant = 'thumbnail' | 'preview' | 'picker' | 'detail' | 'technique'
 
@@ -115,9 +115,20 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, customPho
   const deferredPickerMedia = variant === 'picker' && privateVitalMedia
   const { nearViewport, ref: containerRef } = useNearViewport(deferredPickerMedia)
   const requestPrivateMedia = !deferredPickerMedia || nearViewport || playVideo
-  const resolvedSrc = useVitalMediaUrl(safeSrc, requestPrivateMedia)
-  const resolvedMotionSrc = useVitalMediaUrl(safeMotionSrc, requestPrivateMedia && variant === 'technique' && !privateVitalMedia)
-  const resolvedVideoSrc = useVitalMediaUrl(videoSrc, requestPrivateMedia && wantsVideo)
+  const primaryMedia = useVitalMediaState(safeSrc, requestPrivateMedia)
+  const resolvedSrc = primaryMedia.url
+  const videoMedia = useVitalMediaState(videoSrc, requestPrivateMedia && wantsVideo)
+  const resolvedVideoSrc = videoMedia.url
+  const requestPrivateMotionFallback = privateVitalMedia && requestPrivateMedia && (
+    primaryFailed
+    || primaryMedia.status === 'error'
+    || videoFailed
+    || videoMedia.status === 'error'
+  )
+  const resolvedMotionSrc = useVitalMediaUrl(
+    safeMotionSrc,
+    requestPrivateMedia && (variant === 'technique' && !privateVitalMedia || requestPrivateMotionFallback),
+  )
 
   useEffect(() => setPrimaryFailed(false), [resolvedSrc])
   useEffect(() => setFallbackFailed(false), [safeFallbackSrc])
@@ -147,7 +158,7 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, customPho
 
   const primaryAvailable = Boolean(resolvedSrc) && !primaryFailed
   const stillFallbackAvailable = !privateVitalMedia && Boolean(safeFallbackSrc) && !fallbackFailed
-  const motionFallbackAvailable = !privateVitalMedia && Boolean(resolvedMotionSrc) && !motionFailed
+  const motionFallbackAvailable = Boolean(resolvedMotionSrc) && !motionFailed
   const motionAvailable = variant === 'technique' && motionFallbackAvailable
   // A compact picker video is opt-in: the picker activates exactly one card
   // after an explicit tap. Scrolling or visibility never starts playback.

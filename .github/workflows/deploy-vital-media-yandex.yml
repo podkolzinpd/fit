@@ -10,6 +10,7 @@ on:
         default: audit
         options:
           - audit
+          - smoke
           - apply
 
 permissions:
@@ -54,20 +55,24 @@ jobs:
           fi
           echo "FIT_YANDEX_MEDIA_BUCKET=$bucket" >> "$GITHUB_ENV"
       - name: Decrypt and verify the reviewed package
+        if: inputs.mode != 'smoke'
         env:
           VITAL_MEDIA_KEY: ${{ secrets.VITAL_MEDIA_KEY }}
         run: node scripts/prepare-vital-media.mjs
       - name: Install media analysis dependency
+        if: inputs.mode != 'smoke'
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends ffmpeg
       - name: Analyze safe media canvas bounds
+        if: inputs.mode != 'smoke'
         run: |
           mkdir -p artifacts/exercise-media-presentation
           node scripts/generate-exercise-media-presentation.mjs \
             --require-private \
             --output artifacts/exercise-media-presentation/exercise-media-presentation.generated.json
       - name: Preserve media presentation metadata
+        if: inputs.mode != 'smoke'
         uses: actions/upload-artifact@v4
         with:
           name: exercise-media-presentation
@@ -103,25 +108,30 @@ jobs:
           trap 'rm -f "$report"' EXIT
           node scripts/deploy-vital-media-yandex.mjs > "$report"
           jq -e '
-            (.mode == "audit" or .mode == "apply")
-            and .objects == 2010
-            and .bytes == 71514430
-            and .enumeration == "manifest_only"
-            and (.verified | type == "number")
-            and (.missing | type == "number")
-            and (.mismatched | type == "number")
-            and (.fingerprint | test("^[a-f0-9]{16}$"))
-            and (.mode != "apply" or (
-              .verified == 2010
-              and .missing == 0
-              and .mismatched == 0
-              and .uploaded + .skipped == 2010
-              and .signedUrlSmoke == true
-              and .versioning == "verified_by_manifest_objects"
-            ))
+            if .mode == "smoke" then
+              .checked == 4 and .signedUrlSmoke == true
+            else
+              (.mode == "audit" or .mode == "apply")
+              and .objects == 2010
+              and .bytes == 71514430
+              and .enumeration == "manifest_only"
+              and (.verified | type == "number")
+              and (.missing | type == "number")
+              and (.mismatched | type == "number")
+              and (.fingerprint | test("^[a-f0-9]{16}$"))
+              and (.mode != "apply" or (
+                .verified == 2010
+                and .missing == 0
+                and .mismatched == 0
+                and .uploaded + .skipped == 2010
+                and .signedUrlSmoke == true
+                and .versioning == "verified_by_manifest_objects"
+              ))
+            end
           ' "$report" >/dev/null
           safe_summary=$(jq -r '
             "Mode: " + .mode,
+            "Checked: " + ((.checked // 0) | tostring),
             "Objects: " + (.objects | tostring),
             "Bytes: " + (.bytes | tostring),
             "Verified: " + (.verified | tostring),
