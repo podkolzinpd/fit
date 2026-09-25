@@ -6464,7 +6464,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .schedule-v2-document,.schedule-v2-document body,.schedule-v2-document #root { background:#080908; color-scheme:dark; }
 .phone-frame.trainer-schedule-v2-shell { --schedule-v2-accent:#baff36; --schedule-v2-bg:#080908; --schedule-v2-card:#19191b; --schedule-v2-soft:#222226; --schedule-v2-line:#323236; --schedule-v2-muted:#858589; --bg:#080908; --fg:#f8f8f6; --fg-strong:#fff; --muted:#858589; --surface:#111113; --surface-raised:#19191b; --surface-sunken:#242428; --secondary-bg:#242428; --secondary-fg:#f8f8f6; --border:#323236; --hairline:#29292d; --bar-bg:#171719; --accent-label:#f8f8f6; --frame-bg:#080908; --frame-border:#080908; color-scheme:dark; background:#080908; color:#f8f8f6; }
 .trainer-schedule-v2-shell .content { background:#080908; }
-.trainer-schedule-v2-shell .schedule-v2 { width:100%; max-width:760px; min-height:100%; margin:0 auto; padding:22px 18px 124px; color:#f8f8f6; background:#080908; }
+.trainer-schedule-v2-shell .schedule-v2 { width:100%; max-width:760px; min-height:100%; margin:0 auto; padding:max(22px,env(safe-area-inset-top)) 18px 124px; color:#f8f8f6; background:#080908; }
 .trainer-schedule-v2-shell .schedule-v2.schedule-day-view { height:100%; min-height:0; display:flex; flex-direction:column; padding-bottom:0; }
 .trainer-schedule-v2-shell .schedule-v2 > .page-header { height:0; min-height:0; margin:0; padding:0; overflow:hidden; }
 .trainer-schedule-v2-shell .schedule-v2-topbar { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:28px; }
@@ -6499,8 +6499,8 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-schedule-v2-shell .schedule-v2-day-events > span[class*="schedule-event-"] { border:0; background:transparent; }
 .trainer-schedule-v2-shell .schedule-v2-day-events time { color:var(--schedule-v2-accent); font-variant-numeric:tabular-nums; }
 .trainer-schedule-v2-shell .schedule-v2-day-events b { overflow:hidden; font-weight:450; text-overflow:ellipsis; white-space:nowrap; }
-.trainer-schedule-v2-shell .schedule-v2-day-events .schedule-event-done,.trainer-schedule-v2-shell .schedule-v2-day-events .schedule-event-skipped { color:#707074; }
-.trainer-schedule-v2-shell .schedule-v2-day-events .schedule-event-done time,.trainer-schedule-v2-shell .schedule-v2-day-events .schedule-event-skipped time { color:#707074; }
+.trainer-schedule-v2-shell .schedule-v2-day-events .schedule-event-done,.trainer-schedule-v2-shell .schedule-v2-day-events .schedule-event-self-led,.trainer-schedule-v2-shell .schedule-v2-day-events .schedule-event-skipped,.trainer-schedule-v2-shell .schedule-v2-day-events .schedule-event-decision { color:#707074; }
+.trainer-schedule-v2-shell .schedule-v2-day-events .schedule-event-done time,.trainer-schedule-v2-shell .schedule-v2-day-events .schedule-event-self-led time,.trainer-schedule-v2-shell .schedule-v2-day-events .schedule-event-skipped time,.trainer-schedule-v2-shell .schedule-v2-day-events .schedule-event-decision time { color:#707074; }
 .trainer-schedule-v2-shell .schedule-v2-day-events em { color:#707074; font-size:13px; font-style:normal; }
 .trainer-schedule-v2-shell .schedule-v2-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:26px; }
 .trainer-schedule-v2-shell .schedule-v2-summary > a,.trainer-schedule-v2-shell .schedule-v2-summary > button { position:relative; min-width:0; min-height:142px; display:block; margin:0; padding:0; overflow:hidden; border:0; border-radius:31px; color:#f8f8f6; background:#232328; box-shadow:none; text-decoration:none; }
@@ -6522,6 +6522,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-schedule-v2-shell .schedule-v2-timeline .day-grid { margin:0; }
 .trainer-schedule-v2-shell .schedule-v2-timeline .day-grid-hour { gap:12px; }
 .trainer-schedule-v2-shell .schedule-v2-timeline .day-grid-hour-label { width:57px; color:#77777b; font-size:15px; font-weight:450; transform:translateY(-9px); }
+.trainer-schedule-v2-shell .schedule-v2-timeline .day-grid-hour.is-near-current-time .day-grid-hour-label { visibility:hidden; }
 .trainer-schedule-v2-shell .schedule-v2-timeline .day-grid-hour-line { margin-top:0; background:#29292d; }
 .trainer-schedule-v2-shell .schedule-v2-event { position:absolute; left:69px; right:0; z-index:3; min-width:0; display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:11px; padding:8px 14px; overflow:hidden; border:0; border-radius:18px; color:#f8f8f6; background:#222226; text-decoration:none; }
 .trainer-schedule-v2-shell .schedule-v2-event > span:nth-child(2) { min-width:0; display:grid; gap:2px; }
@@ -6530,11 +6531,15 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-schedule-v2-shell .schedule-v2-event small { color:#96969b; font-size:14px; font-weight:420; }
 .trainer-schedule-v2-shell .schedule-v2-event > svg { width:22px; color:var(--schedule-v2-accent); }
 .trainer-schedule-v2-shell .schedule-v2-event.schedule-event-done { opacity:1; }
+.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-done,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-self-led,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-decision,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-skipped { background:#19191c; }
+.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-done .schedule-v2-avatar,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-self-led .schedule-v2-avatar,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-decision .schedule-v2-avatar,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-skipped .schedule-v2-avatar { color:#d1d1d4; background:#4b4b50; }
+.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-done b,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-self-led b,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-decision b,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-skipped b { color:#9a9a9f; }
+.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-done small,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-self-led small,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-decision small,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-skipped small { color:#6f6f74; }
 .trainer-schedule-v2-shell .schedule-v2-now { position:absolute; left:57px; right:0; z-index:5; display:flex; align-items:center; pointer-events:none; }
 .trainer-schedule-v2-shell .schedule-v2-now time { width:57px; color:var(--schedule-v2-accent); font-size:15px; font-weight:650; transform:translateX(-57px); }
 .trainer-schedule-v2-shell .schedule-v2-now span { position:relative; height:2px; flex:1; margin-left:-43px; border-radius:2px; background:var(--schedule-v2-accent); box-shadow:0 0 10px rgba(186,255,54,.28); }
 .trainer-schedule-v2-shell .schedule-v2-now span::before { position:absolute; left:-7px; top:50%; width:8px; height:8px; border-radius:50%; background:var(--schedule-v2-accent); transform:translateY(-50%); content:""; }
-.trainer-schedule-v2-shell .schedule-v2-fab { position:absolute; right:24px; bottom:104px; z-index:15; width:70px; height:70px; display:grid; place-items:center; border-radius:50%; color:#080908; background:var(--schedule-v2-accent); box-shadow:0 12px 30px rgba(0,0,0,.5); text-decoration:none; }
+.trainer-schedule-v2-shell .schedule-v2-fab { position:absolute; right:24px; bottom:calc(max(10px,env(safe-area-inset-bottom)) + 94px); z-index:15; width:70px; height:70px; display:grid; place-items:center; border-radius:50%; color:#080908; background:var(--schedule-v2-accent); box-shadow:0 12px 30px rgba(0,0,0,.5); text-decoration:none; }
 .trainer-schedule-v2-shell .schedule-v2-fab svg { width:31px; height:31px; stroke-width:2; }
 .trainer-schedule-v2-shell .trainer-tab-bar { position:fixed; left:50%; bottom:max(10px,env(safe-area-inset-bottom)); z-index:20; width:min(calc(100% - 32px),408px); display:grid; grid-template-columns:repeat(auto-fit,minmax(72px,1fr)); flex:initial; padding:8px; border:1px solid rgba(255,255,255,.05); border-radius:34px; background:rgba(25,25,27,.94); box-shadow:0 14px 38px rgba(0,0,0,.48); backdrop-filter:blur(22px); transform:translateX(-50%); }
 .trainer-schedule-v2-shell .trainer-tab-bar a { min-width:0; gap:5px; padding:10px 4px 9px; border-radius:27px; color:#929297; font-size:12px; font-weight:450; }
@@ -6564,10 +6569,12 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .schedule-v2-inbox-row small,.schedule-v2-inbox-row time { color:#8d8d92; font-size:12px; }
 .schedule-v2-inbox-row > strong { min-width:23px; padding:4px 6px; border-radius:99px; color:#111; background:#baff36; font-size:11px; text-align:center; }
 .schedule-v2-inbox-empty { padding:12px 0; border-top:1px solid #303034; color:#8d8d92; font-size:13px; }
+.schedule-v2-inbox-error { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.schedule-v2-inbox-error button { min-height:36px; padding:7px 11px; border:1px solid #48484d; border-radius:11px; color:#f8f8f6; background:#29292d; box-shadow:none; font-size:12px; }
 .schedule-v2-inbox-all { min-height:48px; display:grid; place-items:center; margin-top:16px; border-radius:16px; color:#111; background:#baff36; font-size:14px; font-weight:700; text-decoration:none; }
 
 @media (max-width:430px) {
-  .trainer-schedule-v2-shell .schedule-v2 { padding:16px 14px 120px; }
+  .trainer-schedule-v2-shell .schedule-v2 { padding:max(16px,env(safe-area-inset-top)) 14px 120px; }
   .trainer-schedule-v2-shell .schedule-v2.schedule-day-view { padding-bottom:0; }
   .trainer-schedule-v2-shell .schedule-v2-topbar { margin-bottom:24px; }
   .trainer-schedule-v2-shell .schedule-v2-topbar h1 { font-size:30px; }
@@ -6584,7 +6591,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
   .trainer-schedule-v2-shell .schedule-v2-summary strong { right:19px; bottom:16px; font-size:36px; }
   .trainer-schedule-v2-shell .schedule-v2-event b { font-size:15px; }
   .trainer-schedule-v2-shell .schedule-v2-event small { font-size:13px; }
-  .trainer-schedule-v2-shell .schedule-v2-fab { right:20px; bottom:101px; width:66px; height:66px; }
+  .trainer-schedule-v2-shell .schedule-v2-fab { right:20px; bottom:calc(max(10px,env(safe-area-inset-bottom)) + 91px); width:66px; height:66px; }
   .schedule-v2-sheet-backdrop { padding:8px; }
 }
 

@@ -61,11 +61,17 @@ export function AppLayout() {
     root.classList.add('ui-identity')
     applyMonochromeThemeColor(theme)
     root.classList.toggle('schedule-v2-document', trainerScheduleV2Route)
+    const appleStatusBar = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-status-bar-style"]')
+    const previousAppleStatusBar = appleStatusBar?.content ?? 'default'
     if (trainerScheduleV2Route) {
       document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', '#080908')
+      appleStatusBar?.setAttribute('content', 'black-translucent')
+    } else {
+      appleStatusBar?.setAttribute('content', 'default')
     }
     return () => {
       root.classList.remove('schedule-v2-document')
+      appleStatusBar?.setAttribute('content', previousAppleStatusBar)
       applyAppTheme(theme)
     }
   }, [theme, themeVariant, trainerScheduleV2Route])

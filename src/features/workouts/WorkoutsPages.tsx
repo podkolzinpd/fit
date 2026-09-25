@@ -55,7 +55,7 @@ import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
-import { compactScheduleEventLabel, formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes } from './schedule-presentation'
+import { compactScheduleEventLabel, formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleTimelineScrollTop } from './schedule-presentation'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { latestWorkoutFact } from '../../shared/workout-results'
@@ -126,6 +126,7 @@ function useTrainerScheduleModel(forceDayView = false) {
   const todayWeekStart = mondayWeekStart(today)
   const overviewDays = Array.from({ length: overviewDayCount }, (_, offset) => addDays(weekStart, offset))
   const scrollRef = useRef<HTMLDivElement>(null)
+  const autoScrolledDateRef = useRef<LocalDate | null>(null)
 
   function openDay(date: LocalDate, preservePeriodStart?: LocalDate) {
     setParams(isTwoWeekView
@@ -163,12 +164,19 @@ function useTrainerScheduleModel(forceDayView = false) {
   const untimed = dayItems.filter((workout) => !workout.startTime)
 
   useEffect(() => {
-    if (!isDayView || query.isLoading || !scrollRef.current) return
+    if (!isDayView) {
+      autoScrolledDateRef.current = null
+      return
+    }
+    if (query.isLoading || query.isError || !scrollRef.current || autoScrolledDateRef.current === selected) return
     const focusMinutes = scheduleFocusMinutes(timed, currentTimeInTimeZone(actor?.timezone))
-    // Оставляем первую видимую часовую отметку целиком внутри viewport:
-    // подпись линии визуально поднята на 6 px относительно самой линии.
-    scrollRef.current.scrollTop = Math.max(0, (focusMinutes / 60) * HOUR_HEIGHT - 44)
-  }, [actor?.timezone, isDayView, query.isLoading, selected, timed])
+    scrollRef.current.scrollTop = scheduleTimelineScrollTop(
+      focusMinutes,
+      scrollRef.current.clientHeight,
+      HOUR_HEIGHT,
+    )
+    autoScrolledDateRef.current = selected
+  }, [actor?.timezone, isDayView, query.isError, query.isLoading, selected, timed])
 
   const todayDisabled = isDayView ? selected === today : weekStart === todayWeekStart
 
@@ -424,8 +432,11 @@ function scheduleV2TimeLabel(value: string): string {
   return new Date(value).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
 }
 
-function ScheduleV2InboxSheet({ questions, onClose }: {
+function ScheduleV2InboxSheet({ questions, questionsLoading, questionsError, onRetryQuestions, onClose }: {
   questions: NonNullable<ReturnType<typeof useTrainerWorkspace>['data']>['questions']
+  questionsLoading: boolean
+  questionsError: boolean
+  onRetryQuestions: () => void
   onClose: () => void
 }) {
   const threads = useChatThreads()
@@ -447,18 +458,20 @@ function ScheduleV2InboxSheet({ questions, onClose }: {
       <header><div><h2 id="schedule-v2-inbox-title">Входящие</h2><p>Вопросы тренеру и сообщения</p></div><button type="button" aria-label="Закрыть входящие" onClick={onClose}><CloseIcon /></button></header>
       <div className="schedule-v2-inbox-scroll">
         <section aria-labelledby="schedule-v2-questions-title">
-          <div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-questions-title">Вопросы тренеру</h3><span>{scheduleCount(questions.length)}</span></div>
-          {questions.length === 0 && <p className="schedule-v2-inbox-empty">Новых вопросов нет</p>}
-          {questions.map((item) => <Link key={item.workoutId} className="schedule-v2-inbox-row" to={`/workouts/${item.workoutId}?reply=1`} onClick={onClose}>
+          <div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-questions-title">Вопросы тренеру</h3><span>{questionsError ? '—' : scheduleCount(questions.length)}</span></div>
+          {questionsLoading && <p className="schedule-v2-inbox-empty">Загружаем вопросы…</p>}
+          {questionsError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error">Не удалось загрузить вопросы <button type="button" onClick={onRetryQuestions}>Повторить</button></p>}
+          {!questionsLoading && !questionsError && questions.length === 0 && <p className="schedule-v2-inbox-empty">Новых вопросов нет</p>}
+          {!questionsError && questions.map((item) => <Link key={item.workoutId} className="schedule-v2-inbox-row" to={`/workouts/${item.workoutId}?reply=1`} onClick={onClose}>
             <span className="schedule-v2-inbox-avatar">{clientInitials(item.clientName)}</span>
             <span><b>{item.clientName}</b><small>{item.question}</small></span>
             <time>{scheduleV2TimeLabel(item.askedAt)}</time>
           </Link>)}
         </section>
         <section aria-labelledby="schedule-v2-messages-title">
-          <div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-messages-title">Сообщения</h3><span>{scheduleCount(threads.data?.reduce((sum, item) => sum + item.unreadCount, 0) ?? 0)}</span></div>
+          <div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-messages-title">Сообщения</h3><span>{threads.isError ? '—' : scheduleCount(threads.data?.reduce((sum, item) => sum + item.unreadCount, 0) ?? 0)}</span></div>
           {threads.isLoading && <p className="schedule-v2-inbox-empty">Загружаем сообщения…</p>}
-          {threads.isError && <p className="schedule-v2-inbox-empty">Не удалось загрузить сообщения</p>}
+          {threads.isError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error">Не удалось загрузить сообщения <button type="button" onClick={() => void threads.refetch()}>Повторить</button></p>}
           {!threads.isLoading && !threads.isError && threads.data?.length === 0 && <p className="schedule-v2-inbox-empty">Новых сообщений нет</p>}
           {threads.data?.map((item) => <Link key={`${item.clientId}:${item.trainerId}`} className="schedule-v2-inbox-row" to={item.conversationId ? `/chat/${item.conversationId}` : '/chat'} onClick={onClose}>
             <span className="schedule-v2-inbox-avatar">{clientInitials(item.partnerName)}</span>
@@ -484,7 +497,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const [inboxOpen, setInboxOpen] = useState(false)
   const currentTime = currentTimeInTimeZone(actor?.timezone)
   const currentMinutes = minutesOf(currentTime)
-  const periodWorkouts = query.data ?? []
+  const periodWorkouts = (query.data ?? []).filter((workout) => workout.status !== 'cancelled')
   const periodClients = new Set(periodWorkouts.map((workout) => workout.clientId)).size
 
   useEffect(() => {
@@ -536,8 +549,8 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
               <span className="schedule-v2-day-title"><span>{weekdayShort(day)}</span><strong>{dayOfMonth(day)}</strong></span>
               <span className="schedule-v2-day-events">{workouts.slice(0, 5).map((workout) => {
                 const status = scheduleEventStatus(workout, today)
-                return <span key={workout.id} className={`schedule-event-${status.tone}`}><time>{workout.startTime?.slice(0, 5) ?? '—'}</time><b>{workout.clientName}</b></span>
-              })}{workouts.length > 5 && <em>Ещё {workouts.length - 5}</em>}</span>
+                return <span key={workout.id} className={`schedule-event-${status.tone}`}><time>{workout.startTime?.slice(0, 5) ?? '—'}</time><b>{workout.clientName}</b><span className="sr-only">{status.label}</span></span>
+              })}{workouts.length === 0 && <em>Свободный день</em>}{workouts.length > 5 && <em>Ещё {workouts.length - 5}</em>}</span>
             </button>
           })}
         </section>
@@ -556,7 +569,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
         <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
           <div className="day-grid" style={{ height: HOURS.length * HOUR_HEIGHT }}>
-            {HOURS.map((hour) => <div key={hour} className="day-grid-hour" style={{ top: hour * HOUR_HEIGHT }}><span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span><div className="day-grid-hour-line" /></div>)}
+            {HOURS.map((hour) => <div key={hour} className={`day-grid-hour${selected === today && scheduleHourLabelCollidesWithNow(hour, currentMinutes) ? ' is-near-current-time' : ''}`} style={{ top: hour * HOUR_HEIGHT }}><span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span><div className="day-grid-hour-line" /></div>)}
             {selected === today && <div className="schedule-v2-now" style={{ top: (currentMinutes / 60) * HOUR_HEIGHT }}><time>{currentTime}</time><span /></div>}
             {timed.map((workout) => {
               const startMin = minutesOf(workout.startTime!.slice(0, 5))
@@ -566,7 +579,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
               const status = scheduleEventStatus(workout, today)
               return <Link key={workout.id} className={`schedule-v2-event schedule-event-${status.tone}`} style={{ top, height }} to={`/workouts/${workout.id}`} onClick={() => trackGoal('schedule_v2_workout_opened')}>
                 <span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span>
-                <span><b>{workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small></span>
+                <span><b>{workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small><span className="sr-only">{status.label}</span></span>
                 {workout.status === 'done' && <CheckIcon />}
               </Link>
             })}
@@ -575,7 +588,13 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       </>}
     </AsyncView>
     <Link className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} to={`/workouts/new?date=${selected}`} onClick={() => trackGoal('schedule_v2_workout_create_started')}><AddIcon /></Link>
-    {inboxOpen && <ScheduleV2InboxSheet questions={workspace.data?.questions ?? []} onClose={() => setInboxOpen(false)} />}
+    {inboxOpen && <ScheduleV2InboxSheet
+      questions={workspace.data?.questions ?? []}
+      questionsLoading={workspace.isLoading}
+      questionsError={workspace.isError}
+      onRetryQuestions={() => void workspace.refetch()}
+      onClose={() => setInboxOpen(false)}
+    />}
   </Page>
 }
 
