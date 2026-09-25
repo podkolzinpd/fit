@@ -36,6 +36,27 @@ describe('invitation link continuation', () => {
     expect(window.sessionStorage.getItem('fit.pendingInvitationLink.v1')).not.toContain('Антон')
   })
 
+  it('opens a valid current-page link when browser storage is unavailable', () => {
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      get: () => { throw new DOMException('Access is denied', 'SecurityError') },
+    })
+
+    expect(captureInvitationLink(`#token=${token}&source=yandex`, undefined, 1000)).toEqual({
+      token, source: 'yandex', savedAt: 1000,
+    })
+  })
+
+  it('opens a valid current-page link when browser storage rejects writes', () => {
+    const blockedStorage = memoryStorage()
+    blockedStorage.setItem = () => { throw new DOMException('Access is denied', 'SecurityError') }
+
+    expect(captureInvitationLink(`#token=${token}&source=supabase`, blockedStorage, 1000)).toEqual({
+      token, source: 'supabase', savedAt: 1000,
+    })
+    expect(readPendingInvitationLink(blockedStorage, 1000)).toBeNull()
+  })
+
   it('rejects malformed and stale values and removes a completed invitation', () => {
     expect(captureInvitationLink('#token=short&source=supabase', window.sessionStorage, 1000)).toBeNull()
     expect(captureInvitationLink(`#token=${token}&source=supabase&next=/clients`, window.sessionStorage, 1000)).toBeNull()
