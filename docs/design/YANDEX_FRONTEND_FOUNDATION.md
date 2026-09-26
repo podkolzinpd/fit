@@ -55,6 +55,10 @@ Terraform: `init -backend=false`, `fmt -check`, `validate`, `test` с mock provi
 
 ## Gates следующего шага
 
+Продолжение подготовки после #1181: `YANDEX_FRONTEND_RELEASE_REHEARSAL.md`.
+Оно добавляет локальный HTTP-контракт и проверенный пакет, но не облачный
+adapter или публикацию. Бюджет до 600 ₽/месяц подтверждён; домен будет позже.
+
 - Выбрать домен и endpoint отдельно от Vercel; подтвердить бюджет.
 - Реализовать и проверить HTTP parity: static files, `/trainer`, `/client`,
   `/auth/yandex/callback`, `/invite` с query/fragment, неизвестные JS через
