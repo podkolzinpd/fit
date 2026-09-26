@@ -3,7 +3,7 @@ import { localDate } from '../../shared/local-date'
 
 const rpc = vi.hoisted(() => vi.fn())
 
-vi.mock('./client', () => ({ getSupabaseClient: () => ({ rpc }) }))
+vi.mock('./client', () => ({ supabase: { rpc } }))
 
 import { clientQueries } from './clients.queries'
 

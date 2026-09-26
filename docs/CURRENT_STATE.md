@@ -1,9 +1,10 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-26. База изменений: `367b2937` (#1188). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
+Обновлено: 2026-09-26. База изменений: `89f85227` (#1181). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 
 ## Активная цель
+Контролируемый откат startup-изменений #1144 (#1191): eager Supabase SDK и auth subscription; Yandex-only actor/routing, таймауты и последующие media/invitation fixes сохранены. Stale events не инициализируют legacy-профиль. Обе `VITE_SUPABASE_*` проверены в Vercel Production/Preview 26 сентября; локально прошли check и 3 WebKit smoke. CI выявил гонку E2E с загрузкой фото и ранним Tab: тесты ждут завершения upload/появления формы и учитывают сохранённый draft при повторе. Отдельный дефект формы: uploadPhoto.onSuccess заменяет draft и может затереть ввод во время загрузки; до отдельного исправления вводить поля после окончания upload. Причина startup-инцидента не доказана; #1174 и удалённые данные не меняются.
 Выпустить калибровку карты тела по согласованному первому эскизу: исходные мужская/женская фигуры, независимые контуры всех зон и приоритет конкретных мышц при касании; вместо схемы и неизвестного пола — список с теми же показателями. Home явно подписывает месячный период. План и приёмка: `docs/design/body-map-calibration-20260926.md`. Расчёты, API и ИИ не меняются; тестовые обращения к модели запрещены.
 Локальная приёмка завершена: `npm run check`, 512/512 попаданий, постоянный WebKit-тест 64 точек, 12 mobile-сценариев и Linux visual read-only 19 passed / 8 штатных skipped. Дальше — обязательный CI и production-проверка; это не запуск ИИ-анализа.
 После #1181 подготовлены self-contained offline release и локальный HTTP-стенд: проверка SHA-256, прямые маршруты, JS recovery/asset 404, cache/HEAD/ETag, сохранение прошлых immutable assets при выборе версии и откате. План object keys не выполняет upload; cloud adapter, TLS и атомарная activation ещё не реализованы. Лимит frontend — 600 ₽/месяц, домен позже; платные ресурсы/Vercel/DNS/production не меняются. Приёмка и ограничения: `docs/design/YANDEX_FRONTEND_RELEASE_REHEARSAL.md`.
@@ -90,15 +91,12 @@ Yandex ID является единственным production-входом; app
 1. Выполнить успешный media migration без `allow-missing` для оставшихся chat
    и custom-exercise objects; Vital Gym Pro уже перенесён и полностью проверен.
 2. Добавить Yandex custom-exercise photo adapter.
-3. Frontend больше не создаёт Supabase SDK при импорте и не подписывается на
-   Supabase Auth при Yandex-only входе; production сборка не требует
-   `VITE_SUPABASE_*`. В Yandex-only режиме даже сохранённая конфигурация
-   Supabase не разрешает создать browser client; отсутствие Yandex session у
-   авторизованного actor не выбирает Supabase. Удаление browser vars из Vercel
-   Production ждёт deployment и smoke. Legacy browser path остаётся для
-   локальной разработки и Preview; серверный bridge нужен для recovery и media,
-   его secrets не удалять. Публичная анкета выбирает источник вместе с routing без
-   межпровайдерного fallback.
+3. На время диагностического отката #1144 frontend снова создаёт Supabase SDK
+   при импорте и подписывается на Auth; `VITE_SUPABASE_*` обязательны для запуска.
+   Supabase auth events не инициализируют legacy-профиль в Yandex-only режиме;
+   отсутствие Yandex session не выбирает Supabase. Legacy SDK может обновлять
+   сохранённый auth token; это не dual-write и не перенос данных обратно.
+   Переменные и серверные bridge secrets для recovery/media пока не удалять.
 4. Провести ручной E2E matrix с реальными тестовыми identities: linked trainer,
    linked client, recovery старого email-only профиля, новый Yandex-only аккаунт
    и оба invitation path. Автоматизированы серверные контракты, production auth

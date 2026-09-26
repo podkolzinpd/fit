@@ -1,5 +1,5 @@
 import type { FavoriteWorkoutTemplate, WorkoutExerciseDraft } from '../../shared/domain'
-import { getSupabaseClient } from '../queries/client'
+import { supabase } from '../queries/client'
 import { toJson } from '../queries/json'
 import { repositoryError } from './error'
 
@@ -28,17 +28,17 @@ export function parseFavoriteWorkout(value: unknown): FavoriteWorkoutTemplate {
 
 export const favoriteWorkoutsRepository: FavoriteWorkoutsRepository = {
   async list() {
-    const result = await getSupabaseClient().rpc('list_favorite_workouts')
+    const result = await supabase.rpc('list_favorite_workouts')
     if (result.error) throw repositoryError(result.error)
     return Array.isArray(result.data) ? result.data.map(parseFavoriteWorkout) : []
   },
   async save(title, exercises) {
-    const result = await getSupabaseClient().rpc('save_favorite_workout', { p_title: title, p_exercises: toJson(exercises) })
+    const result = await supabase.rpc('save_favorite_workout', { p_title: title, p_exercises: toJson(exercises) })
     if (result.error) throw repositoryError(result.error)
     return parseFavoriteWorkout(result.data)
   },
   async remove(id) {
-    const result = await getSupabaseClient().rpc('delete_favorite_workout', { p_id: id })
+    const result = await supabase.rpc('delete_favorite_workout', { p_id: id })
     if (result.error) throw repositoryError(result.error)
   },
 }

@@ -1,4 +1,4 @@
-import { getSupabaseClient } from './client'
+import { supabase } from './client'
 import { legacyCloudApiBaseUrl } from './legacy-cloud-functions'
 
 export type AssistantProgressSummaryRequest = {
@@ -23,7 +23,7 @@ export async function invokeAssistantProgressSummary<T>(
 ): Promise<AssistantProgressSummaryResult<T> | undefined> {
   const baseUrl = legacyCloudApiBaseUrl()
   if (baseUrl === undefined) return undefined
-  const { data: { session } } = await getSupabaseClient().auth.getSession()
+  const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
   let response: Response
   try {
