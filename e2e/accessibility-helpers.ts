@@ -35,6 +35,38 @@ export async function expectMonochromeAccessibility(page: Page) {
       // the text alternative used by the browser more reliably in that case.
       return element.innerText.trim() || element.textContent?.trim() || element.getAttribute('title')?.trim() || ''
     }
+    const hasEquivalentBodyZoneButton = (element: HTMLElement) => {
+      if (!(element instanceof SVGGraphicsElement) || !element.matches('.body-progress-region[role="button"][data-body-zone]')) return false
+      const label = element.getAttribute('aria-label')?.trim()
+      const panel = element.closest('.body-progress-panel')
+      if (!label || !panel) return false
+
+      const buttons = [...panel.querySelectorAll<HTMLButtonElement>('.body-progress-zone-list > button[aria-label]')]
+      for (const button of buttons) {
+        if (button.closest('.body-progress-panel') !== panel || button.getAttribute('aria-label')?.trim() !== label) continue
+        if (button.matches(':disabled, [aria-disabled="true"]') || button.closest('[aria-hidden="true"], [inert]')) continue
+        const picker = button.closest<HTMLDetailsElement>('details.body-progress-zone-picker')
+        const summary = picker?.querySelector<HTMLElement>(':scope > summary')
+        if (picker && (!summary || !visible(summary) || accessibleName(summary) !== 'Выбрать зону')) continue
+        const wasOpen = picker?.open
+        try {
+          // Small anatomical paths have a full-sized, equivalent selection in
+          // this map's disclosure. Measure the actual revealed native button;
+          // merely having the zone-list markup is not an accessibility pass.
+          if (picker) picker.open = true
+          const rect = button.getBoundingClientRect()
+          let hiddenByAncestor = false
+          for (let ancestor: HTMLElement | null = button; ancestor; ancestor = ancestor.parentElement) {
+            if (Number(getComputedStyle(ancestor).opacity) === 0) hiddenByAncestor = true
+          }
+          // WebKit can report a CSS 44px edge as 43.99999 after viewport scaling.
+          if (visible(button) && !hiddenByAncestor && rect.width + .01 >= 44 && rect.height + .01 >= 44) return true
+        } finally {
+          if (picker) picker.open = wasOpen ?? false
+        }
+      }
+      return false
+    }
 
     const found: AccessibilityIssue[] = []
     const interactive = [...document.querySelectorAll<HTMLElement>('button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="menuitem"], [role="switch"], [role="radio"]')]
@@ -59,6 +91,7 @@ export async function expectMonochromeAccessibility(page: Page) {
       const width = Math.max(rect.width, (hitRect?.width ?? 0) + hitStroke)
       const height = Math.max(rect.height, (hitRect?.height ?? 0) + hitStroke)
       if (width + .5 < 44 || height + .5 < 44) {
+        if (hasEquivalentBodyZoneButton(element)) continue
         found.push({ selector: selector(element), reason: 'interactive target below 44px', width: Math.round(width * 10) / 10, height: Math.round(height * 10) / 10 })
       }
     }
