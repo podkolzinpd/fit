@@ -155,3 +155,44 @@ SHA-256/size/Content-Encoding; URL и исходные checksum не меняю�
 генератор по-прежнему отклоняет JS, не перенаправляет его на другой origin.
 20 hosting tests проверяют round-trip gzip и прежние ограничения. Поддержка
 gzip шлюзом пока требует cloud smoke; сайт не активирован.
+
+## Реальная публикация 27 сентября 2026
+
+Candidate workflow `36277213600` собрал pinned main `6075cd7714d317ba853ac535437902c451b1a114`.
+Release: `6075cd7714d317ba853ac535437902c451b1a114-6d1c7ad6c0e0c6b4247e4006ae217d7c34e91674b4a11dc3e20f03b7eb085f94`.
+Все 184 объекта записаны только в release prefix и повторно прочитаны с
+проверкой SHA-256. Приватный `releases/frontend-release.json` — транспортный
+пакет, не публичный маршрут. Uploader не меняет ACL, CORS или Gateway.
+
+Отдельно применены READ ACL только двух перечисленных WASM и CORS только
+технического frontend origin (GET/HEAD). Анонимные запросы к обоим WASM дали
+200, application/wasm, годовой immutable cache и совпадение SHA-256;
+анонимный release index.html по-прежнему возвращает 403.
+
+Перед activation сохранён `gateway-before.yaml` в CloudShell
+`/tmp/fit-candidate.mYg48M`; исходный synthetic spec также находится в репозитории.
+Тестовый Gateway активирован с полной candidate спецификацией. HTTP smoke:
+HTML, SPA `/trainer`, callback без параметров, recovery missing/nested JS,
+404 missing CSS, реальные CSS/WASM, основной JS и service worker прошли.
+Распакованный основной gzip JS совпал с исходным SHA-256 (3 517 719 байт).
+HTML/recovery/SW имеют no-store; hash assets — immutable. В браузере
+загрузился экран Yandex-only входа без зарегистрированных console errors.
+
+Новый OAuth callback добавлен к существующим трём без удаления старых.
+API CORS дополнен только техническим origin через новую ревизию прежнего
+образа `6cf00d82d0b87f0f3dacb12d8fddae210d5f5720`, без миграций.
+OPTIONS для нового адреса и Vercel вернул 204 и соответствующий origin.
+Тот же origin добавлен в deploy workflow, чтобы очередной deploy не снял настройку.
+
+Это отдельная опубликованная сборка, не переключение production frontend:
+Vercel и DNS не менялись. Полный real-account OAuth, authenticated product
+E2E, browser WASM instantiate, rollback drill и перенос всех публичных pilot
+флагов пока не проверены. Сравнение API revisions подтвердило изменение только
+CORS_ALLOWED_ORIGINS и служебных id/created_at/status.
+
+**Блокер реального входа:** синтетический callback 27 сентября в 02:12 MSK
+доказал, что HTTP log Gateway сохраняет URL вместе с query (`code`, `state`).
+Реальных OAuth-кодов в проверке не было. Запрошено отдельное разрешение выключить
+request logging только этого frontend Gateway, сохранив backend logs/метрики.
+До решения не выполнять real-account OAuth и не передавать адрес пользователям
+как готовую замену Vercel. Не объявлять эти гейты закрытыми по HTTP smoke.
