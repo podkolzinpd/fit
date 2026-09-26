@@ -382,7 +382,8 @@ p { margin: 6px 0 }
 .yandex-pilot-workout-exercises strong { font-size: var(--text-ui) }
 .yandex-pilot-workout-exercises span { color: var(--muted); font-size: var(--text-caption); line-height: var(--leading-snug); overflow-wrap: anywhere }
 .auth-back-link { align-self: flex-start; margin-top: 2px; font-weight: 700 }
-.brand { width: auto; height: 58px; aspect-ratio: 28 / 15; display: block; object-fit: contain; border: 0; border-radius: 0; background: white; box-shadow:none }
+.brand { width: auto; height: 58px; aspect-ratio: 28 / 15; display: block; object-fit: contain; border: 0; border-radius: 0; background: transparent; filter: invert(1); box-shadow:none }
+.theme-light .brand { filter: none }
 .stack { display: flex; flex-direction: column; gap: 16px }
 .compact { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-raised) }
 .field { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: var(--text-ui); font-weight: var(--weight-medium); min-width: 0 }
@@ -3091,7 +3092,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   margin-bottom:16px;
   border:0;
   border-radius:0;
-  background:white;
+  background:transparent;
   box-shadow:none;
 }
 .auth-flow-identity .auth-entry-head .eyebrow {
@@ -3224,7 +3225,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .legal-header { display:grid; grid-template-columns:44px minmax(0,1fr); align-items:start; gap:12px }
 .legal-header .page-back { font-size:20px; font-weight:500 }
 .legal-header > div { display:grid; gap:4px }
-.legal-header .brand { width:auto; height:44px; aspect-ratio:28 / 15; display:block; object-fit:contain; margin-bottom:10px; border:0; border-radius:0; background:white }
+.legal-header .brand { width:auto; height:44px; aspect-ratio:28 / 15; display:block; object-fit:contain; margin-bottom:10px; border:0; border-radius:0; background:transparent }
 .legal-header h1 { margin:0; font-size:28px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
 .legal-header p { margin:0; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .legal-document { display:grid; gap:12px; padding:22px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
@@ -3250,7 +3251,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .legal-screen .error { margin:0; color:var(--danger); font-size:14px }
 
 .legal-gate { min-height:100dvh; display:grid; place-content:center; gap:16px; padding:24px; background:var(--bg); color:var(--fg) }
-.legal-gate > .brand { width:auto; height:52px; aspect-ratio:28 / 15; display:block; object-fit:contain; justify-self:center; border:0; border-radius:0; background:white }
+.legal-gate > .brand { width:auto; height:52px; aspect-ratio:28 / 15; display:block; object-fit:contain; justify-self:center; border:0; border-radius:0; background:transparent }
 .legal-gate-card { width:min(100%, 420px); display:grid; justify-self:center; gap:14px; padding:22px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
 .legal-gate-card .eyebrow { margin:0; color:var(--secondary-label-fg); font-size:12px; font-weight:500; letter-spacing:.06em }
 .legal-gate-card h1 { margin:0; font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
