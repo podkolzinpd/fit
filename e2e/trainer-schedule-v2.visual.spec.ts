@@ -171,6 +171,40 @@ test('renders the weekly overview from the approved composition', async ({ page 
   await testInfo.attach('trainer-schedule-v2-week', { path: screenshotPath, contentType: 'image/png' })
 })
 
+test('keeps the selected day and both weeks through navigation and reload', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockPilot(page)
+  await page.goto('/schedule?week=2026-09-21')
+  await page.getByRole('button', { name: '2 недели', exact: true }).click()
+  await expect(page).toHaveURL(/\/schedule\?week=2026-09-21&range=2w$/)
+  await expect(page.locator('.schedule-v2-day-card')).toHaveCount(14)
+  await testInfo.attach('trainer-schedule-v2-two-weeks', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
+  await page.locator('.schedule-v2-day-card').nth(8).click()
+  await expect(page).toHaveURL(/\/today\?date=2026-09-29&week=2026-09-21&range=2w$/)
+  await expect(page.locator('.schedule-v2-timeline')).toBeVisible()
+  await page.reload()
+  await expect(page).toHaveURL(/\/today\?date=2026-09-29&week=2026-09-21&range=2w$/)
+  await page.getByRole('button', { name: 'Настройки расписания' }).click()
+  await page.getByRole('menuitem', { name: 'К 2 неделям' }).click()
+  await expect(page).toHaveURL(/\/schedule\?week=2026-09-21&range=2w$/)
+  await expect(page.locator('.schedule-v2-day-card')).toHaveCount(14)
+
+  await page.locator('.schedule-v2-day-card').nth(3).click()
+  await expect(page).toHaveURL(/\/today\?date=2026-09-24&week=2026-09-21&range=2w$/)
+  await page.locator('.schedule-v2-event').click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(page).toHaveURL(/\/today\?date=2026-09-24&week=2026-09-21&range=2w$/)
+})
+
+test('invalid calendar URL dates do not crash the pilot', async ({ page }) => {
+  await mockPilot(page)
+  await page.goto('/schedule?week=2026-02-31&range=2w')
+  await expect(page.locator('.schedule-v2-day-card')).toHaveCount(14)
+  await page.goto('/today?date=oops&week=2026-02-31')
+  await expect(page.locator('.schedule-v2-timeline')).toBeVisible()
+})
+
 test('pilot calendar keeps workout review and save in the existing entry flow', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await mockPilot(page)
