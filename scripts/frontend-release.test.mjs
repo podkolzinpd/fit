@@ -6,8 +6,25 @@ import { join } from 'node:path'
 import { createServer } from 'node:http'
 import { packageRelease, planRelease, supportedRouting, verifyRelease } from './frontend-release.mjs'
 import { frontendHandler } from './frontend-rehearsal-server.mjs'
+import { gatewayPlan, gatewayUpload } from './frontend-gateway-plan.mjs'
+import { gunzipSync } from 'node:zlib'
+import { createHash } from 'node:crypto'
+import { uploadCandidate } from './upload-frontend-candidate.mjs'
 
 const commit = 'a'.repeat(40)
+test('large immutable JS upload uses verified gzip bytes without changing its URL', () => {
+  const bytes = Buffer.from('export const message = "test";\n'.repeat(100_000))
+  const file = { key: 'assets/app-12345678.js', size: bytes.length,
+    content: bytes.toString('base64'), cacheControl: 'public, max-age=31536000, immutable' }
+  const upload = gatewayUpload(file)
+  const encoded = Buffer.from(upload.content, 'base64')
+  assert.equal(upload.contentEncoding, 'gzip')
+  assert.ok(upload.size < 2_400_000)
+  assert.equal(upload.size, encoded.length)
+  assert.equal(upload.sha256, createHash('sha256').update(encoded).digest('hex'))
+  assert.deepEqual(gunzipSync(encoded), bytes)
+  assert.equal(gatewayUpload({ ...file, key: 'sw.js', cacheControl: 'no-cache' }).contentEncoding, null)
+})
 async function release(t, version = 'one', asset = 'app-12345678.js') {
   const dir = await mkdtemp(join(tmpdir(), 'fit-release-test-'))
   t.after(() => rm(dir, { recursive: true, force: true }))
@@ -19,6 +36,32 @@ async function release(t, version = 'one', asset = 'app-12345678.js') {
   })) await writeFile(join(dir, name), bytes)
   return packageRelease(dir, commit, supportedRouting)
 }
+
+test('large immutable WASM uses exact versioned redirect without exposing other files', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'fit-wasm-test-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  await mkdir(join(dir, 'assets'))
+  for (const [key, bytes] of Object.entries({
+    'index.html': '<html>test</html>', 'sw.js': '// sw', 'asset-recovery.js': '// recovery',
+    'site.webmanifest': '{}', 'assets/app-12345678.js': '// app',
+    'assets/engine-12345678.wasm': Buffer.alloc(4_300_000),
+  })) await writeFile(join(dir, key), bytes)
+  const bundle = await packageRelease(dir, commit, supportedRouting)
+  const target = { bucket: 'fit-frontend-candidate', reader: 'a'.repeat(20), frontendOrigin: 'https://fit.example.test' }
+  const plan = gatewayPlan(bundle, [], target)
+  const key = `releases/${bundle.release}/assets/engine-12345678.wasm`
+  assert.deepEqual(plan.publicReadObjects, [key])
+  const route = plan.specification.paths['/assets/engine-12345678.wasm']
+  assert.equal(route.get['x-yc-apigateway-integration'].http_code, 307)
+  assert.equal(route.get['x-yc-apigateway-integration'].http_headers.Location,
+    `https://storage.yandexcloud.net/fit-frontend-candidate/${key}`)
+  assert.equal(route.get['x-yc-apigateway-integration'].http_headers['Cache-Control'], 'no-store')
+  assert.deepEqual(route.get, route.head)
+  assert.deepEqual(plan.requiredCors.allowedOrigins, [target.frontendOrigin])
+  assert.equal(plan.objects.find((f) => f.key === 'index.html').delivery, 'private-gateway')
+  assert.throws(() => gatewayPlan(bundle, [], { ...target, frontendOrigin: undefined }), /exceeds gateway/)
+  assert.throws(() => gatewayPlan(bundle, [], { ...target, frontendOrigin: 'https://fit.example.test/path' }))
+})
 async function server(t, active, previous = []) {
   const instance = createServer(frontendHandler(active, previous))
   await new Promise((resolve) => instance.listen(0, '127.0.0.1', resolve))
@@ -28,6 +71,38 @@ async function server(t, active, previous = []) {
   }))
   return `http://127.0.0.1:${instance.address().port}`
 }
+
+test('candidate uploader verifies remote bytes, skips existing objects and fails closed on forbidden reads', async (t) => {
+  const bundle = await release(t)
+  const remote = new Map()
+  let puts = 0
+  const run = async (command, args) => {
+    assert.equal(command, 'yc')
+    assert.deepEqual(args.slice(0, 2), ['storage', 's3api'])
+    assert.equal(args[args.indexOf('--bucket') + 1], 'fit-frontend-probe-b1goqho1')
+    const key = args[args.indexOf('--key') + 1]
+    assert.ok(key.startsWith(`releases/${bundle.release}/`))
+    if (args[2] === 'get-object') {
+      if (!remote.has(key)) throw Object.assign(new Error('missing'), { stderr: 'NoSuchKey' })
+      await writeFile(args.at(-1), remote.get(key))
+    } else {
+      assert.equal(args[2], 'put-object')
+      puts += 1
+      remote.set(key, await readFile(args[args.indexOf('--body') + 1]))
+    }
+    return { stdout: '' }
+  }
+  await uploadCandidate(bundle, run)
+  assert.equal(puts, bundle.files.length)
+  await uploadCandidate(bundle, run)
+  assert.equal(puts, bundle.files.length)
+  await assert.rejects(uploadCandidate(bundle, async () => {
+    throw Object.assign(new Error('forbidden'), { stderr: 'AccessDenied' })
+  }), /Cannot inspect/)
+  remote.set(remote.keys().next().value, Buffer.from('corrupt'))
+  await assert.rejects(uploadCandidate(bundle, run), /Remote checksum mismatch/)
+  assert.equal(puts, bundle.files.length)
+})
 
 test('source Vercel contract is explicitly supported', async () => {
   const { routes } = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url)))
@@ -130,4 +205,33 @@ test('same immutable URL with different bytes prevents startup', async (t) => {
   const old = await release(t, 'old')
   const next = await release(t, 'next')
   assert.throws(() => frontendHandler(next, [old]), /Conflicting immutable asset/)
+})
+
+test('gateway candidate pins entrypoints and retains old immutable assets for forward and rollback', async (t) => {
+  const old = await release(t, 'old', 'app-11111111.js')
+  const next = await release(t, 'next', 'app-22222222.js')
+  const target = { bucket: 'fit-frontend-candidate', reader: 'a'.repeat(20) }
+  for (const [active, retained] of [[next, old], [old, next]]) {
+    const plan = gatewayPlan(active, [retained], target)
+    assert.equal(plan.deployable, false)
+    const paths = plan.specification.paths
+    assert.match(paths['/'].get['x-yc-apigateway-integration'].object, new RegExp(active.release))
+    for (const key of ['assets/app-11111111.js', 'assets/app-22222222.js']) {
+      assert.ok(paths[`/${key}`])
+      assert.equal(plan.objects.find((f) => f.key === key).cacheControl, 'public, max-age=31536000, immutable')
+    }
+    for (const key of ['index.html', 'sw.js', 'asset-recovery.js']) {
+      assert.equal(plan.objects.find((f) => f.key === key).cacheControl, 'no-store')
+    }
+    assert.equal(paths['/assets/{file+}'].get['x-yc-apigateway-integration'].http_code, 404)
+    assert.deepEqual(paths['/sw.js'].head, paths['/sw.js'].get)
+    assert.ok(plan.objects.every((f) => f.object.startsWith('releases/')))
+  }
+  assert.throws(() => gatewayPlan(next, [old], { ...target, bucket: '../wrong' }), /Invalid hosting target/)
+  assert.throws(() => gatewayPlan({ ...next, release: 'invalid' }, [], target))
+  assert.throws(() => gatewayPlan(next, [next, { ...old, files: [] }], target))
+  const conflict = await release(t, 'changed', 'app-22222222.js')
+  assert.throws(() => gatewayPlan(next, [conflict], target), /Conflicting immutable asset/)
+  const oversized = await release(t, 'x'.repeat(2_400_001), 'app-33333333.js')
+  assert.throws(() => gatewayPlan(oversized, [], target), /exceeds gateway response budget/)
 })

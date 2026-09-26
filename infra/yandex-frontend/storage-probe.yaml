@@ -1,0 +1,64 @@
+openapi: 3.0.0
+info:
+  title: FIT private storage probe — not the application
+  version: 1.0.0
+paths:
+  /:
+    get: &index
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: fit-frontend-probe-b1goqho1
+        object: index.html
+        service_account_id: aje67ouc4633u7i7oc2a
+    head: *index
+  /assets/{file+}.js:
+    parameters:
+      - name: file
+        in: path
+        required: true
+        schema:
+          type: string
+    get: &javascript
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: fit-frontend-probe-b1goqho1
+        object: 'assets/{file}.js'
+        error_object:
+          object: asset-recovery.js
+          statusCode: 200
+        service_account_id: aje67ouc4633u7i7oc2a
+    head: *javascript
+  /assets/{file+}:
+    parameters:
+      - name: file
+        in: path
+        required: true
+        schema:
+          type: string
+    get: &asset
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: fit-frontend-probe-b1goqho1
+        object: 'assets/{file}'
+        error_object:
+          object: not-found.txt
+          statusCode: 404
+        service_account_id: aje67ouc4633u7i7oc2a
+    head: *asset
+  /{path+}:
+    parameters:
+      - name: path
+        in: path
+        required: true
+        schema:
+          type: string
+    get: &page
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: fit-frontend-probe-b1goqho1
+        object: '{path}'
+        error_object:
+          object: index.html
+          statusCode: 200
+        service_account_id: aje67ouc4633u7i7oc2a
+    head: *page
