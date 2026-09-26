@@ -5,7 +5,7 @@ import { BASE_EXERCISES } from './system-exercises.base.generated'
 import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
 import { VITAL_FREE_PACK_ASSETS, VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
 import { VITAL_GYM_PRO_ASSETS, VITAL_GYM_PRO_MAIN_REFS, VITAL_GYM_PRO_NEW_EXERCISES } from './vital-gym-pro.generated'
-import { REVIEWED_EXERCISE_REFS_WITHOUT_SIMILAR_MEDIA, REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF } from './exercise-media-similarity'
+import { isReviewedSimilarMediaCompatible, REJECTED_SIMILAR_MEDIA_REFS, REVIEWED_EXERCISE_REFS_WITHOUT_SIMILAR_MEDIA, REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF } from './exercise-media-similarity'
 import { selectableExercises } from '../features/exercises/selectable-exercises'
 import vitalGymProMediaManifest from '../../scripts/data/vital-gym-pro-media-manifest.json'
 import vitalGymProRemainingReview from '../../scripts/data/vital-gym-pro-remaining-decisions.json'
@@ -388,7 +388,7 @@ describe('system exercise catalog', () => {
     expect(historicalDuplicate?.imageUrl).toBe('/exercises/vital/dumbbell-front-raise.jpg')
   })
 
-  it('даёт проверенным похожим вариантам анимацию того же движения, не меняя их идентичность', () => {
+  it('подключает похожее видео только при совпадении оборудования и метрик движения', () => {
     const byRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
     expect(Object.keys(REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF)).toHaveLength(238)
 
@@ -397,13 +397,17 @@ describe('system exercise catalog', () => {
       const target = byRef.get(targetRef)
       expect(exercise, `нет исходной карточки ${ref}`).toBeDefined()
       expect(target, `нет целевой карточки ${targetRef}`).toBeDefined()
-      expect(target?.techniqueVideoUrl, `у ${targetRef} нет проверенной анимации`).toBeTruthy()
-      expect(exercise).toMatchObject({
-        ref,
-        imageUrl: target?.imageUrl,
-        motionImageUrl: target?.motionImageUrl,
-        techniqueVideoUrl: target?.techniqueVideoUrl,
-      })
+      if (isReviewedSimilarMediaCompatible(exercise!, target!)) {
+        expect(target?.techniqueVideoUrl, `у ${targetRef} нет проверенной анимации`).toBeTruthy()
+        expect(exercise).toMatchObject({
+          ref,
+          imageUrl: target?.imageUrl,
+          motionImageUrl: target?.motionImageUrl,
+          techniqueVideoUrl: target?.techniqueVideoUrl,
+        })
+      } else {
+        expect(exercise).toMatchObject({ ref, imageUrl: undefined, motionImageUrl: undefined, techniqueVideoUrl: undefined })
+      }
     }
 
     expect(byRef.get('fedb-barbell-shrug')).toMatchObject({
@@ -413,7 +417,16 @@ describe('system exercise catalog', () => {
       techniqueVideoUrl: '/exercises/vital-pro/vital-dumbbell-shrug-ex034.mp4',
     })
     expect(byRef.get('fedb-cable-shrugs')?.techniqueVideoUrl)
-      .toBe(byRef.get('fedb-barbell-shrug')?.techniqueVideoUrl)
+      .toBeUndefined()
+    expect(byRef.get('fedb-recumbent-bike')?.techniqueVideoUrl)
+      .toBeUndefined()
+    expect(byRef.get('running-ankling')?.techniqueVideoUrl)
+      .toBeUndefined()
+    expect(REJECTED_SIMILAR_MEDIA_REFS).toEqual(new Set([
+      'fedb-one-arm-dumbbell-preacher-curl',
+      'fedb-reverse-hyperextension',
+      'fedb-straight-bar-bench-mid-rows',
+    ]))
   })
 
   it('каждая видимая пустая карточка явно проверена и оставлена без неподходящего видео', () => {
@@ -421,8 +434,25 @@ describe('system exercise catalog', () => {
       .filter((exercise) => !exercise.techniqueVideoUrl)
       .map((exercise) => exercise.ref)
 
+    const byRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
+    const visibleRefs = new Set(selectableExercises(SYSTEM_EXERCISE_CATALOG).map((exercise) => exercise.ref))
+    const rejectedVisibleRefs = Object.entries(REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF)
+      .filter(([ref, targetRef]) => visibleRefs.has(ref)
+        && !isReviewedSimilarMediaCompatible(byRef.get(ref)!, byRef.get(targetRef)!))
+      .map(([ref]) => ref)
     expect(REVIEWED_EXERCISE_REFS_WITHOUT_SIMILAR_MEDIA.size).toBe(83)
-    expect(new Set(emptyVisibleRefs)).toEqual(REVIEWED_EXERCISE_REFS_WITHOUT_SIMILAR_MEDIA)
+    expect(new Set(emptyVisibleRefs)).toEqual(new Set([
+      ...REVIEWED_EXERCISE_REFS_WITHOUT_SIMILAR_MEDIA,
+      ...rejectedVisibleRefs,
+    ]))
+  })
+
+  it('не показывает неверные анимации из пользовательских скриншотов', () => {
+    const byRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
+    for (const ref of ['fedb-one-arm-dumbbell-preacher-curl', 'fedb-reverse-hyperextension', 'fedb-straight-bar-bench-mid-rows']) {
+      expect(byRef.get(ref)).toMatchObject({ imageUrl: undefined, motionImageUrl: undefined, techniqueVideoUrl: undefined })
+    }
+    expect(byRef.get('hyperextension')?.techniqueVideoUrl).toBe('/exercises/vital-pro/vital-hyperextensions-back-extension-ex036.mp4')
   })
 
   it('не подменяет жим в тренажёре видео жима гантелей сидя', () => {

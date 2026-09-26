@@ -1,5 +1,5 @@
 import type { ExerciseSnapshot } from '../../shared/domain'
-import { COMPATIBLE_EXERCISE_REPLACEMENTS } from '../../shared/exercise-catalog-curation'
+import { EXERCISE_PICKER_REPLACEMENTS } from '../../shared/exercise-catalog-curation'
 import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retirement'
 
 /**
@@ -8,7 +8,7 @@ import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retiremen
  * прогрессу и старым ссылкам. В новом выборе показываем только каноническую
  * карточку. Пользовательские упражнения этот список никогда не затрагивает.
  */
-export const SYSTEM_EXERCISE_PICKER_REPLACEMENTS = COMPATIBLE_EXERCISE_REPLACEMENTS
+export const SYSTEM_EXERCISE_PICKER_REPLACEMENTS = EXERCISE_PICKER_REPLACEMENTS
 
 export function selectableExercises(exercises: readonly ExerciseSnapshot[]): readonly ExerciseSnapshot[] {
   return exercises.filter((exercise) => exercise.source === 'custom'

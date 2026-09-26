@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
-import { COMPATIBLE_EXERCISE_REPLACEMENTS, copiedExerciseName, exerciseCatalogRoot, exerciseCatalogSection, exerciseCatalogVariants, groupCatalogResults, isCatalogRoot } from './exercise-catalog-curation'
+import { COMPATIBLE_EXERCISE_REPLACEMENTS, EXERCISE_PICKER_REPLACEMENTS, copiedExerciseName, exerciseCatalogRoot, exerciseCatalogSection, exerciseCatalogVariants, groupCatalogResults, isCatalogRoot } from './exercise-catalog-curation'
 import { SYSTEM_EXERCISE_CATALOG, SYSTEM_EXERCISE_LEGACY_CATALOG } from './system-exercises'
 import { ORIGINAL_SEARCH_ALIASES, SEARCH_ALIASES, matchesExerciseSearch, normalizeExerciseSearch, resolveExerciseSearch } from '../features/exercises/exercise-search'
 import { selectableExercises } from '../features/exercises/selectable-exercises'
@@ -78,7 +78,7 @@ describe('approved catalog curation', () => {
 
   it('keeps every non-identical variant selectable with its own fields', () => {
     for (const [ref, decision] of Object.entries(EXERCISE_CATALOG_DECISIONS)) {
-      if (!decision.target || decision.action === 'format' || COMPATIBLE_EXERCISE_REPLACEMENTS[ref]) continue
+      if (!decision.target || decision.action === 'format' || EXERCISE_PICKER_REPLACEMENTS[ref]) continue
       const exercise = byRef.get(ref)!
       expect(isCatalogRoot(exercise), ref).toBe(false)
       expect(exerciseCatalogVariants(byRef.get(decision.target)!, SYSTEM_EXERCISE_CATALOG), ref).toContain(exercise)
@@ -91,7 +91,7 @@ describe('approved catalog curation', () => {
   it('preserves every old name, hand-reviewed synonym and slang phrase', () => {
     let checkedAliases = 0
     for (const original of SYSTEM_EXERCISE_LEGACY_CATALOG) {
-      const target = byRef.get(COMPATIBLE_EXERCISE_REPLACEMENTS[original.ref] ?? original.ref)!
+      const target = byRef.get(EXERCISE_PICKER_REPLACEMENTS[original.ref] ?? original.ref)!
       const phrases = [original.name, original.name.replace(/\s*\([^)]*\)\s*$/, ''), ...(ORIGINAL_SEARCH_ALIASES[original.ref] ?? [])]
       const registered = new Set((SEARCH_ALIASES[target.ref] ?? []).map(normalizeExerciseSearch))
       for (const phrase of phrases) {

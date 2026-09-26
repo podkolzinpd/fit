@@ -28,7 +28,7 @@ describe('selectable exercise catalog', () => {
     }
     for (const ref of retained) expect(selectable.some((exercise) => exercise.ref === ref), ref).toBe(true)
     const roots = selectable.filter(isCatalogRoot)
-    expect(['core', 'uncommon', 'rare', 'formats'].map((section) => roots.filter((exercise) => exerciseCatalogSection(exercise) === section).length)).toEqual([80, 776, 137, 7])
+    expect(['core', 'uncommon', 'rare', 'formats'].map((section) => roots.filter((exercise) => exerciseCatalogSection(exercise) === section).length)).toEqual([80, 751, 135, 7])
   })
 
   it('does not recreate retired refs through typed workouts or an explicit AI program ref', () => {
@@ -49,6 +49,16 @@ describe('selectable exercise catalog', () => {
       expect(selectable.find((exercise) => exercise.ref === hiddenRef)).toBeUndefined()
       expect(selectable.find((exercise) => exercise.ref === canonicalRef)).toBeDefined()
     }
+  })
+
+  it('does not show indistinguishable duplicate names in a new choice', () => {
+    const selectable = selectableExercises(SYSTEM_EXERCISE_CATALOG)
+    const normalize = (name: string) => name.toLocaleLowerCase('ru-RU').replaceAll('ё', 'е').replace(/[^а-яa-z0-9]+/gu, ' ').trim()
+    const names = selectable.map((exercise) => normalize(exercise.name))
+    expect(new Set(names).size).toBe(names.length)
+    expect(selectable.find((exercise) => exercise.ref === 'fedb-barbell-walking-lunge')?.name).toBe('Выпады в ходьбе со штангой')
+    expect(selectable.some((exercise) => exercise.ref === 'fedb-concentration-curls')).toBe(false)
+    expect(selectable.some((exercise) => exercise.ref === 'vital-concentration-curl-seated-dumbbell-ex014')).toBe(true)
   })
 
   it('never hides or merges trainer-created exercises even when their ref or name matches a system duplicate', () => {
