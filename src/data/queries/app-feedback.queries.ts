@@ -1,9 +1,9 @@
 import type { AppFeedbackInput } from '../repositories/app-feedback.repository'
-import { getSupabaseClient } from './client'
+import { supabase } from './client'
 import type { Json } from '../database.types'
 
 export const appFeedbackQueries = {
-  submit: (input: AppFeedbackInput) => getSupabaseClient().rpc('submit_app_feedback', {
+  submit: (input: AppFeedbackInput) => supabase.rpc('submit_app_feedback', {
     p_kind: input.kind,
     p_message: input.message,
     p_screen_path: input.screenPath,

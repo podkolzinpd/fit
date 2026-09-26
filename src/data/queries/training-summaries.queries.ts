@@ -1,5 +1,5 @@
 import type { ClientTrainingSummary } from '../../shared/domain'
-import { getSupabaseClient } from './client'
+import { supabase } from './client'
 import { toJson } from './json'
 import { invokeLegacyCloudFunction } from './legacy-cloud-functions'
 import type { TrainingSummaryTriggerReason } from '../../shared/domain'
@@ -14,7 +14,7 @@ const internalColumns = 'id,client_id,period_start,period_end,trainer_summary,cl
 const publishedColumns = 'id,source_summary_id,client_id,period_start,period_end,summary,display_metrics,generated_at,published_at'
 
 export const trainingSummaryQueries = {
-  firstCompletedWorkoutDate: (clientId: string) => getSupabaseClient().from('workouts')
+  firstCompletedWorkoutDate: (clientId: string) => supabase.from('workouts')
     .select('workout_date')
     .eq('client_id', clientId)
     .eq('status', 'done')
@@ -22,12 +22,12 @@ export const trainingSummaryQueries = {
     .order('workout_date', { ascending: true })
     .limit(1)
     .maybeSingle(),
-  listInternal: (clientId: string) => getSupabaseClient().from('client_training_summaries')
+  listInternal: (clientId: string) => supabase.from('client_training_summaries')
     .select(internalColumns)
     .eq('client_id', clientId)
     .order('period_end', { ascending: false })
     .order('generated_at', { ascending: false }),
-  listPublished: (clientId: string) => getSupabaseClient().from('client_published_training_summaries')
+  listPublished: (clientId: string) => supabase.from('client_published_training_summaries')
     .select(publishedColumns)
     .eq('client_id', clientId)
     .order('period_end', { ascending: false }),
@@ -104,13 +104,13 @@ export const trainingSummaryQueries = {
     summaryId: string,
     clientSummary: ClientTrainingSummary,
     expectedVersion: number,
-  ) => getSupabaseClient().rpc('publish_training_summary', {
+  ) => supabase.rpc('publish_training_summary', {
     p_summary_id: summaryId,
     p_client_summary: toJson(clientSummary),
     p_expected_version: expectedVersion,
   }),
   unpublish: (summaryId: string, expectedVersion: number) =>
-    getSupabaseClient().rpc('unpublish_training_summary', {
+    supabase.rpc('unpublish_training_summary', {
       p_summary_id: summaryId,
       p_expected_version: expectedVersion,
     }),

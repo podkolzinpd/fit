@@ -1,69 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const createClient = vi.hoisted(() => vi.fn(() => ({ auth: {} })))
-
 vi.mock('@supabase/supabase-js', () => ({ createClient }))
 
-describe('getSupabaseClient', () => {
+describe('eager Supabase client compatibility rollback', () => {
   beforeEach(() => {
     vi.resetModules()
     createClient.mockClear()
-  })
-
-  afterEach(() => vi.unstubAllEnvs())
-
-  it('does not require Supabase configuration or create a client on import', async () => {
-    vi.stubEnv('VITE_SUPABASE_URL', '')
-    vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', '')
-
-    const { getSupabaseClient } = await import('./client')
-
-    expect(createClient).not.toHaveBeenCalled()
-    expect(() => getSupabaseClient()).toThrow('Задайте VITE_SUPABASE_URL и VITE_SUPABASE_PUBLISHABLE_KEY')
-    expect(createClient).not.toHaveBeenCalled()
-  })
-
-  it('creates one client only when a legacy query needs it', async () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321')
     vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', 'test-publishable-key')
-    const { getSupabaseClient } = await import('./client')
+  })
+  afterEach(() => vi.unstubAllEnvs())
 
-    expect(createClient).not.toHaveBeenCalled()
-    expect(getSupabaseClient()).toBe(getSupabaseClient())
+  it('creates one shared client during module initialization', async () => {
+    const first = await import('./client')
+    const second = await import('./client')
+    expect(first.supabase).toBe(second.supabase)
     expect(createClient).toHaveBeenCalledOnce()
+    expect(first.supabase).toBe(createClient.mock.results[0]?.value)
   })
 
-  it('does not require Supabase configuration to load a production bundle', async () => {
-    vi.stubEnv('PROD', true)
-    vi.stubEnv('VITE_SUPABASE_URL', '')
-    vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', '')
-    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
-    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
-
-    const { getSupabaseClient } = await import('./client')
-
-    expect(createClient).not.toHaveBeenCalled()
-    expect(() => getSupabaseClient()).toThrow('Войдите через Yandex ID, чтобы продолжить.')
+  it.each(['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'])('requires %s before startup', async (key) => {
+    vi.stubEnv(key, '')
+    await expect(import('./client')).rejects.toThrow('Задайте VITE_SUPABASE_URL и VITE_SUPABASE_PUBLISHABLE_KEY')
     expect(createClient).not.toHaveBeenCalled()
   })
 
-  it('blocks a legacy query even if production still has Supabase credentials', async () => {
+  it('still rejects a remote Supabase URL during local development', async () => {
+    vi.stubEnv('DEV', true)
     vi.stubEnv('VITE_SUPABASE_URL', 'https://legacy.example.test')
-    vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', 'legacy-public-key')
-    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
-    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
-    vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
-
-    const { getSupabaseClient } = await import('./client')
-
-    expect(() => getSupabaseClient()).toThrow('Войдите через Yandex ID, чтобы продолжить.')
+    await expect(import('./client')).rejects.toThrow('Локальная разработка может использовать только локальный Supabase')
     expect(createClient).not.toHaveBeenCalled()
   })
 })

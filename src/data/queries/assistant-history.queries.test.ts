@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 const { from } = vi.hoisted(() => ({ from: vi.fn() }))
-vi.mock('./client', () => ({ getSupabaseClient: () => ({ from }) }))
+vi.mock('./client', () => ({ supabase: { from } }))
 
 import { assistantHistoryQueries } from './assistant-history.queries'
 

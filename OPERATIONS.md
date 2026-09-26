@@ -515,21 +515,23 @@ Production и PR previews разворачиваются в Vercel через Gi
 - build command: `npm run build`;
 - output directory: `dist`.
 
-Для локальной разработки и legacy Preview с Supabase нужны публичные
-frontend-переменные:
+На время диагностического отката #1144 для Production и Preview снова
+обязательны публичные frontend-переменные Supabase:
 
 ```text
 VITE_SUPABASE_URL=https://xwfuzfkuhblswpdludbc.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key>
 ```
 
-Production с включённым Yandex-only auth и main routing не требует этих
-`VITE_SUPABASE_*` переменных для запуска frontend: Supabase SDK создаётся
-только при фактическом legacy-вызове, а Yandex-only вход не подписывается на
-Supabase Auth. Это **не** означает, что серверный Supabase bridge уже можно
-отключить: он пока нужен для восстановления старых FIT-аккаунтов и оставшихся
-legacy media. Не удаляйте его Lockbox secrets до закрытия этих сценариев и
-rollback-окна.
+SDK снова создаётся при импорте, а AuthProvider подписывается на auth events.
+Сохранённый legacy token может обновляться через Supabase Auth, но Yandex-only
+actor и data routing остаются Yandex: stale auth events не инициализируют
+Supabase-профиль, а отсутствие Yandex session не включает fallback. Таймаут
+восстановления Yandex session и последующие media/invitation fixes сохранены.
+Это проверка гипотезы startup-регрессии, а не доказанное исправление сетевого
+таймаута Vercel. Обе переменные присутствовали в Production/Preview при
+read-only проверке 26 сентября 2026; до повторного удаления нужен отдельный
+проверенный Yandex-only startup release. Backend bridge secrets не удалять.
 
 `SUPABASE_DB_PASSWORD`, `SUPABASE_ACCESS_TOKEN`, service-role key и OAuth Client Secret в Vercel не добавляются. После первого production deploy его канонический URL фиксируется в Supabase Auth URL Configuration:
 

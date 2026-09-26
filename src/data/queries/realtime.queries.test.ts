@@ -9,10 +9,10 @@ const realtime = vi.hoisted(() => ({
 }))
 
 vi.mock('./client', () => ({
-  getSupabaseClient: () => ({
+  supabase: {
     channel: realtime.channel,
     removeChannel: realtime.removeChannel,
-  }),
+  },
 }))
 
 import { clientRealtimeTables, subscribeToClientChanges } from './realtime.queries'

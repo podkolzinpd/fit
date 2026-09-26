@@ -8,11 +8,6 @@ test('Yandex-only entry has one primary action at 390 and 430 px', async ({ page
       || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true',
     'Run with the complete default-off Yandex-only auth switches.',
   )
-  let legacyAuthRequests = 0
-  await page.route('**/auth/v1/**', (route) => {
-    legacyAuthRequests += 1
-    return route.abort('failed')
-  })
 
   for (const viewport of [
     { width: 390, height: 844 },
@@ -55,7 +50,6 @@ test('Yandex-only entry has one primary action at 390 and 430 px', async ({ page
     await page.goto('/auth/forgot')
     await expect(page).toHaveURL(/\/auth$/)
   }
-  expect(legacyAuthRequests).toBe(0)
 })
 
 test('restored Yandex session completes the legal check after reload', async ({ page }) => {
@@ -65,13 +59,10 @@ test('restored Yandex session completes the legal check after reload', async ({ 
       || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true',
     'Run with the complete Yandex-only session switches.',
   )
-  let legacyAuthRequests = 0
-  await page.route('**/auth/v1/**', (route) => {
-    legacyAuthRequests += 1
-    return route.abort('failed')
-  })
   const token = 'a'.repeat(43)
   let legalRequests = 0
+  // Restoring Yandex must not depend on the legacy service being reachable.
+  await page.route('http://127.0.0.1:54321/**', (route) => route.abort('connectionrefused'))
   await page.route('https://stage.example.test/v1/auth/yandex/session', async (route) => {
     await route.fulfill({
       status: 200,
@@ -111,5 +102,26 @@ test('restored Yandex session completes the legal check after reload', async ({ 
   await expect(page.getByRole('heading', { name: 'Условия обновились' })).toBeVisible()
   await expect(page.getByText('Проверяем документы…')).toHaveCount(0)
   expect(legalRequests).toBe(2)
-  expect(legacyAuthRequests).toBe(0)
+})
+
+test('Yandex restore exits loading after a network error and offers retry', async ({ page }) => {
+  test.skip(
+    process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true'
+      || process.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true'
+      || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true',
+    'Run with the complete Yandex-only session switches.',
+  )
+  await page.route('http://127.0.0.1:54321/**', (route) => route.abort('connectionrefused'))
+  await page.route('https://stage.example.test/v1/auth/yandex/session', (route) => route.abort('connectionrefused'))
+  await page.route('https://stage.example.test/health', (route) => route.abort('connectionrefused'))
+  await page.addInitScript(() => {
+    window.localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({
+      token: 'a'.repeat(43),
+      expiresAt: '2099-09-01T12:00:00.000Z',
+    }))
+  })
+  await page.goto('/')
+  await expect(page.getByText('Восстанавливаем сессию…', { exact: true })).toHaveCount(0, { timeout: 15_000 })
+  await expect(page).toHaveURL(/\/auth$/)
+  await expect(page.getByRole('button', { name: /Повторить/ })).toBeVisible()
 })

@@ -62,8 +62,11 @@ test('identity palettes keep text and semantic colours at WCAG AA', async ({ pag
 
 test('identity provides keyboard focus and honours reduced motion', async ({ page }) => {
   await page.goto('/auth')
-  await page.keyboard.press('Tab')
   const email = page.getByLabel('Email')
+  // The auth form mounts after session restoration; Tab on the loading shell
+  // cannot focus a field that does not exist yet.
+  await expect(email).toBeVisible()
+  await page.keyboard.press('Tab')
   await expect(email).toBeFocused()
   const authFocus = await email.evaluate((element) => {
     const styles = getComputedStyle(element)
