@@ -11,6 +11,7 @@ export interface ExerciseMetricCorrection {
 // (bands, straps, a stability ball, battle ropes or a support) must not create
 // a fictitious kilogram field.
 export const EXERCISE_METRIC_CORRECTIONS: Readonly<Record<string, ExerciseMetricCorrection>> = {
+  'fedb-close-grip-ez-bar-curl': { inputKind: 'strength', equipment: 'EZ-гриф' },
   // Free Exercise DB: mobility, fixed resistance and bodyweight apparatus.
   'fedb-lying-glute': { inputKind: 'duration' },
   'fedb-seated-glute': { inputKind: 'duration' },
