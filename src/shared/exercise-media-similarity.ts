@@ -1,13 +1,10 @@
 import type { ExerciseSnapshot } from './domain'
 
 /**
- * Reviewed visual substitutions for exercises that do not have their own Vital
- * animation. These links affect presentation only: exercise identity, history,
- * metrics and instructions remain attached to the original ref.
- *
- * A substitution is allowed when the main movement pattern is the same even if
- * the grip, bench angle or equipment differs. Do not add a target merely because
- * it trains the same muscle.
+ * Historical candidate substitutions retained as an audit inventory.
+ * These are NOT verified exact movements and do not authorize displaying media.
+ * Approval also requires VERIFIED_EXACT_MEDIA_TARGET_BY_REF below. Differences
+ * in grip, posture, support or implement cannot be ignored because muscles match.
  */
 export const REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF: Readonly<Record<string, string>> = {
   // Cardio.
@@ -299,9 +296,15 @@ const normalizedMuscle = (value: string | undefined): string => (value ?? '')
   .replaceAll('ё', 'е')
   .trim()
 
-/** Similar media is presentation-safe only when its recording semantics agree. */
+// The old table above is an audit inventory, NOT approval to display a clip.
+// Muscle/equipment equality cannot establish grip, posture or movement identity.
+// Populate only after viewing both the exact variant and its candidate clip.
+export const VERIFIED_EXACT_MEDIA_TARGET_BY_REF: Readonly<Record<string, string>> = {}
+
+/** A candidate needs explicit movement verification, not just matching metadata. */
 export function isReviewedSimilarMediaCompatible(source: ExerciseSnapshot, target: ExerciseSnapshot): boolean {
-  return !REJECTED_SIMILAR_MEDIA_REFS.has(source.ref)
+  return VERIFIED_EXACT_MEDIA_TARGET_BY_REF[source.ref] === target.ref
+    && !REJECTED_SIMILAR_MEDIA_REFS.has(source.ref)
     && source.inputKind === target.inputKind
     && source.muscleGroup === target.muscleGroup
     && normalizedEquipment(source) === normalizedEquipment(target)

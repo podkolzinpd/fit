@@ -7,8 +7,9 @@ import { VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF, VITAL_GYM_PRO_NEW_EXERCISES } from '
 import { isReviewedSimilarMediaCompatible, REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF } from './exercise-media-similarity'
 import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
 import { EXERCISE_METRIC_CORRECTIONS } from './exercise-metric-corrections'
+import { QUARANTINED_EXERCISE_MEDIA_REFS } from './exercise-media-quarantine'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 14
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 15
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {
@@ -224,6 +225,7 @@ function vitalMediaForRef(ref: string): ReviewedExerciseMedia | undefined {
 const REVIEWED_REFERENCE_MEDIA_BY_REF: Readonly<Record<string, ReviewedExerciseMedia>> = {}
 
 function reviewedMediaForExercise(exercise: ExerciseSnapshot): ReviewedExerciseMedia | undefined {
+  if (QUARANTINED_EXERCISE_MEDIA_REFS.has(exercise.ref)) return undefined
   const exactReferenceMedia = REVIEWED_REFERENCE_MEDIA_BY_REF[exercise.ref]
   if (exactReferenceMedia) return exactReferenceMedia
   if (exercise.techniqueVideoUrl?.startsWith('/exercises/vital/') || exercise.techniqueVideoUrl?.startsWith('/exercises/vital-pro/')) {
@@ -235,6 +237,7 @@ function reviewedMediaForExercise(exercise: ExerciseSnapshot): ReviewedExerciseM
   let candidate = exercise.ref
   while (!visited.has(candidate)) {
     visited.add(candidate)
+    if (QUARANTINED_EXERCISE_MEDIA_REFS.has(candidate)) return undefined
     const media = vitalMediaForRef(candidate)
     if (media) return media
     const similarTarget = REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF[candidate]
