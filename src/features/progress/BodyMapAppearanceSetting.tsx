@@ -6,8 +6,8 @@ import {
 } from './body-map-appearance'
 
 const LABELS: Record<BodyMapDisplayMode, string> = {
-  real: 'Реальная фигура',
-  scheme: 'Схема',
+  real: 'Фигура',
+  list: 'Список',
 }
 
 export function BodyMapAppearanceSetting({ viewerUserId, role, clientId, gender }: {
@@ -17,13 +17,13 @@ export function BodyMapAppearanceSetting({ viewerUserId, role, clientId, gender 
   gender: Gender | null
 }) {
   const mode = useBodyMapDisplayMode(viewerUserId, role, clientId, gender)
-  const options: readonly BodyMapDisplayMode[] = role === 'trainer' || gender ? ['real', 'scheme'] : ['scheme']
+  const options: readonly BodyMapDisplayMode[] = role === 'trainer' || gender ? ['real', 'list'] : ['list']
   const hint = role === 'trainer'
     ? 'Ваш выбор для карт прогресса спортсменов'
     : 'Личный выбор — тренер его не увидит'
   return <section className="body-map-appearance-setting" aria-label="Вид карты тела">
     <div>
-      <strong>Фигура на карте тела</strong>
+      <strong>Вид карты тела</strong>
       <span>{hint}</span>
     </div>
     <div className={`body-map-appearance-options count-${options.length}`} role="radiogroup" aria-label="Вид фигуры">
@@ -34,10 +34,9 @@ export function BodyMapAppearanceSetting({ viewerUserId, role, clientId, gender 
         aria-checked={mode === option}
         onClick={() => setBodyMapDisplayMode(viewerUserId, role, clientId, option)}
       >
-        <span className={`body-map-appearance-icon ${option}`} aria-hidden="true" />
         {LABELS[option]}
       </button>)}
     </div>
-    {!gender && role === 'client' && <small>Для реальной фигуры укажите пол спортсмена</small>}
+    {!gender && role === 'client' && <small>Для фигуры укажите пол спортсмена</small>}
   </section>
 }

@@ -70,6 +70,110 @@ async function mockAutomaticSummaryGeneration(page: VisualPage) {
   await page.route('**/functions/v1/summarize-client-training', (route) => route.fulfill(response))
 }
 
+async function mockBodyMapClientGender(page: VisualPage, gender: 'male' | 'female' | null, trainer: boolean) {
+  const row = {
+    id: demoClientId, auth_user_id: null, full_name: 'Тестовый спортсмен', gender,
+    age_years: 30, age_updated_at: '2026-08-01', height_cm: 175,
+    goal: null, archived_at: null, version: 1, merged_into_client_id: null, current_weight_kg: 70,
+  }
+  await page.route('**/rest/v1/rpc/get_my_client', (route) => route.fulfill({ json: trainer ? [] : [row] }))
+  if (trainer) await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({ json: [{
+    ...row, can_archive: true, has_account: true, canonical_full_name: row.full_name,
+    note: null, last_activity_at: null, membership_version: 1,
+  }] }))
+  await page.route('**/rest/v1/clients?*', (route) => {
+    // A trainer's linked-client lookup is not the viewed athlete. Returning the
+    // athlete here would switch the authenticated actor to client on reload.
+    const linkedActorLookup = new URL(route.request().url()).searchParams.has('auth_user_id')
+    return trainer && linkedActorLookup ? route.fallback() : route.fulfill({ json: row })
+  })
+}
+
+test('body maps keep route, gender and saved-list preferences without AI requests', async ({ page }, testInfo) => {
+  test.setTimeout(120_000)
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  const forbidden: string[] = []
+  await page.route('**/*', (route) => {
+    const url = new URL(route.request().url())
+    if (!['localhost', '127.0.0.1'].includes(url.hostname)
+      || /parse-workout|summarize-client-training|generate-program/.test(url.pathname)) {
+      forbidden.push(url.pathname)
+      return route.abort('blockedbyclient')
+    }
+    return route.fallback()
+  })
+  await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
+  await mockClientWorkoutHistory(page, { includeBack: true, bestResults: true })
+  await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+
+  for (const gender of ['female', 'male', null] as const) {
+    await mockBodyMapClientGender(page, gender, trainer)
+    const modes = gender ? ['real', 'legacy-list'] as const : ['list'] as const
+    for (const mode of modes) {
+      await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
+      const choice = page.getByRole('radio', { name: mode === 'real' ? 'Фигура' : 'Список', exact: true })
+      await choice.click()
+      await expect(choice).toHaveAttribute('aria-checked', 'true')
+      if (!trainer && gender === null) await expect(page.getByRole('radio', { name: 'Фигура', exact: true })).toHaveCount(0)
+      if (mode === 'legacy-list') {
+        // Existing users keep a working view after the old scheme is retired.
+        await page.evaluate(() => {
+          for (const key of Object.keys(localStorage).filter((name) => name.startsWith('fit.bodyMapDisplay.'))) localStorage.setItem(key, 'scheme')
+        })
+      }
+      for (const theme of ['light', 'dark'] as const) {
+        await page.evaluate((value) => {
+          localStorage.setItem('fit.appTheme', value)
+          window.dispatchEvent(new Event('fit-theme-change'))
+        }, theme)
+        const routes = trainer
+          ? [`/progress/${demoClientId}`]
+          : ['/me', '/me/progress?view=pro&mapMode=load#body-map']
+        for (const route of routes) {
+          await gotoStable(page, route)
+          const map = page.locator(route === '/me' ? '.workout-load-map' : '.body-progress-map').first()
+          await expect(map).toBeVisible()
+          const hasFigure = mode === 'real' && gender !== null
+          if (hasFigure) {
+            const figureName = gender === 'male' ? 'Атлетичный мужчина' : 'Атлетичная женщина'
+            for (const side of [{ label: 'Спереди', alt: 'спереди' }, { label: 'Сзади', alt: 'сзади' }]) {
+              await map.getByRole('button', { name: side.label, exact: true }).click()
+              await expect(map.getByRole('group', { name: `${figureName}, вид ${side.alt}`, exact: true })).toBeVisible()
+              for (const zone of await map.locator('svg [data-body-zone][role="button"]').all()) {
+                await zone.press('Enter')
+                await expect(zone).toHaveAttribute('aria-pressed', 'true')
+              }
+            }
+          } else {
+            const zones = map.getByRole('group', { name: 'Зоны тела', exact: true })
+            await expect(zones).toBeVisible()
+            await expect(map.locator('.body-progress-visual')).toHaveCount(0)
+            await expect(map.locator('.body-progress-sides')).toHaveCount(0)
+            for (const zone of await zones.getByRole('button').all()) {
+              await zone.click()
+              await expect(zone).toHaveAttribute('aria-pressed', 'true')
+            }
+          }
+          if (route === '/me') {
+            await expect(map).toContainText('За последний месяц')
+            await expect(map).toContainText('17 июля – 16 августа 2026')
+          } else {
+            await map.getByRole('button', { name: 'Нагрузка', exact: true }).click()
+            await expect(map.getByRole('heading', { name: 'Нагрузка по телу', exact: true })).toBeVisible()
+            await map.getByRole('button', { name: 'Прогресс', exact: true }).click()
+            await expect(map.getByRole('heading', { name: 'Где выросли результаты', exact: true })).toBeVisible()
+          }
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+          expect(await map.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+          await map.screenshot({ path: testInfo.outputPath(`body-map-${trainer ? 'trainer' : route === '/me' ? 'home' : 'client-progress'}-${gender ?? 'unspecified'}-${mode}-${theme}.png`), animations: 'disabled' })
+        }
+      }
+    }
+  }
+  expect(forbidden).toEqual([])
+})
+
 test.beforeEach(async ({ page }) => {
   await mockAutomaticSummaryGeneration(page)
 })
@@ -426,7 +530,7 @@ async function openClientProgress(page: import('@playwright/test').Page, options
   if (options.scheme || options.dark) {
     await gotoStable(page, '/me/settings')
     if (options.scheme) {
-      const schemeOption = page.getByRole('radio', { name: 'Схема' })
+      const schemeOption = page.getByRole('radio', { name: 'Список' })
       await schemeOption.click()
       await expect(schemeOption).toHaveAttribute('aria-checked', 'true')
     }
@@ -483,7 +587,9 @@ async function expectVisualBaseline(
 async function expectBodyMapBaseline(map: import('@playwright/test').Locator, name: string) {
   const previousScrollTop = await map.evaluate(() => document.querySelector<HTMLElement>('.content')?.scrollTop ?? 0)
   await map.scrollIntoViewIfNeeded()
-  await expect(map.locator('.body-progress-visual')).not.toHaveClass(/discovering/, { timeout: 3_000 })
+  if (await map.locator('.body-progress-visual').count()) {
+    await expect(map.locator('.body-progress-visual')).not.toHaveClass(/discovering/, { timeout: 3_000 })
+  }
   try {
     await expect(map).toHaveScreenshot(name, {
       animations: 'disabled',
@@ -1051,7 +1157,7 @@ test('trainer Profile and feedback keep their visual baselines in both themes', 
   await page.getByRole('switch', { name: 'Тёмная тема' }).uncheck()
 })
 
-test('client Progress scheme keeps its visual baseline', async ({ page }, testInfo) => {
+test('client Progress zone list keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
   await mockClientWorkoutHistory(page)
   await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
@@ -1059,20 +1165,22 @@ test('client Progress scheme keeps its visual baseline', async ({ page }, testIn
   await page.getByRole('tab', { name: 'ПРО' }).click()
   await page.locator('.client-body-map-disclosure > summary').click()
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
-  await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('group', { name: 'Зоны тела', exact: true })).toBeVisible({ timeout: 15_000 })
+  await expect(page.locator('.body-progress-overlay')).toHaveCount(0)
   await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-scheme-${process.platform}.png`)
   await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `client-progress-scheme-${process.platform}.png`)
 })
 
-test('client Progress scheme keeps its dark visual baseline', async ({ page }, testInfo) => {
+test('client Progress zone list keeps its dark visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Progress uses mobile visual profiles')
   await mockClientWorkoutHistory(page)
   await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
   await openClientProgress(page, { scheme: true, dark: true })
   await page.getByRole('tab', { name: 'ПРО' }).click()
   await page.locator('.client-body-map-disclosure > summary').click()
-  await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('group', { name: 'Зоны тела', exact: true })).toBeVisible({ timeout: 15_000 })
+  await expect(page.locator('.body-progress-overlay')).toHaveCount(0)
   await expectBodyMapBaseline(page.locator('.client-progress-card .body-progress-map'), `client-body-map-scheme-dark-${process.platform}.png`)
   await page.locator('.content').evaluate((element) => { element.scrollTop = 0 })
   await expectVisualBaseline(page, `client-progress-scheme-dark-${process.platform}.png`)
@@ -1962,7 +2070,7 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await gotoStable(page, '/profile/settings')
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible()
   await expect(page.getByText('Ваш выбор для карт прогресса спортсменов')).toBeVisible()
-  await page.getByRole('radio', { name: 'Схема' }).click()
+  await page.getByRole('radio', { name: 'Список' }).click()
 
   await gotoStable(page, '/schedule')
   await expect(page.getByRole('heading', { name: 'Расписание' })).toBeVisible()
@@ -1971,6 +2079,15 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   if (await scheduleHint.isVisible()) await scheduleHint.click()
   await expectVisualBaseline(page, 'trainer-schedule.png')
 
+  await mockClientWorkoutHistory(page, { includeBack: true, bestResults: true })
+  await page.route('**/rest/v1/client_training_summaries?*', async (route) => {
+    // Trainer history follows the saved summary's period, not the browser's
+    // current date. Pin that period to the workout fixture without replacing
+    // the established narrative, goal, or other summary fields.
+    const response = await route.fetch()
+    const rows = await response.json() as Record<string, unknown>[]
+    await route.fulfill({ json: rows.map((row) => ({ ...row, period_start: '2026-07-17', period_end: '2026-08-16' })) })
+  })
   await gotoStable(page, `/progress/${demoClientId}`)
   await expect(page.getByRole('heading', { name: 'Прогресс', exact: true })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-progress-identity/)
@@ -1983,7 +2100,7 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
   await trainerAnalysis.getByRole('button', { name: 'Прогресс', exact: true }).click()
   await expect(trainerAnalysis.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
   await expectBodyMapBaseline(trainerAnalysis.locator('.body-progress-map'), `trainer-body-map-scheme-${process.platform}.png`)
-  await expect(trainerAnalysis.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
+  await expect(trainerAnalysis.getByRole('group', { name: 'Зоны тела', exact: true })).toBeVisible()
   await expect(trainerAnalysis.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toHaveCount(0)
   await expect(trainerAnalysis.locator('.client-progress-main-now').evaluate((element) => {
     const card = element.closest('.client-progress-card')
@@ -1995,6 +2112,15 @@ test('trainer key routes keep their visual baselines', async ({ page }, testInfo
       && (goal.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING)
       && (map.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING))
   })).resolves.toBe(true)
+  // The figure/list snapshot needs comparable workouts. Restore the original
+  // seed before the separate full-page and narrative baselines: adding raw
+  // facts there intentionally deduplicates narrative sections.
+  for (const pattern of [
+    '**/rest/v1/client_training_summaries?*', '**/rest/v1/rpc/list_workouts',
+    '**/rest/v1/workouts?*', '**/rest/v1/workout_exercises?*', '**/rest/v1/workout_sets?*',
+  ]) await page.unroute(pattern)
+  await gotoStable(page, `/progress/${demoClientId}`)
+  await expect(page.locator('.client-progress-main-now')).toBeVisible()
   await expect(page.getByText(/AI-анализ/)).toHaveCount(0)
   const coachmark = page.getByRole('button', { name: 'Понятно' })
   if (await coachmark.isVisible()) await coachmark.evaluate((element) => {
@@ -2415,6 +2541,7 @@ test('Home body map keeps its front and back switch aligned', async ({ page }, t
     const buttons = Array.from(sideControl.querySelectorAll<HTMLElement>('button')).map((button) => button.getBoundingClientRect())
     const control = sideControl.getBoundingClientRect()
     const figure = visual.getBoundingClientRect()
+    const detail = element.querySelector<HTMLElement>('.body-progress-detail')!.getBoundingClientRect()
     const mapRect = element.getBoundingClientRect()
     const card = element.closest<HTMLElement>('.personal-workout-result')!
     const cardRect = card.getBoundingClientRect()
@@ -2425,8 +2552,10 @@ test('Home body map keeps its front and back switch aligned', async ({ page }, t
       buttonWidths: buttons.map((button) => button.width),
       buttonTops: buttons.map((button) => button.top),
       gapToFigure: figure.top - control.bottom,
-      centersDelta: Math.abs((figure.left + figure.right) / 2 - (control.left + control.right) / 2),
-      mapCentersDelta: Math.abs((figure.left + figure.right) / 2 - (mapRect.left + mapRect.right) / 2),
+      controlCentersDelta: Math.abs((control.left + control.right) / 2 - (mapRect.left + mapRect.right) / 2),
+      columnGap: detail.left - figure.right,
+      contained: figure.left >= mapRect.left && detail.right <= mapRect.right,
+      verticalOverlap: Math.min(figure.bottom, detail.bottom) - Math.max(figure.top, detail.top),
       figureWidth: figure.width,
       cardWidthDelta: Math.abs(mapRect.width - (cardRect.width - parseFloat(cardStyle.paddingLeft) - parseFloat(cardStyle.paddingRight) - 2)),
     }
@@ -2436,9 +2565,12 @@ test('Home body map keeps its front and back switch aligned', async ({ page }, t
   expect(Math.abs(geometry.buttonWidths[0]! - geometry.buttonWidths[1]!)).toBeLessThanOrEqual(1)
   expect(Math.abs(geometry.buttonTops[0]! - geometry.buttonTops[1]!)).toBeLessThanOrEqual(1)
   expect(geometry.gapToFigure).toBeGreaterThanOrEqual(8)
-  expect(geometry.centersDelta).toBeLessThanOrEqual(1)
-  expect(geometry.mapCentersDelta).toBeLessThanOrEqual(1)
+  expect(geometry.controlCentersDelta).toBeLessThanOrEqual(1)
+  expect(geometry.columnGap).toBeGreaterThanOrEqual(11.9)
+  expect(geometry.contained).toBe(true)
+  expect(geometry.verticalOverlap).toBeGreaterThan(0)
   expect(geometry.figureWidth).toBeGreaterThanOrEqual(108)
+  expect(geometry.figureWidth).toBeLessThanOrEqual(120.1)
   expect(geometry.cardWidthDelta).toBeLessThanOrEqual(1)
   await expectBodyMapBaseline(page.getByRole('region', { name: 'Последняя тренировка' }), `home-result-alignment-${process.platform}.png`)
   await expectBodyMapBaseline(map, `home-body-map-side-switch-${process.platform}.png`)

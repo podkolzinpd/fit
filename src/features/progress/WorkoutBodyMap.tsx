@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import type { Gender, Workout } from '../../shared/domain'
-import { formatLocalDate, localDate, type LocalDate } from '../../shared/local-date'
+import { ChevronRightIcon } from '../../shared/icons'
+import { formatLocalDate, formatWeekRange, localDate, type LocalDate } from '../../shared/local-date'
 import { loadBodyMap, type BodyMapMode, type BodyMapZone, type BodyProgressSummary } from './body-progress-map'
 import { MapPanel, TrainingBodyProgressMap } from './ClientBodyProgressMap'
 import { bodyZoneSides, type BodyFigureSide } from './body-progress-geometry'
@@ -55,13 +56,16 @@ export function PeriodLoadMap({ workouts, clientId, periodStart, periodEnd, gend
           insightCandidates={[]}
           variant={variant}
           side={side}
-          discovering={false}
           onSideChange={changeSide}
           onSelect={(region) => setSelectedGroup(region.group)}
           onShowDetails={() => undefined}
+          compact
+          detailFooter={<p className="body-progress-period"><span>За последний месяц</span><span>{formatWeekRange(periodStart, periodEnd)}</span></p>}
         /> : <p className="body-progress-empty">{data.emptyMessage}</p>}
     </div>
-    <Link className="link" to={periodLoadMapLink()}>Открыть в прогрессе</Link>
+    {data.regions.length === 0 && <p className="body-progress-period"><span>За последний месяц</span><span>{formatWeekRange(periodStart, periodEnd)}</span></p>}
+    {data.regions.length > 0 && <details className="body-progress-meaning"><summary>Что означает процент?</summary><p>Доля подтверждённых подходов этой зоны среди подходов, распределённых по мышцам за указанный период. Кардио и упражнения без определённой зоны не входят в расчёт. Вес и число повторов не учитываются.</p></details>}
+    <Link className="link body-progress-action-row" to={periodLoadMapLink()}><span>Открыть в прогрессе</span><ChevronRightIcon /></Link>
   </section>
 }
 

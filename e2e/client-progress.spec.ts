@@ -1,6 +1,19 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { addDays, todayInTimeZone } from '../src/shared/local-date'
-import { verifyAnalysisShortcutKeepsShell } from './progress-results-fixture'
+import { comparisonWorkoutRow, verifyAnalysisShortcutKeepsShell } from './progress-results-fixture'
+
+async function mockBodyMapWorkoutHistory(page: Page) {
+  const today = todayInTimeZone('Europe/Moscow')
+  const rows = [
+    comparisonWorkoutRow('d1000000-0000-4000-8000-000000000001', addDays(today, -20), 40, 3, 3),
+    comparisonWorkoutRow('d1000000-0000-4000-8000-000000000002', addDays(today, -5), 50, 3, 3),
+  ]
+  await page.route('**/rest/v1/rpc/list_workouts', (route) => {
+    const body = route.request().postDataJSON() as { p_from?: string; p_to?: string; p_offset?: number }
+    const selected = rows.filter((row) => (!body.p_from || row.workout_date >= body.p_from) && (!body.p_to || row.workout_date <= body.p_to))
+    return route.fulfill({ json: selected.slice(body.p_offset ?? 0).map((row) => ({ ...row, total_count: selected.length })) })
+  })
+}
 
 test('global rollout gives a new client the monochrome Progress identity', async ({ page }, testInfo) => {
   await page.goto('/auth')
@@ -78,6 +91,7 @@ test('client explicitly confirms an LLM criterion before it can be saved', async
 })
 
 test('linked client sees only the published client progress view', async ({ page }) => {
+  await mockBodyMapWorkoutHistory(page)
   await page.goto('/auth')
   await page.getByLabel('Email').fill('client@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -86,8 +100,8 @@ test('linked client sees only the published client progress view', async ({ page
   await expect(page).toHaveURL(/\/me$/)
   await page.goto('/me/settings')
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible()
-  await expect(page.getByRole('radio', { name: 'Реальная фигура' })).toBeChecked()
-  await page.getByRole('radio', { name: 'Схема' }).click()
+  await expect(page.getByRole('radio', { name: 'Фигура' })).toBeChecked()
+  await page.getByRole('radio', { name: 'Список' }).click()
   await page.goto('/me/progress')
   await expect(page).toHaveURL(/\/me\/progress$/)
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
@@ -123,13 +137,18 @@ test('linked client sees only the published client progress view', async ({ page
   await page.getByRole('tab', { name: 'ПРО' }).click()
   await page.getByRole('button', { name: 'Прогресс', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Где выросли результаты' })).toBeVisible()
-  await expect(page.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
+  const bodyZones = mapDisclosure.getByRole('group', { name: 'Зоны тела' })
+  await expect(bodyZones).toBeVisible()
+  await expect(bodyZones.getByRole('button', { name: 'Грудь. Результат зоны: +25%' })).toBeVisible()
+  await expect(mapDisclosure.locator('.body-progress-overlay')).toHaveCount(0)
+  await expect(mapDisclosure.getByRole('button', { name: 'Сзади' })).toHaveCount(0)
   await page.goto('/me/settings')
-  await page.getByRole('radio', { name: 'Реальная фигура' }).click()
+  await page.getByRole('radio', { name: 'Фигура' }).click()
   await page.goto('/me/progress')
   await page.getByRole('tab', { name: 'ПРО' }).click()
   await page.locator('.client-body-map-disclosure > summary').click()
   await expect(page.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Грудь. Результат зоны: +25%' })).toBeVisible()
   await page.getByRole('tab', { name: 'Обзор' }).click()
   await page.getByRole('button', { name: 'Открыть анализ' }).click()
   const clientDetails = page.getByRole('dialog', { name: 'Подробный анализ' })
@@ -242,6 +261,7 @@ test('client sees deterministic standard-measurement goal facts', async ({ page 
 })
 
 test('trainer reviews verified signals separately from the client copy', async ({ page }) => {
+  await mockBodyMapWorkoutHistory(page)
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -249,8 +269,8 @@ test('trainer reviews verified signals separately from the client copy', async (
   await expect(page).toHaveURL(/\/today$/)
   await page.goto('/profile/settings')
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toBeVisible()
-  await expect(page.getByRole('radio', { name: 'Реальная фигура' })).toBeChecked()
-  await page.getByRole('radio', { name: 'Схема' }).click()
+  await expect(page.getByRole('radio', { name: 'Фигура' })).toBeChecked()
+  await page.getByRole('radio', { name: 'Список' }).click()
   await page.goto('/clients/11111111-1111-4111-8111-111111111111')
   await expect(page.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
   await page.goto('/progress/11111111-1111-4111-8111-111111111111')
@@ -265,7 +285,11 @@ test('trainer reviews verified signals separately from the client copy', async (
   await expect(trainerAnalysis.getByRole('radiogroup', { name: 'Вид фигуры' })).toHaveCount(0)
   await expect(trainerAnalysis.getByRole('group', { name: 'Атлетичный мужчина, вид спереди' })).toHaveCount(0)
   await expect(trainerAnalysis.getByRole('group', { name: 'Атлетичная женщина, вид спереди' })).toHaveCount(0)
-  await expect(trainerAnalysis.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
+  const bodyZones = trainerAnalysis.getByRole('group', { name: 'Зоны тела' })
+  await expect(bodyZones).toBeVisible()
+  await expect(bodyZones.getByRole('button', { name: 'Грудь. Результат зоны: +25%' })).toBeVisible()
+  await expect(trainerAnalysis.locator('.body-progress-overlay')).toHaveCount(0)
+  await expect(trainerAnalysis.getByRole('button', { name: 'Сзади' })).toHaveCount(0)
   await expect(trainerAnalysis.getByRole('heading', { name: 'Период', exact: true })).toBeVisible()
   await expect(trainerAnalysis.locator('.client-progress-main-now').evaluate((element) => {
     const goal = document.querySelector('.client-progress-goal-story')

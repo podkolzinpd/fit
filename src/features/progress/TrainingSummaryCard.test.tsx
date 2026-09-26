@@ -301,7 +301,7 @@ describe('Training summary card states', () => {
 
     expect(screen.getByRole('group', { name: 'Атлетичная женщина, вид сзади' })).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Сзади' })).toBeNull()
-    expect(screen.getByLabelText('Верх спины. Результат зоны: +36%')).toBeInTheDocument()
+    expect(within(screen.getByRole('group', { name: 'Атлетичная женщина, вид сзади' })).getByRole('button', { name: 'Верх спины. Результат зоны: +36%' })).toBeInTheDocument()
     expect(document.querySelector('.body-progress-zone')).toBeNull()
     await openOverview(user)
     const detailsTrigger = screen.getByRole('button', { name: 'Открыть анализ' })
@@ -331,7 +331,7 @@ describe('Training summary card states', () => {
     await userEvent.setup().click(await screen.findByText('Карта тела'))
 
     expect(await screen.findByRole('group', { name: 'Атлетичный мужчина, вид сзади' })).toBeVisible()
-    expect(screen.getByLabelText('Верх спины. Результат зоны: +36%')).toBeVisible()
+    expect(within(screen.getByRole('group', { name: 'Атлетичный мужчина, вид сзади' })).getByRole('button', { name: 'Верх спины. Результат зоны: +36%' })).toBeVisible()
   })
 
   it('turns the client summary into a factual period, goal and upcoming-plan story', async () => {
@@ -593,13 +593,13 @@ describe('Training summary card states', () => {
 
     render(<TrainerTrainingSummaryCard clientId="client-1" />, { wrapper: wrapper(queryClient()) })
 
-    expect(await screen.findByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
+    expect(await screen.findByRole('group', { name: 'Зоны тела' })).toBeVisible()
     expect(screen.getByLabelText('Верх спины. Результат зоны: +36%')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Нагрузка' }))
     expect(await screen.findByLabelText('Верх спины. Нагрузка зоны: 67%')).toBeVisible()
-    const sideSwitch = screen.getByLabelText('Сторона тела')
-    expect(within(sideSwitch).getByRole('button', { name: 'Спереди' })).toBeVisible()
-    expect(within(sideSwitch).getByRole('button', { name: 'Сзади' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByLabelText('Сторона тела')).toBeNull()
+    expect(document.querySelector('.body-progress-overlay')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Грудь. Нагрузка зоны: 33%' })).toBeVisible()
     expect(repositories.workouts).toHaveBeenCalledWith(
       localDate('2026-06-20'),
       addDays(todayInTimeZone('Europe/Moscow'), 45),
@@ -745,12 +745,13 @@ describe('Training summary card states', () => {
     await openPro(user)
     await userEvent.setup().click(await screen.findByText('Карта тела'))
 
-    expect(await screen.findByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
+    expect(await screen.findByRole('group', { name: 'Зоны тела' })).toBeVisible()
     expect(screen.getByLabelText('Верх спины. Результат зоны: +36%')).toHaveAttribute('aria-pressed', 'true')
     await user.click(await screen.findByRole('button', { name: 'Нагрузка' }))
     expect(await screen.findByLabelText('Верх спины. Нагрузка зоны: 67%')).toHaveAttribute('aria-pressed', 'true')
-    await user.click(screen.getByRole('button', { name: 'Спереди' }))
-    expect(screen.getByRole('group', { name: 'Анатомическая схема мышц, вид спереди' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Спереди' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Сзади' })).toBeNull()
+    expect(document.querySelector('.body-progress-overlay')).toBeNull()
     await user.click(screen.getByLabelText('Грудь. Нагрузка зоны: 33%'))
     const loadDetail = document.querySelector<HTMLElement>('.body-progress-load-value')
     expect(loadDetail).toHaveTextContent('Грудь33%')
@@ -759,7 +760,7 @@ describe('Training summary card states', () => {
     expect(screen.queryByRole('dialog', { name: 'Грудь' })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Прогресс' }))
     expect(screen.getByLabelText('Верх спины. Результат зоны: +36%')).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('group', { name: 'Анатомическая схема мышц, вид сзади' })).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Зоны тела' })).toBeVisible()
   })
 
   it('keeps the zone panel compact and opens the remaining exercise details on demand', async () => {
@@ -789,7 +790,8 @@ describe('Training summary card states', () => {
     if (!map) return
     expect(within(map).queryByText('Изменения по подтверждённым результатам упражнений')).toBeNull()
     expect(within(map).queryByText('Лучший результат зоны')).toBeNull()
-    expect(within(map).getByText('Результат вырос на 36%.')).toBeVisible()
+    expect(within(map).getByText(longExerciseName)).toBeVisible()
+    expect(within(map).getByText('Максимальный вес: 50 → 68 кг')).toBeVisible()
     expect(within(map).queryByText(/Тяга нижнего блока/)).toBeNull()
     expect(within(map).queryByText(/Пуловер прямыми руками/)).toBeNull()
     await user.click(within(map).getByRole('button', { name: 'Показать 3 упражнения' }))

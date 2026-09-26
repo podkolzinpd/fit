@@ -2,7 +2,7 @@ import { useCallback, useSyncExternalStore } from 'react'
 import type { AccountRole, Gender } from '../../shared/domain'
 import type { BodyFigureVariant } from './body-progress-geometry'
 
-export type BodyMapDisplayMode = 'real' | 'scheme'
+export type BodyMapDisplayMode = 'real' | 'list'
 
 const STORAGE_PREFIX = 'fit.bodyMapDisplay.'
 const LEGACY_STORAGE_PREFIX = 'fit.bodyMapAppearance.'
@@ -24,20 +24,28 @@ function legacyStorageKey(viewerUserId: string | undefined, role: AccountRole | 
 }
 
 function isDisplayMode(value: string | null): value is BodyMapDisplayMode {
-  return value === 'real' || value === 'scheme'
+  return value === 'real' || value === 'list'
 }
 
 function legacyDisplayMode(value: string | null): BodyMapDisplayMode | null {
   if (value === 'male' || value === 'female') return 'real'
-  if (value === 'neutral') return 'scheme'
+  if (value === 'neutral' || value === 'scheme') return 'list'
   return null
+}
+
+function migrateDisplayMode(key: string, mode: BodyMapDisplayMode) {
+  try {
+    window.localStorage.setItem(key, mode)
+  } catch {
+    // A blocked storage write must not bring the retired scheme back.
+  }
 }
 
 export function defaultBodyMapDisplayMode(
   gender: Gender | null,
   role?: AccountRole,
 ): BodyMapDisplayMode {
-  return role === 'trainer' || gender ? 'real' : 'scheme'
+  return role === 'trainer' || gender ? 'real' : 'list'
 }
 
 export function resolveBodyFigureVariant(mode: BodyMapDisplayMode, gender: Gender | null): BodyFigureVariant {
@@ -55,17 +63,19 @@ export function getBodyMapDisplayMode(
   if (typeof window === 'undefined' || !key) return fallback
   try {
     const stored = window.localStorage.getItem(key)
-    if (isDisplayMode(stored) && (stored !== 'real' || gender)) return stored
+    if (stored === 'scheme' || stored === 'neutral') {
+      migrateDisplayMode(key, 'list')
+      return 'list'
+    }
+    if (isDisplayMode(stored)) return stored === 'real' && !gender ? fallback : stored
 
-    // Смысл прежнего выбора переносим только клиенту. Глобальный выбор тренера
-    // не мигрируем: он и был причиной применения одной фигуры ко всем клиентам.
-    if (role === 'client') {
-      const legacyKey = legacyStorageKey(viewerUserId, role)
-      const migrated = legacyKey ? legacyDisplayMode(window.localStorage.getItem(legacyKey)) : null
-      if (migrated && (migrated !== 'real' || gender)) {
-        window.localStorage.setItem(key, migrated)
-        return migrated
-      }
+    // Список сохраняем для обеих ролей. Старый глобальный выбор пола тренера
+    // не переносим: фигура должна соответствовать конкретному спортсмену.
+    const legacyKey = legacyStorageKey(viewerUserId, role)
+    const migrated = legacyKey ? legacyDisplayMode(window.localStorage.getItem(legacyKey)) : null
+    if (migrated === 'list' || (role === 'client' && migrated === 'real' && gender)) {
+      migrateDisplayMode(key, migrated)
+      return migrated
     }
     return fallback
   } catch {
