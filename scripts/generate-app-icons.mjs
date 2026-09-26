@@ -8,12 +8,14 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const source = await readFile(resolve(root, 'public/fit-logo.svg'), 'utf8')
 
 const appBackground = '#FBFAF7'
-const primaryScale = 0.88
+const primaryScale = 0.92
 const maskableScale = 0.70
+const opticalHeightScale = 1.12
+const opticalStrokeWidth = 1.8
 
 const assets = [
   { path: 'public/favicon-32x32.png', size: 32, scale: primaryScale },
-  { path: 'public/apple-touch-icon.png', size: 180, scale: primaryScale },
+  { path: 'public/apple-touch-icon-b2.png', size: 180, scale: primaryScale },
   { path: 'public/icon-192.png', size: 192, scale: primaryScale },
   { path: 'public/icon-512.png', size: 512, scale: primaryScale },
   { path: 'public/icon-maskable-192.png', size: 192, scale: maskableScale },
@@ -47,7 +49,11 @@ try {
       deviceScaleFactor: 1,
       viewport: { width: asset.size, height: asset.size },
     })
-    const logo = source.replaceAll('fill="black"', `fill="${asset.foreground ?? '#141414'}"`)
+    const foreground = asset.foreground ?? '#000000'
+    const logo = source.replaceAll(
+      'fill="black"',
+      `fill="${foreground}" stroke="${foreground}" stroke-width="${opticalStrokeWidth}" stroke-linejoin="round"`,
+    )
     const encodedLogo = Buffer.from(logo).toString('base64')
 
     await page.setContent(`
@@ -67,7 +73,7 @@ try {
           display: block;
           width: ${asset.scale * 100}%;
           height: auto;
-          transform: translate(-50%, -50%);
+          transform: translate(-50%, -50%) scaleY(${opticalHeightScale});
         }
       </style>
       <img src="data:image/svg+xml;base64,${encodedLogo}" alt="">
