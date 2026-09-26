@@ -418,6 +418,10 @@ describe('system exercise catalog', () => {
     })
     expect(byRef.get('fedb-cable-shrugs')?.techniqueVideoUrl)
       .toBeUndefined()
+    expect(byRef.get('fedb-recumbent-bike')?.techniqueVideoUrl)
+      .toBe('/exercises/vital/stationary-bike.mp4')
+    expect(byRef.get('running-ankling')?.techniqueVideoUrl)
+      .toBe(byRef.get('running')?.techniqueVideoUrl)
     expect(REJECTED_SIMILAR_MEDIA_REFS).toEqual(new Set([
       'fedb-one-arm-dumbbell-preacher-curl',
       'fedb-reverse-hyperextension',
