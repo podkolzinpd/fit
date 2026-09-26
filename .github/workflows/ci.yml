@@ -36,11 +36,16 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run infra:policy:test
-      - run: node --test scripts/prepare-yandex-frontend.test.mjs
+      - run: npm run frontend:hosting:test
       - run: npm run build
         env:
           VITE_SUPABASE_URL: http://127.0.0.1:54321
           VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+
+      - name: Verify offline frontend package against the real build
+        run: node scripts/frontend-release.mjs dist "$RELEASE_ID" frontend-release.json
+        env:
+          RELEASE_ID: ${{ github.sha }}
 
   frontend-infrastructure:
     runs-on: ubuntu-24.04
