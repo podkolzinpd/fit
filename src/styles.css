@@ -3131,6 +3131,50 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .auth-flow-identity .auth-consent a { color:var(--fg) }
 .auth-flow-identity .auth-legal-links { display:flex; flex-wrap:wrap; gap:8px 16px; padding:2px 4px 0 }
 .auth-flow-identity .auth-legal-links a { min-height:36px; display:inline-flex; align-items:center; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.auth-flow-identity.auth-login-screen { gap:20px }
+.auth-flow-identity.auth-login-screen .auth-entry-head {
+  justify-items:center;
+  gap:10px;
+  padding:14px 0 4px;
+  text-align:center;
+}
+.auth-flow-identity.auth-login-screen .auth-entry-head .brand {
+  width:min(50vw, 188px);
+  height:auto;
+  margin:0 0 26px;
+}
+.auth-flow-identity.auth-login-screen .auth-entry-head h1 {
+  font-size:clamp(28px, 8vw, 34px);
+  letter-spacing:-.025em;
+}
+.auth-flow-identity.auth-login-screen .auth-entry-head .muted {
+  max-width:340px;
+  font-size:16px;
+  line-height:1.4;
+  text-align:center;
+}
+.auth-flow-identity.auth-login-screen .auth-form {
+  width:100%;
+  gap:16px;
+  padding:18px;
+  border-radius:22px;
+}
+.auth-flow-identity.auth-login-screen .field { font-size:14px }
+.auth-flow-identity.auth-login-screen .auth-form input {
+  height:54px;
+  min-height:54px;
+}
+.auth-flow-identity.auth-login-screen .auth-form > button {
+  min-height:52px;
+  font-size:16px;
+}
+.auth-flow-identity.auth-login-screen .auth-links { width:100% }
+.auth-flow-identity.auth-login-screen .auth-legal-links {
+  width:100%;
+  justify-content:center;
+  margin-top:auto;
+  padding-top:20px;
+}
 .auth-flow-identity .error,
 .auth-flow-identity .success { margin:0; padding:12px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); font-size:12px; font-weight:500; line-height:1.4 }
 .auth-flow-identity .error { color:var(--danger) }
@@ -3143,6 +3187,19 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .auth-flow-identity .yandex-pilot-client p,
 .auth-flow-identity .yandex-pilot-connection p,
 .auth-flow-identity .yandex-pilot-training p { color:var(--muted); font-size:12px; font-weight:400 }
+@media (max-height:760px) {
+  .auth-flow-identity.auth-login-screen { gap:14px }
+  .auth-flow-identity.auth-login-screen .auth-entry-head { padding-top:0 }
+  .auth-flow-identity.auth-login-screen .auth-entry-head .brand {
+    width:min(42vw, 160px);
+    margin-bottom:14px;
+  }
+  .auth-flow-identity.auth-login-screen .auth-entry-head h1 { font-size:28px }
+  .auth-flow-identity.auth-login-screen .auth-legal-links {
+    margin-top:0;
+    padding-top:4px;
+  }
+}
 .auth-flow-identity.invitation-page { justify-content:flex-start }
 .invitation-summary { gap:0; padding:6px 16px }
 .invitation-summary > div { min-height:48px; display:flex; align-items:center; justify-content:space-between; gap:16px; border-bottom:1px solid var(--border) }

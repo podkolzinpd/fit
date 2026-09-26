@@ -16,7 +16,7 @@ test('Yandex-only entry has one primary action at 390 and 430 px', async ({ page
     await page.setViewportSize(viewport)
     await page.goto('/auth')
 
-    await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
     await expect(page.getByRole('region', { name: 'Авторизация через Yandex ID' })).toBeVisible()
     await expect(page.getByText('Вход и регистрация выполняются через Yandex ID.')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID' })).toHaveClass(/primary/)

@@ -185,12 +185,11 @@ export function AuthPage() {
       .catch(() => { setError('Не удалось начать вход через Yandex ID.'); setYandexBusy(false) })
   }
 
-  if (yandexOnlyAuthConfig !== null) return <AuthIdentityScreen>
+  if (yandexOnlyAuthConfig !== null) return <AuthIdentityScreen className="auth-login-screen">
     <header className="auth-entry-head">
       <FitLogo />
-      <p className="eyebrow">ВАШ РАБОЧИЙ ПРОЦЕСС</p>
-      <h1>Вход</h1>
-      <p className="muted">Планируйте тренировки и следите за прогрессом клиентов.</p>
+      <h1>Добро пожаловать</h1>
+      <p className="muted">Войдите, чтобы продолжить тренировки</p>
       {(hasPendingInvitationLink() || returnTo?.startsWith('/invite') || returnTo?.startsWith('/join'))
         && <p className="muted">Войдите, чтобы продолжить по приглашению.</p>}
     </header>
@@ -212,12 +211,17 @@ export function AuthPage() {
     <nav className="auth-legal-links" aria-label="Юридическая информация"><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Конфиденциальность</Link></nav>
   </AuthIdentityScreen>
 
-  return <AuthIdentityScreen>
+  return <AuthIdentityScreen className={mode === 'login' ? 'auth-login-screen' : undefined}>
     <header className="auth-entry-head">
       <FitLogo />
-      <p className="eyebrow">ВАШ РАБОЧИЙ ПРОЦЕСС</p>
-      <h1>{mode === 'login' ? 'Вход' : 'Регистрация'}</h1>
-      <p className="muted">{mode === 'register' && role === 'client' ? 'Следите за своими тренировками и прогрессом.' : 'Планируйте тренировки и следите за прогрессом клиентов.'}</p>
+      {mode === 'login' ? <>
+        <h1>Добро пожаловать</h1>
+        <p className="muted">Войдите, чтобы продолжить тренировки</p>
+      </> : <>
+        <p className="eyebrow">ВАШ РАБОЧИЙ ПРОЦЕСС</p>
+        <h1>Регистрация</h1>
+        <p className="muted">{role === 'client' ? 'Следите за своими тренировками и прогрессом.' : 'Планируйте тренировки и следите за прогрессом клиентов.'}</p>
+      </>}
       {returnTo !== undefined && <p className="muted">Войдите или создайте аккаунт, чтобы продолжить по приглашению.</p>}
     </header>
     {mode === 'login' && yandexAppSessionConfig !== null && <button
