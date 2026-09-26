@@ -1,0 +1,63 @@
+openapi: 3.0.0
+info:
+  title: FIT frontend routing probe — synthetic responses only
+  version: 1.0.0
+paths:
+  /:
+    get:
+      x-yc-apigateway-integration:
+        type: dummy
+        http_code: 200
+        http_headers:
+          Content-Type: text/plain
+          Cache-Control: no-store
+        content:
+          '*': fit-routing-probe-root
+  /assets/{file+}.js:
+    get:
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: dummy
+        http_code: 200
+        http_headers:
+          Content-Type: application/javascript
+          Cache-Control: no-store
+        content:
+          '*': '/* fit-routing-probe-js */'
+  /assets/{file+}:
+    get:
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: dummy
+        http_code: 404
+        http_headers:
+          Content-Type: text/plain
+          Cache-Control: no-store
+        content:
+          '*': fit-routing-probe-missing-asset
+  /{path+}:
+    get:
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: dummy
+        http_code: 200
+        http_headers:
+          Content-Type: text/html
+          Cache-Control: no-store
+        content:
+          '*': '<!doctype html><title>FIT routing probe</title>fit-routing-probe-spa'
