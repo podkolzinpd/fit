@@ -278,19 +278,9 @@ export const REJECTED_SIMILAR_MEDIA_REFS: ReadonlySet<string> = new Set([
 
 const normalizedEquipment = (exercise: ExerciseSnapshot): string => {
   const equipmentRef = exercise.equipmentRef?.toLocaleLowerCase('en-US').trim()
-  const value = [
-    equipmentRef && equipmentRef !== 'other' ? equipmentRef : '',
-    exercise.equipment ?? '',
-    exercise.name,
-  ]
-    .filter(Boolean)
-    .join(' ')
+  const value = (equipmentRef && equipmentRef !== 'other' ? equipmentRef : exercise.equipment ?? equipmentRef ?? '')
     .toLocaleLowerCase('ru-RU')
     .replaceAll('ё', 'е')
-  // Some old base cards store the generic value «Кардио» instead of the
-  // actual machine. The reviewed name still identifies the equipment reliably.
-  if (/велотренаж|stationary.?bike|recumbent.?bike/u.test(value)) return 'stationary-bike'
-  if (/беговая дорожка|treadmill/u.test(value)) return 'treadmill'
   if (/гантел|dumbbell/u.test(value)) return 'dumbbell'
   if (/штанг|barbell/u.test(value)) return 'barbell'
   if (/гир|kettlebell/u.test(value)) return 'kettlebell'
@@ -309,20 +299,13 @@ const normalizedMuscle = (value: string | undefined): string => (value ?? '')
   .replaceAll('ё', 'е')
   .trim()
 
-// These reviewed cardio variants intentionally reuse the closest technique:
-// their legacy metadata describes the format rather than the movement itself.
-const REVIEWED_METADATA_COMPATIBILITY_EXCEPTIONS: ReadonlySet<string> = new Set([
-  'running-ankling',
-])
-
 /** Similar media is presentation-safe only when its recording semantics agree. */
 export function isReviewedSimilarMediaCompatible(source: ExerciseSnapshot, target: ExerciseSnapshot): boolean {
   return !REJECTED_SIMILAR_MEDIA_REFS.has(source.ref)
-    && (REVIEWED_METADATA_COMPATIBILITY_EXCEPTIONS.has(source.ref)
-      || (source.inputKind === target.inputKind
-        && source.muscleGroup === target.muscleGroup
-        && normalizedEquipment(source) === normalizedEquipment(target)
-        && normalizedMuscle(source.primaryMuscleDetail) === normalizedMuscle(target.primaryMuscleDetail)))
+    && source.inputKind === target.inputKind
+    && source.muscleGroup === target.muscleGroup
+    && normalizedEquipment(source) === normalizedEquipment(target)
+    && normalizedMuscle(source.primaryMuscleDetail) === normalizedMuscle(target.primaryMuscleDetail)
 }
 
 /**
