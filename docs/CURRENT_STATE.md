@@ -90,7 +90,7 @@ Yandex ID является единственным production-входом; app
 
 ## Открытые post-cutover задачи и риски
 
-Frontend hosting: 27 сентября Gateway публикует candidate `6075cd77…` (run 36277213600); 184 объекта проверены SHA-256. Два WASM — точные 307/READ ACL/scoped CORS, остальной бакет private. HTML/JS gzip/CSS/SW/SPA/recovery HTTP smoke и browser auth-screen прошли. OAuth callback/API CORS добавлены с сохранением Vercel; workflow закрепляет origin. Блокер real-account входа: Gateway логирует query code/state (доказано синтетическим запросом); разрешение на отключение только frontend request logs запрошено. Browser WASM/rollback drill не закрыты. Vercel/DNS не переключены; `docs/design/YANDEX_FRONTEND_CLOUD_PROBE.md`.
+Frontend hosting: 27 сентября Gateway публикует candidate `6075cd77…` (run 36277213600); 184 объекта проверены SHA-256. Два WASM — точные 307/READ ACL/scoped CORS, остальной бакет private. HTML/JS gzip/CSS/SW/SPA/recovery HTTP smoke и browser auth-screen прошли. OAuth callback/API CORS добавлены с сохранением Vercel; workflow закрепляет origin. После подтверждения владельца frontend request logs отключены: get подтвердил disabled=true, /auth HTTP 200; backend logs не менялись. Real-account OAuth/browser WASM/rollback drill не закрыты. Vercel/DNS не переключены; `docs/design/YANDEX_FRONTEND_CLOUD_PROBE.md`.
 
 1. Выполнить успешный media migration без `allow-missing` для оставшихся chat
    и custom-exercise objects; Vital Gym Pro уже перенесён и полностью проверен.

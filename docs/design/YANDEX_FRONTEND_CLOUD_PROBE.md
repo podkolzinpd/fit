@@ -190,9 +190,11 @@ E2E, browser WASM instantiate, rollback drill и перенос всех пуб�
 флагов пока не проверены. Сравнение API revisions подтвердило изменение только
 CORS_ALLOWED_ORIGINS и служебных id/created_at/status.
 
-**Блокер реального входа:** синтетический callback 27 сентября в 02:12 MSK
+**Устранён риск журналирования:** синтетический callback 27 сентября в 02:12 MSK
 доказал, что HTTP log Gateway сохраняет URL вместе с query (`code`, `state`).
-Реальных OAuth-кодов в проверке не было. Запрошено отдельное разрешение выключить
-request logging только этого frontend Gateway, сохранив backend logs/метрики.
-До решения не выполнять real-account OAuth и не передавать адрес пользователям
-как готовую замену Vercel. Не объявлять эти гейты закрытыми по HTTP smoke.
+Реальных OAuth-кодов в проверке не было. После прямого подтверждения владельца
+request logging отключён только у `d5drmhq5ovqk03jgsm8i` через `--no-logging`.
+Повторный get подтвердил `log_options.disabled=true`; `/auth` вернул HTTP 200.
+Backend logging и Vercel не изменялись. При дальнейших обновлениях Gateway
+сохранять отключение request logging, пока нет проверенной редакции OAuth query.
+Полный реальный вход и остальные перечисленные гейты по-прежнему не проверены.
