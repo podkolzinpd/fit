@@ -1,0 +1,37 @@
+name: Prepare Yandex frontend (no deployment)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --test scripts/prepare-yandex-frontend.test.mjs
+      - name: Build an offline rehearsal, not a production configuration
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+      - name: Prepare checksums and required hosting contract
+        run: node scripts/prepare-yandex-frontend.mjs dist "$RELEASE_ID" frontend-manifest.json
+        env:
+          RELEASE_ID: ${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-rehearsal-${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            dist/
+            frontend-manifest.json
