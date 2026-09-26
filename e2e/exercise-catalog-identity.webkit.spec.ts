@@ -87,6 +87,31 @@ test('narrow-grip pulldown keeps exact media separate from the wide-grip variant
 })
 
 for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }, { width: 1440, height: 1000 }]) {
+  test(`unverified technique videos are absent while exercise details remain usable at ${viewport.width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize(viewport)
+    await page.goto('/auth')
+    await page.getByLabel('Email').fill('trainer@fit.local')
+    await page.getByLabel('Пароль').fill('FitLocal123!')
+    await page.getByRole('button', { name: 'Войти', exact: true }).click()
+    await expect(page).toHaveURL(/\/(today|clients)$/, { timeout: 20_000 })
+    await page.goto('/exercises')
+    for (const name of ['Сгибание ноги стоя в тренажёре', 'Кубинский жим', 'Жим гантели лёжа одной рукой']) {
+      await page.getByLabel('Поиск упражнения').fill(name)
+      const card = page.locator('.catalog-media-card').filter({ has: page.getByText(name, { exact: true }) })
+      await expect(card).toHaveCount(1)
+      await expect(card).toHaveClass(/without-media/)
+      await expect(card.locator('video, img, .catalog-media-card-play')).toHaveCount(0)
+      await card.click()
+      const detail = page.getByRole('dialog')
+      await expect(detail.getByRole('heading', { name, exact: true })).toBeVisible()
+      await expect(detail.locator('video, img')).toHaveCount(0)
+      await expect(detail.getByText('Как выполнять', { exact: true })).toBeVisible()
+      await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`safe-technique-${name}-${viewport.width}.png`), fullPage: true })
+      await detail.locator('button.secondary').click()
+    }
+  })
+
   test(`public exercise cover recovers from a stalled image request in the same picker at ${viewport.width}px`, async ({ page }, testInfo) => {
     test.setTimeout(45_000)
     await page.setViewportSize(viewport)
