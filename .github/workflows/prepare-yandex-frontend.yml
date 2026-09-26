@@ -83,6 +83,7 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
           VITE_YANDEX_API_BASE_URL: https://bbat47es6kspjb3dvfn2.containers.yandexcloud.net
           VITE_YANDEX_OAUTH_CLIENT_ID: fdc7e12c472b475690fbb387d8698663
           VITE_YANDEX_APP_SESSION_ENABLED: 'true'
