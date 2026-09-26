@@ -2572,6 +2572,8 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-image-detail { width:104px }
 .exercise-image-technique { width:100%; aspect-ratio:3 / 2; border-radius:var(--radius-lg) }
 .exercise-image-empty { background:var(--surface-sunken) }
+.exercise-image-load-state { position:absolute; inset:0; z-index:1; display:grid; place-items:center; background:var(--surface-sunken); color:var(--secondary-label-fg); pointer-events:none }
+.picker-item-play, .exercise-thumbnail-play, .exercise-catalog-identity .catalog-media-card-play { z-index:2 }
 .picker-technique-header { display:grid; grid-template-columns:40px minmax(0,1fr) 40px; text-align:center }
 .picker-technique-header h1 { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .picker-technique-view { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:12px }
