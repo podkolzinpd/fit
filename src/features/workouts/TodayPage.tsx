@@ -12,6 +12,7 @@ import { InlineRequestError, OverflowMenu, Page } from '../../shared/ui'
 import { ExercisePicker, ExerciseThumbnail, findCatalogExercise, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { ClientPicker, type ClientPickerSelection } from '../clients'
 import { useAuth } from '../../app/auth-context'
+import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { useRpeDisplay } from '../../app/rpe-display'
@@ -167,6 +168,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [firstClientError, setFirstClientError] = useState<Error | null>(null)
   const draftKey = todayDraftKey(actor!.userId)
   const todayPath = clientMode ? '/me' : '/today'
+  const composePath = !clientMode && isTrainerScheduleV2Enabled(actor) ? '/today?view=compose' : todayPath
   const view = new URLSearchParams(location.search).get('view')
   const requestedScreen: Screen = view === 'review' || view === 'save' ? view : 'compose'
   const screen: Screen = draftReady && requestedScreen === 'save' && items.length === 0
@@ -203,7 +205,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       navigate(-1)
       return
     }
-    navigate(next === 'compose' ? todayPath : `${todayPath}?view=${next}`, { replace: next === 'compose', state: { fromTodayScreen: screen } })
+    navigate(next === 'compose' ? composePath : `${todayPath}?view=${next}`, { replace: next === 'compose', state: { fromTodayScreen: screen } })
   }
 
   function closeTextComposer() {
@@ -236,9 +238,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   useEffect(() => {
     if (!draftReady || requestedScreen !== 'save' || items.length > 0) return
     const nextScreen: Screen = text.trim() ? 'review' : 'compose'
-    navigate(nextScreen === 'compose' ? todayPath : `${todayPath}?view=${nextScreen}`, { replace: true })
+    navigate(nextScreen === 'compose' ? composePath : `${todayPath}?view=${nextScreen}`, { replace: true })
     if (nextScreen === 'compose' && text.trim()) setTextComposerOpen(true)
-  }, [draftReady, items.length, navigate, requestedScreen, text, todayPath])
+  }, [composePath, draftReady, items.length, navigate, requestedScreen, text, todayPath])
 
   useEffect(() => {
     if (!draftReady) return
