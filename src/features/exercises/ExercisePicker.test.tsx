@@ -103,7 +103,7 @@ describe('ExercisePicker', () => {
     expect(onPick).toHaveBeenCalledWith(variant)
   })
 
-  it('does not lose recording fields when two dip cards have different input kinds', async () => {
+  it('keeps the reviewed dip variant selectable with its corrected recording fields', async () => {
     const user = userEvent.setup()
     const onPick = vi.fn()
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialSearch="брусья" onPick={onPick} onClose={vi.fn()} />)
@@ -112,7 +112,7 @@ describe('ExercisePicker', () => {
     if (openPlaying) await user.click(openPlaying)
     await user.selectOptions(screen.getByLabelText('Вариант упражнения'), 'fedb-parallel-bar-dip')
     await user.click(screen.getByRole('button', { name: 'Добавить упражнение' }))
-    expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ ref: 'fedb-parallel-bar-dip', inputKind: 'strength' }))
+    expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ ref: 'fedb-parallel-bar-dip', inputKind: 'reps' }))
   })
 
   beforeEach(() => {
@@ -210,11 +210,12 @@ describe('ExercisePicker', () => {
     expect(screen.queryByText('Последние у клиента')).not.toBeInTheDocument()
   })
 
-  it('оставляет статичный запасной кадр в списке, если основной кадр не загрузился', () => {
+  it('оставляет начальный кадр запасным, если обложка из конечного кадра не загрузилась', () => {
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
     const squat = document.querySelector<HTMLElement>('[data-exercise-ref="a"]')!.closest('.picker-item')!
-    fireEvent.error(squat.querySelector('img')!)
     expect(squat.querySelector('img')).toHaveAttribute('src', '/squat-end.jpg')
+    fireEvent.error(squat.querySelector('img')!)
+    expect(squat.querySelector('img')).toHaveAttribute('src', '/squat.jpg')
     expect(squat.querySelector('video')).not.toBeInTheDocument()
     expect(squat.querySelector('.exercise-image-motion')).not.toBeInTheDocument()
   })

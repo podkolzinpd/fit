@@ -6,11 +6,13 @@ import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { RepositoryError } from '../../data/repositories/error'
 import { publicInvitationLinksRepository } from '../../data/repositories/public-invitation-links.repository'
+import { FitLogo } from '../../shared/FitLogo'
 import { StatePanel } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import {
   captureInvitationLink,
   clearPendingInvitationLink,
+  readPendingInvitationLink,
   type PendingInvitationLink,
 } from './invitation-link-continuation'
 import { AuthIdentityScreen } from './AuthPages'
@@ -41,16 +43,27 @@ export function InvitationPage() {
   const queryClient = useQueryClient()
   const { actor, loading: authLoading, signOut } = useAuth()
   const backend = useDataBackend()
-  const [pending] = useState<PendingInvitationLink | null>(() =>
-    captureInvitationLink(window.location.hash))
+  const [{ pending, persisted }] = useState<{
+    pending: PendingInvitationLink | null
+    persisted: boolean
+  }>(() => {
+    const captured = captureInvitationLink(window.location.hash)
+    const stored = readPendingInvitationLink()
+    return {
+      pending: captured,
+      persisted: captured !== null
+        && stored?.token === captured.token
+        && stored.source === captured.source,
+    }
+  })
   const [signingOut, setSigningOut] = useState(false)
   const openedTracked = useRef(false)
 
   useEffect(() => {
-    if (window.location.hash) {
+    if (persisted && window.location.hash) {
       window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)
     }
-  }, [])
+  }, [persisted])
 
   const preview = useQuery({
     queryKey: ['invitation-link-preview', pending?.source, pending?.token.slice(0, 12)],
@@ -102,7 +115,7 @@ export function InvitationPage() {
   if (claim.isSuccess) {
     return <AuthIdentityScreen className="invitation-page">
       <header className="auth-entry-head">
-        <div className="brand" aria-hidden="true">FIT</div>
+        <FitLogo />
         <p className="eyebrow">ГОТОВО</p>
         <h1>{actor?.role === 'client' ? 'Тренер подключён' : 'Спортсмен подключён'}</h1>
         <p className="muted">Теперь можно продолжить работу вместе.</p>
@@ -116,7 +129,7 @@ export function InvitationPage() {
 
   if (pending === null) {
     return <AuthIdentityScreen className="invitation-page">
-      <header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div></header>
+      <header className="auth-entry-head"><FitLogo /></header>
       <StatePanel tone="error" title="Ссылка не работает" description="Проверьте ссылку или попросите новое приглашение." />
       <Link className="auth-back-link" to={actor ? homePath : '/auth'}>{actor ? 'Вернуться в Fit' : 'Перейти ко входу'}</Link>
     </AuthIdentityScreen>
@@ -124,14 +137,14 @@ export function InvitationPage() {
 
   if (preview.isPending || authLoading) {
     return <AuthIdentityScreen className="invitation-page">
-      <header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div></header>
+      <header className="auth-entry-head"><FitLogo /></header>
       <StatePanel tone="info" title="Проверяем приглашение" description="Это займёт несколько секунд." />
     </AuthIdentityScreen>
   }
 
   if (preview.isError || invitation === null || invitation === undefined) {
     return <AuthIdentityScreen className="invitation-page">
-      <header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div></header>
+      <header className="auth-entry-head"><FitLogo /></header>
       <StatePanel tone="error" title="Ссылка не работает" description="Проверьте ссылку или попросите новое приглашение." action={<button type="button" className="secondary" onClick={() => void preview.refetch()}>Повторить</button>} />
       <Link className="auth-back-link" to={actor ? homePath : '/auth'}>{actor ? 'Вернуться в Fit' : 'Перейти ко входу'}</Link>
     </AuthIdentityScreen>
@@ -140,7 +153,7 @@ export function InvitationPage() {
   if (invitation.status !== 'active') {
     const copy = terminalCopy(invitation.status)
     return <AuthIdentityScreen className="invitation-page">
-      <header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div></header>
+      <header className="auth-entry-head"><FitLogo /></header>
       <StatePanel tone={invitation.status === 'claimed' ? 'info' : 'error'} title={copy.title} description={copy.description} />
       <Link className="auth-back-link" to={actor ? homePath : '/auth'}>{actor ? 'Вернуться в Fit' : 'Перейти ко входу'}</Link>
     </AuthIdentityScreen>
@@ -149,10 +162,11 @@ export function InvitationPage() {
   const expiresAt = new Intl.DateTimeFormat('ru-RU', {
     day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
   }).format(new Date(invitation.expiresAt))
+  const requiresStoredContinuation = !persisted && (actor === null || roleMismatch)
 
   return <AuthIdentityScreen className="invitation-page">
     <header className="auth-entry-head">
-      <div className="brand" aria-hidden="true">FIT</div>
+      <FitLogo />
       <p className="eyebrow">ПРИГЛАШЕНИЕ В FIT</p>
       <h1>{invitationTitle(invitation.inviterName, invitation.targetRole)}</h1>
       <p className="muted">После подключения вы увидите общие тренировки и сможете общаться в Fit.</p>
@@ -161,7 +175,11 @@ export function InvitationPage() {
       <div><span>Ваша роль</span><strong>{invitation.targetRole === 'trainer' ? 'Тренер' : 'Спортсмен'}</strong></div>
       <div><span>Действует до</span><strong>{expiresAt}</strong></div>
     </section>
-    {actor === null ? <div className="stack invitation-actions">
+    {requiresStoredContinuation ? <StatePanel
+      tone="error"
+      title="Откройте ссылку в Safari или Chrome"
+      description="Этот браузер не может сохранить приглашение для входа в аккаунт. Откройте эту же ссылку в обычном браузере."
+    /> : actor === null ? <div className="stack invitation-actions">
       <button type="button" className="primary" onClick={() => { trackGoal('invitation_login_started'); navigate('/auth', {
         state: { from: '/invite', mode: 'login', inviteRole: invitation.targetRole },
       }) }}>Войти и подключиться</button>

@@ -52,7 +52,6 @@ export function captureInvitationLink(
   storage: Storage | undefined = browserStorage(),
   now = Date.now(),
 ): PendingInvitationLink | null {
-  if (storage === undefined) return null
   const params = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash)
   const keys = [...params.keys()]
   const tokens = params.getAll('token')
@@ -67,7 +66,7 @@ export function captureInvitationLink(
     return readPendingInvitationLink(storage, now)
   }
   const invitation = { token, source: sourceValue, savedAt: now }
-  try { storage.setItem(storageKey, JSON.stringify(invitation)) } catch { /* Continue in the current page if storage is blocked. */ }
+  try { storage?.setItem(storageKey, JSON.stringify(invitation)) } catch { /* Continue in the current page if storage is blocked. */ }
   return invitation
 }
 

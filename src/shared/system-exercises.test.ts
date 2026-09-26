@@ -9,6 +9,7 @@ import { REVIEWED_EXERCISE_REFS_WITHOUT_SIMILAR_MEDIA, REVIEWED_SIMILAR_MEDIA_TA
 import { selectableExercises } from '../features/exercises/selectable-exercises'
 import vitalGymProMediaManifest from '../../scripts/data/vital-gym-pro-media-manifest.json'
 import vitalGymProRemainingReview from '../../scripts/data/vital-gym-pro-remaining-decisions.json'
+import { EXERCISE_METRIC_CORRECTIONS } from './exercise-metric-corrections'
 
 const PACKAGED_GYM_PRO_MEDIA_PATHS = vitalGymProMediaManifest.files.map(({ path }) => `/exercises/vital-pro/${path}`)
 
@@ -29,7 +30,7 @@ const EXERCISE_VIDEO_PATHS = new Set(
 
 describe('system exercise catalog', () => {
   it('matches the current catalog contract', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(13)
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(14)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
@@ -267,6 +268,59 @@ describe('system exercise catalog', () => {
       expect(SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === ref))
         .toMatchObject({ ref, ...semantics })
     }
+  })
+
+  it('применяет полный аудит формата результата ко всем исправленным карточкам', () => {
+    expect(Object.keys(EXERCISE_METRIC_CORRECTIONS)).toHaveLength(117)
+    const catalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
+
+    for (const [ref, correction] of Object.entries(EXERCISE_METRIC_CORRECTIONS)) {
+      expect(catalogByRef.get(ref), `нет проверенной карточки ${ref}`)
+        .toMatchObject({ ref, ...correction })
+    }
+  })
+
+  it('не предлагает килограммы для фиксированного сопротивления и опор', () => {
+    const fixedResistanceEquipment = /^(?:Резина(?: и (?:платформа|скамья))?|Петли|Фитбол|Канаты|БОСУ и канаты|Лестничный тренажёр|Ролик для пресса|Скамья для гиперэкстензии|Тумба)$/u
+    const reviewedWeightedFitballException = 'fedb-weighted-ball-hyperextension'
+    const invalid = SYSTEM_EXERCISE_CATALOG.filter((exercise) =>
+      exercise.inputKind === 'strength'
+      && exercise.ref !== reviewedWeightedFitballException
+      && (
+        ['body only', 'bands', 'exercise ball'].includes(exercise.equipmentRef ?? '')
+        || fixedResistanceEquipment.test(exercise.equipment ?? '')
+      ))
+
+    expect(invalid.map(({ ref, name }) => ({ ref, name }))).toEqual([])
+  })
+
+  it('оставляет время и дистанцию у проверенных исключений с грузом', () => {
+    const loadedEquipmentRefs = new Set(['barbell', 'dumbbell', 'kettlebells', 'cable', 'machine', 'medicine ball', 'e-z curl bar'])
+    const loadedEquipmentName = /(?:Гантел|Штанг|Гир|Медбол|Диск|Блин|Блок|Тренажёр|Смит|Гриф|Кувалд)/u
+    const nonStrengthWithLoad = SYSTEM_EXERCISE_CATALOG
+      .filter((exercise) => exercise.inputKind !== 'strength' && (
+        loadedEquipmentRefs.has(exercise.equipmentRef ?? '')
+        || loadedEquipmentName.test(exercise.equipment ?? '')
+      ))
+      .map((exercise) => exercise.ref)
+      .sort()
+
+    expect(nonStrengthWithLoad).toEqual([
+      'farmer-carry',
+      'fedb-recumbent-bike',
+      'vital-air-bike-sprint',
+      'vital-barbell-hold-ex010',
+      'vital-gym-pro-r003-0006',
+      'vital-gym-pro-r175-1311',
+      'vital-gym-pro-r176-1312',
+      'vital-gym-pro-r179-1315',
+      'vital-gym-pro-r275-1605',
+      'vital-gym-pro-r289-1625',
+      'vital-stair-climber',
+      'vital-stepper-machine',
+      'vital-treadmill-running',
+      'vital-treadmill-walking',
+    ])
   })
 
   it('подключает все 50 видео бесплатного пака и разрешённые исторические дубли', () => {

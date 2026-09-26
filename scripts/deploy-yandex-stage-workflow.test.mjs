@@ -38,7 +38,7 @@ test('configures a fresh ephemeral Yandex CLI profile after every OIDC exchange'
   assert.doesNotMatch(workflow, /yc config profile create|yc config set token/)
 })
 
-test('keeps the trainer Schedule V2 rollout bounded to one secret-resolved profile', () => {
+test('keeps the trainer Schedule V2 rollout bounded while preserving two assignments', () => {
   assert.match(trainerSchedulePilotWorkflow, /test "\$GITHUB_REF" = 'refs\/heads\/main'/)
   assert.match(
     trainerSchedulePilotWorkflow,
@@ -50,8 +50,8 @@ test('keeps the trainer Schedule V2 rollout bounded to one secret-resolved profi
   assert.match(trainerSchedulePilotWorkflow, /manage_trainer_schedule_v2_pilot/)
   assert.match(trainerSchedulePilotWorkflow, /Supabase pilot manager returned HTTP \$status/)
   assert.match(trainerSchedulePilotWorkflow, /if test "\$status" = 409/)
-  assert.match(trainerSchedulePilotWorkflow, /\.enabled == true and \.enabledAssignments == 1/)
-  assert.match(trainerSchedulePilotWorkflow, /\.enabled == false and \.enabledAssignments == 0/)
+  assert.match(trainerSchedulePilotWorkflow, /\.enabledAssignments >= 1 and \.enabledAssignments <= 2/)
+  assert.match(trainerSchedulePilotWorkflow, /\.enabledAssignments >= 0 and \.enabledAssignments <= 1/)
   assert.doesNotMatch(trainerSchedulePilotWorkflow, /knyaz187@/i)
   assert.doesNotMatch(trainerSchedulePilotWorkflow, /echo.*TARGET_EMAIL/)
 })

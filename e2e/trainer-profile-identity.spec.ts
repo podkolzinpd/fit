@@ -58,9 +58,9 @@ test('trainer profile keeps the questionnaire compact and settings usable on a s
   await expect(rpe).toBeChecked({ checked: !rpeBefore })
   await rpe.setChecked(rpeBefore)
 
-  const scheme = page.getByRole('radio', { name: 'Схема' })
-  await scheme.click()
-  await expect(scheme).toHaveAttribute('aria-checked', 'true')
+  const list = page.getByRole('radio', { name: 'Список' })
+  await list.click()
+  await expect(list).toHaveAttribute('aria-checked', 'true')
 
   await page.getByRole('button', { name: 'Изменить данные' }).click()
   const name = page.getByLabel('Имя', { exact: true })

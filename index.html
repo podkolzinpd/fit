@@ -34,15 +34,12 @@
         text-align: center;
       }
       .fit-startup-mark {
-        display: grid;
-        width: 64px;
+        display: block;
+        width: auto;
         height: 64px;
-        place-items: center;
-        border-radius: 18px;
-        background: #202022;
-        color: #fbfaf7;
-        font-size: 22px;
-        font-weight: 700;
+        aspect-ratio: 28 / 15;
+        object-fit: contain;
+        background: transparent;
       }
       .fit-startup-shell h1 { margin: 8px 0 0; font-size: 24px; line-height: 1.15; }
       .fit-startup-shell p { max-width: 320px; margin: 0; color: #6e6e73; font-size: 15px; line-height: 1.45; }
@@ -101,7 +98,7 @@
           emergencyShell.className = 'fit-startup-shell'
           emergencyShell.setAttribute('aria-live', 'assertive')
           emergencyShell.innerHTML = [
-            '<span class="fit-startup-mark" aria-hidden="true">FIT</span>',
+            '<img class="fit-startup-mark" src="/fit-logo.svg" alt="" aria-hidden="true">',
             '<h1>Не удалось открыть Fit</h1>',
             '<p>Обновите приложение. Ваши данные и тренировки сохранены.</p>',
             '<button type="button">Обновить приложение</button>',
@@ -206,7 +203,7 @@
   <body>
     <div id="root"></div>
     <main id="fit-startup-shell" class="fit-startup-shell" aria-live="polite">
-      <span class="fit-startup-mark" aria-hidden="true">FIT</span>
+      <img class="fit-startup-mark" src="/fit-logo.svg" alt="" aria-hidden="true" />
       <h1 id="fit-startup-title">Открываем Fit…</h1>
       <p id="fit-startup-message">Загружаем приложение.</p>
       <button id="fit-startup-reload" type="button" hidden>Обновить приложение</button>
