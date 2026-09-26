@@ -9,6 +9,7 @@ import { frontendHandler } from './frontend-rehearsal-server.mjs'
 import { gatewayPlan, gatewayUpload } from './frontend-gateway-plan.mjs'
 import { gunzipSync } from 'node:zlib'
 import { createHash } from 'node:crypto'
+import { uploadCandidate } from './upload-frontend-candidate.mjs'
 
 const commit = 'a'.repeat(40)
 test('large immutable JS upload uses verified gzip bytes without changing its URL', () => {
@@ -70,6 +71,38 @@ async function server(t, active, previous = []) {
   }))
   return `http://127.0.0.1:${instance.address().port}`
 }
+
+test('candidate uploader verifies remote bytes, skips existing objects and fails closed on forbidden reads', async (t) => {
+  const bundle = await release(t)
+  const remote = new Map()
+  let puts = 0
+  const run = async (command, args) => {
+    assert.equal(command, 'yc')
+    assert.deepEqual(args.slice(0, 2), ['storage', 's3api'])
+    assert.equal(args[args.indexOf('--bucket') + 1], 'fit-frontend-probe-b1goqho1')
+    const key = args[args.indexOf('--key') + 1]
+    assert.ok(key.startsWith(`releases/${bundle.release}/`))
+    if (args[2] === 'get-object') {
+      if (!remote.has(key)) throw Object.assign(new Error('missing'), { stderr: 'NoSuchKey' })
+      await writeFile(args.at(-1), remote.get(key))
+    } else {
+      assert.equal(args[2], 'put-object')
+      puts += 1
+      remote.set(key, await readFile(args[args.indexOf('--body') + 1]))
+    }
+    return { stdout: '' }
+  }
+  await uploadCandidate(bundle, run)
+  assert.equal(puts, bundle.files.length)
+  await uploadCandidate(bundle, run)
+  assert.equal(puts, bundle.files.length)
+  await assert.rejects(uploadCandidate(bundle, async () => {
+    throw Object.assign(new Error('forbidden'), { stderr: 'AccessDenied' })
+  }), /Cannot inspect/)
+  remote.set(remote.keys().next().value, Buffer.from('corrupt'))
+  await assert.rejects(uploadCandidate(bundle, run), /Remote checksum mismatch/)
+  assert.equal(puts, bundle.files.length)
+})
 
 test('source Vercel contract is explicitly supported', async () => {
   const { routes } = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url)))
