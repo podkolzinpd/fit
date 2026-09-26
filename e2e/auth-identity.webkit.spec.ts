@@ -6,6 +6,13 @@ test('auth identity remains usable in WebKit light and dark themes', async ({ pa
   await expect(page.locator('html')).toHaveClass(/ui-identity/)
   await expect(page.locator('.brand')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
   await expect(page.locator('.brand')).toHaveCSS('filter', 'none')
+  await expect(page.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
+  await expect(page.getByText('Войдите, чтобы продолжить тренировки')).toBeVisible()
+  await expect(page.locator('.auth-flow-identity')).toHaveClass(/auth-login-screen/)
+  const logoBox = await page.locator('.brand').boundingBox()
+  expect(logoBox?.width).toBeGreaterThanOrEqual(160)
+  const screenBox = await page.locator('.auth-flow-identity').boundingBox()
+  expect(Math.abs((logoBox?.x ?? 0) + (logoBox?.width ?? 0) / 2 - ((screenBox?.x ?? 0) + (screenBox?.width ?? 0) / 2))).toBeLessThan(2)
   await expect(page.getByLabel('Email')).toBeVisible()
   await expect(page.getByLabel('Пароль')).toBeVisible()
   await expect(page.getByRole('button', { name: /^Войти(?: по email)?$/ })).toBeEnabled()
@@ -13,6 +20,7 @@ test('auth identity remains usable in WebKit light and dark themes', async ({ pa
 
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await expect(page.getByRole('heading', { name: 'Регистрация' })).toBeVisible()
+  await expect(page.locator('.auth-flow-identity')).not.toHaveClass(/auth-login-screen/)
   await expect(page.getByLabel('Тип аккаунта')).toBeVisible()
   await expect(page.getByRole('button', { name: /Google/ })).toHaveCount(0)
 
