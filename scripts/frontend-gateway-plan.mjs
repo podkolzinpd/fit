@@ -2,6 +2,18 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { verifyRelease } from './frontend-release.mjs'
+import { gzipSync } from 'node:zlib'
+import { createHash } from 'node:crypto'
+
+export function gatewayUpload(file) {
+  const compressed = file.size > 2_400_000 && file.key.endsWith('.js')
+    && file.cacheControl.includes('immutable')
+  const bytes = compressed ? gzipSync(Buffer.from(file.content, 'base64'), { level: 9 })
+    : Buffer.from(file.content, 'base64')
+  return { content: bytes.toString('base64'), size: bytes.length,
+    sha256: createHash('sha256').update(bytes).digest('hex'),
+    contentEncoding: compressed ? 'gzip' : null }
+}
 
 // Compile a reviewed release into a candidate spec. Never upload or activate here.
 export function gatewayPlan(active, previous, { bucket, reader, frontendOrigin }) {
@@ -19,7 +31,8 @@ export function gatewayPlan(active, previous, { bucket, reader, frontendOrigin }
       const immutable = file.cacheControl.includes('immutable')
       if (bundle !== active && !immutable) continue
       // Reserve headroom below API Gateway's documented 2.5 MB response limit.
-      const direct = file.size > 2_400_000
+      const upload = gatewayUpload(file)
+      const direct = upload.size > 2_400_000
       if (direct && (!immutable || !file.key.endsWith('.wasm') || !frontendOrigin)) {
         throw new Error(`File exceeds gateway response budget: ${file.key}`)
       }
@@ -29,7 +42,7 @@ export function gatewayPlan(active, previous, { bucket, reader, frontendOrigin }
       }
       if (existing) continue
       const object = `releases/${bundle.release}/${file.key}`
-      const entry = { ...file, object, delivery: direct ? 'public-object-redirect' : 'private-gateway',
+      const entry = { ...file, upload, object, delivery: direct ? 'public-object-redirect' : 'private-gateway',
         cacheControl: immutable ? file.cacheControl : 'no-store' }
       files.set(file.key, entry)
       objects.set(object, entry)

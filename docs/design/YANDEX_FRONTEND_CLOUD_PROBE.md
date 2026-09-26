@@ -136,3 +136,22 @@ GET/HEAD. При применении нужны READ ACL только этих 
 Это проверка плана, не сети: browser fetch/instantiateStreaming, CORS,
 Content-Type application/wasm, размер/хеш и приватность остальных объектов
 должны быть проверены на облаке. Публикация всё ещё не выполнена.
+
+## Candidate build: фактический статус
+
+Создано отдельное GitHub Environment `fit-frontend-candidate`: только public
+Supabase URL/publishable key и VAPID public key, без локальных env-файлов.
+Ручной prepare workflow имеет отдельный candidate job: pinned SHA из истории
+main, публичная Yandex-only конфигурация, artifact-only без cloud credentials.
+Тестовому бакету добавлен разрешённый владельцем PutObject на `releases/*`.
+
+Сборки 36276047048/36276166332 для `6075cd7714d317ba853ac535437902c451b1a114`
+успешно собрали приложение, но упаковка остановилась: актуальный
+`assets/index-jU72yVX3.js` тоже превышает budget Gateway. Теперь большие
+immutable JS получают отдельное upload-представление gzip с собственными
+SHA-256/size/Content-Encoding; URL и исходные checksum не меняются. Uploader
+должен использовать `upload.content`, а не исходное `content`, и проверять
+декодированные bytes в browser smoke. Если gzip не укладывается в budget,
+генератор по-прежнему отклоняет JS, не перенаправляет его на другой origin.
+20 hosting tests проверяют round-trip gzip и прежние ограничения. Поддержка
+gzip шлюзом пока требует cloud smoke; сайт не активирован.

@@ -6,9 +6,24 @@ import { join } from 'node:path'
 import { createServer } from 'node:http'
 import { packageRelease, planRelease, supportedRouting, verifyRelease } from './frontend-release.mjs'
 import { frontendHandler } from './frontend-rehearsal-server.mjs'
-import { gatewayPlan } from './frontend-gateway-plan.mjs'
+import { gatewayPlan, gatewayUpload } from './frontend-gateway-plan.mjs'
+import { gunzipSync } from 'node:zlib'
+import { createHash } from 'node:crypto'
 
 const commit = 'a'.repeat(40)
+test('large immutable JS upload uses verified gzip bytes without changing its URL', () => {
+  const bytes = Buffer.from('export const message = "test";\n'.repeat(100_000))
+  const file = { key: 'assets/app-12345678.js', size: bytes.length,
+    content: bytes.toString('base64'), cacheControl: 'public, max-age=31536000, immutable' }
+  const upload = gatewayUpload(file)
+  const encoded = Buffer.from(upload.content, 'base64')
+  assert.equal(upload.contentEncoding, 'gzip')
+  assert.ok(upload.size < 2_400_000)
+  assert.equal(upload.size, encoded.length)
+  assert.equal(upload.sha256, createHash('sha256').update(encoded).digest('hex'))
+  assert.deepEqual(gunzipSync(encoded), bytes)
+  assert.equal(gatewayUpload({ ...file, key: 'sw.js', cacheControl: 'no-cache' }).contentEncoding, null)
+})
 async function release(t, version = 'one', asset = 'app-12345678.js') {
   const dir = await mkdtemp(join(tmpdir(), 'fit-release-test-'))
   t.after(() => rm(dir, { recursive: true, force: true }))
