@@ -505,6 +505,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   } = useTrainerScheduleModel(forceDayView)
   const workspace = useTrainerWorkspace(isDayView)
   const location = useLocation()
+  const navigate = useNavigate()
   const returnTo = `${location.pathname}${location.search}`
   const dateInputRef = useRef<HTMLInputElement>(null)
   const [inboxOpen, setInboxOpen] = useState(false)
@@ -532,6 +533,8 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     { label: 'Сегодня', disabled: todayDisabled, onClick: () => openDay(today) },
     { label: 'Выбрать дату', onClick: openDatePicker },
     { label: isTwoWeekView ? 'К 2 неделям' : 'К неделе', onClick: () => showOverview(weekStart) },
+    { label: 'Профиль', onClick: () => navigate('/profile') },
+    { label: 'Настройки', onClick: () => navigate('/profile/settings') },
   ]
 
   return <Page
@@ -543,7 +546,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       {isDayView ? <div><h1>{scheduleV2DayTitle(selected)}</h1><p>{scheduleV2Weekday(selected)}</p></div> : <h1 aria-hidden="true">Расписание</h1>}
       {isDayView
         ? <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>
-        : <label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label>}
+        : <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>}
     </header>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {!isDayView ? <>

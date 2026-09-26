@@ -160,6 +160,43 @@ describe('AppLayout: единственная UI Identity', () => {
 })
 
 describe('AppLayout navigation', () => {
+  it('сохраняет порядок и активную вкладку пилотного тренера на обычных маршрутах', () => {
+    vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
+    vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'pilot-trainer')
+    authState.role = 'trainer'
+    authState.userId = 'pilot-trainer'
+    authState.trainerScheduleV2 = true
+    for (const [route, active] of [
+      ['/today?date=2026-09-24', 'Сегодня'],
+      ['/schedule?week=2026-09-21', 'Расписание'],
+      ['/clients', 'Клиенты'],
+      ['/assistant', 'Ассистент'],
+      ['/profile', null],
+    ] as const) {
+      const layout = renderLayout(route)
+      const navigation = screen.getByRole('navigation', { name: 'Основная навигация' })
+      const links = within(navigation).getAllByRole('link')
+      expect(links.map((link) => link.textContent)).toEqual(['Сегодня', 'Расписание', 'Клиенты', 'Ассистент'])
+      expect(links.filter((link) => link.getAttribute('aria-current') === 'page').map((link) => link.textContent)).toEqual(active ? [active] : [])
+      layout.unmount()
+    }
+  })
+
+  it('оставляет навигацию на вложенных экранах и скрывает её в полноэкранных шагах пилота', () => {
+    authState.role = 'trainer'
+    authState.trainerScheduleV2 = true
+    for (const route of ['/clients/client-1', '/workouts/workout-1', '/profile']) {
+      const layout = renderLayout(route)
+      expect(screen.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
+      layout.unmount()
+    }
+    for (const route of ['/workouts/new', '/today?view=review', '/today?view=save', '/workouts/workout-1/live', '/chat/thread-1']) {
+      const layout = renderLayout(route)
+      expect(screen.queryByRole('navigation', { name: 'Основная навигация' })).not.toBeInTheDocument()
+      layout.unmount()
+    }
+  })
+
   it('не сбрасывает позицию Progress при изменении параметров карты', async () => {
     renderProgressQueryControl()
     const content = document.querySelector('.content') as HTMLDivElement

@@ -6521,7 +6521,10 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 
 /* Personal Schedule V2 pilot. Every in-app rule is route- and experiment-scoped. */
 .schedule-v2-document,.schedule-v2-document body,.schedule-v2-document #root { background:#080908; color-scheme:dark; }
-.phone-frame.trainer-schedule-v2-shell { --schedule-v2-accent:#baff36; --schedule-v2-bg:#080908; --schedule-v2-card:#19191b; --schedule-v2-soft:#222226; --schedule-v2-line:#323236; --schedule-v2-muted:#858589; --bg:#080908; --fg:#f8f8f6; --fg-strong:#fff; --muted:#858589; --surface:#111113; --surface-raised:#19191b; --surface-sunken:#242428; --secondary-bg:#242428; --secondary-fg:#f8f8f6; --border:#323236; --hairline:#29292d; --bar-bg:#171719; --accent-label:#f8f8f6; --frame-bg:#080908; --frame-border:#080908; color-scheme:dark; background:#080908; color:#f8f8f6; }
+.phone-frame.trainer-schedule-v2-shell { --schedule-v2-accent:#baff36; --schedule-v2-bg:#080908; --schedule-v2-card:#19191b; --schedule-v2-soft:#222226; --schedule-v2-line:#323236; --schedule-v2-muted:#858589; --bg:#080908; --fg:#f8f8f6; --fg-strong:#fff; --muted:#858589; --surface:#111113; --surface-raised:#19191b; --surface-elevated:#222226; --surface-sunken:#242428; --secondary-bg:#242428; --secondary-fg:#f8f8f6; --secondary-hover:#303034; --border:#323236; --hairline:#29292d; --bar-bg:#171719; --accent-label:#f8f8f6; --frame-bg:#080908; --frame-border:#080908; color-scheme:dark; background:#080908; color:#f8f8f6; }
+.trainer-schedule-v2-shell .overflow-list { border-color:#3b3b40; background:#222226; }
+.trainer-schedule-v2-shell .overflow-item { color:#f8f8f6; }
+.trainer-schedule-v2-shell .overflow-item:hover,.trainer-schedule-v2-shell .overflow-item:focus-visible { background:#303034; }
 .trainer-schedule-v2-shell .content { background:#080908; }
 .trainer-schedule-v2-shell .schedule-v2 { width:100%; max-width:760px; min-height:100%; margin:0 auto; padding:max(22px,env(safe-area-inset-top)) 18px 124px; color:#f8f8f6; background:#080908; }
 .trainer-schedule-v2-shell .schedule-v2.schedule-day-view { height:100%; min-height:0; display:flex; flex-direction:column; padding-bottom:0; }
