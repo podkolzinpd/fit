@@ -1,3 +1,4 @@
+import { FitLogo } from '../shared/FitLogo'
 import { StatePanel } from '../shared/ui'
 
 export function MaintenancePage({ reload = () => window.location.reload() }: {
@@ -5,7 +6,7 @@ export function MaintenancePage({ reload = () => window.location.reload() }: {
 }) {
   return <main className="maintenance-screen auth-screen auth-entry ui-identity auth-flow-identity">
     <header className="auth-entry-head maintenance-head">
-      <div className="brand" aria-hidden="true">FIT</div>
+      <FitLogo />
       <p className="eyebrow">ТЕХНИЧЕСКИЕ РАБОТЫ</p>
       <h1>Скоро вернёмся</h1>
       <p className="muted">Обновляем систему хранения данных, чтобы Fit продолжал работать надёжно и безопасно.</p>
