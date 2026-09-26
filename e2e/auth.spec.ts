@@ -30,7 +30,7 @@ async function saveCompactClientPlan(page: import('@playwright/test').Page) {
 
 test('auth shell matches mobile baseline', async ({ page }) => {
   await page.goto('/auth')
-  await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
   await expect(page.locator('.auth-flow-identity')).toBeVisible()
   await expect(page.locator('html')).toHaveClass(/ui-identity/)
   await expect(page.getByRole('button', { name: /Google/ })).toHaveCount(0)
@@ -68,7 +68,7 @@ test('trainer registers without surname or email confirmation', async ({ page },
   const introduction = page.getByRole('button', { name: 'Понятно', exact: true })
   if (await introduction.isVisible()) await introduction.click()
   await logoutFromProfile(page)
-  await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await page.getByLabel('Имя').fill('Тест')
   await page.getByLabel('Email').fill(email)
@@ -283,7 +283,7 @@ test('invitation links reject the wrong role and revoked code without consuming 
 
   await page.goto('/me/profile')
   await logoutFromProfile(page)
-  await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
   await page.getByLabel('Email').fill(wrongRoleEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти' }).click()
@@ -328,7 +328,7 @@ test('client safely switches trainers after an explicit disconnect', async ({ pa
   async function logoutTrainer() {
     await page.goto('/profile')
     await logoutFromProfile(page)
-    await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
   }
 
   await registerTrainer('Первый тренер', `reconnect-first-${suffix}@fit.local`)
