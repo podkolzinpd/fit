@@ -3,6 +3,7 @@ import { useEffect, useState, type PropsWithChildren } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
+import { FitLogo } from '../../shared/FitLogo'
 import legalDocuments from '../../shared/legal-documents.json'
 import { LEGAL_PATHS } from '../../shared/legal'
 import { StatePanel, useConfirm } from '../../shared/ui'
@@ -30,7 +31,7 @@ function LegalShell({ title, children }: PropsWithChildren<{ title: string }>) {
   return <main className="legal-screen ui-identity">
     <header className="legal-header">
       <button type="button" className="page-back" aria-label="Назад" onClick={() => navigate(-1)}>←</button>
-      <div><span className="brand" aria-hidden="true">FIT</span><h1>{title}</h1></div>
+      <div><FitLogo /><h1>{title}</h1></div>
     </header>
     <article className="legal-document">{children}</article>
     <nav className="legal-footer-links" aria-label="Юридические документы">
@@ -121,7 +122,7 @@ export function LegalAcceptanceGate({ children }: PropsWithChildren) {
     action={<div className="stack"><button type="button" onClick={() => void status.refetch()}>Повторить</button><button type="button" className="secondary" onClick={() => void signOut()}>Выйти</button></div>}
   /></main>
   return <main className="legal-gate ui-identity">
-    <div className="brand" aria-hidden="true">FIT</div>
+    <FitLogo />
     <section className="legal-gate-card">
       <p className="eyebrow">ДОКУМЕНТЫ FIT</p>
       <h1>Условия обновились</h1>

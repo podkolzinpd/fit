@@ -9,6 +9,7 @@ import {
 import { useOptionalYandexAppSession } from '../../app/yandex-app-session-context'
 import { authRepository } from '../../data/repositories/auth.repository'
 import { yandexPilotRepository } from '../../data/repositories/yandex-pilot.repository'
+import { FitLogo } from '../../shared/FitLogo'
 import { LEGAL_PATHS } from '../../shared/legal'
 import { StatePanel } from '../../shared/ui'
 import { LogoutButton } from './LogoutButton'
@@ -96,7 +97,7 @@ export function YandexAccountLinkRequiredGate({
   </main>
 
   return <main className="legal-gate yandex-link-required-gate ui-identity">
-    <div className="brand" aria-hidden="true">FIT</div>
+    <FitLogo />
     <section className="legal-gate-card yandex-link-required-card">
       <p className="eyebrow">YANDEX ID</p>
       <h1>Привяжите Yandex ID</h1>
