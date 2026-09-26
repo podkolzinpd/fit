@@ -163,7 +163,7 @@ export const EXERCISE_CATALOG_DECISIONS: Readonly<Record<string, CatalogDecision
   "bulgarian-split-squat": {"name":"Болгарский сплит-присед со штангой","tier":"uncommon"},
   "fedb-bench-sprint": {"name":"Быстрые зашагивания на скамью","tier":"uncommon"},
   "fedb-fast-skipping": {"name":"Быстрые прыжки на месте","tier":"uncommon"},
-  "fedb-barbell-walking-lunge": {"name":"Выпады в ходьбе","tier":"uncommon"},
+  "fedb-barbell-walking-lunge": {"name":"Выпады в ходьбе со штангой","tier":"uncommon"},
   "fedb-dumbbell-lunges": {"name":"Выпады с гантелями","tier":"uncommon"},
   "fedb-single-leg-push-off": {"name":"Выпрыгивание с опорой одной ногой","tier":"uncommon"},
   "fedb-inchworm": {"name":"Выход руками в планку","tier":"uncommon"},
