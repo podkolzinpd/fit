@@ -13,6 +13,16 @@ const contentTypes = {
   '.txt': 'text/plain; charset=utf-8', '.wasm': 'application/wasm', '.mp3': 'audio/mpeg',
 }
 
+export function frontendFileMetadata(key) {
+  const contentType = contentTypes[extname(key)]
+  if (!contentType) throw new Error('Unsupported frontend artifact file')
+  return {
+    contentType,
+    cacheControl: /^assets\/.+-[A-Za-z0-9_-]{8,}\.[a-z0-9]+$/.test(key)
+      ? 'public, max-age=31536000, immutable' : 'no-cache',
+  }
+}
+
 export async function prepareFrontend(directory, releaseId, routes) {
   if (!/^[a-f0-9]{40}$/.test(releaseId)) throw new Error('Expected a full commit SHA')
   const root = resolve(directory)
@@ -25,14 +35,12 @@ export async function prepareFrontend(directory, releaseId, routes) {
       if (info.isSymbolicLink()) throw new Error('Symlinks are forbidden in frontend artifacts')
       if (name.startsWith('.')) throw new Error('Hidden files are forbidden in frontend artifacts')
       if (info.isDirectory()) { await visit(fullPath); continue }
-      const contentType = contentTypes[extname(name)]
-      if (!info.isFile() || !contentType) throw new Error('Unsupported frontend artifact file')
+      if (!info.isFile()) throw new Error('Unsupported frontend artifact file')
       const key = relative(root, fullPath).split('\\').join('/')
       const bytes = await readFile(fullPath)
       files.push({
-        key, size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'), contentType,
-        cacheControl: /^assets\/.+-[A-Za-z0-9_-]{8,}\.[a-z0-9]+$/.test(key)
-          ? 'public, max-age=31536000, immutable' : 'no-cache',
+        key, size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'),
+        ...frontendFileMetadata(key),
       })
     }
   }
