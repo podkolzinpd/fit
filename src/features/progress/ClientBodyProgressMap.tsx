@@ -1,7 +1,7 @@
-import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type TouchEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import type { Gender, Workout } from '../../shared/domain'
 import { useAuth } from '../../app/auth-context'
-import { CloseIcon } from '../../shared/icons'
+import { ChevronRightIcon, CloseIcon } from '../../shared/icons'
 import {
   loadBodyMap,
   progressBodyMap,
@@ -25,7 +25,7 @@ import {
 import { resolveBodyFigureVariant, useBodyMapDisplayMode } from './body-map-appearance'
 import { bodyMapInsight } from './body-map-insight'
 
-const BODY_FIGURES: Record<BodyFigureVariant, { image: string; alt: Record<BodyFigureSide, string> }> = {
+const BODY_FIGURES: Record<Exclude<BodyFigureVariant, 'neutral'>, { image: string; alt: Record<BodyFigureSide, string> }> = {
   male: {
     image: '/illustrations/body-progress-athlete.png',
     alt: { front: 'Атлетичный мужчина, вид спереди', back: 'Атлетичный мужчина, вид сзади' },
@@ -34,24 +34,10 @@ const BODY_FIGURES: Record<BodyFigureVariant, { image: string; alt: Record<BodyF
     image: '/illustrations/body-progress-athlete-female.png',
     alt: { front: 'Атлетичная женщина, вид спереди', back: 'Атлетичная женщина, вид сзади' },
   },
-  neutral: {
-    image: '/illustrations/body-progress-anatomical.png',
-    alt: { front: 'Анатомическая схема мышц, вид спереди', back: 'Анатомическая схема мышц, вид сзади' },
-  },
 }
 
 function shapeTransform(shape: BodyZoneShape): string | undefined {
   return shape.rotate ? `rotate(${shape.rotate} ${shape.cx} ${shape.cy})` : undefined
-}
-
-function regionStyle(region: BodyMapRegion, index: number, mode: BodyMapMode): CSSProperties {
-  return {
-    '--body-zone-intensity': region.intensity,
-    '--body-zone-base-opacity': mode === 'load'
-      ? 0.07 + region.intensity * 0.08
-      : 0.045 + region.intensity * 0.045,
-    '--body-zone-delay': `${index * 55}ms`,
-  } as CSSProperties
 }
 
 function regionAriaLabel(region: BodyMapRegion): string {
@@ -62,6 +48,14 @@ function exercisesCountLabel(count: number): string {
   if (count % 10 === 1 && count % 100 !== 11) return 'упражнение'
   if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'упражнения'
   return 'упражнений'
+}
+
+function BodyPrimaryDetail({ detail }: { detail: string }) {
+  const separator = detail.indexOf(' · ')
+  return <p className="body-progress-primary-detail">{separator < 0 ? detail : <>
+    <span>{detail.slice(0, separator)}</span>
+    <span className="body-progress-metric-detail">{detail.slice(separator + 3)}</span>
+  </>}</p>
 }
 
 function RegionShapes({ shapes, className }: { shapes: readonly BodyZoneShape[]; className: string }) {
@@ -93,14 +87,12 @@ function BodyDetailsSheet({ region, onClose }: { region: BodyMapRegion; onClose:
   </div>
 }
 
-function BodyRegion({ region, variant, side, selected, mode, index, filterId, onSelect, decorative = false }: {
+function BodyRegion({ region, variant, side, selected, mode, onSelect, decorative = false }: {
   region: BodyMapRegion
   variant: BodyFigureVariant
   side: BodyFigureSide
   selected: boolean
   mode: BodyMapMode
-  index: number
-  filterId: string
   decorative?: boolean
   onSelect: () => void
 }) {
@@ -118,35 +110,36 @@ function BodyRegion({ region, variant, side, selected, mode, index, filterId, on
     aria-pressed={selected}
     className={`body-progress-region body-progress-region-${mode}${selected ? ' selected' : ''}`}
     data-body-zone={region.group}
-    style={regionStyle(region, index, mode)}
+    style={{ '--body-zone-opacity': mode === 'load' ? .05 + region.intensity * .1 : .04 + region.intensity * .06 } as CSSProperties}
     onClick={decorative ? undefined : onSelect}
     onKeyDown={decorative ? undefined : selectFromKeyboard}
   >
-    <g className="body-progress-region-fill" filter={variant === 'neutral' ? undefined : `url(#${filterId})`}><RegionShapes shapes={shapes} className="body-progress-region-shape" /></g>
+    <g className="body-progress-region-fill"><RegionShapes shapes={shapes} className="body-progress-region-shape" /></g>
     <RegionShapes shapes={shapes} className="body-progress-region-hit" />
   </g>
 }
 
-export function MapPanel({ data, selected, insightCandidates, variant, side, discovering, onSideChange, onSelect, onShowDetails, hideDetail = false, decorative = false }: {
+export function MapPanel({ data, selected, insightCandidates, variant, side, onSideChange, onSelect, onShowDetails, hideDetail = false, decorative = false, compact = false, detailFooter }: {
   data: BodyMapData
   selected: BodyMapRegion | undefined
   insightCandidates: readonly string[]
   variant: BodyFigureVariant
   side: BodyFigureSide
-  discovering: boolean
   onSideChange: (side: BodyFigureSide) => void
   onSelect: (region: BodyMapRegion) => void
   onShowDetails: () => void
   hideDetail?: boolean
   decorative?: boolean
+  compact?: boolean
+  detailFooter?: ReactNode
 }) {
-  const figure = BODY_FIGURES[variant]
+  const figure = variant === 'neutral' ? null : BODY_FIGURES[variant]
+  const [failedImage, setFailedImage] = useState<string | null>(null)
+  const listOnly = !figure || failedImage === figure.image
   const canvas = bodyFigureCanvas(variant)
   const clipBox = bodyFigureClipBox(variant, side)
   const clipId = `body-progress-clip-${useId().replace(/:/g, '')}`
   const maskId = `body-progress-mask-${useId().replace(/:/g, '')}`
-  const filterId = `body-progress-soft-${useId().replace(/:/g, '')}`
-  const darkFigureFilterId = `body-progress-dark-figure-${useId().replace(/:/g, '')}`
   const swipeStartX = useRef<number | null>(null)
   const insight = selected ? bodyMapInsight(data, selected, insightCandidates) : null
   const regionsBySide = useMemo(() => ({
@@ -165,15 +158,29 @@ export function MapPanel({ data, selected, insightCandidates, variant, side, dis
     if (regionsBySide[nextSide].length > 0) onSideChange(nextSide)
   }
   const canSwitchSide = regionsBySide.front.length > 0 && regionsBySide.back.length > 0
+  // Broad fallback zones must never cover the specific muscles' hit targets.
+  const isBroad = (zone: BodyMapZone) => zone === 'arms' || zone === 'legs' || zone === 'back'
+  const paintedRegions = [...regionsBySide[side]].sort((left, right) => Number(isBroad(right.group)) - Number(isBroad(left.group)))
+  const zoneList = <div className="body-progress-zone-list" role="group" aria-label="Зоны тела">
+    {data.regions.map((region) => <button key={region.group} type="button" aria-label={regionAriaLabel(region)} aria-pressed={selected?.group === region.group} onClick={() => onSelect(region)}>
+      <span>{region.label}</span><strong>{region.valueLabel}</strong>
+    </button>)}
+  </div>
 
-  return <>
-    <div className="body-progress-figure-shell">
+  if (data.regions.length === 0) return <p className="body-progress-empty">{data.emptyMessage}</p>
+
+  return <div className={`body-progress-panel${compact ? ' body-progress-panel-compact' : ''}${listOnly ? ' is-list' : ''}`}>
+    <div className="body-progress-main">
+    {listOnly ? <div className="body-progress-list-fallback">
+      {figure && <p className="muted">Не удалось загрузить фигуру. Выберите зону из списка.</p>}
+      {zoneList}
+    </div> : <div className="body-progress-figure-shell">
       {canSwitchSide && <div className="body-progress-sides" aria-label="Сторона тела">
         <button type="button" aria-pressed={side === 'front'} disabled={regionsBySide.front.length === 0} onClick={() => onSideChange('front')}>Спереди</button>
         <button type="button" aria-pressed={side === 'back'} disabled={regionsBySide.back.length === 0} onClick={() => onSideChange('back')}>Сзади</button>
       </div>}
       <div
-        className={`body-progress-visual mode-${data.mode} figure-${variant}${discovering ? ' discovering' : ''}`}
+        className={`body-progress-visual mode-${data.mode} figure-${variant}`}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
@@ -186,44 +193,29 @@ export function MapPanel({ data, selected, insightCandidates, variant, side, dis
             <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width={canvas.width} height={canvas.height} style={{ maskType: 'alpha' }}>
               <image href={figure.image} width={canvas.width} height={canvas.height} preserveAspectRatio="none" clipPath={`url(#${clipId})`} />
             </mask>
-            <filter id={filterId} x="-18%" y="-18%" width="136%" height="136%" colorInterpolationFilters="sRGB">
-              <feGaussianBlur stdDeviation="2.5" />
-            </filter>
-            {variant === 'neutral' && <filter id={darkFigureFilterId} colorInterpolationFilters="sRGB">
-              <feComponentTransfer>
-                <feFuncR type="table" tableValues="0.9 0.08" />
-                <feFuncG type="table" tableValues="0.9 0.08" />
-                <feFuncB type="table" tableValues="0.9 0.08" />
-              </feComponentTransfer>
-            </filter>}
           </defs>
-          {variant === 'neutral' ? <>
-            <image className="body-progress-figure-image body-progress-figure-image-light" href={figure.image} width={canvas.width} height={canvas.height} preserveAspectRatio="none" clipPath={`url(#${clipId})`} aria-hidden="true" />
-            <image className="body-progress-figure-image body-progress-figure-image-dark" href={figure.image} width={canvas.width} height={canvas.height} preserveAspectRatio="none" clipPath={`url(#${clipId})`} filter={`url(#${darkFigureFilterId})`} aria-hidden="true" />
-          </> : <image className="body-progress-figure-image" href={figure.image} width={canvas.width} height={canvas.height} preserveAspectRatio="none" clipPath={`url(#${clipId})`} aria-hidden="true" />}
-          <g mask={variant === 'neutral' ? undefined : `url(#${maskId})`}>
-            {regionsBySide[side].map((region, index) => <BodyRegion
+          <image className="body-progress-figure-image" href={figure.image} width={canvas.width} height={canvas.height} preserveAspectRatio="none" clipPath={`url(#${clipId})`} aria-hidden="true" onError={() => setFailedImage(figure.image)} />
+          <g mask={`url(#${maskId})`} clipPath={`url(#${clipId})`}>
+            {paintedRegions.map((region) => <BodyRegion
               key={region.group}
               region={region}
               variant={variant}
               side={side}
               selected={selected?.group === region.group}
               mode={data.mode}
-              index={index}
-              filterId={filterId}
               decorative={decorative}
               onSelect={() => onSelect(region)}
             />)}
           </g>
         </svg>
       </div>
-    </div>
-    {data.regions.length === 0 && <p className="body-progress-empty">{data.emptyMessage}</p>}
+    </div>}
     {!hideDetail && selected && data.mode === 'load' && <div className="body-progress-detail body-progress-load-value" role="status">
       <div className="body-progress-detail-heading">
         <strong>{selected.label}</strong>
         <span>{selected.valueLabel}</span>
       </div>
+      {detailFooter}
     </div>}
     {!hideDetail && selected && data.mode === 'progress' && insight && <div
       className="body-progress-detail"
@@ -235,12 +227,16 @@ export function MapPanel({ data, selected, insightCandidates, variant, side, dis
         <strong>{selected.label}</strong>
         <span>{selected.valueLabel}</span>
       </div>
-      <p className="body-progress-primary-detail">{insight.text}</p>
-      <button type="button" className="link body-progress-more" onClick={onShowDetails}>
-        Показать {selected.details.length + (data.mode === 'progress' ? 1 : 0)} {exercisesCountLabel(selected.details.length + (data.mode === 'progress' ? 1 : 0))}
+      <BodyPrimaryDetail detail={selected.primaryDetail} />
+      {insight.source === 'llm' && <p>{insight.text}</p>}
+      <button type="button" className="link body-progress-more body-progress-action-row" onClick={onShowDetails}>
+        <span>Показать {selected.details.length + (data.mode === 'progress' ? 1 : 0)} {exercisesCountLabel(selected.details.length + (data.mode === 'progress' ? 1 : 0))}</span>
+        <ChevronRightIcon />
       </button>
     </div>}
-  </>
+    </div>
+    {!listOnly && !decorative && <details className="body-progress-zone-picker"><summary>Выбрать зону</summary>{zoneList}</details>}
+  </div>
 }
 
 export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCandidates, clientGender = null, loadLoading, loadError, onLoadRetry, initialMode }: {
@@ -270,13 +266,8 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
     return firstGroup ? bodyZoneSides(variant, firstGroup)[0] ?? 'front' : 'front'
   })
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const [discovering, setDiscovering] = useState(true)
-
   useEffect(() => {
     setMode(defaultMode)
-    setDiscovering(true)
-    const timer = window.setTimeout(() => setDiscovering(false), 900)
-    return () => window.clearTimeout(timer)
   }, [defaultMode, summary.id])
   useEffect(() => {
     setSelectedGroup((current) => data.regions.some((region) => region.group === current)
@@ -318,7 +309,6 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
           insightCandidates={insightCandidates}
           variant={variant}
           side={side}
-          discovering={discovering}
           onSideChange={changeSide}
           onSelect={(region) => setSelectedGroup(region.group)}
           onShowDetails={() => setDetailsOpen(true)}

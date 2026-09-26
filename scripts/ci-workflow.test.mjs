@@ -63,7 +63,9 @@ test('runs Chromium behavior scenarios in two isolated shards', () => {
 test('keeps the required app check stable while quality and coverage run in parallel', () => {
   assert.match(workflow, /app-quality:[\s\S]*- run: npm run lint[\s\S]*- run: npm run build/)
   assert.match(workflow, /app-tests:[\s\S]*- run: npm run test:coverage/)
-  assert.match(workflow, /app:\n    needs: \[app-quality, app-tests\]/)
+  assert.match(workflow, /app:\n    needs: \[app-quality, app-tests, frontend-infrastructure\]/)
+  assert.match(workflow, /INFRA_RESULT: \$\{\{ needs\.frontend-infrastructure\.result \}\}/)
+  assert.match(workflow, /"\$INFRA_RESULT" != "success"/)
   assert.match(workflow, /QUALITY_RESULT: \$\{\{ needs\.app-quality\.result \}\}/)
   assert.match(workflow, /TESTS_RESULT: \$\{\{ needs\.app-tests\.result \}\}/)
   assert.match(workflow, /App checks failed: quality=\$QUALITY_RESULT tests=\$TESTS_RESULT/)
