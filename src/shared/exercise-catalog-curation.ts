@@ -36,6 +36,59 @@ export const COMPATIBLE_EXERCISE_REPLACEMENTS: Readonly<Record<string, string>> 
       ? [[ref, decision.target]] : []),
 )
 
+/**
+ * Additional picker-only duplicates discovered after the final Gym Pro import.
+ * They remain in the full registry so old workouts keep their refs and metrics.
+ */
+export const PICKER_ONLY_EXERCISE_REPLACEMENTS: Readonly<Record<string, string>> = {
+  'fedb-concentration-curls': 'vital-concentration-curl-seated-dumbbell-ex014',
+  'fedb-inchworm': 'vital-inch-worm-ex309',
+  'fedb-plyo-push-up': 'vital-plyometric-pushup-ex495',
+  'fedb-single-arm-push-up': 'vital-one-hand-pushup-ex230',
+  'vital-gym-pro-r020-1120': 'close-grip-push-up',
+  'vital-gym-pro-r027-1142': 'fedb-hanging-leg-raise',
+  'vital-gym-pro-r031-1170': 'vital-one-hand-pushup-ex230',
+  'vital-gym-pro-r042-1208': 'fedb-push-up-wide',
+  'vital-gym-pro-r062-0147': 'biceps-curl',
+  'vital-gym-pro-r086-0212': 'running-butt-kicks',
+  'vital-gym-pro-r087-0213': 'running-high-knees',
+  'vital-gym-pro-r088-0218': 'vital-place-jog-cardio-ex215',
+  'vital-gym-pro-r091-0223': 'vital-diamond-pushup-ex141',
+  'vital-gym-pro-r120-0272': 'leg-raise',
+  'vital-gym-pro-r140-1255': 'vital-resistance-band-lat-pulldown-ex198',
+  'vital-gym-pro-r150-1273': 'fedb-one-legged-cable-kickback',
+  'vital-gym-pro-r151-1276': 'vital-chin-up-leg-folded-ex031',
+  'vital-gym-pro-r156-1284': 'vital-dumbbell-skull-crusher-ex147',
+  'vital-gym-pro-r161-1292': 'fedb-monster-walk',
+  'vital-gym-pro-r199-1518': 'vital-wall-ball-squat-ex799',
+  'vital-gym-pro-r220-1544': 'vital-dragon-flags-core-mastery-ex363',
+  'vital-gym-pro-r276-1606': 'vital-dumbbell-drag-ex107',
+  'vital-gym-pro-r294-1635': 'vital-standing-dumbbell-press',
+  'vital-gym-pro-r321-1363': 'fedb-dumbbell-rear-lunge',
+  'vital-gym-pro-r322-1365': 'elliptical',
+  'vital-gym-pro-r353-1425': 'vital-toe-touch-crunch-ex125',
+  'vital-gym-pro-r425-1739': 'fedb-kneeling-single-arm-high-pulley-row',
+}
+
+const RAW_EXERCISE_PICKER_REPLACEMENTS: Readonly<Record<string, string>> = {
+  ...COMPATIBLE_EXERCISE_REPLACEMENTS,
+  ...PICKER_ONLY_EXERCISE_REPLACEMENTS,
+}
+
+const finalPickerReplacement = (ref: string): string => {
+  const visited = new Set<string>()
+  let target = ref
+  while (RAW_EXERCISE_PICKER_REPLACEMENTS[target] && !visited.has(target)) {
+    visited.add(target)
+    target = RAW_EXERCISE_PICKER_REPLACEMENTS[target]!
+  }
+  return target
+}
+
+export const EXERCISE_PICKER_REPLACEMENTS: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.entries(RAW_EXERCISE_PICKER_REPLACEMENTS).map(([ref, target]) => [ref, finalPickerReplacement(target)]),
+)
+
 export type CatalogSection = 'core' | 'uncommon' | 'rare' | 'formats'
 export const CATALOG_SECTIONS: ReadonlyArray<{ value: CatalogSection; label: string }> = [
   { value: 'core', label: 'Основные' },
@@ -86,6 +139,6 @@ export function exerciseCatalogVariants(exercise: ExerciseSnapshot, catalog: rea
   const root = exerciseCatalogRoot(exercise)
   return catalog.filter((candidate) => candidate.source === 'system'
     && exerciseCatalogRoot(candidate) === root
-    && !COMPATIBLE_EXERCISE_REPLACEMENTS[candidate.ref])
+    && !EXERCISE_PICKER_REPLACEMENTS[candidate.ref])
     .sort((a, b) => Number(b.ref === root) - Number(a.ref === root) || a.name.localeCompare(b.name, 'ru'))
 }

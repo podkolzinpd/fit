@@ -1,3 +1,5 @@
+import type { ExerciseSnapshot } from './domain'
+
 /**
  * Reviewed visual substitutions for exercises that do not have their own Vital
  * animation. These links affect presentation only: exercise identity, history,
@@ -261,6 +263,49 @@ export const REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF: Readonly<Record<string, strin
   'fedb-standing-hamstring-and-calf-stretch': 'dynamic-hamstring-stretch',
   'fedb-side-to-side-box-shuffle': 'vital-stepup-ex332',
   'fedb-plate-pinch': 'vital-barbell-hold-ex010',
+}
+
+/**
+ * These pairs look close in a text catalogue but show a different movement.
+ * Keep the source exercise available for history and manual selection, without
+ * attaching a misleading animation to it.
+ */
+export const REJECTED_SIMILAR_MEDIA_REFS: ReadonlySet<string> = new Set([
+  'fedb-one-arm-dumbbell-preacher-curl',
+  'fedb-reverse-hyperextension',
+  'fedb-straight-bar-bench-mid-rows',
+])
+
+const normalizedEquipment = (exercise: ExerciseSnapshot): string => {
+  const equipmentRef = exercise.equipmentRef?.toLocaleLowerCase('en-US').trim()
+  const value = (equipmentRef && equipmentRef !== 'other' ? equipmentRef : exercise.equipment ?? equipmentRef ?? '')
+    .toLocaleLowerCase('ru-RU')
+    .replaceAll('ё', 'е')
+  if (/гантел|dumbbell/u.test(value)) return 'dumbbell'
+  if (/штанг|barbell/u.test(value)) return 'barbell'
+  if (/гир|kettlebell/u.test(value)) return 'kettlebell'
+  if (/резин|эспанд|band/u.test(value)) return 'band'
+  if (/трос|блок|cable/u.test(value)) return 'cable'
+  if (/смит|smith/u.test(value)) return 'smith'
+  if (/тренаж|machine/u.test(value)) return 'machine'
+  if (/без оборуд|собствен|свое тело|body only/u.test(value)) return 'body'
+  if (/скам|bench/u.test(value)) return 'bench'
+  if (/турник|переклад|pull.?up bar/u.test(value)) return 'pullup-bar'
+  return value.trim()
+}
+
+const normalizedMuscle = (value: string | undefined): string => (value ?? '')
+  .toLocaleLowerCase('ru-RU')
+  .replaceAll('ё', 'е')
+  .trim()
+
+/** Similar media is presentation-safe only when its recording semantics agree. */
+export function isReviewedSimilarMediaCompatible(source: ExerciseSnapshot, target: ExerciseSnapshot): boolean {
+  return !REJECTED_SIMILAR_MEDIA_REFS.has(source.ref)
+    && source.inputKind === target.inputKind
+    && source.muscleGroup === target.muscleGroup
+    && normalizedEquipment(source) === normalizedEquipment(target)
+    && normalizedMuscle(source.primaryMuscleDetail) === normalizedMuscle(target.primaryMuscleDetail)
 }
 
 /**

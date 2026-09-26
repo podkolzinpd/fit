@@ -4,7 +4,7 @@ import { BASE_EXERCISES } from './system-exercises.base.generated'
 import { CATALOG_EXPANSION } from './system-exercises.expansion.generated'
 import { VITAL_FREE_PACK_EXERCISES, VITAL_FREE_PACK_MEDIA_BY_REF } from './vital-free-pack'
 import { VITAL_GYM_PRO_MEDIA_BY_LEGACY_REF, VITAL_GYM_PRO_NEW_EXERCISES } from './vital-gym-pro.generated'
-import { REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF } from './exercise-media-similarity'
+import { isReviewedSimilarMediaCompatible, REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF } from './exercise-media-similarity'
 import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
 import { EXERCISE_METRIC_CORRECTIONS } from './exercise-metric-corrections'
 
@@ -190,6 +190,19 @@ const SYSTEM_EXERCISE_CATALOG_SOURCE: readonly ExerciseSnapshot[] = [
   ...VITAL_GYM_PRO_NEW_EXERCISES,
 ]
 
+const SYSTEM_EXERCISE_SOURCE_BY_REF = new Map(SYSTEM_EXERCISE_CATALOG_SOURCE.map((exercise) => [exercise.ref, exercise]))
+
+function reviewedMetadataForRef(ref: string): ExerciseSnapshot | undefined {
+  const exercise = SYSTEM_EXERCISE_SOURCE_BY_REF.get(ref)
+  if (!exercise) return undefined
+  return {
+    ...exercise,
+    name: EXERCISE_CATALOG_DECISIONS[ref]?.name ?? exercise.name,
+    inputKind: EXERCISE_METRIC_CORRECTIONS[ref]?.inputKind ?? exercise.inputKind,
+    equipment: EXERCISE_METRIC_CORRECTIONS[ref]?.equipment ?? exercise.equipment,
+  }
+}
+
 type ReviewedExerciseMedia = { imageUrl: string; motionImageUrl: string; techniqueVideoUrl?: string }
 
 const VITAL_GYM_PRO_NEW_MEDIA_BY_REF: Readonly<Record<string, ReviewedExerciseMedia>> = Object.fromEntries(
@@ -226,6 +239,9 @@ function reviewedMediaForExercise(exercise: ExerciseSnapshot): ReviewedExerciseM
     if (media) return media
     const similarTarget = REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF[candidate]
     if (similarTarget) {
+      const sourceMetadata = reviewedMetadataForRef(candidate)
+      const targetMetadata = reviewedMetadataForRef(similarTarget)
+      if (!sourceMetadata || !targetMetadata || !isReviewedSimilarMediaCompatible(sourceMetadata, targetMetadata)) return undefined
       candidate = similarTarget
       continue
     }
