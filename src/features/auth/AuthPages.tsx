@@ -25,6 +25,7 @@ import {
 } from '../../app/feature-flags'
 import { useYandexAppSession } from '../../app/yandex-app-session-context'
 import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from '../../app/theme'
+import { FitLogo } from '../../shared/FitLogo'
 import { ProfileIcon } from '../../shared/icons'
 import { AsyncView, Field, RequestDiagnosticDetails, StatePanel } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
@@ -186,7 +187,7 @@ export function AuthPage() {
 
   if (yandexOnlyAuthConfig !== null) return <AuthIdentityScreen>
     <header className="auth-entry-head">
-      <div className="brand" aria-hidden="true">FIT</div>
+      <FitLogo />
       <p className="eyebrow">ВАШ РАБОЧИЙ ПРОЦЕСС</p>
       <h1>Вход</h1>
       <p className="muted">Планируйте тренировки и следите за прогрессом клиентов.</p>
@@ -213,7 +214,7 @@ export function AuthPage() {
 
   return <AuthIdentityScreen>
     <header className="auth-entry-head">
-      <div className="brand" aria-hidden="true">FIT</div>
+      <FitLogo />
       <p className="eyebrow">ВАШ РАБОЧИЙ ПРОЦЕСС</p>
       <h1>{mode === 'login' ? 'Вход' : 'Регистрация'}</h1>
       <p className="muted">{mode === 'register' && role === 'client' ? 'Следите за своими тренировками и прогрессом.' : 'Планируйте тренировки и следите за прогрессом клиентов.'}</p>
@@ -368,7 +369,7 @@ function YandexNativeRegistrationCallbackPage() {
     : error
   return <AuthIdentityScreen>
     <header className="auth-entry-head">
-      <div className="brand" aria-hidden="true">FIT</div>
+      <FitLogo />
       <p className="eyebrow">YANDEX ID</p>
       <h1>{visibleError ? 'Не удалось зарегистрироваться' : 'Создаём аккаунт'}</h1>
       <p className="muted">{visibleError ?? 'Подтверждаем Yandex ID и готовим защищённый профиль FIT…'}</p>
@@ -499,7 +500,7 @@ function YandexAppSessionCallbackPage() {
   if (config === null) return <Navigate to="/auth" replace />
   if (handoff !== null) return <AuthIdentityScreen>
     <header className="auth-entry-head">
-      <div className="brand" aria-hidden="true">FIT</div>
+      <FitLogo />
       <p className="eyebrow">YANDEX ID ПОДТВЕРЖДЁН</p>
       <h1>{setupMode === 'choice'
         ? 'У вас уже был аккаунт FIT?'
@@ -534,7 +535,7 @@ function YandexAppSessionCallbackPage() {
   </AuthIdentityScreen>
   return <AuthIdentityScreen>
     <header className="auth-entry-head">
-      <div className="brand" aria-hidden="true">FIT</div>
+      <FitLogo />
       <p className="eyebrow">YANDEX ID</p>
       <h1>{error ? 'Не удалось войти' : 'Проверяем вход'}</h1>
       <p className="muted">{error?.message ?? 'Подтверждаем профиль и создаём защищённую сессию FIT…'}</p>
@@ -589,7 +590,7 @@ export function YandexAppSessionPage() {
 
   return <AuthIdentityScreen>
     <header className="auth-entry-head">
-      <div className="brand" aria-hidden="true">FIT</div>
+      <FitLogo />
       <p className="eyebrow">YANDEX ID · ПИЛОТ</p>
       <h1>Сессия работает</h1>
       <p className="muted">Вход восстановится после перезагрузки страницы и завершится автоматически в указанный срок.</p>
@@ -753,7 +754,7 @@ function YandexReadOnlyPilotCallbackPage() {
     : [session.profile.firstName, session.profile.lastName].filter(Boolean).join(' ') || 'Пользователь FIT'
   return <AuthIdentityScreen className="auth-pilot-flow">
     <header className="auth-entry-head">
-      <div className="brand" aria-hidden="true">FIT</div>
+      <FitLogo />
       <p className="eyebrow">YANDEX ID · ПИЛОТ</p>
       <h1>{session ? 'Доступ подтверждён' : error ? 'Не удалось войти' : 'Проверяем доступ'}</h1>
       <p className="muted">{session
@@ -894,7 +895,7 @@ function YandexAccountLinkingCallbackPage() {
 
   return <AuthIdentityScreen className="auth-yandex-link-flow">
     <header className="auth-entry-head">
-      <div className="brand" aria-hidden="true">FIT</div>
+      <FitLogo />
       <p className="eyebrow">YANDEX ID · ПРИВЯЗКА</p>
       <h1>{linked ? 'Yandex ID привязан' : error ? 'Не удалось привязать' : 'Завершаем привязку'}</h1>
       <p className="muted">{linked
@@ -945,7 +946,7 @@ export function ForgotPasswordPage() {
     try { await authRepository.resetPassword(String(new FormData(event.currentTarget).get('email'))); setMessage('Ссылка отправлена, если такой аккаунт существует.') }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }
   }
-  return <AuthIdentityScreen><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">ДОСТУП К АККАУНТУ</p><h1>Восстановление пароля</h1><p className="muted">Отправим ссылку на ваш email.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>{error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}<button className="primary">Отправить ссылку</button></form><Link className="auth-back-link" to="/auth">Вернуться ко входу</Link></AuthIdentityScreen>
+  return <AuthIdentityScreen><header className="auth-entry-head"><FitLogo /><p className="eyebrow">ДОСТУП К АККАУНТУ</p><h1>Восстановление пароля</h1><p className="muted">Отправим ссылку на ваш email.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>{error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}<button className="primary">Отправить ссылку</button></form><Link className="auth-back-link" to="/auth">Вернуться ко входу</Link></AuthIdentityScreen>
 }
 
 export function ResetPasswordPage() {
@@ -959,12 +960,12 @@ export function ResetPasswordPage() {
     }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }
   }
-  return <AuthIdentityScreen><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">БЕЗОПАСНОСТЬ</p><h1>Новый пароль</h1><p className="muted">Выберите новый пароль для входа в FIT.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete="new-password" required /></Field>{error && <p className="error" role="alert">{error}</p>}<button className="primary">Сохранить</button></form></AuthIdentityScreen>
+  return <AuthIdentityScreen><header className="auth-entry-head"><FitLogo /><p className="eyebrow">БЕЗОПАСНОСТЬ</p><h1>Новый пароль</h1><p className="muted">Выберите новый пароль для входа в FIT.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Пароль"><input name="password" type="password" minLength={8} autoComplete="new-password" required /></Field>{error && <p className="error" role="alert">{error}</p>}<button className="primary">Сохранить</button></form></AuthIdentityScreen>
 }
 
 export function AuthCallbackPage() {
   const { loading, error, actor } = useAuth()
   if (getYandexOnlyAuthConfig() !== null) return <Navigate to="/auth" replace />
   if (actor) return <InvitationAuthRedirect role={actor.role} />
-  return <AuthIdentityScreen><header className="auth-entry-head"><div className="brand" aria-hidden="true">FIT</div><p className="eyebrow">ВХОД В АККАУНТ</p><h1>Завершаем вход</h1><p className="muted">{loading ? 'Проверяем сессию…' : error ?? 'Не удалось получить сессию.'}</p></header><Link className="auth-back-link" to="/auth">Вернуться</Link></AuthIdentityScreen>
+  return <AuthIdentityScreen><header className="auth-entry-head"><FitLogo /><p className="eyebrow">ВХОД В АККАУНТ</p><h1>Завершаем вход</h1><p className="muted">{loading ? 'Проверяем сессию…' : error ?? 'Не удалось получить сессию.'}</p></header><Link className="auth-back-link" to="/auth">Вернуться</Link></AuthIdentityScreen>
 }
