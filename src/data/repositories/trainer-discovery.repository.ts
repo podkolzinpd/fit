@@ -2,7 +2,7 @@ import type {
   TrainerDiscoveryPromptAction,
   TrainerDiscoveryPromptPreference,
 } from '../../shared/domain'
-import { getSupabaseClient } from '../queries/client'
+import { supabase } from '../queries/client'
 import { repositoryError } from './error'
 
 export interface TrainerDiscoveryRepository {
@@ -29,12 +29,12 @@ export function parseTrainerDiscoveryPrompt(value: unknown): TrainerDiscoveryPro
 
 export const trainerDiscoveryRepository: TrainerDiscoveryRepository = {
   async getPromptPreference() {
-    const result = await getSupabaseClient().rpc('get_trainer_discovery_prompt')
+    const result = await supabase.rpc('get_trainer_discovery_prompt')
     if (result.error) throw repositoryError(result.error)
     return parseTrainerDiscoveryPrompt(result.data)
   },
   async setPromptPreference(action) {
-    const result = await getSupabaseClient().rpc('set_trainer_discovery_prompt', { p_action: action })
+    const result = await supabase.rpc('set_trainer_discovery_prompt', { p_action: action })
     if (result.error) throw repositoryError(result.error)
     return parseTrainerDiscoveryPrompt(result.data)
   },

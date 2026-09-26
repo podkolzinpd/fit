@@ -1,4 +1,4 @@
-import { getSupabaseClient } from './client'
+import { supabase } from './client'
 import { yandexAppSessionTransport } from '../yandex-app-session-transport'
 import { attachRequestDiagnostics } from '../../shared/request-diagnostics'
 import { diagnosticsForResponse, fetchWithRequestDiagnostics } from './request-diagnostics'
@@ -66,7 +66,7 @@ export async function sendAssistantTurn(conversationId: string, turnId: string, 
   }
   const url = assistantOrchestratorUrl()
   if (url === undefined) throw new Error('assistant_unavailable')
-  const { data: { session } } = await getSupabaseClient().auth.getSession()
+  const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) throw new Error('authentication_required')
   const response = await fetch(url, {
     method: 'POST',

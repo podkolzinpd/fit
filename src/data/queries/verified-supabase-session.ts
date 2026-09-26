@@ -1,4 +1,4 @@
-import { getSupabaseClient } from './client'
+import { supabase } from './client'
 
 function authenticationRequired(): Error {
   return new Error('authentication_required')
@@ -13,7 +13,7 @@ function authenticationRequired(): Error {
  * which also removed the server-side diagnostics needed to recover safely.
  */
 export async function verifiedSupabaseAccessToken(): Promise<string> {
-  const current = await getSupabaseClient().auth.getSession()
+  const current = await supabase.auth.getSession()
   const currentToken = current.data.session?.access_token
   if (current.error || !currentToken) throw authenticationRequired()
   return currentToken
@@ -25,7 +25,7 @@ export async function verifiedSupabaseAccessToken(): Promise<string> {
  * the fast path, while a stale token gets exactly one recovery attempt.
  */
 export async function refreshSupabaseAccessToken(): Promise<string> {
-  const refreshed = await getSupabaseClient().auth.refreshSession()
+  const refreshed = await supabase.auth.refreshSession()
   const refreshedToken = refreshed.data.session?.access_token
   if (refreshed.error || !refreshedToken) throw authenticationRequired()
   return refreshedToken

@@ -1,5 +1,5 @@
 import { REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js'
-import { getSupabaseClient } from './client'
+import { supabase } from './client'
 
 export const clientRealtimeTables = [
   'clients',
@@ -31,7 +31,7 @@ export function subscribeToClientChanges(
   onChange: (change: ClientRealtimeChange) => void,
   onReady?: () => void,
 ) {
-  const channel = getSupabaseClient().channel(`client:${clientId}`)
+  const channel = supabase.channel(`client:${clientId}`)
   for (const table of clientRealtimeTables) {
     const filter = table === 'clients' ? `id=eq.${clientId}` : `client_id=eq.${clientId}`
     channel.on('postgres_changes', { event: '*', schema: 'public', table, filter }, (payload) => {
@@ -46,5 +46,5 @@ export function subscribeToClientChanges(
   channel.subscribe((status) => {
     if (status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) onReady?.()
   })
-  return () => { void getSupabaseClient().removeChannel(channel) }
+  return () => { void supabase.removeChannel(channel) }
 }

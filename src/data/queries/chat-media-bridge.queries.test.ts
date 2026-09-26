@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const getSession = vi.fn()
-vi.mock('./client', () => ({ getSupabaseClient: () => ({ auth: { getSession } }) }))
+vi.mock('./client', () => ({ supabase: { auth: { getSession } } }))
 
 describe('chat media bridge transport', () => {
   beforeEach(() => {

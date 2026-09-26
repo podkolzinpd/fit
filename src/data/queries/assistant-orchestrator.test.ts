@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('./client', () => ({ getSupabaseClient: () => ({ auth: { getSession: vi.fn() } }) }))
+vi.mock('./client', () => ({ supabase: { auth: { getSession: vi.fn() } } }))
 
 import { resolveAssistantOrchestratorUrl } from './assistant-orchestrator'
 

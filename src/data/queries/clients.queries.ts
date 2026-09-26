@@ -1,34 +1,34 @@
 import type { CreateClientInput, UpdateClientInput, UpdateClientTrainerPreferencesInput } from '../../shared/domain'
-import { getSupabaseClient } from './client'
+import { supabase } from './client'
 import { toJson } from './json'
 
 const clientColumns = 'id,auth_user_id,full_name,gender,age_years,age_updated_at,height_cm,goal,archived_at,version,merged_into_client_id'
 
 export const clientQueries = {
-  getMine: () => getSupabaseClient().rpc('get_my_client'),
-  list: (includeArchived = false) => getSupabaseClient().rpc('list_clients', { p_include_archived: includeArchived }),
-  listAttentionPreferences: (trainerId: string) => getSupabaseClient().from('client_trainers')
+  getMine: () => supabase.rpc('get_my_client'),
+  list: (includeArchived = false) => supabase.rpc('list_clients', { p_include_archived: includeArchived }),
+  listAttentionPreferences: (trainerId: string) => supabase.from('client_trainers')
     .select('client_id,attention_snoozed_until').eq('trainer_id', trainerId),
-  get: (id: string) => getSupabaseClient().from('clients').select(clientColumns).eq('id', id).single(),
-  getNote: (id: string) => getSupabaseClient().from('client_private_details').select('note').eq('client_id', id).maybeSingle(),
-  getLatestWeight: (id: string) => getSupabaseClient().from('client_progress').select('weight_kg')
+  get: (id: string) => supabase.from('clients').select(clientColumns).eq('id', id).single(),
+  getNote: (id: string) => supabase.from('client_private_details').select('note').eq('client_id', id).maybeSingle(),
+  getLatestWeight: (id: string) => supabase.from('client_progress').select('weight_kg')
     .eq('client_id', id).is('deleted_at', null).not('weight_kg', 'is', null)
     .order('recorded_on', { ascending: false }).limit(1).maybeSingle(),
-  create: (input: CreateClientInput) => getSupabaseClient().rpc('create_client', { p_client: toJson(input) }),
-  createQuick: (fullName: string) => getSupabaseClient().rpc('create_quick_client', { p_full_name: fullName }),
-  createQuickOwn: (fullName: string) => getSupabaseClient().rpc('create_quick_own_client', { p_full_name: fullName }),
-  createOwn: (input: CreateClientInput) => getSupabaseClient().rpc('create_own_client', { p_client: toJson(input) }),
-  update: (input: UpdateClientInput) => getSupabaseClient().rpc('update_client', {
+  create: (input: CreateClientInput) => supabase.rpc('create_client', { p_client: toJson(input) }),
+  createQuick: (fullName: string) => supabase.rpc('create_quick_client', { p_full_name: fullName }),
+  createQuickOwn: (fullName: string) => supabase.rpc('create_quick_own_client', { p_full_name: fullName }),
+  createOwn: (input: CreateClientInput) => supabase.rpc('create_own_client', { p_client: toJson(input) }),
+  update: (input: UpdateClientInput) => supabase.rpc('update_client', {
     p_client: toJson(input), p_expected_version: input.version,
   }),
-  updateOwn: (input: UpdateClientInput) => getSupabaseClient().rpc('update_own_client', {
+  updateOwn: (input: UpdateClientInput) => supabase.rpc('update_own_client', {
     p_client: toJson(input), p_expected_version: input.version,
   }),
-  updatePreferences: (input: UpdateClientTrainerPreferencesInput) => getSupabaseClient().rpc('update_client_trainer_preferences', {
+  updatePreferences: (input: UpdateClientTrainerPreferencesInput) => supabase.rpc('update_client_trainer_preferences', {
     p_client_id: input.clientId, p_alias: input.alias, p_note: input.note ?? null,
     p_expected_version: input.version,
   }),
-  setArchived: (id: string, version: number, archived: boolean) => getSupabaseClient().from('clients')
+  setArchived: (id: string, version: number, archived: boolean) => supabase.from('clients')
     .update({ archived_at: archived ? new Date().toISOString() : null, version: version + 1 })
     .eq('id', id).eq('version', version).select(clientColumns).single(),
 }
