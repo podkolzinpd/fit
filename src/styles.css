@@ -6541,6 +6541,9 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-schedule-v2-shell .schedule-v2-range-toggle button[aria-pressed="true"] { border-color:#baff36; color:#111; background:#baff36; font-weight:700; }
 .trainer-schedule-v2-shell .schedule-v2-period { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; gap:12px; margin-bottom:22px; }
 .trainer-schedule-v2-shell .schedule-v2-period strong { overflow:hidden; color:#f8f8f6; font-size:18px; font-weight:520; line-height:1.2; text-align:center; text-overflow:ellipsis; white-space:nowrap; }
+.trainer-schedule-v2-shell .schedule-v2-period.is-two-week strong { overflow:visible; font-size:16px; text-overflow:clip; white-space:normal; }
+.trainer-schedule-v2-shell .schedule-v2-period.is-two-week strong span,.trainer-schedule-v2-shell .schedule-v2-period.is-two-week strong small { display:block; }
+.trainer-schedule-v2-shell .schedule-v2-period.is-two-week strong small { margin-top:2px; color:#858589; font-size:13px; font-weight:500; }
 .trainer-schedule-v2-shell .schedule-v2-period button { width:44px; height:44px; min-height:44px; display:grid; place-items:center; padding:0; border:0; border-radius:50%; color:#f8f8f6; background:transparent; box-shadow:none; }
 .trainer-schedule-v2-shell .schedule-v2-period button svg { width:24px; height:24px; }
 .trainer-schedule-v2-shell .schedule-v2-weekstrip { display:grid; gap:12px; margin:0 0 20px; }

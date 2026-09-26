@@ -512,6 +512,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const currentMinutes = minutesOf(currentTime)
   const periodWorkouts = (query.data ?? []).filter((workout) => workout.status !== 'cancelled')
   const periodClients = new Set(periodWorkouts.map((workout) => workout.clientId)).size
+  const periodLabel = scheduleV2Range(weekStart, periodEnd)
 
   useEffect(() => {
     trackGoal('schedule_v2_exposed')
@@ -550,9 +551,11 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
           <button type="button" aria-pressed={!isTwoWeekView} onClick={() => showOverview(weekStart, 'week')}>Неделя</button>
           <button type="button" aria-pressed={isTwoWeekView} onClick={() => showOverview(weekStart, '2w')}>2 недели</button>
         </div>
-        <section className="schedule-v2-period" aria-label="Навигация по расписанию">
+        <section className={`schedule-v2-period${isTwoWeekView ? ' is-two-week' : ''}`} aria-label="Навигация по расписанию">
           <button type="button" aria-label={isTwoWeekView ? 'Предыдущие 2 недели' : 'Предыдущая неделя'} onClick={() => shiftOverview(-1)}><BackIcon /></button>
-          <strong>{scheduleV2Range(weekStart, periodEnd)}</strong>
+          <strong aria-label={periodLabel}>{isTwoWeekView
+            ? <><span>{periodLabel.replace(/ \d{4} г\.$/, '')}</span><small>{periodEnd.slice(0, 4)} г.</small></>
+            : periodLabel}</strong>
           <button type="button" aria-label={isTwoWeekView ? 'Следующие 2 недели' : 'Следующая неделя'} onClick={() => shiftOverview(1)}><ChevronRightIcon /></button>
         </section>
         <div className="schedule-v2-weekstrip" aria-label="Дни периода">
