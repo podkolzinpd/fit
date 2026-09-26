@@ -126,6 +126,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const catalog = useExerciseCatalog()
   const [firstWorkoutIntent] = useState(() => clientMode && actor ? takeFirstWorkoutIntent(actor.userId) : null)
   const compactClientEntry = clientMode && new URLSearchParams(location.search).get('entry') === 'workout'
+  const compactTrainerTextEntry = !clientMode && isTrainerScheduleV2Enabled(actor) && new URLSearchParams(location.search).get('entry') === 'text'
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
   const [items, setItems] = useState<ParsedWorkoutExercise[]>([])
@@ -150,7 +151,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [removedItem, setRemovedItem] = useState<{ item: ParsedWorkoutExercise; index: number } | null>(null)
   const [draftReady, setDraftReady] = useState(false)
   const [restoredDraftScreen, setRestoredDraftScreen] = useState<Screen | null>(null)
-  const [textComposerOpen, setTextComposerOpen] = useState(firstWorkoutIntent?.mode === 'text' || compactClientEntry)
+  const [textComposerOpen, setTextComposerOpen] = useState(firstWorkoutIntent?.mode === 'text' || compactClientEntry || compactTrainerTextEntry)
   const [voicePhase, setVoicePhase] = useState<VoiceInputPhase>('idle')
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState<WorkoutParseErrorKind | null>(null)
@@ -211,6 +212,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   function closeTextComposer() {
     setTextComposerOpen(false)
     if (compactClientEntry) navigate(todayPath, { replace: true })
+    if (compactTrainerTextEntry) navigate(composePath, { replace: true })
   }
 
   useEffect(() => {

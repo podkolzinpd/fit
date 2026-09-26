@@ -764,7 +764,8 @@ export function createYandexMainRepository(
     connectionsPromise = null
   }
   const trainingData = async () => {
-    trainingDataPromise ??= (async () => {
+    if (trainingDataPromise) return trainingDataPromise
+    const nextPromise = (async () => {
       const first = await yandexPilotRepository.listTrainingData(apiBaseUrl, sessionToken, 'read_write', { limit: 100, offset: 0 })
       const workouts = [...first.workouts]
       for (let offset = workouts.length; first.hasMoreWorkouts && offset < (first.totalWorkouts ?? Number.MAX_SAFE_INTEGER); offset = workouts.length) {
@@ -773,21 +774,35 @@ export function createYandexMainRepository(
         if (!page.hasMoreWorkouts || page.workouts.length === 0) break
       }
       return { ...first, workouts, hasMoreWorkouts: false, totalWorkouts: workouts.length }
-    })()
-    return trainingDataPromise
+    })().catch((error: unknown) => {
+      if (trainingDataPromise === nextPromise) trainingDataPromise = null
+      throw error
+    })
+    trainingDataPromise = nextPromise
+    return nextPromise
   }
   const clients = async (archived = false) => {
     const path = archived ? '/v1/clients?archived=true' : '/v1/clients'
     const promise = archived ? archivedClientsPromise : activeClientsPromise
     const nextPromise = promise ?? readJson(queries, path, clientsSchema)
       .then((payload) => payload.clients.map(client))
+      .catch((error: unknown) => {
+        if (archived && archivedClientsPromise === nextPromise) archivedClientsPromise = null
+        if (!archived && activeClientsPromise === nextPromise) activeClientsPromise = null
+        throw error
+      })
     if (archived) archivedClientsPromise = nextPromise
     else activeClientsPromise = nextPromise
     return nextPromise
   }
   const connections = async () => {
-    connectionsPromise ??= readJson(queries, '/v1/connections', connectionsSchema)
-    return connectionsPromise
+    if (connectionsPromise) return connectionsPromise
+    const nextPromise = readJson(queries, '/v1/connections', connectionsSchema).catch((error: unknown) => {
+      if (connectionsPromise === nextPromise) connectionsPromise = null
+      throw error
+    })
+    connectionsPromise = nextPromise
+    return nextPromise
   }
   const commandVersion = async (path: string, method: 'POST' | 'PUT', body: object) => {
     const payload = await writeJson(queries, path, method, body, z.object({

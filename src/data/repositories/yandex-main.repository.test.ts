@@ -543,6 +543,32 @@ describe('Yandex main repository', () => {
     })
   })
 
+  it('retries a failed client list instead of reusing the rejected request', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({}, 503))
+      .mockResolvedValueOnce(jsonResponse({ clients: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.clients.list()).rejects.toBeTruthy()
+    await expect(repository.clients.list()).resolves.toEqual([])
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('retries failed training data without keeping a rejected workout list', async () => {
+    pilot.listTrainingData
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({
+        customExercises: [], workouts: [], attention: [], attentionPreferences: [],
+        hasMoreWorkouts: false, totalWorkouts: 0,
+      })
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.workouts.list()).rejects.toThrow('offline')
+    await expect(repository.workouts.list()).resolves.toEqual([])
+    expect(pilot.listTrainingData).toHaveBeenCalledTimes(2)
+  })
+
   it('implements the complete clients, exercise, progress and goal contracts', async () => {
     const fetchMock = installContractFetch()
     vi.stubGlobal('fetch', fetchMock)
