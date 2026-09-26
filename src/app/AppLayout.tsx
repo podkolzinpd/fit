@@ -126,6 +126,14 @@ export function AppLayout() {
     chat ? 'chat-identity' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
+  const trainerAssistantNav = actor?.role === 'trainer' && isAssistantNavPilotEnabled(actor.userId, actor.email) && <Coachmark
+    id="assistant-all-trainers-2026-09"
+    userId={actor.userId}
+    title="Ассистент теперь доступен"
+    description="Диктуйте или пишите: ассистент подготовит запись тренировки и попросит подтверждение."
+  >
+    <NavLink to="/assistant"><AssistantIcon />Ассистент</NavLink>
+  </Coachmark>
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
     <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>
     <NavLink to="/me/workouts"><ScheduleIcon />Тренировки</NavLink>
@@ -142,17 +150,10 @@ export function AppLayout() {
   </nav>}</div>
   return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><TodayIcon />Сегодня</NavLink>
-    {trainerScheduleV2Route && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
-    {(redesignedStart || trainerScheduleV2Route) && <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>}
-    {actor?.role === 'trainer' && isAssistantNavPilotEnabled(actor.userId, actor.email) && <Coachmark
-      id="assistant-all-trainers-2026-09"
-      userId={actor.userId}
-      title="Ассистент теперь доступен"
-      description="Диктуйте или пишите: ассистент подготовит запись тренировки и попросит подтверждение."
-    >
-      <NavLink to="/assistant"><AssistantIcon />Ассистент</NavLink>
-    </Coachmark>}
-    {!trainerScheduleV2Route && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
-    {!redesignedStart && !trainerScheduleV2Route && <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>}
+    {trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
+    {(redesignedStart || trainerScheduleV2) && <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>}
+    {trainerAssistantNav}
+    {!trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
+    {!redesignedStart && !trainerScheduleV2 && <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>}
   </nav>}</div>
 }
