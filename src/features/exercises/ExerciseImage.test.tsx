@@ -1,21 +1,66 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { ExerciseImage, exerciseMediaPresentationKey } from './ExerciseImage'
+
+function markImageLoaded(image: Element | null) {
+  if (!image) throw new Error('Expected an exercise image')
+  Object.defineProperty(image, 'naturalWidth', { configurable: true, value: 540 })
+  fireEvent.load(image)
+}
 
 describe('ExerciseImage', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllEnvs()
     vi.unstubAllGlobals()
+    vi.useRealTimers()
   })
 
-  it('renders a lazily decoded image inside the requested frame', () => {
+  it('starts loading an image once its frame is near the viewport', () => {
     const { container } = render(<ExerciseImage src="/exercises/test.jpg" alt="Жим лёжа" variant="detail" />)
     const image = screen.getByRole('img', { name: 'Жим лёжа' })
-    expect(image).toHaveAttribute('loading', 'lazy')
+    expect(image).toHaveAttribute('loading', 'eager')
     expect(image).toHaveAttribute('decoding', 'async')
     expect(container.firstElementChild).toHaveClass('exercise-image-detail')
+  })
+
+  it('keeps visible loading feedback until the browser has loaded the image', () => {
+    const { container } = render(<ExerciseImage src="/exercises/vital/stationary-bike-end.jpg" alt="Велотренажёр" variant="picker" />)
+    expect(screen.getByRole('status', { name: 'Загрузка изображения упражнения' })).toBeVisible()
+    const image = screen.getByRole('img', { name: 'Велотренажёр' })
+    Object.defineProperty(image, 'naturalWidth', { value: 540 })
+    fireEvent.load(image)
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-loading')
+  })
+
+  it('retries a stalled public cover once and stops loading after a terminal timeout', () => {
+    vi.useFakeTimers()
+    const { container } = render(<ExerciseImage src="/exercises/vital/leg-press-machine-end.jpg" alt="Жим ногами" variant="picker" />)
+    const original = screen.getByRole('img', { name: 'Жим ногами' }).getAttribute('src')
+    act(() => vi.advanceTimersByTime(10_000))
+    expect(screen.getByRole('img', { name: 'Жим ногами' }).getAttribute('src')).not.toBe(original)
+    expect(screen.getByRole('img', { name: 'Жим ногами' })).toHaveAttribute('src', expect.stringContaining('fit-media-retry='))
+    act(() => vi.advanceTimersByTime(10_000))
+    expect(container.firstElementChild).toHaveClass('exercise-image-empty')
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-loading')
+    expect(container.querySelector('img')).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Изображение недоступно: Жим ногами' })).toBeVisible()
+    act(() => vi.advanceTimersByTime(60_000))
+    expect(container.querySelector('img')).not.toBeInTheDocument()
+  })
+
+  it('requires a new load when returning to an earlier image before the intervening image loads', () => {
+    vi.useFakeTimers()
+    const { rerender } = render(<ExerciseImage src="/exercises/return-a.jpg" alt="Упражнение" />)
+    markImageLoaded(screen.getByRole('img', { name: 'Упражнение' }))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    rerender(<ExerciseImage src="/exercises/return-b.jpg" alt="Упражнение" />)
+    rerender(<ExerciseImage src="/exercises/return-a.jpg" alt="Упражнение" />)
+    expect(screen.getByRole('status', { name: 'Загрузка изображения упражнения' })).toBeVisible()
+    act(() => vi.advanceTimersByTime(10_000))
+    expect(screen.getByRole('img', { name: 'Упражнение' })).toHaveAttribute('src', expect.stringContaining('/exercises/return-a.jpg?fit-media-retry='))
   })
 
   it('uses one reviewed canvas presentation for poster, end frame, and video paths', () => {
@@ -63,9 +108,13 @@ describe('ExerciseImage', () => {
 
   it('cycles through both frames in technique and uses the end frame as a static compact cover', () => {
     const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" alt="Жим лёжа" variant="technique" />)
-    expect(container.firstElementChild).toHaveClass('exercise-image-motion')
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
     expect(container.querySelectorAll('img')).toHaveLength(2)
     expect(container.querySelector('.exercise-image-frame-end')).toHaveAttribute('src', '/exercises/end.jpg')
+    markImageLoaded(container.querySelector('.exercise-image-frame-start'))
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+    markImageLoaded(container.querySelector('.exercise-image-frame-end'))
+    expect(container.firstElementChild).toHaveClass('exercise-image-motion')
 
     rerender(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" alt="Жим лёжа" />)
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
@@ -75,9 +124,47 @@ describe('ExerciseImage', () => {
 
   it('keeps the start frame when the optional end frame fails', () => {
     const { container } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" alt="Жим лёжа" variant="technique" />)
+    markImageLoaded(container.querySelector('.exercise-image-frame-start'))
+    fireEvent.error(container.querySelector('.exercise-image-frame-end')!)
+    expect(container.querySelector('.exercise-image-frame-end')).toHaveAttribute('src', expect.stringContaining('fit-media-retry='))
     fireEvent.error(container.querySelector('.exercise-image-frame-end')!)
     expect(screen.getByRole('img', { name: 'Жим лёжа' })).toHaveAttribute('src', '/exercises/start.jpg')
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+    expect(container.querySelector('.exercise-image-frame-end')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('keeps a loaded still visible while a stalled second frame retries and then gives up', () => {
+    vi.useFakeTimers()
+    const { container } = render(<ExerciseImage src="/exercises/stalled-start.jpg" motionSrc="/exercises/stalled-end.jpg" alt="Тяга" variant="technique" />)
+    markImageLoaded(screen.getByRole('img', { name: 'Тяга' }))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+    act(() => vi.advanceTimersByTime(10_000))
+    expect(container.querySelector('.exercise-image-frame-end')).toHaveAttribute('src', expect.stringContaining('fit-media-retry='))
+    expect(screen.getByRole('img', { name: 'Тяга' })).toHaveAttribute('src', '/exercises/stalled-start.jpg')
+    act(() => vi.advanceTimersByTime(10_000))
+    expect(container.querySelector('.exercise-image-frame-end')).not.toBeInTheDocument()
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+    expect(screen.getByRole('img', { name: 'Тяга' })).toBeVisible()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    act(() => vi.advanceTimersByTime(60_000))
+    expect(container.querySelectorAll('img')).toHaveLength(1)
+  })
+
+  it('starts the two-frame animation only after a retried second frame has loaded', () => {
+    vi.useFakeTimers()
+    const { container } = render(<ExerciseImage src="/exercises/recovered-start.jpg" motionSrc="/exercises/recovered-end.jpg" alt="Тяга" variant="technique" />)
+    markImageLoaded(screen.getByRole('img', { name: 'Тяга' }))
+    act(() => vi.advanceTimersByTime(10_000))
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+    const recoveredFrame = container.querySelector('.exercise-image-frame-end')
+    expect(recoveredFrame).toHaveAttribute('src', expect.stringContaining('fit-media-retry='))
+    markImageLoaded(recoveredFrame)
+    expect(container.firstElementChild).toHaveClass('exercise-image-motion')
+    act(() => vi.advanceTimersByTime(60_000))
+    expect(container.querySelector('.exercise-image-frame-end')).toBe(recoveredFrame)
+    expect(container.firstElementChild).toHaveClass('exercise-image-motion')
   })
 
   it('uses an accessible inline video without native controls in the explicit technique view', () => {
@@ -102,9 +189,14 @@ describe('ExerciseImage', () => {
   it('falls back to the two technique frames when video loading fails', () => {
     const { container } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/broken.mp4" alt="Присед" variant="technique" />)
     fireEvent.error(container.querySelector('video')!)
+    expect(container.querySelector('video')).toHaveAttribute('src', expect.stringContaining('fit-media-retry='))
+    fireEvent.error(container.querySelector('video')!)
     expect(container.querySelector('video')).not.toBeInTheDocument()
-    expect(container.firstElementChild).toHaveClass('exercise-image-motion')
     expect(container.querySelectorAll('img')).toHaveLength(2)
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
+    markImageLoaded(container.querySelector('.exercise-image-frame-start'))
+    markImageLoaded(container.querySelector('.exercise-image-frame-end'))
+    expect(container.firstElementChild).toHaveClass('exercise-image-motion')
   })
 
   it('shows no legacy frame while private Gym Pro media is resolving', async () => {
@@ -202,7 +294,8 @@ describe('ExerciseImage', () => {
     />)
 
     await waitFor(() => expect(createVitalMediaUrl).toHaveBeenCalledTimes(2))
-    expect(container.firstElementChild).toHaveClass('exercise-image-empty', 'exercise-image-loading')
+    expect(container.firstElementChild).toHaveClass('exercise-image-empty')
+    expect(container.firstElementChild).not.toHaveClass('exercise-image-loading')
     expect(container.querySelector('img, video')).not.toBeInTheDocument()
     expect(container.innerHTML).not.toContain('fedb-dumbbell-lunge')
   })
@@ -238,9 +331,24 @@ describe('ExerciseImage', () => {
     expect(container.querySelectorAll('video')).toHaveLength(1)
   })
 
+  it('waits for the new video element when an already played picker card is reactivated', () => {
+    vi.useFakeTimers()
+    const props = { src: '/exercises/replay.jpg', videoSrc: '/exercises/replay.mp4', alt: 'Присед', variant: 'picker' as const }
+    const { container, rerender } = render(<ExerciseImage {...props} playVideo />)
+    fireEvent.playing(screen.getByLabelText('Техника: Присед'))
+    expect(container.querySelector('video')).toHaveClass('playing')
+    rerender(<ExerciseImage {...props} />)
+    rerender(<ExerciseImage {...props} playVideo />)
+    expect(container.querySelector('video')).not.toHaveClass('playing')
+    act(() => vi.advanceTimersByTime(10_000))
+    expect(screen.getByLabelText('Техника: Присед')).toHaveAttribute('src', expect.stringContaining('fit-media-retry='))
+  })
+
   it('falls back from the compact end-frame cover to the start frame', () => {
     const { container } = render(<ExerciseImage src="/exercises/broken.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Жим лёжа" variant="picker" />)
     expect(screen.getByRole('img', { name: 'Жим лёжа' })).toHaveAttribute('src', '/exercises/end.jpg')
+    fireEvent.error(screen.getByRole('img', { name: 'Жим лёжа' }))
+    expect(screen.getByRole('img', { name: 'Жим лёжа' })).toHaveAttribute('src', expect.stringContaining('fit-media-retry='))
     fireEvent.error(screen.getByRole('img', { name: 'Жим лёжа' }))
     expect(screen.getByRole('img', { name: 'Жим лёжа' })).toHaveAttribute('src', '/exercises/broken.jpg')
     expect(container.querySelector('video')).not.toBeInTheDocument()
@@ -267,6 +375,9 @@ describe('ExerciseImage', () => {
     expect(createVitalMediaUrl).toHaveBeenCalledTimes(1)
     expect(createVitalMediaUrl).toHaveBeenCalledWith('vital-pro/vital-cycling-cover-test-end.jpg', 3600)
     fireEvent.error(screen.getByRole('img', { name: 'Велотренажёр' }))
+    await waitFor(() => expect(createVitalMediaUrl).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.getByRole('img', { name: 'Велотренажёр' })).toHaveAttribute('src', 'https://signed.example/cycling-end.jpg'))
+    fireEvent.error(screen.getByRole('img', { name: 'Велотренажёр' }))
     await waitFor(() => expect(screen.getByRole('img', { name: 'Велотренажёр' })).toHaveAttribute('src', 'https://signed.example/cycling.jpg'))
     expect(container.firstElementChild).not.toHaveClass('exercise-image-empty')
     expect(createVitalMediaUrl).toHaveBeenCalledWith('vital-pro/vital-cycling-cover-test.jpg', 3600)
@@ -275,7 +386,7 @@ describe('ExerciseImage', () => {
   it('falls back to private start and end frames when a technique video cannot be loaded', async () => {
     vi.stubEnv('MODE', 'production')
     vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
-    vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockImplementation((path) => Promise.resolve(
+    const createVitalMediaUrl = vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockImplementation((path) => Promise.resolve(
       `https://signed.example/${path.split('/').at(-1)}`,
     ))
 
@@ -289,15 +400,23 @@ describe('ExerciseImage', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Техника: Жим ногами')).toBeInTheDocument())
     fireEvent.error(screen.getByLabelText('Техника: Жим ногами'))
-    await waitFor(() => expect(container.firstElementChild).toHaveClass('exercise-image-motion'), { timeout: 3_000 })
+    await waitFor(() => expect(createVitalMediaUrl.mock.calls.filter(([path]) => path.endsWith('.mp4'))).toHaveLength(2))
+    await waitFor(() => expect(screen.getByLabelText('Техника: Жим ногами')).toBeInTheDocument())
+    fireEvent.error(screen.getByLabelText('Техника: Жим ногами'))
+    await waitFor(() => expect(container.querySelector('.exercise-image-frame-end')).toBeInTheDocument(), { timeout: 3_000 })
     expect(container.querySelectorAll('img')).toHaveLength(2)
     expect(container.querySelector('.exercise-image-frame-end')).toHaveAttribute('src', 'https://signed.example/vital-leg-press-machine-ex073-end.jpg')
+    markImageLoaded(container.querySelector('.exercise-image-frame-start'))
+    markImageLoaded(container.querySelector('.exercise-image-frame-end'))
+    expect(container.firstElementChild).toHaveClass('exercise-image-motion')
   })
 
   it('uses the explicit public poster before falling back to the end frame', () => {
     const { container } = render(<ExerciseImage src="/licensed/start.jpg" fallbackSrc="/public/start.jpg" motionSrc="/public/end.jpg" alt="Тяга" variant="technique" />)
     fireEvent.error(screen.getByRole('img', { name: 'Тяга' }))
     expect(screen.getByRole('img', { name: 'Тяга' })).toHaveAttribute('src', '/public/start.jpg')
+    markImageLoaded(container.querySelector('.exercise-image-frame-start'))
+    markImageLoaded(container.querySelector('.exercise-image-frame-end'))
     expect(container.firstElementChild).toHaveClass('exercise-image-motion')
     fireEvent.error(screen.getByRole('img', { name: 'Тяга' }))
     expect(screen.getByRole('img', { name: 'Тяга' })).toHaveAttribute('src', '/public/end.jpg')
@@ -326,6 +445,7 @@ describe('ExerciseImage', () => {
     expect(container.querySelector('[data-icon="exercise"]')).toBeInTheDocument()
 
     rerender(<ExerciseImage src="/exercises/broken.jpg" />)
+    fireEvent.error(container.querySelector('img')!)
     fireEvent.error(container.querySelector('img')!)
     expect(container.firstElementChild).toHaveClass('exercise-image-empty')
     expect(container.querySelector('img')).not.toBeInTheDocument()
