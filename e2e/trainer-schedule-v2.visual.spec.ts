@@ -170,3 +170,44 @@ test('renders the weekly overview from the approved composition', async ({ page 
   await page.screenshot({ path: screenshotPath, fullPage: true })
   await testInfo.attach('trainer-schedule-v2-week', { path: screenshotPath, contentType: 'image/png' })
 })
+
+test('pilot calendar keeps workout review and save in the existing entry flow', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockPilot(page)
+  await page.goto('/today?date=2026-09-24')
+  expect(await page.evaluate(() => localStorage.getItem('fit.yandexAppSession.v1') !== null)).toBe(true)
+  await expect(page.locator('.schedule-v2-timeline')).toBeVisible()
+  await page.evaluate(({ profileId, workoutClientId }) => {
+    localStorage.setItem(`fit.today-draft.${profileId}`, JSON.stringify({
+      screen: 'review',
+      text: 'Приседания 3 по 8',
+      choices: {},
+      items: [{
+        line: 'Приседания 3 по 8',
+        exercise: { ref: 'squat', name: 'Приседания', inputKind: 'reps' },
+        sets: [{ position: 0, reps: 8 }],
+        hasValues: true,
+      }],
+      clientId: workoutClientId,
+      recordMode: 'planned',
+      workoutDate: '2026-09-24',
+      startTime: '10:00',
+    }))
+  }, { profileId: trainerId, workoutClientId: clientId })
+  await page.goto('/today?view=review')
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+  await expect(page.locator('.schedule-v2-timeline')).toHaveCount(0)
+  await testInfo.attach('pilot-workout-review', { body: await page.screenshot(), contentType: 'image/png' })
+  await page.getByRole('button', { name: 'Далее' }).click()
+  await expect(page).toHaveURL(/\/today\?view=save$/)
+  await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toBeVisible()
+  await testInfo.attach('pilot-workout-save', { body: await page.screenshot(), contentType: 'image/png' })
+  await page.getByRole('button', { name: '← К проверке' }).click()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+  await page.getByRole('button', { name: '← Назад' }).click()
+  await expect(page).toHaveURL(/\/today\?view=compose$/)
+  await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
+  await page.goto('/today?classic=1#trainer-attention')
+  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Продолжить' })).toBeVisible()
+})

@@ -15,7 +15,7 @@ import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage,
 import { AccountDeletionPage, LegalAcceptanceGate, PrivacyPage, TermsPage } from '../features/legal'
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 import { ChatConversationPage, ChatListPage } from '../features/chat'
-import { isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
+import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
 
 function Protected() {
   const { actor, loading, error } = useAuth(); const location = useLocation()
@@ -62,8 +62,8 @@ function AssistantPage() {
 function TrainerTodayPage() {
   const { actor } = useAuth()
   const location = useLocation()
-  const classic = new URLSearchParams(location.search).get('classic') === '1'
-  return isTrainerScheduleV2Enabled(actor) && !classic ? <TrainerScheduleTodayPage /> : <TodayPage />
+  return isTrainerScheduleV2Enabled(actor) && isTrainerScheduleV2CalendarRoute(location.pathname, location.search)
+    ? <TrainerScheduleTodayPage /> : <TodayPage />
 }
 
 const router = createBrowserRouter([

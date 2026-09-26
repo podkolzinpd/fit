@@ -6,7 +6,7 @@ import { Coachmark } from '../shared/ui'
 import { applyAppTheme, applyMonochromeThemeColor, applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from './theme'
 import { isAssistantNavPilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
 import { useAppViewport } from './app-viewport'
-import { isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
+import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
 
 export { appViewportMetrics } from './app-viewport'
 
@@ -18,8 +18,7 @@ export function AppLayout() {
   const redesignedStart = isTodayStartRedesignEnabled()
   const { keyboardOpen } = useAppViewport()
   const trainerScheduleV2 = isTrainerScheduleV2Enabled(actor)
-  const trainerScheduleV2Route = trainerScheduleV2 && (pathname === '/schedule'
-    || (pathname === '/today' && new URLSearchParams(search).get('classic') !== '1'))
+  const trainerScheduleV2Route = trainerScheduleV2 && isTrainerScheduleV2CalendarRoute(pathname, search)
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
   const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)

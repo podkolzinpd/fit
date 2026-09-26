@@ -79,7 +79,7 @@ describe('ExercisePicker', () => {
     const user = userEvent.setup()
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} onPick={vi.fn()} onClose={vi.fn()} />)
     expect(screen.queryByLabelText('Раздел каталога')).not.toBeInTheDocument()
-    expect(screen.getByText('663 упражнения')).toBeInTheDocument()
+    expect(screen.getByText('639 упражнений')).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="fedb-incline-dumbbell-press"]')).toBeInTheDocument()
     expect(document.querySelector('[data-exercise-ref="fedb-incline-dumbbell-press-palms-in"]')).not.toBeInTheDocument()
     await user.type(screen.getByLabelText('Поиск упражнения'), 'тяга гантели одной рукой')
@@ -529,17 +529,15 @@ describe('ExercisePicker', () => {
     expect(document.querySelector('.picker-list video')).toHaveAttribute('src', exercise.techniqueVideoUrl)
   })
 
-  it('проигрывает подобранную анимацию в карточке шрагов без своего ролика', async () => {
+  it('не проигрывает шрагам в блоке анимацию шрагов со штангой', async () => {
     const user = userEvent.setup()
     const exercise = SYSTEM_EXERCISE_CATALOG.find(({ ref }) => ref === 'fedb-cable-shrugs')!
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} initialSearch={exercise.name} onPick={vi.fn()} onClose={vi.fn()} />)
 
-    await user.click(screen.getByRole('button', { name: `Проиграть технику: ${exercise.name}` }))
+    await user.click(screen.getByRole('button', { name: `Посмотреть технику: ${exercise.name}` }))
 
-    expect(document.querySelector('.picker-list video')).toHaveAttribute(
-      'src',
-      '/exercises/vital-pro/vital-barbell-shrug-ex029.mp4',
-    )
+    expect(screen.getByRole('heading', { name: 'Техника' })).toBeInTheDocument()
+    expect(document.querySelector('video')).not.toBeInTheDocument()
   })
 
   it('closes from the overlay and close button', async () => {

@@ -26,11 +26,13 @@ for (const role of ['trainer', 'client'] as const) {
       await expect(dialog.getByLabel('Раздел каталога')).toHaveCount(0)
       const initialListHeight = (await dialog.locator('.picker-list').boundingBox())?.height ?? 0
       expect(initialListHeight).toBeGreaterThan(160)
-      // A previous choice may promote its precise variant in the recent list.
-      await dialog.getByRole('button', { name: /^Проиграть технику: Жим гантелей на наклонной/ }).first().click()
-      await dialog.getByRole('button', { name: /^Открыть технику: Жим гантелей на наклонной/ }).first().click()
+      // An unverified press variant remains usable without a borrowed video.
+      await dialog.getByLabel('Поиск упражнения').fill('Жим гантелей на наклонной')
+      await dialog.getByRole('button', { name: 'Проиграть технику: Жим гантелей на наклонной скамье', exact: true }).first().click()
+      await dialog.getByRole('button', { name: 'Открыть технику: Жим гантелей на наклонной скамье', exact: true }).first().click()
       await dialog.getByLabel('Вариант упражнения').selectOption({ label: 'Жим гантелей на наклонной нейтральным хватом' })
       await expect(dialog.getByRole('heading', { name: 'Жим гантелей на наклонной нейтральным хватом' })).toBeVisible()
+      await expect(dialog.locator('video')).toHaveCount(0)
       expect((await dialog.getByLabel('Вариант упражнения').boundingBox())?.height).toBeGreaterThanOrEqual(48)
       await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`${role}-${dark ? 'dark' : 'light'}-variant.png`) })
