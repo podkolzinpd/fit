@@ -31,7 +31,7 @@ const EXERCISE_VIDEO_PATHS = new Set(
 
 describe('system exercise catalog', () => {
   it('matches the current catalog contract', () => {
-    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(15)
+    expect(SYSTEM_EXERCISE_CATALOG_VERSION).toBe(16)
     expect(SYSTEM_EXERCISES).toHaveLength(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.ref)).size).toBe(49)
     expect(new Set(SYSTEM_EXERCISES.map((exercise) => exercise.name)).size).toBe(49)
@@ -272,7 +272,7 @@ describe('system exercise catalog', () => {
   })
 
   it('применяет полный аудит формата результата ко всем исправленным карточкам', () => {
-    expect(Object.keys(EXERCISE_METRIC_CORRECTIONS)).toHaveLength(117)
+    expect(Object.keys(EXERCISE_METRIC_CORRECTIONS)).toHaveLength(118)
     const catalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
 
     for (const [ref, correction] of Object.entries(EXERCISE_METRIC_CORRECTIONS)) {
@@ -361,9 +361,11 @@ describe('system exercise catalog', () => {
       .toEqual(expectedPackagedPaths)
     const finalCatalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
     expect(VITAL_GYM_PRO_MAIN_REFS.filter((ref) => !finalCatalogByRef.get(ref)?.techniqueVideoUrl)).toEqual([
+      'fedb-alternate-incline-dumbbell-curl',
       'fedb-dumbbell-one-arm-shoulder-press',
       'fedb-dumbbell-one-arm-upright-row',
       'biceps-curl',
+      'fedb-close-grip-ez-bar-curl',
       'fedb-hammer-grip-incline-db-bench-press',
       'close-grip-push-up',
       'fedb-flat-bench-leg-pull-in',
@@ -460,7 +462,7 @@ describe('system exercise catalog', () => {
 
   it('карантин действует и для прямых legacy-привязок, не удаляя сами упражнения', () => {
     const byRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
-    expect(QUARANTINED_EXERCISE_MEDIA_REFS.size).toBe(40)
+    expect(QUARANTINED_EXERCISE_MEDIA_REFS.size).toBe(47)
     for (const ref of QUARANTINED_EXERCISE_MEDIA_REFS) {
       expect(byRef.get(ref), ref).toMatchObject({ ref, imageUrl: undefined, motionImageUrl: undefined, techniqueVideoUrl: undefined })
     }
@@ -470,6 +472,18 @@ describe('system exercise catalog', () => {
     expect(byRef.get('fedb-seated-leg-curl')?.techniqueVideoUrl).toBe('/exercises/vital/seated-leg-curl-machine.mp4')
     expect(byRef.get('fedb-arnold-dumbbell-press')?.techniqueVideoUrl).toBe('/exercises/vital/arnold-press-dumbbell.mp4')
     expect(byRef.get('vital-stepper-machine')?.techniqueVideoUrl).toBe('/exercises/vital/stepper-machine.mp4')
+  })
+
+  it('после просмотра семи роликов сохраняет девять совместимых карточек и изолирует семь вариантов', () => {
+    const byRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
+    for (const ref of ['fedb-alternate-hammer-curl', 'fedb-alternate-incline-dumbbell-curl', 'fedb-close-grip-standing-barbell-curl', 'fedb-close-grip-ez-bar-curl', 'fedb-low-cable-triceps-extension', 'fedb-flexor-incline-dumbbell-curls', 'fedb-incline-inner-biceps-curl']) {
+      expect(byRef.get(ref), ref).toMatchObject({ ref, imageUrl: undefined, motionImageUrl: undefined, techniqueVideoUrl: undefined })
+    }
+    for (const ref of ['hammer-curl', 'barbell-curl', 'fedb-incline-dumbbell-curl', 'fedb-ez-bar-curl', 'fedb-3-4-sit-up', 'fedb-sit-up', 'fedb-hanging-pike', 'fedb-hanging-leg-raise', 'fedb-cable-rope-overhead-triceps-extension']) {
+      expect(byRef.get(ref)?.techniqueVideoUrl, ref).toMatch(/^\/exercises\/vital-pro\//)
+    }
+    expect(byRef.get('fedb-close-grip-ez-bar-curl')).toMatchObject({ equipment: 'EZ-гриф', inputKind: 'strength' })
+    expect(selectableExercises(SYSTEM_EXERCISE_CATALOG)).toHaveLength(1040)
   })
 
   it('не показывает неверные анимации из пользовательских скриншотов', () => {

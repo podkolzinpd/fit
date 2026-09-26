@@ -95,7 +95,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
     await page.getByRole('button', { name: 'Войти', exact: true }).click()
     await expect(page).toHaveURL(/\/(today|clients)$/, { timeout: 20_000 })
     await page.goto('/exercises')
-    for (const name of ['Сгибание ноги стоя в тренажёре', 'Кубинский жим', 'Жим гантели лёжа одной рукой']) {
+    for (const name of ['Сгибание ноги стоя в тренажёре', 'Кубинский жим', 'Жим гантели лёжа одной рукой', 'Попеременный молоток', 'Попеременный подъём на бицепс на наклонной', 'Подъём штанги на бицепс узким хватом стоя', 'Подъём на бицепс узким хватом', 'Разгибание на трицепс в нижнем блоке', 'Подъём гантелей на бицепс на наклонной с супинацией', 'Подъём гантелей на внутренний пучок бицепса']) {
       await page.getByLabel('Поиск упражнения').fill(name)
       const card = page.locator('.catalog-media-card').filter({ has: page.getByText(name, { exact: true }) })
       await expect(card).toHaveCount(1)

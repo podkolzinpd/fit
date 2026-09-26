@@ -13,7 +13,7 @@ import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerRea
 import { LiveRestTimer } from './LiveRestTimer'
 import { cancelNativeRestTimerNotification, scheduleNativeRestTimerNotification } from './rest-timer-notification'
 import {
-  addDays, currentTimeInTimeZone, dayOfMonth, formatLocalDate, formatMonth, formatWeekRange, localDate, todayInTimeZone, weekdayShort,
+  addDays, currentTimeInTimeZone, dayOfMonth, daysBetween, formatLocalDate, formatMonth, formatWeekRange, localDate, todayInTimeZone, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
 import { AsyncView, Coachmark, EmptyState, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
@@ -108,20 +108,28 @@ function eventTime(workout: Workout): string {
   return `${start}–${workout.endTime.slice(0, 5)}`
 }
 
+function safeScheduleDate(value: string | null): LocalDate | null {
+  if (!value) return null
+  try { return localDate(value) } catch { return null }
+}
+
 function useTrainerScheduleModel(forceDayView = false) {
   const { workouts: workoutsRepository } = useDataBackend()
   const [params, setParams] = useSearchParams()
   const { actor } = useAuth()
+  const navigate = useNavigate()
+  const pilot = isTrainerScheduleV2Enabled(actor)
   const today = todayInTimeZone(actor?.timezone)
-  const dateParam = params.get('date')
-  const weekParam = params.get('week')
+  const dateParam = safeScheduleDate(params.get('date'))
+  const weekParam = safeScheduleDate(params.get('week'))
   const scheduleRange = params.get('range') === '2w' ? '2w' : 'week'
   const isTwoWeekView = scheduleRange === '2w'
   const isDayView = forceDayView || Boolean(dateParam)
-  const selected = dateParam ? localDate(dateParam) : weekParam ? localDate(weekParam) : today
-  const periodAnchor = isDayView && weekParam ? localDate(weekParam) : selected
-  const weekStart = mondayWeekStart(periodAnchor)
   const overviewDayCount = isTwoWeekView ? 14 : 7
+  const selected = dateParam ?? (forceDayView ? today : weekParam ?? today)
+  const validWeekStart = weekParam ? mondayWeekStart(weekParam) : null
+  const weekStart = validWeekStart && (!isDayView || (daysBetween(validWeekStart, selected) >= 0 && daysBetween(validWeekStart, selected) < overviewDayCount))
+    ? validWeekStart : mondayWeekStart(selected)
   const periodEnd = addDays(weekStart, overviewDayCount - 1)
   const todayWeekStart = mondayWeekStart(today)
   const overviewDays = Array.from({ length: overviewDayCount }, (_, offset) => addDays(weekStart, offset))
@@ -129,16 +137,20 @@ function useTrainerScheduleModel(forceDayView = false) {
   const autoScrolledDateRef = useRef<LocalDate | null>(null)
 
   function openDay(date: LocalDate, preservePeriodStart?: LocalDate) {
-    setParams(isTwoWeekView
-      ? { date, range: '2w', week: preservePeriodStart ?? mondayWeekStart(date) }
-      : { date })
+    const anchor = preservePeriodStart ?? (daysBetween(weekStart, date) >= 0 && daysBetween(weekStart, date) < overviewDayCount
+      ? weekStart : mondayWeekStart(date))
+    const next = new URLSearchParams({ date, week: anchor })
+    if (isTwoWeekView) next.set('range', '2w')
+    if (pilot) navigate(`/today?${next}`)
+    else setParams(next)
   }
   function showOverview(date: LocalDate, range: 'week' | '2w' = scheduleRange) {
     const start = mondayWeekStart(date)
     const next: Record<string, string> = {}
-    if (start !== todayWeekStart) next.week = start
+    if (pilot || start !== todayWeekStart) next.week = start
     if (range === '2w') next.range = '2w'
-    setParams(next)
+    if (pilot) navigate(`/schedule?${new URLSearchParams(next)}`)
+    else setParams(next)
   }
   function shiftOverview(direction: -1 | 1) { showOverview(addDays(weekStart, direction * overviewDayCount)) }
 
@@ -487,18 +499,20 @@ function ScheduleV2InboxSheet({ questions, questionsLoading, questionsError, onR
 
 function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean }) {
   const {
-    actor, selected, isDayView, weekStart, periodEnd,
-    overviewDays, today, scrollRef, openDay, shiftOverview,
+    actor, selected, isTwoWeekView, isDayView, weekStart, periodEnd,
+    overviewDays, today, scrollRef, openDay, showOverview, shiftOverview,
     query, itemsByDay, timed, untimed, todayDisabled,
   } = useTrainerScheduleModel(forceDayView)
   const workspace = useTrainerWorkspace(isDayView)
-  const navigate = useNavigate()
+  const location = useLocation()
+  const returnTo = `${location.pathname}${location.search}`
   const dateInputRef = useRef<HTMLInputElement>(null)
   const [inboxOpen, setInboxOpen] = useState(false)
   const currentTime = currentTimeInTimeZone(actor?.timezone)
   const currentMinutes = minutesOf(currentTime)
   const periodWorkouts = (query.data ?? []).filter((workout) => workout.status !== 'cancelled')
   const periodClients = new Set(periodWorkouts.map((workout) => workout.clientId)).size
+  const periodLabel = scheduleV2Range(weekStart, periodEnd)
 
   useEffect(() => {
     trackGoal('schedule_v2_exposed')
@@ -517,7 +531,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const menuItems = [
     { label: 'Сегодня', disabled: todayDisabled, onClick: () => openDay(today) },
     { label: 'Выбрать дату', onClick: openDatePicker },
-    { label: 'Показать неделю', onClick: () => navigate('/schedule') },
+    { label: isTwoWeekView ? 'К 2 неделям' : 'К неделе', onClick: () => showOverview(weekStart) },
   ]
 
   return <Page
@@ -528,24 +542,32 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     <header className={`schedule-v2-topbar${isDayView ? ' schedule-v2-topbar-day' : ''}`}>
       {isDayView ? <div><h1>{scheduleV2DayTitle(selected)}</h1><p>{scheduleV2Weekday(selected)}</p></div> : <h1 aria-hidden="true">Расписание</h1>}
       {isDayView
-        ? <OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} />
-        : <label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && navigate(`/today?date=${event.target.value}`)} /></label>}
+        ? <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>
+        : <label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label>}
     </header>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {!isDayView ? <>
-        <section className="schedule-v2-period" aria-label="Навигация по расписанию">
-          <button type="button" aria-label="Предыдущая неделя" onClick={() => shiftOverview(-1)}><BackIcon /></button>
-          <strong>{scheduleV2Range(weekStart, periodEnd)}</strong>
-          <button type="button" aria-label="Следующая неделя" onClick={() => shiftOverview(1)}><ChevronRightIcon /></button>
+        <div className="schedule-v2-range-toggle" role="group" aria-label="Период расписания">
+          <button type="button" aria-pressed={!isTwoWeekView} onClick={() => showOverview(weekStart, 'week')}>Неделя</button>
+          <button type="button" aria-pressed={isTwoWeekView} onClick={() => showOverview(weekStart, '2w')}>2 недели</button>
+        </div>
+        <section className={`schedule-v2-period${isTwoWeekView ? ' is-two-week' : ''}`} aria-label="Навигация по расписанию">
+          <button type="button" aria-label={isTwoWeekView ? 'Предыдущие 2 недели' : 'Предыдущая неделя'} onClick={() => shiftOverview(-1)}><BackIcon /></button>
+          <strong aria-label={periodLabel}>{isTwoWeekView
+            ? <><span>{periodLabel.replace(/ \d{4} г\.$/, '')}</span><small>{periodEnd.slice(0, 4)} г.</small></>
+            : periodLabel}</strong>
+          <button type="button" aria-label={isTwoWeekView ? 'Следующие 2 недели' : 'Следующая неделя'} onClick={() => shiftOverview(1)}><ChevronRightIcon /></button>
         </section>
-        <div className="schedule-v2-weekdays" aria-label="Дни периода">
-          {overviewDays.map((day) => <button key={day} type="button" className={`${day === selected ? 'is-selected' : ''}${day === today ? ' is-today' : ''}`} onClick={() => navigate(`/today?date=${day}`)}><span>{weekdayShort(day)}</span><strong>{dayOfMonth(day)}</strong></button>)}
+        <div className="schedule-v2-weekstrip" aria-label="Дни периода">
+          {Array.from({ length: isTwoWeekView ? 2 : 1 }, (_, weekIndex) => <div key={weekIndex} className="schedule-v2-weekdays">
+            {overviewDays.slice(weekIndex * 7, (weekIndex + 1) * 7).map((day) => <button key={day} type="button" className={`${day === selected ? 'is-selected' : ''}${day === today ? ' is-today' : ''}`} aria-label={formatScheduleDateLabel(day)} onClick={() => openDay(day, weekStart)}><span>{weekdayShort(day)}</span><strong>{dayOfMonth(day)}</strong></button>)}
+          </div>)}
         </div>
         <p className="schedule-v2-period-summary">{workoutCountLabel(periodWorkouts.length)} · {trainerClientCount(periodClients)}</p>
         <section className="schedule-v2-card-grid" aria-label={`Расписание: ${formatWeekRange(weekStart, periodEnd)}`}>
           {overviewDays.map((day) => {
             const workouts = itemsByDay.get(day) ?? []
-            return <button key={day} type="button" className={`schedule-v2-day-card${day === today ? ' is-today' : ''}`} onClick={() => navigate(`/today?date=${day}`)}>
+            return <button key={day} type="button" className={`schedule-v2-day-card${day === today ? ' is-today' : ''}`} onClick={() => openDay(day, weekStart)}>
               <span className="schedule-v2-day-title"><span>{weekdayShort(day)}</span><strong>{dayOfMonth(day)}</strong></span>
               <span className="schedule-v2-day-events">{workouts.slice(0, 5).map((workout) => {
                 const status = scheduleEventStatus(workout, today)
@@ -566,7 +588,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
             <strong>{summaryValue(workspace.data?.summary.inboxCount)}</strong>
           </button>
         </section>
-        {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
+        {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
         <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
           <div className="day-grid" style={{ height: HOURS.length * HOUR_HEIGHT }}>
             {HOURS.map((hour) => <div key={hour} className={`day-grid-hour${selected === today && scheduleHourLabelCollidesWithNow(hour, currentMinutes) ? ' is-near-current-time' : ''}`} style={{ top: hour * HOUR_HEIGHT }}><span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span><div className="day-grid-hour-line" /></div>)}
@@ -577,7 +599,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
               const top = (startMin / 60) * HOUR_HEIGHT
               const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 54)
               const status = scheduleEventStatus(workout, today)
-              return <Link key={workout.id} className={`schedule-v2-event schedule-event-${status.tone}`} style={{ top, height }} to={`/workouts/${workout.id}`} onClick={() => trackGoal('schedule_v2_workout_opened')}>
+              return <Link key={workout.id} className={`schedule-v2-event schedule-event-${status.tone}`} style={{ top, height }} to={`/workouts/${workout.id}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_opened')}>
                 <span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span>
                 <span><b>{workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small><span className="sr-only">{status.label}</span></span>
                 {workout.status === 'done' && <CheckIcon />}

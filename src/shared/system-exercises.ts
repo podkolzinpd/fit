@@ -9,7 +9,7 @@ import { EXERCISE_CATALOG_DECISIONS } from './exercise-catalog-decisions'
 import { EXERCISE_METRIC_CORRECTIONS } from './exercise-metric-corrections'
 import { QUARANTINED_EXERCISE_MEDIA_REFS } from './exercise-media-quarantine'
 
-export const SYSTEM_EXERCISE_CATALOG_VERSION = 15
+export const SYSTEM_EXERCISE_CATALOG_VERSION = 16
 
 // Форма импортированного упражнения (генерируется scripts/import-exercises.mjs).
 export interface ImportedExercise extends ExerciseSnapshot {

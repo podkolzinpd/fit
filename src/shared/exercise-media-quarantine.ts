@@ -5,6 +5,15 @@
  * the exact variant has been checked against the actual clip.
  */
 export const QUARANTINED_EXERCISE_MEDIA_REFS: ReadonlySet<string> = new Set([
+  // Seven-clip visual review, 2026-09-27: five confirmed variant mismatches.
+  'fedb-alternate-hammer-curl', // Clip moves both arms simultaneously.
+  'fedb-alternate-incline-dumbbell-curl', // Clip moves both arms simultaneously.
+  'fedb-close-grip-standing-barbell-curl', // Clip uses a shoulder-width grip.
+  'fedb-close-grip-ez-bar-curl', // Clip uses a shoulder-width grip.
+  'fedb-low-cable-triceps-extension', // Clip cable does not originate at the low pulley.
+  // Exact variants remain unconfirmed; do not turn uncertainty into approval.
+  'fedb-flexor-incline-dumbbell-curls',
+  'fedb-incline-inner-biceps-curl',
   'biceps-curl', // User screenshot conflicts with the described elbows-at-sides curl.
   'fedb-mixed-grip-chin',
   'fedb-v-bar-pullup',
