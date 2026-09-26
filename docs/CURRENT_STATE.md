@@ -6,8 +6,7 @@ Yandex ID является единственным production-входом; app
 ## Активная цель
 Выпустить калибровку карты тела по согласованному первому эскизу: исходные мужская/женская фигуры, независимые контуры всех зон и приоритет конкретных мышц при касании; вместо схемы и неизвестного пола — список с теми же показателями. Home явно подписывает месячный период. План и приёмка: `docs/design/body-map-calibration-20260926.md`. Расчёты, API и ИИ не меняются; тестовые обращения к модели запрещены.
 Локальная приёмка завершена: `npm run check`, 512/512 попаданий, постоянный WebKit-тест 64 точек, 12 mobile-сценариев и Linux visual read-only 19 passed / 8 штатных skipped. Дальше — обязательный CI и production-проверка; это не запуск ИИ-анализа.
-
-Подготовлен первый offline-шаг Yandex frontend: отдельный default-off private bucket template, ручная сборка rehearsal без cloud credentials, manifest с SHA-256/MIME/cache и исходным routing-контрактом. Vercel/DNS/production не переключаются; публикация и HTTP/TLS parity ещё не реализованы. Гейты: `docs/design/YANDEX_FRONTEND_FOUNDATION.md`.
+После #1181 подготовлены self-contained offline release и локальный HTTP-стенд: проверка SHA-256, прямые маршруты, JS recovery/asset 404, cache/HEAD/ETag, сохранение прошлых immutable assets при выборе версии и откате. План object keys не выполняет upload; cloud adapter, TLS и атомарная activation ещё не реализованы. Лимит frontend — 600 ₽/месяц, домен позже; платные ресурсы/Vercel/DNS/production не меняются. Приёмка и ограничения: `docs/design/YANDEX_FRONTEND_RELEASE_REHEARSAL.md`.
 Диагностика фонового dispatcher: `Background dispatch failed` теперь различает `push`/`app_feedback`, `prepare`/`finalize`, безопасный код и категорию ошибки, код rollback и release. Payload/SQL/stack не пишутся, повторы не добавлены. Это улучшение наблюдаемости; причина инцидента 24 сентября ещё не подтверждена.
 
 Стабилизировать Yandex-only production после переключения и затем вывести Supabase из эксплуатации. До закрытия rollback-окна сохраняется общий доменный контракт без dual-write; гейты описаны в `docs/YANDEX_CUTOVER_PLAYBOOK.md`.
@@ -110,7 +109,6 @@ Yandex ID является единственным production-входом; app
    остаётся paused, а обратной миграции Yandex writes нет.
 
 ## Ближайший порядок
-
 1. Наблюдать Yandex auth/API errors и выполнить ручной E2E matrix тестовыми
    trainer/client accounts; при инциденте возвращать maintenance и делать
    forward-fix, а не включать Supabase UI поверх появившихся Yandex writes.

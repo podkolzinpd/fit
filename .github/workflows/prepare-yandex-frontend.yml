@@ -17,7 +17,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --test scripts/prepare-yandex-frontend.test.mjs
+      - run: node --test scripts/prepare-yandex-frontend.test.mjs scripts/frontend-release.test.mjs
       - name: Build an offline rehearsal, not a production configuration
         run: npm run build
         env:
@@ -25,6 +25,10 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
       - name: Prepare checksums and required hosting contract
         run: node scripts/prepare-yandex-frontend.mjs dist "$RELEASE_ID" frontend-manifest.json
+        env:
+          RELEASE_ID: ${{ github.sha }}
+      - name: Package verified offline release
+        run: node scripts/frontend-release.mjs dist "$RELEASE_ID" frontend-release.json
         env:
           RELEASE_ID: ${{ github.sha }}
       - uses: actions/upload-artifact@v4
@@ -35,3 +39,4 @@ jobs:
           path: |
             dist/
             frontend-manifest.json
+            frontend-release.json
