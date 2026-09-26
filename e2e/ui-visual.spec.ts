@@ -772,7 +772,7 @@ test('auth family keeps light and dark visual baselines', async ({ page }) => {
   await expectVisualBaseline(page, `auth-forgot-dark-${process.platform}.png`, [], true, '#111214')
 
   await gotoStable(page, '/auth')
-  await expect(page.getByRole('heading', { name: 'Вход' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
   await expectVisualBaseline(page, `auth-login-dark-${process.platform}.png`, [], true, '#111214')
 
   await gotoStable(page, '/auth/callback')

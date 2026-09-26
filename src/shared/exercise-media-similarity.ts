@@ -1,11 +1,10 @@
+import type { ExerciseSnapshot } from './domain'
+
 /**
- * Reviewed visual substitutions for exercises that do not have their own Vital
- * animation. These links affect presentation only: exercise identity, history,
- * metrics and instructions remain attached to the original ref.
- *
- * A substitution is allowed when the main movement pattern is the same even if
- * the grip, bench angle or equipment differs. Do not add a target merely because
- * it trains the same muscle.
+ * Historical candidate substitutions retained as an audit inventory.
+ * These are NOT verified exact movements and do not authorize displaying media.
+ * Approval also requires VERIFIED_EXACT_MEDIA_TARGET_BY_REF below. Differences
+ * in grip, posture, support or implement cannot be ignored because muscles match.
  */
 export const REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF: Readonly<Record<string, string>> = {
   // Cardio.
@@ -261,6 +260,55 @@ export const REVIEWED_SIMILAR_MEDIA_TARGET_BY_REF: Readonly<Record<string, strin
   'fedb-standing-hamstring-and-calf-stretch': 'dynamic-hamstring-stretch',
   'fedb-side-to-side-box-shuffle': 'vital-stepup-ex332',
   'fedb-plate-pinch': 'vital-barbell-hold-ex010',
+}
+
+/**
+ * These pairs look close in a text catalogue but show a different movement.
+ * Keep the source exercise available for history and manual selection, without
+ * attaching a misleading animation to it.
+ */
+export const REJECTED_SIMILAR_MEDIA_REFS: ReadonlySet<string> = new Set([
+  'fedb-one-arm-dumbbell-preacher-curl',
+  'fedb-reverse-hyperextension',
+  'fedb-straight-bar-bench-mid-rows',
+])
+
+const normalizedEquipment = (exercise: ExerciseSnapshot): string => {
+  const equipmentRef = exercise.equipmentRef?.toLocaleLowerCase('en-US').trim()
+  const value = (equipmentRef && equipmentRef !== 'other' ? equipmentRef : exercise.equipment ?? equipmentRef ?? '')
+    .toLocaleLowerCase('ru-RU')
+    .replaceAll('ё', 'е')
+  if (/гантел|dumbbell/u.test(value)) return 'dumbbell'
+  if (/штанг|barbell/u.test(value)) return 'barbell'
+  if (/гир|kettlebell/u.test(value)) return 'kettlebell'
+  if (/резин|эспанд|band/u.test(value)) return 'band'
+  if (/трос|блок|cable/u.test(value)) return 'cable'
+  if (/смит|smith/u.test(value)) return 'smith'
+  if (/тренаж|machine/u.test(value)) return 'machine'
+  if (/без оборуд|собствен|свое тело|body only/u.test(value)) return 'body'
+  if (/скам|bench/u.test(value)) return 'bench'
+  if (/турник|переклад|pull.?up bar/u.test(value)) return 'pullup-bar'
+  return value.trim()
+}
+
+const normalizedMuscle = (value: string | undefined): string => (value ?? '')
+  .toLocaleLowerCase('ru-RU')
+  .replaceAll('ё', 'е')
+  .trim()
+
+// The old table above is an audit inventory, NOT approval to display a clip.
+// Muscle/equipment equality cannot establish grip, posture or movement identity.
+// Populate only after viewing both the exact variant and its candidate clip.
+export const VERIFIED_EXACT_MEDIA_TARGET_BY_REF: Readonly<Record<string, string>> = {}
+
+/** A candidate needs explicit movement verification, not just matching metadata. */
+export function isReviewedSimilarMediaCompatible(source: ExerciseSnapshot, target: ExerciseSnapshot): boolean {
+  return VERIFIED_EXACT_MEDIA_TARGET_BY_REF[source.ref] === target.ref
+    && !REJECTED_SIMILAR_MEDIA_REFS.has(source.ref)
+    && source.inputKind === target.inputKind
+    && source.muscleGroup === target.muscleGroup
+    && normalizedEquipment(source) === normalizedEquipment(target)
+    && normalizedMuscle(source.primaryMuscleDetail) === normalizedMuscle(target.primaryMuscleDetail)
 }
 
 /**

@@ -1,6 +1,6 @@
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { MUSCLE_GROUP_LABELS, SYSTEM_EXERCISE_LEGACY_CATALOG } from '../../shared/system-exercises'
-import { COMPATIBLE_EXERCISE_REPLACEMENTS } from '../../shared/exercise-catalog-curation'
+import { EXERCISE_PICKER_REPLACEMENTS } from '../../shared/exercise-catalog-curation'
 import { VITAL_GYM_PRO_ALIASES_BY_REF } from '../../shared/vital-gym-pro.generated'
 
 // Разговорные варианты, которыми тренеры обычно называют базовые упражнения.
@@ -127,8 +127,8 @@ export const ORIGINAL_SEARCH_ALIASES: Readonly<Record<string, readonly string[]>
 }
 
 // Preserve the complete hand-reviewed dictionary and old visible names. Only
-// compatible duplicates inherit exact phrases; variants keep their own match
-// and recording units. Nothing here upgrades generated hints to exact aliases.
+// picker duplicates inherit exact phrases; visible variants keep their own
+// match. Nothing here upgrades generated hints to exact aliases.
 export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = (() => {
   const aliases = new Map<string, Set<string>>(Object.entries(ORIGINAL_SEARCH_ALIASES).map(([ref, phrases]) => [ref, new Set(phrases)]))
   for (const [ref, phrases] of Object.entries(VITAL_GYM_PRO_ALIASES_BY_REF)) {
@@ -140,7 +140,7 @@ export const SEARCH_ALIASES: Readonly<Record<string, readonly string[]>> = (() =
     phrases.add(exercise.name.replace(/\s*\([^)]*\)\s*$/, '').trim())
     aliases.set(exercise.ref, phrases)
   }
-  for (const [ref, target] of Object.entries(COMPATIBLE_EXERCISE_REPLACEMENTS)) {
+  for (const [ref, target] of Object.entries(EXERCISE_PICKER_REPLACEMENTS)) {
     const targetPhrases = aliases.get(target) ?? new Set<string>()
     for (const phrase of aliases.get(ref) ?? []) targetPhrases.add(phrase)
     aliases.set(target, targetPhrases)
@@ -228,7 +228,7 @@ export function exerciseSearchAliases(exercise: ExerciseSnapshot): readonly stri
   const aliases = new Set<string>(exercise.source === 'system' ? SEARCH_ALIASES[exercise.ref] ?? [] : [])
   // Old generated English names/forms remain search hints, never exact matches.
   if (exercise.source === 'system') {
-    for (const [ref, target] of Object.entries(COMPATIBLE_EXERCISE_REPLACEMENTS)) {
+    for (const [ref, target] of Object.entries(EXERCISE_PICKER_REPLACEMENTS)) {
       if (target !== exercise.ref) continue
       const original = SYSTEM_EXERCISE_LEGACY_CATALOG.find((item) => item.ref === ref)
       if (original) for (const phrase of legacySearchHints(original)) aliases.add(phrase)
