@@ -1,0 +1,2 @@
+/* Synthetic hosting probe: no application code or user data. */
+console.info('fit-hosting-probe-recovery')
