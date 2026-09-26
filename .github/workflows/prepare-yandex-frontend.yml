@@ -2,12 +2,19 @@ name: Prepare Yandex frontend (no deployment)
 
 on:
   workflow_dispatch:
+    inputs:
+      candidate_commit:
+        description: 'Optional full main commit SHA for the separately approved candidate build'
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
 
 jobs:
   prepare:
+    if: inputs.candidate_commit == ''
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -40,3 +47,65 @@ jobs:
             dist/
             frontend-manifest.json
             frontend-release.json
+
+  candidate:
+    if: inputs.candidate_commit != ''
+    environment: fit-frontend-candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: tooling
+      - name: Validate pinned source
+        env:
+          SOURCE_COMMIT: ${{ inputs.candidate_commit }}
+        run: '[[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]'
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_commit }}
+          fetch-depth: 0
+          path: app
+      - name: Require source from main history
+        working-directory: app
+        env:
+          SOURCE_COMMIT: ${{ inputs.candidate_commit }}
+        run: git merge-base --is-ancestor "$SOURCE_COMMIT" origin/main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+        working-directory: app
+      - name: Build candidate with public client configuration only
+        working-directory: app
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_YANDEX_API_BASE_URL: https://bbat47es6kspjb3dvfn2.containers.yandexcloud.net
+          VITE_YANDEX_OAUTH_CLIENT_ID: fdc7e12c472b475690fbb387d8698663
+          VITE_YANDEX_APP_SESSION_ENABLED: 'true'
+          VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true'
+          VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true'
+          VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
+          VITE_MAINTENANCE_MODE: 'false'
+        run: |
+          test -n "$VITE_SUPABASE_URL"
+          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
+          npm run build
+      - name: Package candidate and version-pinned gateway plan
+        env:
+          SOURCE_COMMIT: ${{ inputs.candidate_commit }}
+          FIT_FRONTEND_ORIGIN: https://d5drmhq5ovqk03jgsm8i.wnq2w1o5.apigw.yandexcloud.net
+        run: |
+          node tooling/scripts/frontend-release.mjs app/dist "$SOURCE_COMMIT" frontend-release.json
+          node tooling/scripts/frontend-gateway-plan.mjs frontend-release.json fit-frontend-probe-b1goqho1 aje67ouc4633u7i7oc2a gateway-plan.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-candidate-${{ inputs.candidate_commit }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            frontend-release.json
+            gateway-plan.json
