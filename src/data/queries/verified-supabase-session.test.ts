@@ -5,7 +5,7 @@ const auth = vi.hoisted(() => ({
   refreshSession: vi.fn(),
 }))
 
-vi.mock('./client', () => ({ getSupabaseClient: () => ({ auth }) }))
+vi.mock('./client', () => ({ supabase: { auth } }))
 
 import { refreshSupabaseAccessToken, verifiedSupabaseAccessToken } from './verified-supabase-session'
 

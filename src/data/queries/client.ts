@@ -1,30 +1,18 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { isYandexOnlyAuthEnabled } from '../../app/feature-flags'
+import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../database.types'
 import { createAuthFetch } from './auth-fetch'
 import { assertSafeSupabaseUrl } from './supabase-environment'
 
-let client: SupabaseClient<Database> | null = null
+const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? (import.meta.env.MODE === 'test' ? 'http://127.0.0.1:54321' : undefined)
+const publishableKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ?? (import.meta.env.MODE === 'test' ? 'test-publishable-key' : undefined)
 
-export function getSupabaseClient(): SupabaseClient<Database> {
-  // A configured legacy URL must never become a fallback in Yandex-only builds.
-  if (isYandexOnlyAuthEnabled()) {
-    throw new Error('Войдите через Yandex ID, чтобы продолжить.')
-  }
-  if (client !== null) return client
-
-  const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)
-    ?? (import.meta.env.MODE === 'test' ? 'http://127.0.0.1:54321' : undefined)
-  const publishableKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined)
-    ?? (import.meta.env.MODE === 'test' ? 'test-publishable-key' : undefined)
-  if (!url || !publishableKey) {
-    throw new Error('Задайте VITE_SUPABASE_URL и VITE_SUPABASE_PUBLISHABLE_KEY')
-  }
-
-  assertSafeSupabaseUrl(url, import.meta.env.DEV)
-  client = createClient<Database>(url, publishableKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
-    global: { fetch: createAuthFetch() },
-  })
-  return client
+if (!url || !publishableKey) {
+  throw new Error('Задайте VITE_SUPABASE_URL и VITE_SUPABASE_PUBLISHABLE_KEY')
 }
+
+assertSafeSupabaseUrl(url, import.meta.env.DEV)
+
+export const supabase = createClient<Database>(url, publishableKey, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  global: { fetch: createAuthFetch() },
+})

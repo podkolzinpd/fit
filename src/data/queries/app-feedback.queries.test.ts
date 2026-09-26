@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const rpc = vi.hoisted(() => vi.fn())
-vi.mock('./client', () => ({ getSupabaseClient: () => ({ rpc }) }))
+vi.mock('./client', () => ({ supabase: { rpc } }))
 
 import { appFeedbackQueries } from './app-feedback.queries'
 

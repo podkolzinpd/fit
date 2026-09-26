@@ -62,7 +62,16 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
     mimeType: 'image/png',
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
   })
-  await editor.getByText('Образование и сертификаты', { exact: true }).click()
+  // Upload saves and replaces the draft asynchronously. Continue only after
+  // its result is rendered, not merely after the file input's change event.
+  await expect(editor.getByLabel('Выбрать фото')).toBeEnabled()
+  await expect(editor.getByRole('status')).toHaveText('Сохранено')
+  await editor.locator('summary').filter({ hasText: /^Образование и сертификаты/ }).click()
+  const certificates = editor.locator('.trainer-certificates-editor')
+  // A retry can see the draft saved by the preceding attempt.
+  while (await certificates.getByRole('button', { name: 'Удалить', exact: true }).count()) {
+    await certificates.getByRole('button', { name: 'Удалить', exact: true }).first().click()
+  }
   await editor.getByLabel('Образование и квалификация').fill('Высшее физкультурное образование.')
   await editor.getByRole('button', { name: 'Добавить сертификат' }).click()
   await editor.getByLabel('Название сертификата 1').fill('Персональный тренер')
