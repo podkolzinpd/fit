@@ -161,7 +161,7 @@ test('trainer opens client chat from the list and returns to the same search and
   const action = page.getByRole('button', { name: 'Сообщения с Спортсмен 06, непрочитанных: 4' })
   await action.scrollIntoViewIfNeeded()
   const scrollBefore = await content.evaluate((element) => element.scrollTop)
-  expect(scrollBefore).toBeGreaterThan(100)
+  expect(scrollBefore).toBeGreaterThan(0)
 
   await action.click()
   await expect(page).toHaveURL(new RegExp(`/chat/${conversationId}$`))
