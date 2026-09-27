@@ -526,6 +526,13 @@ account ID. Постоянные ключи и backend deploy identity не ис
 оператор, слепого повторного переключения нет. Backup OpenAPI сохраняется
 в artifact deployment run на 90 дней.
 
+WASM читаются публично только по bucket policy `releases/*/assets/*.wasm`.
+Public read включён с этой ограничивающей политикой; list/config read закрыты.
+Нельзя удалять policy при включённом public read. Deployment не меняет ACL:
+перед activation проверяет WASM bytes/MIME/CORS и анонимный 403 остальных
+файлов/listing. Роли `storage.uploader` на frontend-бакет достаточно для записи;
+`storage.editor`/`storage.admin` публикации не выдаются.
+
 Шлюз и frontend-бакет общие для технического адреса и `fit-training.ru`;
 DNS propagation не требуется для smoke через технический адрес. Vercel
 работает параллельно и этим workflow не управляется. План, IAM scope,

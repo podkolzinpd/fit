@@ -41,9 +41,15 @@ Frontend only: нет миграций, изменений product API, auth log
 - Предыдущий OpenAPI JSON сохраняется до загрузки в artifact на 90 дней.
   Новая спецификация сохраняет прежние hashed asset routes. Нехватка места
   или лимит размера спецификации останавливают выпуск, не удаляют старые версии.
-- Только WASM, превышающие лимит ответа Gateway, получают exact-object
-  `public-read`. Проверяются redirect, bytes и CORS обоих frontend origins.
-  Бакет целиком не открывается; его policy/CORS workflow не редактирует.
+- Публичное чтение разрешено оператором только для `releases/*/assets/*.wasm`
+  через bucket policy. Флаг public read включён вместе с этой ограничивающей
+  политикой; public list/config read выключены. Нельзя удалять политику при
+  включённом read-флаге: это откроет другие объекты. Перед удалением политики
+  сначала выключить public read. Workflow не меняет ACL, policy или CORS.
+- До activation проверяются анонимные bytes/MIME/CORS каждого WASM для двух
+  origins, 403 для каждого non-WASM файла сборки и 403 для listing. WASM больше
+  лимита Gateway по-прежнему выдаются через redirect. Любая ошибка останавливает
+  выпуск до переключения шлюза.
 - Шлюз обновляется только через `--spec`; домены, certificate и log options
   не меняются. До и после проверяется ACTIVE и disabled request logging.
 - HTTP smoke проверяет все файлы и их SHA-256 (после HTTP decompression),
@@ -60,13 +66,14 @@ Frontend only: нет миграций, изменений product API, auth log
 `fit-frontend-deployer`:
 
 - `s3:GetObject`, `s3:PutObject` только `fit-frontend-probe-b1goqho1/releases/*`;
-- `s3:PutObjectAcl` только `releases/*/assets/*.wasm` этого бакета;
+- Первоначальный `s3:PutObjectAcl` удалён из bucket policy: workflow больше
+  не управляет ACL. Вместо него отдельно согласовано публичное `s3:GetObject`
+  только `releases/*/assets/*.wasm`, включая ещё не активированные версии;
 - Дополнительно отдельно согласована и назначена IAM-роль `storage.uploader`
   на весь frontend-бакет: bucket policy без базового IAM-доступа давала 403.
   Это шире `releases/*`; код ограничивает запись release-префиксом. Ролей
-  на другие бакеты или каталог нет. Чтение от deployer проверено; ACL старого
-  WASM, созданного другим аккаунтом, даёт 403. ACL новых файлов настоящей
-  сборки должен пройти проверку до activation; права автоматически не расширяются.
+  на другие бакеты или каталог нет. Чтение от deployer проверено. `PutObjectAcl`
+  давал 403; для решения не выдавались `storage.editor` или `storage.admin`.
 - `api-gateway.editor` только `d5drmhq5ovqk03jgsm8i` (роль также технически
   позволяет удалить шлюз; workflow не вызывает delete);
 - `iam.serviceAccounts.user` только reader `aje67ouc4633u7i7oc2a`;
@@ -94,7 +101,7 @@ disabled=true. Не менять DNS и не удалять сборки. При
 
 | Пункт | Доказательство / статус |
 | --- | --- |
-| 1 | Созданы deploy SA/OIDC и main-only GitHub environment; gateway access работает. Отдельно согласована bucket-only `storage.uploader`, чтение проверено. ACL новых WASM проверяется перед первым activation. |
+| 1 | Созданы deploy SA/OIDC и main-only GitHub environment; gateway access работает. Bucket-only `storage.uploader`, чтение проверено. WASM-only public policy установлена: реальный WASM с private ACL возвращает 200, HTML/listing 403; ACL из deployment удалён. |
 | 2 | Workflow и exact-main guards реализованы; тесты workflow проходят локально. |
 | 3 | Unit tests проверяют порядок backup/upload/verify/activate, сохранение assets и коллизии; remote выпуск ещё не выполнен. |
 | 4 | Unit tests: smoke failure, потерянный ответ update, чужое изменение, unsettled operation, rollback verification. |
@@ -109,3 +116,13 @@ HTTP-тестов остановил sandbox `listen EPERM`; отдельно с
 полный hosting suite прошёл. API: 927 passed / 49 skipped, lint/typecheck/build.
 Frontend production build с локальными placeholder-параметрами и startup guard
 прошли. После уточнения guards повторно выполнены целевые deployment/CI tests.
+
+Продолжение после merge #1210: устранение WASM ACL-блокера отдельным fix PR.
+Полный hosting suite — 50 passed, включая 25 deployment tests. Изменения
+production ограничены политикой frontend-бакета и проверкой private ACL одного
+реального WASM. Шлюз/версия приложения, DNS, Vercel и product API не менялись;
+автопубликация остаётся выключенной до приёмки первого выпуска.
+Дополнительный HTTP smoke: Gateway `/auth` 200, raw JS/CSS 403, WASM
+`application/wasm` 200 с корректным CORS для обоих frontend origins.
+На базе `b99e5824` повторный полный `npm run check` прошёл: 2053 frontend tests,
+lint/typecheck, generated types, media/infra/hosting, API и production build.

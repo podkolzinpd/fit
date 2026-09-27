@@ -59,6 +59,38 @@ export function retainAssets(next, previous) {
   return validateSpecification(spec)
 }
 
+// Bucket policy, configured separately by an operator, exposes only release WASM.
+// Deployment identity cannot change ACL/policy. Prove access before activation.
+export async function verifyStorageAccess(plan, request = fetch) {
+  const base = `https://storage.yandexcloud.net/${target.bucket}`
+  for (const object of plan.objects.filter((entry) => entry.key.endsWith('.wasm'))) {
+    if (!objectKey(object.object) || !object.key.startsWith('assets/')) throw new Error('Unexpected WASM key')
+    for (const origin of [target.frontendOrigin, target.customOrigin]) {
+      const response = await request(`${base}/${object.object}`, {
+        headers: { Origin: origin }, redirect: 'manual', signal: AbortSignal.timeout(20_000),
+      })
+      if (response.status !== 200 || response.headers.get('access-control-allow-origin') !== origin
+          || response.headers.get('content-type') !== object.contentType
+          || hash(Buffer.from(await response.arrayBuffer())) !== object.sha256) {
+        throw new Error('Public WASM access, bytes, MIME or CORS mismatch; activation refused')
+      }
+    }
+  }
+  const privateObjects = plan.objects.filter((entry) => !entry.key.endsWith('.wasm'))
+  for (let offset = 0; offset < privateObjects.length; offset += 10) {
+    await Promise.all(privateObjects.slice(offset, offset + 10).map(async (object) => {
+      const response = await request(`${base}/${object.object}`, {
+        method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(20_000),
+      })
+      if (response.status !== 403) throw new Error('Non-WASM object is not confirmed private; activation refused')
+    }))
+  }
+  const listing = await request(`${base}?list-type=2&max-keys=1`, {
+    redirect: 'manual', signal: AbortSignal.timeout(20_000),
+  })
+  if (listing.status !== 403) throw new Error('Bucket listing is not confirmed private; activation refused')
+}
+
 export async function smoke(bundle, origin, request = fetch) {
   const plan = gatewayPlan(bundle, [], target)
   const index = bundle.files.find((f) => f.key === 'index.html')
@@ -106,7 +138,7 @@ export async function deployFrontend(bundle, cloud) {
   await cloud.backup(before, next)
   await cloud.upload(bundle)
   for (const object of plan.objects) await cloud.verifyMetadata(object)
-  for (const key of plan.publicReadObjects) await cloud.publishWasm(key)
+  await cloud.verifyStorageAccess(plan)
   await cloud.assertCurrentCommit(bundle.commit)
   await cloud.assertReady()
   if (!isDeepStrictEqual(before, await cloud.specification())) throw new Error('Gateway changed during upload; stopped')
@@ -181,10 +213,7 @@ export function createCloud({ directory, token, githubToken, run = promisify(exe
           || (metadata.content_encoding ?? null) !== object.upload.contentEncoding
           || Number(metadata.content_length) !== object.upload.size) throw new Error('Remote object metadata mismatch')
     },
-    publishWasm: async (key) => {
-      if (!objectKey(key) || !key.endsWith('.wasm')) throw new Error('Refusing public ACL outside WASM release files')
-      await yc(['storage', 's3api', 'put-object-acl', '--bucket', target.bucket, '--key', key, '--acl', 'public-read'])
-    },
+    verifyStorageAccess: (plan) => retry(() => verifyStorageAccess(plan, request)),
     routeBytes: async (route) => {
       const op = route.get[integration]
       // All spec targets are validated before this function is called.
