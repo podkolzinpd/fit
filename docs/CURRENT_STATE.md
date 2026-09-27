@@ -2,8 +2,8 @@
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
 Обновлено: 2026-09-26. База изменений: `89f85227` (#1181). Frontend остаётся на Vercel, а production data plane — принятый Yandex Cloud stage stack.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
-
 ## Активная цель
+Frontend autodeploy: готовится `codex/yandex-frontend-autodeploy` — CI на merge-коммите main, scoped OIDC, checksum/metadata upload, сохранение старых assets, smoke и guarded rollback. До подготовки IAM и включения `YC_FRONTEND_AUTODEPLOY_ENABLED` автоматическая публикация выключена. Vercel не меняется. План/приёмка: `docs/design/YANDEX_FRONTEND_AUTODEPLOY.md`; первый cloud run и rollback drill ещё не выполнены.
 Продолжение визуальной проверки после #1196: семь клипов воспроизведены из исходного архива и совпали SHA-256 с опубликованным manifest. Пять неверных и две неподтверждённые привязки отключены (карантин 47), девять совместимых карточек сохранили видео. Узкое EZ-сгибание использует equipment «EZ-гриф». История/refs/1040 выбираемых упражнений сохранены. План и доказательства: `docs/design/seven-clip-variant-review-20260927.md`; проверки/CI/production обязательны перед выпуском.
 Каталог упражнений: #1193 выпущен, но повторный аудит показал, что совпадение мышц/оборудования не доказывает точность движения. Защитное продолжение #1196: похожие связи требуют отдельного exact-allowlist (пока пуст); 40 прямых legacy-привязок изолированы до сверки, проверка действует и до раннего возврата медиа. История/refs/метрики не меняются, собственный Free50-степпер сохранён. WebKit 390/430/1440, 36 целевых тестов и полный check прошли; CI/rollout — обязательные гейты выпуска. Read-only S3 audit `36272212760` подтвердил 2010/2010 объектов, missing=0, mismatched=0. Полного просмотра 670 Pro-роликов и замены 747 шаблонных описаний нет; план: `docs/design/exact-exercise-media-20260927.md`.
 Контролируемый откат startup-изменений #1144 (#1191): eager Supabase SDK и auth subscription; Yandex-only actor/routing, таймауты и последующие media/invitation fixes сохранены. Stale events не инициализируют legacy-профиль. Обе `VITE_SUPABASE_*` проверены в Vercel Production/Preview 26 сентября; локально прошли check и 3 WebKit smoke. CI выявил гонку E2E с загрузкой фото и ранним Tab: тесты ждут завершения upload/появления формы и учитывают сохранённый draft при повторе. Отдельный дефект формы: uploadPhoto.onSuccess заменяет draft и может затереть ввод во время загрузки; до отдельного исправления вводить поля после окончания upload. Причина startup-инцидента не доказана; #1174 и удалённые данные не меняются.
@@ -34,7 +34,6 @@ Frontend: #1199 и #1205 слиты. Для `fit-training.ru` настроены
 - Тренировки клиента получили третий статус «кем создана» — `workouts.origin` (`manual`/`ai`, пишется один раз при создании) на обоих backend; «Создана ИИ» ставится только для тренировок из сгенерированной ассистентом программы (`create_program_draft`/`schedule_program`), не для голосового/текстового логирования уже сделанной тренировки (`record_workout`). Тренерская ветка подписи не читает `origin`. Карточка тренировки из избранного показывает снэпшот его названия (`workouts.favorite_title`, тоже write-once, вариант C3: «⭐ Название · Создана вами») — план полностью реализован, `docs/design/workout-origin-and-favorite-title.md`.
 
 ## Yandex Cloud — подтверждённая база
-
 - Существующий Terraform stack `fit/stage` принят как production data plane: Managed PostgreSQL 17, один private host, диск 10 GB, API/migration containers, Lockbox и Object Storage. Backup retention — 14 дней, окно — `00:30 UTC`; отдельный production cluster не создаётся.
 - Текущий full-cohort manifest расширен до 35 таблиц: в snapshot входят `user_legal_acceptances`, `account_deletion_requests` и `favorite_workouts`. Import атомарно пересобирает их из свежего snapshot, сохраняя актуальные Yandex identity/session/rollout строки; устаревшие linked-привязки удаляются, а наличие нативного Yandex-профиля блокирует destructive rebuild.
 - Локальная двухпроходная репетиция 35 таблиц снова зелёная. Tenant migration
@@ -117,6 +116,5 @@ Frontend hosting: 27 сентября Gateway публикует candidate `6075
 2. Закрыть media/custom-photo и AI/push/backup задачи.
 3. По `docs/design/SUPABASE_DECOMMISSION_INVENTORY_2026-09-25.md` закрывать
    зависимости по одной; после окна стабильности отключить Supabase и удалить secrets.
-
 ## Отложено
 - DataLens/Telegram/Tracker отложены; HA replica нужна только по SLA; APNs и Android/FCM не входят в Web Push cutover.

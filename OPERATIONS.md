@@ -507,6 +507,32 @@ Workflow не использует GitHub Environment: для приватног
 
 ## Frontend hosting
 
+### Yandex frontend autodeploy
+
+`.github/workflows/deploy-yandex-frontend.yml` публикует только текущий `main`
+после успешного CI merge-коммита. Repository variable
+`YC_FRONTEND_AUTODEPLOY_ENABLED=true` — отдельный выключатель публикации;
+отсутствие или любое другое значение не запускает cloud deployment.
+Включать только после подготовки scoped IAM и GitHub environment.
+Сборка использует public configuration environment `fit-frontend-candidate`;
+публикация — `fit-frontend-production`, разрешён только branch `main`,
+environment variable `YC_FRONTEND_DEPLOY_SA_ID` содержит отдельный service
+account ID. Постоянные ключи и backend deploy identity не используются.
+
+Повторный запуск требует ID успешного `CI` run текущего `main`. Публикации
+сериализованы; старые сборки не перезаписываются, assets прежних версий
+сохраняются. При ошибке после activation выполняется проверяемый rollback;
+при неопределённом статусе облачной операции или чужой конфигурации требуется
+оператор, слепого повторного переключения нет. Backup OpenAPI сохраняется
+в artifact deployment run на 90 дней.
+
+Шлюз и frontend-бакет общие для технического адреса и `fit-training.ru`;
+DNS propagation не требуется для smoke через технический адрес. Vercel
+работает параллельно и этим workflow не управляется. План, IAM scope,
+ограничения и ручной откат: `docs/design/YANDEX_FRONTEND_AUTODEPLOY.md`.
+
+### Vercel (сохраняется)
+
 Production и PR previews разворачиваются в Vercel через GitHub integration:
 
 - repository: `podkolzinpd/fit`;
