@@ -1,0 +1,41 @@
+/* Stage 3, point 15: only the server-assigned trainer's day calendar. */
+.fit-lime-shell .fit-lime-today .schedule-v2-topbar-day {
+  margin-bottom: 26px;
+}
+
+.fit-lime-shell .fit-lime-today .schedule-v2-summary {
+  margin-bottom: 18px;
+}
+
+.fit-lime-shell .fit-lime-today .schedule-v2-summary > button {
+  min-height: clamp(112px, 30vw, 132px);
+}
+
+.fit-lime-shell .fit-lime-today .schedule-v2-summary > .schedule-v2-action-card {
+  background: radial-gradient(circle at 85% 110%, #baff36 0, #8ab729 28%, #5b7b24 58%, #4b651f 100%);
+}
+
+.fit-lime-shell .fit-lime-today .schedule-v2-summary-icon {
+  width: 54px;
+  height: 54px;
+}
+
+.fit-lime-shell .fit-lime-today .schedule-v2-summary-icon svg {
+  width: 50px;
+  height: 50px;
+}
+
+.fit-lime-shell .fit-lime-today .schedule-v2-home-actions {
+  margin: 0 0 16px;
+}
+
+.fit-lime-shell .fit-lime-today .schedule-v2-empty-day {
+  color: #b8b8bd;
+}
+
+@media (max-width: 360px) {
+  .fit-lime-shell .fit-lime-today .schedule-v2-summary strong { right: 14px; bottom: 13px; }
+  .fit-lime-shell .fit-lime-today .schedule-v2-entry-actions { grid-template-columns: minmax(0, 1fr) 48px; }
+  .fit-lime-shell .fit-lime-today .schedule-v2-text-entry { padding: 10px; }
+  .fit-lime-shell .fit-lime-today .schedule-v2-text-entry span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+}
