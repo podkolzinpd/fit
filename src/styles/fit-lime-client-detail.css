@@ -1,0 +1,140 @@
+/* Stage 3, point 21: the trainer's client card, not its nested forms or history. */
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px 18px calc(116px + env(safe-area-inset-bottom));
+  color: #f8f8f6;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .page-header { margin-bottom: 20px }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .page-header h1 {
+  color: #f8f8f6;
+  font-size: clamp(29px, 7vw, 34px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -.04em;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .page-back,
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .overflow-trigger {
+  border-color: #303034;
+  border-radius: 15px;
+  background: #232328;
+  color: #f8f8f6;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-snapshot {
+  padding: 20px;
+  border-color: #303034;
+  border-radius: 28px;
+  background: #19191c;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-vitals {
+  gap: 8px 14px;
+  color: #b8b8bd;
+  font-size: 13px;
+  font-weight: 500;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-activity { border-top-color: #303034 }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-activity strong {
+  color: #f8f8f6;
+  font-size: clamp(21px, 5vw, 25px);
+  font-weight: 700;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-activity span { color: #b8b8bd; font-size: 12px }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-actions { gap: 8px; margin: 14px 0 }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-plan {
+  min-height: 58px;
+  border-color: #baff36;
+  border-radius: 20px;
+  background: #baff36;
+  color: #111111;
+  font-size: 15px;
+  font-weight: 650;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-plan:hover,
+.fit-lime-shell.trainer-client-detail-identity .client-detail-plan:focus-visible {
+  border-color: #baff36;
+  background: #baff36;
+  color: #111111;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-routes { gap: 8px }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-routes a {
+  min-height: 62px;
+  border-color: #303034;
+  border-radius: 20px;
+  background: #232328;
+  color: #f8f8f6;
+  font-size: 13px;
+  font-weight: 600;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-routes a:hover,
+.fit-lime-shell.trainer-client-detail-identity .client-detail-routes a:focus-visible { border-color: #729b27; background: #232328 }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-routes a svg { color: #b8b8bd }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-block,
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-block.client-note-block,
+.fit-lime-shell.trainer-client-detail-identity .client-detail-upcoming .card,
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .page-actions .card {
+  border-color: #303034;
+  border-radius: 28px;
+  background: #19191c;
+  color: #f8f8f6;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-block,
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-block.client-note-block { padding: 18px }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-head h2,
+.fit-lime-shell.trainer-client-detail-identity .client-detail-upcoming h2 { color: #f8f8f6; font-size: 19px; font-weight: 650 }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-head .link { color: #baff36 }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-block > p,
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-stage-line { color: #b8b8bd }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-block > .goal-title,
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-stage-title { color: #f8f8f6 }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .goal-stages-hint {
+  border-color: #303034;
+  border-radius: 18px;
+  background: #232328;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page textarea {
+  border-color: #303034;
+  border-radius: 18px;
+  background: #232328;
+  color: #f8f8f6;
+  font-size: 16px;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .page-actions > .secondary,
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .actions .secondary {
+  border-color: #303034;
+  border-radius: 18px;
+  background: #232328;
+  color: #f8f8f6;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page .page-actions > .danger { color: var(--danger) }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page button:disabled { opacity: .58 }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-source-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  margin: 10px 0;
+  padding: 12px 14px;
+  border: 1px solid #303034;
+  border-radius: 18px;
+  background: #232328;
+  color: #b8b8bd;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.fit-lime-shell.trainer-client-detail-identity .client-detail-source-state.is-error { border-color: var(--danger-border); color: var(--danger) }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-source-state button { flex: 0 0 auto; min-height: 44px }
+.fit-lime-shell.trainer-client-detail-identity .state-panel {
+  border-color: #303034;
+  border-radius: 28px;
+  background: #19191c;
+}
+
+@media (max-width: 480px) {
+  .fit-lime-shell.trainer-client-detail-identity .client-detail-page { padding: 16px 16px calc(116px + env(safe-area-inset-bottom)) }
+}
+
+@media (max-width: 360px) {
+  .fit-lime-shell.trainer-client-detail-identity .client-detail-routes { grid-template-columns: minmax(0, 1fr) }
+  .fit-lime-shell.trainer-client-detail-identity .client-detail-vitals > span { white-space: normal }
+}

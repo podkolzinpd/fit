@@ -203,6 +203,10 @@ describe('AppLayout: единственная UI Identity', () => {
     expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell')
     expect(document.documentElement).toHaveClass('fit-lime-document')
     clients.unmount()
+    const detail = renderLayout('/clients/client-1')
+    expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell')
+    expect(document.documentElement).toHaveClass('fit-lime-document')
+    detail.unmount()
   })
 })
 
