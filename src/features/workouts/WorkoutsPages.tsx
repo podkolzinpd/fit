@@ -525,14 +525,14 @@ function ScheduleV2InboxSheet({ questions, questionsLoading, questionsError, ret
           {threads.isLoading && <p className="schedule-v2-inbox-empty" role="status">Загружаем сообщения…</p>}
           {threads.isError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error" role="alert">Не удалось загрузить сообщения <button type="button" aria-label="Повторить загрузку сообщений" onClick={() => void threads.refetch()}>Повторить</button></p>}
           {!threads.isLoading && !threads.isError && threads.data?.length === 0 && <p className="schedule-v2-inbox-empty">Диалогов пока нет</p>}
-          {!threads.isLoading && !threads.isError && threads.data?.map((item) => <Link key={`${item.clientId}:${item.trainerId}`} className="schedule-v2-inbox-row" to={item.conversationId ? `/chat/${item.conversationId}` : '/chat'} state={{ chatBack: 'history' }} onClick={onClose}>
+          {!threads.isLoading && !threads.isError && threads.data?.map((item) => <Link key={`${item.clientId}:${item.trainerId}`} className="schedule-v2-inbox-row" to={item.conversationId ? `/chat/${item.conversationId}` : '/chat'} state={{ chatBack: 'history', returnTo }} onClick={onClose}>
             <span className="schedule-v2-inbox-avatar">{clientInitials(item.partnerName)}</span>
             <span><b>{item.partnerName}</b><small>{item.lastMessageBody === '' ? 'Фото' : item.lastMessageBody ?? 'Начать диалог'}</small></span>
             {item.unreadCount > 0 && <strong>{scheduleCount(item.unreadCount)}</strong>}
           </Link>)}
         </section>
       </div>
-      <Link className="schedule-v2-inbox-all" to="/chat" state={{ chatBack: 'history' }} onClick={onClose}>Открыть все сообщения</Link>
+      <Link className="schedule-v2-inbox-all" to="/chat" state={{ chatBack: 'history', returnTo }} onClick={onClose}>Открыть все сообщения</Link>
     </section>
   </div>, document.body)
 }
