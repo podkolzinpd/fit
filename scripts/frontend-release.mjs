@@ -31,7 +31,7 @@ export function verifyRelease(bundle) {
   }
   const keys = new Set()
   for (const file of bundle.files) {
-    if (!safeKey(file.key) || keys.has(file.key)
+    if (!safeKey(file.key) || file.key === 'release-manifest.json' || keys.has(file.key)
         || typeof file.content !== 'string'
         || typeof file.contentType !== 'string' || /[\r\n]/.test(file.contentType)
         || !['no-cache', 'public, max-age=31536000, immutable'].includes(file.cacheControl)) {
