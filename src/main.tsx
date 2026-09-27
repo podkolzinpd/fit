@@ -21,6 +21,7 @@ import './styles/fit-lime-progress-history.css'
 import './styles/fit-lime-profile.css'
 import './styles/fit-lime-exercises.css'
 import './styles/fit-lime-workout-form.css'
+import './styles/fit-lime-workout-entry.css'
 
 declare global {
   interface Window {
