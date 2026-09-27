@@ -1,0 +1,150 @@
+name: Deploy Yandex frontend
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: 'Successful CI push/workflow_dispatch run for the current main commit'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+# Never cancel an activation/rollback in progress. Superseded queued releases
+# fail the current-main check before publication.
+concurrency:
+  group: yandex-frontend-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: >-
+      vars.YC_FRONTEND_AUTODEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-24.04
+    environment: fit-frontend-candidate
+    timeout-minutes: 20
+    outputs:
+      commit: ${{ steps.source.outputs.commit }}
+    steps:
+      - name: Resolve only a successful CI run on current main
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id || inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+          commit=$(jq -er --arg repo "$GITHUB_REPOSITORY" '
+            select(.path == ".github/workflows/ci.yml" and
+              .head_repository.full_name == $repo and .head_branch == "main" and
+              (.event == "push" or .event == "workflow_dispatch") and
+              .status == "completed" and .conclusion == "success") | .head_sha
+          ' <<<"$run")
+          [[ "$commit" =~ ^[a-f0-9]{40}$ ]]
+          test "$commit" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.source.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run frontend:hosting:test
+      - name: Build with reviewed public production configuration
+        run: |
+          test -n "$VITE_SUPABASE_URL"
+          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
+          npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
+          VITE_YANDEX_API_BASE_URL: https://bbat47es6kspjb3dvfn2.containers.yandexcloud.net
+          VITE_YANDEX_OAUTH_CLIENT_ID: fdc7e12c472b475690fbb387d8698663
+          VITE_YANDEX_APP_SESSION_ENABLED: 'true'
+          VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true'
+          VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true'
+          VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
+          VITE_MAINTENANCE_MODE: 'false'
+      - name: Package the verified merge commit
+        run: node scripts/frontend-release.mjs dist "$SOURCE_COMMIT" frontend-release.json
+        env:
+          SOURCE_COMMIT: ${{ steps.source.outputs.commit }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yandex-frontend-release
+          path: frontend-release.json
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: fit-frontend-production
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      YC_DEPLOY_SA_ID: ${{ vars.YC_FRONTEND_DEPLOY_SA_ID }}
+      YC_FOLDER_ID: b1goqho12tlk9dibc3f3
+      YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Same-run artifact only; never consume artifacts from PR/untrusted runs.
+      - uses: actions/download-artifact@v4
+        with:
+          name: yandex-frontend-release
+      - name: Check source again before obtaining cloud credentials
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_COMMIT: ${{ needs.build.outputs.commit }}
+        run: |
+          test "$SOURCE_COMMIT" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            import { verifyRelease } from "./scripts/frontend-release.mjs";
+            const release = verifyRelease(JSON.parse(readFileSync("frontend-release.json")));
+            if (release.commit !== process.env.SOURCE_COMMIT) throw new Error("Artifact commit mismatch");
+          '
+      - name: Install official Yandex CLI
+        run: |
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$RUNNER_TEMP/yandex-cloud" -n
+          echo "$RUNNER_TEMP/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - name: Exchange OIDC for frontend-only identity
+        run: scripts/yandex-github-oidc.sh
+      - name: Upload, verify, activate and smoke (rollback on failure)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/deploy-yandex-frontend.mjs frontend-release.json deployment --deploy
+      - name: Preserve exact rollback configuration even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yandex-frontend-gateway-${{ github.run_id }}
+          path: deployment/*-gateway.json
+          if-no-files-found: warn
+          retention-days: 90
