@@ -39,14 +39,16 @@ const workout = {
   exercises: [],
 }
 
-async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?: Array<typeof workout>; failClients?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean } = {}) {
+type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null }
+
+async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?: MockWorkout[]; failClients?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean } = {}) {
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
   let failWorkspace = options.failWorkspace ?? false
   let failThreads = options.failThreads ?? false
   let questionAnswered = false
   let unreadCount = 4
-  let workouts = options.workouts ?? [workout]
+  let workouts: MockWorkout[] = options.workouts ?? [workout]
   let saveAttempts = 0
   let lastSavedStartTime: string | null = null
   let lastEditedStartTime: string | null = null
@@ -592,6 +594,72 @@ test('cancelling a pilot plan updates the day and excludes it from weekly totals
   await page.getByRole('button', { name: 'Настройки расписания' }).click()
   await page.getByRole('menuitem', { name: 'К 2 неделям' }).click()
   await expect(page.getByText('0 тренировок · 0 клиентов')).toBeVisible()
+})
+
+test('short overlapping workouts remain separate tappable cards on mobile and desktop', async ({ page }, testInfo) => {
+  const firstId = '10000000-0000-4000-8000-000000000007'
+  const secondId = '10000000-0000-4000-8000-000000000008'
+  await mockPilot(page, { workouts: [
+    { ...workout, id: firstId, clientName: 'Александр Длиннофамильный Первый', startTime: '14:00', endTime: '14:10' },
+    { ...workout, id: secondId, clientName: 'Богдан Длиннофамильный Второй', startTime: '14:05', endTime: '14:20' },
+  ] })
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 1000 }]) {
+    await page.setViewportSize(viewport)
+    await page.goto('/today?date=2026-09-24')
+    const events = page.locator('.schedule-v2-event')
+    await expect(events).toHaveCount(2)
+    const geometry = await events.evaluateAll((elements) => elements.map((element) => {
+      const box = element.getBoundingClientRect()
+      return { left: box.left, right: box.right, top: box.top, bottom: box.bottom, height: box.height }
+    }))
+    expect(geometry[0]!.height).toBeGreaterThanOrEqual(54)
+    expect(geometry[1]!.height).toBeGreaterThanOrEqual(54)
+    expect(geometry[0]!.right).toBeLessThanOrEqual(geometry[1]!.left)
+    await expect(events.nth(0)).toHaveAttribute('aria-label', /Александр Длиннофамильный Первый/)
+    await expect(events.nth(1)).toHaveAttribute('aria-label', /Богдан Длиннофамильный Второй/)
+    if (viewport.width === 390) {
+      await events.first().scrollIntoViewIfNeeded()
+      const screenshotPath = testInfo.outputPath('trainer-schedule-v2-overlap-mobile.png')
+      await page.screenshot({ path: screenshotPath, fullPage: true })
+      await testInfo.attach('trainer-schedule-v2-overlap-mobile', { path: screenshotPath, contentType: 'image/png' })
+    }
+  }
+  await page.locator('.schedule-v2-event').nth(1).click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/${secondId}$`))
+})
+
+test('untimed and near-midnight workouts remain reachable at the bottom of the day', async ({ page }) => {
+  await mockPilot(page, { workouts: [
+    { ...workout, id: '10000000-0000-4000-8000-000000000009', startTime: null, endTime: null },
+    { ...workout, id: '10000000-0000-4000-8000-000000000010', startTime: '23:50', endTime: '00:20' },
+  ] })
+  await page.goto('/today?date=2026-09-24')
+  await expect(page.locator('.schedule-v2-untimed').getByText('Без времени', { exact: true })).toBeVisible()
+  const late = page.locator('.schedule-v2-event')
+  await expect(late).toHaveCount(1)
+  await expect(late).toContainText('30 мин')
+  const bottom = await late.evaluate((element) => (element as HTMLElement).offsetTop + element.clientHeight)
+  const gridHeight = await page.locator('.schedule-v2-timeline .day-grid').evaluate((element) => element.clientHeight)
+  expect(gridHeight).toBeGreaterThanOrEqual(bottom)
+  await late.scrollIntoViewIfNeeded()
+  await expect(late).toBeInViewport()
+})
+
+test('live clock refreshes after focus without resetting manual scroll and crosses midnight', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-27T20:59:00.000Z'))
+  await mockPilot(page, { workouts: [] })
+  await page.goto('/today')
+  await expect(page.getByRole('heading', { name: '27 сентября' })).toBeVisible()
+  await expect(page.locator('.schedule-v2-now time')).toHaveText('23:59')
+  await page.locator('.schedule-v2-timeline').evaluate((element) => { element.scrollTop = 700 })
+  await page.clock.setFixedTime(new Date('2026-09-27T20:59:40.000Z'))
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect(page.locator('.schedule-v2-now time')).toHaveText('23:59')
+  await expect.poll(() => page.locator('.schedule-v2-timeline').evaluate((element) => element.scrollTop)).toBe(700)
+  await page.clock.setFixedTime(new Date('2026-09-27T21:01:00.000Z'))
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect(page.getByRole('heading', { name: '28 сентября' })).toBeVisible()
+  await expect(page.locator('.schedule-v2-now time')).toHaveText('00:01')
 })
 
 test('invalid calendar URL dates do not crash the pilot', async ({ page }) => {

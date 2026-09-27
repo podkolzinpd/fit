@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
-import { compactScheduleClientName, compactScheduleEventLabel, compactScheduleTime, formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleTimelineScrollTop } from './schedule-presentation'
+import { compactScheduleClientName, compactScheduleEventLabel, compactScheduleTime, formatScheduleDateLabel, layoutScheduleTimelineEvents, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleTimelineScrollTop } from './schedule-presentation'
 
 function workout(overrides: Partial<Workout> = {}): Workout {
   return {
@@ -78,11 +78,50 @@ describe('schedule presentation', () => {
     expect(scheduleFocusMinutes(workouts, '12:00')).toBe(18 * 60 + 30)
     expect(scheduleFocusMinutes(workouts, '21:00')).toBe(7 * 60 + 10)
     expect(scheduleFocusMinutes([], '14:25')).toBe(14 * 60 + 25)
+    expect(scheduleFocusMinutes([
+      workout({ id: 'early', startTime: '07:10', endTime: '08:00' }),
+      workout({ id: 'late', startTime: '23:50', endTime: '00:20' }),
+    ], '23:55')).toBe(23 * 60 + 50)
   })
 
   it('keeps useful context above the focused time instead of pinning it to the top', () => {
     expect(scheduleTimelineScrollTop(15 * 60 + 3, 400, 56)).toBeCloseTo(707, 0)
     expect(scheduleTimelineScrollTop(60, 800, 56)).toBe(0)
+  })
+
+  it('places overlapping and short workouts in separate tappable lanes', () => {
+    const events = layoutScheduleTimelineEvents([
+      workout({ id: 'a', startTime: '14:00', endTime: '14:10' }),
+      workout({ id: 'b', startTime: '14:15', endTime: '14:30' }),
+      workout({ id: 'c', startTime: '16:00', endTime: '17:00' }),
+    ], 56)
+    expect(events.map(({ workout: item, column, columns, height }) => [item.id, column, columns, height])).toEqual([
+      ['a', 0, 2, 54], ['b', 1, 2, 54], ['c', 0, 1, 56],
+    ])
+  })
+
+  it('keeps three simultaneous workouts distinct and reuses a lane afterwards', () => {
+    const events = layoutScheduleTimelineEvents([
+      workout({ id: 'a', startTime: '14:00', endTime: '15:00' }),
+      workout({ id: 'b', startTime: '14:05', endTime: '14:20' }),
+      workout({ id: 'c', startTime: '14:10', endTime: '14:30' }),
+      workout({ id: 'd', startTime: '15:15', endTime: '16:00' }),
+    ], 56)
+    expect(events.map(({ workout: item, column, columns }) => [item.id, column, columns])).toEqual([
+      ['a', 0, 3], ['b', 1, 3], ['c', 2, 3], ['d', 0, 1],
+    ])
+  })
+
+  it('keeps late and across-midnight workouts visible without hiding untimed items', () => {
+    const events = layoutScheduleTimelineEvents([
+      workout({ id: 'untimed', startTime: null, endTime: null }),
+      workout({ id: 'late', startTime: '23:50', endTime: null }),
+      workout({ id: 'midnight', startTime: '23:55', endTime: '00:25' }),
+    ], 56)
+    expect(events.map(({ workout: item }) => item.id)).toEqual(['late', 'midnight'])
+    expect(events[0]?.top).toBeGreaterThan(23 * 56)
+    expect(events[1]?.height).toBe(54)
+    expect(events.map((event) => event.columns)).toEqual([2, 2])
   })
 
   it('hides an hourly label only when the live marker would overlap it', () => {

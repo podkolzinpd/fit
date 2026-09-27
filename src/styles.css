@@ -6610,7 +6610,18 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-schedule-v2-shell .schedule-v2-timeline .day-grid-hour-label { width:57px; color:#77777b; font-size:15px; font-weight:450; transform:translateY(-9px); }
 .trainer-schedule-v2-shell .schedule-v2-timeline .day-grid-hour.is-near-current-time .day-grid-hour-label { visibility:hidden; }
 .trainer-schedule-v2-shell .schedule-v2-timeline .day-grid-hour-line { margin-top:0; background:#29292d; }
+.trainer-schedule-v2-shell .schedule-v2-event-layer { position:absolute; inset:0 0 0 69px; pointer-events:none; }
 .trainer-schedule-v2-shell .schedule-v2-event { position:absolute; left:69px; right:0; z-index:3; min-width:0; display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:11px; padding:8px 14px; overflow:hidden; border:0; border-radius:18px; color:#f8f8f6; background:#222226; text-decoration:none; }
+.trainer-schedule-v2-shell .schedule-v2-event-layer .schedule-v2-event { right:auto; pointer-events:auto; }
+.trainer-schedule-v2-shell .schedule-v2-event.is-compact { grid-template-columns:28px minmax(0,1fr); gap:5px; padding:6px; border-radius:12px; }
+.trainer-schedule-v2-shell .schedule-v2-event.is-compact .schedule-v2-avatar { width:28px; height:28px; font-size:9px; }
+.trainer-schedule-v2-shell .schedule-v2-event.is-compact b { font-size:12px; }
+.trainer-schedule-v2-shell .schedule-v2-event.is-compact small { font-size:10px; }
+.trainer-schedule-v2-shell .schedule-v2-event.is-compact > svg { display:none; }
+.trainer-schedule-v2-shell .schedule-v2-event.is-dense { grid-template-columns:24px minmax(0,1fr); gap:3px; padding:5px; }
+.trainer-schedule-v2-shell .schedule-v2-event.is-dense .schedule-v2-avatar { width:24px; height:24px; font-size:8px; }
+.trainer-schedule-v2-shell .schedule-v2-event.is-dense b { font-size:11px; }
+.trainer-schedule-v2-shell .schedule-v2-event.is-dense small { display:none; }
 .trainer-schedule-v2-shell .schedule-v2-event > span:nth-child(2) { min-width:0; display:grid; gap:2px; }
 .trainer-schedule-v2-shell .schedule-v2-event b,.trainer-schedule-v2-shell .schedule-v2-event small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .trainer-schedule-v2-shell .schedule-v2-event b { color:#f8f8f6; font-size:16px; font-weight:520; }
