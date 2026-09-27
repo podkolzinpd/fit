@@ -6,11 +6,12 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gatewayPlan } from './frontend-gateway-plan.mjs'
+import { releaseBatch } from './frontend-release-storage.mjs'
 
 // Deliberately restricted to the separately approved candidate bucket.
 const bucket = 'fit-frontend-probe-b1goqho1'
-export async function uploadCandidate(bundle, run = promisify(execFile)) {
-const plan = gatewayPlan(bundle, [], {
+export async function uploadCandidate(bundle, run = promisify(execFile), resolvedPlan) {
+const plan = resolvedPlan ?? gatewayPlan(bundle, [], {
   bucket, reader: 'aje67ouc4633u7i7oc2a',
   frontendOrigin: 'https://d5drmhq5ovqk03jgsm8i.wnq2w1o5.apigw.yandexcloud.net',
 })
@@ -18,7 +19,8 @@ const hash = (bytes) => createHash('sha256').update(bytes).digest('hex')
 const directory = await mkdtemp(join(tmpdir(), 'fit-candidate-upload-'))
 let verified = 0
 try {
-  for (const [index, object] of plan.objects.entries()) {
+  await releaseBatch(plan.objects, async (object, index) => {
+    if (object.reused) { verified += 1; return }
     const file = join(directory, String(index))
     const downloaded = join(directory, `${index}.remote`)
     const args = ['--bucket', bucket, '--key', object.object]
@@ -43,7 +45,7 @@ try {
     if (hash(await readFile(downloaded)) !== object.upload.sha256) throw new Error(`Remote checksum mismatch at object ${index}`)
     verified += 1
     if (verified % 20 === 0) console.log(`Verified ${verified}/${plan.objects.length}`)
-  }
+  })
   console.log(`Verified ${verified} objects. No ACL, CORS or gateway changes applied.`)
   return plan.specification
 } finally {

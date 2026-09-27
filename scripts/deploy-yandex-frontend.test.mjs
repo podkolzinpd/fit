@@ -32,6 +32,7 @@ function fakeCloud(beforeBundle) {
       return Buffer.from(beforeBundle.files.find((file) => file.key === key).content, 'base64')
     },
     backup: async () => { events.push('backup') },
+    recordManifest: async () => { events.push('manifest') },
     upload: async () => { events.push('upload') },
     verifyMetadata: async () => { events.push('metadata') },
     verifyStorageAccess: async () => { events.push('storage-access') },
@@ -58,7 +59,7 @@ test('uploads and validates before switching; keeps old hashed assets and unchan
   assert.deepEqual(retainAssets(gatewayPlan(next, [], target).specification, previous)['x-yc-apigateway'], previous['x-yc-apigateway'])
 })
 
-for (const stage of ['backup', 'upload', 'verifyMetadata', 'verifyStorageAccess', 'assertCurrentCommit']) {
+for (const stage of ['backup', 'recordManifest', 'upload', 'verifyMetadata', 'verifyStorageAccess', 'assertCurrentCommit']) {
   test(`${stage} failure never activates or rolls back`, async (t) => {
     const cloud = fakeCloud(await fixture(t))
     cloud[stage] = async () => { throw new Error('failure') }

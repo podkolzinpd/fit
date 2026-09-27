@@ -1,12 +1,13 @@
 import { execFile } from 'node:child_process'
 import { promisify, isDeepStrictEqual } from 'node:util'
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as delay } from 'node:timers/promises'
 import { gatewayPlan } from './frontend-gateway-plan.mjs'
 import { uploadCandidate } from './upload-frontend-candidate.mjs'
+import { releaseBatch, reuseReleaseObjects, releaseManifest, manifestKey } from './frontend-release-storage.mjs'
 
 export const target = Object.freeze({
   bucket: 'fit-frontend-probe-b1goqho1', reader: 'aje67ouc4633u7i7oc2a',
@@ -77,22 +78,19 @@ export async function verifyStorageAccess(plan, request = fetch) {
     }
   }
   const privateObjects = plan.objects.filter((entry) => !entry.key.endsWith('.wasm'))
-  for (let offset = 0; offset < privateObjects.length; offset += 10) {
-    await Promise.all(privateObjects.slice(offset, offset + 10).map(async (object) => {
-      const response = await request(`${base}/${object.object}`, {
-        method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(20_000),
-      })
-      if (response.status !== 403) throw new Error('Non-WASM object is not confirmed private; activation refused')
-    }))
-  }
+  await releaseBatch(privateObjects, async (object) => {
+    const response = await request(`${base}/${object.object}`, {
+      method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(20_000),
+    })
+    if (response.status !== 403) throw new Error('Non-WASM object is not confirmed private; activation refused')
+  })
   const listing = await request(`${base}?list-type=2&max-keys=1`, {
     redirect: 'manual', signal: AbortSignal.timeout(20_000),
   })
   if (listing.status !== 403) throw new Error('Bucket listing is not confirmed private; activation refused')
 }
 
-export async function smoke(bundle, origin, request = fetch) {
-  const plan = gatewayPlan(bundle, [], target)
+export async function smoke(bundle, origin, request = fetch, plan = gatewayPlan(bundle, [], target)) {
   const index = bundle.files.find((f) => f.key === 'index.html')
   const check = async (path, file) => {
     const response = await request(`${origin}${path}`, { redirect: 'manual', signal: AbortSignal.timeout(20_000) })
@@ -104,7 +102,7 @@ export async function smoke(bundle, origin, request = fetch) {
     }
   }
   for (const path of ['/', '/auth', '/auth/yandex/callback', '/today']) await check(path, index)
-  for (const file of bundle.files) {
+  await releaseBatch(bundle.files, async (file) => {
     const object = plan.objects.find((entry) => entry.key === file.key)
     if (object.delivery === 'public-object-redirect') {
       const response = await request(`${origin}/${file.key}`, { redirect: 'manual', signal: AbortSignal.timeout(20_000) })
@@ -116,7 +114,7 @@ export async function smoke(bundle, origin, request = fetch) {
             || hash(Buffer.from(await asset.arrayBuffer())) !== file.sha256) throw new Error('WASM bytes or CORS mismatch')
       }
     } else await check(`/${file.key}`, file)
-  }
+  })
   const missing = await request(`${origin}/assets/fit-deploy-missing.css`, { signal: AbortSignal.timeout(20_000) })
   if (missing.status !== 404) throw new Error('Missing assets must return 404')
   await check('/assets/fit-deploy-missing.js', bundle.files.find((f) => f.key === 'asset-recovery.js'))
@@ -126,18 +124,15 @@ export async function deployFrontend(bundle, cloud) {
   const plan = gatewayPlan(bundle, [], target)
   const before = validateSpecification(await cloud.specification())
   await cloud.assertReady()
+  await reuseReleaseObjects(plan, before, cloud, target.bucket)
   const next = retainAssets(plan.specification, before)
-  // Check content-hash collisions against bytes, not merely matching filenames.
-  for (const file of plan.objects) {
-    const route = before.paths[`/${file.key}`]
-    if (immutable(`/${file.key}`) && route) {
-      if (hash(await cloud.routeBytes(route)) !== file.sha256) throw new Error('Conflicting immutable asset')
-    }
-  }
   const oldIndex = await cloud.routeBytes(before.paths['/'])
   await cloud.backup(before, next)
-  await cloud.upload(bundle)
-  for (const object of plan.objects) await cloud.verifyMetadata(object)
+  const manifest = releaseManifest(plan, before.info.version)
+  manifest.previousSpecification = before
+  await cloud.recordManifest(manifest)
+  await cloud.upload(bundle, plan)
+  await releaseBatch(plan.objects, (object) => cloud.verifyMetadata(object))
   await cloud.verifyStorageAccess(plan)
   await cloud.assertCurrentCommit(bundle.commit)
   await cloud.assertReady()
@@ -147,7 +142,7 @@ export async function deployFrontend(bundle, cloud) {
   try {
     await cloud.activate(next)
     activationCompleted = true
-    await cloud.smoke(bundle)
+    await cloud.smoke(bundle, plan)
     await cloud.assertReady()
     if (!isDeepStrictEqual(next, await cloud.specification())) throw new Error('Activated gateway differs from candidate')
   } catch {
@@ -165,7 +160,8 @@ export async function deployFrontend(bundle, cloud) {
     await cloud.verifyRollback(oldIndex)
     throw new Error('Frontend publication failed; previous gateway restored and verified')
   }
-  return { release: bundle.release, files: plan.objects.length, status: 'verified' }
+  return { release: bundle.release, files: plan.objects.length,
+    reused: plan.objects.filter((object) => object.reused).length, status: 'verified' }
 }
 
 export function createCloud({ directory, token, githubToken, run = promisify(execFile), request = fetch }) {
@@ -177,7 +173,7 @@ export function createCloud({ directory, token, githubToken, run = promisify(exe
   }
   const yc = async (args) => {
     try { return await run('yc', args, { timeout: 240_000, maxBuffer: 8_000_000 }) }
-    catch { throw new Error(`Yandex command failed: ${args.slice(0, 3).join(' ')}; inspect gateway status before retry`) }
+    catch (cause) { throw new Error(`Yandex command failed: ${args.slice(0, 3).join(' ')}; inspect gateway status before retry`, { cause }) }
   }
   const retry = async (action) => {
     for (let attempt = 0; ; attempt += 1) {
@@ -205,7 +201,27 @@ export function createCloud({ directory, token, githubToken, run = promisify(exe
       await writeFile(join(directory, 'previous-gateway.json'), JSON.stringify(before), { flag: 'wx' })
       await writeFile(join(directory, 'candidate-gateway.json'), JSON.stringify(next), { flag: 'wx' })
     },
-    upload: (bundle) => uploadCandidate(bundle, run),
+    recordManifest: async (manifest) => {
+      const key = manifestKey(manifest.release)
+      const path = join(directory, 'release-manifest.json')
+      try {
+        await yc(['storage', 's3api', 'get-object', '--bucket', target.bucket, '--key', key, path])
+        const existing = JSON.parse(await readFile(path, 'utf8'))
+        if (existing.release !== manifest.release || !isDeepStrictEqual(existing.objects, manifest.objects)
+            || !isDeepStrictEqual(existing.specification, manifest.specification)) throw new Error('Manifest conflict')
+        return
+      } catch (error) {
+        // Only a proven missing key permits creation; permission/network errors
+        // must never be interpreted as absence.
+        if (!/NoSuchKey/.test(String(error.cause?.stderr))) throw error
+      }
+      await writeFile(path, JSON.stringify(manifest))
+      await yc(['storage', 's3api', 'put-object', '--bucket', target.bucket, '--key', key,
+        '--body', path, '--content-type', 'application/json', '--cache-control', 'no-store'])
+      await yc(['storage', 's3api', 'get-object', '--bucket', target.bucket, '--key', key, path])
+      if (!isDeepStrictEqual(JSON.parse(await readFile(path, 'utf8')), manifest)) throw new Error('Manifest verification failed')
+    },
+    upload: (bundle, plan) => uploadCandidate(bundle, run, plan),
     verifyMetadata: async (object) => {
       const { stdout } = await yc(['storage', 's3api', 'head-object', '--bucket', target.bucket, '--key', object.object, '--format', 'json'])
       const metadata = JSON.parse(stdout)
@@ -218,7 +234,7 @@ export function createCloud({ directory, token, githubToken, run = promisify(exe
       const op = route.get[integration]
       // All spec targets are validated before this function is called.
       const key = op.type === 'object_storage' ? op.object : op.http_headers.Location.split(`/${target.bucket}/`)[1]
-      const file = join(directory, 'inspect-object')
+      const file = join(directory, `inspect-${randomUUID()}`)
       const { stdout } = await yc(['storage', 's3api', 'get-object', '--bucket', target.bucket, '--key', key, file, '--format', 'json'])
       const bytes = await readFile(file)
       const metadata = JSON.parse(stdout)
@@ -235,7 +251,7 @@ export function createCloud({ directory, token, githubToken, run = promisify(exe
       // Updating only --spec preserves custom domains, certificate and log options.
       await yc(['serverless', 'api-gateway', 'update', target.gateway, '--spec', path, '--format', 'json'])
     },
-    smoke: (bundle) => retry(() => smoke(bundle, target.frontendOrigin, request)),
+    smoke: (bundle, plan) => retry(() => smoke(bundle, target.frontendOrigin, request, plan)),
     verifyRollback: (expected) => retry(async () => {
       const response = await request(`${target.frontendOrigin}/auth`, { signal: AbortSignal.timeout(20_000) })
       if (response.status !== 200 || hash(Buffer.from(await response.arrayBuffer())) !== hash(expected)) {
