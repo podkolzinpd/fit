@@ -41,9 +41,10 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null }
 
-async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?: MockWorkout[]; failClients?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean } = {}) {
+async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?: MockWorkout[]; failClients?: boolean; failTrainingData?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean } = {}) {
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
+  let failTrainingData = options.failTrainingData ?? false
   let failWorkspace = options.failWorkspace ?? false
   let failThreads = options.failThreads ?? false
   let questionAnswered = false
@@ -82,6 +83,10 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
     } else if (url.pathname === '/v1/legal/acceptance') {
       body = { applicable: true, accepted: true, acceptedAt: '2026-09-01T00:00:00.000Z' }
     } else if (url.pathname === '/v1/training-data') {
+      if (failTrainingData) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+        return
+      }
       body = {
         accessMode: 'read_only',
         customExercises: [],
@@ -225,6 +230,7 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
   })
   return {
     setClientsFailure(value: boolean) { failClients = value },
+    setTrainingDataFailure(value: boolean) { failTrainingData = value },
     setWorkspaceFailure(value: boolean) { failWorkspace = value },
     setThreadsFailure(value: boolean) { failThreads = value },
     getSaveAttempts() { return saveAttempts },
@@ -399,9 +405,25 @@ test('today keeps creation available when the trainer has no clients or workouts
   await expect(page.getByRole('link', { name: 'Надиктовать тренировку' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Ввести текстом' })).toBeVisible()
   await expect(page.locator('.schedule-v2-next-workout')).toHaveCount(0)
+  await expect(page.getByText('Свободный день')).toBeVisible()
   await expect(page.getByRole('button', { name: '0 Незавершённые действия' })).toBeVisible()
   await page.getByRole('button', { name: '0 Незавершённые действия' }).click()
   await expect(page.getByRole('dialog', { name: 'Рабочая очередь' }).getByText('Незавершённых действий нет')).toBeVisible()
+})
+
+test('calendar error leaves inbox and action tiles reachable, then retries in place', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+  const backend = await mockPilot(page, { failTrainingData: true })
+  await page.goto('/today')
+  await expect(page.getByRole('button', { name: /Вопросы и сообщения/ })).toBeVisible()
+  await expect(page.getByText('Не удалось загрузить данные')).toBeVisible({ timeout: 15_000 })
+  await page.getByRole('button', { name: /Вопросы и сообщения/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Входящие' })).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть входящие' }).click()
+  await expect(page.getByRole('button', { name: /Незавершённые действия/ })).toBeVisible()
+  backend.setTrainingDataFailure(false)
+  await page.getByRole('alert').filter({ hasText: 'Не удалось загрузить данные' }).getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.locator('.schedule-v2-timeline')).toBeVisible()
 })
 
 test('action queue shows source failure and recovers on retry', async ({ page }) => {
@@ -436,6 +458,33 @@ test('the bell count equals the visible queue and updates after snoozing', async
   await expect.poll(() => snoozeStatus).toBe(200)
   await expect(page.getByRole('button', { name: '0 Незавершённые действия' })).toBeVisible()
   await expect(queue.getByText('Незавершённых действий нет')).toBeVisible()
+})
+
+test('action and onboarding sheets keep keyboard focus inside and return it on close', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+  await mockPilot(page, { workouts: [] })
+  await page.goto('/today')
+  const bell = page.getByRole('button', { name: '1 Незавершённые действия' })
+  await bell.click()
+  const closeQueue = page.getByRole('button', { name: 'Закрыть рабочую очередь' })
+  await expect(closeQueue).toBeFocused()
+  await page.keyboard.press('Shift+Tab')
+  await expect(page.getByRole('button', { name: 'Напомнить через 2 недели' })).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(closeQueue).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(bell).toBeFocused()
+
+  const onboarding = page.getByRole('button', { name: 'Установка и уведомления' })
+  await onboarding.click()
+  const closeOnboarding = page.getByRole('button', { name: 'Закрыть подсказки' })
+  await expect(closeOnboarding).toBeFocused()
+  await page.keyboard.press('Shift+Tab')
+  await expect(page.getByRole('link', { name: 'Открыть настройки' })).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(closeOnboarding).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(onboarding).toBeFocused()
 })
 
 test('today keeps workout entry usable while clients fail and recover', async ({ page }) => {
