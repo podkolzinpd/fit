@@ -81,6 +81,8 @@ test('identity provides keyboard focus and honours reduced motion', async ({ pag
   const motion = await page.locator('.client-home-identity .voice-action-button').evaluate((element) => {
     const toMilliseconds = (value: string) => value.split(',').map((part) => {
       const duration = part.trim()
+      // An absent pseudo-element can report an empty computed duration.
+      if (!duration) return 0
       return duration.endsWith('ms') ? Number.parseFloat(duration) : Number.parseFloat(duration) * 1000
     })
     const values = [getComputedStyle(element), getComputedStyle(element, '::before')]
