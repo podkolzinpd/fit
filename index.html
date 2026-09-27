@@ -12022,6 +12022,83 @@ Strava, поддерживаемые виды спорта: https://support.stra
   <div class="slide-meta"><span id="sectionName">Решение</span><span id="counter">01 / 30</span></div>
   <div class="notes-panel" id="notesPanel" aria-hidden="true"><button id="closeNotes" aria-label="Закрыть заметки">×</button><div id="notesContent"></div></div>
   <script>
+function buildClearDeck(deck) {
+  const get = s => deck.querySelector(s);
+  const set = (s, child, html) => { const e=get(s)?.querySelector(child); if(e)e.innerHTML=html; };
+  const panel = (label,title,body) => `<article><span>${label}</span><h3>${title}</h3><p>${body}</p></article>`;
+  const rebuild = (selector,label,title,body,foot) => {
+    const el=get(selector), notes=el.querySelector('.speaker-notes')?.outerHTML || '';
+    el.className='slide prefinal-keep clear-slide';
+    el.innerHTML=`<div class="eyebrow">${label}</div><h2>${title}</h2><div class="clear-body">${body}</div><div class="clear-foot">${foot}</div>${notes}`;
+    return el;
+  };
+  const style=document.createElement('style');
+  style.textContent=`
+  .clear-slide {padding:70px 76px!important;background:linear-gradient(115deg,#222730,#343c4a)!important;color:#f5f3ee!important;}
+  .clear-slide > .eyebrow {position:static!important;font-size:15px!important;letter-spacing:2px;color:#aebfe7;margin:0 0 35px!important;}
+  .clear-slide > h2 {position:static!important;font-size:59px!important;line-height:1.08!important;letter-spacing:-2px!important;max-width:1400px!important;margin:0!important;color:#f5f3ee!important;}
+  .clear-body {position:absolute;left:76px;right:76px;top:285px;bottom:155px;}
+  .clear-grid {display:grid;grid-template-columns:1fr 1fr;gap:55px;height:100%;}
+  .clear-grid.three {grid-template-columns:repeat(3,1fr);gap:36px;}
+  .clear-grid article {border-top:1px solid #637082;padding-top:25px;}
+  .clear-grid article>span {font-size:15px;letter-spacing:1.5px;color:#aebfe7;}
+  .clear-grid h3 {font-size:34px;line-height:1.15;margin:25px 0 24px;color:#f5f3ee;}
+  .clear-grid p {font-size:25px;line-height:1.45;margin:0;color:#bdc3ce;}
+  .clear-grid p b {font-weight:600;color:#f5f3ee;}
+  .clear-foot {position:absolute;bottom:64px;left:76px;right:76px;border-top:1px solid #637082;padding-top:20px;font-size:20px;line-height:1.35;color:#bdc3ce;}
+  .clear-number {display:block;font-size:80px;letter-spacing:-3px;color:#f5f3ee;margin:25px 0 12px;}
+  .clear-money {display:grid;grid-template-columns:1fr 1fr;gap:30px 55px;}
+  .clear-money article {border-top:1px solid #637082;padding-top:18px;}
+  .clear-money h3 {font-size:29px;margin:0 0 12px;color:#f5f3ee;}
+  .clear-money p {font-size:23px;line-height:1.35;color:#bdc3ce;margin:0 0 12px;}
+  .clear-money span {font-size:20px;color:#aebfe7;}
+  .clear-slide .clear-body.money {top:300px;bottom:180px;}
+  .review-product-flow-v6 h2 {font-size:53px!important;line-height:1.04!important;}
+  .review-product-flow-v6 .subhead {font-size:23px!important;}
+  .review-product-flow-v6 .loop-proof-now strong,.review-product-flow-v6 .loop-native strong {font-size:22px!important;}
+  .clear-model-assumption {position:absolute;left:76px;right:76px;bottom:198px;font-size:18px;color:#bdc3ce;}
+  .appendix-tag {position:absolute;right:75px;top:28px;color:#aebfe7;font-size:14px;letter-spacing:1px;}
+  `;
+  document.head.appendChild(style);
+  set('.pilot-cover','h1','Fit — приложение<br>для тренировок');
+  set('.pilot-cover','.pilot-cover-copy p','Персональный план от ИИ, результаты и прогресс.<br>Самостоятельно или с тренером.');
+
+  rebuild('.path-map-review-v2','01 · ДЛЯ КОГО FIT','Человеку — план тренировок.<br>Тренеру — работа с клиентами.',`<div class="clear-grid">${panel('ДЛЯ СЕБЯ','Начать и продолжать занятия','Сообщить цель и условия → получить план.<br><br>Записывать результаты и видеть прогресс.<br><br><b>AI-план · факт · прогресс</b>')}${panel('ДЛЯ ТРЕНЕРА','Вести клиентов в одном месте','Назначать программы и видеть результаты клиентов.<br><br>План и история тренировок доступны в совместной работе.')}</div>`,'Можно начать самому и продолжить с тренером — история тренировок остаётся в Fit.');
+
+  rebuild('.review-problem-v2','02 · ПРОБЛЕМА','План есть. Как заниматься дальше?',`<div class="clear-grid">${panel('ЧЕЛОВЕК','Жизнь меняется — программу<br>нужно подстраивать','Меньше времени, другое оборудование, перерыв.<br><br>Нужно понять, какую тренировку выбрать сегодня.')}${panel('ТРЕНЕР','Результаты приходится<br>собирать вручную','Программа — в одном месте, отчёты — в переписке.<br><br>Сложно быстро увидеть, что клиент выполнил и что изменить.')}</div>`,'Задача Fit — связать программу и результаты, чтобы следующую тренировку было проще выбрать.');
+
+  set('.review-product-flow-v6','h2','ИИ составляет план.<br>Fit сохраняет<br>результаты.');
+  set('.review-product-flow-v6','.subhead','Цель и условия → план → результат → следующая тренировка');
+  set('.review-product-flow-v6','.loop-proof-now span','ПРИМЕР ЗАПРОСА');
+  set('.review-product-flow-v6','.loop-proof-now strong','«Колено побаливает. Есть 15 минут. Сегодня без давления»');
+  set('.review-product-flow-v6','.loop-native span','НЕ НУЖНО НАЧИНАТЬ ЗАНОВО');
+  set('.review-product-flow-v6','.loop-native strong','План и результаты остаются в Fit и используются для следующей тренировки.');
+
+  rebuild('.prefinal-audience-scale','06 · АУДИТОРИЯ','50,5 млн занимаются спортом.<br>30,5 млн — база нашей модели.',`<div class="clear-grid">${panel('СПОРТИВНАЯ АУДИТОРИЯ','<strong class="clear-number">50,5 млн</strong>','Россияне 15–59 лет, которые занимаются<br>не реже 1–3 раз в месяц.<br><br>58,8% от 85,9 млн человек.')}${panel('РАСЧЁТНАЯ БАЗА FIT','<strong class="clear-number">30,5 млн</strong>','Семь направлений: бег, фитнес, силовые,<br>ЛФК, зарядка, прогулки и йога.<br><br>Тренерская аудитория моделируется отдельно.')}</div>`,'30,5 млн — расчётная база, а не измеренное число уникальных пользователей. Методика — в заметках.');
+
+  const eco=rebuild('.ecosystem-combined-slide','08 · FIT И ЯНДЕКС','Карты помогают найти место.<br>Fit — начать тренировку.',`<div class="clear-grid">${panel('КАРТЫ → FIT','Ищу, где заниматься<br>→ перехожу к тренировке','<b>Механика:</b> переход из подходящего спортивного сценария Карт в Fit.<br><br><b>Для Fit:</b> человек уже собирается заниматься.')}${panel('FIT → КАРТЫ','Выбираю тренировку<br>→ нахожу площадку и маршрут','<b>Механика:</b> из Fit открыть поиск места для выбранного занятия в Картах.<br><br><b>Для Карт:</b> выбор мест и построение маршрутов.')}</div>`,'Предлагаемая интеграция, не договорённость. Начать с одного сценария и согласовать переходы с командой Карт.');
+  eco.querySelector('.speaker-notes').textContent='Предложение для обсуждения, не работающая и не согласованная интеграция. Польза обеим сторонам показана через действия пользователя. Условия размещения, технический способ переходов и доступность сценариев требуют согласования. Другие сервисы намеренно не перечислены без конкретной механики. Обмен персональными данными не предполагается этим слайдом.';
+
+  const money=rebuild('.prefinal-revenue-model','09 · МОНЕТИЗАЦИЯ','Клиент платит за ИИ-план.<br>Тренер — за рабочие инструменты.',`<div class="clear-money"><article><h3>Premium AI · 190 ₽/мес.</h3><p>Персональная программа и AI-сопровождение.<br>Клиент оплачивает подписку.</p><span>2031: 489 млн ₽ · 44% выручки</span></article><article><h3>Pro для тренера</h3><p>Программы, ведение клиентов и продвижение.<br>Тренер оплачивает подписку.</p><span>2031: 81 млн ₽ · 7% выручки</span></article><article><h3>Комиссия с занятий</h3><p>Клиент оплачивает занятие через Fit.<br>Fit удерживает комиссию с платежа.</p><span>2031: 369 млн ₽ · 33% выручки, не ставка комиссии</span></article><article><h3>Реклама и товары</h3><p>Партнёры платят за рекламу и продажи.<br>Подключаем после роста аудитории.</p><span>2031: 169 млн ₽ · 15% выручки</span></article></div>`,'План монетизации. Состав платных функций и условия комиссии ещё нужно согласовать. Суммы — прогноз, доли округлены.');
+  eco.querySelector('.clear-grid article p').innerHTML='<b>Предлагаем:</b> переход «Тренировка в Fit» при поиске места для занятий в Картах.<br><br><b>Для Fit:</b> человек уже собирается заниматься.';
+  money.querySelectorAll('.clear-money article p')[2].innerHTML='Предлагаем: Fit приводит клиента и принимает оплату.<br>С оплаченного занятия — комиссия платформе.';
+  money.querySelector('.clear-body').classList.add('money');
+  money.querySelector('.speaker-notes').textContent+='\n\nНОВАЯ ПОДАЧА\nЦена 190 ₽/мес. взята из модели. Граница бесплатных и платных функций не утверждена; бесплатный тариф здесь не обещан. Причина оплачивать занятие через Fit требует отдельной проработки: привлечение нового клиента и организация оплаты — возможное обоснование комиссии, не подтверждённый факт. Прогноз комиссии сохранён без пересчёта; он зависит от прохождения платежей через Fit. Нельзя считать любую записанную тренировку комиссионной. Все четыре потока сохранены. Следующий основной слайд — финансовый прогноз; подробные драйверы в материалах.';
+
+  const finance=get('.prefinal-financial');
+  const assumption=document.createElement('div');assumption.className='clear-model-assumption';
+  assumption.textContent='Цели на конец 2031: 264 тыс. платящих клиентов · 9,3 тыс. тренеров Pro · 934 тыс. тренировок/мес.';
+  finance.appendChild(assumption);
+  set('.prefinal-launch-ask','h2','Команда запуска — 12 человек');
+  set('.prefinal-launch-ask','.launch-simple-lead','Бюджет января–июня 2027 — около 48 млн ₽.');
+
+  rebuild('.prefinal-launch-roadmap','12 · ПУТЬ К ЗАПУСКУ','Подготовить продукт → запустить<br>в залах → подключить оплату',`<div class="clear-grid three">${panel('СЕЙЧАС','Подготовить<br>продукт','Завершить перенос на инструменты Яндекса.<br><br>Доработать дизайн и AI-программы.<br><br>Настроить аналитику использования.')}${panel('ПЕРВАЯ ВОЛНА','Запустить<br>в двух залах','Пригласить сотрудников Яндекса и около 30 внешних тренеров.<br><br>Организовать поддержку и сбор обратной связи.')}${panel('ПО МОДЕЛИ · ОКТЯБРЬ 2027','Подключить<br>подписки и платежи','Premium AI, Pro для тренера и оплата занятий.<br><br>Развивать поиск тренеров и согласованные входы из сервисов Яндекса.')}</div>`,'48 млн ₽ — бюджет первых шести месяцев, а не всего периода до начала монетизации.');
+
+  const appendix=['.review-story-v2','.retention-answer-v3','.prefinal-model-drivers'];
+  appendix.forEach((s,i)=>{const el=get(s);el.dataset.section='Материалы';el.dataset.appendix=String(i+1);const tag=document.createElement('div');tag.className='appendix-tag';tag.textContent=`ДОПОЛНИТЕЛЬНЫЕ МАТЕРИАЛЫ · ${i+1}/3`;el.appendChild(tag);deck.appendChild(el);});
+  // Keep source notes and their calculation trail; add a contents link for appendix access.
+  const nav=document.createElement('a');nav.href='#14';nav.textContent='Материалы →';nav.style.cssText='position:fixed;right:28px;bottom:12px;z-index:20;color:#aebfe7;font:13px Arial;text-decoration:none';document.body.appendChild(nav);
+}
 const deck = document.getElementById('deck')
 // Предфинальная сборка: в DOM попадают только явно утверждённые слайды.
 deck.querySelectorAll('.slide:not(.prefinal-keep)').forEach(slide => slide.remove())
@@ -12094,6 +12171,7 @@ Fit сохраняет план и историю тренировок при с
 Далее — что мешает этим людям начать и продолжать тренировки.`
   pathMapSource.replaceWith(revisedPathMap)
 }
+buildClearDeck(deck)
 const slides = [...document.querySelectorAll('.slide:not(.legacy-competitor-slide):not(.legacy-behavior-slide)')]
 if (slides.length <= 1) document.querySelectorAll('.nav').forEach(button => { button.style.display = 'none' })
 // One retained version per slide: keep revision suffixes, renumber after the approved reorder.
