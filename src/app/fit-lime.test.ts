@@ -37,14 +37,18 @@ describe('Fit Lime route boundary', () => {
     ['/exercises', '', true],
     ['/chat/thread-1', '', true],
     ['/join', '', true],
-    ['/today', '?view=compose', false],
-    ['/today', '?view=review', false],
-    ['/workouts/new', '', false],
-    ['/workouts/workout-1/live', '', false],
-    ['/assistant', '', false],
+    ['/today', '?view=compose', true],
+    ['/today', '?view=review', true],
+    ['/today', '?view=save', true],
+    ['/workouts/new', '', true],
+    ['/workouts/workout-1/edit', '', true],
+    ['/workouts/workout-1', '', true],
+    ['/workouts/workout-1/live', '', true],
+    ['/workouts/workout-1/history/exercise-1', '', true],
+    ['/assistant', '', true],
     ['/me', '', false],
     ['/auth', '', false],
-  ] as const)('%s%s has the approved stage-3 boundary', (pathname, search, approved) => {
+  ] as const)('%s%s has the released Fit Lime boundary', (pathname, search, approved) => {
     expect(isFitLimeApprovedTrainerRoute(pathname, search)).toBe(approved)
   })
 
@@ -68,12 +72,30 @@ describe('Fit Lime route boundary', () => {
     expect(isFitLimeShellRoute(pilot, '/profile/settings', '')).toBe(true)
     expect(isFitLimeShellRoute(pilot, '/profile/trainer', '')).toBe(true)
     expect(isFitLimeShellRoute(pilot, '/exercises', '')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/workouts/new', '?client=client-1&date=2026-09-25')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/workouts/workout-1/edit', '')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/workouts/workout-1', '?reply=1')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/workouts/workout-1/live', '')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/workouts/workout-1/history/exercise-1', '')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/assistant', '')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/workouts/workout-1/live/extra', '')).toBe(false)
     expect(isFitLimeShellRoute(pilot, '/progress/client-1/history', '')).toBe(false)
-    expect(isFitLimeShellRoute(pilot, '/today', '?view=compose')).toBe(false)
+    expect(isFitLimeShellRoute(pilot, '/today', '?view=compose')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/today', '?view=review')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/today', '?view=save')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/me', '?view=compose')).toBe(false)
+    expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/today', '?view=compose')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/today', '')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/chat', '')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/chat/thread-1', '')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/clients', '')).toBe(false)
+    expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/workouts/new', '')).toBe(false)
+    expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/workouts/workout-1', '')).toBe(false)
+    expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/workouts/workout-1/live', '')).toBe(false)
+    expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/workouts/workout-1/history/exercise-1', '')).toBe(false)
+    expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/assistant', '')).toBe(false)
+    expect(isFitLimeShellRoute({ ...pilot, kind: 'client', role: 'client', clientId: 'client-1', trainerId: 'trainer-1', fullName: 'Клиент' }, '/assistant', '')).toBe(false)
+    expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: false, fitLime: true } }, '/workouts/new', '')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: false, fitLime: true } }, '/today', '')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, kind: 'client', role: 'client', clientId: 'client-1', trainerId: 'trainer-1', fullName: 'Клиент' }, '/schedule', '')).toBe(false)
   })

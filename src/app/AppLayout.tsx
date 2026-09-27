@@ -21,6 +21,7 @@ export function AppLayout() {
   const trainerScheduleV2 = isTrainerScheduleV2Enabled(actor)
   const trainerScheduleV2Route = trainerScheduleV2 && isTrainerScheduleV2CalendarRoute(pathname, search)
   const fitLimeShell = isFitLimeShellRoute(actor, pathname, search)
+  const pilotCompose = fitLimeShell && pathname === '/today' && new URLSearchParams(search).get('view') === 'compose'
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
   const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
@@ -34,9 +35,9 @@ export function AppLayout() {
   const monochromeTrainerClientWorkouts = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+\/workouts$/.test(pathname))
   const monochromeClientProfile = pathname === '/me/profile' || pathname === '/me/settings'
   const monochromeClientCardEdit = pathname === '/me/edit'
-  const monochromeWorkoutCreateEdit = workoutForm || todayStep
+  const monochromeWorkoutCreateEdit = workoutForm || todayStep || pilotCompose
   const monochromeWorkoutDetailHistory = workoutDetail || exerciseHistory
-  const monochromeTrainerToday = Boolean(actor?.role === 'trainer' && pathname === '/today' && !todayStep)
+  const monochromeTrainerToday = Boolean(actor?.role === 'trainer' && pathname === '/today' && !todayStep && !pilotCompose)
   const monochromeTrainerClients = Boolean(actor?.role === 'trainer' && (pathname === '/clients' || pathname === '/clients/archive'))
   const monochromeTrainerClientDetail = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+$/.test(pathname) && !['/clients/new', '/clients/archive'].includes(pathname))
   const monochromeTrainerClientForm = Boolean(actor?.role === 'trainer' && (pathname === '/clients/new' || /^\/clients\/[^/]+\/edit$/.test(pathname)))
@@ -96,7 +97,7 @@ export function AppLayout() {
   // сценария, но внутри не конкурирует с текущим действием.
   const assistant = pathname === '/assistant'
   const chat = pathname === '/chat' || pathname.startsWith('/chat/')
-  const immersive = liveSession || workoutForm || todayStep || chat
+  const immersive = liveSession || workoutForm || todayStep || pilotCompose || chat
   const contentClass = immersive ? 'content content-immersive' : 'content'
 
   const frameClass = [

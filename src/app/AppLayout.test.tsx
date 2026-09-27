@@ -190,16 +190,36 @@ describe('AppLayout: единственная UI Identity', () => {
     authState.role = 'trainer'
     authState.trainerScheduleV2 = true
     authState.fitLime = true
-    for (const route of ['/today?view=compose', '/workouts/new', '/assistant']) {
-      const layout = renderLayout(route)
-      expect(document.querySelector('.phone-frame')).not.toHaveClass('fit-lime-shell')
-      expect(document.documentElement).not.toHaveClass('fit-lime-document')
-      layout.unmount()
-    }
+    const assistant = renderLayout('/assistant')
+    expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell', 'assistant-identity')
+    expect(document.documentElement).toHaveClass('fit-lime-document')
+    assistant.unmount()
     const conversation = renderLayout('/chat/thread-1')
     expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell')
     expect(document.documentElement).toHaveClass('fit-lime-document')
     conversation.unmount()
+    for (const step of ['compose', 'review', 'save']) {
+      const entry = renderLayout(`/today?view=${step}`)
+      expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell', 'workout-create-edit-identity')
+      expect(document.documentElement).toHaveClass('fit-lime-document')
+      entry.unmount()
+    }
+    const workoutForm = renderLayout('/workouts/new?client=client-1&date=2026-09-25')
+    expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell', 'workout-create-edit-identity')
+    expect(document.documentElement).toHaveClass('fit-lime-document')
+    workoutForm.unmount()
+    const workoutDetail = renderLayout('/workouts/workout-1?reply=1')
+    expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell', 'workout-detail-history-identity')
+    expect(document.documentElement).toHaveClass('fit-lime-document')
+    workoutDetail.unmount()
+    const liveWorkout = renderLayout('/workouts/workout-1/live')
+    expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell', 'live-identity')
+    expect(document.documentElement).toHaveClass('fit-lime-document')
+    liveWorkout.unmount()
+    const exerciseHistory = renderLayout('/workouts/workout-1/history/exercise-1')
+    expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell', 'workout-detail-history-identity')
+    expect(document.documentElement).toHaveClass('fit-lime-document')
+    exerciseHistory.unmount()
     const clients = renderLayout('/clients/archive')
     expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell')
     expect(document.documentElement).toHaveClass('fit-lime-document')

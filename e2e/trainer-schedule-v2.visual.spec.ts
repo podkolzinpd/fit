@@ -93,6 +93,8 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
     }))
     localStorage.setItem(`fit.coachmarks-seen.${profileId}`, JSON.stringify([
       'assistant-all-trainers-2026-09',
+      'missed-workout-actions-2026-08',
+      'live-timer-2026-09',
     ]))
   }, { token: sessionToken, profileId })
   await page.route('http://127.0.0.1:4100/v1/**', async (route) => {
@@ -244,6 +246,8 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
         return
       }
       body = { entries: progressEntries, customMetrics: [], goal: goalRecord }
+    } else if (/^\/v1\/clients\/[0-9a-f-]+\/progress\/exercises\//.test(url.pathname)) {
+      body = { items: [], nextCursor: null, totalCount: 0 }
     } else if (/^\/v1\/clients\/[0-9a-f-]+\/progress\/regularity$/.test(url.pathname)) {
       body = { regularity: [{ period: 'week', periodStart: '2026-09-21', periodEnd: '2026-09-27', plannedCount: 1, completedCount: 0, completedPlannedCount: 0, partialCount: 0, skippedCount: 0, completionPercent: null }] }
     } else if (/^\/v1\/clients\/[0-9a-f-]+\/progress\/running$/.test(url.pathname)) {
@@ -291,6 +295,14 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
     } else if (url.pathname === `/v1/workouts/${workoutId}/cancel` && route.request().method() === 'POST') {
       workouts = workouts.map((item) => item.id === workoutId ? { ...item, status: 'cancelled', version: item.version + 1 } : item)
       body = { workout: { version: 2 } }
+    } else if (url.pathname === '/v1/assistant/conversations' && route.request().method() === 'POST') {
+      body = { conversation: { id: conversationId, title: null, createdAt: '2026-09-27T12:00:00.000Z' } }
+    } else if (url.pathname === '/v1/assistant/conversations') {
+      body = { conversations: [] }
+    } else if (url.pathname === `/v1/assistant/conversations/${conversationId}/messages`) {
+      body = { messages: [] }
+    } else if (url.pathname === '/v1/assistant/actions') {
+      body = { actions: [] }
     } else if (url.pathname === '/v1/trainer-workspace') {
       if (failWorkspace) {
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
@@ -421,7 +433,7 @@ for (const [account, profileId] of [
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
     await expect(page.locator('html')).toHaveClass(/fit-lime-document/)
     await page.goto('/today?view=compose')
-    await expect(page.locator('.phone-frame')).not.toHaveClass(/fit-lime-shell/)
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
     await page.goto('/schedule?week=2026-09-21')
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
   })
@@ -449,9 +461,40 @@ for (const [account, profileId] of [
     }
     await page.getByRole('link', { name: 'Ввести текстом' }).click()
     await expect(page).toHaveURL(/\/today\?view=compose&entry=text/)
-    await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+    await expect(page.locator('.fit-lime-shell')).toBeVisible()
   })
 }
+
+test('Fit Lime stage 4 keeps workout and assistant routes scoped to the pilot trainer', async ({ page }, testInfo) => {
+  await mockPilot(page, { fitLime: true })
+  for (const [route, surface] of [
+    ['/workouts/new?date=2026-09-24', '.workout-form-page'],
+    ['/today?view=compose&entry=text', '.today-text-fallback'],
+    [`/workouts/${workoutId}`, '.workout-detail-page'],
+    [`/workouts/${workoutId}/live`, '.live-workout-page'],
+    [`/workouts/${workoutId}/history/fedb-barbell-squat`, '.exercise-card-tabs'],
+    ['/assistant', '.assistant-page'],
+  ] as const) {
+    await page.goto(route)
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+    await expect(page.locator('html')).toHaveClass(/fit-lime-document/)
+    await expect(page.locator(surface)).toBeVisible()
+    await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(8, 9, 8)')
+    if (route === '/assistant') await expect(page.getByPlaceholder('Опишите тренировку')).toBeVisible()
+    const screenshotPath = testInfo.outputPath(`stage4-${surface.slice(1)}.png`)
+    await page.screenshot({ path: screenshotPath, fullPage: true })
+    await testInfo.attach(`stage4-${surface.slice(1)}`, { path: screenshotPath, contentType: 'image/png' })
+  }
+})
+
+test('workout and assistant routes keep the previous presentation outside Fit Lime', async ({ page }) => {
+  await mockPilot(page, { fitLime: false })
+  for (const route of ['/workouts/new?date=2026-09-24', '/today?view=compose&entry=text', `/workouts/${workoutId}`, `/workouts/${workoutId}/live`, '/assistant']) {
+    await page.goto(route)
+    await expect(page.locator('.phone-frame')).not.toHaveClass(/fit-lime-shell/)
+    await expect(page.locator('html')).not.toHaveClass(/fit-lime-document/)
+  }
+})
 
 test('trainer without Fit Lime keeps the existing day hierarchy', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-24T12:30:00+03:00'))

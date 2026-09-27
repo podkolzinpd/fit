@@ -1,0 +1,116 @@
+/* Stage 4 / workout creation and editing. The existing form and its data
+   contract are unchanged; only the server-gated trainer shell opts in. */
+.fit-lime-shell.workout-create-edit-identity .workout-form-page {
+  max-width: 680px;
+  padding: 18px 18px calc(36px + env(safe-area-inset-bottom));
+}
+.fit-lime-shell.workout-create-edit-identity .workout-header-contract {
+  padding-bottom: 20px;
+  border-color: var(--lime-divider);
+}
+.fit-lime-shell.workout-create-edit-identity .workout-header-eyebrow,
+.fit-lime-shell.workout-create-edit-identity .workout-form-section-head .eyebrow {
+  color: var(--lime-text-tertiary);
+  font-weight: 650;
+  letter-spacing: .09em;
+}
+.fit-lime-shell.workout-create-edit-identity .workout-header-contract h2 {
+  color: var(--lime-text);
+  font-size: clamp(28px, 7vw, 34px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+}
+.fit-lime-shell.workout-create-edit-identity .workout-header-meta {
+  color: var(--lime-text-secondary);
+  font-size: 13px;
+}
+.fit-lime-shell.workout-create-edit-identity .workout-form-section,
+.fit-lime-shell.workout-create-edit-identity .workout-form-page .workout-form-section:first-child {
+  border: 1px solid var(--lime-divider);
+  border-radius: 28px;
+  background: var(--lime-surface);
+}
+.fit-lime-shell.workout-create-edit-identity .workout-form-section-head h2,
+.fit-lime-shell.workout-create-edit-identity .workout-form-exercises .workout-form-exercise-heading h2 {
+  color: var(--lime-text);
+  font-size: 20px;
+  font-weight: 700;
+}
+.fit-lime-shell.workout-create-edit-identity .workout-form .field input,
+.fit-lime-shell.workout-create-edit-identity .workout-form .field select,
+.fit-lime-shell.workout-create-edit-identity .workout-form .field textarea,
+.fit-lime-shell.workout-create-edit-identity .client-picker-trigger,
+.fit-lime-shell.workout-create-edit-identity .picker-search {
+  border-color: var(--lime-divider);
+  border-radius: 16px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.workout-create-edit-identity .workout-record-mode {
+  border-color: var(--lime-divider);
+  border-radius: 18px;
+  background: var(--lime-surface-raised);
+}
+.fit-lime-shell.workout-create-edit-identity .workout-record-mode button.active {
+  border-radius: 14px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+  font-weight: 700;
+}
+.fit-lime-shell.workout-create-edit-identity .workout-form-exercises .planned-exercise,
+.fit-lime-shell.workout-create-edit-identity .exercise-block,
+.fit-lime-shell.workout-create-edit-identity .workout-composer-card {
+  border-color: var(--lime-divider);
+  border-radius: 22px;
+  background: var(--lime-surface-raised);
+}
+.fit-lime-shell.workout-create-edit-identity .workout-composer-card .voice-note-field textarea,
+.fit-lime-shell.workout-create-edit-identity .planned-set-input,
+.fit-lime-shell.workout-create-edit-identity .planned-set-rpe,
+.fit-lime-shell.workout-create-edit-identity .exercise-block select,
+.fit-lime-shell.workout-create-edit-identity .exercise-block input {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface);
+  color: var(--lime-text);
+}
+.fit-lime-shell.workout-create-edit-identity button.primary,
+.fit-lime-shell.workout-create-edit-identity .workout-cta[data-variant='primary'] {
+  border-color: var(--lime-accent);
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+  font-weight: 700;
+}
+.fit-lime-shell.workout-create-edit-identity button.primary:disabled,
+.fit-lime-shell.workout-create-edit-identity .workout-cta[data-variant='primary']:disabled {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-tertiary);
+}
+.fit-lime-shell.workout-create-edit-identity .workout-form .workout-action-row {
+  border-color: var(--lime-divider);
+  background: rgba(25, 25, 28, .96);
+}
+.fit-lime-shell.workout-create-edit-identity .exercise-picker,
+.fit-lime-shell.workout-create-edit-identity .client-picker,
+.fit-lime-shell.workout-create-edit-identity .exercise-settings-sheet,
+.fit-lime-shell.workout-create-edit-identity .modal-dialog {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+}
+.fit-lime-shell.workout-create-edit-identity .exercise-picker,
+.fit-lime-shell.workout-create-edit-identity .client-picker,
+.fit-lime-shell.workout-create-edit-identity .exercise-settings-sheet {
+  border-radius: 30px 30px 0 0;
+}
+.fit-lime-shell.workout-create-edit-identity .picker-item.selected,
+.fit-lime-shell.workout-create-edit-identity .picker-category.active,
+.fit-lime-shell.workout-create-edit-identity .picker-muscle.active {
+  border-color: var(--accent-surface-border);
+  background: var(--lime-accent-muted);
+  color: var(--lime-accent);
+}
+@media (max-width: 480px) {
+  .fit-lime-shell.workout-create-edit-identity .workout-form-page { padding-inline: 16px }
+  .fit-lime-shell.workout-create-edit-identity .workout-form-section,
+  .fit-lime-shell.workout-create-edit-identity .workout-form-page .workout-form-section:first-child { padding: 18px }
+}
