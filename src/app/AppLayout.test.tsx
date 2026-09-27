@@ -207,7 +207,7 @@ describe('AppLayout: единственная UI Identity', () => {
     expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell')
     expect(document.documentElement).toHaveClass('fit-lime-document')
     detail.unmount()
-    for (const route of ['/clients/new', '/clients/client-1/edit', '/clients/client-1/goal', '/join']) {
+    for (const route of ['/clients/new', '/clients/client-1/edit', '/clients/client-1/goal', '/clients/client-1/workouts', '/progress/client-1?view=measurements', '/join']) {
       const layout = renderLayout(route)
       expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell')
       expect(document.documentElement).toHaveClass('fit-lime-document')
@@ -217,6 +217,20 @@ describe('AppLayout: единственная UI Identity', () => {
 })
 
 describe('AppLayout navigation', () => {
+  it('сохраняет активной вкладку клиентов на прогрессе только у Fit Lime тренера', () => {
+    authState.role = 'trainer'
+    authState.trainerScheduleV2 = true
+    authState.fitLime = true
+    const pilot = renderLayout('/progress/client-1?view=measurements')
+    const clients = screen.getByRole('navigation', { name: 'Основная навигация' }).querySelector('a[href="/clients"]')
+    expect(clients).toHaveClass('active')
+    expect(clients).toHaveAttribute('aria-current', 'page')
+    pilot.unmount()
+    authState.fitLime = false
+    renderLayout('/progress/client-1')
+    expect(screen.getByRole('navigation', { name: 'Основная навигация' }).querySelector('a[href="/clients"]')).not.toHaveClass('active')
+  })
+
   it('сохраняет порядок и активную вкладку пилотного тренера на обычных маршрутах', () => {
     vi.stubEnv('VITE_ASSISTANT_NAV_ENABLED', 'true')
     vi.stubEnv('VITE_ASSISTANT_NAV_PILOT_USER_IDS', 'pilot-trainer')

@@ -17,6 +17,7 @@ import './styles/fit-lime-clients.css'
 import './styles/fit-lime-client-detail.css'
 import './styles/fit-lime-client-forms.css'
 import './styles/fit-lime-client-goal.css'
+import './styles/fit-lime-progress-history.css'
 
 declare global {
   interface Window {
