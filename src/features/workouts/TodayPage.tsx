@@ -34,7 +34,7 @@ import { PresetWorkoutPicker } from './PresetWorkoutPicker'
 import { PRESET_WORKOUTS, presetWorkoutToParsedItems } from '../../shared/preset-workouts'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { WorkoutCta, WorkoutExercise, WorkoutHeader, WorkoutSetRow } from './WorkoutSurface'
-import { trainerActionItems, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
+import { trainerActionItems, trainerPlanningDetail, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
 import { TrainerFirstPlanPrompt, TrainerFirstRun } from './FirstRunExperience'
 import { takeFirstWorkoutIntent } from './first-workout-intent'
 import { groupParsedWorkoutReviewBlocks, hasUnresolvedWorkoutReviewItems, moveParsedWorkoutReviewBlock } from './today-review-order'
@@ -53,10 +53,6 @@ type VoiceRefinement = { state: 'loading' | 'success' | 'error'; message: string
 
 interface TodayPageProps {
   clientMode?: boolean
-}
-
-function trainerPlanningDetail(value: string): string {
-  return value.replace(/\d{4}-\d{2}-\d{2}/g, (date) => formatLocalDate(localDate(date)))
 }
 
 function appendVoiceText(previous: string, addition: string): string {
