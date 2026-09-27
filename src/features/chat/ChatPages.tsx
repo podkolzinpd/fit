@@ -26,8 +26,10 @@ export function ChatListPage() {
   const { actor } = useAuth()
   const { chat } = useDataBackend()
   const navigate = useNavigate()
+  const location = useLocation()
   const homePath = actor?.role === 'trainer' ? '/today' : '/me'
-  const exitChat = () => navigate(homePath, { replace: true })
+  const fromHistory = isTrainerScheduleV2Enabled(actor) && (location.state as { chatBack?: unknown } | null)?.chatBack === 'history'
+  const exitChat = () => fromHistory ? navigate(-1) : navigate(homePath, { replace: true })
   const query = useChatThreads()
   const pilot = isTrainerScheduleV2Enabled(actor)
   const workspace = useTrainerWorkspace(pilot)
@@ -217,6 +219,9 @@ export function ChatConversationPage() {
     return [...new Map(items.map((item) => [item.id, item])).values()].filter((item) => !hiddenMessageIds.has(item.id))
       .sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id))
   }, [contextMessages, hiddenMessageIds, messages.data?.messages, older, pending])
+  const chatContentReady = !messages.isLoading && !threads.isLoading && !unread.isLoading && !connection.isLoading
+    && !messages.error && !threads.error && !unread.error && !connection.error
+  const canObserveVisibleMessages = !isTrainerScheduleV2Enabled(actor) || chatContentReady
 
   function scrollToMessage(id: string, behavior: ScrollBehavior = 'smooth') {
     surfaceRef.current?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'center', behavior })
@@ -233,7 +238,7 @@ export function ChatConversationPage() {
     else endRef.current?.scrollIntoView({ block: 'end' })
   }, [messages.data, unread.data])
   useEffect(() => {
-    if (!actor || !surfaceRef.current || typeof IntersectionObserver === 'undefined') return
+    if (!canObserveVisibleMessages || !actor || !surfaceRef.current || typeof IntersectionObserver === 'undefined') return
     let through: ChatMessage | null = null
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
@@ -250,7 +255,7 @@ export function ChatConversationPage() {
     }, { root: surfaceRef.current, threshold: [.65] })
     surfaceRef.current.querySelectorAll('[data-message-id]').forEach((element) => observer.observe(element))
     return () => observer.disconnect()
-  }, [actor, chat, conversationId, queryClient, visible])
+  }, [actor, canObserveVisibleMessages, chat, conversationId, queryClient, visible])
 
   async function deliver(item: PendingMessage) {
     setPending((current) => current.map((message) => message.id === item.id ? { ...message, state: 'sending' } : message))

@@ -1,6 +1,6 @@
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -449,55 +449,71 @@ function scheduleV2TimeLabel(value: string): string {
   return new Date(value).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
 }
 
-function ScheduleV2InboxSheet({ questions, questionsLoading, questionsError, onRetryQuestions, onClose }: {
+function ScheduleV2InboxSheet({ questions, questionsLoading, questionsError, returnTo, onRetryQuestions, onClose, onReturnFocus }: {
   questions: NonNullable<ReturnType<typeof useTrainerWorkspace>['data']>['questions']
   questionsLoading: boolean
   questionsError: boolean
+  returnTo: string
   onRetryQuestions: () => void
   onClose: () => void
+  onReturnFocus: () => void
 }) {
   const threads = useChatThreads()
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    closeRef.current?.focus()
     window.addEventListener('keydown', closeOnEscape)
     return () => {
       document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', closeOnEscape)
+      onReturnFocus()
     }
-  }, [onClose])
+  }, [onClose, onReturnFocus])
+
+  const keepFocusInside = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'Tab') return
+    const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ?? [])]
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (!first || !last) return
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+  }
 
   return createPortal(<div className="schedule-v2-sheet-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-    <section className="schedule-v2-inbox-sheet" role="dialog" aria-modal="true" aria-labelledby="schedule-v2-inbox-title">
+    <section ref={dialogRef} className="schedule-v2-inbox-sheet" role="dialog" aria-modal="true" aria-labelledby="schedule-v2-inbox-title" onKeyDown={keepFocusInside}>
       <div className="schedule-v2-sheet-handle" aria-hidden="true" />
-      <header><div><h2 id="schedule-v2-inbox-title">Входящие</h2><p>Вопросы тренеру и сообщения</p></div><button type="button" aria-label="Закрыть входящие" onClick={onClose}><CloseIcon /></button></header>
+      <header><div><h2 id="schedule-v2-inbox-title">Входящие</h2><p>Вопросы тренеру и сообщения</p></div><button ref={closeRef} type="button" aria-label="Закрыть входящие" onClick={onClose}><CloseIcon /></button></header>
       <div className="schedule-v2-inbox-scroll">
         <section aria-labelledby="schedule-v2-questions-title">
-          <div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-questions-title">Вопросы тренеру</h3><span>{questionsError ? '—' : scheduleCount(questions.length)}</span></div>
-          {questionsLoading && <p className="schedule-v2-inbox-empty">Загружаем вопросы…</p>}
-          {questionsError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error">Не удалось загрузить вопросы <button type="button" onClick={onRetryQuestions}>Повторить</button></p>}
+          <div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-questions-title">Вопросы тренеру</h3><span>{questionsError ? '—' : questionsLoading ? '…' : scheduleCount(questions.length)}</span></div>
+          {questionsLoading && <p className="schedule-v2-inbox-empty" role="status">Загружаем вопросы…</p>}
+          {questionsError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error" role="alert">Не удалось загрузить вопросы <button type="button" aria-label="Повторить загрузку вопросов" onClick={onRetryQuestions}>Повторить</button></p>}
           {!questionsLoading && !questionsError && questions.length === 0 && <p className="schedule-v2-inbox-empty">Новых вопросов нет</p>}
-          {!questionsError && questions.map((item) => <Link key={item.workoutId} className="schedule-v2-inbox-row" to={`/workouts/${item.workoutId}?reply=1`} onClick={onClose}>
+          {!questionsLoading && !questionsError && questions.map((item) => <Link key={item.workoutId} className="schedule-v2-inbox-row" to={`/workouts/${item.workoutId}?reply=1`} state={{ returnTo }} onClick={onClose}>
             <span className="schedule-v2-inbox-avatar">{clientInitials(item.clientName)}</span>
             <span><b>{item.clientName}</b><small>{item.question}</small></span>
             <time>{scheduleV2TimeLabel(item.askedAt)}</time>
           </Link>)}
         </section>
         <section aria-labelledby="schedule-v2-messages-title">
-          <div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-messages-title">Сообщения</h3><span>{threads.isError ? '—' : scheduleCount(threads.data?.reduce((sum, item) => sum + item.unreadCount, 0) ?? 0)}</span></div>
-          {threads.isLoading && <p className="schedule-v2-inbox-empty">Загружаем сообщения…</p>}
-          {threads.isError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error">Не удалось загрузить сообщения <button type="button" onClick={() => void threads.refetch()}>Повторить</button></p>}
-          {!threads.isLoading && !threads.isError && threads.data?.length === 0 && <p className="schedule-v2-inbox-empty">Новых сообщений нет</p>}
-          {threads.data?.map((item) => <Link key={`${item.clientId}:${item.trainerId}`} className="schedule-v2-inbox-row" to={item.conversationId ? `/chat/${item.conversationId}` : '/chat'} onClick={onClose}>
+          <div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-messages-title">Сообщения</h3><span>{threads.isError ? '—' : threads.isLoading ? '…' : scheduleCount(threads.data?.reduce((sum, item) => sum + item.unreadCount, 0) ?? 0)}</span></div>
+          {threads.isLoading && <p className="schedule-v2-inbox-empty" role="status">Загружаем сообщения…</p>}
+          {threads.isError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error" role="alert">Не удалось загрузить сообщения <button type="button" aria-label="Повторить загрузку сообщений" onClick={() => void threads.refetch()}>Повторить</button></p>}
+          {!threads.isLoading && !threads.isError && threads.data?.length === 0 && <p className="schedule-v2-inbox-empty">Диалогов пока нет</p>}
+          {!threads.isLoading && !threads.isError && threads.data?.map((item) => <Link key={`${item.clientId}:${item.trainerId}`} className="schedule-v2-inbox-row" to={item.conversationId ? `/chat/${item.conversationId}` : '/chat'} state={{ chatBack: 'history' }} onClick={onClose}>
             <span className="schedule-v2-inbox-avatar">{clientInitials(item.partnerName)}</span>
             <span><b>{item.partnerName}</b><small>{item.lastMessageBody === '' ? 'Фото' : item.lastMessageBody ?? 'Начать диалог'}</small></span>
             {item.unreadCount > 0 && <strong>{scheduleCount(item.unreadCount)}</strong>}
           </Link>)}
         </section>
       </div>
-      <Link className="schedule-v2-inbox-all" to="/chat" onClick={onClose}>Открыть все сообщения</Link>
+      <Link className="schedule-v2-inbox-all" to="/chat" state={{ chatBack: 'history' }} onClick={onClose}>Открыть все сообщения</Link>
     </section>
   </div>, document.body)
 }
@@ -586,10 +602,13 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const navigate = useNavigate()
   const returnTo = `${location.pathname}${location.search}`
   const dateInputRef = useRef<HTMLInputElement>(null)
+  const inboxTriggerRef = useRef<HTMLButtonElement>(null)
   const [inboxOpen, setInboxOpen] = useState(false)
   const [actionOpen, setActionOpen] = useState(false)
   const [onboardingOpen, setOnboardingOpen] = useState(false)
   const closeActionQueue = useCallback(() => setActionOpen(false), [])
+  const closeInbox = useCallback(() => setInboxOpen(false), [])
+  const restoreInboxFocus = useCallback(() => inboxTriggerRef.current?.focus(), [])
   const closeOnboarding = useCallback(() => setOnboardingOpen(false), [])
   const currentTime = currentTimeInTimeZone(actor?.timezone)
   const currentMinutes = minutesOf(currentTime)
@@ -724,7 +743,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
             <span className="schedule-v2-summary-icon"><BellIcon /></span>
             <strong>{actionCount}</strong>
           </button>
-          <button type="button" className="schedule-v2-message-card" aria-label={`${summaryValue(workspace.data?.summary.inboxCount)} Вопросы и сообщения`} onClick={() => { trackGoal('schedule_v2_inbox_tile_opened'); setInboxOpen(true) }}>
+          <button ref={inboxTriggerRef} type="button" className="schedule-v2-message-card" aria-label={`${summaryValue(workspace.data?.summary.inboxCount)} Вопросы и сообщения`} onClick={() => { trackGoal('schedule_v2_inbox_tile_opened'); setInboxOpen(true) }}>
             <span className="schedule-v2-summary-icon"><MessageIcon /></span>
             <strong>{summaryValue(workspace.data?.summary.inboxCount)}</strong>
           </button>
@@ -755,8 +774,10 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       questions={workspace.data?.questions ?? []}
       questionsLoading={workspace.isLoading}
       questionsError={workspace.isError}
+      returnTo={returnTo}
       onRetryQuestions={() => void workspace.refetch()}
-      onClose={() => setInboxOpen(false)}
+      onClose={closeInbox}
+      onReturnFocus={restoreInboxFocus}
     />}
     {actionOpen && <ScheduleV2ActionSheet
       actions={actionItems}
