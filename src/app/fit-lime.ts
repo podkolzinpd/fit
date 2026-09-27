@@ -35,5 +35,6 @@ export function isFitLimeShellRoute(
       || /^\/clients\/[^/]+\/goal$/.test(pathname)
       || /^\/clients\/[^/]+\/workouts$/.test(pathname)
       || /^\/progress\/[^/]+$/.test(pathname)
-      || pathname === '/join')
+      || pathname === '/join'
+      || pathname === '/profile' || pathname === '/profile/settings' || pathname === '/profile/trainer')
 }

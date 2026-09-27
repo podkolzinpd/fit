@@ -5,6 +5,7 @@ import { setExercisePlanRestDisplay, useExercisePlanRestDisplay } from '../../ap
 import { setLiveExerciseAnimation, useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { setRpeDisplay, useRpeDisplay } from '../../app/rpe-display'
 import { setAppTheme, useAppTheme } from '../../app/theme'
+import { isFitLimeShellRoute } from '../../app/fit-lime'
 import { SettingsIcon } from '../../shared/icons'
 import { LEGAL_PATHS } from '../../shared/legal'
 import { SUPPORT_TELEGRAM_URL } from '../../shared/support'
@@ -39,6 +40,7 @@ export function TrainerProfileSettingsPage() {
   const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [installOpen, setInstallOpen] = useState(false)
+  const fitLimeSettings = isFitLimeShellRoute(actor, '/profile/settings', '')
 
   if (!actor || actor.role !== 'trainer') return null
 
@@ -56,7 +58,8 @@ export function TrainerProfileSettingsPage() {
     </SettingsSection>
 
     <SettingsSection title="Оформление">
-      <div className="profile-settings"><Switch label="Тёмная тема" checked={theme === 'dark'} onChange={(dark) => setAppTheme(dark ? 'dark' : 'light')} /></div>
+      {fitLimeSettings && <p className="fit-lime-profile-theme-note">Lime пока доступна только на экранах тренера из пилота. Выбор темы ниже сохраняется для остальных экранов.</p>}
+      <div className="profile-settings"><Switch label={fitLimeSettings ? 'Тёмная тема остальных экранов' : 'Тёмная тема'} checked={theme === 'dark'} onChange={(dark) => setAppTheme(dark ? 'dark' : 'light')} /></div>
       <BodyMapAppearanceSetting viewerUserId={actor.userId} role={actor.role} gender={null} />
     </SettingsSection>
 
