@@ -49,7 +49,7 @@ export function ChatListPage() {
     setOpening(true); setOpenError(false)
     try {
       const id = item.conversationId ?? await chat.open(item.clientId, item.trainerId)
-      navigate(`/chat/${id}`, { state: { chatBack: 'history' } })
+      navigate(`/chat/${id}`, { state: { chatBack: 'history', returnTo } })
     } catch { setOpenError(true) } finally { setOpening(false) }
   }
   return <Page title="Сообщения" back={homePath} onBack={exitChat} swipeBack className="chat-list-page">
@@ -122,12 +122,12 @@ function useChatLayer(open: boolean, onClose: () => void) {
   }, [open])
 }
 
-function ChatActionSheet({ message, own, local, busy, error, onClose, onReply, onCopy, onEdit, onDelete, onOpenPhoto }:
-  { message: ChatMessage; own: boolean; local: boolean; busy: boolean; error: boolean; onClose: () => void; onReply: () => void; onCopy: () => void; onEdit: () => void; onDelete: () => void; onOpenPhoto: () => void }) {
+function ChatActionSheet({ message, own, local, busy, error, fitLime, onClose, onReply, onCopy, onEdit, onDelete, onOpenPhoto }:
+  { message: ChatMessage; own: boolean; local: boolean; busy: boolean; error: boolean; fitLime: boolean; onClose: () => void; onReply: () => void; onCopy: () => void; onEdit: () => void; onDelete: () => void; onOpenPhoto: () => void }) {
   useChatLayer(true, onClose)
   const close = () => window.history.back()
   const action = (work: () => void) => { close(); window.setTimeout(work, 0) }
-  return createPortal(<div className="chat-sheet-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) close() }}>
+  return createPortal(<div className={`chat-sheet-backdrop${fitLime ? ' fit-lime-chat-sheet' : ''}`} role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) close() }}>
     <section className="chat-action-sheet" role="dialog" aria-modal="true" aria-label="Действия с сообщением">
       <div className="chat-sheet-handle" aria-hidden="true" />
       {!local && <button type="button" onClick={() => action(onReply)}>Ответить</button>}
@@ -144,6 +144,7 @@ function ChatActionSheet({ message, own, local, busy, error, onClose, onReply, o
 export function ChatConversationPage() {
   const { conversationId = '' } = useParams()
   const { actor } = useAuth()
+  const fitLimeConversation = actor?.role === 'trainer' && actor.experiments?.fitLime === true && isTrainerScheduleV2Enabled(actor)
   const { chat } = useDataBackend()
   const queryClient = useQueryClient()
   const location = useLocation()
@@ -158,6 +159,7 @@ export function ChatConversationPage() {
   const [pending, setPending] = useState<PendingMessage[]>(() => storedPending(pendingKey))
   const [nextCursor, setNextCursor] = useState<{ createdAt: string; id: string } | null>(null)
   const [loadingOlder, setLoadingOlder] = useState(false)
+  const [olderError, setOlderError] = useState(false)
   const thread = threads.data?.find((item) => item.conversationId === conversationId)
   const draftKey = `fit:chat-draft:${actor?.userId}:${conversationId}`
   const [draft, setDraft] = useState(() => localStorage.getItem(draftKey) ?? '')
@@ -308,8 +310,9 @@ export function ChatConversationPage() {
   }
   async function loadOlder() {
     if (!nextCursor) return
-    setLoadingOlder(true)
+    setLoadingOlder(true); setOlderError(false)
     try { const page = await chat.listMessages(conversationId, nextCursor); setOlder((current) => [...page.messages, ...current]); setNextCursor(page.nextCursor) }
+    catch { setOlderError(true) }
     finally { setLoadingOlder(false) }
   }
   async function removeMessage(item: ChatMessage, local: PendingMessage | undefined) {
@@ -331,7 +334,15 @@ export function ChatConversationPage() {
     window.setTimeout(() => void revealMessage(item.id), 0)
   }
 
-  const leaveConversation = () => location.state && (location.state as { chatBack?: string }).chatBack ? navigate(-1) : navigate('/chat', { replace: true })
+  const conversationState = location.state as { chatBack?: unknown; returnTo?: unknown } | null
+  const safeReturnTo = typeof conversationState?.returnTo === 'string'
+    && /^\/(?:today|schedule)(?:[/?#]|$)/.test(conversationState.returnTo)
+    && !conversationState.returnTo.includes('\\') ? conversationState.returnTo : '/chat'
+  const leaveConversation = () => {
+    const historyState = window.history.state as { idx?: unknown } | null
+    if (conversationState?.chatBack === 'history' && typeof historyState?.idx === 'number' && historyState.idx > 0) navigate(-1)
+    else navigate(safeReturnTo, { replace: true })
+  }
   const searchAction = <button type="button" className="chat-page-search" aria-label={searchOpen ? 'Закрыть поиск' : 'Поиск по переписке'} onClick={() => searchOpen ? window.history.back() : setSearchOpen(true)}>{searchOpen ? <CloseIcon /> : <SearchIcon />}</button>
   const blockedByMe = thread?.blockedByMe === true
   const chatAction = <div className="chat-page-actions">{searchAction}<OverflowMenu label="Действия с диалогом" items={[{
@@ -364,7 +375,8 @@ export function ChatConversationPage() {
                 : <><strong>Можно общаться без подключения</strong><span>Тренировки пока недоступны тренеру.</span></>}
           {connectionError && <span className="error" role="alert">Не удалось выполнить действие</span>}
         </section>}
-        {nextCursor && <button type="button" className="link chat-load-older" disabled={loadingOlder} onClick={() => void loadOlder()}>{loadingOlder ? 'Загружаем…' : 'Ранее'}</button>}
+        {nextCursor && <button type="button" className="link chat-load-older" disabled={loadingOlder} onClick={() => void loadOlder()}>{loadingOlder ? 'Загружаем…' : olderError && fitLimeConversation ? 'Повторить загрузку ранних сообщений' : 'Ранее'}</button>}
+        {olderError && fitLimeConversation && <p className="chat-older-error" role="alert">Не удалось загрузить ранние сообщения</p>}
         {visible.length === 0 && <StatePanel compact tone="info" title="Начните диалог" description="Напишите первое сообщение." />}
         <div className="chat-messages">{visible.map((item) => {
           const local = pending.find((candidate) => candidate.id === item.id)
@@ -398,7 +410,7 @@ export function ChatConversationPage() {
       </form>}
     </AsyncView>
   </Page>
-  {actionMessage && <ChatActionSheet message={actionMessage} own={actionMessage.senderId === actor?.userId} local={pending.some((item) => item.id === actionMessage.id)} busy={deletingMessageId === actionMessage.id} error={deleteErrorMessageId === actionMessage.id}
+  {actionMessage && <ChatActionSheet message={actionMessage} own={actionMessage.senderId === actor?.userId} local={pending.some((item) => item.id === actionMessage.id)} busy={deletingMessageId === actionMessage.id} error={deleteErrorMessageId === actionMessage.id} fitLime={fitLimeConversation}
     onClose={() => setActionMessage(null)} onReply={() => { setReplyingTo(actionMessage); setEditing(null); messageInputRef.current?.focus() }} onCopy={() => void copyMessage(actionMessage)} onEdit={() => startEdit(actionMessage)} onDelete={() => void removeMessage(actionMessage, pending.find((item) => item.id === actionMessage.id))} onOpenPhoto={() => setPhotoMessage(actionMessage)} />}
   {photoMessage?.image?.url && <FullscreenImageViewer src={photoMessage.image.url} alt="Фото в сообщении" label="Просмотр фото"
     saveFileName={`fit-${photoMessage.id}.jpg`} onClose={() => setPhotoMessage(null)} />}
