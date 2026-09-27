@@ -67,6 +67,7 @@ import { LiveExerciseTechnique } from './LiveExerciseTechnique'
 import { useAppViewport } from '../../app/app-viewport'
 import { prepareZeroReplacement } from '../../shared/numeric-input'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
+import { isFitLimeEnabled } from '../../app/fit-lime'
 import { useTrainerWorkspace } from './use-trainer-workspace'
 import { useChatThreads } from '../chat/use-chat-threads'
 import { useYandexAppSession } from '../../app/yandex-app-session-context'
@@ -645,6 +646,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const periodClients = new Set(periodWorkouts.map((workout) => workout.clientId)).size
   const periodLabel = scheduleV2Range(weekStart, periodEnd)
   const showHomeActions = isDayView && selected === today
+  const fitLimeToday = isDayView && isFitLimeEnabled(actor)
   const homeClients = useQuery({
     queryKey: ['clients', false],
     queryFn: () => clientsRepository.list(false),
@@ -711,8 +713,33 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     { label: 'Настройки', onClick: () => navigate('/profile/settings') },
   ]
 
+  const homeActions = showHomeActions && <section className="schedule-v2-home-actions" aria-label="Рабочие действия">
+    <div className="schedule-v2-entry-actions">
+      <Link className="schedule-v2-voice-entry" to="/today?view=compose" onClick={() => trackGoal('schedule_v2_voice_entry_opened')}><MicIcon />Надиктовать тренировку</Link>
+      <Link className="schedule-v2-text-entry" to="/today?view=compose&entry=text" onClick={() => trackGoal('schedule_v2_text_entry_opened')}><KeyboardIcon /><span>Ввести текстом</span></Link>
+    </div>
+    {draft && <Link className="schedule-v2-resume" to="/today?view=compose"><strong>Есть незавершённая тренировка</strong><span>Продолжить <ChevronRightIcon /></span></Link>}
+    {homeClients.isLoading && <p className="schedule-v2-home-state" role="status">Загружаем клиентов…</p>}
+    {homeClients.isError && <p className="schedule-v2-home-state" role="alert">Не удалось загрузить клиентов. <button type="button" onClick={() => void homeClients.refetch()}>Повторить</button></p>}
+    {!homeClients.isLoading && !homeClients.isError && homeClients.data?.length === 0 && <Link className="schedule-v2-first-client" to="/clients/new">Добавить первого клиента <ChevronRightIcon /></Link>}
+    {homeWorkouts.isLoading && <p className="schedule-v2-home-state" role="status">Загружаем тренировки…</p>}
+    {homeWorkouts.isError && <p className="schedule-v2-home-state" role="alert">Не удалось загрузить тренировки. <button type="button" onClick={() => void homeWorkouts.refetch()}>Повторить</button></p>}
+    {homeContext && <Link className="schedule-v2-next-workout" to={homeContext.workout.status === 'in_progress' ? `/workouts/${homeContext.workout.id}/live` : `/workouts/${homeContext.workout.id}`} state={{ returnTo }}><small>{homeContext.title}</small><strong>{homeContext.workout.clientName}</strong><span>{homeContext.workout.workoutDate === today ? homeContext.workout.startTime?.slice(0, 5) || 'Сегодня' : formatLocalDate(homeContext.workout.workoutDate)} <ChevronRightIcon /></span></Link>}
+    {actor && <button ref={onboardingTriggerRef} type="button" className="schedule-v2-onboarding-trigger" onClick={() => setOnboardingOpen(true)}>Установка и уведомления <ChevronRightIcon /></button>}
+  </section>
+  const daySummary = isDayView && <section className="schedule-v2-summary" aria-label="Рабочая сводка">
+    <button ref={actionTriggerRef} type="button" className="schedule-v2-action-card" aria-label={`${actionCount} Незавершённые действия`} onClick={() => { trackGoal('schedule_v2_action_tile_opened'); setActionOpen(true) }}>
+      <span className="schedule-v2-summary-icon"><BellIcon /></span>
+      <strong>{actionCount}</strong>
+    </button>
+    <button ref={inboxTriggerRef} type="button" className="schedule-v2-message-card" aria-label={`${summaryValue(workspace.data?.summary.inboxCount)} Вопросы и сообщения`} onClick={() => { trackGoal('schedule_v2_inbox_tile_opened'); setInboxOpen(true) }}>
+      <span className="schedule-v2-summary-icon"><MessageIcon /></span>
+      <strong>{summaryValue(workspace.data?.summary.inboxCount)}</strong>
+    </button>
+  </section>
+
   return <Page
-    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}`}
+    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${fitLimeToday ? ' fit-lime-today' : ''}`}
     title="Расписание"
     hideTitle
   >
@@ -722,30 +749,9 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         ? <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>
         : <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>}
     </header>
-    {showHomeActions && <section className="schedule-v2-home-actions" aria-label="Рабочие действия">
-      <div className="schedule-v2-entry-actions">
-        <Link className="schedule-v2-voice-entry" to="/today?view=compose" onClick={() => trackGoal('schedule_v2_voice_entry_opened')}><MicIcon />Надиктовать тренировку</Link>
-        <Link className="schedule-v2-text-entry" to="/today?view=compose&entry=text" onClick={() => trackGoal('schedule_v2_text_entry_opened')}><KeyboardIcon /><span>Ввести текстом</span></Link>
-      </div>
-      {draft && <Link className="schedule-v2-resume" to="/today?view=compose"><strong>Есть незавершённая тренировка</strong><span>Продолжить <ChevronRightIcon /></span></Link>}
-      {homeClients.isLoading && <p className="schedule-v2-home-state" role="status">Загружаем клиентов…</p>}
-      {homeClients.isError && <p className="schedule-v2-home-state" role="alert">Не удалось загрузить клиентов. <button type="button" onClick={() => void homeClients.refetch()}>Повторить</button></p>}
-      {!homeClients.isLoading && !homeClients.isError && homeClients.data?.length === 0 && <Link className="schedule-v2-first-client" to="/clients/new">Добавить первого клиента <ChevronRightIcon /></Link>}
-      {homeWorkouts.isLoading && <p className="schedule-v2-home-state" role="status">Загружаем тренировки…</p>}
-      {homeWorkouts.isError && <p className="schedule-v2-home-state" role="alert">Не удалось загрузить тренировки. <button type="button" onClick={() => void homeWorkouts.refetch()}>Повторить</button></p>}
-      {homeContext && <Link className="schedule-v2-next-workout" to={homeContext.workout.status === 'in_progress' ? `/workouts/${homeContext.workout.id}/live` : `/workouts/${homeContext.workout.id}`} state={{ returnTo }}><small>{homeContext.title}</small><strong>{homeContext.workout.clientName}</strong><span>{homeContext.workout.workoutDate === today ? homeContext.workout.startTime?.slice(0, 5) || 'Сегодня' : formatLocalDate(homeContext.workout.workoutDate)} <ChevronRightIcon /></span></Link>}
-      {actor && <button ref={onboardingTriggerRef} type="button" className="schedule-v2-onboarding-trigger" onClick={() => setOnboardingOpen(true)}>Установка и уведомления <ChevronRightIcon /></button>}
-    </section>}
-    {isDayView && <section className="schedule-v2-summary" aria-label="Рабочая сводка">
-      <button ref={actionTriggerRef} type="button" className="schedule-v2-action-card" aria-label={`${actionCount} Незавершённые действия`} onClick={() => { trackGoal('schedule_v2_action_tile_opened'); setActionOpen(true) }}>
-        <span className="schedule-v2-summary-icon"><BellIcon /></span>
-        <strong>{actionCount}</strong>
-      </button>
-      <button ref={inboxTriggerRef} type="button" className="schedule-v2-message-card" aria-label={`${summaryValue(workspace.data?.summary.inboxCount)} Вопросы и сообщения`} onClick={() => { trackGoal('schedule_v2_inbox_tile_opened'); setInboxOpen(true) }}>
-        <span className="schedule-v2-summary-icon"><MessageIcon /></span>
-        <strong>{summaryValue(workspace.data?.summary.inboxCount)}</strong>
-      </button>
-    </section>}
+    {fitLimeToday && daySummary}
+    {homeActions}
+    {!fitLimeToday && daySummary}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {!isDayView ? <>
         <div className="schedule-v2-range-toggle" role="group" aria-label="Период расписания">

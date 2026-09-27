@@ -8,6 +8,7 @@ import '@fontsource-variable/onest/wght.css'
 import './styles.css'
 import './styles/fit-lime-components.css'
 import './styles/fit-lime-shell.css'
+import './styles/fit-lime-today.css'
 
 declare global {
   interface Window {
