@@ -124,6 +124,24 @@ test('shared objects referenced by retained manifests survive, unknown legacy up
   assert.ok(!plan.objects.some((o) => o.key === key || o.key === unknown || o.key === 'releases/frontend-release.json'))
 })
 
+test('cleanup preserves zero-byte legacy folder markers but rejects non-empty or unsafe markers', async (t) => {
+  const data = await history(t)
+  const release = data.manifests[0].release
+  data.inventory.push(
+    { key: 'releases/', size: 0, lastModified: '2025-01-01', etag: 'root-marker' },
+    { key: `releases/${release}/`, size: 0, lastModified: '2025-01-01', etag: 'release-marker' },
+    { key: `releases/${release}/assets/`, size: 0, lastModified: '2025-01-01', etag: 'folder-marker' },
+  )
+  const plan = planCleanup(data)
+  assert.ok(!plan.objects.some((item) => item.key.endsWith('/')))
+
+  for (const key of [`releases/${release}/assets/`, 'releases/../../']) {
+    const invalid = structuredClone(data)
+    invalid.inventory.push({ key, size: 1, lastModified: '2025-01-01', etag: 'invalid' })
+    assert.throws(() => planCleanup(invalid), /Invalid object inventory/)
+  }
+})
+
 test('cleanup accepts cloud-expanded defaults but refuses real parameter drift before deletion', async (t) => {
   const data = await history(t)
   const expand = (spec) => {
