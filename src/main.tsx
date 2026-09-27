@@ -20,6 +20,7 @@ import './styles/fit-lime-client-goal.css'
 import './styles/fit-lime-progress-history.css'
 import './styles/fit-lime-profile.css'
 import './styles/fit-lime-exercises.css'
+import './styles/fit-lime-workout-form.css'
 
 declare global {
   interface Window {
