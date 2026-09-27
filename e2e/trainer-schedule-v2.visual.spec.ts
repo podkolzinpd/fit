@@ -496,6 +496,68 @@ test('workout and assistant routes keep the previous presentation outside Fit Li
   }
 })
 
+test('Fit Lime trainer screens fit a narrow phone without horizontal page clipping', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 320, height: 720 })
+  await page.clock.setFixedTime(new Date('2026-09-24T12:30:00+03:00'))
+  await mockPilot(page, { fitLime: true })
+  for (const route of [
+    '/today?date=2026-09-24',
+    '/schedule?week=2026-09-21',
+    '/chat',
+    `/chat/${conversationId}`,
+    '/clients',
+    `/clients/${clientId}`,
+    '/clients/new',
+    `/clients/${clientId}/goal`,
+    `/progress/${clientId}`,
+    `/clients/${clientId}/workouts`,
+    '/profile',
+    '/profile/settings',
+    '/profile/trainer',
+    '/exercises',
+    '/workouts/new?date=2026-09-24',
+    `/workouts/${workoutId}`,
+    `/workouts/${workoutId}/live`,
+    `/workouts/${workoutId}/history/fedb-barbell-squat`,
+    '/assistant',
+  ]) {
+    await page.goto(route)
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+    if (route.startsWith('/today')) await expect(page.locator('.fit-lime-today')).toBeVisible()
+    if (route.startsWith('/schedule')) await expect(page.locator('.fit-lime-schedule')).toBeVisible()
+    if (route.startsWith('/workouts/new')) await expect(page.locator('.workout-form-page')).toBeVisible()
+    if (route === '/assistant') await expect(page.locator('.assistant-page')).toBeVisible()
+    const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth)
+    expect(documentWidth, `Horizontal overflow on ${route}`).toBeLessThanOrEqual(320)
+    const clippedControls = await page.evaluate(() => {
+      const selectors = [
+        '.trainer-tab-bar a',
+        '.workout-form-section',
+        '.workout-form-section .client-picker-trigger',
+        '.workout-form-section .workout-record-mode button',
+        '.workout-form-section .workout-time-row input',
+        '.workout-form-section .workout-notes summary',
+        '.schedule-v2-period strong',
+        '.assistant-composer textarea',
+      ]
+      return [...document.querySelectorAll<HTMLElement>(selectors.join(', '))]
+        .filter((element) => {
+          const bounds = element.getBoundingClientRect()
+          return bounds.right > window.innerWidth + 1 || bounds.left < -1 || element.scrollWidth > element.clientWidth + 1
+        })
+        .map((element) => `${element.tagName.toLowerCase()}${element.className ? `.${String(element.className).trim().replace(/\s+/g, '.')}` : ''}`)
+    })
+    expect(clippedControls, `Clipped controls on ${route}`).toEqual([])
+    if (route.startsWith('/workouts/') || route.startsWith('/today')
+      || route.startsWith('/schedule') || route === '/assistant') {
+      const label = `narrow-${route.replace(/[^a-z0-9]+/gi, '-')}`
+      const screenshotPath = testInfo.outputPath(`${label}.png`)
+      await page.screenshot({ path: screenshotPath, fullPage: true })
+      await testInfo.attach(label, { path: screenshotPath, contentType: 'image/png' })
+    }
+  }
+})
+
 test('trainer without Fit Lime keeps the existing day hierarchy', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-24T12:30:00+03:00'))
   await mockPilot(page)
@@ -1560,7 +1622,8 @@ test('editing a pilot workout returns to its calendar day with the changed time'
   const backend = await mockPilot(page)
   await page.goto('/today?date=2026-09-24&week=2026-09-21&range=2w')
   await page.locator('.schedule-v2-event').click()
-  await page.getByRole('button', { name: 'Понятно' }).click()
+  const coachmarkDismiss = page.getByRole('button', { name: 'Понятно' })
+  if (await coachmarkDismiss.isVisible()) await coachmarkDismiss.click()
   await page.getByRole('link', { name: 'Изменить', exact: true }).click()
   await page.getByLabel('Начало').fill('13:00')
   await page.getByLabel('Окончание').fill('14:00')

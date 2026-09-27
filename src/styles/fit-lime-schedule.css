@@ -32,6 +32,13 @@
 }
 
 @media (max-width: 360px) {
+  .fit-lime-shell .fit-lime-schedule .schedule-v2-period { gap: 4px; }
+  .fit-lime-shell .fit-lime-schedule .schedule-v2-period strong {
+    overflow: visible;
+    font-size: 14px;
+    text-overflow: clip;
+    white-space: normal;
+  }
   .fit-lime-shell .fit-lime-schedule .schedule-v2-weekstrip {
     margin-inline: -12px;
   }

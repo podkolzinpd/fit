@@ -40,3 +40,8 @@ html.fit-lime-document #root { background: #080908; color-scheme: dark }
   }
   .fit-lime-shell .trainer-tab-bar { bottom: max(8px, env(safe-area-inset-bottom)); }
 }
+@media (max-width: 360px) {
+  .fit-lime-shell .trainer-tab-bar { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 6px; }
+  .fit-lime-shell .trainer-tab-bar a { gap: 4px; padding-inline: 1px; font-size: 10px; }
+  .fit-lime-shell .trainer-tab-bar a svg { width: 23px; height: 23px; }
+}
