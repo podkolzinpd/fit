@@ -3,6 +3,8 @@ import { expect, test, type Page } from '@playwright/test'
 const trainerId = '10000000-0000-4000-8000-000000000001'
 const clientId = '10000000-0000-4000-8000-000000000002'
 const workoutId = '10000000-0000-4000-8000-000000000003'
+const conversationId = '10000000-0000-4000-8000-000000000004'
+const messageId = '10000000-0000-4000-8000-000000000005'
 const sessionToken = 's'.repeat(43)
 
 const workout = {
@@ -36,9 +38,13 @@ const workout = {
   exercises: [],
 }
 
-async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?: Array<typeof workout>; failClients?: boolean } = {}) {
+async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?: Array<typeof workout>; failClients?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean } = {}) {
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
+  let failWorkspace = options.failWorkspace ?? false
+  let failThreads = options.failThreads ?? false
+  let questionAnswered = false
+  let unreadCount = 4
   await page.route('http://127.0.0.1:4100/health', async (route) => {
     await route.fulfill({ status: 200, headers: { 'x-fit-request-id': 'pilot-health-check', 'access-control-allow-origin': '*', 'access-control-expose-headers': 'x-fit-request-id' }, contentType: 'application/json', body: '{"ok":true}' })
   })
@@ -72,8 +78,29 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
       body = {
         accessMode: 'read_only',
         customExercises: [],
-        workouts: options.workouts ?? [workout],
-        attention: [],
+        workouts: options.questionWorkout ? [{
+          ...workout,
+          status: 'done',
+          clientQuestion: 'Можно заменить приседания?',
+          clientQuestionAskedAt: '2026-09-24T11:30:00.000Z',
+          clientQuestionResolvedAt: questionAnswered ? '2026-09-24T12:30:00.000Z' : null,
+          trainerReview: questionAnswered ? 'Да, можно заменить.' : null,
+          trainerReviewedAt: questionAnswered ? '2026-09-24T12:30:00.000Z' : null,
+          completedAt: '2026-09-24T11:00:00.000Z',
+          version: questionAnswered ? 2 : 1,
+        }] : options.workouts ?? [workout],
+        attention: options.questionWorkout && !questionAnswered ? [{
+          workoutId,
+          clientId,
+          clientName: 'Алексей Смирнов',
+          workoutDate: '2026-09-24',
+          clientQuestion: 'Можно заменить приседания?',
+          clientQuestionAskedAt: '2026-09-24T11:30:00.000Z',
+          discomfort: false,
+          clientComment: null,
+          feedbackSubmittedAt: '2026-09-24T11:30:00.000Z',
+          version: 1,
+        }] : [],
         attentionPreferences: snoozedUntil ? [{ clientId, snoozedUntil }] : [],
         hasMoreWorkouts: false,
         totalWorkouts: options.workouts?.length ?? 1,
@@ -103,16 +130,23 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
     } else if (url.pathname === `/v1/clients/${clientId}/attention/snooze` && route.request().method() === 'POST') {
       snoozedUntil = '2099-01-01T00:00:00.000Z'
       body = { client: { snoozedUntil } }
+    } else if (url.pathname === `/v1/workouts/${workoutId}/question/answer` && route.request().method() === 'PUT') {
+      questionAnswered = true
+      body = { workout: { version: 2 } }
     } else if (url.pathname === '/v1/trainer-workspace') {
+      if (failWorkspace) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+        return
+      }
       body = {
         summary: {
           pendingActionCount: 3,
-          unresolvedQuestionCount: 2,
-          unreadChatMessageCount: 4,
-          inboxCount: 6,
+          unresolvedQuestionCount: questionAnswered ? 0 : 1,
+          unreadChatMessageCount: unreadCount,
+          inboxCount: (questionAnswered ? 0 : 1) + unreadCount,
           updatedAt: '2026-09-24T12:00:00.000Z',
         },
-        questions: [{
+        questions: questionAnswered ? [] : [{
           workoutId,
           clientId,
           clientName: 'Алексей Смирнов',
@@ -121,8 +155,12 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
         }],
       }
     } else if (url.pathname === '/v1/chat/threads') {
+      if (failThreads) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+        return
+      }
       body = { threads: [{
-        conversationId: '10000000-0000-4000-8000-000000000004',
+        conversationId,
         clientId,
         trainerId,
         partnerUserId: clientId,
@@ -131,18 +169,32 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
         lastMessageBody: 'Спасибо!',
         lastMessageAt: '2026-09-24T11:45:00.000Z',
         lastMessageSenderId: clientId,
-        unreadCount: 4,
+        unreadCount,
         canMessage: true,
         blockedByMe: false,
         blockedByPartner: false,
       }] }
+    } else if (url.pathname === `/v1/chat/conversations/${conversationId}/messages`) {
+      body = { messages: [{ id: messageId, conversationId, senderId: clientId, body: 'Спасибо!', createdAt: '2026-09-24T11:45:00.000Z', editedAt: null, replyTo: null, image: null }], nextCursor: null }
+    } else if (url.pathname === `/v1/chat/conversations/${conversationId}/unread`) {
+      body = { unread: { firstMessageId: unreadCount > 0 ? messageId : null, firstCreatedAt: unreadCount > 0 ? '2026-09-24T11:45:00.000Z' : null, unreadCount } }
+    } else if (url.pathname === `/v1/chat/conversations/${conversationId}/connection`) {
+      body = { state: { activeConnection: true, invitationPending: false, invitedAt: null, canInvite: false, canAccept: false, trainerSwitchRequired: false } }
+    } else if (url.pathname === `/v1/chat/conversations/${conversationId}/read` && route.request().method() === 'PUT') {
+      unreadCount = 0
+      await route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*' }, body: '' })
+      return
     } else {
       await route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
       return
     }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
   })
-  return { setClientsFailure(value: boolean) { failClients = value } }
+  return {
+    setClientsFailure(value: boolean) { failClients = value },
+    setWorkspaceFailure(value: boolean) { failWorkspace = value },
+    setThreadsFailure(value: boolean) { failThreads = value },
+  }
 }
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
@@ -154,7 +206,7 @@ test('renders the single-trainer schedule and combines questions with messages',
 
   await expect(page.locator('.trainer-schedule-v2-shell')).toBeVisible()
   await expect(page.getByRole('button', { name: /1 Незавершённые действия/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /6 Вопросы и сообщения/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /5 Вопросы и сообщения/ })).toBeVisible()
   await expect(page.getByText('Алексей Смирнов')).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toContainText('СегодняРасписаниеКлиенты')
   await expect(page.getByRole('link', { name: 'Запланировать тренировку на 2026-09-24' })).toHaveAttribute('href', '/workouts/new?date=2026-09-24')
@@ -179,19 +231,92 @@ test('renders the single-trainer schedule and combines questions with messages',
   await testInfo.attach('trainer-schedule-v2-actions', { path: actionScreenshotPath, contentType: 'image/png' })
   await page.getByRole('button', { name: 'Закрыть рабочую очередь' }).click()
 
-  await page.getByRole('button', { name: /6 Вопросы и сообщения/ }).click()
+  await page.getByRole('button', { name: /5 Вопросы и сообщения/ }).click()
   await expect(page.getByRole('dialog', { name: 'Входящие' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Вопросы тренеру' })).toBeVisible()
   await expect(page.getByText('Можно заменить приседания?')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Сообщения', level: 3 })).toBeVisible()
   await expect(page.getByText('Спасибо!')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Закрыть входящие' })).toBeFocused()
   const inboxScreenshotPath = testInfo.outputPath('trainer-schedule-v2-inbox.png')
   await page.screenshot({ path: inboxScreenshotPath, fullPage: true })
   await testInfo.attach('trainer-schedule-v2-inbox', { path: inboxScreenshotPath, contentType: 'image/png' })
 
+  await page.keyboard.press('Shift+Tab')
+  await expect(page.getByRole('link', { name: 'Открыть все сообщения' })).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('button', { name: 'Закрыть входящие' })).toBeFocused()
+
   await page.locator('.schedule-v2-timeline').evaluate((element) => { element.scrollTop = 0 })
   await page.getByRole('button', { name: 'Закрыть входящие' }).click()
+  await expect(page.getByRole('button', { name: /5 Вопросы и сообщения/ })).toBeFocused()
   await expect.poll(() => page.locator('.schedule-v2-timeline').evaluate((element) => element.scrollTop)).toBe(0)
+})
+
+test('inbox messages fail independently and all-messages back returns to the selected day', async ({ page }) => {
+  const backend = await mockPilot(page, { failThreads: true })
+  await page.goto('/today?date=2026-09-24')
+  await page.getByRole('button', { name: /5 Вопросы и сообщения/ }).click()
+  const inbox = page.getByRole('dialog', { name: 'Входящие' })
+  await expect(inbox.getByText('Можно заменить приседания?')).toBeVisible()
+  await expect(inbox.getByText('Не удалось загрузить сообщения')).toBeVisible({ timeout: 15_000 })
+  backend.setThreadsFailure(false)
+  await inbox.getByRole('button', { name: 'Повторить загрузку сообщений' }).click()
+  await expect(inbox.getByText('Спасибо!')).toBeVisible()
+  await inbox.getByRole('link', { name: 'Открыть все сообщения' }).click()
+  await expect(page).toHaveURL(/\/chat$/)
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(/\/today\?date=2026-09-24$/)
+})
+
+test('inbox questions fail independently and recover without hiding messages', async ({ page }) => {
+  const backend = await mockPilot(page, { failWorkspace: true })
+  await page.goto('/today?date=2026-09-24')
+  await page.getByRole('button', { name: /Вопросы и сообщения/ }).click()
+  const inbox = page.getByRole('dialog', { name: 'Входящие' })
+  await expect(inbox.getByText('Спасибо!')).toBeVisible()
+  await expect(inbox.getByText('Не удалось загрузить вопросы')).toBeVisible({ timeout: 15_000 })
+  backend.setWorkspaceFailure(false)
+  await inbox.getByRole('button', { name: 'Повторить загрузку вопросов' }).click()
+  await expect(inbox.getByText('Можно заменить приседания?')).toBeVisible()
+  await inbox.getByText('Можно заменить приседания?').click()
+  await expect(page).toHaveURL(/\/workouts\/10000000-0000-4000-8000-000000000003\?reply=1$/)
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(/\/today\?date=2026-09-24$/)
+})
+
+test('replying to a trainer question updates the inbox count on return', async ({ page }) => {
+  await mockPilot(page, { questionWorkout: true })
+  await page.goto('/today?date=2026-09-24')
+  await expect(page.getByRole('button', { name: '5 Вопросы и сообщения' })).toBeVisible()
+  await page.getByRole('button', { name: /Незавершённые действия/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Рабочая очередь' }).getByText('Можно заменить приседания?')).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть рабочую очередь' }).click()
+  await page.getByRole('button', { name: '5 Вопросы и сообщения' }).click()
+  await page.getByRole('dialog', { name: 'Входящие' }).getByText('Можно заменить приседания?').click()
+  await expect(page.getByRole('textbox', { name: 'Ответ клиенту' })).toBeVisible()
+  await page.getByRole('textbox', { name: 'Ответ клиенту' }).fill('Да, можно заменить.')
+  await page.getByRole('button', { name: 'Отправить ответ' }).click()
+  await expect(page.getByText('Вопрос закрыт')).toBeVisible()
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(/\/today\?date=2026-09-24$/)
+  await expect(page.getByRole('button', { name: '4 Вопросы и сообщения' })).toBeVisible()
+})
+
+test('reading a chat message updates the inbox count on return', async ({ page }) => {
+  const readRequests: string[] = []
+  page.on('request', (request) => { if (request.method() === 'PUT' && request.url().includes('/read')) readRequests.push(request.url()) })
+  await mockPilot(page)
+  await page.goto('/today?date=2026-09-24')
+  await expect(page.getByRole('button', { name: '5 Вопросы и сообщения' })).toBeVisible()
+  await page.getByRole('button', { name: '5 Вопросы и сообщения' }).click()
+  await page.getByRole('dialog', { name: 'Входящие' }).getByText('Спасибо!').click()
+  await expect(page).toHaveURL(new RegExp(`/chat/${conversationId}$`))
+  await expect(page.getByText('Спасибо!')).toBeVisible()
+  await expect.poll(() => readRequests).toHaveLength(1)
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(/\/today\?date=2026-09-24$/)
+  await expect(page.getByRole('button', { name: '1 Вопросы и сообщения' })).toBeVisible()
 })
 
 test('today keeps voice, text, draft, workout context and onboarding beside the calendar', async ({ page }, testInfo) => {
