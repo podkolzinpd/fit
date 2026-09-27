@@ -1,0 +1,161 @@
+/* Fit Lime is inert until an approved trainer route receives .fit-lime.
+   Do not infer this class from email, browser storage or Schedule V2. */
+.phone-frame.fit-lime {
+  --lime-bg: #080908;
+  --lime-surface: #19191c;
+  --lime-surface-raised: #232328;
+  --lime-accent: #baff36;
+  --lime-accent-muted: #25360c;
+  --lime-text: #f8f8f6;
+  --lime-text-secondary: #b8b8bd;
+  --lime-text-tertiary: #929296;
+  --lime-divider: #303034;
+  --lime-text-on-accent: #111111;
+
+  --bg: var(--lime-bg);
+  --fg: var(--lime-text);
+  --fg-strong: var(--lime-text);
+  --fg-on-surface: var(--lime-text);
+  --surface: #111113;
+  --surface-raised: var(--lime-surface);
+  --surface-elevated: var(--lime-surface-raised);
+  --surface-sunken: #242428;
+  --surface-muted: #242428;
+  --input: var(--lime-surface-raised);
+  --border: var(--lime-divider);
+  --hairline: #29292d;
+  --muted: var(--lime-text-secondary);
+  --secondary-label-fg: var(--lime-text-secondary);
+  --secondary-bg: var(--lime-surface-raised);
+  --secondary-fg: var(--lime-text);
+  --secondary-hover: #303034;
+  --tertiary-fg: var(--lime-text-secondary);
+  --mono-primary: var(--lime-accent);
+  --mono-on-primary: var(--lime-text-on-accent);
+  --accent: var(--lime-accent);
+  --accent-label: var(--lime-accent);
+  --accent-strong: var(--lime-accent);
+  --accent-weak: var(--lime-accent);
+  --accent-focus: var(--lime-accent);
+  --accent-border: var(--lime-accent);
+  --primary-fill: var(--lime-accent);
+  --accent-surface: var(--lime-accent-muted);
+  --accent-surface-border: #729b27;
+  --accent-ring: color-mix(in srgb, var(--lime-accent) 38%, transparent);
+  --accent-soft: var(--lime-accent-muted);
+  --on-accent: var(--lime-text-on-accent);
+  --selection: color-mix(in srgb, var(--lime-accent) 28%, transparent);
+  --overlay: color-mix(in srgb, var(--lime-bg) 78%, transparent);
+  --card-fill: var(--lime-surface);
+  --frame-bg: var(--lime-bg);
+  --frame-border: var(--lime-bg);
+  --bar-bg: rgba(25, 25, 27, .94);
+  --page-back-bg: var(--lime-surface-raised);
+  color-scheme: dark;
+  color: var(--lime-text);
+  background: var(--lime-bg);
+}
+
+/* One high-priority action. Warning and destructive states keep their own
+   existing semantic colors and always retain a text or icon label. */
+.fit-lime :where(button, .button) {
+  min-height: 44px;
+  border-radius: 16px;
+  font-weight: 600;
+}
+.fit-lime button.primary,
+.fit-lime .button.primary {
+  border-color: var(--lime-accent);
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.fit-lime button.secondary,
+.fit-lime .button.secondary {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime button:disabled,
+.fit-lime .button[aria-disabled='true'] {
+  opacity: .58;
+  cursor: not-allowed;
+}
+.fit-lime :where(button, a[href], input, textarea, select, summary, [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 2px solid var(--lime-accent);
+  outline-offset: 3px;
+}
+
+.fit-lime :where(.field, .client-picker-control) { gap: 8px; color: var(--lime-text-secondary) }
+.fit-lime .field input,
+.fit-lime .field textarea,
+.fit-lime .field select,
+.fit-lime .inline-form input,
+.fit-lime .client-picker-trigger {
+  min-height: 48px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 16px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-size: 16px;
+}
+.fit-lime :where(input, textarea, select)::placeholder { color: var(--lime-text-tertiary) }
+.fit-lime .field :where(input, textarea, select):focus-visible {
+  border-color: var(--lime-accent);
+}
+
+.fit-lime .card,
+.fit-lime .skeleton-card,
+.fit-lime .state-panel {
+  border: 1px solid var(--lime-divider);
+  border-radius: 28px;
+  background: var(--lime-surface);
+  box-shadow: none;
+}
+.fit-lime .card { min-height: 76px; padding: 16px }
+.fit-lime .card:hover { border-color: #729b27; transform: none }
+.fit-lime .card p { color: var(--lime-text-secondary) }
+.fit-lime :where(.badge, .chip, .status-badge) { border-radius: 999px }
+.fit-lime .status-current { color: var(--lime-accent); border-color: #729b27; background: var(--lime-accent-muted) }
+.fit-lime .status-upcoming { color: var(--lime-text-secondary); border-color: var(--lime-divider); background: var(--lime-surface-raised) }
+.fit-lime .status-done { color: var(--success-fg); border-color: var(--success-border); background: var(--success-surface) }
+.fit-lime .skeleton-block { border-radius: 10px; background: var(--lime-surface-raised) }
+.fit-lime .state-panel { padding: 22px }
+.fit-lime .state-panel-mark { border-radius: 16px; color: var(--lime-accent); background: var(--lime-accent-muted) }
+.fit-lime .state-panel p { color: var(--lime-text-secondary) }
+.fit-lime .state-panel-error { border-color: var(--danger-border); background: var(--danger-surface) }
+.fit-lime .state-panel-error .state-panel-mark { color: var(--danger); background: var(--lime-surface-raised) }
+.fit-lime .state-panel-action button { min-height: 44px }
+.fit-lime .save-status { font-weight: 600 }
+.fit-lime .save-status-saving { color: var(--lime-text-secondary) }
+
+.fit-lime .overflow-trigger,
+.fit-lime .page-back {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 15px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime .overflow-list { border-color: var(--lime-divider); border-radius: 18px; background: var(--lime-surface-raised) }
+.fit-lime .overflow-item { min-height: 44px; border-radius: 12px; color: var(--lime-text) }
+.fit-lime .overflow-item:hover { background: #303034 }
+.fit-lime .overflow-item.danger { color: var(--danger) }
+.fit-lime .overflow-item:disabled { opacity: .58 }
+.fit-lime .sheet-overlay,
+.fit-lime .modal-overlay { background: var(--overlay) }
+.fit-lime .client-picker,
+.fit-lime .exercise-picker {
+  border-color: var(--lime-divider);
+  border-radius: 30px 30px 0 0;
+  background: var(--lime-surface-raised);
+}
+.fit-lime .modal-dialog { border-color: var(--lime-divider); border-radius: 28px; background: var(--lime-surface-raised) }
+.fit-lime .modal-message { color: var(--lime-text) }
+.fit-lime .modal-dialog .actions .danger { border-color: var(--danger); background: var(--danger); color: #111111 }
+.fit-lime .chat-action-sheet,
+.fit-lime .workout-decision-sheet { border-color: var(--lime-divider); border-radius: 28px 28px 0 0; background: var(--lime-surface-raised) }
+
+@media (prefers-reduced-motion: reduce) {
+  .fit-lime :where(.card, .tab-bar a, button, .button) { animation: none; transition: none }
+}

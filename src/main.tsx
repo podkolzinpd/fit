@@ -6,6 +6,7 @@ import { applyAppTheme, getAppTheme } from './app/theme'
 import { initializeWorkoutInactivityNotificationActions } from './features/workouts/workout-inactivity-reminder'
 import '@fontsource-variable/onest/wght.css'
 import './styles.css'
+import './styles/fit-lime-components.css'
 
 declare global {
   interface Window {
