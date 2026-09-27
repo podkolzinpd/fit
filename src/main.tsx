@@ -13,6 +13,7 @@ import './styles/fit-lime-schedule.css'
 import './styles/fit-lime-actions.css'
 import './styles/fit-lime-inbox.css'
 import './styles/fit-lime-chat.css'
+import './styles/fit-lime-clients.css'
 
 declare global {
   interface Window {

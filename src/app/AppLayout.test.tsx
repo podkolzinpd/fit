@@ -189,7 +189,7 @@ describe('AppLayout: единственная UI Identity', () => {
     authState.role = 'trainer'
     authState.trainerScheduleV2 = true
     authState.fitLime = true
-    for (const route of ['/clients', '/today?view=compose', '/workouts/new', '/assistant']) {
+    for (const route of ['/today?view=compose', '/workouts/new', '/assistant']) {
       const layout = renderLayout(route)
       expect(document.querySelector('.phone-frame')).not.toHaveClass('fit-lime-shell')
       expect(document.documentElement).not.toHaveClass('fit-lime-document')
@@ -199,6 +199,10 @@ describe('AppLayout: единственная UI Identity', () => {
     expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell')
     expect(document.documentElement).toHaveClass('fit-lime-document')
     conversation.unmount()
+    const clients = renderLayout('/clients/archive')
+    expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell')
+    expect(document.documentElement).toHaveClass('fit-lime-document')
+    clients.unmount()
   })
 })
 
