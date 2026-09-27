@@ -1,0 +1,107 @@
+/* Stage 4 / completed workout and drill-down exercise history. Results,
+   progress queries and share behavior remain unchanged. */
+.fit-lime-shell.workout-detail-history-identity .workout-completion,
+.fit-lime-shell.workout-detail-history-identity .workout-completion-share-card,
+.fit-lime-shell.workout-detail-history-identity .workout-completion-recorded,
+.fit-lime-shell.workout-detail-history-identity .workout-completion-highlight,
+.fit-lime-shell.workout-detail-history-identity .exercise-card-head,
+.fit-lime-shell.workout-detail-history-identity .exercise-progress-chart,
+.fit-lime-shell.workout-detail-history-identity .exercise-technique {
+  border: 1px solid var(--lime-divider);
+  border-radius: 28px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+  box-shadow: none;
+}
+.fit-lime-shell.workout-detail-history-identity .workout-completion-report h1 {
+  color: var(--lime-text);
+  font-size: clamp(28px, 7vw, 34px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+}
+.fit-lime-shell.workout-detail-history-identity .workout-completion-report-kicker,
+.fit-lime-shell.workout-detail-history-identity .workout-completion-record strong {
+  color: var(--lime-accent);
+  font-weight: 700;
+}
+.fit-lime-shell.workout-detail-history-identity .workout-completion-report.is-partial .workout-completion-report-kicker {
+  color: var(--warning-fg);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-completion-report-mark,
+.fit-lime-shell.workout-detail-history-identity .workout-completion-mark {
+  border-color: var(--accent-surface-border);
+  border-radius: 18px;
+  background: var(--lime-accent-muted);
+  color: var(--lime-accent);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-completion-report-facts {
+  border-color: var(--lime-divider);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-completion-report-facts div {
+  border-color: var(--lime-divider);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-completion-report-facts dd,
+.fit-lime-shell.workout-detail-history-identity .workout-completion-count-line,
+.fit-lime-shell.workout-detail-history-identity .workout-completion-highlight h2 {
+  color: var(--lime-text);
+  font-weight: 700;
+}
+.fit-lime-shell.workout-detail-history-identity .workout-completion-report-facts dt,
+.fit-lime-shell.workout-detail-history-identity .workout-completion-report-date,
+.fit-lime-shell.workout-detail-history-identity .workout-completion-share-status {
+  color: var(--lime-text-secondary);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-completion-progress {
+  height: 8px;
+  background: var(--lime-divider);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-completion-progress span { background: var(--lime-accent) }
+.fit-lime-shell.workout-detail-history-identity .workout-completion-report.is-partial .workout-completion-progress span { background: var(--warning-fg) }
+.fit-lime-shell.workout-detail-history-identity .workout-completion-recorded > summary { min-height: 70px }
+.fit-lime-shell.workout-detail-history-identity .workout-completion-recorded > summary strong { color: var(--lime-text); font-weight: 700 }
+.fit-lime-shell.workout-detail-history-identity .workout-completion-share-card .workout-cta[data-variant='primary'] {
+  border-color: var(--lime-accent);
+  border-radius: 18px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+  font-weight: 700;
+}
+.fit-lime-shell.workout-detail-history-identity .workout-completion-share-card .workout-cta[data-variant='primary']:disabled {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-tertiary);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-share-sheet {
+  border-color: var(--lime-divider);
+  border-radius: 30px 30px 0 0;
+  background: var(--lime-surface-raised);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-share-options > button {
+  border-color: var(--lime-divider);
+  border-radius: 18px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-share-options > button.is-selected {
+  border-color: var(--accent-surface-border);
+  background: var(--lime-accent-muted);
+}
+.fit-lime-shell.workout-detail-history-identity .exercise-card-meta h2,
+.fit-lime-shell.workout-detail-history-identity .exercise-progress-chart h2 { color: var(--lime-text); font-weight: 700 }
+.fit-lime-shell.workout-detail-history-identity .exercise-card-tabs {
+  border-color: var(--lime-divider);
+  border-radius: 18px;
+  background: var(--lime-surface);
+}
+.fit-lime-shell.workout-detail-history-identity .exercise-card-tabs .tab.active,
+.fit-lime-shell.workout-detail-history-identity .exercise-card-tabs .tab[aria-selected='true'] {
+  border-color: var(--lime-accent);
+  border-radius: 14px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+  font-weight: 700;
+}
+.fit-lime-shell.workout-detail-history-identity .exercise-technique .how-steps { color: var(--lime-text) }
+@media (max-width: 480px) {
+  .fit-lime-shell.workout-detail-history-identity .page { padding-inline: 16px }
+}
