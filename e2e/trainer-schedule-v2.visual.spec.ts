@@ -41,18 +41,23 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null }
 
-async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
+async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; failProgress?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
   let failTrainingData = options.failTrainingData ?? false
   let failConnections = options.failConnections ?? false
+  let failProgress = options.failProgress ?? false
   let failWorkspace = options.failWorkspace ?? false
   let failThreads = options.failThreads ?? false
   let questionAnswered = false
   let unreadCount = 4
   let workouts: MockWorkout[] = options.workouts ?? [workout]
   let clientRecords = options.clientRecords ?? [{ id: clientId, fullName: 'Алексей Смирнов', archivedAt: null, version: 1 }]
+  let goalRecord: Record<string, unknown> | null = options.withGoal ? {
+    id: '10000000-0000-4000-8000-000000000040', clientId, title: 'Подготовка к старту', targetDate: '2026-12-01',
+    status: 'active', version: 1, criteria: [], stages: [{ id: '10000000-0000-4000-8000-000000000041', goalId: '10000000-0000-4000-8000-000000000040', title: 'База', startsOn: '2026-09-01', endsOn: '2026-10-01', position: 0, version: 1 }],
+  } : null
   let saveAttempts = 0
   let chatSendAttempts = 0
   const sentMessages: Array<{ id: string; conversationId: string; senderId: string; body: string; createdAt: string; editedAt: null; replyTo: null; image: null }> = []
@@ -155,7 +160,15 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
       }
       body = { memberships: clientRecords.map((client) => ({ clientId: client.id, trainerId: profileId, firstName: 'Антон', lastName: null, joinedAt: '2026-09-01T00:00:00.000Z', isRoot: true })), invitations: [] }
     } else if (/^\/v1\/clients\/[0-9a-f-]+\/progress$/.test(url.pathname)) {
-      body = { entries: [], customMetrics: [], goal: null }
+      if (failProgress) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+        return
+      }
+      body = { entries: [], customMetrics: [], goal: goalRecord }
+    } else if (url.pathname === '/v1/goals' && route.request().method() === 'POST') {
+      const command = route.request().postDataJSON() as { draft: { title: string; targetDate: string | null } }
+      goalRecord = { id: '10000000-0000-4000-8000-000000000040', clientId, title: command.draft.title, targetDate: command.draft.targetDate, status: 'active', version: 1, criteria: [], stages: [] }
+      body = { goal: { id: '10000000-0000-4000-8000-000000000040' } }
     } else if (/^\/v1\/clients\/[0-9a-f-]+\/archive$/.test(url.pathname) && route.request().method() === 'PUT') {
       const id = url.pathname.split('/')[3]
       const command = route.request().postDataJSON() as { archived: boolean; expectedVersion: number }
@@ -264,6 +277,7 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
     setClientsFailure(value: boolean) { failClients = value },
     setTrainingDataFailure(value: boolean) { failTrainingData = value },
     setConnectionsFailure(value: boolean) { failConnections = value },
+    setProgressFailure(value: boolean) { failProgress = value },
     setWorkspaceFailure(value: boolean) { failWorkspace = value },
     setThreadsFailure(value: boolean) { failThreads = value },
     getSaveAttempts() { return saveAttempts },
@@ -945,6 +959,61 @@ test('trainer without Fit Lime keeps create, edit and join outside the pilot the
     await page.goto(route)
     await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
   }
+})
+
+for (const [account, profileId] of [
+  ['first', trainerId],
+  ['second', '10000000-0000-4000-8000-000000000010'],
+] as const) {
+  test(`${account} Fit Lime goal keeps the current stage and edit actions`, async ({ page }, testInfo) => {
+    await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+    await mockPilot(page, { profileId, fitLime: true, withGoal: true })
+    await page.goto(`/clients/${clientId}/goal`)
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+    await expect(page.getByRole('heading', { name: 'Подготовка к старту' })).toBeVisible()
+    await expect(page.locator('.stage-row.current')).toContainText('База')
+    await expect(page.locator('.stage-row.current')).toContainText('идёт')
+    await expect(page.locator('.stage-row.current')).toHaveCSS('border-top-color', 'rgb(186, 255, 54)')
+    if (account === 'first') {
+      const screenshotPath = testInfo.outputPath('fit-lime-client-goal.png')
+      await page.screenshot({ path: screenshotPath, fullPage: true })
+      await testInfo.attach('fit-lime-client-goal', { path: screenshotPath, contentType: 'image/png' })
+    }
+    await page.getByRole('button', { name: '＋ Добавить' }).click()
+    await expect(page.getByLabel('Название этапа')).toBeVisible()
+    await page.getByRole('button', { name: 'Отмена' }).click()
+    await expect(page.getByLabel('Название этапа')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Назад' }).click()
+    await expect(page).toHaveURL(new RegExp(`/clients/${clientId}$`))
+  })
+}
+
+test('Fit Lime empty goal can be created without automatic criteria', async ({ page }) => {
+  await mockPilot(page, { fitLime: true })
+  await page.goto(`/clients/${clientId}/goal`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+  await expect(page.getByRole('button', { name: 'Создать цель' })).toBeVisible()
+  await page.getByRole('textbox', { name: 'Цель' }).fill('Укрепить спину')
+  await page.getByRole('button', { name: 'Создать цель' }).click()
+  await expect(page.getByRole('heading', { name: 'Укрепить спину' })).toBeVisible()
+  await expect(page.getByText('Этапов пока нет')).toBeVisible()
+})
+
+test('Fit Lime goal error retries without changing the client route', async ({ page }) => {
+  const backend = await mockPilot(page, { fitLime: true, failProgress: true })
+  await page.goto(`/clients/${clientId}/goal`)
+  await expect(page.getByRole('alert')).toBeVisible({ timeout: 15_000 })
+  backend.setProgressFailure(false)
+  await page.getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.getByRole('button', { name: 'Создать цель' })).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`/clients/${clientId}/goal$`))
+})
+
+test('trainer without Fit Lime keeps the original goal surface', async ({ page }) => {
+  await mockPilot(page, { withGoal: true })
+  await page.goto(`/clients/${clientId}/goal`)
+  await expect(page.getByRole('heading', { name: 'Подготовка к старту' })).toBeVisible()
+  await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
 })
 
 test('the bell count equals the visible queue and updates after snoozing', async ({ page }) => {

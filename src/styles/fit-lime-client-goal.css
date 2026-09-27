@@ -1,0 +1,116 @@
+/* Stage 3, point 23: the trainer's goal and stages, not client goals. */
+.fit-lime-shell.trainer-client-goal-identity .page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px 18px calc(116px + env(safe-area-inset-bottom));
+}
+.fit-lime-shell.trainer-client-goal-identity .page-header { margin-bottom: 20px }
+.fit-lime-shell.trainer-client-goal-identity .page-header h1 {
+  color: var(--lime-text);
+  font-size: clamp(29px, 7vw, 32px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+}
+.fit-lime-shell.trainer-client-goal-identity .page-back {
+  border-color: var(--lime-divider);
+  border-radius: 16px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.trainer-client-goal-identity .page > .stack,
+.fit-lime-shell.trainer-client-goal-identity .page > form.stack { gap: 12px }
+.fit-lime-shell.trainer-client-goal-identity .goal-block,
+.fit-lime-shell.trainer-client-goal-identity .goal-criterion-form {
+  gap: 14px;
+  padding: 20px;
+  border-color: var(--lime-divider);
+  border-radius: 28px;
+  background: var(--lime-surface);
+}
+.fit-lime-shell.trainer-client-goal-identity .goal-head h2,
+.fit-lime-shell.trainer-client-goal-identity .goal-criterion-form-head h2 {
+  color: var(--lime-text);
+  font-size: 19px;
+  font-weight: 650;
+}
+.fit-lime-shell.trainer-client-goal-identity .goal-head .link { color: var(--lime-accent) }
+.fit-lime-shell.trainer-client-goal-identity .goal-head .link.danger { color: var(--danger) }
+.fit-lime-shell.trainer-client-goal-identity .goal-block .muted,
+.fit-lime-shell.trainer-client-goal-identity .page > form.stack > .muted,
+.fit-lime-shell.trainer-client-goal-identity .goal-criterion-form-head p,
+.fit-lime-shell.trainer-client-goal-identity .goal-criterion-hint,
+.fit-lime-shell.trainer-client-goal-identity .goal-title-counter,
+.fit-lime-shell.trainer-client-goal-identity .stage-hint { color: var(--lime-text-secondary) }
+.fit-lime-shell.trainer-client-goal-identity .goal-criterion-summary > p { color: var(--lime-text); overflow-wrap: anywhere }
+.fit-lime-shell.trainer-client-goal-identity .goal-criterion-fields { border-top-color: var(--lime-divider) }
+.fit-lime-shell.trainer-client-goal-identity .goal-criterion-item,
+.fit-lime-shell.trainer-client-goal-identity .stage-row,
+.fit-lime-shell.trainer-client-goal-identity .stage-form {
+  border-color: var(--lime-divider);
+  border-radius: 19px;
+  background: var(--lime-surface-raised);
+}
+.fit-lime-shell.trainer-client-goal-identity .stage-row { padding: 16px }
+.fit-lime-shell.trainer-client-goal-identity .stage-row.current {
+  border-color: var(--lime-accent);
+  background: var(--lime-surface-raised);
+}
+.fit-lime-shell.trainer-client-goal-identity .stage-row strong { color: var(--lime-text); font-size: 15px; font-weight: 650 }
+.fit-lime-shell.trainer-client-goal-identity .stage-row.done strong,
+.fit-lime-shell.trainer-client-goal-identity .stage-row.done .muted { color: var(--lime-text-secondary) }
+.fit-lime-shell.trainer-client-goal-identity .stage-actions .link { color: var(--lime-text) }
+.fit-lime-shell.trainer-client-goal-identity .stage-actions .link.danger { color: var(--danger) }
+.fit-lime-shell.trainer-client-goal-identity .field > :where(span, label) { color: var(--lime-text-secondary) }
+.fit-lime-shell.trainer-client-goal-identity :where(input, textarea, select) {
+  min-height: 48px;
+  border-color: var(--lime-divider);
+  border-radius: 17px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-size: 16px;
+}
+.fit-lime-shell.trainer-client-goal-identity .stage-form :where(input, textarea) { background: var(--lime-surface) }
+.fit-lime-shell.trainer-client-goal-identity .goal-criterion-confirm {
+  border-color: var(--lime-divider);
+  border-radius: 18px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.trainer-client-goal-identity .goal-criterion-confirm small { color: var(--lime-text-secondary) }
+.fit-lime-shell.trainer-client-goal-identity .actions { gap: 10px }
+.fit-lime-shell.trainer-client-goal-identity .primary {
+  min-height: 50px;
+  border-color: var(--lime-accent);
+  border-radius: 17px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.fit-lime-shell.trainer-client-goal-identity .secondary {
+  min-height: 50px;
+  border-color: var(--lime-divider);
+  border-radius: 17px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.trainer-client-goal-identity .danger.secondary {
+  border-color: var(--danger-border);
+  background: var(--lime-surface-raised);
+  color: var(--danger);
+}
+.fit-lime-shell.trainer-client-goal-identity button:disabled {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+  opacity: 1;
+}
+.fit-lime-shell.trainer-client-goal-identity .state-panel {
+  border-color: var(--lime-divider);
+  border-radius: 28px;
+  background: var(--lime-surface);
+}
+
+@media (max-width: 480px) {
+  .fit-lime-shell.trainer-client-goal-identity .page { padding: 16px 16px calc(116px + env(safe-area-inset-bottom)) }
+  .fit-lime-shell.trainer-client-goal-identity .goal-block,
+  .fit-lime-shell.trainer-client-goal-identity .goal-criterion-form { padding: 18px }
+}
