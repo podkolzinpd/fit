@@ -1,0 +1,25 @@
+/* Portalled queue is explicitly marked: it is outside .phone-frame.fit-lime. */
+.fit-lime-action-backdrop .schedule-v2-action-sheet {
+  border-color: #303034;
+  background: #19191c;
+}
+
+.fit-lime-action-backdrop .schedule-v2-action-row {
+  min-height: 68px;
+  gap: 16px;
+}
+
+.fit-lime-action-backdrop .schedule-v2-action-row > b,
+.fit-lime-action-backdrop .schedule-v2-planning-row a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: #baff36;
+}
+
+.fit-lime-action-backdrop .schedule-v2-action-row:focus-visible,
+.fit-lime-action-backdrop .schedule-v2-planning-row a:focus-visible,
+.fit-lime-action-backdrop .schedule-v2-planning-row button:focus-visible {
+  outline: 2px solid #baff36;
+  outline-offset: 2px;
+}

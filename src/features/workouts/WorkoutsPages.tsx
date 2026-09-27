@@ -561,7 +561,7 @@ function ScheduleV2OnboardingSheet({ userId, onClose, onReturnFocus }: { userId:
   </div>, document.body)
 }
 
-function ScheduleV2ActionSheet({ actions, planning, actionsLoading, actionsError, planningLoading, planningError, snoozingClientId, snoozeError, onSnooze, onRetryActions, onRetryPlanning, onClose, onReturnFocus }: {
+function ScheduleV2ActionSheet({ actions, planning, actionsLoading, actionsError, planningLoading, planningError, snoozingClientId, snoozeError, returnTo, fitLime, onSnooze, onRetryActions, onRetryPlanning, onClose, onReturnFocus }: {
   actions: TrainerActionItem[]
   planning: TrainerPlanningItem[]
   actionsLoading: boolean
@@ -570,6 +570,8 @@ function ScheduleV2ActionSheet({ actions, planning, actionsLoading, actionsError
   planningError: boolean
   snoozingClientId?: string
   snoozeError: boolean
+  returnTo: string
+  fitLime: boolean
   onSnooze: (clientId: string) => void
   onRetryActions: () => void
   onRetryPlanning: () => void
@@ -590,7 +592,7 @@ function ScheduleV2ActionSheet({ actions, planning, actionsLoading, actionsError
     }
   }, [onClose, onReturnFocus])
 
-  return createPortal(<div className="schedule-v2-sheet-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+  return createPortal(<div className={`schedule-v2-sheet-backdrop${fitLime ? ' fit-lime-action-backdrop' : ''}`} role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
     <section className="schedule-v2-inbox-sheet schedule-v2-action-sheet" role="dialog" aria-modal="true" aria-labelledby="schedule-v2-action-title" onKeyDown={keepScheduleSheetFocusInside}>
       <div className="schedule-v2-sheet-handle" aria-hidden="true" />
       <header><div><h2 id="schedule-v2-action-title">Рабочая очередь</h2><p>Незавершённые действия по клиентам</p></div><button ref={closeRef} type="button" aria-label="Закрыть рабочую очередь" onClick={onClose}><CloseIcon /></button></header>
@@ -599,13 +601,13 @@ function ScheduleV2ActionSheet({ actions, planning, actionsLoading, actionsError
         {actionsError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error" role="alert">Не удалось загрузить действия <button type="button" aria-label="Повторить загрузку действий" onClick={onRetryActions}>Повторить</button></p>}
         {snoozeError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error" role="alert">Не удалось отложить напоминание. Попробуйте ещё раз.</p>}
         {!actionsLoading && !actionsError && !planningLoading && !planningError && actions.length + planning.length === 0 && <p className="schedule-v2-inbox-empty">Незавершённых действий нет</p>}
-        {!actionsLoading && !actionsError && actions.length > 0 && <section aria-labelledby="schedule-v2-actions-heading"><div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-actions-heading">Требует действия</h3><span>{scheduleCount(actions.length)}</span></div>{actions.map((item) => <Link key={item.clientId} className="schedule-v2-action-row" to={`/workouts/${item.workoutId}${item.reason === 'question' ? '?reply=1' : ''}`} onClick={onClose}>
+        {!actionsLoading && !actionsError && actions.length > 0 && <section aria-labelledby="schedule-v2-actions-heading"><div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-actions-heading">Требует действия</h3><span>{scheduleCount(actions.length)}</span></div>{actions.map((item) => <Link key={item.clientId} className="schedule-v2-action-row" to={`/workouts/${item.workoutId}${item.reason === 'question' ? '?reply=1' : ''}`} state={{ returnTo }} onClick={onClose}>
           <span><strong>{item.clientName}</strong><small>{item.title}</small><em>{item.reason === 'past_plan' ? formatLocalDate(localDate(item.detail)) : item.detail}</em></span><b>{item.actionLabel}</b>
         </Link>)}</section>}
-        {!actionsError && planningLoading && <p className="schedule-v2-inbox-empty" role="status">Загружаем планы…</p>}
-        {!actionsError && planningError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error" role="alert">Не удалось загрузить планы <button type="button" aria-label="Повторить загрузку планов" onClick={onRetryPlanning}>Повторить</button></p>}
-        {!actionsError && !planningLoading && !planningError && planning.length > 0 && <section aria-labelledby="schedule-v2-planning-heading"><div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-planning-heading">Проверить планы</h3><span>{scheduleCount(planning.length)}</span></div>{planning.map((item) => <article key={item.clientId} className="schedule-v2-action-row schedule-v2-planning-row">
-          <span><strong>{item.clientName}</strong><small>{item.title}</small><em>{trainerPlanningDetail(item.detail)}</em></span><div><Link to={`/workouts/new?client=${item.clientId}`} onClick={onClose}>Запланировать</Link><button type="button" disabled={snoozingClientId === item.clientId} onClick={() => onSnooze(item.clientId)}>{snoozingClientId === item.clientId ? 'Сохраняем…' : 'Напомнить через 2 недели'}</button></div>
+        {planningLoading && <p className="schedule-v2-inbox-empty" role="status">Загружаем планы…</p>}
+        {planningError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error" role="alert">Не удалось загрузить планы <button type="button" aria-label="Повторить загрузку планов" onClick={onRetryPlanning}>Повторить</button></p>}
+        {!planningLoading && !planningError && planning.length > 0 && <section aria-labelledby="schedule-v2-planning-heading"><div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-planning-heading">Проверить планы</h3><span>{scheduleCount(planning.length)}</span></div>{planning.map((item) => <article key={item.clientId} className="schedule-v2-action-row schedule-v2-planning-row">
+          <span><strong>{item.clientName}</strong><small>{item.title}</small><em>{trainerPlanningDetail(item.detail)}</em></span><div><Link to={`/workouts/new?client=${item.clientId}`} state={{ returnTo }} onClick={onClose}>Запланировать</Link><button type="button" disabled={snoozingClientId === item.clientId} onClick={() => onSnooze(item.clientId)}>{snoozingClientId === item.clientId ? 'Сохраняем…' : 'Напомнить через 2 недели'}</button></div>
         </article>)}</section>}
       </div>
     </section>
@@ -674,8 +676,8 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const planningItems = trainerPlanningItems(homeClients.data ?? [], homeWorkouts.data ?? [], attentionPreferences.data ?? [], actionClientIds, today)
   const actionsLoading = homeClients.isLoading || homeWorkouts.isLoading || attention.isLoading
   const actionsError = homeClients.isError || homeWorkouts.isError || attention.isError
-  const planningLoading = !actionsError && (actionsLoading || attentionPreferences.isLoading)
-  const planningError = !actionsError && attentionPreferences.isError
+  const planningLoading = homeClients.isLoading || homeWorkouts.isLoading || attentionPreferences.isLoading
+  const planningError = homeClients.isError || homeWorkouts.isError || attentionPreferences.isError
   const actionCount = actionsError || planningError ? '—' : actionsLoading || planningLoading ? '…' : scheduleCount(actionItems.length + planningItems.length)
   const snoozeAttention = useMutation({
     mutationFn: (clientId: string) => workoutsRepository.snoozeClientAttention(clientId),
@@ -688,6 +690,11 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     void homeClients.refetch()
     void homeWorkouts.refetch()
     void attention.refetch()
+  }
+  const retryPlanning = () => {
+    void homeClients.refetch()
+    void homeWorkouts.refetch()
+    void attentionPreferences.refetch()
   }
   const homeContext = homeWorkouts.data ? trainerHomeContext(homeWorkouts.data, today) : null
   const draft = actor && showHomeActions ? readTodayDraft(todayDraftKey(actor.userId)) : null
@@ -824,9 +831,11 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       planningError={planningError}
       snoozingClientId={snoozeAttention.isPending ? snoozeAttention.variables : undefined}
       snoozeError={snoozeAttention.isError}
+      returnTo={returnTo}
+      fitLime={fitLimeToday}
       onSnooze={(clientId) => snoozeAttention.mutate(clientId)}
       onRetryActions={retryActionQueue}
-      onRetryPlanning={() => void attentionPreferences.refetch()}
+      onRetryPlanning={retryPlanning}
       onClose={closeActionQueue}
       onReturnFocus={restoreActionFocus}
     />}
