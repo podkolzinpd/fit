@@ -6,6 +6,7 @@ import { resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as delay } from 'node:timers/promises'
 import { gatewayPlan } from './frontend-gateway-plan.mjs'
+import { gatewaySpecificationsEqual } from './frontend-gateway-specification.mjs'
 import { uploadCandidate } from './upload-frontend-candidate.mjs'
 import { releaseBatch, reuseReleaseObjects, releaseManifest, manifestKey } from './frontend-release-storage.mjs'
 
@@ -20,6 +21,11 @@ const hash = (bytes) => createHash('sha256').update(bytes).digest('hex')
 const immutable = (path) => /^\/assets\/[a-zA-Z0-9_./-]+-[A-Za-z0-9_-]{8,}\.[a-z0-9]+$/.test(path)
 const objectKey = (key) => /^releases\/[a-f0-9]{40}-[a-f0-9]{64}\/[a-zA-Z0-9_./-]+$/.test(key)
   && !key.split('/').some((part) => part.startsWith('.') || !part)
+
+// Only explicitly authored diagnostics may reach CI. Never print raw fetch/yc
+// errors, their causes, stderr, headers or command arguments.
+class DeploymentCheckError extends Error {}
+const failureReason = (error) => error instanceof DeploymentCheckError ? error.message : 'External operation failed (details withheld)'
 
 export function validateSpecification(spec) {
   if (spec?.openapi !== '3.0.0' || !spec.paths?.['/'] || !spec.paths?.['/assets/{file+}']) {
@@ -95,10 +101,10 @@ export async function smoke(bundle, origin, request = fetch, plan = gatewayPlan(
   const check = async (path, file) => {
     const response = await request(`${origin}${path}`, { redirect: 'manual', signal: AbortSignal.timeout(20_000) })
     if (response.status !== 200 || hash(Buffer.from(await response.arrayBuffer())) !== file.sha256
-        || response.headers.get('content-type') !== file.contentType) throw new Error(`Frontend smoke failed: ${path}`)
+        || response.headers.get('content-type') !== file.contentType) throw new DeploymentCheckError(`Frontend smoke failed: ${path}`)
     const cache = response.headers.get('cache-control') ?? ''
     if (file.cacheControl.includes('immutable') ? !cache.includes('immutable') : !cache.includes('no-store')) {
-      throw new Error(`Unexpected frontend cache policy: ${path}`)
+      throw new DeploymentCheckError(`Unexpected frontend cache policy: ${path}`)
     }
   }
   for (const path of ['/', '/auth', '/auth/yandex/callback', '/today']) await check(path, index)
@@ -107,16 +113,16 @@ export async function smoke(bundle, origin, request = fetch, plan = gatewayPlan(
     if (object.delivery === 'public-object-redirect') {
       const response = await request(`${origin}/${file.key}`, { redirect: 'manual', signal: AbortSignal.timeout(20_000) })
       const url = `https://storage.yandexcloud.net/${target.bucket}/${object.object}`
-      if (response.status !== 307 || response.headers.get('location') !== url) throw new Error('WASM redirect mismatch')
+      if (response.status !== 307 || response.headers.get('location') !== url) throw new DeploymentCheckError('WASM redirect mismatch')
       for (const allowedOrigin of [target.frontendOrigin, target.customOrigin]) {
         const asset = await request(url, { headers: { Origin: allowedOrigin }, signal: AbortSignal.timeout(20_000) })
         if (asset.status !== 200 || asset.headers.get('access-control-allow-origin') !== allowedOrigin
-            || hash(Buffer.from(await asset.arrayBuffer())) !== file.sha256) throw new Error('WASM bytes or CORS mismatch')
+            || hash(Buffer.from(await asset.arrayBuffer())) !== file.sha256) throw new DeploymentCheckError('WASM bytes or CORS mismatch')
       }
     } else await check(`/${file.key}`, file)
   })
   const missing = await request(`${origin}/assets/fit-deploy-missing.css`, { signal: AbortSignal.timeout(20_000) })
-  if (missing.status !== 404) throw new Error('Missing assets must return 404')
+  if (missing.status !== 404) throw new DeploymentCheckError('Missing assets must return 404')
   await check('/assets/fit-deploy-missing.js', bundle.files.find((f) => f.key === 'asset-recovery.js'))
 }
 
@@ -136,29 +142,44 @@ export async function deployFrontend(bundle, cloud) {
   await cloud.verifyStorageAccess(plan)
   await cloud.assertCurrentCommit(bundle.commit)
   await cloud.assertReady()
-  if (!isDeepStrictEqual(before, await cloud.specification())) throw new Error('Gateway changed during upload; stopped')
+  if (!gatewaySpecificationsEqual(before, await cloud.specification())) throw new Error('Gateway changed during upload; stopped')
   // No blind retry of activation: an uncertain update must first settle.
   let activationCompleted = false
+  let stage = 'activate'
   try {
     await cloud.activate(next)
     activationCompleted = true
+    stage = 'smoke'
     await cloud.smoke(bundle, plan)
+    stage = 'activation-readiness'
     await cloud.assertReady()
-    if (!isDeepStrictEqual(next, await cloud.specification())) throw new Error('Activated gateway differs from candidate')
-  } catch {
-    await cloud.assertReady()
-    const current = await cloud.specification()
-    if (!activationCompleted && isDeepStrictEqual(current, before)) {
-      throw new Error('Activation outcome uncertain; previous spec is still visible. Inspect cloud operations before retry.')
+    stage = 'activation-readback'
+    if (!gatewaySpecificationsEqual(next, await cloud.specification())) throw new DeploymentCheckError('Activated gateway differs from candidate')
+  } catch (cause) {
+    const original = `stage=${stage}: ${failureReason(cause)}`
+    let rollbackStage = 'rollback-readiness'
+    try {
+      await cloud.assertReady()
+      rollbackStage = 'rollback-inspection'
+      const current = await cloud.specification()
+      if (!activationCompleted && gatewaySpecificationsEqual(current, before)) {
+        throw new DeploymentCheckError('Activation outcome uncertain; previous spec is still visible. Inspect cloud operations before retry.')
+      }
+      if (!gatewaySpecificationsEqual(current, before) && !gatewaySpecificationsEqual(current, next)) {
+        throw new DeploymentCheckError('Concurrent or uncertain gateway update; automatic rollback refused. Use saved backup after inspection.')
+      }
+      rollbackStage = 'rollback-activate'
+      if (!gatewaySpecificationsEqual(current, before)) await cloud.activate(before)
+      rollbackStage = 'rollback-readback'
+      if (!gatewaySpecificationsEqual(before, await cloud.specification())) throw new DeploymentCheckError('Rollback specification verification failed')
+      rollbackStage = 'rollback-readiness'
+      await cloud.assertReady()
+      rollbackStage = 'rollback-smoke'
+      await cloud.verifyRollback(oldIndex)
+    } catch (rollbackError) {
+      throw new Error(`Frontend publication failed; ${original}; stage=${rollbackStage}: ${failureReason(rollbackError)}`, { cause: new AggregateError([cause, rollbackError]) })
     }
-    if (!isDeepStrictEqual(current, before) && !isDeepStrictEqual(current, next)) {
-      throw new Error('Concurrent or uncertain gateway update; automatic rollback refused. Use saved backup after inspection.')
-    }
-    if (!isDeepStrictEqual(current, before)) await cloud.activate(before)
-    if (!isDeepStrictEqual(before, await cloud.specification())) throw new Error('Rollback specification verification failed')
-    await cloud.assertReady()
-    await cloud.verifyRollback(oldIndex)
-    throw new Error('Frontend publication failed; previous gateway restored and verified')
+    throw new Error(`Frontend publication failed; previous gateway restored and verified; ${original}`, { cause })
   }
   return { release: bundle.release, files: plan.objects.length,
     reused: plan.objects.filter((object) => object.reused).length, status: 'verified' }
@@ -168,12 +189,12 @@ export function createCloud({ directory, token, githubToken, run = promisify(exe
   const api = `https://serverless-apigateway.api.cloud.yandex.net/apigateways/v1/apigateways/${target.gateway}`
   const json = async (url, bearer) => {
     const response = await request(url, { headers: { Authorization: `Bearer ${bearer}` }, signal: AbortSignal.timeout(30_000) })
-    if (!response.ok) throw new Error(`Read-only deployment API failed: HTTP ${response.status}`)
+    if (!response.ok) throw new DeploymentCheckError(`Read-only deployment API failed: HTTP ${response.status}`)
     return response.json()
   }
   const yc = async (args) => {
     try { return await run('yc', args, { timeout: 240_000, maxBuffer: 8_000_000 }) }
-    catch (cause) { throw new Error(`Yandex command failed: ${args.slice(0, 3).join(' ')}; inspect gateway status before retry`, { cause }) }
+    catch (cause) { throw new DeploymentCheckError(`Yandex command failed: ${args.slice(0, 3).join(' ')}; inspect gateway status before retry`, { cause }) }
   }
   const retry = async (action) => {
     for (let attempt = 0; ; attempt += 1) {
@@ -189,7 +210,7 @@ export function createCloud({ directory, token, githubToken, run = promisify(exe
       await retry(async () => {
         const state = await json(api, token)
         if (state.status !== 'ACTIVE' || state.logOptions?.disabled !== true) {
-          throw new Error('Gateway is not ACTIVE with request logging disabled')
+          throw new DeploymentCheckError('Gateway is not ACTIVE with request logging disabled')
         }
       })
     },
@@ -255,7 +276,7 @@ export function createCloud({ directory, token, githubToken, run = promisify(exe
     verifyRollback: (expected) => retry(async () => {
       const response = await request(`${target.frontendOrigin}/auth`, { signal: AbortSignal.timeout(20_000) })
       if (response.status !== 200 || hash(Buffer.from(await response.arrayBuffer())) !== hash(expected)) {
-        throw new Error('Previous frontend was not restored')
+        throw new DeploymentCheckError('Previous frontend was not restored')
       }
     }),
   }
