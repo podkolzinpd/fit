@@ -50,7 +50,7 @@ import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 import { WorkoutCompletionCard } from './WorkoutCompletionCard'
 import { WorkoutCompletionReport } from './WorkoutCompletionReport'
-import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, MessageIcon, RecordIcon, ScheduleIcon, SettingsIcon } from '../../shared/icons'
+import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, KeyboardIcon, MessageIcon, MicIcon, RecordIcon, ScheduleIcon, SettingsIcon } from '../../shared/icons'
 import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
@@ -72,6 +72,10 @@ import { useChatThreads } from '../chat/use-chat-threads'
 import { useYandexAppSession } from '../../app/yandex-app-session-context'
 import { getYandexAppSessionEntryConfig } from '../../app/feature-flags'
 import { yandexPilotRepository } from '../../data/repositories/yandex-pilot.repository'
+import { AppInstallPrompt } from '../install'
+import { NotificationOnboarding } from '../notifications'
+import { readTodayDraft, todayDraftKey } from './today-draft'
+import { trainerHomeContext } from './trainer-home-context'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -497,6 +501,31 @@ function ScheduleV2InboxSheet({ questions, questionsLoading, questionsError, onR
   </div>, document.body)
 }
 
+function ScheduleV2OnboardingSheet({ userId, onClose }: { userId: string; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    closeRef.current?.focus()
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+      previousFocus?.focus()
+    }
+  }, [onClose])
+
+  return createPortal(<div className="schedule-v2-sheet-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="schedule-v2-inbox-sheet schedule-v2-onboarding-sheet" role="dialog" aria-modal="true" aria-labelledby="schedule-v2-onboarding-title">
+      <div className="schedule-v2-sheet-handle" aria-hidden="true" />
+      <header><div><h2 id="schedule-v2-onboarding-title">Установка и уведомления</h2><p>Настройте Fit на этом устройстве</p></div><button ref={closeRef} type="button" aria-label="Закрыть подсказки" onClick={onClose}><CloseIcon /></button></header>
+      <div className="schedule-v2-inbox-scroll"><AppInstallPrompt userId={userId} /><NotificationOnboarding userId={userId} role="trainer" /><Link className="schedule-v2-inbox-all" to="/profile/settings" onClick={onClose}>Открыть настройки</Link></div>
+    </section>
+  </div>, document.body)
+}
+
 function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean }) {
   const {
     actor, selected, isTwoWeekView, isDayView, weekStart, periodEnd,
@@ -504,16 +533,32 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     query, itemsByDay, timed, untimed, todayDisabled,
   } = useTrainerScheduleModel(forceDayView)
   const workspace = useTrainerWorkspace(isDayView)
+  const { clients: clientsRepository, workouts: workoutsRepository } = useDataBackend()
   const location = useLocation()
   const navigate = useNavigate()
   const returnTo = `${location.pathname}${location.search}`
   const dateInputRef = useRef<HTMLInputElement>(null)
   const [inboxOpen, setInboxOpen] = useState(false)
+  const [onboardingOpen, setOnboardingOpen] = useState(false)
+  const closeOnboarding = useCallback(() => setOnboardingOpen(false), [])
   const currentTime = currentTimeInTimeZone(actor?.timezone)
   const currentMinutes = minutesOf(currentTime)
   const periodWorkouts = (query.data ?? []).filter((workout) => workout.status !== 'cancelled')
   const periodClients = new Set(periodWorkouts.map((workout) => workout.clientId)).size
   const periodLabel = scheduleV2Range(weekStart, periodEnd)
+  const showHomeActions = isDayView && selected === today
+  const homeClients = useQuery({
+    queryKey: ['clients', false],
+    queryFn: () => clientsRepository.list(false),
+    enabled: showHomeActions,
+  })
+  const homeWorkouts = useQuery({
+    queryKey: ['workouts', undefined],
+    queryFn: () => workoutsRepository.list(undefined, undefined),
+    enabled: showHomeActions,
+  })
+  const homeContext = homeWorkouts.data ? trainerHomeContext(homeWorkouts.data, today) : null
+  const draft = actor && showHomeActions ? readTodayDraft(todayDraftKey(actor.userId)) : null
 
   useEffect(() => {
     trackGoal('schedule_v2_exposed')
@@ -548,6 +593,20 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         ? <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>
         : <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>}
     </header>
+    {showHomeActions && <section className="schedule-v2-home-actions" aria-label="Рабочие действия">
+      <div className="schedule-v2-entry-actions">
+        <Link className="schedule-v2-voice-entry" to="/today?view=compose" onClick={() => trackGoal('schedule_v2_voice_entry_opened')}><MicIcon />Надиктовать тренировку</Link>
+        <Link className="schedule-v2-text-entry" to="/today?view=compose&entry=text" onClick={() => trackGoal('schedule_v2_text_entry_opened')}><KeyboardIcon /><span>Ввести текстом</span></Link>
+      </div>
+      {draft && <Link className="schedule-v2-resume" to="/today?view=compose"><strong>Есть незавершённая тренировка</strong><span>Продолжить <ChevronRightIcon /></span></Link>}
+      {homeClients.isLoading && <p className="schedule-v2-home-state" role="status">Загружаем клиентов…</p>}
+      {homeClients.isError && <p className="schedule-v2-home-state" role="alert">Не удалось загрузить клиентов. <button type="button" onClick={() => void homeClients.refetch()}>Повторить</button></p>}
+      {!homeClients.isLoading && !homeClients.isError && homeClients.data?.length === 0 && <Link className="schedule-v2-first-client" to="/clients/new">Добавить первого клиента <ChevronRightIcon /></Link>}
+      {homeWorkouts.isLoading && <p className="schedule-v2-home-state" role="status">Загружаем тренировки…</p>}
+      {homeWorkouts.isError && <p className="schedule-v2-home-state" role="alert">Не удалось загрузить тренировки. <button type="button" onClick={() => void homeWorkouts.refetch()}>Повторить</button></p>}
+      {homeContext && <Link className="schedule-v2-next-workout" to={homeContext.workout.status === 'in_progress' ? `/workouts/${homeContext.workout.id}/live` : `/workouts/${homeContext.workout.id}`} state={{ returnTo }}><small>{homeContext.title}</small><strong>{homeContext.workout.clientName}</strong><span>{homeContext.workout.workoutDate === today ? homeContext.workout.startTime?.slice(0, 5) || 'Сегодня' : formatLocalDate(homeContext.workout.workoutDate)} <ChevronRightIcon /></span></Link>}
+      {actor && <button type="button" className="schedule-v2-onboarding-trigger" onClick={() => setOnboardingOpen(true)}>Установка и уведомления <ChevronRightIcon /></button>}
+    </section>}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {!isDayView ? <>
         <div className="schedule-v2-range-toggle" role="group" aria-label="Период расписания">
@@ -620,6 +679,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       onRetryQuestions={() => void workspace.refetch()}
       onClose={() => setInboxOpen(false)}
     />}
+    {onboardingOpen && actor && <ScheduleV2OnboardingSheet userId={actor.userId} onClose={closeOnboarding} />}
   </Page>
 }
 

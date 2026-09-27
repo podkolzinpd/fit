@@ -6579,6 +6579,22 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-schedule-v2-shell .schedule-v2-summary-icon svg { width:58px; height:58px; stroke-width:1.75; }
 .trainer-schedule-v2-shell .schedule-v2-message-card .schedule-v2-summary-icon { color:#66666c; }
 .trainer-schedule-v2-shell .schedule-v2-summary strong { position:absolute; right:22px; bottom:18px; color:#f8f8f6; font-size:39px; font-weight:720; line-height:1; letter-spacing:-.04em; }
+.trainer-schedule-v2-shell .schedule-v2-home-actions { display:grid; gap:8px; flex:0 0 auto; margin:-8px 0 18px; }
+.trainer-schedule-v2-shell .schedule-v2-entry-actions { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+.trainer-schedule-v2-shell .schedule-v2-entry-actions a { min-width:0; min-height:52px; display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 13px; border-radius:18px; font-size:14px; font-weight:650; text-decoration:none; }
+.trainer-schedule-v2-shell .schedule-v2-entry-actions svg { width:21px; height:21px; flex:0 0 auto; }
+.trainer-schedule-v2-shell .schedule-v2-voice-entry { color:#111; background:var(--schedule-v2-accent); }
+.trainer-schedule-v2-shell .schedule-v2-text-entry { border:1px solid #38383e; color:#f8f8f6; background:#222226; }
+.trainer-schedule-v2-shell .schedule-v2-resume,.trainer-schedule-v2-shell .schedule-v2-first-client,.trainer-schedule-v2-shell .schedule-v2-next-workout { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; border:1px solid #303034; border-radius:17px; color:#f8f8f6; background:#19191b; font-size:13px; text-decoration:none; }
+.trainer-schedule-v2-shell .schedule-v2-resume strong,.trainer-schedule-v2-shell .schedule-v2-next-workout strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.trainer-schedule-v2-shell .schedule-v2-resume > span,.trainer-schedule-v2-shell .schedule-v2-next-workout > span { display:flex; align-items:center; flex:0 0 auto; gap:3px; color:var(--schedule-v2-accent); }
+.trainer-schedule-v2-shell .schedule-v2-resume svg,.trainer-schedule-v2-shell .schedule-v2-first-client svg,.trainer-schedule-v2-shell .schedule-v2-next-workout svg { width:16px; height:16px; }
+.trainer-schedule-v2-shell .schedule-v2-next-workout { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 10px; }
+.trainer-schedule-v2-shell .schedule-v2-next-workout small { grid-column:1/-1; color:#929296; font-size:11px; }
+.trainer-schedule-v2-shell .schedule-v2-home-state { margin:0; padding:9px 12px; border-radius:14px; color:#b4b4b9; background:#19191b; font-size:12px; }
+.trainer-schedule-v2-shell .schedule-v2-home-state button { min-height:36px; border:0; color:var(--schedule-v2-accent); background:transparent; font-weight:650; }
+.trainer-schedule-v2-shell .schedule-v2-onboarding-trigger { min-height:40px; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 14px; border:1px solid #303034; border-radius:14px; color:#a8a8ad; background:#19191b; box-shadow:none; font-size:12px; text-align:left; }
+.trainer-schedule-v2-shell .schedule-v2-onboarding-trigger svg { width:15px; height:15px; }
 .trainer-schedule-v2-shell .schedule-v2-untimed { display:grid; gap:7px; margin-bottom:16px; padding:14px; border:1px solid #303034; border-radius:20px; background:#19191b; }
 .trainer-schedule-v2-shell .schedule-v2-untimed > strong { color:#858589; font-size:11px; text-transform:uppercase; letter-spacing:.07em; }
 .trainer-schedule-v2-shell .schedule-v2-untimed > a { min-width:0; display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:10px; padding-top:8px; border-top:1px solid #303034; color:#f8f8f6; text-decoration:none; }
@@ -6642,6 +6658,12 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .schedule-v2-inbox-error { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .schedule-v2-inbox-error button { min-height:36px; padding:7px 11px; border:1px solid #48484d; border-radius:11px; color:#f8f8f6; background:#29292d; box-shadow:none; font-size:12px; }
 .schedule-v2-inbox-all { min-height:48px; display:grid; place-items:center; margin-top:16px; border-radius:16px; color:#111; background:#baff36; font-size:14px; font-weight:700; text-decoration:none; }
+.schedule-v2-onboarding-sheet { --bg:#080908; --fg:#f8f8f6; --muted:#a8a8ad; --surface-raised:#222226; --secondary-bg:#2b2b30; --secondary-fg:#f8f8f6; --border:#3b3b40; }
+.schedule-v2-onboarding-sheet .schedule-v2-inbox-scroll { gap:8px; }
+.schedule-v2-onboarding-sheet .app-install-card.compact { margin:0; border-color:#3b3b40; border-radius:18px; background:#222226; }
+.schedule-v2-onboarding-sheet .app-install-card h2 { color:#f8f8f6; }
+.schedule-v2-onboarding-sheet .app-install-card .eyebrow { color:#baff36; }
+.schedule-v2-onboarding-sheet .schedule-v2-inbox-all { margin-top:4px; }
 
 @media (max-width:430px) {
   .trainer-schedule-v2-shell .schedule-v2 { padding:max(16px,env(safe-area-inset-top)) 14px 120px; }
