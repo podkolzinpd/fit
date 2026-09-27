@@ -1,0 +1,119 @@
+/* Stage 4 / assistant. Session history, prepared actions and confirmation
+   retain their existing authorization and state machine. */
+.fit-lime-shell.assistant-identity .assistant-page {
+  max-width: 680px;
+  padding-inline: 18px;
+}
+.fit-lime-shell.assistant-identity .assistant-page .page-header h1 {
+  color: var(--lime-text);
+  font-size: clamp(28px, 7vw, 34px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+}
+.fit-lime-shell.assistant-identity .assistant-session-bar { border-color: var(--lime-divider) }
+.fit-lime-shell.assistant-identity .assistant-session-label strong { color: var(--lime-text); font-weight: 700 }
+.fit-lime-shell.assistant-identity .assistant-local-note,
+.fit-lime-shell.assistant-identity .assistant-thread-status,
+.fit-lime-shell.assistant-identity .assistant-flow-guidance,
+.fit-lime-shell.assistant-identity .assistant-card-hint { color: var(--lime-text-secondary) }
+.fit-lime-shell.assistant-identity .assistant-history-toggle,
+.fit-lime-shell.assistant-identity .assistant-session-history,
+.fit-lime-shell.assistant-identity .assistant-workout-user-receipt,
+.fit-lime-shell.assistant-identity .assistant-workout-receipt {
+  border-color: var(--lime-divider);
+  border-radius: 18px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+}
+.fit-lime-shell.assistant-identity .assistant-session-history button.selected {
+  border-color: var(--accent-surface-border);
+  background: var(--lime-accent-muted);
+  color: var(--lime-accent);
+}
+.fit-lime-shell.assistant-identity .assistant-first-entry-icon {
+  border-color: var(--accent-surface-border);
+  border-radius: 18px;
+  background: var(--lime-accent-muted);
+  color: var(--lime-accent);
+}
+.fit-lime-shell.assistant-identity .assistant-first-entry-copy h2 { color: var(--lime-text); font-weight: 700 }
+.fit-lime-shell.assistant-identity .assistant-first-entry-copy p { color: var(--lime-text-secondary) }
+.fit-lime-shell.assistant-identity .assistant-message:not(.assistant-message-assistant):not(.assistant-message-result) {
+  border-color: var(--lime-accent);
+  border-radius: 22px 22px 8px 22px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.fit-lime-shell.assistant-identity .assistant-message.assistant-message-assistant,
+.fit-lime-shell.assistant-identity .assistant-message.assistant-message-result { color: var(--lime-text) }
+.fit-lime-shell.assistant-identity .assistant-thinking span { background: var(--lime-accent) }
+.fit-lime-shell.assistant-identity .assistant-context-panel,
+.fit-lime-shell.assistant-identity .assistant-flow-card,
+.fit-lime-shell.assistant-identity .assistant-action-card,
+.fit-lime-shell.assistant-identity .assistant-workout-card,
+.fit-lime-shell.assistant-identity .assistant-inline-summary {
+  border-color: var(--lime-divider);
+  border-radius: 28px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+  box-shadow: none;
+}
+.fit-lime-shell.assistant-identity .assistant-context-panel > .assistant-flow-card { border: 0; background: transparent }
+.fit-lime-shell.assistant-identity .assistant-flow-card > header strong,
+.fit-lime-shell.assistant-identity .assistant-workout-draft-content > header strong,
+.fit-lime-shell.assistant-identity .assistant-workout-result > header strong {
+  color: var(--lime-text);
+  font-weight: 700;
+}
+.fit-lime-shell.assistant-identity .assistant-flow-status,
+.fit-lime-shell.assistant-identity .assistant-flow-checklist span {
+  border-color: var(--lime-divider);
+  border-radius: 999px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+}
+.fit-lime-shell.assistant-identity .assistant-flow-checklist.complete span { color: var(--success-fg) }
+.fit-lime-shell.assistant-identity .assistant-workout-result-row,
+.fit-lime-shell.assistant-identity .assistant-workout-meta label,
+.fit-lime-shell.assistant-identity .assistant-workout-metrics label,
+.fit-lime-shell.assistant-identity .assistant-exercise-choice,
+.fit-lime-shell.assistant-identity .assistant-progress-preview {
+  border-color: var(--lime-divider);
+  border-radius: 18px;
+  background: var(--lime-surface-raised);
+}
+.fit-lime-shell.assistant-identity .assistant-flow-actions .primary,
+.fit-lime-shell.assistant-identity .assistant-action-card .primary,
+.fit-lime-shell.assistant-identity .assistant-progress-preview .primary,
+.fit-lime-shell.assistant-identity .assistant-workout-draft > .assistant-flow-actions > .primary,
+.fit-lime-shell.assistant-identity .assistant-workout-draft-content > .assistant-workout-result > .primary,
+.fit-lime-shell.assistant-identity .assistant-exercise-options button:first-child {
+  border-color: var(--lime-accent);
+  border-radius: 16px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+  font-weight: 700;
+}
+.fit-lime-shell.assistant-identity button.primary:disabled,
+.fit-lime-shell.assistant-identity .assistant-composer > .assistant-icon-button:last-child:disabled {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-tertiary);
+}
+.fit-lime-shell.assistant-identity .assistant-composer {
+  border-color: var(--lime-divider);
+  border-radius: 22px;
+  background: var(--lime-surface);
+}
+.fit-lime-shell.assistant-identity .assistant-composer textarea { color: var(--lime-text) }
+.fit-lime-shell.assistant-identity .assistant-composer > .assistant-icon-button:last-child {
+  border-color: var(--lime-accent);
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.fit-lime-shell.assistant-identity :where(button, summary, textarea, input, select):focus-visible {
+  outline-color: var(--lime-accent);
+}
+@media (max-width: 480px) {
+  .fit-lime-shell.assistant-identity .assistant-page { padding-inline: 16px }
+}
