@@ -55,7 +55,7 @@ import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
-import { compactScheduleEventLabel, formatScheduleDateLabel, mondayWeekStart, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleTimelineScrollTop } from './schedule-presentation'
+import { compactScheduleEventLabel, formatScheduleDateLabel, layoutScheduleTimelineEvents, mondayWeekStart, scheduleDurationMinutes, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleTimelineScrollTop } from './schedule-presentation'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { latestWorkoutFact } from '../../shared/workout-results'
@@ -432,11 +432,30 @@ function scheduleV2Range(start: LocalDate, end: LocalDate): string {
 }
 
 function scheduleV2WorkoutLine(workout: Workout): string {
-  const start = workout.startTime ? minutesOf(workout.startTime) : 0
-  const end = workout.endTime ? minutesOf(workout.endTime) : start + 60
-  const duration = Math.max(end - start, 1)
+  const duration = workout.startTime ? scheduleDurationMinutes(workout.startTime, workout.endTime) : 60
   const durationLabel = duration % 60 === 0 ? `${duration / 60} ч` : `${duration} мин`
   return `${durationLabel} · ${scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}`
+}
+
+function useScheduleV2MinuteTicker() {
+  const [, tick] = useState(0)
+  useEffect(() => {
+    let timer: number | undefined
+    const schedule = () => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => { tick((value) => value + 1); schedule() }, 60_000 - Date.now() % 60_000 + 50)
+    }
+    const refresh = () => { tick((value) => value + 1); schedule() }
+    const onVisibility = () => { if (!document.hidden) refresh() }
+    schedule()
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
 }
 
 function trainerClientCount(value: number): string {
@@ -590,6 +609,7 @@ function ScheduleV2ActionSheet({ actions, planning, loading, error, snoozingClie
 }
 
 function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean }) {
+  useScheduleV2MinuteTicker()
   const {
     actor, selected, isTwoWeekView, isDayView, weekStart, periodEnd,
     overviewDays, today, scrollRef, openDay, showOverview, shiftOverview,
@@ -612,6 +632,8 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const closeOnboarding = useCallback(() => setOnboardingOpen(false), [])
   const currentTime = currentTimeInTimeZone(actor?.timezone)
   const currentMinutes = minutesOf(currentTime)
+  const timelineEvents = layoutScheduleTimelineEvents(timed, HOUR_HEIGHT)
+  const timelineHeight = Math.max(HOURS.length * HOUR_HEIGHT, ...timelineEvents.map((event) => event.top + event.height + 8))
   const periodWorkouts = (query.data ?? []).filter((workout) => workout.status !== 'cancelled')
   const periodClients = new Set(periodWorkouts.map((workout) => workout.clientId)).size
   const periodLabel = scheduleV2Range(weekStart, periodEnd)
@@ -750,21 +772,19 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         </section>
         {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
         <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
-          <div className="day-grid" style={{ height: HOURS.length * HOUR_HEIGHT }}>
+          <div className="day-grid" style={{ height: timelineHeight }}>
             {HOURS.map((hour) => <div key={hour} className={`day-grid-hour${selected === today && scheduleHourLabelCollidesWithNow(hour, currentMinutes) ? ' is-near-current-time' : ''}`} style={{ top: hour * HOUR_HEIGHT }}><span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span><div className="day-grid-hour-line" /></div>)}
             {selected === today && <div className="schedule-v2-now" style={{ top: (currentMinutes / 60) * HOUR_HEIGHT }}><time>{currentTime}</time><span /></div>}
-            {timed.map((workout) => {
-              const startMin = minutesOf(workout.startTime!.slice(0, 5))
-              const endMin = workout.endTime ? minutesOf(workout.endTime.slice(0, 5)) : startMin + 60
-              const top = (startMin / 60) * HOUR_HEIGHT
-              const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 54)
+            <div className="schedule-v2-event-layer">
+            {timelineEvents.map(({ workout, top, height, column, columns }) => {
               const status = scheduleEventStatus(workout, today)
-              return <Link key={workout.id} className={`schedule-v2-event schedule-event-${status.tone}`} style={{ top, height }} to={`/workouts/${workout.id}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_opened')}>
+              return <Link key={workout.id} className={`schedule-v2-event schedule-event-${status.tone}${columns > 1 ? ' is-compact' : ''}${columns > 2 ? ' is-dense' : ''}`} style={{ top, height, left: `${column * 100 / columns}%`, width: `calc(${100 / columns}% - ${columns > 1 ? 4 : 0}px)` }} aria-label={`${eventTime(workout)} ${workout.clientName} · ${status.label}`} title={`${eventTime(workout)} · ${workout.clientName}`} to={`/workouts/${workout.id}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_opened')}>
                 <span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span>
                 <span><b>{workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small><span className="sr-only">{status.label}</span></span>
                 {workout.status === 'done' && <CheckIcon />}
               </Link>
             })}
+            </div>
           </div>
         </div>
       </>}
