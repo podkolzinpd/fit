@@ -20,6 +20,7 @@ export function isFitLimeApprovedTrainerRoute(pathname: string, search: string):
     || /^\/clients\/[^/]+(?:\/(?:goal|edit|workouts))?$/.test(pathname)
     || /^\/progress\/[^/]+$/.test(pathname)
     || /^\/workouts\/[^/]+\/edit$/.test(pathname)
+    || /^\/workouts\/[^/]+$/.test(pathname)
 }
 
 /** Activate only released trainer surfaces. */
@@ -42,5 +43,6 @@ export function isFitLimeShellRoute(
       || pathname === '/join'
       || pathname === '/exercises'
       || pathname === '/workouts/new' || /^\/workouts\/[^/]+\/edit$/.test(pathname)
+      || /^\/workouts\/[^/]+$/.test(pathname)
       || pathname === '/profile' || pathname === '/profile/settings' || pathname === '/profile/trainer')
 }

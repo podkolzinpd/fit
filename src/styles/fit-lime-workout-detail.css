@@ -1,0 +1,96 @@
+/* Stage 4 / workout card. Questions, feedback and plan actions continue to
+   use their existing product contracts, with a scoped visual variant. */
+.fit-lime-shell.workout-detail-history-identity .workout-detail-page {
+  max-width: 680px;
+  padding: 18px 18px calc(116px + env(safe-area-inset-bottom));
+}
+.fit-lime-shell.workout-detail-history-identity .workout-detail-page .page-header { margin-bottom: 18px }
+.fit-lime-shell.workout-detail-history-identity .workout-header-contract {
+  padding-bottom: 20px;
+  border-color: var(--lime-divider);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-header-eyebrow,
+.fit-lime-shell.workout-detail-history-identity .workout-detail-exercise-overview p,
+.fit-lime-shell.workout-detail-history-identity .workout-review .eyebrow {
+  color: var(--lime-text-tertiary);
+  font-weight: 650;
+  letter-spacing: .09em;
+}
+.fit-lime-shell.workout-detail-history-identity .workout-header-contract h2 {
+  color: var(--lime-text);
+  font-size: clamp(28px, 7vw, 34px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+}
+.fit-lime-shell.workout-detail-history-identity .workout-header-meta,
+.fit-lime-shell.workout-detail-history-identity .workout-detail-exercise-overview span {
+  color: var(--lime-text-secondary);
+  font-size: 13px;
+}
+.fit-lime-shell.workout-detail-history-identity .workout-status {
+  border-color: var(--lime-divider);
+  border-radius: 999px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-detail-exercise-row,
+.fit-lime-shell.workout-detail-history-identity .planned-detail-exercise,
+.fit-lime-shell.workout-detail-history-identity .completed-exercise,
+.fit-lime-shell.workout-detail-history-identity .workout-review,
+.fit-lime-shell.workout-detail-history-identity .workout-fact-summary,
+.fit-lime-shell.workout-detail-history-identity .first-plan-success {
+  border: 1px solid var(--lime-divider);
+  border-radius: 28px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+  box-shadow: none;
+}
+.fit-lime-shell.workout-detail-history-identity .workout-review h2,
+.fit-lime-shell.workout-detail-history-identity .workout-detail-exercise-heading strong,
+.fit-lime-shell.workout-detail-history-identity .workout-detail-exercise-heading h2 {
+  color: var(--lime-text);
+  font-weight: 700;
+}
+.fit-lime-shell.workout-detail-history-identity .workout-review-text,
+.fit-lime-shell.workout-detail-history-identity .workout-detail-exercise-result,
+.fit-lime-shell.workout-detail-history-identity .exercise-comment-note { color: var(--lime-text-secondary) }
+.fit-lime-shell.workout-detail-history-identity .workout-detail-exercise-row:focus-visible,
+.fit-lime-shell.workout-detail-history-identity .exercise-history-link:focus-visible {
+  outline-color: var(--lime-accent);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-detail-primary-actions .workout-cta[data-variant='primary'],
+.fit-lime-shell.workout-detail-history-identity .workout-review .workout-cta[data-variant='primary'],
+.fit-lime-shell.workout-detail-history-identity .workout-decision-sheet .workout-cta[data-variant='primary'] {
+  border-color: var(--lime-accent);
+  border-radius: 18px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+  font-weight: 700;
+}
+.fit-lime-shell.workout-detail-history-identity .workout-detail-primary-actions .workout-cta[data-variant='primary']:disabled,
+.fit-lime-shell.workout-detail-history-identity .workout-review .workout-cta[data-variant='primary']:disabled,
+.fit-lime-shell.workout-detail-history-identity .workout-decision-sheet .workout-cta[data-variant='primary']:disabled {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-tertiary);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-feedback-options .workout-choice[data-control-state='selected']:not([data-tone='destructive']) {
+  border-color: var(--lime-accent);
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-decision-sheet {
+  border-color: var(--lime-divider);
+  border-radius: 30px 30px 0 0;
+  background: var(--lime-surface-raised);
+}
+.fit-lime-shell.workout-detail-history-identity .workout-decision-sheet input,
+.fit-lime-shell.workout-detail-history-identity .workout-review :where(textarea, input, select) {
+  border-color: var(--lime-divider);
+  border-radius: 16px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+@media (max-width: 480px) {
+  .fit-lime-shell.workout-detail-history-identity .workout-detail-page { padding-inline: 16px }
+}
