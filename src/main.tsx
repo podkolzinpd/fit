@@ -24,6 +24,7 @@ import './styles/fit-lime-workout-form.css'
 import './styles/fit-lime-workout-entry.css'
 import './styles/fit-lime-workout-detail.css'
 import './styles/fit-lime-workout-live.css'
+import './styles/fit-lime-workout-completion.css'
 
 declare global {
   interface Window {
