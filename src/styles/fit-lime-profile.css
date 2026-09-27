@@ -1,0 +1,100 @@
+/* Stage 3, point 25: trainer-only profile, questionnaire and settings. */
+.fit-lime-shell.trainer-profile-identity .profile-page {
+  max-width: 760px;
+  gap: 16px;
+  padding: 20px 18px calc(116px + env(safe-area-inset-bottom));
+}
+.fit-lime-shell.trainer-profile-identity .profile-page > .page-header { margin-bottom: 4px }
+.fit-lime-shell.trainer-profile-identity .profile-page > .page-header h1 {
+  color: var(--lime-text);
+  font-size: clamp(29px, 7vw, 32px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+}
+.fit-lime-shell.trainer-profile-identity .profile-settings-link,
+.fit-lime-shell.trainer-profile-identity .page-back {
+  border-color: var(--lime-divider);
+  border-radius: 16px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.trainer-profile-identity .trainer-professional-embedded { margin: 0 }
+.fit-lime-shell.trainer-profile-identity :where(.trainer-card-compact, .trainer-profile-edit-card, .profile-settings, .body-map-appearance-setting, .account-settings-card, .menu, .app-install-card, .app-feedback-card) {
+  border-color: var(--lime-divider);
+  border-radius: 28px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+  box-shadow: none;
+}
+.fit-lime-shell.trainer-profile-identity .trainer-card-compact,
+.fit-lime-shell.trainer-profile-identity .trainer-profile-edit-card { padding: 20px }
+.fit-lime-shell.trainer-profile-identity .trainer-card-identity h2,
+.fit-lime-shell.trainer-profile-identity .trainer-profile-edit-head h2,
+.fit-lime-shell.trainer-profile-identity .settings-section h2 { color: var(--lime-text); font-size: 20px; font-weight: 650 }
+.fit-lime-shell.trainer-profile-identity :where(.trainer-card-identity p, .trainer-profile-empty-copy, .trainer-card-facts dt, .trainer-publication-disclosure > summary small, .trainer-photo-editor > p, .account-settings-summary span, .body-map-appearance-setting > div:first-child span) { color: var(--lime-text-secondary) }
+.fit-lime-shell.trainer-profile-identity .trainer-card-avatar-placeholder {
+  border-radius: 20px;
+  background: var(--lime-accent-muted);
+  color: var(--lime-accent);
+}
+.fit-lime-shell.trainer-profile-identity .trainer-card-facts,
+.fit-lime-shell.trainer-profile-identity :where(.trainer-card-disclosure, .trainer-profile-form-disclosure, .trainer-profile-form-section) { border-color: var(--lime-divider) }
+.fit-lime-shell.trainer-profile-identity .trainer-card-facts dd,
+.fit-lime-shell.trainer-profile-identity :where(.trainer-card-disclosure, .trainer-profile-form-disclosure) > summary { color: var(--lime-text) }
+.fit-lime-shell.trainer-profile-identity .trainer-profile-edit-action,
+.fit-lime-shell.trainer-profile-identity .trainer-profile-publish-cta > .primary,
+.fit-lime-shell.trainer-profile-identity .trainer-profile-actions .primary,
+.fit-lime-shell.trainer-profile-identity .account-settings-form .primary,
+.fit-lime-shell.trainer-profile-identity .app-feedback-card .primary {
+  min-height: 48px;
+  border-color: var(--lime-accent);
+  border-radius: 17px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.fit-lime-shell.trainer-profile-identity :where(.trainer-profile-empty, .trainer-profile-actions, .trainer-photo-editor, .trainer-publication-actions, .account-settings-form) .secondary,
+.fit-lime-shell.trainer-profile-identity .app-install-card .secondary {
+  border-color: var(--lime-divider);
+  border-radius: 17px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.trainer-profile-identity .trainer-profile-unpublish-action,
+.fit-lime-shell.trainer-profile-identity .profile-page > .danger.secondary { border-color: var(--danger-border); color: var(--danger) }
+.fit-lime-shell.trainer-profile-identity :where(.trainer-photo-editor, .trainer-locations-editor, .trainer-profile-form-disclosure, .trainer-mode-fields) {
+  border-color: var(--lime-divider);
+  border-radius: 19px;
+  background: var(--lime-surface-raised);
+}
+.fit-lime-shell.trainer-profile-identity .trainer-photo-editor-head strong { color: var(--lime-text) }
+.fit-lime-shell.trainer-profile-identity .trainer-photo-editor-head .button { border-color: var(--lime-divider); background: var(--lime-surface); color: var(--lime-text) }
+.fit-lime-shell.trainer-profile-identity .trainer-profile-edit-card :where(input, textarea, select),
+.fit-lime-shell.trainer-profile-identity .account-settings-form input,
+.fit-lime-shell.trainer-profile-identity .app-feedback-card textarea {
+  border-color: var(--lime-divider);
+  border-radius: 17px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-size: 16px;
+}
+.fit-lime-shell.trainer-profile-identity .trainer-profile-edit-card :where(input, textarea, select):focus-visible,
+.fit-lime-shell.trainer-profile-identity .account-settings-form input:focus-visible { border-color: var(--lime-accent); outline-color: var(--lime-accent) }
+.fit-lime-shell.trainer-profile-identity .switch-control,
+.fit-lime-shell.trainer-profile-identity .body-map-appearance-options { border-color: var(--lime-divider); background: var(--lime-surface-raised) }
+.fit-lime-shell.trainer-profile-identity .switch-input:checked + .switch-control { border-color: var(--lime-accent); background: var(--lime-accent) }
+.fit-lime-shell.trainer-profile-identity .switch-input:checked + .switch-control::after { background: var(--lime-text-on-accent) }
+.fit-lime-shell.trainer-profile-identity .body-map-appearance-options button[aria-checked='true'] { background: var(--lime-accent-muted); color: var(--lime-accent) }
+.fit-lime-shell.trainer-profile-identity .menu a:hover,
+.fit-lime-shell.trainer-profile-identity .menu > button:hover { background: var(--lime-surface-raised) }
+.fit-lime-shell.trainer-profile-identity .menu :where(a, button) { border-color: var(--lime-divider); color: var(--lime-text) }
+.fit-lime-shell.trainer-profile-identity .fit-lime-profile-theme-note { margin: 0; color: var(--lime-text-secondary); font-size: 13px; line-height: 1.5 }
+.fit-lime-shell.trainer-profile-identity .save-status { border-color: var(--lime-divider); background: var(--lime-surface-raised); color: var(--lime-text) }
+.fit-lime-shell.trainer-profile-identity .save-status-saved { color: var(--success-fg) }
+.fit-lime-shell.trainer-profile-identity .save-status-error { color: var(--danger) }
+
+@media (max-width: 480px) {
+  .fit-lime-shell.trainer-profile-identity .profile-page { padding: 16px 16px calc(116px + env(safe-area-inset-bottom)) }
+  .fit-lime-shell.trainer-profile-identity .trainer-card-compact,
+  .fit-lime-shell.trainer-profile-identity .trainer-profile-edit-card { padding: 18px }
+  .fit-lime-shell.trainer-profile-identity .trainer-profile-form-grid { grid-template-columns: 1fr }
+}
