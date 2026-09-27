@@ -70,6 +70,59 @@ function minutesOfTime(time: string): number {
   return (hours ?? 0) * 60 + (minutes ?? 0)
 }
 
+export function scheduleDurationMinutes(startTime: string, endTime: string | null | undefined): number {
+  if (!endTime) return 60
+  const start = minutesOfTime(startTime)
+  const end = minutesOfTime(endTime)
+  if (end > start) return end - start
+  return start >= 18 * 60 && end <= 6 * 60 ? end + 24 * 60 - start : 60
+}
+
+export interface ScheduleTimelineEvent {
+  workout: Workout
+  top: number
+  height: number
+  column: number
+  columns: number
+}
+
+/** Collisions use the visible card height, so a 10-minute workout stays tappable. */
+export function layoutScheduleTimelineEvents(
+  workouts: readonly Workout[],
+  hourHeight: number,
+  minimumHeight = 54,
+): ScheduleTimelineEvent[] {
+  const entries = workouts.filter((workout) => workout.startTime).map((workout) => {
+    const start = minutesOfTime(workout.startTime!)
+    const duration = scheduleDurationMinutes(workout.startTime!, workout.endTime)
+    return { workout, top: (start / 60) * hourHeight, height: Math.max((duration / 60) * hourHeight, minimumHeight) }
+  }).sort((left, right) => left.top - right.top || left.workout.id.localeCompare(right.workout.id))
+  const result: ScheduleTimelineEvent[] = []
+  let group: typeof entries = []
+  let groupBottom = -Infinity
+  const flushGroup = () => {
+    const laneBottoms: number[] = []
+    const assigned = group.map((entry) => {
+      let column = laneBottoms.findIndex((bottom) => bottom + 4 <= entry.top)
+      if (column < 0) column = laneBottoms.length
+      laneBottoms[column] = entry.top + entry.height
+      return { ...entry, column }
+    })
+    for (const entry of assigned) result.push({ ...entry, columns: laneBottoms.length })
+  }
+  for (const entry of entries) {
+    if (group.length > 0 && entry.top >= groupBottom + 4) {
+      flushGroup()
+      group = []
+      groupBottom = -Infinity
+    }
+    group.push(entry)
+    groupBottom = Math.max(groupBottom, entry.top + entry.height)
+  }
+  if (group.length > 0) flushGroup()
+  return result
+}
+
 export function scheduleFocusMinutes(workouts: readonly Workout[], currentTime: string): number {
   const currentMinutes = minutesOfTime(currentTime)
   const timed = workouts
@@ -80,7 +133,7 @@ export function scheduleFocusMinutes(workouts: readonly Workout[], currentTime: 
   if (timed.length === 0) return currentMinutes
   const nearest = timed.find((workout) => {
     const start = minutesOfTime(workout.startTime!)
-    const end = workout.endTime ? minutesOfTime(workout.endTime) : start + 60
+    const end = start + scheduleDurationMinutes(workout.startTime!, workout.endTime)
     return end >= currentMinutes
   })
   return minutesOfTime((nearest ?? timed[0]!).startTime!)
