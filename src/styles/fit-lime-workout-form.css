@@ -114,3 +114,22 @@
   .fit-lime-shell.workout-create-edit-identity .workout-form-section,
   .fit-lime-shell.workout-create-edit-identity .workout-form-page .workout-form-section:first-child { padding: 18px }
 }
+@media (max-width: 360px) {
+  .fit-lime-shell.workout-create-edit-identity .workout-form-section,
+  .fit-lime-shell.workout-create-edit-identity .workout-form-page .workout-form-section:first-child {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: 14px;
+  }
+  .fit-lime-shell.workout-create-edit-identity .workout-form-section > *,
+  .fit-lime-shell.workout-create-edit-identity .workout-time-row > *,
+  .fit-lime-shell.workout-create-edit-identity .client-picker-control {
+    min-width: 0;
+  }
+  .fit-lime-shell.workout-create-edit-identity .workout-time-row {
+    flex-direction: column;
+  }
+  .fit-lime-shell.workout-create-edit-identity .workout-notes summary {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
