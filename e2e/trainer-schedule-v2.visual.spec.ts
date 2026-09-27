@@ -5,6 +5,7 @@ const clientId = '10000000-0000-4000-8000-000000000002'
 const workoutId = '10000000-0000-4000-8000-000000000003'
 const conversationId = '10000000-0000-4000-8000-000000000004'
 const messageId = '10000000-0000-4000-8000-000000000005'
+const newWorkoutId = '10000000-0000-4000-8000-000000000006'
 const sessionToken = 's'.repeat(43)
 
 const workout = {
@@ -38,13 +39,17 @@ const workout = {
   exercises: [],
 }
 
-async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?: Array<typeof workout>; failClients?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean } = {}) {
+async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?: Array<typeof workout>; failClients?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean } = {}) {
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
   let failWorkspace = options.failWorkspace ?? false
   let failThreads = options.failThreads ?? false
   let questionAnswered = false
   let unreadCount = 4
+  let workouts = options.workouts ?? [workout]
+  let saveAttempts = 0
+  let lastSavedStartTime: string | null = null
+  let lastEditedStartTime: string | null = null
   await page.route('http://127.0.0.1:4100/health', async (route) => {
     await route.fulfill({ status: 200, headers: { 'x-fit-request-id': 'pilot-health-check', 'access-control-allow-origin': '*', 'access-control-expose-headers': 'x-fit-request-id' }, contentType: 'application/json', body: '{"ok":true}' })
   })
@@ -88,7 +93,7 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
           trainerReviewedAt: questionAnswered ? '2026-09-24T12:30:00.000Z' : null,
           completedAt: '2026-09-24T11:00:00.000Z',
           version: questionAnswered ? 2 : 1,
-        }] : options.workouts ?? [workout],
+        }] : workouts,
         attention: options.questionWorkout && !questionAnswered ? [{
           workoutId,
           clientId,
@@ -103,7 +108,7 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
         }] : [],
         attentionPreferences: snoozedUntil ? [{ clientId, snoozedUntil }] : [],
         hasMoreWorkouts: false,
-        totalWorkouts: options.workouts?.length ?? 1,
+        totalWorkouts: workouts.length,
       }
     } else if (url.pathname === '/v1/clients') {
       if (failClients) {
@@ -132,6 +137,32 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
       body = { client: { snoozedUntil } }
     } else if (url.pathname === `/v1/workouts/${workoutId}/question/answer` && route.request().method() === 'PUT') {
       questionAnswered = true
+      body = { workout: { version: 2 } }
+    } else if (url.pathname === '/v1/workouts' && route.request().method() === 'POST') {
+      saveAttempts += 1
+      if (options.failFirstSave && saveAttempts === 1) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+        return
+      }
+      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null }
+      lastSavedStartTime = draft.startTime ?? null
+      workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, id: newWorkoutId, workoutDate: draft.workoutDate, startTime: draft.startTime || '10:00', endTime: draft.endTime || '11:00' }]
+      body = { workout: { id: newWorkoutId } }
+    } else if (url.pathname === `/v1/workouts/${workoutId}` && route.request().method() === 'PUT') {
+      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null }
+      lastEditedStartTime = draft.startTime ?? null
+      workouts = workouts.map((item) => item.id === workoutId
+        ? { ...item, workoutDate: draft.workoutDate, startTime: draft.startTime || '10:00', endTime: draft.endTime || '11:00', version: item.version + 1 }
+        : item)
+      body = { workout: { id: workoutId } }
+    } else if (url.pathname === `/v1/workouts/${workoutId}/reschedule` && route.request().method() === 'POST') {
+      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null }
+      workouts = workouts.map((item) => item.id === workoutId
+        ? { ...item, workoutDate: draft.workoutDate, startTime: draft.startTime || '10:00', version: item.version + 1 }
+        : item)
+      body = { workout: { version: 2 } }
+    } else if (url.pathname === `/v1/workouts/${workoutId}/cancel` && route.request().method() === 'POST') {
+      workouts = workouts.map((item) => item.id === workoutId ? { ...item, status: 'cancelled', version: item.version + 1 } : item)
       body = { workout: { version: 2 } }
     } else if (url.pathname === '/v1/trainer-workspace') {
       if (failWorkspace) {
@@ -194,6 +225,9 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
     setClientsFailure(value: boolean) { failClients = value },
     setWorkspaceFailure(value: boolean) { failWorkspace = value },
     setThreadsFailure(value: boolean) { failThreads = value },
+    getSaveAttempts() { return saveAttempts },
+    getLastSavedStartTime() { return lastSavedStartTime },
+    getLastEditedStartTime() { return lastEditedStartTime },
   }
 }
 
@@ -463,6 +497,101 @@ test('keeps the selected day and both weeks through navigation and reload', asyn
   await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
   await page.getByRole('button', { name: 'Назад', exact: true }).click()
   await expect(page).toHaveURL(/\/today\?date=2026-09-24&week=2026-09-21&range=2w$/)
+})
+
+test('new workout keeps the selected calendar day and returns to its two-week context', async ({ page }) => {
+  await mockPilot(page)
+  await page.goto('/schedule?week=2026-09-21&range=2w')
+  await page.locator('.schedule-v2-day-card').nth(8).click()
+  const selectedDay = '/today?date=2026-09-29&week=2026-09-21&range=2w'
+  await expect(page).toHaveURL(new RegExp(`${selectedDay.replace('?', '\\?')}$`))
+  await page.getByRole('link', { name: 'Запланировать тренировку на 2026-09-29' }).click()
+  await expect(page).toHaveURL(/\/workouts\/new\?date=2026-09-29$/)
+  await expect(page.getByLabel('Дата')).toHaveValue('2026-09-29')
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(new RegExp(`${selectedDay.replace('?', '\\?')}$`))
+})
+
+test('direct pilot workout link returns to its dated calendar instead of clients', async ({ page }) => {
+  await mockPilot(page)
+  await page.goto('/workouts/new?date=2026-09-29')
+  await expect(page.getByLabel('Дата')).toHaveValue('2026-09-29')
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(/\/today\?date=2026-09-29$/)
+})
+
+test('failed calendar save preserves the form and retry returns to the selected day once', async ({ page }) => {
+  const backend = await mockPilot(page, { failFirstSave: true })
+  await page.goto('/today?date=2026-09-29&week=2026-09-21&range=2w')
+  await page.getByRole('link', { name: 'Запланировать тренировку на 2026-09-29' }).click()
+  await page.locator('.client-picker-trigger').click()
+  await page.locator(`.client-picker-item[data-client-id="${clientId}"]`).click()
+  await page.getByLabel('Начало').fill('14:00')
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByRole('button', { name: 'Сохранить план' }).click()
+  await expect(page.locator('.workout-form .error')).toBeVisible()
+  await expect(page.getByLabel('Дата')).toHaveValue('2026-09-29')
+  await expect(page.getByLabel('Начало')).toHaveValue('14:00')
+  await page.getByRole('button', { name: 'Сохранить план' }).click()
+  await expect(page).toHaveURL(/\/today\?date=2026-09-29&week=2026-09-21&range=2w$/)
+  await expect(page.locator('.schedule-v2-event')).toHaveCount(1)
+  expect(backend.getLastSavedStartTime()).toBe('14:00')
+  expect(backend.getSaveAttempts()).toBe(2)
+  await page.reload()
+  await expect(page.locator('.schedule-v2-event')).toHaveCount(1)
+})
+
+test('editing a pilot workout returns to its calendar day with the changed time', async ({ page }) => {
+  const backend = await mockPilot(page)
+  await page.goto('/today?date=2026-09-24&week=2026-09-21&range=2w')
+  await page.locator('.schedule-v2-event').click()
+  await page.getByRole('button', { name: 'Понятно' }).click()
+  await page.getByRole('link', { name: 'Изменить', exact: true }).click()
+  await page.getByLabel('Начало').fill('13:00')
+  await page.getByLabel('Окончание').fill('14:00')
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByRole('button', { name: 'Сохранить план' }).click()
+  await expect(page).toHaveURL(/\/today\?date=2026-09-24&week=2026-09-21&range=2w$/)
+  expect(backend.getLastEditedStartTime()).toBe('13:00')
+  await expect(page.locator('.schedule-v2-event')).toHaveCount(1)
+})
+
+test('rescheduling refreshes both the former day and the two-week overview', async ({ page }) => {
+  await mockPilot(page)
+  await page.goto('/today?date=2026-09-24&week=2026-09-21&range=2w')
+  await page.locator('.schedule-v2-event').click()
+  await page.getByRole('button', { name: 'Выбрать действие' }).click()
+  await page.getByRole('button', { name: 'Перенести тренировку' }).click()
+  await page.getByLabel('Новая дата').fill('2026-09-29')
+  await page.getByRole('button', { name: 'Перенести', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Перенести тренировку' })).toBeHidden()
+  await page.locator('.page-back').click()
+  await expect(page).toHaveURL(/\/today\?date=2026-09-24&week=2026-09-21&range=2w$/)
+  await expect(page.locator('.schedule-v2-event')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Настройки расписания' }).click()
+  await page.getByRole('menuitem', { name: 'К 2 неделям' }).click()
+  await expect(page.locator('.schedule-v2-day-card').nth(8)).toContainText('Алексей Смирнов')
+})
+
+test('cancelling a pilot plan updates the day and excludes it from weekly totals', async ({ page }) => {
+  await mockPilot(page)
+  await page.goto('/today?date=2026-09-24&week=2026-09-21&range=2w')
+  await page.locator('.schedule-v2-event').click()
+  await page.getByRole('button', { name: 'Выбрать действие' }).click()
+  await page.getByRole('button', { name: 'Тренировка не состоялась' }).click()
+  await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await page.locator('.page-back').click()
+  await expect(page).toHaveURL(/\/today\?date=2026-09-24&week=2026-09-21&range=2w$/)
+  await expect(page.locator('.schedule-v2-event')).toHaveClass(/schedule-event-skipped/)
+  await page.getByRole('button', { name: 'Настройки расписания' }).click()
+  await page.getByRole('menuitem', { name: 'К 2 неделям' }).click()
+  await expect(page.getByText('0 тренировок · 0 клиентов')).toBeVisible()
 })
 
 test('invalid calendar URL dates do not crash the pilot', async ({ page }) => {
