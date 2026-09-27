@@ -21,6 +21,10 @@ import {
   TrainerScheduleV2PilotProfileNotReadyError,
   type TrainerScheduleV2PilotManager,
 } from './db/trainer-schedule-v2-pilot.js'
+import {
+  FitLimePilotProfileNotReadyError,
+  type FitLimePilotManager,
+} from './db/fit-lime-pilot.js'
 import type {
   YandexIdentityUnlinkManager,
 } from './db/yandex-identity-unlink.js'
@@ -727,6 +731,86 @@ describe('trainer Schedule V2 pilot assignment', () => {
     expect(notReadyResponse.json()).toEqual({ status: 'trainer_profile_not_ready' })
     expect(failedResponse.statusCode).toBe(500)
     expect(failedResponse.json()).toEqual({ status: 'trainer_schedule_v2_failed' })
+    expect(failedResponse.body).not.toContain('secret')
+  })
+})
+
+describe('Fit Lime two-trainer assignment', () => {
+  function buildPilot(
+    apply: FitLimePilotManager['apply'] = () => Promise.resolve({
+      accountRole: 'trainer', enabled: true, enabledAllowlistRows: 2,
+    }),
+  ) {
+    const applyPilot = vi.fn(apply)
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      fitLimePilot: { apply: applyPilot },
+    })
+    apps.push(app)
+    return { app, applyPilot }
+  }
+
+  it('is unavailable unless explicitly enabled', async () => {
+    const app = buildMigrationApp({ logger: false, runMigrations: () => Promise.resolve([]) })
+    apps.push(app)
+    const response = await app.inject({
+      method: 'POST', url: '/stage/experiments/fit-lime',
+      payload: { action: 'inspect', profileId: STAGE_CLIENT_ID },
+    })
+    expect(response.statusCode).toBe(404)
+  })
+
+  it.each([
+    ['inspect', true, 'fit_lime_inspected'],
+    ['enable', true, 'fit_lime_enabled'],
+    ['disable', false, 'fit_lime_disabled'],
+  ] as const)('%s changes only an allowlisted trainer without disclosing their ID', async (
+    action, enabled, status,
+  ) => {
+    const { app, applyPilot } = buildPilot(() => Promise.resolve({
+      accountRole: 'trainer', enabled, enabledAllowlistRows: enabled ? 2 : 1,
+    }))
+    const response = await app.inject({
+      method: 'POST', url: '/stage/experiments/fit-lime',
+      payload: { action, profileId: STAGE_CLIENT_ID },
+    })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      status, accountRole: 'trainer', enabled, enabledAllowlistRows: enabled ? 2 : 1,
+    })
+    expect(applyPilot).toHaveBeenCalledWith(action, STAGE_CLIENT_ID)
+    expect(response.body).not.toContain(STAGE_CLIENT_ID)
+  })
+
+  it('rejects malformed identifiers before database access', async () => {
+    const { app, applyPilot } = buildPilot()
+    const response = await app.inject({
+      method: 'POST', url: '/stage/experiments/fit-lime',
+      payload: { action: 'enable', profileId: 'not-a-profile' },
+    })
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(applyPilot).not.toHaveBeenCalled()
+  })
+
+  it('keeps readiness and database failures generic', async () => {
+    const notReady = buildPilot(() => Promise.reject(
+      new FitLimePilotProfileNotReadyError(),
+    )).app
+    const failed = buildPilot(() => Promise.reject(
+      new Error('postgresql://owner:secret@database'),
+    )).app
+    const request = {
+      method: 'POST' as const, url: '/stage/experiments/fit-lime',
+      payload: { action: 'enable', profileId: STAGE_CLIENT_ID },
+    }
+    const notReadyResponse = await notReady.inject(request)
+    const failedResponse = await failed.inject(request)
+    expect(notReadyResponse.statusCode).toBe(409)
+    expect(notReadyResponse.json()).toEqual({ status: 'trainer_profile_not_ready' })
+    expect(failedResponse.statusCode).toBe(500)
+    expect(failedResponse.json()).toEqual({ status: 'fit_lime_failed' })
     expect(failedResponse.body).not.toContain('secret')
   })
 })

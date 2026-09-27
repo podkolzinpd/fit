@@ -12,6 +12,7 @@ interface ProfileRow extends QueryResultRow {
   client_trainer_id: string | null
   client_full_name: string | null
   trainer_schedule_v2: boolean
+  fit_lime: boolean
 }
 
 export interface ProfileResponse {
@@ -29,6 +30,7 @@ export interface ProfileResponse {
     } | null
     experiments: {
       trainerScheduleV2: boolean
+      fitLime: boolean
     }
   }
 }
@@ -42,7 +44,8 @@ export async function readOwnProfile(
       profile.timezone, profile.account_role,
       client.id client_id, client.trainer_id client_trainer_id,
       client.full_name client_full_name,
-      app_private.trainer_schedule_v2_enabled() trainer_schedule_v2
+      app_private.trainer_schedule_v2_enabled() trainer_schedule_v2,
+      app_private.fit_lime_enabled() fit_lime
     from public.profiles profile
     left join public.clients client
       on client.auth_user_id = profile.id
@@ -62,6 +65,7 @@ export async function readOwnProfile(
       accountRole: row.account_role,
       experiments: {
         trainerScheduleV2: row.trainer_schedule_v2 === true,
+        fitLime: row.fit_lime === true,
       },
       client: row.client_id !== null
         && row.client_trainer_id !== null

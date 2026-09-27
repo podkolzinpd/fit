@@ -313,7 +313,7 @@ describe('authRepository.initialize', () => {
 
     expect(actor).toMatchObject({
       kind: 'trainer',
-      experiments: { trainerScheduleV2: true },
+      experiments: { trainerScheduleV2: true, fitLime: false },
     })
   })
 
