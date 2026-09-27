@@ -584,11 +584,48 @@ test('action queue shows source failure and recovers on retry', async ({ page })
   await expect(page.getByRole('button', { name: '— Незавершённые действия' })).toBeVisible({ timeout: 15_000 })
   await page.getByRole('button', { name: '— Незавершённые действия' }).click()
   const queue = page.getByRole('dialog', { name: 'Рабочая очередь' })
-  await expect(queue.getByRole('alert')).toContainText('Не удалось загрузить действия')
+  await expect(queue.getByRole('alert').filter({ hasText: 'Не удалось загрузить действия' })).toBeVisible()
+  await expect(queue.getByRole('alert').filter({ hasText: 'Не удалось загрузить планы' })).toBeVisible()
   backend.setClientsFailure(false)
-  await queue.getByRole('button', { name: 'Повторить' }).click()
+  await queue.getByRole('button', { name: 'Повторить загрузку действий' }).click()
   await expect(page.getByRole('button', { name: '1 Незавершённые действия' })).toBeVisible()
   await expect(queue.getByRole('heading', { name: 'Проверить планы' })).toBeVisible()
+})
+
+for (const [account, profileId] of [
+  ['first', trainerId],
+  ['second', '10000000-0000-4000-8000-000000000010'],
+] as const) {
+  test(`${account} Fit Lime action queue preserves the selected day in workout navigation`, async ({ page }) => {
+    await mockPilot(page, { profileId, fitLime: true, questionWorkout: true })
+    await page.goto('/today?date=2026-09-24')
+    await page.getByRole('button', { name: /Незавершённые действия/ }).click()
+    await expect(page.locator('.fit-lime-action-backdrop')).toBeVisible()
+    const action = page.getByRole('dialog', { name: 'Рабочая очередь' }).locator('.schedule-v2-action-row[href]')
+    await expect(action).toHaveAttribute('href', `/workouts/${workoutId}?reply=1`)
+    await action.click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}\\?reply=1$`))
+    expect(await page.evaluate(() => (window.history.state as { usr?: { returnTo?: string } } | null)?.usr?.returnTo)).toBe('/today?date=2026-09-24')
+    await page.getByRole('button', { name: 'Назад' }).click()
+    await expect(page).toHaveURL(/\/today\?date=2026-09-24$/)
+  })
+}
+
+test('Fit Lime planning action returns to its calendar date', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+  await mockPilot(page, { fitLime: true, workouts: [] })
+  await page.goto('/today?date=2026-09-27')
+  await page.getByRole('button', { name: '1 Незавершённые действия' }).click()
+  await page.getByRole('dialog', { name: 'Рабочая очередь' }).getByRole('link', { name: 'Запланировать' }).click()
+  expect(await page.evaluate(() => (window.history.state as { usr?: { returnTo?: string } } | null)?.usr?.returnTo)).toBe('/today?date=2026-09-27')
+})
+
+test('trainer without Fit Lime keeps the queue outside the pilot portal scope', async ({ page }) => {
+  await mockPilot(page, { workouts: [] })
+  await page.goto('/today?date=2026-09-27')
+  await page.getByRole('button', { name: /Незавершённые действия/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Рабочая очередь' })).toBeVisible()
+  await expect(page.locator('.fit-lime-action-backdrop')).toHaveCount(0)
 })
 
 test('the bell count equals the visible queue and updates after snoozing', async ({ page }) => {
