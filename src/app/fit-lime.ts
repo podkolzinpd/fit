@@ -33,5 +33,7 @@ export function isFitLimeShellRoute(
       || pathname === '/clients/new' || /^\/clients\/[^/]+\/edit$/.test(pathname)
       || (/^\/clients\/[^/]+$/.test(pathname) && pathname !== '/clients/new')
       || /^\/clients\/[^/]+\/goal$/.test(pathname)
+      || /^\/clients\/[^/]+\/workouts$/.test(pathname)
+      || /^\/progress\/[^/]+$/.test(pathname)
       || pathname === '/join')
 }

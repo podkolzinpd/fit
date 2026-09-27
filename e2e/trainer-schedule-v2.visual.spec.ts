@@ -41,7 +41,7 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null }
 
-async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; failProgress?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
+async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; failProgress?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
@@ -58,6 +58,10 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
     id: '10000000-0000-4000-8000-000000000040', clientId, title: 'Подготовка к старту', targetDate: '2026-12-01',
     status: 'active', version: 1, criteria: [], stages: [{ id: '10000000-0000-4000-8000-000000000041', goalId: '10000000-0000-4000-8000-000000000040', title: 'База', startsOn: '2026-09-01', endsOn: '2026-10-01', position: 0, version: 1 }],
   } : null
+  let progressEntries = options.withMeasurements ? [{
+    id: '10000000-0000-4000-8000-000000000050', clientId, createdBy: profileId, recordedOn: '2026-09-24',
+    weightKg: 70 as number | null, chestCm: null, waistCm: null, hipCm: null, notes: null, customMetrics: [], version: 1,
+  }] : []
   let saveAttempts = 0
   let chatSendAttempts = 0
   const sentMessages: Array<{ id: string; conversationId: string; senderId: string; body: string; createdAt: string; editedAt: null; replyTo: null; image: null }> = []
@@ -159,12 +163,26 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
         return
       }
       body = { memberships: clientRecords.map((client) => ({ clientId: client.id, trainerId: profileId, firstName: 'Антон', lastName: null, joinedAt: '2026-09-01T00:00:00.000Z', isRoot: true })), invitations: [] }
+    } else if (url.pathname === '/v1/progress' && route.request().method() === 'POST') {
+      const command = route.request().postDataJSON() as { draft: { recordedOn: string; weightKg: number | null } }
+      progressEntries = [{ id: '10000000-0000-4000-8000-000000000050', clientId, createdBy: profileId, recordedOn: command.draft.recordedOn,
+        weightKg: command.draft.weightKg, chestCm: null, waistCm: null, hipCm: null, notes: null, customMetrics: [], version: 1 }]
+      body = { progress: { id: '10000000-0000-4000-8000-000000000050' } }
+    } else if (url.pathname === '/v1/progress/10000000-0000-4000-8000-000000000050' && route.request().method() === 'DELETE') {
+      progressEntries = []
+      body = { progress: { version: 2 } }
     } else if (/^\/v1\/clients\/[0-9a-f-]+\/progress$/.test(url.pathname)) {
       if (failProgress) {
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
         return
       }
-      body = { entries: [], customMetrics: [], goal: goalRecord }
+      body = { entries: progressEntries, customMetrics: [], goal: goalRecord }
+    } else if (/^\/v1\/clients\/[0-9a-f-]+\/progress\/regularity$/.test(url.pathname)) {
+      body = { regularity: [{ period: 'week', periodStart: '2026-09-21', periodEnd: '2026-09-27', plannedCount: 1, completedCount: 0, completedPlannedCount: 0, partialCount: 0, skippedCount: 0, completionPercent: null }] }
+    } else if (/^\/v1\/clients\/[0-9a-f-]+\/progress\/running$/.test(url.pathname)) {
+      body = { sessions: [] }
+    } else if (/^\/v1\/clients\/[0-9a-f-]+\/training-summaries$/.test(url.pathname)) {
+      body = { summaries: [] }
     } else if (url.pathname === '/v1/goals' && route.request().method() === 'POST') {
       const command = route.request().postDataJSON() as { draft: { title: string; targetDate: string | null } }
       goalRecord = { id: '10000000-0000-4000-8000-000000000040', clientId, title: command.draft.title, targetDate: command.draft.targetDate, status: 'active', version: 1, criteria: [], stages: [] }
@@ -1014,6 +1032,86 @@ test('trainer without Fit Lime keeps the original goal surface', async ({ page }
   await page.goto(`/clients/${clientId}/goal`)
   await expect(page.getByRole('heading', { name: 'Подготовка к старту' })).toBeVisible()
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+})
+
+for (const [account, profileId] of [
+  ['first', trainerId],
+  ['second', '10000000-0000-4000-8000-000000000010'],
+] as const) {
+  test(`${account} Fit Lime progress keeps weekly data and the measurements route`, async ({ page }, testInfo) => {
+    await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+    await mockPilot(page, { profileId, fitLime: true, workouts: [] })
+    await page.goto(`/progress/${clientId}`)
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+    await expect(page.getByRole('heading', { name: 'Прогресс', exact: true })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Клиенты' })).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('region', { name: 'Тренировки за неделю' })).toContainText('Тренировок пока не было')
+    await expect(page.getByRole('link', { name: 'Открыть замеры и показатели' })).toBeVisible()
+    await page.getByRole('status').filter({ hasText: 'Прогресс стал короче' }).getByRole('button', { name: 'Понятно' }).click()
+    if (account === 'first') {
+      const screenshotPath = testInfo.outputPath('fit-lime-progress.png')
+      await page.screenshot({ path: screenshotPath, fullPage: true })
+      await testInfo.attach('fit-lime-progress', { path: screenshotPath, contentType: 'image/png' })
+    }
+    await page.getByRole('link', { name: 'Открыть замеры и показатели' }).click()
+    await expect(page).toHaveURL(new RegExp(`/progress/${clientId}\\?view=measurements$`))
+    await expect(page.getByText('Замеров пока нет')).toBeVisible()
+    await page.getByRole('button', { name: 'Добавить замер' }).click()
+    await expect(page.getByRole('heading', { name: 'Новый замер' })).toBeVisible()
+    await page.getByRole('button', { name: 'Отмена' }).click()
+    await page.goto(`/progress/${clientId}?view=running`)
+    await expect(page.getByText('За этот период пробежек нет.')).toBeVisible()
+  })
+}
+
+test('Fit Lime measurement history confirms destructive removal', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+  await mockPilot(page, { fitLime: true, withMeasurements: true })
+  await page.goto(`/progress/${clientId}?view=measurements`)
+  await expect(page.getByText('Последний замер')).toBeVisible()
+  await page.getByRole('button', { name: 'История · 1' }).click()
+  await expect(page.getByRole('heading', { name: 'История замеров (1)' })).toBeVisible()
+  await page.getByRole('button', { name: 'Удалить' }).click()
+  await expect(page.getByRole('alertdialog', { name: /Удалить замер/ })).toBeVisible()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена' }).click()
+  await expect(page.getByRole('heading', { name: 'История замеров (1)' })).toBeVisible()
+  await page.getByRole('button', { name: 'Удалить' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить' }).click()
+  await expect(page.getByText('Замеров пока нет')).toBeVisible()
+})
+
+test('Fit Lime progress source error has a working retry', async ({ page }) => {
+  const backend = await mockPilot(page, { fitLime: true, failProgress: true })
+  await page.goto(`/progress/${clientId}?view=measurements`)
+  await expect(page.getByRole('alert')).toBeVisible({ timeout: 15_000 })
+  backend.setProgressFailure(false)
+  await page.getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.getByText('Замеров пока нет')).toBeVisible()
+})
+
+test('Fit Lime client workout history retains list, calendar and planning exit', async ({ page }, testInfo) => {
+  await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+  await mockPilot(page, { fitLime: true, workouts: [{ ...workout, status: 'done' }] })
+  await page.goto(`/clients/${clientId}/workouts`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+  await expect(page.locator('.workout-chronicle-card')).toHaveCount(1)
+  await expect(page.getByRole('link', { name: 'Запланировать' })).toBeVisible()
+  await page.getByRole('status').filter({ hasText: 'История по датам' }).getByRole('button', { name: 'Понятно' }).click()
+  const screenshotPath = testInfo.outputPath('fit-lime-client-workout-history.png')
+  await page.screenshot({ path: screenshotPath, fullPage: true })
+  await testInfo.attach('fit-lime-client-workout-history', { path: screenshotPath, contentType: 'image/png' })
+  await page.getByRole('group', { name: 'Вид истории тренировок' }).getByRole('button', { name: 'Календарь' }).click()
+  await expect(page.locator('.client-history-calendar')).toBeVisible()
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(new RegExp(`/clients/${clientId}$`))
+})
+
+test('trainer without Fit Lime keeps progress and workout history in the prior theme', async ({ page }) => {
+  await mockPilot(page, { workouts: [{ ...workout, status: 'done' }] })
+  for (const route of [`/progress/${clientId}`, `/progress/${clientId}?view=measurements`, `/clients/${clientId}/workouts`]) {
+    await page.goto(route)
+    await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+  }
 })
 
 test('the bell count equals the visible queue and updates after snoozing', async ({ page }) => {
