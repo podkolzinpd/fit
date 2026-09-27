@@ -9,6 +9,7 @@ import './styles.css'
 import './styles/fit-lime-components.css'
 import './styles/fit-lime-shell.css'
 import './styles/fit-lime-today.css'
+import './styles/fit-lime-schedule.css'
 
 declare global {
   interface Window {

@@ -1,0 +1,48 @@
+/* Stage 3, point 16: week and fortnight under the independent trainer flag. */
+.fit-lime-shell .fit-lime-schedule .schedule-v2-weekdays {
+  position: relative;
+  background: transparent;
+}
+
+.fit-lime-shell .fit-lime-schedule .schedule-v2-weekdays::before {
+  position: absolute;
+  inset: 29px 0 0;
+  border-radius: 999px;
+  background: #25360c;
+  content: '';
+}
+
+.fit-lime-shell .fit-lime-schedule .schedule-v2-weekdays button {
+  z-index: 1;
+}
+
+.fit-lime-shell .fit-lime-schedule .schedule-v2-day-card.is-today {
+  background: #232328;
+}
+
+.fit-lime-shell .fit-lime-schedule .schedule-v2-day-events em {
+  color: #b8b8bd;
+  font-size: 14px;
+}
+
+.fit-lime-shell .fit-lime-schedule .schedule-v2-day-card:focus-visible,
+.fit-lime-shell .fit-lime-schedule .schedule-v2-weekdays button:focus-visible {
+  outline: 2px solid #baff36;
+  outline-offset: 2px;
+}
+
+@media (max-width: 360px) {
+  .fit-lime-shell .fit-lime-schedule .schedule-v2-weekstrip {
+    margin-inline: -12px;
+  }
+
+  .fit-lime-shell .fit-lime-schedule .schedule-v2-day-card {
+    padding: 18px 14px;
+  }
+
+  .fit-lime-shell .fit-lime-schedule .schedule-v2-day-events > span {
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 5px;
+    font-size: 14px;
+  }
+}
