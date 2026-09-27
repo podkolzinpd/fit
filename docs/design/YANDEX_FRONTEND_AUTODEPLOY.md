@@ -61,6 +61,12 @@ Frontend only: нет миграций, изменений product API, auth log
 
 - `s3:GetObject`, `s3:PutObject` только `fit-frontend-probe-b1goqho1/releases/*`;
 - `s3:PutObjectAcl` только `releases/*/assets/*.wasm` этого бакета;
+- Дополнительно отдельно согласована и назначена IAM-роль `storage.uploader`
+  на весь frontend-бакет: bucket policy без базового IAM-доступа давала 403.
+  Это шире `releases/*`; код ограничивает запись release-префиксом. Ролей
+  на другие бакеты или каталог нет. Чтение от deployer проверено; ACL старого
+  WASM, созданного другим аккаунтом, даёт 403. ACL новых файлов настоящей
+  сборки должен пройти проверку до activation; права автоматически не расширяются.
 - `api-gateway.editor` только `d5drmhq5ovqk03jgsm8i` (роль также технически
   позволяет удалить шлюз; workflow не вызывает delete);
 - `iam.serviceAccounts.user` только reader `aje67ouc4633u7i7oc2a`;
@@ -88,7 +94,7 @@ disabled=true. Не менять DNS и не удалять сборки. При
 
 | Пункт | Доказательство / статус |
 | --- | --- |
-| 1 | Созданы deploy SA/OIDC и main-only GitHub environment; gateway access работает. Storage policy сама по себе даёт 403: базовая IAM-роль требует дополнительного согласования. |
+| 1 | Созданы deploy SA/OIDC и main-only GitHub environment; gateway access работает. Отдельно согласована bucket-only `storage.uploader`, чтение проверено. ACL новых WASM проверяется перед первым activation. |
 | 2 | Workflow и exact-main guards реализованы; тесты workflow проходят локально. |
 | 3 | Unit tests проверяют порядок backup/upload/verify/activate, сохранение assets и коллизии; remote выпуск ещё не выполнен. |
 | 4 | Unit tests: smoke failure, потерянный ответ update, чужое изменение, unsettled operation, rollback verification. |
