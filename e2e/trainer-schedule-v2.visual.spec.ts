@@ -291,6 +291,40 @@ for (const [account, profileId] of [
   })
 }
 
+for (const [account, profileId] of [
+  ['first', trainerId],
+  ['second', '10000000-0000-4000-8000-000000000010'],
+] as const) {
+  test(`${account} Fit Lime today keeps the reference hierarchy and working entry paths`, async ({ page }, testInfo) => {
+    await page.clock.setFixedTime(new Date('2026-09-24T12:30:00+03:00'))
+    await mockPilot(page, { profileId, fitLime: true })
+    await page.goto('/today?date=2026-09-24')
+    await expect(page.locator('.fit-lime-today')).toBeVisible()
+    await expect(page.locator('.schedule-v2 > section').first()).toHaveClass(/schedule-v2-summary/)
+    await expect(page.getByRole('button', { name: '0 Незавершённые действия' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '5 Вопросы и сообщения' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Надиктовать тренировку' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Ввести текстом' })).toBeVisible()
+    await expect(page.locator('.schedule-v2-now')).toBeVisible()
+    if (account === 'first') {
+      const screenshotPath = testInfo.outputPath('fit-lime-today.png')
+      await page.screenshot({ path: screenshotPath, fullPage: true })
+      await testInfo.attach('fit-lime-today', { path: screenshotPath, contentType: 'image/png' })
+    }
+    await page.getByRole('link', { name: 'Ввести текстом' }).click()
+    await expect(page).toHaveURL(/\/today\?view=compose&entry=text/)
+    await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+  })
+}
+
+test('trainer without Fit Lime keeps the existing day hierarchy', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:30:00+03:00'))
+  await mockPilot(page)
+  await page.goto('/today?date=2026-09-24')
+  await expect(page.locator('.fit-lime-today')).toHaveCount(0)
+  await expect(page.locator('.schedule-v2 > section').first()).toHaveClass(/schedule-v2-home-actions/)
+})
+
 test('non-pilot trainer retains the classic Today and schedule routes', async ({ page }) => {
   await mockPilot(page, { pilot: false, workouts: [] })
   await page.goto('/today')
