@@ -28,8 +28,16 @@ export function ChatListPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const homePath = actor?.role === 'trainer' ? '/today' : '/me'
-  const fromHistory = isTrainerScheduleV2Enabled(actor) && (location.state as { chatBack?: unknown } | null)?.chatBack === 'history'
-  const exitChat = () => fromHistory ? navigate(-1) : navigate(homePath, { replace: true })
+  const navigationState = location.state as { chatBack?: unknown; returnTo?: unknown } | null
+  const fromHistory = isTrainerScheduleV2Enabled(actor) && navigationState?.chatBack === 'history'
+  const returnTo = typeof navigationState?.returnTo === 'string'
+    && /^\/(?:today|schedule)(?:[/?#]|$)/.test(navigationState.returnTo)
+    && !navigationState.returnTo.includes('\\') ? navigationState.returnTo : homePath
+  const exitChat = () => {
+    const historyState = window.history.state as { idx?: unknown } | null
+    if (fromHistory && typeof historyState?.idx === 'number' && historyState.idx > 0) navigate(-1)
+    else navigate(returnTo, { replace: true })
+  }
   const query = useChatThreads()
   const pilot = isTrainerScheduleV2Enabled(actor)
   const workspace = useTrainerWorkspace(pilot)
@@ -45,20 +53,20 @@ export function ChatListPage() {
     } catch { setOpenError(true) } finally { setOpening(false) }
   }
   return <Page title="Сообщения" back={homePath} onBack={exitChat} swipeBack className="chat-list-page">
-    <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}
-      empty={query.data?.length === 0 && (!pilot || (!workspace.isLoading && questions.length === 0))} emptyTitle="Диалогов пока нет" emptyDescription="Подключите тренера или спортсмена, чтобы начать переписку.">
-      {pilot && <section className="trainer-inbox-questions" aria-labelledby="trainer-inbox-questions-title">
-        <div><h2 id="trainer-inbox-questions-title">Вопросы тренеру</h2><span>{workspace.isError ? '—' : workspace.isLoading ? '' : questions.length > 99 ? '99+' : questions.length}</span></div>
+    {pilot && <section className="trainer-inbox-questions" aria-labelledby="trainer-inbox-questions-title">
+        <div><h2 id="trainer-inbox-questions-title">Вопросы тренеру</h2><span>{workspace.isError ? '—' : workspace.isLoading ? '…' : questions.length > 99 ? '99+' : questions.length}</span></div>
         {workspace.isLoading && <div className="trainer-inbox-question-loading"><span className="skeleton-line" /><span className="skeleton-line short" /></div>}
         {workspace.isError && <div className="trainer-inbox-question-error" role="alert"><span>Не удалось загрузить вопросы</span><button type="button" className="link" onClick={() => void workspace.refetch()}>Повторить</button></div>}
         {!workspace.isLoading && !workspace.isError && questions.length === 0 && <p>Новых вопросов нет</p>}
-        {questions.map((item) => <Link key={item.workoutId} className="trainer-inbox-question" to={`/workouts/${item.workoutId}?reply=1`}>
+        {!workspace.isLoading && !workspace.isError && questions.map((item) => <Link key={item.workoutId} className="trainer-inbox-question" to={`/workouts/${item.workoutId}?reply=1`} state={{ returnTo }}>
           <span className="chat-avatar" aria-hidden="true">{item.clientName.slice(0, 1).toUpperCase()}</span>
           <span><strong>{item.clientName}</strong><small>{item.question}</small></span>
           <time>{timeLabel(item.askedAt)}</time>
         </Link>)}
       </section>}
-      {pilot && <div className="chat-thread-section-title"><h2>Сообщения</h2><span>{query.data?.reduce((sum, item) => sum + item.unreadCount, 0) || ''}</span></div>}
+    {pilot && <div className="chat-thread-section-title"><h2>Сообщения</h2><span>{query.isError ? '—' : query.isLoading ? '…' : query.data?.reduce((sum, item) => sum + item.unreadCount, 0) ?? 0}</span></div>}
+    <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}
+      empty={query.data?.length === 0} emptyTitle="Диалогов пока нет" emptyDescription="Подключите тренера или спортсмена, чтобы начать переписку.">
       <div className="chat-thread-list">{query.data?.map((item) => <button type="button" className="chat-thread" key={`${item.clientId}:${item.trainerId}`}
         disabled={opening} onClick={() => void openChat(item)}>
         <span className="chat-avatar" aria-hidden="true">{item.partnerName.slice(0, 1).toUpperCase()}</span>

@@ -11,6 +11,7 @@ import './styles/fit-lime-shell.css'
 import './styles/fit-lime-today.css'
 import './styles/fit-lime-schedule.css'
 import './styles/fit-lime-actions.css'
+import './styles/fit-lime-inbox.css'
 
 declare global {
   interface Window {
