@@ -8,19 +8,20 @@ const config = JSON.parse(
 const indexHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8')
 
 test('redirects only the legacy production hostname to fit-training.ru', () => {
-  assert.deepEqual(config.redirects, [
-    {
-      source: '/:path*',
-      destination: 'https://fit-training.ru/:path*',
-      has: [
-        {
-          type: 'host',
-          value: 'fit-drab.vercel.app',
-        },
-      ],
-      permanent: true,
+  assert.deepEqual(config.routes[0], {
+    src: '/(.*)',
+    has: [
+      {
+        type: 'host',
+        value: 'fit-drab.vercel.app',
+      },
+    ],
+    headers: {
+      Location: 'https://fit-training.ru/$1',
     },
-  ])
+    status: 308,
+  })
+  assert.equal(config.redirects, undefined)
 })
 
 test('keeps production analytics enabled on the canonical domain', () => {
