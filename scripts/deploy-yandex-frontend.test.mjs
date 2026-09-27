@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { packageRelease, supportedRouting } from './frontend-release.mjs'
 import { gatewayPlan } from './frontend-gateway-plan.mjs'
+import { gatewaySpecificationsEqual } from './frontend-gateway-specification.mjs'
 import { deployFrontend, retainAssets, target, validateSpecification, smoke, createCloud, verifyStorageAccess } from './deploy-yandex-frontend.mjs'
 
 async function fixture(t, name = 'old', wasm = false) {
@@ -18,13 +19,26 @@ async function fixture(t, name = 'old', wasm = false) {
   return packageRelease(directory, name === 'old' ? 'a'.repeat(40) : 'b'.repeat(40), supportedRouting)
 }
 
-function fakeCloud(beforeBundle) {
+function fakeCloud(beforeBundle, expandDefaults = false) {
   const before = gatewayPlan(beforeBundle, [], target).specification
   let current = structuredClone(before)
   const events = []
   const cloud = {
     events, before,
-    specification: async () => structuredClone(current),
+    specification: async () => {
+      const spec = structuredClone(current)
+      if (expandDefaults) {
+        for (const route of Object.values(spec.paths)) {
+          for (const owner of [route, route.get, route.head]) {
+            for (const parameter of owner?.parameters ?? []) {
+              parameter.style ??= 'simple'
+              parameter.explode ??= false
+            }
+          }
+        }
+      }
+      return spec
+    },
     assertReady: async () => { events.push('ready') },
     assertCurrentCommit: async () => { events.push('current') },
     routeBytes: async (route) => {
@@ -78,13 +92,101 @@ test('smoke failure restores exact previous spec and verifies old HTML', async (
   assert.ok(cloud.events.includes('rollback-verified'))
 })
 
+test('cloud-expanded path defaults pass activation and rollback without weakening comparison', async (t) => {
+  const old = await fixture(t)
+  const next = await fixture(t, 'new')
+  for (const failure of [false, true]) {
+    const cloud = fakeCloud(old, true)
+    const before = await cloud.specification()
+    if (failure) cloud.smoke = () => smoke(next, target.frontendOrigin, responses(next, 'index.html'))
+    if (failure) {
+      await assert.rejects(deployFrontend(next, cloud), /previous gateway restored and verified; stage=smoke: Frontend smoke failed: \//)
+      assert.deepEqual(await cloud.specification(), before)
+      assert.equal(cloud.events.filter((e) => e === 'activate').length, 2)
+    } else {
+      assert.equal((await deployFrontend(next, cloud)).status, 'verified')
+      assert.equal(cloud.events.filter((e) => e === 'activate').length, 1)
+    }
+  }
+})
+
+test('only inline path defaults compare equal; input objects remain untouched', async (t) => {
+  const spec = gatewayPlan(await fixture(t), [], target).specification
+  const original = structuredClone(spec)
+  const expanded = structuredClone(spec)
+  for (const route of Object.values(expanded.paths)) {
+    for (const p of route.parameters ?? []) Object.assign(p, { style: 'simple', explode: false })
+  }
+  assert.ok(gatewaySpecificationsEqual(spec, expanded))
+  assert.ok(gatewaySpecificationsEqual(expanded, spec))
+  assert.deepEqual(spec, original)
+  const operationLevel = structuredClone(spec)
+  operationLevel.paths['/'].get.parameters = [{ in: 'path', name: 'test', schema: { type: 'string' } }]
+  const expandedOperation = structuredClone(operationLevel)
+  Object.assign(expandedOperation.paths['/'].get.parameters[0], { style: 'simple', explode: false })
+  assert.ok(gatewaySpecificationsEqual(operationLevel, expandedOperation))
+  for (const change of [
+    (s) => { s.paths['/{path+}'].parameters[0].explode = true },
+    (s) => { s.paths['/{path+}'].parameters[0].style = 'label' },
+    (s) => { s.paths['/{path+}'].parameters[0].style = null },
+    (s) => { s.paths['/{path+}'].parameters[0].schema.type = 'integer' },
+    (s) => { s.paths['/'].get['x-yc-apigateway-integration'].object += '.changed' },
+    (s) => { s.paths['/'].get['x-yc-apigateway-integration'].service_account_id = 'other' },
+    (s) => { s.paths['/'].get.security = [] },
+    (s) => { s.servers = [{ url: 'https://other.invalid' }] },
+    (s) => { s.info.version = 'other' },
+    (s) => { s['x-yc-apigateway'] = { cors: { origin: '*' } } },
+  ]) {
+    const changed = structuredClone(expanded)
+    change(changed)
+    assert.equal(gatewaySpecificationsEqual(spec, changed), false)
+  }
+  for (const parameter of [
+    { $ref: '#/components/parameters/path' },
+    { in: 'query', name: 'search', schema: { type: 'string' } },
+  ]) {
+    const a = structuredClone(spec)
+    a.paths['/'].get.parameters = [parameter]
+    const b = structuredClone(a)
+    Object.assign(b.paths['/'].get.parameters[0], { style: 'simple', explode: false })
+    assert.equal(gatewaySpecificationsEqual(a, b), false)
+  }
+})
+
+test('normalized readback still refuses a same-version concurrent route change', async (t) => {
+  const cloud = fakeCloud(await fixture(t), true)
+  cloud.smoke = async () => {
+    const other = await cloud.specification()
+    other.paths['/'].get['x-yc-apigateway-integration'].object += '.other'
+    await cloud.activate(other)
+  }
+  await assert.rejects(deployFrontend(await fixture(t, 'new'), cloud), /stage=activation-readback: Activated gateway differs from candidate; stage=rollback-inspection: Concurrent/)
+  assert.equal(cloud.events.filter((e) => e === 'activate').length, 2)
+  assert.ok(!cloud.events.includes('rollback-verified'))
+})
+
+test('original smoke diagnostic survives rollback failure without exposing raw external errors', async (t) => {
+  const next = await fixture(t, 'new')
+  const cloud = fakeCloud(await fixture(t), true)
+  cloud.smoke = () => smoke(next, target.frontendOrigin, responses(next, 'index.html'))
+  cloud.verifyRollback = async () => { throw new Error('secret-token private-response-body') }
+  await assert.rejects(deployFrontend(next, cloud), (error) => {
+    assert.match(error.message, /stage=smoke: Frontend smoke failed: \//)
+    assert.match(error.message, /stage=rollback-smoke: External operation failed/)
+    assert.doesNotMatch(error.message, /secret-token|private-response-body/)
+    assert.equal(error.cause.errors.length, 2)
+    return true
+  })
+})
+
 test('an update which committed but lost its response is rolled back after status/readback', async (t) => {
-  const cloud = fakeCloud(await fixture(t))
+  const cloud = fakeCloud(await fixture(t), true)
+  const before = await cloud.specification()
   const activate = cloud.activate
   let calls = 0
   cloud.activate = async (spec) => { await activate(spec); if (++calls === 1) throw new Error('lost response') }
   await assert.rejects(deployFrontend(await fixture(t, 'new'), cloud), /restored and verified/)
-  assert.deepEqual(await cloud.specification(), cloud.before)
+  assert.deepEqual(await cloud.specification(), before)
 })
 
 test('does not overwrite a concurrent external update during rollback', async (t) => {
@@ -104,7 +206,11 @@ test('an unsettled gateway operation is not blindly retried or rolled back', asy
   cloud.activate = async () => { throw new Error('timeout') }
   let checks = 0
   cloud.assertReady = async () => { if (++checks > 2) throw new Error('UPDATING') }
-  await assert.rejects(deployFrontend(await fixture(t, 'new'), cloud), /UPDATING/)
+  await assert.rejects(deployFrontend(await fixture(t, 'new'), cloud), (error) => {
+    assert.match(error.message, /stage=activate:.*stage=rollback-readiness:/)
+    assert.equal(error.cause.errors[1].message, 'UPDATING')
+    return true
+  })
   assert.ok(!cloud.events.includes('rollback-verified'))
 })
 

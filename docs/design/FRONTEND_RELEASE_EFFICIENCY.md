@@ -57,6 +57,15 @@ through the console, not by this PR. Semantics: [Object Storage lifecycles](http
 
 ## Failure and recovery
 
+- Gateway comparisons account only for cloud-expanded OpenAPI defaults on inline
+  string path parameters (`style: simple`, `explode: false`), including GET/HEAD
+  parameters. Other changes remain conflicts: objects, identities, security,
+  origins, explicit non-default parameters, extensions and release versions.
+  This applies to activation/rollback and manifest/cleanup readback; stored
+  backup specifications are not rewritten. Publication failures report the
+  original stage and safe authored check message even if rollback also fails;
+  raw external error bodies, commands and credentials are not printed.
+
 - Current/previous/recent references are protected even if stored under an old
   release prefix. No recursive prefix deletion and no version purge.
 - All listing pages must be read; invalid manifests/inventory, missing protected
@@ -75,6 +84,15 @@ through the console, not by this PR. Semantics: [Object Storage lifecycles](http
 
 Remote enablement, actual timing reduction and first cleanup dry-run are pending
 until this branch passes CI and is deployed; local tests are not production proof.
+
+Deployment follow-up, 27 September: run `36342821957` activated `58f62d95`
+but failed its literal specification check after Yandex expanded the parameter
+defaults. Both public origins served HTML matching the release artifact; a full
+read-only HTTP/hash/cache/WASM smoke passed. The normalization regression tests
+cover activation, rollback after smoke failure/lost response, same-version
+concurrent changes, safe failure diagnostics and cleanup fail-closed behavior.
+The fixed cloud deployment still requires verification after merge; no remote
+cleanup or deliberate production rollback was performed for this diagnosis.
 
 Local verification: full `npm run check` passed (2,053 frontend tests, 943 API
 tests; 49 environment-dependent API tests skipped by the existing suite).

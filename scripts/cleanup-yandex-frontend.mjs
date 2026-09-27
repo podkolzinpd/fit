@@ -4,6 +4,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { target, validateSpecification } from './deploy-yandex-frontend.mjs'
+import { gatewayRoutesEqual, gatewaySpecificationsEqual } from './frontend-gateway-specification.mjs'
 import { releaseId, isReleaseObject, manifestKey, routeObject, releaseBatch, digest } from './frontend-release-storage.mjs'
 
 const DAY = 86_400_000
@@ -41,9 +42,9 @@ export function planCleanup({ specification, manifests, inventory, now = new Dat
   }
   const active = records.get(specification.info.version)
   if (!active) throw new Error('Active release has no verified manifest; cleanup refused')
-  // Unknown/manual changes to any own route are not silently normalized.
+  // Only known OpenAPI defaults are normalized; manual route changes still fail.
   for (const [path, route] of Object.entries(active.specification.paths)) {
-    if (!isDeepStrictEqual(specification.paths[path], route)) throw new Error('Active gateway differs from manifest')
+    if (!gatewayRoutesEqual(specification.paths[path], route)) throw new Error('Active gateway differs from manifest')
   }
   const keep = manifests.filter((m) => m.release === active.release || m.release === active.previous
     || Date.parse(m.createdAt) >= cutoff)
@@ -86,7 +87,7 @@ export function planCleanup({ specification, manifests, inventory, now = new Dat
 export async function applyCleanup(plan, cloud) {
   const assertUnchanged = async (expected) => {
     await cloud.assertReady()
-    if (!isDeepStrictEqual(await cloud.specification(), expected)) throw new Error('Gateway changed; cleanup stopped')
+    if (!gatewaySpecificationsEqual(await cloud.specification(), expected)) throw new Error('Gateway changed; cleanup stopped')
   }
   await assertUnchanged(plan.before)
   await cloud.backup(plan)

@@ -124,6 +124,37 @@ test('shared objects referenced by retained manifests survive, unknown legacy up
   assert.ok(!plan.objects.some((o) => o.key === key || o.key === unknown || o.key === 'releases/frontend-release.json'))
 })
 
+test('cleanup accepts cloud-expanded defaults but refuses real parameter drift before deletion', async (t) => {
+  const data = await history(t)
+  const expand = (spec) => {
+    const copy = structuredClone(spec)
+    for (const route of Object.values(copy.paths)) {
+      for (const p of route.parameters ?? []) Object.assign(p, { style: 'simple', explode: false })
+    }
+    return copy
+  }
+  const plan = planCleanup({ ...data, specification: expand(data.specification) })
+  assert.ok(plan.objects.length > 0)
+  const changed = expand(data.specification)
+  changed.paths['/{path+}'].parameters[0].explode = true
+  assert.throws(() => planCleanup({ ...data, specification: changed }), /differs from manifest/)
+  let current = data.specification
+  const unexpandedPlan = planCleanup(data)
+  let removed = 0
+  await applyCleanup(unexpandedPlan, {
+    assertReady: async () => {}, specification: async () => expand(current), backup: async () => {},
+    activate: async (s) => { current = s }, verifyActive: async () => {},
+    assertObjectUnchanged: async () => {}, remove: async () => { removed++ },
+  })
+  assert.equal(removed, plan.objects.length + plan.manifests.length)
+  removed = 0
+  await assert.rejects(applyCleanup(unexpandedPlan, {
+    assertReady: async () => {}, specification: async () => changed,
+    remove: async () => { removed++ },
+  }), /Gateway changed/)
+  assert.equal(removed, 0)
+})
+
 test('3-day cutoff retains an exact-boundary release and expires it only after the boundary', async (t) => {
   const data = await history(t)
   const recent = data.manifests[1]
