@@ -6,6 +6,7 @@ const workoutId = '10000000-0000-4000-8000-000000000003'
 const conversationId = '10000000-0000-4000-8000-000000000004'
 const messageId = '10000000-0000-4000-8000-000000000005'
 const newWorkoutId = '10000000-0000-4000-8000-000000000006'
+const customExerciseId = '10000000-0000-4000-8000-000000000070'
 const sessionToken = 's'.repeat(43)
 
 const workout = {
@@ -41,7 +42,7 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null }
 
-async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
+async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
@@ -49,6 +50,7 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
   let failConnections = options.failConnections ?? false
   let failProgress = options.failProgress ?? false
   let failProfile = options.failProfile ?? false
+  let failArchive = options.failArchive ?? false
   let failWorkspace = options.failWorkspace ?? false
   let failThreads = options.failThreads ?? false
   let questionAnswered = false
@@ -66,6 +68,8 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
   let saveAttempts = 0
   let chatSendAttempts = 0
   let profileSaveAttempts = 0
+  let customExerciseSaveAttempts = 0
+  let customExercises = options.withCustomExercise ? [{ id: customExerciseId, name: 'Мой присед', muscleGroup: 'legs', inputKind: 'strength', primaryMuscleDetail: null, equipment: null, description: null, archivedAt: null as string | null, version: 1, createdBy: profileId }] : []
   let professionalProfile = {
     publicId: '10000000-0000-4000-8000-000000000060',
     draft: { displayName: 'Антон', bio: '', specialties: [] as string[], city: '', metroStationIds: [] as string[], customLocations: [] as string[], trainingModes: [] as string[], experienceStartYear: null as number | null, education: '', formats: '', price: '', acceptingClients: false, avatarDataUrl: null as string | null, photos: [], certificates: [] },
@@ -144,7 +148,7 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
       }
       body = {
         accessMode: 'read_only',
-        customExercises: [],
+        customExercises,
         workouts: options.questionWorkout ? [{
           ...workout,
           status: 'done',
@@ -172,6 +176,28 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
         hasMoreWorkouts: false,
         totalWorkouts: workouts.length,
       }
+    } else if (url.pathname === '/v1/custom-exercises' && route.request().method() === 'POST') {
+      customExerciseSaveAttempts += 1
+      if (options.failFirstCustomExerciseSave && customExerciseSaveAttempts === 1) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+        return
+      }
+      const draft = route.request().postDataJSON() as { name: string; muscleGroup: string; inputKind: string }
+      const exercise = { id: customExerciseId, ...draft, primaryMuscleDetail: null, equipment: null, description: null, archivedAt: null, version: 1, createdBy: profileId }
+      customExercises = [exercise]
+      body = { exercise }
+    } else if (url.pathname === `/v1/custom-exercises/${customExerciseId}` && route.request().method() === 'PUT') {
+      const command = route.request().postDataJSON() as { draft: { name: string; muscleGroup: string; inputKind: string } }
+      customExercises = customExercises.map((item) => ({ ...item, ...command.draft, version: item.version + 1 }))
+      body = { exercise: customExercises[0] }
+    } else if (url.pathname === `/v1/custom-exercises/${customExerciseId}/archive` && route.request().method() === 'PUT') {
+      if (failArchive) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+        return
+      }
+      const command = route.request().postDataJSON() as { archived: boolean }
+      customExercises = customExercises.map((item) => ({ ...item, archivedAt: command.archived ? '2026-09-24T09:00:00.000Z' : null, version: item.version + 1 }))
+      body = { exercise: customExercises[0] }
     } else if (url.pathname === '/v1/clients' && route.request().method() === 'POST') {
       const input = route.request().postDataJSON() as { fullName: string }
       clientRecords = [...clientRecords, { id: '10000000-0000-4000-8000-000000000030', fullName: input.fullName, archivedAt: null, version: 1 }]
@@ -339,6 +365,8 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
     setProgressFailure(value: boolean) { failProgress = value },
     setProfileFailure(value: boolean) { failProfile = value },
     getProfileSaveAttempts() { return profileSaveAttempts },
+    setArchiveFailure(value: boolean) { failArchive = value },
+    getCustomExerciseSaveAttempts() { return customExerciseSaveAttempts },
     setWorkspaceFailure(value: boolean) { failWorkspace = value },
     setThreadsFailure(value: boolean) { failThreads = value },
     getSaveAttempts() { return saveAttempts },
@@ -714,7 +742,7 @@ for (const [account, profileId] of [
     await action.click()
     await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}\\?reply=1$`))
     expect(await page.evaluate(() => (window.history.state as { usr?: { returnTo?: string } } | null)?.usr?.returnTo)).toBe('/today?date=2026-09-24')
-    await page.getByRole('button', { name: 'Назад' }).click()
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
     await expect(page).toHaveURL(/\/today\?date=2026-09-24$/)
   })
 }
@@ -892,7 +920,7 @@ test('trainer without Fit Lime keeps the previous clients list and archive', asy
   await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
   await page.getByRole('link', { name: 'Архив' }).click()
-  await expect(page.getByRole('heading', { name: 'Архив' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Архив', exact: true })).toBeVisible()
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
 })
 
@@ -1248,6 +1276,86 @@ test('Fit Lime trainer profile has addressed load retry and non-pilot control', 
   await page.goto('/profile/settings')
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
   await expect(page.getByRole('switch', { name: 'Тёмная тема', exact: true })).toBeVisible()
+})
+
+for (const [account, profileId] of [
+  ['first', trainerId],
+  ['second', '10000000-0000-4000-8000-000000000010'],
+] as const) {
+  test(`${account} Fit Lime exercises retain search, technique, own list and profile return`, async ({ page }, testInfo) => {
+    await mockPilot(page, { profileId, fitLime: true, withCustomExercise: true })
+    await page.goto('/exercises')
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+    await expect(page.getByRole('heading', { name: 'Упражнения', exact: true })).toBeVisible()
+    await page.getByLabel('Поиск упражнения').fill('лестница')
+    await expect(page.locator('.catalog-media-card').filter({ hasText: 'Лестничный тренажёр' })).toBeVisible()
+    if (account === 'first') {
+      const screenshotPath = testInfo.outputPath('fit-lime-exercises.png')
+      await page.screenshot({ path: screenshotPath })
+      await testInfo.attach('fit-lime-exercises', { path: screenshotPath, contentType: 'image/png' })
+    }
+    await page.locator('.catalog-media-card').filter({ hasText: 'Лестничный тренажёр' }).click()
+    await expect(page.getByRole('dialog').getByRole('heading', { name: 'Лестничный тренажёр' })).toBeVisible()
+    await page.getByRole('dialog').getByRole('button', { name: 'Закрыть' }).first().click()
+    await page.getByLabel('Поиск упражнения').fill('невозможное упражнение')
+    await expect(page.getByText('Ничего не найдено')).toBeVisible()
+    await page.getByRole('button', { name: 'Сбросить поиск' }).click()
+    await expect(page.locator('.catalog-custom-item')).toContainText('Мой присед')
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+    await expect(page).toHaveURL(/\/profile$/)
+  })
+}
+
+test('Fit Lime custom exercise creation keeps draft after server error', async ({ page }) => {
+  const backend = await mockPilot(page, { fitLime: true, failFirstCustomExerciseSave: true })
+  await page.goto('/exercises')
+  const form = page.locator('.catalog-custom-form')
+  await form.getByLabel('Название').fill('Мой присед')
+  await form.getByRole('button', { name: 'Добавить' }).click()
+  await expect(form.getByRole('alert')).toBeVisible()
+  await expect(form.getByLabel('Название')).toHaveValue('Мой присед')
+  await form.getByRole('button', { name: 'Добавить' }).click()
+  await expect(page.locator('.catalog-custom-item')).toContainText('Мой присед')
+  expect(backend.getCustomExerciseSaveAttempts()).toBe(2)
+})
+
+test('Fit Lime custom exercise edit and archive keep confirmation, error and restore', async ({ page }) => {
+  const backend = await mockPilot(page, { fitLime: true, withCustomExercise: true, failArchive: true })
+  await page.goto('/exercises')
+  const item = page.locator('.catalog-custom-item')
+  await expect(item).toContainText('Мой присед')
+  await item.getByRole('button', { name: 'Изменить' }).click()
+  const form = page.locator('.catalog-custom-form')
+  await form.getByLabel('Название').fill('Мой присед с паузой')
+  await form.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(item).toContainText('Мой присед с паузой')
+  await item.getByRole('button', { name: 'В архив' }).click()
+  await expect(page.getByRole('alertdialog', { name: /Перенести «Мой присед с паузой» в архив/ })).toBeVisible()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена' }).click()
+  await expect(item).not.toHaveClass(/archived/)
+  await item.getByRole('button', { name: 'В архив' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'В архив' }).click()
+  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(item).not.toHaveClass(/archived/)
+  backend.setArchiveFailure(false)
+  await item.getByRole('button', { name: 'В архив' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'В архив' }).click()
+  await expect(item).toHaveClass(/archived/)
+  await item.getByRole('button', { name: 'Вернуть' }).click()
+  await expect(item).not.toHaveClass(/archived/)
+})
+
+test('Fit Lime exercises retry failed data without changing non-pilot catalog', async ({ page }) => {
+  const backend = await mockPilot(page, { fitLime: true, failTrainingData: true })
+  await page.goto('/exercises')
+  await expect(page.locator('.catalog-custom-results').getByRole('alert')).toBeVisible()
+  backend.setTrainingDataFailure(false)
+  await page.locator('.catalog-custom-results').getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.getByText('Собственных упражнений пока нет')).toBeVisible()
+  await mockPilot(page)
+  await page.reload()
+  await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+  await expect(page.locator('.phone-frame')).toHaveClass(/exercise-catalog-identity/)
 })
 
 test('the bell count equals the visible queue and updates after snoozing', async ({ page }) => {
