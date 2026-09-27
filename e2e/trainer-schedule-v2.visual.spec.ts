@@ -325,6 +325,61 @@ test('trainer without Fit Lime keeps the existing day hierarchy', async ({ page 
   await expect(page.locator('.schedule-v2 > section').first()).toHaveClass(/schedule-v2-home-actions/)
 })
 
+for (const [account, profileId] of [
+  ['first', trainerId],
+  ['second', '10000000-0000-4000-8000-000000000010'],
+] as const) {
+  test(`${account} Fit Lime schedule keeps week, fortnight and selected date`, async ({ page }, testInfo) => {
+    await page.clock.setFixedTime(new Date('2026-09-21T12:30:00+03:00'))
+    await mockPilot(page, { profileId, fitLime: true })
+    await page.goto('/schedule?week=2026-09-21')
+    await expect(page.locator('.fit-lime-schedule')).toBeVisible()
+    await expect(page.locator('.schedule-v2-day-card')).toHaveCount(7)
+    const weekstripSurface = await page.locator('.schedule-v2-weekdays').first().evaluate((element) => ({
+      labelBackground: getComputedStyle(element).backgroundColor,
+      numberStripBackground: getComputedStyle(element, '::before').backgroundColor,
+    }))
+    expect(weekstripSurface).toEqual({ labelBackground: 'rgba(0, 0, 0, 0)', numberStripBackground: 'rgb(37, 54, 12)' })
+    await expect(page.locator('.schedule-v2-period-summary')).toHaveText('1 тренировка · 1 клиент')
+    await expect(page.locator('.schedule-v2-day-card').first()).toContainText('Свободный день')
+    await expect(page.locator('.schedule-v2-day-card').nth(3)).toContainText('Алексей Смирнов')
+    if (account === 'first') {
+      const screenshotPath = testInfo.outputPath('fit-lime-schedule-week.png')
+      await page.screenshot({ path: screenshotPath, fullPage: true })
+      await testInfo.attach('fit-lime-schedule-week', { path: screenshotPath, contentType: 'image/png' })
+    }
+    await page.getByRole('button', { name: '2 недели', exact: true }).click()
+    await expect(page.locator('.schedule-v2-day-card')).toHaveCount(14)
+    await page.locator('.schedule-v2-day-card').nth(8).click()
+    await expect(page).toHaveURL(/\/today\?date=2026-09-29&week=2026-09-21&range=2w$/)
+    await page.reload()
+    await expect(page.locator('.fit-lime-today')).toBeVisible()
+    await page.getByRole('button', { name: 'Настройки расписания' }).click()
+    await page.getByRole('menuitem', { name: 'К 2 неделям' }).click()
+    await expect(page.locator('.fit-lime-schedule')).toBeVisible()
+    await expect(page.locator('.schedule-v2-day-card')).toHaveCount(14)
+  })
+}
+
+test('Fit Lime weekstrip fits a 320-pixel phone without clipping days', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 })
+  await page.clock.setFixedTime(new Date('2026-09-21T12:30:00+03:00'))
+  await mockPilot(page, { fitLime: true })
+  await page.goto('/schedule?week=2026-09-21')
+  await expect(page.locator('.fit-lime-schedule')).toBeVisible()
+  const lastDay = await page.locator('.schedule-v2-weekdays button').last().boundingBox()
+  expect(lastDay).not.toBeNull()
+  expect(lastDay && lastDay.x + lastDay.width <= 320).toBe(true)
+  await expect(page.locator('.schedule-v2-weekdays button')).toHaveCount(7)
+})
+
+test('trainer without Fit Lime keeps the existing week styling', async ({ page }) => {
+  await mockPilot(page)
+  await page.goto('/schedule?week=2026-09-21')
+  await expect(page.locator('.schedule-v2-weekstrip')).toBeVisible()
+  await expect(page.locator('.fit-lime-schedule')).toHaveCount(0)
+})
+
 test('non-pilot trainer retains the classic Today and schedule routes', async ({ page }) => {
   await mockPilot(page, { pilot: false, workouts: [] })
   await page.goto('/today')

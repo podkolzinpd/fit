@@ -647,6 +647,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const periodLabel = scheduleV2Range(weekStart, periodEnd)
   const showHomeActions = isDayView && selected === today
   const fitLimeToday = isDayView && isFitLimeEnabled(actor)
+  const fitLimeSchedule = !isDayView && isFitLimeEnabled(actor)
   const homeClients = useQuery({
     queryKey: ['clients', false],
     queryFn: () => clientsRepository.list(false),
@@ -739,7 +740,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   </section>
 
   return <Page
-    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${fitLimeToday ? ' fit-lime-today' : ''}`}
+    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}`}
     title="Расписание"
     hideTitle
   >
