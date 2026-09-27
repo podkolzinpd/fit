@@ -44,17 +44,20 @@ describe('Fit Lime route boundary', () => {
     expect(isFitLimeApprovedTrainerRoute(pathname, search)).toBe(approved)
   })
 
-  it('activates the calendar, inbox and conversation, but not unapproved routes', () => {
+  it('activates the calendar, chat and clients lists, but not unapproved routes', () => {
     expect(isFitLimeShellRoute(pilot, '/today', '?date=2026-09-25')).toBe(true)
     expect(isFitLimeShellRoute(pilot, '/schedule', '?range=2w')).toBe(true)
     expect(isFitLimeShellRoute(pilot, '/chat', '')).toBe(true)
     expect(isFitLimeShellRoute(pilot, '/chat/thread-1', '')).toBe(true)
     expect(isFitLimeShellRoute(pilot, '/chat/thread-1/extra', '')).toBe(false)
-    expect(isFitLimeShellRoute(pilot, '/clients', '')).toBe(false)
+    expect(isFitLimeShellRoute(pilot, '/clients', '')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/clients/archive', '')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/clients/client-1', '')).toBe(false)
     expect(isFitLimeShellRoute(pilot, '/today', '?view=compose')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/today', '')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/chat', '')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/chat/thread-1', '')).toBe(false)
+    expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/clients', '')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: false, fitLime: true } }, '/today', '')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, kind: 'client', role: 'client', clientId: 'client-1', trainerId: 'trainer-1', fullName: 'Клиент' }, '/schedule', '')).toBe(false)
   })

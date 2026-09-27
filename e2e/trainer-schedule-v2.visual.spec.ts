@@ -41,7 +41,7 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null }
 
-async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; workouts?: MockWorkout[]; failClients?: boolean; failTrainingData?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
+async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; failClients?: boolean; failTrainingData?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
@@ -51,6 +51,7 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
   let questionAnswered = false
   let unreadCount = 4
   let workouts: MockWorkout[] = options.workouts ?? [workout]
+  let clientRecords = options.clientRecords ?? [{ id: clientId, fullName: 'Алексей Смирнов', archivedAt: null, version: 1 }]
   let saveAttempts = 0
   let chatSendAttempts = 0
   const sentMessages: Array<{ id: string; conversationId: string; senderId: string; body: string; createdAt: string; editedAt: null; replyTo: null; image: null }> = []
@@ -125,12 +126,12 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
         return
       }
-      body = { clients: options.hasClients === false ? [] : [{
-        id: clientId,
+      body = { clients: options.hasClients === false ? [] : clientRecords.filter((client) => url.searchParams.get('archived') === 'true' ? client.archivedAt !== null : client.archivedAt === null).map((client) => ({
+        id: client.id,
         canArchive: true,
         hasAccount: true,
-        fullName: 'Алексей Смирнов',
-        canonicalFullName: 'Алексей Смирнов',
+        fullName: client.fullName,
+        canonicalFullName: client.fullName,
         gender: null,
         ageYears: null,
         ageUpdatedAt: null,
@@ -138,10 +139,15 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
         goal: null,
         note: null,
         currentWeightKg: null,
-        archivedAt: null,
-        version: 1,
+        archivedAt: client.archivedAt,
+        version: client.version,
         membershipVersion: 1,
-      }] }
+      })) }
+    } else if (/^\/v1\/clients\/[0-9a-f-]+\/archive$/.test(url.pathname) && route.request().method() === 'PUT') {
+      const id = url.pathname.split('/')[3]
+      const command = route.request().postDataJSON() as { archived: boolean; expectedVersion: number }
+      clientRecords = clientRecords.map((client) => client.id === id ? { ...client, archivedAt: command.archived ? '2026-09-24T12:00:00.000Z' : null, version: client.version + 1 } : client)
+      body = { client: { id, version: command.expectedVersion + 1 } }
     } else if (url.pathname === `/v1/clients/${clientId}/attention/snooze` && route.request().method() === 'POST') {
       snoozedUntil = '2099-01-01T00:00:00.000Z'
       body = { client: { snoozedUntil } }
@@ -281,7 +287,7 @@ for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
 ] as const) {
-  test(`${account} trainer receives Fit Lime shell only on the redesigned calendar`, async ({ page }, testInfo) => {
+  test(`${account} trainer receives Fit Lime shell on released routes only`, async ({ page }, testInfo) => {
     await mockPilot(page, { profileId, fitLime: true, workouts: [] })
     await page.goto('/today?date=2026-09-24')
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
@@ -295,8 +301,8 @@ for (const [account, profileId] of [
     await page.reload()
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
     await page.goto('/clients')
-    await expect(page.locator('.phone-frame')).not.toHaveClass(/fit-lime-shell/)
-    await expect(page.locator('html')).not.toHaveClass(/fit-lime-document/)
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+    await expect(page.locator('html')).toHaveClass(/fit-lime-document/)
     await page.goto('/today?view=compose')
     await expect(page.locator('.phone-frame')).not.toHaveClass(/fit-lime-shell/)
     await page.goto('/schedule?week=2026-09-21')
@@ -735,6 +741,69 @@ test('trainer without Fit Lime keeps the existing conversation styling', async (
   await mockPilot(page)
   await page.goto(`/chat/${conversationId}`)
   await expect(page.getByRole('region', { name: 'Переписка' }).getByText('Спасибо!')).toBeVisible()
+  await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+})
+
+const limeClients = [
+  { id: clientId, fullName: 'Алексей Смирнов', archivedAt: null, version: 1 },
+  { id: '10000000-0000-4000-8000-000000000021', fullName: 'Борис Иванов', archivedAt: null, version: 1 },
+  { id: '10000000-0000-4000-8000-000000000022', fullName: 'Вера Кузнецова', archivedAt: null, version: 1 },
+  { id: '10000000-0000-4000-8000-000000000023', fullName: 'Глеб Орлов', archivedAt: null, version: 1 },
+  { id: '10000000-0000-4000-8000-000000000024', fullName: 'Дарья Ершова', archivedAt: null, version: 1 },
+  { id: '10000000-0000-4000-8000-000000000025', fullName: 'Егор Панов', archivedAt: null, version: 1 },
+]
+
+for (const [account, profileId] of [
+  ['first', trainerId],
+  ['second', '10000000-0000-4000-8000-000000000010'],
+] as const) {
+  test(`${account} Fit Lime client list keeps search, archive and restore`, async ({ page }, testInfo) => {
+    await mockPilot(page, { profileId, fitLime: true, clientRecords: limeClients })
+    await page.goto('/clients')
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+    await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+    await expect(page.locator('.client-card').first()).toHaveCSS('background-color', 'rgb(25, 25, 28)')
+    await page.getByRole('searchbox', { name: 'Поиск клиента' }).fill('кузнец')
+    await expect(page.getByRole('link', { name: /Вера Кузнецова/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Алексей Смирнов/ })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Очистить поиск' }).click()
+    if (account === 'first') {
+      const screenshotPath = testInfo.outputPath('fit-lime-clients-list.png')
+      await page.screenshot({ path: screenshotPath, fullPage: true })
+      await testInfo.attach('fit-lime-clients-list', { path: screenshotPath, contentType: 'image/png' })
+    }
+    const firstCard = page.locator(`[data-client-swipe-id="${clientId}"]`)
+    await firstCard.getByRole('button', { name: 'Действия с клиентом Алексей Смирнов' }).click()
+    await firstCard.getByRole('button', { name: 'В архив' }).click()
+    await expect(page.getByRole('status').getByText('Карточка «Алексей Смирнов» перемещена в архив')).toBeVisible()
+    await page.getByRole('link', { name: 'Архив' }).click()
+    await expect(page).toHaveURL(/\/clients\/archive$/)
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+    const archivedCard = page.locator(`[data-client-swipe-id="${clientId}"]`)
+    await expect(archivedCard.getByRole('link', { name: /Алексей Смирнов/ })).toBeVisible()
+    await archivedCard.getByRole('button', { name: 'Действия с клиентом Алексей Смирнов' }).click()
+    await archivedCard.getByRole('button', { name: 'Восстановить' }).click()
+    await expect(page.getByRole('heading', { name: 'Архив пуст' })).toBeVisible()
+  })
+}
+
+test('Fit Lime client loading error retries without losing the clients route', async ({ page }) => {
+  const backend = await mockPilot(page, { fitLime: true, failClients: true })
+  await page.goto('/clients')
+  await expect(page.getByRole('alert')).toBeVisible()
+  backend.setClientsFailure(false)
+  await page.getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.getByRole('link', { name: /Алексей Смирнов/ })).toBeVisible()
+  await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+})
+
+test('trainer without Fit Lime keeps the previous clients list and archive', async ({ page }) => {
+  await mockPilot(page, { clientRecords: limeClients })
+  await page.goto('/clients')
+  await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
+  await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+  await page.getByRole('link', { name: 'Архив' }).click()
+  await expect(page.getByRole('heading', { name: 'Архив' })).toBeVisible()
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
 })
 
