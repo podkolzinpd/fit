@@ -41,7 +41,8 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null }
 
-async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?: MockWorkout[]; failClients?: boolean; failTrainingData?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean } = {}) {
+async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; hasClients?: boolean; workouts?: MockWorkout[]; failClients?: boolean; failTrainingData?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean } = {}) {
+  const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
   let failTrainingData = options.failTrainingData ?? false
@@ -64,7 +65,7 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
     localStorage.setItem(`fit.coachmarks-seen.${profileId}`, JSON.stringify([
       'assistant-all-trainers-2026-09',
     ]))
-  }, { token: sessionToken, profileId: trainerId })
+  }, { token: sessionToken, profileId })
   await page.route('http://127.0.0.1:4100/v1/**', async (route) => {
     const url = new URL(route.request().url())
     let body: unknown
@@ -72,12 +73,12 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
       body = {
         accessMode: 'read_write',
         profile: {
-          id: trainerId,
+          id: profileId,
           firstName: 'Антон',
           lastName: null,
           timezone: 'Europe/Moscow',
           accountRole: 'trainer',
-          experiments: { trainerScheduleV2: true },
+          experiments: { trainerScheduleV2: options.pilot !== false },
         },
       }
     } else if (url.pathname === '/v1/legal/acceptance') {
@@ -240,6 +241,38 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
 }
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
+
+for (const [account, profileId] of [
+  ['first', trainerId],
+  ['second', '10000000-0000-4000-8000-000000000010'],
+] as const) {
+  test(`${account} server-assigned trainer keeps calendar, actions and inbox after direct navigation`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+    await mockPilot(page, { profileId, workouts: [] })
+    await page.goto('/today?date=2026-09-24')
+    await expect(page.locator('.trainer-schedule-v2-shell')).toBeVisible()
+    await expect(page.locator('.schedule-v2-topbar h1')).toHaveText('24 сентября')
+    await expect(page.getByRole('button', { name: '1 Незавершённые действия' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '5 Вопросы и сообщения' })).toBeVisible()
+    await page.getByRole('button', { name: '5 Вопросы и сообщения' }).click()
+    await expect(page.getByRole('dialog', { name: 'Входящие' }).getByRole('heading', { name: 'Сообщения' })).toBeVisible()
+    await page.getByRole('button', { name: 'Закрыть входящие' }).click()
+    await page.goto('/schedule?week=2026-09-21')
+    await expect(page.getByRole('button', { name: 'Четверг, 24 сентября' })).toBeVisible()
+    await page.reload()
+    await expect(page.locator('.schedule-v2-card-grid')).toBeVisible()
+  })
+}
+
+test('non-pilot trainer retains the classic Today and schedule routes', async ({ page }) => {
+  await mockPilot(page, { pilot: false, workouts: [] })
+  await page.goto('/today')
+  await expect(page.locator('.today-page')).toBeVisible()
+  await expect(page.locator('.trainer-schedule-v2-shell')).toHaveCount(0)
+  await page.goto('/schedule')
+  await expect(page.locator('.schedule-page:not(.schedule-v2)')).toBeVisible()
+  await expect(page.locator('.trainer-schedule-v2-shell')).toHaveCount(0)
+})
 
 test('renders the single-trainer schedule and combines questions with messages', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
