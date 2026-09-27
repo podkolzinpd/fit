@@ -29,5 +29,6 @@ export function isFitLimeShellRoute(
   return isTrainerScheduleV2Enabled(actor)
     && (isTrainerScheduleV2CalendarRoute(pathname, search)
       || pathname === '/chat' || /^\/chat\/[^/]+$/.test(pathname)
-      || pathname === '/clients' || pathname === '/clients/archive')
+      || pathname === '/clients' || pathname === '/clients/archive'
+      || (/^\/clients\/[^/]+$/.test(pathname) && pathname !== '/clients/new'))
 }
