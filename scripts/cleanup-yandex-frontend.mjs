@@ -24,7 +24,7 @@ export function referencedObjects(spec) {
 
 export function planCleanup({ specification, manifests, inventory, now = new Date() }) {
   referencedObjects(specification)
-  const cutoff = now.getTime() - 30 * DAY
+  const cutoff = now.getTime() - 3 * DAY
   if (!Number.isFinite(cutoff)) throw new Error('Invalid cleanup time')
   const records = new Map()
   for (const m of manifests) {
@@ -61,7 +61,9 @@ export function planCleanup({ specification, manifests, inventory, now = new Dat
   for (const key of referencedObjects(next)) protectedKeys.add(key)
   const seen = new Set()
   for (const item of inventory) {
-    if (!isReleaseObject(item.key) || seen.has(item.key) || !Number.isFinite(Date.parse(item.lastModified))
+    // Existing bootstrap bundle observed in the bucket; never a deletion target.
+    const bootstrapBundle = item.key === 'releases/frontend-release.json'
+    if ((!isReleaseObject(item.key) && !bootstrapBundle) || seen.has(item.key) || !Number.isFinite(Date.parse(item.lastModified))
         || !Number.isSafeInteger(item.size) || item.size < 0) throw new Error('Invalid object inventory')
     seen.add(item.key)
   }

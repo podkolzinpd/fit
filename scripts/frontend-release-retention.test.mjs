@@ -74,7 +74,7 @@ async function history(t) {
   const plans = []
   for (const rev of ['a', 'b', 'c', 'd']) plans.push(gatewayPlan(await fixture(t, rev), [], target))
   const manifests = plans.map((p, index) => ({
-    ...releaseManifest(p, plans[Math.max(0, index - 1)].release, new Date(index === 1 ? '2026-09-20' : '2026-01-01')),
+    ...releaseManifest(p, plans[Math.max(0, index - 1)].release, new Date(index === 1 ? '2026-09-26' : '2026-01-01')),
     previousSpecification: plans[Math.max(0, index - 1)].specification,
   }))
   let specification = plans[0].specification
@@ -85,7 +85,7 @@ async function history(t) {
   return { specification, manifests, inventory, now: new Date('2026-09-27') }
 }
 
-test('retention protects active and previous even older than 30 days, plus recent releases; prunes obsolete routes first', async (t) => {
+test('retention protects active and previous regardless of age, plus the last 3 days; prunes obsolete routes first', async (t) => {
   const data = await history(t)
   const plan = planCleanup(data)
   assert.deepEqual(plan.keptReleases, data.manifests.slice(1).map((m) => m.release).sort())
@@ -119,8 +119,26 @@ test('shared objects referenced by retained manifests survive, unknown legacy up
   }
   const unknown = `releases/${'e'.repeat(40)}-${'f'.repeat(64)}/orphan.js`
   data.inventory.push({ key: unknown, size: 1, lastModified: '2025-01-01', etag: 'x' })
+  data.inventory.push({ key: 'releases/frontend-release.json', size: 1, lastModified: '2025-01-01', etag: 'x' })
   const plan = planCleanup(data)
-  assert.ok(!plan.objects.some((o) => o.key === key || o.key === unknown))
+  assert.ok(!plan.objects.some((o) => o.key === key || o.key === unknown || o.key === 'releases/frontend-release.json'))
+})
+
+test('3-day cutoff retains an exact-boundary release and expires it only after the boundary', async (t) => {
+  const data = await history(t)
+  const recent = data.manifests[1]
+  recent.createdAt = '2026-09-24T00:00:00.000Z'
+  const exact = planCleanup(data)
+  assert.ok(exact.keptReleases.includes(recent.release))
+  assert.ok(!exact.manifests.some((item) => item.key === manifestKey(recent.release)))
+  for (const item of data.inventory) {
+    if (recent.objects.includes(item.key) || item.key === manifestKey(recent.release)) item.lastModified = recent.createdAt
+  }
+  const expired = planCleanup({ ...data, now: new Date('2026-09-27T00:00:00.001Z') })
+  assert.ok(!expired.keptReleases.includes(recent.release))
+  assert.ok(expired.manifests.some((item) => item.key === manifestKey(recent.release)))
+  assert.ok(expired.keptReleases.includes(expired.active))
+  assert.ok(expired.keptReleases.includes(expired.previous))
 })
 
 for (const failure of ['manifest-missing', 'invalid-path', 'missing-protected', 'future-manifest', 'gateway-drift', 'duplicate-inventory']) {
@@ -186,9 +204,9 @@ test('first manifest pins the full legacy rollback graph; newly modified old obj
   assert.equal(planCleanup(data2).manifests.length, 0)
 })
 
-test('weekly cleanup is opt-in, defaults to a plan and shares the deploy lock/environment', async () => {
+test('daily cleanup is opt-in, defaults to a plan and shares the deploy lock/environment', async () => {
   const workflow = await readFile(new URL('../.github/workflows/cleanup-yandex-frontend.yml', import.meta.url), 'utf8')
-  assert.match(workflow, /cron: '17 3 \* \* 0'/)
+  assert.match(workflow, /cron: '17 3 \* \* \*'/)
   assert.match(workflow, /default: plan/)
   assert.match(workflow, /group: yandex-frontend-production/)
   assert.match(workflow, /cancel-in-progress: false/)

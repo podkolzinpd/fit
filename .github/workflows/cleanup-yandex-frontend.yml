@@ -2,11 +2,11 @@ name: Cleanup Yandex frontend releases
 
 on:
   schedule:
-    - cron: '17 3 * * 0'
+    - cron: '17 3 * * *'
   workflow_dispatch:
     inputs:
       mode:
-        description: 'plan = read-only inventory; apply = guarded 30-day cleanup'
+        description: 'plan = read-only inventory; apply = guarded 3-day cleanup'
         type: choice
         options: [plan, apply]
         default: plan

@@ -11,8 +11,8 @@ Tracker connection is unavailable here; no ticket ID is invented.
 3. Для каждой версии сохранять полный список её файлов — это позволит безопасно переключаться и откатываться.
 4. Новые файлы загружать параллельно.
 5. Всегда сохранять текущий релиз и предыдущий для быстрого отката.
-6. Остальные релизы хранить 30 дней.
-7. Раз в неделю удалять устаревшие релизы.
+6. Остальные релизы хранить 3 дня (срок изменён по прямому решению пользователя).
+7. Ежедневно удалять устаревшие релизы (частота изменена вместе со сроком).
 8. Общие файлы удалять только тогда, когда на них больше не ссылается ни один сохраняемый релиз.
 
 ## Implementation and acceptance evidence
@@ -22,8 +22,8 @@ Tracker connection is unavailable here; no ticket ID is invented.
 | 1–2 | Verify previous object bytes; unchanged objects stay at their original immutable release key; only new bytes require PUT | Cross-commit test reuses 4/6 files; 2 PUTs, zero additional PUTs on retry; collision/access errors fail closed |
 | 3 | Private `releases/<release>/release-manifest.json` records own routes/objects, creation date and previous gateway; read back before activation | Manifest write/readback and permission-failure tests; reserved filename rejected |
 | 4 | At most six upload/read/metadata/smoke workers, drained before failure propagates | Bounded worker and in-flight drain test; existing upload checksum suite |
-| 5–6 | Active and actual previous release pinned independent of age; other manifests retained for 30 days | Retention tests with months-old active/previous, recent release and shared objects |
-| 7–8 | Sunday 03:17 UTC, same concurrency lock as deployment; preview exact deletion inventory; prune only expired compatibility routes before deleting unreferenced objects | Workflow, pagination, inventory, drift, partial-failure and zero-delete safety tests |
+| 5–6 | Active and actual previous release pinned independent of age; other manifests retained for 3 days | Retention tests with months-old active/previous, recent release, exact cutoff and shared objects |
+| 7–8 | Daily 03:17 UTC, same concurrency lock as deployment; preview exact deletion inventory; prune only expired compatibility routes before deleting unreferenced objects | Workflow, pagination, inventory, drift, partial-failure and zero-delete safety tests |
 
 ## Storage and rollout
 
@@ -46,8 +46,14 @@ Old releases without a manifest are not deleted merely because of their age.
 The first modern manifest also protects the full pre-migration rollback graph;
 later manifests can share files from that graph. Untracked failed/legacy uploads
 require a separate reviewed inventory, not a wildcard cleanup. A standard DELETE
-does not purge object versions: if versioning is enabled, noncurrent versions
-may still consume storage. No bucket lifecycle rule is added.
+does not purge object versions. On 27 September, the console confirmed versioning
+is enabled and there is no lifecycle configuration: noncurrent versions therefore
+still consume storage. A separate operator rule is prepared but not saved:
+`releases/` prefix, only `NoncurrentVersionExpiration`, 3 days after becoming
+noncurrent; no current-object Expiration, no transitions. This gives deleted
+releases a further 3-day recovery window before irreversible version removal.
+Saving that rule requires explicit confirmation; no lifecycle setting is applied
+by this PR. Semantics: [Object Storage lifecycles](https://yandex.cloud/ru/docs/storage/concepts/lifecycles).
 
 ## Failure and recovery
 
@@ -63,7 +69,7 @@ may still consume storage. No bucket lifecycle rule is added.
   objects may remain absent on retry; pinned objects may not.
 - Prune obsolete hashed routes before removing backing objects. Do not roll
   back to a pruned gateway after deletions. Current/previous own assets survive;
-  90-day artifacts do not extend the 30-day retention of expired releases.
+  90-day artifacts do not extend the 3-day retention of expired releases.
 - Old tabs are supported for the retention window, not indefinitely. Beyond it,
   the existing missing-JS recovery remains the fallback.
 
