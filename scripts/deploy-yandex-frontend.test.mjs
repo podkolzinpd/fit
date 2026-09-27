@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { packageRelease, supportedRouting } from './frontend-release.mjs'
 import { gatewayPlan } from './frontend-gateway-plan.mjs'
-import { deployFrontend, retainAssets, target, validateSpecification, smoke, createCloud } from './deploy-yandex-frontend.mjs'
+import { deployFrontend, retainAssets, target, validateSpecification, smoke, createCloud, verifyStorageAccess } from './deploy-yandex-frontend.mjs'
 
 async function fixture(t, name = 'old', wasm = false) {
   const directory = await mkdtemp(join(tmpdir(), 'fit-deploy-test-'))
@@ -34,7 +34,7 @@ function fakeCloud(beforeBundle) {
     backup: async () => { events.push('backup') },
     upload: async () => { events.push('upload') },
     verifyMetadata: async () => { events.push('metadata') },
-    publishWasm: async (key) => { events.push(key) },
+    verifyStorageAccess: async () => { events.push('storage-access') },
     activate: async (spec) => { events.push('activate'); current = structuredClone(spec) },
     smoke: async () => { events.push('smoke') },
     verifyRollback: async (bytes) => { events.push('rollback-verified'); assert.equal(bytes.toString(), '<html>old</html>') },
@@ -51,14 +51,14 @@ test('uploads and validates before switching; keeps old hashed assets and unchan
   assert.ok(cloud.events.indexOf('backup') < cloud.events.indexOf('upload'))
   assert.ok(cloud.events.lastIndexOf('metadata') < cloud.events.indexOf('activate'))
   assert.ok(cloud.events.indexOf('current') < cloud.events.indexOf('activate'))
-  assert.ok(cloud.events.includes(`releases/${next.release}/assets/engine-12345678.wasm`))
+  assert.ok(cloud.events.indexOf('storage-access') < cloud.events.indexOf('activate'))
   const current = await cloud.specification()
   assert.deepEqual(current.paths['/assets/old-12345678.js'], cloud.before.paths['/assets/old-12345678.js'])
   const previous = { ...cloud.before, 'x-yc-apigateway': { rateLimit: { allRequests: { rps: 100 } } } }
   assert.deepEqual(retainAssets(gatewayPlan(next, [], target).specification, previous)['x-yc-apigateway'], previous['x-yc-apigateway'])
 })
 
-for (const stage of ['backup', 'upload', 'verifyMetadata', 'publishWasm', 'assertCurrentCommit']) {
+for (const stage of ['backup', 'upload', 'verifyMetadata', 'verifyStorageAccess', 'assertCurrentCommit']) {
   test(`${stage} failure never activates or rolls back`, async (t) => {
     const cloud = fakeCloud(await fixture(t))
     cloud[stage] = async () => { throw new Error('failure') }
@@ -148,12 +148,12 @@ test('smoke checks routes, all asset hashes, caches, WASM redirect/CORS and miss
   await assert.rejects(smoke(bundle, target.frontendOrigin, responses(bundle, 'assets/new-12345678.js')), /smoke failed/)
 })
 
-test('cloud adapter only updates spec and restricts public ACL to release WASM', async (t) => {
+test('cloud adapter only updates spec and has no ACL mutation operation', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'fit-adapter-test-'))
   t.after(() => rm(directory, { force: true, recursive: true }))
   const calls = []
   const cloud = createCloud({ directory, run: async (...args) => { calls.push(args); return { stdout: '{}' } } })
-  await assert.rejects(cloud.publishWasm('releases/test/index.html'))
+  assert.equal(cloud.publishWasm, undefined)
   assert.equal(calls.length, 0)
   const spec = gatewayPlan(await fixture(t), [], target).specification
   await cloud.activate(spec)
@@ -169,6 +169,44 @@ test('metadata guard uses actual yc snake_case fields and rejects stale cache me
   metadata.cache_control = 'public, max-age=3600'
   await assert.rejects(cloud.verifyMetadata(object), /metadata mismatch/)
 })
+
+test('storage access is read-only: public WASM for both origins, all other files and listing private', async (t) => {
+  const plan = gatewayPlan(await fixture(t, 'new', true), [], target)
+  const requests = []
+  await verifyStorageAccess(plan, async (url, options) => {
+    requests.push({ url, options })
+    assert.equal(options.headers?.Authorization, undefined)
+    assert.ok(options.method === undefined || options.method === 'HEAD')
+    const wasm = plan.objects.find((object) => url.endsWith(object.object) && object.key.endsWith('.wasm'))
+    return wasm ? new Response(Buffer.from(wasm.content, 'base64'), { headers: {
+      'content-type': wasm.contentType, 'access-control-allow-origin': options.headers.Origin,
+    } }) : new Response(null, { status: 403 })
+  })
+  assert.equal(requests.filter(({ options }) => options.method === 'HEAD').length, plan.objects.length - 1)
+  assert.deepEqual(requests.filter(({ options }) => options.headers?.Origin).map(({ options }) => options.headers.Origin),
+    [target.frontendOrigin, target.customOrigin])
+  assert.ok(requests.some(({ url }) => url.endsWith('?list-type=2&max-keys=1')))
+})
+
+for (const failure of ['wasm-private', 'wasm-bytes', 'wasm-cors', 'wasm-mime', 'html-public', 'listing-public']) {
+  test(`storage preflight rejects ${failure} before activation`, async (t) => {
+    const bundle = await fixture(t, 'new', true)
+    const cloud = fakeCloud(await fixture(t))
+    cloud.verifyStorageAccess = (plan) => verifyStorageAccess(plan, async (url, options) => {
+      const wasm = plan.objects.find((object) => url.endsWith(object.object) && object.key.endsWith('.wasm'))
+      if (wasm) return new Response(failure === 'wasm-bytes' ? 'wrong' : Buffer.from(wasm.content, 'base64'), {
+        status: failure === 'wasm-private' ? 403 : 200,
+        headers: { 'content-type': failure === 'wasm-mime' ? 'text/plain' : wasm.contentType,
+          'access-control-allow-origin': failure === 'wasm-cors' ? 'https://wrong.invalid' : options.headers.Origin },
+      })
+      const publicFile = failure === 'html-public' && url.endsWith('/index.html')
+      const publicListing = failure === 'listing-public' && url.includes('?list-type=')
+      return new Response(null, { status: publicFile || publicListing ? 200 : 403 })
+    })
+    await assert.rejects(deployFrontend(bundle, cloud), /activation refused/)
+    assert.ok(!cloud.events.includes('activate'))
+  })
+}
 
 test('gateway change during upload is detected before activation', async (t) => {
   const cloud = fakeCloud(await fixture(t))
