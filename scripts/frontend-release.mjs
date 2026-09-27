@@ -7,6 +7,12 @@ import { prepareFrontend, frontendFileMetadata } from './prepare-yandex-frontend
 
 // Deliberately fail closed when the source hosting contract changes.
 export const supportedRouting = [
+  {
+    src: '/(.*)',
+    has: [{ type: 'host', value: 'fit-drab.vercel.app' }],
+    headers: { Location: 'https://fit-training.ru/$1' },
+    status: 308,
+  },
   { handle: 'filesystem' },
   { src: '/assets/.*\\.js', dest: '/asset-recovery.js' },
   { src: '/assets/.*', status: 404 },

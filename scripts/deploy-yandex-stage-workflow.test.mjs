@@ -669,6 +669,12 @@ test('deploys Vercel only from main, stable stage, and explicit PR preview refs'
 
 test('recovers stale frontend bundles without leaving a blank screen', () => {
   assert.deepEqual(vercelConfig.routes, [
+    {
+      src: '/(.*)',
+      has: [{ type: 'host', value: 'fit-drab.vercel.app' }],
+      headers: { Location: 'https://fit-training.ru/$1' },
+      status: 308,
+    },
     { handle: 'filesystem' },
     { src: '/assets/.*\\.js', dest: '/asset-recovery.js' },
     { src: '/assets/.*', status: 404 },
