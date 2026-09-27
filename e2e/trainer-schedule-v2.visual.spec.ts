@@ -41,11 +41,12 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null }
 
-async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; failClients?: boolean; failTrainingData?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
+async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
   let failTrainingData = options.failTrainingData ?? false
+  let failConnections = options.failConnections ?? false
   let failWorkspace = options.failWorkspace ?? false
   let failThreads = options.failThreads ?? false
   let questionAnswered = false
@@ -143,6 +144,14 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
         version: client.version,
         membershipVersion: 1,
       })) }
+    } else if (url.pathname === '/v1/connections') {
+      if (failConnections) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+        return
+      }
+      body = { memberships: clientRecords.map((client) => ({ clientId: client.id, trainerId: profileId, firstName: 'Антон', lastName: null, joinedAt: '2026-09-01T00:00:00.000Z', isRoot: true })), invitations: [] }
+    } else if (/^\/v1\/clients\/[0-9a-f-]+\/progress$/.test(url.pathname)) {
+      body = { entries: [], customMetrics: [], goal: null }
     } else if (/^\/v1\/clients\/[0-9a-f-]+\/archive$/.test(url.pathname) && route.request().method() === 'PUT') {
       const id = url.pathname.split('/')[3]
       const command = route.request().postDataJSON() as { archived: boolean; expectedVersion: number }
@@ -250,6 +259,7 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
   return {
     setClientsFailure(value: boolean) { failClients = value },
     setTrainingDataFailure(value: boolean) { failTrainingData = value },
+    setConnectionsFailure(value: boolean) { failConnections = value },
     setWorkspaceFailure(value: boolean) { failWorkspace = value },
     setThreadsFailure(value: boolean) { failThreads = value },
     getSaveAttempts() { return saveAttempts },
@@ -804,6 +814,59 @@ test('trainer without Fit Lime keeps the previous clients list and archive', asy
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
   await page.getByRole('link', { name: 'Архив' }).click()
   await expect(page.getByRole('heading', { name: 'Архив' })).toBeVisible()
+  await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+})
+
+for (const [account, profileId] of [
+  ['first', trainerId],
+  ['second', '10000000-0000-4000-8000-000000000010'],
+] as const) {
+  test(`${account} Fit Lime client card keeps actions and confirms archive`, async ({ page }, testInfo) => {
+    await mockPilot(page, { profileId, fitLime: true })
+    await page.goto(`/clients/${clientId}`)
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+    await expect(page.getByRole('heading', { name: 'Алексей Смирнов' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Сводка по спортсмену' })).toContainText('ИМТ')
+    await expect(page.getByRole('link', { name: /Запланировать тренировку/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: /История тренировок/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Прогресс и замеры/ })).toBeVisible()
+    await expect(page.locator('.client-detail-plan')).toHaveCSS('background-color', 'rgb(186, 255, 54)')
+    if (account === 'first') {
+      const screenshotPath = testInfo.outputPath('fit-lime-client-card.png')
+      await page.screenshot({ path: screenshotPath, fullPage: true })
+      await testInfo.attach('fit-lime-client-card', { path: screenshotPath, contentType: 'image/png' })
+    }
+    await page.getByRole('button', { name: 'Архивировать клиента' }).click()
+    await expect(page.getByRole('alertdialog', { name: /Переместить карточку/ })).toBeVisible()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена' }).click()
+    await expect(page.getByRole('button', { name: 'Архивировать клиента' })).toBeVisible()
+    await page.getByRole('button', { name: 'Архивировать клиента' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'В архив' }).click()
+    await expect(page.getByRole('button', { name: 'Вернуть из архива' })).toBeVisible()
+    await expect(page.getByRole('status').getByText('Изменение архива сохранено')).toBeVisible()
+    await page.getByRole('button', { name: 'Назад' }).click()
+    await expect(page).toHaveURL(/\/clients$/)
+  })
+}
+
+test('Fit Lime client card isolates secondary data failures and retries', async ({ page }) => {
+  const backend = await mockPilot(page, { fitLime: true, failTrainingData: true, failConnections: true })
+  await page.goto(`/clients/${clientId}`)
+  await expect(page.getByRole('heading', { name: 'Алексей Смирнов' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Запланировать тренировку/ })).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить статистику тренировок' })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить приглашения и права доступа' })).toBeVisible({ timeout: 15_000 })
+  backend.setTrainingDataFailure(false)
+  backend.setConnectionsFailure(false)
+  await page.getByRole('alert').filter({ hasText: 'Не удалось загрузить статистику тренировок' }).getByRole('button', { name: 'Повторить' }).click()
+  await page.getByRole('alert').filter({ hasText: 'Не удалось загрузить приглашения и права доступа' }).getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.getByRole('button', { name: 'Архивировать клиента' })).toBeVisible()
+})
+
+test('trainer without Fit Lime keeps the existing client card', async ({ page }) => {
+  await mockPilot(page)
+  await page.goto(`/clients/${clientId}`)
+  await expect(page.getByRole('heading', { name: 'Алексей Смирнов' })).toBeVisible()
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
 })
 
