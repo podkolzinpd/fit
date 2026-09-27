@@ -16,6 +16,7 @@ import './styles/fit-lime-chat.css'
 import './styles/fit-lime-clients.css'
 import './styles/fit-lime-client-detail.css'
 import './styles/fit-lime-client-forms.css'
+import './styles/fit-lime-client-goal.css'
 
 declare global {
   interface Window {
