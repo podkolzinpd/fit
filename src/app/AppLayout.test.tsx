@@ -89,6 +89,7 @@ describe('AppLayout: единственная UI Identity', () => {
     ['trainer', '/exercises', 'exercise-catalog-identity'],
     ['trainer', '/profile', 'trainer-profile-identity'],
     ['trainer', '/profile/settings', 'trainer-profile-identity'],
+    ['trainer', '/profile/trainer', 'trainer-profile-identity'],
     ['client', '/assistant', 'assistant-identity'],
     ['trainer', '/assistant', 'assistant-identity'],
   ] as const)('применяет identity для %s %s', (role, path, routeClass) => {
