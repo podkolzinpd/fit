@@ -14,6 +14,19 @@
       "VITE_ASSISTANT_PROGRAM_ENABLED": "true"
     }
   },
+  "redirects": [
+    {
+      "source": "/:path*",
+      "destination": "https://fit-training.ru/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "fit-drab.vercel.app"
+        }
+      ],
+      "permanent": true
+    }
+  ],
   "routes": [
     {
       "handle": "filesystem"
