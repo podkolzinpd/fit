@@ -7,6 +7,7 @@ import { initializeWorkoutInactivityNotificationActions } from './features/worko
 import '@fontsource-variable/onest/wght.css'
 import './styles.css'
 import './styles/fit-lime-components.css'
+import './styles/fit-lime-shell.css'
 
 declare global {
   interface Window {
