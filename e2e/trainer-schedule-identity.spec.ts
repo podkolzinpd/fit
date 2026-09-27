@@ -50,6 +50,7 @@ test('trainer Schedule preview keeps real date controls usable and compact', asy
   await expect(page.locator('.schedule-fortnight-date').first()).not.toHaveText(firstFortnightDay)
   await page.getByRole('button', { name: 'Сегодня' }).click()
   await expect(page).toHaveURL(/range=2w/)
+  await expect(page.locator('.schedule-fortnight-day').first()).toBeVisible()
   const firstWeekHeights = await page.locator('.schedule-fortnight-day').evaluateAll((days) => days.slice(0, 7).map((day) => day.getBoundingClientRect().height))
   expect(new Set(firstWeekHeights.map(Math.round)).size).toBe(1)
   expect(firstWeekHeights[0]).toBeGreaterThanOrEqual(148)
