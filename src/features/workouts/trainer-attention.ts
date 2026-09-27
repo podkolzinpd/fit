@@ -1,5 +1,5 @@
 import type { Client, ClientAttentionPreference, TrainerAttentionWorkout, Workout } from '../../shared/domain'
-import { daysBetween, type LocalDate } from '../../shared/local-date'
+import { daysBetween, formatLocalDate, localDate, type LocalDate } from '../../shared/local-date'
 
 export type TrainerActionReason = 'question' | 'discomfort' | 'past_plan'
 
@@ -18,6 +18,10 @@ export interface TrainerPlanningItem {
   clientName: string
   title: string
   detail: string
+}
+
+export function trainerPlanningDetail(value: string): string {
+  return value.replace(/\d{4}-\d{2}-\d{2}/g, (date) => formatLocalDate(localDate(date)))
 }
 
 function newestAttention(rows: TrainerAttentionWorkout[], reason: 'question' | 'discomfort') {
