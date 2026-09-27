@@ -9,6 +9,9 @@ import { releaseId, isReleaseObject, manifestKey, routeObject, releaseBatch, dig
 
 const DAY = 86_400_000
 const hashedAsset = (path) => /^\/assets\/[a-zA-Z0-9_./-]+-[A-Za-z0-9_-]{8,}\.[a-z0-9]+$/.test(path)
+const legacyFolderMarker = (item) => item?.size === 0 && typeof item.key === 'string'
+  && (item.key === 'releases/'
+    || /^releases\/[a-f0-9]{40}-[a-f0-9]{64}\/(?:[a-zA-Z0-9_-]+\/)*$/.test(item.key))
 export function referencedObjects(spec) {
   validateSpecification(spec)
   const objects = new Set()
@@ -64,7 +67,10 @@ export function planCleanup({ specification, manifests, inventory, now = new Dat
   for (const item of inventory) {
     // Existing bootstrap bundle observed in the bucket; never a deletion target.
     const bootstrapBundle = item.key === 'releases/frontend-release.json'
-    if ((!isReleaseObject(item.key) && !bootstrapBundle) || seen.has(item.key) || !Number.isFinite(Date.parse(item.lastModified))
+    // The console and older upload tooling may have left zero-byte S3 folder
+    // markers. They carry no release data and are preserved, not cleanup targets.
+    const folderMarker = legacyFolderMarker(item)
+    if ((!isReleaseObject(item.key) && !bootstrapBundle && !folderMarker) || seen.has(item.key) || !Number.isFinite(Date.parse(item.lastModified))
         || !Number.isSafeInteger(item.size) || item.size < 0) throw new Error('Invalid object inventory')
     seen.add(item.key)
   }
