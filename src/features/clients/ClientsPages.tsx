@@ -73,7 +73,10 @@ const clientProfileSchema = clientSchema.extend({
 
 export function ClientFormPage() {
   const { clients: clientsRepository } = useDataBackend()
+  const { actor } = useAuth()
   const { clientId } = useParams(); const navigate = useNavigate(); const queryClient = useQueryClient()
+  const fitLimePilot = isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)
+  const cancel = () => fitLimePilot ? navigate(clientId ? `/clients/${clientId}` : '/clients') : navigate(-1)
   useClientRealtime(clientId)
   const existing = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId ?? ''), enabled: Boolean(clientId) })
   if (clientId && (existing.isLoading || existing.error)) return <Page title="Карточка клиента"><AsyncView loading={existing.isLoading} error={existing.error} onRetry={() => void existing.refetch()} /></Page>
@@ -81,8 +84,8 @@ export function ClientFormPage() {
     await queryClient.invalidateQueries({ queryKey: ['clients'] })
     await queryClient.invalidateQueries({ queryKey: ['client', clientId] })
     navigate(`/clients/${clientId}`)
-  }} onCancel={() => navigate(-1)} />
-  return <ClientForm onSaved={async (id) => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); navigate(`/clients/${id}`) }} onCancel={() => navigate(-1)} />
+  }} onCancel={cancel} />
+  return <ClientForm onSaved={async (id) => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); navigate(`/clients/${id}`) }} onCancel={cancel} />
 }
 
 export function MyClientEditPage() {
@@ -139,6 +142,9 @@ function ClientForm({
   const { actor } = useAuth()
   const queryClient = useQueryClient()
   const today = todayInTimeZone(actor?.timezone)
+  const fitLimeBack = createMode === 'trainer' && isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)
+    ? existing ? `/clients/${existing.id}` : '/clients'
+    : undefined
   const showInitialWeight = !existing || canRecordInitialWeight
   const form = useForm<ClientProfileValues>({ resolver: zodResolver(clientProfileSchema), defaultValues: existing ? {
     fullName: existing.canonicalFullName, gender: existing.gender ?? undefined, ageYears: existing.ageYears ?? undefined, heightCm: existing.heightCm ?? undefined,
@@ -221,7 +227,7 @@ function ClientForm({
   const title = createMode === 'self' && !existing
     ? 'Профиль спортсмена'
     : existing ? 'Редактировать клиента' : 'Новый клиент'
-  return embedded ? contents : <Page title={title} className={createMode === 'self' ? 'client-self-edit-page' : undefined}>{contents}</Page>
+  return embedded ? contents : <Page title={title} back={fitLimeBack} className={createMode === 'self' ? 'client-self-edit-page' : undefined}>{contents}</Page>
 }
 
 // update_client пишет goal и note одной транзакцией с optimistic-lock (version).

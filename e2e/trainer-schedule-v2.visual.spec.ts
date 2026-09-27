@@ -122,6 +122,10 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
         hasMoreWorkouts: false,
         totalWorkouts: workouts.length,
       }
+    } else if (url.pathname === '/v1/clients' && route.request().method() === 'POST') {
+      const input = route.request().postDataJSON() as { fullName: string }
+      clientRecords = [...clientRecords, { id: '10000000-0000-4000-8000-000000000030', fullName: input.fullName, archivedAt: null, version: 1 }]
+      body = { client: { id: '10000000-0000-4000-8000-000000000030' } }
     } else if (url.pathname === '/v1/clients') {
       if (failClients) {
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
@@ -868,6 +872,79 @@ test('trainer without Fit Lime keeps the existing client card', async ({ page })
   await page.goto(`/clients/${clientId}`)
   await expect(page.getByRole('heading', { name: 'Алексей Смирнов' })).toBeVisible()
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+})
+
+for (const [account, profileId] of [
+  ['first', trainerId],
+  ['second', '10000000-0000-4000-8000-000000000010'],
+] as const) {
+  test(`${account} Fit Lime client creation keeps validation, save and safe return`, async ({ page }, testInfo) => {
+    await mockPilot(page, { profileId, fitLime: true })
+    await page.goto('/clients/new')
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+    await expect(page.getByRole('heading', { name: 'Новый клиент' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Назад' })).toBeVisible()
+    await expect(page.locator('.client-form-section')).toHaveCSS('background-color', 'rgb(25, 25, 28)')
+    if (account === 'first') {
+      const screenshotPath = testInfo.outputPath('fit-lime-client-create.png')
+      await page.screenshot({ path: screenshotPath, fullPage: true })
+      await testInfo.attach('fit-lime-client-create', { path: screenshotPath, contentType: 'image/png' })
+    }
+    await page.getByRole('button', { name: 'Отмена' }).click()
+    await expect(page).toHaveURL(/\/clients$/)
+    await page.goto('/clients/new')
+    await page.getByLabel('Имя', { exact: true }).fill('Мария Тестовая')
+    await page.getByLabel('Пол').selectOption('female')
+    await page.getByLabel('Возраст').fill('28')
+    await page.getByLabel('Рост, см').fill('168')
+    await page.getByRole('button', { name: 'Сохранить' }).click()
+    await expect(page).toHaveURL(/\/clients\/10000000-0000-4000-8000-000000000030$/)
+    await expect(page.getByRole('heading', { name: 'Мария Тестовая' })).toBeVisible()
+  })
+}
+
+test('Fit Lime trainer edit and join keep a route back to the client list', async ({ page }) => {
+  await mockPilot(page, { fitLime: true })
+  await page.goto(`/clients/${clientId}/edit`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+  await expect(page.getByRole('heading', { name: 'Редактировать клиента' })).toBeVisible()
+  await page.getByRole('button', { name: 'Отмена' }).click()
+  await expect(page).toHaveURL(new RegExp(`/clients/${clientId}$`))
+  await page.goto('/join')
+  await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+  await expect(page.getByRole('heading', { name: 'Подключение' })).toBeVisible()
+  await expect(page.getByLabel('Код приглашения')).toBeVisible()
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(/\/clients$/)
+})
+
+test('Fit Lime invitation dialog keeps the existing invite entry and close', async ({ page }, testInfo) => {
+  await mockPilot(page, { fitLime: true })
+  await page.goto('/clients')
+  const invite = page.getByRole('button', { name: 'Пригласить спортсмена' })
+  await invite.click()
+  const dialog = page.getByRole('dialog', { name: 'Кого пригласить?' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog).toHaveCSS('background-color', 'rgb(35, 35, 40)')
+  await expect(dialog.getByLabel('Имя спортсмена')).toBeFocused()
+  await page.keyboard.press('Shift+Tab')
+  await expect(dialog.getByRole('button', { name: 'Закрыть' })).toBeFocused()
+  await page.keyboard.press('Shift+Tab')
+  await expect(dialog.getByRole('button', { name: 'Создать приглашение' })).toBeFocused()
+  const screenshotPath = testInfo.outputPath('fit-lime-invite-dialog.png')
+  await page.screenshot({ path: screenshotPath, fullPage: true })
+  await testInfo.attach('fit-lime-invite-dialog', { path: screenshotPath, contentType: 'image/png' })
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await expect(invite).toBeFocused()
+})
+
+test('trainer without Fit Lime keeps create, edit and join outside the pilot theme', async ({ page }) => {
+  await mockPilot(page)
+  for (const route of ['/clients/new', `/clients/${clientId}/edit`, '/join']) {
+    await page.goto(route)
+    await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+  }
 })
 
 test('the bell count equals the visible queue and updates after snoozing', async ({ page }) => {

@@ -1,0 +1,139 @@
+/* Stage 3, point 22: trainer create/edit and invitation connection flow. */
+.fit-lime-shell.trainer-client-form-identity .page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px 18px calc(116px + env(safe-area-inset-bottom));
+}
+.fit-lime-shell.trainer-client-form-identity .page-header { margin-bottom: 20px }
+.fit-lime-shell.trainer-client-form-identity .page-header h1 {
+  color: var(--lime-text);
+  font-size: clamp(29px, 7vw, 32px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+}
+.fit-lime-shell.trainer-client-form-identity .client-profile-form { gap: 12px }
+.fit-lime-shell.trainer-client-form-identity .client-form-section {
+  gap: 16px;
+  padding: 20px;
+  border-color: var(--lime-divider);
+  border-radius: 28px;
+  background: var(--lime-surface);
+}
+.fit-lime-shell.trainer-client-form-identity .client-form-section-head h2 {
+  color: var(--lime-text);
+  font-size: 19px;
+  font-weight: 650;
+}
+.fit-lime-shell.trainer-client-form-identity .client-form-section-head .eyebrow,
+.fit-lime-shell.trainer-client-form-identity .client-form-section-head p:last-child,
+.fit-lime-shell.trainer-client-form-identity .client-profile-form .field > span,
+.fit-lime-shell.trainer-client-form-identity .client-profile-form .field > label {
+  color: var(--lime-text-secondary);
+}
+.fit-lime-shell.trainer-client-form-identity .client-profile-form :where(input, select, textarea) {
+  border-color: var(--lime-divider);
+  border-radius: 17px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-size: 16px;
+}
+.fit-lime-shell.trainer-client-form-identity .client-profile-form textarea { min-height: 112px }
+.fit-lime-shell.trainer-client-form-identity .client-profile-form .voice-input-button {
+  border-color: var(--lime-divider);
+  border-radius: 17px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.trainer-client-form-identity .client-profile-form .actions { gap: 10px }
+.fit-lime-shell.trainer-client-form-identity .client-profile-form .actions .secondary {
+  border-color: var(--lime-divider);
+  border-radius: 17px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.trainer-client-form-identity .client-profile-form .actions .primary {
+  border-color: var(--lime-accent);
+  border-radius: 17px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.fit-lime-shell.trainer-client-form-identity .client-profile-form button:disabled {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+  opacity: 1;
+}
+
+.fit-lime-shell.auth-join-identity .join-page {
+  max-width: 760px;
+  padding: 20px 18px calc(116px + env(safe-area-inset-bottom));
+}
+.fit-lime-shell.auth-join-identity .join-card {
+  gap: 20px;
+  padding: 22px;
+  border-color: var(--lime-divider);
+  border-radius: 28px;
+  background: var(--lime-surface);
+}
+.fit-lime-shell.auth-join-identity .join-card-head h2 { color: var(--lime-text); font-size: 23px; font-weight: 650 }
+.fit-lime-shell.auth-join-identity .join-card-head > p:last-child,
+.fit-lime-shell.auth-join-identity .join-card-head .eyebrow { color: var(--lime-text-secondary) }
+.fit-lime-shell.auth-join-identity .join-form input {
+  border-color: var(--lime-divider);
+  border-radius: 17px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.auth-join-identity .join-card button.primary {
+  min-height: 52px;
+  border-color: var(--lime-accent);
+  border-radius: 17px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.fit-lime-shell.auth-join-identity .join-card button:disabled {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+  opacity: 1;
+}
+.fit-lime-shell.auth-join-identity .join-success .eyebrow,
+.fit-lime-shell.auth-join-identity .join-success h2 { color: var(--success-fg) }
+
+.fit-lime-shell .invitation-name-dialog,
+.fit-lime-shell .invitation-share-dialog {
+  border-color: var(--lime-divider);
+  border-radius: 28px 28px 22px 22px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell .invitation-name-dialog h2,
+.fit-lime-shell .invitation-share-dialog h2 { color: var(--lime-text); font-size: 23px }
+.fit-lime-shell .invitation-name-dialog .muted,
+.fit-lime-shell .invitation-share-dialog .muted { color: var(--lime-text-secondary) }
+.fit-lime-shell .invitation-name-dialog input {
+  min-height: 50px;
+  border-color: var(--lime-divider);
+  border-radius: 16px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+  font-size: 16px;
+}
+.fit-lime-shell .invitation-share-dialog .invitation-code-fallback {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface);
+}
+.fit-lime-shell .invitation-name-dialog button.primary,
+.fit-lime-shell .invitation-share-dialog button.primary {
+  min-height: 50px;
+  border-color: var(--lime-accent);
+  border-radius: 16px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+
+@media (max-width: 480px) {
+  .fit-lime-shell.trainer-client-form-identity .page,
+  .fit-lime-shell.auth-join-identity .join-page { padding: 16px 16px calc(116px + env(safe-area-inset-bottom)) }
+  .fit-lime-shell.trainer-client-form-identity .client-form-section { padding: 18px }
+}

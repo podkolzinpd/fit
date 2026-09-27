@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useAuth } from '../../app/auth-context'
+import { isFitLimeEnabled } from '../../app/fit-lime'
+import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { InvitationShare } from '../../shared/domain'
 import { CloseIcon } from '../../shared/icons'
@@ -57,9 +59,12 @@ export function InvitationShareButton({
 
 export function InviteAthleteButton({ className, label = 'Пригласить спортсмена' }: { className?: string; label?: string }) {
   const { actor } = useAuth()
+  const fitLimePilot = isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)
   const backend = useDataBackend()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
+  const openerRef = useRef<HTMLButtonElement>(null)
+  const nameDialogRef = useRef<HTMLElement>(null)
   const [fullName, setFullName] = useState('')
   const [operationId, setOperationId] = useState(() => crypto.randomUUID())
   const invitation = useMutation({
@@ -79,6 +84,21 @@ export function InviteAthleteButton({ className, label = 'Пригласить �
     setFullName('')
     setOperationId(crypto.randomUUID())
     invitation.reset()
+    if (fitLimePilot) window.requestAnimationFrame(() => openerRef.current?.focus())
+  }
+
+  function onNameDialogKeyDown(event: KeyboardEvent<HTMLElement>): void {
+    if (!fitLimePilot) return
+    if (event.key === 'Escape') { event.preventDefault(); close(); return }
+    if (event.key !== 'Tab') return
+    const controls = nameDialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])')
+    if (!controls?.length) return
+    const current = Array.from(controls).indexOf(document.activeElement as HTMLElement)
+    const next = event.shiftKey
+      ? (current < 0 ? controls.length - 1 : (current - 1 + controls.length) % controls.length)
+      : (current + 1) % controls.length
+    event.preventDefault()
+    controls[next]?.focus()
   }
 
   function submit(event: FormEvent<HTMLFormElement>): void {
@@ -95,11 +115,11 @@ export function InviteAthleteButton({ className, label = 'Пригласить �
 
   const host = document.querySelector('.phone-frame') ?? document.body
   return <>
-    <button type="button" className={className} aria-label="Пригласить спортсмена" onClick={() => setOpen(true)}>{label}</button>
+    <button ref={openerRef} type="button" className={className} aria-label="Пригласить спортсмена" onClick={() => setOpen(true)}>{label}</button>
     {open && invitation.data === undefined && createPortal(<div className="modal-overlay invitation-name-overlay" role="presentation" onPointerDown={(event) => {
       if (event.target === event.currentTarget) close()
     }}>
-      <section className="invitation-name-dialog" role="dialog" aria-modal="true" aria-labelledby="invitation-name-title">
+      <section ref={nameDialogRef} className="invitation-name-dialog" role="dialog" aria-modal="true" aria-labelledby="invitation-name-title" onKeyDown={onNameDialogKeyDown}>
         <header><div><p className="eyebrow">НОВЫЙ СПОРТСМЕН</p><h2 id="invitation-name-title">Кого пригласить?</h2></div><button type="button" className="icon-button" aria-label="Закрыть" onClick={close}><CloseIcon /></button></header>
         <p className="muted">Имя появится в списке клиентов. Остальные данные спортсмен заполнит позже.</p>
         <form className="stack" onSubmit={submit}>
