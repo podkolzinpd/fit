@@ -1,0 +1,70 @@
+name: Cleanup Yandex frontend releases
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'plan = read-only inventory; apply = guarded 3-day cleanup'
+        type: choice
+        options: [plan, apply]
+        default: plan
+
+permissions:
+  contents: read
+
+# Same lock as deployment: cleanup never races an upload/activation/rollback.
+concurrency:
+  group: yandex-frontend-production
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' || vars.YC_FRONTEND_CLEANUP_ENABLED == 'true')
+    runs-on: ubuntu-24.04
+    environment: fit-frontend-production
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      YC_DEPLOY_SA_ID: ${{ vars.YC_FRONTEND_DEPLOY_SA_ID }}
+      YC_FOLDER_ID: b1goqho12tlk9dibc3f3
+      YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify cleanup policy offline
+        run: node --test scripts/frontend-release-retention.test.mjs
+      - name: Install official Yandex CLI
+        run: |
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$RUNNER_TEMP/yandex-cloud" -n
+          echo "$RUNNER_TEMP/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - name: Exchange OIDC for frontend-only identity
+        run: scripts/yandex-github-oidc.sh
+      - name: Plan or apply protected release cleanup
+        env:
+          MODE: ${{ inputs.mode || 'apply' }}
+          CLEANUP_ENABLED: ${{ vars.YC_FRONTEND_CLEANUP_ENABLED }}
+        run: |
+          set -euo pipefail
+          [[ "$MODE" == plan || "$MODE" == apply ]]
+          if [[ "$MODE" == apply ]]; then test "$CLEANUP_ENABLED" = true; fi
+          node scripts/cleanup-yandex-frontend.mjs cleanup "--$MODE"
+      - name: Preserve inventory, exact targets and gateway backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-cleanup-${{ github.run_id }}
+          path: cleanup/*.json
+          if-no-files-found: warn
+          retention-days: 90

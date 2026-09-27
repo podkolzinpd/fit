@@ -31,13 +31,17 @@ Frontend only: нет миграций, изменений product API, auth log
   он получает только same-run artifact, повторно проверяет checksum/commit и
   обменивает OIDC через environment `fit-frontend-production`.
 - `fit-frontend-production` разрешает только branch `main`. Subject:
-  `repo:podkolzinpd/fit:environment:fit-frontend-production`. Audience:
+  `repo:podkolzinpd@3878475/fit@1307853602:environment:fit-frontend-production`. Audience:
   `https://github.com/podkolzinpd`. Отдельная переменная `YC_FRONTEND_DEPLOY_SA_ID`
   не переиспользует broad backend deploy identity.
 - Один concurrency group, `cancel-in-progress=false`. Head повторно сверяется
   перед получением credentials и непосредственно перед activation.
 - `releases/<commit>-<sha256>/` immutable: существующие bytes не перезаписываются;
   каждая загрузка сверяется скачиванием и SHA-256, затем проверяются metadata.
+  Неизменившиеся файлы переиспользуются по checksum из предыдущей спецификации,
+  сохраняя исходный object key. Upload/metadata/smoke — до шести параллельных
+  операций. Private manifest хранит полный граф собственной версии. Политика
+  хранения и приёмка: `FRONTEND_RELEASE_EFFICIENCY.md`.
 - Предыдущий OpenAPI JSON сохраняется до загрузки в artifact на 90 дней.
   Новая спецификация сохраняет прежние hashed asset routes. Нехватка места
   или лимит размера спецификации останавливают выпуск, не удаляют старые версии.
