@@ -190,12 +190,10 @@ describe('AppLayout: единственная UI Identity', () => {
     authState.role = 'trainer'
     authState.trainerScheduleV2 = true
     authState.fitLime = true
-    for (const route of ['/assistant']) {
-      const layout = renderLayout(route)
-      expect(document.querySelector('.phone-frame')).not.toHaveClass('fit-lime-shell')
-      expect(document.documentElement).not.toHaveClass('fit-lime-document')
-      layout.unmount()
-    }
+    const assistant = renderLayout('/assistant')
+    expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell', 'assistant-identity')
+    expect(document.documentElement).toHaveClass('fit-lime-document')
+    assistant.unmount()
     const conversation = renderLayout('/chat/thread-1')
     expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell')
     expect(document.documentElement).toHaveClass('fit-lime-document')

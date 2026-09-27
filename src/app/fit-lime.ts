@@ -13,7 +13,7 @@ export function isFitLimeApprovedTrainerRoute(pathname: string, search: string):
   if (pathname === '/schedule' || pathname === '/join' || pathname === '/chat'
     || pathname === '/clients' || pathname === '/clients/archive'
     || pathname === '/clients/new' || pathname === '/exercises'
-    || pathname === '/workouts/new'
+    || pathname === '/workouts/new' || pathname === '/assistant'
     || pathname === '/profile' || pathname === '/profile/settings'
     || pathname === '/profile/trainer') return true
   return /^\/chat\/[^/]+$/.test(pathname)
@@ -48,5 +48,6 @@ export function isFitLimeShellRoute(
       || /^\/workouts\/[^/]+$/.test(pathname)
       || /^\/workouts\/[^/]+\/live$/.test(pathname)
       || /^\/workouts\/[^/]+\/history\/[^/]+$/.test(pathname)
+      || pathname === '/assistant'
       || pathname === '/profile' || pathname === '/profile/settings' || pathname === '/profile/trainer')
 }
