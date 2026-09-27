@@ -41,7 +41,7 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null }
 
-async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; workouts?: MockWorkout[]; failClients?: boolean; failTrainingData?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean } = {}) {
+async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; workouts?: MockWorkout[]; failClients?: boolean; failTrainingData?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
@@ -52,6 +52,8 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
   let unreadCount = 4
   let workouts: MockWorkout[] = options.workouts ?? [workout]
   let saveAttempts = 0
+  let chatSendAttempts = 0
+  const sentMessages: Array<{ id: string; conversationId: string; senderId: string; body: string; createdAt: string; editedAt: null; replyTo: null; image: null }> = []
   let lastSavedStartTime: string | null = null
   let lastEditedStartTime: string | null = null
   await page.route('http://127.0.0.1:4100/health', async (route) => {
@@ -213,8 +215,18 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
         blockedByMe: false,
         blockedByPartner: false,
       }] }
+    } else if (url.pathname === `/v1/chat/conversations/${conversationId}/messages` && route.request().method() === 'POST') {
+      chatSendAttempts += 1
+      if (options.failFirstChatSend && chatSendAttempts === 1) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+        return
+      }
+      const draft = route.request().postDataJSON() as { id: string; body: string }
+      const message = { id: draft.id, conversationId, senderId: profileId, body: draft.body, createdAt: '2026-09-24T12:00:00.000Z', editedAt: null, replyTo: null, image: null }
+      sentMessages.push(message)
+      body = { message }
     } else if (url.pathname === `/v1/chat/conversations/${conversationId}/messages`) {
-      body = { messages: [{ id: messageId, conversationId, senderId: clientId, body: 'Спасибо!', createdAt: '2026-09-24T11:45:00.000Z', editedAt: null, replyTo: null, image: null }], nextCursor: null }
+      body = { messages: [{ id: messageId, conversationId, senderId: clientId, body: 'Спасибо!', createdAt: '2026-09-24T11:45:00.000Z', editedAt: null, replyTo: null, image: null }, ...sentMessages], nextCursor: null }
     } else if (url.pathname === `/v1/chat/conversations/${conversationId}/unread`) {
       body = { unread: { firstMessageId: unreadCount > 0 ? messageId : null, firstCreatedAt: unreadCount > 0 ? '2026-09-24T11:45:00.000Z' : null, unreadCount } }
     } else if (url.pathname === `/v1/chat/conversations/${conversationId}/connection`) {
@@ -237,6 +249,7 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
     getSaveAttempts() { return saveAttempts },
     getLastSavedStartTime() { return lastSavedStartTime },
     getLastEditedStartTime() { return lastEditedStartTime },
+    getChatSendAttempts() { return chatSendAttempts },
   }
 }
 
@@ -675,6 +688,53 @@ test('trainer without Fit Lime keeps the existing messages list', async ({ page 
   await mockPilot(page)
   await page.goto('/chat')
   await expect(page.getByRole('heading', { name: 'Сообщения', level: 1 })).toBeVisible()
+  await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+})
+
+for (const [account, profileId] of [
+  ['first', trainerId],
+  ['second', '10000000-0000-4000-8000-000000000010'],
+] as const) {
+  test(`${account} Fit Lime conversation keeps the calendar path and readable composer`, async ({ page }, testInfo) => {
+    await mockPilot(page, { profileId, fitLime: true })
+    await page.goto('/today?date=2026-09-24')
+    await page.getByRole('button', { name: /Вопросы и сообщения/ }).click()
+    await page.getByRole('link', { name: 'Открыть все сообщения' }).click()
+    await page.getByRole('button', { name: /Алексей Смирнов.*Спасибо/ }).click()
+    await expect(page).toHaveURL(new RegExp(`/chat/${conversationId}$`))
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+    await expect(page.getByRole('region', { name: 'Переписка' }).getByText('Спасибо!')).toBeVisible()
+    await expect(page.locator('.chat-message.partner')).toHaveCSS('background-color', 'rgb(25, 25, 28)')
+    await expect(page.getByRole('button', { name: 'Отправить' })).toHaveCSS('background-color', 'rgb(186, 255, 54)')
+    if (account === 'first') {
+      const screenshotPath = testInfo.outputPath('fit-lime-conversation.png')
+      await page.screenshot({ path: screenshotPath, fullPage: true })
+      await testInfo.attach('fit-lime-conversation', { path: screenshotPath, contentType: 'image/png' })
+    }
+    await page.getByRole('button', { name: 'Назад' }).click()
+    await expect(page).toHaveURL(/\/chat$/)
+    await page.getByRole('button', { name: 'Назад' }).click()
+    await expect(page).toHaveURL(/\/today\?date=2026-09-24$/)
+  })
+}
+
+test('Fit Lime conversation retries a failed send without duplicating the message', async ({ page }) => {
+  const backend = await mockPilot(page, { fitLime: true, failFirstChatSend: true })
+  await page.goto(`/chat/${conversationId}`)
+  await page.getByRole('textbox', { name: 'Сообщение' }).fill('Проверю и отвечу')
+  await page.getByRole('button', { name: 'Отправить' }).click()
+  await expect(page.locator('.chat-message.own').getByText('Ошибка')).toBeVisible()
+  await page.locator('.chat-message.own').getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.locator('.chat-message.own').getByText('Проверю и отвечу')).toBeVisible()
+  await expect(page.locator('.chat-message.own').getByText('Отправлено')).toBeVisible()
+  await expect(page.locator('.chat-message.own')).toHaveCount(1)
+  expect(backend.getChatSendAttempts()).toBe(2)
+})
+
+test('trainer without Fit Lime keeps the existing conversation styling', async ({ page }) => {
+  await mockPilot(page)
+  await page.goto(`/chat/${conversationId}`)
+  await expect(page.getByRole('region', { name: 'Переписка' }).getByText('Спасибо!')).toBeVisible()
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
 })
 

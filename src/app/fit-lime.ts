@@ -19,7 +19,7 @@ export function isFitLimeApprovedTrainerRoute(pathname: string, search: string):
     || /^\/progress\/[^/]+$/.test(pathname)
 }
 
-/** Activate only released trainer surfaces; conversation styling is a later point. */
+/** Activate only released trainer surfaces. */
 export function isFitLimeShellRoute(
   actor: SessionActor | null | undefined,
   pathname: string,
@@ -27,5 +27,5 @@ export function isFitLimeShellRoute(
 ): boolean {
   if (!isFitLimeEnabled(actor) || !isFitLimeApprovedTrainerRoute(pathname, search)) return false
   return isTrainerScheduleV2Enabled(actor)
-    && (isTrainerScheduleV2CalendarRoute(pathname, search) || pathname === '/chat')
+    && (isTrainerScheduleV2CalendarRoute(pathname, search) || pathname === '/chat' || /^\/chat\/[^/]+$/.test(pathname))
 }
