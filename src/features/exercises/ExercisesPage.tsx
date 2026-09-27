@@ -3,10 +3,11 @@ import { useMemo, useState, type FormEvent, type MouseEvent } from 'react'
 import type { CustomExercise } from '../../data/repositories/exercises.repository'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useAuth } from '../../app/auth-context'
+import { isFitLimeShellRoute } from '../../app/fit-lime'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
 import { ChevronRightIcon, CloseIcon, PlayIcon, SearchIcon } from '../../shared/icons'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
-import { AsyncView, Field, Page } from '../../shared/ui'
+import { AsyncView, Field, Page, useConfirm } from '../../shared/ui'
 import { ExerciseImage } from './ExerciseImage'
 import { hasExerciseAnimation, hasExerciseMedia } from './ExerciseTechnique'
 import { matchesExerciseSearch, rankExerciseSearch } from './exercise-search'
@@ -48,20 +49,23 @@ function useCustomExercises() {
   })
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const data = new FormData(event.currentTarget)
+    const form = event.currentTarget
+    const data = new FormData(form)
     save.mutate({
       name: String(data.get('name')).trim(),
       muscleGroup: String(data.get('muscleGroup')) as MuscleGroup,
       inputKind: String(data.get('inputKind')) as InputKind,
-    })
-    event.currentTarget.reset()
+    }, { onSuccess: () => form.reset() })
   }
   return { archive, editing, query, save, setEditing, submit }
 }
 
 export function ExercisesPage() {
+  const { actor } = useAuth()
   const { exercises: exercisesRepository } = useDataBackend()
   const { archive, editing, query, save, setEditing, submit } = useCustomExercises()
+  const [confirm, confirmDialog] = useConfirm()
+  const fitLimeExercises = isFitLimeShellRoute(actor, '/exercises', '')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<ExerciseSnapshot | null>(null)
   const [visibleCount, setVisibleCount] = useState(48)
@@ -81,8 +85,16 @@ export function ExercisesPage() {
   function stopPropagation(event: MouseEvent) {
     event.stopPropagation()
   }
+  async function requestArchive(exercise: CustomExercise) {
+    if (fitLimeExercises && !exercise.archivedAt) {
+      const accepted = await confirm({ message: `Перенести «${exercise.name}» в архив? Упражнение останется в уже сохранённых тренировках.`, confirmLabel: 'В архив' })
+      if (!accepted) return
+    }
+    archive.mutate(exercise)
+  }
 
   return <Page className="exercise-catalog-page exercise-catalog-preview" title="Упражнения" subtitle="Библиотека движений и ваш каталог" back="/profile">
+    {confirmDialog}
     <section className="catalog-library" aria-labelledby="catalog-library-title">
       <div className="catalog-library-head">
         <div><p className="eyebrow">БИБЛИОТЕКА</p><h2 id="catalog-library-title">Системные упражнения</h2></div>
@@ -120,8 +132,9 @@ export function ExercisesPage() {
         <div className="actions">{editing && <button type="button" className="secondary" onClick={() => setEditing(null)}>Отмена</button>}<button className="primary" disabled={save.isPending}>{save.isPending ? 'Сохранение…' : editing ? 'Сохранить' : 'Добавить'}</button></div>
       </form>
       <div className="catalog-custom-results">
+        {archive.error && <p className="error catalog-archive-error" role="alert">{archive.error.message}</p>}
         <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()} empty={!query.data?.length} emptyTitle="Собственных упражнений пока нет" emptyDescription="Создайте первое упражнение с помощью формы выше.">
-          <div className="catalog-custom-list">{query.data?.map((exercise) => <article className={`catalog-custom-item${exercise.archivedAt ? ' archived' : ''}`} key={exercise.id}><div><strong>{exercise.name}</strong><p>{MUSCLE_GROUP_LABELS[exercise.muscleGroup]} · {INPUT_KIND_LABELS[exercise.inputKind]}{exercise.archivedAt ? ' · В архиве' : ''}</p></div><div className="row-actions"><button className="link" onClick={() => setEditing(exercise)}>Изменить</button><button className="link danger" disabled={archive.isPending} onClick={() => archive.mutate(exercise)}>{exercise.archivedAt ? 'Вернуть' : 'В архив'}</button></div></article>)}</div>
+          <div className="catalog-custom-list">{query.data?.map((exercise) => <article className={`catalog-custom-item${exercise.archivedAt ? ' archived' : ''}`} key={exercise.id}><div><strong>{exercise.name}</strong><p>{MUSCLE_GROUP_LABELS[exercise.muscleGroup]} · {INPUT_KIND_LABELS[exercise.inputKind]}{exercise.archivedAt ? ' · В архиве' : ''}</p></div><div className="row-actions"><button className="link" onClick={() => setEditing(exercise)}>Изменить</button><button className="link danger" disabled={archive.isPending} onClick={() => void requestArchive(exercise)}>{exercise.archivedAt ? 'Вернуть' : 'В архив'}</button></div></article>)}</div>
         </AsyncView>
       </div>
     </section>

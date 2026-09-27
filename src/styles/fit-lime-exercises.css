@@ -1,0 +1,123 @@
+/* Stage 3, point 26: the trainer's catalog, detail sheet and custom exercises. */
+.fit-lime-shell.exercise-catalog-identity .exercise-catalog-preview {
+  max-width: 980px;
+  gap: 14px;
+  padding: 20px 18px calc(116px + env(safe-area-inset-bottom));
+}
+.fit-lime-shell.exercise-catalog-identity .exercise-catalog-preview > .page-header h1 {
+  color: var(--lime-text);
+  font-size: clamp(29px, 7vw, 32px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+}
+.fit-lime-shell.exercise-catalog-identity .page-back {
+  border-color: var(--lime-divider);
+  border-radius: 16px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.exercise-catalog-identity .catalog-library,
+.fit-lime-shell.exercise-catalog-identity .catalog-custom-preview {
+  gap: 16px;
+  padding: 20px;
+  border-color: var(--lime-divider);
+  border-radius: 28px;
+  background: var(--lime-surface);
+}
+.fit-lime-shell.exercise-catalog-identity :where(.catalog-library-head, .catalog-section-head) h2 {
+  color: var(--lime-text);
+  font-size: 20px;
+  font-weight: 650;
+}
+.fit-lime-shell.exercise-catalog-identity :where(.catalog-library-head, .catalog-section-head) > span {
+  min-width: 42px;
+  border-color: var(--lime-divider);
+  border-radius: 14px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-accent);
+  font-weight: 650;
+}
+.fit-lime-shell.exercise-catalog-identity .catalog-search {
+  border-color: var(--lime-divider);
+  border-radius: 18px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+}
+.fit-lime-shell.exercise-catalog-identity .catalog-search:focus-within { border-color: var(--lime-accent); outline-color: var(--accent-ring) }
+.fit-lime-shell.exercise-catalog-identity .catalog-search input { color: var(--lime-text) }
+.fit-lime-shell.exercise-catalog-identity .catalog-search input::placeholder { color: var(--lime-text-tertiary) }
+.fit-lime-shell.exercise-catalog-identity .catalog-media-card {
+  min-height: 78px;
+  border-color: var(--lime-divider);
+  border-radius: 19px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.exercise-catalog-identity .catalog-media-card:hover { border-color: var(--accent-surface-border); background: var(--lime-surface-raised) }
+.fit-lime-shell.exercise-catalog-identity .catalog-media-card:focus-visible { outline-color: var(--lime-accent) }
+.fit-lime-shell.exercise-catalog-identity .catalog-media-card .exercise-image { border-color: var(--lime-divider); border-radius: 13px; background: var(--lime-surface) }
+.fit-lime-shell.exercise-catalog-identity .catalog-media-card strong { color: var(--lime-text); font-weight: 600 }
+.fit-lime-shell.exercise-catalog-identity .catalog-media-card small,
+.fit-lime-shell.exercise-catalog-identity .catalog-results-meta,
+.fit-lime-shell.exercise-catalog-identity .catalog-section-description { color: var(--lime-text-secondary) }
+.fit-lime-shell.exercise-catalog-identity .catalog-media-card-play { border-color: var(--lime-surface-raised); background: var(--lime-accent); color: var(--lime-text-on-accent) }
+.fit-lime-shell.exercise-catalog-identity .catalog-search-empty,
+.fit-lime-shell.exercise-catalog-identity .catalog-custom-results .state-panel {
+  border-color: var(--lime-divider);
+  border-radius: 20px;
+  background: var(--lime-surface-raised);
+}
+.fit-lime-shell.exercise-catalog-identity .catalog-search-empty strong { color: var(--lime-text) }
+.fit-lime-shell.exercise-catalog-identity .catalog-search-empty p { color: var(--lime-text-secondary) }
+.fit-lime-shell.exercise-catalog-identity .catalog-custom-form :where(input, select) {
+  border-color: var(--lime-divider);
+  border-radius: 17px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-size: 16px;
+}
+.fit-lime-shell.exercise-catalog-identity .catalog-custom-form :where(input, select):focus-visible { border-color: var(--lime-accent); outline-color: var(--lime-accent) }
+.fit-lime-shell.exercise-catalog-identity .catalog-custom-form .primary {
+  border-color: var(--lime-accent);
+  border-radius: 17px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.fit-lime-shell.exercise-catalog-identity :where(.catalog-custom-form, .catalog-search-empty, .catalog-detail, .catalog-load-more) .secondary,
+.fit-lime-shell.exercise-catalog-identity .catalog-search-empty .ghost {
+  border-color: var(--lime-divider);
+  border-radius: 17px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.exercise-catalog-identity .catalog-custom-results,
+.fit-lime-shell.exercise-catalog-identity .catalog-custom-item { border-color: var(--lime-divider) }
+.fit-lime-shell.exercise-catalog-identity .catalog-custom-item strong { color: var(--lime-text); font-weight: 600 }
+.fit-lime-shell.exercise-catalog-identity .catalog-custom-item p { color: var(--lime-text-secondary) }
+.fit-lime-shell.exercise-catalog-identity .catalog-custom-item .row-actions .link { color: var(--lime-accent) }
+.fit-lime-shell.exercise-catalog-identity .catalog-custom-item .row-actions .danger { color: var(--danger) }
+.fit-lime-shell.exercise-catalog-identity .catalog-archive-error { margin: 10px 0 0 }
+.fit-lime-shell.exercise-catalog-identity .catalog-detail-overlay { background: var(--overlay) }
+.fit-lime-shell.exercise-catalog-identity .catalog-detail {
+  border-color: var(--lime-divider);
+  border-radius: 30px 30px 0 0;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.exercise-catalog-identity .catalog-detail h2 { color: var(--lime-text); font-size: 26px; font-weight: 700 }
+.fit-lime-shell.exercise-catalog-identity .catalog-detail-close { border-color: var(--lime-divider); border-radius: 16px; background: var(--lime-surface); color: var(--lime-text) }
+.fit-lime-shell.exercise-catalog-identity .catalog-detail .exercise-image-technique,
+.fit-lime-shell.exercise-catalog-identity .catalog-detail-facts,
+.fit-lime-shell.exercise-catalog-identity .catalog-detail-note { border-color: var(--lime-divider); border-radius: 19px; background: var(--lime-surface) }
+.fit-lime-shell.exercise-catalog-identity .catalog-detail-facts span { border-color: var(--lime-divider); background: var(--lime-surface) }
+.fit-lime-shell.exercise-catalog-identity .catalog-detail-facts strong,
+.fit-lime-shell.exercise-catalog-identity .catalog-detail-instructions h3 { color: var(--lime-text) }
+.fit-lime-shell.exercise-catalog-identity .catalog-detail-facts small,
+.fit-lime-shell.exercise-catalog-identity .catalog-detail-instructions ol,
+.fit-lime-shell.exercise-catalog-identity .catalog-detail-note { color: var(--lime-text-secondary) }
+
+@media (max-width: 640px) {
+  .fit-lime-shell.exercise-catalog-identity .exercise-catalog-preview { padding: 16px 16px calc(116px + env(safe-area-inset-bottom)) }
+  .fit-lime-shell.exercise-catalog-identity .catalog-library,
+  .fit-lime-shell.exercise-catalog-identity .catalog-custom-preview { padding: 18px }
+}
