@@ -15,6 +15,7 @@ const profilePayloadSchema = z.object({
   accountRole: z.enum(['trainer', 'client']),
   experiments: z.object({
     trainerScheduleV2: z.boolean(),
+    fitLime: z.boolean().optional(),
   }).optional(),
   client: z.object({
     id: z.uuid(),

@@ -185,6 +185,7 @@ export const authRepository = {
       timezone: normalizeTimeZone(profileData.timezone),
       experiments: {
         trainerScheduleV2: trainerScheduleV2Flag.data?.trainer_schedule_v2 === true,
+        fitLime: false,
       },
     }
   },

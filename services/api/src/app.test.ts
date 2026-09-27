@@ -1844,7 +1844,7 @@ const PROFILE_RESPONSE: ProfileResponse = {
     lastName: null,
     timezone: 'Europe/Moscow',
     accountRole: 'trainer',
-    experiments: { trainerScheduleV2: false },
+    experiments: { trainerScheduleV2: false, fitLime: false },
   },
 }
 
@@ -2971,6 +2971,35 @@ describe('Yandex ID app session and account linking endpoints', () => {
 
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual(APP_SESSION_RESPONSE)
+    expect(issue).toHaveBeenCalledWith(SUBJECT_HASH)
+  })
+
+  it('binds Fit Lime independently before issuing a verified Yandex session', async () => {
+    const loginHash = 'c'.repeat(64)
+    const bind = vi.fn().mockResolvedValue({ bound: true })
+    const issue = vi.fn().mockImplementation(() => {
+      expect(bind).toHaveBeenCalledWith(SUBJECT_HASH, loginHash)
+      return Promise.resolve(APP_SESSION_RESPONSE)
+    })
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: {
+        verifyAccessToken: vi.fn().mockResolvedValue({ subjectHash: SUBJECT_HASH, loginHash }),
+      },
+      fitLimeAutoActivator: { bind },
+      yandexAppSessionIssuer: { issue },
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
     expect(issue).toHaveBeenCalledWith(SUBJECT_HASH)
   })
 

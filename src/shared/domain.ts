@@ -96,6 +96,7 @@ interface SessionActorBase {
   timezone: string
   experiments?: {
     trainerScheduleV2: boolean
+    fitLime?: boolean
   }
 }
 
