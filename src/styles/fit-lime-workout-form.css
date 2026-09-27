@@ -80,6 +80,12 @@
   color: var(--lime-text-on-accent);
   font-weight: 700;
 }
+.fit-lime-shell.workout-create-edit-identity button.primary:disabled,
+.fit-lime-shell.workout-create-edit-identity .workout-cta[data-variant='primary']:disabled {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-tertiary);
+}
 .fit-lime-shell.workout-create-edit-identity .workout-form .workout-action-row {
   border-color: var(--lime-divider);
   background: rgba(25, 25, 28, .96);
