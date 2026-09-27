@@ -27,8 +27,14 @@ per million authoritative requests, VAT included. No new compute resources.
   `autoconfig.beget.com.`. New provider's NS/SOA are retained, not copied.
 - Authoritative MX/TXT queries against Yandex nameservers passed.
 - Managed certificate `fpqsgmijaus25eog4poq`, domain `fit-training.ru`,
-  status `Validating`. Linked CNAME `_acme-challenge.fit-training.ru.` points
+  status `Issued` at 03:22 MSK on 27 September. Linked CNAME `_acme-challenge.fit-training.ru.` points
   to `fpqsgmijaus25eog4poq.cm.yandexcloud.net.` (TTL 600), verified by DNS.
+- Follow-up at 03:15–03:17 MSK: validation log showed a failed challenge check
+  at 03:11 (1/5), while the registry still delegated to Beget. Added the same
+  ACME CNAME to the still-authoritative Beget zone. Verified the exact answer
+  on all six Beget nameservers and public resolvers 1.1.1.1 / 8.8.8.8.
+  Automatic recheck subsequently succeeded. PR #1205 is merged with required
+  CI successful.
 - OAuth client retains its four existing callbacks and adds
   `https://fit-training.ru/auth/yandex/callback`; saved form re-opened to verify.
 - API CORS adds `https://fit-training.ru`. Recursive comparison against
@@ -42,24 +48,36 @@ per million authoritative requests, VAT included. No new compute resources.
 
 ## Pending gates / continuation
 
-Do not mark custom-domain rollout complete yet. Wait for registry delegation
-and certificate `Issued`, then attach certificate to existing gateway
-`d5drmhq5ovqk03jgsm8i`, replace only apex A with ANAME to its technical hostname,
-and verify HTTPS `/auth`, direct routes and assets. Keep frontend request
-logging disabled (OAuth query safety). No frontend release replacement here.
+Certificate is attached to existing gateway `d5drmhq5ovqk03jgsm8i`.
+Yandex DNS apex A `5.101.152.161` was replaced with ANAME to
+`d5drmhq5ovqk03jgsm8i.wnq2w1o5.apigw.yandexcloud.net.` (TTL 300).
+Authoritative Yandex DNS returns the gateway address; MX and `www` remain
+unchanged. Frontend request logging remains disabled (OAuth query safety).
+No frontend release replacement here.
+
+TLS verification using curl `--connect-to` with the real `fit-training.ru`
+Host/SNI succeeded without disabling certificate validation. `/`, `/auth`,
+`/auth/yandex/callback`, `/today`, `/sw.js` and the deployed JS returned 200;
+WASM returned expected 307, missing CSS 404. HTTP returned 301 to
+`https://fit-training.ru/`.
+
+At 03:27 MSK the `.ru` registry still returned Beget nameservers. The remaining
+gate is registry delegation and resolver propagation, followed by an ordinary
+browser check of `https://fit-training.ru/auth` without DNS override. No further
+configuration is required for DNS to start directing traffic to the ready site.
 Real-account OAuth, browser WASM and rollback drill remain separate unverified
 checks from the previous candidate rollout.
 
-Until those gates pass, apex still uses the preserved Beget parking A record.
+Resolvers still using Beget see the preserved parking A record.
 The existing technical frontend and Vercel remain available. No DB migrations,
 user-data writes, secret rotation or service-account permission changes.
 
 ## Recovery
 
-Before gateway activation, new zone preserves the previous public behavior.
 If required, restore Beget delegation to the six original servers
 `ns1.beget.com`, `ns2.beget.com`, `ns1.beget.pro`, `ns2.beget.pro`,
-`ns1.beget.ru`, `ns2.beget.ru`; their existing zone has not been edited.
+`ns1.beget.ru`, `ns2.beget.ru`; their existing website/mail records are preserved,
+with only the additive ACME CNAME for certificate validation.
 After activation, website-only recovery is to restore apex A `5.101.152.161`
 instead of ANAME, without touching mail, `www` or delegation. This restores
 the former parking page, not FIT; Vercel remains the working alternative.
