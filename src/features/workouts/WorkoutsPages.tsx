@@ -769,7 +769,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         </div>
       </>}
     </AsyncView>
-    <Link className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} to={`/workouts/new?date=${selected}`} onClick={() => trackGoal('schedule_v2_workout_create_started')}><AddIcon /></Link>
+    <Link className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} to={`/workouts/new?date=${selected}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_create_started')}><AddIcon /></Link>
     {inboxOpen && <ScheduleV2InboxSheet
       questions={workspace.data?.questions ?? []}
       questionsLoading={workspace.isLoading}
@@ -987,6 +987,12 @@ export function WorkoutFormPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const navigationState = location.state as WorkoutNavigationState | null
+  const sourceReturnTo = safeWorkoutReturnTo(navigationState?.returnTo)
+  const pilotCalendarReturnTo = isTrainerScheduleV2Enabled(actor)
+    ? sourceReturnTo && /^\/(?:today|schedule)(?:[/?#]|$)/.test(sourceReturnTo)
+      ? sourceReturnTo
+      : !workoutId && params.has('date') ? `/today?date=${localDate(params.get('date') ?? today)}` : undefined
+    : undefined
   const queryClient = useQueryClient()
   const [confirmLeave, confirmLeaveDialog] = useConfirm()
   const sourceId = workoutId ?? params.get('copy') ?? undefined
@@ -1035,7 +1041,7 @@ export function WorkoutFormPage() {
   // Копия остаётся в контексте клиента исходной тренировки: имя уже видно
   // в шапке, поэтому повторный picker только удлинял форму и создавал риск ошибки.
   const clientId = copiedWorkout ? (initial?.clientId ?? defaultClientId) : (selectedClientId || defaultClientId)
-  const goBack = useWorkoutBack(workoutId ? `/workouts/${workoutId}` : workoutListFallback(clientMode, clientId))
+  const goBack = useWorkoutBack(pilotCalendarReturnTo ?? (workoutId ? `/workouts/${workoutId}` : workoutListFallback(clientMode, clientId)))
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', clientId], queryFn: () => workoutsRepository.list(undefined, undefined, clientId), enabled: Boolean(clientId) })
   const clientRecentExercises = useMemo(() => recentExercisesForClient(catalog.exercises, clientWorkouts.data ?? []), [catalog.exercises, clientWorkouts.data])
   const goal = useQuery({ queryKey: ['client-goal', clientId], queryFn: () => goalsRepository.get(clientId), enabled: Boolean(clientId) })
@@ -1090,17 +1096,23 @@ export function WorkoutFormPage() {
     // version. Иначе пользователь успевает запустить только что изменённую
     // тренировку из устаревшего cache и получает ложный conflict.
     await queryClient.invalidateQueries({ queryKey: ['workout', id] })
-    if (workoutId === id && navigationState?.fromWorkoutDetailId === id && hasWorkoutBackEntry()) {
-      navigate(-1)
-    } else {
-      navigate(`/workouts/${id}`, { replace: true, state: { returnTo: safeWorkoutReturnTo(navigationState?.returnTo) } })
-    }
-    void Promise.all([
+    const refreshCalendar = Promise.all([
       invalidateWorkoutResults(queryClient),
       queryClient.invalidateQueries({ queryKey: ['today-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['today-recent-workouts'] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
     ])
+    if (pilotCalendarReturnTo) {
+      await refreshCalendar
+      navigate(pilotCalendarReturnTo, { replace: true })
+      return
+    }
+    if (workoutId === id && navigationState?.fromWorkoutDetailId === id && hasWorkoutBackEntry()) {
+      navigate(-1)
+    } else {
+      navigate(`/workouts/${id}`, { replace: true, state: { returnTo: sourceReturnTo } })
+    }
+    void refreshCalendar
   } })
 
   async function createQuickClient(fullName: string): Promise<ClientPickerSelection> {
@@ -1245,7 +1257,8 @@ export function WorkoutFormPage() {
       if (!shouldLeave) return
       removeWorkoutFormDraft(draftKey)
     }
-    goBack()
+    if (pilotCalendarReturnTo) navigate(pilotCalendarReturnTo, { replace: true })
+    else goBack()
   }
   return <Page title={documentTitle} hideTitle className="workout-form-page workout-focused-page" back={-1} onBack={() => void leaveForm()}>
     <WorkoutHeader eyebrow={completedMode ? 'РЕЗУЛЬТАТ' : 'ПЛАН ТРЕНИРОВКИ'} title={pageTitle} state={completedMode ? 'history' : 'planned'}
@@ -1342,7 +1355,11 @@ export function WorkoutDetailPage() {
   const clientCompletionReport = Boolean(justCompleted && clientMode)
   const backTo = workoutListFallback(actor?.role === 'client', query.data?.clientId)
   const goBack = useWorkoutBack(backTo)
-  const childNavigationState: WorkoutNavigationState = { returnTo: `${location.pathname}${location.search}`, fromWorkoutDetailId: workoutId }
+  const calendarReturnTo = isTrainerScheduleV2Enabled(actor) ? safeWorkoutReturnTo(navigationState?.returnTo) : undefined
+  const childNavigationState: WorkoutNavigationState = {
+    returnTo: calendarReturnTo && /^\/(?:today|schedule)(?:[/?#]|$)/.test(calendarReturnTo) ? calendarReturnTo : `${location.pathname}${location.search}`,
+    fromWorkoutDetailId: workoutId,
+  }
   function openLive(id: string) {
     if (id === workoutId) {
       // Keep the existing detail entry and its origin for Back/completion.
