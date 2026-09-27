@@ -125,6 +125,14 @@ describe('reliable chat screens', () => {
     expect(screen.getByLabelText('route')).toHaveTextContent('/today')
   })
 
+  it('returns from a dialog to the client list that opened it', async () => {
+    const user = userEvent.setup()
+    renderAt(['/clients', { pathname: '/chat/conversation-1', state: { chatBack: 'clients' } }])
+
+    await user.click(await screen.findByRole('button', { name: 'Назад' }))
+    expect(screen.getByLabelText('route')).toHaveTextContent('/clients')
+  })
+
   it('supports an edge swipe back and ignores a vertical edge gesture', () => {
     auth.mockReturnValue({ actor: { ...actor, kind: 'trainer', role: 'trainer' } })
     const view = renderAt('/chat')
