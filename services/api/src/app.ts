@@ -157,6 +157,7 @@ import {
   type TrainerScheduleV2Claimer,
 } from './trainer-schedule-v2-claim.js'
 import type { TrainerScheduleV2AutoActivator } from './trainer-schedule-v2-auto-activation.js'
+import type { FitLimeAutoActivator } from './fit-lime-auto-activation.js'
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
@@ -218,6 +219,7 @@ interface BuildAppOptions {
   pilotFavoriteWorkouts?: PilotFavoriteWorkouts
   trainerScheduleV2Claimer?: TrainerScheduleV2Claimer
   trainerScheduleV2AutoActivator?: TrainerScheduleV2AutoActivator
+  fitLimeAutoActivator?: FitLimeAutoActivator
   logger?: boolean
   releaseId?: string
 }
@@ -1357,6 +1359,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           identity.subjectHash,
           identity.loginHash,
         )
+      }
+      if (options.fitLimeAutoActivator !== undefined && identity.loginHash !== undefined) {
+        await options.fitLimeAutoActivator.bind(identity.subjectHash, identity.loginHash)
       }
       const session = await options.yandexAppSessionIssuer.issue(identity.subjectHash)
       if (session === undefined) {

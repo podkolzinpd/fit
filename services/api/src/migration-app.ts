@@ -32,6 +32,10 @@ import {
   type TrainerScheduleV2PilotAction,
   type TrainerScheduleV2PilotManager,
 } from './db/trainer-schedule-v2-pilot.js'
+import {
+  FitLimePilotProfileNotReadyError,
+  type FitLimePilotManager,
+} from './db/fit-lime-pilot.js'
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
 import type { StageTenantMigrationRunner } from './tenant-migration/stage-runner.js'
@@ -59,6 +63,7 @@ interface BuildMigrationAppOptions {
   pilotEnrollment?: PilotEnrollmentOptions
   rolloutAssignment?: StageRolloutAssignmentManager
   trainerScheduleV2Pilot?: TrainerScheduleV2PilotManager
+  fitLimePilot?: FitLimePilotManager
   runMigrations: () => Promise<readonly string[]>
   runtimeDatabaseReadiness?: (
     sessionToken: string,
@@ -501,6 +506,32 @@ export function buildMigrationApp(
           return reply.code(409).send({ status: 'trainer_profile_not_ready' })
         }
         return reply.code(500).send({ status: 'trainer_schedule_v2_failed' })
+      }
+    })
+  }
+
+  if (options.fitLimePilot !== undefined) {
+    const pilot = options.fitLimePilot
+    app.post('/stage/experiments/fit-lime', async (request, reply) => {
+      const command = readTrainerScheduleV2PilotRequest(request.body)
+      if (command === undefined) return reply.code(400).send({ status: 'invalid_request' })
+      try {
+        const result = await pilot.apply(command.action, command.profileId)
+        return {
+          status: command.action === 'inspect'
+            ? 'fit_lime_inspected'
+            : command.action === 'enable'
+              ? 'fit_lime_enabled'
+              : 'fit_lime_disabled',
+          accountRole: result.accountRole,
+          enabled: result.enabled,
+          enabledAllowlistRows: result.enabledAllowlistRows,
+        }
+      } catch (error) {
+        if (error instanceof FitLimePilotProfileNotReadyError) {
+          return reply.code(409).send({ status: 'trainer_profile_not_ready' })
+        }
+        return reply.code(500).send({ status: 'fit_lime_failed' })
       }
     })
   }
