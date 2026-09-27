@@ -9,13 +9,14 @@ const authState = vi.hoisted(() => ({
   userId: 'user-1',
   theme: 'light' as 'light' | 'dark',
   trainerScheduleV2: false,
+  fitLime: false,
 }))
 
 vi.mock('./auth-context', () => ({
   useAuth: () => ({ actor: {
     role: authState.role,
     userId: authState.userId,
-    experiments: { trainerScheduleV2: authState.trainerScheduleV2 },
+    experiments: { trainerScheduleV2: authState.trainerScheduleV2, fitLime: authState.fitLime },
   } }),
 }))
 
@@ -60,6 +61,7 @@ afterEach(() => {
   authState.userId = 'user-1'
   authState.theme = 'light'
   authState.trainerScheduleV2 = false
+  authState.fitLime = false
   vi.unstubAllEnvs()
   document.documentElement.className = ''
   document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.remove()
@@ -156,6 +158,43 @@ describe('AppLayout: единственная UI Identity', () => {
     layout.unmount()
     expect(document.documentElement).not.toHaveClass('schedule-v2-document')
     expect(meta).toHaveAttribute('content', 'default')
+  })
+
+  it('применяет Fit Lime до первого кадра только к согласованному календарю', () => {
+    const meta = document.createElement('meta')
+    meta.name = 'theme-color'
+    meta.content = '#FBFAF7'
+    document.head.append(meta)
+    authState.role = 'trainer'
+    authState.trainerScheduleV2 = true
+    authState.fitLime = true
+
+    const layout = renderLayout('/today?date=2026-09-25')
+    expect(document.querySelector('.phone-frame')).toHaveClass('fit-lime-shell', 'fit-lime')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('theme-light')
+    expect(document.documentElement).toHaveClass('fit-lime-document')
+    expect(document.documentElement).not.toHaveClass('theme-light')
+    expect(meta).toHaveAttribute('content', '#080908')
+
+    layout.unmount()
+    expect(document.documentElement).not.toHaveClass('fit-lime-document')
+    authState.fitLime = false
+    renderLayout('/today?date=2026-09-25')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('fit-lime-shell', 'fit-lime')
+    expect(document.documentElement).toHaveClass('theme-light')
+    meta.remove()
+  })
+
+  it('не перекрашивает неподтверждённые маршруты и шаги записи', () => {
+    authState.role = 'trainer'
+    authState.trainerScheduleV2 = true
+    authState.fitLime = true
+    for (const route of ['/clients', '/chat/thread-1', '/today?view=compose', '/workouts/new', '/assistant']) {
+      const layout = renderLayout(route)
+      expect(document.querySelector('.phone-frame')).not.toHaveClass('fit-lime-shell')
+      expect(document.documentElement).not.toHaveClass('fit-lime-document')
+      layout.unmount()
+    }
   })
 })
 

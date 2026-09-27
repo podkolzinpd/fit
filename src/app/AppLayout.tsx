@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, AssistantIcon, ClientsIcon, HomeIcon, ProfileIcon, ScheduleIcon, TodayIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
@@ -7,6 +7,7 @@ import { applyAppTheme, applyMonochromeThemeColor, applyThemeVariant, resolveThe
 import { isAssistantNavPilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
 import { useAppViewport } from './app-viewport'
 import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
+import { isFitLimeShellRoute } from './fit-lime'
 
 export { appViewportMetrics } from './app-viewport'
 
@@ -19,6 +20,7 @@ export function AppLayout() {
   const { keyboardOpen } = useAppViewport()
   const trainerScheduleV2 = isTrainerScheduleV2Enabled(actor)
   const trainerScheduleV2Route = trainerScheduleV2 && isTrainerScheduleV2CalendarRoute(pathname, search)
+  const fitLimeShell = isFitLimeShellRoute(actor, pathname, search)
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
   const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
@@ -52,17 +54,19 @@ export function AppLayout() {
       ? new URLSearchParams(search).get('view') ?? ''
       : ''
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Класс живёт на <html>: фон вне рамки телефона и цвет системной панели
     // должны совпадать с палитрой внутри неё.
     applyThemeVariant(themeVariant)
     const root = document.documentElement
     root.classList.add('ui-identity')
+    root.classList.toggle('theme-light', themeVariant === 'light' && !fitLimeShell)
+    root.classList.toggle('fit-lime-document', fitLimeShell)
     applyMonochromeThemeColor(theme)
     root.classList.toggle('schedule-v2-document', trainerScheduleV2Route)
     const appleStatusBar = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-status-bar-style"]')
     const previousAppleStatusBar = appleStatusBar?.content ?? 'default'
-    if (trainerScheduleV2Route) {
+    if (trainerScheduleV2Route || fitLimeShell) {
       document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', '#080908')
       appleStatusBar?.setAttribute('content', 'black-translucent')
     } else {
@@ -70,10 +74,11 @@ export function AppLayout() {
     }
     return () => {
       root.classList.remove('schedule-v2-document')
+      root.classList.remove('fit-lime-document')
       appleStatusBar?.setAttribute('content', previousAppleStatusBar)
       applyAppTheme(theme)
     }
-  }, [theme, themeVariant, trainerScheduleV2Route])
+  }, [theme, themeVariant, trainerScheduleV2Route, fitLimeShell])
 
   useEffect(() => {
     // Route content can grow again while its draft is restored. Reset on the
@@ -96,7 +101,7 @@ export function AppLayout() {
 
   const frameClass = [
     'phone-frame',
-    themeVariantClass(themeVariant),
+    fitLimeShell ? '' : themeVariantClass(themeVariant),
     redesignedStart && pathname === '/today' ? 'today-start-shell' : '',
     liveSession ? 'live-session-shell' : '',
     workoutForm ? 'workout-form-shell' : '',
@@ -118,6 +123,7 @@ export function AppLayout() {
     monochromeTrainerClientGoal ? 'trainer-client-goal-identity' : '',
     monochromeTrainerSchedule && !trainerScheduleV2Route ? 'trainer-schedule-identity' : '',
     trainerScheduleV2Route ? 'trainer-schedule-v2-shell' : '',
+    fitLimeShell ? 'fit-lime-shell fit-lime' : '',
     monochromeTrainerProgress ? 'trainer-progress-identity' : '',
     monochromeExerciseCatalog ? 'exercise-catalog-identity' : '',
     monochromeTrainerProfile ? 'trainer-profile-identity' : '',
