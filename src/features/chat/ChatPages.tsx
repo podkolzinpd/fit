@@ -339,7 +339,7 @@ export function ChatConversationPage() {
     && /^\/(?:today|schedule)(?:[/?#]|$)/.test(conversationState.returnTo)
     && !conversationState.returnTo.includes('\\') ? conversationState.returnTo : '/chat'
   const leaveConversation = () => {
-    if (conversationState?.chatBack === 'history') navigate(-1)
+    if (conversationState?.chatBack === 'history' || conversationState?.chatBack === 'clients' || conversationState?.chatBack === 'profile') navigate(-1)
     else navigate(safeReturnTo, { replace: true })
   }
   const searchAction = <button type="button" className="chat-page-search" aria-label={searchOpen ? 'Закрыть поиск' : 'Поиск по переписке'} onClick={() => searchOpen ? window.history.back() : setSearchOpen(true)}>{searchOpen ? <CloseIcon /> : <SearchIcon />}</button>
