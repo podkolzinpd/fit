@@ -36,7 +36,7 @@ const workout = {
   exercises: [],
 }
 
-async function mockPilot(page: Page) {
+async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?: Array<typeof workout> } = {}) {
   await page.addInitScript(({ token, profileId }) => {
     localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({
       token,
@@ -67,12 +67,30 @@ async function mockPilot(page: Page) {
       body = {
         accessMode: 'read_only',
         customExercises: [],
-        workouts: [workout],
+        workouts: options.workouts ?? [workout],
         attention: [],
         attentionPreferences: [],
         hasMoreWorkouts: false,
-        totalWorkouts: 1,
+        totalWorkouts: options.workouts?.length ?? 1,
       }
+    } else if (url.pathname === '/v1/clients') {
+      body = { clients: options.hasClients === false ? [] : [{
+        id: clientId,
+        canArchive: true,
+        hasAccount: true,
+        fullName: 'Алексей Смирнов',
+        canonicalFullName: 'Алексей Смирнов',
+        gender: null,
+        ageYears: null,
+        ageUpdatedAt: null,
+        heightCm: null,
+        goal: null,
+        note: null,
+        currentWeightKg: null,
+        archivedAt: null,
+        version: 1,
+        membershipVersion: 1,
+      }] }
     } else if (url.pathname === '/v1/trainer-workspace') {
       body = {
         summary: {
@@ -151,6 +169,69 @@ test('renders the single-trainer schedule and combines questions with messages',
   await page.locator('.schedule-v2-timeline').evaluate((element) => { element.scrollTop = 0 })
   await page.getByRole('button', { name: 'Закрыть входящие' }).click()
   await expect.poll(() => page.locator('.schedule-v2-timeline').evaluate((element) => element.scrollTop)).toBe(0)
+})
+
+test('today keeps voice, text, draft, workout context and onboarding beside the calendar', async ({ page }, testInfo) => {
+  await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+  await page.addInitScript((profileId) => {
+    localStorage.setItem(`fit.today-draft.${profileId}`, JSON.stringify({
+      screen: 'compose', text: 'Приседания 3 по 10', choices: {}, items: [], clientId: '',
+    }))
+  }, trainerId)
+  await mockPilot(page, { workouts: [{ ...workout, workoutDate: '2026-09-27', startTime: '15:00' }] })
+  await page.goto('/today')
+
+  await expect(page.getByRole('link', { name: 'Надиктовать тренировку' })).toHaveAttribute('href', '/today?view=compose')
+  await expect(page.getByRole('link', { name: 'Ввести текстом' })).toHaveAttribute('href', '/today?view=compose&entry=text')
+  await expect(page.getByRole('link', { name: /Есть незавершённая тренировка.*Продолжить/ })).toBeVisible()
+  await expect(page.locator('.schedule-v2-next-workout')).toContainText('Ближайшая тренировка')
+  await expect(page.locator('.schedule-v2-next-workout')).toContainText('Алексей Смирнов')
+  const timelineHeight = await page.locator('.schedule-v2-timeline').evaluate((element) => element.clientHeight)
+  await page.getByRole('button', { name: 'Установка и уведомления' }).click()
+  await expect(page.getByRole('dialog', { name: 'Установка и уведомления' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Открыть настройки' })).toBeVisible()
+  expect(await page.locator('.schedule-v2-timeline').evaluate((element) => element.clientHeight)).toBe(timelineHeight)
+  const screenshotPath = testInfo.outputPath('trainer-schedule-v2-today-actions.png')
+  await page.screenshot({ path: screenshotPath, fullPage: true })
+  await testInfo.attach('trainer-schedule-v2-today-actions', { path: screenshotPath, contentType: 'image/png' })
+
+  await page.getByRole('button', { name: 'Закрыть подсказки' }).click()
+  await page.getByRole('link', { name: 'Ввести текстом' }).click()
+  await expect(page).toHaveURL(/\/today\?view=compose&entry=text$/)
+  await expect(page.locator('.today-text-fallback')).toBeVisible()
+  await expect(page.locator('.today-text-fallback')).toContainText('Приседания 3 по 10')
+  await page.goBack()
+  await expect(page.locator('.schedule-v2-home-actions')).toBeVisible()
+  await page.getByRole('link', { name: 'Надиктовать тренировку' }).click()
+  await expect(page).toHaveURL(/\/today\?view=compose$/)
+  await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
+})
+
+test('today keeps creation available when the trainer has no clients or workouts', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+  await mockPilot(page, { hasClients: false, workouts: [] })
+  await page.goto('/today')
+  await expect(page.getByRole('link', { name: 'Добавить первого клиента' })).toHaveAttribute('href', '/clients/new')
+  await expect(page.getByRole('link', { name: 'Надиктовать тренировку' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Ввести текстом' })).toBeVisible()
+  await expect(page.locator('.schedule-v2-next-workout')).toHaveCount(0)
+})
+
+test('today keeps workout entry usable while clients fail and recover', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+  await mockPilot(page)
+  let recovered = false
+  await page.route('http://127.0.0.1:4100/v1/clients', async (route) => {
+    await route.fulfill(recovered
+      ? { status: 200, contentType: 'application/json', body: JSON.stringify({ clients: [] }) }
+      : { status: 503, contentType: 'application/json', body: '{}' })
+  })
+  await page.goto('/today')
+  await expect(page.getByRole('link', { name: 'Надиктовать тренировку' })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('Не удалось загрузить клиентов')
+  recovered = true
+  await page.getByRole('alert').getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.getByRole('link', { name: 'Добавить первого клиента' })).toBeVisible()
 })
 
 test('renders the weekly overview from the approved composition', async ({ page }, testInfo) => {
