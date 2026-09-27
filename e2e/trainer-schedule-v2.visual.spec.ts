@@ -41,7 +41,7 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null }
 
-async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; hasClients?: boolean; workouts?: MockWorkout[]; failClients?: boolean; failTrainingData?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean } = {}) {
+async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; workouts?: MockWorkout[]; failClients?: boolean; failTrainingData?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
@@ -78,7 +78,7 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
           lastName: null,
           timezone: 'Europe/Moscow',
           accountRole: 'trainer',
-          experiments: { trainerScheduleV2: options.pilot !== false },
+          experiments: { trainerScheduleV2: options.pilot !== false, fitLime: options.fitLime === true },
         },
       }
     } else if (url.pathname === '/v1/legal/acceptance') {
@@ -264,14 +264,43 @@ for (const [account, profileId] of [
   })
 }
 
+for (const [account, profileId] of [
+  ['first', trainerId],
+  ['second', '10000000-0000-4000-8000-000000000010'],
+] as const) {
+  test(`${account} trainer receives Fit Lime shell only on the redesigned calendar`, async ({ page }, testInfo) => {
+    await mockPilot(page, { profileId, fitLime: true, workouts: [] })
+    await page.goto('/today?date=2026-09-24')
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+    await expect(page.locator('html')).toHaveClass(/fit-lime-document/)
+    await expect(page.locator('.schedule-v2-topbar h1')).toHaveText('24 сентября')
+    if (account === 'first') {
+      const screenshotPath = testInfo.outputPath('fit-lime-shell-today.png')
+      await page.screenshot({ path: screenshotPath, fullPage: true })
+      await testInfo.attach('fit-lime-shell-today', { path: screenshotPath, contentType: 'image/png' })
+    }
+    await page.reload()
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+    await page.goto('/clients')
+    await expect(page.locator('.phone-frame')).not.toHaveClass(/fit-lime-shell/)
+    await expect(page.locator('html')).not.toHaveClass(/fit-lime-document/)
+    await page.goto('/today?view=compose')
+    await expect(page.locator('.phone-frame')).not.toHaveClass(/fit-lime-shell/)
+    await page.goto('/schedule?week=2026-09-21')
+    await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+  })
+}
+
 test('non-pilot trainer retains the classic Today and schedule routes', async ({ page }) => {
   await mockPilot(page, { pilot: false, workouts: [] })
   await page.goto('/today')
   await expect(page.locator('.today-page')).toBeVisible()
   await expect(page.locator('.trainer-schedule-v2-shell')).toHaveCount(0)
+  await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
   await page.goto('/schedule')
   await expect(page.locator('.schedule-page:not(.schedule-v2)')).toBeVisible()
   await expect(page.locator('.trainer-schedule-v2-shell')).toHaveCount(0)
+  await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
 })
 
 test('renders the single-trainer schedule and combines questions with messages', async ({ page }, testInfo) => {
