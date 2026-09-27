@@ -47,13 +47,13 @@ The first modern manifest also protects the full pre-migration rollback graph;
 later manifests can share files from that graph. Untracked failed/legacy uploads
 require a separate reviewed inventory, not a wildcard cleanup. A standard DELETE
 does not purge object versions. On 27 September, the console confirmed versioning
-is enabled and there is no lifecycle configuration: noncurrent versions therefore
-still consume storage. A separate operator rule is prepared but not saved:
+is enabled. After the user's explicit 3-day decision, the operator rule was saved
+and its enabled state verified in the console:
 `releases/` prefix, only `NoncurrentVersionExpiration`, 3 days after becoming
 noncurrent; no current-object Expiration, no transitions. This gives deleted
 releases a further 3-day recovery window before irreversible version removal.
-Saving that rule requires explicit confirmation; no lifecycle setting is applied
-by this PR. Semantics: [Object Storage lifecycles](https://yandex.cloud/ru/docs/storage/concepts/lifecycles).
+No current objects were deleted manually. The lifecycle setting was applied
+through the console, not by this PR. Semantics: [Object Storage lifecycles](https://yandex.cloud/ru/docs/storage/concepts/lifecycles).
 
 ## Failure and recovery
 
