@@ -186,13 +186,39 @@ describe('reliable chat screens', () => {
     renderAt('/chat', chatBackend(), trainerWorkspace)
 
     expect(await screen.findByRole('heading', { name: 'Вопросы тренеру' })).toBeVisible()
-    expect(screen.getByText('Можно заменить приседания?')).toBeVisible()
+    expect(await screen.findByText('Можно заменить приседания?')).toBeVisible()
     expect(screen.getByRole('link', { name: /Можно заменить приседания/ })).toHaveAttribute(
       'href',
       '/workouts/workout-question-1?reply=1',
     )
     expect(screen.getByRole('heading', { name: 'Сообщения', level: 2 })).toBeVisible()
     expect(trainerWorkspace.read).toHaveBeenCalledOnce()
+  })
+
+  it('keeps trainer questions visible when the dialog source fails', async () => {
+    auth.mockReturnValue({ actor: { ...actor, kind: 'trainer', role: 'trainer', experiments: { trainerScheduleV2: true } } })
+    const chat = chatBackend()
+    chat.listThreads.mockRejectedValue(new Error('threads unavailable'))
+    const trainerWorkspace: MockWorkspace = { read: vi.fn().mockResolvedValue({
+      summary: { pendingActionCount: 1, unresolvedQuestionCount: 1, unreadChatMessageCount: 0, inboxCount: 1, updatedAt: '2026-09-24T12:00:00.000Z' },
+      questions: [{ workoutId: 'workout-question-1', clientId: 'client-1', clientName: 'Иван', question: 'Можно заменить приседания?', askedAt: '2026-09-24T11:00:00.000Z' }],
+    }) }
+    renderAt('/chat', chat, trainerWorkspace)
+
+    expect(await screen.findByText('Можно заменить приседания?')).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Сообщения', level: 2 })).toBeVisible()
+    expect(await screen.findByRole('button', { name: 'Повторить' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Вопросы тренеру' })).toBeVisible()
+  })
+
+  it('keeps dialogs visible when trainer questions fail', async () => {
+    auth.mockReturnValue({ actor: { ...actor, kind: 'trainer', role: 'trainer', experiments: { trainerScheduleV2: true } } })
+    const trainerWorkspace: MockWorkspace = { read: vi.fn().mockRejectedValue(new Error('workspace unavailable')) }
+    renderAt('/chat', chatBackend(), trainerWorkspace)
+
+    expect(await screen.findByText('Анна')).toBeVisible()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось загрузить вопросы')
+    expect(screen.getByRole('button', { name: /Анна/ })).toBeVisible()
   })
 
   it('lets a trainer invite the athlete inside an unconnected dialog', async () => {

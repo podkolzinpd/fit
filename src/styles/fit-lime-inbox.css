@@ -1,0 +1,85 @@
+/* Stage 3, point 18: the inbox list only. Conversation is a separate point. */
+.fit-lime-shell.chat-identity .content-immersive:has(.chat-list-page) {
+  overflow-y: auto;
+  background: #080908;
+}
+
+.fit-lime-shell .chat-list-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: max(20px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom));
+}
+
+.fit-lime-shell .chat-list-page > .page-header {
+  justify-content: flex-start;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.fit-lime-shell .trainer-inbox-questions {
+  gap: 0;
+  margin-bottom: 22px;
+  padding: 18px;
+  border-color: #303034;
+  border-radius: 28px;
+  background: #19191c;
+}
+
+.fit-lime-shell .trainer-inbox-questions h2,
+.fit-lime-shell .chat-thread-section-title h2 {
+  color: #f8f8f6;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.fit-lime-shell .trainer-inbox-questions > div:first-child > span,
+.fit-lime-shell .chat-thread-section-title > span {
+  color: #baff36;
+  font-size: 16px;
+}
+
+.fit-lime-shell .trainer-inbox-question {
+  min-height: 68px;
+  border-color: #303034;
+}
+
+.fit-lime-shell .trainer-inbox-question .chat-avatar,
+.fit-lime-shell .chat-thread .chat-avatar {
+  border-radius: 50%;
+  background: #232328;
+  color: #f8f8f6;
+}
+
+.fit-lime-shell .trainer-inbox-question small,
+.fit-lime-shell .trainer-inbox-question time,
+.fit-lime-shell .chat-thread-copy small,
+.fit-lime-shell .chat-thread-meta {
+  color: #b8b8bd;
+}
+
+.fit-lime-shell .chat-thread-section-title {
+  margin: 0 2px 12px;
+}
+
+.fit-lime-shell .chat-thread-list {
+  gap: 8px;
+}
+
+.fit-lime-shell .chat-thread {
+  min-height: 80px;
+  border: 1px solid #303034;
+  border-radius: 28px;
+  background: #19191c;
+  box-shadow: none;
+}
+
+.fit-lime-shell .chat-thread-meta b {
+  color: #111111;
+  background: #baff36;
+}
+
+@media (max-width: 480px) {
+  .fit-lime-shell .chat-list-page {
+    padding-inline: 16px;
+  }
+}
