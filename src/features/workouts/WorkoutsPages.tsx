@@ -468,6 +468,16 @@ function scheduleV2TimeLabel(value: string): string {
   return new Date(value).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
 }
 
+function keepScheduleSheetFocusInside(event: ReactKeyboardEvent<HTMLElement>) {
+  if (event.key !== 'Tab') return
+  const focusable = [...event.currentTarget.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')]
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (!first || !last) return
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+}
+
 function ScheduleV2InboxSheet({ questions, questionsLoading, questionsError, returnTo, onRetryQuestions, onClose, onReturnFocus }: {
   questions: NonNullable<ReturnType<typeof useTrainerWorkspace>['data']>['questions']
   questionsLoading: boolean
@@ -479,7 +489,6 @@ function ScheduleV2InboxSheet({ questions, questionsLoading, questionsError, ret
 }) {
   const threads = useChatThreads()
   const closeRef = useRef<HTMLButtonElement>(null)
-  const dialogRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
@@ -494,18 +503,8 @@ function ScheduleV2InboxSheet({ questions, questionsLoading, questionsError, ret
     }
   }, [onClose, onReturnFocus])
 
-  const keepFocusInside = (event: ReactKeyboardEvent<HTMLElement>) => {
-    if (event.key !== 'Tab') return
-    const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ?? [])]
-    const first = focusable[0]
-    const last = focusable[focusable.length - 1]
-    if (!first || !last) return
-    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
-    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
-  }
-
   return createPortal(<div className="schedule-v2-sheet-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-    <section ref={dialogRef} className="schedule-v2-inbox-sheet" role="dialog" aria-modal="true" aria-labelledby="schedule-v2-inbox-title" onKeyDown={keepFocusInside}>
+    <section className="schedule-v2-inbox-sheet" role="dialog" aria-modal="true" aria-labelledby="schedule-v2-inbox-title" onKeyDown={keepScheduleSheetFocusInside}>
       <div className="schedule-v2-sheet-handle" aria-hidden="true" />
       <header><div><h2 id="schedule-v2-inbox-title">Входящие</h2><p>Вопросы тренеру и сообщения</p></div><button ref={closeRef} type="button" aria-label="Закрыть входящие" onClick={onClose}><CloseIcon /></button></header>
       <div className="schedule-v2-inbox-scroll">
@@ -537,10 +536,9 @@ function ScheduleV2InboxSheet({ questions, questionsLoading, questionsError, ret
   </div>, document.body)
 }
 
-function ScheduleV2OnboardingSheet({ userId, onClose }: { userId: string; onClose: () => void }) {
+function ScheduleV2OnboardingSheet({ userId, onClose, onReturnFocus }: { userId: string; onClose: () => void; onReturnFocus: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -549,12 +547,12 @@ function ScheduleV2OnboardingSheet({ userId, onClose }: { userId: string; onClos
     return () => {
       document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', closeOnEscape)
-      previousFocus?.focus()
+      onReturnFocus()
     }
-  }, [onClose])
+  }, [onClose, onReturnFocus])
 
   return createPortal(<div className="schedule-v2-sheet-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-    <section className="schedule-v2-inbox-sheet schedule-v2-onboarding-sheet" role="dialog" aria-modal="true" aria-labelledby="schedule-v2-onboarding-title">
+    <section className="schedule-v2-inbox-sheet schedule-v2-onboarding-sheet" role="dialog" aria-modal="true" aria-labelledby="schedule-v2-onboarding-title" onKeyDown={keepScheduleSheetFocusInside}>
       <div className="schedule-v2-sheet-handle" aria-hidden="true" />
       <header><div><h2 id="schedule-v2-onboarding-title">Установка и уведомления</h2><p>Настройте Fit на этом устройстве</p></div><button ref={closeRef} type="button" aria-label="Закрыть подсказки" onClick={onClose}><CloseIcon /></button></header>
       <div className="schedule-v2-inbox-scroll"><AppInstallPrompt userId={userId} /><NotificationOnboarding userId={userId} role="trainer" /><Link className="schedule-v2-inbox-all" to="/profile/settings" onClick={onClose}>Открыть настройки</Link></div>
@@ -562,20 +560,23 @@ function ScheduleV2OnboardingSheet({ userId, onClose }: { userId: string; onClos
   </div>, document.body)
 }
 
-function ScheduleV2ActionSheet({ actions, planning, loading, error, snoozingClientId, snoozeError, onSnooze, onRetry, onClose }: {
+function ScheduleV2ActionSheet({ actions, planning, actionsLoading, actionsError, planningLoading, planningError, snoozingClientId, snoozeError, onSnooze, onRetryActions, onRetryPlanning, onClose, onReturnFocus }: {
   actions: TrainerActionItem[]
   planning: TrainerPlanningItem[]
-  loading: boolean
-  error: boolean
+  actionsLoading: boolean
+  actionsError: boolean
+  planningLoading: boolean
+  planningError: boolean
   snoozingClientId?: string
   snoozeError: boolean
   onSnooze: (clientId: string) => void
-  onRetry: () => void
+  onRetryActions: () => void
+  onRetryPlanning: () => void
   onClose: () => void
+  onReturnFocus: () => void
 }) {
   const closeRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -584,23 +585,25 @@ function ScheduleV2ActionSheet({ actions, planning, loading, error, snoozingClie
     return () => {
       document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', closeOnEscape)
-      previousFocus?.focus()
+      onReturnFocus()
     }
-  }, [onClose])
+  }, [onClose, onReturnFocus])
 
   return createPortal(<div className="schedule-v2-sheet-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-    <section className="schedule-v2-inbox-sheet schedule-v2-action-sheet" role="dialog" aria-modal="true" aria-labelledby="schedule-v2-action-title">
+    <section className="schedule-v2-inbox-sheet schedule-v2-action-sheet" role="dialog" aria-modal="true" aria-labelledby="schedule-v2-action-title" onKeyDown={keepScheduleSheetFocusInside}>
       <div className="schedule-v2-sheet-handle" aria-hidden="true" />
       <header><div><h2 id="schedule-v2-action-title">Рабочая очередь</h2><p>Незавершённые действия по клиентам</p></div><button ref={closeRef} type="button" aria-label="Закрыть рабочую очередь" onClick={onClose}><CloseIcon /></button></header>
       <div className="schedule-v2-inbox-scroll">
-        {loading && <p className="schedule-v2-inbox-empty" role="status">Загружаем действия…</p>}
-        {error && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error" role="alert">Не удалось загрузить действия <button type="button" onClick={onRetry}>Повторить</button></p>}
+        {actionsLoading && <p className="schedule-v2-inbox-empty" role="status">Загружаем действия…</p>}
+        {actionsError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error" role="alert">Не удалось загрузить действия <button type="button" aria-label="Повторить загрузку действий" onClick={onRetryActions}>Повторить</button></p>}
         {snoozeError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error" role="alert">Не удалось отложить напоминание. Попробуйте ещё раз.</p>}
-        {!loading && !error && actions.length + planning.length === 0 && <p className="schedule-v2-inbox-empty">Незавершённых действий нет</p>}
-        {!loading && !error && actions.length > 0 && <section aria-labelledby="schedule-v2-actions-heading"><div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-actions-heading">Требует действия</h3><span>{scheduleCount(actions.length)}</span></div>{actions.map((item) => <Link key={item.clientId} className="schedule-v2-action-row" to={`/workouts/${item.workoutId}${item.reason === 'question' ? '?reply=1' : ''}`} onClick={onClose}>
+        {!actionsLoading && !actionsError && !planningLoading && !planningError && actions.length + planning.length === 0 && <p className="schedule-v2-inbox-empty">Незавершённых действий нет</p>}
+        {!actionsLoading && !actionsError && actions.length > 0 && <section aria-labelledby="schedule-v2-actions-heading"><div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-actions-heading">Требует действия</h3><span>{scheduleCount(actions.length)}</span></div>{actions.map((item) => <Link key={item.clientId} className="schedule-v2-action-row" to={`/workouts/${item.workoutId}${item.reason === 'question' ? '?reply=1' : ''}`} onClick={onClose}>
           <span><strong>{item.clientName}</strong><small>{item.title}</small><em>{item.reason === 'past_plan' ? formatLocalDate(localDate(item.detail)) : item.detail}</em></span><b>{item.actionLabel}</b>
         </Link>)}</section>}
-        {!loading && !error && planning.length > 0 && <section aria-labelledby="schedule-v2-planning-heading"><div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-planning-heading">Проверить планы</h3><span>{scheduleCount(planning.length)}</span></div>{planning.map((item) => <article key={item.clientId} className="schedule-v2-action-row schedule-v2-planning-row">
+        {!actionsError && planningLoading && <p className="schedule-v2-inbox-empty" role="status">Загружаем планы…</p>}
+        {!actionsError && planningError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error" role="alert">Не удалось загрузить планы <button type="button" aria-label="Повторить загрузку планов" onClick={onRetryPlanning}>Повторить</button></p>}
+        {!actionsError && !planningLoading && !planningError && planning.length > 0 && <section aria-labelledby="schedule-v2-planning-heading"><div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-planning-heading">Проверить планы</h3><span>{scheduleCount(planning.length)}</span></div>{planning.map((item) => <article key={item.clientId} className="schedule-v2-action-row schedule-v2-planning-row">
           <span><strong>{item.clientName}</strong><small>{item.title}</small><em>{trainerPlanningDetail(item.detail)}</em></span><div><Link to={`/workouts/new?client=${item.clientId}`} onClick={onClose}>Запланировать</Link><button type="button" disabled={snoozingClientId === item.clientId} onClick={() => onSnooze(item.clientId)}>{snoozingClientId === item.clientId ? 'Сохраняем…' : 'Напомнить через 2 недели'}</button></div>
         </article>)}</section>}
       </div>
@@ -622,14 +625,18 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const navigate = useNavigate()
   const returnTo = `${location.pathname}${location.search}`
   const dateInputRef = useRef<HTMLInputElement>(null)
+  const actionTriggerRef = useRef<HTMLButtonElement>(null)
   const inboxTriggerRef = useRef<HTMLButtonElement>(null)
+  const onboardingTriggerRef = useRef<HTMLButtonElement>(null)
   const [inboxOpen, setInboxOpen] = useState(false)
   const [actionOpen, setActionOpen] = useState(false)
   const [onboardingOpen, setOnboardingOpen] = useState(false)
   const closeActionQueue = useCallback(() => setActionOpen(false), [])
+  const restoreActionFocus = useCallback(() => actionTriggerRef.current?.focus(), [])
   const closeInbox = useCallback(() => setInboxOpen(false), [])
   const restoreInboxFocus = useCallback(() => inboxTriggerRef.current?.focus(), [])
   const closeOnboarding = useCallback(() => setOnboardingOpen(false), [])
+  const restoreOnboardingFocus = useCallback(() => onboardingTriggerRef.current?.focus(), [])
   const currentTime = currentTimeInTimeZone(actor?.timezone)
   const currentMinutes = minutesOf(currentTime)
   const timelineEvents = layoutScheduleTimelineEvents(timed, HOUR_HEIGHT)
@@ -662,9 +669,11 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const actionItems = trainerActionItems(homeClients.data ?? [], homeWorkouts.data ?? [], attention.data ?? [], today)
   const actionClientIds = new Set(actionItems.map((item) => item.clientId))
   const planningItems = trainerPlanningItems(homeClients.data ?? [], homeWorkouts.data ?? [], attentionPreferences.data ?? [], actionClientIds, today)
-  const queueLoading = homeClients.isLoading || homeWorkouts.isLoading || attention.isLoading || attentionPreferences.isLoading
-  const queueError = homeClients.isError || homeWorkouts.isError || attention.isError || attentionPreferences.isError
-  const actionCount = queueError ? '—' : queueLoading ? '…' : scheduleCount(actionItems.length + planningItems.length)
+  const actionsLoading = homeClients.isLoading || homeWorkouts.isLoading || attention.isLoading
+  const actionsError = homeClients.isError || homeWorkouts.isError || attention.isError
+  const planningLoading = !actionsError && (actionsLoading || attentionPreferences.isLoading)
+  const planningError = !actionsError && attentionPreferences.isError
+  const actionCount = actionsError || planningError ? '—' : actionsLoading || planningLoading ? '…' : scheduleCount(actionItems.length + planningItems.length)
   const snoozeAttention = useMutation({
     mutationFn: (clientId: string) => workoutsRepository.snoozeClientAttention(clientId),
     onSuccess: async () => {
@@ -676,7 +685,6 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     void homeClients.refetch()
     void homeWorkouts.refetch()
     void attention.refetch()
-    void attentionPreferences.refetch()
   }
   const homeContext = homeWorkouts.data ? trainerHomeContext(homeWorkouts.data, today) : null
   const draft = actor && showHomeActions ? readTodayDraft(todayDraftKey(actor.userId)) : null
@@ -726,7 +734,17 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       {homeWorkouts.isLoading && <p className="schedule-v2-home-state" role="status">Загружаем тренировки…</p>}
       {homeWorkouts.isError && <p className="schedule-v2-home-state" role="alert">Не удалось загрузить тренировки. <button type="button" onClick={() => void homeWorkouts.refetch()}>Повторить</button></p>}
       {homeContext && <Link className="schedule-v2-next-workout" to={homeContext.workout.status === 'in_progress' ? `/workouts/${homeContext.workout.id}/live` : `/workouts/${homeContext.workout.id}`} state={{ returnTo }}><small>{homeContext.title}</small><strong>{homeContext.workout.clientName}</strong><span>{homeContext.workout.workoutDate === today ? homeContext.workout.startTime?.slice(0, 5) || 'Сегодня' : formatLocalDate(homeContext.workout.workoutDate)} <ChevronRightIcon /></span></Link>}
-      {actor && <button type="button" className="schedule-v2-onboarding-trigger" onClick={() => setOnboardingOpen(true)}>Установка и уведомления <ChevronRightIcon /></button>}
+      {actor && <button ref={onboardingTriggerRef} type="button" className="schedule-v2-onboarding-trigger" onClick={() => setOnboardingOpen(true)}>Установка и уведомления <ChevronRightIcon /></button>}
+    </section>}
+    {isDayView && <section className="schedule-v2-summary" aria-label="Рабочая сводка">
+      <button ref={actionTriggerRef} type="button" className="schedule-v2-action-card" aria-label={`${actionCount} Незавершённые действия`} onClick={() => { trackGoal('schedule_v2_action_tile_opened'); setActionOpen(true) }}>
+        <span className="schedule-v2-summary-icon"><BellIcon /></span>
+        <strong>{actionCount}</strong>
+      </button>
+      <button ref={inboxTriggerRef} type="button" className="schedule-v2-message-card" aria-label={`${summaryValue(workspace.data?.summary.inboxCount)} Вопросы и сообщения`} onClick={() => { trackGoal('schedule_v2_inbox_tile_opened'); setInboxOpen(true) }}>
+        <span className="schedule-v2-summary-icon"><MessageIcon /></span>
+        <strong>{summaryValue(workspace.data?.summary.inboxCount)}</strong>
+      </button>
     </section>}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {!isDayView ? <>
@@ -760,16 +778,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
           })}
         </section>
       </> : <>
-        <section className="schedule-v2-summary" aria-label="Рабочая сводка">
-          <button type="button" className="schedule-v2-action-card" aria-label={`${actionCount} Незавершённые действия`} onClick={() => { trackGoal('schedule_v2_action_tile_opened'); setActionOpen(true) }}>
-            <span className="schedule-v2-summary-icon"><BellIcon /></span>
-            <strong>{actionCount}</strong>
-          </button>
-          <button ref={inboxTriggerRef} type="button" className="schedule-v2-message-card" aria-label={`${summaryValue(workspace.data?.summary.inboxCount)} Вопросы и сообщения`} onClick={() => { trackGoal('schedule_v2_inbox_tile_opened'); setInboxOpen(true) }}>
-            <span className="schedule-v2-summary-icon"><MessageIcon /></span>
-            <strong>{summaryValue(workspace.data?.summary.inboxCount)}</strong>
-          </button>
-        </section>
+        {timelineEvents.length === 0 && untimed.length === 0 && <p className="schedule-v2-empty-day" role="status">Свободный день</p>}
         {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
         <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
           <div className="day-grid" style={{ height: timelineHeight }}>
@@ -802,15 +811,19 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     {actionOpen && <ScheduleV2ActionSheet
       actions={actionItems}
       planning={planningItems}
-      loading={queueLoading}
-      error={queueError}
+      actionsLoading={actionsLoading}
+      actionsError={actionsError}
+      planningLoading={planningLoading}
+      planningError={planningError}
       snoozingClientId={snoozeAttention.isPending ? snoozeAttention.variables : undefined}
       snoozeError={snoozeAttention.isError}
       onSnooze={(clientId) => snoozeAttention.mutate(clientId)}
-      onRetry={retryActionQueue}
+      onRetryActions={retryActionQueue}
+      onRetryPlanning={() => void attentionPreferences.refetch()}
       onClose={closeActionQueue}
+      onReturnFocus={restoreActionFocus}
     />}
-    {onboardingOpen && actor && <ScheduleV2OnboardingSheet userId={actor.userId} onClose={closeOnboarding} />}
+    {onboardingOpen && actor && <ScheduleV2OnboardingSheet userId={actor.userId} onClose={closeOnboarding} onReturnFocus={restoreOnboardingFocus} />}
   </Page>
 }
 
