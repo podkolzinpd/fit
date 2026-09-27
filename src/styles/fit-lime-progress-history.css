@@ -1,0 +1,133 @@
+/* Stage 3, point 24: trainer progress, measurements, running and client history. */
+.fit-lime-shell.trainer-progress-identity .progress-page,
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 20px 18px calc(116px + env(safe-area-inset-bottom));
+}
+.fit-lime-shell.trainer-progress-identity .progress-page > .page-header,
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page > .page-header { margin-bottom: 20px }
+.fit-lime-shell.trainer-progress-identity .progress-page > .page-header h1,
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page > .page-header h1 {
+  color: var(--lime-text);
+  font-size: clamp(29px, 7vw, 32px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+}
+.fit-lime-shell.trainer-progress-identity .page-back,
+.fit-lime-shell.client-workouts-identity .page-back {
+  border-color: var(--lime-divider);
+  border-radius: 16px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.trainer-progress-identity .trainer-progress-stack { gap: 10px }
+.fit-lime-shell.trainer-progress-identity :where(.trainer-progress-week, .ai-progress-card, .trainer-progress-route-card, .running-progress-card, .trainer-measurements-workspace),
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page :where(.workout-chronicle-card, .past-workout-plan-card, .client-history-calendar, .empty-state) {
+  border-color: var(--lime-divider);
+  border-radius: 28px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+  box-shadow: none;
+}
+.fit-lime-shell.trainer-progress-identity .trainer-progress-week.is-positive { border-color: var(--lime-divider); background: var(--lime-surface) }
+.fit-lime-shell.trainer-progress-identity .trainer-progress-week strong,
+.fit-lime-shell.trainer-progress-identity .trainer-progress-route-card strong,
+.fit-lime-shell.trainer-progress-identity .running-progress-card h2,
+.fit-lime-shell.trainer-progress-identity .trainer-measurements-workspace-head h2 {
+  color: var(--lime-text);
+  font-size: 20px;
+  font-weight: 650;
+}
+.fit-lime-shell.trainer-progress-identity :where(.trainer-progress-week p, .trainer-progress-week span, .trainer-progress-route-card span, .trainer-measurements-workspace-head > span),
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page :where(.muted, .client-workout-section-head .eyebrow, .workout-chronicle-card .card-author) { color: var(--lime-text-secondary) }
+.fit-lime-shell.trainer-progress-identity .progress-story-period,
+.fit-lime-shell.trainer-progress-identity .client-progress-main-now { border-color: var(--lime-divider) }
+.fit-lime-shell.trainer-progress-identity .progress-story-hero { border-color: var(--lime-divider); background: var(--lime-surface-raised) }
+.fit-lime-shell.trainer-progress-identity .progress-story-hero > strong { color: var(--success-fg) }
+.fit-lime-shell.trainer-progress-identity .ai-progress-periods button.active::before {
+  border-color: var(--lime-accent);
+  background: var(--lime-accent-muted);
+}
+.fit-lime-shell.trainer-progress-identity :where(.client-progress-overview, .client-progress-measurements-story, .client-progress-regularity-story, .client-progress-goal-story.empty, .client-progress-upcoming, .running-progress-metrics, .running-progress-insight) {
+  border-color: var(--lime-divider);
+  border-radius: 19px;
+  background: var(--lime-surface-raised);
+}
+.fit-lime-shell.trainer-progress-identity .client-progress-overview { border-color: var(--lime-divider) }
+.fit-lime-shell.trainer-progress-identity .trainer-progress-route-card:focus-visible { outline-color: var(--lime-accent) }
+.fit-lime-shell.trainer-progress-identity .metric-tab {
+  border-color: var(--lime-divider);
+  border-radius: 15px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+}
+.fit-lime-shell.trainer-progress-identity .metric-tab.active,
+.fit-lime-shell.trainer-progress-identity .measurement-actions .measurement-primary-action {
+  border-color: var(--lime-accent);
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.fit-lime-shell.trainer-progress-identity :where(.progress-form-card, .progress-history, .metrics-manager) { border-color: var(--lime-divider) }
+.fit-lime-shell.trainer-progress-identity :where(.progress-history .card, .progress-form-card, .metrics-manager .card) {
+  border-color: var(--lime-divider);
+  border-radius: 20px;
+  background: var(--lime-surface-raised);
+}
+.fit-lime-shell.trainer-progress-identity :where(input, textarea, select) {
+  border-color: var(--lime-divider);
+  border-radius: 17px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-size: 16px;
+}
+.fit-lime-shell.trainer-progress-identity .progress-form-card .primary {
+  border-color: var(--lime-accent);
+  border-radius: 17px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.fit-lime-shell.trainer-progress-identity .progress-form-card .secondary {
+  border-color: var(--lime-divider);
+  border-radius: 17px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+}
+.fit-lime-shell.trainer-progress-identity .progress-history .row-actions .danger { color: var(--danger) }
+
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page { max-width: 760px }
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page > .page-header .button {
+  min-height: 48px;
+  border-radius: 16px;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+  font-weight: 650;
+}
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page .client-workout-section-head h2 { color: var(--lime-text); font-size: 20px; font-weight: 650 }
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page .client-history-view-toggle,
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page .client-history-calendar-state {
+  border-color: var(--lime-divider);
+  border-radius: 18px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+}
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page .client-history-view-toggle button[aria-pressed='true'] {
+  border-radius: 14px;
+  background: var(--lime-accent-muted);
+  color: var(--lime-accent);
+  box-shadow: none;
+}
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page .workout-chronicle-card:hover,
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page .past-workout-plan-card:hover { border-color: var(--accent-surface-border); background: var(--lime-surface-raised) }
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page .client-history-calendar-day.selected > button { background: var(--lime-accent); color: var(--lime-text-on-accent) }
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page .client-history-calendar-day.has-workout > button { background: var(--lime-surface-raised); color: var(--lime-text) }
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page .client-history-calendar-day.selected.has-workout > button { background: var(--lime-accent); color: var(--lime-text-on-accent) }
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page .client-history-calendar-day.today > button { box-shadow: inset 0 0 0 1px var(--lime-accent) }
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page .workout-status[data-tone='success'] { color: var(--success-fg) }
+.fit-lime-shell.client-workouts-identity .trainer-client-workouts-page .workout-status[data-tone='warning'] { color: var(--warning-fg) }
+
+@media (max-width: 480px) {
+  .fit-lime-shell.trainer-progress-identity .progress-page,
+  .fit-lime-shell.client-workouts-identity .trainer-client-workouts-page { padding: 16px 16px calc(116px + env(safe-area-inset-bottom)) }
+  .fit-lime-shell.trainer-progress-identity .trainer-measurements-workspace { padding: 18px }
+}

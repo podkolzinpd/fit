@@ -2,13 +2,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
+import { isFitLimeEnabled } from '../../app/fit-lime'
+import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useDataBackend } from '../../app/data-backend-context'
 import { findProgressDateConflict } from '../../data/repositories/progress-rules'
 import type { CustomMetric, ProgressEntry } from '../../shared/domain'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { ChevronRightIcon, CloseIcon } from '../../shared/icons'
-import { AsyncView, Field, Page } from '../../shared/ui'
+import { AsyncView, Field, Page, useConfirm } from '../../shared/ui'
 import { ProgressChart, type MetricKey, type MetricSelector } from './ProgressChart'
 import { groupMetricRows } from './measure-presets'
 import { MetricsManager } from './MetricsManager'
@@ -32,6 +34,8 @@ function metricField(metric: CustomMetric, entry: ProgressEntry | null, placehol
 export function ProgressPage() {
   const { clients: clientsRepository, progress: progressRepository } = useDataBackend()
   const { clientId = '' } = useParams(); const queryClient = useQueryClient(); const { actor } = useAuth(); const [editing, setEditing] = useState<ProgressEntry | null>(null)
+  const fitLimePilot = isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)
+  const [confirm, confirmDialog] = useConfirm()
   const [searchParams] = useSearchParams()
   const view = searchParams.get('view')
   const today = todayInTimeZone(actor?.timezone)
@@ -101,7 +105,7 @@ export function ProgressPage() {
   if (view === 'running') {
     return <Page className="progress-page trainer-progress-subpage" title="Бег" subtitle={client.data?.fullName} back={`/progress/${clientId}`}>
       <AsyncView loading={client.isLoading} error={client.error} onRetry={() => void client.refetch()}>
-        {client.data && <RunningProgressCard clientId={clientId} />}
+        {client.data && <RunningProgressCard clientId={clientId} keepVisible={fitLimePilot} />}
       </AsyncView>
     </Page>
   }
@@ -134,12 +138,14 @@ export function ProgressPage() {
             <div className="workout-editor-heading"><h2>История замеров ({entries.data?.length ?? 0})</h2></div>
             <div className="cards">{entries.data?.map((entry) => editing?.id === entry.id
               ? <article className="card editing" key={entry.id}><ProgressForm entry={entry} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={save.error?.message ?? null} onSubmit={(form) => save.mutate(form)} onCancel={() => setEditing(null)} /></article>
-              : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p></div>{canManage(entry) && <div className="row-actions"><button className="link" onClick={() => { setCreateError(null); setCreateFormOpen(false); setEditing(entry) }}>Изменить</button><button className="link danger" onClick={() => remove.mutate(entry)}>Удалить</button></div>}</article>)}</div>
+              : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p></div>{canManage(entry) && <div className="row-actions"><button className="link" onClick={() => { setCreateError(null); setCreateFormOpen(false); setEditing(entry) }}>Изменить</button><button className="link danger" disabled={remove.isPending} aria-busy={remove.isPending} onClick={async () => { if (!fitLimePilot || await confirm({ message: `Удалить замер за ${formatLocalDate(entry.recordedOn)}? Данные этого замера будут потеряны.`, confirmLabel: 'Удалить', danger: true })) remove.mutate(entry) }}>Удалить</button></div>}</article>)}</div>
+            {fitLimePilot && remove.error && <p className="error" role="alert">Не удалось удалить замер. Повторите действие.</p>}
           </section>}
           {metricsOpen && <MetricsManager metrics={metrics.data ?? []} busy={createMetric.isPending || archiveMetric.isPending} error={createMetric.error ?? archiveMetric.error} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />}
         </section>}
         {metricSheetOpen && <MetricOverflowSheet metrics={overflowMetrics} onPick={(id) => { setSelectedMetric(id); setMetricSheetOpen(false) }} onClose={() => setMetricSheetOpen(false)} />}
       </AsyncView>
+      {confirmDialog}
     </Page>
   }
 

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, AssistantIcon, ClientsIcon, HomeIcon, ProfileIcon, ScheduleIcon, TodayIcon } from '../shared/icons'
 import { useAuth } from './auth-context'
 import { Coachmark } from '../shared/ui'
@@ -157,7 +157,9 @@ export function AppLayout() {
   return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><TodayIcon />Сегодня</NavLink>
     {trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
-    {(redesignedStart || trainerScheduleV2) && <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>}
+    {(redesignedStart || trainerScheduleV2) && (fitLimeShell && /^\/progress\/[^/]+$/.test(pathname)
+      ? <Link to="/clients" className="active" aria-current="page"><ClientsIcon />Клиенты</Link>
+      : <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>)}
     {trainerAssistantNav}
     {!trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
     {!redesignedStart && !trainerScheduleV2 && <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>}
