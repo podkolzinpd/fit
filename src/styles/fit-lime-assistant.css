@@ -117,3 +117,6 @@
 @media (max-width: 480px) {
   .fit-lime-shell.assistant-identity .assistant-page { padding-inline: 16px }
 }
+@media (max-width: 360px) {
+  .fit-lime-shell.assistant-identity .assistant-composer textarea { min-height: 72px }
+}
