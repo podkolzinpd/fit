@@ -37,8 +37,9 @@ describe('Fit Lime route boundary', () => {
     ['/exercises', '', true],
     ['/chat/thread-1', '', true],
     ['/join', '', true],
-    ['/today', '?view=compose', false],
-    ['/today', '?view=review', false],
+    ['/today', '?view=compose', true],
+    ['/today', '?view=review', true],
+    ['/today', '?view=save', true],
     ['/workouts/new', '', true],
     ['/workouts/workout-1/edit', '', true],
     ['/workouts/workout-1', '', false],
@@ -74,7 +75,11 @@ describe('Fit Lime route boundary', () => {
     expect(isFitLimeShellRoute(pilot, '/workouts/workout-1/edit', '')).toBe(true)
     expect(isFitLimeShellRoute(pilot, '/workouts/workout-1', '')).toBe(false)
     expect(isFitLimeShellRoute(pilot, '/progress/client-1/history', '')).toBe(false)
-    expect(isFitLimeShellRoute(pilot, '/today', '?view=compose')).toBe(false)
+    expect(isFitLimeShellRoute(pilot, '/today', '?view=compose')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/today', '?view=review')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/today', '?view=save')).toBe(true)
+    expect(isFitLimeShellRoute(pilot, '/me', '?view=compose')).toBe(false)
+    expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/today', '?view=compose')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/today', '')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/chat', '')).toBe(false)
     expect(isFitLimeShellRoute({ ...pilot, experiments: { trainerScheduleV2: true, fitLime: false } }, '/chat/thread-1', '')).toBe(false)

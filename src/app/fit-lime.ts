@@ -9,6 +9,7 @@ export function isFitLimeEnabled(actor: SessionActor | null | undefined): boolea
 /** Released Fit Lime routes. This list alone does not activate styling. */
 export function isFitLimeApprovedTrainerRoute(pathname: string, search: string): boolean {
   if (pathname === '/today') return isTrainerScheduleV2CalendarRoute(pathname, search)
+    || ['compose', 'review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   if (pathname === '/schedule' || pathname === '/join' || pathname === '/chat'
     || pathname === '/clients' || pathname === '/clients/archive'
     || pathname === '/clients/new' || pathname === '/exercises'
@@ -30,6 +31,7 @@ export function isFitLimeShellRoute(
   if (!isFitLimeEnabled(actor) || !isFitLimeApprovedTrainerRoute(pathname, search)) return false
   return isTrainerScheduleV2Enabled(actor)
     && (isTrainerScheduleV2CalendarRoute(pathname, search)
+      || (pathname === '/today' && ['compose', 'review', 'save'].includes(new URLSearchParams(search).get('view') ?? ''))
       || pathname === '/chat' || /^\/chat\/[^/]+$/.test(pathname)
       || pathname === '/clients' || pathname === '/clients/archive'
       || pathname === '/clients/new' || /^\/clients\/[^/]+\/edit$/.test(pathname)
