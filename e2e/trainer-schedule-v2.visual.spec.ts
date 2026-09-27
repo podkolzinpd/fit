@@ -36,7 +36,12 @@ const workout = {
   exercises: [],
 }
 
-async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?: Array<typeof workout> } = {}) {
+async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?: Array<typeof workout>; failClients?: boolean } = {}) {
+  let snoozedUntil: string | null = null
+  let failClients = options.failClients ?? false
+  await page.route('http://127.0.0.1:4100/health', async (route) => {
+    await route.fulfill({ status: 200, headers: { 'x-fit-request-id': 'pilot-health-check', 'access-control-allow-origin': '*', 'access-control-expose-headers': 'x-fit-request-id' }, contentType: 'application/json', body: '{"ok":true}' })
+  })
   await page.addInitScript(({ token, profileId }) => {
     localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({
       token,
@@ -69,11 +74,15 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
         customExercises: [],
         workouts: options.workouts ?? [workout],
         attention: [],
-        attentionPreferences: [],
+        attentionPreferences: snoozedUntil ? [{ clientId, snoozedUntil }] : [],
         hasMoreWorkouts: false,
         totalWorkouts: options.workouts?.length ?? 1,
       }
     } else if (url.pathname === '/v1/clients') {
+      if (failClients) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+        return
+      }
       body = { clients: options.hasClients === false ? [] : [{
         id: clientId,
         canArchive: true,
@@ -91,6 +100,9 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
         version: 1,
         membershipVersion: 1,
       }] }
+    } else if (url.pathname === `/v1/clients/${clientId}/attention/snooze` && route.request().method() === 'POST') {
+      snoozedUntil = '2099-01-01T00:00:00.000Z'
+      body = { client: { snoozedUntil } }
     } else if (url.pathname === '/v1/trainer-workspace') {
       body = {
         summary: {
@@ -130,6 +142,7 @@ async function mockPilot(page: Page, options: { hasClients?: boolean; workouts?:
     }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
   })
+  return { setClientsFailure(value: boolean) { failClients = value } }
 }
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
@@ -140,7 +153,7 @@ test('renders the single-trainer schedule and combines questions with messages',
   await page.goto('/today?date=2026-09-24')
 
   await expect(page.locator('.trainer-schedule-v2-shell')).toBeVisible()
-  await expect(page.getByRole('link', { name: /3 Незавершённые действия/ })).toHaveAttribute('href', '/today?classic=1#trainer-attention')
+  await expect(page.getByRole('button', { name: /1 Незавершённые действия/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /6 Вопросы и сообщения/ })).toBeVisible()
   await expect(page.getByText('Алексей Смирнов')).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toContainText('СегодняРасписаниеКлиенты')
@@ -155,6 +168,16 @@ test('renders the single-trainer schedule and combines questions with messages',
   const screenshotPath = testInfo.outputPath('trainer-schedule-v2.png')
   await page.screenshot({ path: screenshotPath, fullPage: true })
   await testInfo.attach('trainer-schedule-v2', { path: screenshotPath, contentType: 'image/png' })
+
+  await page.getByRole('button', { name: /1 Незавершённые действия/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Рабочая очередь' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Требует действия' })).toBeVisible()
+  await expect(page.getByText('Прошлый план ждёт решения')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Рабочая очередь' }).getByText('Алексей Смирнов')).toHaveCSS('color', 'rgb(248, 248, 246)')
+  const actionScreenshotPath = testInfo.outputPath('trainer-schedule-v2-actions.png')
+  await page.screenshot({ path: actionScreenshotPath, fullPage: true })
+  await testInfo.attach('trainer-schedule-v2-actions', { path: actionScreenshotPath, contentType: 'image/png' })
+  await page.getByRole('button', { name: 'Закрыть рабочую очередь' }).click()
 
   await page.getByRole('button', { name: /6 Вопросы и сообщения/ }).click()
   await expect(page.getByRole('dialog', { name: 'Входящие' })).toBeVisible()
@@ -215,6 +238,43 @@ test('today keeps creation available when the trainer has no clients or workouts
   await expect(page.getByRole('link', { name: 'Надиктовать тренировку' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Ввести текстом' })).toBeVisible()
   await expect(page.locator('.schedule-v2-next-workout')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '0 Незавершённые действия' })).toBeVisible()
+  await page.getByRole('button', { name: '0 Незавершённые действия' }).click()
+  await expect(page.getByRole('dialog', { name: 'Рабочая очередь' }).getByText('Незавершённых действий нет')).toBeVisible()
+})
+
+test('action queue shows source failure and recovers on retry', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+  const backend = await mockPilot(page, { workouts: [], failClients: true })
+  await page.goto('/today')
+  await expect(page.getByRole('button', { name: '— Незавершённые действия' })).toBeVisible({ timeout: 15_000 })
+  await page.getByRole('button', { name: '— Незавершённые действия' }).click()
+  const queue = page.getByRole('dialog', { name: 'Рабочая очередь' })
+  await expect(queue.getByRole('alert')).toContainText('Не удалось загрузить действия')
+  backend.setClientsFailure(false)
+  await queue.getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.getByRole('button', { name: '1 Незавершённые действия' })).toBeVisible()
+  await expect(queue.getByRole('heading', { name: 'Проверить планы' })).toBeVisible()
+})
+
+test('the bell count equals the visible queue and updates after snoozing', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+  let snoozeStatus = 0
+  const snoozeRequests: string[] = []
+  page.on('request', (request) => { if (request.method() === 'POST' && request.url().includes('/attention/snooze')) snoozeRequests.push(request.url()) })
+  page.on('response', (response) => { if (response.url().includes('/attention/snooze')) snoozeStatus = response.status() })
+  await mockPilot(page, { workouts: [] })
+  await page.goto('/today')
+  await expect(page.getByRole('button', { name: '1 Незавершённые действия' })).toBeVisible()
+  await page.getByRole('button', { name: '1 Незавершённые действия' }).click()
+  const queue = page.getByRole('dialog', { name: 'Рабочая очередь' })
+  await expect(queue.getByRole('heading', { name: 'Проверить планы' })).toBeVisible()
+  await expect(queue.getByText('Тренировки ещё не добавлены')).toBeVisible()
+  await queue.getByRole('button', { name: 'Напомнить через 2 недели' }).click()
+  await expect.poll(() => snoozeRequests).toHaveLength(1)
+  await expect.poll(() => snoozeStatus).toBe(200)
+  await expect(page.getByRole('button', { name: '0 Незавершённые действия' })).toBeVisible()
+  await expect(queue.getByText('Незавершённых действий нет')).toBeVisible()
 })
 
 test('today keeps workout entry usable while clients fail and recover', async ({ page }) => {

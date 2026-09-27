@@ -6664,6 +6664,19 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .schedule-v2-onboarding-sheet .app-install-card h2 { color:#f8f8f6; }
 .schedule-v2-onboarding-sheet .app-install-card .eyebrow { color:#baff36; }
 .schedule-v2-onboarding-sheet .schedule-v2-inbox-all { margin-top:4px; }
+.schedule-v2-action-sheet .schedule-v2-inbox-scroll { gap:18px; }
+.schedule-v2-action-row { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 0; border-top:1px solid #303034; color:#f8f8f6; text-decoration:none; }
+.schedule-v2-action-row > span { min-width:0; display:grid; gap:4px; }
+.schedule-v2-action-row strong,.schedule-v2-action-row small,.schedule-v2-action-row em { overflow:hidden; text-overflow:ellipsis; }
+.schedule-v2-action-row strong { color:#f8f8f6; font-size:15px; font-weight:650; }
+.schedule-v2-action-row small { color:#c5c5c8; font-size:13px; }
+.schedule-v2-action-row em { color:#929296; font-size:12px; font-style:normal; }
+.schedule-v2-action-row > b,.schedule-v2-planning-row a { flex:0 0 auto; color:#baff36; font-size:12px; font-weight:650; text-decoration:none; }
+.schedule-v2-planning-row { display:grid; align-items:start; }
+.schedule-v2-planning-row > div { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-start; gap:8px 18px; }
+.schedule-v2-planning-row a { min-height:44px; display:flex; align-items:center; }
+.schedule-v2-planning-row button { min-height:44px; padding:0; border:0; color:#a8a8ad; background:transparent; box-shadow:none; font-size:12px; text-align:left; }
+.schedule-v2-planning-row button:disabled { color:#77777b; }
 
 @media (max-width:430px) {
   .trainer-schedule-v2-shell .schedule-v2 { padding:max(16px,env(safe-area-inset-top)) 14px 120px; }
