@@ -186,9 +186,7 @@
     </script>
     <!-- Yandex.Metrika counter -->
     <script type="text/javascript">
-      const isFitProduction = ['fit-drab.vercel.app', 'fit-training.ru'].includes(
-        window.location.hostname,
-      )
+      const isFitProduction = window.location.hostname === 'fit-training.ru'
         || window.location.protocol === 'capacitor:';
       if (isFitProduction) {
         (function(m,e,t,r,i,k,a){
