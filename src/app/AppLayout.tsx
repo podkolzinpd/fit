@@ -26,6 +26,7 @@ export function AppLayout() {
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
   const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
+  const templateEditor = pathname === '/schedule/templates/new/editor' || /\/schedule\/templates\/[^/]+\/edit$/.test(pathname)
   const workoutDetail = pathname !== '/workouts/new' && /\/workouts\/[^/]+$/.test(pathname)
   const exerciseHistory = /\/workouts\/[^/]+\/history\/[^/]+$/.test(pathname)
   const monochromeClientHome = pathname === '/me' && !todayStep
@@ -43,7 +44,7 @@ export function AppLayout() {
   const monochromeTrainerClientDetail = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+$/.test(pathname) && !['/clients/new', '/clients/archive'].includes(pathname))
   const monochromeTrainerClientForm = Boolean(actor?.role === 'trainer' && (pathname === '/clients/new' || /^\/clients\/[^/]+\/edit$/.test(pathname)))
   const monochromeTrainerClientGoal = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+\/goal$/.test(pathname))
-  const monochromeTrainerSchedule = Boolean(actor?.role === 'trainer' && pathname === '/schedule')
+  const monochromeTrainerSchedule = Boolean(actor?.role === 'trainer' && (pathname === '/schedule' || pathname.startsWith('/schedule/templates')))
   const monochromeTrainerProgress = Boolean(actor?.role === 'trainer' && /^\/progress\/[^/]+$/.test(pathname))
   const monochromeExerciseCatalog = Boolean(actor?.role === 'trainer' && pathname === '/exercises')
   const monochromeTrainerProfile = Boolean(actor?.role === 'trainer' && (pathname === '/profile' || pathname === '/profile/settings' || pathname === '/profile/trainer'))
@@ -98,7 +99,7 @@ export function AppLayout() {
   // сценария, но внутри не конкурирует с текущим действием.
   const assistant = pathname === '/assistant'
   const chat = pathname === '/chat' || pathname.startsWith('/chat/')
-  const immersive = liveSession || workoutForm || todayStep || pilotCompose || chat
+  const immersive = liveSession || workoutForm || templateEditor || todayStep || pilotCompose || chat
   const contentClass = immersive ? 'content content-immersive' : 'content'
 
   const frameClass = [

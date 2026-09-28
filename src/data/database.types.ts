@@ -1,4 +1,4 @@
-// schema-sha256: 942980ec40488ba237ade4779cc2b6e85bd15efa5082158a8f646976c621ab19
+// schema-sha256: 2a274df859df98b5e7905260f84fdfb65d658bbddf4fab4e1beffc44a0d6d276
 
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 export type Json =
@@ -428,17 +428,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "chat_messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "chat_messages_reply_to_message_id_fkey"
             columns: ["reply_to_message_id"]
             isOneToOne: false
             referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1236,6 +1236,38 @@ export type Database = {
           },
         ]
       }
+      favorite_workouts: {
+        Row: {
+          client_id: string
+          created_at: string
+          exercises: Json
+          id: string
+          title: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          exercises: Json
+          id?: string
+          title: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          exercises?: Json
+          id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorite_workouts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goal_criteria: {
         Row: {
           archived_at: string | null
@@ -1854,6 +1886,50 @@ export type Database = {
           },
         ]
       }
+      workout_templates: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          exercises: Json
+          id: string
+          name: string
+          notes: string | null
+          trainer_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          exercises?: Json
+          id?: string
+          name: string
+          notes?: string | null
+          trainer_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          exercises?: Json
+          id?: string
+          name?: string
+          notes?: string | null
+          trainer_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_templates_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
       workouts: {
         Row: {
           active_calories_kcal: number | null
@@ -1977,18 +2053,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "workouts_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "workouts_client_fk"
             columns: ["client_id", "trainer_id"]
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id", "trainer_id"]
+          },
+          {
+            foreignKeyName: "workouts_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "workouts_created_by_fkey"
@@ -2032,22 +2108,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      assistant_program_generation_job: {
-        Args: { p_id: string; p_owner_id: string; p_client_id: string; p_lease_id: string; p_result?: Json }
-        Returns: Json
-      }
-      release_assistant_program_generation_job: {
-        Args: { p_id: string; p_owner_id: string; p_client_id: string; p_lease_id: string }
-        Returns: boolean
-      }
       accept_chat_connection_invitation: {
         Args: { p_conversation_id: string }
         Returns: {
           active_connection: boolean
-          invitation_pending: boolean
-          invited_at: string | null
-          can_invite: boolean
           can_accept: boolean
+          can_invite: boolean
+          invitation_pending: boolean
+          invited_at: string
           trainer_switch_required: boolean
         }[]
       }
@@ -2084,6 +2152,10 @@ export type Database = {
         Args: { p_expected_version: number; p_goal_id: string }
         Returns: undefined
       }
+      archive_workout_template: {
+        Args: { p_expected_version: number; p_template_id: string }
+        Returns: number
+      }
       ask_workout_question: {
         Args: {
           p_expected_version: number
@@ -2091,6 +2163,28 @@ export type Database = {
           p_workout_id: string
         }
         Returns: number
+      }
+      assistant_program_generation_job: {
+        Args: {
+          p_client_id: string
+          p_id: string
+          p_lease_id: string
+          p_owner_id: string
+          p_result?: Json
+        }
+        Returns: Json
+      }
+      authorize_chat_media_read: {
+        Args: { p_conversation_id: string; p_message_id: string }
+        Returns: undefined
+      }
+      authorize_chat_media_remove: {
+        Args: { p_conversation_id: string; p_message_id: string }
+        Returns: undefined
+      }
+      authorize_chat_send: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
       }
       authorize_client_mutation: {
         Args: { p_allow_owner: boolean; p_client_id: string }
@@ -2191,15 +2285,39 @@ export type Database = {
         Args: { p_conversation_id: string; p_message_id: string }
         Returns: string
       }
-      edit_chat_message: {
-        Args: { p_body: string; p_conversation_id: string; p_message_id: string }
-        Returns: Database["public"]["Tables"]["chat_messages"]["Row"][]
-      }
       delete_favorite_workout: { Args: { p_id: string }; Returns: undefined }
       delete_goal_stage: { Args: { p_stage_id: string }; Returns: undefined }
       disconnect_client_trainer: {
         Args: { p_client_id: string }
         Returns: Json
+      }
+      edit_chat_message: {
+        Args: {
+          p_body: string
+          p_conversation_id: string
+          p_message_id: string
+        }
+        Returns: {
+          body: string
+          conversation_id: string
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          id: string
+          image_height: number | null
+          image_mime_type: string | null
+          image_path: string | null
+          image_size_bytes: number | null
+          image_width: number | null
+          reply_to_message_id: string | null
+          sender_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "chat_messages"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       fail_training_summary_generation: {
         Args: {
@@ -2217,6 +2335,51 @@ export type Database = {
         Args: { p_expected_version: number; p_workout_id: string }
         Returns: number
       }
+      get_chat_connection_state: {
+        Args: { p_conversation_id: string }
+        Returns: {
+          active_connection: boolean
+          can_accept: boolean
+          can_invite: boolean
+          invitation_pending: boolean
+          invited_at: string
+          trainer_switch_required: boolean
+        }[]
+      }
+      get_chat_message_window: {
+        Args: {
+          p_conversation_id: string
+          p_message_id: string
+          p_radius?: number
+        }
+        Returns: {
+          body: string
+          conversation_id: string
+          created_at: string
+          edited_at: string
+          id: string
+          image_height: number
+          image_mime_type: string
+          image_path: string
+          image_size_bytes: number
+          image_width: number
+          reply_to_body: string
+          reply_to_deleted: boolean
+          reply_to_has_image: boolean
+          reply_to_message_id: string
+          reply_to_sender_id: string
+          sender_id: string
+        }[]
+      }
+      get_chat_unread_state: {
+        Args: { p_conversation_id: string }
+        Returns: {
+          first_created_at: string
+          first_message_id: string
+          unread_count: number
+        }[]
+      }
+      get_client_goal: { Args: { p_client_id: string }; Returns: Json }
       get_client_invitation_preview: {
         Args: { p_token: string }
         Returns: {
@@ -2225,30 +2388,6 @@ export type Database = {
           inviter_name: string
           target_role: string
         }[]
-      }
-      get_client_goal: { Args: { p_client_id: string }; Returns: Json }
-      get_chat_message_window: {
-        Args: { p_conversation_id: string; p_message_id: string; p_radius?: number }
-        Returns: {
-          body: string; conversation_id: string; created_at: string; edited_at: string | null; id: string
-          image_height: number | null; image_mime_type: string | null; image_path: string | null; image_size_bytes: number | null; image_width: number | null
-          reply_to_body: string | null; reply_to_deleted: boolean; reply_to_has_image: boolean; reply_to_message_id: string | null; reply_to_sender_id: string | null; sender_id: string
-        }[]
-      }
-      get_chat_connection_state: {
-        Args: { p_conversation_id: string }
-        Returns: {
-          active_connection: boolean
-          invitation_pending: boolean
-          invited_at: string | null
-          can_invite: boolean
-          can_accept: boolean
-          trainer_switch_required: boolean
-        }[]
-      }
-      get_chat_unread_state: {
-        Args: { p_conversation_id: string }
-        Returns: { first_created_at: string | null; first_message_id: string | null; unread_count: number }[]
       }
       get_my_client: {
         Args: never
@@ -2330,6 +2469,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      is_active_client_trainer_connection: {
+        Args: { p_client_id: string; p_trainer_id: string }
+        Returns: boolean
+      }
       leave_client_space: { Args: { p_client_id: string }; Returns: undefined }
       list_chat_messages: {
         Args: {
@@ -2358,25 +2501,39 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
-          image_height: number | null
-          image_mime_type: string | null
-          image_path: string | null
-          image_size_bytes: number | null
-          image_width: number | null
+          image_height: number
+          image_mime_type: string
+          image_path: string
+          image_size_bytes: number
+          image_width: number
           sender_id: string
         }[]
       }
       list_chat_messages_v3: {
-        Args: { p_before_created_at?: string; p_before_id?: string; p_conversation_id: string; p_limit?: number }
+        Args: {
+          p_before_created_at?: string
+          p_before_id?: string
+          p_conversation_id: string
+          p_limit?: number
+        }
         Returns: {
-          body: string; conversation_id: string; created_at: string; edited_at: string | null; id: string
-          image_height: number | null; image_mime_type: string | null; image_path: string | null; image_size_bytes: number | null; image_width: number | null
-          reply_to_body: string | null; reply_to_deleted: boolean; reply_to_has_image: boolean; reply_to_message_id: string | null; reply_to_sender_id: string | null; sender_id: string
+          body: string
+          conversation_id: string
+          created_at: string
+          edited_at: string
+          id: string
+          image_height: number
+          image_mime_type: string
+          image_path: string
+          image_size_bytes: number
+          image_width: number
+          reply_to_body: string
+          reply_to_deleted: boolean
+          reply_to_has_image: boolean
+          reply_to_message_id: string
+          reply_to_sender_id: string
+          sender_id: string
         }[]
-      }
-      is_active_client_trainer_connection: {
-        Args: { p_client_id: string; p_trainer_id: string }
-        Returns: boolean
       }
       list_chat_threads: {
         Args: never
@@ -2593,23 +2750,17 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: undefined
       }
+      mark_chat_read_v2: {
+        Args: { p_conversation_id: string; p_through_message_id: string }
+        Returns: undefined
+      }
       open_chat: {
         Args: { p_client_id: string; p_trainer_id: string }
         Returns: string
       }
-      open_public_trainer_chat: { Args: { p_public_id: string }; Returns: string }
-      authorize_chat_media_read: {
-        Args: { p_conversation_id: string; p_message_id: string }
-        Returns: undefined
-      }
-      authorize_chat_media_remove: {
-        Args: { p_conversation_id: string; p_message_id: string }
-        Returns: undefined
-      }
-      authorize_chat_send: { Args: { p_conversation_id: string }; Returns: undefined }
-      set_chat_block: {
-        Args: { p_blocked: boolean; p_conversation_id: string }
-        Returns: { blocked_by_me: boolean; blocked_by_partner: boolean; can_message: boolean }[]
+      open_public_trainer_chat: {
+        Args: { p_public_id: string }
+        Returns: string
       }
       persist_assistant_response: {
         Args: {
@@ -2646,6 +2797,15 @@ export type Database = {
       record_planned_workout_result: {
         Args: { p_expected_version: number; p_workout: Json }
         Returns: string
+      }
+      release_assistant_program_generation_job: {
+        Args: {
+          p_client_id: string
+          p_id: string
+          p_lease_id: string
+          p_owner_id: string
+        }
+        Returns: boolean
       }
       remove_client_trainer: {
         Args: { p_client_id: string; p_trainer_id: string }
@@ -2728,6 +2888,42 @@ export type Database = {
         Args: { p_expected_version?: number | null; p_workout: Json }
         Returns: string
       }
+      save_workout_template: {
+        Args: { p_expected_version?: number | null; p_template: Json }
+        Returns: string
+      }
+      search_chat_messages: {
+        Args: { p_conversation_id: string; p_limit?: number; p_query: string }
+        Returns: {
+          body: string
+          conversation_id: string
+          created_at: string
+          edited_at: string
+          id: string
+          image_height: number
+          image_mime_type: string
+          image_path: string
+          image_size_bytes: number
+          image_width: number
+          reply_to_body: string
+          reply_to_deleted: boolean
+          reply_to_has_image: boolean
+          reply_to_message_id: string
+          reply_to_sender_id: string
+          sender_id: string
+        }[]
+      }
+      send_chat_connection_invitation: {
+        Args: { p_conversation_id: string }
+        Returns: {
+          active_connection: boolean
+          can_accept: boolean
+          can_invite: boolean
+          invitation_pending: boolean
+          invited_at: string
+          trainer_switch_required: boolean
+        }[]
+      }
       send_chat_message: {
         Args: {
           p_body: string
@@ -2742,18 +2938,31 @@ export type Database = {
           sender_id: string
         }[]
       }
-      send_chat_connection_invitation: {
-        Args: { p_conversation_id: string }
+      send_chat_message_v2: {
+        Args: {
+          p_body: string
+          p_conversation_id: string
+          p_image_height: number
+          p_image_mime_type: string
+          p_image_path: string
+          p_image_size_bytes: number
+          p_image_width: number
+          p_message_id: string
+        }
         Returns: {
-          active_connection: boolean
-          invitation_pending: boolean
-          invited_at: string | null
-          can_invite: boolean
-          can_accept: boolean
-          trainer_switch_required: boolean
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          image_height: number
+          image_mime_type: string
+          image_path: string
+          image_size_bytes: number
+          image_width: number
+          sender_id: string
         }[]
       }
-      send_chat_message_v2: {
+      send_chat_message_v3: {
         Args: {
           p_body: string
           p_conversation_id: string
@@ -2763,39 +2972,41 @@ export type Database = {
           p_image_size_bytes: number | null
           p_image_width: number | null
           p_message_id: string
+          p_reply_to_message_id?: string | null
         }
         Returns: {
           body: string
           conversation_id: string
           created_at: string
+          deleted_at: string | null
+          edited_at: string | null
           id: string
           image_height: number | null
           image_mime_type: string | null
           image_path: string | null
           image_size_bytes: number | null
           image_width: number | null
+          reply_to_message_id: string | null
           sender_id: string
         }[]
-      }
-      send_chat_message_v3: {
-        Args: {
-          p_body: string; p_conversation_id: string; p_image_height: number | null; p_image_mime_type: string | null
-          p_image_path: string | null; p_image_size_bytes: number | null; p_image_width: number | null; p_message_id: string; p_reply_to_message_id?: string | null
+        SetofOptions: {
+          from: "*"
+          to: "chat_messages"
+          isOneToOne: false
+          isSetofReturn: true
         }
-        Returns: Database["public"]["Tables"]["chat_messages"]["Row"][]
-      }
-      mark_chat_read_v2: { Args: { p_conversation_id: string; p_through_message_id: string }; Returns: undefined }
-      search_chat_messages: {
-        Args: { p_conversation_id: string; p_limit?: number; p_query: string }
-        Returns: {
-          body: string; conversation_id: string; created_at: string; edited_at: string | null; id: string
-          image_height: number | null; image_mime_type: string | null; image_path: string | null; image_size_bytes: number | null; image_width: number | null
-          reply_to_body: string | null; reply_to_deleted: boolean; reply_to_has_image: boolean; reply_to_message_id: string | null; reply_to_sender_id: string | null; sender_id: string
-        }[]
       }
       send_test_push_notification: {
         Args: { p_endpoint: string }
         Returns: undefined
+      }
+      set_chat_block: {
+        Args: { p_blocked: boolean; p_conversation_id: string }
+        Returns: {
+          blocked_by_me: boolean
+          blocked_by_partner: boolean
+          can_message: boolean
+        }[]
       }
       set_client_custom_metric_archived: {
         Args: {
@@ -2837,12 +3048,12 @@ export type Database = {
         }
         Returns: number
       }
-      set_trainer_profile_catalog_listing: {
-        Args: { p_listed: boolean }
-        Returns: Json
-      }
       set_trainer_discovery_prompt: {
         Args: { p_action: string }
+        Returns: Json
+      }
+      set_trainer_profile_catalog_listing: {
+        Args: { p_listed: boolean }
         Returns: Json
       }
       set_workout_review: {
@@ -2870,19 +3081,31 @@ export type Database = {
         Args: { p_expected_version: number; p_workout_id: string }
         Returns: number
       }
-      submit_app_feedback: {
-        Args: {
-          p_app_version: string
-          p_display_mode: string
-          p_kind: string
-          p_message: string
-          p_model_input_json: Json | null
-          p_model_output_json: Json | null
-          p_screen_path: string
-          p_user_agent: string
-        }
-        Returns: string
-      }
+      submit_app_feedback:
+        | {
+            Args: {
+              p_app_version: string
+              p_display_mode: string
+              p_kind: string
+              p_message: string
+              p_screen_path: string
+              p_user_agent: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_app_version: string
+              p_display_mode: string
+              p_kind: string
+              p_message: string
+              p_model_input_json: Json
+              p_model_output_json: Json
+              p_screen_path: string
+              p_user_agent: string
+            }
+            Returns: string
+          }
       submit_workout_feedback: {
         Args: {
           p_comment: string

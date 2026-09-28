@@ -13,6 +13,7 @@ import { ProfilePage, PublicTrainerProfilePage, TrainerCatalogPage, TrainerProfi
 import { YandexAssistantRoute } from '../features/assistant'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, TrainerScheduleTodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 import { AccountDeletionPage, LegalAcceptanceGate, PrivacyPage, TermsPage } from '../features/legal'
+import { WorkoutTemplateAssignPage, WorkoutTemplateCreatePage, WorkoutTemplateEditorPage, WorkoutTemplateSourcePage, WorkoutTemplatesPage } from '../features/workout-templates'
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 import { ChatConversationPage, ChatListPage } from '../features/chat'
 import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
@@ -116,6 +117,12 @@ const router = createBrowserRouter([
         { path: '/progress/:clientId', element: <ProgressPage /> },
       ] },
       { path: '/schedule', element: <SchedulePage /> },
+      { path: '/schedule/templates', element: <WorkoutTemplatesPage /> },
+      { path: '/schedule/templates/new', element: <WorkoutTemplateCreatePage /> },
+      { path: '/schedule/templates/new/editor', element: <WorkoutTemplateEditorPage /> },
+      { path: '/schedule/templates/from-workout', element: <WorkoutTemplateSourcePage /> },
+      { path: '/schedule/templates/:templateId/edit', element: <WorkoutTemplateEditorPage /> },
+      { path: '/schedule/templates/:templateId/assign', element: <WorkoutTemplateAssignPage /> },
       { path: '/exercises', element: <ExercisesPage /> },
       { path: '/profile', element: <ProfilePage /> },
       { path: '/profile/settings', element: <TrainerProfileSettingsPage /> },

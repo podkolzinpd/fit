@@ -15,6 +15,7 @@ import { trainerProfilesRepository } from '../data/repositories/trainer-profiles
 import { trainerDiscoveryRepository } from '../data/repositories/trainer-discovery.repository'
 import { trainerWorkspaceRepository } from '../data/repositories/trainer-workspace.repository'
 import { workoutsRepository } from '../data/repositories/workouts.repository'
+import { workoutTemplatesRepository } from '../data/repositories/workout-templates.repository'
 import { createYandexMainRepository } from '../data/repositories/yandex-main.repository'
 import { getYandexAppSessionEntryConfig, getYandexMainRoutingConfig, isYandexMainRoutingEnabled, isYandexOnlyAuthEnabled } from './feature-flags'
 import { useAuth } from './auth-context'
@@ -31,6 +32,7 @@ export interface DataBackend {
   progress: typeof progressRepository
   workouts: typeof workoutsRepository
   favoriteWorkouts: typeof favoriteWorkoutsRepository
+  workoutTemplates: typeof workoutTemplatesRepository
   trainingSummaries: typeof trainingSummariesRepository
   trainerProfiles: typeof trainerProfilesRepository
   trainerDiscovery: typeof trainerDiscoveryRepository
@@ -51,6 +53,7 @@ const supabaseDataBackend: DataBackend = {
   progress: progressRepository,
   workouts: workoutsRepository,
   favoriteWorkouts: favoriteWorkoutsRepository,
+  workoutTemplates: workoutTemplatesRepository,
   trainingSummaries: trainingSummariesRepository,
   trainerProfiles: trainerProfilesRepository,
   trainerDiscovery: trainerDiscoveryRepository,
