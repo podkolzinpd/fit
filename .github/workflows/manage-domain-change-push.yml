@@ -117,7 +117,7 @@ jobs:
             echo "- Eligible subscriptions: \`$(jq -r '.eligibleSubscriptions' announcement-response.json)\`"
             echo "- Already queued: \`$(jq -r '.alreadyQueued' announcement-response.json)\`"
             echo "- Newly queued: \`$(jq -r '.inserted' announcement-response.json)\`"
-            echo '- Title: `Fit теперь на новом адресе`'
-            echo '- Body: `Открывайте приложение на fit-training.ru. Старая ссылка пока перенаправляет автоматически.`'
+            echo '- Title: `FIT теперь на новом адресе - fit-training.ru`'
+            echo '- Body: `Работа по старой ссылке скоро будет прекращена.`'
             echo '- Click target: `/` (legacy origins redirect to `fit-training.ru`)'
           } >> "$GITHUB_STEP_SUMMARY"
