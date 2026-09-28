@@ -6,6 +6,7 @@ import {
   getYandexOnlyAuthConfig,
   getYandexSessionLinkingConfig,
   isAssistantNavPilotEnabled,
+  isContestWinnerPilotEnabled,
   isTodayGreetingPilotEnabled,
   isTodayStartRedesignEnabled,
   isTrainerDiscoveryHomeEnabled,
@@ -405,5 +406,31 @@ describe('Yandex main sticky routing flag', () => {
   it('routes every server-authorized Yandex session when globally enabled', () => {
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
     expect(isYandexMainRoutingEnabled()).toBe(true)
+  })
+})
+
+describe('contest winner announcement pilot flag', () => {
+  it('is disabled when the enabled flag is missing or not exactly "true", even for an allowlisted user', () => {
+    vi.stubEnv('VITE_CONTEST_WINNER_ENABLED', '')
+    vi.stubEnv('VITE_CONTEST_WINNER_PILOT_USER_IDS', 'client-1')
+    expect(isContestWinnerPilotEnabled('client-1')).toBe(false)
+    vi.stubEnv('VITE_CONTEST_WINNER_ENABLED', 'TRUE')
+    expect(isContestWinnerPilotEnabled('client-1')).toBe(false)
+  })
+
+  it('is enabled only for an allowlisted user when the flag is exactly "true"', () => {
+    vi.stubEnv('VITE_CONTEST_WINNER_ENABLED', 'true')
+    vi.stubEnv('VITE_CONTEST_WINNER_PILOT_USER_IDS', ' , client-1 , ')
+    expect(isContestWinnerPilotEnabled('client-1')).toBe(true)
+    expect(isContestWinnerPilotEnabled('client-2')).toBe(false)
+    expect(isContestWinnerPilotEnabled('')).toBe(false)
+  })
+
+  it('is disabled for everyone when the allowlist is empty and ignores other pilot allowlists', () => {
+    vi.stubEnv('VITE_CONTEST_WINNER_ENABLED', 'true')
+    vi.stubEnv('VITE_CONTEST_WINNER_PILOT_USER_IDS', '')
+    vi.stubEnv('VITE_TODAY_GREETING_ENABLED', 'true')
+    vi.stubEnv('VITE_TODAY_GREETING_PILOT_USER_IDS', 'client-1')
+    expect(isContestWinnerPilotEnabled('client-1')).toBe(false)
   })
 })

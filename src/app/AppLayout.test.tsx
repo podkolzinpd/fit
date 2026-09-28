@@ -20,6 +20,10 @@ vi.mock('./auth-context', () => ({
   } }),
 }))
 
+vi.mock('./data-backend-context', () => ({
+  useDataBackend: () => ({ appFeedback: { submit: vi.fn() } }),
+}))
+
 vi.mock('./theme', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./theme')>()),
   useAppTheme: () => authState.theme,
@@ -360,5 +364,35 @@ describe('AppLayout: вкладка ассистента', () => {
     expect(within(navigation).getAllByRole('link').map((link) => link.textContent)).toEqual(['Кабинет', 'Тренировки', 'Ассистент', 'Прогресс', 'Профиль'])
     expect(iconName(within(navigation).getByRole('link', { name: 'Ассистент' }))).toBe('assistant')
     expect(screen.getByRole('status')).toHaveTextContent('Ассистент теперь доступен')
+  })
+})
+
+describe('AppLayout: объявление победителю конкурса', () => {
+  it('показывается только участнику пилота и не перебивает Live', () => {
+    vi.stubEnv('VITE_CONTEST_WINNER_ENABLED', 'true')
+    vi.stubEnv('VITE_CONTEST_WINNER_PILOT_USER_IDS', 'user-1')
+    localStorage.clear()
+
+    const home = renderLayout('/me')
+    expect(screen.getByRole('dialog', { name: 'Вы выиграли персональную тренировку' })).toBeTruthy()
+    home.unmount()
+
+    const live = renderLayout('/workouts/workout-1/live')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    live.unmount()
+
+    authState.userId = 'user-2'
+    renderLayout('/me')
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('показывается тренеру из allowlist на рабочем экране', () => {
+    vi.stubEnv('VITE_CONTEST_WINNER_ENABLED', 'true')
+    vi.stubEnv('VITE_CONTEST_WINNER_PILOT_USER_IDS', 'user-1')
+    localStorage.clear()
+    authState.role = 'trainer'
+
+    renderLayout('/today')
+    expect(screen.getByRole('dialog', { name: 'Вы выиграли персональную тренировку' })).toBeTruthy()
   })
 })
