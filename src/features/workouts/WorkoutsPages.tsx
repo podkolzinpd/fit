@@ -979,6 +979,11 @@ export function ClientWorkoutsPage() {
   const returnTo = `/clients/${clientId}/workouts${calendar.search}`
   const goBack = useWorkoutBack(`/clients/${clientId}`)
   useClientRealtime(clientId)
+  const upcoming = useQuery({
+    queryKey: ['workouts', clientId, 'upcoming', today],
+    queryFn: () => workoutsRepository.list(today, undefined, clientId),
+  })
+  const upcomingItems = splitClientWorkouts(upcoming.data ?? [], today).upcoming
   const query = useInfiniteQuery({
     queryKey: ['workouts', clientId, 'history', today],
     initialPageParam: 0,
@@ -994,9 +999,16 @@ export function ClientWorkoutsPage() {
   })
   const calendarItems = splitClientWorkouts(calendarHistory.data ?? [], today).history
   const contextLabel = (workout: Workout) => workout.createdBy && workout.createdBy !== actor?.userId ? 'Создано клиентом' : null
-  const hasWorkouts = split.needsDecision.length > 0 || split.history.length > 0
-  return <Page className="trainer-client-workouts-page" title="Тренировки клиента" back={`/clients/${clientId}`} onBack={goBack} action={hasWorkouts && <Link className="button" to={`/workouts/new?client=${clientId}`} state={{ returnTo }}>Запланировать</Link>}><AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
+  const hasWorkouts = upcomingItems.length > 0 || split.needsDecision.length > 0 || split.history.length > 0
+  return <Page className="trainer-client-workouts-page" title="Тренировки клиента" back={`/clients/${clientId}`} onBack={goBack} action={hasWorkouts && <Link className="button" to={`/workouts/new?client=${clientId}`} state={{ returnTo }}>Запланировать</Link>}><AsyncView loading={upcoming.isLoading || query.isLoading} error={upcoming.error ?? query.error} onRetry={() => { void upcoming.refetch(); void query.refetch() }}>
     {hasWorkouts || calendar.state.view === 'calendar' ? <div className="client-workouts-stack">
+      {upcomingItems.length > 0 && <section className="client-workout-section">
+        <div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div>
+        <div className="cards client-workout-cards">{upcomingItems.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}>
+          <div><strong>{formatLocalDate(workout.workoutDate)}</strong>{workout.startTime && <p className="muted">{workout.startTime.slice(0, 5)}</p>}<WorkoutExercisesSummary workout={workout} maxItems={2} /></div>
+          <WorkoutStatusBadge workout={workout} />
+        </Link>)}</div>
+      </section>}
       {split.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{split.needsDecision.map((workout) => <PastWorkoutPlanCard key={workout.id} workout={workout} returnTo={returnTo} />)}</div></section>}
       <section className="client-workout-section client-history-section">
         <div className="client-workout-section-head client-history-section-head">

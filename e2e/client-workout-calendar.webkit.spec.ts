@@ -135,7 +135,7 @@ async function loginForHistory(page: Page, role: 'trainer' | 'client') {
   await page.getByLabel('Email').fill(`${role}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Войти', exact: true }).click()
-  await expect(page).toHaveURL(role === 'trainer' ? /\/today$/ : /\/me$/)
+  await expect(page).toHaveURL(role === 'trainer' ? /\/today$/ : /\/me$/, { timeout: 15_000 })
   await expect(page.getByRole('heading', { name: 'Сегодня', exact: true })).toBeVisible()
   await dismissVisibleHints(page)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
@@ -148,11 +148,124 @@ async function dismissVisibleHints(page: Page) {
 
 async function dismissCalendarHint(page: Page) {
   if (!new URL(page.url()).pathname.startsWith('/clients/')) return
+  await page.getByRole('group', { name: 'Вид истории тренировок' }).scrollIntoViewIfNeeded()
   const hint = page.locator('.coachmark-bubble').filter({ hasText: 'История по датам' })
   await expect(hint).toBeVisible()
   await hint.getByRole('button', { name: 'Понятно' }).click()
   await dismissVisibleHints(page)
 }
+
+for (const role of ['trainer', 'client'] as const) {
+test(`${role}: current and future plans remain visible beside history`, async ({ page }, testInfo) => {
+  await mockNavigationWorkouts(page)
+  const rows = [
+    { ...historyRow, id: 'c1000000-0000-4000-8000-000000000002', workout_date: '2026-08-20', status: 'planned' },
+    { ...historyRow, workout_date: '2026-08-16', status: 'planned' },
+    { ...historyRow, id: 'c1000000-0000-4000-8000-000000000003', workout_date: '2026-08-16', status: 'in_progress' },
+    { ...historyRow, id: 'c1000000-0000-4000-8000-000000000004', workout_date: '2026-08-15', status: 'planned' },
+    { ...historyRow, id: 'c1000000-0000-4000-8000-000000000005' },
+  ].map((row) => ({ ...row, created_by: trainerId, trainer_id: trainerId, exercises: historyListExercises(row.status === 'done') }))
+  await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
+    const body = route.request().postDataJSON() as { p_from?: string; p_to?: string; p_client_id?: string }
+    const visible = rows.filter((row) => (!body.p_from || row.workout_date >= body.p_from) && (!body.p_to || row.workout_date <= body.p_to))
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(visible) })
+  })
+  await loginForHistory(page, role)
+  await page.goto(role === 'trainer' ? clientHistoryPath : '/me/workouts')
+  await dismissCalendarHint(page)
+  await page.screenshot({ path: testInfo.outputPath(`${role}-upcoming-initial.png`), fullPage: true })
+  const upcoming = page.locator('.client-workout-section').filter({ has: page.getByRole('heading', { name: 'Предстоит', exact: true }) })
+  await expect(upcoming.locator('.client-workout-card')).toHaveCount(3)
+  await expect(upcoming.locator('.client-workout-card').first()).toContainText('16 августа 2026 г.')
+  await expect(upcoming.locator('.client-workout-card').last()).toContainText('20 августа 2026 г.')
+  await expect(page.locator('.past-workout-plan-card')).toHaveCount(1)
+  await expect(page.locator('.workout-chronicle-card')).toHaveCount(1)
+  for (const width of [390, 430, ...(role === 'trainer' ? [1440] : [])]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await upcoming.getByRole('heading').scrollIntoViewIfNeeded()
+    for (const card of await upcoming.locator('.client-workout-card').all()) {
+      const bounds = await card.boundingBox()
+      expect(bounds).not.toBeNull()
+      expect(bounds!.x).toBeGreaterThanOrEqual(0)
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width)
+    }
+    await page.screenshot({ path: testInfo.outputPath(`${role}-upcoming-${width}.png`), fullPage: true })
+  }
+  await page.getByRole('button', { name: 'Календарь', exact: true }).click()
+  await expect(upcoming.locator('.client-workout-card')).toHaveCount(3)
+  const source = page.url()
+  await upcoming.locator(`a[href="${detailPath}"]`).click()
+  await expect(page).toHaveURL(detailPath)
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(page).toHaveURL(source)
+  await expect(upcoming.locator('.client-workout-card')).toHaveCount(3)
+})
+}
+
+test('trainer: a plan stays visible through Live and completion from the client list', async ({ page }) => {
+  const state = await mockNavigationWorkouts(page)
+  state.status = 'planned'
+  await loginForHistory(page, 'trainer')
+  await page.goto(clientHistoryPath)
+  await dismissCalendarHint(page)
+  const upcoming = page.locator('.client-workout-card')
+  await expect(upcoming).toHaveCount(1)
+  await expect(page.getByRole('heading', { name: 'Тренировка для клиента', exact: true })).toHaveCount(0)
+  await upcoming.click()
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+  await expect(page).toHaveURL(`${detailPath}/live`)
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(page).toHaveURL(detailPath)
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(page).toHaveURL(clientHistoryPath)
+  await expect(upcoming).toContainText('Идёт')
+  await upcoming.click()
+  await page.getByRole('link', { name: 'Продолжить тренировку' }).click()
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  await expect(page).toHaveURL(detailPath)
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(page).toHaveURL(clientHistoryPath)
+  await expect(upcoming).toHaveCount(0)
+  await expect(page.locator('.workout-chronicle-card')).toHaveCount(1)
+})
+
+test('trainer: upcoming loading and failure never masquerade as an empty list', async ({ page }) => {
+  await mockNavigationWorkouts(page)
+  await loginForHistory(page, 'trainer')
+  let mode: 'loading' | 'error' | 'success' | 'empty' = 'loading'
+  let release = () => {}
+  const gate = new Promise<void>((resolve) => { release = resolve })
+  await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
+    const body = route.request().postDataJSON() as { p_from?: string; p_to?: string; p_client_id?: string }
+    if (body.p_from === '2026-08-16' && !body.p_to) {
+      expect(body.p_client_id).toBe(historyRow.client_id)
+      if (mode === 'loading') await gate
+      if (mode === 'error') {
+        await route.fulfill({ status: 400, contentType: 'application/json', body: '{"code":"22023","message":"Не удалось загрузить предстоящие тренировки"}' })
+        return
+      }
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify(mode === 'empty' ? [] : [{ ...historyRow, workout_date: '2026-10-01', status: 'planned', exercises: [] }]) })
+      return
+    }
+    await route.fulfill({ contentType: 'application/json', body: '[]' })
+  })
+  await page.goto(clientHistoryPath)
+  await expect(page.getByRole('status', { name: 'Загрузка', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка для клиента', exact: true })).toHaveCount(0)
+  mode = 'error'
+  release()
+  await expect(page.getByText('Не удалось загрузить данные', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Тренировка для клиента', exact: true })).toHaveCount(0)
+  mode = 'success'
+  await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect(page.locator('.client-workout-card')).toContainText('1 октября 2026 г.')
+  await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
+  mode = 'empty'
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Тренировка для клиента', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Запланировать тренировку', exact: true })).toBeVisible()
+})
 
 for (const role of ['trainer', 'client'] as const) {
   test(`${role}: history list shows performed muscles and opens a copy from its own action`, async ({ page }, testInfo) => {
