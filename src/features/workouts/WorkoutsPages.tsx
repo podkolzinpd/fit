@@ -78,6 +78,7 @@ import { NotificationOnboarding } from '../notifications'
 import { readTodayDraft, todayDraftKey } from './today-draft'
 import { trainerHomeContext } from './trainer-home-context'
 import { trainerActionItems, trainerPlanningDetail, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
+import { cloneWorkoutTemplate } from '../../data/repositories/workout-templates.repository'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
 const HOUR_HEIGHT = 56
@@ -261,6 +262,9 @@ function TrainerScheduleV1() {
       <div className="schedule-month-row">
         <strong>{formatMonth(selected)}</strong>
         <div className="schedule-month-actions">
+          <Coachmark id="trainer-workout-templates-2026-09" userId={actor?.userId} title="Планы можно использовать повторно" description="Сохраните тренировку как шаблон и назначайте её любому клиенту.">
+            <Link className="button ghost schedule-templates" to="/schedule/templates">Шаблоны</Link>
+          </Coachmark>
           <button type="button" className="schedule-today" disabled={todayDisabled} onClick={() => showOverview(today)}>Сегодня</button>
           <label className="schedule-jump" aria-label="Выбрать дату"><ScheduleIcon /><input type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label>
         </div>
@@ -717,6 +721,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     { label: 'Сегодня', disabled: todayDisabled, onClick: () => openDay(today) },
     { label: 'Выбрать дату', onClick: openDatePicker },
     { label: isTwoWeekView ? 'К 2 неделям' : 'К неделе', onClick: () => showOverview(weekStart) },
+    { label: 'Шаблоны тренировок', onClick: () => navigate('/schedule/templates') },
     { label: 'Профиль', onClick: () => navigate('/profile') },
     { label: 'Настройки', onClick: () => navigate('/profile/settings') },
   ]
@@ -1038,7 +1043,7 @@ export function ClientWorkoutsPage() {
 }
 
 export function WorkoutFormPage() {
-  const { clients: clientsRepository, exercises: exercisesRepository, favoriteWorkouts: favoriteWorkoutsRepository, goals: goalsRepository, workouts: workoutsRepository } = useDataBackend()
+  const { clients: clientsRepository, exercises: exercisesRepository, favoriteWorkouts: favoriteWorkoutsRepository, goals: goalsRepository, workouts: workoutsRepository, workoutTemplates } = useDataBackend()
   const { workoutId } = useParams()
   const { actor } = useAuth()
   const today = todayInTimeZone(actor?.timezone)
@@ -1057,6 +1062,7 @@ export function WorkoutFormPage() {
   const queryClient = useQueryClient()
   const [confirmLeave, confirmLeaveDialog] = useConfirm()
   const sourceId = workoutId ?? params.get('copy') ?? undefined
+  const templateId = params.get('template') ?? undefined
   const copiedWorkout = params.has('copy')
   const favoriteId = params.get('favorite') ?? undefined
   const recordPlannedResult = Boolean(workoutId && params.get('result') === '1')
@@ -1065,6 +1071,8 @@ export function WorkoutFormPage() {
   const favorites = useQuery({ queryKey: ['favorite-workouts'], queryFn: () => favoriteWorkoutsRepository.list(), enabled: Boolean(favoriteId) })
   const favorite = favorites.data?.find((item) => item.id === favoriteId)
   const plannedFromFavorite = Boolean(favoriteId)
+  const templateSource = useQuery({ queryKey: ['workout-template', templateId], queryFn: () => workoutTemplates.get(templateId ?? ''), enabled: Boolean(templateId) })
+  const templateDraft = useMemo(() => templateSource.data ? cloneWorkoutTemplate(templateSource.data) : undefined, [templateSource.data])
   const clientMode = actor?.role === 'client'
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false), enabled: !clientMode })
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientMode })
@@ -1090,11 +1098,13 @@ export function WorkoutFormPage() {
   const parsedExerciseSelection = useRef<((exercise: ExerciseSnapshot) => void) | null>(null)
   // Индекс упражнения, которое заменяем через пикер; null — режим добавления.
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
-  const initial = source.data
+  const initial = templateSource.data && templateDraft
+    ? { clientId: routeClientId, workoutDate: localDate(params.get('date') ?? today), notes: templateSource.data.notes, exercises: templateDraft.exercises }
+    : source.data
     ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today, { refreshCatalogNames: true }))
     : favorite ? favoriteTemplateToWorkoutDraft(favorite.exercises, mine.data?.id ?? '', today, favorite.title) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
-  const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? (favoriteId ? `favorite-${favoriteId}` : `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`))
+  const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? (templateId ? `template-${templateId}` : favoriteId ? `favorite-${favoriteId}` : `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`))
   useEffect(() => { setPickerSelectionDraft([]) }, [draftKey])
   // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
   const defaultClientId = clientMode ? (mine.data?.id ?? '') : (initial?.clientId ?? routeClientId)
@@ -1114,7 +1124,7 @@ export function WorkoutFormPage() {
   // переключить в «Завершённую».
   const completedMode = recordCompleted || recordPlannedResult || Boolean(workoutId && source.data?.status === 'done')
   useEffect(() => {
-    if (!actor || source.isLoading || (clientMode && mine.isLoading) || (plannedFromFavorite && favorites.isLoading) || formDraftReady) return
+    if (!actor || source.isLoading || templateSource.isLoading || (clientMode && mine.isLoading) || (plannedFromFavorite && favorites.isLoading) || formDraftReady) return
     // Only creation persists drafts. An unfinished copy must never populate an edit.
     const saved = workoutId ? null : readWorkoutFormDraft(draftKey)
     if (saved) {
@@ -1126,7 +1136,7 @@ export function WorkoutFormPage() {
       setNotes(saved.notes)
       setStageId(saved.stageId)
       setRecordCompleted(saved.recordCompleted)
-      setDraftExercises(copiedWorkout || plannedFromFavorite
+      setDraftExercises(copiedWorkout || plannedFromFavorite || Boolean(templateId)
         ? saved.exercises.map((exercise) => ({ ...exercise, name: copiedExerciseName(exercise) }))
         : saved.exercises)
     } else if (initial) {
@@ -1140,7 +1150,7 @@ export function WorkoutFormPage() {
       setStageId(initial.stageId ?? '')
     }
     setFormDraftReady(true)
-  }, [actor, clientMode, draftKey, favorites.isLoading, formDraftReady, initial, mine.isLoading, plannedFromFavorite, routeClientId, source.data?.status, source.isLoading])
+  }, [actor, clientMode, draftKey, favorites.isLoading, formDraftReady, initial, mine.isLoading, plannedFromFavorite, routeClientId, source.data?.status, source.isLoading, templateId, templateSource.isLoading])
 
   useEffect(() => {
     if (!formDraftReady || workoutId) return
@@ -1305,12 +1315,12 @@ export function WorkoutFormPage() {
   const selectedClientName = availableClients?.find((client) => client.id === clientId)?.fullName
   const clientContextLocked = !clientMode && !workoutId && Boolean(routeClientId || (copiedWorkout && source.data?.clientId))
   const editingDenied = Boolean(clientMode && workoutId && source.data && source.data.createdBy !== actor?.userId)
-  const loading = source.isLoading || mine.isLoading
-  const error = source.error ?? mine.error
+  const loading = source.isLoading || templateSource.isLoading || mine.isLoading
+  const error = source.error ?? templateSource.error ?? mine.error
   const pageTitle = recordPlannedResult ? 'Записать результат' : workoutId ? 'Редактировать тренировку' : 'Новая тренировка'
-  const documentTitle = recordPlannedResult ? 'Запись результата' : workoutId ? 'Редактирование тренировки' : params.has('copy') ? 'Копирование тренировки' : 'Создание тренировки'
+  const documentTitle = recordPlannedResult ? 'Запись результата' : workoutId ? 'Редактирование тренировки' : params.has('copy') ? 'Копирование тренировки' : templateId ? 'Тренировка из шаблона' : 'Создание тренировки'
   const exerciseMeta = exercises.length > 0 ? `${exercises.length} ${exerciseCountLabel(exercises.length)}` : 'Сначала добавьте упражнения'
-  const headerMeta = [copiedWorkout ? 'Скопировано' : plannedFromFavorite ? 'Из избранного' : '', selectedClientName, exerciseMeta].filter(Boolean).join(' · ')
+  const headerMeta = [copiedWorkout ? 'Скопировано' : templateId ? templateSource.data?.name : plannedFromFavorite ? 'Из избранного' : '', selectedClientName, exerciseMeta].filter(Boolean).join(' · ')
   const hasMeaningfulDraft = exercises.length > 0 || Boolean(notes.trim() || startTime || endTime || selectedClientId || recordCompleted || entryDate !== localDate(params.get('date') ?? today))
   async function leaveForm() {
     if (!workoutId && hasMeaningfulDraft) {
@@ -1324,7 +1334,7 @@ export function WorkoutFormPage() {
   return <Page title={documentTitle} hideTitle className="workout-form-page workout-focused-page" back={-1} onBack={() => void leaveForm()}>
     <WorkoutHeader eyebrow={completedMode ? 'РЕЗУЛЬТАТ' : 'ПЛАН ТРЕНИРОВКИ'} title={pageTitle} state={completedMode ? 'history' : 'planned'}
       meta={headerMeta} showStatus={Boolean(workoutId)} />
-    <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void mine.refetch() }}>{editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={goBack}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Заполните профиль спортсмена" description="После этого можно будет добавлять самостоятельные тренировки и отслеживать результаты." action={<Link className="button" to="/me/edit">Заполнить профиль</Link>} /> : <form className="stack workout-form" onSubmit={(event) => void submit(event)}>
+    <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void templateSource.refetch(); void mine.refetch() }}>{editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={goBack}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Заполните профиль спортсмена" description="После этого можно будет добавлять самостоятельные тренировки и отслеживать результаты." action={<Link className="button" to="/me/edit">Заполнить профиль</Link>} /> : <form className="stack workout-form" onSubmit={(event) => void submit(event)}>
       <section className="workout-form-section">
         {clientMode
           ? <input type="hidden" name="clientId" value={mine.data?.id ?? ''} />
@@ -1357,7 +1367,7 @@ export function WorkoutFormPage() {
           exerciseCatalog={catalog.exercises}
           canOpenTechnique={(exercise) => hasExerciseTechnique(findCatalogExercise(catalog.exercises, exercise))}
           onOpenTechnique={(exercise) => { const meta = findCatalogExercise(catalog.exercises, exercise); if (hasExerciseTechnique(meta)) setTechniqueExercise(meta) }}
-          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite} initialExercisesReady={formDraftReady} />
+          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite || Boolean(templateId)} initialExercisesReady={formDraftReady} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
@@ -1599,6 +1609,7 @@ export function WorkoutDetailPage() {
   const workoutManageItems = [
     ...(clientMode ? [{ label: 'В избранное', onClick: () => setFavoriteSheetOpen(true) }] : []),
     { label: 'Копировать тренировку', onClick: () => navigate(`/workouts/new?copy=${workoutId}`, { state: childNavigationState }) },
+    ...(!clientMode ? [{ label: 'Сохранить как шаблон', onClick: () => navigate(`/schedule/templates/new/editor?sourceWorkout=${workoutId}`) }] : []),
     { label: 'Удалить тренировку', danger: true, disabled: remove.isPending, onClick: () => { void requestWorkoutRemoval() } },
   ]
   const exerciseCards = <div className={`cards ${done ? 'completed-exercise-list' : 'planned-exercise-list'}`}>{groupIntoBlocks(workout?.exercises ?? []).map((block) => {
