@@ -1265,6 +1265,37 @@ test('Fit Lime progress source error has a working retry', async ({ page }) => {
   await expect(page.getByText('Замеров пока нет')).toBeVisible()
 })
 
+for (const fitLime of [false, true]) {
+  test(`Yandex client workouts show current and future plans (Fit Lime ${fitLime})`, async ({ page }, testInfo) => {
+    await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+    await mockPilot(page, { fitLime, workouts: [
+      { ...workout, id: newWorkoutId, workoutDate: '2026-10-01' },
+      workout,
+      { ...workout, id: '10000000-0000-4000-8000-000000000007', status: 'in_progress' },
+    ] })
+    await page.goto(`/clients/${clientId}/workouts`)
+    const cards = page.locator('.client-workout-card')
+    await expect(cards).toHaveCount(3)
+    await expect(cards.first()).toContainText('24 сентября 2026 г.')
+    await expect(cards.last()).toContainText('1 октября 2026 г.')
+    await expect(page.getByRole('link', { name: 'Запланировать', exact: true })).toBeVisible()
+    await page.getByRole('status').filter({ hasText: 'История по датам' }).getByRole('button', { name: 'Понятно' }).click()
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate((value) => localStorage.setItem('fit.appTheme', value), theme)
+      await page.reload()
+      await expect(cards).toHaveCount(3)
+      for (const width of [390, 430, 1440]) {
+        await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+        await page.screenshot({ path: testInfo.outputPath(`upcoming-${fitLime}-${theme}-${width}.png`), fullPage: true })
+      }
+    }
+    await page.getByRole('button', { name: 'Календарь', exact: true }).click()
+    await expect(cards).toHaveCount(3)
+    await expect(page.getByText('В этом месяце тренировок нет.')).toBeVisible()
+  })
+}
+
 test('Fit Lime client workout history retains list, calendar and planning exit', async ({ page }, testInfo) => {
   await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
   await mockPilot(page, { fitLime: true, workouts: [{ ...workout, status: 'done' }] })
