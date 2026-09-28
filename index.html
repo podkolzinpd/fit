@@ -196,7 +196,11 @@
             k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
         })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=111074543', 'ym');
 
-        ym(111074543, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+        // Переходный период: 111074543 хранит историю, 113121193 — новый счётчик
+        // fit-training.ru. Список должен совпадать с COUNTER_IDS в yandex-metrika.ts.
+        [111074543, 113121193].forEach(function (id) {
+          ym(id, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+        });
       }
     </script>
   </head>
