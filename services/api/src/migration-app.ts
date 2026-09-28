@@ -36,6 +36,10 @@ import {
   FitLimePilotProfileNotReadyError,
   type FitLimePilotManager,
 } from './db/fit-lime-pilot.js'
+import type {
+  DomainChangeAnnouncementAction,
+  DomainChangeAnnouncementManager,
+} from './db/domain-change-announcement.js'
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
 import type { StageTenantMigrationRunner } from './tenant-migration/stage-runner.js'
@@ -59,6 +63,7 @@ interface PilotEnrollmentOptions {
 
 interface BuildMigrationAppOptions {
   databaseReaderAccess?: StageDatabaseReaderAccessManager
+  domainChangeAnnouncement?: DomainChangeAnnouncementManager
   logger?: boolean
   pilotEnrollment?: PilotEnrollmentOptions
   rolloutAssignment?: StageRolloutAssignmentManager
@@ -73,6 +78,17 @@ interface BuildMigrationAppOptions {
   vitalMediaDeployment?: VitalMediaDeploymentService
   stageWorkoutFixture?: StageWorkoutFixtureLoader
   yandexIdentityUnlink?: YandexIdentityUnlinkManager
+}
+
+function readDomainChangeAnnouncementRequest(body: unknown): {
+  action: DomainChangeAnnouncementAction
+} | undefined {
+  if (typeof body !== 'object' || body === null || !('action' in body)) {
+    return undefined
+  }
+  const action = body.action
+  if (action !== 'inspect' && action !== 'enqueue') return undefined
+  return { action }
 }
 
 const DATABASE_USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._@-]{0,62}$/
@@ -423,6 +439,27 @@ export function buildMigrationApp(
           return reply.code(409).send({ status: 'database_user_not_ready' })
         }
         return reply.code(500).send({ status: 'database_access_failed' })
+      }
+    })
+  }
+
+  if (options.domainChangeAnnouncement !== undefined) {
+    const announcement = options.domainChangeAnnouncement
+    app.post('/stage/push/domain-change-announcement', async (request, reply) => {
+      const command = readDomainChangeAnnouncementRequest(request.body)
+      if (command === undefined) {
+        return reply.code(400).send({ status: 'invalid_request' })
+      }
+      try {
+        const result = await announcement.run(command.action)
+        return {
+          status: command.action === 'inspect'
+            ? 'domain_change_announcement_inspected'
+            : 'domain_change_announcement_queued',
+          ...result,
+        }
+      } catch {
+        return reply.code(500).send({ status: 'domain_change_announcement_failed' })
       }
     })
   }
