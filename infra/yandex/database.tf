@@ -31,6 +31,12 @@ resource "yandex_mdb_postgresql_cluster_v2" "fit" {
       pooling_mode = "SESSION"
       pool_discard = false
     }
+
+    performance_diagnostics = {
+      enabled                      = true
+      sessions_sampling_interval   = 30
+      statements_sampling_interval = 60
+    }
   }
 
   hosts = {
@@ -70,6 +76,10 @@ resource "yandex_mdb_postgresql_database" "fit" {
   lc_collate          = "C"
   lc_type             = "C"
   deletion_protection = var.postgres_deletion_protection
+
+  extension {
+    name = "pg_stat_statements"
+  }
 }
 
 resource "yandex_mdb_postgresql_user" "api" {
