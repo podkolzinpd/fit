@@ -65,8 +65,8 @@ select results_eq(
       from private.push_notifications_outbox
       where kind = 'service_domain_changed_2026_09'$$,
   $$values (
-      'Fit теперь на новом адресе'::text,
-      'Открывайте приложение на fit-training.ru. Старая ссылка пока перенаправляет автоматически.'::text,
+      'FIT теперь на новом адресе - fit-training.ru'::text,
+      'Работа по старой ссылке скоро будет прекращена.'::text,
       '/'::text
     )$$,
   'announcement carries the reviewed copy and redirect-safe root URL'
