@@ -262,9 +262,7 @@ function TrainerScheduleV1() {
       <div className="schedule-month-row">
         <strong>{formatMonth(selected)}</strong>
         <div className="schedule-month-actions">
-          <Coachmark id="trainer-workout-templates-2026-09" userId={actor?.userId} title="Планы можно использовать повторно" description="Сохраните тренировку как шаблон и назначайте её любому клиенту.">
-            <Link className="button ghost schedule-templates" to="/schedule/templates">Шаблоны</Link>
-          </Coachmark>
+          <Link className="button ghost schedule-templates" to="/schedule/templates">Шаблоны</Link>
           <button type="button" className="schedule-today" disabled={todayDisabled} onClick={() => showOverview(today)}>Сегодня</button>
           <label className="schedule-jump" aria-label="Выбрать дату"><ScheduleIcon /><input type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label>
         </div>
