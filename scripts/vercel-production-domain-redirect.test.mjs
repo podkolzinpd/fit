@@ -27,6 +27,7 @@ test('redirects only the legacy production hostname to fit-training.ru', () => {
 test('keeps production analytics enabled on the canonical domain', () => {
   assert.match(
     indexHtml,
-    /\['fit-drab\.vercel\.app', 'fit-training\.ru'\]\.includes\(\s*window\.location\.hostname,/,
+    /window\.location\.hostname === 'fit-training\.ru'/,
   )
+  assert.doesNotMatch(indexHtml, /fit-drab\.vercel\.app/)
 })
