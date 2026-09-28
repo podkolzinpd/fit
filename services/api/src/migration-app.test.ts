@@ -25,6 +25,7 @@ import {
   FitLimePilotProfileNotReadyError,
   type FitLimePilotManager,
 } from './db/fit-lime-pilot.js'
+import type { DomainChangeAnnouncementManager } from './db/domain-change-announcement.js'
 import type {
   YandexIdentityUnlinkManager,
 } from './db/yandex-identity-unlink.js'
@@ -47,6 +48,97 @@ const STAGE_CLIENT_ID = '10000000-0000-4000-8000-000000000001'
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()))
+})
+
+describe('domain-change push announcement', () => {
+  function buildAnnouncement(
+    run: DomainChangeAnnouncementManager['run'] = () => Promise.resolve({
+      eligibleUsers: 3,
+      eligibleSubscriptions: 4,
+      alreadyQueued: 0,
+      inserted: 0,
+    }),
+  ) {
+    const runAnnouncement = vi.fn(run)
+    const app = buildMigrationApp({
+      domainChangeAnnouncement: { run: runAnnouncement },
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    return { app, runAnnouncement }
+  }
+
+  it('does not expose the operational route unless explicitly enabled', async () => {
+    const app = buildMigrationApp({ logger: false, runMigrations: () => Promise.resolve([]) })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/push/domain-change-announcement',
+      payload: { action: 'inspect' },
+    })
+
+    expect(response.statusCode).toBe(404)
+  })
+
+  it.each([
+    ['inspect', 'domain_change_announcement_inspected'],
+    ['enqueue', 'domain_change_announcement_queued'],
+  ] as const)('returns aggregate-only results for %s', async (action, status) => {
+    const { app, runAnnouncement } = buildAnnouncement(() => Promise.resolve({
+      eligibleUsers: 3,
+      eligibleSubscriptions: 4,
+      alreadyQueued: action === 'enqueue' ? 1 : 0,
+      inserted: action === 'enqueue' ? 3 : 0,
+    }))
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/push/domain-change-announcement',
+      payload: { action },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      status,
+      eligibleUsers: 3,
+      eligibleSubscriptions: 4,
+      alreadyQueued: action === 'enqueue' ? 1 : 0,
+      inserted: action === 'enqueue' ? 3 : 0,
+    })
+    expect(runAnnouncement).toHaveBeenCalledWith(action)
+  })
+
+  it('rejects malformed commands before touching the database', async () => {
+    const { app, runAnnouncement } = buildAnnouncement()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/push/domain-change-announcement',
+      payload: { action: 'send-now' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ status: 'invalid_request' })
+    expect(runAnnouncement).not.toHaveBeenCalled()
+  })
+
+  it('keeps database failures generic', async () => {
+    const { app } = buildAnnouncement(() => Promise.reject(
+      new Error('postgresql://owner:secret@database'),
+    ))
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/push/domain-change-announcement',
+      payload: { action: 'inspect' },
+    })
+
+    expect(response.statusCode).toBe(500)
+    expect(response.json()).toEqual({ status: 'domain_change_announcement_failed' })
+    expect(response.body).not.toContain('secret')
+  })
 })
 
 describe('migration endpoint', () => {

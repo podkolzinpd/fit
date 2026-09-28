@@ -7,6 +7,7 @@ import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import { inspectRuntimeDomainReadiness } from './db/runtime-domain-readiness.js'
 import { DatabaseStageDatabaseReaderAccessManager } from './db/stage-database-reader-access.js'
+import { DatabaseDomainChangeAnnouncementManager } from './db/domain-change-announcement.js'
 import { DatabaseStageRolloutAssignmentManager } from './db/stage-rollout-assignment.js'
 import { DatabaseTrainerScheduleV2PilotManager } from './db/trainer-schedule-v2-pilot.js'
 import { DatabaseFitLimePilotManager } from './db/fit-lime-pilot.js'
@@ -152,6 +153,8 @@ const app = buildMigrationApp({
   ...(privateFeaturePool === undefined || !stageRolloutAssignmentsEnabled
     ? {}
     : {
+        domainChangeAnnouncement:
+          new DatabaseDomainChangeAnnouncementManager(privateFeaturePool),
         rolloutAssignment:
           new DatabaseStageRolloutAssignmentManager(privateFeaturePool),
         trainerScheduleV2Pilot:

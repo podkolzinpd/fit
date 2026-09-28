@@ -3,6 +3,7 @@
 Обновлено: 2026-09-27. Frontend опубликован на `fit-training.ru` через Yandex API Gateway/Object Storage; Vercel сохранён для legacy redirect/Preview. Production data plane — принятый Yandex Cloud stage stack.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 ## Активная цель
+Одноразовая push-рассылка о переходе на `fit-training.ru`: добавлены parity-producer для Supabase/Yandex, агрегированный `inspect` и confirmation-gated `enqueue` через private migration runner. Сценарий идемпотентен по subscription, исключает пользователей со всеми выключенными категориями и открывает `/` через legacy redirect. До merge/deploy и отдельного inspect production outbox не менялся; отправка не запускалась.
 Frontend autodeploy: #1233 слит (`58f62d95`), OIDC и общий switch работают; checksum-reuse, шесть workers и private manifests включены. Run `36342821957` загрузил/проверил 186 файлов и активировал сборку, но упал на буквальном сравнении spec: Yandex добавляет `style=simple`, `explode=false` к path-параметрам. HTML обоих доменов совпал с artifact; полный read-only HTTP smoke прошёл. Исправление сравнения учитывает только эти defaults, сохраняет запрет настоящего drift и безопасно сообщает исходный этап даже при сбое rollback; CI/следующий deploy ещё предстоят. Daily cleanup сохраняет current/previous/3 дня и общие ссылки, остаётся default-off до cloud dry-run/scoped permissions; legacy без manifests не удаляется. Bucket lifecycle: только noncurrent versions `releases/`, 3 дня, без current Expiration. План: `docs/design/FRONTEND_RELEASE_EFFICIENCY.md`; remote rollback drill не выполнен.
 Продолжение визуальной проверки после #1196: семь клипов воспроизведены из исходного архива и совпали SHA-256 с опубликованным manifest. Пять неверных и две неподтверждённые привязки отключены (карантин 47), девять совместимых карточек сохранили видео. Узкое EZ-сгибание использует equipment «EZ-гриф». История/refs/1040 выбираемых упражнений сохранены. План и доказательства: `docs/design/seven-clip-variant-review-20260927.md`; проверки/CI/production обязательны перед выпуском.
 Каталог упражнений: #1193 выпущен, но повторный аудит показал, что совпадение мышц/оборудования не доказывает точность движения. Защитное продолжение #1196: похожие связи требуют отдельного exact-allowlist (пока пуст); 40 прямых legacy-привязок изолированы до сверки, проверка действует и до раннего возврата медиа. История/refs/метрики не меняются, собственный Free50-степпер сохранён. WebKit 390/430/1440, 36 целевых тестов и полный check прошли; CI/rollout — обязательные гейты выпуска. Read-only S3 audit `36272212760` подтвердил 2010/2010 объектов, missing=0, mismatched=0. Полного просмотра 670 Pro-роликов и замены 747 шаблонных описаний нет; план: `docs/design/exact-exercise-media-20260927.md`.
@@ -11,9 +12,7 @@ Frontend autodeploy: #1233 слит (`58f62d95`), OIDC и общий switch ра
 Локальная приёмка завершена: `npm run check`, 512/512 попаданий, постоянный WebKit-тест 64 точек, 12 mobile-сценариев и Linux visual read-only 19 passed / 8 штатных skipped. Дальше — обязательный CI и production-проверка; это не запуск ИИ-анализа.
 Frontend: #1199 и #1205 слиты. Для `fit-training.ru` настроены Cloud DNS, OAuth/API/storage CORS; почта/www и Vercel сохранены. После добавления ACME CNAME также в действующий Beget сертификат Issued в 03:22 и подключён к Gateway; apex ANAME указывает на шлюз. Прямой HTTPS smoke с настоящим Host/SNI прошёл: страницы/JS/SW 200, WASM 307, missing CSS 404, HTTP→HTTPS 301. На 03:27 реестр .ru ещё отдаёт Beget NS; осталось распространение делегирования и обычная browser-проверка. Ресурсы: `docs/design/FIT_DOMAIN_DNS.md`.
 Диагностика фонового dispatcher: `Background dispatch failed` теперь различает `push`/`app_feedback`, `prepare`/`finalize`, безопасный код и категорию ошибки, код rollback и release. Payload/SQL/stack не пишутся, повторы не добавлены. Это улучшение наблюдаемости; причина инцидента 24 сентября ещё не подтверждена.
-
 Стабилизировать Yandex-only production после переключения и затем вывести Supabase из эксплуатации. До закрытия rollback-окна сохраняется общий доменный контракт без dual-write; гейты описаны в `docs/YANDEX_CUTOVER_PLAYBOOK.md`.
-
 ## Последняя проверенная продуктовая точка
 - Assistant доступен обеим ролям; клиент работает только со своей карточкой, программы остаются за общим kill switch.
 - Клиентская генерация четырёхнедельной программы работает через выбранный backend. Yandex API читает actor-scoped историю, цель, замеры и будущие занятия из PostgreSQL, использует короткие idempotent generation leases и вызывает тот же валидируемый YandexGPT generator вне DB-транзакции.
@@ -32,7 +31,6 @@ Frontend: #1199 и #1205 слиты. Для `fit-training.ru` настроены
 - `analytics.trainer_overview`/`client_overview` на Yandex приведены к parity с Supabase (000079_analytics_overview_parity). `is_test_account` всегда `false` (email на Yandex не хранится), `last_sign_in_at` — приближение по session-таблицам.
 - Первое голосовое или текстовое действие клиента использует отдельную идемпотентную own-client команду. Она возвращает существующую карточку, восстанавливает архивную и исправляет перенесённый аккаунт, оставшийся на merged source, атомарной привязкой к активной канонической карточке; общий trainer create-контракт не меняется.
 - Тренировки клиента получили третий статус «кем создана» — `workouts.origin` (`manual`/`ai`, пишется один раз при создании) на обоих backend; «Создана ИИ» ставится только для тренировок из сгенерированной ассистентом программы (`create_program_draft`/`schedule_program`), не для голосового/текстового логирования уже сделанной тренировки (`record_workout`). Тренерская ветка подписи не читает `origin`. Карточка тренировки из избранного показывает снэпшот его названия (`workouts.favorite_title`, тоже write-once, вариант C3: «⭐ Название · Создана вами») — план полностью реализован, `docs/design/workout-origin-and-favorite-title.md`.
-
 ## Yandex Cloud — подтверждённая база
 - Существующий Terraform stack `fit/stage` принят как production data plane: Managed PostgreSQL 17, один private host, диск 10 GB, API/migration containers, Lockbox и Object Storage. Backup retention — 14 дней, окно — `00:30 UTC`; отдельный production cluster не создаётся.
 - Текущий full-cohort manifest расширен до 35 таблиц: в snapshot входят `user_legal_acceptances`, `account_deletion_requests` и `favorite_workouts`. Import атомарно пересобирает их из свежего snapshot, сохраняя актуальные Yandex identity/session/rollout строки; устаревшие linked-привязки удаляются, а наличие нативного Yandex-профиля блокирует destructive rebuild.
@@ -91,7 +89,6 @@ Frontend: #1199 и #1205 слиты. Для `fit-training.ru` настроены
   `verified=2010`, `missing=0`, `mismatched=0` и fingerprint
   `3f47c2c64d7d3a50`; signed-URL smoke и версионирование прошли. Main routing
   не включён, проверенные копии в Supabase сохранены.
-
 ## Открытые post-cutover задачи и риски
 Frontend hosting: 27 сентября Gateway публикует candidate `6075cd77…` (run 36277213600); 184 объекта проверены SHA-256. Два WASM — точные 307/WASM-only policy/scoped CORS; реальный WASM с private ACL читается, raw HTML/JS/CSS/listing дают 403. HTML/JS gzip/CSS/SW/SPA/recovery HTTP smoke и browser auth-screen прошли. OAuth callback/API CORS сохраняют Vercel; workflow закрепляет origins. Frontend request logs disabled=true; backend logs не менялись. Custom-domain HTTPS/ANAME настроены, ожидается делегирование .ru. Real-account OAuth/browser WASM/rollback drill не закрыты; `docs/design/FIT_DOMAIN_DNS.md`.
 
@@ -112,7 +109,6 @@ Frontend hosting: 27 сентября Gateway публикует candidate `6075
 5. Провести backup restore drill, повторить authenticated AI summary и push
    smoke. До завершения observation window Supabase не удалять: write gate
    остаётся paused, а обратной миграции Yandex writes нет.
-
 ## Ближайший порядок
 1. Наблюдать Yandex auth/API errors и выполнить ручной E2E matrix тестовыми
    trainer/client accounts; при инциденте возвращать maintenance и делать
