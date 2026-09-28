@@ -413,6 +413,18 @@ claim/finalize работает с точной подпиской; terminal Web
 producer, subscription schema или migration catalog обязано сохранять этот
 контракт в Supabase и Yandex.
 
+Одноразовое сообщение о переходе на `fit-training.ru` управляется workflow
+`Manage domain-change push announcement`. Сначала запустите `inspect` с пустым
+confirmation: он возвращает только число пользователей, подписок и уже
+поставленных строк, не читая PII и не меняя outbox. После проверки текста и
+агрегатов `enqueue` требует точную строку
+`QUEUE_DOMAIN_CHANGE_ANNOUNCEMENT`. Producer ставит не более одной строки на
+активную подписку и повторно безопасен. Пользователи, явно выключившие все
+категории уведомлений, исключаются; отсутствие preference сохраняет прежнюю
+default-on семантику подписки. По нажатию открывается `/`: сохранённая старая
+origin проходит через legacy redirect, новая сразу остаётся на каноническом
+домене. Доставку, как и для остальных сценариев, выполняет минутный dispatcher.
+
 После merge первый автоматический `Deploy Yandex stage` ожидаемо остановится на
 проверке Terraform plan. Запустите workflow вручную с `plan_only=true` и
 `approve_push_pipeline=false`: такой запуск только покажет точный список
