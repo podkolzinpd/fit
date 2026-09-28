@@ -8,6 +8,7 @@ import { isAssistantNavPilotEnabled, isTodayStartRedesignEnabled } from './featu
 import { useAppViewport } from './app-viewport'
 import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
 import { isFitLimeShellRoute } from './fit-lime'
+import { ContestWinnerDialog } from '../features/contest'
 
 export { appViewportMetrics } from './app-viewport'
 
@@ -133,6 +134,8 @@ export function AppLayout() {
     chat ? 'chat-identity' : '',
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
+  // Объявление победителю конкурса не перебивает Live, форму тренировки и чат.
+  const contestWinnerDialog = actor && <ContestWinnerDialog userId={actor.userId} suppressed={immersive} />
   const trainerAssistantNav = actor?.role === 'trainer' && isAssistantNavPilotEnabled(actor.userId, actor.email) && <Coachmark
     id="assistant-all-trainers-2026-09"
     userId={actor.userId}
@@ -141,7 +144,7 @@ export function AppLayout() {
   >
     <NavLink to="/assistant"><AssistantIcon />Ассистент</NavLink>
   </Coachmark>
-  if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
+  if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
     <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>
     <NavLink to="/me/workouts"><ScheduleIcon />Тренировки</NavLink>
     {isAssistantNavPilotEnabled(actor.userId, actor.email) && <Coachmark
@@ -155,7 +158,7 @@ export function AppLayout() {
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/me/profile"><ProfileIcon />Профиль</NavLink>
   </nav>}</div>
-  return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
+  return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><TodayIcon />Сегодня</NavLink>
     {trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
     {(redesignedStart || trainerScheduleV2) && (fitLimeShell && /^\/progress\/[^/]+$/.test(pathname)

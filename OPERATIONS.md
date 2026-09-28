@@ -655,6 +655,23 @@ VITE_TODAY_GREETING_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 авторизации: данные и мутации защищаются существующими RLS/ownership-
 проверками.
 
+Одноразовое окно победителю конкурса управляется build-time переменными
+production-сборки `fit-training.ru` — GitHub repository variables, которые
+читают `prepare-yandex-frontend.yml` и `deploy-yandex-frontend.yml`:
+
+```text
+VITE_CONTEST_WINNER_ENABLED=true
+VITE_CONTEST_WINNER_PILOT_USER_IDS=<profile-uuid-победителя>
+```
+
+Механизм default-off: без переменных, при пустом allowlist или значении флага
+кроме точного `true` окно никому не показывается. После изменения переменных
+нужен новый frontend deployment. Контакт приходит как обычное сообщение
+обратной связи (Telegram/Tracker) с «Кодом сообщения»; автор проверяется
+запросом `select user_id from public.app_feedback where id = '<код>'`.
+После 13.10.2026 окно скрывается кодом; переменные после вручения приза
+удаляются. UUID виден в публичном bundle и не является авторизацией.
+
 Привязка существующего FIT-аккаунта к Yandex ID использует общие публичные
 настройки Yandex ID и глобальный build-time switch:
 

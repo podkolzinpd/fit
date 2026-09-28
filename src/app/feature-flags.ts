@@ -69,6 +69,20 @@ export function isTodayGreetingPilotEnabled(userId: string) {
   return allowedUserIds.includes(userId)
 }
 
+// Одноразовое окно победителю конкурса среди коллег (сентябрь 2026): приз
+// нельзя вручить без контакта, а Yandex ID не отдаёт почту. Флаг намеренно
+// default-off; allowlist содержит только публичный UUID победителя и не
+// является границей авторизации. Независимый rollout — не переиспользует
+// allowlist других пилотов.
+export function isContestWinnerPilotEnabled(userId: string) {
+  if (import.meta.env.VITE_CONTEST_WINNER_ENABLED !== 'true') return false
+  const allowedUserIds = String(import.meta.env.VITE_CONTEST_WINNER_PILOT_USER_IDS ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+  return allowedUserIds.includes(userId)
+}
+
 export interface YandexIdPilotConfig {
   apiBaseUrl: string
   clientId: string
