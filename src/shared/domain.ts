@@ -434,6 +434,21 @@ export interface FavoriteWorkoutTemplate {
   exercises: WorkoutExerciseDraft[]
 }
 
+export interface WorkoutTemplateDraft {
+  id: UUID
+  name: string
+  notes?: string
+  exercises: WorkoutExerciseDraft[]
+  version?: number
+}
+
+export interface WorkoutTemplate extends WorkoutTemplateDraft {
+  trainerId: UUID
+  createdAt: string
+  updatedAt: string
+  version: number
+}
+
 export interface LiveSetDraft {
   weightKg?: number
   /** Повторы; для гребного тренажёра — фактическая частота гребков в минуту. */

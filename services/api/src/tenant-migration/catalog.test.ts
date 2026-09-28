@@ -11,6 +11,7 @@ import {
 const EXPECTED_MIGRATION_TABLES = [
   'public.profiles',
   'public.favorite_workouts',
+  'public.workout_templates',
   'public.user_legal_acceptances',
   'public.account_deletion_requests',
   'public.trainers',
@@ -88,6 +89,8 @@ describe('tenant migration catalog', () => {
       .toContain('trainer_professional_profiles')
     expect(byName.get('public.favorite_workouts')?.sourceSql)
       .toContain('favorite_workouts')
+    expect(byName.get('public.workout_templates')?.sourceSql)
+      .toContain('workout_templates')
     expect(byName.get('public.client_trainers')?.sourceSql)
       .toContain('client_private_details')
     expect(byName.get('app_private.push_notifications_outbox')?.sourceSql)
@@ -120,6 +123,8 @@ describe('tenant migration catalog', () => {
       .toEqual(['id'])
     expect(byName.get('public.favorite_workouts')?.sourceSql)
       .toContain('scope_users')
+    expect(byName.get('public.workout_templates')?.sourceSql)
+      .toContain('scope_users')
     expect(byName.get('app_private.workout_create_requests')?.sourceSql)
       .toContain("'actor_id'")
 
@@ -140,6 +145,8 @@ describe('tenant migration catalog', () => {
       .toContain('scope_custom_exercises')
     expect(byName.get('public.favorite_workouts')?.sourceSql)
       .toContain('row.client_id = $1')
+    expect(byName.get('public.workout_templates')?.sourceSql)
+      .toContain('row.trainer_id = $1')
     expect(byName.get('public.chat_conversations')?.sourceSql)
       .toContain('scope_conversations')
     expect(STANDALONE_CLIENT_SOURCE_PREFLIGHT_SQL)

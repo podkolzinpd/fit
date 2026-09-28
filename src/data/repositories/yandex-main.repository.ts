@@ -29,6 +29,7 @@ import type {
   WorkoutPersonalRecord,
   WorkoutSetDraft,
   WorkoutSummary,
+  WorkoutTemplate,
 } from '../../shared/domain'
 import { parseTrainerDiscoveryPrompt } from './trainer-discovery.repository'
 import { localDate } from '../../shared/local-date'
@@ -303,6 +304,18 @@ const publishedSummarySchema = z.object({
   display_metrics: z.record(z.string(), z.unknown()),
   generated_at: yandexDateTimeSchema, published_at: yandexDateTimeSchema,
 })
+const workoutTemplateSchema = z.object({
+  id: uuid,
+  trainerId: uuid,
+  name: z.string(),
+  notes: z.string().nullable(),
+  exercises: z.array(z.record(z.string(), z.unknown())),
+  version: z.number().int().positive(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+})
+const workoutTemplatesSchema = z.object({ templates: z.array(workoutTemplateSchema) })
+const workoutTemplateResponseSchema = z.object({ template: workoutTemplateSchema })
 
 type ResponseErrorFactory = (status: number, code?: string) => Error
 
@@ -647,6 +660,19 @@ function favoriteWorkout(payload: z.infer<typeof favoriteWorkoutSchema>): Favori
         rpe: set.rpe ?? undefined,
       })),
     })),
+  }
+}
+
+function workoutTemplate(value: z.infer<typeof workoutTemplateSchema>): WorkoutTemplate {
+  return {
+    id: value.id,
+    trainerId: value.trainerId,
+    name: value.name,
+    notes: value.notes ?? undefined,
+    exercises: value.exercises as unknown as WorkoutTemplate['exercises'],
+    version: value.version,
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt,
   }
 }
 
@@ -1166,6 +1192,26 @@ export function createYandexMainRepository(
         if (!stage) throw new RepositoryError('PT404', 'Этап не найден.')
         await writeEmpty(queries, `/v1/goal-stages/${stageId}`, 'DELETE', { expectedVersion: stage.version })
         invalidate()
+      },
+    },
+    workoutTemplates: {
+      async list() {
+        const payload = await readJson(queries, '/v1/workout-templates', workoutTemplatesSchema)
+        return payload.templates.map(workoutTemplate)
+      },
+      async get(id) {
+        const payload = await readJson(queries, `/v1/workout-templates/${id}`, workoutTemplateResponseSchema)
+        return workoutTemplate(payload.template)
+      },
+      async save(draft) {
+        const path = draft.version === undefined ? '/v1/workout-templates' : `/v1/workout-templates/${draft.id}`
+        const payload = await writeJson(queries, path, draft.version === undefined ? 'POST' : 'PUT', {
+          draft: toJson({ ...draft, notes: draft.notes ?? null }), expectedVersion: draft.version ?? null,
+        }, workoutTemplateResponseSchema)
+        return payload.template.id
+      },
+      async archive(template) {
+        await writeJson(queries, `/v1/workout-templates/${template.id}`, 'DELETE', { expectedVersion: template.version }, z.object({ template: z.object({ id: uuid, version: z.number().int().positive() }) }))
       },
     },
     workouts: {

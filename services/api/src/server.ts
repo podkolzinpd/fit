@@ -30,6 +30,7 @@ import { DatabasePilotSessionIssuer } from './pilot-session.js'
 import { DatabasePilotTrainingDataReader } from './pilot-training-data-reader.js'
 import { DatabasePilotTrainerWorkspace } from './pilot-trainer-workspace.js'
 import { DatabasePilotWorkoutsWriter } from './pilot-workouts-writer.js'
+import { DatabasePilotWorkoutTemplates } from './workout-templates.js'
 import { DatabasePilotProgressData } from './progress-data.js'
 import { DatabasePilotWorkoutParser } from './pilot-workout-parser.js'
 import { DatabasePilotTrainingSummaries } from './training-summary.js'
@@ -182,6 +183,10 @@ const pilotWorkoutsWriter =
   databasePool === undefined
     ? undefined
     : new DatabasePilotWorkoutsWriter(databasePool)
+const pilotWorkoutTemplates =
+  databasePool === undefined
+    ? undefined
+    : new DatabasePilotWorkoutTemplates(databasePool)
 const pilotProgressData =
   databasePool === undefined
     ? undefined
@@ -306,6 +311,7 @@ const app = buildApp(
     ...(pilotTrainerDiscovery === undefined ? {} : { pilotTrainerDiscovery }),
     ...(pilotFavoriteWorkouts === undefined ? {} : { pilotFavoriteWorkouts }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
+    ...(pilotWorkoutTemplates === undefined ? {} : { pilotWorkoutTemplates }),
     ...(pilotProgressData === undefined ? {} : { pilotProgressData }),
     ...(pilotWorkoutParser === undefined ? {} : { pilotWorkoutParser }),
     ...(pilotTrainingSummaryGenerator === undefined
