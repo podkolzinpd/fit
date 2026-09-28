@@ -1,12 +1,55 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { trackAuthenticatedOpen } from './yandex-metrika'
+import { COUNTER_IDS, trackAuthenticatedOpen, trackGoal, trackPageView } from './yandex-metrika'
 
-describe('trackAuthenticatedOpen', () => {
-  afterEach(() => {
-    delete window.ym
+afterEach(() => {
+  delete window.ym
+})
+
+describe('Metrika counters', () => {
+  it('initializes exactly the counters that receive events', () => {
+    const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8')
+    const initList = html.match(/\[([\d,\s]+)\]\.forEach\(function \(id\) \{\s*ym\(id, 'init'/)?.[1] ?? ''
+
+    expect(initList.split(',').map((id) => Number(id.trim()))).toEqual([...COUNTER_IDS])
+  })
+})
+
+describe('trackPageView', () => {
+  it('sends the hit to every counter', () => {
+    const ym = vi.fn()
+    window.ym = ym
+
+    trackPageView('/today?view=compose')
+
+    expect(ym.mock.calls).toEqual([
+      [111074543, 'hit', '/today?view=compose'],
+      [113121193, 'hit', '/today?view=compose'],
+    ])
+  })
+})
+
+describe('trackGoal', () => {
+  it('sends the goal to every counter', () => {
+    const ym = vi.fn()
+    window.ym = ym
+
+    trackGoal('today_opened')
+
+    expect(ym.mock.calls).toEqual([
+      [111074543, 'reachGoal', 'today_opened'],
+      [113121193, 'reachGoal', 'today_opened'],
+    ])
   })
 
-  it.each(['trainer', 'client'] as const)('identifies a %s and sends the role', (role) => {
+  it('does nothing when Metrika is unavailable', () => {
+    expect(() => trackGoal('today_opened')).not.toThrow()
+  })
+})
+
+describe('trackAuthenticatedOpen', () => {
+  it.each(['trainer', 'client'] as const)('identifies a %s and sends the role to every counter', (role) => {
     const ym = vi.fn()
     window.ym = ym
 
@@ -15,6 +58,8 @@ describe('trackAuthenticatedOpen', () => {
     expect(ym.mock.calls).toEqual([
       [111074543, 'setUserID', `${role}-user-id`],
       [111074543, 'reachGoal', 'authenticated_open', { role }],
+      [113121193, 'setUserID', `${role}-user-id`],
+      [113121193, 'reachGoal', 'authenticated_open', { role }],
     ])
   })
 
