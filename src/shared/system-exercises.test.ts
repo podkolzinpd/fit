@@ -11,6 +11,7 @@ import vitalGymProMediaManifest from '../../scripts/data/vital-gym-pro-media-man
 import vitalGymProRemainingReview from '../../scripts/data/vital-gym-pro-remaining-decisions.json'
 import { EXERCISE_METRIC_CORRECTIONS } from './exercise-metric-corrections'
 import { QUARANTINED_EXERCISE_MEDIA_REFS } from './exercise-media-quarantine'
+import { allowsOptionalDistance, OPTIONAL_DISTANCE_EXERCISE_REFS } from './exercise-measurements'
 
 const PACKAGED_GYM_PRO_MEDIA_PATHS = vitalGymProMediaManifest.files.map(({ path }) => `/exercises/vital-pro/${path}`)
 
@@ -272,12 +273,34 @@ describe('system exercise catalog', () => {
   })
 
   it('применяет полный аудит формата результата ко всем исправленным карточкам', () => {
-    expect(Object.keys(EXERCISE_METRIC_CORRECTIONS)).toHaveLength(118)
+    expect(Object.keys(EXERCISE_METRIC_CORRECTIONS)).toHaveLength(123)
     const catalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
 
     for (const [ref, correction] of Object.entries(EXERCISE_METRIC_CORRECTIONS)) {
       expect(catalogByRef.get(ref), `нет проверенной карточки ${ref}`)
         .toMatchObject({ ref, ...correction })
+    }
+  })
+
+  it('разделяет все доступные упражнения на время и время с дистанцией без фиктивных километров', () => {
+    const active = selectableExercises(SYSTEM_EXERCISE_CATALOG)
+    expect(active).toHaveLength(1040)
+    expect(active.filter((exercise) => exercise.inputKind === 'distance')).toHaveLength(24)
+    expect(active.filter((exercise) => exercise.inputKind === 'duration')).toHaveLength(113)
+    const catalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
+    for (const ref of OPTIONAL_DISTANCE_EXERCISE_REFS) {
+      const exercise = catalogByRef.get(ref)
+      expect(exercise, ref).toBeDefined()
+      expect(exercise?.inputKind, ref).toBe('duration')
+      expect(allowsOptionalDistance(exercise!), ref).toBe(true)
+    }
+    for (const ref of ['vital-gym-pro-r038-1190', 'vital-gym-pro-r039-1191', 'vital-gym-pro-r213-1533', 'plank']) {
+      const exercise = catalogByRef.get(ref)
+      expect(exercise?.inputKind, ref).toBe('duration')
+      expect(allowsOptionalDistance(exercise!), ref).toBe(false)
+    }
+    for (const exercise of active.filter((item) => item.inputKind === 'duration' && !OPTIONAL_DISTANCE_EXERCISE_REFS.some((ref) => ref === item.ref))) {
+      expect(allowsOptionalDistance(exercise), exercise.ref).toBe(false)
     }
   })
 

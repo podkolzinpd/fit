@@ -1,10 +1,10 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { CloseIcon, TimerIcon } from '../../shared/icons'
 import { playGong, prepareGong } from '../../shared/gong'
 import { wasNativeRestTimerNotificationScheduled } from './rest-timer-notification'
+import { TimeWheel } from './TimeWheel'
 
-const WHEEL_ROW_HEIGHT = 44
 const MINUTES = Array.from({ length: 61 }, (_, index) => index)
 const SECONDS = Array.from({ length: 60 }, (_, index) => index)
 
@@ -24,70 +24,6 @@ function gongWasPlayed(workoutId: string, deadline: number) {
 
 function markGongPlayed(workoutId: string, deadline: number) {
   try { sessionStorage.setItem(gongStorageKey(workoutId, deadline), '1') } catch { /* The timer remains usable without storage. */ }
-}
-
-function TimeWheel({ label, value, values, disabled = false, onChange }: {
-  label: string
-  value: number
-  values: number[]
-  disabled?: boolean
-  onChange: (value: number) => void
-}) {
-  const wheel = useRef<HTMLDivElement>(null)
-  const selectedIndex = Math.max(0, values.indexOf(value))
-
-  useLayoutEffect(() => {
-    if (!wheel.current) return
-    wheel.current.scrollTop = selectedIndex * WHEEL_ROW_HEIGHT
-  }, [selectedIndex])
-
-  function select(index: number) {
-    const nextIndex = Math.min(values.length - 1, Math.max(0, index))
-    const next = values[nextIndex] ?? values[0] ?? 0
-    if (next !== value) onChange(next)
-    wheel.current?.scrollTo?.({ top: nextIndex * WHEEL_ROW_HEIGHT, behavior: 'smooth' })
-  }
-
-  return <div className={`rest-time-wheel-field${disabled ? ' disabled' : ''}`}>
-    <span>{label}</span>
-    <div
-      ref={wheel}
-      className="rest-time-wheel"
-      role="listbox"
-      aria-label={label}
-      aria-disabled={disabled}
-      tabIndex={disabled ? -1 : 0}
-      onScroll={() => {
-        if (disabled) return
-        // Keep the selected value synchronous with the physical wheel. On iOS
-        // a user can tap the primary action immediately after a short flick;
-        // deferring this through requestAnimationFrame used to submit the old
-        // duration in that narrow window.
-        const index = Math.min(values.length - 1, Math.max(0, Math.round((wheel.current?.scrollTop ?? 0) / WHEEL_ROW_HEIGHT)))
-        const next = values[index] ?? values[0] ?? 0
-        if (next !== value) onChange(next)
-      }}
-      onKeyDown={(event) => {
-        if (disabled) return
-        if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End') event.preventDefault()
-        if (event.key === 'ArrowDown') select(selectedIndex + 1)
-        if (event.key === 'ArrowUp') select(selectedIndex - 1)
-        if (event.key === 'Home') select(0)
-        if (event.key === 'End') select(values.length - 1)
-      }}
-    >
-      <div className="rest-time-wheel-spacer" aria-hidden="true" />
-      {values.map((item, index) => <div
-        key={item}
-        className={item === value ? 'selected' : ''}
-        role="option"
-        aria-selected={item === value}
-        aria-label={`${String(item).padStart(2, '0')} ${label}`}
-        onClick={() => { if (!disabled) select(index) }}
-      >{String(item).padStart(2, '0')}</div>)}
-      <div className="rest-time-wheel-spacer" aria-hidden="true" />
-    </div>
-  </div>
 }
 
 /** Only this small subtree ticks; workout inputs do not rerender every second. */

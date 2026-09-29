@@ -5,6 +5,7 @@ import { runningFormatExerciseName } from '../../shared/running-formats'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
 import { correctedExerciseInputKind } from '../../shared/exercise-metric-corrections'
+import { OPTIONAL_DISTANCE_EXERCISE_REFS } from '../../shared/exercise-measurements'
 import { isRowingExerciseRef, rowingPaceLabel, runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
 
 export interface ExerciseBlock {
@@ -395,7 +396,7 @@ export function nextSetDraft(sets: WorkoutSetDraft[], inputKind: InputKind): Wor
   ) as WorkoutSetDraft
   if (inputKind === 'distance') return inherit({ position, durationSec: last.durationSec, durationMin: last.durationMin, distanceKm: last.distanceKm, rpe: last.rpe })
   if (inputKind === 'reps') return inherit({ position, durationSec: last.durationSec, durationMin: last.durationMin, reps: last.reps, rpe: last.rpe })
-  if (inputKind === 'duration') return inherit({ position, durationSec: last.durationSec, durationMin: last.durationMin, rpe: last.rpe })
+  if (inputKind === 'duration') return inherit({ position, durationSec: last.durationSec, durationMin: last.durationMin, distanceKm: last.distanceKm, rpe: last.rpe })
   return inherit({ position, weightKg: last.weightKg, reps: last.reps, rpe: last.rpe })
 }
 
@@ -519,7 +520,7 @@ function setLine(weightKg?: number, reps?: number, distanceKm?: number, duration
   const duration = durationLabel(durationSec, durationMin)
   const distance = runDistanceLabel(distanceKm)
   const rowing = isRowingExerciseRef(exerciseRef)
-  const pace = rowing
+  const pace = OPTIONAL_DISTANCE_EXERCISE_REFS.some((ref) => ref === exerciseRef) || exerciseRef === 'vital-gym-pro-r213-1533' ? null : rowing
     ? rowingPaceLabel(durationSeconds(durationSec, durationMin), distanceKm)
     : runPaceLabel(durationSeconds(durationSec, durationMin), distanceKm)
   const repsLabel = reps && `${reps} ${rowing ? 'гребков/мин' : 'повт.'}`
@@ -662,8 +663,9 @@ export function compactExerciseDetailSummary(
     }
   } else if (inputKind === 'reps') {
     summary = repeatedSeries(values.map((value) => value.skipped || value.reps === undefined ? '—' : String(value.reps)), ' повт.')
+    if (completed.some((value) => value.durationSec !== undefined)) summary += ` · ${repeatedSeries(values.map((value) => value.skipped ? '—' : durationLabel(value.durationSec) ?? '—'))}`
   } else if (inputKind === 'duration') {
-    summary = repeatedSeries(values.map((value) => value.skipped ? '—' : durationLabel(value.durationSec) ?? '—'))
+    summary = repeatedSeries(values.map((value) => value.skipped ? '—' : [durationLabel(value.durationSec), runDistanceLabel(value.distanceKm)].filter(Boolean).join(' · ') || '—'))
   } else {
     const distances = completed.map((value) => runDistanceLabel(value.distanceKm))
     const commonDistance = distances[0] && distances.every((distance) => distance === distances[0]) ? distances[0] : null
@@ -879,8 +881,8 @@ function normalizedPlanSet(set: WorkoutSetDraft, inputKind: InputKind): WorkoutS
   const base = { position: set.position, sourceSetId: set.sourceSetId, rpe: set.rpe }
   if (inputKind === 'strength') return { ...base, weightKg: set.weightKg, reps: set.reps }
   if (inputKind === 'distance') return { ...base, durationSec: set.durationSec, durationMin: set.durationMin, distanceKm: set.distanceKm, reps: set.reps }
-  if (inputKind === 'reps') return { ...base, reps: set.reps }
-  return { ...base, durationSec: set.durationSec, durationMin: set.durationMin }
+  if (inputKind === 'reps') return { ...base, durationSec: set.durationSec, durationMin: set.durationMin, reps: set.reps }
+  return { ...base, durationSec: set.durationSec, durationMin: set.durationMin, distanceKm: set.distanceKm }
 }
 
 export function copyWorkout(source: Workout, workoutDate = source.workoutDate, options: { refreshCatalogNames?: boolean } = {}): WorkoutDraft {
@@ -910,11 +912,16 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate, o
         // планом новой. Иначе тренеру приходится заново набивать только что
         // выполненные веса и повторы.
         sets: exercise.sets.map((set) => {
+          // Duration is one value with two historical encodings. Never combine
+          // planned seconds with factual minutes: seconds would silently win.
+          const factualDuration = source.status === 'done'
+            ? durationSeconds(set.fact?.durationSec, set.fact?.durationMin)
+            : undefined
           const plan = { position: set.position,
             weightKg: source.status === 'done' ? set.fact?.weightKg ?? set.weightKg : set.weightKg,
             reps: source.status === 'done' ? set.fact?.reps ?? set.reps : set.reps,
-            durationSec: source.status === 'done' ? set.fact?.durationSec ?? set.durationSec : set.durationSec,
-            durationMin: source.status === 'done' ? set.fact?.durationMin ?? set.durationMin : set.durationMin,
+            durationSec: factualDuration ?? set.durationSec,
+            durationMin: factualDuration === undefined ? set.durationMin : undefined,
             distanceKm: source.status === 'done' ? set.fact?.distanceKm ?? set.distanceKm : set.distanceKm,
             rpe: source.status === 'done' ? set.fact?.rpe ?? set.rpe : set.rpe }
           return inputKind === exercise.inputKind ? plan : normalizedPlanSet(plan, inputKind)

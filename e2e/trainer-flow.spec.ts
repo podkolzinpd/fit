@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { chooseWorkoutTime } from './workout-time-wheel'
 
 async function mockWorkoutParser(page: Page, items: unknown[]) {
   await page.route('**/functions/v1/parse-workout', async (route) => {
@@ -74,7 +75,7 @@ test('форма: быстрый ввод разбирает текст в уп�
   await squatEditor.getByRole('button', { name: 'Ещё действия' }).click()
   await page.getByRole('menuitem', { name: 'Указать RPE' }).click()
   await expect(squatEditor.getByLabel('Целевой RPE, подход 1')).toHaveValue('8')
-  await expect(page.getByLabel('Время, сек, подход 3')).toHaveValue('45')
+  await expect(page.getByLabel('Время, подход 3')).toHaveText('0:45')
 })
 
 test('форма: заголовки «Сет» и «Круговая» автоматически создают круговые', async ({ page }) => {
@@ -95,7 +96,7 @@ test('форма: заголовки «Сет» и «Круговая» авто
   await expect(page.locator('.planned-round')).toHaveCount(3)
   await expect(page.locator('.planned-round').nth(2).locator('.planned-round-exercise-name')).toHaveCount(1)
   await expect(page.getByLabel('Вес, подход 1')).toHaveValue('60')
-  await expect(page.getByLabel('Время, сек, подход 2')).toHaveValue('45')
+  await expect(page.getByLabel('Время, подход 2')).toHaveText('0:45')
 
   await page.locator('.block-options summary').click()
   await expect(page.getByLabel('Отдых между упражнениями, с')).toHaveValue('15')
@@ -141,13 +142,13 @@ test('гребной тренажёр использует темп на 500 м 
   await page.getByRole('button', { name: 'Выбрать: Гребной тренажёр', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
 
-  await page.getByLabel('Время, подход 1').fill('5:08')
+  await chooseWorkoutTime(page, 'Время, подход 1', 5 * 60 + 8)
   await expect(page.getByLabel('Единица расстояния, подход 1')).toHaveValue('m')
   await page.getByLabel('Расстояние, подход 1').fill('500')
   await page.getByLabel('Гребков в минуту').fill('30')
   await page.getByLabel('Гребков в минуту').press('Tab')
 
-  await expect(page.getByLabel('Время, подход 1')).toHaveValue('5:08')
+  await expect(page.getByLabel('Время, подход 1')).toHaveText('5:08')
   await expect(page.getByLabel('Расстояние, подход 1')).toHaveValue('500')
   await expect(page.getByText('Темп 5:08/500 м')).toBeVisible()
   await expect(page.getByLabel('Гребков в минуту')).toHaveValue('30')
@@ -469,28 +470,27 @@ test('live: планка вводится в секундах, таймер за
   await page.getByRole('button', { name: 'Выбрать: Планка', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   // Планка — точное время в секундах, а не вес или минуты.
-  await expect(page.getByLabel('Время, сек, подход 1')).toBeVisible()
-  await expect(page.getByLabel('Время, сек, подход 1')).toHaveAttribute('placeholder', 'сек')
-  await page.getByLabel('Время, сек, подход 1').fill('60')
+  await expect(page.getByLabel('Время, подход 1')).toHaveText('Добавить время')
+  await chooseWorkoutTime(page, 'Время, подход 1', 60)
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
-  await expect(page.locator('.live-set-table-head')).toContainText('Сек.')
+  await expect(page.locator('.live-set-table-head')).toContainText('Время')
   await expect(page.locator('.live-set-table-head')).not.toContainText('Кг')
   await expect(page.locator('.live-timer')).toContainText(/\d\d:\d\d/)
   // #3: закреплённый блок с таймером (и отдыхом) sticky — не уезжает при скролле.
   await expect(page.locator('.live-pinned')).toHaveCSS('position', 'sticky')
   // #6: подтверждаем подход, затем правим карандашом.
-  await page.getByLabel('Фактическое время, сек').first().fill('75')
+  await chooseWorkoutTime(page, 'Фактическое время', 75)
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await page.locator('.live-exercise-collapsed').click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toBeVisible()
   await page.getByRole('button', { name: 'Редактировать подход' }).first().click()
-  await expect(page.getByLabel('Фактическое время, сек').first()).toBeEnabled()
-  await page.getByLabel('Фактическое время, сек').first().fill('90')
+  await expect(page.getByLabel('Фактическое время').first()).toBeEnabled()
+  await chooseWorkoutTime(page, 'Фактическое время', 90)
   await page.getByRole('button', { name: 'Сохранить' }).first().click()
   await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
 })

@@ -50,6 +50,20 @@ describe('catalog names in new copies only', () => {
     expect(copy.id).toBeUndefined()
   })
 
+  it('copies factual seconds and distance together, including legacy factual minutes', () => {
+    const source = sourceWorkout()
+    source.exercises[0] = {
+      ...source.exercises[0]!, ref: 'vital-stair-climber', name: 'Лестничный тренажёр', inputKind: 'duration',
+      sets: [{ id: 'stepper-set', position: 0, durationSec: 300, distanceKm: 0.3,
+        fact: { durationMin: 11.5, distanceKm: 0.8 }, confirmedAt: 'now', version: 2 }],
+    }
+    const copied = copyWorkout(source, TODAY, { refreshCatalogNames: true }).exercises[0]!
+    expect(copied.inputKind).toBe('duration')
+    expect(copied.sets[0]).toMatchObject({ durationSec: 690, distanceKm: 0.8 })
+    expect(copied.sets[0]?.durationMin).toBeUndefined()
+    expect(source.exercises[0]?.sets[0]?.durationSec).toBe(300)
+  })
+
   it('leaves planned and completed edit drafts with their original names', () => {
     const source = sourceWorkout()
     expect(copyWorkout({ ...source, status: 'planned' }).exercises[0]!.name).toBe(oldBench.name)
@@ -132,6 +146,19 @@ describe('workouts repository rules', () => {
       .toBe('500 м × 4:48 × 32 гребков/мин · темп 4:48/500 м')
     expect(compactExerciseDetailSummary('distance', [rowing], 'completed', false, 'rowing-machine'))
       .toBe('500 м · 4:48 · 4:48/500 м · 32 гребков/мин')
+  })
+
+  it('показывает время и измеренное расстояние степпера без вымышленного темпа', () => {
+    const stepper: WorkoutSet = {
+      id: 'stepper', position: 0, durationSec: 600, distanceKm: 0.5,
+      fact: { durationSec: 690, distanceKm: 0.8 }, confirmedAt: 'now', version: 1,
+    }
+    expect(compactPlannedSetSummary([stepper], false, 'vital-stair-climber')).toBe('500 м × 10:00')
+    expect(compactCompletedSetSummary([stepper], false, 'vital-stair-climber')).toBe('800 м × 11:30')
+    expect(compactExerciseDetailSummary('duration', [stepper], 'completed', false, 'vital-stair-climber'))
+      .toBe('11:30 · 800 м')
+    expect(formatFactVsPlan(stepper, false, 'vital-stair-climber'))
+      .toEqual({ fact: '800 м × 11:30', planNote: 'план 500 м × 10:00' })
   })
 
   it('даёт спокойную двухстрочную сводку для детального экрана', () => {
@@ -499,6 +526,10 @@ describe('nextSetDraft', () => {
   it('копирует время и дистанцию для distance-упражнения', () => {
     const sets = [{ position: 0, durationMin: 30, distanceKm: 5 }]
     expect(nextSetDraft(sets, 'distance')).toEqual({ position: 1, durationMin: 30, distanceKm: 5 })
+  })
+  it('копирует обе метрики времени и дистанции у тренажёра с основным временем', () => {
+    expect(nextSetDraft([{ position: 0, durationSec: 3679, distanceKm: 2.4 }], 'duration'))
+      .toEqual({ position: 1, durationSec: 3679, distanceKm: 2.4 })
   })
   it('копирует время и повторы для reps-упражнения', () => {
     const sets = [{ position: 0, durationMin: 5, reps: 40 }]

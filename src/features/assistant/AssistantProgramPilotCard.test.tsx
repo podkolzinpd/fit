@@ -100,7 +100,7 @@ it('shows and edits aerobic effort from the program while saving it as a comment
   expect(screen.getAllByText(/1 подход по 10 мин.*Усилие — 4 из 10/)[0]).toBeVisible()
   await userEvent.click(screen.getAllByRole('button', { name: /^Изменить$/ })[0]!)
   expect(screen.getByLabelText('Усилие (1–10)')).toHaveValue(4)
-  expect(screen.getByLabelText('Секунды')).toHaveValue(600)
+  expect(screen.getByRole('button', { name: 'Время упражнения: 10:00' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Закрыть правку' }))
   await userEvent.click(screen.getByRole('button', { name: 'Добавить в расписание' }))
   expect(handlers.onApply).toHaveBeenCalledExactlyOnceWith({ workouts })
