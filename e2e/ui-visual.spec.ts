@@ -1766,7 +1766,10 @@ test('workout detail, completion and exercise history keep their visual baseline
   if (trainer) {
     await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
   } else {
-    await expect(page.getByRole('progressbar', { name: 'Выполнение плана' })).toHaveAttribute('aria-valuenow', '100')
+    await expect(page.getByText('Выполнено 2 из 2 подходов')).toBeVisible()
+    await expect(page.locator('.workout-completion-count-line strong')).toHaveText('100%')
+    await expect(page.getByRole('form', { name: 'Как прошла тренировка?' })).toBeVisible()
+    await expect(page.locator('.workout-feedback')).toHaveCount(1)
     await expect(page.getByText('Не завершено')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Поделиться', exact: true })).toBeVisible()
     await expect(page.locator('.workout-completion-recorded')).not.toHaveAttribute('open')

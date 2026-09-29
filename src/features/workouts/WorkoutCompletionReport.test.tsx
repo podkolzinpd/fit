@@ -39,9 +39,9 @@ describe('WorkoutCompletionReport', () => {
   it('shows the complete result without empty metrics', () => {
     render(<MemoryRouter><WorkoutCompletionReport {...baseProps} /></MemoryRouter>)
     expect(screen.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
-    expect(screen.getByText('1 упражнение · 3 подхода')).toBeVisible()
-    expect(screen.getByRole('progressbar', { name: 'Выполнение плана' })).toHaveAttribute('aria-valuenow', '100')
-    expect(screen.getByRole('heading', { name: 'План выполнен' })).toBeVisible()
+    expect(screen.getByText('Выполнено 3 из 3 подходов')).toBeVisible()
+    expect(screen.getAllByText('100%')).toHaveLength(1)
+    expect(screen.queryByText('Главный результат')).not.toBeInTheDocument()
     expect(screen.getByText('Результат доступен тренеру')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Поделиться' })).toBeVisible()
     expect(screen.queryByText('С устройства')).not.toBeInTheDocument()
@@ -50,9 +50,8 @@ describe('WorkoutCompletionReport', () => {
   it('names a partial save and lists unfinished exercises', () => {
     render(<MemoryRouter><WorkoutCompletionReport {...baseProps} completedSets={1} totalSets={4} completedExercises={0} totalExercises={2} incompleteExercises={['Жим лёжа', 'Очень длинное название упражнения для мобильного экрана']} duration={null} tonnage={null} muscleGroups={[]} hasTrainer={false} /></MemoryRouter>)
     expect(screen.getByRole('heading', { name: 'Тренировка сохранена частично' })).toBeVisible()
-    expect(screen.getByRole('progressbar', { name: 'Выполнение плана' })).toHaveAttribute('aria-valuenow', '25')
-    expect(screen.getByText('0/2 упражнения · 1/4 подхода')).toBeVisible()
-    expect(screen.getByText('Подтверждено 1 из 4 подходов')).toBeVisible()
+    expect(screen.getByText('Выполнено 1 из 4 подходов')).toBeVisible()
+    expect(screen.getAllByText('25%')).toHaveLength(1)
     expect(screen.getByText(/Жим лёжа/)).toBeVisible()
     expect(screen.queryByText('Результат доступен тренеру')).not.toBeInTheDocument()
     expect(screen.queryByText('Время')).not.toBeInTheDocument()
@@ -66,6 +65,14 @@ describe('WorkoutCompletionReport', () => {
     expect(screen.getByText('Максимальный вес: 70 кг')).toBeVisible()
     expect(screen.getByText('+10 кг к прошлому результату')).toBeVisible()
     expect(screen.queryByRole('heading', { name: 'План выполнен' })).not.toBeInTheDocument()
+  })
+
+  it('places feedback before sharing while keeping a single completion summary', () => {
+    render(<MemoryRouter><WorkoutCompletionReport {...baseProps} completedSets={1} feedback={<section aria-label="Обратная связь"><button>Сохранить итоги</button></section>} /></MemoryRouter>)
+    const feedback = screen.getByRole('region', { name: 'Обратная связь' })
+    const share = screen.getByRole('button', { name: 'Поделиться' })
+    expect(feedback.compareDocumentPosition(share) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getAllByText('33%')).toHaveLength(1)
   })
 
   it('keeps the achievement stable while records are loading', () => {

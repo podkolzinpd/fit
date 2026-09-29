@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { tonnageLabel } from '../../data/repositories/workouts.repository'
 import { CheckIcon, CloseIcon, RecordIcon, ShareIcon } from '../../shared/icons'
 import { formatLocalDate, localDate } from '../../shared/local-date'
@@ -61,6 +61,7 @@ export function WorkoutCompletionReport({
   volumeComparison,
   comparisonLoading = false,
   hasTrainer,
+  feedback,
 }: {
   date: string
   completedSets: number
@@ -79,6 +80,7 @@ export function WorkoutCompletionReport({
   volumeComparison?: WorkoutVolumeComparison | null
   comparisonLoading?: boolean
   hasTrainer: boolean
+  feedback?: ReactNode
 }) {
   const [shareState, setShareState] = useState<'idle' | 'sharing' | 'shared' | 'copied' | 'error'>('idle')
   const [shareOpen, setShareOpen] = useState(false)
@@ -93,6 +95,7 @@ export function WorkoutCompletionReport({
     ...(caloriesKcal ? [{ label: 'Оценка ФИТ', value: `≈ ${caloriesKcal} ккал` }] : []),
     ...(percent !== null ? [{ label: 'План', value: `${percent}%` }] : []),
   ]
+  const visibleMetrics = metrics.filter((metric) => metric.label !== 'План')
   const recordAchievement = personalResult?.state === 'record' ? personalResult : undefined
   const positiveVolumeProgress = !recordAchievement && volumeComparison && volumeComparison.changePercent > 0
   const personalAchievement = recordAchievement ?? (!positiveVolumeProgress && personalResult && ['increase', 'baseline'].includes(personalResult.state)
@@ -176,28 +179,22 @@ export function WorkoutCompletionReport({
         </div>
       </header>
 
-      <p className="workout-completion-count-line">{countLine}</p>
+      {percent !== null
+        ? <p className="workout-completion-count-line"><span>Выполнено {completedSets} из {totalSets} подходов</span><strong>{percent}%</strong></p>
+        : <p className="workout-completion-count-line">{countLine}</p>}
 
-      {metrics.length > 0 && <dl className="workout-completion-report-facts" aria-label="Краткий итог тренировки">
-        {metrics.map((metric) => <div key={metric.label}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}
+      {visibleMetrics.length > 0 && <dl className="workout-completion-report-facts" aria-label="Краткий итог тренировки">
+        {visibleMetrics.map((metric) => <div key={metric.label}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}
       </dl>}
 
-      <section className="workout-completion-highlight" aria-labelledby="workout-completion-highlight-title" aria-busy={highlightLoading}>
-        <p className="eyebrow">{highlightLabel.toUpperCase()}</p>
+      {(highlightLoading || highlightError || personalAchievement || positiveVolumeProgress) && <section className="workout-completion-highlight" aria-busy={highlightLoading}>
         {highlightLoading ? <p className="workout-completion-highlight-loading" role="status">Проверяем достижения…</p>
           : highlightError ? <div className="workout-completion-highlight-error" role="alert"><p>Не удалось проверить достижения.</p>{onRetryResult && <button type="button" className="secondary" onClick={onRetryResult}>Повторить</button>}</div>
-            : <div className="workout-completion-highlight-record">
+            : <><p className="eyebrow">{highlightLabel.toUpperCase()}</p><div className="workout-completion-highlight-record">
               {personalAchievement?.state === 'record' ? <RecordIcon /> : <CheckIcon />}
               <div><h2 id="workout-completion-highlight-title">{highlightTitle}</h2><span>{highlightValue}</span>{highlightDelta && <small>{highlightDelta}</small>}</div>
-            </div>}
-      </section>
-
-      {percent !== null && <div className="workout-completion-plan-compact">
-        <span><b>План</b><strong>{percent}%</strong></span>
-        <div className="workout-completion-progress" role="progressbar" aria-label="Выполнение плана" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
-          <span style={{ width: `${percent}%` }} />
-        </div>
-      </div>}
+            </div></>}
+      </section>}
 
       {partial && incompleteExercises.length > 0 && <div className="workout-completion-missing">
         <strong>Не завершено</strong>
@@ -206,6 +203,11 @@ export function WorkoutCompletionReport({
 
       {muscleGroups.length > 0 && <p className="workout-completion-muscles-line"><span>Нагрузка</span>{muscleGroups.join(' · ')}</p>}
 
+    </div>
+
+    {hasTrainer && <p className="workout-completion-trainer-status"><CheckIcon /> Результат доступен тренеру</p>}
+    {feedback}
+    <div className="workout-completion-share-actions">
       <button type="button" className="button secondary wide workout-completion-share" disabled={highlightLoading || highlightError} onClick={openShareOptions}>
         <ShareIcon /> Поделиться
       </button>
@@ -213,8 +215,6 @@ export function WorkoutCompletionReport({
       {shareState === 'copied' && <p className="workout-completion-share-status" role="status">Итог скопирован — вставьте его в публикацию.</p>}
       {shareState === 'error' && !shareOpen && <p className="workout-completion-share-status error" role="alert">Не удалось поделиться. Попробуйте ещё раз.</p>}
     </div>
-
-    {hasTrainer && <p className="workout-completion-trainer-status"><CheckIcon /> Результат доступен тренеру</p>}
     {shareOpen && <div className="sheet-overlay workout-share-overlay" onClick={() => shareState !== 'sharing' && setShareOpen(false)}>
       <section className="workout-share-sheet" role="dialog" aria-modal="true" aria-labelledby="workout-share-title" onClick={(event) => event.stopPropagation()}>
         <header>
