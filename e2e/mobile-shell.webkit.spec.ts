@@ -2099,6 +2099,7 @@ test('iPhone: отдых начинается после последнего п
   await selectClient(page, clientName)
   await addExercise(page, 'Присед со штангой', true)
   await addExercise(page, 'Жим лёжа')
+  await expect(page.locator('.planned-exercise')).toHaveCount(2)
   await page.getByLabel('Вес, подход 1').first().fill('40')
   await page.getByLabel('Повторы, подход 1').first().fill('10')
   await page.getByLabel('Вес, подход 1').nth(1).fill('40')
