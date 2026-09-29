@@ -5130,21 +5130,24 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-schedule-identity .tab-bar a { color:var(--secondary-label-fg); background:transparent }
 .trainer-schedule-identity .tab-bar a.active { color:var(--fg); background:var(--surface-sunken) }
 
-/* YAFIT-292: reusable trainer workout templates live inside Schedule. */
-.trainer-schedule-identity :is(.workout-templates-page,.workout-template-create-page,.workout-template-source-page,.workout-template-editor-page,.workout-template-assign-page) {
+/* YAFIT-292: template library belongs to Schedule; its editor reuses the
+   focused workout-create identity instead of a parallel form language. */
+.trainer-schedule-identity :is(.workout-templates-page,.workout-template-source-page) {
   width:min(100%,760px); margin:0 auto; padding:20px 24px calc(112px + env(safe-area-inset-bottom)); color:var(--fg);
 }
-.trainer-schedule-identity :is(.workout-templates-page,.workout-template-create-page,.workout-template-source-page,.workout-template-editor-page,.workout-template-assign-page) > .page-header {
-  min-height:48px; align-items:center; gap:12px; margin-bottom:18px;
+.trainer-schedule-identity :is(.workout-templates-page,.workout-template-source-page) > .page-header {
+  min-height:44px; display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; gap:8px; margin-bottom:18px;
 }
-.trainer-schedule-identity :is(.workout-templates-page,.workout-template-create-page,.workout-template-source-page,.workout-template-editor-page,.workout-template-assign-page) > .page-header h1 {
-  color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em;
+.trainer-schedule-identity :is(.workout-templates-page,.workout-template-source-page) > .page-header h1 {
+  grid-column:2; min-width:0; margin:0; color:var(--fg); font-size:20px; font-weight:600; line-height:1.12; letter-spacing:-.018em; text-align:center; white-space:nowrap;
 }
-.trainer-schedule-identity :is(.workout-templates-page,.workout-template-create-page,.workout-template-source-page,.workout-template-editor-page,.workout-template-assign-page) .page-back {
+.trainer-schedule-identity :is(.workout-templates-page,.workout-template-source-page) .page-back {
+  grid-column:1;
   width:44px; min-width:44px; height:44px; min-height:44px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); box-shadow:none;
 }
-.trainer-schedule-identity .template-new-button { min-height:44px; gap:7px; padding:0 14px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); font-size:12px; font-weight:500; box-shadow:none }
-.trainer-schedule-identity .template-new-button svg { width:18px; height:18px }
+.trainer-schedule-identity .template-create-menu { grid-column:3; justify-self:end }
+.trainer-schedule-identity .template-create-menu .overflow-trigger { display:grid; width:44px; height:44px; min-height:44px; place-items:center; padding:0; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
+.trainer-schedule-identity .template-create-menu .overflow-trigger svg { width:20px; height:20px }
 .trainer-schedule-identity .template-list { display:grid; gap:10px }
 .trainer-schedule-identity .template-card { display:grid; gap:14px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
 .trainer-schedule-identity .template-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px }
@@ -5154,45 +5157,23 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .trainer-schedule-identity .template-card-footer > span { margin:4px 0 0; color:var(--secondary-label-fg); font-size:12px; font-weight:400; line-height:1.4 }
 .trainer-schedule-identity .template-exercise-preview { margin:0; min-height:34px }
 .trainer-schedule-identity .template-card-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:12px; border-top:1px solid var(--border) }
-.trainer-schedule-identity .template-card-footer .secondary { min-height:44px; gap:7px; padding:0 14px; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
+.trainer-schedule-identity .template-card-footer .secondary { display:inline-flex; min-height:44px; align-items:center; justify-content:center; gap:7px; padding:0 14px; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--fg); font-size:12px; font-weight:500; box-shadow:none }
 .trainer-schedule-identity .template-card-footer svg { width:17px; height:17px }
-.trainer-schedule-identity .template-empty-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:8px }
-.trainer-schedule-identity .template-empty-actions .button { min-height:48px; gap:7px; border-radius:14px; box-shadow:none }
-.trainer-schedule-identity .template-create-intro { max-width:520px; margin:0 0 18px; color:var(--secondary-label-fg); font-size:14px; line-height:1.5 }
-.trainer-schedule-identity .template-source-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px }
-.trainer-schedule-identity .template-source-card { display:grid; align-content:start; gap:8px; min-height:180px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg); text-decoration:none }
-.trainer-schedule-identity .template-source-card:hover { border-color:var(--fg) }
-.trainer-schedule-identity .template-source-icon { display:grid; width:44px; height:44px; place-items:center; margin-bottom:12px; border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
-.trainer-schedule-identity .template-source-icon svg { width:20px; height:20px }
-.trainer-schedule-identity .template-source-card strong { font-size:18px; font-weight:600; line-height:1.2 }
-.trainer-schedule-identity .template-source-card > span:last-child { color:var(--secondary-label-fg); font-size:12px; line-height:1.4 }
+.trainer-schedule-identity .workout-templates-page .state-panel-action { width:100% }
+.trainer-schedule-identity .template-empty-actions { width:min(100%,320px); display:grid; gap:8px; margin-inline:auto }
+.trainer-schedule-identity .template-empty-actions .button { display:inline-flex; min-height:48px; align-items:center; justify-content:center; gap:7px; border-radius:14px; box-shadow:none }
 .trainer-schedule-identity .workout-template-source-page > .field { max-width:360px; margin-bottom:14px }
-.trainer-schedule-identity .workout-template-source-page .field > span,
-.trainer-schedule-identity .workout-template-form .field > span,
-.trainer-schedule-identity .template-assign-card .field > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
-.trainer-schedule-identity :is(.workout-template-source-page,.workout-template-editor-page,.workout-template-assign-page) :is(input,select,textarea) { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; box-shadow:none }
+.trainer-schedule-identity .workout-template-source-page .field > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.trainer-schedule-identity .workout-template-source-page :is(input,select,textarea) { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; box-shadow:none }
 .trainer-schedule-identity .template-source-workouts { display:grid; gap:8px }
 .trainer-schedule-identity .template-source-workout { display:flex; min-height:68px; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); text-decoration:none }
 .trainer-schedule-identity .template-source-workout > span:first-child { display:grid; gap:4px; min-width:0 }
 .trainer-schedule-identity .template-source-workout strong { overflow:hidden; font-size:14px; font-weight:500; text-overflow:ellipsis; white-space:nowrap }
 .trainer-schedule-identity .template-source-workout small { color:var(--secondary-label-fg); font-size:12px }
 .trainer-schedule-identity .template-source-workout > span:last-child { color:var(--fg); font-size:12px; font-weight:500 }
-.trainer-schedule-identity .workout-template-form { gap:12px }
-.trainer-schedule-identity .workout-template-form .workout-form-section { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none }
-.trainer-schedule-identity .template-basics { display:grid; gap:14px; padding:18px }
-.trainer-schedule-identity .workout-template-form textarea { min-height:96px; resize:vertical }
-.trainer-schedule-identity .workout-template-form .workout-form-exercises { padding:18px }
-.trainer-schedule-identity .workout-template-form .workout-form-section-head > span { color:var(--secondary-label-fg); font-size:12px }
-.trainer-schedule-identity .template-save { min-height:48px; border:1px solid var(--mono-primary); border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
-.trainer-schedule-identity .template-save:disabled { border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg) }
-.trainer-schedule-identity .template-assign-card { display:grid; gap:16px; max-width:520px; padding:20px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
-.trainer-schedule-identity .template-assign-summary { display:grid; gap:5px; padding-bottom:16px; border-bottom:1px solid var(--border) }
-.trainer-schedule-identity .template-assign-summary :is(p,h2) { margin:0 }
-.trainer-schedule-identity .template-assign-summary h2 { font-size:20px; font-weight:600 }
-.trainer-schedule-identity .template-assign-summary p:last-child,
-.trainer-schedule-identity .template-assign-hint { color:var(--secondary-label-fg); font-size:12px; line-height:1.4 }
-.trainer-schedule-identity .template-assign-card > .primary { min-height:48px; border-radius:14px; background:var(--mono-primary); color:var(--mono-on-primary); box-shadow:none }
-.trainer-schedule-identity .template-assign-hint { margin:0; text-align:center }
+
+.workout-create-edit-identity .workout-template-editor-page .workout-form-section-head > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
+.workout-create-edit-identity .workout-template-editor-page .workout-notes .voice-note-field textarea { min-height:96px; resize:vertical }
 
 @media (max-width:480px) {
   .trainer-schedule-identity .schedule-page { padding:12px 14px 0 }
@@ -5201,10 +5182,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
   .trainer-schedule-identity .schedule-selected-actions { width:100% }
   .trainer-schedule-identity .schedule-selected-actions > * { flex:1 }
   .trainer-schedule-identity .schedule-selected-actions .button { width:100% }
-  .trainer-schedule-identity :is(.workout-templates-page,.workout-template-create-page,.workout-template-source-page,.workout-template-editor-page,.workout-template-assign-page) { padding:12px 16px calc(108px + env(safe-area-inset-bottom)) }
-  .trainer-schedule-identity :is(.workout-templates-page,.workout-template-create-page,.workout-template-source-page,.workout-template-editor-page,.workout-template-assign-page) > .page-header h1 { font-size:21px }
-  .trainer-schedule-identity .template-source-grid { grid-template-columns:1fr }
-  .trainer-schedule-identity .template-source-card { min-height:132px }
+  .trainer-schedule-identity :is(.workout-templates-page,.workout-template-source-page) { padding:12px 16px calc(108px + env(safe-area-inset-bottom)) }
   .trainer-schedule-identity .template-card-footer { align-items:flex-end }
 }
 
