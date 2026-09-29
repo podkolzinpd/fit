@@ -9,8 +9,10 @@ import { OverflowMenu, useConfirm } from '../../shared/ui'
 import { ArrowDownIcon, ArrowUpIcon, CloseIcon } from '../../shared/icons'
 import { isRowingExerciseRef } from '../../shared/run-metrics'
 import { prepareZeroReplacement } from '../../shared/numeric-input'
+import { allowsOptionalDistance } from '../../shared/exercise-measurements'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
+import { WorkoutDurationField } from './WorkoutDurationField'
 import { WorkoutExercise, WorkoutSetRow } from './WorkoutSurface'
 import { ExerciseThumbnail, findCatalogExercise } from '../exercises'
 
@@ -222,6 +224,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     const set = exercise.sets[setIndex]
     if (!set) return null
     const durationSec = set.durationSec ?? (set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60))
+    const distanceCapable = exercise.inputKind === 'distance' || (exercise.inputKind === 'duration' && (allowsOptionalDistance(exercise) || exercise.sets.some((item) => item.distanceKm !== undefined)))
     const inputClass = 'planned-set-input'
     const rpeField = showRpe ? <select className="planned-set-rpe" aria-label={`${entryMode === 'fact' ? 'Фактический' : 'Целевой'} RPE, подход ${setIndex + 1}`} value={set.rpe ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { rpe: inputNumber(event.target.value) })}>
       <option value="">—</option>
@@ -233,12 +236,12 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       {rpeField}
     </>
     if (exercise.inputKind === 'reps') return <>
-      <input className={inputClass} aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" step="1" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
+      <WorkoutDurationField className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />
       <input className={inputClass} aria-label={`Повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
       {rpeField}
     </>
-    if (exercise.inputKind === 'duration') return <>
-      <input className={inputClass} aria-label={`Время, сек, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" step="1" placeholder="сек" value={durationSec ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { durationSec: inputNumber(event.target.value), durationMin: undefined })} />
+    if (exercise.inputKind === 'duration' && !distanceCapable) return <>
+      <WorkoutDurationField className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />
       <span aria-hidden="true" />
       {rpeField}
     </>
@@ -247,6 +250,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         key={`${exercise.name}-${set.position}`}
         idPrefix={`plan-run-${exerciseIndex}-${setIndex}`}
         rowing={isRowingExerciseRef(exercise.ref)}
+        optionalDistance={exercise.inputKind === 'duration'}
         durationSec={durationSec}
         distanceKm={set.distanceKm}
         strokeRate={set.reps}
@@ -271,6 +275,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
 
   // Одиночное упражнение (вне блока): подходы + «＋ Подход» + «Объединить».
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode, canReorder = false) {
+    const distanceCapable = exercise.inputKind === 'distance' || (exercise.inputKind === 'duration' && (allowsOptionalDistance(exercise) || exercise.sets.some((set) => set.distanceKm !== undefined)))
     const showRpe = isRpeVisible(exerciseIndex)
     const showRest = showRestByDefault
     const expanded = isExerciseExpanded(exercise, exerciseIndex)
@@ -298,10 +303,10 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       {expanded && <div className="compact-editor-exercise-fields">
       {(() => { const previous = previousResults.get(exercise.ref); const line = previous && previousResultLine(previous.sets, exercise.ref); return line ? <p className="exercise-prefill-note">В прошлый раз: {line}</p> : exercise.prefilledFromDate ? <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p> : null })()}
       {showRest && <label className="exercise-plan-rest-field">Отдых между подходами, с<ClampedNumberInput label={`Отдых между подходами, ${exercise.name}`} value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) updateRestBetweenSets(exercise.blockId, next) }} /></label>}
-      <WorkoutSetTable variant="planned" inputKind={exercise.inputKind} showRpe={showRpe}
-        columnLabels={exercise.inputKind === 'distance' && showRpe ? ['Параметры', ''] : undefined}
-        className={exercise.inputKind === 'distance' && showRpe ? 'planned-run-rpe-table' : ''}>
-        {exercise.sets.map((_set, setIndex) => <WorkoutSetRow state="planned" className={`planned-set ${exercise.inputKind === 'distance' ? 'planned-set-running' : ''} ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
+      <WorkoutSetTable variant="planned" inputKind={distanceCapable ? 'distance' : exercise.inputKind} showRpe={showRpe}
+        columnLabels={distanceCapable && showRpe ? ['Параметры', ''] : undefined}
+        className={distanceCapable && showRpe ? 'planned-run-rpe-table' : ''}>
+        {exercise.sets.map((_set, setIndex) => <WorkoutSetRow state="planned" className={`planned-set ${distanceCapable ? 'planned-set-running' : ''} ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
           <span className="workout-set-number planned-set-number" aria-hidden="true">{setIndex + 1}</span>
           <span className="sr-only">Подход {setIndex + 1}</span>
           {setFields(exercise, exerciseIndex, setIndex, showRpe)}

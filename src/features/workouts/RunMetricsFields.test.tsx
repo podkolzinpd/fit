@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { RunMetricsFields } from './RunMetricsFields'
@@ -20,7 +20,7 @@ function renderFields(onCommit = vi.fn()) {
 describe('RunMetricsFields', () => {
   it('shows runner-friendly values and calculated pace', () => {
     renderFields()
-    expect(screen.getByLabelText('Время')).toHaveValue('29:40')
+    expect(screen.getByRole('button', { name: 'Время: 29:40' })).toBeInTheDocument()
     expect(screen.getByLabelText('Дистанция')).toHaveValue(5.2)
     expect(screen.getByLabelText('Дистанция')).toHaveAttribute('placeholder', '0')
     expect(screen.getByLabelText('Единица дистанции')).toHaveValue('km')
@@ -41,13 +41,13 @@ describe('RunMetricsFields', () => {
     expect(onCommit).toHaveBeenLastCalledWith({ distanceKm: 0.4 })
   })
 
-  it('commits duration written as minutes and seconds', async () => {
+  it('commits duration selected as minutes and seconds', async () => {
     const user = userEvent.setup()
     const onCommit = renderFields()
-    const duration = screen.getByLabelText('Время')
-    await user.clear(duration)
-    await user.type(duration, '30:15')
-    await user.tab()
+    await user.click(screen.getByRole('button', { name: 'Время: 29:40' }))
+    await user.click(within(screen.getByRole('listbox', { name: 'минуты' })).getByRole('option', { name: '30 минуты' }))
+    await user.click(within(screen.getByRole('listbox', { name: 'секунды' })).getByRole('option', { name: '15 секунды' }))
+    await user.click(screen.getByRole('button', { name: 'Применить · 30:15' }))
     expect(onCommit).toHaveBeenLastCalledWith({ durationSec: 1815, durationMin: undefined })
   })
 
@@ -74,5 +74,35 @@ describe('RunMetricsFields', () => {
     await user.type(strokeRate, '32')
     await user.tab()
     expect(onCommit).toHaveBeenLastCalledWith({ reps: 32 })
+  })
+
+  it('lets the stair machine record time alone or measured distance without a calculated pace', async () => {
+    const user = userEvent.setup()
+    const onCommit = vi.fn()
+    render(<RunMetricsFields idPrefix="stair" optionalDistance durationSec={7559}
+      inputClassName="test-input" durationLabel="Время" distanceLabel="Дистанция"
+      distanceUnitLabel="Единица дистанции" onCommit={onCommit} />)
+    expect(screen.getByRole('button', { name: 'Время: 125:59' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Дистанция')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '+ Добавить дистанцию' }))
+    await user.selectOptions(screen.getByLabelText('Единица дистанции'), 'm')
+    await user.type(screen.getByLabelText('Дистанция'), '800')
+    await user.tab()
+    expect(onCommit).toHaveBeenLastCalledWith({ distanceKm: 0.8 })
+    expect(screen.getByText('По дисплею тренажёра')).toBeInTheDocument()
+    expect(screen.queryByText(/Темп/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Убрать дистанцию' }))
+    expect(onCommit).toHaveBeenLastCalledWith({ distanceKm: undefined })
+    expect(screen.queryByLabelText('Дистанция')).not.toBeInTheDocument()
+  })
+
+  it('reveals distance received later from a saved plan or another session', () => {
+    const fields = (distanceKm?: number) => <RunMetricsFields idPrefix="late-distance" optionalDistance
+      durationSec={120} distanceKm={distanceKm} inputClassName="test-input"
+      durationLabel="Время" distanceLabel="Дистанция" distanceUnitLabel="Единица дистанции" />
+    const { rerender } = render(fields())
+    expect(screen.queryByLabelText('Дистанция')).not.toBeInTheDocument()
+    rerender(fields(0.5))
+    expect(screen.getByLabelText('Дистанция')).toHaveValue(500)
   })
 })
