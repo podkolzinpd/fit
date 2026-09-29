@@ -9864,6 +9864,8 @@ document.querySelector('.idea-polished .foot').style.display = 'none';
 const cover = document.querySelector('#deck > .slide');
 cover.querySelector('.eyebrow').textContent = 'FIT';
 cover.dataset.section = 'FIT';
+cover.querySelector('h2').innerHTML = 'Fit — приложение<br>для тренировок';
+cover.querySelector('.content').style.display = 'none';
 cover.querySelector('.foot').style.display = 'none';
 document.querySelector('[data-section="09 · МОНЕТИЗАЦИЯ"] .foot').style.display = 'none';
 const slides = [...document.querySelectorAll('.slide:not(.legacy-competitor-slide):not(.legacy-behavior-slide)')]
