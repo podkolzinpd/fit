@@ -998,10 +998,18 @@ Program access (trainers and clients):
   private generator. The Yandex API container sets it for backend parity; user
   access remains controlled by the existing frontend Assistant flag and Yandex
   routing assignment. A missing/false flag disables new quiz/generator calls.
-- `VITE_ASSISTANT_PROGRAM_ENABLED=true` in `vercel.json` enables existing chat
-  controls for both signed-in product roles. Trainers can select only connected
-  clients; a client is bound to their own active card. The server checks
-  authentication, conversation ownership, role and target ownership.
+- `VITE_ASSISTANT_PROGRAM_ENABLED=true` enables existing chat controls for both
+  signed-in product roles. Trainers can select only connected clients; a client
+  is bound to their own active card. The server checks authentication,
+  conversation ownership, role and target ownership. Set in the build step of
+  both `.github/workflows/deploy-yandex-frontend.yml` (production,
+  `fit-training.ru`) and `.github/workflows/prepare-yandex-frontend.yml`
+  (preview) - `vercel.json`'s copy only affects the legacy `fit-drab.vercel.app`
+  project, which is redirect-only and no longer serves production traffic. A
+  variable missing from either Yandex workflow silently disables the flow for
+  everyone on that channel with no error - `import.meta.env` reads it as
+  `undefined`, not `false` (real incident: 2026-09-29, the flag was never
+  carried over when frontend hosting moved off Vercel).
 - The former `*_PROGRAM_PILOT_USER_IDS` variables are no longer read. No per-user
   deployment configuration is needed. Generator IAM remains private; client
   selection still uses the actor-scoped client list; client program apply also
