@@ -62,6 +62,30 @@ test('trainer invitation name stays inside the visible iPhone viewport above the
   expect(geometry.inputBottom).toBeLessThanOrEqual(geometry.overlayBottom)
 })
 
+test('trainer template list and editor use the centered header and workout form geometry', async ({ page }) => {
+  await loginAsTrainer(page)
+  await page.goto('/schedule/templates')
+  const title = page.getByRole('heading', { name: 'Шаблоны тренировок' })
+  await expect(title).toBeVisible()
+  const centers = await page.locator('.phone-frame').evaluate((frame, titleElement) => {
+    const frameBox = frame.getBoundingClientRect()
+    const titleBox = (titleElement as HTMLElement).getBoundingClientRect()
+    return { frame: frameBox.left + frameBox.width / 2, title: titleBox.left + titleBox.width / 2 }
+  }, await title.elementHandle())
+  expect(Math.abs(centers.frame - centers.title)).toBeLessThanOrEqual(1)
+
+  await page.goto('/schedule/templates/new/editor')
+  await expect(page.getByRole('heading', { name: 'Новый шаблон', level: 2 })).toBeVisible()
+  const nameLabel = page.getByText('Название шаблона', { exact: true })
+  const basics = page.locator('.template-basics')
+  const [labelBox, basicsBox] = await Promise.all([nameLabel.boundingBox(), basics.boundingBox()])
+  expect(labelBox).not.toBeNull()
+  expect(basicsBox).not.toBeNull()
+  expect(labelBox!.y).toBeGreaterThanOrEqual(basicsBox!.y + 12)
+  await expect(page.getByRole('button', { name: 'Сохранить шаблон' })).toBeDisabled()
+  await expectNoHorizontalOverflow(page)
+})
+
 test('chat entry and conversation list fit the iPhone shell', async ({ page }) => {
   await login(page, 'client@fit.local')
   const entry = page.getByRole('link', { name: /Сообщения/ })

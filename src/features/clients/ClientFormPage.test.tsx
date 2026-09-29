@@ -10,6 +10,7 @@ import { ClientFormPage } from './ClientsPages'
 
 const repository = vi.hoisted(() => ({
   get: vi.fn(),
+  create: vi.fn(),
   update: vi.fn(),
   updatePreferences: vi.fn(),
 }))
@@ -33,11 +34,12 @@ const client: Client = {
   archivedAt: null, version: 4, membershipVersion: 3,
 }
 
-function renderPage() {
+function renderPage(initialEntry = '/clients/client-1/edit') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<MemoryRouter initialEntries={['/clients/client-1/edit']}>
+  return render(<MemoryRouter initialEntries={[initialEntry]}>
     <QueryClientProvider client={queryClient}>
       <Routes>
+        <Route path="/clients/new" element={<ClientFormPage />} />
         <Route path="/clients/:clientId/edit" element={<ClientFormPage />} />
         <Route path="/clients/:clientId" element={<p>Карточка сохранена</p>} />
       </Routes>
@@ -48,9 +50,30 @@ function renderPage() {
 describe('ClientFormPage', () => {
   beforeEach(() => {
     repository.get.mockReset().mockResolvedValue(client)
+    repository.create.mockReset().mockResolvedValue('client-new')
     repository.update.mockReset().mockResolvedValue(undefined)
     repository.updatePreferences.mockReset().mockResolvedValue(undefined)
     realtime.subscribeToClientChanges.mockClear()
+  })
+
+  it('creates a client without optional age, height and initial weight', async () => {
+    const user = userEvent.setup()
+    renderPage('/clients/new')
+
+    await user.type(screen.getByLabelText('Имя'), 'Вася')
+    await user.selectOptions(screen.getByLabelText('Пол'), 'male')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+    await waitFor(() => expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({
+      fullName: 'Вася',
+      gender: 'male',
+      ageYears: null,
+      ageUpdatedAt: null,
+      heightCm: null,
+      initialWeightKg: undefined,
+      initialWeightRecordedOn: undefined,
+    })))
+    expect(await screen.findByText('Карточка сохранена')).toBeVisible()
   })
 
   it('edits the canonical questionnaire without overwriting a trainer alias', async () => {
