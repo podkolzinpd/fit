@@ -198,9 +198,9 @@ export interface UpdateClientTrainerPreferencesInput {
 export interface CreateClientInput {
   fullName: string
   gender: Gender
-  ageYears: number
-  ageUpdatedAt: LocalDate
-  heightCm: number
+  ageYears: number | null
+  ageUpdatedAt: LocalDate | null
+  heightCm: number | null
   goal?: string
   note?: string
   initialWeightKg?: number
