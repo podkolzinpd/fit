@@ -2,9 +2,18 @@
 
 ## Локальная разработка
 
-Обычный запуск выполняется командой `npm run dev`: она запускает локальный Supabase и только затем frontend. Безопасные локальные URL и publishable key хранятся в committed-файле `.env.development`.
+Обычный запуск выполняется командой `npm run dev`: через Podman она готовит
+локальные Supabase и PostgreSQL 17 для Yandex API, затем запускает API и
+frontend. Безопасные локальные URL и publishable key хранятся в committed-файле
+`.env.development`.
 
-Development-сборка программно отклоняет любой Supabase URL, кроме `localhost` и `127.0.0.1`. Production URL и publishable key задаются только в Vercel. Их запрещено копировать в `.env.local`, `.env.development` или другие локальные env-файлы. Для сброса локальных данных используйте `npm run db:reset`.
+Development-сборка программно отклоняет любой Supabase URL, кроме `localhost` и
+`127.0.0.1`. Legacy `VITE_SUPABASE_*` пока остаются в production Yandex frontend
+build из-за startup/recovery совместимости; текущая конфигурация находится в
+`.github/workflows/deploy-yandex-frontend.yml`, а не в Vercel Production.
+Production URL/ключи нельзя копировать в `.env.local`, `.env.development` или
+другие локальные env-файлы. `npm run db:reset` сбрасывает только локальный
+Supabase baseline, не Yandex PostgreSQL.
 
 ## Диагностика пользовательской ошибки
 
@@ -329,7 +338,7 @@ mutations; это не визуальный overlay поверх работаю�
 действие экрана — перезагрузить страницу и повторно проверить значение флага.
 
 Frontend-флаг меняется только после прямой команды владельца продукта и требует нового
-Vercel deployment. Уже открытая вкладка со старым JS bundle не узнает о новом
+Yandex frontend deployment. Уже открытая вкладка со старым JS bundle не узнает о новом
 build-time значении до reload, поэтому перед финальным snapshot обязателен
 короткий drain: дождаться распространения deployment, обновить контролируемые
 клиенты и подтвердить отсутствие незавершённых source mutations.
@@ -501,7 +510,17 @@ delete/replace и любые сопутствующие изменения datab
 - `SUPABASE_DB_PASSWORD` — пароль новой БД;
 - `SUPABASE_PROJECT_ID` — `xwfuzfkuhblswpdludbc`.
 
-После merge миграции применяет `.github/workflows/deploy-database.yml`. Запуск SQL через Dashboard запрещён. Publishable key может находиться в frontend deployment environment; service role и DB password — никогда.
+Это **legacy Supabase secrets** для сохранённых recovery/media/rollback путей.
+Новые изменения схемы в `supabase/migrations` больше не добавляются. Workflow
+`.github/workflows/deploy-database.yml` пока технически существует и сработает,
+если изменить legacy migration-файлы в `main`; не используйте его для новой
+функциональности и не запускайте вручную без отдельного решения о legacy
+исправлении. Новые numbered migrations в `services/api/db/migrations`
+применяет `.github/workflows/deploy-yandex-stage.yml` до переключения
+API-ревизии. Запуск SQL через Dashboard запрещён. Production frontend
+публикуется на `fit-training.ru` через Yandex Gateway/Object Storage; Vercel
+остаётся Preview/legacy redirect. Service role и DB password никогда не
+помещаются в публичный frontend build.
 
 Foundation UI Identity v1 является единственным production UI. Отдельного
 rollout-переключателя, пользовательского preview allowlist и rollback-режима у
@@ -578,9 +597,11 @@ DNS propagation не требуется для smoke через техничес
 работает параллельно и этим workflow не управляется. План, IAM scope,
 ограничения и ручной откат: `docs/design/YANDEX_FRONTEND_AUTODEPLOY.md`.
 
-### Vercel (сохраняется)
+### Vercel (legacy redirect и отдельные PR previews)
 
-Production и PR previews разворачиваются в Vercel через GitHub integration:
+Vercel больше не является точкой production-публикации `fit-training.ru`.
+Его GitHub integration и настройки ниже относятся к старому адресу и
+изолированным PR previews, а не к выпуску основного сайта:
 
 - repository: `podkolzinpd/fit`;
 - framework preset: Vite;
@@ -588,8 +609,10 @@ Production и PR previews разворачиваются в Vercel через Gi
 - build command: `npm run build`;
 - output directory: `dist`.
 
-На время диагностического отката #1144 для Production и Preview снова
-обязательны публичные frontend-переменные Supabase:
+На время диагностического отката #1144 для старой Vercel-сборки и Preview
+понадобились публичные frontend-переменные Supabase. В текущей Yandex
+production-сборке они также пока обязательны для startup/recovery
+совместимости и читаются GitHub workflow, а не Vercel Environment:
 
 ```text
 VITE_SUPABASE_URL=https://xwfuzfkuhblswpdludbc.supabase.co
@@ -601,12 +624,13 @@ SDK снова создаётся при импорте, а AuthProvider под�
 actor и data routing остаются Yandex: stale auth events не инициализируют
 Supabase-профиль, а отсутствие Yandex session не включает fallback. Таймаут
 восстановления Yandex session и последующие media/invitation fixes сохранены.
-Это проверка гипотезы startup-регрессии, а не доказанное исправление сетевого
-таймаута Vercel. Обе переменные присутствовали в Production/Preview при
-read-only проверке 26 сентября 2026; до повторного удаления нужен отдельный
-проверенный Yandex-only startup release. Backend bridge secrets не удалять.
+Это была проверка гипотезы startup-регрессии, а не доказанное исправление
+сетевого таймаута Vercel. До удаления переменных из текущего Yandex build
+нужен отдельный проверенный Yandex-only startup release. Backend bridge
+secrets не удалять.
 
-`SUPABASE_DB_PASSWORD`, `SUPABASE_ACCESS_TOKEN`, service-role key и OAuth Client Secret в Vercel не добавляются. После первого production deploy его канонический URL фиксируется в Supabase Auth URL Configuration:
+`SUPABASE_DB_PASSWORD`, `SUPABASE_ACCESS_TOKEN`, service-role key и OAuth Client
+Secret во frontend build не добавляются.
 
 Лицензированные Vital Gym Pro media также не требуют закрытых переменных в
 Vercel. Зашифрованный bundle публикуется только workflow `Deploy Vital exercise
@@ -615,7 +639,15 @@ media`, использующим GitHub secrets `VITAL_MEDIA_KEY`, `SUPABASE_ACC
 `fit-exercise-media`; policy разрешает чтение только роли `authenticated`, а
 frontend создаёт короткоживущие signed URL.
 
-Закрытый пилот Apple Health управляется build-time переменными Vercel:
+### Build-time флаги production frontend
+
+Текущий источник production-значений — шаг build в
+`.github/workflows/deploy-yandex-frontend.yml`: переменную нужно явно
+передать в его `env` (из GitHub variable/secret либо фиксированного значения),
+а после изменения выполнить новый Yandex frontend deployment. Одной записи в
+Vercel Environment или GitHub Variables без подключения в workflow недостаточно.
+
+Закрытый пилот Apple Health использует build-time переменные:
 
 ```text
 VITE_WEARABLES_ENABLED=true
@@ -626,8 +658,8 @@ VITE_WEARABLES_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>
 нового deployment. UUID попадают во frontend bundle, поэтому этот механизм
 служит только для rollout интерфейса и не является границей авторизации.
 
-Ассистент в production доступен тренерам и клиентам. Build-time переменная
-Vercel остаётся мгновенным kill switch:
+Ассистент в production доступен тренерам и клиентам. Его build-time переменная
+может служить аварийным выключателем после нового deployment:
 
 ```text
 VITE_ASSISTANT_NAV_ENABLED=true
@@ -639,8 +671,8 @@ VITE_ASSISTANT_NAV_ENABLED=true
 и в production игнорируются. Клиентский ассистент автоматически использует собственную
 карточку; данные и мутации защищены серверными role/ownership-проверками.
 
-Закрытый пилот приветствия в шапке «Сегодня»/«Кабинет» управляется build-time
-переменными Vercel:
+Закрытый пилот приветствия в шапке «Сегодня»/«Кабинет» использует build-time
+переменные:
 
 ```text
 VITE_TODAY_GREETING_ENABLED=true
@@ -692,7 +724,7 @@ VITE_YANDEX_ACCOUNT_LINK_REQUIRED=true
 ID виден во frontend bundle и не является границей авторизации: callback и
 проверка статуса передают текущую Supabase-сессию в stage API, а данные и
 мутации защищаются backend ownership/RLS-проверками. OAuth Client Secret в
-Vite/Vercel frontend variables не добавляется.
+Vite/frontend build variables не добавляется.
 
 Linking не требует предварительного tenant import только для корневой identity:
 после проверки Supabase access token stage читает через его RLS точную строку
@@ -708,8 +740,8 @@ assignment, не переносит клиентов/тренировки и н�
 действия, непривязанный видит только PKCE-привязку, юридические документы и
 выход. Ошибка проверки не открывает приложение автоматически и показывает
 `Повторить`; отсутствие полной публичной linking-конфигурации также закрывает
-доступ с явной ошибкой. Реализация остаётся default-off, но в Vercel Production
-Environment глобально включены оба linking-флага: персонального allowlist нет,
+доступ с явной ошибкой. Реализация остаётся default-off, но в Yandex production
+frontend build глобально включены оба linking-флага: персонального allowlist нет,
 а Preview и локальная разработка не затронуты. Gate не создаёт rollout
 assignment, не включает Yandex app-session и не меняет выбранный data backend.
 Для аварийного возврата необязательной привязки нужен новый deployment со
@@ -736,7 +768,7 @@ VITE_YANDEX_APP_SESSION_ENABLED=true
 YC_STAGE_YANDEX_NATIVE_REGISTRATION_ENABLED=true
 YC_STAGE_YANDEX_ONLY_AUTH_ENABLED=true
 
-# Vercel Production Environment
+# Yandex production frontend build (GitHub Actions)
 VITE_YANDEX_APP_SESSION_ENABLED=true
 VITE_YANDEX_MAIN_ROUTING_ENABLED=true
 VITE_YANDEX_NATIVE_REGISTRATION_ENABLED=true
@@ -757,7 +789,7 @@ variables как `false`.
 пользователя без подходящей Yandex app-session data backend тоже закрывается,
 а не переключается на Supabase. После deployment и проверки входа обеих ролей,
 публичной анкеты и приглашения эти две переменные можно удалить именно из
-Vercel Production Environment и сделать новый deployment. Серверные Supabase
+Yandex frontend build workflow и сделать новый deployment. Серверные Supabase
 secrets не удалять: они ещё нужны для recovery старых аккаунтов и оставшегося
 media bridge. Локальная разработка и Preview сохраняют свои legacy настройки.
 
@@ -853,13 +885,13 @@ lifecycle, связи/приглашения, Assistant, сводки, feedback 
 
 Выключенный флаг сохраняет Supabase для пользователей без активной Yandex
 app-session. Каждое чтение и изменение повторно защищается opaque session,
-actor/tenant ownership и правами БД. Изменение флага требует нового Vercel
+actor/tenant ownership и правами БД. Изменение флага требует нового Yandex frontend
 deployment. До завершения full-cohort export/import и rehearsal включать его
 нельзя. Rollback после начала mutations требует согласованного окна и проверки
 расхождений данных, а не только выключения frontend-флага.
 
 Серверное назначение для первого перенесённого tenant управляется отдельно от
-Vercel через ручной GitHub Actions workflow `Manage Yandex stage rollout`.
+frontend build через ручной GitHub Actions workflow `Manage Yandex stage rollout`.
 Workflow использует repository variable
 `FIT_YANDEX_ROLLOUT_TENANT_FINGERPRINT`, сохранённую из успешного apply, а
 private runner однозначно сопоставляет fingerprint с уже перенесённым
@@ -873,11 +905,11 @@ role-specific profile root. UUID не передаётся как workflow input
   включает назначение только для уже перенесённого профиля;
 - `disable` требует confirmation `DISABLE_YANDEX_READ_WRITE`, немедленно
   выключает разрешение новых и существующих app-session, но не удаляет данные и
-  не меняет Vercel-флаги.
+  не меняет frontend-флаги.
 
 Операция использует short-lived GitHub OIDC и private migration runner. Она не
 создаёт облачные ресурсы, не запускает DB migration и не требует Dashboard SQL.
-Для полного rollback сначала выключите frontend sticky routing новым Vercel
+Для полного rollback сначала выключите frontend sticky routing новым Yandex frontend
 deployment, затем выполните `disable`; обратный порядок мгновенно завершит
 доступ выбранного пользователя к Yandex API.
 
