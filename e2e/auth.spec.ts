@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { chooseWorkoutTime } from './workout-time-wheel'
 
 async function logoutFromProfile(page: import('@playwright/test').Page) {
   const pathname = new URL(page.url()).pathname
@@ -475,7 +476,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('button', { name: 'Начать тренировку' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
-  await page.getByLabel('Фактическое время').fill('20:00')
+  await chooseWorkoutTime(page, 'Фактическое время', 20 * 60)
   await page.getByLabel('Фактическая дистанция').fill('3')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
   // Дожидаемся подтверждения единственного подхода. Иначе завершение может
@@ -556,7 +557,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // Берём именно активную, чтобы проверка не зависела от двух одинаковых
   // aria-label в режиме перестановки.
   await expect(page.getByRole('button', { name: 'Вверх' }).last()).toBeEnabled()
-  await page.getByLabel('Фактическое время').first().fill('29:40')
+  await chooseWorkoutTime(page, 'Фактическое время', 29 * 60 + 40)
   await page.getByLabel('Фактическая дистанция').first().fill('5.2')
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   // Для последующей перестановки результата нужны два реально выполненных
@@ -566,8 +567,8 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // Дождаться серверной перестановки: у нового текущего упражнения один
   // подход; до refetch здесь ещё видны два подхода предыдущего упражнения.
   await expect(page.locator('.live-exercise .live-set-number')).toHaveCount(1)
-  await expect(page.getByLabel('Фактическое время')).toHaveValue('')
-  await page.getByLabel('Фактическое время').fill('10:00')
+  await expect(page.getByLabel('Фактическое время')).toHaveText('Добавить время')
+  await chooseWorkoutTime(page, 'Фактическое время', 10 * 60)
   await page.getByLabel('Фактическая дистанция').fill('1.2')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
   await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
@@ -630,9 +631,9 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByText('Бег', { exact: true })).toHaveCount(2)
   // После перестановки в Live и обратной перестановки результата оба факта
   // остаются у своих упражнений, а не переносятся между одинаковыми ref.
-  await expect(page.getByLabel('Время, подход 1').first()).toHaveValue('29:40')
+  await expect(page.getByLabel('Время, подход 1').first()).toHaveText('29:40')
   await expect(page.getByLabel('Расстояние, подход 1').first()).toHaveValue('5.2')
-  await expect(page.getByLabel('Время, подход 1').last()).toHaveValue('10:00')
+  await expect(page.getByLabel('Время, подход 1').last()).toHaveText('10:00')
   await expect(page.getByLabel('Расстояние, подход 1').last()).toHaveValue('1.2')
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),
@@ -677,7 +678,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page).toHaveURL(/\/live$/)
-  await page.getByLabel('Фактическое время').fill('30:00')
+  await chooseWorkoutTime(page, 'Фактическое время', 30 * 60)
   await page.getByLabel('Фактическая дистанция').fill('5')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
   await expect(page.locator('.live-exercise-collapsed')).toBeVisible()

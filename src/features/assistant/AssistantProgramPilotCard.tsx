@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { ChevronRightIcon } from '../../shared/icons'
 import { ProgramFeedbackForm } from './ProgramFeedbackForm'
+import { WorkoutDurationField } from '../workouts'
 
 const workoutSchema = z.object({ requestId: z.string().uuid(), clientId: z.string().uuid(), workoutDate: z.string(),
   exercises: z.array(z.object({ name: z.string(), restBetweenSetsSec: z.number(), trainerComment: z.string().optional(), sets: z.array(z.object({ reps: z.number().optional(), durationSec: z.number().optional(), rpe: z.number().optional() }).passthrough()) }).passthrough()),
@@ -76,7 +77,8 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
         const duration = ['duration', 'distance'].includes(catalog.data.find((row) => row.name === name)?.inputKind ?? '')
         setEdit({ ...edit, name, reps: duration ? '' : edit.reps || '8', seconds: duration ? edit.seconds || '30' : '' })
       }}>{catalog.data.map((row) => <option key={row.ref}>{row.name}</option>)}</select></label>
-      {(['sets', 'reps', 'seconds', 'rpe', 'rest'] as const).map((field) => <label key={field}>{({ sets: 'Подходы', reps: 'Повторы', seconds: 'Секунды', rpe: 'Усилие (1–10)', rest: 'Отдых, секунды' })[field]}<input type="number" step={field === 'rpe' ? '0.5' : '1'} value={edit[field]} disabled={(field === 'reps' && !!edit.seconds) || (field === 'seconds' && !!edit.reps)} onChange={(event) => setEdit({ ...edit, [field]: event.target.value })} /></label>)}
+      {(['sets', 'reps', 'rpe', 'rest'] as const).map((field) => <label key={field}>{({ sets: 'Подходы', reps: 'Повторы', rpe: 'Усилие (1–10)', rest: 'Отдых, секунды' })[field]}<input type="number" step={field === 'rpe' ? '0.5' : '1'} value={edit[field]} disabled={field === 'reps' && !!edit.seconds} onChange={(event) => setEdit({ ...edit, [field]: event.target.value })} /></label>)}
+      <label>Время<WorkoutDurationField label="Время упражнения" durationSec={edit.seconds ? Number(edit.seconds) : undefined} disabled={!!edit.reps} onCommit={(next) => setEdit({ ...edit, seconds: next === undefined ? '' : String(next) })} /></label>
       <div className="assistant-flow-actions"><button type="button" className="primary" disabled={busy} onClick={submitEdit}>Проверить изменение</button><button type="button" disabled={busy} onClick={() => setEdit(undefined)}>Закрыть правку</button></div>
     </section>}
     {error && <p role="alert" className="assistant-card-hint">{error}</p>}

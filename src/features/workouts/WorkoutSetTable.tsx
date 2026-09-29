@@ -6,13 +6,13 @@ type SetTableLayout = 'full' | 'singleValue'
 
 function columnLabels(inputKind: InputKind, layout: SetTableLayout): string[] {
   if (layout === 'singleValue' && inputKind !== 'strength') {
-    if (inputKind === 'duration') return ['Сек.']
+    if (inputKind === 'duration') return ['Время']
     if (inputKind === 'distance') return ['Км']
     return ['Повт.']
   }
   if (inputKind === 'strength') return ['Кг', 'Повт.']
-  if (inputKind === 'reps') return ['Сек.', 'Повт.']
-  if (inputKind === 'duration') return ['Сек.']
+  if (inputKind === 'reps') return ['Время', 'Повт.']
+  if (inputKind === 'duration') return ['Время']
   return ['Время', 'Дистанц.']
 }
 

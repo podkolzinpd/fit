@@ -27,6 +27,8 @@ import { AssistantFirstEntry } from './AssistantFirstEntry'
 import { anchorAssistantViewport } from './assistant-viewport'
 import { isAssistantProgramSurfaceEnabled } from './assistant-program-availability'
 import { prepareZeroReplacement } from '../../shared/numeric-input'
+import { RunMetricsFields, WorkoutDurationField } from '../workouts'
+import { allowsOptionalDistance } from '../../shared/exercise-measurements'
 
 type FailedTurn = { turnId: string; message: string }
 
@@ -536,7 +538,33 @@ function ProgramDraftCard({ payload, timezone, catalog, onApply, onSaved, onCanc
     <div className="assistant-program-sessions">{sessions.map((session, index) => <details key={`${session.day}-${index}`}>
       <summary><span><strong>{session.title || `Тренировка ${index + 1}`}</strong><small>{session.exercises.length} упражнений · {dates[index]}</small></span><b>Изменить</b></summary>
       <div className="assistant-program-session-fields"><label>Дата<input type="date" value={dates[index] ?? ''} onChange={(event) => setDates((current) => current.map((value, position) => position === index ? event.target.value : value))} /></label><label>Название<input value={session.title} onChange={(event) => setSessions((current) => current.map((item, position) => position === index ? { ...item, title: event.target.value } : item))} /></label></div>
-      <div className="assistant-program-exercises">{session.exercises.map((exercise, exerciseIndex) => <div key={exerciseIndex} className="assistant-program-exercise"><label className="assistant-program-exercise-name">Упражнение<input value={exercise.name} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { name: event.target.value }))} /></label><label>Подх.<input type="number" min="1" max="8" value={exercise.sets} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { sets: Number(event.target.value) }))} /></label><label>Повт.<input type="number" min="1" value={exercise.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { reps: optionalProgramNumber(event.target.value) }))} /></label><label>Кг<input type="number" min="0" step="0.5" value={exercise.weightKg ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { weightKg: optionalProgramNumber(event.target.value) }))} /></label><label>Мин.<input type="number" min="0" step="1" value={exercise.durationMin ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { durationMin: optionalProgramNumber(event.target.value) }))} /></label><label>Км<input type="number" min="0" step="0.1" value={exercise.distanceKm ?? ''} onChange={(event) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, { distanceKm: optionalProgramNumber(event.target.value) }))} /></label></div>)}</div>
+      <div className="assistant-program-exercises">{session.exercises.map((exercise, exerciseIndex) => {
+        const catalogExercise = catalog.exercises.find((item) => item.ref === exercise.exerciseRef)
+          ?? catalog.exercises.find((item) => item.name.toLocaleLowerCase('ru-RU') === exercise.name.toLocaleLowerCase('ru-RU'))
+        const durationSec = exercise.durationSec ?? (exercise.durationMin === undefined ? undefined : Math.round(exercise.durationMin * 60))
+        const distanceCapable = catalogExercise?.inputKind === 'distance'
+          || (catalogExercise ? allowsOptionalDistance(catalogExercise) : false)
+          || exercise.distanceKm !== undefined
+        const showDuration = distanceCapable || catalogExercise?.inputKind === 'duration'
+          || catalogExercise?.inputKind === 'reps' || durationSec !== undefined
+        const update = (patch: Partial<typeof exercise>) => setSessions((current) => updateProgramExercise(current, index, exerciseIndex, patch))
+        return <div key={exerciseIndex} className="assistant-program-exercise">
+          <label className="assistant-program-exercise-name">Упражнение<input value={exercise.name} onChange={(event) => update({ name: event.target.value })} /></label>
+          <label>Подх.<input type="number" min="1" max="8" value={exercise.sets} onChange={(event) => update({ sets: Number(event.target.value) })} /></label>
+          <label>Повт.<input type="number" min="1" value={exercise.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => update({ reps: optionalProgramNumber(event.target.value) })} /></label>
+          <label>Кг<input type="number" min="0" step="0.5" value={exercise.weightKg ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => update({ weightKg: optionalProgramNumber(event.target.value) })} /></label>
+          {showDuration && <div className="assistant-program-metrics">
+            {distanceCapable
+              ? <RunMetricsFields idPrefix={`program-${index}-${exerciseIndex}`} optionalDistance={catalogExercise?.inputKind !== 'distance'}
+                  durationSec={durationSec} distanceKm={exercise.distanceKm} inputClassName="assistant-program-metric-input"
+                  durationLabel={exercise.name + ': время'} distanceLabel={exercise.name + ': расстояние'}
+                  distanceUnitLabel={exercise.name + ': единица расстояния'} onCommit={update} />
+              : <div className="assistant-program-duration-field"><span>Время</span><WorkoutDurationField
+                  label={exercise.name + ': время'} durationSec={durationSec}
+                  onCommit={(next) => update({ durationSec: next, durationMin: undefined })} /></div>}
+          </div>}
+        </div>
+      })}</div>
     </details>)}</div>
     {error && <p className="assistant-card-hint" role="alert">{error}</p>}
     <div className="assistant-flow-actions"><button type="button" className="primary" onClick={() => void save()} disabled={catalog.loading || saving || saved}>{saved ? 'Добавлено в расписание' : saving ? 'Добавляю…' : 'Добавить в расписание'}</button>{!saved && <CancelActionButton onCancel={onCancel} />}</div>

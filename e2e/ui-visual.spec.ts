@@ -1,8 +1,48 @@
 import { expect, test } from '@playwright/test'
+import { chooseWorkoutTime } from './workout-time-wheel'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { comparisonWorkoutRow, mockResultsHistory, verifyResultsSources } from './progress-results-fixture'
 import { expectMonochromeAccessibility } from './accessibility-helpers'
+
+test('time and distance wheel fits client and trainer viewports', async ({ page }, testInfo) => {
+  await page.goto('/auth')
+  // This is an isolated component harness. CI intentionally omits app auth env,
+  // so the unrelated startup fallback must not sit above its pointer targets.
+  await page.addStyleTag({ content: '#fit-startup-shell, #fit-startup-emergency { display: none !important; }' })
+  await page.evaluate(async () => {
+    const modulePath = '/e2e/workout-time-distance-harness.tsx'
+    const harness = await import(modulePath) as typeof import('./workout-time-distance-harness')
+    harness.mountWorkoutTimeDistanceHarness()
+  })
+  await expect(page.getByRole('button', { name: 'Время, подход 1: 125:59' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '+ Добавить дистанцию' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+
+  await page.getByRole('button', { name: '+ Добавить дистанцию' }).click()
+  await page.getByRole('combobox', { name: 'Единица расстояния, подход 1' }).first().selectOption('m')
+  await page.getByRole('spinbutton', { name: 'Расстояние, подход 1' }).first().fill('800')
+  await page.getByRole('spinbutton', { name: 'Расстояние, подход 1' }).first().blur()
+  await expect(page.getByRole('spinbutton', { name: 'Расстояние, подход 1' }).first()).toHaveValue('800')
+  await page.screenshot({ path: testInfo.outputPath('time-distance-plan.png') })
+
+  await page.getByRole('button', { name: 'Время, подход 1: 125:59' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Время, подход 1' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('option', { name: '59 секунды' })).toHaveAttribute('aria-selected', 'true')
+  const box = await dialog.boundingBox()
+  expect(box).not.toBeNull()
+  expect(box!.x).toBeGreaterThanOrEqual(0)
+  expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width)
+  await page.screenshot({ path: testInfo.outputPath('time-distance-wheel.png') })
+  await page.locator('html').evaluate((element) => element.classList.remove('theme-light'))
+  await page.locator('#workout-time-distance-qa .phone-frame').evaluate((element) => element.classList.remove('theme-light'))
+  await page.screenshot({ path: testInfo.outputPath('time-distance-wheel-dark.png') })
+  await dialog.getByRole('listbox', { name: 'минуты' }).press('ArrowDown')
+  await dialog.getByRole('button', { name: 'Применить · 126:59' }).click()
+  await expect(page.getByRole('button', { name: 'Время, подход 1: 126:59' })).toBeVisible()
+  await chooseWorkoutTime(page, 'Время, подход 1', 65)
+})
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
@@ -1766,7 +1806,10 @@ test('workout detail, completion and exercise history keep their visual baseline
   if (trainer) {
     await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
   } else {
-    await expect(page.getByRole('progressbar', { name: 'Выполнение плана' })).toHaveAttribute('aria-valuenow', '100')
+    await expect(page.getByText('Выполнено 2 из 2 подходов')).toBeVisible()
+    await expect(page.locator('.workout-completion-count-line strong')).toHaveText('100%')
+    await expect(page.getByRole('form', { name: 'Как прошла тренировка?' })).toBeVisible()
+    await expect(page.locator('.workout-feedback')).toHaveCount(1)
     await expect(page.getByText('Не завершено')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Поделиться', exact: true })).toBeVisible()
     await expect(page.locator('.workout-completion-recorded')).not.toHaveAttribute('open')

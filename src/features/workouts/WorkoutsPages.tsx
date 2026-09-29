@@ -45,6 +45,8 @@ import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writ
 import { plannedWorkoutActionLabels } from './workout-entry-rules'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
+import { WorkoutDurationField } from './WorkoutDurationField'
+import { allowsOptionalDistance, OPTIONAL_DISTANCE_EXERCISE_REFS } from '../../shared/exercise-measurements'
 import { isRowingExerciseRef, parseRunDurationInput, rowingPaceLabel, runDistanceKmFromInput, runDistanceLabel, runPaceLabel, type RunDistanceUnit } from '../../shared/run-metrics'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
@@ -1667,6 +1669,7 @@ export function WorkoutDetailPage() {
         volumeComparison={completionVolumeComparison}
         comparisonLoading={completionHistory.isLoading}
         hasTrainer={hasActiveTrainer}
+        feedback={<WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       />}
       {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
       {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode && done ? 'ТРЕНИРОВКА ЗАВЕРШЕНА' : clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? (done ? workoutFocusTitle(groups) : 'Ваша тренировка') : workout.clientName} state={detailState}
@@ -1694,7 +1697,7 @@ export function WorkoutDetailPage() {
         {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
         {clientMode && workout.hasPr && <p className="workout-fact-summary-record"><RecordIcon /><span>Личный рекорд</span><strong>Лучший результат тренировки</strong></p>}
       </section>}
-      {done && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
+      {done && !clientCompletionReport && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       {done && clientMode && hasActiveTrainer && !clientCompletionReport && <WorkoutClientQuestion workout={workout} saving={question.isPending} error={question.error} onSave={(value) => question.mutateAsync(value)} />}
       {done && !clientMode && workout.clientQuestion && <WorkoutTrainerQuestion workout={workout} canReply={canReview} startEditing={new URLSearchParams(location.search).get('reply') === '1'} authorName={responseAuthorName} saving={questionAnswer.isPending} error={questionAnswer.error} onSave={(value) => questionAnswer.mutateAsync(value)} />}
       {done && (clientMode || !workout.clientQuestion) && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
@@ -2078,7 +2081,7 @@ function formatSet(set: WorkoutSet, showRpe: boolean, exerciseRef?: string) {
   const duration = durationLabel(set.durationSec, set.durationMin)
   const distance = runDistanceLabel(set.distanceKm)
   const rowing = isRowingExerciseRef(exerciseRef)
-  const pace = rowing ? rowingPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm) : runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
+  const pace = OPTIONAL_DISTANCE_EXERCISE_REFS.some((ref) => ref === exerciseRef) || exerciseRef === 'vital-gym-pro-r213-1533' ? null : rowing ? rowingPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm) : runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
   const plan = [set.weightKg && `${set.weightKg} кг`, set.reps && `${set.reps} ${rowing ? 'гребков/мин' : 'повт.'}`, distance, duration, showRpe && set.rpe !== undefined && `RPE ${set.rpe}`].filter(Boolean).join(' × ')
   return pace && plan ? `${plan} · темп ${pace}` : plan || 'Подход без плана'
 }
@@ -2113,6 +2116,8 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet, exe
   } else if (inputKind === 'duration') {
     const duration = durationLabel(set.durationSec, set.durationMin)
     if (duration) parts.push(duration)
+    const distance = runDistanceLabel(set.distanceKm)
+    if (distance) parts.push(distance)
   } else {
     const duration = durationLabel(set.durationSec, set.durationMin)
     if (duration) parts.push(duration)
@@ -2122,7 +2127,8 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet, exe
   }
   if (set.rpe !== undefined) parts.push(`RPE ${set.rpe}`)
   const plan = parts.length ? parts.join(' × ') : null
-  const pace = inputKind === 'distance'
+  const pace = inputKind === 'distance' && !OPTIONAL_DISTANCE_EXERCISE_REFS.some((ref) => ref === exerciseRef)
+    && exerciseRef !== 'vital-gym-pro-r213-1533'
     ? isRowingExerciseRef(exerciseRef)
       ? rowingPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
       : runPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
@@ -2154,7 +2160,7 @@ function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, 
   />
 }
 
-function LiveSetFields({ inputKind, exerciseRef, set, editing = false, showRpe = false, carriedWeightKey = 'plan' }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string }) {
+function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan' }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string }) {
   // После подтверждения показываем зафиксированный результат (факт, иначе план)
   // как обычное яркое значение в заблокированном поле, а не тусклый placeholder.
   // Правка по карандашику временно разблокирует поля (editing).
@@ -2174,6 +2180,7 @@ function LiveSetFields({ inputKind, exerciseRef, set, editing = false, showRpe =
   const isPlanHint = (fact: number | undefined, plan: number | undefined) => !locked && fact === undefined && plan !== undefined
   const factDuration = durationSeconds(set.fact.durationSec, set.fact.durationMin)
   const planDuration = durationSeconds(set.durationSec, set.durationMin)
+  const distanceCapable = inputKind === 'distance' || allowsOptionalDistance({ source, ref: exerciseRef ?? '', inputKind }) || (inputKind === 'duration' && (set.distanceKm !== undefined || set.fact.distanceKm !== undefined))
   const rpeField = showRpe ? <select className="live-set-rpe" name="rpe" aria-label="Фактический RPE" defaultValue={set.fact.rpe ?? set.rpe ?? ''} disabled={locked}>
     <option value="">—</option>
     {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
@@ -2184,12 +2191,12 @@ function LiveSetFields({ inputKind, exerciseRef, set, editing = false, showRpe =
     {rpeField}
   </>
   if (inputKind === 'reps') return <>
-    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
+    <WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} />
     <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero />
     {rpeField}
   </>
-  if (inputKind === 'duration') return <>
-    <LiveSetInput name="durationSec" label="Фактическое время, сек" placeholder="сек" defaultValue={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} step={15} disabled={locked} inputKey={`d-${k}`} />
+  if (inputKind === 'duration' && !distanceCapable) return <>
+    <WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} />
     <span className="live-set-empty" aria-hidden="true" />
     {rpeField}
   </>
@@ -2197,6 +2204,7 @@ function LiveSetFields({ inputKind, exerciseRef, set, editing = false, showRpe =
     <RunMetricsFields
       idPrefix={`live-run-${set.id}-${k}`}
       rowing={isRowingExerciseRef(exerciseRef)}
+      optionalDistance={inputKind === 'duration'}
       durationSec={value(factDuration, planDuration)}
       distanceKm={value(set.fact.distanceKm, set.distanceKm)}
       strokeRate={value(set.fact.reps, set.reps)}
@@ -2205,7 +2213,7 @@ function LiveSetFields({ inputKind, exerciseRef, set, editing = false, showRpe =
       planDurationHint={isPlanHint(factDuration, planDuration)}
       planDistanceHint={isPlanHint(set.fact.distanceKm, set.distanceKm)}
       planStrokeRateHint={isPlanHint(set.fact.reps, set.reps)}
-      durationName="runDuration"
+      durationName="durationSec"
       distanceName="runDistance"
       distanceUnitName="runDistanceUnit"
       strokeRateName="reps"
@@ -2910,7 +2918,7 @@ export function LiveWorkoutPage() {
     }}>
       <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} />
+        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
